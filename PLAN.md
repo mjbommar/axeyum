@@ -338,7 +338,7 @@ Lean v4.30.0 checks, to `R_3(x-y=5z)=286` and `R_4(2(x-y)=z)=56`, with
 (spool admitted `Declaration::Theorem`s and truncate behind them) — that is the
 change that makes proof size disk-bounded rather than RAM-bounded.
 
-**Immediate action (`WIP`, Lean lane).** Gate ADR-0430; next prove right-addition
+**Immediate action (`WIP`, Lean lane).** Gate ADR-0431; next prove multiplication
 compatibility for relational Nat congruence. No credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
 A5 V2 QF_RDL row 1 remains pending and uncredited.

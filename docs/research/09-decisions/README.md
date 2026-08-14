@@ -485,3 +485,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0428](adr-0428-balanced-witness-nat-congruence.md) | Balanced-witness Nat congruence | accepted |
 | [0429](adr-0429-cas-ideal-refutation-certificate.md) | Multivariate ideal refutation certified by a polynomial identity | proposed |
 | [0430](adr-0430-left-addition-preserves-nat-congruence.md) | Left addition preserves Nat congruence | accepted |
+| [0431](adr-0431-additive-closure-of-nat-congruence.md) | Additive closure of Nat congruence | accepted |

@@ -169,6 +169,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_symm,
         p.mod_eq_trans,
         p.mod_eq_add_left,
+        p.mod_eq_add_right,
+        p.mod_eq_add,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -814,6 +816,32 @@ fn modular_congruence_is_a_checked_equivalence_relation() {
     let shifted_name = f.name("five_mod_five_ten");
     f.declare_theorem(shifted_name, shifted_ty, shifted)
         .unwrap_or_else(|e| panic!("left-shifted congruence should admit: {}", f.explain(&e)));
+
+    let shifted_right = f.lemma(p.mod_eq_add_right, &[five, two, seven, three, two_to_seven]);
+    let right_shifted_left = f.add(two, three);
+    let right_shifted_right = f.add(seven, three);
+    let shifted_right_ty = f.mod_eq(five, right_shifted_left, right_shifted_right);
+    let shifted_right_name = f.name("two_plus_three_mod_five_seven_plus_three");
+    f.declare_theorem(shifted_right_name, shifted_right_ty, shifted_right)
+        .unwrap_or_else(|e| panic!("right-shifted congruence should admit: {}", f.explain(&e)));
+
+    let eight = f.num(8);
+    let three_to_eight = f.concrete_mod_eq(five, three, eight, one, zero);
+    let pairwise = f.lemma(
+        p.mod_eq_add,
+        &[five, two, seven, three, eight, two_to_seven, three_to_eight],
+    );
+    let pairwise_left = f.add(two, three);
+    let pairwise_right = f.add(seven, eight);
+    let pairwise_ty = f.mod_eq(five, pairwise_left, pairwise_right);
+    let pairwise_name = f.name("two_plus_three_mod_five_seven_plus_eight");
+    f.declare_theorem(pairwise_name, pairwise_ty, pairwise)
+        .unwrap_or_else(|e| {
+            panic!(
+                "pairwise additive congruence should admit: {}",
+                f.explain(&e)
+            )
+        });
 }
 
 #[test]
@@ -2233,7 +2261,64 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 49, "every negative control must be rejected");
+    // NC50 — right-addition compatibility retains its common shift.
+    {
+        let name = f.name("nc50_mod_eq_add_right_wrong_shift");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let relation = f.concrete_mod_eq(five, two, seven, one, zero);
+        let proof = f.lemma(p.mod_eq_add_right, &[five, two, seven, three, relation]);
+        let shifted_left = f.add(two, three);
+        let wrong_right = f.add(seven, four);
+        let bad = f.mod_eq(five, shifted_left, wrong_right);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC50: right-additive congruence must retain its common shift");
+        println!(
+            "NC50 (wrong right-addition shift) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    // NC51 — pairwise additive congruence retains its second right endpoint.
+    {
+        let name = f.name("nc51_mod_eq_add_wrong_endpoint");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let eight = f.num(8);
+        let nine = f.num(9);
+        let first = f.concrete_mod_eq(five, two, seven, one, zero);
+        let second = f.concrete_mod_eq(five, three, eight, one, zero);
+        let proof = f.lemma(
+            p.mod_eq_add,
+            &[five, two, seven, three, eight, first, second],
+        );
+        let left_sum = f.add(two, three);
+        let wrong_right_sum = f.add(seven, nine);
+        let bad = f.mod_eq(five, left_sum, wrong_right_sum);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC51: pairwise additive congruence must retain every endpoint");
+        println!(
+            "NC51 (wrong pairwise-addition endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 51, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2256,7 +2341,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        12 + 76,
+        12 + 78,
         "every promised definition and theorem must be rendered"
     );
 }
