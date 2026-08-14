@@ -51,7 +51,7 @@
 //! `Nat.le.step : Le n m → Le n (succ m)` — admitted through the same trusted
 //! inductive gate, so its recursor `Nat.le.rec` (induction on the *derivation*)
 //! is kernel-generated. `Nat.lt n m := Nat.le (Nat.succ n) m`. Theorems:
-//! `zero_le`, `le_succ_succ`, `le_of_succ_le_succ`, `le_trans`, and
+//! `zero_le`, `le_succ_succ`, `le_of_succ_le_succ`, `le_trans`, `le_total`, and
 //! `le_add_right`, addition/multiplication monotonicity, order-conditioned
 //! `sub_add_cancel`, and bounded `mul_sub_left_distrib`.
 //!
@@ -213,8 +213,8 @@ pub struct NatPrelude {
     /// This fragment is deliberately minimal: it carries reflexivity/step
     /// (the constructors), `zero_le`, successor monotonicity/inversion,
     /// transitivity, and `le_add_right` — enough to *state and derive* bounds,
-    /// but **not** a complete order library. There is no antisymmetry,
-    /// totality, `min`, or decidability. The constructor shape matches Lean's,
+    /// but **not** a complete order library. There is no antisymmetry, `min`,
+    /// or decidability. The constructor shape matches Lean's,
     /// so those are extensions rather than redesigns.
     pub le: NameId,
     /// `Nat.lt n m := Nat.le (Nat.succ n) m`.
@@ -233,6 +233,8 @@ pub struct NatPrelude {
     pub le_of_succ_le_succ: NameId,
     /// `le_trans : ∀ (a b c : Nat), Le a b → Le b c → Le a c`.
     pub le_trans: NameId,
+    /// `le_total : ∀ a b, Or (Le a b) (Le b a)`.
+    pub le_total: NameId,
     /// `le_add_right : ∀ (n k : Nat), Le n (add n k)`.
     pub le_add_right: NameId,
     /// `add_le_add_left : ∀ c a b, Le a b → Le (c+a) (c+b)`.
@@ -337,6 +339,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_succ_succ: kernel.name_str(nat, "le_succ_succ"),
             le_of_succ_le_succ: kernel.name_str(nat, "le_of_succ_le_succ"),
             le_trans: kernel.name_str(nat, "le_trans"),
+            le_total: kernel.name_str(nat, "le_total"),
             le_add_right: kernel.name_str(nat, "le_add_right"),
             add_le_add_left: kernel.name_str(nat, "add_le_add_left"),
             mul_le_mul_left: kernel.name_str(nat, "mul_le_mul_left"),
@@ -1591,6 +1594,84 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         };
         d.declare_theorem(p.le_add_right, ty, value)?;
     }
+
+    // le_total : ∀ a b, Or (Le a b) (Le b a)
+    // Structural induction on both naturals; the successor/successor branch
+    // maps the smaller comparison through `le_succ_succ`.
+    d.theorem(p.le_total, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let logic = p.logic;
+        let total = |d: &mut NatDev<'_>, x: ExprId, y: ExprId| {
+            let xy = d.le(x, y);
+            let yx = d.le(y, x);
+            d.const_app(logic.or, &[xy, yx])
+        };
+        let motive_a = |d: &mut NatDev<'_>, x: ExprId| {
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let body = total(d, x, y);
+            d.pi_fv(y_fv, nat, body)
+        };
+        let all_from_zero = |d: &mut NatDev<'_>| {
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let zero = d.zero();
+            let left = d.le(zero, y);
+            let right = d.le(y, zero);
+            let bound = d.lemma(p.zero_le, &[y]);
+            let body = d.const_app(logic.or_inl, &[left, right, bound]);
+            d.lam_fv(y_fv, nat, body)
+        };
+        let step_a = |d: &mut NatDev<'_>, x: ExprId, ih: ExprId| {
+            let sx = d.succ(x);
+            let motive_b = |d: &mut NatDev<'_>, y: ExprId| total(d, sx, y);
+            let at_zero = |d: &mut NatDev<'_>| {
+                let zero = d.zero();
+                let left = d.le(sx, zero);
+                let right = d.le(zero, sx);
+                let bound = d.lemma(p.zero_le, &[sx]);
+                d.const_app(logic.or_inr, &[left, right, bound])
+            };
+            let step_b = |d: &mut NatDev<'_>, y: ExprId, _inner_ih: ExprId| {
+                let sy = d.succ(y);
+                let xy = d.le(x, y);
+                let yx = d.le(y, x);
+                let old_total = d.apply(ih, &[y]);
+                let sxy = d.le(sx, sy);
+                let syx = d.le(sy, sx);
+                let target = d.const_app(logic.or, &[sxy, syx]);
+                let old_total_ty = d.const_app(logic.or, &[xy, yx]);
+                let motive = d
+                    .kernel()
+                    .lam(anon, old_total_ty, target, BinderInfo::Default);
+                let left_minor = {
+                    let h_fv = d.fresh_fvar();
+                    let h = d.kernel().fvar(h_fv);
+                    let lifted = d.lemma(p.le_succ_succ, &[x, y, h]);
+                    let body = d.const_app(logic.or_inl, &[sxy, syx, lifted]);
+                    d.lam_fv(h_fv, xy, body)
+                };
+                let right_minor = {
+                    let h_fv = d.fresh_fvar();
+                    let h = d.kernel().fvar(h_fv);
+                    let lifted = d.lemma(p.le_succ_succ, &[y, x, h]);
+                    let body = d.const_app(logic.or_inr, &[sxy, syx, lifted]);
+                    d.lam_fv(h_fv, yx, body)
+                };
+                d.const_app(
+                    logic.or_rec,
+                    &[xy, yx, motive, left_minor, right_minor, old_total],
+                )
+            };
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let body = d.induct(&motive_b, &at_zero, &step_b, y);
+            d.lam_fv(y_fv, nat, body)
+        };
+        let all_b = d.induct(&motive_a, &all_from_zero, &step_a, a);
+        let proof = d.apply(all_b, &[b]);
+        (total(d, a, b), proof)
+    })?;
 
     // add_le_add_left : ∀ c a b, Le a b → Le (add c a) (add c b)
     // Eliminate the bound derivation; `add` recurses on exactly its index.

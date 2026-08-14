@@ -458,3 +458,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0400](adr-0400-closed-form-rado-sharpness-witness.md) | Closed-form Rado sharpness witness | accepted |
 | [0401](adr-0401-checked-rado-witness-basic-ranges.md) | Checked basic ranges for the Rado sharpness witness | accepted |
 | [0402](adr-0402-checked-rado-witness-sufficient-range.md) | Checked sufficient upper range for the Rado witness | accepted |
+| [0403](adr-0403-proved-nat-order-totality.md) | Proved Nat order totality | accepted |

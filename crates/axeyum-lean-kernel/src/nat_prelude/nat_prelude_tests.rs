@@ -101,6 +101,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_succ_succ,
         p.le_of_succ_le_succ,
         p.le_trans,
+        p.le_total,
         p.le_add_right,
         p.add_le_add_left,
         p.mul_le_mul_left,
@@ -555,6 +556,17 @@ fn order_is_monotone_under_left_addition_and_multiplication() {
                 f.explain(&e)
             )
         });
+}
+
+#[test]
+fn order_is_total() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let two = f.num(2);
+    let five = f.num(5);
+    let proof = f.lemma(p.le_total, &[five, two]);
+    f.k.infer(proof)
+        .unwrap_or_else(|e| panic!("totality application should infer: {}", f.explain(&e)));
 }
 
 /// Divisibility is a real prelude definition, not a test-only proposition:
@@ -1077,7 +1089,28 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 19, "every negative control must be rejected");
+    // NC20 — totality retains both compared endpoints.
+    {
+        let name = f.name("nc20_totality_wrong_endpoint");
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let proof = f.lemma(p.le_total, &[five, two]);
+        let wrong_left = f.le(five, three);
+        let right = f.le(two, five);
+        let bad = f.const_app(p.logic.or, &[wrong_left, right]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC20: totality must retain both compared endpoints");
+        println!(
+            "NC20 (wrong totality endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 20, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1100,7 +1133,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        8 + 43,
+        8 + 44,
         "every promised definition and theorem must be rendered"
     );
 }
