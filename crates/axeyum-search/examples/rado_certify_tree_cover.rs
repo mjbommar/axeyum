@@ -21,7 +21,12 @@
 //! preference for one of them.
 //!
 //! usage: `rado_certify_tree_cover a=5 b=4 k=4 n=741 proofs=<dir> prefix=f741 \
-//!         points=2,4,6,8,10,12 ledger=<a.tsv> [ledger2=<b.tsv> ...]`
+//!         points=2,4,6,8,10,12 ledger=<a.tsv> [ledger2=<b.tsv> ...] \
+//!         [merged=<one.tsv>]`
+//!
+//! `merged=` writes the certified rows back out as ONE byte-stable ledger in
+//! cube-code order — the artifact a claim should carry, rather than five files
+//! in completion order that someone has to reassemble correctly later.
 //!
 //! exit: 0 certified, 3 rejected (the message names the obligation and the
 //! cube), 2 usage.
@@ -39,7 +44,7 @@ use std::time::Instant;
 
 use axeyum_search::certify::certify_dumped_tree_cover;
 use axeyum_search::cover::colour_branch_plan;
-use axeyum_search::ledger::parse_ledger;
+use axeyum_search::ledger::{parse_ledger, render_ledger};
 use axeyum_search::{CellRecord, CheckMode, ColouringFamily, Rado};
 
 fn main() -> ExitCode {
@@ -123,6 +128,13 @@ fn main() -> ExitCode {
         return ExitCode::from(3);
     }
 
+    // The artifact of record is ONE ledger, byte-stable and in cube-code
+    // order: a cover spread over five files is easy to mis-assemble later, and
+    // the row order of a live status file is completion order, which no two
+    // runs agree on. Written only after certification, and written from the
+    // rows that were certified.
+    records.sort_by_key(|record| record.index);
+
     let started = Instant::now();
     let verdict = certify_dumped_tree_cover(
         &formula,
@@ -135,6 +147,10 @@ fn main() -> ExitCode {
     let wall = started.elapsed().as_secs_f64();
     match verdict {
         Ok(certificate) => {
+            if let Some(path) = args.get("merged") {
+                fs::write(path, render_ledger(&records)).expect("write merged ledger");
+                println!("merged ledger written to {path}");
+            }
             println!("{}", certificate.summary());
             println!(
                 "{{\"status\":\"certified\",\"a\":{a},\"b\":{b},\"k\":{k},\"n\":{n},\
