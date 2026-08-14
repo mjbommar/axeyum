@@ -62,8 +62,8 @@
 //! **Relational division and congruence**: `Nat.divMod` carries quotient and
 //! remainder witnesses and proves existence, uniqueness, and floor-order laws.
 //! `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v` avoids signed subtraction;
-//! reflexivity, symmetry, transitivity, and additive compatibility are checked
-//! theorems.
+//! reflexivity, symmetry, transitivity, additive closure, and common-factor
+//! multiplication compatibility are checked theorems.
 //!
 //! ## What is **not** here
 //!
@@ -323,6 +323,8 @@ pub struct NatPrelude {
     pub mod_eq_add_right: NameId,
     /// `Nat.mod_eq_add : modEq d a b → modEq d c e → modEq d (a+c) (b+e)`.
     pub mod_eq_add: NameId,
+    /// `Nat.mod_eq_mul_left : ∀ d a b c, modEq d a b → modEq d (c*a) (c*b)`.
+    pub mod_eq_mul_left: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -464,6 +466,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             mod_eq_add_left: kernel.name_str(nat, "mod_eq_add_left"),
             mod_eq_add_right: kernel.name_str(nat, "mod_eq_add_right"),
             mod_eq_add: kernel.name_str(nat, "mod_eq_add"),
+            mod_eq_mul_left: kernel.name_str(nat, "mod_eq_mul_left"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -714,6 +717,7 @@ fn declare_modular_congruence(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_mod_eq_trans(d, &p, nat, anon, one)?;
     declare_mod_eq_add_left(d, &p, nat, anon, one)?;
     declare_mod_eq_additive_compatibility(d, &p)?;
+    declare_mod_eq_mul_left(d, &p, nat, anon, one)?;
     Ok(())
 }
 
@@ -960,6 +964,161 @@ fn declare_mod_eq_additive_compatibility(
     })?;
 
     Ok(())
+}
+
+fn declare_mod_eq_mul_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    nat: ExprId,
+    anon: NameId,
+    one: LevelId,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.mod_eq_mul_left, 4, &|d, values| {
+        let (modulus, left, right, factor) = (values[0], values[1], values[2], values[3]);
+        let source = d.mod_eq(modulus, left, right);
+        let scaled_left = d.mul(factor, left);
+        let scaled_right = d.mul(factor, right);
+        let target = d.mod_eq(modulus, scaled_left, scaled_right);
+        let source_fv = d.fresh_fvar();
+        let source_proof = d.kernel().fvar(source_fv);
+        let outer_predicate = d.mod_eq_outer_predicate(modulus, left, right);
+        let outer_motive = d.kernel().lam(anon, source, target, BinderInfo::Default);
+        let outer_minor = {
+            let u_fv = d.fresh_fvar();
+            let u = d.kernel().fvar(u_fv);
+            let inner_source = d.mod_eq_inner_exists(modulus, left, right, u);
+            let inner_source_fv = d.fresh_fvar();
+            let inner_source_proof = d.kernel().fvar(inner_source_fv);
+            let inner_predicate = d.mod_eq_inner_predicate(modulus, left, right, u);
+            let inner_motive = d
+                .kernel()
+                .lam(anon, inner_source, target, BinderInfo::Default);
+            let inner_minor = {
+                let v_fv = d.fresh_fvar();
+                let v = d.kernel().fvar(v_fv);
+                let du = d.mul(modulus, u);
+                let dv = d.mul(modulus, v);
+                let left_sum = d.add(left, du);
+                let right_sum = d.add(right, dv);
+                let equation_ty = d.eq(left_sum, right_sum);
+                let equation_fv = d.fresh_fvar();
+                let equation = d.kernel().fvar(equation_fv);
+                let factor_u = d.mul(factor, u);
+                let factor_v = d.mul(factor, v);
+                let target_left = d.mod_eq_sum(modulus, scaled_left, factor_u);
+                let target_right = d.mod_eq_sum(modulus, scaled_right, factor_v);
+                let factor_du = d.mul(factor, du);
+                let factor_dv = d.mul(factor, dv);
+                let distributed_left = d.add(scaled_left, factor_du);
+                let distributed_right = d.add(scaled_right, factor_dv);
+                let factored_left = d.mul(factor, left_sum);
+                let factored_right = d.mul(factor, right_sum);
+
+                let scaled_u = mod_eq_scaled_multiple(d, &p, modulus, factor, u);
+                let modulus_factor_u = d.mul(modulus, factor_u);
+                let step1 = d.congr(modulus_factor_u, factor_du, scaled_u, &|d, value| {
+                    d.add(scaled_left, value)
+                });
+                let left_distrib = d.lemma(p.left_distrib, &[factor, left, du]);
+                let step2 = d.symm(factored_left, distributed_left, left_distrib);
+                let step3 = d.congr(left_sum, right_sum, equation, &|d, value| {
+                    d.mul(factor, value)
+                });
+                let step4 = d.lemma(p.left_distrib, &[factor, right, dv]);
+                let scaled_v = mod_eq_scaled_multiple(d, &p, modulus, factor, v);
+                let modulus_factor_v = d.mul(modulus, factor_v);
+                let reverse_scaled_v = d.symm(modulus_factor_v, factor_dv, scaled_v);
+                let step5 = d.congr(
+                    factor_dv,
+                    modulus_factor_v,
+                    reverse_scaled_v,
+                    &|d, value| d.add(scaled_right, value),
+                );
+                let (_, scaled_equation) = d.chain(
+                    target_left,
+                    &[
+                        (distributed_left, step1),
+                        (factored_left, step2),
+                        (factored_right, step3),
+                        (distributed_right, step4),
+                        (target_right, step5),
+                    ],
+                );
+                let target_outer = d.mod_eq_outer_predicate(modulus, scaled_left, scaled_right);
+                let target_inner =
+                    d.mod_eq_inner_predicate(modulus, scaled_left, scaled_right, factor_u);
+                let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                let inner_proof = d.apply(intro, &[nat, target_inner, factor_v, scaled_equation]);
+                let body = d.apply(intro, &[nat, target_outer, factor_u, inner_proof]);
+                let with_equation = d.lam_fv(equation_fv, equation_ty, body);
+                d.lam_fv(v_fv, nat, with_equation)
+            };
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(
+                rec,
+                &[
+                    nat,
+                    inner_predicate,
+                    inner_motive,
+                    inner_minor,
+                    inner_source_proof,
+                ],
+            );
+            let with_inner = d.lam_fv(inner_source_fv, inner_source, body);
+            d.lam_fv(u_fv, nat, with_inner)
+        };
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(
+            rec,
+            &[
+                nat,
+                outer_predicate,
+                outer_motive,
+                outer_minor,
+                source_proof,
+            ],
+        );
+        let stmt = d.arrow(source, target);
+        let proof = d.lam_fv(source_fv, source, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `d * (c*u) = c * (d*u)`, from associativity and commutativity.
+fn mod_eq_scaled_multiple(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    modulus: ExprId,
+    factor: ExprId,
+    witness: ExprId,
+) -> ExprId {
+    let p = *p;
+    let factor_witness = d.mul(factor, witness);
+    let start = d.mul(modulus, factor_witness);
+    let modulus_factor = d.mul(modulus, factor);
+    let modulus_factor_witness = d.mul(modulus_factor, witness);
+    let factor_modulus = d.mul(factor, modulus);
+    let factor_modulus_witness = d.mul(factor_modulus, witness);
+    let modulus_witness = d.mul(modulus, witness);
+    let target = d.mul(factor, modulus_witness);
+    let assoc_left = d.lemma(p.mul_assoc, &[modulus, factor, witness]);
+    let step1 = d.symm(modulus_factor_witness, start, assoc_left);
+    let commute = d.lemma(p.mul_comm, &[modulus, factor]);
+    let step2 = d.congr(modulus_factor, factor_modulus, commute, &|d, value| {
+        d.mul(value, witness)
+    });
+    let step3 = d.lemma(p.mul_assoc, &[factor, modulus, witness]);
+    let (_, proof) = d.chain(
+        start,
+        &[
+            (modulus_factor_witness, step1),
+            (factor_modulus_witness, step2),
+            (target, step3),
+        ],
+    );
+    proof
 }
 
 #[allow(clippy::too_many_arguments)]

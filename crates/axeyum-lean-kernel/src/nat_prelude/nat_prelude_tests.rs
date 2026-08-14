@@ -171,6 +171,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_add_left,
         p.mod_eq_add_right,
         p.mod_eq_add,
+        p.mod_eq_mul_left,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -842,6 +843,15 @@ fn modular_congruence_is_a_checked_equivalence_relation() {
                 f.explain(&e)
             )
         });
+
+    let factor = f.num(4);
+    let scaled = f.lemma(p.mod_eq_mul_left, &[five, two, seven, factor, two_to_seven]);
+    let scaled_left = f.mul(factor, two);
+    let scaled_right = f.mul(factor, seven);
+    let scaled_ty = f.mod_eq(five, scaled_left, scaled_right);
+    let scaled_name = f.name("four_times_two_mod_five_four_times_seven");
+    f.declare_theorem(scaled_name, scaled_ty, scaled)
+        .unwrap_or_else(|e| panic!("left-scaled congruence should admit: {}", f.explain(&e)));
 }
 
 #[test]
@@ -2318,7 +2328,33 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 51, "every negative control must be rejected");
+    // NC52 — multiplicative congruence retains the common left factor.
+    {
+        let name = f.name("nc52_mod_eq_mul_left_wrong_factor");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let relation = f.concrete_mod_eq(five, two, seven, one, zero);
+        let proof = f.lemma(p.mod_eq_mul_left, &[five, two, seven, three, relation]);
+        let wrong_left = f.mul(four, two);
+        let scaled_right = f.mul(three, seven);
+        let bad = f.mod_eq(five, wrong_left, scaled_right);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC52: multiplicative congruence must retain its common factor");
+        println!(
+            "NC52 (wrong modular multiplication factor) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 52, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2341,7 +2377,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        12 + 78,
+        12 + 79,
         "every promised definition and theorem must be rendered"
     );
 }

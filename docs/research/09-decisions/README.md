@@ -487,3 +487,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0429](adr-0429-cas-ideal-refutation-certificate.md) | Multivariate ideal refutation certified by a polynomial identity | proposed |
 | [0430](adr-0430-left-addition-preserves-nat-congruence.md) | Left addition preserves Nat congruence | accepted |
 | [0431](adr-0431-additive-closure-of-nat-congruence.md) | Additive closure of Nat congruence | accepted |
+| [0432](adr-0432-left-multiplication-preserves-nat-congruence.md) | Left multiplication preserves Nat congruence | accepted |
