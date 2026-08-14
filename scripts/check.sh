@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
-# Plain-shell fallback for `just check`: runs every gate CI runs (except
-# cargo-deny, which needs the tool installed) so the preferred aggregate check
-# is runnable on a fresh machine without `just`. Mirrors the `check` recipe in
-# the justfile; keep the two in sync.
+# Plain-shell fallback for `just check`: runs the gates CI runs (except
+# cargo-deny, which needs the tool installed) so an aggregate check is runnable
+# on a fresh machine without `just`.
+#
+# It does NOT mirror the `check` recipe, and the claim that it did -- which lived
+# in this header for the life of the file -- was false: measured 2026-08-14, this
+# script ran 61 steps and `just check` ran 112, each missing something the other
+# had. `scripts/check-aggregate-scope.sh` now measures the difference on every
+# run and fails when it grows; the accepted difference is written down in
+# `scripts/check-aggregate-scope.expected`. Treat `just check` as the gate and
+# this as the no-`just` fallback that may lag it.
 #
 # Usage: ./scripts/check.sh
 # Honor CARGO_BUILD_JOBS / a low -j on memory-constrained hosts, e.g.
