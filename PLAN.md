@@ -339,9 +339,9 @@ regression. Guard-isolating satisfiable-query forgeries replaced ineffective
 tamper cases. **Next:** exact-rational LP over candidate residues instead of
 unit-coefficient subset search; see `agent-i-cas-bridge/FEEDBACK.md` F8.
 
-**Immediate action (`WIP`, Lean lane).** Gate ADR-0436, the converse from
-`modEq` and supplied divisions to equal remainders; next package the two-way
-characterization and connect congruence to divisibility. No credit.
+**Immediate action (`WIP`, Lean lane).** Gate ADR-0437, the relational
+remainder/congruence equivalence; next prove congruence-to-zero iff divisibility,
+including modulus zero. No credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
 A5 V2 QF_RDL row 1 remains pending and uncredited.
 

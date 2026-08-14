@@ -177,6 +177,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_mul,
         p.div_mod_same_remainder_mod_eq,
         p.div_mod_remainder_eq_of_mod_eq,
+        p.mod_eq_iff_div_mod_remainder_eq,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -970,6 +971,35 @@ fn modular_congruence_is_a_checked_equivalence_relation() {
                 f.explain(&e)
             )
         });
+
+    let remainder_characterization = f.lemma(
+        p.mod_eq_iff_div_mod_remainder_eq,
+        &[
+            five,
+            seven,
+            twelve,
+            one,
+            two,
+            two,
+            two,
+            left_relation,
+            right_relation,
+        ],
+    );
+    let congruence_ty = f.mod_eq(five, seven, twelve);
+    let remainder_characterization_ty = f.const_app(p.logic.iff, &[congruence_ty, remainder_eq_ty]);
+    let characterization_name = f.name("mod_eq_iff_equal_relational_remainders");
+    f.declare_theorem(
+        characterization_name,
+        remainder_characterization_ty,
+        remainder_characterization,
+    )
+    .unwrap_or_else(|e| {
+        panic!(
+            "modular congruence/remainder characterization should admit: {}",
+            f.explain(&e)
+        )
+    });
 }
 
 #[test]
@@ -2672,7 +2702,62 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 57, "every negative control must be rejected");
+    // NC58 — the packaged characterization retains the remainder endpoints.
+    {
+        let name = f.name("nc58_mod_eq_iff_wrong_remainder");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let twelve = f.num(12);
+        let bound_ty = f.lt(two, five);
+        let bound = f.lemma(p.le_add_right, &[three, two]);
+        let left_product = f.mul(five, one);
+        let left_reconstructed = f.add(left_product, two);
+        let left_equation_ty = f.eq(seven, left_reconstructed);
+        let left_equation = f.refl(seven);
+        let left_relation = f.const_app(
+            p.logic.and_intro,
+            &[left_equation_ty, bound_ty, left_equation, bound],
+        );
+        let right_product = f.mul(five, two);
+        let right_reconstructed = f.add(right_product, two);
+        let right_equation_ty = f.eq(twelve, right_reconstructed);
+        let right_equation = f.refl(twelve);
+        let right_relation = f.const_app(
+            p.logic.and_intro,
+            &[right_equation_ty, bound_ty, right_equation, bound],
+        );
+        let proof = f.lemma(
+            p.mod_eq_iff_div_mod_remainder_eq,
+            &[
+                five,
+                seven,
+                twelve,
+                one,
+                two,
+                two,
+                two,
+                left_relation,
+                right_relation,
+            ],
+        );
+        let congruence_ty = f.mod_eq(five, seven, twelve);
+        let wrong_remainder_eq = f.eq(two, one);
+        let bad = f.const_app(p.logic.iff, &[congruence_ty, wrong_remainder_eq]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC58: remainder characterization must retain both endpoints");
+        println!(
+            "NC58 (wrong packaged remainder endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 58, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2695,7 +2780,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        12 + 84,
+        12 + 85,
         "every promised definition and theorem must be rendered"
     );
 }

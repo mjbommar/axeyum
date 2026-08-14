@@ -338,6 +338,9 @@ pub struct NatPrelude {
     /// `Nat.div_mod_remainder_eq_of_mod_eq :
     ///   modEq d a b → divMod d a qa ra → divMod d b qb rb → ra = rb`.
     pub div_mod_remainder_eq_of_mod_eq: NameId,
+    /// `Nat.mod_eq_iff_div_mod_remainder_eq :
+    ///   divMod d a qa ra → divMod d b qb rb → (modEq d a b ↔ ra = rb)`.
+    pub mod_eq_iff_div_mod_remainder_eq: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -485,6 +488,8 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             mod_eq_mul: kernel.name_str(nat, "mod_eq_mul"),
             div_mod_same_remainder_mod_eq: kernel.name_str(nat, "div_mod_same_remainder_mod_eq"),
             div_mod_remainder_eq_of_mod_eq: kernel.name_str(nat, "div_mod_remainder_eq_of_mod_eq"),
+            mod_eq_iff_div_mod_remainder_eq: kernel
+                .name_str(nat, "mod_eq_iff_div_mod_remainder_eq"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -739,6 +744,7 @@ fn declare_modular_congruence(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_mod_eq_multiplicative_compatibility(d, &p)?;
     declare_div_mod_same_remainder_mod_eq(d, &p, nat, anon, one)?;
     declare_div_mod_remainder_eq_of_mod_eq(d, &p, nat, anon, one)?;
+    declare_mod_eq_iff_div_mod_remainder_eq(d, &p)?;
     Ok(())
 }
 
@@ -1043,6 +1049,91 @@ fn declare_div_mod_remainder_eq_of_mod_eq(
         let with_right = d.lam_fv(right_relation_fv, right_relation_ty, body);
         let with_left = d.lam_fv(left_relation_fv, left_relation_ty, with_right);
         let proof = d.lam_fv(congruence_fv, congruence_ty, with_left);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+fn declare_mod_eq_iff_div_mod_remainder_eq(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    // mod_eq_iff_div_mod_remainder_eq :
+    //   divMod d a qa ra → divMod d b qb rb → (modEq d a b ↔ ra = rb)
+    d.theorem(p.mod_eq_iff_div_mod_remainder_eq, 7, &|d, values| {
+        let (modulus, left, right, left_quotient, left_remainder, right_quotient, right_remainder) = (
+            values[0], values[1], values[2], values[3], values[4], values[5], values[6],
+        );
+        let left_relation_ty =
+            d.div_mod(modulus, left, left_quotient, left_remainder);
+        let right_relation_ty =
+            d.div_mod(modulus, right, right_quotient, right_remainder);
+        let congruence_ty = d.mod_eq(modulus, left, right);
+        let remainder_eq_ty = d.eq(left_remainder, right_remainder);
+        let target = d.const_app(p.logic.iff, &[congruence_ty, remainder_eq_ty]);
+        let left_relation_fv = d.fresh_fvar();
+        let left_relation = d.kernel().fvar(left_relation_fv);
+        let right_relation_fv = d.fresh_fvar();
+        let right_relation = d.kernel().fvar(right_relation_fv);
+
+        let forward = {
+            let congruence_fv = d.fresh_fvar();
+            let congruence = d.kernel().fvar(congruence_fv);
+            let body = d.lemma(
+                p.div_mod_remainder_eq_of_mod_eq,
+                &[
+                    modulus,
+                    left,
+                    right,
+                    left_quotient,
+                    left_remainder,
+                    right_quotient,
+                    right_remainder,
+                    congruence,
+                    left_relation,
+                    right_relation,
+                ],
+            );
+            d.lam_fv(congruence_fv, congruence_ty, body)
+        };
+        let reverse = {
+            let remainder_eq_fv = d.fresh_fvar();
+            let remainder_eq = d.kernel().fvar(remainder_eq_fv);
+            let left_remainder_motive = d.eq_motive(left_remainder, &|d, remainder| {
+                d.div_mod(modulus, left, left_quotient, remainder)
+            });
+            let left_relation_at_right_remainder = d.transport(
+                left_remainder,
+                left_remainder_motive,
+                left_relation,
+                right_remainder,
+                remainder_eq,
+            );
+            let body = d.lemma(
+                p.div_mod_same_remainder_mod_eq,
+                &[
+                    modulus,
+                    left,
+                    right,
+                    left_quotient,
+                    right_quotient,
+                    right_remainder,
+                    left_relation_at_right_remainder,
+                    right_relation,
+                ],
+            );
+            d.lam_fv(remainder_eq_fv, remainder_eq_ty, body)
+        };
+        let body = d.const_app(
+            p.logic.iff_intro,
+            &[congruence_ty, remainder_eq_ty, forward, reverse],
+        );
+        let right_to_target = d.arrow(right_relation_ty, target);
+        let stmt = d.arrow(left_relation_ty, right_to_target);
+        let with_right = d.lam_fv(right_relation_fv, right_relation_ty, body);
+        let proof = d.lam_fv(left_relation_fv, left_relation_ty, with_right);
         (stmt, proof)
     })?;
     Ok(())

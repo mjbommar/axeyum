@@ -492,3 +492,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0434](adr-0434-same-euclidean-remainder-implies-nat-congruence.md) | Equal Euclidean remainders imply Nat congruence | accepted |
 | [0435](adr-0435-relational-nat-division-shift-by-a-multiple.md) | Shift relational Nat division by a divisor multiple | accepted |
 | [0436](adr-0436-nat-congruence-forces-equal-euclidean-remainders.md) | Nat congruence forces equal Euclidean remainders | accepted |
+| [0437](adr-0437-relational-euclidean-remainder-characterizes-nat-congruence.md) | Relational Euclidean remainders characterize Nat congruence | accepted |
