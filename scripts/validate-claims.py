@@ -63,8 +63,9 @@ EPISTEMIC = {"axiom", "proved", "computed", "empirical", "conjectured", "open"}
 LANGUAGES = {"cnf-family", "smtlib2", "axeyum-term", "prose-only"}
 RELATIONS = {"instance-of", "exercises", "refutes", "frontier-of", "uses-technique"}
 EVIDENCE_KINDS = {"witness-replay", "unsat-certificate", "cube-cover",
-                  "exhaustive-enumeration", "published-value-replication",
-                  "bound-citation", "instance-pin"}
+                  "cube-tree-cover", "exhaustive-enumeration",
+                  "published-value-replication", "bound-citation",
+                  "instance-pin"}
 CHECK_STATUS = {"checked", "replay-only", "not-checked"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")

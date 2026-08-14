@@ -276,12 +276,13 @@
               "witness-replay",
               "unsat-certificate",
               "cube-cover",
+              "cube-tree-cover",
               "exhaustive-enumeration",
               "published-value-replication",
               "bound-citation",
               "instance-pin"
             ],
-            "description": "witness-replay: a concrete object re-validated against the definition. unsat-certificate: DRAT/LRAT/Farkas artifact re-checked by an independent checker. cube-cover: a decomposed refutation — every cube of an exhaustive case split independently refuted and its proof checked; the artifact is the per-cube ledger and the checker re-verifies exhaustiveness against the formula's own case-split clauses. exhaustive-enumeration: full finite sweep. published-value-replication: our pipeline reproduces a cited value. bound-citation: a bound taken from literature, NOT machine-checked here."
+            "description": "witness-replay: a concrete object re-validated against the definition. unsat-certificate: DRAT/LRAT/Farkas artifact re-checked by an independent checker. cube-cover: a decomposed refutation — every cube of an exhaustive case split independently refuted and its proof checked; the artifact is the per-cube ledger and the checker re-verifies exhaustiveness against the formula's own case-split clauses. cube-tree-cover: the same, for an ADAPTIVE cover whose cubes sit at mixed depths because a cube that exhausted its budget was split further; the checker re-verifies that the cubes are exactly the leaf set of a complete branch trie (no hole, no cube inside another) rather than exactly a product. exhaustive-enumeration: full finite sweep. published-value-replication: our pipeline reproduces a cited value. bound-citation: a bound taken from literature, NOT machine-checked here."
           },
           "parameters": {
             "type": "object",
