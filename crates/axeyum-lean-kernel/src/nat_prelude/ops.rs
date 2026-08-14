@@ -4,7 +4,7 @@
 //! downstream developments implement [`NatOps`] with its two required methods.
 
 use super::NatPrelude;
-use super::{bezout_after_mp_exists, bezout_tail_exists};
+use super::bezout::{bezout_after_mp_exists, bezout_tail_exists};
 use crate::BinderInfo;
 use crate::Kernel;
 use crate::KernelError;
