@@ -44,12 +44,8 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The Rado/Ramsey-driven
-[`Lean requirements`](docs/plan/lean-kernel-requirements-2026-08-13.md) are
-**WIP**. R1/TL3.3 is pushed and hosted-green at `f2ccc4322`. R2 retains
-34-assumption Int for reconstruction and uses Nat prefixes for credited Rado
-rigidity. Zero-axiom Nat divisibility, order inversion, and finite-range sums
-are exact-pushed through `fc2020dd9`; its hosted gates are running.
+The [Lean requirements](docs/plan/lean-kernel-requirements-2026-08-13.md) are
+**WIP**. Nat is zero-axiom; Int reconstruction remains assumption-bearing.
 
 Exact pushed `e996afd83` passed `just check`; its RDL capture then failed closed
 at 196/200 because allocator arenas accumulated across files. ADR-0379 rejects
@@ -340,9 +336,8 @@ regression. Guard-isolating satisfiable-query forgeries replaced ineffective
 tamper cases. **Next:** exact-rational LP over candidate residues instead of
 unit-coefficient subset search; see `agent-i-cas-bridge/FEEDBACK.md` F8.
 
-**Immediate action (`WIP`, Lean lane).** Gate ADR-0439, positive-modulus
-congruence to zero implies divisibility; next close modulus zero and package the
-all-Nat `Iff`. No credit.
+**Immediate action (`WIP`, Lean lane).** Gate ADR-0439, then close modulus zero
+and package the all-Nat `Iff`. No credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
 A5 V2 QF_RDL row 1 remains pending and uncredited.
 

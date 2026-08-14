@@ -179,6 +179,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_mod_remainder_eq_of_mod_eq,
         p.mod_eq_iff_div_mod_remainder_eq,
         p.mod_eq_zero_of_dvd,
+        p.dvd_of_mod_eq_zero_of_pos,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -1140,6 +1141,16 @@ fn divisibility_introduction_and_addition_are_checked() {
 
     let one = f.num(1);
     let positive = f.lemma(p.le_add_right, &[one, one]);
+    let recovered_divisibility = f.lemma(
+        p.dvd_of_mod_eq_zero_of_pos,
+        &[two, ten, positive, ten_mod_two_zero],
+    );
+    f.k.infer(recovered_divisibility).unwrap_or_else(|e| {
+        panic!(
+            "positive congruence to zero should imply divisibility: {}",
+            f.explain(&e)
+        )
+    });
     let h10 = f.const_app(ten_name, &[]);
     let cancelled = f.lemma(
         p.dvd_add_right_cancel_of_pos,
@@ -2791,7 +2802,35 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 59, "every negative control must be rejected");
+    // NC60 — the positive converse retains the divisible value.
+    {
+        let name = f.name("nc60_dvd_of_mod_eq_zero_wrong_value");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let four = f.num(4);
+        let five = f.num(5);
+        let ten = f.num(10);
+        let eleven = f.num(11);
+        let positive = f.lemma(p.le_add_right, &[one, four]);
+        let congruence = f.concrete_mod_eq(five, ten, zero, zero, two);
+        let proof = f.lemma(
+            p.dvd_of_mod_eq_zero_of_pos,
+            &[five, ten, positive, congruence],
+        );
+        let bad = f.dvd(five, eleven);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC60: positive congruence-to-zero converse must retain its value");
+        println!(
+            "NC60 (wrong positive-converse divisible value) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 60, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2814,7 +2853,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        12 + 86,
+        12 + 87,
         "every promised definition and theorem must be rendered"
     );
 }
