@@ -338,6 +338,27 @@ Lean v4.30.0 checks, to `R_3(x-y=5z)=286` and `R_4(2(x-y)=z)=56`, with
 (spool admitted `Declaration::Theorem`s and truncate behind them) — that is the
 change that makes proof size disk-bounded rather than RAM-bounded.
 
+**CAS bridge lane (`DONE`, agent-i, 2026-08-13).** `cas-ideal-refuter`
+(ADR-0429, `119858e2c` + `04249ded3`) is the first solver route that reasons
+about the *ideal* asserted equations generate. New in `axeyum-cas`:
+`groebner_cert.rs`, cofactor-tracking Buchberger, so ideal membership emits the
+identity `target = Σ cᵢ·gᵢ + r` that a checker with no CAS dependency re-derives
+— `ideal_contains` returned a bare `bool`, which under ADR-0386's own standard
+is not evidence. Four refutation shapes; the useful ones supply facts nobody
+asserted (a sum of squares, a product of two asserted bounds). Six query classes
+moved from `unknown` to `unsat`, all of them systems whose **atoms leave the
+polynomial fragment** (`div`, `mod`, `ite`, UF) — including the Rado `L3` shape
+over three `div` atoms, 20 s timeout → 207 ms. Two counter-measurements worth
+keeping: the obvious bridge (Sturm) is a *duplication* of the stronger
+`nra_real_root.rs`, not a gap; and the first placement, beside the ADR-0386 fast
+path, was a **regression** (0.96 ms → 3.96 ms), so the route sits behind
+`nra-real-root` and `nia-bounded-blast`. **The finding to propagate:** six of
+seven checker guards could be deleted with every tamper test still green — they
+all reject through the identity check. Replaced with six *forgeries* (valid
+certificates for satisfiable queries) that map 1:1 onto their guards. **Next:
+an exact-rational LP over the candidate residues** to replace the
+unit-coefficient subset search; see `agent-i-cas-bridge/FEEDBACK.md` F8.
+
 **Immediate action (`WIP`, Lean lane).** Gate ADR-0432; next prove right-factor
 and pairwise multiplication closure for relational Nat congruence. No credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
