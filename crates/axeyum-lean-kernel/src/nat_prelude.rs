@@ -140,6 +140,8 @@ pub struct NatPrelude {
     pub sum_range_zero: NameId,
     /// `sumRange_succ : ∀ f n, sumRange f (succ n) = sumRange f n + f n`.
     pub sum_range_succ: NameId,
+    /// `mul_sumRange : ∀ a f n, a * sumRange f n = sumRange (fun i => a * f i) n`.
+    pub mul_sum_range: NameId,
     /// `mul_sumRange_pow : ∀ a n, a * sumRange (a^·) n = sumRange (a^(·+1)) n`.
     pub mul_sum_range_pow: NameId,
 
@@ -260,6 +262,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             pow_succ: kernel.name_str(nat, "pow_succ"),
             sum_range_zero: kernel.name_str(nat, "sumRange_zero"),
             sum_range_succ: kernel.name_str(nat, "sumRange_succ"),
+            mul_sum_range: kernel.name_str(nat, "mul_sumRange"),
             mul_sum_range_pow: kernel.name_str(nat, "mul_sumRange_pow"),
             zero_add: kernel.name_str(nat, "zero_add"),
             succ_add: kernel.name_str(nat, "succ_add"),
@@ -822,6 +825,71 @@ fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
 /// test-only recurrence.
 fn declare_finite_sum_theorems(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
+
+    // mul_sumRange : ∀ a f n,
+    //   a * sumRange f n = sumRange (fun i => a * f i) n
+    {
+        let nat = d.nat_ty();
+        let fn_ty = d.arrow(nat, nat);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let scaled_fn = |d: &mut NatDev<'_>| {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let fi = d.apply(f, &[i]);
+            let body = d.mul(a, fi);
+            let nat = d.nat_ty();
+            d.lam_fv(i_fv, nat, body)
+        };
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let lhs_sum = d.sum_range(f, x);
+            let lhs = d.mul(a, lhs_sum);
+            let scaled = scaled_fn(d);
+            let rhs = d.sum_range(scaled, x);
+            d.eq(lhs, rhs)
+        };
+        let stmt = motive(d, n);
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let zero = d.zero();
+                d.refl(zero)
+            },
+            &|d, j, ih| {
+                let prior = d.sum_range(f, j);
+                let fj = d.apply(f, &[j]);
+                let extended = d.add(prior, fj);
+                let start = d.mul(a, extended);
+                let a_prior = d.mul(a, prior);
+                let a_fj = d.mul(a, fj);
+                let distributed = d.add(a_prior, a_fj);
+                let h1 = d.lemma(p.left_distrib, &[a, prior, fj]);
+                let scaled = scaled_fn(d);
+                let scaled_prior = d.sum_range(scaled, j);
+                let end = d.add(scaled_prior, a_fj);
+                let h2 = d.congr(a_prior, scaled_prior, ih, &|d, t| d.add(t, a_fj));
+                let (_, proof) = d.chain(start, &[(distributed, h1), (end, h2)]);
+                proof
+            },
+            n,
+        );
+        let ty = {
+            let over_n = d.pi_fv(n_fv, nat, stmt);
+            let over_f = d.pi_fv(f_fv, fn_ty, over_n);
+            d.pi_fv(a_fv, nat, over_f)
+        };
+        let value = {
+            let over_n = d.lam_fv(n_fv, nat, proof);
+            let over_f = d.lam_fv(f_fv, fn_ty, over_n);
+            d.lam_fv(a_fv, nat, over_f)
+        };
+        d.declare_theorem(p.mul_sum_range, ty, value)?;
+    }
+
     d.theorem(p.mul_sum_range_pow, 2, &|d, v| {
         let (a, n) = (v[0], v[1]);
         let power_fn = |d: &mut NatDev<'_>, shifted: bool| {

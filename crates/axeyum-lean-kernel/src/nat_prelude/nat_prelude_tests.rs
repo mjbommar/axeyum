@@ -73,6 +73,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_succ,
         p.sum_range_zero,
         p.sum_range_succ,
+        p.mul_sum_range,
         p.mul_sum_range_pow,
         p.zero_add,
         p.succ_add,
@@ -265,6 +266,30 @@ fn geometric_sum_reindexing_is_checked() {
     assert!(f.k.def_eq(applied_ty, expected_ty));
     f.declare_theorem(name, applied_ty, proof)
         .unwrap_or_else(|e| panic!("nonempty reindexing should admit: {}", f.explain(&e)));
+}
+
+/// Scalar distribution is generic in the summand, so downstream mathematics
+/// can reuse it without introducing a Rado-specific recurrence.
+#[test]
+fn scalar_multiplication_distributes_over_finite_ranges() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let three = f.num(3);
+    let four = f.num(4);
+    let i_fv = f.fresh_fvar();
+    let i = f.k.fvar(i_fv);
+    let nat = f.nat_ty();
+    let identity = f.lam_fv(i_fv, nat, i);
+    let proof = f.lemma(p.mul_sum_range, &[three, identity, four]);
+    let ty = f.k.infer(proof).expect("distribution proof infers");
+    let name = f.name("three_distributes_over_first_four");
+    f.declare_theorem(name, ty, proof)
+        .unwrap_or_else(|e| panic!("finite-sum distribution should admit: {}", f.explain(&e)));
+
+    let sum = f.sum_range(identity, four);
+    let lhs = f.mul(three, sum);
+    let eighteen = f.num(18);
+    assert!(f.k.def_eq(lhs, eighteen), "3 * (0+1+2+3) must reduce to 18");
 }
 
 /// A downstream development proves something new out of the prelude's lemmas:
@@ -681,7 +706,34 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 12, "every negative control must be rejected");
+    // NC13 — scalar distribution retains the scalar. A proof for multiplication
+    // by two cannot be assigned the proposition for multiplication by three.
+    {
+        let name = f.name("nc13_sum_distribution_wrong_scalar");
+        let two = f.num(2);
+        let three = f.num(3);
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let nat = f.nat_ty();
+        let identity = f.lam_fv(i_fv, nat, i);
+        let proof = f.lemma(p.mul_sum_range, &[two, identity, three]);
+        let theorem = f.k.const_(p.mul_sum_range, vec![]);
+        let at_scalar = f.k.app(theorem, three);
+        let at_function = f.k.app(at_scalar, identity);
+        let wrong = f.k.app(at_function, three);
+        let bad = f.k.infer(wrong).expect("wrong-scalar target infers");
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC13: distribution must retain the exact scalar");
+        println!(
+            "NC13 (wrong distribution scalar) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 13, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -704,7 +756,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        6 + 28,
+        6 + 29,
         "every promised definition and theorem must be rendered"
     );
 }
