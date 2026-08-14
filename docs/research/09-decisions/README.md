@@ -529,3 +529,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0450](adr-0450-all-nat-divisibility-and-executable-remainder-bridge.md) | All-Nat divisibility and executable remainder bridge | accepted |
 | [0451](adr-0451-checked-nat-gcd-common-divisor-characterization.md) | Checked Nat gcd common-divisor characterization | accepted |
 | [0452](adr-0452-balanced-nat-bezout-certificates.md) | Balanced Nat Bézout certificates | accepted |
+| [0453](adr-0453-route-dependent-provability.md) | Two proof routes prove different theorems; keep the kernel constructive and make classicality an explicit, recorded assumption | proposed |
