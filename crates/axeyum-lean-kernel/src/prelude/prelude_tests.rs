@@ -44,6 +44,42 @@ fn pi_fvar(k: &mut Kernel, fvar: u64, ty: crate::ExprId, body: crate::ExprId) ->
     k.pi(anon, ty, body, BinderInfo::Default)
 }
 
+fn empty_relation(k: &mut Kernel, p: LogicPrelude, carrier: crate::ExprId) -> crate::ExprId {
+    let anon = k.anon();
+    let false_prop = k.const_(p.false_, vec![]);
+    let inner = k.lam(anon, carrier, false_prop, BinderInfo::Default);
+    k.lam(anon, carrier, inner, BinderInfo::Default)
+}
+
+fn empty_well_founded(
+    k: &mut Kernel,
+    p: LogicPrelude,
+    carrier: crate::ExprId,
+    carrier_level: crate::LevelId,
+    relation: crate::ExprId,
+) -> crate::ExprId {
+    let value_fvar = 30_000;
+    let predecessor_fvar = 30_001;
+    let impossible_fvar = 30_002;
+    let motive_proof_fvar = 30_003;
+    let value = k.fvar(value_fvar);
+    let predecessor = k.fvar(predecessor_fvar);
+    let impossible = k.fvar(impossible_fvar);
+    let false_prop = k.const_(p.false_, vec![]);
+    let acc = k.const_(p.acc, vec![carrier_level]);
+    let accessible_predecessor = apply_all(k, acc, &[carrier, relation, predecessor]);
+    let false_motive = lam_fvar(k, motive_proof_fvar, false_prop, accessible_predecessor);
+    let zero_level = k.level_zero();
+    let false_rec = k.const_(p.false_rec, vec![zero_level]);
+    let absurd = apply_all(k, false_rec, &[false_motive, impossible]);
+    let relation_proof_ty = apply_all(k, relation, &[predecessor, value]);
+    let with_impossible = lam_fvar(k, impossible_fvar, relation_proof_ty, absurd);
+    let no_predecessors = lam_fvar(k, predecessor_fvar, carrier, with_impossible);
+    let acc_intro = k.const_(p.acc_intro, vec![carrier_level]);
+    let accessible = apply_all(k, acc_intro, &[carrier, relation, value, no_predecessors]);
+    lam_fvar(k, value_fvar, carrier, accessible)
+}
+
 /// A test fixture: a kernel with the prelude plus abstract `A, B, C : Prop` and
 /// `ha : A`, `hb : B` axioms.
 struct Fixture {
@@ -165,6 +201,7 @@ fn prelude_admits_all_declarations() {
         p.acc_intro,
         p.acc_rec,
         p.well_founded,
+        p.well_founded_fix,
         p.not,
     ] {
         assert!(
@@ -428,6 +465,7 @@ fn accessibility_prelude_build_is_deterministic() {
             prelude.acc_intro,
             prelude.acc_rec,
             prelude.well_founded,
+            prelude.well_founded_fix,
         ]
         .into_iter()
         .map(|name| {
@@ -444,6 +482,61 @@ fn accessibility_prelude_build_is_deterministic() {
     assert_eq!(
         first, second,
         "accessibility declarations must repeat exactly"
+    );
+}
+
+/// `WellFounded.fix` is universe-polymorphic and computes through the generic
+/// `Acc.rec` path. A `Prop`-level carrier and `Type`-level result deliberately
+/// distinguish its two universe arguments instead of testing only `u = v`.
+#[test]
+fn well_founded_fix_computes_across_universes() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
+    let zero_level = k.level_zero();
+    let one_level = k.level_succ(zero_level);
+    let carrier = k.const_(p.true_, vec![]);
+    let point = k.const_(p.true_intro, vec![]);
+    let nat = k.const_(p.nat, vec![]);
+    let zero = k.const_(p.nat_zero, vec![]);
+    let successor = k.const_(p.nat_succ, vec![]);
+    let one = k.app(successor, zero);
+    let relation = empty_relation(&mut k, p, carrier);
+    let well_founded = empty_well_founded(&mut k, p, carrier, zero_level, relation);
+
+    let family_fvar = 31_000;
+    let family = lam_fvar(&mut k, family_fvar, carrier, nat);
+    let step_value_fvar = 31_001;
+    let step_predecessor_fvar = 31_002;
+    let step_relation_fvar = 31_003;
+    let step_recursive_fvar = 31_004;
+    let step_value = k.fvar(step_value_fvar);
+    let step_predecessor = k.fvar(step_predecessor_fvar);
+    let relation_proof_ty = apply_all(&mut k, relation, &[step_predecessor, step_value]);
+    let recursive_at_relation = pi_fvar(&mut k, step_relation_fvar, relation_proof_ty, nat);
+    let recursive_values = pi_fvar(
+        &mut k,
+        step_predecessor_fvar,
+        carrier,
+        recursive_at_relation,
+    );
+    let step_with_recursive = lam_fvar(&mut k, step_recursive_fvar, recursive_values, one);
+    let step = lam_fvar(&mut k, step_value_fvar, carrier, step_with_recursive);
+
+    let fix = k.const_(p.well_founded_fix, vec![zero_level, one_level]);
+    let computed = apply_all(
+        &mut k,
+        fix,
+        &[carrier, relation, family, well_founded, step, point],
+    );
+    let inferred = k.infer(computed).expect("WellFounded.fix should infer");
+    assert!(k.def_eq(inferred, nat), "the result should have type Nat");
+    assert!(
+        k.def_eq(computed, one),
+        "WellFounded.fix should delta/iota-reduce through the accessibility proof"
+    );
+    assert!(
+        !k.def_eq(computed, zero),
+        "the computation control must distinguish the selected step result"
     );
 }
 
