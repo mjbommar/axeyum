@@ -498,3 +498,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0440](adr-0440-nat-congruence-to-zero-characterizes-divisibility.md) | Nat congruence to zero characterizes divisibility | accepted |
 | [0441](adr-0441-native-accessibility-and-well-foundedness-foundation.md) | Native accessibility and well-foundedness foundation | accepted |
 | [0442](adr-0442-generic-checked-well-founded-fixpoint.md) | Generic checked well-founded fixpoint | accepted |
+| [0443](adr-0443-checked-well-founded-fixpoint-equation.md) | Checked well-founded fixpoint equation | accepted |

@@ -36,7 +36,7 @@
 //!   accessibility predicate with its higher-order recursive constructor and
 //!   generated `Acc.rec`; **`WellFounded r := ∀ a, Acc r a`** packages global
 //!   accessibility, and **`WellFounded.fix`** supplies a universe-polymorphic
-//!   fixpoint for well-founded algorithms.
+//!   fixpoint with a checked **`WellFounded.fix_eq`** unfolding theorem.
 //! - **`Not (a : Prop) : Prop := a → False`** — a [`Declaration::Definition`],
 //!   not an inductive.
 //!
@@ -129,6 +129,9 @@ pub struct LogicPrelude {
     /// `WellFounded.fix.{u,v}` — the generic well-founded fixpoint built from
     /// `Acc.rec`.
     pub well_founded_fix: NameId,
+    /// `WellFounded.fix_eq.{u,v}` — the checked unfolding equation for the
+    /// generic well-founded fixpoint.
+    pub well_founded_fix_eq: NameId,
     /// The result-family universe parameter `v` of `WellFounded.fix`.
     pub well_founded_fix_vparam: NameId,
 
@@ -581,6 +584,7 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> Result<LogicPrelude, KernelEr
         // Its value is the corresponding `Acc.rec` application. Source-level
         // termination elaboration remains outside this core definition.
         let well_founded_fix = kernel.name_str(well_founded, "fix");
+        let well_founded_fix_eq = kernel.name_str(well_founded, "fix_eq");
         let well_founded_fix_vparam = kernel.name_str(anon, "v");
         {
             let u_lvl = kernel.level_param(acc_uparam);
@@ -854,6 +858,484 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> Result<LogicPrelude, KernelEr
             })?;
         }
 
+        // WellFounded.fix_eq.{u,v} :
+        //   ∀ {α} {r} {C} (wf : WellFounded r) (F) x,
+        //     fix wf F x = F x (fun y _ => fix wf F y).
+        // Accessibility induction makes the equation reflexive in the single
+        // constructor case: proof irrelevance identifies the accessibility
+        // proof selected by `wf` with the constructor field used by `Acc.rec`.
+        {
+            let u_lvl = kernel.level_param(acc_uparam);
+            let v_lvl = kernel.level_param(well_founded_fix_vparam);
+            let zero_lvl = kernel.level_zero();
+            let sort_u = kernel.sort(u_lvl);
+            let sort_v = kernel.sort(v_lvl);
+            let prop = kernel.prop();
+            let acc_const = kernel.const_(acc, vec![u_lvl]);
+            let well_founded_const = kernel.const_(well_founded, vec![u_lvl]);
+            let fix_const = kernel.const_(well_founded_fix, vec![u_lvl, v_lvl]);
+            let eq_const = kernel.const_(eq, vec![v_lvl]);
+
+            let alpha_fvar = 21_000;
+            let relation_fvar = 21_001;
+            let family_fvar = 21_002;
+            let well_founded_proof_fvar = 21_003;
+            let step_fvar = 21_004;
+            let value_fvar = 21_005;
+            let alpha = kernel.fvar(alpha_fvar);
+            let relation = kernel.fvar(relation_fvar);
+            let family = kernel.fvar(family_fvar);
+            let well_founded_proof = kernel.fvar(well_founded_proof_fvar);
+            let step = kernel.fvar(step_fvar);
+            let value = kernel.fvar(value_fvar);
+
+            let relation_left_fvar = 21_006;
+            let relation_right_fvar = 21_007;
+            let relation_ty = {
+                let right = pi_fvar(
+                    kernel,
+                    relation_right_fvar,
+                    alpha,
+                    prop,
+                    BinderInfo::Default,
+                );
+                pi_fvar(
+                    kernel,
+                    relation_left_fvar,
+                    alpha,
+                    right,
+                    BinderInfo::Default,
+                )
+            };
+            let family_argument_fvar = 21_008;
+            let family_ty = pi_fvar(
+                kernel,
+                family_argument_fvar,
+                alpha,
+                sort_v,
+                BinderInfo::Default,
+            );
+            let well_founded_ty = apply_all(kernel, well_founded_const, &[alpha, relation]);
+
+            let step_value_fvar = 21_009;
+            let step_predecessor_fvar = 21_010;
+            let step_relation_proof_fvar = 21_011;
+            let step_recursive_fvar = 21_012;
+            let step_value = kernel.fvar(step_value_fvar);
+            let step_predecessor = kernel.fvar(step_predecessor_fvar);
+            let step_relation = apply_all(kernel, relation, &[step_predecessor, step_value]);
+            let step_predecessor_result = kernel.app(family, step_predecessor);
+            let recursive_at_relation = pi_fvar(
+                kernel,
+                step_relation_proof_fvar,
+                step_relation,
+                step_predecessor_result,
+                BinderInfo::Default,
+            );
+            let recursive_values = pi_fvar(
+                kernel,
+                step_predecessor_fvar,
+                alpha,
+                recursive_at_relation,
+                BinderInfo::Default,
+            );
+            let step_result = kernel.app(family, step_value);
+            let step_with_recursive = pi_fvar(
+                kernel,
+                step_recursive_fvar,
+                recursive_values,
+                step_result,
+                BinderInfo::Default,
+            );
+            let step_ty = pi_fvar(
+                kernel,
+                step_value_fvar,
+                alpha,
+                step_with_recursive,
+                BinderInfo::Default,
+            );
+
+            let fix_at = |kernel: &mut Kernel, point: ExprId| {
+                apply_all(
+                    kernel,
+                    fix_const,
+                    &[alpha, relation, family, well_founded_proof, step, point],
+                )
+            };
+            let fix_body_at = |kernel: &mut Kernel, point: ExprId, accessible: ExprId| {
+                let motive_point_fvar = 21_100;
+                let motive_accessible_fvar = 21_101;
+                let motive_point = kernel.fvar(motive_point_fvar);
+                let motive_accessible_ty =
+                    apply_all(kernel, acc_const, &[alpha, relation, motive_point]);
+                let motive_result = kernel.app(family, motive_point);
+                let motive_with_accessible = lam_fvar(
+                    kernel,
+                    motive_accessible_fvar,
+                    motive_accessible_ty,
+                    motive_result,
+                    BinderInfo::Default,
+                );
+                let result_motive = lam_fvar(
+                    kernel,
+                    motive_point_fvar,
+                    alpha,
+                    motive_with_accessible,
+                    BinderInfo::Default,
+                );
+
+                let minor_point_fvar = 21_102;
+                let minor_field_fvar = 21_103;
+                let minor_ih_fvar = 21_104;
+                let minor_predecessor_fvar = 21_105;
+                let minor_relation_proof_fvar = 21_106;
+                let minor_point = kernel.fvar(minor_point_fvar);
+                let minor_predecessor = kernel.fvar(minor_predecessor_fvar);
+                let minor_relation_ty =
+                    apply_all(kernel, relation, &[minor_predecessor, minor_point]);
+                let minor_accessible_result =
+                    apply_all(kernel, acc_const, &[alpha, relation, minor_predecessor]);
+                let minor_field_at_relation = pi_fvar(
+                    kernel,
+                    minor_relation_proof_fvar,
+                    minor_relation_ty,
+                    minor_accessible_result,
+                    BinderInfo::Default,
+                );
+                let minor_field_ty = pi_fvar(
+                    kernel,
+                    minor_predecessor_fvar,
+                    alpha,
+                    minor_field_at_relation,
+                    BinderInfo::Default,
+                );
+
+                let ih_predecessor_fvar = 21_107;
+                let ih_relation_proof_fvar = 21_108;
+                let ih_predecessor = kernel.fvar(ih_predecessor_fvar);
+                let ih_relation_ty = apply_all(kernel, relation, &[ih_predecessor, minor_point]);
+                let ih_result = kernel.app(family, ih_predecessor);
+                let ih_at_relation = pi_fvar(
+                    kernel,
+                    ih_relation_proof_fvar,
+                    ih_relation_ty,
+                    ih_result,
+                    BinderInfo::Default,
+                );
+                let ih_ty = pi_fvar(
+                    kernel,
+                    ih_predecessor_fvar,
+                    alpha,
+                    ih_at_relation,
+                    BinderInfo::Default,
+                );
+                let ih = kernel.fvar(minor_ih_fvar);
+                let minor_body = apply_all(kernel, step, &[minor_point, ih]);
+                let minor_with_ih = lam_fvar(
+                    kernel,
+                    minor_ih_fvar,
+                    ih_ty,
+                    minor_body,
+                    BinderInfo::Default,
+                );
+                let minor_with_field = lam_fvar(
+                    kernel,
+                    minor_field_fvar,
+                    minor_field_ty,
+                    minor_with_ih,
+                    BinderInfo::Default,
+                );
+                let result_minor = lam_fvar(
+                    kernel,
+                    minor_point_fvar,
+                    alpha,
+                    minor_with_field,
+                    BinderInfo::Default,
+                );
+                let result_rec = kernel.const_(acc_rec, vec![v_lvl, u_lvl]);
+                apply_all(
+                    kernel,
+                    result_rec,
+                    &[
+                        alpha,
+                        relation,
+                        result_motive,
+                        result_minor,
+                        point,
+                        accessible,
+                    ],
+                )
+            };
+            let recursive_at = |kernel: &mut Kernel, point: ExprId| {
+                let predecessor_fvar = 21_013;
+                let relation_proof_fvar = 21_014;
+                let predecessor = kernel.fvar(predecessor_fvar);
+                let relation_proof_ty = apply_all(kernel, relation, &[predecessor, point]);
+                let recursive = fix_at(kernel, predecessor);
+                let with_proof = lam_fvar(
+                    kernel,
+                    relation_proof_fvar,
+                    relation_proof_ty,
+                    recursive,
+                    BinderInfo::Default,
+                );
+                lam_fvar(
+                    kernel,
+                    predecessor_fvar,
+                    alpha,
+                    with_proof,
+                    BinderInfo::Default,
+                )
+            };
+            let equation_at = |kernel: &mut Kernel, point: ExprId| {
+                let carrier = kernel.app(family, point);
+                let lhs = fix_at(kernel, point);
+                let recursive = recursive_at(kernel, point);
+                let rhs = apply_all(kernel, step, &[point, recursive]);
+                apply_all(kernel, eq_const, &[carrier, lhs, rhs])
+            };
+
+            let equation = equation_at(kernel, value);
+            let theorem_ty = {
+                let with_value = pi_fvar(kernel, value_fvar, alpha, equation, BinderInfo::Default);
+                let with_step =
+                    pi_fvar(kernel, step_fvar, step_ty, with_value, BinderInfo::Default);
+                let with_well_founded = pi_fvar(
+                    kernel,
+                    well_founded_proof_fvar,
+                    well_founded_ty,
+                    with_step,
+                    BinderInfo::Default,
+                );
+                let with_family = pi_fvar(
+                    kernel,
+                    family_fvar,
+                    family_ty,
+                    with_well_founded,
+                    BinderInfo::Implicit,
+                );
+                let with_relation = pi_fvar(
+                    kernel,
+                    relation_fvar,
+                    relation_ty,
+                    with_family,
+                    BinderInfo::Implicit,
+                );
+                pi_fvar(
+                    kernel,
+                    alpha_fvar,
+                    sort_u,
+                    with_relation,
+                    BinderInfo::Implicit,
+                )
+            };
+
+            // motive := fun x (_ : Acc r x) => fix wf F x = F x (... fix ...).
+            let motive_value_fvar = 21_015;
+            let motive_accessible_fvar = 21_016;
+            let motive_value = kernel.fvar(motive_value_fvar);
+            let motive_accessible_ty =
+                apply_all(kernel, acc_const, &[alpha, relation, motive_value]);
+            let motive_equation = equation_at(kernel, motive_value);
+            let motive_with_accessible = lam_fvar(
+                kernel,
+                motive_accessible_fvar,
+                motive_accessible_ty,
+                motive_equation,
+                BinderInfo::Default,
+            );
+            let motive = lam_fvar(
+                kernel,
+                motive_value_fvar,
+                alpha,
+                motive_with_accessible,
+                BinderInfo::Default,
+            );
+
+            let minor_value_fvar = 21_017;
+            let minor_field_fvar = 21_018;
+            let minor_ih_fvar = 21_019;
+            let minor_predecessor_fvar = 21_020;
+            let minor_relation_proof_fvar = 21_021;
+            let minor_value = kernel.fvar(minor_value_fvar);
+            let minor_predecessor = kernel.fvar(minor_predecessor_fvar);
+            let minor_relation_ty = apply_all(kernel, relation, &[minor_predecessor, minor_value]);
+            let minor_accessible_result =
+                apply_all(kernel, acc_const, &[alpha, relation, minor_predecessor]);
+            let minor_field_at_relation = pi_fvar(
+                kernel,
+                minor_relation_proof_fvar,
+                minor_relation_ty,
+                minor_accessible_result,
+                BinderInfo::Default,
+            );
+            let minor_field_ty = pi_fvar(
+                kernel,
+                minor_predecessor_fvar,
+                alpha,
+                minor_field_at_relation,
+                BinderInfo::Default,
+            );
+
+            let ih_predecessor_fvar = 21_022;
+            let ih_relation_proof_fvar = 21_023;
+            let ih_predecessor = kernel.fvar(ih_predecessor_fvar);
+            let ih_relation_ty = apply_all(kernel, relation, &[ih_predecessor, minor_value]);
+            let ih_accessible = {
+                let field = kernel.fvar(minor_field_fvar);
+                let relation_proof = kernel.fvar(ih_relation_proof_fvar);
+                apply_all(kernel, field, &[ih_predecessor, relation_proof])
+            };
+            let ih_result = apply_all(kernel, motive, &[ih_predecessor, ih_accessible]);
+            let ih_at_relation = pi_fvar(
+                kernel,
+                ih_relation_proof_fvar,
+                ih_relation_ty,
+                ih_result,
+                BinderInfo::Default,
+            );
+            let ih_ty = pi_fvar(
+                kernel,
+                ih_predecessor_fvar,
+                alpha,
+                ih_at_relation,
+                BinderInfo::Default,
+            );
+
+            let minor_recursive = recursive_at(kernel, minor_value);
+            let minor_rhs = apply_all(kernel, step, &[minor_value, minor_recursive]);
+            let minor_carrier = kernel.app(family, minor_value);
+            let minor_field = kernel.fvar(minor_field_fvar);
+            let constructor = kernel.const_(acc_intro, vec![u_lvl]);
+            let constructor_proof = apply_all(
+                kernel,
+                constructor,
+                &[alpha, relation, minor_value, minor_field],
+            );
+            let selected_proof = kernel.app(well_founded_proof, minor_value);
+            let proof_carrier = apply_all(kernel, acc_const, &[alpha, relation, minor_value]);
+
+            // First reduce the fixpoint at the explicit constructor proof, then
+            // transport along equality of accessibility proofs. The equality
+            // itself is reflexive modulo proof irrelevance.
+            let case_refl = kernel.const_(eq_refl, vec![v_lvl]);
+            let case_proof = apply_all(kernel, case_refl, &[minor_carrier, minor_rhs]);
+            let transport_proof_fvar = 21_109;
+            let transport_equality_fvar = 21_110;
+            let transport_proof = kernel.fvar(transport_proof_fvar);
+            let transported_lhs = fix_body_at(kernel, minor_value, transport_proof);
+            let transported_equation = apply_all(
+                kernel,
+                eq_const,
+                &[minor_carrier, transported_lhs, minor_rhs],
+            );
+            let equality_ty = {
+                let proof_eq = kernel.const_(eq, vec![zero_lvl]);
+                apply_all(
+                    kernel,
+                    proof_eq,
+                    &[proof_carrier, constructor_proof, transport_proof],
+                )
+            };
+            let transport_with_equality = lam_fvar(
+                kernel,
+                transport_equality_fvar,
+                equality_ty,
+                transported_equation,
+                BinderInfo::Default,
+            );
+            let transport_motive = lam_fvar(
+                kernel,
+                transport_proof_fvar,
+                proof_carrier,
+                transport_with_equality,
+                BinderInfo::Default,
+            );
+            let proof_refl = kernel.const_(eq_refl, vec![zero_lvl]);
+            let proof_equality = apply_all(kernel, proof_refl, &[proof_carrier, constructor_proof]);
+            let eq_rec = kernel.const_(eq_rec, vec![zero_lvl, zero_lvl]);
+            let minor_body = apply_all(
+                kernel,
+                eq_rec,
+                &[
+                    proof_carrier,
+                    constructor_proof,
+                    transport_motive,
+                    case_proof,
+                    selected_proof,
+                    proof_equality,
+                ],
+            );
+            let minor_with_ih = lam_fvar(
+                kernel,
+                minor_ih_fvar,
+                ih_ty,
+                minor_body,
+                BinderInfo::Default,
+            );
+            let minor_with_field = lam_fvar(
+                kernel,
+                minor_field_fvar,
+                minor_field_ty,
+                minor_with_ih,
+                BinderInfo::Default,
+            );
+            let minor = lam_fvar(
+                kernel,
+                minor_value_fvar,
+                alpha,
+                minor_with_field,
+                BinderInfo::Default,
+            );
+
+            let accessible_value = kernel.app(well_founded_proof, value);
+            let acc_rec = kernel.const_(acc_rec, vec![zero_lvl, u_lvl]);
+            let proof = apply_all(
+                kernel,
+                acc_rec,
+                &[alpha, relation, motive, minor, value, accessible_value],
+            );
+            let theorem_value = {
+                let with_value = lam_fvar(kernel, value_fvar, alpha, proof, BinderInfo::Default);
+                let with_step =
+                    lam_fvar(kernel, step_fvar, step_ty, with_value, BinderInfo::Default);
+                let with_well_founded = lam_fvar(
+                    kernel,
+                    well_founded_proof_fvar,
+                    well_founded_ty,
+                    with_step,
+                    BinderInfo::Default,
+                );
+                let with_family = lam_fvar(
+                    kernel,
+                    family_fvar,
+                    family_ty,
+                    with_well_founded,
+                    BinderInfo::Implicit,
+                );
+                let with_relation = lam_fvar(
+                    kernel,
+                    relation_fvar,
+                    relation_ty,
+                    with_family,
+                    BinderInfo::Implicit,
+                );
+                lam_fvar(
+                    kernel,
+                    alpha_fvar,
+                    sort_u,
+                    with_relation,
+                    BinderInfo::Implicit,
+                )
+            };
+            kernel.add_declaration(Declaration::Theorem {
+                name: well_founded_fix_eq,
+                uparams: vec![acc_uparam, well_founded_fix_vparam],
+                ty: theorem_ty,
+                value: theorem_value,
+            })?;
+        }
+
         // --- Not (a : Prop) : Prop := fun a => a → False ---------------------
         // --- Bool : Type, Bool.true | Bool.false -----------------------------
         // The computational two-element enum at `Sort 1` (= Type). Its two nullary
@@ -961,6 +1443,7 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> Result<LogicPrelude, KernelEr
             acc_uparam,
             well_founded,
             well_founded_fix,
+            well_founded_fix_eq,
             well_founded_fix_vparam,
             not,
             bool_,

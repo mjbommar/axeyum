@@ -80,6 +80,67 @@ fn empty_well_founded(
     lam_fvar(k, value_fvar, carrier, accessible)
 }
 
+struct WellFoundedFixExample {
+    p: LogicPrelude,
+    zero_level: crate::LevelId,
+    one_level: crate::LevelId,
+    carrier: crate::ExprId,
+    point: crate::ExprId,
+    nat: crate::ExprId,
+    zero: crate::ExprId,
+    one: crate::ExprId,
+    relation: crate::ExprId,
+    well_founded: crate::ExprId,
+    family: crate::ExprId,
+    step: crate::ExprId,
+    fix: crate::ExprId,
+    computed: crate::ExprId,
+}
+
+fn well_founded_fix_example(k: &mut Kernel) -> WellFoundedFixExample {
+    let p = build_logic_prelude(k).expect("logic prelude must build");
+    let zero_level = k.level_zero();
+    let one_level = k.level_succ(zero_level);
+    let carrier = k.const_(p.true_, vec![]);
+    let point = k.const_(p.true_intro, vec![]);
+    let nat = k.const_(p.nat, vec![]);
+    let zero = k.const_(p.nat_zero, vec![]);
+    let successor = k.const_(p.nat_succ, vec![]);
+    let one = k.app(successor, zero);
+    let relation = empty_relation(k, p, carrier);
+    let well_founded = empty_well_founded(k, p, carrier, zero_level, relation);
+    let family = lam_fvar(k, 31_000, carrier, nat);
+    let step_value = k.fvar(31_001);
+    let step_predecessor = k.fvar(31_002);
+    let relation_proof_ty = apply_all(k, relation, &[step_predecessor, step_value]);
+    let recursive_at_relation = pi_fvar(k, 31_003, relation_proof_ty, nat);
+    let recursive_values = pi_fvar(k, 31_002, carrier, recursive_at_relation);
+    let step_with_recursive = lam_fvar(k, 31_004, recursive_values, one);
+    let step = lam_fvar(k, 31_001, carrier, step_with_recursive);
+    let fix = k.const_(p.well_founded_fix, vec![zero_level, one_level]);
+    let computed = apply_all(
+        k,
+        fix,
+        &[carrier, relation, family, well_founded, step, point],
+    );
+    WellFoundedFixExample {
+        p,
+        zero_level,
+        one_level,
+        carrier,
+        point,
+        nat,
+        zero,
+        one,
+        relation,
+        well_founded,
+        family,
+        step,
+        fix,
+        computed,
+    }
+}
+
 /// A test fixture: a kernel with the prelude plus abstract `A, B, C : Prop` and
 /// `ha : A`, `hb : B` axioms.
 struct Fixture {
@@ -202,6 +263,7 @@ fn prelude_admits_all_declarations() {
         p.acc_rec,
         p.well_founded,
         p.well_founded_fix,
+        p.well_founded_fix_eq,
         p.not,
     ] {
         assert!(
@@ -466,6 +528,7 @@ fn accessibility_prelude_build_is_deterministic() {
             prelude.acc_rec,
             prelude.well_founded,
             prelude.well_founded_fix,
+            prelude.well_founded_fix_eq,
         ]
         .into_iter()
         .map(|name| {
@@ -491,53 +554,91 @@ fn accessibility_prelude_build_is_deterministic() {
 #[test]
 fn well_founded_fix_computes_across_universes() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
-    let zero_level = k.level_zero();
-    let one_level = k.level_succ(zero_level);
-    let carrier = k.const_(p.true_, vec![]);
-    let point = k.const_(p.true_intro, vec![]);
-    let nat = k.const_(p.nat, vec![]);
-    let zero = k.const_(p.nat_zero, vec![]);
-    let successor = k.const_(p.nat_succ, vec![]);
-    let one = k.app(successor, zero);
-    let relation = empty_relation(&mut k, p, carrier);
-    let well_founded = empty_well_founded(&mut k, p, carrier, zero_level, relation);
-
-    let family_fvar = 31_000;
-    let family = lam_fvar(&mut k, family_fvar, carrier, nat);
-    let step_value_fvar = 31_001;
-    let step_predecessor_fvar = 31_002;
-    let step_relation_fvar = 31_003;
-    let step_recursive_fvar = 31_004;
-    let step_value = k.fvar(step_value_fvar);
-    let step_predecessor = k.fvar(step_predecessor_fvar);
-    let relation_proof_ty = apply_all(&mut k, relation, &[step_predecessor, step_value]);
-    let recursive_at_relation = pi_fvar(&mut k, step_relation_fvar, relation_proof_ty, nat);
-    let recursive_values = pi_fvar(
-        &mut k,
-        step_predecessor_fvar,
-        carrier,
-        recursive_at_relation,
-    );
-    let step_with_recursive = lam_fvar(&mut k, step_recursive_fvar, recursive_values, one);
-    let step = lam_fvar(&mut k, step_value_fvar, carrier, step_with_recursive);
-
-    let fix = k.const_(p.well_founded_fix, vec![zero_level, one_level]);
-    let computed = apply_all(
-        &mut k,
-        fix,
-        &[carrier, relation, family, well_founded, step, point],
-    );
-    let inferred = k.infer(computed).expect("WellFounded.fix should infer");
-    assert!(k.def_eq(inferred, nat), "the result should have type Nat");
+    let e = well_founded_fix_example(&mut k);
+    let inferred = k.infer(e.computed).expect("WellFounded.fix should infer");
+    assert!(k.def_eq(inferred, e.nat), "the result should have type Nat");
     assert!(
-        k.def_eq(computed, one),
+        k.def_eq(e.computed, e.one),
         "WellFounded.fix should delta/iota-reduce through the accessibility proof"
     );
     assert!(
-        !k.def_eq(computed, zero),
+        !k.def_eq(e.computed, e.zero),
         "the computation control must distinguish the selected step result"
     );
+}
+
+#[test]
+fn well_founded_fix_equation_checks_and_rejects_a_changed_rhs() {
+    let mut k = Kernel::new();
+    let e = well_founded_fix_example(&mut k);
+    let recursive_predecessor_fvar = 31_005;
+    let recursive_relation_fvar = 31_006;
+    let recursive_predecessor = k.fvar(recursive_predecessor_fvar);
+    let recursive_relation_ty = apply_all(&mut k, e.relation, &[recursive_predecessor, e.point]);
+    let fix_at_predecessor = apply_all(
+        &mut k,
+        e.fix,
+        &[
+            e.carrier,
+            e.relation,
+            e.family,
+            e.well_founded,
+            e.step,
+            recursive_predecessor,
+        ],
+    );
+    let recursive_with_relation = lam_fvar(
+        &mut k,
+        recursive_relation_fvar,
+        recursive_relation_ty,
+        fix_at_predecessor,
+    );
+    let recursive = lam_fvar(
+        &mut k,
+        recursive_predecessor_fvar,
+        e.carrier,
+        recursive_with_relation,
+    );
+    let unfolded = apply_all(&mut k, e.step, &[e.point, recursive]);
+    let eq = k.const_(e.p.eq, vec![e.one_level]);
+    let equation = apply_all(&mut k, eq, &[e.nat, e.computed, unfolded]);
+    let fix_eq = k.const_(e.p.well_founded_fix_eq, vec![e.zero_level, e.one_level]);
+    let equation_proof = apply_all(
+        &mut k,
+        fix_eq,
+        &[
+            e.carrier,
+            e.relation,
+            e.family,
+            e.well_founded,
+            e.step,
+            e.point,
+        ],
+    );
+    let inferred_equation = k
+        .infer(equation_proof)
+        .expect("WellFounded.fix_eq should infer");
+    assert!(
+        k.def_eq(inferred_equation, equation),
+        "WellFounded.fix_eq should expose the generic unfolding equation"
+    );
+
+    let wrong_equation = apply_all(&mut k, eq, &[e.nat, e.computed, e.zero]);
+    let anon = k.anon();
+    let wrong_name = k.name_str(anon, "well_founded_fix_eq_wrong_rhs");
+    let error = k
+        .add_declaration(Declaration::Theorem {
+            name: wrong_name,
+            uparams: vec![],
+            ty: wrong_equation,
+            value: equation_proof,
+        })
+        .expect_err("fix_eq must not prove a changed right-hand side");
+    assert!(
+        matches!(error, crate::KernelError::DeclarationValueMismatch { .. }),
+        "unexpected rejection: {error:?}"
+    );
+    assert!(!k.environment().contains(wrong_name));
 }
 
 /// `False.rec` (zero-constructor recursor) exists and its generated type
