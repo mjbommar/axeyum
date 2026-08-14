@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "id": "rado-r5-a3-b1-frontier",
+  "title": "R_5(3(x-y)=1z) > 243: the a^k law fails at five colours",
+  "statement": "The 5-colour Rado number of 3(x-y) = 1z is strictly greater than 243 = 3^5: there is a 5-colouring of {1,...,243} with no monochromatic solution. Consequently the natural generalisation of Chang-De Loera-Wesley's Theorem 1.2(3) -- that R_k(a(x-y)=bz) = a^k whenever gcd(a,b)=1 and a >= b+2, for every k >= 3 -- is FALSE. It holds at k=3 (R_3 = 27, ledger claim rado-r3-a3-b1) and at k=4 (R_4 = 81, ledger claim rado-r4-a3-b1, CDLW Table 10) and fails at k=5. The exact value of R_5(3(x-y)=1z) is not known.",
+  "epistemic_status": "open",
+  "formal": {
+    "language": "cnf-family",
+    "family": "rado-colouring-a(x-y)=bz",
+    "parameters": {
+      "a": 3,
+      "b": 1,
+      "k": 5,
+      "n": 243
+    },
+    "generator": "scripts/gen-rado-instance.py",
+    "semantics_note": "artifacts/claims/rado/SEMANTICS.md"
+  },
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:ramsey-number",
+      "relation": "frontier-of",
+      "resolved": false,
+      "note": "pending: no graph_pin evaluated for this claim, so no ref is asserted resolved"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:open-problem",
+      "relation": "instance-of",
+      "resolved": false,
+      "note": "pending: no graph_pin evaluated for this claim"
+    },
+    {
+      "graph": "math-education",
+      "ref": "TQ:colouring",
+      "relation": "uses-technique",
+      "resolved": false,
+      "note": "pending: no graph_pin evaluated for this claim"
+    }
+  ],
+  "axeyum_refs": {
+    "fragments": [],
+    "curriculum_nodes": [
+      "propositional-logic"
+    ]
+  },
+  "provenance": {
+    "conjectured_by": "literature-generalisation: Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022 / arXiv:2210.03262, Theorem 1.2(3) (k=3) plus Table 10 (k=4) suggest R_k = a^k for all k; this claim records the REFUTATION of that generalisation at k=5",
+    "searched_by": [
+      "axeyum cube-and-conquer (axeyum_search::harness::run_cover, depth 6, branch points [2,4,6,8,10,12], 15625 cells, 12 workers): cell 137, cube [1,1,2,1,3,3], reported SATISFIABLE after 35.82 s",
+      "axeyum rustsat-batsat adapter (axeyum_cnf::solve_with_rustsat_batsat_timeout, ADR-0007, pure Rust): independently found a DIFFERENT satisfying assignment for the same formula after 457.76 s",
+      "axeyum min-conflicts SLS (axeyum_search::min_conflicts, seeds 1/2/3, 5,000,000 moves each) FAILED to find any colouring in ~28 s per seed when warm-started from the a-adic valuation colouring; recorded because the failure is informative, not because it is evidence"
+    ],
+    "checked_by": [
+      "axeyum_search::harness::run_cover model self-check (SearchError::ModelDoesNotSatisfy guard): the model satisfies the original formula",
+      "axeyum_search::ColouringFamily::first_violation, the crate's brute-force enumerator written from the defining equation and sharing no code with the encoder",
+      "axeyum_cnf::CnfFormula::evaluate on the one-hot assignment decoded from the colouring",
+      "scripts/check-claim-certificates.py witness replay (independent in-file O(n^2) enumerator, 16,362 solution triples of 3(x-y)=z inside [243]^3, zero monochromatic)"
+    ],
+    "date": "2026-08-13",
+    "machine": "linux x86-64, 16 cores, 26 GiB (s7)",
+    "toolchain": {
+      "axeyum_commit": "fc2020dd967fc51edca561701f63f2acaa50aaea",
+      "rustc_version": "rustc 1.99.0-nightly (77cf889bc 2026-07-12)",
+      "target": "x86_64-unknown-linux-gnu",
+      "dirty": true
+    },
+    "prior_art": [
+      {
+        "citation": "Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022 / arXiv:2210.03262",
+        "url": "https://arxiv.org/abs/2210.03262",
+        "establishes": "Theorem 1.2(3): R_3(a(x-y)=bz) = a^3 for b >= 1, a >= b+2, gcd(a,b)=1. Lemma 4.1: R_k(a(x-y)=bz) >= a^k for every k, by the a-adic valuation colouring. Table 10: R_4(3(x-y)=z) = 81. The paper contains NO k=5 value and NO k=5 upper bound for any member of this family; verified by reading the rendered v1 PDF (its compiled form does contain Tables 9-15, unlike the arXiv source tarball)."
+      },
+      {
+        "citation": "A. C. Li, 'On Rado Numbers for x+by=bz: The b^k Pattern and a Threshold Conjecture', SSRN 6814341 (posted 2026-06-03)",
+        "url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6814341",
+        "establishes": "REPORTEDLY: R_5(3) > 296 > 243 with an explicit 5-colouring, and the conjecture R_k(b) = b^k iff k <= 2(b-1). NOT VERIFIED HERE: SSRN returns HTTP 403 to every fetch attempted, so these are search-engine summaries of the abstract page, not directly read text. The family identification IS verified: x + by = bz rearranges to x = b(z-y), a permutation of coordinates, so it induces the same 3-uniform hypergraph on [n] as b(x-y) = 1z; checked as sets-of-sets for b = 1..7 and n in {1,2,5,13,40,97,200}, 49/49 identical. If the report is accurate then our 243 result is a WEAKER independent reproduction of it and is not new; what is ours is that it is certified end to end with no external solver or checker."
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "deciding-instance",
+      "kind": "instance-pin",
+      "supports": "identifies F_243, the formula the satisfiability verdict is about",
+      "artifact": "artifacts/claims/rado/rado-r5-a3-b1-frontier/F_243.cnf",
+      "artifact_sha256": "ac6b7c6f7ff99e7b686176a637ab5bc0e5588fd0b1fba33efd628405b2280e6e",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r5-a3-b1-frontier",
+      "notes": "1215 variables, 85452 clauses. Re-checked by regeneration from (a,b,k,n)=(3,1,5,243) with the encoder written independently of the generator of record, not by hash alone.",
+      "artifact_format": "dimacs-cnf"
+    },
+    {
+      "id": "witness-243",
+      "kind": "witness-replay",
+      "supports": "R_5 > 243 (lower bound; 243 = 3^5, so this refutes R_5 = a^k)",
+      "artifact": "artifacts/claims/rado/rado-r5-a3-b1-frontier/witness-243.txt",
+      "artifact_sha256": "d7702b516365f3b2d9a4f772bd0863a4aaec22d78fec8ec0c47945bb126d94ae",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r5-a3-b1-frontier",
+      "notes": "A 5-colouring of [243] using all five colours, no monochromatic solution among the 16,362 solutions of 3(x-y)=z in [243]^3. Class sizes {1:63, 2:54, 3:41, 4:28, 5:57}. Decoded from cell 137 of the cube cover and verified four independent ways. STRUCTURE, recorded because it explains why the search was needed: colour 2 is EXACTLY the valuation stratum {j : v_3(j) = 1} (all 54 of it) while the other four classes partition {v_3 = 0} u {v_3 >= 2} into interval-like shells. The pure valuation colouring provably cannot be extended to 243 -- joining 243 to class v=0 makes {82,1,243} monochromatic, to v=1 makes {84,3,243}, to v=2 makes {90,9,243}, to v=3 makes {108,27,243}, to v=4 makes {162,81,243} -- so the extremal object at k=5 is structurally unlike the construction that is extremal at k=3 and k=4.",
+      "artifact_format": "colouring-text"
+    }
+  ],
+  "frontier": {
+    "known": [
+      "R_5(3(x-y)=1z) > 243, witnessed and verified (evidence row witness-243). This is the whole content of the claim: the a^k prediction is refuted, the true value is unknown.",
+      "R_3(3(x-y)=1z) = 27 = 3^3 (ledger claim rado-r3-a3-b1) and R_4(3(x-y)=1z) = 81 = 3^4 (ledger claim rado-r4-a3-b1, CDLW Table 10), so the law holds at k=3 and k=4 and fails at k=5.",
+      "Lemma 4.1's lower bound R_k >= a^k remains SOUND at k=5 -- a lower bound cannot be refuted by exhibiting a larger colouring. What fails is its tightness.",
+      "Corroborating but UNVERIFIED: Li (SSRN 6814341) reportedly gives R_5(3) > 296 and conjectures the law holds exactly for k <= 2(a-1), which for a=3 means k <= 4. Our data (27, 81, and >243 at k=5) is consistent with that threshold at every point we have.",
+      "Incremental climbing from the 243 witness reached a verified 5-colouring of [251] and stalled at 252 across four seeds; that is a search limit, not a threshold, and the intermediate witnesses are not shipped."
+    ],
+    "would_settle": "A verified 5-colouring of [n-1] together with an exhaustive checked refutation of F_n, for the same n. Both artifact kinds and their checkers exist in this family. The obstruction is the refutation side at five colours, which has never been done at any n for any member of this family.",
+    "attack_notes": "The satisfiable side is not free here: the a-adic construction that settles every n <= a^k - 1 in milliseconds provably cannot reach a^k, and min-conflicts warm-started from it failed three times. What worked was cube-and-conquer, which starts from no construction at all (35.8 s). Monolithic proof-producing CDCL is the wrong tool on the satisfiable side of this instance: it emitted 2.6 GB of DRAT in 8 minutes without deciding, and its resident set tracked the proof size almost exactly, so on a 26 GiB host it would have OOM-killed before answering."
+  },
+  "notes": "Recorded because a refuted prediction is evidence. This claim exists to stop the a^k law being quoted beyond k=4: the conjecture was the headline target of this campaign lane and the machinery falsified it in 36 seconds. See also rado-r5-a3-b2-frontier, which recorded the analogous non-tightness of this project's own shell bound at k=5 -- two independent constructions, both extremal at k=3 and k=4, both non-extremal at k=5."
+}
