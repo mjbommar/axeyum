@@ -57,6 +57,10 @@ step fmt    cargo fmt --all --check
 # for different reasons, and a disagreement between them is itself a finding.
 step fmt-all scripts/check-fmt-complete.sh
 step facts  python3 scripts/validate-facts.py
+# `facts` proves the ledger is self-consistent; this proves its evidence still
+# holds. An unchecked certificate is not evidence, and `close-fact.py` enforces
+# that at write time -- this is the same rule at gate time.
+step facts-replay ./scripts/check-fact-evidence-replay.sh
 # `cargo clippy --workspace --all-targets --all-features -- -D warnings` exits 0
 # in two situations that look identical from outside: it linted everything and
 # found nothing, or it linted NOTHING because cargo thought the cache was fresh.

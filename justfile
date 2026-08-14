@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts clippy gate-controls aggregate-scope test frontier gate-liveness moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers plan-authority links
+check: fmt fmt-all facts facts-replay clippy gate-controls aggregate-scope test frontier gate-liveness moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers plan-authority links
 
 fmt:
     cargo fmt --all --check
@@ -23,6 +23,13 @@ fmt-all:
 # `proved` fact with nothing checked, or an `open` one carrying evidence, fails.
 facts:
     python3 scripts/validate-facts.py
+
+# Re-run the evidence behind every settled fact, route-agnostically. `facts`
+# above checks the ledger is CONSISTENT; this checks it is still TRUE -- a fact
+# can be correct the day it lands and rot as the code beneath it changes.
+# ~330s, dominated by per-checker cargo startup rather than by the checkers.
+facts-replay:
+    ./scripts/check-fact-evidence-replay.sh
 
 # Pin +stable so local clippy matches CI's stable toolchain: nightly and stable
 # carry different lints, so a nightly-only local gate lets clippy breaks slip
