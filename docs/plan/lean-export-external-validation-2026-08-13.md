@@ -1,4 +1,10 @@
-# The Lean export is not externally checkable yet — measurement, 2026-08-13
+# Lean external validation — measurement, defect and resolution, 2026-08-13
+
+**Read the last section first if you want the outcome.** The Lean export was
+rejected by real Lean in the morning and is accepted by Lean's own kernel by the
+evening; every defect was in the pretty-printer. This document keeps the whole
+sequence, in order, because two of the wrong turns were mine and the reasoning
+that produced them is more reusable than the fix.
 
 Closes the open question behind item A2 of
 [next actions from the Rado paper](next-actions-from-the-rado-paper-2026-08-12.md),
@@ -8,9 +14,15 @@ which read:
 > into *"an independent kernel accepted it."* Very high credibility per unit of
 > effort, and it is the single cheapest item on this list.
 
-The command was run. The answer is negative, and the reason is architectural
-rather than a typo. Full reproduction:
+The command was run and the answer was negative. The premise — that one command
+would settle it — was wrong; the eventual route was an export format and a
+kernel replay. Full reproduction of the original measurement:
 `/nas3/data/axeyum/frontier-2026-08-13/coordinator/logs/lean-export-check-2026-08-13.md`.
+
+> **Superseded in place:** the sections below say "is rejected", "has never
+> executed", and "surface syntax is hostage to the elaborator". All three were
+> true when written and are false now. The corrections are at the end rather
+> than edited in, so the sequence stays legible.
 
 ## The toolchain was never absent
 
