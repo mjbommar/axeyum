@@ -785,8 +785,7 @@ fn zip_map(
 #[cfg(test)]
 mod end_to_end_recheck {
     use super::{
-        EndToEndUnsatOutcome, certify_qf_bv_unsat_end_to_end,
-        certify_qf_bv_unsat_end_to_end_within,
+        EndToEndUnsatOutcome, certify_qf_bv_unsat_end_to_end, certify_qf_bv_unsat_end_to_end_within,
     };
     use axeyum_ir::TermArena;
     use std::time::{Duration, Instant};

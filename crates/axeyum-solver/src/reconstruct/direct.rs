@@ -1,8 +1,8 @@
 //! Direct structural certificate validation and Lean reconstruction.
 
 use super::{
-    BinderInfo, BTreeMap, BTreeSet, Declaration, ExprId, FINITE_DOMAIN_ENUM_CERT_BITS, FuncId, IrOp,
-    IrSort, IrTermNode, ProofFragment, ReconstructCtx, ReconstructError, TermArena, TermId,
+    BTreeMap, BTreeSet, BinderInfo, Declaration, ExprId, FINITE_DOMAIN_ENUM_CERT_BITS, FuncId,
+    IrOp, IrSort, IrTermNode, ProofFragment, ReconstructCtx, ReconstructError, TermArena, TermId,
     and_chain_prop_of, and_intro_fold, fresh_axiom, reflexive_disequality_assertion,
     render_ctx_module, require_infers_false,
 };
@@ -13,10 +13,7 @@ struct FiniteDomainPigeonholeLeanInstance {
     args: [TermId; 3],
 }
 
-pub(super) fn finite_domain_pigeonhole_certifies(
-    arena: &TermArena,
-    assertions: &[TermId],
-) -> bool {
+pub(super) fn finite_domain_pigeonhole_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
     finite_domain_pigeonhole_lean_instance(arena, assertions).is_some()
 }
 
@@ -780,10 +777,7 @@ fn reconstruct_lra_dpll_to_lean_module(
         });
     }
 
-    reconstruct_checked_structural_certificate_to_lean_module(
-        "lra_dpll_assertions",
-        "lra_dpll",
-    )
+    reconstruct_checked_structural_certificate_to_lean_module("lra_dpll_assertions", "lra_dpll")
 }
 
 fn reconstruct_arith_dpll_to_lean_module(
@@ -832,10 +826,7 @@ fn reconstruct_arith_dpll_to_lean_module(
         });
     }
 
-    reconstruct_checked_structural_certificate_to_lean_module(
-        "arith_dpll_assertions",
-        "arith_dpll",
-    )
+    reconstruct_checked_structural_certificate_to_lean_module("arith_dpll_assertions", "arith_dpll")
 }
 
 fn reconstruct_bounded_int_blast_to_lean_module(
@@ -1209,10 +1200,7 @@ fn reconstruct_fifo_bc04_to_lean_module(
         });
     }
 
-    reconstruct_checked_structural_certificate_to_lean_module(
-        "fifo_bc04_assertion",
-        "fifo_bc04",
-    )
+    reconstruct_checked_structural_certificate_to_lean_module("fifo_bc04_assertion", "fifo_bc04")
 }
 
 fn reconstruct_bool_array_read_collapse_to_lean_module(

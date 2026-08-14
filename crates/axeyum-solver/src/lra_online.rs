@@ -3198,9 +3198,7 @@ mod tests {
     #[test]
     fn atom_normalization_ceiling_declines_and_near_miss_is_admitted() {
         let mut arena = TermArena::new();
-        let vars: Vec<TermId> = (0..4)
-            .map(|i| rvar(&mut arena, &format!("x{i}")))
-            .collect();
+        let vars: Vec<TermId> = (0..4).map(|i| rvar(&mut arena, &format!("x{i}"))).collect();
         let sum01 = arena.real_add(vars[0], vars[1]).expect("linear sum");
         let sum012 = arena.real_add(sum01, vars[2]).expect("linear sum");
         let sum = arena.real_add(sum012, vars[3]).expect("linear sum");
@@ -3224,7 +3222,10 @@ mod tests {
             ..limits
         };
         let mut admitted = AtomBuilder::with_limits(None, limits);
-        assert!(matches!(admitted.build(&arena, atom), AtomKind::Order { .. }));
+        assert!(matches!(
+            admitted.build(&arena, atom),
+            AtomKind::Order { .. }
+        ));
         assert_eq!(admitted.stop, None);
         assert!(admitted.cached_coefficients <= limits.cached_coefficients);
     }

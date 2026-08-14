@@ -2,8 +2,7 @@
 
 use super::{
     BTreeMap, BTreeSet, BinderInfo, Declaration, ExprId, IrOp, IrSort, IrTermNode, Kernel, NameId,
-    Rational, ReconstructError, TermArena, TermId, is_am_gm_two_var,
-    is_single_square_lt_zero,
+    Rational, ReconstructError, TermArena, TermId, is_am_gm_two_var, is_single_square_lt_zero,
 };
 // ===========================================================================
 // LRA `la_generic` (Farkas) reconstruction (P3.7 arithmetic fragment, slice 1).

@@ -1545,21 +1545,17 @@ pub(super) fn reconstruct_bitwise_cps_tail(
     for command in commands {
         let (id, mut recovered, or_clause) = match command {
             AletheCommand::Assume { id, clause } => {
-                let source_proof = *source_proofs
-                    .next()
-                    .ok_or_else(|| ReconstructError::UnsupportedResolution {
+                let source_proof = *source_proofs.next().ok_or_else(|| {
+                    ReconstructError::UnsupportedResolution {
                         detail: "Alethe CPS tail has too many assumptions".to_owned(),
-                    })?;
+                    }
+                })?;
                 if !live.contains(id) {
                     continue;
                 }
                 let proposition = ctx.clause_to_prop(clause);
-                let source_proof = check_against(
-                    ctx,
-                    "source_instance_assume_cps",
-                    source_proof,
-                    proposition,
-                )?;
+                let source_proof =
+                    check_against(ctx, "source_instance_assume_cps", source_proof, proposition)?;
                 let clause_proof = Clause {
                     lits: clause.clone(),
                     proof: source_proof,
@@ -1578,7 +1574,8 @@ pub(super) fn reconstruct_bitwise_cps_tail(
                     continue;
                 }
                 if matches!(rule.as_str(), "resolution" | "th_resolution") {
-                    let recovered = if premises.iter().all(|premise| cps_env.contains_key(premise)) {
+                    let recovered = if premises.iter().all(|premise| cps_env.contains_key(premise))
+                    {
                         reconstruct_ordered_rup_cps_step(ctx, clause, premises, &cps_env)?
                     } else if let Some(definition) = try_reconstruct_bit_definition(ctx, clause)? {
                         clause_to_cps(ctx, &definition)?
@@ -1612,10 +1609,7 @@ pub(super) fn reconstruct_bitwise_cps_tail(
             }
             let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
             let mut proof = apply_cps_clause(ctx, &recovered, false_, []);
-            let fvars = lets
-                .iter()
-                .map(|(fvar, _, _, _)| *fvar)
-                .collect::<Vec<_>>();
+            let fvars = lets.iter().map(|(fvar, _, _, _)| *fvar).collect::<Vec<_>>();
             proof = ctx.kernel.abstract_fvars(proof, &fvars);
             for (index, (_, name, ty, value)) in lets.into_iter().enumerate().rev() {
                 let ty = ctx.kernel.abstract_fvars(ty, &fvars[..index]);

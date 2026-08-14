@@ -69,9 +69,7 @@ use axeyum_ir::{Sort, TermArena, TermId, TermNode, Value};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
-use crate::lra_online::{
-    Encoder, Lit, LraTheory, LraTheoryBuildStop, collect_lra_atoms, replays,
-};
+use crate::lra_online::{Encoder, Lit, LraTheory, LraTheoryBuildStop, collect_lra_atoms, replays};
 use crate::model::Model;
 
 /// Distinct-atom ceiling for the online route, applied **before** atom

@@ -52,8 +52,8 @@ mod cnf;
 mod datatype;
 mod direct;
 mod equality;
-mod quantifier;
 mod quant_bv_instance_set_lean;
+mod quantifier;
 mod resolution;
 
 pub use arithmetic::{LraReconstructCtx, reconstruct_lra_proof, reconstruct_sos_proof};
@@ -63,7 +63,6 @@ pub use bitblast::{
 };
 pub use cnf::reconstruct_cnf_intro_rule;
 pub use equality::reconstruct_eq_step;
-pub use quantifier::{reconstruct_quant_unsat_proof, reconstruct_skolem_unsat_proof};
 pub use quant_bv_instance_set_lean::{
     reconstruct_bv_alternation_counterexample_to_lean_module,
     reconstruct_bv_closed_universal_counterexample_to_lean_module,
@@ -73,6 +72,7 @@ pub use quant_bv_instance_set_lean::{
     reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
     reconstruct_negated_existential_witness_to_lean_module,
 };
+pub use quantifier::{reconstruct_quant_unsat_proof, reconstruct_skolem_unsat_proof};
 pub use resolution::{
     declared_assumption_clauses, reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
 };
@@ -89,38 +89,38 @@ use axeyum_lean_kernel::{
     build_logic_prelude,
 };
 
-use datatype::{
-    reconstruct_qf_dt_acyclic_to_lean_module, reconstruct_qf_dt_distinct_to_lean_module,
-    reconstruct_qf_dt_injective_to_lean_module, reconstruct_qf_dt_tester_to_lean_module,
-};
 use arithmetic::{
-    clear_rational_sos_denominators, is_disjunctive_lra_refutation,
-    real_to_lin, reconstruct_disjunctive_lra_proof,
+    clear_rational_sos_denominators, is_disjunctive_lra_refutation, real_to_lin,
+    reconstruct_disjunctive_lra_proof,
 };
-use cnf::{
-    Assignment, and_chain_prop_of, and_intro, and_intro_fold, and_project, iff_intro,
-    prove_clause_by_cases,
-};
+#[cfg(test)]
+use arithmetic::{try_general_farkas, try_mixed_farkas};
 use bitblast::{
     bit_of_operand_resolves, bv_bit, reconstruct_bitwise_cps_tail, reconstruct_bitwise_step,
 };
 #[cfg(test)]
 use bitblast::{collect_congruence_blocks, euf_refutation_for_test};
-#[cfg(test)]
-use arithmetic::{try_general_farkas, try_mixed_farkas};
+use cnf::{
+    Assignment, and_chain_prop_of, and_intro, and_intro_fold, and_project, iff_intro,
+    prove_clause_by_cases,
+};
 #[cfg(test)]
 use datatype::{
-    build_nat_discriminator, build_nat_ne_succ, build_nat_ne_succ_m_succ,
-    build_nat_ne_succ_m_zero, build_nat_ne_succ_pow, build_nat_ne_succ_pow_m_succ,
-    build_nat_ne_succ_pow_m_zero, build_nat_pred,
+    build_nat_discriminator, build_nat_ne_succ, build_nat_ne_succ_m_succ, build_nat_ne_succ_m_zero,
+    build_nat_ne_succ_pow, build_nat_ne_succ_pow_m_succ, build_nat_ne_succ_pow_m_zero,
+    build_nat_pred,
+};
+use datatype::{
+    reconstruct_qf_dt_acyclic_to_lean_module, reconstruct_qf_dt_distinct_to_lean_module,
+    reconstruct_qf_dt_injective_to_lean_module, reconstruct_qf_dt_tester_to_lean_module,
 };
 use equality::{reconstruct_eq_congruent, reconstruct_eq_transitive_n, reconstruct_symm};
 #[cfg(test)]
 use quantifier::declare_forall_axiom;
 use resolution::{
-    Clause, CpsClause, apply_cps_clause, check_false_prop, clause_to_cps, cps_clause_prop, ex_falso,
-    double_negation_elim, fresh_fvar_id, normalize_cps_clause, normalize_lit_polarity, or_inl,
-    or_inr, reconstruct_ordered_rup_cps_step, reconstruct_resolution_step,
+    Clause, CpsClause, apply_cps_clause, check_false_prop, clause_to_cps, cps_clause_prop,
+    double_negation_elim, ex_falso, fresh_fvar_id, normalize_cps_clause, normalize_lit_polarity,
+    or_inl, or_inr, reconstruct_ordered_rup_cps_step, reconstruct_resolution_step,
 };
 
 /// An error from Alethe → Lean reconstruction. Every out-of-scope shape, unknown
@@ -824,10 +824,7 @@ fn check_against(
             rule: rule.to_owned(),
             detail: format!("infer failed: {e:?}"),
         })?;
-    if ctx
-        .kernel
-        .def_eq_in(inferred, expected, &mut ctx.local_ctx)
-    {
+    if ctx.kernel.def_eq_in(inferred, expected, &mut ctx.local_ctx) {
         Ok(proof)
     } else {
         Err(ReconstructError::KernelRejected {
@@ -1790,7 +1787,6 @@ fn dispatch_datatype_to_lean_module(
     }
 }
 
-
 /// **Like [`prove_unsat_to_lean`], but also returns a self-contained Lean 4
 /// module** (`prelude`-mode source) that re-proves the refutation and can be
 /// checked by an independent `lean` binary.
@@ -2238,7 +2234,6 @@ fn reconstruct_proof_fragment_to_lean_module(
     };
     Ok(source)
 }
-
 
 fn reconstruct_qf_abv_to_lean_source(
     arena: &mut TermArena,
@@ -2790,7 +2785,6 @@ fn fresh_axiom(
     ctx.axiom_roles.insert(name, role.to_owned());
     Ok(ctx.kernel.const_(name, vec![]))
 }
-
 
 #[cfg(test)]
 mod tests;

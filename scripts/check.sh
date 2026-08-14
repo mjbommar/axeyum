@@ -24,6 +24,14 @@ step() {
 }
 
 step fmt    cargo fmt --all --check
+# `cargo fmt --all` finds files by walking `mod` declarations, and rustfmt does
+# not expand macros -- so `axeyum-solver`'s module tree, declared inside
+# `macro_rules! full_modules`, was invisible to the gate above: 156 modules /
+# 221,445 lines including the whole trusted reconstruction layer. Fourteen
+# source files had never been formatted while this step reported success.
+# The step below enumerates from the filesystem instead. Keep both: they fail
+# for different reasons, and a disagreement between them is itself a finding.
+step fmt-all scripts/check-fmt-complete.sh
 step clippy cargo clippy --workspace --all-targets --all-features -- -D warnings
 # `frontier_*` runs in its own serialized step below: those ratchets are
 # wall-clock-budget based, so contention from the rest of the suite shrinks the

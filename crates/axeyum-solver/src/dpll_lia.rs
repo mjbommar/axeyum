@@ -1087,10 +1087,9 @@ impl IncrementalArithDpll {
 }
 
 fn exceeds_pre_sat_skeleton_boundary(atoms: usize, cnf_vars: usize) -> bool {
-    let crosses_base_trigger =
-        atoms > MAX_PRE_SAT_ARITH_ATOMS && cnf_vars > MAX_PRE_SAT_CNF_VARS;
-    let outside_moderate_envelope = atoms > MAX_MODERATE_PRE_SAT_ARITH_ATOMS
-        || cnf_vars > MAX_MODERATE_PRE_SAT_CNF_VARS;
+    let crosses_base_trigger = atoms > MAX_PRE_SAT_ARITH_ATOMS && cnf_vars > MAX_PRE_SAT_CNF_VARS;
+    let outside_moderate_envelope =
+        atoms > MAX_MODERATE_PRE_SAT_ARITH_ATOMS || cnf_vars > MAX_MODERATE_PRE_SAT_CNF_VARS;
     crosses_base_trigger && outside_moderate_envelope
 }
 
@@ -2675,9 +2674,7 @@ impl BoolSkeletonSolver {
                 let rhs = lits[1];
                 self.encode_or_lits(&[lhs, rhs])
             }
-            Op::BoolXor => {
-                self.encode_xor_lits(lits[0], lits[1])
-            }
+            Op::BoolXor => self.encode_xor_lits(lits[0], lits[1]),
             Op::Eq if arena.sort_of(args[0]) == Sort::Bool => {
                 self.encode_iff_lits(lits[0], lits[1])
             }
@@ -3255,8 +3252,7 @@ fn int_bound_or_is_tautology(arena: &TermArena, terms: &[TermId]) -> bool {
 }
 
 fn int_bounds_have_conflict(bounds: &[SimpleIntBound]) -> bool {
-    let mut extrema: HashMap<TermId, (Vec<SimpleIntBound>, Vec<SimpleIntBound>)> =
-        HashMap::new();
+    let mut extrema: HashMap<TermId, (Vec<SimpleIntBound>, Vec<SimpleIntBound>)> = HashMap::new();
     for &bound in bounds {
         let (lowers, uppers) = extrema.entry(bound.expr).or_default();
         let candidates = match bound.side {
@@ -3364,7 +3360,10 @@ impl ArithAbstractor {
         arena: &mut TermArena,
         term: TermId,
     ) -> Result<TermId, SolverError> {
-        if self.deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        if self
+            .deadline
+            .is_some_and(|deadline| Instant::now() >= deadline)
+        {
             self.timed_out = true;
             return Ok(arena.bool_const(false));
         }
@@ -4578,10 +4577,9 @@ mod tests {
         let mut arena = TermArena::new();
         let assertion = arena.bool_const(true);
         let mut solver = IncrementalArithDpll::new(&mut arena, &[assertion]).unwrap();
-        solver.core_stats.record(
-            ArithCoreSource::Large,
-            MAX_DYNAMIC_LARGE_CORE_LITERALS,
-        );
+        solver
+            .core_stats
+            .record(ArithCoreSource::Large, MAX_DYNAMIC_LARGE_CORE_LITERALS);
 
         let result = solver
             .solve(&mut arena, &[assertion], &SolverConfig::default())
@@ -4595,11 +4593,7 @@ mod tests {
                 .detail
                 .contains("declining before the next SAT round")
         );
-        assert!(
-            reason
-                .detail
-                .contains("core_large_literals=8192")
-        );
+        assert!(reason.detail.contains("core_large_literals=8192"));
         assert_eq!(solver.total_rounds, 0, "the SAT loop must not start");
     }
 

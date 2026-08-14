@@ -36,7 +36,6 @@ pub(crate) fn collect_top_binary_conjuncts(arena: &TermArena, term: TermId, out:
     }
 }
 
-
 /// Flattens a right- or left-nested binary spine ITERATIVELY, leaves left to
 /// right, given a predicate that recognises a spine node and yields its two
 /// operands.
@@ -113,7 +112,6 @@ pub(crate) fn flatten_op_spine(arena: &TermArena, term: TermId, out: &mut Vec<Te
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

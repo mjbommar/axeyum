@@ -785,8 +785,7 @@ fn conflicts_carry_the_trigger_literal() {
     let first = arena.int_le(xy, minus_one).expect("x-y<=-1");
     let second = arena.int_le(yz, minus_one).expect("y-z<=-1");
     let third = arena.int_le(zx, minus_one).expect("z-x<=-1");
-    let scan =
-        scan_dl(&mut arena, &[first, second, third], None).expect("pure difference logic");
+    let scan = scan_dl(&mut arena, &[first, second, third], None).expect("pure difference logic");
     let mut theory = DlTheory::new(&scan, None);
     let index = |t: TermId| {
         scan.atom_terms

@@ -6,10 +6,17 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt clippy test frontier moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs plan-authority links
+check: fmt fmt-all clippy test frontier moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs plan-authority links
 
 fmt:
     cargo fmt --all --check
+
+# `cargo fmt --all` walks `mod` declarations and rustfmt does not expand
+# macros, so `axeyum-solver`'s tree behind `macro_rules! full_modules` --
+# 156 modules, 221,445 lines, the whole trusted reconstruction layer -- was
+# invisible to `fmt` above. This enumerates from the filesystem instead.
+fmt-all:
+    scripts/check-fmt-complete.sh
 
 # Pin +stable so local clippy matches CI's stable toolchain: nightly and stable
 # carry different lints, so a nightly-only local gate lets clippy breaks slip

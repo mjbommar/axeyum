@@ -609,9 +609,7 @@ impl ReconstructCtx {
         let motive = self
             .kernel
             .lam(anon, exists_ap, false_, BinderInfo::Default);
-        let rec = self
-            .kernel
-            .const_(self.prelude.exists_rec, vec![self.one]);
+        let rec = self.kernel.const_(self.prelude.exists_rec, vec![self.one]);
         let e = self.kernel.app(rec, self.alpha);
         let e = self.kernel.app(e, p);
         let e = self.kernel.app(e, motive);

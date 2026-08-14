@@ -6,8 +6,8 @@ use axeyum_cnf::{AletheLit, AletheTerm};
 use axeyum_lean_kernel::{BinderInfo, Declaration, ExprId, ExprNode, ReducibilityHint};
 
 use super::{
-    GatePropAlias, ReconstructCtx, ReconstructError, bit_of_operand_resolves, bv_bit, check_against,
-    ex_falso, fresh_fvar_id, normalize_lit_polarity, or_inl, or_inr,
+    GatePropAlias, ReconstructCtx, ReconstructError, bit_of_operand_resolves, bv_bit,
+    check_against, ex_falso, fresh_fvar_id, normalize_lit_polarity, or_inl, or_inr,
 };
 
 // ===========================================================================
@@ -106,9 +106,7 @@ impl ReconstructCtx {
         let prop = self.kernel.sort_zero();
         for index in (0..aliases.len()).rev() {
             let alias = &aliases[index];
-            let value = self
-                .kernel
-                .abstract_fvars(alias.value, &fvars[..index]);
+            let value = self.kernel.abstract_fvars(alias.value, &fvars[..index]);
             proof = self.kernel.let_(alias.name, prop, value, proof);
         }
         proof

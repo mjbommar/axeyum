@@ -186,8 +186,7 @@ fn decide_single(
     // scope, and exact-source substitution before reflexivity can grant SAT.
     if matches!(z_sort, Sort::BitVec(_)) {
         for candidate in bv_source_term_candidates(arena, body, z, z_sort) {
-            let Some(witness) = affine_skolem_witness(arena, candidate, original_term_count)
-            else {
+            let Some(witness) = affine_skolem_witness(arena, candidate, original_term_count) else {
                 continue;
             };
             let cert = QuantifiedSkolemSatCertificate {
