@@ -4,6 +4,7 @@
   "title": "R_4(5(x-y)=2z) = 625",
   "statement": "The 4-colour Rado number of 5(x-y) = 2z is exactly 625 = 5^4: every 4-colouring of {1,...,625} contains a monochromatic solution, and some 4-colouring of {1,...,624} avoids one. The cell (a,b) = (5,2) is BLANK in Table 10 of Chang-De Loera-Wesley (ISSAC 2022), the only published four-colour table for this family, so this is a new exact four-colour Rado number. It confirms the a^k pattern at a point where a >= b+2 and gcd(a,b) = 1 hold and nothing was known.",
   "epistemic_status": "computed",
+  "novelty": "new",
   "formal": {
     "language": "cnf-family",
     "family": "rado-colouring-a(x-y)=bz",
