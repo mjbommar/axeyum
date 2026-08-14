@@ -142,6 +142,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_mod_mul_le_iff,
         p.div_mod_lt_mul_iff,
         p.div_mod_remainder_eq_zero_iff_dvd,
+        p.div_mod_exact_exists,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -731,6 +732,15 @@ fn euclidean_division_exists_constructively() {
     f.k.infer(exact_division).unwrap_or_else(|e| {
         panic!(
             "zero remainder/exact divisibility equivalence should infer: {}",
+            f.explain(&e)
+        )
+    });
+
+    let divides_six = f.lemma(p.dvd_mul, &[two, three]);
+    let exact_exists = f.lemma(p.div_mod_exact_exists, &[two, six, positive, divides_six]);
+    f.k.infer(exact_exists).unwrap_or_else(|e| {
+        panic!(
+            "exact zero-remainder decomposition should infer: {}",
             f.explain(&e)
         )
     });
@@ -2029,7 +2039,38 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 44, "every negative control must be rejected");
+    // NC45 — exact decomposition existence retains the dividend.
+    {
+        let name = f.name("nc45_exact_decomposition_wrong_dividend");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let six = f.num(6);
+        let positive = f.lemma(p.le_add_right, &[one, one]);
+        let divides = f.lemma(p.dvd_mul, &[two, three]);
+        let proof = f.lemma(p.div_mod_exact_exists, &[two, six, positive, divides]);
+        let nat = f.nat_ty();
+        let level_one = f.level_one();
+        let quotient_fv = f.fresh_fvar();
+        let quotient = f.k.fvar(quotient_fv);
+        let wrong_relation = f.div_mod(two, five, quotient, zero);
+        let wrong_predicate = f.lam_fv(quotient_fv, nat, wrong_relation);
+        let exists = f.k.const_(p.logic.exists_, vec![level_one]);
+        let bad = f.apply(exists, &[nat, wrong_predicate]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC45: exact decomposition must retain the dividend");
+        println!(
+            "NC45 (wrong exact-decomposition dividend) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 45, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2052,7 +2093,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        11 + 71,
+        11 + 72,
         "every promised definition and theorem must be rendered"
     );
 }

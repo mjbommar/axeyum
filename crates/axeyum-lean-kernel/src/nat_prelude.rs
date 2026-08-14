@@ -301,6 +301,8 @@ pub struct NatPrelude {
     pub dvd: NameId,
     /// `Nat.div_mod_remainder_eq_zero_iff_dvd : divMod d n q r → (r=0 ↔ dvd d n)`.
     pub div_mod_remainder_eq_zero_iff_dvd: NameId,
+    /// `Nat.div_mod_exact_exists : Le one d → dvd d n → ∃ q, divMod d n q zero`.
+    pub div_mod_exact_exists: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -434,6 +436,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             dvd: kernel.name_str(nat, "dvd"),
             div_mod_remainder_eq_zero_iff_dvd: kernel
                 .name_str(nat, "div_mod_remainder_eq_zero_iff_dvd"),
+            div_mod_exact_exists: kernel.name_str(nat, "div_mod_exact_exists"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -4119,6 +4122,74 @@ fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kernel
         );
         let stmt = d.arrow(relation_ty, target);
         let proof = d.lam_fv(relation_fv, relation_ty, body);
+        (stmt, proof)
+    })?;
+
+    // div_mod_exact_exists :
+    //   ∀ d n, Le one d → dvd d n → ∃ q, divMod d n q zero
+    // Eliminate the factorization witness and reuse it as the quotient. The
+    // positive divisor hypothesis is definitionally the zero-remainder bound.
+    d.theorem(p.div_mod_exact_exists, 2, &|d, v| {
+        let (divisor, dividend) = (v[0], v[1]);
+        let unit = d.num(1);
+        let zero = d.zero();
+        let positive_ty = d.le(unit, divisor);
+        let divides_ty = d.dvd(divisor, dividend);
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+        let divides_fv = d.fresh_fvar();
+        let divides = d.kernel().fvar(divides_fv);
+
+        let quotient_fv = d.fresh_fvar();
+        let quotient = d.kernel().fvar(quotient_fv);
+        let relation = d.div_mod(divisor, dividend, quotient, zero);
+        let exact_predicate = d.lam_fv(quotient_fv, nat, relation);
+        let exists = d.kernel().const_(p.logic.exists_, vec![one]);
+        let target = d.apply(exists, &[nat, exact_predicate]);
+        let divides_predicate = d.dvd_predicate(divisor, dividend);
+        let exists_motive = d
+            .kernel()
+            .lam(anon, divides_ty, target, BinderInfo::Default);
+        let exists_minor = {
+            let candidate_fv = d.fresh_fvar();
+            let candidate = d.kernel().fvar(candidate_fv);
+            let product = d.mul(divisor, candidate);
+            let witness_equation_fv = d.fresh_fvar();
+            let witness_equation_ty = d.eq(dividend, product);
+            let witness_equation = d.kernel().fvar(witness_equation_fv);
+            let product_plus_zero = d.add(product, zero);
+            let add_zero = d.lemma(p.add_zero, &[product]);
+            let add_zero_rev = d.symm(product_plus_zero, product, add_zero);
+            let (_, zero_equation) = d.chain(
+                dividend,
+                &[
+                    (product, witness_equation),
+                    (product_plus_zero, add_zero_rev),
+                ],
+            );
+            let zero_equation_ty = d.eq(dividend, product_plus_zero);
+            let zero_bound_ty = d.lt(zero, divisor);
+            let exact_relation = d.const_app(
+                p.logic.and_intro,
+                &[zero_equation_ty, zero_bound_ty, zero_equation, positive],
+            );
+            let exact_intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+            let body = d.apply(
+                exact_intro,
+                &[nat, exact_predicate, candidate, exact_relation],
+            );
+            let with_equation = d.lam_fv(witness_equation_fv, witness_equation_ty, body);
+            d.lam_fv(candidate_fv, nat, with_equation)
+        };
+        let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(
+            exists_rec,
+            &[nat, divides_predicate, exists_motive, exists_minor, divides],
+        );
+        let divides_to_target = d.arrow(divides_ty, target);
+        let stmt = d.arrow(positive_ty, divides_to_target);
+        let with_divides = d.lam_fv(divides_fv, divides_ty, body);
+        let proof = d.lam_fv(positive_fv, positive_ty, with_divides);
         (stmt, proof)
     })?;
 
