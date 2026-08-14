@@ -407,7 +407,7 @@ Ordered follow-on work:
    points at the certificate itself rather than at a test that rebuilds it.
 
 Full write-up, including what the fragment does *not* cover:
-[`docs/mathematics-2026-08/diary-telescoping.md`](../../mathematics-2026-08/diary-telescoping.md).
+[`docs/mathematics-2026-08/diary-telescoping.md`](docs/mathematics-2026-08/diary-telescoping.md).
 
 **Immediate action (`PAUSED`, Lean lane).** ADR-0452 focused-green; full gate hit
 concurrent scoreboard drift. Await refactor. No Gauss credit.

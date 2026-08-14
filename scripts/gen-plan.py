@@ -124,9 +124,53 @@ def read_lane(path: Path) -> dict[str, object]:
         "path": path.name,
         "lane": path.stem,
         "sections": {
-            name: "\n".join(body).strip("\n") for name, body in contributions.items()
+            name: rebase_links("\n".join(body).strip("\n"), path)
+            for name, body in contributions.items()
         },
     }
+
+
+# A relative link is relative to the file it lives in, and generation moves the
+# text to a different directory. `docs/plan/status/x.md` writing
+# `../../mathematics-2026-08/y.md` is correct where it sits and escapes the
+# repository once emitted into `PLAN.md` at the root.
+#
+# This is not hypothetical: it shipped, broke `check-links.sh`, and two separate
+# lanes each declined to fix it because the file belonged to the other. The fix
+# belongs in the generator, not in a convention every future lane must remember —
+# a source file should be correct in its own right AND survive being moved.
+RELATIVE_LINK = re.compile(r"(?<=\]\()(?!https?://|#|/)([^)]+)(?=\))")
+
+
+def rebase_links(body: str, source: Path) -> str:
+    """Rewrite relative markdown links so they resolve from `PLAN.md` at the root."""
+
+    def rebase(match: re.Match[str]) -> str:
+        target = match.group(1)
+        anchor = ""
+        if "#" in target:
+            target, _, anchor = target.partition("#")
+            anchor = "#" + anchor
+        if not target:
+            return match.group(0)
+        # Two conventions are already in use and they are not distinguishable by
+        # syntax: some status files write links relative to themselves
+        # (`../../mathematics-2026-08/x.md`), others write them already relative to
+        # the repository root, for `PLAN.md`'s benefit (`docs/plan/x.md`).
+        # Rewriting the second kind produced `docs/plan/status/docs/plan/...` on the
+        # first attempt here. So ask the filesystem instead of guessing: rebase only
+        # what actually resolves against the source file's own directory.
+        from_source = (source.parent / target).resolve()
+        if from_source.exists():
+            try:
+                return str(from_source.relative_to(ROOT)) + anchor
+            except ValueError:
+                return match.group(0)  # outside the repo; report, do not invent
+        # Already root-relative, or simply broken. Either way leave it exactly as
+        # written and let `check-links.sh` be the one to complain.
+        return match.group(0)
+
+    return RELATIVE_LINK.sub(rebase, body)
 
 
 def _negated_date(date: str) -> str:
