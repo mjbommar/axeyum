@@ -10,12 +10,21 @@
 #
 # This hook APPENDS a trailer rather than rejecting, deliberately. The pre-push
 # hook's own history records why: a gate that forces `--no-verify` defeats
-# itself. So identify your lane once,
+# itself. So identify your lane,
 #
-#     git config axeyum.agent <lane-id>        # e.g. coordinator, lean-kernel
+#     export AXEYUM_AGENT=<lane-id>            # e.g. coordinator, lean-kernel
 #
-# and every commit is stamped from then on. Only a checkout that has never set
-# it is asked to do anything.
+# and every commit from that shell is stamped.
+#
+# THE ENV VAR IS PRIMARY, and that ordering is the whole point. The first
+# version of this hook read `git config axeyum.agent` only — repo-LOCAL config,
+# which in a checkout shared by several lanes is one more shared append point.
+# It took 5 minutes to bite: the `gates` lane set it, and the coordinator's very
+# next commit (c8bd277f9) was stamped `gates`. A hook written to stop
+# misattribution had misattributed a commit to the wrong lane. Environment is
+# per-process, so it is the only identity that can differ between two lanes
+# working in one tree. `git config` remains as a fallback for the ordinary
+# single-lane checkout, where it is genuinely more convenient.
 #
 # Install (per checkout): git config core.hooksPath hooks
 set -euo pipefail
@@ -29,20 +38,27 @@ head -1 "$msg_file" | grep -qiE '^(merge|revert|fixup!|squash!|amend!)' && exit 
 # Already stamped (including by a template or a previous --amend): leave it.
 grep -qiE '^Agent:[[:space:]]*\S' "$msg_file" && exit 0
 
-agent="$(git config --get axeyum.agent 2>/dev/null || true)"
+# Per-process first, repo-local second. See the note above: the reverse order
+# stamped a coordinator commit with another lane's name within 5 minutes.
+agent="${AXEYUM_AGENT:-$(git config --get axeyum.agent 2>/dev/null || true)}"
 
 if [[ -z "$agent" ]]; then
     cat >&2 <<'EOF'
-commit-msg: this checkout has no lane identity, so the commit cannot be attributed.
+commit-msg: this shell has no lane identity, so the commit cannot be attributed.
 
-  git config axeyum.agent <lane-id>
+  export AXEYUM_AGENT=<lane-id>
 
 Pick anything stable that names who is working here — `coordinator`,
-`lean-kernel`, `alice`. It is set once per checkout, and every commit is
-stamped from then on.
+`lean-kernel`, `alice`.
 
-Why: several lanes and a human share one git author here, so `git log` cannot
-say who made a change. Three parties misattributed commits on 2026-08-14.
+If this checkout only ever has ONE writer, `git config axeyum.agent <lane-id>`
+is a persistent equivalent. Do NOT use it in a checkout several lanes share:
+that config is repo-local, so whoever sets it last renames everyone else. It
+happened to this hook's own author (c8bd277f9), which is why the env var wins.
+
+Why any of this: several lanes and a human share one git author here, so
+`git log` cannot say who made a change. Three parties misattributed commits on
+2026-08-14.
 EOF
     exit 1
 fi
