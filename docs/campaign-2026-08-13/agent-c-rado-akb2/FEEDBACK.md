@@ -47,7 +47,7 @@ akb2_frontier` compiles the whole lib, so *any* agent's half-finished edit
 in *any* file of that crate blocks *every* other agent's build of it.
 
 **Diagnosis.** The multi-agent hygiene rules in
-[CLAUDE.md](../../../../home/mjbommar/projects/personal/axeyum/CLAUDE.md)
+[CLAUDE.md](../../../CLAUDE.md)
 ("Multi-agent hygiene", "One writer per worktree/area at a time") are about
 *write* conflicts. There is no rule about *read* conflicts, and the shared
 checkout has exactly one compile state.
