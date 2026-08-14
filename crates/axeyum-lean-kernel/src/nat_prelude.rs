@@ -235,6 +235,8 @@ pub struct NatPrelude {
     pub le_trans: NameId,
     /// `le_total : ∀ a b, Or (Le a b) (Le b a)`.
     pub le_total: NameId,
+    /// `not_succ_le_zero : ∀ n, Not (Le (succ n) zero)`.
+    pub not_succ_le_zero: NameId,
     /// `le_intro : ∀ a b k, a+k=b → Le a b`.
     pub le_intro: NameId,
     /// `le_dest : ∀ a b, Le a b → Exists (fun k => a+k=b)`.
@@ -247,6 +249,8 @@ pub struct NatPrelude {
     pub le_of_add_le_add_left: NameId,
     /// `mul_le_mul_left : ∀ c a b, Le a b → Le (c*a) (c*b)`.
     pub mul_le_mul_left: NameId,
+    /// `le_of_mul_le_mul_left_succ : ∀ c a b, Le ((succ c)*a) ((succ c)*b) → Le a b`.
+    pub le_of_mul_le_mul_left_succ: NameId,
     /// `sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n`.
     pub sub_add_cancel: NameId,
     /// `mul_sub_left_distrib : ∀ b q a, Le a q → b*(q-a) = b*q-b*a`.
@@ -346,12 +350,14 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_of_succ_le_succ: kernel.name_str(nat, "le_of_succ_le_succ"),
             le_trans: kernel.name_str(nat, "le_trans"),
             le_total: kernel.name_str(nat, "le_total"),
+            not_succ_le_zero: kernel.name_str(nat, "not_succ_le_zero"),
             le_intro: kernel.name_str(nat, "le_intro"),
             le_dest: kernel.name_str(nat, "le_dest"),
             le_add_right: kernel.name_str(nat, "le_add_right"),
             add_le_add_left: kernel.name_str(nat, "add_le_add_left"),
             le_of_add_le_add_left: kernel.name_str(nat, "le_of_add_le_add_left"),
             mul_le_mul_left: kernel.name_str(nat, "mul_le_mul_left"),
+            le_of_mul_le_mul_left_succ: kernel.name_str(nat, "le_of_mul_le_mul_left_succ"),
             sub_add_cancel: kernel.name_str(nat, "sub_add_cancel"),
             mul_sub_left_distrib: kernel.name_str(nat, "mul_sub_left_distrib"),
             dvd: kernel.name_str(nat, "dvd"),
@@ -1682,6 +1688,58 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         (total(d, a, b), proof)
     })?;
 
+    // not_succ_le_zero : ∀ n, Not (Le (succ n) zero)
+    // Eliminate a hypothetical derivation into a family that is `False` only
+    // at index zero and `True` at every successor index.
+    d.theorem(p.not_succ_le_zero, 1, &|d, v| {
+        let n = v[0];
+        let sn = d.succ(n);
+        let zero = d.zero();
+        let hyp_ty = d.le(sn, zero);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let true_ty = d.kernel().const_(p.logic.true_, vec![]);
+        let family = |d: &mut NatDev<'_>, x: ExprId| {
+            let motive = d.kernel().lam(anon, nat, prop, BinderInfo::Default);
+            let step = {
+                let j_fv = d.fresh_fvar();
+                let ih_fv = d.fresh_fvar();
+                let body = true_ty;
+                let with_ih = d.lam_fv(ih_fv, prop, body);
+                d.lam_fv(j_fv, nat, with_ih)
+            };
+            let one = d.level_one();
+            let rec = d.kernel().const_(p.rec, vec![one]);
+            d.apply(rec, &[motive, false_ty, step, x])
+        };
+        let motive = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let dom = d.le(sn, x);
+            let body = family(d, x);
+            let inner = d.kernel().lam(anon, dom, body, BinderInfo::Default);
+            d.lam_fv(x_fv, nat, inner)
+        };
+        let minor_refl = d.kernel().const_(p.logic.true_intro, vec![]);
+        let minor_step = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_fv = d.fresh_fvar();
+            let hx_ty = d.le(sn, x);
+            let ih_fv = d.fresh_fvar();
+            let ih_ty = family(d, x);
+            let body = d.kernel().const_(p.logic.true_intro, vec![]);
+            let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+            let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+            d.lam_fv(x_fv, nat, with_hx)
+        };
+        let body = d.const_app(p.le_rec, &[sn, motive, minor_refl, minor_step, zero, h]);
+        let stmt = d.arrow(hyp_ty, false_ty);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+
     // le_intro : ∀ a b k, a+k=b → Le a b
     d.theorem(p.le_intro, 3, &|d, v| {
         let (a, b, k) = (v[0], v[1], v[2]);
@@ -1918,6 +1976,96 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         let stmt = d.arrow(hyp_ty, conclusion);
         let proof = d.lam_fv(h_fv, hyp_ty, body);
         (stmt, proof)
+    })?;
+
+    // le_of_mul_le_mul_left_succ :
+    //   ∀ c a b, Le ((succ c)*a) ((succ c)*b) → Le a b
+    // Induct on both compared values. Successor/successor products expose a
+    // common positive addend, which additive order reflection cancels.
+    d.theorem(p.le_of_mul_le_mul_left_succ, 3, &|d, v| {
+        let (c, a, b) = (v[0], v[1], v[2]);
+        let factor = d.succ(c);
+        let cancellation_at = |d: &mut NatDev<'_>, x: ExprId| {
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let fx = d.mul(factor, x);
+            let fy = d.mul(factor, y);
+            let hyp = d.le(fx, fy);
+            let conclusion = d.le(x, y);
+            let body = d.arrow(hyp, conclusion);
+            d.pi_fv(y_fv, nat, body)
+        };
+        let at_zero = |d: &mut NatDev<'_>| {
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let zero = d.zero();
+            let fy = d.mul(factor, y);
+            let hyp_ty = d.le(zero, fy);
+            let h_fv = d.fresh_fvar();
+            let body = d.lemma(p.zero_le, &[y]);
+            let with_h = d.lam_fv(h_fv, hyp_ty, body);
+            d.lam_fv(y_fv, nat, with_h)
+        };
+        let step_x = |d: &mut NatDev<'_>, x: ExprId, ih: ExprId| {
+            let sx = d.succ(x);
+            let motive_y = |d: &mut NatDev<'_>, y: ExprId| {
+                let fsx = d.mul(factor, sx);
+                let fy = d.mul(factor, y);
+                let hyp = d.le(fsx, fy);
+                let conclusion = d.le(sx, y);
+                d.arrow(hyp, conclusion)
+            };
+            let at_y_zero = |d: &mut NatDev<'_>| {
+                let zero = d.zero();
+                let fx = d.mul(factor, x);
+                let positive_body = d.add(fx, c);
+                let positive = d.succ(positive_body);
+                let hyp_ty = d.le(positive, zero);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let impossible = d.lemma(p.not_succ_le_zero, &[positive_body, h]);
+                let target = d.le(sx, zero);
+                let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+                let level_zero = d.kernel().level_zero();
+                let rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+                let body = d.apply(rec, &[motive, impossible]);
+                d.lam_fv(h_fv, hyp_ty, body)
+            };
+            let step_y = |d: &mut NatDev<'_>, y: ExprId, _inner_ih: ExprId| {
+                let sy = d.succ(y);
+                let fx = d.mul(factor, x);
+                let fy = d.mul(factor, y);
+                let fsx = d.mul(factor, sx);
+                let fsy = d.mul(factor, sy);
+                let hyp_ty = d.le(fsx, fsy);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let left_common = d.add(factor, fx);
+                let right_common = d.add(factor, fy);
+                let left_comm = d.lemma(p.add_comm, &[fx, factor]);
+                let right_comm = d.lemma(p.add_comm, &[fy, factor]);
+                let lower_motive = d.eq_motive(fsx, &|d, lower| d.le(lower, fsy));
+                let common_lower = d.transport(fsx, lower_motive, h, left_common, left_comm);
+                let upper_motive = d.eq_motive(fsy, &|d, upper| d.le(left_common, upper));
+                let common = d.transport(fsy, upper_motive, common_lower, right_common, right_comm);
+                let smaller = d.lemma(p.le_of_add_le_add_left, &[factor, fx, fy, common]);
+                let prior = d.apply(ih, &[y, smaller]);
+                let body = d.lemma(p.le_succ_succ, &[x, y, prior]);
+                d.lam_fv(h_fv, hyp_ty, body)
+            };
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let body = d.induct(&motive_y, &at_y_zero, &step_y, y);
+            d.lam_fv(y_fv, nat, body)
+        };
+        let all_b = d.induct(&cancellation_at, &at_zero, &step_x, a);
+        let proof = d.apply(all_b, &[b]);
+        let fa = d.mul(factor, a);
+        let fb = d.mul(factor, b);
+        let hyp = d.le(fa, fb);
+        let conclusion = d.le(a, b);
+        (d.arrow(hyp, conclusion), proof)
     })?;
 
     // sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n

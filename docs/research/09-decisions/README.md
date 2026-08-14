@@ -460,3 +460,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0402](adr-0402-checked-rado-witness-sufficient-range.md) | Checked sufficient upper range for the Rado witness | accepted |
 | [0403](adr-0403-proved-nat-order-totality.md) | Proved Nat order totality | accepted |
 | [0404](adr-0404-order-witnesses-and-additive-reflection.md) | Order witnesses and additive reflection | accepted |
+| [0405](adr-0405-positive-multiplication-order-reflection.md) | Positive multiplication reflects Nat order | accepted |

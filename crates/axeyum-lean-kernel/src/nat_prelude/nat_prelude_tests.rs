@@ -102,12 +102,14 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_of_succ_le_succ,
         p.le_trans,
         p.le_total,
+        p.not_succ_le_zero,
         p.le_intro,
         p.le_dest,
         p.le_add_right,
         p.add_le_add_left,
         p.le_of_add_le_add_left,
         p.mul_le_mul_left,
+        p.le_of_mul_le_mul_left_succ,
         p.sub_add_cancel,
         p.mul_sub_left_distrib,
         p.dvd_mul,
@@ -601,6 +603,31 @@ fn order_bounds_round_trip_through_additive_witnesses() {
     let four_plus_five = f.add(four, five);
     assert!(f.k.def_eq(six, four_plus_two));
     assert!(f.k.def_eq(nine, four_plus_five));
+}
+
+#[test]
+fn positive_successor_multiplication_reflects_order() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let two = f.num(2);
+    let three = f.num(3);
+    let five = f.num(5);
+    let six = f.num(6);
+    let nine = f.num(9);
+    let fifteen = f.num(15);
+    let exclusion = f.lemma(p.not_succ_le_zero, &[two]);
+    f.k.infer(exclusion)
+        .unwrap_or_else(|e| panic!("successor exclusion should infer: {}", f.explain(&e)));
+    let scaled = f.lemma(p.le_add_right, &[six, nine]);
+    let reflected = f.lemma(p.le_of_mul_le_mul_left_succ, &[two, two, five, scaled]);
+    let stmt = f.le(two, five);
+    let name = f.name("cancel_three_from_six_le_fifteen");
+    f.declare_theorem(name, stmt, reflected)
+        .unwrap_or_else(|e| panic!("positive multiplication should reflect: {}", f.explain(&e)));
+    let three_times_two = f.mul(three, two);
+    let three_times_five = f.mul(three, five);
+    assert!(f.k.def_eq(six, three_times_two));
+    assert!(f.k.def_eq(fifteen, three_times_five));
 }
 
 /// Divisibility is a real prelude definition, not a test-only proposition:
@@ -1187,7 +1214,29 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 22, "every negative control must be rejected");
+    // NC23 — positive multiplication cancellation retains the reflected endpoints.
+    {
+        let name = f.name("nc23_mul_order_reflection_wrong_lower_endpoint");
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let six = f.num(6);
+        let nine = f.num(9);
+        let scaled = f.lemma(p.le_add_right, &[six, nine]);
+        let proof = f.lemma(p.le_of_mul_le_mul_left_succ, &[two, two, five, scaled]);
+        let bad = f.le(three, five);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC23: multiplication reflection must retain both endpoints");
+        println!(
+            "NC23 (wrong multiplied endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 23, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1210,7 +1259,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        8 + 47,
+        8 + 49,
         "every promised definition and theorem must be rendered"
     );
 }
