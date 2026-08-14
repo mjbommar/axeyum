@@ -24,6 +24,7 @@ use axeyum_cnf::{CnfClause, CnfFormula, DratStep, check_drat, check_drat_backwar
 use crate::SearchError;
 use crate::cover::{
     BranchPlan, CellCheck, CellRecord, CellVerdict, CoverCertificate, certify_cover,
+    certify_tree_cover,
 };
 use crate::harness::{CheckMode, cell_proof_path};
 
@@ -55,6 +56,52 @@ pub fn certify_dumped_cover(
     proof_prefix: &str,
     mode: CheckMode,
 ) -> Result<CoverCertificate, SearchError> {
+    let upgraded = recheck_dumped(formula, plan, records, proof_dir, proof_prefix, mode)?;
+    certify_cover(formula, plan, &upgraded)
+}
+
+/// [`certify_dumped_cover`] for a **tree** cover, as produced by
+/// [`run_adaptive_cover`](crate::harness::run_adaptive_cover).
+///
+/// The only differences are that a row's augmenting units come from
+/// [`BranchPlan::literals_for_prefix`] (a cube's path can be shorter than the
+/// plan's depth) and that the certificate is issued by
+/// [`certify_tree_cover`], whose obligation 3 is the complete-trie check
+/// rather than the flat product check.
+///
+/// `records` is normally the concatenation of every run's ledger: a resumed
+/// run's rows carry the same shape-independent cube codes, so the union
+/// certifies as one cover or names the cube that is missing from it.
+///
+/// # Errors
+///
+/// As [`certify_dumped_cover`], with [`certify_tree_cover`]'s obligations.
+pub fn certify_dumped_tree_cover(
+    formula: &CnfFormula,
+    plan: &BranchPlan,
+    records: &[CellRecord],
+    proof_dir: &Path,
+    proof_prefix: &str,
+    mode: CheckMode,
+) -> Result<CoverCertificate, SearchError> {
+    let upgraded = recheck_dumped(formula, plan, records, proof_dir, proof_prefix, mode)?;
+    certify_tree_cover(formula, plan, &upgraded)
+}
+
+/// Re-checks every deferred row's dumped proof, returning the upgraded ledger.
+///
+/// Shared by the flat and tree certification passes so the two cannot drift on
+/// what a re-check does. The augmented formula is rebuilt from the row's own
+/// recorded choices through the plan; the proof file contributes only the
+/// proof.
+fn recheck_dumped(
+    formula: &CnfFormula,
+    plan: &BranchPlan,
+    records: &[CellRecord],
+    proof_dir: &Path,
+    proof_prefix: &str,
+    mode: CheckMode,
+) -> Result<Vec<CellRecord>, SearchError> {
     if matches!(mode, CheckMode::Deferred) {
         return Err(SearchError::InvalidParameter {
             what: "certify_dumped_cover needs a checking mode; Deferred would defer forever"
@@ -77,9 +124,11 @@ pub fn certify_dumped_cover(
         let proof = parse_drat(&text)?;
 
         // Rebuild F + cell units from the RECORDED choices via the plan. The
-        // proof file contributes only the proof.
+        // proof file contributes only the proof. `literals_for_prefix` accepts
+        // a full-depth cell and a shorter cube alike, so one path serves both
+        // cover shapes.
         let mut augmented = formula.clone();
-        for literal in plan.literals_for(&record.choices)? {
+        for literal in plan.literals_for_prefix(&record.choices)? {
             augmented.add_clause(CnfClause::new(vec![literal]))?;
         }
 
@@ -108,7 +157,7 @@ pub fn certify_dumped_cover(
             ..record.clone()
         });
     }
-    certify_cover(formula, plan, &upgraded)
+    Ok(upgraded)
 }
 
 #[cfg(test)]
@@ -205,6 +254,76 @@ mod tests {
             certify_dumped_cover(&formula, &plan, &records, &dir, &prefix, CheckMode::Backward),
             Err(SearchError::ProofUnavailable { index, .. }) if index == records[1].index
         ));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn certifies_a_deferred_tree_cover_and_rejects_an_incomplete_one() {
+        use crate::harness::{AdaptiveOptions, AdaptiveOutcome, run_adaptive_cover};
+
+        // S(3) = 14 with a starved budget: the run must split, so the cover is
+        // a genuine mixed-depth tree rather than the flat product.
+        let family = Schur::new(3).expect("family");
+        let problem = family.problem(14).expect("problem");
+        let formula = problem.encode().expect("encode");
+        let plan = colour_branch_plan(&problem, &[2, 3, 4, 5]).expect("plan");
+        let dir = scratch_dir("tree");
+        let options = CoverOptions {
+            cell_conflicts: 1,
+            check: CheckMode::Deferred,
+            proof_dir: Some(dir.clone()),
+            ..CoverOptions::default()
+        };
+        let outcome = run_adaptive_cover(
+            &formula,
+            &plan,
+            &options,
+            &AdaptiveOptions {
+                initial_depth: 1,
+                ..AdaptiveOptions::default()
+            },
+            &SilentObserver,
+        )
+        .expect("run");
+        let AdaptiveOutcome::Refuted {
+            records, splits, ..
+        } = &outcome
+        else {
+            panic!("expected a refutation, got {outcome:?}");
+        };
+        assert!(*splits > 0, "the cover should be a tree, not a product");
+        assert!(
+            outcome.certificate().is_none(),
+            "deferred certifies nothing"
+        );
+
+        let prefix = options.proof_prefix.clone();
+        let certificate =
+            certify_dumped_tree_cover(&formula, &plan, records, &dir, &prefix, CheckMode::Backward)
+                .expect("certify");
+        assert_eq!(certificate.cells, records.len());
+        assert!(certificate.steps > 0, "a certified cover has proof steps");
+
+        // SOUNDNESS-NEGATIVE: drop one cube's row. The proofs on disk are
+        // untouched and every remaining row still checks, so only the
+        // completeness obligation stands between this and a fabricated result.
+        let mut holed = records.clone();
+        let dropped = holed.remove(records.len() / 2);
+        assert!(
+            matches!(
+                certify_dumped_tree_cover(
+                    &formula,
+                    &plan,
+                    &holed,
+                    &dir,
+                    &prefix,
+                    CheckMode::Backward
+                ),
+                Err(SearchError::MissingCell { .. })
+            ),
+            "an incomplete tree cover must not certify (dropped cube {})",
+            dropped.index
+        );
         fs::remove_dir_all(&dir).ok();
     }
 
