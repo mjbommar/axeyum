@@ -60,7 +60,7 @@ impl Fixture {
 /// have. `Nat`/`Nat.zero`/`Nat.succ`/`Nat.rec`/`Nat.le`/… are inductive
 /// machinery, so they are checked separately by `environment().contains`.
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
-    vec![p.add, p.mul, p.pow, p.sum_range, p.lt, p.dvd]
+    vec![p.add, p.mul, p.pow, p.sum_range, p.pred, p.sub, p.lt, p.dvd]
 }
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
@@ -71,6 +71,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mul_succ,
         p.pow_zero,
         p.pow_succ,
+        p.pred_zero,
+        p.pred_succ,
+        p.sub_zero,
+        p.sub_succ,
         p.sum_range_zero,
         p.sum_range_succ,
         p.sum_range_congr,
@@ -81,6 +85,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.add_comm,
         p.add_assoc,
         p.add_right_comm,
+        p.succ_injective,
+        p.add_right_cancel,
+        p.add_left_cancel,
         p.zero_mul,
         p.succ_mul,
         p.mul_comm,
@@ -195,6 +202,23 @@ fn arithmetic_reduces_on_numerals() {
     let twenty_seven = f.num(27);
     assert!(f.k.def_eq(cube, twenty_seven), "pow 3 3 must reduce to 27");
 
+    let subtraction_zero = f.zero();
+    let zero_pred = f.pred(subtraction_zero);
+    assert!(
+        f.k.def_eq(zero_pred, subtraction_zero),
+        "pred 0 must reduce to 0"
+    );
+    let pred_four = f.pred(four);
+    assert!(f.k.def_eq(pred_four, three), "pred 4 must reduce to 3");
+    let seven = f.num(7);
+    let seven_sub_three = f.sub(seven, three);
+    assert!(f.k.def_eq(seven_sub_three, four), "7 - 3 must reduce to 4");
+    let two_sub_five = f.sub(two, five);
+    assert!(
+        f.k.def_eq(two_sub_five, subtraction_zero),
+        "2 - 5 must truncate to 0"
+    );
+
     let six = f.num(6);
     let i_fv = f.fresh_fvar();
     let i = f.k.fvar(i_fv);
@@ -223,6 +247,43 @@ fn arithmetic_reduces_on_numerals() {
         !f.k.def_eq(first_four, five),
         "sumRange identity 4 must NOT be def-eq to 5"
     );
+    assert!(
+        !f.k.def_eq(seven_sub_three, five),
+        "7 - 3 must NOT be def-eq to 5"
+    );
+}
+
+/// Checked predecessor elimination supports successor injectivity and both
+/// orientations of additive cancellation in downstream proof terms.
+#[test]
+fn additive_cancellation_is_checked_and_reusable() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let two = f.num(2);
+    let three = f.num(3);
+    let five = f.num(5);
+    let zero = f.zero();
+    let zero_plus_two = f.add(zero, two);
+    let zero_add_two = f.lemma(p.zero_add, &[two]);
+
+    let succ_eq = f.congr(zero_plus_two, two, zero_add_two, &|d, n| d.succ(n));
+    let injective = f.lemma(p.succ_injective, &[zero_plus_two, two, succ_eq]);
+    let injective_name = f.name("succ_two_injective");
+    let zero_plus_two_eq_two = f.eq(zero_plus_two, two);
+    f.declare_theorem(injective_name, zero_plus_two_eq_two, injective)
+        .unwrap_or_else(|e| panic!("successor injectivity should admit: {}", f.explain(&e)));
+
+    let right_h = f.congr(zero_plus_two, two, zero_add_two, &|d, n| d.add(n, five));
+    let right = f.lemma(p.add_right_cancel, &[zero_plus_two, two, five, right_h]);
+    let right_name = f.name("cancel_right_five");
+    f.declare_theorem(right_name, zero_plus_two_eq_two, right)
+        .unwrap_or_else(|e| panic!("right cancellation should admit: {}", f.explain(&e)));
+
+    let left_h = f.congr(zero_plus_two, two, zero_add_two, &|d, n| d.add(three, n));
+    let left = f.lemma(p.add_left_cancel, &[three, zero_plus_two, two, left_h]);
+    let left_name = f.name("cancel_left_three");
+    f.declare_theorem(left_name, zero_plus_two_eq_two, left)
+        .unwrap_or_else(|e| panic!("left cancellation should admit: {}", f.explain(&e)));
 }
 
 /// The generic checked reindexing theorem covers both the empty `k = 3`
@@ -798,7 +859,34 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 14, "every negative control must be rejected");
+    // NC15 — cancellation preserves equality orientation. The checked proof
+    // returns `b = c`; it cannot be assigned the untransported target `c = b`.
+    {
+        let name = f.name("nc15_add_left_cancel_wrong_orientation");
+        let err = f
+            .try_theorem(name, 3, &|d, v| {
+                let (a, b, c) = (v[0], v[1], v[2]);
+                let ab = d.add(a, b);
+                let ac = d.add(a, c);
+                let hyp_ty = d.eq(ab, ac);
+                let h_fv = d.fresh_fvar();
+                let h = d.k.fvar(h_fv);
+                let body = d.lemma(p.add_left_cancel, &[a, b, c, h]);
+                let proof = d.lam_fv(h_fv, hyp_ty, body);
+                let wrong = d.eq(c, b);
+                let stmt = d.arrow(hyp_ty, wrong);
+                (stmt, proof)
+            })
+            .expect_err("NC15: cancellation result orientation must be checked");
+        println!(
+            "NC15 (wrong cancellation orientation) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 15, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -821,7 +909,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        6 + 30,
+        8 + 37,
         "every promised definition and theorem must be rendered"
     );
 }

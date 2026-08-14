@@ -122,6 +122,11 @@ pub struct NatPrelude {
     pub pow: NameId,
     /// `Nat.sumRange : (Nat → Nat) → Nat → Nat`.
     pub sum_range: NameId,
+    /// `Nat.pred : Nat → Nat`, with `pred zero = zero`.
+    pub pred: NameId,
+    /// `Nat.sub : Nat → Nat → Nat`, truncated at zero and recursive in the
+    /// second argument.
+    pub sub: NameId,
 
     // --- defining equations (each proved by `Eq.refl`) -----------------------
     /// `add_zero : ∀ (n : Nat), Eq Nat (add n zero) n`.
@@ -136,6 +141,14 @@ pub struct NatPrelude {
     pub pow_zero: NameId,
     /// `pow_succ : ∀ (n m : Nat), Eq Nat (pow n (succ m)) (mul (pow n m) n)`.
     pub pow_succ: NameId,
+    /// `pred_zero : pred zero = zero`.
+    pub pred_zero: NameId,
+    /// `pred_succ : ∀ n, pred (succ n) = n`.
+    pub pred_succ: NameId,
+    /// `sub_zero : ∀ n, sub n zero = n`.
+    pub sub_zero: NameId,
+    /// `sub_succ : ∀ n m, sub n (succ m) = pred (sub n m)`.
+    pub sub_succ: NameId,
     /// `sumRange_zero : ∀ f, sumRange f zero = zero`.
     pub sum_range_zero: NameId,
     /// `sumRange_succ : ∀ f n, sumRange f (succ n) = sumRange f n + f n`.
@@ -158,6 +171,12 @@ pub struct NatPrelude {
     pub add_assoc: NameId,
     /// `add_right_comm : ∀ (a b c : Nat), Eq Nat (add (add a b) c) (add (add a c) b)`.
     pub add_right_comm: NameId,
+    /// `succ_injective : ∀ n m, succ n = succ m → n = m`.
+    pub succ_injective: NameId,
+    /// `add_right_cancel : ∀ n m k, n + k = m + k → n = m`.
+    pub add_right_cancel: NameId,
+    /// `add_left_cancel : ∀ a b c, a + b = a + c → b = c`.
+    pub add_left_cancel: NameId,
 
     // --- multiplicative theorems --------------------------------------------
     /// `zero_mul : ∀ (n : Nat), Eq Nat (mul zero n) zero`.
@@ -256,12 +275,18 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             mul: kernel.name_str(nat, "mul"),
             pow: kernel.name_str(nat, "pow"),
             sum_range: kernel.name_str(nat, "sumRange"),
+            pred: kernel.name_str(nat, "pred"),
+            sub: kernel.name_str(nat, "sub"),
             add_zero: kernel.name_str(nat, "add_zero"),
             add_succ: kernel.name_str(nat, "add_succ"),
             mul_zero: kernel.name_str(nat, "mul_zero"),
             mul_succ: kernel.name_str(nat, "mul_succ"),
             pow_zero: kernel.name_str(nat, "pow_zero"),
             pow_succ: kernel.name_str(nat, "pow_succ"),
+            pred_zero: kernel.name_str(nat, "pred_zero"),
+            pred_succ: kernel.name_str(nat, "pred_succ"),
+            sub_zero: kernel.name_str(nat, "sub_zero"),
+            sub_succ: kernel.name_str(nat, "sub_succ"),
             sum_range_zero: kernel.name_str(nat, "sumRange_zero"),
             sum_range_succ: kernel.name_str(nat, "sumRange_succ"),
             sum_range_congr: kernel.name_str(nat, "sumRange_congr"),
@@ -272,6 +297,9 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             add_comm: kernel.name_str(nat, "add_comm"),
             add_assoc: kernel.name_str(nat, "add_assoc"),
             add_right_comm: kernel.name_str(nat, "add_right_comm"),
+            succ_injective: kernel.name_str(nat, "succ_injective"),
+            add_right_cancel: kernel.name_str(nat, "add_right_cancel"),
+            add_left_cancel: kernel.name_str(nat, "add_left_cancel"),
             zero_mul: kernel.name_str(nat, "zero_mul"),
             succ_mul: kernel.name_str(nat, "succ_mul"),
             mul_comm: kernel.name_str(nat, "mul_comm"),
@@ -296,6 +324,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
 
         let mut d = NatDev::new(kernel, p);
         declare_arithmetic(&mut d, &p)?;
+        declare_subtraction(&mut d, &p)?;
         declare_finite_ranges(&mut d, &p)?;
         declare_defining_equations(&mut d, &p)?;
         declare_additive_theorems(&mut d, &p)?;
@@ -326,6 +355,42 @@ fn declare_arithmetic(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
     d.define_binary(p.mul, 2, &|d, _x| d.zero(), &|d, x, _j, ih| d.add(ih, x))?;
     // pow x zero ≡ 1 ; pow x (succ j) ≡ mul (pow x j) x
     d.define_binary(p.pow, 3, &|d, _x| d.num(1), &|d, x, _j, ih| d.mul(ih, x))?;
+    Ok(())
+}
+
+/// `pred` and truncated `sub`, both by structural recursion. Subtraction
+/// recurses on its second argument exactly as Lean's core `Nat.sub` does.
+fn declare_subtraction(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, nat, nat, BinderInfo::Default);
+    let base = d.zero();
+    let step = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let ih_fv = d.fresh_fvar();
+        let body = j;
+        let with_ih = d.lam_fv(ih_fv, nat, body);
+        d.lam_fv(j_fv, nat, with_ih)
+    };
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let one = d.level_one();
+    let rec = d.kernel().const_(p.rec, vec![one]);
+    let body = d.apply(rec, &[motive, base, step, n]);
+    let value = d.lam_fv(n_fv, nat, body);
+    let ty = d.arrow(nat, nat);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.pred,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+
+    // sub x zero ≡ x ; sub x (succ j) ≡ pred (sub x j)
+    d.define_binary(p.sub, 2, &|_d, x| x, &|d, _x, _j, ih| d.pred(ih))?;
     Ok(())
 }
 
@@ -430,6 +495,31 @@ fn declare_defining_equations(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
         let stmt = d.eq(lhs, rhs);
         let proof = d.refl(rhs);
         (stmt, proof)
+    })?;
+    d.theorem(p.pred_zero, 0, &|d, _v| {
+        let z = d.zero();
+        let lhs = d.pred(z);
+        (d.eq(lhs, z), d.refl(z))
+    })?;
+    d.theorem(p.pred_succ, 1, &|d, v| {
+        let n = v[0];
+        let sn = d.succ(n);
+        let lhs = d.pred(sn);
+        (d.eq(lhs, n), d.refl(n))
+    })?;
+    d.theorem(p.sub_zero, 1, &|d, v| {
+        let n = v[0];
+        let z = d.zero();
+        let lhs = d.sub(n, z);
+        (d.eq(lhs, n), d.refl(n))
+    })?;
+    d.theorem(p.sub_succ, 2, &|d, v| {
+        let (n, m) = (v[0], v[1]);
+        let sm = d.succ(m);
+        let lhs = d.sub(n, sm);
+        let inner = d.sub(n, m);
+        let rhs = d.pred(inner);
+        (d.eq(lhs, rhs), d.refl(rhs))
     })?;
     {
         let nat = d.nat_ty();
@@ -609,6 +699,81 @@ fn declare_additive_theorems(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
         let h3 = d.symm(s3, s2, h_assoc2);
         let (end, proof) = d.chain(start, &[(s1, h1), (s2, h2), (s3, h3)]);
         let stmt = d.eq(start, end);
+        (stmt, proof)
+    })?;
+
+    // succ_injective : ∀ n m, succ n = succ m → n = m
+    // Applying the checked predecessor definition to both sides computes to
+    // the desired equality; no constructor-disjointness axiom is involved.
+    d.theorem(p.succ_injective, 2, &|d, v| {
+        let (n, m) = (v[0], v[1]);
+        let sn = d.succ(n);
+        let sm = d.succ(m);
+        let hyp_ty = d.eq(sn, sm);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = d.congr(sn, sm, h, &|d, x| d.pred(x));
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        let conclusion = d.eq(n, m);
+        let stmt = d.arrow(hyp_ty, conclusion);
+        (stmt, proof)
+    })?;
+
+    // add_right_cancel : ∀ n m k, n + k = m + k → n = m
+    // Induction follows the argument on which `add` recurses.
+    d.theorem(p.add_right_cancel, 3, &|d, v| {
+        let (n, m, k) = (v[0], v[1], v[2]);
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let nx = d.add(n, x);
+            let mx = d.add(m, x);
+            let hyp = d.eq(nx, mx);
+            let conclusion = d.eq(n, m);
+            d.arrow(hyp, conclusion)
+        };
+        let stmt = motive(d, k);
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let hyp_ty = d.eq(n, m);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                d.lam_fv(h_fv, hyp_ty, h)
+            },
+            &|d, j, ih| {
+                let nj = d.add(n, j);
+                let mj = d.add(m, j);
+                let snj = d.succ(nj);
+                let smj = d.succ(mj);
+                let hyp_ty = d.eq(snj, smj);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let stripped = d.lemma(p.succ_injective, &[nj, mj, h]);
+                let body = d.apply(ih, &[stripped]);
+                d.lam_fv(h_fv, hyp_ty, body)
+            },
+            k,
+        );
+        (stmt, proof)
+    })?;
+
+    // add_left_cancel : ∀ a b c, a + b = a + c → b = c
+    // Commute the common operand to the right and reuse the inductive theorem.
+    d.theorem(p.add_left_cancel, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let ab = d.add(a, b);
+        let ac = d.add(a, c);
+        let hyp_ty = d.eq(ab, ac);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let ba = d.add(b, a);
+        let ca = d.add(c, a);
+        let h1 = d.lemma(p.add_comm, &[b, a]);
+        let h3 = d.lemma(p.add_comm, &[a, c]);
+        let (_end, right_common) = d.chain(ba, &[(ab, h1), (ac, h), (ca, h3)]);
+        let body = d.lemma(p.add_right_cancel, &[b, c, a, right_common]);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        let conclusion = d.eq(b, c);
+        let stmt = d.arrow(hyp_ty, conclusion);
         (stmt, proof)
     })?;
     Ok(())
@@ -1648,6 +1813,18 @@ pub trait NatOps {
     /// `Nat.pow x y`.
     fn pow(&mut self, x: ExprId, y: ExprId) -> ExprId {
         let f = self.prelude().pow;
+        self.const_app(f, &[x, y])
+    }
+
+    /// `Nat.pred x`.
+    fn pred(&mut self, x: ExprId) -> ExprId {
+        let f = self.prelude().pred;
+        self.const_app(f, &[x])
+    }
+
+    /// Truncated subtraction `Nat.sub x y`.
+    fn sub(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        let f = self.prelude().sub;
         self.const_app(f, &[x, y])
     }
 
