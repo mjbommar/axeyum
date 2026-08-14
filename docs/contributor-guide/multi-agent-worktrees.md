@@ -238,6 +238,32 @@ agent's staged files into an unrelated commit and had to be recovered):
   history; re-stage and re-commit your pathspec set on the new HEAD, then
   verify with `git show --stat`.
 
+## Lane attribution (`hooks/commit-msg`)
+
+Every commit in this checkout carries the **same git author**, because several
+agent lanes and a human share one identity. `git log` therefore cannot answer
+"who did this" — and on 2026-08-14 three separate parties misattributed commits
+to the wrong lane within one day, while one lane's `PLAN.md` edit was swept into
+another's commit with no way to tell afterwards.
+
+Identify your lane once per checkout:
+
+```sh
+git config core.hooksPath hooks      # if not already set
+git config axeyum.agent <lane-id>    # e.g. coordinator, lean-kernel, alice
+```
+
+`hooks/commit-msg` then stamps every commit with an `Agent:` trailer. It
+**appends rather than rejects** — deliberately, because the pre-push hook's own
+history records that a gate which forces `--no-verify` defeats itself. Merges,
+reverts and fixups are skipped, and an existing trailer is never duplicated.
+
+Recover attribution with:
+
+```sh
+git log --format='%h %(trailers:key=Agent,valueonly) %s'
+```
+
 ## The pre-push compile gate (mechanism, not vigilance)
 
 Every checkout should run `git config core.hooksPath hooks` once. The

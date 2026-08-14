@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Stamp every commit with the lane that made it.
+#
+# Every commit in this checkout carries the SAME git author, because several
+# agent lanes and a human share one identity. So `git log` cannot answer "who
+# did this", and on 2026-08-14 three separate parties misattributed commits to
+# the wrong lane within one day — twice by the coordinator, once by a peer —
+# while one lane's PLAN.md edit was swept into another's commit with no way to
+# tell afterwards.
+#
+# This hook APPENDS a trailer rather than rejecting, deliberately. The pre-push
+# hook's own history records why: a gate that forces `--no-verify` defeats
+# itself. So identify your lane once,
+#
+#     git config axeyum.agent <lane-id>        # e.g. coordinator, lean-kernel
+#
+# and every commit is stamped from then on. Only a checkout that has never set
+# it is asked to do anything.
+#
+# Install (per checkout): git config core.hooksPath hooks
+set -euo pipefail
+
+msg_file="$1"
+
+# Merges, squashes, fixups and reverts are mechanical — git composes their
+# messages and a lane stamp on them says nothing useful.
+head -1 "$msg_file" | grep -qiE '^(merge|revert|fixup!|squash!|amend!)' && exit 0
+
+# Already stamped (including by a template or a previous --amend): leave it.
+grep -qiE '^Agent:[[:space:]]*\S' "$msg_file" && exit 0
+
+agent="$(git config --get axeyum.agent 2>/dev/null || true)"
+
+if [[ -z "$agent" ]]; then
+    cat >&2 <<'EOF'
+commit-msg: this checkout has no lane identity, so the commit cannot be attributed.
+
+  git config axeyum.agent <lane-id>
+
+Pick anything stable that names who is working here — `coordinator`,
+`lean-kernel`, `alice`. It is set once per checkout, and every commit is
+stamped from then on.
+
+Why: several lanes and a human share one git author here, so `git log` cannot
+say who made a change. Three parties misattributed commits on 2026-08-14.
+EOF
+    exit 1
+fi
+
+# Append as a trailer, with a blank line before it if the message does not
+# already end in a trailer block.
+if [[ -n "$(tail -1 "$msg_file")" ]] && ! tail -1 "$msg_file" | grep -qE '^[A-Za-z-]+:[[:space:]]'; then
+    printf '\n' >> "$msg_file"
+fi
+printf 'Agent: %s\n' "$agent" >> "$msg_file"
+exit 0
