@@ -188,6 +188,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_lt,
         p.gcd_zero_left,
         p.gcd_succ,
+        p.gcd_dvd,
+        p.gcd_dvd_left,
+        p.gcd_dvd_right,
+        p.dvd_gcd,
+        p.dvd_gcd_iff,
         p.mod_eq_refl,
         p.mod_eq_symm,
         p.mod_eq_trans,
@@ -948,6 +953,59 @@ fn executable_gcd_uses_checked_remainder_descent_and_computes() {
     let error = f
         .declare_theorem(changed_name, changed_ty, equation)
         .expect_err("the gcd equation must reject quotient/remainder mutation");
+    assert!(matches!(
+        error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
+}
+
+#[test]
+fn executable_gcd_has_the_checked_common_divisor_characterization() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let two = f.num(2);
+    let three = f.num(3);
+    let five = f.num(5);
+    let ten = f.num(10);
+    let fourteen = f.num(14);
+    let fifteen = f.num(15);
+
+    let common = f.gcd(ten, fifteen);
+    let common_divides_ten_ty = f.dvd(common, ten);
+    let common_divides_fifteen_ty = f.dvd(common, fifteen);
+    let pair_ty = f.const_app(
+        p.logic.and,
+        &[common_divides_ten_ty, common_divides_fifteen_ty],
+    );
+    let gcd_dvd = f.lemma(p.gcd_dvd, &[ten, fifteen]);
+    let inferred =
+        f.k.infer(gcd_dvd)
+            .expect("computed gcd should divide both inputs");
+    assert!(f.k.def_eq(inferred, pair_ty));
+
+    let five_divides_ten = f.lemma(p.dvd_mul, &[five, two]);
+    let five_divides_fifteen = f.lemma(p.dvd_mul, &[five, three]);
+    let five_divides_gcd = f.lemma(
+        p.dvd_gcd,
+        &[five, ten, fifteen, five_divides_ten, five_divides_fifteen],
+    );
+    f.k.infer(five_divides_gcd)
+        .expect("every common divisor should divide computed gcd");
+
+    let characterization = f.lemma(p.dvd_gcd_iff, &[five, ten, fifteen]);
+    f.k.infer(characterization)
+        .expect("dvd_gcd_iff should package both semantic directions");
+    let zero_characterization = f.lemma(p.dvd_gcd_iff, &[zero, zero, zero]);
+    f.k.infer(zero_characterization)
+        .expect("the gcd characterization should include the all-zero corner");
+
+    let changed_right_ty = f.dvd(common, fourteen);
+    let changed_pair_ty = f.const_app(p.logic.and, &[common_divides_ten_ty, changed_right_ty]);
+    let changed_name = f.name("gcd_dvd_with_changed_right_input");
+    let error = f
+        .declare_theorem(changed_name, changed_pair_ty, gcd_dvd)
+        .expect_err("gcd divisibility must reject a changed input");
     assert!(matches!(
         error,
         KernelError::DeclarationValueMismatch { .. }
@@ -3318,7 +3376,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        18 + 110,
+        18 + 115,
         "every promised definition and theorem must be rendered"
     );
 }
