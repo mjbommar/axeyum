@@ -39,16 +39,51 @@ conflicts at ~4–9 s each, and 2,210 are untouched. The conclusion recorded
 there is that the hard subtree needs **adaptive deeper splitting**, not more
 hardware. That is the concrete next engineering step.
 
-### A2. Check the Lean export with real Lean
+### A2. Check the Lean export with real Lean — **DONE 2026-08-13, and it failed**
 
-The paper states the export has not been validated by real Lean, and that is
-accurate: `lean`, `lake` and `elan` are all absent on the machine that
-produced it (verified). The module is 42 KB, self-contained, with **0 `sorry`
-and 0 `axiom`** (verified by inspection), ending in `#print axioms`.
+**This item's premise was wrong and its answer is negative.** Superseded by
+[the measurement](lean-export-external-validation-2026-08-13.md); kept here
+because the way it was wrong is instructive.
 
-One command on any host with a toolchain converts *"we emitted a Lean module"*
-into *"an independent kernel accepted it."* Very high credibility per unit of
-effort, and it is the single cheapest item on this list.
+The claim that "`lean`, `lake` and `elan` are all absent on the machine that
+produced it (verified)" was **false**. The pinned toolchain was installed at
+`~/.elan/toolchains/leanprover--lean4---v4.30.0` — matching this repository's
+own `lean-toolchain` — for the whole session. Only `elan` is absent and `lean`
+is off `PATH`, so `which lean` came back empty and that negative probe was
+recorded as a fact about the machine. Related consequence: the eight suites
+gated on `AXEYUM_LEAN_BIN` that were believed unrunnable locally can in fact
+run.
+
+The one command was then run:
+
+```
+$ lean proofs/shell_closed_form.lean      # in ../axeyum-rado-paper
+EXIT=1, 22 diagnostics, real 0m0.175s
+```
+
+Breakdown: 15 "invalid use of explicit universe parameters", 5 codegen /
+`noncomputable`, 2 unknown identifier/constant. **The 5 codegen diagnostics are
+not type-checking failures** — Lean is trying to emit executable code for
+recursor-based definitions — and the remaining errors are one root cause
+cascading, not seventeen problems. The emitted `Eq` inductive flattens its
+parameter telescope past the colon *and* carries an explicit universe argument
+on its self-reference inside its own constructor; Lean rejects the declaration,
+`Eq` never enters the environment, and everything downstream fails with it —
+including `#print axioms shell_closed_form`, so **that line has never executed**
+and the `0 sorry / 0 axiom` property rests on inspection of the text.
+
+This is a **pretty-printer** defect, not a kernel divergence: `Kernel::add_inductive`
+takes `num_params` explicitly (`crates/axeyum-lean-kernel/src/inductive.rs:239-283`)
+and `axeyum-lean-import` round-trips official `lean4export` output, while
+`lean_pp.rs` never references `num_params`.
+
+**The premise to retire is "one command converts an emitted module into an
+accepted one."** `lean file.lean` runs the elaborator — implicit-argument
+inference, universe unification, coercion insertion, codegen — none of which
+bear on whether a proof term is well-typed. Independent acceptance needs the
+`lean4export` route (and `Environment.replay` into the real C++ kernel, per
+`leanprover/comparator`, deleting `Quot.mk`/`Quot.lift`/`Quot.ind` first to
+avoid a double-add error). That work is now in flight.
 
 ### A3. Promote the `k = 5` non-tightness to a proposition
 
