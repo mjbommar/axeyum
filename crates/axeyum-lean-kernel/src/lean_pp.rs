@@ -1163,34 +1163,7 @@ impl Kernel {
         }
     }
 
-    fn write_application_with_shares<O: LeanModuleOutput>(
-        &self,
-        out: &mut O,
-        expression: ExprId,
-        binders: &mut Vec<String>,
-        at_consts: &BTreeSet<NameId>,
-        shares: &BTreeMap<ExprId, String>,
-        expand_root: Option<ExprId>,
-    ) {
-        // One flat left-associated spine: see [`Self::app_spine`]. A shared
-        // node inside the spine ends it (it prints as its name).
-        let (head, arguments) = self.app_spine(expression, |node| {
-            expand_root != Some(node) && shares.contains_key(&node)
-        });
-        self.write_expr_with_shares_atom(out, head, binders, at_consts, shares, expand_root);
-        for argument in arguments {
-            let _ = out.write_char(' ');
-            self.write_expr_with_shares_atom(
-                out,
-                argument,
-                binders,
-                at_consts,
-                shares,
-                expand_root,
-            );
-        }
-    }
-
+    #[allow(clippy::too_many_lines)]
     fn write_expr_with_shares<O: LeanModuleOutput>(
         &self,
         out: &mut O,
@@ -1247,14 +1220,30 @@ impl Kernel {
                 );
             }
             ExprNode::App(_, _) => {
-                self.write_application_with_shares(
+                // One flat left-associated spine: see [`Self::app_spine`]. A
+                // shared node inside the spine ends it (it prints as its name).
+                let (head, arguments) = self.app_spine(expression, |node| {
+                    expand_root != Some(node) && shares.contains_key(&node)
+                });
+                self.write_expr_with_shares_atom(
                     out,
-                    expression,
+                    head,
                     binders,
                     at_consts,
                     shares,
                     expand_root,
                 );
+                for argument in arguments {
+                    let _ = out.write_char(' ');
+                    self.write_expr_with_shares_atom(
+                        out,
+                        argument,
+                        binders,
+                        at_consts,
+                        shares,
+                        expand_root,
+                    );
+                }
             }
             ExprNode::Lam(name, ty, body, _) => {
                 let binder = self.binder_name(*name, binders.len());

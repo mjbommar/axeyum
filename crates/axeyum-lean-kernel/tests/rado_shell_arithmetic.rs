@@ -49,8 +49,8 @@
 )]
 
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, Kernel, KernelError, LogicPrelude, NameId, NatOps, NatPrelude,
-    NatState, ReducibilityHint, build_nat_prelude,
+    BinderInfo, Declaration, ExprId, Kernel, KernelError, Lean4ExportMetadata, LogicPrelude,
+    NameId, NatOps, NatPrelude, NatState, ReducibilityHint, build_nat_prelude,
 };
 
 // ---------------------------------------------------------------------------
@@ -1541,5 +1541,20 @@ fn export_probe_renders_a_real_lean_module() {
         let path = std::path::Path::new(&dir).join("shell_closed_form.lean");
         std::fs::write(&path, &module).expect("export directory must be writable");
         println!("wrote {}", path.display());
+
+        // The same development in the official `lean4export` wire format, which
+        // an independent kernel reads without elaborating anything
+        // (`scripts/lean/replay-lean4export.lean` replays it into real Lean's
+        // own `Environment.addDeclCore`).
+        let stream =
+            d.k.render_lean4export_ndjson(&Lean4ExportMetadata::axeyum("4.30.0"))
+                .expect("the checked development must export");
+        let path = std::path::Path::new(&dir).join("shell_closed_form.ndjson");
+        std::fs::write(&path, &stream).expect("export directory must be writable");
+        println!(
+            "wrote {} ({} records)",
+            path.display(),
+            stream.lines().count()
+        );
     }
 }
