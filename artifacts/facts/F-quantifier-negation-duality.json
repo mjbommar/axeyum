@@ -13,10 +13,32 @@
       "x"
     ]
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
+  "proof_route": "smt-term-level",
+  "axiom_footprint": [
+    "axeyum-solver.bool-simplification-normalizer",
+    "axeyum-rewrite.alpha-and-duality-equivalence",
+    "classical-two-valued-bool-semantics",
+    "smtlib-first-order-quantifier-semantics"
+  ],
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "quantifier-negation-duality-bool-simplification",
+      "kind": "unsat-certificate",
+      "supports": "Over any domain and any predicate P: not (for all x, P(x)) is equivalent to (there exists x with not P(x)), and not (there exists x with P(x)) is equivalent to (for all x, not P(x)).",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-quantifier-negation-duality.smt2",
+      "artifact": "artifacts/facts/smt2/neg-quantifier-negation-duality.smt2",
+      "notes": "Ran 2026-08-14: the file asserts the NEGATION of formal.statement and the solver reported `unsat` with `kind=unsat-bool-simplification certified=1 recheck=na arena=ok`. This fact was `open` earlier the same day (`kind=unknown ... ms=18`); the lane `quant-duality` closed it. WHAT THE CERTIFICATE IS, precisely, because the route name could mislead: it is NOT exhaustive evaluation -- the carrier sort U is uninterpreted and cannot be enumerated. It is `Evidence::UnsatBoolSimplification`, a refutation by the small checked propositional normalizer in `axeyum-solver/src/bool_simplify.rs`, which treats every quantified subformula as an OPAQUE ATOM and instantiates, skolemizes and expands nothing. The one thing it now knows about quantifiers is when two of them are the same formula written differently -- `axeyum_rewrite::alpha_equivalent`, which decides equality up to bound-variable renaming (the SMT-LIB front end mints a fresh arena symbol per binder, so the four `x`s in this file are four distinct symbols) and up to the negation duality itself, by carrying a negation parity through the walk. Under those two facts both conjuncts of the asserted `and` normalize to `true`, the outer `not` to `false`, and the assertion is refuted. It trusts neither the bit-blaster, the CNF encoder, nor the SAT solver: nothing was blasted. `arena=ok` means `Evidence::check` re-ran that normalizer against a FRESH PARSE of the file, independent of anything the producing solve held in memory. Independently cross-checked: `z3 -smt2` (4.13.3) on the same file also reports `unsat`.",
+      "checkers": [
+        "axeyum-canonicalizer-rewrite-to-false-producing-solve",
+        "axeyum-bool-simplification-checker-fresh-parse",
+        "z3-4.13.3-independent-agreement"
+      ]
+    }
+  ],
   "concept_refs": [
     {
       "graph": "math-education",
@@ -45,16 +67,16 @@
   ],
   "provenance": {
     "date": "2026-08-14",
-    "established_by": "not established in this ledger",
+    "established_by": "axeyum lane `quant-duality`, 2026-08-14: `quant.negation_duality.v1` and `eq.alpha_equivalent.v1` in the canonicalizer, plus the matching alpha/duality predicate in the `bool_simplify` certificate checker",
     "source": "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied",
     "prior_art": [
       {
         "oracle": "z3 -smt2 artifacts/facts/smt2/neg-quantifier-negation-duality.smt2",
         "result": "unsat",
         "date": "2026-08-14",
-        "establishes": "the proposition is valid; only OUR route fails to see it"
+        "establishes": "the proposition is valid; recorded when only OUR route failed to see it, and kept as the independent cross-check now that it does"
       }
     ]
   },
-  "notes": "OPEN IN THIS LEDGER, NOT IN MATHEMATICS -- this is a standard first-order validity and the enum has no value for that distinction (see the lane diary). The reason it carries no evidence: axeyum returns `unknown` on it. Measured 2026-08-14 with `cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-quantifier-negation-duality.smt2`, which printed `; evidence kind=unknown certified=0 recheck=na arena=na ms=18` and then `unknown`. z3 on the identical file returns `unsat` in milliseconds, so the gap is ours and it is a small one: the negated form is a purely propositional combination of four quantified atoms over an uninterpreted sort, needing no instantiation heuristic at all, only the ability to treat a quantified subformula as a Boolean atom and then relate `forall x . phi` to `not exists x . not phi` by a skolem-free structural rule. This is the single most actionable entry in this batch: it is squarely inside the fragment axeyum advertises, it is the quantifier analogue of the already-proved F:de-morgan-laws, and closing it would flip this fact to `proved` with a real certificate."
+  "notes": "PROVED HERE AS OF 2026-08-14; it was `open` in this ledger the same morning, and `external_status: proved` was always right -- this is a standard first-order validity, so the gap was import, not discovery. WHAT WAS MISSING, and why the one-line diagnosis on the earlier note was half right. The note predicted a single structural rule, `not (forall x . phi) -> exists x . not phi`. That rule was necessary and is now `quant.negation_duality.v1`, but it is NOT sufficient, and the reason is a property of this IR rather than of the mathematics: the SMT-LIB parser gives every binder occurrence a fresh arena symbol, so the four `x`s in the benchmark are four distinct symbols `!q.x.0 .. !q.x.3`. Pushing the negation inward turns the first conjunct into `(= (exists !q.x.0 . not (P !q.x.0)) (exists !q.x.1 . not (P !q.x.1)))` -- alpha-equivalent, hash-consed apart, and invisible to equality reflexivity. Closing the fact needed a second capability, alpha-equivalence of quantified terms (`eq.alpha_equivalent.v1`), which did not exist anywhere in the tree. SOUNDNESS. The duality rewrite performs no substitution -- it flips the operator and wraps the body in one `not`, leaving the body byte-identical -- so capture is structurally absent rather than merely avoided. The alpha predicate is the delicate half and is where the negative tests live: it declines the pointer fast path under a renamed binder (`forall x . P x` vs `forall y . P x`), rejects a right-hand binder capturing a left-hand free symbol, rejects one-sided shadowing (`forall x . forall z . R(x,z)` vs `forall y . forall y . R(y,y)`, which a one-directional correspondence lookup wrongly accepts), and never falls through to structural comparison at odd negation parity, which would claim a formula is its own negation. A symbol occurrence is matched by the binder DEPTH that binds it on each side, never by name and never in one direction only. All six near-misses of the duality were confirmed `sat` by z3 and are pinned as negatives. A 1048-file randomized differential sweep against z3 over quantified UF formulas of this family found 0 disagreements. See docs/mathematics-2026-08/diary-quant-duality.md."
 }

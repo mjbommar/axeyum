@@ -58,6 +58,9 @@ fn checked_quantified_fast_path(
     if !is_quantified {
         return Ok(None);
     }
+    if canonicalization_discharges_quantifiers(arena, assertions, config)? {
+        return Ok(Some(CheckResult::Unsat));
+    }
     if let Some(result) =
         crate::quant_guard_vacuity_search::decide_quantified_guard_vacuity_sat(arena, assertions)
     {
@@ -97,6 +100,54 @@ fn checked_quantified_fast_path(
         return Ok(Some(CheckResult::Unsat));
     }
     Ok(None)
+}
+
+/// Whether denotation-preserving canonicalization alone discharges every
+/// quantifier in the query **and** refutes what is left.
+///
+/// The word-level preprocessing pipeline is skipped on quantified queries
+/// (`solve_eqs`/`elim_unconstrained` treat the assertion list as ground, and the
+/// trigger/e-matching routes need the original structure). Canonicalization is
+/// the one member of that pipeline that is *structurally* quantifier-aware: it
+/// rebuilds `forall`/`exists` nodes with the same binder around a rewritten body
+/// and never substitutes a symbol, so it cannot capture. Running it here recovers
+/// the family of queries that are propositional tautologies **over** quantified
+/// atoms — the quantifier-duality identities `not (forall x. P) = exists x. not
+/// P` among them — which no instantiation heuristic can reach because there is
+/// nothing to instantiate.
+///
+/// Two deliberate restrictions keep this from disturbing anything else:
+///
+/// * The canonicalized form is adopted **only when it is quantifier-free**. A
+///   partial simplification is discarded, so every query the existing quantifier
+///   portfolio handles reaches it byte-identical.
+/// * Only `unsat` is propagated. Canonicalization is denotation-preserving, so
+///   `sat` would transfer too, but a folded query can drop symbols the original
+///   model must still bind; rather than grow a reconstruction trail for a probe,
+///   a non-`unsat` outcome simply falls through to the ordinary quantified path.
+///   The result is a refutation-side-only addition: it can turn `unknown` into
+///   `unsat` and can turn nothing into anything else.
+fn canonicalization_discharges_quantifiers(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<bool, SolverError> {
+    if !config.preprocess {
+        return Ok(false);
+    }
+    // A canonicalization failure is not an error here: this is a probe, and
+    // declining leaves the ordinary quantified path in charge.
+    let Ok(canonical) = canonicalize_terms(arena, assertions) else {
+        return Ok(false);
+    };
+    let canonical = canonical.terms;
+    if has_quantifier(arena, &canonical) {
+        return Ok(false);
+    }
+    Ok(matches!(
+        check_auto(arena, &canonical, config)?,
+        CheckResult::Unsat
+    ))
 }
 
 /// Tries a strict quantifier-free subset of a quantified conjunction before the

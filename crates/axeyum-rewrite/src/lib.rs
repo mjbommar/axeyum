@@ -25,6 +25,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::Op;
 
+mod alpha;
 mod arrays;
 mod canonical;
 mod datatypes;
@@ -38,6 +39,7 @@ mod quantifiers;
 mod reconstruct;
 mod solve_eqs;
 
+pub use alpha::{ALPHA_EQUIVALENCE_STEP_BUDGET, alpha_equivalent, alpha_equivalent_to_negation};
 pub use arrays::{
     ArrayAbstraction, ArrayElimError, ArrayElimination, abstract_arrays, eliminate_arrays,
 };
@@ -811,6 +813,29 @@ mod tests {
             let y = a.bv_var("y", 4).unwrap();
             let x = a.bv_var("x", 4).unwrap();
             (a.bv_mul(x, y).unwrap(), a.bv_mul(y, x).unwrap())
+        });
+        assert_rule_fires(&mut covered, "quant.negation_duality.v1", |a| {
+            // `not (forall x. x)` -> `exists x. not x`: the binder is carried
+            // over unchanged and only the body gains a negation.
+            let x = a.declare("x", Sort::Bool).unwrap();
+            let xv = a.var(x);
+            let universal = a.forall(x, xv).unwrap();
+            let negated_body = a.not(xv).unwrap();
+            (
+                a.not(universal).unwrap(),
+                a.exists(x, negated_body).unwrap(),
+            )
+        });
+        assert_rule_fires(&mut covered, "eq.alpha_equivalent.v1", |a| {
+            // Two spellings of `forall x:Bool. x` over independently fresh
+            // binders, exactly as the SMT-LIB front end mints them.
+            let first = a.declare("!q.x.0", Sort::Bool).unwrap();
+            let second = a.declare("!q.x.1", Sort::Bool).unwrap();
+            let first_var = a.var(first);
+            let second_var = a.var(second);
+            let left = a.forall(first, first_var).unwrap();
+            let right = a.forall(second, second_var).unwrap();
+            (a.eq(left, right).unwrap(), a.bool_const(true))
         });
 
         let enabled = default_manifest()

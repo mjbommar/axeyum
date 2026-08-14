@@ -13,7 +13,7 @@ use axeyum_ir::{
 
 use crate::{
     ModelProjection, PreconditionGuard, Preservation, RewriteManifest, RewriteRule, RewriteRuleId,
-    RewriteTestRoute,
+    RewriteTestRoute, alpha::alpha_equivalent,
 };
 
 /// Widest AC operand multiset that is flattened, sorted, and rebuilt as a
@@ -57,6 +57,8 @@ const BOOL_XOR_SELF: &str = "bool.xor_self.v1";
 const BOOL_IMPLIES_CONST: &str = "bool.implies_const.v1";
 const BOOL_IMPLIES_REFLEXIVE: &str = "bool.implies_reflexive.v1";
 const EQ_REFLEXIVE: &str = "eq.reflexive.v1";
+const EQ_ALPHA_EQUIVALENT: &str = "eq.alpha_equivalent.v1";
+const QUANT_NEGATION_DUALITY: &str = "quant.negation_duality.v1";
 const EQ_BOOL_CONST: &str = "eq.bool_const.v1";
 const BV_EQ_ADD_CONSTANT_CANCEL: &str = "bv.eq_add_constant_cancel.v1";
 const SELECT_STORE_SAME: &str = "array.select_store_same.v1";
@@ -610,6 +612,16 @@ fn default_rules() -> Vec<RewriteRule> {
             "`=` with structurally identical operands",
         ),
         rule(
+            EQ_ALPHA_EQUIVALENT,
+            "Equality of alpha-equivalent quantified formulas",
+            "`=` whose two operands are both quantifiers and differ only in the names of their bound variables",
+        ),
+        rule(
+            QUANT_NEGATION_DUALITY,
+            "Quantifier negation duality",
+            "`(not (forall x b))` / `(not (exists x b))` — negation exchanges the two quantifiers",
+        ),
+        rule(
             EQ_BOOL_CONST,
             "Boolean equality with a constant",
             "`=` of a Boolean term with a Boolean constant (`true`/`false`)",
@@ -905,12 +917,14 @@ fn default_guard(id: &str) -> PreconditionGuard {
             Op::IntMod,
             Op::Eq,
         ]),
-        BOOL_DOUBLE_NOT => ops(&[Op::BoolNot]),
+        BOOL_DOUBLE_NOT | QUANT_NEGATION_DUALITY => ops(&[Op::BoolNot]),
         BOOL_AND_IDENTITY | BOOL_AND_ANNIHILATOR | BOOL_AND_IDEMPOTENT => ops(&[Op::BoolAnd]),
         BOOL_OR_IDENTITY | BOOL_OR_ANNIHILATOR | BOOL_OR_IDEMPOTENT => ops(&[Op::BoolOr]),
         BOOL_XOR_IDENTITY | BOOL_XOR_SELF => ops(&[Op::BoolXor]),
         BOOL_IMPLIES_CONST | BOOL_IMPLIES_REFLEXIVE => ops(&[Op::BoolImplies]),
-        EQ_REFLEXIVE | EQ_BOOL_CONST | BV_EQ_ADD_CONSTANT_CANCEL => ops(&[Op::Eq]),
+        EQ_REFLEXIVE | EQ_ALPHA_EQUIVALENT | EQ_BOOL_CONST | BV_EQ_ADD_CONSTANT_CANCEL => {
+            ops(&[Op::Eq])
+        }
         SELECT_STORE_SAME | SELECT_CONST_ARRAY => ops(&[Op::Select]),
         BV_COMPARE_REFLEXIVE => ops(COMPARISONS),
         // Saturation is unsigned-only: `rewrite_bv_compare` matches just the
@@ -1449,7 +1463,7 @@ fn rewrite_app(
     }
 
     let local = match op {
-        Op::BoolNot => rewrite_bool_not(arena, args, enabled),
+        Op::BoolNot => rewrite_bool_not(arena, args, enabled)?,
         Op::BoolAnd => rewrite_bool_and(arena, args, enabled),
         Op::BoolOr => rewrite_bool_or(arena, args, enabled),
         Op::BoolXor => rewrite_bool_xor(arena, args, enabled),
@@ -1733,16 +1747,65 @@ fn rewrite_bool_not(
     arena: &mut TermArena,
     args: &[TermId],
     enabled: &BTreeSet<&str>,
-) -> Option<LocalRewrite> {
+) -> Result<Option<LocalRewrite>, IrError> {
     if enabled.contains(BOOL_DOUBLE_NOT)
         && let TermNode::App {
             op: Op::BoolNot,
             args: inner,
         } = arena.node(args[0])
     {
-        return Some(applied(inner[0], BOOL_DOUBLE_NOT));
+        return Ok(Some(applied(inner[0], BOOL_DOUBLE_NOT)));
     }
-    None
+    if enabled.contains(QUANT_NEGATION_DUALITY)
+        && let Some(dual) = push_negation_through_quantifier(arena, args[0])?
+    {
+        return Ok(Some(applied(dual, QUANT_NEGATION_DUALITY)));
+    }
+    Ok(None)
+}
+
+/// `not (forall x. b) -> exists x. not b` and `not (exists x. b) -> forall x.
+/// not b`: negation exchanges the two quantifiers. Returns `None` when
+/// `quantified` is not a quantifier.
+///
+/// # Why this is denotation-preserving unconditionally
+///
+/// `forall x. b` is true in a structure exactly when `b` holds at every element
+/// of `x`'s carrier, so its negation is true exactly when *some* element
+/// falsifies `b` — which is `exists x. not b`. The dual reading gives the
+/// `exists` case. Neither direction needs a non-empty carrier: over an empty
+/// one, `forall x. b` is vacuously true and `exists x. not b` is vacuously
+/// false, and both sides of the rewrite agree at `false` (SMT-LIB sorts are
+/// non-empty in any case). It is likewise independent of what `b` is: `b` may
+/// contain further quantifiers, may not mention `x` at all, and may reuse `x`
+/// as an inner binder.
+///
+/// The rewrite performs **no substitution**. It flips the operator and wraps the
+/// body in one `not`, leaving `b` byte-for-byte the term it was, so there is no
+/// capture to avoid — the classic soundness hazard of quantifier rewriting is
+/// structurally absent here rather than merely handled.
+fn push_negation_through_quantifier(
+    arena: &mut TermArena,
+    quantified: TermId,
+) -> Result<Option<TermId>, IrError> {
+    let (var, body, is_forall) = match arena.node(quantified) {
+        TermNode::App {
+            op: Op::Forall(var),
+            args,
+        } => (*var, args[0], true),
+        TermNode::App {
+            op: Op::Exists(var),
+            args,
+        } => (*var, args[0], false),
+        _ => return Ok(None),
+    };
+    let negated_body = arena.not(body)?;
+    let dual = if is_forall {
+        arena.exists(var, negated_body)?
+    } else {
+        arena.forall(var, negated_body)?
+    };
+    Ok(Some(dual))
 }
 
 /// `bvnot(bvnot x) -> x`. Bitwise complement is an involution, so two
@@ -2130,6 +2193,24 @@ fn rewrite_eq(
     if enabled.contains(EQ_REFLEXIVE) && args[0] == args[1] {
         return Ok(Some(applied(arena.bool_const(true), EQ_REFLEXIVE)));
     }
+    // Two quantified formulas that differ only in the *names* of their bound
+    // variables have the same denotation, but not the same term id: the SMT-LIB
+    // front end mints a fresh arena symbol per binder occurrence, so even a
+    // literally re-typed `(forall ((x U)) (P x))` interns as a second, distinct
+    // term. Reflexivity alone therefore cannot see it.
+    //
+    // The guard is deliberately narrow — *both* operands must be quantifiers at
+    // the root, an O(1) test. That leaves every quantifier-free equality (the
+    // hot path) untouched, and still covers the shape this exists for: the
+    // quantifier-duality identities, whose two sides are quantifiers after
+    // `QUANT_NEGATION_DUALITY` has pushed the negations inward.
+    if enabled.contains(EQ_ALPHA_EQUIVALENT)
+        && is_quantifier(arena, args[0])
+        && is_quantifier(arena, args[1])
+        && alpha_equivalent(arena, args[0], args[1])
+    {
+        return Ok(Some(applied(arena.bool_const(true), EQ_ALPHA_EQUIVALENT)));
+    }
     // Boolean equality with a Boolean constant: `(= p true)` ≡ `p`, `(= p false)` ≡
     // `(not p)` (and symmetric). A Boolean constant operand forces the other to be
     // Boolean-sorted, so this never matches a bit-vector equality. (An equality of
@@ -2153,6 +2234,17 @@ fn rewrite_eq(
         }
     }
     Ok(None)
+}
+
+/// Whether `term`'s root operator is a quantifier.
+fn is_quantifier(arena: &TermArena, term: TermId) -> bool {
+    matches!(
+        arena.node(term),
+        TermNode::App {
+            op: Op::Forall(_) | Op::Exists(_),
+            ..
+        }
+    )
 }
 
 /// Cancels the constant part of `sum` across equality with `constant`.
@@ -5184,7 +5276,7 @@ mod precondition_control_tests {
     #[test]
     fn every_default_rule_declares_a_guard() {
         let manifest = default_manifest();
-        assert_eq!(manifest.len(), 57);
-        assert_eq!(manifest.enabled_guards().len(), 57);
+        assert_eq!(manifest.len(), 59);
+        assert_eq!(manifest.enabled_guards().len(), 59);
     }
 }
