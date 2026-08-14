@@ -46,6 +46,42 @@ impl Dev {
         let root = self.root;
         self.k.name_str(root, part)
     }
+
+    fn iff_mp(&mut self, left: ExprId, right: ExprId, equivalence: ExprId) -> ExprId {
+        let implication = self.arrow(left, right);
+        let iff_ty = self.const_app(self.p.logic.iff, &[left, right]);
+        let major_fv = self.fresh_fvar();
+        let motive = self.lam_fv(major_fv, iff_ty, implication);
+        let minor = {
+            let mp_fv = self.fresh_fvar();
+            let mp = self.k.fvar(mp_fv);
+            let mpr_fv = self.fresh_fvar();
+            let reverse = self.arrow(right, left);
+            let with_mpr = self.lam_fv(mpr_fv, reverse, mp);
+            self.lam_fv(mp_fv, implication, with_mpr)
+        };
+        let level_zero = self.k.level_zero();
+        let rec = self.k.const_(self.p.logic.iff_rec, vec![level_zero]);
+        self.apply(rec, &[left, right, motive, minor, equivalence])
+    }
+
+    fn iff_mpr(&mut self, left: ExprId, right: ExprId, equivalence: ExprId) -> ExprId {
+        let implication = self.arrow(left, right);
+        let reverse = self.arrow(right, left);
+        let iff_ty = self.const_app(self.p.logic.iff, &[left, right]);
+        let major_fv = self.fresh_fvar();
+        let motive = self.lam_fv(major_fv, iff_ty, reverse);
+        let minor = {
+            let mp_fv = self.fresh_fvar();
+            let mpr_fv = self.fresh_fvar();
+            let mpr = self.k.fvar(mpr_fv);
+            let with_mpr = self.lam_fv(mpr_fv, reverse, mpr);
+            self.lam_fv(mp_fv, implication, with_mpr)
+        };
+        let level_zero = self.k.level_zero();
+        let rec = self.k.const_(self.p.logic.iff_rec, vec![level_zero]);
+        self.apply(rec, &[left, right, motive, minor, equivalence])
+    }
 }
 
 fn power_range(d: &mut Dev, a: ExprId, shifts: usize) -> ExprId {
@@ -339,6 +375,321 @@ struct RangeTheorems {
     x_upper: NameId,
     z_lower: NameId,
     z_upper_if_a_le_b: NameId,
+}
+
+/// Admit the exact signed-range criterion from the paper in Nat form:
+///
+/// `a*(q-a) <= N  <->  N*(a-b) <= a^2*b`,
+///
+/// under `N=b*q`, `a<=q`, and `1<=b`. Nat subtraction encodes the paper's
+/// signed case split: when `a<=b`, `a-b=0`; when `b<=a`, subtraction
+/// distribution and order adjunction recover the displayed integer algebra.
+fn admit_exact_range_criterion(d: &mut Dev) -> NameId {
+    let p = d.p;
+    let name = d.name("exact_range_criterion");
+    d.theorem(name, 4, &|d, v| {
+        let (a, b, capital_n, q) = (v[0], v[1], v[2], v[3]);
+        let bq = d.mul(b, q);
+        let factor_ty = d.eq(capital_n, bq);
+        let factor_fv = d.fresh_fvar();
+        let factor = d.k.fvar(factor_fv);
+        let a_le_q_ty = d.le(a, q);
+        let a_le_q_fv = d.fresh_fvar();
+        let a_le_q = d.k.fvar(a_le_q_fv);
+        let one = d.num(1);
+        let positive_ty = d.le(one, b);
+        let positive_fv = d.fresh_fvar();
+        let positive = d.k.fvar(positive_fv);
+
+        let u = d.sub(q, a);
+        let z = d.mul(a, u);
+        let range = d.le(z, capital_n);
+        let a_sub_b = d.sub(a, b);
+        let criterion_lhs = d.mul(capital_n, a_sub_b);
+        let aa = d.mul(a, a);
+        let square_b = d.mul(aa, b);
+        let criterion = d.le(criterion_lhs, square_b);
+        let conclusion = d.const_app(p.logic.iff, &[range, criterion]);
+
+        let a_le_b = d.le(a, b);
+        let b_le_a = d.le(b, a);
+        let total = d.lemma(p.le_total, &[a, b]);
+        let total_ty = d.const_app(p.logic.or, &[a_le_b, b_le_a]);
+        let motive_fv = d.fresh_fvar();
+        let motive = d.lam_fv(motive_fv, total_ty, conclusion);
+
+        let a_le_b_minor = {
+            let hab_fv = d.fresh_fvar();
+            let hab = d.k.fvar(hab_fv);
+
+            let restored = d.add(u, a);
+            let restored_eq_q = d.lemma(p.sub_add_cancel, &[a, q, a_le_q]);
+            let u_le_restored = d.lemma(p.le_add_right, &[u, a]);
+            let u_le_q = transport_le_upper(d, u, restored, q, u_le_restored, restored_eq_q);
+            let au = z;
+            let aq = d.mul(a, q);
+            let au_le_aq = d.lemma(p.mul_le_mul_left, &[a, u, q, u_le_q]);
+            let qa = d.mul(q, a);
+            let qb = d.mul(q, b);
+            let qa_le_qb = d.lemma(p.mul_le_mul_left, &[q, a, b, hab]);
+            let qa_eq_aq = d.lemma(p.mul_comm, &[q, a]);
+            let aq_le_qb = transport_le_lower(d, qa, aq, qb, qa_le_qb, qa_eq_aq);
+            let qb_eq_bq = d.lemma(p.mul_comm, &[q, b]);
+            let aq_le_bq = transport_le_upper(d, aq, qb, bq, aq_le_qb, qb_eq_bq);
+            let bq_eq_n = d.symm(capital_n, bq, factor);
+            let aq_le_n = transport_le_upper(d, aq, bq, capital_n, aq_le_bq, bq_eq_n);
+            let range_proof = d.lemma(p.le_trans, &[au, aq, capital_n, au_le_aq, aq_le_n]);
+
+            let zero = d.zero();
+            let difference_eq_zero = d.lemma(p.sub_eq_zero_of_le, &[a, b, hab]);
+            let n_zero = d.mul(capital_n, zero);
+            let lhs_eq_n_zero = d.congr(a_sub_b, zero, difference_eq_zero, &|d, x| {
+                d.mul(capital_n, x)
+            });
+            let n_zero_eq_zero = d.lemma(p.mul_zero, &[capital_n]);
+            let (_, lhs_eq_zero) = d.chain(
+                criterion_lhs,
+                &[(n_zero, lhs_eq_n_zero), (zero, n_zero_eq_zero)],
+            );
+            let zero_le_square = d.lemma(p.zero_le, &[square_b]);
+            let zero_eq_lhs = d.symm(criterion_lhs, zero, lhs_eq_zero);
+            let criterion_proof = transport_le_lower(
+                d,
+                zero,
+                criterion_lhs,
+                square_b,
+                zero_le_square,
+                zero_eq_lhs,
+            );
+
+            let mp_fv = d.fresh_fvar();
+            let mp = d.lam_fv(mp_fv, range, criterion_proof);
+            let mpr_fv = d.fresh_fvar();
+            let mpr = d.lam_fv(mpr_fv, criterion, range_proof);
+            let body = d.const_app(p.logic.iff_intro, &[range, criterion, mp, mpr]);
+            d.lam_fv(hab_fv, a_le_b, body)
+        };
+
+        let b_le_a_minor = {
+            let hba_fv = d.fresh_fvar();
+            let hba = d.k.fvar(hba_fv);
+            let bz = d.mul(b, z);
+            let ba = d.mul(b, a);
+            let ab = d.mul(a, b);
+            let ba_u = d.mul(ba, u);
+            let ab_u = d.mul(ab, u);
+            let ab_q = d.mul(ab, q);
+            let ab_a = d.mul(ab, a);
+            let algebraic_difference = d.sub(ab_q, ab_a);
+
+            let h_assoc_b = d.lemma(p.mul_assoc, &[b, a, u]);
+            let bz_eq_ba_u = d.symm(ba_u, bz, h_assoc_b);
+            let ba_eq_ab = d.lemma(p.mul_comm, &[b, a]);
+            let ba_u_eq_ab_u = d.congr(ba, ab, ba_eq_ab, &|d, x| d.mul(x, u));
+            let ab_u_eq_difference = d.lemma(p.mul_sub_left_distrib, &[ab, q, a, a_le_q]);
+
+            let a_bq = d.mul(a, bq);
+            let a_n = d.mul(a, capital_n);
+            let ab_q_eq_a_bq = d.lemma(p.mul_assoc, &[a, b, q]);
+            let bq_eq_n = d.symm(capital_n, bq, factor);
+            let a_bq_eq_a_n = d.congr(bq, capital_n, bq_eq_n, &|d, x| d.mul(a, x));
+            let (_, ab_q_eq_a_n) = d.chain(ab_q, &[(a_bq, ab_q_eq_a_bq), (a_n, a_bq_eq_a_n)]);
+
+            let a_ba = d.mul(a, ba);
+            let a_ab = d.mul(a, ab);
+            let aa_b = square_b;
+            let ab_a_eq_a_ba = d.lemma(p.mul_assoc, &[a, b, a]);
+            let a_ba_eq_a_ab = d.congr(ba, ab, ba_eq_ab, &|d, x| d.mul(a, x));
+            let aa_b_eq_a_ab = d.lemma(p.mul_assoc, &[a, a, b]);
+            let a_ab_eq_aa_b = d.symm(aa_b, a_ab, aa_b_eq_a_ab);
+            let (_, ab_a_eq_aa_b) = d.chain(
+                ab_a,
+                &[
+                    (a_ba, ab_a_eq_a_ba),
+                    (a_ab, a_ba_eq_a_ab),
+                    (aa_b, a_ab_eq_aa_b),
+                ],
+            );
+
+            let a_n_sub_ab_a = d.sub(a_n, ab_a);
+            let exact_difference = d.sub(a_n, square_b);
+            let h_first = d.congr(ab_q, a_n, ab_q_eq_a_n, &|d, x| d.sub(x, ab_a));
+            let h_second = d.congr(ab_a, square_b, ab_a_eq_aa_b, &|d, x| d.sub(a_n, x));
+            let (_, bz_eq_difference) = d.chain(
+                bz,
+                &[
+                    (ba_u, bz_eq_ba_u),
+                    (ab_u, ba_u_eq_ab_u),
+                    (algebraic_difference, ab_u_eq_difference),
+                    (a_n_sub_ab_a, h_first),
+                    (exact_difference, h_second),
+                ],
+            );
+
+            let b_n = d.mul(b, capital_n);
+            let n_a = d.mul(capital_n, a);
+            let n_b = d.mul(capital_n, b);
+            let additive_left = d.add(b_n, square_b);
+            let additive_right = d.add(square_b, n_b);
+            let a_n_eq_n_a = d.lemma(p.mul_comm, &[a, capital_n]);
+            let b_n_eq_n_b = d.lemma(p.mul_comm, &[b, capital_n]);
+            let swapped = d.add(square_b, b_n);
+            let additive_left_eq_swapped = d.lemma(p.add_comm, &[b_n, square_b]);
+            let swapped_eq_right = d.congr(b_n, n_b, b_n_eq_n_b, &|d, x| d.add(square_b, x));
+            let (_, additive_left_eq_right) = d.chain(
+                additive_left,
+                &[
+                    (swapped, additive_left_eq_swapped),
+                    (additive_right, swapped_eq_right),
+                ],
+            );
+
+            let first_adj = d.lemma(p.sub_le_iff_le_add, &[a_n, square_b, b_n]);
+            let first_left = d.le(exact_difference, b_n);
+            let first_right = d.le(a_n, additive_left);
+            let second_difference = d.sub(n_a, n_b);
+            let second_left = d.le(second_difference, square_b);
+            let second_right = d.le(n_a, additive_right);
+            let second_adj = d.lemma(p.sub_le_iff_le_add, &[n_a, n_b, square_b]);
+            let distributed = d.lemma(p.mul_sub_left_distrib, &[capital_n, a, b, hba]);
+
+            let mp = {
+                let h_fv = d.fresh_fvar();
+                let h = d.k.fvar(h_fv);
+                let scaled = d.lemma(p.mul_le_mul_left, &[b, z, capital_n, h]);
+                let difference_bound =
+                    transport_le_lower(d, bz, exact_difference, b_n, scaled, bz_eq_difference);
+                let first_mp = d.iff_mp(first_left, first_right, first_adj);
+                let original_additive = d.apply(first_mp, &[difference_bound]);
+                let lower_motive = d.eq_motive(a_n, &|d, lower| d.le(lower, additive_left));
+                let commuted_lower =
+                    d.transport(a_n, lower_motive, original_additive, n_a, a_n_eq_n_a);
+                let upper_motive = d.eq_motive(additive_left, &|d, upper| d.le(n_a, upper));
+                let commuted = d.transport(
+                    additive_left,
+                    upper_motive,
+                    commuted_lower,
+                    additive_right,
+                    additive_left_eq_right,
+                );
+                let second_mpr = d.iff_mpr(second_left, second_right, second_adj);
+                let difference_bound = d.apply(second_mpr, &[commuted]);
+                let difference_eq_lhs = d.symm(criterion_lhs, second_difference, distributed);
+                let body = transport_le_lower(
+                    d,
+                    second_difference,
+                    criterion_lhs,
+                    square_b,
+                    difference_bound,
+                    difference_eq_lhs,
+                );
+                d.lam_fv(h_fv, range, body)
+            };
+
+            let mpr = {
+                let h_fv = d.fresh_fvar();
+                let h = d.k.fvar(h_fv);
+                let lhs_eq_difference = distributed;
+                let difference_bound = transport_le_lower(
+                    d,
+                    criterion_lhs,
+                    second_difference,
+                    square_b,
+                    h,
+                    lhs_eq_difference,
+                );
+                let second_mp = d.iff_mp(second_left, second_right, second_adj);
+                let commuted = d.apply(second_mp, &[difference_bound]);
+                let n_a_eq_a_n = d.symm(a_n, n_a, a_n_eq_n_a);
+                let right_eq_left = d.symm(additive_left, additive_right, additive_left_eq_right);
+                let lower_motive = d.eq_motive(n_a, &|d, lower| d.le(lower, additive_right));
+                let original_lower = d.transport(n_a, lower_motive, commuted, a_n, n_a_eq_a_n);
+                let upper_motive = d.eq_motive(additive_right, &|d, upper| d.le(a_n, upper));
+                let original_additive = d.transport(
+                    additive_right,
+                    upper_motive,
+                    original_lower,
+                    additive_left,
+                    right_eq_left,
+                );
+                let first_mpr = d.iff_mpr(first_left, first_right, first_adj);
+                let exact_bound = d.apply(first_mpr, &[original_additive]);
+                let difference_eq_bz = d.symm(bz, exact_difference, bz_eq_difference);
+                let scaled =
+                    transport_le_lower(d, exact_difference, bz, b_n, exact_bound, difference_eq_bz);
+                let body = d.lemma(
+                    p.le_of_mul_le_mul_left,
+                    &[b, z, capital_n, positive, scaled],
+                );
+                d.lam_fv(h_fv, criterion, body)
+            };
+
+            let body = d.const_app(p.logic.iff_intro, &[range, criterion, mp, mpr]);
+            d.lam_fv(hba_fv, b_le_a, body)
+        };
+
+        let or_rec = d.k.const_(p.logic.or_rec, vec![]);
+        let body = d.apply(
+            or_rec,
+            &[a_le_b, b_le_a, motive, a_le_b_minor, b_le_a_minor, total],
+        );
+        let proof = {
+            let with_positive = d.lam_fv(positive_fv, positive_ty, body);
+            let with_bound = d.lam_fv(a_le_q_fv, a_le_q_ty, with_positive);
+            d.lam_fv(factor_fv, factor_ty, with_bound)
+        };
+        let stmt = {
+            let with_positive = d.arrow(positive_ty, conclusion);
+            let with_bound = d.arrow(a_le_q_ty, with_positive);
+            d.arrow(factor_ty, with_bound)
+        };
+        (stmt, proof)
+    })
+    .expect("exact Rado range criterion checks");
+    name
+}
+
+/// Specialize the exact criterion to the paper's closed-form shell witness.
+fn admit_closed_form_exact_range_criterion(d: &mut Dev, exact: NameId) -> NameId {
+    let p = d.p;
+    let name = d.name("closed_form_exact_range_criterion");
+    d.theorem(name, 3, &|d, v| {
+        let (a, b, n) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let positive_ty = d.le(one, b);
+        let positive_fv = d.fresh_fvar();
+        let positive = d.k.fvar(positive_fv);
+
+        let two = d.num(2);
+        let shifted = power_range(d, a, 1);
+        let sum = d.sum_range(shifted, n);
+        let sn = d.succ(n);
+        let power = d.pow(a, sn);
+        let twice_sum = d.mul(two, sum);
+        let tail = d.add(twice_sum, power);
+        let inner = d.add(one, tail);
+        let u = d.mul(a, inner);
+        let q = d.add(a, u);
+        let capital_n = d.mul(b, q);
+        let factor = d.refl(capital_n);
+        let a_le_q = d.lemma(p.le_add_right, &[a, u]);
+        let body = d.lemma(exact, &[a, b, capital_n, q, factor, a_le_q, positive]);
+
+        let q_sub_a = d.sub(q, a);
+        let z = d.mul(a, q_sub_a);
+        let range = d.le(z, capital_n);
+        let a_sub_b = d.sub(a, b);
+        let criterion_lhs = d.mul(capital_n, a_sub_b);
+        let aa = d.mul(a, a);
+        let square_b = d.mul(aa, b);
+        let criterion = d.le(criterion_lhs, square_b);
+        let conclusion = d.const_app(p.logic.iff, &[range, criterion]);
+        let stmt = d.arrow(positive_ty, conclusion);
+        let proof = d.lam_fv(positive_fv, positive_ty, body);
+        (stmt, proof)
+    })
+    .expect("closed-form exact Rado range criterion checks");
+    name
 }
 
 fn transport_le_upper(
@@ -879,6 +1230,97 @@ fn kernel_checks_the_closed_form_witness_ranges() {
     let inferred_z_upper = d.k.infer(z_upper).expect("Z upper infers");
     let expected_z_upper = d.le(twelve, twenty_four);
     assert!(d.k.def_eq(inferred_z_upper, expected_z_upper));
+}
+
+#[test]
+fn kernel_checks_the_exact_rado_range_criterion() {
+    let mut d = Dev::new();
+    let theorem = admit_exact_range_criterion(&mut d);
+    let closed = admit_closed_form_exact_range_criterion(&mut d, theorem);
+
+    // a<=b branch: a=2, b=3, q=8, N=24, Z=12.
+    let a = d.num(2);
+    let b = d.num(3);
+    let q = d.num(8);
+    let capital_n = d.num(24);
+    let factor = d.refl(capital_n);
+    let six = d.num(6);
+    let a_le_q = d.lemma(d.p.le_add_right, &[a, six]);
+    let one = d.num(1);
+    let two = d.num(2);
+    let positive = d.lemma(d.p.le_add_right, &[one, two]);
+    let easy = d.lemma(theorem, &[a, b, capital_n, q, factor, a_le_q, positive]);
+    d.k.infer(easy)
+        .expect("a<=b exact-range application infers");
+    let zero = d.zero();
+    let closed_easy = d.lemma(closed, &[a, b, zero, positive]);
+    d.k.infer(closed_easy)
+        .expect("closed-form a<=b exact-range application infers");
+
+    // b<=a branch: a=3, b=2, q=5, N=10, Z=6 and 10*(3-2)<=18.
+    let a = d.num(3);
+    let b = d.num(2);
+    let q = d.num(5);
+    let capital_n = d.num(10);
+    let factor = d.refl(capital_n);
+    let two = d.num(2);
+    let a_le_q = d.lemma(d.p.le_add_right, &[a, two]);
+    let one = d.num(1);
+    let positive = d.lemma(d.p.le_add_right, &[one, one]);
+    let signed = d.lemma(theorem, &[a, b, capital_n, q, factor, a_le_q, positive]);
+    d.k.infer(signed)
+        .expect("b<=a exact-range application infers");
+    let zero = d.zero();
+    let closed_signed = d.lemma(closed, &[a, b, zero, positive]);
+    d.k.infer(closed_signed)
+        .expect("closed-form b<=a exact-range application infers");
+
+    let axioms: Vec<_> =
+        d.k.environment()
+            .iter()
+            .filter(|(_, decl)| matches!(decl, Declaration::Axiom { .. }))
+            .collect();
+    assert!(
+        axioms.is_empty(),
+        "exact range criterion must add no axioms"
+    );
+}
+
+#[test]
+fn kernel_rejects_a_broken_exact_rado_range_criterion() {
+    let mut d = Dev::new();
+    let theorem = admit_exact_range_criterion(&mut d);
+    let a = d.num(2);
+    let b = d.num(3);
+    let q = d.num(8);
+    let capital_n = d.num(24);
+    let factor = d.refl(capital_n);
+    let six = d.num(6);
+    let a_le_q = d.lemma(d.p.le_add_right, &[a, six]);
+    let one = d.num(1);
+    let two = d.num(2);
+    let positive = d.lemma(d.p.le_add_right, &[one, two]);
+    let proof = d.lemma(theorem, &[a, b, capital_n, q, factor, a_le_q, positive]);
+
+    let u = d.sub(q, a);
+    let z = d.mul(a, u);
+    let range = d.le(z, capital_n);
+    let a_sub_b = d.sub(a, b);
+    let lhs = d.mul(capital_n, a_sub_b);
+    let eleven = d.num(11);
+    let broken_criterion = d.le(lhs, eleven);
+    let false_goal = d.const_app(d.p.logic.iff, &[range, broken_criterion]);
+    let bad_name = d.name("broken_exact_range_criterion");
+    let error =
+        d.k.add_declaration(Declaration::Theorem {
+            name: bad_name,
+            uparams: vec![],
+            ty: false_goal,
+            value: proof,
+        })
+        .expect_err("a changed a^2*b endpoint must be rejected");
+    println!("broken exact Rado range criterion rejected: {error:?}");
+    assert!(!d.k.environment().contains(bad_name));
 }
 
 #[test]
