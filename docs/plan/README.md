@@ -7,7 +7,9 @@ engineering record, not the live task tracker.
 Start with these documents:
 
 1. [Root `PLAN.md`](../../PLAN.md) — the only mutable session status, ordered
-   queue, stop conditions, and resume protocol.
+   queue, stop conditions, and resume protocol. It is **generated**: edit your
+   lane's file in [`status/`](status/README.md) or a project-wide section in
+   [`global/`](global/README.md), then run `python3 scripts/gen-plan.py`.
 2. [Project State](../PROJECT-STATE.md) — the short public account of what is
    built, measured, partial, and not claimed.
 3. [Research roadmap](../research/08-planning/roadmap.md) — phase definitions

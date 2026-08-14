@@ -1,5 +1,12 @@
 # Axeyum plan, status, and next actions
 
+> **Generated; do not edit by hand.** Sources: project-wide sections in
+> [`docs/plan/global/`](docs/plan/global/README.md), one file per lane in
+> [`docs/plan/status/`](docs/plan/status/README.md). Edit **your lane's file**
+> and run `python3 scripts/gen-plan.py`; `--check` is a gate. This file was
+> touched 67 times in 24 hours by concurrent lanes on 2026-08-13/14 and one
+> lane's edit was swept into another's commit — that is what the split fixes.
+
 **Canonical project tracker.** This is the repository's single mutable source
 for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.

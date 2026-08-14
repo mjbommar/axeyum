@@ -57,27 +57,39 @@ Also contested for the same reason: the two `nat_prelude.rs` hazards recorded in
 math `02` — the `:8090` `.expect(...)` panic and the O(n³) bubble sort in
 `prove_left_sum_permutation`. Both are real; neither is ours to fix.
 
-### Shared append points — protocol, not avoidance
+### Shared append points — FIXED 2026-08-14 (lane `append-points`)
 
 `PLAN.md` and `docs/research/09-decisions/README.md` were clobbered by
 concurrent lanes **four times on 2026-08-14**. Pathspec discipline does not
 help: it stops you sweeping files you did not touch, not two lanes legitimately
-touching the same one. The session protocol *instructs* every lane to edit
-`PLAN.md`, so the instruction is the defect.
+touching the same one. The session protocol *instructed* every lane to edit
+`PLAN.md`, so the instruction was the defect.
 
-Until that is fixed:
+Both are now **generated views over per-lane sources**, so there is nothing left
+to clobber:
 
-- **write no ADR while that lane is live** — the index is touched 60 times a
-  day and every ADR appends to it. Record decisions in this folder and link
-  inward; convert to ADRs when the lane goes quiet.
-- **make no `PLAN.md` edit** for the same reason.
+- `PLAN.md` ← `docs/plan/status/<lane>.md` (one file per lane; lane blocks and
+  landed-changes rows merged deterministically) + `docs/plan/global/*.md` (the
+  project-wide sections, still hand-authored and deliberately so).
+  `python3 scripts/gen-plan.py`, gated by `--check`.
+- the ADR index ← each `adr-*.md`'s own front matter (`Index-summary:` /
+  `Index-status:` carry the curated row text that previously existed only in
+  the index) + `README-preamble.md`. `python3 scripts/gen-adr-index.py`, gated
+  by `--check`.
+
+Both gates run in `scripts/check.sh` and `just check` (`generated-trackers`).
+Writing an ADR or a lane status update while another lane is live is now safe.
+
 - **tag every commit with an `Agent:` trailer.** Every commit in this checkout
   carries the same git author, so `git log` attribution is otherwise
   unrecoverable — two lanes and this session all misattributed commits on the
-  same day.
+  same day. Identity is `export AXEYUM_AGENT=<lane>` in your environment,
+  per-process: the first version of the hook read a repo-local git config key,
+  which was a third shared append point of exactly the same shape (one lane set
+  it and the next lane's commits were stamped with the wrong name).
 
-Note the slope: the ADR index is growing at **~65 per day** against a 455
-baseline. Engineering `04`'s governance point is not static.
+Note the slope that made this urgent: the ADR index was growing at **~65 per
+day** against a 455 baseline. A generated index does not care.
 
 ## What this changes in the ordering
 

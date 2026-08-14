@@ -147,6 +147,14 @@ step rules-as-code-query-adjacent python3 scripts/query-rules-as-code.py familie
 step rules-as-code-query-quality-rows python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family quality_monotonicity_adjacent --limit 3 --require-any
 step rules-as-code-generated-clean git diff --exit-code docs/rules-as-code/generated
 step smtcomp-resume ./scripts/check-smtcomp-resume.sh
+# PLAN.md and the ADR index are generated views over per-lane sources. They are
+# the two files concurrent lanes clobbered four times on 2026-08-14 (67 and 60
+# touches in 24 hours), because the session protocol told every lane to append
+# to them. These gates make a hand edit a failure instead of a lost line.
+step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
+step gen-plan       python3 scripts/gen-plan.py --check
+step adr-index-tests python3 -m unittest scripts.tests.test_gen_adr_index
+step adr-index      python3 scripts/gen-adr-index.py --check
 step plan-authority python3 scripts/check-plan-authority.py
 step links         ./scripts/check-links.sh
 

@@ -21,7 +21,10 @@ quantifier-free corner.
 
 1. Read [PLAN.md](PLAN.md) **first** — it carries current status, the next
    actions, and the resume protocol. It is the only file with mutable session
-   state.
+   state. **It is generated** (`python3 scripts/gen-plan.py`, gated by
+   `--check`): you never edit it. Your lane's state lives in
+   [`docs/plan/status/<lane>.md`](docs/plan/status/README.md); project-wide
+   sections are in [`docs/plan/global/`](docs/plan/global/README.md).
 2. Work against the current roadmap phase and its exit criteria:
    [docs/research/08-planning/roadmap.md](docs/research/08-planning/roadmap.md).
 3. Before adding public operators, rewrites, encodings, backends, evidence
@@ -30,9 +33,21 @@ quantifier-free corner.
 4. Decisions are not made silently in code. Check
    [docs/research/08-planning/research-questions.md](docs/research/08-planning/research-questions.md)
    and [docs/research/09-decisions/](docs/research/09-decisions/README.md);
-   close questions with ADRs (template in the decisions README).
-5. Before ending a session: update PLAN.md's **Status** and **Next Actions**
-   sections.
+   close questions with ADRs (template in the decisions README). The ADR
+   **index is generated** (`python3 scripts/gen-adr-index.py`): write the ADR
+   file, including its optional `Index-summary:` / `Index-status:` front
+   matter, and regenerate. Never append an index row by hand.
+5. Before ending a session: update **your lane's** `docs/plan/status/<lane>.md`
+   — its status block and any landed-changes rows — then run
+   `python3 scripts/gen-plan.py` and commit both it and `PLAN.md`. Touch
+   `docs/plan/global/` only for a genuinely project-wide change.
+
+   These two files are generated because they were the repository's shared
+   append points: `PLAN.md` was touched 67 times and the ADR index 60 times in
+   24 hours by concurrent lanes on 2026-08-13/14, and four clobbering incidents
+   lost real content in one day. The general rule: **per-lane state and
+   per-lane identity belong in per-lane paths or per-process environment, never
+   in one file or one config key every lane writes.**
 
 ## Commands
 

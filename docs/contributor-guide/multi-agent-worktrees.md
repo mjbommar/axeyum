@@ -10,10 +10,20 @@ keep one integration owner for `main`.
 
 Axeyum has a few high-conflict files:
 
-- `PLAN.md`
 - `Cargo.toml`
 - solver core files such as `crates/axeyum-solver/src/incremental.rs`
 - broad planning docs under `docs/plan/` and `docs/research/08-planning/`
+
+`PLAN.md` and the ADR index `docs/research/09-decisions/README.md` used to head
+that list — 67 and 60 touches in 24 hours by concurrent lanes on 2026-08-13/14,
+four clobbering incidents in one day. They are no longer shared files: both are
+**generated views** over per-lane sources (`docs/plan/status/<lane>.md` and the
+`adr-*.md` files themselves), and `scripts/gen-plan.py --check` /
+`scripts/gen-adr-index.py --check` fail if either is hand-edited. That is the
+pattern to reach for when a file becomes a queue: **give each writer its own
+path and derive the shared view.** The same rule applies to identity — lane
+identity is the per-process `AXEYUM_AGENT`, not a repo-local config key, because
+a shared config key is the same defect in a smaller file.
 
 Two agents editing the same checkout or both pushing directly to `main` can
 silently overwrite context, duplicate work, or force noisy conflict resolution
@@ -115,16 +125,20 @@ Good examples:
 - "Agent A owns `crates/axeyum-solver/src/incremental.rs` for this slice."
 - "Agent B owns `docs/rules-as-code/` and will leave root planning state to the
   integration owner."
-- "The integration owner updates `PLAN.md`; topic branches update only their
-  local design/handoff docs and provide a short integration summary."
+- "Every lane updates its own `docs/plan/status/<lane>.md` and regenerates
+  `PLAN.md`; the integration owner owns `docs/plan/global/`."
 
 Root `STATUS.md` is a compatibility pointer, not mutable session state. Do not
-add lane sections to it. `PLAN.md` is the single mutable project tracker and is
-updated by the integration owner after auditing the merged state.
+add lane sections to it. `PLAN.md` is the single mutable project tracker, and it
+is **generated**: edit your lane's file under
+[`docs/plan/status/`](../plan/status/README.md), run
+`python3 scripts/gen-plan.py`, and commit both. The project-wide sections in
+[`docs/plan/global/`](../plan/global/README.md) stay hand-authored and are
+changed deliberately, not once per session per lane.
 
-For `PLAN.md`, prefer stable links and short index updates. Detailed session
-evidence and design belong under `docs/plan/` or another owned documentation
-path, with one deterministic handoff when work pauses.
+In your lane's file, prefer stable links and short index updates. Detailed
+session evidence and design belong under `docs/plan/` or another owned
+documentation path, with one deterministic handoff when work pauses.
 
 ## Push Policy
 

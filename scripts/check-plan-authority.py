@@ -35,8 +35,26 @@ def main() -> int:
         if marker not in plan:
             errors.append(f"PLAN.md is missing required marker: {marker!r}")
 
-    if plan_path.stat().st_size > 50_000:
-        errors.append("PLAN.md exceeds 50 KB; move journal/detail to a result note")
+    # PLAN.md is generated (scripts/gen-plan.py); the writing happens in
+    # docs/plan/global/ and docs/plan/status/, so the no-journal-growth ceiling
+    # is measured there.  The number moved from 50,000 to 52,000 because the
+    # split itself costs bytes that are structure, not journal: at the moment
+    # of the split PLAN.md was 49,997 bytes and its sources 50,741 — +744 for
+    # nine lane headings and sixteen section markers.  `gen-plan.py --check`
+    # keeps PLAN.md equal to those sources, so this still bounds PLAN.md.
+    # `README.md` in each directory documents the format and is not emitted
+    # into PLAN.md, so it is not journal either.
+    authored = sum(
+        path.stat().st_size
+        for directory in ("docs/plan/global", "docs/plan/status")
+        for path in sorted((ROOT / directory).glob("*.md"))
+        if path.name != "README.md"
+    )
+    if authored > 52_000:
+        errors.append(
+            f"PLAN.md sources total {authored} bytes (>52 KB); "
+            "move journal/detail to a result note"
+        )
     if status_path.stat().st_size > 1_500:
         errors.append("STATUS.md is no longer a compact compatibility pointer")
     if exploration_status_path.stat().st_size > 2_000:
