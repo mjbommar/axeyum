@@ -163,6 +163,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_mod_bounds,
         p.div_mod_mul_le_iff,
         p.div_mod_lt_mul_iff,
+        p.div_mod_add_multiple,
         p.div_mod_remainder_eq_zero_iff_dvd,
         p.div_mod_exact_exists,
         p.mod_eq_refl,
@@ -743,6 +744,21 @@ fn euclidean_division_exists_constructively() {
             f.explain(&e)
         )
     });
+
+    // Adding 2*3 to 5 = 2*2+1 preserves the remainder and shifts the
+    // quotient: 11 = 2*5+1.
+    let shifted_relation = f.lemma(p.div_mod_add_multiple, &[two, five, two, one, three, proof]);
+    let eleven = f.num(11);
+    let shifted_quotient = f.num(5);
+    let shifted_relation_ty = f.div_mod(two, eleven, shifted_quotient, one);
+    let shifted_name = f.name("eleven_div_two_from_shift");
+    f.declare_theorem(shifted_name, shifted_relation_ty, shifted_relation)
+        .unwrap_or_else(|e| {
+            panic!(
+                "adding a divisor multiple should preserve divMod: {}",
+                f.explain(&e)
+            )
+        });
 
     // Exact division connects zero remainder to the existing existential
     // divisibility relation: 6 = 2*3+0 iff 2 divides 6.
@@ -2541,7 +2557,39 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 55, "every negative control must be rejected");
+    // NC56 — adding a multiple shifts the quotient by the same amount.
+    {
+        let name = f.name("nc56_div_mod_add_multiple_wrong_quotient");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let five = f.num(5);
+        let eleven = f.num(11);
+        let product = f.mul(two, two);
+        let reconstructed = f.add(product, one);
+        let equation_ty = f.eq(five, reconstructed);
+        let bound_ty = f.lt(one, two);
+        let equation = f.refl(five);
+        let bound = f.lemma(p.le_refl, &[two]);
+        let relation = f.const_app(p.logic.and_intro, &[equation_ty, bound_ty, equation, bound]);
+        let proof = f.lemma(
+            p.div_mod_add_multiple,
+            &[two, five, two, one, three, relation],
+        );
+        let bad = f.div_mod(two, eleven, four, one);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC56: adding a multiple must shift the quotient exactly");
+        println!(
+            "NC56 (wrong shifted divMod quotient) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 56, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2564,7 +2612,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        12 + 82,
+        12 + 83,
         "every promised definition and theorem must be rendered"
     );
 }

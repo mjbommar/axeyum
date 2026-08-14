@@ -490,3 +490,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0432](adr-0432-left-multiplication-preserves-nat-congruence.md) | Left multiplication preserves Nat congruence | accepted |
 | [0433](adr-0433-multiplicative-closure-of-nat-congruence.md) | Multiplicative closure of Nat congruence | accepted |
 | [0434](adr-0434-same-euclidean-remainder-implies-nat-congruence.md) | Equal Euclidean remainders imply Nat congruence | accepted |
+| [0435](adr-0435-relational-nat-division-shift-by-a-multiple.md) | Shift relational Nat division by a divisor multiple | accepted |

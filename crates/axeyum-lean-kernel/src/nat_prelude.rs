@@ -301,6 +301,9 @@ pub struct NatPrelude {
     pub div_mod_mul_le_iff: NameId,
     /// `Nat.div_mod_lt_mul_iff : divMod d n q r → (n < d*s ↔ q < s)`.
     pub div_mod_lt_mul_iff: NameId,
+    /// `Nat.div_mod_add_multiple :
+    ///   divMod d n q r → divMod d (n+d*k) (q+k) r`.
+    pub div_mod_add_multiple: NameId,
 
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
@@ -462,6 +465,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             div_mod_bounds: kernel.name_str(nat, "div_mod_bounds"),
             div_mod_mul_le_iff: kernel.name_str(nat, "div_mod_mul_le_iff"),
             div_mod_lt_mul_iff: kernel.name_str(nat, "div_mod_lt_mul_iff"),
+            div_mod_add_multiple: kernel.name_str(nat, "div_mod_add_multiple"),
             dvd: kernel.name_str(nat, "dvd"),
             div_mod_remainder_eq_zero_iff_dvd: kernel
                 .name_str(nat, "div_mod_remainder_eq_zero_iff_dvd"),
@@ -4771,6 +4775,87 @@ fn declare_euclidean_division(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
         let body = d.apply(
             and_rec,
             &[lower_ty, upper_ty, bounds_motive, bounds_minor, bounds],
+        );
+        let stmt = d.arrow(relation_ty, target);
+        let proof = d.lam_fv(relation_fv, relation_ty, body);
+        (stmt, proof)
+    })?;
+
+    // div_mod_add_multiple :
+    //   ∀ d n q r k, divMod d n q r → divMod d (n+d*k) (q+k) r
+    // Shift a relational decomposition by a multiple of its divisor. This is
+    // the reusable closure fact needed to compare balanced congruence witnesses
+    // through div_mod_unique.
+    d.theorem(p.div_mod_add_multiple, 5, &|d, v| {
+        let (divisor, dividend, quotient, remainder, shift) = (v[0], v[1], v[2], v[3], v[4]);
+        let relation_ty = d.div_mod(divisor, dividend, quotient, remainder);
+        let shift_product = d.mul(divisor, shift);
+        let shifted_dividend = d.add(dividend, shift_product);
+        let shifted_quotient = d.add(quotient, shift);
+        let target = d.div_mod(divisor, shifted_dividend, shifted_quotient, remainder);
+        let relation_fv = d.fresh_fvar();
+        let relation = d.kernel().fvar(relation_fv);
+
+        let quotient_product = d.mul(divisor, quotient);
+        let reconstructed = d.add(quotient_product, remainder);
+        let equation_ty = d.eq(dividend, reconstructed);
+        let bound_ty = d.lt(remainder, divisor);
+        let relation_motive = d
+            .kernel()
+            .lam(anon, relation_ty, target, BinderInfo::Default);
+        let relation_minor = {
+            let equation_fv = d.fresh_fvar();
+            let equation = d.kernel().fvar(equation_fv);
+            let bound_fv = d.fresh_fvar();
+            let bound = d.kernel().fvar(bound_fv);
+
+            let expanded = d.add(reconstructed, shift_product);
+            let products_sum = d.add(quotient_product, shift_product);
+            let regrouped = d.add(products_sum, remainder);
+            let shifted_quotient_product = d.mul(divisor, shifted_quotient);
+            let shifted_reconstructed = d.add(shifted_quotient_product, remainder);
+            let expand = d.congr(dividend, reconstructed, equation, &|d, value| {
+                d.add(value, shift_product)
+            });
+            let regroup = d.lemma(
+                p.add_right_comm,
+                &[quotient_product, remainder, shift_product],
+            );
+            let distribute = d.lemma(p.left_distrib, &[divisor, quotient, shift]);
+            let factor = d.symm(shifted_quotient_product, products_sum, distribute);
+            let factor_under_remainder = d.congr(
+                products_sum,
+                shifted_quotient_product,
+                factor,
+                &|d, value| d.add(value, remainder),
+            );
+            let (_, shifted_equation) = d.chain(
+                shifted_dividend,
+                &[
+                    (expanded, expand),
+                    (regrouped, regroup),
+                    (shifted_reconstructed, factor_under_remainder),
+                ],
+            );
+            let shifted_equation_ty = d.eq(shifted_dividend, shifted_reconstructed);
+            let body = d.const_app(
+                p.logic.and_intro,
+                &[shifted_equation_ty, bound_ty, shifted_equation, bound],
+            );
+            let with_bound = d.lam_fv(bound_fv, bound_ty, body);
+            d.lam_fv(equation_fv, equation_ty, with_bound)
+        };
+        let level_zero = d.kernel().level_zero();
+        let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+        let body = d.apply(
+            and_rec,
+            &[
+                equation_ty,
+                bound_ty,
+                relation_motive,
+                relation_minor,
+                relation,
+            ],
         );
         let stmt = d.arrow(relation_ty, target);
         let proof = d.lam_fv(relation_fv, relation_ty, body);
