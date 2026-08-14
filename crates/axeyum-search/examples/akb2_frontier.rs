@@ -22,6 +22,9 @@
 //!   it with `check_drat_backward` (ADR-0382).
 //! * `cover` runs the cube-and-conquer harness when the monolithic solve is
 //!   out of reach.
+//! * `check` re-checks a DRAT proof this process did not produce, so a proof
+//!   can be moved to a host that can afford to check it rather than being
+//!   re-derived there.
 //!
 //! No external solver and no external checker anywhere in this binary
 //! (ADR-0002).
@@ -30,6 +33,7 @@
 //! ```text
 //! akb2_frontier valuation <a> <b> <k> <n> <out.txt>
 //! akb2_frontier verify    <a> <b> <k> <in.txt>
+//! akb2_frontier check     <a> <b> <k> <n> <in.drat>
 //! akb2_frontier climb     <a> <b> <k> <n> <start.txt|-> <out.txt> <seed> <moves>
 //! akb2_frontier sat       <a> <b> <k> <n> <out-witness.txt> <hours>
 //! akb2_frontier solve     <a> <b> <k> <n> <out.drat> <out-witness.txt> <hours>
@@ -167,7 +171,7 @@ fn write_colouring(path: &str, colouring: &[usize]) {
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        eprintln!("usage: akb2_frontier <valuation|verify|climb|solve|cover> ...");
+        eprintln!("usage: akb2_frontier <valuation|verify|check|climb|sat|solve|cover> ...");
         return ExitCode::from(2);
     }
     let mode = args[1].as_str();
@@ -198,6 +202,61 @@ fn main() -> ExitCode {
                     );
                     ExitCode::from(3)
                 }
+            }
+        }
+        "check" => {
+            // Check a DRAT proof this process did NOT produce. `solve` bundles
+            // production and checking, and `recertify_rado` always re-solves;
+            // neither can check a proof that already exists. That matters
+            // because production and checking have very different memory
+            // profiles: a proof that solves comfortably on a 61 GiB host can
+            // need a 123 GiB host to check (measured 6.6x resident over the
+            // text-DRAT file size). Separating them lets the proof move to the
+            // machine that can afford it instead of being re-derived.
+            if args.len() < 7 {
+                eprintln!("usage: akb2_frontier check <a> <b> <k> <n> <in.drat>");
+                return ExitCode::from(2);
+            }
+            let (a, b, k, n) = (num(2), num(3), num(4), num(5));
+            let in_drat = args[6].clone();
+            let family = Rado::new(a, b, k).expect("family");
+            let problem = family.problem(n).expect("problem");
+            let formula = problem.encode().expect("encode");
+            let bytes = fs::metadata(&in_drat).expect("stat drat").len();
+            eprintln!(
+                "instance a={a} b={b} k={k} n={n} vars={} clauses={} drat_bytes={bytes}",
+                formula.variable_count(),
+                formula.clauses().len()
+            );
+            let t0 = Instant::now();
+            let text = fs::read_to_string(&in_drat).expect("read drat");
+            let proof = match parse_drat(&text) {
+                Ok(p) => p,
+                Err(e) => {
+                    println!("{{\"status\":\"parse-failed\",\"error\":\"{e:?}\"}}");
+                    return ExitCode::from(3);
+                }
+            };
+            let parse_s = t0.elapsed().as_secs_f64();
+            drop(text);
+            let t1 = Instant::now();
+            let verified = check_drat_backward(&formula, &proof).expect("check");
+            let check_s = t1.elapsed().as_secs_f64();
+            println!(
+                "{{\"status\":\"{}\",\"mode\":\"check\",\"a\":{a},\"b\":{b},\"k\":{k},\"n\":{n},\
+                 \"steps\":{},\"drat_bytes\":{bytes},\"parse_s\":{parse_s:.3},\
+                 \"check_s\":{check_s:.3}}}",
+                if verified {
+                    "verified-unsat"
+                } else {
+                    "check-failed"
+                },
+                proof.len(),
+            );
+            if verified {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(3)
             }
         }
         "verify" => {
