@@ -26,6 +26,9 @@ instead of only being prevented from growing.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-14 | `fb1066709` | The workspace test gate's zero-test list capped and phrased as information (parser validated at 1191 tests / 34 binaries). |
+| 2026-08-14 | `23bd018be` | `check.sh` stops claiming to mirror a recipe it does not; the claim was false for the life of the file. |
+| 2026-08-14 | `585d4ac23` | Control 6: the step floor itself is exercised (20 controls). |
 | 2026-08-14 | `fc1090126` | Frontier curves re-recorded with the machine, load, calibration and comparability that produced them. |
 | 2026-08-14 | `4be94e45c` | Controls for the aggregate gate's own scope (18 checks). |
 | 2026-08-14 | `952a3ae2b` | Calibration kernel corrected to track the workload (it under-reported the core-class slowdown by 60 %). |
