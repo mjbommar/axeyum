@@ -368,6 +368,136 @@ fn admit_closed_form_sharp_witness_identity(d: &mut Dev, witness_identity: NameI
     name
 }
 
+/// Prove the paper's closed-form witness has exact base-`a` valuation two.
+/// This expands the manuscript's `u' ≡ 1 (mod a)` sentence into a checked
+/// factorization of the shifted sum and final power by `a`.
+fn admit_closed_form_witness_valuation(d: &mut Dev) -> NameId {
+    let p = d.p;
+    let name = d.name("closed_form_witness_valuation");
+    d.theorem(name, 3, &|d, v| {
+        let (a, _b, n) = (v[0], v[1], v[2]);
+        let two = d.num(2);
+        let bound_ty = d.le(two, a);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.k.fvar(bound_fv);
+        let one = d.num(1);
+
+        let unshifted = power_range(d, a, 0);
+        let shifted = power_range(d, a, 1);
+        let sum0 = d.sum_range(unshifted, n);
+        let sum1 = d.sum_range(shifted, n);
+        let sn = d.succ(n);
+        let power_n = d.pow(a, n);
+        let power1 = d.pow(a, sn);
+        let twice_sum1 = d.mul(two, sum1);
+        let tail = d.add(twice_sum1, power1);
+        let inner = d.add(one, tail);
+
+        // sum1 = a*sum0.
+        let a_sum0 = d.mul(a, sum0);
+        let a_sum0_eq_sum1 = d.lemma(p.mul_sum_range_pow, &[a, n]);
+        let sum1_eq_a_sum0 = d.symm(a_sum0, sum1, a_sum0_eq_sum1);
+
+        // 2*sum1 = a*(2*sum0).
+        let two_a_sum0 = d.mul(two, a_sum0);
+        let h_sum_under_two = d.congr(sum1, a_sum0, sum1_eq_a_sum0, &|d, x| d.mul(two, x));
+        let two_a = d.mul(two, a);
+        let two_a_times_sum0 = d.mul(two_a, sum0);
+        let h_assoc_two = d.lemma(p.mul_assoc, &[two, a, sum0]);
+        let h_assoc_two_rev = d.symm(two_a_times_sum0, two_a_sum0, h_assoc_two);
+        let a_two = d.mul(a, two);
+        let a_two_times_sum0 = d.mul(a_two, sum0);
+        let h_two_a = d.lemma(p.mul_comm, &[two, a]);
+        let h_comm_under_sum = d.congr(two_a, a_two, h_two_a, &|d, x| d.mul(x, sum0));
+        let twice_sum0 = d.mul(two, sum0);
+        let a_twice_sum0 = d.mul(a, twice_sum0);
+        let h_assoc_a = d.lemma(p.mul_assoc, &[a, two, sum0]);
+        let (_, twice_sum1_eq_factored) = d.chain(
+            twice_sum1,
+            &[
+                (two_a_sum0, h_sum_under_two),
+                (two_a_times_sum0, h_assoc_two_rev),
+                (a_two_times_sum0, h_comm_under_sum),
+                (a_twice_sum0, h_assoc_a),
+            ],
+        );
+
+        // a^(n+1) = a*a^n.
+        let power_n_a = d.mul(power_n, a);
+        let a_power_n = d.mul(a, power_n);
+        let h_power = d.lemma(p.pow_succ, &[a, n]);
+        let h_power_comm = d.lemma(p.mul_comm, &[power_n, a]);
+        let (_, power1_eq_factored) =
+            d.chain(power1, &[(power_n_a, h_power), (a_power_n, h_power_comm)]);
+
+        let factored_terms = d.add(a_twice_sum0, a_power_n);
+        let t = d.add(twice_sum0, power_n);
+        let a_t = d.mul(a, t);
+        let h_tail_left = d.congr(twice_sum1, a_twice_sum0, twice_sum1_eq_factored, &|d, x| {
+            d.add(x, power1)
+        });
+        let h_tail_right = d.congr(power1, a_power_n, power1_eq_factored, &|d, x| {
+            d.add(a_twice_sum0, x)
+        });
+        let h_distribute = d.lemma(p.left_distrib, &[a, twice_sum0, power_n]);
+        let h_distribute_rev = d.symm(a_t, factored_terms, h_distribute);
+        let factored_left = d.add(a_twice_sum0, power1);
+        let (_, tail_eq_a_t) = d.chain(
+            tail,
+            &[
+                (factored_left, h_tail_left),
+                (factored_terms, h_tail_right),
+                (a_t, h_distribute_rev),
+            ],
+        );
+
+        let shaped_inner = d.add(one, a_t);
+        let inner_eq_shaped = d.congr(tail, a_t, tail_eq_a_t, &|d, x| d.add(one, x));
+        let shaped_not_dvd = d.lemma(p.not_dvd_one_add_mul_of_two_le, &[a, t, bound]);
+        let shaped_eq_inner = d.symm(inner, shaped_inner, inner_eq_shaped);
+        let inner_not_dvd = {
+            let motive = d.eq_motive(shaped_inner, &|d, x| {
+                let divides = d.dvd(a, x);
+                d.const_app(p.logic.not, &[divides])
+            });
+            d.transport(shaped_inner, motive, shaped_not_dvd, inner, shaped_eq_inner)
+        };
+
+        let aa = d.mul(a, a);
+        let aa_inner = d.mul(aa, inner);
+        let generic = d.lemma(p.valuation_at_two_mul_sq, &[a, inner, bound, inner_not_dvd]);
+
+        // Return to the witness as stated: q=a+a*inner and Z=a*(q-a).
+        let u = d.mul(a, inner);
+        let q = d.add(a, u);
+        let q_sub_a = d.sub(q, a);
+        let restored = d.add(q_sub_a, a);
+        let a_le_q = d.lemma(p.le_add_right, &[a, u]);
+        let restored_eq_q = d.lemma(p.sub_add_cancel, &[a, q, a_le_q]);
+        let u_plus_a = d.add(u, a);
+        let q_eq_u_plus_a = d.lemma(p.add_comm, &[a, u]);
+        let (_, common_sum) = d.chain(restored, &[(q, restored_eq_q), (u_plus_a, q_eq_u_plus_a)]);
+        let q_sub_a_eq_u = d.lemma(p.add_right_cancel, &[q_sub_a, u, a, common_sum]);
+        let z = d.mul(a, q_sub_a);
+        let a_u = d.mul(a, u);
+        let z_eq_a_u = d.congr(q_sub_a, u, q_sub_a_eq_u, &|d, x| d.mul(a, x));
+        let h_assoc = d.lemma(p.mul_assoc, &[a, a, inner]);
+        let a_u_eq_aa_inner = d.symm(aa_inner, a_u, h_assoc);
+        let (_, z_eq_aa_inner) = d.chain(z, &[(a_u, z_eq_a_u), (aa_inner, a_u_eq_aa_inner)]);
+        let aa_inner_eq_z = d.symm(z, aa_inner, z_eq_aa_inner);
+        let body = {
+            let motive = d.eq_motive(aa_inner, &|d, value| d.valuation_at(a, value, two));
+            d.transport(aa_inner, motive, generic, z, aa_inner_eq_z)
+        };
+        let conclusion = d.valuation_at(a, z, two);
+        let stmt = d.arrow(bound_ty, conclusion);
+        let proof = d.lam_fv(bound_fv, bound_ty, body);
+        (stmt, proof)
+    })
+    .expect("closed-form witness valuation checks");
+    name
+}
+
 #[derive(Clone, Copy)]
 struct RangeTheorems {
     x_lower: NameId,
@@ -1150,6 +1280,57 @@ fn kernel_checks_the_closed_form_sharpness_witness_identity() {
             .filter(|(_, decl)| matches!(decl, Declaration::Axiom { .. }))
             .collect();
     assert!(axioms.is_empty(), "closed-form witness must add no axioms");
+}
+
+#[test]
+fn kernel_checks_the_closed_form_witness_valuation() {
+    let mut d = Dev::new();
+    let theorem = admit_closed_form_witness_valuation(&mut d);
+    let a = d.num(2);
+    let b = d.num(3);
+    let zero = d.zero();
+    let bound = d.lemma(d.p.le_refl, &[a]);
+    let proof = d.lemma(theorem, &[a, b, zero, bound]);
+    d.k.infer(proof)
+        .expect("closed-form empty-corner valuation infers");
+
+    let axioms: Vec<_> =
+        d.k.environment()
+            .iter()
+            .filter(|(_, decl)| matches!(decl, Declaration::Axiom { .. }))
+            .collect();
+    assert!(
+        axioms.is_empty(),
+        "closed-form valuation must add no axioms"
+    );
+}
+
+#[test]
+fn kernel_rejects_a_broken_closed_form_witness_valuation() {
+    let mut d = Dev::new();
+    let theorem = admit_closed_form_witness_valuation(&mut d);
+    let a = d.num(2);
+    let b = d.num(3);
+    let zero = d.zero();
+    let bound = d.lemma(d.p.le_refl, &[a]);
+    let proof = d.lemma(theorem, &[a, b, zero, bound]);
+
+    // At n=0 the closed form has Z=12 and exact base-two valuation 2.
+    // Changing only the valuation exponent must not inherit that proof.
+    let twelve = d.num(12);
+    let one = d.num(1);
+    let bad = d.valuation_at(a, twelve, one);
+    let bad_name = d.name("broken_closed_form_witness_valuation");
+    let error =
+        d.k.add_declaration(Declaration::Theorem {
+            name: bad_name,
+            uparams: vec![],
+            ty: bad,
+            value: proof,
+        })
+        .expect_err("a changed valuation exponent must be rejected");
+    println!("broken closed-form witness valuation rejected: {error:?}");
+    assert!(!d.k.environment().contains(bad_name));
 }
 
 #[test]

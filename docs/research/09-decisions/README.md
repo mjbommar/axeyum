@@ -469,3 +469,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0411](adr-0411-positive-multiplication-equality-cancellation.md) | Positive multiplication equality cancellation | accepted |
 | [0412](adr-0412-constructive-one-plus-multiple-nondivisibility.md) | Constructive one-plus-multiple nondivisibility | accepted |
 | [0413](adr-0413-relational-nat-valuation-at-two.md) | Relational Nat valuation at two | accepted |
+| [0414](adr-0414-closed-form-rado-witness-valuation.md) | Closed-form Rado witness valuation | accepted |
