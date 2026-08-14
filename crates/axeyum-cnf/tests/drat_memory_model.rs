@@ -81,7 +81,7 @@ fn pigeonhole(holes: usize) -> CnfFormula {
 /// because the model must cover per-run fixed costs that a small proof does not
 /// amortise; the point of the bound is to catch a model that has become
 /// meaningless, not to pin a coefficient.
-const MAX_OVERPREDICTION: f64 = 6.0;
+const MAX_OVERPREDICTION: f64 = 3.0;
 
 #[test]
 fn the_model_covers_what_the_file_backed_route_actually_holds() {

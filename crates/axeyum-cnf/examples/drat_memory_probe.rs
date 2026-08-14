@@ -79,6 +79,32 @@ fn main() {
 
     let start = std::time::Instant::now();
     match mode {
+        "differential" => {
+            // Both routes, same process, same bytes, verdicts compared. This is
+            // the differential test of `tests/drat_backward_file_differential.rs`
+            // run against a real committed certificate, which no unit test can
+            // afford to hold.
+            let file = fs::File::open(drat_path).unwrap();
+            let file_backed = axeyum_cnf::check_drat_backward_reader(
+                &formula,
+                BufReader::with_capacity(1 << 20, file),
+            );
+            let after_file = vm_hwm();
+            let text = fs::read_to_string(drat_path).unwrap();
+            let steps = axeyum_cnf::parse_drat(&text).unwrap();
+            drop(text);
+            let in_memory = axeyum_cnf::check_drat_backward(&formula, &steps);
+            eprintln!(
+                "file-backed {file_backed:?} (peak {after_file} B) vs in-memory {in_memory:?} \
+                 (peak {} B)",
+                vm_hwm()
+            );
+            assert_eq!(
+                file_backed, in_memory,
+                "DISAGREEMENT between the file-backed and in-memory backward checkers"
+            );
+            eprintln!("AGREE on {} steps", steps.len());
+        }
         "file-backed" => {
             let file = fs::File::open(drat_path).unwrap();
             let verdict = axeyum_cnf::check_drat_backward_reader(

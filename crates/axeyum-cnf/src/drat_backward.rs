@@ -69,12 +69,75 @@ use crate::{CnfFormula, CnfLit, DratError, DratStep, DratTextReader};
 /// indexed by literal.
 type Code = usize;
 
-/// Sentinel for "no clause": the reason of an assumed literal, an absent
-/// record, and the pivot of an empty clause.
+/// A literal code as *stored*: the arena is the single largest term in a
+/// backward check's footprint, so it holds 4-byte codes rather than the 8-byte
+/// `usize` the engine computes with (ADR-0426, follow-on).
+///
+/// Every stored code came through [`code_of`], and [`PlanBuilder::finish`]
+/// refuses a proof whose variable count could produce one that does not fit, so
+/// the narrowing is total rather than checked per literal.
+type StoredCode = u32;
+
+/// Widest variable index whose literal codes fit a [`StoredCode`].
+///
+/// A code is `2 * index + is_negated`, so `(u32::MAX - 1) / 2` would be the
+/// largest index whose codes fit — except that its negated code is exactly
+/// `u32::MAX`, which is [`NO_PIVOT`]. One below it is therefore the largest
+/// usable index, and every real code is strictly less than the sentinel.
+///
+/// Reaching this needs a proof over more than two billion variables; the guard
+/// exists because the failure it prevents — a silently truncated literal, or a
+/// real pivot indistinguishable from "no pivot" — would be a wrong answer, not
+/// a crash.
+const MAX_STORED_VARIABLE_INDEX: usize = ((u32::MAX - 1) / 2) as usize - 1;
+
+/// Widens a stored record id from a step map back to the engine's working type,
+/// mapping [`NO_RECORD`] onto [`NO_CLAUSE`] so the two sentinels never have to
+/// be compared across widths.
+const fn record_of(id: u32) -> usize {
+    if id == NO_RECORD {
+        NO_CLAUSE
+    } else {
+        id as usize
+    }
+}
+
+/// Widens a stored code back to the engine's working type.
+const fn widen(code: StoredCode) -> Code {
+    code as Code
+}
+
+/// Narrows a working code for storage.
+///
+/// # Panics
+///
+/// Debug-asserts the code fits. In release the truncation cannot happen:
+/// [`PlanBuilder::finish`] rejects any proof whose variable count could produce
+/// an out-of-range code, and no code is stored before that check runs on a plan
+/// that is used.
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "guarded by MAX_STORED_VARIABLE_INDEX in PlanBuilder::finish"
+)]
+const fn narrow(code: Code) -> StoredCode {
+    debug_assert!(code <= u32::MAX as Code, "literal code fits a StoredCode");
+    code as StoredCode
+}
+
+/// Sentinel for "no clause": the reason of an assumed literal and an absent
+/// record.
 const NO_CLAUSE: usize = usize::MAX;
 
 /// Sentinel for "never deleted" in [`ClauseRecord::died`].
-const NEVER: usize = usize::MAX;
+const NEVER: u32 = u32::MAX;
+
+/// Sentinel for "this clause has no RAT pivot", which only the empty clause is.
+const NO_PIVOT: StoredCode = StoredCode::MAX;
+
+/// Sentinel for "no record" in the step-to-record maps, which hold 32-bit record
+/// ids. [`PlanBuilder::push_clause`] refuses to create a record that would reach
+/// it.
+const NO_RECORD: u32 = u32::MAX;
 
 /// Packs a literal.
 fn code_of(lit: CnfLit) -> Code {
@@ -96,17 +159,22 @@ const fn var_of(code: Code) -> usize {
 /// for the same reason.
 struct ClauseRecord {
     /// Start of the clause's literals in the arena.
+    ///
+    /// Stays 64-bit deliberately: an 18.9 GB proof — one this repository ships —
+    /// has roughly 4.4 G literal occurrences, and a 32-bit arena offset
+    /// overflows at 4.29 G. That overflow would appear only at a size no test
+    /// here can reach, on exactly the certificates that matter most.
     start: usize,
     /// Number of literals (occurrences, not distinct variables).
-    len: usize,
+    len: u32,
     /// First proof-step index at which the clause is available.
-    born: usize,
+    born: u32,
     /// First proof-step index at which the clause is no longer available.
-    died: usize,
+    died: u32,
     /// The clause's *first literal as written*, which is the RAT pivot the
     /// reference checker uses. Watch maintenance permutes the arena span, so
-    /// the pivot cannot be recovered from it; `NO_CLAUSE` for an empty clause.
-    pivot: Code,
+    /// the pivot cannot be recovered from it; `NO_PIVOT` for an empty clause.
+    pivot: StoredCode,
     /// The refutation depends on this clause, so it must itself be verified.
     core: bool,
     /// Currently in the working database.
@@ -122,18 +190,35 @@ struct ClauseRecord {
     key_hash: u64,
 }
 
+impl ClauseRecord {
+    /// The record's literal span in the arena.
+    fn span(&self) -> core::ops::Range<usize> {
+        self.start..self.start + self.width()
+    }
+
+    /// Number of literal occurrences, as an index-friendly width.
+    fn width(&self) -> usize {
+        self.len as usize
+    }
+
+    /// Is the clause available to the checks at proof step `step`?
+    fn live_at(&self, step: usize) -> bool {
+        self.born as usize <= step && step < self.died as usize
+    }
+}
+
 /// The proof compiled into clause records with lifetimes: the whole of phase 1.
 struct Plan {
-    /// Literals of every clause, back to back.
-    arena: Vec<Code>,
+    /// Literals of every clause, back to back, as [`StoredCode`].
+    arena: Vec<StoredCode>,
     /// Formula clauses first, then one record per addition, in proof order.
     records: Vec<ClauseRecord>,
-    /// Record added by each proof step (`NO_CLAUSE` for a deletion step).
-    added_by_step: Vec<usize>,
-    /// Record removed by each proof step (`NO_CLAUSE` for an addition step, or
+    /// Record added by each proof step (`NO_RECORD` for a deletion step).
+    added_by_step: Vec<u32>,
+    /// Record removed by each proof step (`NO_RECORD` for an addition step, or
     /// for a deletion that matched no live clause — which the reference ignores
     /// and so do we).
-    deleted_by_step: Vec<usize>,
+    deleted_by_step: Vec<u32>,
     /// Number of variables the assignment must cover: the formula's count and
     /// every variable the proof mentions.
     variable_count: usize,
@@ -164,10 +249,10 @@ impl Plan {
     /// cost constants in [`crate::DratMemoryModel`] stay measured rather than
     /// remembered.
     fn heap_bytes(&self) -> u64 {
-        let arena = self.arena.capacity() * size_of::<Code>();
+        let arena = self.arena.capacity() * size_of::<StoredCode>();
         let records = self.records.capacity() * size_of::<ClauseRecord>();
         let maps =
-            (self.added_by_step.capacity() + self.deleted_by_step.capacity()) * size_of::<usize>();
+            (self.added_by_step.capacity() + self.deleted_by_step.capacity()) * size_of::<u32>();
         (arena + records + maps) as u64
     }
 }
@@ -204,10 +289,10 @@ impl RecordSlot {
     /// and is reused across calls.
     fn pop_matching(
         &mut self,
-        arena: &[Code],
+        arena: &[StoredCode],
         records: &[ClauseRecord],
-        key: &[Code],
-        scratch: &mut Vec<Code>,
+        key: &[StoredCode],
+        scratch: &mut Vec<StoredCode>,
     ) -> usize {
         match self {
             RecordSlot::Empty => NO_CLAUSE,
@@ -242,13 +327,13 @@ impl RecordSlot {
 
 /// Does `record`'s literal set equal `key` (which is sorted and deduplicated)?
 fn record_key_equals(
-    arena: &[Code],
+    arena: &[StoredCode],
     record: &ClauseRecord,
-    key: &[Code],
-    scratch: &mut Vec<Code>,
+    key: &[StoredCode],
+    scratch: &mut Vec<StoredCode>,
 ) -> bool {
     scratch.clear();
-    scratch.extend_from_slice(&arena[record.start..record.start + record.len]);
+    scratch.extend_from_slice(&arena[record.span()]);
     scratch.sort_unstable();
     scratch.dedup();
     scratch.as_slice() == key
@@ -287,12 +372,12 @@ impl Hasher for KeyHasher {
 /// Order-independent by construction (the input is sorted first) and mixed hard
 /// enough that the table is not the bottleneck; correctness never rests on it,
 /// because [`RecordSlot::pop_matching`] compares the sets themselves.
-fn hash_key(key: &[Code]) -> u64 {
+fn hash_key(key: &[StoredCode]) -> u64 {
     const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
     const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
     let mut hash = FNV_OFFSET;
     for &code in key {
-        hash ^= code as u64;
+        hash ^= u64::from(code);
         hash = hash.wrapping_mul(FNV_PRIME);
     }
     // Final avalanche (splitmix64's finaliser), because the table uses the low
@@ -316,9 +401,13 @@ struct PlanBuilder {
     /// iterated, so no output of this module depends on hash order.
     live: HashMap<u64, RecordSlot, BuildHasherDefault<KeyHasher>>,
     /// Scratch for the key being looked up.
-    key: Vec<Code>,
+    key: Vec<StoredCode>,
     /// Scratch for a candidate's key during exact comparison.
-    candidate: Vec<Code>,
+    candidate: Vec<StoredCode>,
+    /// A count that did not fit its stored width, recorded rather than panicked
+    /// so [`PlanBuilder::finish`] can refuse the plan. A truncated count would
+    /// be a wrong answer; refusing is a `DratError::Parse`.
+    overflow: Option<String>,
     /// Set once the empty clause has been added: nothing after it can be part of
     /// the refutation, so the walk stops there.
     root: Option<usize>,
@@ -343,6 +432,7 @@ impl PlanBuilder {
             live: HashMap::default(),
             key: Vec::new(),
             candidate: Vec::new(),
+            overflow: None,
             root: None,
             shape_steps: 0,
             shape_added_clauses: 0,
@@ -370,8 +460,8 @@ impl PlanBuilder {
             self.plan.added_by_step.len() == index,
             "plan steps must arrive in proof order"
         );
-        self.plan.added_by_step.push(NO_CLAUSE);
-        self.plan.deleted_by_step.push(NO_CLAUSE);
+        self.plan.added_by_step.push(NO_RECORD);
+        self.plan.deleted_by_step.push(NO_RECORD);
         self.shape_steps += 1;
         match step {
             DratStep::Add(lits) => {
@@ -379,7 +469,7 @@ impl PlanBuilder {
                 self.shape_added_literals += lits.len() as u64;
                 self.shape_total_literals += lits.len() as u64;
                 let record = self.push_clause(lits, index + 1);
-                self.plan.added_by_step[index] = record;
+                self.plan.added_by_step[index] = self.narrow_id(record, "clause records");
                 let hash = self.plan.records[record].key_hash;
                 self.live
                     .entry(hash)
@@ -396,7 +486,8 @@ impl PlanBuilder {
                 // stored literal order affects nothing but its own RAT pivot,
                 // which a database clause never supplies.
                 self.key.clear();
-                self.key.extend(lits.iter().copied().map(code_of));
+                self.key
+                    .extend(lits.iter().copied().map(|lit| narrow(code_of(lit))));
                 self.key.sort_unstable();
                 self.key.dedup();
                 let hash = hash_key(&self.key);
@@ -407,6 +498,7 @@ impl PlanBuilder {
                     live,
                     key,
                     candidate,
+                    overflow,
                     ..
                 } = self;
                 let record = match live.get_mut(&hash) {
@@ -414,8 +506,13 @@ impl PlanBuilder {
                     None => NO_CLAUSE,
                 };
                 if record != NO_CLAUSE {
-                    plan.records[record].died = index;
-                    plan.deleted_by_step[index] = record;
+                    let died = u32::try_from(index).unwrap_or(NEVER);
+                    let id = u32::try_from(record).unwrap_or(NO_RECORD);
+                    if died == NEVER || id == NO_RECORD {
+                        *overflow = Some("proof step or clause count exceeds 2^32".to_owned());
+                    }
+                    plan.records[record].died = died;
+                    plan.deleted_by_step[index] = id;
                 }
             }
         }
@@ -430,7 +527,9 @@ impl PlanBuilder {
     /// Appends a clause to the arena and returns its record id.
     fn push_clause(&mut self, lits: &[CnfLit], born: usize) -> usize {
         let start = self.plan.arena.len();
-        self.plan.arena.extend(lits.iter().copied().map(code_of));
+        self.plan
+            .arena
+            .extend(lits.iter().copied().map(|lit| narrow(code_of(lit))));
         for lit in lits {
             self.plan.variable_count = self.plan.variable_count.max(lit.var().index() + 1);
         }
@@ -441,18 +540,45 @@ impl PlanBuilder {
         self.key.dedup();
         let key_hash = hash_key(&self.key);
         let record = self.plan.records.len();
+        let len = self.narrow_count(lits.len(), "clause literals");
+        let born = self.narrow_count(born, "proof steps");
         self.plan.records.push(ClauseRecord {
             start,
-            len: lits.len(),
+            len,
             born,
             died: NEVER,
-            pivot: lits.first().copied().map_or(NO_CLAUSE, code_of),
+            pivot: lits
+                .first()
+                .copied()
+                .map_or(NO_PIVOT, |lit| narrow(code_of(lit))),
             core: false,
             live: false,
             forced: false,
             key_hash,
         });
         record
+    }
+
+    /// Narrows a count for storage, recording an overflow rather than
+    /// truncating silently.
+    fn narrow_count(&mut self, value: usize, what: &str) -> u32 {
+        u32::try_from(value).unwrap_or_else(|_| {
+            self.overflow
+                .get_or_insert_with(|| format!("{what} exceed 2^32"));
+            u32::MAX
+        })
+    }
+
+    /// Narrows a record id for the step maps, recording an overflow rather than
+    /// truncating silently. `NO_RECORD` is reserved, so the last usable id is
+    /// one below it.
+    fn narrow_id(&mut self, record: usize, what: &str) -> u32 {
+        let id = u32::try_from(record).unwrap_or(NO_RECORD);
+        if id == NO_RECORD {
+            self.overflow
+                .get_or_insert_with(|| format!("{what} exceed 2^32 - 1"));
+        }
+        id
     }
 
     /// The counts consumed so far, as a shape for the memory report.
@@ -483,10 +609,19 @@ impl PlanBuilder {
     /// in `usize` — the literal encoding would overflow. Only reachable on a
     /// 32-bit target with an absurd variable count.
     fn finish(self) -> Result<Plan, DratError> {
-        if self.plan.variable_count.checked_mul(2).is_none() {
+        // Every stored literal code, clause length, step index and record id is
+        // narrowed on the way in. Truncation would be a wrong answer rather than
+        // a crash, so it is refused here — after the fact, but strictly before
+        // the plan is handed to a checker.
+        if self.plan.variable_count > MAX_STORED_VARIABLE_INDEX + 1 {
             return Err(DratError::Parse(format!(
                 "proof mentions {} variables, which overflows the literal encoding",
                 self.plan.variable_count
+            )));
+        }
+        if let Some(what) = self.overflow {
+            return Err(DratError::Parse(format!(
+                "proof is too large for the backward checker's plan: {what}"
             )));
         }
         Ok(self.plan)
@@ -835,8 +970,8 @@ pub fn trim_drat_proof(
     let mut trimmed = Vec::new();
     for (step, entry) in proof.iter().enumerate().take(checker.added_by_step.len()) {
         let record = match entry {
-            DratStep::Add(_) => checker.added_by_step[step],
-            DratStep::Delete(_) => checker.deleted_by_step[step],
+            DratStep::Add(_) => record_of(checker.added_by_step[step]),
+            DratStep::Delete(_) => record_of(checker.deleted_by_step[step]),
         };
         // A deletion that matched nothing (`NO_CLAUSE`) is dropped: the
         // reference ignores it, and it cannot be describing a clause the
@@ -957,10 +1092,10 @@ struct TraceEntry {
 /// The backward checking engine: a watched-literal unit propagator over a
 /// clause arena whose membership tracks the proof position being checked.
 struct BackwardChecker {
-    arena: Vec<Code>,
+    arena: Vec<StoredCode>,
     records: Vec<ClauseRecord>,
-    added_by_step: Vec<usize>,
-    deleted_by_step: Vec<usize>,
+    added_by_step: Vec<u32>,
+    deleted_by_step: Vec<u32>,
     /// Number of leading records that belong to the formula.
     formula_len: usize,
     /// Propagate over core clauses first (see [`Options::core_first`]).
@@ -1095,12 +1230,12 @@ impl BackwardChecker {
         for record in 0..self.records.len() {
             self.set_membership(record, root);
         }
-        if !self.verify(self.added_by_step[root], root) {
+        if !self.verify(record_of(self.added_by_step[root]), root) {
             return Err(DratError::StepNotVerified { step: root });
         }
         for step in (0..root).rev() {
             self.retreat_to(step);
-            let record = self.added_by_step[step];
+            let record = record_of(self.added_by_step[step]);
             if record != NO_CLAUSE && self.records[record].core && !self.verify(record, step) {
                 return Err(DratError::StepNotVerified { step });
             }
@@ -1118,11 +1253,11 @@ impl BackwardChecker {
     /// case — a clause added and deleted by consecutive steps — correct without
     /// a special case.
     fn retreat_to(&mut self, step: usize) {
-        let born_here = self.added_by_step[step];
+        let born_here = record_of(self.added_by_step[step]);
         if born_here != NO_CLAUSE {
             self.set_membership(born_here, step);
         }
-        let died_next = self.deleted_by_step[step + 1];
+        let died_next = record_of(self.deleted_by_step[step + 1]);
         if died_next != NO_CLAUSE {
             self.set_membership(died_next, step);
         }
@@ -1131,7 +1266,7 @@ impl BackwardChecker {
     /// Attaches or detaches `record` so the database matches its lifetime at
     /// `step`.
     fn set_membership(&mut self, record: usize, step: usize) {
-        let wanted = self.records[record].born <= step && step < self.records[record].died;
+        let wanted = self.records[record].live_at(step);
         match (wanted, self.records[record].live) {
             (true, false) => self.attach(record),
             (false, true) => self.detach(record),
@@ -1149,7 +1284,7 @@ impl BackwardChecker {
     fn attach(&mut self, record: usize) {
         self.records[record].live = true;
         let start = self.records[record].start;
-        let len = self.records[record].len;
+        let len = self.records[record].width();
         if len < 2 {
             // An empty clause is an immediate conflict and a unit always forces
             // its literal; either way the trail must be rebuilt.
@@ -1158,7 +1293,7 @@ impl BackwardChecker {
         }
         let mut placed = 0;
         for position in start..start + len {
-            if !self.assign[self.arena[position] ^ 1] {
+            if !self.assign[widen(self.arena[position]) ^ 1] {
                 self.arena.swap(start + placed, position);
                 placed += 1;
                 if placed == 2 {
@@ -1173,8 +1308,8 @@ impl BackwardChecker {
         // attached to *some* pair of literals: the stale flag forces a rebuild
         // from an empty assignment before anything propagates, and under an
         // empty assignment every placement is valid.
-        let first = self.arena[start];
-        let second = self.arena[start + 1];
+        let first = widen(self.arena[start]);
+        let second = widen(self.arena[start + 1]);
         let core = self.core_first && self.records[record].core;
         let watches = if core {
             &mut self.watches_core
@@ -1190,8 +1325,8 @@ impl BackwardChecker {
         self.records[record].live = false;
         let start = self.records[record].start;
         if self.records[record].len >= 2 {
-            let first = self.arena[start];
-            let second = self.arena[start + 1];
+            let first = widen(self.arena[start]);
+            let second = widen(self.arena[start + 1]);
             let core = self.core_first && self.records[record].core;
             let watches = if core {
                 &mut self.watches_core
@@ -1226,8 +1361,8 @@ impl BackwardChecker {
             return;
         }
         let start = self.records[record].start;
-        let first = self.arena[start];
-        let second = self.arena[start + 1];
+        let first = widen(self.arena[start]);
+        let second = widen(self.arena[start + 1]);
         remove_watch(&mut self.watches[first], record);
         remove_watch(&mut self.watches[second], record);
         self.watches_core[first].push(record);
@@ -1268,7 +1403,7 @@ impl BackwardChecker {
                 conflict = Some(record);
                 break;
             }
-            let unit = self.arena[self.records[record].start];
+            let unit = widen(self.arena[self.records[record].start]);
             if self.assign[unit] {
                 continue;
             }
@@ -1385,18 +1520,18 @@ impl BackwardChecker {
                 watches[falsified][index]
             };
             let start = self.records[record].start;
-            let len = self.records[record].len;
-            if self.arena[start] == falsified {
+            let len = self.records[record].width();
+            if widen(self.arena[start]) == falsified {
                 self.arena.swap(start, start + 1);
             }
-            let other = self.arena[start];
+            let other = widen(self.arena[start]);
             if self.assign[other] {
                 index += 1;
                 continue;
             }
             let mut moved = false;
             for position in start + 2..start + len {
-                let candidate = self.arena[position];
+                let candidate = widen(self.arena[position]);
                 if !self.assign[candidate ^ 1] {
                     self.arena.swap(start + 1, position);
                     let watches = if core {
@@ -1430,11 +1565,11 @@ impl BackwardChecker {
     fn verify(&mut self, record: usize, step: usize) -> bool {
         self.set_core(record);
         let start = self.records[record].start;
-        let len = self.records[record].len;
+        let len = self.records[record].width();
         let pivot = self.records[record].pivot;
         let mut lemma = std::mem::take(&mut self.lemma);
         lemma.clear();
-        lemma.extend_from_slice(&self.arena[start..start + len]);
+        lemma.extend(self.arena[start..start + len].iter().copied().map(widen));
         let rup = self.check_rup(&lemma);
         let verified = rup || self.check_rat(&lemma, pivot);
         if self.trace && verified {
@@ -1499,12 +1634,12 @@ impl BackwardChecker {
         if !tautology {
             for &record in chain {
                 let start = self.records[record].start;
-                let len = self.records[record].len;
+                let len = self.records[record].width();
                 let mut satisfied = false;
                 let mut unassigned = NO_CLAUSE;
                 let mut unassigned_count = 0usize;
                 for slot in start..start + len {
-                    let lit = self.arena[slot];
+                    let lit = widen(self.arena[slot]);
                     if self.sim[lit] {
                         satisfied = true;
                         break;
@@ -1619,12 +1754,12 @@ impl BackwardChecker {
     /// returns. A proof that genuinely leans on RAT for many of its core
     /// lemmas would pay that scan per lemma; occurrence lists are the fix if
     /// such a producer ever appears.
-    fn check_rat(&mut self, lits: &[Code], pivot: Code) -> bool {
-        if pivot == NO_CLAUSE {
+    fn check_rat(&mut self, lits: &[Code], pivot: StoredCode) -> bool {
+        if pivot == NO_PIVOT {
             // The empty clause has no pivot, so it is never RAT.
             return false;
         }
-        let complement = pivot ^ 1;
+        let complement = widen(pivot) ^ 1;
         let mut resolvent = std::mem::take(&mut self.resolvent);
         let mut verified = true;
         for record in 0..self.records.len() {
@@ -1632,14 +1767,14 @@ impl BackwardChecker {
                 continue;
             }
             let start = self.records[record].start;
-            let len = self.records[record].len;
-            if !self.arena[start..start + len].contains(&complement) {
+            let len = self.records[record].width();
+            if !self.arena[start..start + len].contains(&narrow(complement)) {
                 continue;
             }
             resolvent.clear();
             resolvent.extend_from_slice(lits);
             for position in start..start + len {
-                let lit = self.arena[position];
+                let lit = widen(self.arena[position]);
                 if lit != complement {
                     resolvent.push(lit);
                 }
@@ -1671,9 +1806,9 @@ impl BackwardChecker {
         while let Some(record) = stack.pop() {
             self.set_core(record);
             let start = self.records[record].start;
-            let len = self.records[record].len;
+            let len = self.records[record].width();
             for position in start..start + len {
-                let lit = self.arena[position];
+                let lit = widen(self.arena[position]);
                 let var = var_of(lit);
                 if self.seen[var] == generation {
                     continue;
@@ -1722,7 +1857,10 @@ fn remove_watch(watch: &mut Vec<usize>, record: usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::{BackwardChecker, Options, Plan, check_drat_backward};
+    use super::{
+        BackwardChecker, MAX_STORED_VARIABLE_INDEX, NO_PIVOT, Options, Plan, check_drat_backward,
+        code_of, record_of,
+    };
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, DratError, DratStep, ProofSolveOutcome, check_drat,
         solve_with_drat_proof,
@@ -1744,6 +1882,67 @@ mod tests {
                 .unwrap();
         }
         f
+    }
+
+    /// The narrowing guards, with controls.
+    ///
+    /// The plan stores literal codes, clause widths, step indices and record ids
+    /// in 32 bits. Truncating any of them would be a *wrong answer* — a literal
+    /// silently renamed, or a real RAT pivot indistinguishable from "no pivot" —
+    /// rather than a crash, so each is refused at construction. None of the
+    /// overflows is reachable in a test (they need billions of variables or
+    /// literals), which is exactly why the guards need testing directly.
+    #[test]
+    fn a_variable_count_that_would_truncate_a_stored_code_is_refused() {
+        // One past the widest index whose codes fit. No allocation is sized by
+        // this: the guard fires in `PlanBuilder::finish`, before the checker's
+        // per-variable vectors exist.
+        let huge = MAX_STORED_VARIABLE_INDEX + 1;
+        let var = CnfVar::new(huge).expect("the index fits a CnfVar");
+        let mut f = CnfFormula::new(huge + 1);
+        f.add_clause(CnfClause::new(vec![CnfLit::positive(var)]))
+            .expect("clause is over the formula's variables");
+        f.add_clause(CnfClause::new(vec![CnfLit::positive(var).negated()]))
+            .expect("clause is over the formula's variables");
+        let proof = [DratStep::Add(Vec::new())];
+        assert!(
+            matches!(check_drat_backward(&f, &proof), Err(DratError::Parse(_))),
+            "a variable count past the stored-code range must be refused"
+        );
+
+        // The control that makes it mean something: the identical shape over a
+        // narrow variable is refuted, not refused. Without this the assertion
+        // above would pass against a checker that refused everything.
+        let small = CnfVar::new(0).expect("index 0 fits");
+        let mut g = CnfFormula::new(1);
+        g.add_clause(CnfClause::new(vec![CnfLit::positive(small)]))
+            .expect("clause is over the formula's variables");
+        g.add_clause(CnfClause::new(vec![CnfLit::positive(small).negated()]))
+            .expect("clause is over the formula's variables");
+        assert_eq!(check_drat_backward(&g, &proof), Ok(true));
+    }
+
+    #[test]
+    fn no_real_literal_code_can_be_mistaken_for_the_pivot_sentinel() {
+        // `NO_PIVOT` is `u32::MAX`. If `MAX_STORED_VARIABLE_INDEX` were raised,
+        // an ordinary negated literal would become indistinguishable from "this
+        // clause has no RAT pivot" -- and a lemma that should have been RAT-
+        // checked would be skipped instead.
+        let widest = CnfVar::new(MAX_STORED_VARIABLE_INDEX).expect("the index fits a CnfVar");
+        let negated = CnfLit::positive(widest).negated();
+        let code = u32::try_from(code_of(negated)).expect("the widest code fits 32 bits");
+        assert!(
+            code < NO_PIVOT,
+            "the widest allowed literal code {code} collides with the NO_PIVOT sentinel"
+        );
+        // The control: raising the guard by one lands the negated code exactly
+        // on the sentinel, so the guard is at the last safe index and this
+        // assertion fails if anyone moves it.
+        let next_code = 2 * (MAX_STORED_VARIABLE_INDEX + 1) + 1;
+        assert_eq!(
+            next_code, NO_PIVOT as usize,
+            "one variable past the guard collides with NO_PIVOT"
+        );
     }
 
     /// Runs both checkers, asserts they agree exactly, and returns the verdict.
@@ -2135,7 +2334,7 @@ mod tests {
             for record in 0..checker.records.len() {
                 checker.set_membership(record, 0);
             }
-            let record = checker.added_by_step[0];
+            let record = record_of(checker.added_by_step[0]);
             let actual = checker.verify(record, 0);
             assert_eq!(
                 actual, expected,

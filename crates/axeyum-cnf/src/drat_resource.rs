@@ -414,6 +414,10 @@ impl FormulaShape {
 /// | `rado-r4-a1-b2/F_171` | 131,197,778 | 2,010,887 | 16,317,546 | 1,112,662,016 | 8.48x |
 /// | `rado-r4-a4-b1/F_256` | 166,982,506 | 2,555,413 | 19,652,014 | 1,335,078,912 | 8.00x |
 ///
+/// The same four on the file-backed route, after ADR-0426 and its `u32`
+/// follow-on: 18,857,984 (2.13x), 119,418,880 (1.60x), 225,923,072 (1.72x) and
+/// 248,700,928 (**1.49x**). Verdicts identical on all four.
+///
 /// agent-c measured 6.6x independently on a 1,873,245,421-byte proof, which is
 /// the same model with the fixed per-run costs amortised away.
 ///
@@ -453,24 +457,25 @@ impl DratMemoryModel {
 
     /// Bytes per clause record in the backward checker's plan.
     ///
-    /// `size_of::<ClauseRecord>()` is 56 and the record vector grows by
-    /// doubling, so its capacity runs at up to 2x its length: 112. The deletion
-    /// index holds one entry per distinct clause at 33 bytes a slot, and its
-    /// table is likewise power-of-two sized: 56. Measured directly on
-    /// `PHP(8, 7)`, where 4,212 records occupied 458,752 bytes of record vector
-    /// and 236,544 bytes of index table.
-    const PLAN_BYTES_PER_CLAUSE: u64 = 168;
+    /// `size_of::<ClauseRecord>()` is 40 and the record vector grows by
+    /// doubling, so its capacity runs at up to 2x its length: 80. The deletion
+    /// index holds one entry per distinct clause at 33 bytes a slot in a
+    /// power-of-two table, which likewise tops out near 2x: 66. Measured on
+    /// `PHP(8, 7)`, where 4,212 records occupied 327,680 bytes of record vector
+    /// and 236,544 bytes of index table — 134 bytes each at that fill, against
+    /// the 146 the worst fill would give.
+    const PLAN_BYTES_PER_CLAUSE: u64 = 150;
 
-    /// Bytes per proof step in the plan's two step-to-record maps: 8 bytes each,
-    /// with the same doubling slack. Measured at 131,072 bytes for 6,153 steps
-    /// on `PHP(8, 7)`.
-    const PLAN_BYTES_PER_STEP: u64 = 24;
+    /// Bytes per proof step in the plan's two step-to-record maps: 4 bytes each,
+    /// with the same doubling slack. Measured at 65,536 bytes for 6,153 steps on
+    /// `PHP(8, 7)`.
+    const PLAN_BYTES_PER_STEP: u64 = 16;
 
-    /// Bytes per literal occurrence in the plan's clause arena: 8 bytes per
-    /// packed literal code, with doubling slack. Measured at 917,504 bytes for
-    /// 62,961 literals on `PHP(8, 7)` — 1.82x over the exact 8 bytes, which is
-    /// where a `Vec` that grew by `push` happened to land.
-    const PLAN_BYTES_PER_LITERAL: u64 = 15;
+    /// Bytes per literal occurrence in the plan's clause arena: 4 bytes per
+    /// packed literal code, with doubling slack, so exactly 8 at the worst fill.
+    /// Measured at 458,752 bytes for 63,409 literals on `PHP(8, 7)` — 7.23,
+    /// which is where that particular `Vec` happened to land.
+    const PLAN_BYTES_PER_LITERAL: u64 = 8;
 
     /// Fixed cost of a run: allocator arenas, the binary's own resident pages,
     /// and the per-variable vectors, which are negligible beside the above at

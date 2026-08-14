@@ -166,26 +166,78 @@ for a budget. `DratProofShape::recommended_sample_bytes` encodes 5% with a 1 MiB
 floor, and the test asserts a deliberately tiny sample is *worse*, so the
 recommendation is not vacuous.
 
+### 5. Follow-on: narrow the plan's stored fields to 32 bits
+
+Landed separately, on top of the differential harness rather than beside it.
+
+The clause arena stores `StoredCode = u32` rather than the 8-byte `usize` the
+engine computes with; `ClauseRecord`'s `len`, `born`, `died` and `pivot` are
+`u32` (40 bytes a record, from 56); and the two step-to-record maps are `Vec<u32>`.
+
+`ClauseRecord::start` **stays 64-bit deliberately**. An 18.9 GB proof — one this
+repository ships — has roughly 4.4 G literal occurrences, and a 32-bit arena
+offset overflows at 4.29 G. That overflow would appear only at a size no test
+here can reach, on exactly the certificates that matter most.
+
+Every other narrowing is guarded at construction and refused as
+`DratError::Parse` rather than truncated, because a truncated literal is a
+*wrong answer* and not a crash. Two guards need naming:
+
+- `MAX_STORED_VARIABLE_INDEX` is `((u32::MAX - 1) / 2) - 1`, one below the
+  arithmetic maximum. At the arithmetic maximum the *negated* code is exactly
+  `u32::MAX`, which is the `NO_PIVOT` sentinel — an ordinary literal would become
+  indistinguishable from "this clause has no RAT pivot", and a lemma that should
+  have been RAT-checked would be skipped.
+- Clause widths, step indices and record ids are narrowed through helpers that
+  record an overflow for `PlanBuilder::finish` to refuse, rather than panicking
+  or truncating in the hot path.
+
+Neither overflow is reachable in a test, which is why both guards are tested
+directly, each with a control that fails if the constant moves.
+
 ## Consequences
 
+Measured after the follow-on, same four certificates, same instrument:
+
+| certificate | text DRAT | original | file-backed | file-backed + `u32` |
+|---|---:|---:|---:|---:|
+| `rado-r4-a3-b1/F_81` | 8.86 MB | 88.4 MB (9.98x) | 27.1 MB (3.06x) | 18.9 MB (**2.13x**) |
+| `rado-r4-a3-b2/F_103` | 74.8 MB | 608.5 MB (8.13x) | 188.0 MB (2.51x) | 119.4 MB (**1.60x**) |
+| `rado-r4-a1-b2/F_171` | 131.2 MB | 1112.7 MB (8.48x) | 321.6 MB (2.45x) | 225.9 MB (**1.72x**) |
+| `rado-r4-a4-b1/F_256` | 167.0 MB | 1335.1 MB (8.00x) | 399.6 MB (2.39x) | 248.7 MB (**1.49x**) |
+
+**8.00x to 1.49x, a 5.4x reduction**, verdicts identical throughout. The
+in-memory route benefits too, since it shares the plan: `F_256` goes from
+1335.1 MB to 805.4 MB.
+
+Both routes were also run in a single process over each of the four
+certificates, with their verdicts compared directly, which is the differential
+test of `tests/drat_backward_file_differential.rs` applied to real certificates
+no unit test can afford to hold. They agree on all four.
+
+The follow-on is also *faster*, measured alternating under identical load on
+`F_256`: 57.0-91.6 s before, 23.6-50.5 s after. (An earlier apparent 2.5x
+slowdown was machine load — the box was at a load average of 34 on 24 cores from
+other lanes — and the alternating re-measurement is the only reason that did not
+become a recorded regression.)
+
 The re-checkability of this repository's own certificates changes materially. At
-2.4x with a 4/5 headroom fraction:
+1.5x with a 4/5 headroom fraction:
 
-| host | RAM | largest proof before | largest proof after |
+| host | RAM | largest proof before (8x) | after (1.5x) |
 |---|---:|---:|---:|
-| s5 / s6 / s7 | 26 GiB | ~2.6 GB | ~8.7 GB |
-| s0 / s4 | 123 GiB | ~12.3 GB | ~41 GB |
+| s5 / s6 / s7 | 26 GiB | ~2.6 GB | **~14 GB** |
+| s1 | 61 GiB | ~6.1 GB | **~32 GB** |
+| s0 / s4 | 123 GiB | ~12.3 GB | **~65 GB** |
 
-`rado-r4-a2-b3` (18.9 GB) moves from *uncheckable on every host in the fleet* to
-checkable on s0 and s4. `rado-r4-a4-b3` (5.0 GB) moves from s0/s4-only to
-checkable on any host here.
+`rado-r4-a2-b3` (18.9 GB) moves from *uncheckable on every host in the fleet* —
+18.9 GB at 6.6-8x is 125-151 GiB against a 123 GiB maximum — to checkable on s0
+and s4. `rado-r4-a4-b3` (5.0 GB) moves from s0/s4-only to checkable on any host
+here.
 
 What this does **not** do: it does not make the footprint independent of the
-proof. A backward walk needs its prefix indexable, so the plan is still O(proof).
-The remaining terms are the clause arena (8 bytes per literal code) and the
-clause records (56 bytes each); narrowing both to `u32` is a further ~1.8x and is
-left as follow-on work, because it touches every indexing site in the engine and
-the value of landing the differential harness first is higher.
+proof. A backward walk needs its prefix indexable, so the plan is still
+O(proof).
 
 `DratMemoryModel::estimate` takes a `FormulaShape` as well as a proof shape.
 Passing `FormulaShape::EMPTY` under-predicts by the formula's own contribution,
