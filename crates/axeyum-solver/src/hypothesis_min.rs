@@ -174,7 +174,7 @@ pub enum MinimizeOutcome {
 /// Search: subsets of ascending cardinality, `0..=config.max_subset_size`,
 /// enumerated in a deterministic order keyed on the subset's distinct normalized
 /// cross-product-monomial count (the property measured to predict
-/// [`crate::nra`]'s `MAX_CROSS_PRODUCTS` admission cap), then on index order.
+/// `crate::nra`'s `MAX_CROSS_PRODUCTS` admission cap), then on index order.
 /// Once a subset refutes, it is shrunk by deletion (which is valid from that
 /// point, unlike from the full set) and re-verified.
 ///
