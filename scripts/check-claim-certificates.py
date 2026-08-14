@@ -9,6 +9,17 @@ of the semantics (the generator and the search are the other two, and they
 are not trusted).
 
 Currently understood families:
+  * offdiag-schur-colouring-L(k) — generalized OFF-DIAGONAL Schur numbers
+    S(r; k_1..k_r), where colour c forbids monochromatic solutions of
+    L(k_c): x_1 + ... + x_{k_c - 1} = x_{k_c}. Witness rows are replayed by
+    a layered reachability computation read straight off the equation.
+    unsat-certificate rows validate the deciding CNF CLAUSE BY CLAUSE against
+    the definition — every negative clause must forbid a genuine
+    monochromatic solution of the equation its colour actually carries, and
+    the structural clauses must be exactly the sound at-least-one /
+    at-most-one / BLOCKED symmetry set, where symmetry may only order colours
+    that forbid the SAME equation. That last condition is the one that would
+    otherwise let a wrong `unsat` through.
   * rado-colouring-a(x-y)=bz  — witness-replay rows: the artifact is a
     whitespace-separated list of colours for 1..n; we recompute every
     solution of a(x-y)=bz inside [n]^3 by direct search and confirm none is
@@ -140,6 +151,209 @@ def rado_cnf(a: int, b: int, k: int, n: int) -> str:
     lines = [f"p cnf {n * k} {len(clauses)}\n"]
     lines.extend(" ".join(map(str, cl)) + " 0\n" for cl in clauses)
     return "".join(lines)
+
+
+# ------------------------------- independent off-diagonal Schur semantics
+
+OFFDIAG_FAMILY = "offdiag-schur-colouring-L(k)"
+OFFDIAG_BOUND_RE = re.compile(r"S\s*(>|=|>=|<=)\s*(\d+)")
+
+
+def offdiag_reachable(members: list[int], parts: int, limit: int) -> set[int]:
+    """Sums of EXACTLY `parts` elements of `members` (with repetition), <= limit.
+
+    Deliberately a different derivation from the Rust family's: sets grown by
+    layer, not a boolean table with backtracking, and no partition enumeration
+    anywhere. The mathematics is read straight off
+    `x_1 + ... + x_{parts} = x_{parts+1}`.
+    """
+    reach = {0}
+    for _ in range(parts):
+        nxt = set()
+        for total in reach:
+            for member in members:
+                s = total + member
+                if s <= limit:
+                    nxt.add(s)
+        reach = nxt
+        if not reach:
+            break
+    return reach
+
+
+def check_offdiag_witness(k: list[int], colours: list[int]) -> str | None:
+    """None if the colouring has no monochromatic L(k_c) solution in colour c."""
+    n = len(colours)
+    r = len(k)
+    for j, colour in enumerate(colours, start=1):
+        if not (1 <= colour <= r):
+            return f"integer {j} has colour {colour} outside 1..{r}"
+    for index, equation in enumerate(k):
+        colour = index + 1
+        klass = sorted(j for j in range(1, n + 1) if colours[j - 1] == colour)
+        if not klass:
+            continue
+        hit = offdiag_reachable(klass, equation - 1, n) & set(klass)
+        if hit:
+            target = min(hit)
+            return (f"colour {colour} has a monochromatic solution of "
+                    f"L({equation}) with right-hand side {target}")
+    return None
+
+
+def offdiag_is_solution_set(equation: int, members: list[int]) -> bool:
+    """Is `members` (ascending, distinct) a solution set of L(equation)?
+
+    A solution contributes the DISTINCT values of its `equation - 1` parts
+    together with their sum. For equation >= 3 the sum of at least two positive
+    parts strictly exceeds every part, so the sum must be max(members) and the
+    parts must be drawn from the rest, using every one of them at least once.
+    """
+    if len(members) < 2 or equation < 3:
+        return False
+    total = members[-1]
+    values = members[:-1]
+    parts = equation - 1
+    if len(values) > parts:
+        return False
+    # Spend one part on each distinct value (they must all appear), then the
+    # remaining parts freely over `values`.
+    base = sum(values)
+    remaining_parts = parts - len(values)
+    remaining = total - base
+    if remaining < 0:
+        return False
+    if remaining_parts == 0:
+        return remaining == 0
+    return remaining in offdiag_reachable(values, remaining_parts, remaining)
+
+
+def offdiag_structural_clauses(k: list[int], n: int) -> tuple[list, list, list]:
+    """The at-least-one, at-most-one and symmetry clauses the encoding must use.
+
+    These are the clauses that are NOT implied by the problem, so they are
+    reconstructed exactly rather than validated one at a time:
+
+    * at-least-one and at-most-one are satisfiability-preserving for any
+      colouring instance (a real colouring satisfies both);
+    * the symmetry clauses order colour classes by least element, which is
+      sound ONLY between colours forbidding the SAME equation. They are
+      rebuilt here from `k`'s own blocks, so a stored CNF that ordered
+      non-interchangeable colours cannot match.
+    """
+    r = len(k)
+
+    def var(j: int, i: int) -> int:
+        return (j - 1) * r + i
+
+    alo = [[var(j, i) for i in range(1, r + 1)] for j in range(1, n + 1)]
+    amo = [[-var(j, i1), -var(j, i2)]
+           for j in range(1, n + 1)
+           for i1 in range(1, r + 1)
+           for i2 in range(i1 + 1, r + 1)]
+    blocks: list[list[int]] = []
+    for index, equation in enumerate(k):
+        for block in blocks:
+            if k[block[0] - 1] == equation:
+                block.append(index + 1)
+                break
+        else:
+            blocks.append([index + 1])
+    symmetry = []
+    for block in blocks:
+        for idx in range(1, len(block)):
+            colour, previous = block[idx], block[idx - 1]
+            for j in range(1, n + 1):
+                clause = [-var(j, colour)]
+                if j > idx:
+                    clause += [var(jp, previous) for jp in range(1, j)]
+                symmetry.append(clause)
+    return alo, amo, symmetry
+
+
+def check_offdiag_cnf(k: list[int], n: int, text: str) -> list[str]:
+    """Validate a deciding CNF clause by clause against the definition.
+
+    This is deliberately NOT a byte-identity check against a regenerated file.
+    Byte-identity proves the certificate refutes the *intended* instance;
+    clause-wise validity proves it refutes something *implied by* the intended
+    instance, which is what the bound needs, and it survives an encoder that
+    legitimately drops subsumed clauses (as this family's does: a clause over a
+    superset is implied by the clause over its subset, so the encoder keeps only
+    the subsumption-minimal antichain and the full list would never regenerate).
+
+    Establishes: every negative clause forbids a genuine monochromatic solution
+    of the equation its colour actually carries, and the structural clauses are
+    exactly the sound at-least-one / at-most-one / BLOCKED symmetry set. Hence
+    the CNF is satisfiable whenever the instance is colourable, and an
+    unsatisfiable CNF proves the instance is not.
+    """
+    errors: list[str] = []
+    r = len(k)
+    clauses = []
+    header = None
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("c"):
+            continue
+        if line.startswith("p "):
+            header = line.split()
+            continue
+        lits = [int(t) for t in line.split()]
+        if not lits or lits[-1] != 0:
+            return [f"clause line {line!r} does not end in 0"]
+        clauses.append(lits[:-1])
+    if header is None or len(header) != 4 or header[1] != "cnf":
+        return ["missing or malformed DIMACS header"]
+    if int(header[2]) != n * r or int(header[3]) != len(clauses):
+        return [f"header says {header[2]} vars / {header[3]} clauses, "
+                f"found {n * r} / {len(clauses)}"]
+
+    def point_colour(lit: int) -> tuple[int, int]:
+        v = abs(lit) - 1
+        return v // r + 1, v % r + 1
+
+    alo, amo, symmetry = offdiag_structural_clauses(k, n)
+    structural = {tuple(c) for c in alo} | {tuple(c) for c in amo} \
+        | {tuple(c) for c in symmetry}
+    seen_structural: set[tuple] = set()
+    negative = 0
+    for clause in clauses:
+        key = tuple(clause)
+        if key in structural:
+            seen_structural.add(key)
+            continue
+        if any(lit > 0 for lit in clause):
+            errors.append(f"clause {clause} is neither a solution-set clause "
+                          f"nor one of the sound structural clauses")
+            continue
+        colours = {point_colour(lit)[1] for lit in clause}
+        if len(colours) != 1:
+            errors.append(f"clause {clause} spans colours {sorted(colours)}; "
+                          f"a solution-set clause is scoped to one")
+            continue
+        colour = colours.pop()
+        members = sorted({point_colour(lit)[0] for lit in clause})
+        if len(members) != len(clause):
+            errors.append(f"clause {clause} repeats a point")
+            continue
+        if members[-1] > n:
+            errors.append(f"clause {clause} names a point above n={n}")
+            continue
+        if not offdiag_is_solution_set(k[colour - 1], members):
+            errors.append(f"clause over {members} in colour {colour} is NOT a "
+                          f"solution set of L({k[colour - 1]}) -- the refuted "
+                          f"formula is not implied by the instance")
+            continue
+        negative += 1
+    missing = structural - seen_structural
+    if missing:
+        errors.append(f"{len(missing)} sound structural clause(s) absent from "
+                      f"the CNF, e.g. {sorted(missing)[0]}")
+    if negative == 0:
+        errors.append("the CNF carries no solution-set clauses at all; an "
+                      "unconstrained formula refutes nothing")
+    return errors
 
 
 # --------------------------------------------------------------- cube covers
@@ -672,6 +886,129 @@ def parse_bound(supports: str) -> tuple[int, str, int] | None:
     return int(m.group(1)), m.group(2), int(m.group(3))
 
 
+def check_offdiag_evidence(path: Path, ev: dict, params: dict) -> list[str]:
+    """Re-check one evidence row of the off-diagonal generalized Schur family.
+
+    `witness-replay`: the artifact is a whitespace-separated colouring of
+    1..n; we recompute, from the defining equation and nothing else, whether
+    any colour class contains a monochromatic solution of ITS OWN equation.
+
+    `unsat-certificate`: the deciding CNF beside the proof is validated clause
+    by clause against the claim's parameters (see `check_offdiag_cnf`), the
+    stored bytes are checked against the recorded sha256 / size / step count,
+    and the proof is checked to parse and to end in the empty clause. The RUP
+    re-derivation itself is axeyum's own `check_drat_backward`, which produced
+    the row -- this file's job is to establish that what was refuted really is
+    implied by the instance the claim names.
+    """
+    import gzip
+    import hashlib
+
+    errors: list[str] = []
+    eid = ev["id"]
+    kind = ev["kind"]
+    k = [int(x) for x in params["k"]]
+    n = int(params["n"])
+    art = ev.get("artifact")
+    if art is None:
+        return [f"{path}: '{eid}' is 'checked' but has no artifact"]
+    art_path = artifact_path(art)
+    if not art_path.exists():
+        return [f"{path}: '{eid}' artifact {art} does not exist"]
+
+    if kind == "witness-replay":
+        body = " ".join(line for line in art_path.read_text().splitlines()
+                        if not line.startswith("c"))
+        colours = [int(t) for t in body.split()]
+        if not colours:
+            return [f"{path}: '{eid}' witness is empty"]
+        msg = check_offdiag_witness(k, colours)
+        if msg is not None:
+            return [f"{path}: '{eid}' witness INVALID: {msg}"]
+        m = OFFDIAG_BOUND_RE.search(ev["supports"])
+        if m is not None:
+            rel, bound = m.group(1), int(m.group(2))
+            if rel == ">" and len(colours) < bound:
+                errors.append(f"{path}: '{eid}' claims S > {bound} but the "
+                              f"witness colours only {len(colours)} integers")
+        print(f"  checked witness {eid}: {len(colours)} integers, no "
+              f"monochromatic solution of L{tuple(k)} in its own colour")
+        return errors
+
+    if kind != "unsat-certificate":
+        return [f"{path}: '{eid}' kind '{kind}' cannot be 'checked' for "
+                f"family {OFFDIAG_FAMILY}"]
+
+    cnf_name = art_path.name.replace(".drat.gz", ".cnf").replace(".drat", ".cnf")
+    cnf_path = art_path.parent / cnf_name
+    if not cnf_path.exists() and (art_path.parent / (cnf_name + ".gz")).exists():
+        cnf_path = art_path.parent / (cnf_name + ".gz")
+    if not cnf_path.exists():
+        # A row may legitimately not carry its CNF here: this family's largest
+        # instances are millions of clauses and the ledger records a
+        # regeneration recipe instead. Without the CNF the proof cannot be tied
+        # to the claimed instance, so the row is reported as NOT re-checked --
+        # never passed silently, and never confused with a checked one.
+        if ev.get("distribution") == "regenerable" or ev.get("regeneration"):
+            recipe = ((ev.get("regeneration") or {}).get("command")
+                      or "no recipe recorded")
+            NOT_RECHECKED.append(f"{path.parent.name}/{eid}: deciding CNF "
+                                 f"{cnf_name} not in this tree; regenerate "
+                                 f"with: {recipe}")
+            print(f"  NOT re-checked {eid}: deciding CNF absent (regenerable)")
+            return []
+        return [f"{path}: '{eid}' has no deciding CNF beside it; the proof "
+                f"cannot be tied to the claimed instance"]
+    cnf_bytes = cnf_path.read_bytes()
+    cnf_text = (gzip.decompress(cnf_bytes) if cnf_path.suffix == ".gz"
+                else cnf_bytes).decode()
+    cnf_errors = check_offdiag_cnf(k, n, cnf_text)
+    if cnf_errors:
+        return [f"{path}: '{eid}' deciding CNF: {m}" for m in cnf_errors]
+
+    data = art_path.read_bytes()
+    payload = (gzip.decompress(data) if ev.get("artifact_format", "").endswith("-gzip")
+               else data)
+    recorded = ev.get("parameters") or {}
+    text = payload.decode()
+    steps = [line for line in text.splitlines() if line.strip()]
+    if not steps:
+        return [f"{path}: '{eid}' proof has no steps; a zero-step proof is "
+                f"not a refutation"]
+    additions = [line for line in steps if not line.strip().startswith("d ")]
+    if not additions or additions[-1].strip() != "0":
+        return [f"{path}: '{eid}' proof does not end in the empty clause; it "
+                f"refutes nothing"]
+    for line in steps:
+        body = line.strip()
+        if body.startswith("d "):
+            body = body[2:]
+        toks = body.split()
+        if not toks or toks[-1] != "0" or any(t == "0" for t in toks[:-1]):
+            return [f"{path}: '{eid}' proof line {line!r} is not DRAT text"]
+        try:
+            [int(t) for t in toks]
+        except ValueError:
+            return [f"{path}: '{eid}' proof line {line!r} has a non-integer"]
+    if "proof_steps" in recorded and int(recorded["proof_steps"]) != len(steps):
+        errors.append(f"{path}: '{eid}' records {recorded['proof_steps']} steps "
+                      f"but the artifact has {len(steps)}")
+    if "proof_sha256" in recorded:
+        got = hashlib.sha256(payload).hexdigest()
+        if got != recorded["proof_sha256"]:
+            errors.append(f"{path}: '{eid}' proof sha256 {got} != recorded "
+                          f"{recorded['proof_sha256']}")
+    if ev.get("artifact_sha256"):
+        got = hashlib.sha256(data).hexdigest()
+        if got != ev["artifact_sha256"]:
+            errors.append(f"{path}: '{eid}' artifact sha256 {got} != recorded "
+                          f"{ev['artifact_sha256']}")
+    print(f"  checked certificate {eid}: deciding CNF is clause-wise implied "
+          f"by S(3;{','.join(map(str, k))}) at n={n}; {len(steps)} DRAT steps "
+          f"ending in the empty clause")
+    return errors
+
+
 def check_claim(path: Path, drat_checker: str | None) -> list[str]:
     errors: list[str] = []
     c = json.loads(path.read_text())
@@ -683,6 +1020,9 @@ def check_claim(path: Path, drat_checker: str | None) -> list[str]:
             continue
         eid = ev["id"]
         kind = ev["kind"]
+        if fam == OFFDIAG_FAMILY:
+            errors.extend(check_offdiag_evidence(path, ev, params))
+            continue
         if fam != RADO_FAMILY:
             errors.append(f"{path}: evidence '{eid}' is 'checked' but family "
                           f"'{fam}' is not understood by this checker")
