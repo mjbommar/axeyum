@@ -42,7 +42,16 @@
   "provenance": {
     "date": "2026-08-14",
     "established_by": "not established in this ledger",
-    "source": "proposition extracted from the S:number strand of the math-education concept graph; statement authored here, nothing copied"
+    "source": "proposition extracted from the S:number strand of the math-education concept graph; statement authored here, nothing copied",
+    "prior_art": [
+      {
+        "who": "Euclid",
+        "what": "Elements, Book VII, Proposition 30",
+        "year": -300,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
   },
-  "notes": "Stated INSTEAD of unique factorisation itself, which is the concept it came from: the kernel has no list, multiset or finite-product vocabulary, so `n is a product of primes, unique up to order` cannot be written in its language at all today. Euclid's lemma is the mathematical content of the uniqueness half and IS expressible. Reachable from the stated dependencies: gcd(p, a) divides p, so it is 1 or p, and the Bezout certificate turns the first case into p | b. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
+  "notes": "Stated INSTEAD of unique factorisation itself, which is the concept it came from: the kernel has no list, multiset or finite-product vocabulary, so `n is a product of primes, unique up to order` cannot be written in its language at all today. Euclid's lemma is the mathematical content of the uniqueness half and IS expressible. Reachable from the stated dependencies: gcd(p, a) divides p, so it is 1 or p, and the Bezout certificate turns the first case into p | b. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names.",
+  "external_status": "proved"
 }

@@ -10,6 +10,7 @@
     "free_symbols": ["x", "y", "z"]
   },
   "epistemic_status": "open",
+  "external_status": "open",
   "depends_on": [],
   "evidence": [],
   "concept_refs": [

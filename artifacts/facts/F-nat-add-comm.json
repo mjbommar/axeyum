@@ -49,5 +49,6 @@
     "established_by": "axeyum-lean-kernel nat_prelude (lean-kernel lane)",
     "source": "hand-built foundational library"
   },
-  "notes": "Seed fact for fact.schema.json (the `proved` case). Statement and type are dumped from the kernel by nat_theorem_inventory, not hand-written: the first version of this file was transcribed from doc comments and named `rado.add_comm`, a shell declared in tests/rado_shell_arithmetic.rs, while citing `--lib nat_prelude` -- a filter that never compiles that integration test. Two of the three seeds were additionally unparseable."
+  "notes": "Seed fact for fact.schema.json (the `proved` case). Statement and type are dumped from the kernel by nat_theorem_inventory, not hand-written: the first version of this file was transcribed from doc comments and named `rado.add_comm`, a shell declared in tests/rado_shell_arithmetic.rs, while citing `--lib nat_prelude` -- a filter that never compiles that integration test. Two of the three seeds were additionally unparseable.",
+  "external_status": "proved"
 }

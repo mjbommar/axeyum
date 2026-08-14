@@ -42,7 +42,15 @@
   "provenance": {
     "date": "2026-08-14",
     "established_by": "not established in this ledger",
-    "source": "proposition extracted from the S:number strand of the math-education concept graph; statement authored here, nothing copied"
+    "source": "proposition extracted from the S:number strand of the math-education concept graph; statement authored here, nothing copied",
+    "prior_art": [
+      {
+        "who": "classical / folklore",
+        "what": "the index law a^(m+n) = a^m * a^n is an immediate induction on the exponent and appears in every elementary treatment; no single originating source is meaningful",
+        "attribution": "standard textbook attribution; this lane did not consult a primary source"
+      }
+    ]
   },
-  "notes": "Chosen deliberately as a NEAR target for the self-extension loop: `AxNat.pow`, `Nat.pow_zero` and `Nat.pow_succ` are already declared and both dependencies are proved, so this should fall to induction on n with no new definitions. Measured 2026-08-14: the prelude declares 119 theorems and no index law is among them. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
+  "notes": "Chosen deliberately as a NEAR target for the self-extension loop: `AxNat.pow`, `Nat.pow_zero` and `Nat.pow_succ` are already declared and both dependencies are proved, so this should fall to induction on n with no new definitions. Measured 2026-08-14: the prelude declares 119 theorems and no index law is among them. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names.",
+  "external_status": "proved"
 }

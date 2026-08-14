@@ -37,10 +37,13 @@
     "source": "proposition extracted from the S:number strand of the math-education concept graph; statement authored here, nothing copied",
     "prior_art": [
       {
-        "citation": "Euclid, Elements IX.20",
-        "establishes": "the statement, by considering a divisor of 1 + (the product of any finite list of primes)"
+        "who": "Euclid",
+        "what": "Elements, Book IX, Proposition 20",
+        "year": -300,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
       }
     ]
   },
-  "notes": "`open` here means NOT ESTABLISHED IN THIS LEDGER; it is not mathematically open, Euclid settled it. It is recorded because it is a live target rather than a curiosity: the prelude already carries `Nat.not_dvd_one_add_mul_of_two_le`, which is exactly the step `no a >= 2 divides 1 + a*t` -- the contradiction at the end of Euclid's argument. What is missing is a least-divisor construction, and `Nat.lt_well_founded` is present to support one. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
+  "notes": "`open` here means NOT ESTABLISHED IN THIS LEDGER; it is not mathematically open, Euclid settled it. It is recorded because it is a live target rather than a curiosity: the prelude already carries `Nat.not_dvd_one_add_mul_of_two_le`, which is exactly the step `no a >= 2 divides 1 + a*t` -- the contradiction at the end of Euclid's argument. What is missing is a least-divisor construction, and `Nat.lt_well_founded` is present to support one. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names.",
+  "external_status": "proved"
 }

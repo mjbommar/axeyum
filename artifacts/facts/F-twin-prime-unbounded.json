@@ -46,5 +46,6 @@
       }
     ]
   },
-  "notes": "Phrased as `unbounded` rather than `infinitely many` so the statement needs no cardinality vocabulary: over the naturals the two are equivalent, and only the first is expressible in the fragment the kernel has. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
+  "notes": "Phrased as `unbounded` rather than `infinitely many` so the statement needs no cardinality vocabulary: over the naturals the two are equivalent, and only the first is expressible in the fragment the kernel has. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names.",
+  "external_status": "open"
 }

@@ -59,5 +59,6 @@
     "established_by": "axeyum-lean-kernel build_nat_prelude, re-measured by lane facts-number",
     "source": "proposition extracted from the S:number / S:arithmetic-structure strands of the math-education concept graph; statement authored here, nothing copied"
   },
-  "notes": "formal.statement is the type the kernel admitted, taken verbatim from Kernel::render_lean over the environment build_nat_prelude produces; it was not transcribed by hand. The sort renders as `AxNat` (the prelude's own inductive) while declarations are rooted at `Nat`."
+  "notes": "formal.statement is the type the kernel admitted, taken verbatim from Kernel::render_lean over the environment build_nat_prelude produces; it was not transcribed by hand. The sort renders as `AxNat` (the prelude's own inductive) while declarations are rooted at `Nat`.",
+  "external_status": "proved"
 }

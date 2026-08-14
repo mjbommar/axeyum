@@ -46,5 +46,6 @@
       }
     ]
   },
-  "notes": "The ONLY fact in this batch whose formal statement is Lean 4 surface syntax rather than the kernel's own rendering, and that is the finding: expressing it needs function iteration, and `build_nat_prelude` exposes no iteration combinator, no `Function.iterate`, and no list type -- only `AxNat.rec` and `WellFounded.fix`. So this statement is not currently writable in axeyum's kernel vocabulary at all, and `formal.fragment` is `none` rather than `Nat` for that reason. Kept because a ledger that contains only what its own stack can express is a biased sample."
+  "notes": "The ONLY fact in this batch whose formal statement is Lean 4 surface syntax rather than the kernel's own rendering, and that is the finding: expressing it needs function iteration, and `build_nat_prelude` exposes no iteration combinator, no `Function.iterate`, and no list type -- only `AxNat.rec` and `WellFounded.fix`. So this statement is not currently writable in axeyum's kernel vocabulary at all, and `formal.fragment` is `none` rather than `Nat` for that reason. Kept because a ledger that contains only what its own stack can express is a biased sample.",
+  "external_status": "open"
 }
