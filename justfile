@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts clippy test frontier moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs plan-authority links
+check: fmt fmt-all facts clippy gate-controls test frontier gate-liveness moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers plan-authority links
 
 fmt:
     cargo fmt --all --check
@@ -36,8 +36,21 @@ facts:
 # `-D warnings` and had been failing this gate. Fixed in 451f9c50 by adding
 # `#![allow(unknown_lints)]` ahead of it, which is toolchain-agnostic in both
 # directions.
+#
+# Run through `check-clippy-complete.sh`, which reports how many workspace
+# targets were actually linted and refuses to pass over content cargo never
+# compiled. `cargo clippy` exited 0 over a CACHED example carrying
+# `too_many_lines` on 2026-08-13, because cargo decides freshness by MTIME and
+# `git archive | tar -x` stamps every file with the commit time.
 clippy:
-    cargo +stable clippy --workspace --all-targets --all-features -- -D warnings
+    scripts/check-clippy-complete.sh --toolchain stable
+
+# The negative controls for the two gate-scope fixes above: each shows the old
+# gate green on a broken tree, the new gate red, and the new gate green again
+# with its guard deleted (a mutation test on our own gate). ~30 s, no workspace
+# build -- it runs against a throwaway one-crate workspace.
+gate-controls:
+    scripts/tests/test-gate-scope-controls.sh
 
 # `frontier_*` is skipped here and run by `frontier` instead. Those ratchets
 # measure "the largest N decided within a fixed WALL-CLOCK budget", so running
@@ -47,8 +60,14 @@ clippy:
 # run could ratchet the project down on a measurement artifact. Measured
 # 2026-07-30 -- lia_cuts reported 24 < 26 under `check.sh` and passed 9/9
 # standalone on the same commit, with no artifact actually moving.
+#
+# Run through `check-workspace-tests.sh`, which prints the number of tests that
+# actually ran (a suite emptied by a `cfg` exits 0 printing "running 0 tests")
+# and touches content whose hash changed so cargo cannot replay a cached test
+# binary over source it never compiled (measured: `cargo test` printed
+# "1 passed" for a test that must fail, after the file was stamped in the past).
 test:
-    cargo test --workspace --all-features -- --skip frontier_
+    scripts/check-workspace-tests.sh
 
 # The capability ratchets, serialized and alone. Run nothing else concurrently.
 frontier:
@@ -257,6 +276,17 @@ parity-docs:
 # scoring pipeline.
 smtcomp-resume:
     ./scripts/check-smtcomp-resume.sh
+
+# PLAN.md and the ADR index are generated views over per-lane sources. They
+# were the two files concurrent lanes clobbered four times on 2026-08-14 --
+# 67 and 60 touches in 24 hours -- because the session protocol told every lane
+# to append to them. These two gates make a hand edit a failure instead of
+# somebody else's lost line.
+generated-trackers:
+    python3 -m unittest scripts.tests.test_gen_plan
+    python3 scripts/gen-plan.py --check
+    python3 -m unittest scripts.tests.test_gen_adr_index
+    python3 scripts/gen-adr-index.py --check
 
 # Prevent PLAN/STATUS/TODO from becoming competing project-level authorities.
 plan-authority:

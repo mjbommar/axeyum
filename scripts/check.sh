@@ -12,13 +12,30 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 fail=0
+ran=0
+failed_steps=()
+
+# `AXEYUM_CHECK_LIST=1 ./scripts/check.sh` enumerates the steps and exits without
+# running any of them. That listing is this script's own answer to "what does
+# this gate examine?", and it is what `scripts/check-aggregate-scope.sh` compares
+# against the justfile's `check` recipe — the two ran 61 and 112 steps
+# respectively on 2026-08-14 while both documents claimed they were the same
+# gate.
+list_only="${AXEYUM_CHECK_LIST:-0}"
+
 step() {
   local name="$1"; shift
+  ran=$((ran + 1))
+  if [ "$list_only" = "1" ]; then
+    printf '%s\t%s\n' "$name" "$*"
+    return 0
+  fi
   echo "=== $name ==="
   if "$@"; then
     echo "--- $name: ok"
   else
     echo "--- $name: FAILED"
+    failed_steps+=("$name")
     fail=1
   fi
 }
@@ -33,11 +50,24 @@ step fmt    cargo fmt --all --check
 # for different reasons, and a disagreement between them is itself a finding.
 step fmt-all scripts/check-fmt-complete.sh
 step facts  python3 scripts/validate-facts.py
-step clippy cargo clippy --workspace --all-targets --all-features -- -D warnings
+# `cargo clippy --workspace --all-targets --all-features -- -D warnings` exits 0
+# in two situations that look identical from outside: it linted everything and
+# found nothing, or it linted NOTHING because cargo thought the cache was fresh.
+# The second happened on 2026-08-13 over a cached example carrying
+# `too_many_lines`. Cargo decides freshness by MTIME, and `git archive | tar -x`
+# stamps every file with the commit time, so a snapshot build in a reused target
+# dir hits this systematically. The wrapper reports how many of the workspace's
+# targets it actually linted; the controls are
+# `scripts/tests/test-gate-scope-controls.sh`.
+step clippy ./scripts/check-clippy-complete.sh
+step gate-controls ./scripts/tests/test-gate-scope-controls.sh
 # `frontier_*` runs in its own serialized step below: those ratchets are
 # wall-clock-budget based, so contention from the rest of the suite shrinks the
 # measured frontier and reports a false REGRESSION (measured 2026-07-30).
-step test   cargo test --workspace --all-features -- --skip frontier_
+# Wrapped so the sweep prints the number of tests it ran (an emptied suite exits
+# 0 printing "running 0 tests ... ok") and cannot replay a cached test binary
+# over source it never compiled.
+step test   ./scripts/check-workspace-tests.sh
 step frontier cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
 # The gate-liveness ratchet: proves the gates above still RUN something. A suite
 # emptied by a new `#![cfg(feature = ...)]` exits 0 and prints "running 0 tests
@@ -120,8 +150,37 @@ step smtcomp-resume ./scripts/check-smtcomp-resume.sh
 step plan-authority python3 scripts/check-plan-authority.py
 step links         ./scripts/check-links.sh
 
+if [ "$list_only" = "1" ]; then
+  echo "check: $ran steps" >&2
+  exit 0
+fi
+
+# The step FLOOR. A gate that silently loses steps is the aggregate version of
+# the "running 0 tests ... ok" trap: the exit status is identical whether it ran
+# 61 steps or 2. Measured 2026-08-14: 82 steps here. The floor sits a little
+# below that so ordinary churn does not trip it. Raising it as steps are added is
+# expected; LOWERING it needs a reason in the commit message.
+STEP_FLOOR=80
+echo "check: ran $ran steps (floor $STEP_FLOOR), ${#failed_steps[@]} failed"
+if [ "$ran" -lt "$STEP_FLOOR" ]; then
+  echo "check: only $ran steps ran, below the committed floor of $STEP_FLOOR --" \
+       "steps have been removed. If that was deliberate, lower STEP_FLOOR in" \
+       "this file and say why." >&2
+  fail=1
+fi
+# NOT run here, and named rather than passed over silently: `cargo deny check`
+# (needs cargo-deny installed), the z3 differential fuzzes (C/C++ leaf dependency,
+# ADR-0002; CLAUDE.md lists them as the linear-arithmetic pre-merge gate), the
+# wasm32 build, and every step `just check` has that this script does not --
+# `scripts/check-aggregate-scope.sh` enumerates that divergence.
+echo "check: not run here -- cargo deny, the z3 differential fuzzes, the wasm32" \
+     "target build; run scripts/check-aggregate-scope.sh for the just-vs-check.sh divergence"
+
 if [ "$fail" -ne 0 ]; then
+  if [ ${#failed_steps[@]} -gt 0 ]; then
+    printf 'check: FAILED steps: %s\n' "${failed_steps[*]}" >&2
+  fi
   echo "check: one or more gates FAILED" >&2
   exit 1
 fi
-echo "check: all gates passed"
+echo "check: all $ran gates passed"
