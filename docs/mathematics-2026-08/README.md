@@ -6,6 +6,11 @@ The companion to [`docs/refactor-2026-08/`](../refactor-2026-08/README.md).
 > [`refactor-2026-08/00-parallel-work.md`](../refactor-2026-08/00-parallel-work.md).**
 > A second lane owns `crates/axeyum-lean-kernel/` — which is rung 5, the
 > library — and two shared append points. It re-orders this strand.
+>
+> A third strand,
+> [`docs/formalized-math-2026-08/`](../formalized-math-2026-08/README.md),
+> covers collecting and integrating the ~10 M lines of formalized mathematics
+> that already exist outside this project.
 
 That strand asks *where is the code untidy*. This one asks **what mathematics
 can this system do, what can it only assert, and what can it not yet state.**

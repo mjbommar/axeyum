@@ -48,6 +48,7 @@ flowchart TD
 | **A maintainer / researcher** | [`internals/`](internals/README.md), [`plan/`](plan/README.md), [`research/`](research/README.md) |
 | **Planning a refactor or cleanup** | [`refactor-2026-08/`](refactor-2026-08/README.md) — measured baseline and four ordered findings from the 2026-08-14 campaign |
 | **Asking what mathematics the stack can do** | [`mathematics-2026-08/`](mathematics-2026-08/README.md) — decide vs certify, the library, values vs theorems, reachability |
+| **Bringing in the world's formalized mathematics** | [`formalized-math-2026-08/`](formalized-math-2026-08/README.md) — collect, synthesize, integrate, and what to build instead |
 
 Multi-agent sessions should use the
 [worktree collaboration protocol](contributor-guide/multi-agent-worktrees.md).

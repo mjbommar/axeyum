@@ -5,6 +5,11 @@
 > mathematics the system can do rather than where the code is untidy. Read that
 > one if you want the ceiling; this one is the floor.
 >
+> A third strand,
+> [`docs/formalized-math-2026-08/`](../formalized-math-2026-08/README.md),
+> covers collecting and integrating the ~10 M lines of formalized mathematics
+> that already exist outside this project.
+>
 > **Before taking any item, read [`00-parallel-work.md`](00-parallel-work.md).**
 > A second lane owns `crates/axeyum-lean-kernel/` and two shared append points,
 > and it re-orders both strands.
