@@ -163,6 +163,57 @@ passed; `cas_bridge_routes` 25; `corpus_regression` 1; `route_trace` 12;
 `frontier_bv_reduction`. `clippy --all-targets --features full -D warnings` clean
 on both crates.
 
+### Amendment (same day): a fourth shape, and what the tamper tests were worth
+
+**A fourth refutation shape.** A non-negative combination of asserted
+inequalities, their **pairwise products**, and atom squares, collapsing to a
+constant below its own floor. A product of two asserted non-negativities is
+non-negative — a degree-2 fact no rational multiplier can express — carried by a
+new `CasIdealEntry::AssertedProduct`.
+
+The motivating shape is the Rado campaign's micro-lemma `M6`
+(`M ≥ 1 ∧ w ≥ 1 ⊢ M·w ≥ M`), which its degree-3 lemma `L3` was hand-split into
+after `L3` timed out at 60 s. Its refutation is
+`(M − M·w) + (M−1)(w−1) + (w−1) = 0` against a floor of `1`.
+
+Measured honestly: `M6` and `L3` in *minimal* form are already decided by
+`int-real-relax` in about 1 ms on the pristine tree, so the campaign's timeout was
+the monolithic hypothesis set rather than the shape. Where the product argument
+adds reach is the same place the rest of the route does — atoms outside the
+polynomial fragment:
+
+| query | before | after |
+|---|---|---|
+| the `L3` shape over three `div` atoms | `unknown`, **20 s timeout** | `unsat` 207 ms |
+| `M6` over real `/` atoms | `unsat` 60.6 ms via `nra` | `unsat` 1.2 ms |
+
+The search is unit-coefficient over subsets of at most three candidates, so a
+refutation needing `2x² + 3y²`, or a multiplier other than `1`, is still missed.
+`reduce_many_with_cofactors` shares one Gröbner basis across all candidates.
+
+**The tamper tests were mostly duds, and this was measured rather than assumed.**
+Deleting the parity check, the citation check, the kind-label check, the
+square-coefficient check, or either product guard left **every** tamper test
+green. They all reject through the *identity* check — change any number and the
+combination stops being a constant — so none exercised the guard it was named
+after. Three product tamper tests were deleted outright: no forgery of their shape
+can exist.
+
+They are replaced by six **guard-isolating forgeries**. Each is a hand-built
+certificate for a *satisfiable* query whose combination really is a constant of
+the refuting sign, with exactly one guard standing between it and a wrong `unsat`.
+The parity one is the clearest: `x³ = −1` is satisfiable at `x = −1`, and
+presenting `x³` as a non-negative term cancels against the equation to give `−1`.
+
+Verified 1:1 — each of the six guard deletions kills exactly one forgery, and only
+that one.
+
+One guard is measured **not** to be soundness-critical, and is documented as
+conservative rather than load-bearing: an equality's polynomial is zero in every
+model, so citing one as a product factor contributes zero, which is non-negative.
+The rejection is kept for clarity; the honest note beats a control that tests
+nothing.
+
 ## What this deliberately does not claim
 
 The certificate is a statement about ℝ. It cannot see integrality:
