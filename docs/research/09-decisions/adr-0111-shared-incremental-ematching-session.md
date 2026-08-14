@@ -1,6 +1,7 @@
 # ADR-0111: Shared incremental e-matching session
 
 Status: accepted
+Index-summary: Shared incremental e-matching session: compile/intern triggers once and retain one ground bridge with one batched match index per propagation round
 Date: 2026-07-11
 
 ## Context

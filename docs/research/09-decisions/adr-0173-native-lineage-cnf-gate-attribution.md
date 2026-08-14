@@ -1,6 +1,7 @@
 # ADR-0173: Native lineage CNF gate attribution
 
 Status: accepted
+Index-summary: Native lineage CNF gate attribution: exact per-check gate/root deltas reject more root fusion or dedup and select future-reuse-safe positive internal AND-tree flattening
 Date: 2026-07-15
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0355: Preregister Lean nested-inductive kernel elimination
 
 Status: accepted upon containing-commit publication
+Index-summary: Accept kernel-side nested-inductive expansion, checking, restoration, and auxiliary recursors
 
 Date: 2026-07-22
 

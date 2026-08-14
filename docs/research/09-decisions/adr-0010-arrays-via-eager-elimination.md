@@ -1,6 +1,7 @@
 # ADR-0010: Arrays (QF_ABV) Via Eager Elimination To QF_BV
 
 Status: accepted
+Index-summary: Arrays (QF_ABV) via eager elimination to QF_BV
 Date: 2026-06-13
 
 ## Context

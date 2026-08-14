@@ -1,6 +1,7 @@
 # ADR-0147: Zero-copy reverse AIG node iteration
 
 Status: deferred
+Index-summary: Zero-copy reverse AIG node iteration: expose the existing exact-size double-ended iterator contract so CNF planning need not copy every node before reverse traversal
 Date: 2026-07-14
 
 ## Context

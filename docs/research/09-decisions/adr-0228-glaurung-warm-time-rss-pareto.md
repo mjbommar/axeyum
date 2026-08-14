@@ -1,6 +1,7 @@
 # ADR-0228: Glaurung bounded-warm time/RSS Pareto
 
 Status: accepted
+Index-summary: Glaurung bounded-warm time/RSS Pareto: current same-stream controls expose one-shot cost, 14.77--25.58% warm RSS overhead, greater than 98% retained-owner hits, and zero fallback without relabeling cumulative work as a solver speedup
 Date: 2026-07-17
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0129: Checked paired-existential witness transfer
 
 Status: accepted
+Index-summary: Checked paired-existential witness transfer: alpha-align complete Bool/BV witness tuples and replay every target conjunct by exact signed no-wrap reasoning or a source-bound QF_BV proof
 Date: 2026-07-12
 
 ## Context

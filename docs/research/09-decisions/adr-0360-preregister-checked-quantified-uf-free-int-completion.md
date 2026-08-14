@@ -1,6 +1,7 @@
 # ADR-0360: Preregister checked quantified-UF free-Int completion
 
 Status: proposed
+Index-summary: Preregister bounded untrusted free-Int candidate completion behind exact quantified-UF model replay
 Date: 2026-07-22
 
 ## Context

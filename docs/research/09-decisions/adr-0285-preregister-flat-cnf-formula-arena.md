@@ -1,6 +1,7 @@
 # ADR-0285: Preregister a flat CNF formula arena
 
 Status: accepted
+Index-summary: Reject the flat CNF formula arena at its fixed per-instance storage gate before timing and restore production
 Date: 2026-07-19
 
 Result state: rejected at the fixed per-instance storage gate; timing not run;

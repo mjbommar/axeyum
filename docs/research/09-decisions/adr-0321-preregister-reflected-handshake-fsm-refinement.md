@@ -1,6 +1,7 @@
 # ADR-0321: Preregister reflected handshake FSM refinement
 
 Status: accepted
+Index-summary: Accept bounded identity refinement from a compiler-reflected Rust handshake step to the shipped declarative FSM
 Date: 2026-07-21
 
 ## Context

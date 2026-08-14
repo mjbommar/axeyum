@@ -1,6 +1,7 @@
 # ADR-0074: Deterministic Majority-Default Array Models
 
 Status: accepted
+Index-summary: Deterministic majority-default array models: vote over distinct observed indices, choose a stable smallest-value tie, retain only true overrides, and keep original replay as the SAT gate across canonical and fallback projection
 Date: 2026-07-09
 
 ## Context

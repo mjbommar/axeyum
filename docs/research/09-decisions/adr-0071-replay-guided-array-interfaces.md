@@ -1,6 +1,7 @@
 # ADR-0071: Replay-Guided Array Interfaces on Canonical CDCL(T)
 
 Status: accepted
+Index-summary: Replay-guided array interfaces: a true abstraction-only array boundary plus candidate-violated select congruence on canonical `CdclT`, composed array-first/function-second with original replay; ADR-0084 supersedes its original function-first projection order
 Date: 2026-07-09
 
 ## Context

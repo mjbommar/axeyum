@@ -1,6 +1,7 @@
 # ADR-0085: Bounded Structural Array-Class Equations
 
 Status: accepted
+Index-summary: Bounded structural array-class equations: decompose array-ITE equality before search, realize true store/ITE/constant equations into class-owned leaf arrays without changing observed reads, then project functions and replay
 Date: 2026-07-10
 
 ## Context

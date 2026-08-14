@@ -1,6 +1,7 @@
 # ADR-0092: Retained Warm Direct Array-Valued UF Parameters
 
 Status: accepted
+Index-summary: Retained warm direct array-valued UF parameters: direct finite-array symbols can key retained array-valued UF parents, using relation-flag guarded key congruence, distinct full-value key projection, filtering, and replay
 Date: 2026-07-10
 
 ## Context

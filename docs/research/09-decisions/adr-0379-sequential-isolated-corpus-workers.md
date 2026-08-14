@@ -1,6 +1,7 @@
 # ADR-0379: Sequential isolated workers for corpus explanation
 
 Status: accepted
+Index-summary: Run ordered corpus explanation through one sequential inherited-limit child per file with fail-closed record validation
 Date: 2026-08-09
 
 ## Context

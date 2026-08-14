@@ -1,6 +1,7 @@
 # ADR-0311: Group interpolation APIs by logic
 
 Status: accepted
+Index-summary: Group common, QF_BV, QF_UF, LIA, LRA, UFLIA, and UFLRA interpolation contracts without exposing internal verifiers
 Date: 2026-07-20
 
 ## Context

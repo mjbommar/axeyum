@@ -1,6 +1,8 @@
 # ADR-0027: Mixed Integer/Real Arithmetic by Branch-and-Bound
 
 Status: accepted (implemented 2026-06-14)
+Index-summary: Mixed integer/real arithmetic by branch-and-bound over the Farkas-checked LRA engine
+Index-status: accepted
 Date: 2026-06-14
 
 ## Context

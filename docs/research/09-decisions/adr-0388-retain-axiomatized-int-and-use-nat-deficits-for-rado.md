@@ -1,6 +1,7 @@
 # ADR-0388: Retain the axiomatized Int profile and use Nat deficits for Rado rigidity
 
 Status: accepted
+Index-summary: Retain the axiomatized Int reconstruction profile and use Nat prefix deficits for credited Rado rigidity
 
 Date: 2026-08-13
 

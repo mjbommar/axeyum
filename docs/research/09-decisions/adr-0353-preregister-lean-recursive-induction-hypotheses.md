@@ -1,6 +1,7 @@
 # ADR-0353: Preregister one Lean recursive induction-hypothesis rule for indexed and higher-order fields
 
 Status: accepted
+Index-summary: Accept one telescope-based Lean induction-hypothesis rule for direct, indexed, and higher-order recursive fields
 
 Date: 2026-07-22
 

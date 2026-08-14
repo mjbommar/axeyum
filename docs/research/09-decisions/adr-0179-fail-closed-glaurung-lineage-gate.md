@@ -1,6 +1,7 @@
 # ADR-0179: Fail-closed Glaurung lineage gate
 
 Status: accepted
+Index-summary: Fail-closed Glaurung lineage gate: version source/environment/work/findings/resources, enforce hard memory and exact traffic, and compare homogeneous held-out artifacts
 Date: 2026-07-15
 
 ## Context

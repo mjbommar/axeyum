@@ -1,6 +1,7 @@
 # ADR-0238: Extremal-model coverage-union authority control
 
 Status: accepted
+Index-summary: Extremal-model coverage-union authority control: exact least/greatest union parity with 125 findings, but 33 arbitrary-model-only rows forbid a preservation claim
 Date: 2026-07-18
 
 ## Context

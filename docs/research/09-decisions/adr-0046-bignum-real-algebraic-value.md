@@ -1,6 +1,7 @@
 # ADR-0046: Bignum `Value::RealAlgebraic` — unconditional arbitrary-precision storage
 
 Status: accepted
+Index-summary: Bignum `Value::RealAlgebraic` — unconditional `num-bigint`/`num-rational` storage (`Vec<BigInt>` + `BigRational`); removes the i128-storage ceiling so higher-degree coupled NRA decides; collapses the i128/retry split; supersedes ADR-0045's `bignum` feature gate
 Date: 2026-06-21
 
 ## Context

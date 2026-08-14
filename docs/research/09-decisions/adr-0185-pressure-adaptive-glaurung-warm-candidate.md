@@ -1,6 +1,8 @@
 # ADR-0185: Pressure-adaptive Glaurung warm candidate
 
 Status: accepted as opt-in candidate
+Index-summary: Pressure-adaptive Glaurung warm candidate: start at two live sessions, expand once after 128 pressure events, and repeat exact held-out gates before any default
+Index-status: candidate
 Date: 2026-07-16
 
 ## Context

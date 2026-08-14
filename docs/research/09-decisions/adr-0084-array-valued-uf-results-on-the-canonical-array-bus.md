@@ -1,6 +1,7 @@
 # ADR-0084: Array-Valued UF Results on the Canonical Array Bus
 
 Status: accepted
+Index-summary: Array-valued UF results on the canonical array bus: retain semantic application parents on the e-graph, reconstruct fresh result arrays by final parent class, then project function tables and replay
 Date: 2026-07-10
 
 ## Context

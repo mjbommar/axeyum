@@ -1,6 +1,8 @@
 # ADR-0029: SMT-LIB string front-end over the bounded-string BV lowering
 
 Status: accepted (equality slice implemented 2026-06-14; full str.* front end deferred)
+Index-summary: SMT-LIB string front-end over the bounded-string BV lowering (equality slice done; full str.* deferred)
+Index-status: accepted
 Date: 2026-06-14
 
 ## Context

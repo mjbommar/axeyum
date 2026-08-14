@@ -1,6 +1,7 @@
 # ADR-0138: Kernel-checked negated BV existential witnesses
 
 - **Status:** accepted
+- Index-summary: Kernel-checked negated BV existential witnesses: genuine typed `Exists.intro` plus logical or computational AIG reduction closes all three ADR-0126 public rows
 - **Date:** 2026-07-13
 - **Owners:** solver / evidence / Lean reconstruction
 - **Extends:** ADR-0126, ADR-0135, ADR-0137

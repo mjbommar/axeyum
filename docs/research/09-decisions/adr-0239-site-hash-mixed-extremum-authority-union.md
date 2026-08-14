@@ -1,6 +1,7 @@
 # ADR-0239: Site-hash mixed-extremum authority union
 
 Status: accepted
+Index-summary: Site-hash mixed-extremum authority union: complementary stable-site schedules add three rows beyond the two extrema and accept an exact backend-identical 128-row four-policy union while retaining 33 arbitrary-only rows
 Date: 2026-07-18
 
 ## Context

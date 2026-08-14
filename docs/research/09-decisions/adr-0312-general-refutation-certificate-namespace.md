@@ -1,6 +1,7 @@
 # ADR-0312: Complete the checked-refutation certificate catalog
 
 Status: accepted
+Index-summary: Complete the checked-refutation catalog across arithmetic, finite-domain, structural, and uninterpreted-function families
 Date: 2026-07-20
 
 ## Context

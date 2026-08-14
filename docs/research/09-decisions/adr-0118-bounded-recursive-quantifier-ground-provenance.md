@@ -1,6 +1,7 @@
 # ADR-0118: Bounded recursive quantifier ground provenance
 
 Status: accepted
+Index-summary: Bounded recursive quantifier ground provenance: derive generated equality premises from exact universal instances or earlier checked detached propagations
 Date: 2026-07-11
 
 ## Context

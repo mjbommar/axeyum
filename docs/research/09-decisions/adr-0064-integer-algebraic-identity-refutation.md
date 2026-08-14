@@ -1,6 +1,7 @@
 # ADR-0064: Integer-aware, UNSAT-only polynomial-identity refutation (QF_NIA)
 
 Status: accepted
+Index-summary: An integer-aware, **UNSAT-only** polynomial-identity refutation (`integer_algebraic_refutation`, `nra_real_root.rs`) decides a genuinely **integer-specific** `QF_NIA` unsat class the real CAD cannot see (its relaxation is SAT — e.g. `nl-eq-infer`: `i−n=3/2` satisfies over ℝ). Collects `Int` polynomial atoms, injects integer tight-bounds (`g≥0 ∧ −g≥0 ⊢ g=0`), substitutes asserted equalities (incl. `MultiPoly::solve_for_var`, a standalone-linear isolate that yields *rational* defs like `s=(i²−i)/2`) into asserted disequalities; a `p≠0` reduced to the **zero polynomial** is `0≠0` ⇒ UNSAT. KEY soundness: **emits only Unsat, never a model** — so the rational def carries NO wrong-sat risk (this sidesteps the `a946f925`-class integer/rational trap that reverted the naive "extend `decompose_multivariate`" attempt, which was also 0-ROI since `QF_NIA` never reaches the `Sort::Real` CAD). The strict→non-strict tightening is the only ℤ-specific step, gated by `Int`-only collectors. Wired as an additive `Unknown`-fallback in `check_auto`/`_explained` (route `integer-algebraic-refutation`). Decides `nl-eq-infer`; `nia_differential_fuzz` DISAGREE=0 + 3 wrong-sat-negatives. Task #88
 Date: 2026-07-08
 
 ## Context

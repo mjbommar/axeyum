@@ -1,6 +1,7 @@
 # ADR-0168: Opt-in ordered replay policy controls
 
 Status: accepted
+Index-summary: Opt-in ordered replay policy controls: compare exact cold occurrences, consecutive snapshot/LCP reuse, and explicit lineage in separate processes with replay and memory telemetry
 Date: 2026-07-15
 
 ## Context

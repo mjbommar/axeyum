@@ -1,6 +1,7 @@
 # ADR-0069: Ground-Distinct UFBV Interface Pruning
 
 Status: accepted
+Index-summary: Exact ground-distinct UFBV interface pruning: omit a same-function application pair only when cached empty-assignment evaluation proves one argument position unequal; concrete tables bypass impossible quadratic pairs while dynamic/equal-valued pairs remain
 Date: 2026-07-09
 
 ## Context

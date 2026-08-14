@@ -1,6 +1,7 @@
 # ADR-0100: Evaluator-replayed closed-universal counterexamples
 
 Status: accepted
+Index-summary: Evaluator-replayed closed-universal counterexamples: carry original binder values and check falsity directly against the untouched quantifier-free body
 Date: 2026-07-11
 
 ## Context

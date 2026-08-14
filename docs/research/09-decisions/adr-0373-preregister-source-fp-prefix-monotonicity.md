@@ -1,6 +1,7 @@
 # ADR-0373: Preregister source FP prefix monotonicity refutation
 
 Status: accepted
+Index-summary: Accept one fail-closed source-level RNE nonnegative FP prefix refuter
 
 Date: 2026-07-27
 

@@ -1,6 +1,7 @@
 # ADR-0073: Candidate-Guided Array Extensionality on the Canonical Bus
 
 Status: accepted
+Index-summary: Candidate-guided array extensionality: shared equality flags plus bounded observed-index/diff reads materialize only violated congruence/witness instances on canonical ABV/AUFBV; cloned probes preserve pristine fallbacks and replay gates SAT
 Date: 2026-07-09
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0291: Preregister a typed canonical LLVM loop bridge
 
 Status: accepted
+Index-summary: Accept one typed, definedness-aware canonical LLVM self-loop to `TransitionSystem` bridge
 Date: 2026-07-20
 
 Result state: accepted; strict implicit-entry PHI normalization, canonical

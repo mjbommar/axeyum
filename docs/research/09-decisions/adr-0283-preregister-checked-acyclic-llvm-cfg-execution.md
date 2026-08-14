@@ -1,6 +1,7 @@
 # ADR-0283: Preregister checked acyclic LLVM CFG execution
 
 Status: accepted
+Index-summary: Accept bounded checked acyclic LLVM CFG execution with path-conditioned value and definedness joins
 Date: 2026-07-19
 
 Result state: accepted; all frozen semantic and repository gates pass

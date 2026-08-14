@@ -1,6 +1,7 @@
 # ADR-0067: Warm BV Decision-Frame Conflict Cores
 
 Status: accepted
+Index-summary: Warm BV decision-frame conflict cores: reuse failed persistent frame selectors from the same SAT solve, retain full-core fallback, and reject measured-regressive per-literal selectors
 Date: 2026-07-09
 
 ## Context

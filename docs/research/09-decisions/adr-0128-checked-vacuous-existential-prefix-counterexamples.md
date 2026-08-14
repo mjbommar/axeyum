@@ -1,6 +1,7 @@
 # ADR-0128: Checked vacuous-existential-prefix counterexamples
 
 Status: accepted
+Index-summary: Checked vacuous-existential-prefix counterexamples: prove the leading Bool/BV existentials absent and directly evaluate a complete universal counterexample against the untouched body
 Date: 2026-07-12
 
 ## Context

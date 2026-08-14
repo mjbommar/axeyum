@@ -1,6 +1,7 @@
 # ADR-0290: Preregister the reflection semantics coverage gate
 
 Status: accepted
+Index-summary: Accept exact source-derived ownership of 62 checked-frontend semantic variants with proof plus deterministic fuzz evidence
 Date: 2026-07-20
 
 Result state: accepted; all frozen gates pass

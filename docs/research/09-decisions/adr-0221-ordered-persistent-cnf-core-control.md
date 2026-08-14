@@ -1,6 +1,7 @@
 # ADR-0221: Ordered persistent CNF core control
 
 Status: accepted
+Index-summary: Ordered persistent CNF core control: complete SAT/UNSAT solver-call streams retain per-path learned state and show BatSat beating Z3 Boolean on Axeyum CNF, moving the causal boundary to word-level representation and integration
 Date: 2026-07-17
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0293: Preregister a Glaurung LLVM loop-shape census
 
 Status: accepted
+Index-summary: Accept the exact Glaurung loop census: 11 existing-shape rows and one under-diverse early-exit row select no new implementation
 Date: 2026-07-20
 
 Result state: accepted; the exact 12-source result reproduces byte-for-byte and

@@ -1,6 +1,7 @@
 # ADR-0002: Ground-Up Identity, Oracle As Bootstrap Scaffolding
 
 Status: accepted
+Index-summary: Ground-up identity, oracle as bootstrap scaffolding
 Date: 2026-06-10
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0068: Bounded Exact BV Interface Propagation
 
 Status: accepted
+Index-summary: Bounded exact BV interface propagation: opposite-polarity warm-CNF refutation with failed-frame reasons, one round-robin candidate per state, 64-interface/128-probe caps, and a measured ~2.3x `bug520` win
 Date: 2026-07-09
 
 ## Context

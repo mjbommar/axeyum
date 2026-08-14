@@ -1,6 +1,7 @@
 # ADR-0191: Glaurung replay-SAT-cache measurement control
 
 Status: accepted
+Index-summary: Glaurung replay-SAT-cache measurement control: explicit path-owned off/on policy, fixed per-path bounds, exact traffic/footer gates, terminal cleanup, and named comparison without changing the default
 Date: 2026-07-16
 
 ## Context

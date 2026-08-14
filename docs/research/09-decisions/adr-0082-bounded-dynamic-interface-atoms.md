@@ -1,6 +1,7 @@
 # ADR-0082: Bounded Dynamic Interface Atoms in Canonical Search
 
 Status: accepted
+Index-summary: Bounded dynamic interface atoms: explicitly map appended SAT variables to theory atoms, grow EUF/BV over pre-observed terms, and insert UF/select/extensionality refinements into one retained canonical search
 Date: 2026-07-10
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0006: Phase 4 Bit Order And Lowering Entry Contract
 
 Status: accepted
+Index-summary: Phase 4 bit order and lowering entry contract
 Date: 2026-06-11
 
 ## Context

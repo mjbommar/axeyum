@@ -1,6 +1,7 @@
 # ADR-0198: Keep the two-owner adaptive initial cap
 
 Status: deferred
+Index-summary: Keep the two-owner adaptive initial cap: the three-owner no-fallback ceiling improves SurfacePen time but raises median RSS 7.66% and fails the production memory alarm
 Date: 2026-07-16
 
 ## Context

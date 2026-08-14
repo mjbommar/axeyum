@@ -1,6 +1,7 @@
 # ADR-0122: Checked vacuous bit-vector guard models
 
 Status: accepted
+Index-summary: Checked vacuous bit-vector guard models: carry one outer BV witness and independently prove an exact equality antecedent false below direct Bool/BV alternation
 Date: 2026-07-11
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0070: Replay-Guided Dynamic UFBV Interfaces
 
 Status: accepted
+Index-summary: Replay-guided dynamic UFBV interfaces: start canonical `CdclT` from the function-free relaxation, batch only candidate-model congruence violations, transfer partial-round UNSAT, and accept SAT only after function projection plus original replay
 Date: 2026-07-09
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0288: Preregister checked MIR byte-memory CFG reflection
 
 Status: accepted
+Index-summary: Accept structured non-panicking MIR byte-memory reflection with explicit access panic and branch-state joins
 Date: 2026-07-20
 
 Result state: accepted; all frozen gates pass

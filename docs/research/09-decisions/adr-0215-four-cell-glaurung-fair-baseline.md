@@ -1,6 +1,7 @@
 # ADR-0215: Four-cell Glaurung fair baseline
 
 Status: accepted
+Index-summary: Four-cell Glaurung fair baseline: cold and exact-lineage warm Z3/Axeyum cells share one authoritative fixed-work stream and feed separate paired contrasts
 Date: 2026-07-17
 
 ## Context

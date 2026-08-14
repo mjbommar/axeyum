@@ -1,6 +1,7 @@
 # ADR-0218: Glaurung query-feature regime attribution
 
 Status: accepted
+Index-summary: Glaurung query-feature regime attribution: outcome, purpose, and exact-query reuse explain material workload composition while lexical size alone does not identify the causal boundary
 Date: 2026-07-17
 
 ## Context

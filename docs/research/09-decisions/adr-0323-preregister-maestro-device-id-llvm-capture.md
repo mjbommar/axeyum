@@ -1,6 +1,7 @@
 # ADR-0323: Preregister Maestro device-ID LLVM capture
 
 Status: accepted
+Index-summary: Reject the first Maestro owning-kernel LLVM capture at the frozen two-root full-module byte-identity gate
 Date: 2026-07-21
 
 ## Context

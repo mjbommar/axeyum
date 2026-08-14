@@ -1,6 +1,7 @@
 # ADR-0336: Preregister Tock log2 proof v2 lock correction
 
 Status: accepted
+Index-summary: Preregister proof v2 with the corrected lock; accept the first target proof as rejected because bit-blast trust is uncertified
 Date: 2026-07-21
 
 ## Context

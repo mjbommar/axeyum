@@ -1,6 +1,7 @@
 # ADR-0210: Exact ordered timeout-continuation replay
 
 Status: accepted
+Index-summary: Accept exact ordered timeout continuation: one same-instance retry recovers 7/14 exact-stream timeouts within time/RSS alarms while preserving strict validation and classified nondecisions
 Date: 2026-07-16
 
 ## Context

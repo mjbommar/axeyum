@@ -1,6 +1,7 @@
 # ADR-0299: Preregister checked MIR relational scalar call composition
 
 Status: accepted
+Index-summary: Accept typed MIR relational scalar calls with separate MIR-body panic and postcondition verification
 Date: 2026-07-20
 
 ## Context

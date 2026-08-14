@@ -1,6 +1,7 @@
 # ADR-0305: Group proof APIs under a compatibility-preserving namespace
 
 Status: accepted
+Index-summary: Group proof, evidence, Alethe, faithfulness, and Lean APIs under a compatibility-preserving `proofs` facade
 Date: 2026-07-20
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0077: Array Equalities on the Canonical E-Graph
 
 Status: accepted
+Index-summary: Array equalities on the canonical e-graph: align each Boolean flag with its original equality for backtrackable EUF transitivity/congruence, remove the compensating cross-diff queue, and project one deterministic model per true direct-symbol class
 Date: 2026-07-10
 
 ## Context

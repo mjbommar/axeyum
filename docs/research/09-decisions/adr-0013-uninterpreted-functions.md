@@ -1,6 +1,7 @@
 # ADR-0013: Uninterpreted Functions (EUF) in the IR, via Ackermann Reduction
 
 Status: accepted
+Index-summary: Uninterpreted functions (EUF): eager Ackermann reduction plus a projection-preserving abstraction-only boundary for lazy UFBV/UFLIA and canonical theory combination
 Date: 2026-06-13
 
 ## Context

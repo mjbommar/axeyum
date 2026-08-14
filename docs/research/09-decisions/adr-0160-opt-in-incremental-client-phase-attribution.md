@@ -1,6 +1,7 @@
 # ADR-0160: Opt-in incremental client phase attribution
 
 Status: accepted
+Index-summary: Opt-in incremental client attribution: zero-overhead ordinary constructors, exact-query ordered JSONL profiles, fail-closed manifest reconciliation, and measured Glaurung phase shares
 Date: 2026-07-15
 
 ## Context

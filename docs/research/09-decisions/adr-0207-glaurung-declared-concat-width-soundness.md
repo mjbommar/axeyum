@@ -1,6 +1,7 @@
 # ADR-0207: Glaurung declared-concat-width soundness
 
 Status: accepted
+Index-summary: Glaurung declared-concat-width soundness: strict split replay exposes and closes a 57-bit consumer defect, leaving only measured 250 ms timeout residue
 Date: 2026-07-16
 
 ## Context

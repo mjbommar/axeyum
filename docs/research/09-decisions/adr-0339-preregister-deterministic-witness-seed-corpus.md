@@ -1,6 +1,7 @@
 # ADR-0339: Preregister deterministic replay-checked witness seed corpora
 
 Status: accepted
+Index-summary: Accept deterministic replay-checked solver witness corpora and generated regression tests
 Date: 2026-07-21
 
 ## Context

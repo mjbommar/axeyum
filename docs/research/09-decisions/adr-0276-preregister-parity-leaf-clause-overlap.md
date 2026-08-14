@@ -1,6 +1,7 @@
 # ADR-0276: Preregister parity-leaf clause-overlap attribution
 
 Status: accepted
+Index-summary: Preregister profile-only within-leaf versus cross-leaf parity-clause overlap attribution before another cold CNF generator experiment
 Date: 2026-07-19
 
 Result state: fixed artifact-v37 observation accepted; exactly one within-leaf

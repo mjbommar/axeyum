@@ -1,6 +1,7 @@
 # ADR-0337: Preregister Tock end-to-end proof v3
 
 Status: accepted
+Index-summary: Preregister the dual-DRAT route; accept v3 as a completed-test/first-row parser negative
 Date: 2026-07-21
 
 ## Context

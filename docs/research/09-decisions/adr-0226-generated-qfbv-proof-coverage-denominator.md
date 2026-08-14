@@ -1,6 +1,7 @@
 # ADR-0226: Generated QF_BV proof-coverage denominator
 
 Status: accepted
+Index-summary: Generated QF_BV proof-coverage denominator: 169/169 selected UNSAT rows carry rechecked CNF DRAT and end-to-end faithfulness certificates, while seed 83 exposes the deadline boundary for widening
 Date: 2026-07-17
 
 ## Context

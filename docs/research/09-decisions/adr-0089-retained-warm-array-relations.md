@@ -1,6 +1,7 @@
 # ADR-0089: Retained Warm Array Relations and Diff Witnesses
 
 Status: accepted
+Index-summary: Retained warm array relations: projection-owned positive equality plus one exact private diff witness for disequality over supported structural parents, with scoped roots, array-first/function-second projection, owner filtering, and replay
 Date: 2026-07-10
 
 ## Context

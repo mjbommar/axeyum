@@ -1,6 +1,7 @@
 # ADR-0224: Standing QF_BV multi-oracle fuzz gate
 
 Status: accepted
+Index-summary: Standing QF_BV multi-oracle fuzz gate: 4,000 deterministic Axeyum/Z3 agreements, a fail-closed 250-row cvc5 sample, original-model replay, and named strict Glaurung width/model/W128 controls
 Date: 2026-07-17
 
 ## Context

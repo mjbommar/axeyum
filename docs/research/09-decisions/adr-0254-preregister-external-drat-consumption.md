@@ -1,6 +1,7 @@
 # ADR-0254: Preregister external DRAT consumption on one real query
 
 Status: accepted
+Index-summary: Add a fail-closed standard DIMACS/DRAT exporter and preregister neutral drat-trim consumption plus a truncated-proof teeth control on the lowest-hash real holdout UNSAT
 Date: 2026-07-19
 
 Result state: exporter implemented; real external-check cell preregistered

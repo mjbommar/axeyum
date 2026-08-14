@@ -1,6 +1,7 @@
 # ADR-0049: Abduction (`get-abduct`) as a verify-guarded generator
 
 Status: accepted
+Index-summary: Abduction (`get-abduct`) as a verify-guarded generator — bounded enumeration of shared-vocabulary atoms, each candidate returned only when `check_auto` confirms consistency (`Sat`) + sufficiency (`Unsat`) + shared vocabulary; the 3rd of the three categorically-missing engines, no new trusted code
 Date: 2026-06-22
 
 ## Context

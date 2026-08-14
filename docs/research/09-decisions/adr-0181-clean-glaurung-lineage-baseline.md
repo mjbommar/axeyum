@@ -1,6 +1,7 @@
 # ADR-0181: Clean Glaurung lineage regression baseline
 
 Status: accepted
+Index-summary: Clean Glaurung lineage baseline: commit the exact six-process artifact as the same-environment reference before GQ9 automatic admission
 Date: 2026-07-16
 
 ## Context

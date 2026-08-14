@@ -1,6 +1,7 @@
 # ADR-0063: The word-level UNSAT residue is the Nielsen-arrangement keystone (deferred)
 
 Status: accepted
+Index-summary: The remaining string word-level `unsat` residue reduces to the **Nielsen-arrangement** class, DEFERRED as a soundness-critical keystone (#82, needs a completeness-of-splits witness). Word-unsat is ALREADY live (refute.rs slices 1–3 clash/cycle/congruence + StringGate length projection → decides str001–str005). The two search-free sub-classes are NOT pursued: Rank #2 (ε→length bridge) is redundant (str004/005 already decide) + crate-boundary-infeasible; Rank #1 (two-ended constant clash) is sound but 0 corpus ROI (quad rows have variable ends). `arrange.rs` SearchOutcome stays Unsat-free by construction. Non-word rows (ctn-repl/open-pf/issue2958/artemis) belong to other arcs. Tasks #80/#81/#82
 Date: 2026-07-08
 
 ## Context

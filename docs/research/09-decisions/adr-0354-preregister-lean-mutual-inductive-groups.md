@@ -1,6 +1,7 @@
 # ADR-0354: Preregister atomic Lean mutual-inductive group admission
 
 Status: accepted
+Index-summary: Preregister atomic ordered mutual-inductive groups with group-wide positivity, shared motives/minors, and target-family recursion
 
 Date: 2026-07-22
 

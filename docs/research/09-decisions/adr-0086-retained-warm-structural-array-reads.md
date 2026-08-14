@@ -1,6 +1,7 @@
 # ADR-0086: Retained Warm Structural Array Reads
 
 Status: accepted
+Index-summary: Retained warm structural array reads: give observed store/constant/ITE reads permanent exact scalar definitions in the incremental CNF, project only leaf owners, and replay original scoped roots
 Date: 2026-07-10
 
 Follow-up: [ADR-0087](adr-0087-candidate-triggered-retained-warm-row.md)

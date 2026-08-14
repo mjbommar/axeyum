@@ -1,6 +1,7 @@
 # ADR-0223: Four-driver neutral cvc5 breadth
 
 Status: accepted
+Index-summary: Four-driver neutral cvc5 breadth: all 9,526 accepted Glaurung checks agree with exact model-output accounting and stable cold-reset external-SMT timing, while cross-solver ordering rejects a universal size or FFI explanation
 Date: 2026-07-17
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0097: Checked affine-growth quantifier evidence
 
 Status: accepted
+Index-summary: Checked affine-growth quantifier evidence: two consecutive Euclidean-division counterexamples for an exact positive-slope piecewise universal, independently re-matched over original IR
 Date: 2026-07-11
 
 ## Context

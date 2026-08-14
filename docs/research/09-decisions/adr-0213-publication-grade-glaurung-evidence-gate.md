@@ -1,6 +1,7 @@
 # ADR-0213: Publication-grade Glaurung evidence gate
 
 Status: accepted
+Index-summary: Publication-grade Glaurung evidence gate: lead with strict-typing correctness and require paired fixed-work statistics, fair warm baselines, authoritative finding parity, and multi-oracle assurance before headline performance claims
 Date: 2026-07-17
 
 ## Context

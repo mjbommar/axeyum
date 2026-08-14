@@ -1,6 +1,7 @@
 # ADR-0153: Fold constants across associative bit-vector additions
 
 Status: accepted
+Index-summary: Fold constants across associative bit-vector additions: combine mixed-chain constant leaves modulo width before rebuilding the canonical AC tree
 Date: 2026-07-14
 
 ## Context

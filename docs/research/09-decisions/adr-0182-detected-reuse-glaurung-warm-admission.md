@@ -1,6 +1,7 @@
 # ADR-0182: Detected-reuse Glaurung warm admission candidate
 
 Status: accepted
+Index-summary: Detected-reuse Glaurung warm admission: promote a path only after its second solve; retain the measured time/RSS tradeoff as opt-in pending repetition
 Date: 2026-07-16
 
 ## Context

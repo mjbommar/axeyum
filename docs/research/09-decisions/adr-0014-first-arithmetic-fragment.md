@@ -1,6 +1,7 @@
 # ADR-0014: First Arithmetic Fragment — Linear Integer Arithmetic, Bit-Blasted
 
 Status: accepted
+Index-summary: First arithmetic fragment: linear integer arithmetic, bit-blasted
 Date: 2026-06-13
 
 ## Context

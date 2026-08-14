@@ -1,6 +1,7 @@
 # ADR-0364: Preregister profile-guided quantified-UF model completion
 
 Status: proposed
+Index-summary: Preregister one shared-deadline SAT-only finite-profile completion loop with exact source definitions and checker-derived counterexamples
 Date: 2026-07-23
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0177: Widen Glaurung lineage assertion admission
 
 Status: accepted
+Index-summary: Widen Glaurung lineage assertion admission: held-out 479-root paths select 512 assertions while preserving the nine-session memory policy and explicit warm boundary
 Date: 2026-07-15
 
 ## Context

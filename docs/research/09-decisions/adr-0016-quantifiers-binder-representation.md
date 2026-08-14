@@ -1,6 +1,7 @@
 # ADR-0016: Quantifiers — Binder Representation and Finite-Domain Semantics
 
 Status: accepted
+Index-summary: Quantifiers: named binders and finite-domain semantics
 Date: 2026-06-13
 
 ## Context

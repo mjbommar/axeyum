@@ -1,6 +1,7 @@
 # ADR-0045: Arbitrary-precision (bignum) on the algebraic path — `num-bigint`/`num-rational`, feature-gated
 
 Status: accepted
+Index-summary: Arbitrary-precision (`num-bigint`/`num-rational`, pure Rust, feature-gated `bignum`) on the algebraic path — intermediate resultant/Sturm overflow becomes a decision; core i128 `Rational` untouched; the prerequisite for a useful CAD/nlsat
 Date: 2026-06-21
 
 ## Context

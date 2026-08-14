@@ -1,6 +1,7 @@
 # ADR-0313: Give constraint builders one bounded namespace
 
 Status: accepted
+Index-summary: Group distinct, cardinality, and pseudo-Boolean constraint builders and close the R4 namespace sweep
 Date: 2026-07-20
 
 ## Context

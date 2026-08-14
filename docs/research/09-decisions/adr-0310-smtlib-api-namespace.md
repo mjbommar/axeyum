@@ -1,6 +1,7 @@
 # ADR-0310: Expose the curated SMT-LIB text-front-door module
 
 Status: accepted
+Index-summary: Expose the exact 25-entry SMT-LIB text-front-door module while retaining source-compatible root aliases
 Date: 2026-07-20
 
 ## Context

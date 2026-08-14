@@ -1,6 +1,7 @@
 # ADR-0378: Deterministically bounded SMT-LIB `distinct` expansion
 
 Status: accepted
+Index-summary: Bound eager SMT-LIB `distinct` pair expansion, balance admitted conjunctions, and classify the ceiling as `Unknown(ResourceLimit)`
 Date: 2026-08-07
 
 ## Context

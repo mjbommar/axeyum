@@ -1,6 +1,7 @@
 # ADR-0326: Preregister stable-virtual-root Maestro capture
 
 Status: accepted
+Index-summary: Reject isolated Maestro capture when its owning build requires an unregistered network font input
 Date: 2026-07-21
 
 ## Context

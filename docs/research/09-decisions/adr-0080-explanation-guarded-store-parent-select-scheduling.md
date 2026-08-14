@@ -1,6 +1,7 @@
 # ADR-0080: Explanation-Guarded Store-Parent Select Scheduling
 
 Status: accepted
+Index-summary: Explanation-guarded store-parent select scheduling: expose original store terms to final e-classes, materialize only candidate-violated select pairs, preserve lazy ROW as an independent obligation, and retain bounded outer rounds
 Date: 2026-07-10
 
 ## Context

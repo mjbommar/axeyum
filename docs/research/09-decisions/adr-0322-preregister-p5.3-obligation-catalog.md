@@ -1,6 +1,7 @@
 # ADR-0322: Preregister the P5.3 obligation catalog
 
 Status: accepted
+Index-summary: Accept the reviewer-facing P5.3 obligation catalog with one bounded page per accepted family
 Date: 2026-07-21
 
 ## Context

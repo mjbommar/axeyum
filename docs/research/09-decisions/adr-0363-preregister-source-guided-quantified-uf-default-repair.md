@@ -1,6 +1,7 @@
 # ADR-0363: Preregister source-guided quantified-UF default repair
 
 Status: proposed
+Index-summary: Preregister one bounded source-guided Int-result UF-default retry after established quantified-UF completion routes
 Date: 2026-07-23
 
 ## Context

@@ -1,6 +1,8 @@
 # ADR-0024: Nonlinear Real Arithmetic via Linear Abstraction + Replay
 
 Status: accepted (first slice implemented 2026-06-14)
+Index-summary: Nonlinear real arithmetic via linear abstraction + replay (sound, incomplete)
+Index-status: accepted
 Date: 2026-06-14
 
 ## Context

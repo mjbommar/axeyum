@@ -1,6 +1,7 @@
 # ADR-0231: Deadline-aware QF_BV proof coverage
 
 Status: accepted
+Index-summary: Deadline-aware QF_BV proof coverage: all 1,505 width-at-most-8 generated UNSAT rows receive rechecked CNF DRAT and 1,487 receive stronger end-to-end certificates under a declared 100 ms proof-search policy, with all 18 uncovered seeds retained in the denominator
 Date: 2026-07-17
 
 ## Context

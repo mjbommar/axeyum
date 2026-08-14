@@ -1,6 +1,7 @@
 # ADR-0384: An honest evidence front door — three-valued checking, bounded proof production, retained subjects
 
 - Status: proposed
+- Index-summary: Three-valued evidence checking, bounded proof production, retained checking subjects
 - Date: 2026-08-12
 - Deciders: (pending review)
 

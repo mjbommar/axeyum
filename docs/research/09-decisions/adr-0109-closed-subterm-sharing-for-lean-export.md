@@ -1,6 +1,7 @@
 # ADR-0109: Closed-subterm sharing for Lean export
 
 Status: accepted
+Index-summary: Closed-subterm sharing for Lean export: deterministically hoist repeated closed kernel DAG nodes into top-level definitions while preserving legacy rendering and binder safety
 Date: 2026-07-11
 
 ## Context

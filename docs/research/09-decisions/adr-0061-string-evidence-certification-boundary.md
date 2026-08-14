@@ -1,6 +1,7 @@
 # ADR-0061: Evidence certification for non-arena theories lives at the text front door
 
 Status: accepted
+Index-summary: Evidence certification for non-arena theories (strings/regex) lives at the **text** front door, not the arena one — the word/regex/length cores are not representable in the term IR (arena view is empty/bounded, which produced two wrong `checked=true` verdicts, #62/#63). `produce_evidence_smtlib` delegates the decision to `solve_smtlib` and wraps the sound verdict; a certified string `unsat` is a **self-contained** variant (`UnsatRegexEmptiness`) whose `check()` re-derives from the parse-tree `Membership`, ignoring `(arena, assertions)`; uncertified classes stay a correct bare `Unsat(None)`. Soundness trap: `Unsat(None).check()` is a vacuous `Ok(true)` → consumers gate crediting on `is_certified()`. Extensible pattern for #58b word-clash + future non-arena theories
 Date: 2026-07-07
 
 ## Context

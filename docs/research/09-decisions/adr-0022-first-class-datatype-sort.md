@@ -1,6 +1,8 @@
 # ADR-0022: First-Class Datatype Sort in the IR
 
 Status: accepted (IR foundation implemented 2026-06-13; datatype solving deferred)
+Index-summary: First-class datatype sort in the IR (recursive datatypes)
+Index-status: accepted
 Date: 2026-06-13
 
 ## Context

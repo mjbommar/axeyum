@@ -1,6 +1,7 @@
 # ADR-0148: Bounded CNF container capacity hints
 
 Status: deferred
+Index-summary: Bounded CNF container capacity hints: pre-size formula headers and the exact-dedup index from existing variable/root counts without an observational pass
 Date: 2026-07-14
 
 ## Context

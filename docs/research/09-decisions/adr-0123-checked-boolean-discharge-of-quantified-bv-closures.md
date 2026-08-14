@@ -1,6 +1,7 @@
 # ADR-0123: Checked Boolean discharge of quantified BV closures
 
 Status: accepted
+Index-summary: Checked Boolean discharge of quantified BV closures: permit opaque BV syntax in free-Boolean model certificates only when three-valued original-IR evaluation proves it irrelevant
 Date: 2026-07-11
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0262: Preregister wider authority timeout/policy evidence
 
 Status: accepted
+Index-summary: Accept the wider first-20 tcpip sole-authority matrix: timeout is a no-op across 100/250/1000 ms, AnyModel remains raw-divergent, and LeastUnsigned gives exact parity at substantial cost
 Date: 2026-07-19
 
 Result state: accepted; all six cells valid

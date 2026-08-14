@@ -1,6 +1,7 @@
 # ADR-0319: Preregister checked MIR lexical-scope metadata
 
 Status: accepted
+Index-summary: Accept exact nested rustc MIR lexical-scope metadata with flattened typed locals
 Date: 2026-07-21
 
 ## Context

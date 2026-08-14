@@ -1,6 +1,7 @@
 # ADR-0066: Canonical Online QF_UFBV Combination
 
 Status: accepted
+Index-summary: Canonical online QF_UFBV combination: abstraction-only applications plus explicit argument/result interface equalities drive one `CdclT` trail over the e-graph and warm incremental BV solver; replay-gated models, bounded admission, eager proof/fallback route retained
 Date: 2026-07-09
 
 ## Context

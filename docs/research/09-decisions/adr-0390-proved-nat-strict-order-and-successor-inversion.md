@@ -1,6 +1,7 @@
 # ADR-0390: Proved Nat strict order and successor inversion
 
 Status: accepted
+Index-summary: Proved Nat strict order and successor inversion for Rado ranges
 
 Date: 2026-08-13
 

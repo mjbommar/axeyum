@@ -1,6 +1,7 @@
 # ADR-0175: Deterministic open-addressed AIG unique table
 
 Status: accepted
+Index-summary: Deterministic open-addressed AIG unique table: exact v4 attribution selects a low-hit ordered-table path; the replacement preserves structure and improves the repeated three-driver native ratio from 0.742 to 0.680
 Date: 2026-07-15
 
 ## Context

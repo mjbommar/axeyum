@@ -1,6 +1,7 @@
 # ADR-0126: Evaluator-replayed negated-existential witnesses
 
 Status: accepted
+Index-summary: Evaluator-replayed negated-existential witnesses: check a concrete Bool/BV witness directly against an untouched top-level negated existential
 Date: 2026-07-11
 
 ## Context

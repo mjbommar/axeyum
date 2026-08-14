@@ -1,6 +1,7 @@
 # ADR-0243: Source-backed Glaurung positive finding control
 
 Status: accepted
+Index-summary: Source-backed Glaurung positive control: exact source/binary validation joins 14 finding rows across nine planted WDM fixtures to stable sole-authority output without claiming real-world recall
 Date: 2026-07-18
 
 ## Context

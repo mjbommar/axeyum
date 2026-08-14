@@ -1,6 +1,7 @@
 # ADR-0107: Checked Boolean-guard models for quantified SAT
 
 Status: accepted
+Index-summary: Checked Boolean-guard models for quantified SAT: search a quantifier-erased Boolean skeleton, then independently prove untouched assertions under the candidate free-Boolean assignment with exhaustive bound-Bool and symbolic affine-Int checking
 Date: 2026-07-11
 
 ## Context

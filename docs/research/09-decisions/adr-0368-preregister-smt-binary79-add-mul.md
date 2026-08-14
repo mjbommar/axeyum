@@ -1,6 +1,7 @@
 # ADR-0368: Preregister SMT `(15,64)` add/sub/mul circuits
 
 Status: accepted
+Index-summary: Accept operator-specific SMT `(15,64)` add/sub/mul admission behind an all-mode independent oracle sweep
 
 Date: 2026-07-27
 

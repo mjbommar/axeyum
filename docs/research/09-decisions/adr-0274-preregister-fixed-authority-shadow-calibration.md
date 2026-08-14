@@ -1,6 +1,7 @@
 # ADR-0274: Preregister fixed-authority shadow-limit calibration
 
 Status: accepted
+Index-summary: Preregister an observation-aware fixed-Z3-authority calibration of Axeyum and Bitwuzla shadow limits on one invariant tcpip stream
 Date: 2026-07-19
 
 Result state: executed and accepted; zero census rows

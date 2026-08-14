@@ -1,6 +1,7 @@
 # ADR-0347: Type Lean Nat literals only against a checked canonical bootstrap
 
 Status: accepted
+Index-summary: Type Lean Nat literals only against a checked canonical bootstrap and reproduce offset/recursor conversion separately from accelerated operations
 
 Date: 2026-07-22
 

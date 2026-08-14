@@ -1,6 +1,7 @@
 # ADR-0117: Source-bound detached quantifier-literal propagation
 
 Status: accepted
+Index-summary: Source-bound detached quantifier-literal propagation: check exact source instances and named false-sibling equality reasons before asserting a unit
 Date: 2026-07-11
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0217: Glaurung small-driver performance regime
 
 Status: accepted
+Index-summary: Glaurung small-driver performance regime: repeated fair controls establish two Axeyum wins, one tie, and one Z3 win while deferring the causal boundary to joined query-feature attribution
 Date: 2026-07-17
 
 ## Context

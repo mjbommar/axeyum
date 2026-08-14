@@ -1,6 +1,7 @@
 # ADR-0143: Opt-in structural bit-demand profiling
 
 Status: accepted
+Index-summary: Opt-in structural bit-demand profiling: production lowering records actual materialization without observational analysis, while explicit diagnostic runs carry machine-readable completeness
 Date: 2026-07-14
 
 ## Context

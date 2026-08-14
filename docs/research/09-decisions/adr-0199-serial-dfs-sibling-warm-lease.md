@@ -1,6 +1,7 @@
 # ADR-0199: Serial DFS sibling warm lease
 
 Status: accepted
+Index-summary: Accept serial DFS sibling warm leasing: reference-counted continuation ownership over exact snapshot LCP transitions, with zero terminal gauges, explicit off, and repeated real-client alarms
 Date: 2026-07-16
 
 ## Context

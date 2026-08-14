@@ -1,6 +1,7 @@
 # ADR-0136: QF_BV client integration and benchmark boundary
 
 Status: accepted
+Index-summary: QF_BV client integration and benchmark boundary: explicit unsigned coercion, minimal profile, warm extract preprocessing, model ergonomics, per-worker solvers, and decided-rate-gated Glaurung measurement
 Date: 2026-07-13
 
 ## Context

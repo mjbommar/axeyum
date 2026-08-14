@@ -1,6 +1,7 @@
 # ADR-0195: Skip empty warm-theory model projection
 
 Status: accepted
+Index-summary: Skip empty warm-theory model projection: preserve complete scalar models and original replay while avoiding an unnecessary active-root array-select traversal
 Date: 2026-07-16
 
 ## Context

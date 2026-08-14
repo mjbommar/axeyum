@@ -1,6 +1,7 @@
 # ADR-0041: Lean-backed SOS evidence (the SOS unsat carries its kernel-checked Lean module)
 
 Status: accepted
+Index-summary: Lean-backed SOS evidence — the SOS unsat's `Evidence::UnsatSos` carries its kernel-checked Lean module, re-derived+re-checked on `Evidence::check`
 Date: 2026-06-21
 Relates to: [ADR-0039](adr-0039-degree-2-sos-psd-certificate.md) (the SOS
 decision), [ADR-0040](adr-0040-sos-lean-reconstruction.md) (SOS→Lean

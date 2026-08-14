@@ -1,6 +1,7 @@
 # ADR-0304: Correct canonical cache identity and rerun the factorial
 
 Status: accepted
+Index-summary: Reject the first factorial on textual-query versus canonical-set classification drift; freeze a fresh otherwise-identical rerun against corrected opportunity v2
 Date: 2026-07-20
 
 Result state: successor accepted; mixed per-driver additivity, warm cache-on

@@ -1,6 +1,7 @@
 # ADR-0101: Checked finite equality-partition quantifiers
 
 Status: accepted
+Index-summary: Checked finite equality-partition quantifiers: quotient an Int binder by its explicit equality constants plus one other representative and recursively evaluate the untouched closed formula
 Date: 2026-07-11
 
 ## Context

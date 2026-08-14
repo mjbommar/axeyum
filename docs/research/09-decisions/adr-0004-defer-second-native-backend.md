@@ -1,6 +1,7 @@
 # ADR-0004: Defer The Second Native Backend
 
 Status: accepted
+Index-summary: Defer the second native backend
 Date: 2026-06-11
 
 ## Context

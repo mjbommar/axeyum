@@ -1,6 +1,7 @@
 # ADR-0330: Preregister Tock cache resolver correction
 
 Status: accepted
+Index-summary: Preregister minimal resolver-file bind and real DNS probe for Tock cache preparation v3
 Date: 2026-07-21
 
 ## Context

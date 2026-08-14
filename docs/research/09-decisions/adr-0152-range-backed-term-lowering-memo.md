@@ -1,6 +1,7 @@
 # ADR-0152: Range-backed term-lowering memo
 
 Status: deferred
+Index-summary: Range-backed term-lowering memo: use dense completed-term ranges and authoritative bindings instead of retaining a second ordered map of per-term bit vectors
 Date: 2026-07-14
 
 ## Context

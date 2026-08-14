@@ -1,6 +1,7 @@
 # ADR-0115: E-class label and ground-argument path filters
 
 Status: accepted
+Index-summary: E-class label and ground-argument path filters: prune same-shape merge paths by exact nested declarations and nullary ground siblings
 Date: 2026-07-11
 
 ## Context

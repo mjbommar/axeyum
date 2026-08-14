@@ -1,6 +1,7 @@
 # ADR-0256: Accept bounded external DRAT interoperability
 
 Status: accepted
+Index-summary: Accept one real standard DIMACS/DRAT external-consumer cell plus a separately preregistered satisfiable-CNF checker sanity control, with the trivial-proof limitation explicit
 Date: 2026-07-19
 
 ## Context

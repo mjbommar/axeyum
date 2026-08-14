@@ -1,6 +1,7 @@
 # ADR-0108: Checked counterexample covers for quantified UNSAT
 
 Status: accepted
+Index-summary: Checked counterexample covers for quantified UNSAT: source-instantiate concrete Bool/Int counterexamples, independently prove each sufficient free-Boolean cube invalid, then prove the cubes cover the weakened ground skeleton
 Date: 2026-07-11
 
 ## Context

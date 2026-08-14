@@ -1,6 +1,7 @@
 # ADR-0249: Preregister the usbprint policy-resource frontier
 
 Status: accepted
+Index-summary: Preregister and execute a point-major 5/10/15-function usbprint frontier; preserve the rejected prefix-15/site-hash-one work drift, common prefix 10, and post-result hidden-deadline attribution without claiming a resource bracket
 Date: 2026-07-19
 
 Result state: executed; rejected at the protocol gate

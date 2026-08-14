@@ -1,6 +1,7 @@
 # ADR-0159: Paired rewrite-ablation attribution
 
 Status: accepted
+Index-summary: Paired rewrite ablation: same-revision path pairing, exact one-rule manifest delta, strict correctness/configuration gates, and separate structural/timing attribution
 Date: 2026-07-14
 
 ## Context

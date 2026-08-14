@@ -1,6 +1,7 @@
 # ADR-0164: Opt-in Glaurung snapshot-to-incremental reuse
 
 Status: accepted
+Index-summary: Opt-in Glaurung snapshot-to-incremental reuse: structural longest-common-prefix scopes retain arena/AIG/CNF/SAT state and halve native client time without treating cloned expression IDs as global identity
 Date: 2026-07-15
 
 ## Context

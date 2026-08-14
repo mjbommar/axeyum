@@ -1,6 +1,7 @@
 # ADR-0334: Preregister Tock LLVM capture v3 replay correction
 
 Status: accepted
+Index-summary: Preregister the narrow Tock LLVM capture-v3 structural replay correction
 Date: 2026-07-21
 
 ## Context

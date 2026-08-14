@@ -1,6 +1,7 @@
 # ADR-0370: Preregister SMT `(15,64)` symbolic square root
 
 Status: accepted
+Index-summary: Accept SMT `(15,64)` symbolic sqrt behind an exact all-mode dyadic rounding oracle
 
 Date: 2026-07-27
 

@@ -1,6 +1,7 @@
 # ADR-0008: Consumer Scenario Models For Testing And Optimization
 
 Status: accepted
+Index-summary: Consumer scenario models for testing and optimization
 Date: 2026-06-13
 
 ## Context

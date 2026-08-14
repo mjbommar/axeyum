@@ -1,6 +1,7 @@
 # ADR-0374: Admit Bool free symbols in quantified-BV model certificates
 
 Status: accepted
+Index-summary: Admit Bool free symbols in quantified-BV model certificates and certify skolemized negated universals
 
 Date: 2026-07-29
 

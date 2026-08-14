@@ -1,6 +1,8 @@
 # ADR-0023: Floating-Point (IEEE 754) as Bit-Vector Formula Builders
 
 Status: accepted (non-arithmetic core implemented 2026-06-14; arithmetic deferred)
+Index-summary: Floating-point (IEEE 754) as bit-vector formula builders, non-arithmetic core first
+Index-status: accepted
 Date: 2026-06-14
 
 ## Context

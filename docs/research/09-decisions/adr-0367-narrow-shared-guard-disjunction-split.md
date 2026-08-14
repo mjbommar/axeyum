@@ -1,6 +1,7 @@
 # ADR-0367: Narrow shared-guard disjunction splitting in SAT-BV
 
 Status: accepted
+Index-summary: Accept a bounded SAT-BV split for large disjunctions of negated obligations with one shared antecedent
 
 Date: 2026-07-27
 

@@ -1,6 +1,7 @@
 # ADR-0088: Retained Warm Array-Valued UF Parents
 
 Status: accepted
+Index-summary: Retained warm array-valued UF parents: abstract finite-scalar application arguments and reads, enforce conditional read congruence, project one array result per concrete argument tuple, hide private owners, and replay
 Date: 2026-07-10
 
 ## Context

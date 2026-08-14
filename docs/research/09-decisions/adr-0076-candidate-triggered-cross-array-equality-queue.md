@@ -1,6 +1,8 @@
 # ADR-0076: Candidate-Triggered Cross-Array Equality Queue
 
 Status: superseded by ADR-0077
+Index-summary: Candidate-triggered cross-array equality queue: retain diff indices, track new/delayed/applied state, and observe only a deterministic candidate-true equality path at a false equality's witness under shared round/site/interface/replay bounds
+Index-status: superseded by 0077
 Date: 2026-07-10
 
 ADR-0077 connects the flags to their original array equalities on the canonical

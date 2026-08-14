@@ -1,6 +1,7 @@
 # ADR-0114: Compiled e-match parent-path tries
 
 Status: accepted
+Index-summary: Compiled e-match parent-path tries: share exact declaration/argument transitions and queue only pattern terminals reachable from merged classes
 Date: 2026-07-11
 
 ## Context

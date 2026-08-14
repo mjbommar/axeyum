@@ -1,6 +1,7 @@
 # ADR-0332: Preregister Tock cache structural metadata authentication
 
 Status: accepted
+Index-summary: Preregister structural active-metadata graph and lock authentication for Tock cache preparation v5
 Date: 2026-07-21
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0140: Kernel-checked vacuous BV existential prefixes
 
 - **Status:** accepted
+- Index-summary: Kernel-checked vacuous BV existential prefixes: genuine `Exists.rec` elimination plus a typed computational counterexample closes ADR-0128's public row
 - **Date:** 2026-07-13
 - **Owners:** solver / evidence / Lean reconstruction
 - **Extends:** ADR-0128, ADR-0138, ADR-0139

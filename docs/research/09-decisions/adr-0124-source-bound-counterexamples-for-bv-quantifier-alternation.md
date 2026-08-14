@@ -1,6 +1,7 @@
 # ADR-0124: Source-bound counterexamples for BV quantifier alternation
 
 Status: accepted
+Index-summary: Source-bound counterexamples for BV quantifier alternation: concrete outer bindings plus an exact instantiated QF_BV DRAT refutation
 Date: 2026-07-11
 
 ## Context

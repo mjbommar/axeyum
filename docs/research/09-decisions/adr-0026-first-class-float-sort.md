@@ -1,6 +1,8 @@
 # ADR-0026: First-Class Floating-Point Sort in the IR
 
 Status: accepted (implemented 2026-06-14)
+Index-summary: First-class floating-point sort in the IR (disambiguates FP conversions)
+Index-status: accepted
 Date: 2026-06-14
 
 ## Context

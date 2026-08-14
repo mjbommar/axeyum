@@ -1,6 +1,7 @@
 # ADR-0146: Reusable direct-root OR-leaf scratch
 
 Status: deferred
+Index-summary: Reusable direct-root OR-leaf scratch: collect only emission leaves into one cleared encoder-local buffer instead of rebuilding owned leaf/helper vectors
 Date: 2026-07-14
 
 ## Context

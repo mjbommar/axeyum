@@ -1,6 +1,7 @@
 # ADR-0241: Versioned Glaurung finding-confidence partition
 
 Status: accepted
+Index-summary: Versioned Glaurung finding-confidence partition: preserve raw bytes, fail closed on producer-policy drift, close tcpip's raw remainder as diagnostic, and select a nonzero usbprint labeling target
 Date: 2026-07-18
 
 ## Context

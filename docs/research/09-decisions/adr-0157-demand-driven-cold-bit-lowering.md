@@ -1,6 +1,7 @@
 # ADR-0157: Demand-driven cold bit lowering
 
 Status: deferred
+Index-summary: Demand-driven cold bit lowering: semantically correct but deferred after unconditional analysis regressed the real Glaurung gate
 Date: 2026-07-14
 
 ## Context

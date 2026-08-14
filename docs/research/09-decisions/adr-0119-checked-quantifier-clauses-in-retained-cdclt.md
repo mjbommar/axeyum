@@ -1,6 +1,7 @@
 # ADR-0119: Checked quantifier clauses in retained CDCL(T)
 
 Status: accepted
+Index-summary: Checked quantifier clauses in retained CDCL(T): recheck ADR-0118 derivations, append dynamic equality atoms/clauses at level zero, retain learned search state, and independently replay any online refutation
 Date: 2026-07-11
 
 ## Context

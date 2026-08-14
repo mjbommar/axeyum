@@ -1,6 +1,8 @@
 # ADR-0059: Enable CNF inprocessing + vivification by default (paired), gated on a broader measure
 
 Status: **proposed → resolved: flip DECLINED (broader measure, 2026-07-08, task #60).**
+Index-summary: Enable CNF inprocessing + vivification by default, PAIRED — the built-but-off levers measured net-positive on public p4dfa (task #56: OFF→ALL-ON 4→7 @20s, 3→5 @3s, DISAGREE=0). Pairing is load-bearing (inprocessing-alone regresses at a tight budget; vivify recovers). Code flip gated on a broader QF_BV re-measure. Verdict: p4dfa is search-bound (CNF already smaller than Z3's) → the real lever is SAT-core modernization P1.3; this banks the cheap pre-pass win. Corrects the stale "Z3 113/113 ≤1s" (measured 8–9/113 @20s)
+Index-status: proposed
 The paired levers stay `false` by default (opt-in). See "Resolution" below.
 Date: 2026-07-07 (proposed); 2026-07-08 (resolved)
 

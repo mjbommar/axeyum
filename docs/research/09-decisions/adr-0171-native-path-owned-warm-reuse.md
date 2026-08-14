@@ -1,6 +1,7 @@
 # ADR-0171: Native path-owned warm reuse
 
 Status: accepted
+Index-summary: Native path-owned warm reuse: isolate retained solver state per explorer path, accept repeated sub-Z3 lineage performance, and require bounded lifecycle/memory fallback before default admission
 Date: 2026-07-15
 
 ## Context

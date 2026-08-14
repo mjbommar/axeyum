@@ -1,6 +1,7 @@
 # ADR-0172: Native lineage phase attribution
 
 Status: accepted
+Index-summary: Native lineage phase attribution: exact-query/path-bound incremental deltas identify CNF construction as the dominant remaining warm stage without taxing ordinary solvers
 Date: 2026-07-15
 
 ## Context

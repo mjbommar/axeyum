@@ -1,6 +1,7 @@
 # ADR-0325: Preregister dependency-wide Maestro path remapping
 
 Status: accepted
+Index-summary: Reject dependency-wide path remapping after zero root-token leakage but continued raw full-module drift
 Date: 2026-07-21
 
 ## Context

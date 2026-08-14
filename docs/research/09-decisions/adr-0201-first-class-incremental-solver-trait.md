@@ -1,6 +1,7 @@
 # ADR-0201: First-class incremental solver trait
 
 Status: accepted
+Index-summary: First-class incremental solver trait: object-safe retained assert/push/pop/check/assume contract over arena-explicit lifetime-free terms, implemented first by the warm QF_BV engine
 Date: 2026-07-16
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0194: Incremental model-lift attribution
 
 Status: accepted
+Index-summary: Incremental model-lift attribution: opt-in nested timers and exact operation counts separate AIG recomputation, assignment reconstruction, and complete-model construction
 Date: 2026-07-16
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0081: Dynamic In-Search ROW Insertion
 
 Status: accepted
+Index-summary: Dynamic in-search ROW insertion: reserve bounded per-store atoms dormant, activate them with permanent valid ROW clauses after a violated candidate, and resume the same `CdclT` search; generalized to pair-generated atoms by ADR-0082
 Date: 2026-07-10
 
 Follow-up: [ADR-0082](adr-0082-bounded-dynamic-interface-atoms.md) generalizes

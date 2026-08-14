@@ -1,6 +1,7 @@
 # ADR-0247: Preregister corrected Glaurung A0 policy sweep v3
 
 Status: accepted
+Index-summary: Corrected Glaurung A0 sweep v3: all five policies preserve the exact 14-row control; deterministic tcpip diagnostics vary 84--110 with material work/RSS cost but remain unlabeled
 Date: 2026-07-18
 
 Result state: accepted; all five policies and both strata complete

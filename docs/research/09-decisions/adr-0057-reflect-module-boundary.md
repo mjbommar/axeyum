@@ -1,6 +1,7 @@
 # ADR-0057: The IR reflectors are an `axeyum-verify::reflect` module, not a new crate (yet)
 
 Status: accepted
+Index-summary: The IR reflectors are an `axeyum-verify::reflect` module, not a new crate (yet) — promote the per-test reflector scaffolding to a real library module (`reflect::mir`/`reflect::llvm`) with one consumer today; the crate split waits for a second proven consumer (ADR-0001 minimal-split discipline)
 Date: 2026-07-06
 
 ## Context

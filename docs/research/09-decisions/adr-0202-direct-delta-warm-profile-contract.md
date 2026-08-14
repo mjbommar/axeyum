@@ -1,6 +1,7 @@
 # ADR-0202: Direct-delta warm profile contract
 
 Status: accepted
+Index-summary: Direct-delta warm profile contract: versioned entry mode plus persistent/temporary translation and root-encoding partitions, fail-closed across historical and current artifacts
 Date: 2026-07-16
 
 ## Context

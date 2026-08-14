@@ -1,6 +1,7 @@
 # ADR-0167: Enter the proof-construction rung — scope, and supersede the stale exclusion
 
 Status: accepted
+Index-summary: Enter the proof-construction rung for a certificate-first goal layer, gated; supersede `proof-assistant-lessons.md`'s stale "implementing dependent type theory is out of scope" (overtaken by ADR-0036)
 Date: 2026-07-15
 
 ## Context

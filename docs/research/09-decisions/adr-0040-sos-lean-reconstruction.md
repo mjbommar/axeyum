@@ -1,6 +1,8 @@
 # ADR-0040: SOS certificate → Lean reconstruction via ring axioms + a degree-2 normalizer
 
 Status: accepted (plan; implementation is a staged keystone)
+Index-summary: SOS certificate → Lean reconstruction via minimal commutative-ordered-ring axioms + a degree-2 ring normalizer (kernel-checked proof for the SOS unsat route)
+Index-status: accepted
 Date: 2026-06-21
 Relates to: [ADR-0039](adr-0039-degree-2-sos-psd-certificate.md) (the degree-2
 SOS/PSD decision), [ADR-0036](adr-0036-lean-kernel-crate.md) (the in-tree Lean

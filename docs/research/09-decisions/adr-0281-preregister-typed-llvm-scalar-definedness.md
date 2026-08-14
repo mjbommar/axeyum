@@ -1,6 +1,7 @@
 # ADR-0281: Preregister typed LLVM scalar instructions and definedness
 
 Status: accepted
+Index-summary: Preregister typed scalar LLVM instructions plus explicit poison/undefinedness predicates before migrating checked reflection
 Date: 2026-07-19
 
 Result state: accepted; implementation and gates complete

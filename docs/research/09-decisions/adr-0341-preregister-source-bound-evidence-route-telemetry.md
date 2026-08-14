@@ -1,6 +1,7 @@
 # ADR-0341: Preregister source-bound evidence-route telemetry
 
 Status: proposed
+Index-summary: Preregister source-bound evidence-route telemetry with verdict-invariant recorder plumbing
 Date: 2026-07-21
 
 ## Context

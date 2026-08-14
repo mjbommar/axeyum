@@ -1,6 +1,7 @@
 # ADR-0244: Preregister the corrected Glaurung A0 policy sweep
 
 Status: deferred
+Index-summary: Preregistered corrected Glaurung A0 sweep v1: failed closed when all four minimum/complete-usbprint processes hit the declared wall deadline
 Date: 2026-07-18
 
 Result state: v1 failed closed at the complete-usbprint policy-resource boundary

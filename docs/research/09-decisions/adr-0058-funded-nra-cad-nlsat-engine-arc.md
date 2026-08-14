@@ -1,6 +1,8 @@
 # ADR-0058: The funded QF_NRA CAD/nlsat engine arc
 
 Status: proposed — **Phase B superseded/OBE (see Scope refresh); remaining arc = Phase C + D**
+Index-summary: The funded QF_NRA CAD/nlsat engine arc — **Phase B OBE (10th review): its DPLL→CAD edge (`5ede57f4`) + bignum coefficient path (#43 `4d74b288`) already landed** (~+2 rows); remaining arc = Phase C (ICP/transcendental, δ-sat⇒unknown) + D (projection/cell scaling) for the ~6 genuine-engine residue rows, per-cell certs → kernel-checked Lean `False`, pure Rust, dual-oracle DISAGREE=0. Pivot re-opened: Phase C/D DE-PRIORITIZED below strings breadth (the dominant measured gap post-arithmetic); stays proposed, NOT ratified
+Index-status: proposed
 Date: 2026-07-07
 
 > **Scope refresh (2026-07-07, 10th review).** Both of Phase B's named

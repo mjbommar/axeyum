@@ -1,6 +1,7 @@
 # ADR-0083: Deadline-Aware Bit-Vector Lowering
 
 Status: accepted
+Index-summary: Deadline-aware bit-vector lowering: poll DAG and wide-circuit construction, classify expiry as `Unknown(Timeout)`, and share conservative cumulative encoding admission with canonical UFBV/AUFBV
 Date: 2026-07-10
 
 ## Context

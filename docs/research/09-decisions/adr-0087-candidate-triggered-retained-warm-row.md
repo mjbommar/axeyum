@@ -1,6 +1,7 @@
 # ADR-0087: Candidate-Triggered Retained Warm ROW
 
 Status: accepted
+Index-summary: Candidate-triggered retained warm ROW: retain one exact transitive scalar summary per observed structural read, activate only candidate-false summaries in the persistent incremental CNF, share one deadline, and preserve leaf projection plus original replay
 Date: 2026-07-10
 
 ## Context

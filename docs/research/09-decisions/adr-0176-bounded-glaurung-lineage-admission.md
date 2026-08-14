@@ -1,6 +1,7 @@
 # ADR-0176: Bounded Glaurung lineage admission
 
 Status: accepted
+Index-summary: Bounded Glaurung lineage admission: measured 9-path/128-assertion defaults preserve Axeyum time, reduce real-driver RSS, expose fallback identity, and keep warm reuse explicit
 Date: 2026-07-15
 
 ## Context

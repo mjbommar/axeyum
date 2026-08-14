@@ -1,6 +1,7 @@
 # ADR-0391: Generic Nat finite-range sums
 
 Status: accepted
+Index-summary: Generic zero-axiom Nat finite-range sums
 
 Date: 2026-08-13
 

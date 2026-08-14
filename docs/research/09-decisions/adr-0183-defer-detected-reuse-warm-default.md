@@ -1,6 +1,7 @@
 # ADR-0183: Defer detected-reuse warm default
 
 Status: accepted
+Index-summary: Defer detected-reuse as default: repeated auto saves 16--21% RSS but breaches the 3% time alarm; retain it only as an explicit low-memory policy
 Date: 2026-07-16
 
 ## Context

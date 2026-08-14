@@ -1,6 +1,7 @@
 # ADR-0272: Preregister the six-cell neutral warm regime map
 
 Status: accepted
+Index-summary: Accept the topology-equivalent six-cell neutral map: Axeyum beats warm Z3 on three drivers but warm Bitwuzla wins all four, closing any performance-leadership framing
 Date: 2026-07-19
 
 ## Context

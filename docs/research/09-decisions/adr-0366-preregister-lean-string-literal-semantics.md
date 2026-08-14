@@ -1,6 +1,7 @@
 # ADR-0366: Preregister checked Lean String-literal semantics
 
 Status: proposed
+Index-summary: Preregister checked Lean String-literal typing and exact Unicode-scalar constructor conversion across defeq, projection, recursors, and import
 
 Date: 2026-07-23
 

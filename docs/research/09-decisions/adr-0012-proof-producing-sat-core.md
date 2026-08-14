@@ -1,6 +1,7 @@
 # ADR-0012: First Proof-Producing Pure-Rust SAT Core
 
 Status: accepted
+Index-summary: First proof-producing pure-Rust SAT core
 Date: 2026-06-13
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0144: Collision-safe CNF clause deduplication index
 
 Status: accepted
+Index-summary: Collision-safe CNF clause deduplication index: fingerprint buckets reference formula-owned clauses and require exact equality before suppressing duplicates
 Date: 2026-07-14
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0093: Retained Warm Structural Array-Valued UF Parameters
 
 Status: accepted
+Index-summary: Retained warm structural array-valued UF parameters: supported store/constant/array-ITE keys retain scalar dependencies, realize private structural owners before full-value function projection, use equality classes or relation flags for key congruence, and replay originals
 Date: 2026-07-10
 
 ## Context

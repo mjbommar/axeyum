@@ -1,6 +1,7 @@
 # ADR-0295: Preregister checked LLVM direct-body call reflection
 
 Status: accepted
+Index-summary: Accept an opt-in checked direct-body baseline for the two exact Glaurung PAC loop calls; keep ordinary/external calls rejected by default
 Date: 2026-07-20
 
 ## Context

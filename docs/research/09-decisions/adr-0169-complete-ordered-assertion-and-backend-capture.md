@@ -1,6 +1,7 @@
 # ADR-0169: Complete ordered assertion and backend capture
 
 Status: accepted
+Index-summary: Complete ordered assertion/backend capture: persist every root with producer-declared symbols and separate same-occurrence Z3/Axeyum timers
 Date: 2026-07-15
 
 ## Context

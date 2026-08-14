@@ -1,6 +1,7 @@
 # ADR-0038: Real algebraic numbers (defining polynomial + isolating interval)
 
 Status: accepted
+Index-summary: Real algebraic numbers (defining poly + isolating interval); single-variable NRA decider with irrational witnesses (slice 1)
 Date: 2026-06-20
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0166: Reassess the Alethe proof-format bet against CPC
 
 Status: proposed
+Index-summary: Reassess the Alethe proof-format bet against CPC: `lean-smt` targets CPC, and cvc5's Alethe output has no bit-vectors — decide the keystone rather than inherit it
 Date: 2026-07-15
 
 ## Context

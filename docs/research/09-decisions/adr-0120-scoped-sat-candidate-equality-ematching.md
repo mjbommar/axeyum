@@ -1,6 +1,7 @@
 # ADR-0120: Scoped SAT-candidate equality e-matching
 
 Status: accepted
+Index-summary: Scoped SAT-candidate equality e-matching: use true candidate equalities only in a rollback scope to queue affected nested triggers, materialize exact source instances, pop, and add them through the retained checked-clause gate
 Date: 2026-07-11
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0297: Preregister explicit scalar call-requirement obligations
 
 Status: accepted
+Index-summary: Accept path-conditioned scalar call requirements as explicit transition-system bad states rather than silently pruning violating callers
 Date: 2026-07-20
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0015: Linear Real Arithmetic via Exact-Rational Simplex
 
 Status: accepted
+Index-summary: Linear real arithmetic via exact-rational simplex
 Date: 2026-06-13
 
 ## Context

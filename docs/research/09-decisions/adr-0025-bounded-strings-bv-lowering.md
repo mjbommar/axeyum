@@ -1,6 +1,8 @@
 # ADR-0025: Bounded-Length Strings by Bit-Vector Lowering
 
 Status: accepted (first slice implemented 2026-06-14)
+Index-summary: Bounded-length strings by bit-vector lowering (BMC fragment)
+Index-status: accepted
 Date: 2026-06-14
 
 ## Context

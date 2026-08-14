@@ -1,6 +1,7 @@
 # ADR-0200: Open-addressed primary CNF fingerprint index
 
 Status: deferred
+Index-summary: Open-addressed primary CNF fingerprint index: structurally exact direct AIG-table transfer rejected after representative CNF/total regressions; accepted primary map restored
 Date: 2026-07-16
 
 ## Context

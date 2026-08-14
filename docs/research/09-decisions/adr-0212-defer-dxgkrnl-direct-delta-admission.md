@@ -1,6 +1,7 @@
 # ADR-0212: Defer dxgkrnl direct-delta admission
 
 Status: deferred
+Index-summary: Defer wider direct-delta admission: dxgkrnl is an exact no-op functionality control, but ordinary-core timing fails the declared variance alarm and slower-core calibration changes bounded outcomes; win32k needs a different frontend
 Date: 2026-07-17
 
 ## Context

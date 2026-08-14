@@ -1,6 +1,7 @@
 # ADR-0275: Preregister joint triplet reproduction and bounded census
 
 Status: accepted
+Index-summary: Preregister exact joint-triplet reproduction before a conditional 338-function cold-Z3-authoritative six-cell census
 Date: 2026-07-19
 
 Result state: Phase A accepted; Phase B executed and rejected

@@ -1,6 +1,8 @@
 # ADR-0028: A software-float oracle for validating wide-format FP arithmetic
 
 Status: accepted (implemented for F128 add/mul/div/fma/sqrt, 2026-06-14)
+Index-summary: A software-float oracle (`rustc_apfloat`) for validating wide-format FP arithmetic
+Index-status: accepted
 Date: 2026-06-14
 
 ## Context

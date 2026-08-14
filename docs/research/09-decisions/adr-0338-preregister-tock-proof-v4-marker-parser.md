@@ -1,6 +1,7 @@
 # ADR-0338: Preregister Tock proof v4 marker parser
 
 Status: accepted
+Index-summary: Accept eight dual-DRAT Tock proofs and six replayed controls after exact first-row parser correction
 Date: 2026-07-21
 
 ## Context

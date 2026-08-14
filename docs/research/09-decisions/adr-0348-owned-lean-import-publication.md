@@ -1,6 +1,7 @@
 # ADR-0348: Publish Lean imports only as owned completed environments
 
 Status: accepted
+Index-summary: Publish Lean imports only as owned completed environments after the full stream succeeds
 
 Date: 2026-07-22
 

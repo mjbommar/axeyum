@@ -1,6 +1,7 @@
 # ADR-0303: Preregister a bounded engine-cache versus warm-solver factorial
 
 Status: accepted
+Index-summary: Preregister and freeze the bounded fixed-stream cold/warm x cache-off/exact/implication factorial for engine-cache additivity
 Date: 2026-07-20
 
 Result state: first 120-process campaign rejected at the independent cache-

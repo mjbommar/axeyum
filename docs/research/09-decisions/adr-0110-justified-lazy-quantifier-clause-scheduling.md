@@ -1,6 +1,7 @@
 # ADR-0110: Justified lazy quantifier-clause scheduling
 
 Status: accepted
+Index-summary: Justified lazy quantifier-clause scheduling: suppress redundant equality clauses and prioritize conflict/unit-like complete source instances without emitting unjustified bare literals
 Date: 2026-07-11
 
 ## Context

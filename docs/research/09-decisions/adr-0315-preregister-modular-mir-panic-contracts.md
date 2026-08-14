@@ -1,6 +1,7 @@
 # ADR-0315: Preregister modular MIR panic-contract propagation
 
 Status: accepted
+Index-summary: Accept exact checked-MIR callee-panic propagation, normal-return result guarding, and exhaustive replay before source annotations
 Date: 2026-07-21
 
 ## Context

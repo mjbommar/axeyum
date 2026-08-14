@@ -1,6 +1,7 @@
 # ADR-0039: Degree-2 sum-of-squares / PSD nonnegativity certificate for NRA
 
 Status: accepted
+Index-summary: Degree-2 sum-of-squares / PSD nonnegativity certificate for NRA (multivariate AM–GM and globally-(non)negative quadratic forms decide Unsat exactly)
 Date: 2026-06-20
 
 ## Context

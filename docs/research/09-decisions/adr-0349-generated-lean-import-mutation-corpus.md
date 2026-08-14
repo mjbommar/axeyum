@@ -1,6 +1,7 @@
 # ADR-0349: Generate and classify the complete TL1.4 Lean import mutation corpus
 
 Status: accepted
+Index-summary: Generate and stably classify every TL1.4 Lean import mutation family while exposing the upstream no-footer boundary
 
 Date: 2026-07-22
 

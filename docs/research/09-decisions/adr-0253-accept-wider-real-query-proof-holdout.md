@@ -1,6 +1,7 @@
 # ADR-0253: Accept the wider real-query proof holdout with one retained miss
 
 Status: accepted
+Index-summary: Accept complete decision, oracle, replay, and CNF DRAT evidence on the 1,024-query holdout; report stronger fixed-policy coverage as 508/509 with one stable retained hard timeout
 Date: 2026-07-19
 
 ## Context

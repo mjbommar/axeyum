@@ -1,6 +1,7 @@
 # ADR-0196: Single-successor warm-owner transfer
 
 Status: accepted
+Index-summary: Accept LIFO-aligned single-successor warm-owner transfer: move a terminal parent's retained solver to the next-executed fork child without sibling sharing, with explicit off control and repeated real-client gates
 Date: 2026-07-16
 
 ## Context

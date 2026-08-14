@@ -1,6 +1,7 @@
 # ADR-0139: Kernel-checked BV universal counterexamples
 
 - **Status:** accepted
+- Index-summary: Kernel-checked BV universal counterexamples: exact typed source applications plus evaluated AIG refutations close the ADR-0100 `qbv-simp` row
 - **Date:** 2026-07-13
 - **Owners:** solver / evidence / Lean reconstruction
 - **Extends:** ADR-0100, ADR-0138

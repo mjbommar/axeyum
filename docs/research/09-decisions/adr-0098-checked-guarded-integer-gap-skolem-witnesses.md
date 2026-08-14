@@ -1,6 +1,7 @@
 # ADR-0098: Checked guarded unit-gap Skolem witnesses
 
 Status: accepted
+Index-summary: Checked guarded unit-gap Skolem witnesses: pull one positive `or`-nested existential for untrusted search and independently certify the global successor witness against the original assertion
 Date: 2026-07-11
 
 ## Context

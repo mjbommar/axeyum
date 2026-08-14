@@ -1,6 +1,7 @@
 # ADR-0189: Replay-checked same-arena SAT duplicate cache
 
 Status: accepted
+Index-summary: Replay-checked same-arena SAT duplicate cache: exact term-sequence identity, bounded deterministic storage, mandatory original-model replay, and no ordinary UNSAT/prefix verdict reuse
 Date: 2026-07-16
 
 ## Context

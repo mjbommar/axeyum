@@ -1,6 +1,7 @@
 # ADR-0240: Corrected taint provenance before policy coverage scoring
 
 Status: accepted
+Index-summary: Corrected taint provenance before policy coverage scoring: preserve exact sources, separate raw/confidence/labeled populations, and reject arbitrary-model raw union as recall ground truth
 Date: 2026-07-18
 
 ## Context

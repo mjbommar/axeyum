@@ -1,6 +1,7 @@
 # ADR-0017: WebAssembly as a Supported Target
 
 Status: accepted
+Index-summary: WebAssembly as a supported target (browser + WASI)
 Date: 2026-06-13
 
 ## Context

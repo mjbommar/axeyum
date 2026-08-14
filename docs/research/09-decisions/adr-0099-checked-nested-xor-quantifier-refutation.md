@@ -1,6 +1,7 @@
 # ADR-0099: Checked nested-XOR quantifier refutation
 
 Status: accepted
+Index-summary: Checked nested-XOR quantifier refutation: derive one ground contradiction by hierarchical universal instantiation and independently re-match the exact original theorem
 Date: 2026-07-11
 
 ## Context

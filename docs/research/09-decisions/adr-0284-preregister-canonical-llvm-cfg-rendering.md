@@ -1,6 +1,7 @@
 # ADR-0284: Accept canonical scalar LLVM CFG rendering
 
 Status: accepted
+Index-summary: Accept canonical scalar LLVM CFG rendering and exact quoted-identifier byte escapes
 Date: 2026-07-19
 
 Result state: accepted; all frozen gates pass

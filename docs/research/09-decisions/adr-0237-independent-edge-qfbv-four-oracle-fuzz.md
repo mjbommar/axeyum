@@ -1,6 +1,7 @@
 # ADR-0237: Independent and edge-directed QF_BV four-oracle fuzzing
 
 Status: accepted
+Index-summary: Independent and edge-directed QF_BV fuzzing: 12,000/12,000 four-way agreements across two untouched uniform rounds and one frequency-accounted semantic-corner round
 Date: 2026-07-18
 
 ## Context

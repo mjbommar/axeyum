@@ -1,6 +1,7 @@
 # ADR-0105: Affine-growth quantifiers to Lean
 
 Status: accepted
+Index-summary: Affine-growth quantifiers to Lean: reuse Euclidean decomposition, guarded exact `ite` semantics, two consecutive witnesses, and constructive double-negation reasoning to reconstruct the full checked ADR-0097 class without new arithmetic axioms
 Date: 2026-07-11
 
 ## Context

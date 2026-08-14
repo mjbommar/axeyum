@@ -1,6 +1,7 @@
 # ADR-0344: Preregister resumable distributed benchmark execution
 
 Status: accepted
+Index-summary: Preregister resumable distributed benchmark execution before another large candidate run
 Date: 2026-07-21
 Accepted: 2026-07-22
 

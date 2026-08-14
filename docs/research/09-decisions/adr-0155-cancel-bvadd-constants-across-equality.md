@@ -1,6 +1,7 @@
 # ADR-0155: Cancel additive bit-vector constants across equality
 
 Status: accepted
+Index-summary: Cancel BV-add constants across equality: move the modular constant sum to the constant side and remove one wide adder before lowering
 Date: 2026-07-14
 
 ## Context

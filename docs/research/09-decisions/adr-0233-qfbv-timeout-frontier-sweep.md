@@ -1,6 +1,7 @@
 # ADR-0233: QF_BV timeout-frontier sweep
 
 Status: accepted
+Index-summary: QF_BV timeout-frontier sweep: artifact-v32 four-population accounting and repeated 50--1000 ms Axeyum/Z3/cvc5 controls establish a cold one-shot Axeyum-winning tcpip formula regime without relabeling it as retained-warm or authoritative evidence
 Date: 2026-07-18
 
 ## Context

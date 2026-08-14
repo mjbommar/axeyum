@@ -1,6 +1,7 @@
 # ADR-0103: Nested-XOR quantifiers to Lean
 
 Status: accepted
+Index-summary: Nested-XOR quantifiers to Lean: recheck ADR-0099, instantiate two outer pivots and one adjacent nested witness, then close through kernel-checked Iff/XOR reasoning and integer normalization with no theorem-specific refuter
 Date: 2026-07-11
 
 ## Context

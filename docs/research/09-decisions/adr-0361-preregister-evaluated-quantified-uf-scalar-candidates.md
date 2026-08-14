@@ -1,6 +1,7 @@
 # ADR-0361: Preregister evaluated quantified-UF scalar candidates
 
 Status: proposed
+Index-summary: Preregister evaluated ground-source and UF-result scalar candidates without widening quantified-UF search or evidence caps
 Date: 2026-07-23
 
 ## Context

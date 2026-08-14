@@ -1,6 +1,7 @@
 # ADR-0327: Preregister Tock log2 reflection prerequisite
 
 Status: accepted
+Index-summary: Accept typed LLVM call-result ranges and `ctlz` poison semantics for the selected Tock integer-log replacement target
 Date: 2026-07-21
 
 ## Context

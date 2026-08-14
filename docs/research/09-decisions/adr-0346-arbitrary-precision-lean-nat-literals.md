@@ -1,6 +1,7 @@
 # ADR-0346: Store Lean natural literals as canonical arbitrary-precision values
 
 Status: accepted
+Index-summary: Store Lean natural literals as canonical arbitrary-precision values without preempting literal typing
 
 Date: 2026-07-22
 

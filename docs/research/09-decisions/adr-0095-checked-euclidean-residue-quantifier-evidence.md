@@ -1,6 +1,7 @@
 # ADR-0095: Checked Euclidean-residue quantifier evidence
 
 Status: accepted
+Index-summary: Checked Euclidean-residue quantifier evidence: independently re-match the exact positive-modulus partition over original IR and certify its `div`/`mod` counterexample without trusting search
 Date: 2026-07-11
 
 ## Context

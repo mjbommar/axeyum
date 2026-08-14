@@ -1,6 +1,7 @@
 # ADR-0320: Preregister bounded reflected page-table evidence
 
 Status: accepted
+Index-summary: Accept authenticated bounded page-table-shaped proofs and replayed broken controls after the scope prerequisite
 Date: 2026-07-21
 
 ## Context

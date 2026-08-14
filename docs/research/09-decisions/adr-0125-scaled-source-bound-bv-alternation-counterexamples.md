@@ -1,6 +1,7 @@
 # ADR-0125: Scaled source-bound BV alternation counterexamples
 
 Status: accepted
+Index-summary: Scaled source-bound BV alternation counterexamples: raise bounded admission for large hardware state tuples without weakening replay
 Date: 2026-07-11
 
 ## Context

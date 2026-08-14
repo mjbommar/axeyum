@@ -1,6 +1,7 @@
 # ADR-0365: Preregister Lean's fixed quotient package
 
 Status: proposed
+Index-summary: Preregister atomic canonical Lean quotient-package admission, reduction, import, and identity
 
 Date: 2026-07-23
 

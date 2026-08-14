@@ -1,6 +1,7 @@
 # ADR-0135: Kernel-checked query-scoped BV instances
 
 Status: accepted
+Index-summary: Kernel-checked query-scoped BV instances: genuine typed universal applications plus a compact source-bound QF_BV refutation
 Date: 2026-07-13
 
 ## Context

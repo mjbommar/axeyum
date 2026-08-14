@@ -1,6 +1,7 @@
 # ADR-0106: Single-pivot equality partitions to Lean
 
 Status: accepted
+Index-summary: Single-pivot equality partitions to Lean: add integer equality decidability, preserve genuine Bool/Int quantifiers, and recursively reconstruct the two-cell ADR-0101 sub-class without trusting finite expansion or evaluator results
 Date: 2026-07-11
 
 ## Context

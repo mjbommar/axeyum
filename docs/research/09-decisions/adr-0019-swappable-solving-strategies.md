@@ -1,6 +1,7 @@
 # ADR-0019: Swappable Solving Strategies
 
 Status: accepted
+Index-summary: Swappable solving strategies (high-memory eager vs low-memory oracle)
 Date: 2026-06-13
 
 ## Context

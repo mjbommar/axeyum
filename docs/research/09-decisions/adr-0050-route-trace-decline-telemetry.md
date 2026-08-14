@@ -1,6 +1,7 @@
 # ADR-0050: Route-trace / decline telemetry as a verdict-invariant addition
 
 Status: accepted
+Index-summary: Route-trace / decline telemetry (`check_auto_explained`) as a purely-additive, verdict-invariant layer — one dispatch path with an `Option<&mut RouteTrace>` recorder that never gates a branch, `DeclineReason` reusing `UnknownKind`; guarded by a 400-query verdict-invariance differential (0 mismatches) + determinism; the observability prerequisite for the lazy-CDCL(T) dispatch push
 Date: 2026-06-22
 
 ## Context

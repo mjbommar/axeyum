@@ -1,6 +1,7 @@
 # ADR-0211: Accept native timeout-continuation default
 
 Status: accepted
+Index-summary: Accept native timeout-continuation default inside separately selected direct-delta sessions: repeated exact production-topology replay recovers 18/29 bounded nondecisions within time/RSS/variance alarms and preserves explicit fail-closed off control
 Date: 2026-07-17
 
 ## Context

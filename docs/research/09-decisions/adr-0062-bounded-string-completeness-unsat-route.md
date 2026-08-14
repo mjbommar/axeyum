@@ -1,6 +1,7 @@
 # ADR-0062: Bounded-completeness UNSAT route for the packed-BV string model
 
 Status: accepted
+Index-summary: A bounded packed-BV string `unsat` (ADR-0029) is upgraded to a real `unsat` only when a conservative syntactic test C1∧C2∧C3 proves the query **bounded-complete** — no free `Int` (C1), every free `String` length-capped ≤ MAX_LEN (C2), every `Int` provably `< 2³¹` (C3); the analyzer declines on anything unrecognised. Run as the final escalator `apply_bounded_completeness_unsat` in `solve_smtlib`, keyed on the `"no model within the bounded integer width"` Unknown. KEY: the string-length axis is a **second** incompleteness source, so "no free Int" alone is a wrong-unsat trap (`(> (str.len s) 100)` is real-sat with no Int). Corollary #76 fix: `str.at s k` for constant `k ≥ cap` on a symbolic string routed through the Int mux (sound `unknown`) instead of a hard `""` (was an exact wrong-unsat). cvc5 whole-corpus DISAGREE=0; decides both `update-ex2` targets. Broadening has 0 measured ROI (measure-don't-seed). Tasks #74/#75/#76/#77
 Date: 2026-07-08
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0273: Preregister deterministic six-cell work-bound calibration
 
 Status: accepted
+Index-summary: Preregister a zero-row 14-tier calibration of distinct Z3 rlimit, Axeyum progress-check, and Bitwuzla termination-poll bounds before freezing the full tcpip census
 Date: 2026-07-19
 
 Result state: executed; calibration rejected; no census authorized

@@ -1,6 +1,7 @@
 # ADR-0307: Group theory contracts without absorbing cross-cutting APIs
 
 Status: accepted
+Index-summary: Group direct theory contracts and procedures while retaining cross-cutting APIs in their own domains
 Date: 2026-07-20
 
 ## Context

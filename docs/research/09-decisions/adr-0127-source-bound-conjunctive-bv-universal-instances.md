@@ -1,6 +1,7 @@
 # ADR-0127: Source-bound conjunctive BV universal instances
 
 Status: accepted
+Index-summary: Source-bound conjunctive BV universal instances: weaken one positive universal conjunct to a concrete source instance and recheck the residual QF_BV proof
 Date: 2026-07-11
 
 ## Context

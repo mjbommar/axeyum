@@ -1,6 +1,7 @@
 # ADR-0246: Model-independent Glaurung stack-region classification
 
 Status: accepted
+Index-summary: Model-independent Glaurung stack-region classification: require structural expression ancestry before numeric refinement and restore the exact 14-row maximum-policy control
 Date: 2026-07-18
 
 ## Context

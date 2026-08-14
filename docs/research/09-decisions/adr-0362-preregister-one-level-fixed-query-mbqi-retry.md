@@ -1,6 +1,7 @@
 # ADR-0362: Preregister one-level fixed-query MBQI retry
 
 Status: proposed
+Index-summary: Preregister one recursion-guarded MBQI pass under one temporary source-Int fixing with exact unfixed replay
 Date: 2026-07-23
 
 ## Context

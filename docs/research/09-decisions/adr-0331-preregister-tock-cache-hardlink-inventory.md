@@ -1,6 +1,7 @@
 # ADR-0331: Preregister Tock cache hard-link inventory
 
 Status: accepted
+Index-summary: Preregister canonical in-cache hard-link owner and alias rows for Tock cache preparation v4
 Date: 2026-07-21
 
 ## Context

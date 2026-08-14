@@ -1,6 +1,7 @@
 # ADR-0011: DRAT As The UNSAT Proof Format, With An In-Tree Checker
 
 Status: accepted
+Index-summary: DRAT UNSAT proof format with an in-tree checker
 Date: 2026-06-13
 
 ## Context

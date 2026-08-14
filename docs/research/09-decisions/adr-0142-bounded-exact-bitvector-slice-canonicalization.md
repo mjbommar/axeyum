@@ -1,6 +1,7 @@
 # ADR-0142: Bounded exact bit-vector slice canonicalization
 
 Status: accepted
+Index-summary: Bounded exact bit-vector slice canonicalization: nested, concat-straddling, and extension-region rewrites use stable exact rule IDs, bounded local replacement fuel, identity projection, and original-query replay
 Date: 2026-07-14
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0229: Four-driver authoritative finding parity
 
 Status: accepted
+Index-summary: Four-driver authoritative finding parity: 302 raw sinks are byte-identical under sole Z3 and Axeyum authority across 24 bounded processes, while differing solve counts keep exploration-equivalence and wider timeout tiers explicitly open
 Date: 2026-07-17
 
 ## Context

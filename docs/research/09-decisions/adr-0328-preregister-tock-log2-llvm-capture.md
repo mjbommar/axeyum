@@ -1,6 +1,7 @@
 # ADR-0328: Preregister authenticated Tock log2 LLVM capture
 
 Status: accepted
+Index-summary: Preregister two-root offline LLVM-22 capture and exact admission for the selected Tock integer-log target
 Date: 2026-07-21
 
 ## Context

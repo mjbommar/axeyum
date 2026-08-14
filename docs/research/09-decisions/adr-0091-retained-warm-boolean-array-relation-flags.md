@@ -1,6 +1,7 @@
 # ADR-0091: Retained Warm Boolean Array Relation Flags
 
 Status: accepted
+Index-summary: Retained warm Boolean array relation flags: nested supported array equality atoms become private candidate-sensitive flags with guarded true-branch read equality, guarded false-branch diff witnesses, true-flag-only owner merging/structural realization, filtering, and replay
 Date: 2026-07-10
 
 ## Context

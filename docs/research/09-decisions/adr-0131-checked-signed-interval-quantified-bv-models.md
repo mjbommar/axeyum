@@ -1,6 +1,7 @@
 # ADR-0131: Checked signed-interval quantified-BV models
 
 Status: accepted
+Index-summary: Checked signed-interval quantified-BV models: complete free-BV assignments with exact ground replay and nonempty signed interval containment
 Date: 2026-07-12
 
 ## Context

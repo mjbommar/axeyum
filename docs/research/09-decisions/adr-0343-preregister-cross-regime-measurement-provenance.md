@@ -1,6 +1,7 @@
 # ADR-0343: Preregister cross-regime measurement provenance
 
 Status: proposed
+Index-summary: Preregister cross-regime measurement provenance without a false global parity aggregate
 Date: 2026-07-21
 
 ## Context

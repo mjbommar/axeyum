@@ -1,6 +1,7 @@
 # ADR-0165: Lean-compatible `Prop` large elimination
 
 Status: accepted
+Index-summary: Lean-compatible `Prop` large elimination: syntactic-subsingleton recursors retain arbitrary motives; every other potentially-`Prop` family is restricted to `Sort 0` and checked by mandatory real Lean CI
 Date: 2026-07-15
 
 ## Context

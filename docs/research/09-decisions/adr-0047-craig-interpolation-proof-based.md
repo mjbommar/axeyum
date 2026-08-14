@@ -1,6 +1,7 @@
 # ADR-0047: Craig interpolation as a verified proof transform
 
 Status: accepted
+Index-summary: Craig interpolation as a verified proof transform — read the interpolant off the already-checked Farkas (LRA) / congruence-explanation (EUF) refutation, re-verify the three Craig conditions before returning, decline otherwise; partial generator kept sound by the verify-before-return contract
 Date: 2026-06-22
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0260: Preregister cold duplicate-clause origin attribution
 
 Status: accepted
+Index-summary: Preregister and implement artifact-v36 profile-only first-origin/duplicate-origin attribution before the fixed observation or any generator-elision change
 Date: 2026-07-19
 
 Result state: fixed artifact-v36 observation accepted; exactly one follow-on

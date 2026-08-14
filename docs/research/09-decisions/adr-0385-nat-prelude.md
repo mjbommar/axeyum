@@ -1,6 +1,7 @@
 # ADR-0385: A proved `Nat` prelude for the Lean kernel
 
 - Status: proposed
+- Index-summary: A proved `Nat` prelude for the Lean kernel — `add`/`mul`/`pow`, the algebraic laws, `Nat.le`, and the `Eq` combinators, with **zero axioms**
 - Date: 2026-08-12
 - Deciders: (pending review)
 

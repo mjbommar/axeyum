@@ -1,6 +1,7 @@
 # ADR-0296: Preregister verified scalar LLVM contract composition
 
 Status: accepted
+Index-summary: Accept one verified exact scalar contract for modular-versus-inlined comparison on the two Glaurung PAC loop callers
 Date: 2026-07-20
 
 ## Context

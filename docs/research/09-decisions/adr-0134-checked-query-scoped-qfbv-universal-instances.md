@@ -1,6 +1,7 @@
 # ADR-0134: Checked query-scoped QF_BV universal instances
 
 Status: accepted
+Index-summary: Checked query-scoped QF_BV universal instances: complete source bindings plus an exact proof of the rebuilt ground query
 Date: 2026-07-13
 
 ## Context

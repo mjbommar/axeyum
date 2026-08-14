@@ -1,6 +1,7 @@
 # ADR-0308: Group verification and symbolic-execution APIs
 
 Status: accepted
+Index-summary: Group transition-system verification, symbolic execution, and reference-VM APIs without changing historical root paths
 Date: 2026-07-20
 
 ## Context

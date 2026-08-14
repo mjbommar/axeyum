@@ -1,6 +1,7 @@
 # ADR-0156: Batched canonical assertion for cold incremental clients
 
 Status: deferred
+Index-summary: Batched canonical assertion: share one rewrite memo across a cold client's top-level roots while retaining original assertions for replay
 Date: 2026-07-14
 
 ## Context

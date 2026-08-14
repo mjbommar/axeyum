@@ -1,6 +1,7 @@
 # ADR-0289: Preregister Cargo-owned MIR target selection
 
 Status: accepted
+Index-summary: Accept explicit Cargo package/target selection through exact-toolchain MIR capture and checked reflection
 Date: 2026-07-20
 
 Result state: accepted; all frozen gates pass

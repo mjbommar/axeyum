@@ -1,6 +1,7 @@
 # ADR-0001: Vertical Slice Before Horizontal Layers
 
 Status: accepted
+Index-summary: Vertical slice before horizontal layers
 Date: 2026-06-10
 
 ## Context

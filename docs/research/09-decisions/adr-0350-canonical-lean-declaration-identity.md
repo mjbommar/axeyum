@@ -1,6 +1,7 @@
 # ADR-0350: Publish canonical Lean declaration and dependency identities
 
 Status: accepted
+Index-summary: Publish ledger-compatible axiom identities plus canonical structural declaration and direct-dependency digests
 
 Date: 2026-07-22
 

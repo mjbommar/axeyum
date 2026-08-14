@@ -1,6 +1,7 @@
 # ADR-0358: Preregister multi-binder finite-profile quantified-UF models
 
 Status: accepted
+Index-summary: Preregister bounded Cartesian finite-profile certificates for leading multi-binder quantified-UF models
 Date: 2026-07-22
 
 ## Context

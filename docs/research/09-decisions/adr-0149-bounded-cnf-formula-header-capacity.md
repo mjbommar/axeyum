@@ -1,6 +1,7 @@
 # ADR-0149: Bounded CNF formula-header capacity
 
 Status: deferred
+Index-summary: Bounded CNF formula-header capacity: reserve only contiguous clause headers while preserving the exact-dedup index's accepted growth behavior
 Date: 2026-07-14
 
 ## Context

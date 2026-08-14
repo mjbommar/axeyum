@@ -1,6 +1,7 @@
 # ADR-0371: Preregister definite-result retention across the combined-theory deadline
 
 Status: rejected
+Index-summary: Reject definite-result retention across the combined-theory deadline after zero selected-row gain
 
 Date: 2026-07-27
 

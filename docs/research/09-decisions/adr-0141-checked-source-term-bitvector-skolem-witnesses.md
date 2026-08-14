@@ -1,6 +1,7 @@
 # ADR-0141: Checked source-term bit-vector Skolem witnesses
 
 Status: accepted
+Index-summary: Checked source-term BV Skolem witnesses: exact modular/bitwise/UF-derived terms over universal binders receive SAT credit only after untouched-source substitution proves reflexivity
 Date: 2026-07-14
 
 ## Context

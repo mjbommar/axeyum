@@ -1,6 +1,7 @@
 # ADR-0007: First Pure Rust SAT Adapter
 
 Status: accepted
+Index-summary: First pure Rust SAT adapter
 Date: 2026-06-11
 
 ## Context

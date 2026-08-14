@@ -1,6 +1,7 @@
 # ADR-0298: Preregister relational scalar call results with explicit havoc constraints
 
 Status: accepted
+Index-summary: Straight-line relational scalar call results as explicit internal havoc symbols plus separate replayable constraints
 Date: 2026-07-20
 
 ## Context

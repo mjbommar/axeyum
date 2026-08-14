@@ -1,6 +1,7 @@
 # ADR-0009: Incremental SAT And Incremental Solving
 
 Status: accepted
+Index-summary: Incremental SAT and incremental solving
 Date: 2026-06-13
 
 ## Context

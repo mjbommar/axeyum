@@ -1,6 +1,7 @@
 # ADR-0216: QF_BV default and explicit consumer profiles
 
 Status: accepted
+Index-summary: QF_BV default and explicit consumer profiles: lean-by-default solver manifests, full consumers opt in, production Glaurung and real wasm32 binding stay on the minimal solver surface
 Date: 2026-07-17
 
 ## Context

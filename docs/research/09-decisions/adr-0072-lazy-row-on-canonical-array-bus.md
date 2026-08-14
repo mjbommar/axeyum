@@ -1,6 +1,7 @@
 # ADR-0072: Lazy Read-Over-Write on the Canonical Array Bus
 
 Status: accepted
+Index-summary: Lazy read-over-write on the canonical array bus: reuse the existing ROW abstraction, materialize only violated store hit/miss axioms, retain UF-bearing metadata roots, and accept SAT only after replay; ADR-0084 supersedes its original function-first projection order
 Date: 2026-07-09
 
 ## Context

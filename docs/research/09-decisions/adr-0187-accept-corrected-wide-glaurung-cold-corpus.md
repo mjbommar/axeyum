@@ -1,6 +1,7 @@
 # ADR-0187: Accept the corrected wide Glaurung cold corpus
 
 Status: accepted
+Index-summary: Accept the corrected wide Glaurung cold corpus: zero-exclusion five-driver capture, exact sharded full gate, and clean raw/canonical baseline
 Date: 2026-07-16
 
 ## Context

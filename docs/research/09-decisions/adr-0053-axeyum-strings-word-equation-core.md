@@ -1,6 +1,8 @@
 # ADR-0053: `axeyum-strings` crate + the Phase-B word-equation core
 
 Status: accepted (2026-07-03 — the work resting on it is landed, measured, and fuzz-gated)
+Index-summary: `axeyum-strings` crate + the P2.7 Phase-B word-equation core (CAV-2014 normal forms/arrangements) — depends only on `axeyum-ir`; bridge mode: one-shot behind `check_auto` after the bounded pre-check; `sat` only via ground-evaluator replay, word-level `unsat` declined until derivations are checkable (T-B.7); deadline honored from day one; automata substrate deferred to a Phase-C ADR
+Index-status: accepted
 Date: 2026-07-03
 
 ## Context

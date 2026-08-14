@@ -1,6 +1,7 @@
 # ADR-0154: Record complete post-word QF_BV operator inventories
 
 Status: accepted
+Index-summary: Post-word QF_BV operator inventory: count every scalar Bool/BV operator over unique original and rewritten DAGs before selecting the next Glaurung optimization
 Date: 2026-07-14
 
 ## Context

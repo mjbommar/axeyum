@@ -1,6 +1,7 @@
 # ADR-0186: Accept pressure-adaptive Glaurung default
 
 Status: accepted
+Index-summary: Accept pressure-adaptive Glaurung default: the clean 92,721-check gate clears every alarm; default only explorer-owned Axeyum solves with an explicit one-shot override
 Date: 2026-07-16
 
 ## Context

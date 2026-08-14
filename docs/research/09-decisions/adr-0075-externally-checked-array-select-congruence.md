@@ -1,6 +1,7 @@
 # ADR-0075: Externally Checked Array Select Congruence
 
 Status: accepted
+Index-summary: Externally checked array select congruence: emit literal SMT-LIB `select` with `eq_reflexive`/`eq_congruent`/`symm`/resolution so direct equal-array read conflicts check in-tree, in Carcara, and in Lean without an array-elimination trust step
 Date: 2026-07-09
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0162: Incremental direct positive-root fusion
 
 Status: accepted
+Index-summary: Incremental direct positive-root fusion: selector-guarded AND-tree/XOR assertion clauses remain sound under later reuse and reduce native Glaurung time
 Date: 2026-07-15
 
 ## Context

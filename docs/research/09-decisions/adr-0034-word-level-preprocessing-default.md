@@ -1,6 +1,8 @@
 # ADR-0034: Word-level preprocessing is opt-in, default-off (for now)
 
 Status: accepted — **default flipped to ON (2026-06-18)**, see the update below
+Index-summary: Word-level preprocessing is opt-in, default-off pending broad-corpus measurement
+Index-status: accepted
 Date: 2026-06-17
 
 > **Update (2026-06-18): the ratification criterion is met; `preprocess` now

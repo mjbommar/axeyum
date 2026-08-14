@@ -1,6 +1,7 @@
 # ADR-0282: Preregister typed LLVM CFG syntax and validation
 
 Status: accepted
+Index-summary: Preregister typed LLVM PHI/terminator syntax and whole-function CFG validation before checked graph execution
 Date: 2026-07-19
 
 Result state: accepted; implementation and gates complete

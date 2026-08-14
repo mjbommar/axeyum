@@ -1,6 +1,7 @@
 # ADR-0248: Preregister exhaustive source-backed policy-difference adjudication
 
 Status: accepted
+Index-summary: Exhaustively adjudicate all 54 source-backed policy-varying rows: 30 ordinary request-plumbing rows, 24 duplicate sink presentations, zero independent primitives, and no validated residual gap
 Date: 2026-07-18
 
 Result state: accepted; 54/54 labels complete

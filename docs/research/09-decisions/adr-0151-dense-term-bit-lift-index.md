@@ -1,6 +1,7 @@
 # ADR-0151: Dense term-bit lift index
 
 Status: accepted
+Index-summary: Dense term-bit lift index: map each dense term ID to its contiguous range in the authoritative binding vector instead of inserting every bit into an ordered map
 Date: 2026-07-14
 
 ## Context

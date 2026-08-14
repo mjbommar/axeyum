@@ -1,6 +1,7 @@
 # ADR-0234: Real-query QF_BV term-to-CNF faithfulness
 
 Status: accepted
+Index-summary: Real-query QF_BV faithfulness: artifact-v33 attempts every UNSAT in ADR-0187's corrected 162-query representative Glaurung manifest and independently rechecks both the bit-blast miter and final CNF DRAT, reaching 74/74 in two clean runs under a named cooperative deadline
 Date: 2026-07-18
 
 ## Context

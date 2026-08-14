@@ -1,6 +1,7 @@
 # ADR-0184: Correct Glaurung wide-assertion exports
 
 Status: accepted
+Index-summary: Correct Glaurung wide-assertion exports: preserve native arbitrary-width truthiness, keep strict sorts, and invalidate the old cold-corpus byte identity
 Date: 2026-07-16
 
 ## Context

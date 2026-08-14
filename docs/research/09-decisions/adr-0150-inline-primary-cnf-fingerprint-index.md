@@ -1,6 +1,7 @@
 # ADR-0150: Inline primary CNF fingerprint index
 
 Status: accepted
+Index-summary: Inline primary CNF fingerprint index: retain the common formula index directly and allocate a side bucket only for genuine fingerprint collisions
 Date: 2026-07-14
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0167: Opt-in ordered per-lineage warm replay
 
 Status: accepted
+Index-summary: Opt-in ordered per-lineage warm replay: validate fork prefixes, retain one solver per path without shared mutable state, and expose model-choice divergence plus fork-replay cost
 Date: 2026-07-15
 
 ## Context

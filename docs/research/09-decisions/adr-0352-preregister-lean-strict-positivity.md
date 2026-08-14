@@ -1,6 +1,7 @@
 # ADR-0352: Preregister Lean 4.30 strict positivity before recursive admission widens
 
 Status: accepted
+Index-summary: Reproduce Lean 4.30 strict positivity before recursive-indexed or reflexive admission widens
 
 Date: 2026-07-22
 

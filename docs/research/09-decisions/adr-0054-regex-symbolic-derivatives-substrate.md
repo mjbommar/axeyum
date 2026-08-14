@@ -1,6 +1,8 @@
 # ADR-0054: Regex via symbolic derivatives — from-scratch in `axeyum-strings`
 
 Status: accepted (2026-07-06 — the derivative engine + membership sub-solver + T-C.5/C.6 are landed, measured, and scoreboard-moving)
+Index-summary: Phase-C regex via symbolic Boolean derivatives (PLDI 2021; native `R{n,m}`, LPAR 2024) — built from scratch in `axeyum-strings/src/regex/` over interval-set code-point predicates; NO external automata dependency (`regex-automata`/`aws-smt-strings`/`smt-str` are references only); `sat` replays through an independent reference matcher, regex `unsat` declines until a derivative-emptiness checker lands; the bounded byte-oriented `regex.rs` untouched. Demand: 15/35 census unknowns are regex-blocked
+Index-status: accepted
 Date: 2026-07-03
 
 ## Context

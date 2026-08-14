@@ -1,6 +1,7 @@
 # ADR-0377: Shared arithmetic deadlines and deterministic normalization ceilings
 
 Status: accepted
+Index-summary: Share one arithmetic deadline across fallback routes and bound LRA normalization deterministically
 Date: 2026-08-05
 Amended: 2026-08-08, 2026-08-10
 

@@ -1,6 +1,7 @@
 # ADR-0294: Preregister a Glaurung LLVM loop semantic census
 
 Status: accepted
+Index-summary: Accept the corrected exact census: 0/12 loops pass typed CFG; diverse unsupported-instruction causes select an audit lane, not code
 Date: 2026-07-20
 
 Result state: accepted after disclosed reproduction correction; exact corrected

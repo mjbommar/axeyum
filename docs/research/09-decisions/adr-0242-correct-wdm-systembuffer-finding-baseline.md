@@ -1,6 +1,7 @@
 # ADR-0242: Correct WDM SystemBuffer finding baseline
 
 Status: accepted
+Index-summary: Correct WDM SystemBuffer finding baseline: retire usbprint's five producer-model false positives, preserve content taint without pointer taint, and require a new independently validated nonzero sweep target
 Date: 2026-07-18
 
 ## Context

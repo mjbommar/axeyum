@@ -1,6 +1,7 @@
 # ADR-0219: Glaurung internal warm-regime attribution
 
 Status: accepted
+Index-summary: Glaurung internal warm-regime attribution: retained topology removes nearly all repeated construction, makes SAT dominant, and selects the Dptf UNSAT CNF/SAT boundary for neutral-core comparison
 Date: 2026-07-17
 
 ## Context

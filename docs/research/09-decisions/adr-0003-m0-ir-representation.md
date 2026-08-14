@@ -1,6 +1,7 @@
 # ADR-0003: M0 IR Representation Choices
 
 Status: accepted
+Index-summary: M0 IR representation choices
 Date: 2026-06-10
 
 ## Context

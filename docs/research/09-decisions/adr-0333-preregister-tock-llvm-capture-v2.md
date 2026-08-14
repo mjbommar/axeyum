@@ -1,6 +1,7 @@
 # ADR-0333: Preregister Tock LLVM capture v2
 
 Status: accepted
+Index-summary: Preregister two-root Tock LLVM capture v2 over the authenticated read-only dedicated cache
 Date: 2026-07-21
 
 ## Context

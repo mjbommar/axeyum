@@ -1,6 +1,7 @@
 # ADR-0316: Preregister source scalar contract annotations
 
 Status: accepted
+Index-summary: Accept straight-line scalar source contracts with retained results and distinct replayed postcondition violations
 Date: 2026-07-21
 
 ## Context

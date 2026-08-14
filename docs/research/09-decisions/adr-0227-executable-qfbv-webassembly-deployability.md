@@ -1,6 +1,7 @@
 # ADR-0227: Executable QF_BV WebAssembly deployability
 
 Status: accepted
+Index-summary: Executable QF_BV WebAssembly deployability: repair a wasm32-only AIG hash trap, gate real SAT/UNSAT execution, and report explicit browser bundle size plus Node/Chromium latency boundaries
 Date: 2026-07-17
 
 ## Context

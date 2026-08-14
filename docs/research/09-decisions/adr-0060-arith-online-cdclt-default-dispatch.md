@@ -1,6 +1,7 @@
 # ADR-0060: Default dispatch for the arithmetic online CDCL(T) routes
 
 Status: accepted
+Index-summary: Default dispatch for arithmetic online CDCL(T). Ratifies QF_UFLIA/QF_UFLRA online-first ordering and the 16M-step no-deadline belt. **2026-07-09 updates:** pure QF_LIA/QF_LRA and Boolean-structured QF_UFLIA/QF_UFLRA use canonical `CdclT`; caller-owned LRA deadlines and a deterministic 1,024-atom cap cover construction/FM/model work; canonical search now has deterministic VSIDS, phase saving, Luby restarts, and LBD reduction with stable tombstones plus glue/active-reason protection. Curated decisions, zero disagreements, and replay safety are preserved. BV combination remains open
 Date: 2026-07-07
 
 ## Context

@@ -1,6 +1,8 @@
 # ADR-0042: Integer prelude (discretely-ordered commutative ring) for integer-arithmetic Lean reconstruction
 
 Status: accepted (axioms; reconstruction is a follow-up)
+Index-summary: Integer prelude (discretely-ordered commutative ring + `no_int_between`) — the trusted-kernel foundation for integer-arithmetic / Diophantine Lean reconstruction
+Index-status: accepted
 Date: 2026-06-21
 Relates to: [ADR-0036](adr-0036-lean-kernel-crate.md) (the in-tree Lean kernel),
 the LRA arith prelude (`crates/axeyum-lean-kernel/src/arith_prelude.rs`,

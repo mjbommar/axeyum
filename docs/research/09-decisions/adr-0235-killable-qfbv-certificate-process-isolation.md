@@ -1,6 +1,7 @@
 # ADR-0235: Killable QF_BV whole-certificate process isolation
 
 Status: accepted
+Index-summary: Killable QF_BV certificate isolation: artifact-v34 runs parse, construction, both proof searches, and both self-rechecks in a source-hashed child; 74/74 corrected representative UNSAT rows certify twice under a 1500 ms wall, while a 1 ms control retains all 74 as hard-timeout non-certifications
 Date: 2026-07-18
 
 ## Context

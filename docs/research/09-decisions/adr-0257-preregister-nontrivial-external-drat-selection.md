@@ -1,6 +1,7 @@
 # ADR-0257: Preregister bounded nontrivial external DRAT selection
 
 Status: accepted
+Index-summary: Preregister a bounded content-hash-order scan that retains every attempt and selects only a multi-line real DRAT whose CNF fails external verification with an empty proof
 Date: 2026-07-19
 
 Result state: protocol implemented and preregistered; real candidate scan not run

@@ -1,6 +1,7 @@
 # ADR-0300: Preregister a dense bit-lowering term memo
 
 Status: accepted
+Index-summary: Reject dense `TermId` memo indexing at the fixed variance gate and restore BTree despite favorable point estimates
 Date: 2026-07-20
 
 ## Context

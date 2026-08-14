@@ -1,6 +1,7 @@
 # ADR-0203: Defer Glaurung direct-delta default after dual-control gate
 
 Status: accepted
+Index-summary: Defer Glaurung direct-delta default: the causal entry win passes, but production serial-snapshot time/RSS alarms select source-identity/COW sibling sharing before admission
 Date: 2026-07-16
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0180: Glaurung lineage regression alarms
 
 Status: accepted
+Index-summary: Glaurung lineage regression alarms: fail above 3% Axeyum, 3% normalized ratio, 5% median RSS, or 2% absolute Z3 drift after exact identity gates
 Date: 2026-07-15
 
 ## Context

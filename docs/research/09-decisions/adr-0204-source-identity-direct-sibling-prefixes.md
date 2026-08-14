@@ -1,6 +1,7 @@
 # ADR-0204: Source-identity direct sibling prefixes
 
 Status: accepted
+Index-summary: Source-identity direct sibling prefixes: immutable exact ancestry restores sound serial direct reuse without cloning mutable solver state or trusting depth/ExprId/hash identity
 Date: 2026-07-16
 
 ## Context

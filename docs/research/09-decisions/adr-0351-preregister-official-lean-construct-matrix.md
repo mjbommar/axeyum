@@ -1,6 +1,7 @@
 # ADR-0351: Preregister the official Lean construct matrix before widening admission
 
 Status: accepted
+Index-summary: Preregister source-first and wire-second official Lean construct measurement before widening recursive admission
 
 Date: 2026-07-22
 

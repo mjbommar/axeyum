@@ -1,6 +1,7 @@
 # ADR-0005: Phase 3 Query, Evidence, And Rewrite Contracts
 
 Status: accepted
+Index-summary: Phase 3 query, evidence, and rewrite contracts
 Date: 2026-06-11
 
 ## Context

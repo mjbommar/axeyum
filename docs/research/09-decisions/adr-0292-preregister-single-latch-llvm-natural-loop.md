@@ -1,6 +1,7 @@
 # ADR-0292: Preregister a checked single-latch LLVM natural loop
 
 Status: accepted
+Index-summary: Accept one checked single-latch LLVM natural loop with path-conditioned internal control flow
 Date: 2026-07-20
 
 Result state: accepted; the registered compiler module routes through checked

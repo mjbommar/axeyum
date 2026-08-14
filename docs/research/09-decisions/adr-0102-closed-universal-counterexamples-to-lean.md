@@ -1,6 +1,7 @@
 # ADR-0102: Closed-universal counterexamples to Lean
 
 Status: accepted
+Index-summary: Closed-universal counterexamples to Lean: recheck ADR-0100 evidence, apply the original dependent-product universal to concrete Int/Bool witnesses, and close by kernel-checked integer normalization without a theorem-specific refuter axiom
 Date: 2026-07-11
 
 ## Context

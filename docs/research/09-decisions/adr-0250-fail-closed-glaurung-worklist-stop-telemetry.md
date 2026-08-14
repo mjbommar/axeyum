@@ -1,6 +1,7 @@
 # ADR-0250: Fail closed on Glaurung worklist stop telemetry
 
 Status: accepted
+Index-summary: Version authoritative-finding reports with a required inner-worklist stop partition; reject missing, inconsistent, deadline/timeout, or repeated-drift telemetry before accepting fixed work
 Date: 2026-07-19
 
 Result state: implemented in the Axeyum harness; Glaurung integration remains

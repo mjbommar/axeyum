@@ -1,6 +1,7 @@
 # ADR-0335: Preregister Tock log2 proof and scoreboard
 
 Status: accepted
+Index-summary: Preregister authenticated Tock log2 proofs, replayed controls, and measured scoreboard; accept v1 as a pre-query stale-lock negative
 Date: 2026-07-21
 
 ## Context

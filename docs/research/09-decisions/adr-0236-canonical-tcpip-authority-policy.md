@@ -1,6 +1,7 @@
 # ADR-0236: Canonical tcpip authority policy
 
 Status: accepted
+Index-summary: Canonical tcpip authority policy: stable any-model output differs by two Z3-only sinks, while an opt-in backend-independent unsigned-minimum policy gives exact 110-sink output and exploration-counter parity across six fixed-prefix processes without becoming the production default
 Date: 2026-07-18
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0372: Preregister one bounded negated-conjunction branch split
 
 Status: rejected
+Index-summary: Reject serial negated-conjunction splitting after the hard branch exceeded the monolithic solve
 
 Date: 2026-07-27
 

@@ -1,6 +1,7 @@
 # ADR-0258: Retain capped nontrivial DRAT no-selection
 
 Status: accepted
+Index-summary: Retain the fixed 32-row no-selection: every real DRAT is the same two-byte empty-clause proof, so do not widen or claim a nontrivial external trace
 Date: 2026-07-19
 
 ## Context

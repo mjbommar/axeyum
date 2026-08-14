@@ -1,6 +1,7 @@
 # ADR-0356: Preregister official SMT-COMP selection identity
 
 Status: accepted
+Index-summary: Content-addressed official SMT-COMP selection production plus independent eligibility and corpus-byte audit
 Date: 2026-07-22
 
 ## Context

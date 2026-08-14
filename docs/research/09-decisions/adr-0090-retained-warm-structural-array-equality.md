@@ -1,6 +1,7 @@
 # ADR-0090: Retained Warm Structural Array Equality
 
 Status: accepted
+Index-summary: Retained warm structural array equality: cached private constructor owners, bounded old/future shared-index observations, class-aware observed-read-preserving fixed-point realization, array-first/function-second projection, filtering, and replay
 Date: 2026-07-10
 
 ## Context

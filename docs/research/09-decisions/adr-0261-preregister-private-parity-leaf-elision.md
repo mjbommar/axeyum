@@ -1,6 +1,7 @@
 # ADR-0261: Preregister private parity-leaf elision
 
 Status: accepted
+Index-summary: Reject private parity-leaf elision at the fixed structural gate: all correctness holds but attempts, duplicates, and attempted literals change by exactly zero, so timing is not run
 Date: 2026-07-19
 
 Result state: rejected at the fixed structural gate; timing not run

@@ -1,6 +1,7 @@
 # ADR-0056: The verified-systems trajectory (IR reflection) is a first-class track
 
 Status: accepted
+Index-summary: The verified-systems trajectory (IR reflection) is a first-class track — reflect post-borrowck MIR + post-optimization LLVM IR into the typed IR and prove properties/equivalences over them; explicit boundaries (no seL4-parity claims, no ghost-code deductive language, no source-level Rust semantics)
 Date: 2026-07-06
 
 ## Context

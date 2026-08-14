@@ -1,6 +1,7 @@
 # ADR-0205: Accept the source-prefix production gate and widen before default
 
 Status: accepted
+Index-summary: Accept the source-prefix production gate: repeated two-driver time/ratio/RSS wins pass, while direct stays opt-in for tcpip/dxgkrnl widening and an exclusive-control Z3-drift retry
 Date: 2026-07-16
 
 ## Context

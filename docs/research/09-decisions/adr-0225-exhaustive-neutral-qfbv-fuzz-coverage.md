@@ -1,6 +1,7 @@
 # ADR-0225: Exhaustive neutral QF_BV fuzz coverage
 
 Status: accepted
+Index-summary: Exhaustive neutral QF_BV fuzz coverage: all 4,000 deterministic formulas agree three ways with cvc5, all SAT models replay, and all declared widths plus 35 operator classes are executable gates
 Date: 2026-07-17
 
 ## Context

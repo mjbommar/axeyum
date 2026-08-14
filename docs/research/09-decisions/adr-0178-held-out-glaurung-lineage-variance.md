@@ -1,6 +1,7 @@
 # ADR-0178: Held-out Glaurung lineage variance
 
 Status: accepted
+Index-summary: Held-out Glaurung lineage variance: repeated SurfacePen and fixed-budget NETwtw10 tiers accept the explicit 9/512 envelope across every available realworld query stream
 Date: 2026-07-15
 
 ## Context

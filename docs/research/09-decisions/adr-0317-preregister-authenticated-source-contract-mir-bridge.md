@@ -1,6 +1,7 @@
 # ADR-0317: Preregister an authenticated source-contract to checked-MIR bridge
 
 Status: accepted
+Index-summary: Accept an authenticated total source-contract to checked-MIR summary bridge with exact Cargo provenance
 Date: 2026-07-21
 
 ## Context

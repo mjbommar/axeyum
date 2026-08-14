@@ -1,6 +1,7 @@
 # ADR-0306: Group specialized certificate catalogs without hiding solver APIs
 
 Status: accepted
+Index-summary: Group specialized array and quantified certificate catalogs while retaining core model/theory APIs at the root
 Date: 2026-07-20
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0230: Real Glaurung QF_BV DRAT denominator
 
 Status: accepted
+Index-summary: Real Glaurung QF_BV DRAT denominator: all 64 UNSAT rows in a complete 128-query representative client corpus carry independently rechecked inline DRAT, with all SAT models, Z3 decisions, and manifest expectations also checked
 Date: 2026-07-17
 
 ## Context

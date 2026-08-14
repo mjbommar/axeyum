@@ -1,6 +1,7 @@
 # ADR-0052: The string `len`↔LIA link and the bounded-string `unsat` gate
 
 Status: accepted
+Index-summary: The string `len`↔LIA link (P2.7 A.2) + the bounded-string `unsat` gate — `bv2nat`-linear→BV equivalence blast; parser-built unbounded length abstraction (`len(x++y)=len(x)+len(y)`, atom→`B ∧ fact` relaxation); every front-door `unsat` on a bounded-string script is confirmed bound-independent (abstraction refutes / bite detector / content-only relax) or downgraded to honest `unknown` — closes Gap 10 AND repairs the measured ADR-0029 wrong-unsat classes (`len(s)=9`, cross-width `prefixof`)
 Date: 2026-07-01
 
 ## Context

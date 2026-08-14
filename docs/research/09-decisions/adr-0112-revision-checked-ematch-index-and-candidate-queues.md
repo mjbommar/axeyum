@@ -1,6 +1,7 @@
 # ADR-0112: Revision-checked e-match index and candidate queues
 
 Status: accepted
+Index-summary: Revision-checked e-match index and candidate queues: extend root indexes on add-only updates, queue affected pattern roots, and conservatively rebuild/rematch after merges
 Date: 2026-07-11
 
 ## Context

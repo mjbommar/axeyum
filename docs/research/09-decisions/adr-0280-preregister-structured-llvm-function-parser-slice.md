@@ -1,6 +1,7 @@
 # ADR-0280: Preregister the first structured LLVM function-parser slice
 
 Status: accepted
+Index-summary: Preregister a span-carrying, non-panicking LLVM function syntax parser and migrate parameter declarations before instruction semantics
 Date: 2026-07-19
 
 Result state: accepted; implementation and compatibility migration complete

@@ -1,6 +1,7 @@
 # ADR-0279: Gate a Glaurung LLVM frontend on the executable-LLIR contract
 
 Status: accepted
+Index-summary: Gate a general Glaurung LLVM frontend on Axeyum's structured parser and an explicit executable-LLIR contract; keep the accepted AArch64 ELF route
 Date: 2026-07-19
 
 ## Context

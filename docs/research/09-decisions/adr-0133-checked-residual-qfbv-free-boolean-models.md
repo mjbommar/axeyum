@@ -1,6 +1,7 @@
 # ADR-0133: Checked residual-QF_BV free-Boolean models
 
 Status: accepted
+Index-summary: Checked residual-QF_BV free-Boolean models: bounded counterexample refinement plus source-rebuilt proof of the exact negated positive-universal residual
 Date: 2026-07-12
 
 ## Context

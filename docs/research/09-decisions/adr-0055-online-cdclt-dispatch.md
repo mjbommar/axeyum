@@ -1,6 +1,7 @@
 # ADR-0055: Dispatch policy for the online CDCL(T) routes
 
 Status: accepted
+Index-summary: Dispatch policy for the online CDCL(T) routes — QF_S online route default-on at the front door (ratifies the landed second-chance ordering; measured 52→58 with dual-oracle DISAGREE=0 and the 5707563b termination/expansion/polarity gate paid); **2026-07-09 update:** QF_UF criterion (2) fired, so the existing `euf-online` front-door route is now the generic replay-checked `CdclT` path, config-timeout aware, with offline EUF retained as fallback; new theories arrive online-first behind the same discipline
 Date: 2026-07-03
 
 ## Context

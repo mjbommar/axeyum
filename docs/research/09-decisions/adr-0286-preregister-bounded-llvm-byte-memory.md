@@ -1,6 +1,7 @@
 # ADR-0286: Accept checked bounded LLVM byte memory
 
 Status: accepted
+Index-summary: Accept checked bounded initialized byte memory for typed LLVM GEP/load/store reflection
 Date: 2026-07-20
 
 Result state: accepted; all frozen gates pass

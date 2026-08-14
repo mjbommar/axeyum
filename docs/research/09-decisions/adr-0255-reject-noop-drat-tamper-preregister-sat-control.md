@@ -1,6 +1,7 @@
 # ADR-0255: Reject the no-op DRAT tamper and preregister a SAT control
 
 Status: accepted
+Index-summary: Preserve ADR-0254's positive external verification but reject its semantically inert final-line deletion; preregister a fixed satisfiable-CNF checker control
 Date: 2026-07-19
 
 Result state: ADR-0254 observed and rejected; corrected teeth control

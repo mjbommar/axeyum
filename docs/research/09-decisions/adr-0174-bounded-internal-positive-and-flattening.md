@@ -1,6 +1,7 @@
 # ADR-0174: Bounded internal positive-AND flattening
 
 Status: deferred
+Index-summary: Bounded internal positive-AND flattening: semantically exact immediate clause avoidance is deferred because later helper reuse grows retained CNF and regresses native Dptf time
 Date: 2026-07-15
 
 ## Context

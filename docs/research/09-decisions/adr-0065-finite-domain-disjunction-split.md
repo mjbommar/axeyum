@@ -1,6 +1,7 @@
 # ADR-0065: Finite-domain disjunction case-split (QF_NIA/QF_LIA)
 
 Status: accepted
+Index-summary: A NARROW finite-domain disjunction case-split (`try_finite_domain_split`, `auto.rs`) fired only as an `Unknown`-fallback: splits only conjuncts `(or (= …) … (= …))` whose every disjunct is an EQUALITY (each is unconditional in its branch, so branch preprocessing propagates it — a region/inequality disjunct would not), bounded to ≤64 branches. `D₁∧…∧Dₘ∧rest` sat iff some choice of one equality per `Dᵢ` + `rest` is sat: all branches unsat ⇒ unsat, any branch sat ⇒ sat, else decline. Decides `rewriting-sums` (`x∈{5,7,9}`, `y∈{x+1,x+2}`, `z∈{y+5,y+10}`, `z²>10⁹` ⇒ z≤21 ⇒ unsat) which the online loop stalls on because the conditional equalities can't be globally propagated into the nonlinear atom. KEY: the earlier BROAD split (all disjunctions incl. regions) was reverted for doubling PAR-2; the equality-only + Unknown-fallback narrowing is what makes it pay without regressing (frontier_nia_unsat held). cvc5-regress QF_NIA unsat 16→17; nia+nra fuzz DISAGREE=0 (emits both sat+unsat). Task #87
 Date: 2026-07-08
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0209: Keep Glaurung same-session timeout continuation opt-in
 
 Status: candidate
+Index-summary: Glaurung same-session timeout continuation: exact ordered replay accepts the low-memory mechanism; native production-topology traffic/finding and resource gates remain
 Date: 2026-07-16
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0190: Opt-in bounded replay-checked SAT cache
 
 Status: accepted
+Index-summary: Opt-in bounded replay-checked SAT cache: exact assertion/scope/assumption identity, deterministic LRU value/bit bounds, scalar eligibility, fail-closed replay, and complete telemetry
 Date: 2026-07-16
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0170: Multi-driver ordered warm-policy comparison
 
 Status: accepted
+Index-summary: Multi-driver ordered warm-policy comparison: reject a universal snapshot winner, retain snapshot and lineage controls, and prioritize native lineage/delta ownership behind replay and admission gates
 Date: 2026-07-15
 
 ## Context

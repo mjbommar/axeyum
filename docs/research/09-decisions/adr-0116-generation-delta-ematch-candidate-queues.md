@@ -1,6 +1,7 @@
 # ADR-0116: Generation-delta e-match candidate queues
 
 Status: accepted
+Index-summary: Generation-delta e-match candidate queues: retain monotonic matches and scan only newly added or merge-reached top applications
 Date: 2026-07-11
 
 ## Context

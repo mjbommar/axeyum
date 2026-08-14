@@ -1,6 +1,7 @@
 # ADR-0252: Materialize the exact real-query proof holdout before execution
 
 Status: accepted
+Index-summary: Preserve the pre-execution full-root membership rejection, then materialize exactly ADR-0251's 1,024 selected files without changing its population, bounds, or acceptance gates
 Date: 2026-07-19
 
 Result state: materialization preregistered; corrected holdout not yet executed

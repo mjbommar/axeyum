@@ -1,6 +1,7 @@
 # ADR-0094: Retained Warm Nested Array-Valued UF Parameters
 
 Status: accepted
+Index-summary: Retained warm nested array-valued UF parameters: supported array-valued application keys use private projection symbols directly or inside rewritten structural keys, preserving projection order and original replay
 Date: 2026-07-10
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0121: Checked reflexive bit-vector Skolem witnesses
 
 Status: accepted
+Index-summary: Checked reflexive bit-vector Skolem witnesses: admit only an exact same-width universal identity recipe and independently prove the substituted source theorem
 Date: 2026-07-11
 
 ## Context

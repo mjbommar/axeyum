@@ -1,6 +1,7 @@
 # ADR-0188: Corrected Glaurung shard variance and alarms
 
 Status: accepted
+Index-summary: Corrected Glaurung shard variance and alarms: repeat complete composites and guard commits at 3% Axeyum, 3% ratio, 5% RSS, and 2% Z3 drift
 Date: 2026-07-16
 
 ## Context

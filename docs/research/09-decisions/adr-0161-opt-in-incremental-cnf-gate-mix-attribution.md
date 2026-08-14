@@ -1,6 +1,7 @@
 # ADR-0161: Opt-in incremental CNF gate-mix attribution
 
 Status: accepted
+Index-summary: Opt-in incremental CNF gate-mix attribution: polarity-specific definition families and direct-root opportunities select positive-AND/XOR fusion
 Date: 2026-07-15
 
 ## Context

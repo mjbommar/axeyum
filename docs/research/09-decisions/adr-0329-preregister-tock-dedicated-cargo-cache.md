@@ -1,6 +1,7 @@
 # ADR-0329: Preregister dedicated Tock Cargo-cache preparation
 
 Status: accepted
+Index-summary: Preregister dedicated locked Tock Cargo-cache preparation and canonical inventory before capture v2
 Date: 2026-07-21
 
 ## Context

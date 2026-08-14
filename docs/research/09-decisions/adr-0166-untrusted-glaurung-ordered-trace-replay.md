@@ -1,6 +1,7 @@
 # ADR-0166: Untrusted Glaurung ordered-trace replay boundary
 
 Status: accepted
+Index-summary: Untrusted Glaurung ordered-trace replay: independently reconstruct lineage/scopes, re-solve exact QF_BV bytes with original-model replay, and prove exploration-driving value constraints satisfiable
 Date: 2026-07-15
 
 ## Context

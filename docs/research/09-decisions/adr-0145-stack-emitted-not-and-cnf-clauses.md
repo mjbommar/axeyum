@@ -1,6 +1,7 @@
 # ADR-0145: Stack-emitted not-AND CNF clauses
 
 Status: accepted
+Index-summary: Stack-emitted not-AND CNF clauses: match the bounded two-factor expansion and remove encoder-local temporary vectors without changing CNF content
 Date: 2026-07-14
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0206: Glaurung shadow unknown-split corpus
 
 Status: accepted
+Index-summary: Glaurung shadow unknown-split corpus: atomically capture exact formulas where one backend decides and the other is nondecided before admitting large-driver widening
 Date: 2026-07-16
 
 ## Context

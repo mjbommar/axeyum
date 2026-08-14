@@ -1,6 +1,7 @@
 # ADR-0096: Quantified SAT Skolem certificates
 
 Status: accepted
+Index-summary: Quantified SAT Skolem certificates: typed witness terms in `Model`, checked against the exact original assertion by a separate affine/reflexive tautology checker
 Date: 2026-07-11
 
 ## Context

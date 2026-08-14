@@ -1,6 +1,7 @@
 # ADR-0369: Preregister SMT `(15,64)` symbolic division
 
 Status: accepted
+Index-summary: Accept SMT `(15,64)` symbolic division behind a separate all-mode independent oracle sweep
 
 Date: 2026-07-27
 

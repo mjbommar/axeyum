@@ -1,6 +1,7 @@
 # ADR-0318: Preregister reflected page-table walk obligations
 
 Status: accepted
+Index-summary: Reject the bounded page-table obligation before capture because registered MIR emits unowned nested scope metadata
 Date: 2026-07-21
 
 Result state: rejected before fixture/capture admission

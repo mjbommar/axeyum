@@ -1,6 +1,7 @@
 # ADR-0208: Defer Glaurung cold timeout retry
 
 Status: deferred
+Index-summary: Defer Glaurung cold timeout retry: four recoveries do not justify a 10.46% RSS increase or eleven residual timeouts; keep the bounded diagnostic off
 Date: 2026-07-16
 
 ## Context

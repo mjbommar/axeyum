@@ -1,6 +1,7 @@
 # ADR-0387: Fallible, transactional, namespaced Lean preludes
 
 Status: accepted
+Index-summary: Fallible, transactional, namespaced Lean preludes for mixed mathematical environments
 
 Date: 2026-08-13
 

@@ -1,6 +1,7 @@
 # ADR-0132: Checked zero-product quantified-BV models
 
 Status: accepted
+Index-summary: Checked zero-product quantified-BV models: complete free-BV assignments with exact signed-division-to-zero replay and binder-product annihilation
 Date: 2026-07-12
 
 ## Context

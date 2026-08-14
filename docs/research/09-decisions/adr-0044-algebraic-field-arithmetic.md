@@ -1,6 +1,7 @@
 # ADR-0044: Algebraic field arithmetic (α±β, α·β, −α) in the IR value layer
 
 Status: accepted
+Index-summary: Algebraic field arithmetic (α±β, α·β, −α) on `RealAlgebraic` in the IR value layer; moves the exact-poly + Sturm primitives down to `axeyum-ir` (one isolation impl); `eval` upgrades from `Err` to computed — the multivariate unlock
 Date: 2026-06-21
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0163: Incremental root-context deduplication
 
 Status: accepted
+Index-summary: Incremental root-context deduplication: skip repeated exact root/selector assertions; reject a structurally stronger clause index that regresses native client time
 Date: 2026-07-15
 
 ## Context

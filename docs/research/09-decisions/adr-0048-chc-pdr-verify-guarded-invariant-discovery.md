@@ -1,6 +1,7 @@
 # ADR-0048: CHC/PDR engine — verify-guarded inductive-invariant discovery, MBP deferred
 
 Status: accepted
+Index-summary: CHC/PDR engine — verify-guarded inductive-invariant discovery: single-predicate IC3/PDR over `TransitionSystem` (QF_BV), `Safe` admitted only when the *discovered* invariant passes the 3 implication checks, `Reachable` only when BMC-confirmed; MBP and the online LRA solver deferred (MBP = next prerequisite)
 Date: 2026-06-22
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0259: Preregister cold CNF construction attribution
 
 Status: accepted
+Index-summary: Accept the fixed artifact-v35 cold profile: 119,260 exact primary duplicates, zero collision work, and no optimization selected
 Date: 2026-07-19
 
 Result state: fixed 162-query measurement accepted; no optimization selected

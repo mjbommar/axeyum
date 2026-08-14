@@ -1,6 +1,8 @@
 # ADR-0051: First-class `Seq`/`String` sort in the IR
 
 Status: accepted (2026-07-03 — the work resting on it is landed, measured, and fuzz-gated)
+Index-summary: First-class `Sort::Seq(ArraySortKey)` in `axeyum-ir` (`String` = `Seq(BitVec(18))`, Unicode code points) — strings become ordinary interned terms; the bounded `(len, content)` encoder retained as the fast pre-check; the P2.7 Phase A enabling refactor, sliced A.1a–c to keep the workspace green
+Index-status: accepted
 Date: 2026-07-01
 
 ## Context

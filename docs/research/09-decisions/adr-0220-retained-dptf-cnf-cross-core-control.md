@@ -1,6 +1,7 @@
 # ADR-0220: Retained Dptf CNF cross-core control
 
 Status: accepted
+Index-summary: Retained Dptf CNF cross-core control: exact selector-materialized DIMACS closes verdict parity, finds the proof core faster than BatSat before checking, and moves the causal boundary to retained learned state and integration
 Date: 2026-07-17
 
 ## Context

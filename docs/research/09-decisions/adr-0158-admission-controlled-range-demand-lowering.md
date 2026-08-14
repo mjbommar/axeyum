@@ -1,6 +1,7 @@
 # ADR-0158: Admission-controlled range demand lowering
 
 Status: deferred
+Index-summary: Admission-controlled range demand: cheap structural screen, deterministic bounded range propagation, early full-lowerer fallback, and replay-safe sparse materialization
 Date: 2026-07-14
 
 ## Context

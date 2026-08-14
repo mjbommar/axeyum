@@ -1,6 +1,7 @@
 # ADR-0137: DAG-linear Lean module export for corpus-scale proofs
 
 Status: accepted
+Index-summary: DAG-linear Lean module export: exact expression reachability plus deterministic closed chunks for declarations and proof tails make the corpus-scale ADR-0135 route complete under a guarded stress gate
 Date: 2026-07-13
 
 ## Context

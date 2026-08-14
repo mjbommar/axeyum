@@ -1,6 +1,7 @@
 # ADR-0113: Inverted-parent merge queues
 
 Status: accepted
+Index-summary: Inverted-parent merge queues: apply retained union journals to matching indexes and rematch only trigger roots reachable through e-graph parent paths
 Date: 2026-07-11
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0021: Boolean-Structured QF_LIA via Lazy-SMT over the Integer Simplex
 
 Status: accepted
+Index-summary: Boolean-structured QF_LIA via lazy-SMT over the integer simplex
 Date: 2026-06-13
 
 ## Context

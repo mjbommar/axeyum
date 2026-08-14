@@ -1,6 +1,7 @@
 # ADR-0324: Preregister the Maestro LLVM root-drift diagnostic
 
 Status: accepted
+Index-summary: Diagnose Maestro's broad two-root LLVM drift as a dependency-wide source-path remapping gap; grant no capture credit
 Date: 2026-07-21
 
 ## Context

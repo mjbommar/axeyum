@@ -1,6 +1,7 @@
 # ADR-0314: Make the cold bit-lowering mode a typed choice
 
 Status: accepted
+Index-summary: Replace mutually exclusive demand-lowering fields with one typed bit-lowering mode while preserving benchmark identity
 Date: 2026-07-20
 
 ## Context

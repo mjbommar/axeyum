@@ -1,6 +1,7 @@
 # ADR-0193: Bounded shared-memo model replay
 
 Status: accepted
+Index-summary: Bounded shared-memo model replay: preserve original-term checking while eliminating repeated cross-root evaluator work under a fixed per-replay retention bound
 Date: 2026-07-16
 
 ## Context

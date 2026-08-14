@@ -1,6 +1,7 @@
 # ADR-0079: Finite Scalar Array Admission
 
 Status: accepted
+Index-summary: Finite scalar array admission: canonical ABV/AUFBV accepts Bool/BitVec index and element components, preserves broader fallback routing, and replay-checks generic mixed-component models
 Date: 2026-07-10
 
 ## Context

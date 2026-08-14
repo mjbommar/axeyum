@@ -1,6 +1,7 @@
 # ADR-0251: Preregister a wider real-query proof holdout
 
 Status: accepted
+Index-summary: Preregister a 1,024-query content-hash-stratified proof holdout disjoint from the accepted 162-query representative; retain all 509 UNSAT rows under fixed killable certificate bounds
 Date: 2026-07-19
 
 Result state: preregistered; no holdout query observed

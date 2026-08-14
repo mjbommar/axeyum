@@ -1,6 +1,7 @@
 # ADR-0197: Adaptive mixed warm/fallback profile attribution
 
 Status: accepted
+Index-summary: Adaptive mixed warm/fallback profile attribution: validate the unsplit production sequence, normalize phases, and preserve separate retained, created-owner, and one-shot fallback costs
 Date: 2026-07-16
 
 ## Context

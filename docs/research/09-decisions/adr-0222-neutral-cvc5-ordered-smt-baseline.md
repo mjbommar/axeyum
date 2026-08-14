@@ -1,6 +1,7 @@
 # ADR-0222: Neutral cvc5 ordered SMT baseline
 
 Status: accepted
+Index-summary: Neutral cvc5 ordered SMT baseline: exact hash-bound Dptf scripts establish third-party verdict parity and a cold-reset external word-level performance point without conflating it with in-process or warm paired cells
 Date: 2026-07-17
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0035: CDCL(XOR) Search Acceleration with a Ledgered Trust Hole
 
 Status: accepted
+Index-summary: CDCL(XOR) search acceleration with a ledgered `XorGaussian` trust hole
 
 Date: 2026-06-17
 

@@ -1,6 +1,7 @@
 # ADR-0309: Group objective-optimization APIs
 
 Status: accepted
+Index-summary: Group model minimization, MaxSAT, and objective optimization while retaining SAT backends and SMT-LIB commands in their own domains
 Date: 2026-07-20
 
 ## Context

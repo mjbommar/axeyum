@@ -1,6 +1,7 @@
 # ADR-0018: SMT-LIB Text Front Door in the Solver Crate
 
 Status: accepted
+Index-summary: SMT-LIB text front door (`solve_smtlib`) in the solver crate
 Date: 2026-06-13
 
 ## Context

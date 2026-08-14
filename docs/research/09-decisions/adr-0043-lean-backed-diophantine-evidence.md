@@ -1,6 +1,7 @@
 # ADR-0043: Lean-backed Diophantine evidence (integer-infeasibility unsat carries a self-check + kernel-checked Lean module)
 
 Status: accepted
+Index-summary: Lean-backed Diophantine evidence — integer-infeasibility `Evidence::UnsatDiophantine` carries a self-check + kernel-checked Lean module; `TrustId::Diophantine`
 Date: 2026-06-21
 Relates to: ADR-0042 (the integer prelude + `int_reconstruct`), P2.4 (the
 `DiophantineCertificate`), ADR-0041 (the same pattern for SOS), ADR-0031 (the

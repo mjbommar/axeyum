@@ -1,6 +1,7 @@
 # ADR-0192: Accept Glaurung's path-owned replay-cache default
 
 Status: accepted
+Index-summary: Accept Glaurung's path-owned replay-cache default: clean repeated two-driver off/on evidence clears correctness, finding, time, ratio, RSS, and environment alarms while Axeyum's generic cache remains opt-in
 Date: 2026-07-16
 
 ## Context

@@ -1,6 +1,7 @@
 # ADR-0357: Preregister checked finite-profile quantified-UF models
 
 Status: accepted
+Index-summary: Preregister source-bound finite-profile certificates for the existing almost-uninterpreted MBQI SAT fragment
 Date: 2026-07-22
 
 ## Context

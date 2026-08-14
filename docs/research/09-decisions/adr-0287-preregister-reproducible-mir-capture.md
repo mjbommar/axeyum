@@ -1,6 +1,7 @@
 # ADR-0287: Accept reproducible compiler-MIR capture and drift detection
 
 Status: accepted
+Index-summary: Accept exact compiler-MIR provenance, byte reproduction, and stale-fixture detection before extending MIR semantics
 Date: 2026-07-20
 
 Result state: accepted; all frozen gates pass

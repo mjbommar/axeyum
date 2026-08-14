@@ -1,6 +1,7 @@
 # ADR-0130: Checked affine-LSB quantified-BV models
 
 Status: accepted
+Index-summary: Checked affine-LSB quantified-BV models: complete free-BV assignments with exact universal low-bit invariants and evaluator-replayed negated-universal witnesses
 Date: 2026-07-12
 
 ## Context

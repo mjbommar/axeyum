@@ -1,6 +1,7 @@
 # ADR-0359: Preregister checked quantified-UF default repair
 
 Status: accepted
+Index-summary: Preregister bounded checked default-only model repair for quantified Int/Real-result UFs
 Date: 2026-07-22
 
 Acceptance note (2026-07-22): the bounded repair is implemented in topic commit

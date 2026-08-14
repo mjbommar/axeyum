@@ -1,6 +1,7 @@
 # ADR-0214: Paired Glaurung trace analysis
 
 Status: accepted
+Index-summary: Paired Glaurung trace analysis: marked per-backend outcomes and named execution classes feed fail-closed N>=5 both-decided geomean/bootstrap/quantile/CDF analysis without a ratio of sums
 Date: 2026-07-17
 
 ## Context

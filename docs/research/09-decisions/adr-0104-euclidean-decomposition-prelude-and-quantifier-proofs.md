@@ -1,6 +1,7 @@
 # ADR-0104: Euclidean decomposition prelude and quantifier proofs
 
 Status: accepted
+Index-summary: Euclidean decomposition prelude + quantifier proofs: add one existential positive-modulus division-algorithm theorem, then eliminate its witnesses to reconstruct the two ADR-0095 residue rows without div/mod operations or query-specific witness axioms
 Date: 2026-07-11
 
 ## Context

@@ -1,6 +1,8 @@
 # ADR-0030: Incremental (lazy) arrays for symbolic memory
 
 Status: accepted (eager route plus bounded retained structural-read slices; full warm lazy deferred)
+Index-summary: Incremental arrays for symbolic memory (eager-route slice done; warm lazy deferred)
+Index-status: accepted
 Date: 2026-06-14
 
 ## Context

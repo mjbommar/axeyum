@@ -1,6 +1,7 @@
 # ADR-0078: Explanation-Guarded Parent-Select Scheduling
 
 Status: accepted
+Index-summary: Explanation-guarded parent-select scheduling: group base reads by final live e-class, materialize only candidate-violated cross-parent pairs, guard them with e-graph merge explanations, and remove direct-symbol equality-by-query-index preparation
 Date: 2026-07-10
 
 ## Context

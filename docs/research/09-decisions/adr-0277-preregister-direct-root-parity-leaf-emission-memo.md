@@ -1,6 +1,7 @@
 # ADR-0277: Preregister direct-root parity-leaf emission memo
 
 Status: accepted
+Index-summary: Reject the exact-delta direct-root parity memo at its variance/family timing gates and remove it despite a 0.9601 aggregate ratio
 Date: 2026-07-19
 
 Result state: exact structural gate passed; performance gate rejected; candidate

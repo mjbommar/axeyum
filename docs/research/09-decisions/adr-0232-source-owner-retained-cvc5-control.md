@@ -1,6 +1,7 @@
 # ADR-0232: Source-owner-retained cvc5 control
 
 Status: accepted
+Index-summary: Source-owner-retained cvc5 control: all 9,526 accepted checks preserve exact decisions and model-output accounting across topology-equivalent persistent-prefix, temporary-assumption, and owner-session boundaries, without relabeling external SMT as in-process
 Date: 2026-07-18
 
 ## Context

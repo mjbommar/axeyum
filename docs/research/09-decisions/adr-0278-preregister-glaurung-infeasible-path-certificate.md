@@ -1,6 +1,7 @@
 # ADR-0278: Preregister one proof-carrying Glaurung infeasible-path verdict
 
 Status: accepted
+Index-summary: Accept one source-bound Glaurung infeasible-path certificate attachment consumed by pinned external drat-trim
 Date: 2026-07-19
 
 Result state: accepted bounded downstream certificate attachment and external

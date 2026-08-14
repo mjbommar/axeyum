@@ -1,6 +1,7 @@
 # ADR-0020: Unbounded QF_LIA via Branch-and-Bound over the Simplex
 
 Status: accepted
+Index-summary: Unbounded QF_LIA via branch-and-bound over the simplex
 Date: 2026-06-13
 
 ## Context

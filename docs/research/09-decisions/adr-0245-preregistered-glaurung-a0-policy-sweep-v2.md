@@ -1,6 +1,7 @@
 # ADR-0245: Preregister Glaurung A0 policy sweep v2 after the usbprint resource failure
 
 Status: deferred
+Index-summary: Preregistered corrected Glaurung A0 sweep v2: failed closed when maximum retained 14/14 but added one source-rejected stack classification; site-hash cells remain unobserved
 Date: 2026-07-18
 
 Result state: v2 failed closed at maximum's positive-control precision gate

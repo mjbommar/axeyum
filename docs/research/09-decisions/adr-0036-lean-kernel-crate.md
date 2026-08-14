@@ -1,6 +1,7 @@
 # ADR-0036: Standalone in-tree Lean kernel crate (`axeyum-lean-kernel`)
 
 Status: accepted
+Index-summary: Standalone in-tree Lean kernel crate (`axeyum-lean-kernel`), ported from nanoda
 
 Date: 2026-06-17
 
