@@ -181,6 +181,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_mod_add_multiple,
         p.div_mod_remainder_eq_zero_iff_dvd,
         p.div_mod_exact_exists,
+        p.div_mod_exec,
         p.mod_eq_refl,
         p.mod_eq_symm,
         p.mod_eq_trans,
@@ -839,6 +840,57 @@ fn executable_division_computes_both_shared_state_projections() {
         remainder_error,
         KernelError::DeclarationValueMismatch { .. }
     ));
+}
+
+#[test]
+fn executable_division_is_checked_against_the_relational_specification() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let five = f.num(5);
+    let six = f.num(6);
+
+    let five_spec = f.lemma(p.div_mod_exec, &[one, five]);
+    let five_quotient = f.div(five, two);
+    let five_remainder = f.modulo(five, two);
+    let five_spec_ty = f.div_mod(two, five, five_quotient, five_remainder);
+    let inferred =
+        f.k.infer(five_spec)
+            .expect("the executable division specification should infer");
+    assert!(f.k.def_eq(inferred, five_spec_ty));
+
+    let floor_bounds = f.lemma(
+        p.div_mod_bounds,
+        &[two, five, five_quotient, five_remainder, five_spec],
+    );
+    f.k.infer(floor_bounds)
+        .expect("relational floor laws should apply to executable division");
+
+    let six_spec = f.lemma(p.div_mod_exec, &[one, six]);
+    let six_quotient = f.div(six, two);
+    let six_remainder = f.modulo(six, two);
+    let zero_remainder_dvd = f.lemma(
+        p.div_mod_remainder_eq_zero_iff_dvd,
+        &[two, six, six_quotient, six_remainder, six_spec],
+    );
+    f.k.infer(zero_remainder_dvd)
+        .expect("divisibility laws should apply to executable remainders");
+
+    let swapped_ty = f.div_mod(two, five, five_remainder, five_quotient);
+    let swapped_name = f.name("five_div_mod_projections_are_swapped");
+    let error = f
+        .declare_theorem(swapped_name, swapped_ty, five_spec)
+        .expect_err("the relational bridge must reject swapped projections");
+    assert!(matches!(
+        error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
+
+    let zero_spec = f.lemma(p.div_mod_exec, &[zero, five]);
+    f.k.infer(zero_spec)
+        .expect("the successor-divisor theorem must include divisor one");
 }
 
 /// The Nat accessibility proof is deliberately reducible: a closed function
@@ -3144,7 +3196,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        17 + 98,
+        17 + 99,
         "every promised definition and theorem must be rendered"
     );
 }

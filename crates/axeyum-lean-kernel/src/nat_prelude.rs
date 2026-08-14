@@ -70,6 +70,9 @@
 //! witnesses and proves existence, uniqueness, and floor-order laws. One shared
 //! structurally recursive state computes total `Nat.div` and `Nat.mod`; its
 //! projections use Lean's dividend-first argument order and zero-divisor values.
+//! `div_mod_exec` proves those projections satisfy the relational specification
+//! for every positive divisor, so its uniqueness, floor, congruence, and
+//! divisibility laws apply to computation.
 //! `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v` avoids signed subtraction;
 //! reflexivity, symmetry, transitivity, and pairwise additive and multiplicative
 //! closure are checked theorems.
@@ -353,6 +356,8 @@ pub struct NatPrelude {
     pub div_mod_remainder_eq_zero_iff_dvd: NameId,
     /// `Nat.div_mod_exact_exists : Le one d → dvd d n → ∃ q, divMod d n q zero`.
     pub div_mod_exact_exists: NameId,
+    /// Executable quotient and remainder satisfy `divMod` at every successor divisor.
+    pub div_mod_exec: NameId,
     /// `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v`.
     pub mod_eq: NameId,
     /// `Nat.mod_eq_refl : ∀ d a, modEq d a a`.
@@ -539,6 +544,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             div_mod_remainder_eq_zero_iff_dvd: kernel
                 .name_str(nat, "div_mod_remainder_eq_zero_iff_dvd"),
             div_mod_exact_exists: kernel.name_str(nat, "div_mod_exact_exists"),
+            div_mod_exec: kernel.name_str(nat, "div_mod_exec"),
             mod_eq: kernel.name_str(nat, "modEq"),
             mod_eq_refl: kernel.name_str(nat, "mod_eq_refl"),
             mod_eq_symm: kernel.name_str(nat, "mod_eq_symm"),
@@ -6084,6 +6090,347 @@ fn declare_euclidean_division(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     Ok(())
 }
 
+/// Prove that the executable projections satisfy the relational Euclidean
+/// specification for every positive divisor, represented constructively as a
+/// successor. The proof follows the same Boolean rollover transition as the
+/// shared computational state.
+fn declare_executable_division_spec(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    anon: NameId,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.div_mod_exec, 2, &|d, values| {
+        let (divisor_predecessor, dividend) = (values[0], values[1]);
+        let divisor = d.succ(divisor_predecessor);
+        let spec = |d: &mut NatDev<'_>, value: ExprId| {
+            let quotient = d.div(value, divisor);
+            let remainder = d.modulo(value, divisor);
+            d.div_mod(divisor, value, quotient, remainder)
+        };
+
+        let proof = d.induct(
+            &spec,
+            &|d| {
+                let zero = d.zero();
+                let quotient = d.div(zero, divisor);
+                let remainder = d.modulo(zero, divisor);
+                let product = d.mul(divisor, quotient);
+                let reconstructed = d.add(product, remainder);
+                let equation_ty = d.eq(zero, reconstructed);
+                let equation = d.refl(zero);
+                let bound_ty = d.lt(remainder, divisor);
+                let zero_le_predecessor = d.lemma(p.zero_le, &[divisor_predecessor]);
+                let bound = d.lemma(
+                    p.le_succ_succ,
+                    &[zero, divisor_predecessor, zero_le_predecessor],
+                );
+                d.const_app(p.logic.and_intro, &[equation_ty, bound_ty, equation, bound])
+            },
+            &|d, prior_dividend, prior_relation| {
+                executable_division_spec_step(
+                    d,
+                    &p,
+                    anon,
+                    divisor_predecessor,
+                    divisor,
+                    prior_dividend,
+                    prior_relation,
+                )
+            },
+            dividend,
+        );
+        (spec(d, dividend), proof)
+    })?;
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn executable_division_spec_step(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    anon: NameId,
+    divisor_predecessor: ExprId,
+    divisor: ExprId,
+    prior_dividend: ExprId,
+    prior_relation: ExprId,
+) -> ExprId {
+    let bool_ty = d.bool_ty();
+    let zero = d.zero();
+    let successor_dividend = d.succ(prior_dividend);
+    let quotient = d.div(prior_dividend, divisor);
+    let remainder = d.modulo(prior_dividend, divisor);
+    let successor_quotient = d.succ(quotient);
+    let successor_remainder = d.succ(remainder);
+    let condition = d.beq(remainder, divisor_predecessor);
+
+    let target_for = |d: &mut NatDev<'_>, selector: ExprId| {
+        let next_quotient = d.bool_select_nat(selector, successor_quotient, quotient);
+        let next_remainder = d.bool_select_nat(selector, zero, successor_remainder);
+        d.div_mod(divisor, successor_dividend, next_quotient, next_remainder)
+    };
+    let branch_for = |d: &mut NatDev<'_>, selector: ExprId| {
+        let equality = d.bool_eq(condition, selector);
+        let target = target_for(d, selector);
+        d.arrow(equality, target)
+    };
+
+    let false_value = d.bool_false();
+    let true_value = d.bool_true();
+    let false_minor = executable_division_spec_no_rollover(
+        d,
+        p,
+        anon,
+        divisor_predecessor,
+        divisor,
+        prior_dividend,
+        prior_relation,
+        quotient,
+        remainder,
+        condition,
+        false_value,
+    );
+    let true_minor = executable_division_spec_rollover(
+        d,
+        p,
+        anon,
+        divisor_predecessor,
+        divisor,
+        prior_dividend,
+        prior_relation,
+        quotient,
+        remainder,
+        condition,
+        true_value,
+    );
+    let motive = {
+        let selector_fv = d.fresh_fvar();
+        let selector = d.kernel().fvar(selector_fv);
+        let body = branch_for(d, selector);
+        d.lam_fv(selector_fv, bool_ty, body)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
+    let selected = d.apply(bool_rec, &[motive, true_minor, false_minor, condition]);
+    let condition_refl = d.bool_refl(condition);
+    d.apply(selected, &[condition_refl])
+}
+
+#[allow(clippy::too_many_arguments)]
+fn executable_division_spec_no_rollover(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    anon: NameId,
+    divisor_predecessor: ExprId,
+    divisor: ExprId,
+    prior_dividend: ExprId,
+    prior_relation: ExprId,
+    quotient: ExprId,
+    remainder: ExprId,
+    condition: ExprId,
+    false_value: ExprId,
+) -> ExprId {
+    let false_equality_ty = d.bool_eq(condition, false_value);
+    let false_equality_fv = d.fresh_fvar();
+    let false_equality = d.kernel().fvar(false_equality_fv);
+    let successor_dividend = d.succ(prior_dividend);
+    let successor_remainder = d.succ(remainder);
+    let target = d.div_mod(divisor, successor_dividend, quotient, successor_remainder);
+    let relation_ty = d.div_mod(divisor, prior_dividend, quotient, remainder);
+    let product = d.mul(divisor, quotient);
+    let reconstructed = d.add(product, remainder);
+    let equation_ty = d.eq(prior_dividend, reconstructed);
+    let bound_ty = d.lt(remainder, divisor);
+    let relation_motive = d
+        .kernel()
+        .lam(anon, relation_ty, target, BinderInfo::Default);
+    let relation_minor = {
+        let equation_fv = d.fresh_fvar();
+        let equation = d.kernel().fvar(equation_fv);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+        let remainder_le_predecessor = d.lemma(
+            p.le_of_succ_le_succ,
+            &[remainder, divisor_predecessor, bound],
+        );
+        let strict_ty = d.lt(remainder, divisor_predecessor);
+        let equal_ty = d.eq(remainder, divisor_predecessor);
+        let split_ty = d.const_app(p.logic.or, &[strict_ty, equal_ty]);
+        let split = d.lemma(
+            p.lt_or_eq_of_le,
+            &[remainder, divisor_predecessor, remainder_le_predecessor],
+        );
+        let split_motive = d.kernel().lam(anon, split_ty, target, BinderInfo::Default);
+        let strict_minor = {
+            let strict_fv = d.fresh_fvar();
+            let strict = d.kernel().fvar(strict_fv);
+            let next_reconstructed = d.add(product, successor_remainder);
+            let next_equation_ty = d.eq(successor_dividend, next_reconstructed);
+            let next_equation = d.congr(prior_dividend, reconstructed, equation, &|d, value| {
+                d.succ(value)
+            });
+            let next_bound_ty = d.lt(successor_remainder, divisor);
+            let next_bound = d.lemma(
+                p.le_succ_succ,
+                &[successor_remainder, divisor_predecessor, strict],
+            );
+            let body = d.const_app(
+                p.logic.and_intro,
+                &[next_equation_ty, next_bound_ty, next_equation, next_bound],
+            );
+            d.lam_fv(strict_fv, strict_ty, body)
+        };
+        let equal_minor = {
+            let equal_fv = d.fresh_fvar();
+            let equal = d.kernel().fvar(equal_fv);
+            let true_value = d.bool_true();
+            let true_equality = d.lemma(
+                p.beq_eq_true_of_eq,
+                &[remainder, divisor_predecessor, equal],
+            );
+            let reverse_false = d.bool_symm(condition, false_value, false_equality);
+            let impossible = d.bool_trans(
+                false_value,
+                condition,
+                true_value,
+                reverse_false,
+                true_equality,
+            );
+            let body = d.false_true_elim(target, impossible);
+            d.lam_fv(equal_fv, equal_ty, body)
+        };
+        let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+        let body = d.apply(
+            or_rec,
+            &[
+                strict_ty,
+                equal_ty,
+                split_motive,
+                strict_minor,
+                equal_minor,
+                split,
+            ],
+        );
+        let with_bound = d.lam_fv(bound_fv, bound_ty, body);
+        d.lam_fv(equation_fv, equation_ty, with_bound)
+    };
+    let level_zero = d.kernel().level_zero();
+    let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+    let body = d.apply(
+        and_rec,
+        &[
+            equation_ty,
+            bound_ty,
+            relation_motive,
+            relation_minor,
+            prior_relation,
+        ],
+    );
+    d.lam_fv(false_equality_fv, false_equality_ty, body)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn executable_division_spec_rollover(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    anon: NameId,
+    divisor_predecessor: ExprId,
+    divisor: ExprId,
+    prior_dividend: ExprId,
+    prior_relation: ExprId,
+    quotient: ExprId,
+    remainder: ExprId,
+    condition: ExprId,
+    true_value: ExprId,
+) -> ExprId {
+    let true_equality_ty = d.bool_eq(condition, true_value);
+    let true_equality_fv = d.fresh_fvar();
+    let true_equality = d.kernel().fvar(true_equality_fv);
+    let zero = d.zero();
+    let successor_dividend = d.succ(prior_dividend);
+    let successor_quotient = d.succ(quotient);
+    let target = d.div_mod(divisor, successor_dividend, successor_quotient, zero);
+    let relation_ty = d.div_mod(divisor, prior_dividend, quotient, remainder);
+    let product = d.mul(divisor, quotient);
+    let reconstructed = d.add(product, remainder);
+    let equation_ty = d.eq(prior_dividend, reconstructed);
+    let bound_ty = d.lt(remainder, divisor);
+    let relation_motive = d
+        .kernel()
+        .lam(anon, relation_ty, target, BinderInfo::Default);
+    let relation_minor = {
+        let equation_fv = d.fresh_fvar();
+        let equation = d.kernel().fvar(equation_fv);
+        let bound_fv = d.fresh_fvar();
+        let _bound = d.kernel().fvar(bound_fv);
+        let remainder_eq_predecessor = d.lemma(
+            p.eq_of_beq_eq_true,
+            &[remainder, divisor_predecessor, true_equality],
+        );
+        let successor_remainder = d.succ(remainder);
+        let successor_remainder_eq_divisor = d.congr(
+            remainder,
+            divisor_predecessor,
+            remainder_eq_predecessor,
+            &|d, value| d.succ(value),
+        );
+        let next_product = d.mul(divisor, successor_quotient);
+        let next_reconstructed = d.add(next_product, zero);
+        let next_equation_ty = d.eq(successor_dividend, next_reconstructed);
+        let successor_reconstructed = d.succ(reconstructed);
+        let lifted = d.congr(prior_dividend, reconstructed, equation, &|d, value| {
+            d.succ(value)
+        });
+        let product_plus_successor_remainder = d.add(product, successor_remainder);
+        let successor_eq_product_plus_successor_remainder = d.refl(successor_reconstructed);
+        let product_plus_divisor = d.add(product, divisor);
+        let replace_remainder = d.congr(
+            successor_remainder,
+            divisor,
+            successor_remainder_eq_divisor,
+            &|d, value| d.add(product, value),
+        );
+        let product_plus_divisor_eq_next = d.refl(product_plus_divisor);
+        let (_, next_equation) = d.chain(
+            successor_dividend,
+            &[
+                (successor_reconstructed, lifted),
+                (
+                    product_plus_successor_remainder,
+                    successor_eq_product_plus_successor_remainder,
+                ),
+                (product_plus_divisor, replace_remainder),
+                (next_reconstructed, product_plus_divisor_eq_next),
+            ],
+        );
+        let zero_bound_ty = d.lt(zero, divisor);
+        let zero_le_predecessor = d.lemma(p.zero_le, &[divisor_predecessor]);
+        let zero_bound = d.lemma(
+            p.le_succ_succ,
+            &[zero, divisor_predecessor, zero_le_predecessor],
+        );
+        let body = d.const_app(
+            p.logic.and_intro,
+            &[next_equation_ty, zero_bound_ty, next_equation, zero_bound],
+        );
+        let with_bound = d.lam_fv(bound_fv, bound_ty, body);
+        d.lam_fv(equation_fv, equation_ty, with_bound)
+    };
+    let level_zero = d.kernel().level_zero();
+    let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+    let body = d.apply(
+        and_rec,
+        &[
+            equation_ty,
+            bound_ty,
+            relation_motive,
+            relation_minor,
+            prior_relation,
+        ],
+    );
+    d.lam_fv(true_equality_fv, true_equality_ty, body)
+}
+
 /// `Nat.dvd`, `dvd_mul`, and `dvd_add`, all constructed from the logic
 /// prelude's checked `Exists` eliminator and the proved Nat multiplication
 /// laws. No proposition is admitted as an axiom.
@@ -6379,6 +6726,8 @@ fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kernel
         let proof = d.lam_fv(positive_fv, positive_ty, with_divides);
         (stmt, proof)
     })?;
+
+    declare_executable_division_spec(d, &p, anon)?;
 
     // dvd_mul : ∀ a q, dvd a (a * q)
     d.theorem(p.dvd_mul, 2, &|d, v| {
@@ -7255,6 +7604,59 @@ pub trait NatOps {
         let refl = self.kernel().const_(name, vec![one]);
         let bool_ty = self.bool_ty();
         self.apply(refl, &[bool_ty, value])
+    }
+
+    /// `h : Eq Bool a b  ⊢  Eq Bool b a`.
+    fn bool_symm(&mut self, a: ExprId, b: ExprId, h: ExprId) -> ExprId
+    where
+        Self: Sized,
+    {
+        let motive = self.bool_eq_motive(a, &|d, value| d.bool_eq(value, a));
+        let refl_case = self.bool_refl(a);
+        self.bool_transport(a, motive, refl_case, b, h)
+    }
+
+    /// `h1 : Eq Bool a b`, `h2 : Eq Bool b c  ⊢  Eq Bool a c`.
+    fn bool_trans(&mut self, a: ExprId, b: ExprId, c: ExprId, h1: ExprId, h2: ExprId) -> ExprId
+    where
+        Self: Sized,
+    {
+        let motive = self.bool_eq_motive(b, &|d, value| d.bool_eq(a, value));
+        self.bool_transport(b, motive, h1, c, h2)
+    }
+
+    /// `Eq.rec.{0,1} Bool p motive refl_case q h : motive q h`.
+    fn bool_transport(
+        &mut self,
+        p: ExprId,
+        motive: ExprId,
+        refl_case: ExprId,
+        q: ExprId,
+        h: ExprId,
+    ) -> ExprId {
+        let zero = self.kernel().level_zero();
+        let one = self.level_one();
+        let eq_rec = self.prelude().logic.eq_rec;
+        let rec = self.kernel().const_(eq_rec, vec![zero, one]);
+        let bool_ty = self.bool_ty();
+        self.apply(rec, &[bool_ty, p, motive, refl_case, q, h])
+    }
+
+    /// Build `fun (x : Bool) (_ : Eq Bool a x) => body x`.
+    fn bool_eq_motive(&mut self, a: ExprId, body: &dyn Fn(&mut Self, ExprId) -> ExprId) -> ExprId
+    where
+        Self: Sized,
+    {
+        let value_fv = self.fresh_fvar();
+        let value = self.kernel().fvar(value_fv);
+        let conclusion = body(self, value);
+        let equality = self.bool_eq(a, value);
+        let anon = self.anon_name();
+        let inner = self
+            .kernel()
+            .lam(anon, equality, conclusion, BinderInfo::Default);
+        let bool_ty = self.bool_ty();
+        self.lam_fv(value_fv, bool_ty, inner)
     }
 
     /// Eliminate an impossible equality `Bool.false = Bool.true` into `target`.

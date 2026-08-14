@@ -503,3 +503,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0445](adr-0445-reducible-nat-strict-order-well-foundedness.md) | Reducible Nat strict-order well-foundedness | accepted |
 | [0446](adr-0446-computational-nat-equality-for-constructive-algorithms.md) | Computational Nat equality for constructive algorithms | accepted |
 | [0447](adr-0447-shared-executable-nat-division-state.md) | Shared executable Nat division state | accepted |
+| [0448](adr-0448-checked-executable-nat-division-specification.md) | Checked executable Nat division specification | accepted |
