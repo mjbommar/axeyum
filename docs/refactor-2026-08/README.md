@@ -64,6 +64,14 @@ the code does not.** Three gate-scope holes and one whole class of
 prose-only guards were found in a single day — none by running the gates. →
 [`04-gates-and-truth.md`](04-gates-and-truth.md)
 
+**5. Proof consumption is nearly closed, and this folder was quoting the
+pre-fix number.** ADR-0426 took backward checking from 8.00× the proof's size to
+**1.49×** — verdicts identical, and faster — which moved the 18.9 GB certificate
+from uncheckable anywhere in the fleet to checkable on s0/s4. The remaining wall
+is not I/O at all: the Lean *proof-term* route peaks at 96.6 GB on a 628 MB
+certificate, so large combinatorial results have to reach Lean by reflection. →
+[`05-proof-consumption.md`](05-proof-consumption.md)
+
 ## What this plan is not
 
 It is not a rewrite. The measured evidence says the architecture is sound and
@@ -73,8 +81,10 @@ already group cleanly, a dependency contract that already exists in
 is half-drawn, and each is independently landable.
 
 Nor is it a performance plan. Where performance appears — the 4,000× kernel
-rebuild, the 6.6× proof-checking blow-up since reduced to 1.5× — it appears
-because it *bounds what can be proved at all*, not because it is slow.
+rebuild, the proof-checking blow-up measured at 8.00× and since reduced to
+1.49× (ADR-0426) — it appears because it *bounds what can be proved at all*,
+not because it is slow. The earlier "6.6× since reduced to 1.5×" phrasing here
+mixed a pre-fix measurement with a figure that was only ever a rule of thumb.
 
 ## Order
 
