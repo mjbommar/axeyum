@@ -471,3 +471,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0413](adr-0413-relational-nat-valuation-at-two.md) | Relational Nat valuation at two | accepted |
 | [0414](adr-0414-closed-form-rado-witness-valuation.md) | Closed-form Rado witness valuation | accepted |
 | [0415](adr-0415-relational-closed-nat-intervals.md) | Relational closed Nat intervals | accepted |
+| [0416](adr-0416-closed-form-rado-witness-colour-two.md) | Closed-form Rado witness colour two | accepted |

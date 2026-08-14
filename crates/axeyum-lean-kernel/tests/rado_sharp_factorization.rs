@@ -12,7 +12,8 @@
 )]
 
 use axeyum_lean_kernel::{
-    Declaration, ExprId, Kernel, NameId, NatOps, NatPrelude, NatState, build_nat_prelude,
+    BinderInfo, Declaration, ExprId, Kernel, NameId, NatOps, NatPrelude, NatState,
+    ReducibilityHint, build_nat_prelude,
 };
 
 struct Dev {
@@ -505,6 +506,121 @@ struct RangeTheorems {
     x_upper: NameId,
     z_lower: NameId,
     z_upper_if_a_le_b: NameId,
+}
+
+#[derive(Clone, Copy)]
+struct ColourTwoDefinitions {
+    shell_two_member: NameId,
+    colour_two_at: NameId,
+}
+
+fn define_colour_two_relations(d: &mut Dev) -> ColourTwoDefinitions {
+    let p = d.p;
+    let nat = d.nat_ty();
+    let prop = d.k.sort_zero();
+    let anon = d.k.anon();
+
+    let shell_two_member = d.name("shellTwoMember");
+    {
+        let n_fv = d.fresh_fvar();
+        let capital_n = d.k.fvar(n_fv);
+        let ab_fv = d.fresh_fvar();
+        let ab = d.k.fvar(ab_fv);
+        let value_fv = d.fresh_fvar();
+        let value = d.k.fvar(value_fv);
+        let one = d.num(1);
+        let left = d.in_closed_interval(one, ab, value);
+        let difference = d.sub(capital_n, ab);
+        let right_lower = d.add(difference, one);
+        let right = d.in_closed_interval(right_lower, capital_n, value);
+        let body = d.const_app(p.logic.or, &[left, right]);
+        let value = {
+            let with_value = d.lam_fv(value_fv, nat, body);
+            let with_ab = d.lam_fv(ab_fv, nat, with_value);
+            d.lam_fv(n_fv, nat, with_ab)
+        };
+        let ty = {
+            let with_value = d.k.pi(anon, nat, prop, BinderInfo::Default);
+            let with_ab = d.k.pi(anon, nat, with_value, BinderInfo::Default);
+            d.k.pi(anon, nat, with_ab, BinderInfo::Default)
+        };
+        d.k.add_declaration(Declaration::Definition {
+            name: shell_two_member,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(6),
+        })
+        .expect("shell-two membership definition checks");
+    }
+
+    let colour_two_at = d.name("colourTwoAt");
+    {
+        let a_fv = d.fresh_fvar();
+        let a = d.k.fvar(a_fv);
+        let n_fv = d.fresh_fvar();
+        let capital_n = d.k.fvar(n_fv);
+        let ab_fv = d.fresh_fvar();
+        let ab = d.k.fvar(ab_fv);
+        let value_fv = d.fresh_fvar();
+        let value = d.k.fvar(value_fv);
+        let one = d.num(1);
+        let two = d.num(2);
+        let domain = d.in_closed_interval(one, capital_n, value);
+        let valuation = d.valuation_at(a, value, two);
+        let divides = d.dvd(a, value);
+        let unit = d.const_app(p.logic.not, &[divides]);
+        let shell = d.const_app(shell_two_member, &[capital_n, ab, value]);
+        let unit_in_shell = d.const_app(p.logic.and, &[unit, shell]);
+        let classified = d.const_app(p.logic.or, &[valuation, unit_in_shell]);
+        let body = d.const_app(p.logic.and, &[domain, classified]);
+        let value = {
+            let with_value = d.lam_fv(value_fv, nat, body);
+            let with_ab = d.lam_fv(ab_fv, nat, with_value);
+            let with_n = d.lam_fv(n_fv, nat, with_ab);
+            d.lam_fv(a_fv, nat, with_n)
+        };
+        let ty = {
+            let with_value = d.k.pi(anon, nat, prop, BinderInfo::Default);
+            let with_ab = d.k.pi(anon, nat, with_value, BinderInfo::Default);
+            let with_n = d.k.pi(anon, nat, with_ab, BinderInfo::Default);
+            d.k.pi(anon, nat, with_n, BinderInfo::Default)
+        };
+        d.k.add_declaration(Declaration::Definition {
+            name: colour_two_at,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(7),
+        })
+        .expect("colour-two relation checks");
+    }
+
+    ColourTwoDefinitions {
+        shell_two_member,
+        colour_two_at,
+    }
+}
+
+fn shell_two_member(
+    d: &mut Dev,
+    defs: ColourTwoDefinitions,
+    capital_n: ExprId,
+    ab: ExprId,
+    value: ExprId,
+) -> ExprId {
+    d.const_app(defs.shell_two_member, &[capital_n, ab, value])
+}
+
+fn colour_two_at(
+    d: &mut Dev,
+    defs: ColourTwoDefinitions,
+    a: ExprId,
+    capital_n: ExprId,
+    ab: ExprId,
+    value: ExprId,
+) -> ExprId {
+    d.const_app(defs.colour_two_at, &[a, capital_n, ab, value])
 }
 
 /// Admit the exact signed-range criterion from the paper in Nat form:
@@ -1093,6 +1209,257 @@ fn admit_closed_form_range_theorems(d: &mut Dev) -> RangeTheorems {
     }
 }
 
+/// Prove that the three closed-form witness terms all have manuscript colour
+/// two. The relation includes membership in `[1,N]`; consequently the paper's
+/// explicit `Z <= N` guard remains an explicit theorem hypothesis.
+fn admit_closed_form_witness_colour_two(
+    d: &mut Dev,
+    defs: ColourTwoDefinitions,
+    ranges: RangeTheorems,
+    valuation: NameId,
+) -> NameId {
+    let p = d.p;
+    let name = d.name("closed_form_witness_colour_two");
+    d.theorem(name, 3, &|d, v| {
+        let (a, b, n) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let two = d.num(2);
+        let ha_two_ty = d.le(two, a);
+        let ha_two_fv = d.fresh_fvar();
+        let ha_two = d.k.fvar(ha_two_fv);
+        let hb_ty = d.le(one, b);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.k.fvar(hb_fv);
+
+        let shifted = power_range(d, a, 1);
+        let sum = d.sum_range(shifted, n);
+        let sn = d.succ(n);
+        let power = d.pow(a, sn);
+        let twice_sum = d.mul(two, sum);
+        let tail = d.add(twice_sum, power);
+        let inner = d.add(one, tail);
+        let u = d.mul(a, inner);
+        let q = d.add(a, u);
+        let capital_n = d.mul(b, q);
+        let ab = d.mul(a, b);
+        let difference = d.sub(capital_n, ab);
+        let x = d.add(difference, one);
+        let y = one;
+        let q_sub_a = d.sub(q, a);
+        let z = d.mul(a, q_sub_a);
+        let z_upper_ty = d.le(z, capital_n);
+        let z_upper_fv = d.fresh_fvar();
+        let z_upper = d.k.fvar(z_upper_fv);
+
+        let one_le_two = d.lemma(p.le_add_right, &[one, one]);
+        let ha = d.lemma(p.le_trans, &[one, two, a, one_le_two, ha_two]);
+
+        // Y is a unit in the left interval [1,ab].
+        let a_times_one = d.mul(a, one);
+        let a_times_one_le_ab = d.lemma(p.mul_le_mul_left, &[a, one, b, hb]);
+        let a_times_one_eq_a = d.lemma(p.mul_one, &[a]);
+        let a_le_ab =
+            transport_le_lower(d, a_times_one, a, ab, a_times_one_le_ab, a_times_one_eq_a);
+        let one_le_ab = d.lemma(p.le_trans, &[one, a, ab, ha, a_le_ab]);
+        let one_le_one = d.lemma(p.le_refl, &[one]);
+        let y_left_interval_ty = d.in_closed_interval(one, ab, y);
+        let one_le_y_ty = d.le(one, y);
+        let y_le_ab_ty = d.le(y, ab);
+        let y_left_interval = d.const_app(
+            p.logic.and_intro,
+            &[one_le_y_ty, y_le_ab_ty, one_le_one, one_le_ab],
+        );
+        let y_right_interval = d.in_closed_interval(x, capital_n, y);
+        let y_shell = d.const_app(
+            p.logic.or_inl,
+            &[y_left_interval_ty, y_right_interval, y_left_interval],
+        );
+        let y_shell_ty = shell_two_member(d, defs, capital_n, ab, y);
+        let y_not_dvd = d.lemma(p.not_dvd_one_of_two_le, &[a, ha_two]);
+        let y_not_dvd_ty = {
+            let divides = d.dvd(a, y);
+            d.const_app(p.logic.not, &[divides])
+        };
+        let y_unit_shell_ty = d.const_app(p.logic.and, &[y_not_dvd_ty, y_shell_ty]);
+        let y_unit_shell = d.const_app(
+            p.logic.and_intro,
+            &[y_not_dvd_ty, y_shell_ty, y_not_dvd, y_shell],
+        );
+        let y_valuation_ty = d.valuation_at(a, y, two);
+        let y_classified = d.const_app(
+            p.logic.or_inr,
+            &[y_valuation_ty, y_unit_shell_ty, y_unit_shell],
+        );
+        let y_lower = one_le_one;
+        let y_upper = d.lemma(ranges.y_upper, &[a, b, n, ha, hb]);
+        let y_domain_ty = d.in_closed_interval(one, capital_n, y);
+        let y_le_n_ty = d.le(y, capital_n);
+        let y_domain = d.const_app(
+            p.logic.and_intro,
+            &[one_le_y_ty, y_le_n_ty, y_lower, y_upper],
+        );
+        let y_classified_ty = d.const_app(p.logic.or, &[y_valuation_ty, y_unit_shell_ty]);
+        let y_colour = d.const_app(
+            p.logic.and_intro,
+            &[y_domain_ty, y_classified_ty, y_domain, y_classified],
+        );
+
+        // X is the right shell endpoint and is congruent to one modulo a.
+        let x_lower = d.lemma(ranges.x_lower, &[a, b, n]);
+        let x_upper = d.lemma(ranges.x_upper, &[a, b, n, ha, hb]);
+        let x_domain_ty = d.in_closed_interval(one, capital_n, x);
+        let one_le_x_ty = d.le(one, x);
+        let x_le_n_ty = d.le(x, capital_n);
+        let x_domain = d.const_app(
+            p.logic.and_intro,
+            &[one_le_x_ty, x_le_n_ty, x_lower, x_upper],
+        );
+        let x_right_interval_ty = d.in_closed_interval(x, capital_n, x);
+        let x_le_x_ty = d.le(x, x);
+        let x_le_x = d.lemma(p.le_refl, &[x]);
+        let x_right_interval =
+            d.const_app(p.logic.and_intro, &[x_le_x_ty, x_le_n_ty, x_le_x, x_upper]);
+        let x_left_interval = d.in_closed_interval(one, ab, x);
+        let x_shell = d.const_app(
+            p.logic.or_inr,
+            &[x_left_interval, x_right_interval_ty, x_right_interval],
+        );
+        let x_shell_ty = shell_two_member(d, defs, capital_n, ab, x);
+
+        let ba = d.mul(b, a);
+        let capital_n_sub_ba = d.sub(capital_n, ba);
+        let ab_eq_ba = d.lemma(p.mul_comm, &[a, b]);
+        let difference_eq_n_sub_ba = d.congr(ab, ba, ab_eq_ba, &|d, t| d.sub(capital_n, t));
+        let b_q_sub_a = d.mul(b, q_sub_a);
+        let a_le_q = d.lemma(p.le_add_right, &[a, u]);
+        let n_sub_ba_eq_b_q_sub_a = {
+            let distributed = d.lemma(p.mul_sub_left_distrib, &[b, q, a, a_le_q]);
+            d.symm(b_q_sub_a, capital_n_sub_ba, distributed)
+        };
+        let restored = d.add(q_sub_a, a);
+        let restored_eq_q = d.lemma(p.sub_add_cancel, &[a, q, a_le_q]);
+        let u_plus_a = d.add(u, a);
+        let q_eq_u_plus_a = d.lemma(p.add_comm, &[a, u]);
+        let (_, common_sum) = d.chain(restored, &[(q, restored_eq_q), (u_plus_a, q_eq_u_plus_a)]);
+        let q_sub_a_eq_u = d.lemma(p.add_right_cancel, &[q_sub_a, u, a, common_sum]);
+        let b_u = d.mul(b, u);
+        let b_q_sub_a_eq_b_u = d.congr(q_sub_a, u, q_sub_a_eq_u, &|d, t| d.mul(b, t));
+        let ba_inner = d.mul(ba, inner);
+        let b_assoc = d.lemma(p.mul_assoc, &[b, a, inner]);
+        let b_u_eq_ba_inner = d.symm(ba_inner, b_u, b_assoc);
+        let ab_inner = d.mul(ab, inner);
+        let ba_eq_ab = d.lemma(p.mul_comm, &[b, a]);
+        let ba_inner_eq_ab_inner = d.congr(ba, ab, ba_eq_ab, &|d, t| d.mul(t, inner));
+        let b_inner = d.mul(b, inner);
+        let a_b_inner = d.mul(a, b_inner);
+        let ab_inner_eq_a_b_inner = d.lemma(p.mul_assoc, &[a, b, inner]);
+        let (_, difference_eq_a_b_inner) = d.chain(
+            difference,
+            &[
+                (capital_n_sub_ba, difference_eq_n_sub_ba),
+                (b_q_sub_a, n_sub_ba_eq_b_q_sub_a),
+                (b_u, b_q_sub_a_eq_b_u),
+                (ba_inner, b_u_eq_ba_inner),
+                (ab_inner, ba_inner_eq_ab_inner),
+                (a_b_inner, ab_inner_eq_a_b_inner),
+            ],
+        );
+        let one_plus_difference = d.add(one, difference);
+        let x_eq_one_plus_difference = d.lemma(p.add_comm, &[difference, one]);
+        let shaped_x = d.add(one, a_b_inner);
+        let one_plus_difference_eq_shaped =
+            d.congr(difference, a_b_inner, difference_eq_a_b_inner, &|d, t| {
+                d.add(one, t)
+            });
+        let (_, x_eq_shaped) = d.chain(
+            x,
+            &[
+                (one_plus_difference, x_eq_one_plus_difference),
+                (shaped_x, one_plus_difference_eq_shaped),
+            ],
+        );
+        let shaped_not_dvd = d.lemma(p.not_dvd_one_add_mul_of_two_le, &[a, b_inner, ha_two]);
+        let shaped_eq_x = d.symm(x, shaped_x, x_eq_shaped);
+        let x_not_dvd = {
+            let motive = d.eq_motive(shaped_x, &|d, value| {
+                let divides = d.dvd(a, value);
+                d.const_app(p.logic.not, &[divides])
+            });
+            d.transport(shaped_x, motive, shaped_not_dvd, x, shaped_eq_x)
+        };
+        let x_not_dvd_ty = {
+            let divides = d.dvd(a, x);
+            d.const_app(p.logic.not, &[divides])
+        };
+        let x_unit_shell_ty = d.const_app(p.logic.and, &[x_not_dvd_ty, x_shell_ty]);
+        let x_unit_shell = d.const_app(
+            p.logic.and_intro,
+            &[x_not_dvd_ty, x_shell_ty, x_not_dvd, x_shell],
+        );
+        let x_valuation_ty = d.valuation_at(a, x, two);
+        let x_classified = d.const_app(
+            p.logic.or_inr,
+            &[x_valuation_ty, x_unit_shell_ty, x_unit_shell],
+        );
+        let x_classified_ty = d.const_app(p.logic.or, &[x_valuation_ty, x_unit_shell_ty]);
+        let x_colour = d.const_app(
+            p.logic.and_intro,
+            &[x_domain_ty, x_classified_ty, x_domain, x_classified],
+        );
+
+        // Z is in the domain by the explicit guard and has exact valuation two.
+        let z_lower = d.lemma(ranges.z_lower, &[a, b, n, ha]);
+        let z_domain_ty = d.in_closed_interval(one, capital_n, z);
+        let one_le_z_ty = d.le(one, z);
+        let z_le_n_ty = d.le(z, capital_n);
+        let z_domain = d.const_app(
+            p.logic.and_intro,
+            &[one_le_z_ty, z_le_n_ty, z_lower, z_upper],
+        );
+        let z_valuation_ty = d.valuation_at(a, z, two);
+        let z_valuation = d.lemma(valuation, &[a, b, n, ha_two]);
+        let z_not_dvd_ty = {
+            let divides = d.dvd(a, z);
+            d.const_app(p.logic.not, &[divides])
+        };
+        let z_shell_ty = shell_two_member(d, defs, capital_n, ab, z);
+        let z_unit_shell_ty = d.const_app(p.logic.and, &[z_not_dvd_ty, z_shell_ty]);
+        let z_classified = d.const_app(
+            p.logic.or_inl,
+            &[z_valuation_ty, z_unit_shell_ty, z_valuation],
+        );
+        let z_classified_ty = d.const_app(p.logic.or, &[z_valuation_ty, z_unit_shell_ty]);
+        let z_colour = d.const_app(
+            p.logic.and_intro,
+            &[z_domain_ty, z_classified_ty, z_domain, z_classified],
+        );
+
+        let x_colour_ty = colour_two_at(d, defs, a, capital_n, ab, x);
+        let y_colour_ty = colour_two_at(d, defs, a, capital_n, ab, y);
+        let z_colour_ty = colour_two_at(d, defs, a, capital_n, ab, z);
+        let yz_ty = d.const_app(p.logic.and, &[y_colour_ty, z_colour_ty]);
+        let yz = d.const_app(
+            p.logic.and_intro,
+            &[y_colour_ty, z_colour_ty, y_colour, z_colour],
+        );
+        let body = d.const_app(p.logic.and_intro, &[x_colour_ty, yz_ty, x_colour, yz]);
+        let conclusion = d.const_app(p.logic.and, &[x_colour_ty, yz_ty]);
+        let proof = {
+            let with_z_upper = d.lam_fv(z_upper_fv, z_upper_ty, body);
+            let with_hb = d.lam_fv(hb_fv, hb_ty, with_z_upper);
+            d.lam_fv(ha_two_fv, ha_two_ty, with_hb)
+        };
+        let stmt = {
+            let with_z_upper = d.arrow(z_upper_ty, conclusion);
+            let with_hb = d.arrow(hb_ty, with_z_upper);
+            d.arrow(ha_two_ty, with_hb)
+        };
+        (stmt, proof)
+    })
+    .expect("closed-form witness colour-two theorem checks");
+    name
+}
+
 #[test]
 fn kernel_checks_the_exact_sharpness_factorization() {
     let mut d = Dev::new();
@@ -1330,6 +1697,81 @@ fn kernel_rejects_a_broken_closed_form_witness_valuation() {
         })
         .expect_err("a changed valuation exponent must be rejected");
     println!("broken closed-form witness valuation rejected: {error:?}");
+    assert!(!d.k.environment().contains(bad_name));
+}
+
+#[test]
+fn kernel_checks_the_closed_form_witness_colour_two() {
+    let mut d = Dev::new();
+    let defs = define_colour_two_relations(&mut d);
+    let ranges = admit_closed_form_range_theorems(&mut d);
+    let valuation = admit_closed_form_witness_valuation(&mut d);
+    let theorem = admit_closed_form_witness_colour_two(&mut d, defs, ranges, valuation);
+
+    // Empty-range corner: a=2, b=3, n=0 gives N=24, X=19, Y=1, Z=12.
+    let a = d.num(2);
+    let b = d.num(3);
+    let zero = d.zero();
+    let one = d.num(1);
+    let two = d.num(2);
+    let ha = d.lemma(d.p.le_refl, &[a]);
+    let hb = d.lemma(d.p.le_add_right, &[one, two]);
+    let twelve = d.num(12);
+    let twelve_more = d.num(12);
+    let z_upper = d.lemma(d.p.le_add_right, &[twelve, twelve_more]);
+    let proof = d.lemma(theorem, &[a, b, zero, ha, hb, z_upper]);
+    d.k.infer(proof)
+        .expect("closed-form colour-two application infers");
+
+    let axioms: Vec<_> =
+        d.k.environment()
+            .iter()
+            .filter(|(_, decl)| matches!(decl, Declaration::Axiom { .. }))
+            .collect();
+    assert!(axioms.is_empty(), "colour-two theorem must add no axioms");
+}
+
+#[test]
+fn kernel_rejects_a_broken_closed_form_witness_colour_two_shell() {
+    let mut d = Dev::new();
+    let defs = define_colour_two_relations(&mut d);
+    let ranges = admit_closed_form_range_theorems(&mut d);
+    let valuation = admit_closed_form_witness_valuation(&mut d);
+    let theorem = admit_closed_form_witness_colour_two(&mut d, defs, ranges, valuation);
+    let a = d.num(2);
+    let b = d.num(3);
+    let zero = d.zero();
+    let one = d.num(1);
+    let two = d.num(2);
+    let ha = d.lemma(d.p.le_refl, &[a]);
+    let hb = d.lemma(d.p.le_add_right, &[one, two]);
+    let twelve = d.num(12);
+    let twelve_more = d.num(12);
+    let z_upper = d.lemma(d.p.le_add_right, &[twelve, twelve_more]);
+    let proof = d.lemma(theorem, &[a, b, zero, ha, hb, z_upper]);
+
+    // The checked shell has ab=6 and right endpoint 19. Changing only the
+    // shell width to five moves its right interval to [20,24].
+    let capital_n = d.num(24);
+    let broken_ab = d.num(5);
+    let x = d.num(19);
+    let y = one;
+    let z = twelve;
+    let x_colour = colour_two_at(&mut d, defs, a, capital_n, broken_ab, x);
+    let y_colour = colour_two_at(&mut d, defs, a, capital_n, broken_ab, y);
+    let z_colour = colour_two_at(&mut d, defs, a, capital_n, broken_ab, z);
+    let yz = d.const_app(d.p.logic.and, &[y_colour, z_colour]);
+    let bad = d.const_app(d.p.logic.and, &[x_colour, yz]);
+    let bad_name = d.name("broken_closed_form_witness_colour_two_shell");
+    let error =
+        d.k.add_declaration(Declaration::Theorem {
+            name: bad_name,
+            uparams: vec![],
+            ty: bad,
+            value: proof,
+        })
+        .expect_err("a changed shell width must be rejected");
+    println!("broken closed-form colour-two shell rejected: {error:?}");
     assert!(!d.k.environment().contains(bad_name));
 }
 
