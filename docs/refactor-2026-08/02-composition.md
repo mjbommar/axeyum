@@ -1,5 +1,26 @@
 # 02 — The components are adjacent, not composed
 
+> **W1 UPDATE 2026-08-15 — the tax grows as the mathematics succeeds.** Measured
+> with `prelude_build_timing` (a lane built it while settling the whnf cache key):
+>
+> | prelude | earlier 2026-08-15 | later the same day |
+> |---|---|---|
+> | `nat` | 22.2 ms | **25.3 ms** |
+> | `integer` | 38.9 ms | **44.6 ms** |
+> | `logic` / `real` / `string` | ~1.4 ms | ~1.6 ms |
+>
+> Nothing regressed. `integer` went from **0 substantive theorems to 51** in one
+> day, and `build_int_prelude` now builds `nat` first, so every theorem the
+> library gains makes every fresh-`Kernel` reconstruction more expensive. There
+> are six `Kernel::new()` sites in `axeyum-solver/src`.
+>
+> The cache (`cached_prelude`, ADR follow-on to `f2ccc4322`) is **per-`Kernel`**,
+> not global: a second build inside one kernel is a lookup, and a fresh kernel
+> pays in full. So this item does not age out as other work lands — it gets
+> *worse*, and it gets worse precisely in proportion to the library growth that is
+> the point of the project. Re-measure before scoping; the numbers above will be
+> stale again by the time anyone reads this, which is itself the argument.
+
 **The finding.** axeyum's pitch is an SMT solver, a computer-algebra system, a
 Lean-compatible kernel and a proved library in one Rust process with no C
 dependency. That is accurate as an inventory. It is not yet accurate as an
