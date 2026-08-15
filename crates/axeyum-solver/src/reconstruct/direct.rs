@@ -997,7 +997,37 @@ pub(super) fn reconstruct_checked_structural_certificate_to_lean_module(
     let refuter = fresh_axiom(&mut ctx, refuter_prop, refuter_role)?;
     let proof = ctx.kernel.app(refuter, asserted);
     require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    let body = render_ctx_module(&mut ctx, proof);
+    Ok(format!(
+        "{}\n{}",
+        structural_attestation_banner(refuter_role),
+        body
+    ))
+}
+
+/// The self-labelling header on every structural-attestation module.
+///
+/// A module that kernel-checks, is `sorry`-free, and contains no reasoning is
+/// indistinguishable from a real proof by every property a reader normally
+/// checks. So the artifact says what it is, in its own first lines, in a form
+/// both a person and [`super::LeanModuleContent::of_module_source`] can read.
+pub(super) fn structural_attestation_banner(refuter_role: &str) -> String {
+    format!(
+        "{marker}\n\
+         -- refuter: {refuter_role}\n\
+         --\n\
+         -- WARNING: this module contains NO theory reasoning. The refuted\n\
+         -- proposition below is an OPAQUE axiom; `False` follows from it and\n\
+         -- its negation by application, and the same 21 lines are emitted for\n\
+         -- every route in this class. Kernel-checking this module establishes\n\
+         -- nothing about the query it came from.\n\
+         --\n\
+         -- The evidence for this refutation is the Rust certificate that the\n\
+         -- `{refuter_role}` checker re-derived and verified before this module\n\
+         -- was rendered -- not this term. Do not report this as a\n\
+         -- machine-checked proof of the query.",
+        marker = super::STRUCTURAL_ATTESTATION_MARKER,
+    )
 }
 
 fn reconstruct_bv_abstraction_to_lean_module(

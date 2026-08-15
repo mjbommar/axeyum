@@ -27,7 +27,12 @@ fn legacy_checked_structural_certificate_module(
     let refuter = fresh_axiom(&mut ctx, refuter_prop, refuter_role)?;
     let proof = ctx.kernel.app(refuter, asserted);
     require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    let body = render_ctx_module(&mut ctx, proof);
+    Ok(format!(
+        "{}\n{}",
+        super::direct::structural_attestation_banner(refuter_role),
+        body
+    ))
 }
 
 #[test]
@@ -4961,9 +4966,10 @@ fn unified_dispatcher_routes_each_fragment_to_kernel_false() {
         assert_eq!(frag, ProofFragment::BvUfLocal);
     }
 
-    // LRA: x < 0 ∧ 0 ≤ x — Int/Real sorts, no functions. The general
-    // Boolean-structured LRA DPLL proof route has priority over the older
-    // conjunctive fallback when it certifies the row.
+    // LRA: x < 0 ∧ 0 ≤ x — Int/Real sorts, no functions. Purely conjunctive, so
+    // the GENUINE Farkas reconstructor owns it; the lazy-SMT arm also certifies
+    // this row but emits a contentless structural attestation, which is why it
+    // no longer has priority.
     {
         let mut arena = TermArena::new();
         let x = arena.real_var("x").unwrap();
@@ -4972,7 +4978,7 @@ fn unified_dispatcher_routes_each_fragment_to_kernel_false() {
         let a2 = arena.real_le(zero, x).unwrap();
         let frag = prove_unsat_to_lean(&mut arena, &[a1, a2])
             .expect("LRA unsat dispatches + kernel-checks to False");
-        assert_eq!(frag, ProofFragment::LraDpll);
+        assert_eq!(frag, ProofFragment::Lra);
     }
 
     // Quantifier ∀: ∀x.(f x = c) ∧ ¬(f a = c) — top-level universal.
@@ -5101,6 +5107,262 @@ fn nat_ne_succ_pow_infers_to_pi_eq_succ_pow_false() {
         assert_eq!(
             succ_count, k,
             "nat_ne_succ_pow (k={k}) RHS must have k `Nat.succ`s, got {succ_count}: {rendered}"
+        );
+    }
+}
+
+// --- Dispatch: the conjunctive-LRA front door reaches the REAL reconstructor ---
+//
+// `ProofFragment::Lra` used to occur in the whole tree at exactly two places —
+// where the classifier produced it as the final fallthrough and where the
+// dispatcher consumed it — with **no test anywhere asserting that a query
+// reaches it** (measured by the `infeasibility` lane, 2026-08-14). Every
+// conjunctive real row was intercepted first by `ProofFragment::LraDpll`, whose
+// module is a 21-line structural attestation. These tests are the missing
+// measurement, on both sides: the route is reached, and what comes out of it is
+// arithmetic.
+
+mod lra_dispatch_tests {
+    use axeyum_ir::{Rational, TermArena};
+
+    use crate::reconstruct::{
+        LeanModuleContent, ProofFragment, ReconstructError, STRUCTURAL_ATTESTATION_MARKER,
+        prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module, scan_proof_fragment,
+    };
+
+    /// `x < 0 ∧ 0 ≤ x` — the two-row conjunctive real refutation.
+    fn strict_bound_conflict(arena: &mut TermArena) -> Vec<axeyum_ir::TermId> {
+        let x = arena.real_var("x").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let a1 = arena.real_lt(x, zero).unwrap();
+        let a2 = arena.real_le(zero, x).unwrap();
+        vec![a1, a2]
+    }
+
+    /// `x + y ≤ 0 ∧ 1 ≤ x ∧ 1 ≤ y` — three rows, two variables, a general
+    /// (non-unit-cycle) Farkas combination.
+    fn three_row_farkas(arena: &mut TermArena) -> Vec<axeyum_ir::TermId> {
+        let x = arena.real_var("x").unwrap();
+        let y = arena.real_var("y").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let one = arena.real_const(Rational::integer(1));
+        let sum = arena.real_add(x, y).unwrap();
+        let a1 = arena.real_le(sum, zero).unwrap();
+        let a2 = arena.real_le(one, x).unwrap();
+        let a3 = arena.real_le(one, y).unwrap();
+        vec![a1, a2, a3]
+    }
+
+    /// **The test whose absence was measured.** A query reaches
+    /// `ProofFragment::Lra` through the public classifier *and* through the
+    /// public front door.
+    #[test]
+    fn conjunctive_real_queries_reach_the_farkas_reconstructor() {
+        for (label, build) in [
+            (
+                "x < 0 and 0 <= x",
+                strict_bound_conflict as fn(&mut TermArena) -> Vec<axeyum_ir::TermId>,
+            ),
+            ("x + y <= 0 and 1 <= x and 1 <= y", three_row_farkas),
+        ] {
+            let mut arena = TermArena::new();
+            let assertions = build(&mut arena);
+            assert_eq!(
+                scan_proof_fragment(&arena, &assertions),
+                ProofFragment::Lra,
+                "{label}: the classifier must route a conjunctive real refutation \
+                 to the genuine Farkas reconstructor"
+            );
+            let (fragment, _) = prove_unsat_to_lean_module(&mut arena, &assertions)
+                .unwrap_or_else(|e| panic!("{label}: front door reconstructs: {e}"));
+            assert_eq!(fragment, ProofFragment::Lra, "{label}");
+        }
+    }
+
+    /// Reaching the route is half the claim; the other half is that the module
+    /// carries the query's own arithmetic. The structural attestation would pass
+    /// a "kernel-checked, no `sorryAx`" test just as happily, so those two
+    /// properties are asserted **plus** the arithmetic content: the ordered-field
+    /// prelude, one hypothesis axiom per asserted row, and the variable.
+    #[test]
+    fn the_farkas_module_contains_the_arithmetic_not_an_opaque_proposition() {
+        let mut arena = TermArena::new();
+        let assertions = three_row_farkas(&mut arena);
+        let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &assertions)
+            .expect("three-row Farkas reconstructs");
+        assert_eq!(fragment, ProofFragment::Lra);
+
+        assert_eq!(
+            LeanModuleContent::of_module_source(&source),
+            LeanModuleContent::TheoryReconstruction,
+            "the Farkas module must not carry the structural-attestation marker"
+        );
+        assert!(!source.contains(STRUCTURAL_ATTESTATION_MARKER));
+        assert!(!source.contains("sorryAx"), "module must be sorry-free");
+
+        // The ordered-field prelude the refutation actually rests on.
+        for needed in [
+            "axiom Real : Sort (1)",
+            "Real.add_le_add",
+            "Real.lt_irrefl",
+            "theorem axeyum_refutation : False :=",
+        ] {
+            assert!(
+                source.contains(needed),
+                "Farkas module must contain `{needed}`:\n{source}"
+            );
+        }
+        // One hypothesis axiom per asserted row, and the two real variables. The
+        // shim has neither: its only axioms are `prop._0` and its negation.
+        let hypotheses = source.matches("axeyum.reconstruct.lra.hyp.").count();
+        assert!(
+            hypotheses >= assertions.len(),
+            "expected at least one hypothesis axiom per asserted row \
+             ({} rows), found {hypotheses} mentions:\n{source}",
+            assertions.len()
+        );
+        assert!(
+            source.contains("axeyum.reconstruct.lra.x."),
+            "Farkas module must declare the query's real variables:\n{source}"
+        );
+    }
+
+    /// The strict/non-strict two-row shape reconstructs through the *strict*
+    /// arm, so both Farkas arms of `reconstruct_lra_proof` are exercised by a
+    /// query that arrived through the front door rather than by a direct call.
+    #[test]
+    fn the_strict_conflict_module_contains_the_arithmetic() {
+        let mut arena = TermArena::new();
+        let assertions = strict_bound_conflict(&mut arena);
+        let (fragment, source) =
+            prove_unsat_to_lean_module(&mut arena, &assertions).expect("strict conflict");
+        assert_eq!(fragment, ProofFragment::Lra);
+        assert!(!source.contains(STRUCTURAL_ATTESTATION_MARKER));
+        assert!(source.contains("Real.lt"), "module mentions strict order");
+        assert!(source.contains("axeyum.reconstruct.lra.hyp."));
+    }
+
+    /// `prove_unsat_to_lean_theory_module` accepts a genuine reconstruction.
+    #[test]
+    fn the_theory_front_door_accepts_the_farkas_route() {
+        let mut arena = TermArena::new();
+        let assertions = three_row_farkas(&mut arena);
+        let (fragment, source) = prove_unsat_to_lean_theory_module(&mut arena, &assertions)
+            .expect("the Farkas route has theory content");
+        assert_eq!(fragment, ProofFragment::Lra);
+        assert!(source.contains("Real.add_le_add"));
+    }
+
+    // --- The shim side: it is marked, and the strict door refuses it ---
+
+    /// Every structural-attestation fragment declares itself as one, and every
+    /// theory fragment does not. A hand-written table, so it is cross-checked at
+    /// runtime by `gate_module_content` on every reconstruction; this test pins
+    /// the two arithmetic entries that motivated the split.
+    #[test]
+    fn arithmetic_fragment_content_classes_are_declared() {
+        assert_eq!(
+            ProofFragment::Lra.lean_module_content(),
+            Some(LeanModuleContent::TheoryReconstruction)
+        );
+        assert_eq!(
+            ProofFragment::DisjunctiveLra.lean_module_content(),
+            Some(LeanModuleContent::TheoryReconstruction)
+        );
+        assert_eq!(
+            ProofFragment::LraDpll.lean_module_content(),
+            Some(LeanModuleContent::StructuralAttestation)
+        );
+        assert_eq!(
+            ProofFragment::ArithDpll.lean_module_content(),
+            Some(LeanModuleContent::StructuralAttestation)
+        );
+        assert_eq!(ProofFragment::Unsupported.lean_module_content(), None);
+    }
+
+    /// The shim emitter's output is self-labelling: a caller holding only the
+    /// rendered source can classify it without consulting the fragment.
+    #[test]
+    fn the_structural_attestation_labels_itself() {
+        let source = super::reconstruct_checked_structural_certificate_to_lean_module(
+            "lra_dpll_assertions",
+            "lra_dpll",
+        )
+        .expect("shim renders");
+        assert!(
+            source.starts_with(STRUCTURAL_ATTESTATION_MARKER),
+            "the marker must be the module's FIRST line, so a reader sees it \
+             before the theorem:\n{source}"
+        );
+        assert!(source.contains("-- refuter: lra_dpll"));
+        assert!(source.contains("NO theory reasoning"));
+        assert_eq!(
+            LeanModuleContent::of_module_source(&source),
+            LeanModuleContent::StructuralAttestation
+        );
+        // The property that made this dangerous is still true, and is asserted
+        // here so nobody has to rediscover it: the module type-checks and is
+        // `sorry`-free while containing none of the query.
+        assert!(!source.contains("sorryAx"));
+        assert!(source.contains("theorem axeyum_refutation : False :="));
+    }
+
+    /// `NoTheoryContent` is a **typed decline**, distinct from "the query was
+    /// not refuted": the same query still reconstructs through the permissive
+    /// door, and the certificate behind it still verified.
+    /// **Two** clauses over three real variables:
+    /// `(x ≤ 0 ∨ y ≤ 0) ∧ (x ≤ 0 ∨ z ≤ 0) ∧ 1 ≤ x ∧ 1 ≤ y ∧ 1 ≤ z`. Unsat, and
+    /// outside both conjunctive Farkas (there is a disjunction) and
+    /// `DisjunctiveLra` (which handles exactly one clause) — so it is a genuine
+    /// `LraDpll` row.
+    fn two_clause_boolean_lra(arena: &mut TermArena) -> Vec<axeyum_ir::TermId> {
+        let x = arena.real_var("x").unwrap();
+        let y = arena.real_var("y").unwrap();
+        let z = arena.real_var("z").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let one = arena.real_const(Rational::integer(1));
+        let x_le_0 = arena.real_le(x, zero).unwrap();
+        let y_le_0 = arena.real_le(y, zero).unwrap();
+        let z_le_0 = arena.real_le(z, zero).unwrap();
+        let c1 = arena.or(x_le_0, y_le_0).unwrap();
+        let c2 = arena.or(x_le_0, z_le_0).unwrap();
+        let x_ge_1 = arena.real_le(one, x).unwrap();
+        let y_ge_1 = arena.real_le(one, y).unwrap();
+        let z_ge_1 = arena.real_le(one, z).unwrap();
+        vec![c1, c2, x_ge_1, y_ge_1, z_ge_1]
+    }
+
+    #[test]
+    fn the_theory_front_door_declines_a_structural_attestation() {
+        let mut arena = TermArena::new();
+        let assertions = two_clause_boolean_lra(&mut arena);
+        let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &assertions)
+            .expect("the Boolean-structured row still reconstructs through the permissive door");
+        assert_eq!(
+            fragment,
+            ProofFragment::LraDpll,
+            "a two-clause Boolean real row is still owned by the lazy-SMT arm"
+        );
+        assert_eq!(
+            LeanModuleContent::of_module_source(&source),
+            LeanModuleContent::StructuralAttestation
+        );
+        // The permissive door hands this back — and it kernel-checks, and has no
+        // `sorryAx`. That is exactly why the marker exists.
+        assert!(source.contains(STRUCTURAL_ATTESTATION_MARKER));
+        assert!(!source.contains("sorryAx"));
+
+        let mut arena = TermArena::new();
+        let assertions = two_clause_boolean_lra(&mut arena);
+        let err = prove_unsat_to_lean_theory_module(&mut arena, &assertions)
+            .expect_err("the strict door must decline a contentless module");
+        assert!(
+            matches!(err, ReconstructError::NoTheoryContent { .. }),
+            "expected a typed NoTheoryContent decline, got {err:?}"
+        );
+        assert!(
+            err.to_string().contains("structural attestation"),
+            "the decline must say why: {err}"
         );
     }
 }

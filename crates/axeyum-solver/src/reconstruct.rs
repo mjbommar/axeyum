@@ -180,6 +180,27 @@ pub enum ReconstructError {
     /// The proof walked to completion without a resolution step deriving the
     /// empty clause `(cl)` — so there is no `False` to return.
     NoEmptyClause,
+    /// The rendered Lean module's own content class (read off its header) is not
+    /// the one [`ProofFragment::lean_module_content`] declares for the routed
+    /// fragment. Either the table drifted or a route changed what it emits; a
+    /// module is never handed back under a class it does not carry.
+    ModuleContentMismatch {
+        /// The routed fragment.
+        fragment: String,
+        /// The class the fragment table declares.
+        declared: String,
+        /// The class the rendered module actually carries.
+        rendered: String,
+    },
+    /// [`prove_unsat_to_lean_theory_module`] declining: the routed fragment
+    /// emits only a [`LeanModuleContent::StructuralAttestation`], so there is no
+    /// theory content to return. **This is the honest answer**, not a failure of
+    /// the refutation — the query is still `unsat` and the route's Rust
+    /// certificate still verified; there is simply no Lean term that says so.
+    NoTheoryContent {
+        /// The routed fragment that has no theory reconstructor.
+        fragment: String,
+    },
 }
 
 impl core::fmt::Display for ReconstructError {
@@ -208,6 +229,26 @@ impl core::fmt::Display for ReconstructError {
             }
             ReconstructError::NoEmptyClause => {
                 write!(f, "proof does not derive the empty clause `(cl)`")
+            }
+            ReconstructError::ModuleContentMismatch {
+                fragment,
+                declared,
+                rendered,
+            } => {
+                write!(
+                    f,
+                    "fragment `{fragment}` declares Lean module content `{declared}` \
+                     but rendered `{rendered}`"
+                )
+            }
+            ReconstructError::NoTheoryContent { fragment } => {
+                write!(
+                    f,
+                    "fragment `{fragment}` emits only a structural attestation \
+                     (an opaque `axiom P` refuted by `axiom Not P`), which contains none \
+                     of the reasoning; there is no theory-reconstructed Lean module for \
+                     this query"
+                )
             }
         }
     }
@@ -1047,6 +1088,172 @@ pub enum ProofFragment {
     Unsupported,
 }
 
+/// **What a rendered Lean module actually contains.**
+///
+/// Every module this crate emits kernel-checks and is `sorry`-free, so neither
+/// of those facts distinguishes them. This does. A caller asking "turn my
+/// `unsat` into a Lean proof" gets one of two very different artifacts, and the
+/// difference is not visible in the exit status, the fragment name, or the
+/// absence of `sorryAx`:
+///
+/// - [`TheoryReconstruction`](Self::TheoryReconstruction) — the module's
+///   `theorem` is derived from the query's own translated atoms. Checking it
+///   checks the reasoning.
+/// - [`StructuralAttestation`](Self::StructuralAttestation) — the module
+///   declares the refuted proposition as an **opaque** `axiom P`, its negation
+///   as `axiom Not P`, and closes `False` by application. Checking it checks
+///   nothing about the query; the evidence is the re-derived Rust certificate
+///   the route's checker accepted, and the module is the same 21 lines across
+///   the 29 unrelated routes that share the emitter — differing only in the
+///   generated constant names and the refuter named in its header.
+///
+/// The distinction is the same one [`crate::Evidence`]/[`crate::CheckOutcome`]
+/// draw between "nothing to check" and "checked and failed": an artifact that
+/// cannot fail is not thereby a proof.
+///
+/// Sources are self-labelling — every structural attestation carries
+/// [`STRUCTURAL_ATTESTATION_MARKER`] in its header — and
+/// [`prove_unsat_to_lean_module`] cross-checks the emitted source against
+/// [`ProofFragment::lean_module_content`] on every call, so the two cannot
+/// drift silently. Callers who need real content should use
+/// [`prove_unsat_to_lean_theory_module`], which declines instead.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LeanModuleContent {
+    /// The module's `theorem` is built from the query's own translated content.
+    TheoryReconstruction,
+    /// The module asserts an opaque proposition and its negation. It contains
+    /// none of the reasoning it attests to.
+    StructuralAttestation,
+}
+
+/// The header line every [`LeanModuleContent::StructuralAttestation`] module
+/// carries, so a caller holding only the rendered source can still tell what it
+/// has. Machine-readable on purpose: [`LeanModuleContent::of_module_source`]
+/// looks for exactly this.
+pub const STRUCTURAL_ATTESTATION_MARKER: &str =
+    "-- axeyum-lean-module-content: structural-attestation";
+
+impl LeanModuleContent {
+    /// Classify a rendered module by its own header.
+    ///
+    /// This reads the artifact rather than a table, which is what makes it
+    /// usable as a cross-check on [`ProofFragment::lean_module_content`].
+    #[must_use]
+    pub fn of_module_source(source: &str) -> Self {
+        if source.contains(STRUCTURAL_ATTESTATION_MARKER) {
+            Self::StructuralAttestation
+        } else {
+            Self::TheoryReconstruction
+        }
+    }
+
+    /// Is this a contentless structural attestation?
+    #[must_use]
+    pub fn is_structural_attestation(self) -> bool {
+        matches!(self, Self::StructuralAttestation)
+    }
+
+    /// A stable kebab-case label, for reports and evidence rows.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::TheoryReconstruction => "theory-reconstruction",
+            Self::StructuralAttestation => "structural-attestation",
+        }
+    }
+}
+
+impl core::fmt::Display for LeanModuleContent {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl ProofFragment {
+    /// What kind of Lean module this fragment's reconstructor emits.
+    ///
+    /// `None` for [`ProofFragment::Unsupported`], which emits no module at all.
+    ///
+    /// The match is **exhaustive by construction**: a new fragment does not
+    /// compile until someone states which of the two it is, and
+    /// [`prove_unsat_to_lean_module`] fails loudly if the answer disagrees with
+    /// the module the route actually rendered.
+    #[must_use]
+    pub fn lean_module_content(self) -> Option<LeanModuleContent> {
+        use LeanModuleContent::{StructuralAttestation, TheoryReconstruction};
+        Some(match self {
+            // --- Structural attestations: `axiom P`, `axiom Not P`, apply. ---
+            // All 29 of these funnel through the single shared emitter
+            // `reconstruct_checked_structural_certificate_to_lean_module`, whose
+            // output does not depend on the query at all beyond the generated
+            // constant names. The checking that matters happened in Rust.
+            ProofFragment::BoolSimplification
+            | ProofFragment::BoolUfExhaustive
+            | ProofFragment::BoolEufExhaustive
+            | ProofFragment::BoolEufOnline
+            | ProofFragment::UfArithCongruence
+            | ProofFragment::DatatypeStructural
+            | ProofFragment::FiniteDomainEnum
+            | ProofFragment::TermLevelEnum
+            | ProofFragment::BvDefinedEnum
+            | ProofFragment::SetCardinality
+            | ProofFragment::BvForallNonconstant
+            | ProofFragment::BvUfLocal
+            | ProofFragment::ConstArrayDefaultMismatch
+            | ProofFragment::StoreChainReadback
+            | ProofFragment::CrossStoreArrayDisequality
+            | ProofFragment::BoolArrayReadCollapse
+            | ProofFragment::BvAbstraction
+            | ProofFragment::TwoByteMemcpy
+            | ProofFragment::TwoElementBubbleSort
+            | ProofFragment::TwoElementSelectionSort
+            | ProofFragment::TwoCellXorSwap
+            | ProofFragment::TwoByteXorSwapRoundtrip
+            | ProofFragment::BinarySearch16
+            | ProofFragment::FifoBc04
+            | ProofFragment::AlignedWriteChainCommutation
+            | ProofFragment::LraDpll
+            | ProofFragment::ArithDpll
+            | ProofFragment::BoundedIntBlast
+            | ProofFragment::NraEvenPower => StructuralAttestation,
+            // --- Theory reconstructions: the term is built from the query. ---
+            ProofFragment::QfBv
+            | ProofFragment::ReflexiveDisequality
+            | ProofFragment::TermIdentity
+            | ProofFragment::QfUf
+            | ProofFragment::QfUfBv
+            | ProofFragment::FiniteDomainPigeonhole
+            | ProofFragment::ArrayAxiom
+            | ProofFragment::FiniteArrayExtensionality
+            | ProofFragment::QfAbv
+            | ProofFragment::Datatype
+            | ProofFragment::Lra
+            | ProofFragment::DisjunctiveLra
+            | ProofFragment::Diophantine
+            | ProofFragment::IntInequality
+            | ProofFragment::Sos
+            | ProofFragment::Forall
+            | ProofFragment::ClosedUniversalCounterexample
+            | ProofFragment::BvClosedUniversalCounterexample
+            | ProofFragment::BvVacuousExistsUniversalCounterexample
+            | ProofFragment::BvAlternationCounterexample
+            | ProofFragment::BvPairedExistentialTransfer
+            | ProofFragment::IntNestedXor
+            | ProofFragment::IntEuclideanResidue
+            | ProofFragment::IntAffineGrowth
+            | ProofFragment::SinglePivotEqualityPartition
+            | ProofFragment::QuantifiedCounterexampleCover
+            | ProofFragment::BvPositiveUniversalInstanceSet
+            | ProofFragment::BvConjunctiveUniversalInstance
+            | ProofFragment::NegatedExistentialWitness
+            | ProofFragment::Exists
+            | ProofFragment::WordEquation => TheoryReconstruction,
+            // Emits no module: reconstruction always errors.
+            ProofFragment::Unsupported => return None,
+        })
+    }
+}
+
 /// Detect the **trivial single-square** SOS shape: `assertions` is exactly one
 /// assertion of the form `(x * x) < 0` where `x` is a real-sorted free variable
 /// and the right-hand side is the real constant `0`. On a match, returns the
@@ -1599,9 +1806,29 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         // conjunctive Farkas fold; the purely-conjunctive `Lra` path can never
         // match, so this is uncovered by `reconstruct_lra_proof` today.
         ProofFragment::DisjunctiveLra
+    } else if lra_farkas_reconstruction_certifies(arena, assertions) {
+        // A purely CONJUNCTIVE linear-real system whose self-checked Farkas
+        // certificate the genuine reconstructor turns into a kernel term.
+        //
+        // This arm MUST precede the lazy-SMT arm below, and the ordering is the
+        // whole point: `lra_dpll_refutation_certifies` also accepts these
+        // queries, but `ProofFragment::LraDpll`'s Lean module is a
+        // [`LeanModuleContent::StructuralAttestation`] — an opaque `axiom P`,
+        // `axiom Not P`, and the application, containing no arithmetic at all.
+        // Routing a conjunctive Farkas row there produced a module that
+        // kernel-checks and says nothing about the query, which is why the
+        // `Lra` arm was previously reachable only as the final fallthrough and
+        // no test could reach it. The predicate trial-builds the actual proof
+        // term, so a certificate whose shape the reconstructor does not cover
+        // keeps falling through to the lazy-SMT arm rather than turning a
+        // working route into an error.
+        ProofFragment::Lra
     } else if lra_dpll_refutation_certifies(arena, assertions) {
-        // General Boolean-structured pure-real LRA. The lazy-SMT certificate is
-        // re-derived and self-checked here before Lean reconstruction is allowed.
+        // General Boolean-structured pure-real LRA that the conjunctive Farkas
+        // reconstructor above could not build a term for. The lazy-SMT
+        // certificate is re-derived and self-checked here before Lean
+        // reconstruction is allowed — but the emitted module is a structural
+        // attestation, not arithmetic (see [`LeanModuleContent`]).
         ProofFragment::LraDpll
     } else if arith_dpll_refutation_certifies(arena, assertions) {
         // General Boolean-structured linear arithmetic. The arithmetic lazy-SMT
@@ -1614,6 +1841,51 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
     } else {
         ProofFragment::Lra
     }
+}
+
+/// Does the **genuine** conjunctive-Farkas LRA reconstructor cover `assertions`?
+///
+/// Two gates, in cost order:
+///
+/// 1. [`crate::lra_farkas_certificate`] returns a self-checked certificate — the
+///    query is conjunctive linear-**real** and unsat through Fourier–Motzkin.
+///    Cheap, and it is the same decision the lazy-SMT arm would run anyway.
+/// 2. The reconstruction itself builds and the kernel `infer`s the result to
+///    `False`. This is the honest gate: step 1 alone would route certificate
+///    shapes the reconstructor declines (a later slice) into an error, whereas
+///    today they reach a working — if contentless — lazy-SMT route.
+///
+/// The trial term is discarded; [`reconstruct_proof_fragment_to_lean_module`]
+/// rebuilds it. That is a deliberate second build: the classifier is a pure
+/// predicate on `&TermArena` and threading a built kernel out of it would make
+/// [`scan_proof_fragment`] return proof state.
+fn lra_farkas_reconstruction_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
+    if !matches!(
+        crate::lra_farkas_certificate(arena, assertions),
+        Ok(Some(_))
+    ) {
+        return false;
+    }
+    let mut ctx = LraReconstructCtx::new();
+    match reconstruct_lra_proof(&mut ctx, arena, assertions) {
+        Ok(term) => lra_term_infers_false(&mut ctx, term),
+        Err(_) => false,
+    }
+}
+
+/// `infer` + `def_eq False` for an [`LraReconstructCtx`]-built term, as a bool.
+/// Shared by the classifier above and [`gate_and_render_lra_module`], so the
+/// route a query is classified into is gated by the same check that later
+/// accepts it.
+fn lra_term_infers_false(ctx: &mut LraReconstructCtx, proof: ExprId) -> bool {
+    let Ok(inferred) = ctx.kernel_mut().infer(proof) else {
+        return false;
+    };
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
+    ctx.kernel_mut().def_eq(inferred, false_)
 }
 
 fn lra_dpll_refutation_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
@@ -1715,23 +1987,16 @@ fn gate_and_render_lra_module(
     proof: ExprId,
     kind: &str,
 ) -> Result<String, ReconstructError> {
-    let inferred = ctx
-        .kernel_mut()
-        .infer(proof)
-        .map_err(|e| ReconstructError::KernelRejected {
-            rule: "prove_unsat_to_lean".to_owned(),
-            detail: format!("infer failed: {e:?}"),
-        })?;
-    let false_ = {
-        let f = ctx.arith().logic.false_;
-        ctx.kernel_mut().const_(f, vec![])
-    };
-    if !ctx.kernel_mut().def_eq(inferred, false_) {
+    if !lra_term_infers_false(ctx, proof) {
         return Err(ReconstructError::KernelRejected {
             rule: "prove_unsat_to_lean".to_owned(),
             detail: format!("reconstructed {kind} term did not infer to False"),
         });
     }
+    let false_ = {
+        let f = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(f, vec![])
+    };
     Ok(ctx
         .kernel()
         .render_lean_module(LEAN_MODULE_THEOREM, false_, proof))
@@ -1808,6 +2073,17 @@ fn dispatch_datatype_to_lean_module(
 /// negations. This accepts consumer-facing shapes such as a single
 /// `hyps ∧ ¬goal` assertion without perturbing existing direct routes.
 ///
+/// # The returned module is not always a proof of your query
+///
+/// For the ~29 fragments whose [`ProofFragment::lean_module_content`] is
+/// [`LeanModuleContent::StructuralAttestation`] the module is a 21-line shim —
+/// `axiom P`, `axiom Not P`, `theorem _ : False := …` — that kernel-checks, is
+/// `sorry`-free, and contains **none** of the reasoning. Such a module always
+/// carries [`STRUCTURAL_ATTESTATION_MARKER`] in its header, and the emitted
+/// class is cross-checked against the fragment table on every call. If you are
+/// going to report the result as a machine-checked proof, call
+/// [`prove_unsat_to_lean_theory_module`] instead — it declines those routes.
+///
 /// # Errors
 ///
 /// Same as [`prove_unsat_to_lean`]: an [`ReconstructError`] when no reconstructor
@@ -1832,6 +2108,40 @@ pub fn prove_unsat_to_lean_module(
         }
         Err(error) => Err(error),
     }
+}
+
+/// **[`prove_unsat_to_lean_module`], but it declines instead of handing back a
+/// module that contains no reasoning.**
+///
+/// Use this whenever the returned module is going to be *reported* as a proof —
+/// attached to a fact, checked by an external `lean`, or shown to a user. It
+/// returns [`ReconstructError::NoTheoryContent`] when the routed fragment's
+/// module is a [`LeanModuleContent::StructuralAttestation`], because for those
+/// routes the honest answer is "there is no Lean proof of this query", not a
+/// 21-line theorem about an opaque proposition.
+///
+/// A decline here says nothing against the refutation: the query is still
+/// `unsat`, and the route's Rust certificate was still re-derived and verified.
+/// It says only that the certificate has no Lean reconstruction yet.
+///
+/// # Errors
+///
+/// Everything [`prove_unsat_to_lean_module`] can return, plus
+/// [`ReconstructError::NoTheoryContent`] for a structural-attestation route.
+pub fn prove_unsat_to_lean_theory_module(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<(ProofFragment, String), ReconstructError> {
+    let (fragment, source) = prove_unsat_to_lean_module(arena, assertions)?;
+    // Read the class off the artifact, not off the table: `gate_module_content`
+    // has already proven the two agree, and this way the decline cannot be
+    // defeated by a table edit alone.
+    if LeanModuleContent::of_module_source(&source).is_structural_attestation() {
+        return Err(ReconstructError::NoTheoryContent {
+            fragment: format!("{fragment:?}"),
+        });
+    }
+    Ok((fragment, source))
 }
 
 fn should_retry_with_normalized_lean_input(error: &ReconstructError) -> bool {
@@ -1916,7 +2226,7 @@ fn reconstruct_proof_fragment_to_lean_module(
     if let Some(source) =
         direct::reconstruct_direct_structural_fragment_to_lean_module(fragment, arena, assertions)?
     {
-        return Ok(source);
+        return gate_module_content(fragment, source);
     }
 
     let declined = || ReconstructError::MalformedStep {
@@ -2236,7 +2546,36 @@ fn reconstruct_proof_fragment_to_lean_module(
             });
         }
     };
-    Ok(source)
+    gate_module_content(fragment, source)
+}
+
+/// Cross-check the rendered module against the routed fragment's **declared**
+/// [`LeanModuleContent`], and refuse to hand back a module whose content class
+/// is not the one the route advertises.
+///
+/// This is the guard that keeps [`ProofFragment::lean_module_content`] from
+/// becoming a stale comment. The declaration is a hand-written table; the
+/// classification of the *artifact* is read off the artifact. A route that
+/// starts or stops emitting a structural attestation fails here the first time
+/// it is exercised, rather than quietly relabelling a shim as arithmetic.
+fn gate_module_content(
+    fragment: ProofFragment,
+    source: String,
+) -> Result<String, ReconstructError> {
+    let rendered = LeanModuleContent::of_module_source(&source);
+    match fragment.lean_module_content() {
+        Some(declared) if declared == rendered => Ok(source),
+        Some(declared) => Err(ReconstructError::ModuleContentMismatch {
+            fragment: format!("{fragment:?}"),
+            declared: declared.as_str().to_owned(),
+            rendered: rendered.as_str().to_owned(),
+        }),
+        None => Err(ReconstructError::ModuleContentMismatch {
+            fragment: format!("{fragment:?}"),
+            declared: "none (fragment emits no module)".to_owned(),
+            rendered: rendered.as_str().to_owned(),
+        }),
+    }
 }
 
 fn reconstruct_qf_abv_to_lean_source(

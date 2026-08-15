@@ -9,27 +9,40 @@
 //! term and the explanation are the same object: five rows, five multipliers,
 //! one contradiction.
 //!
-//! WHAT THIS MEASURES, and why it prints two different Lean results. The top
-//! level `prove_unsat_to_lean_module` and the arithmetic reconstructor
-//! `reconstruct_lra_proof` do NOT produce the same thing for this query, and the
-//! difference is the entire honesty of the claim:
+//! WHAT THIS MEASURES, and why it still prints two Lean results even though
+//! they now agree. The top-level `prove_unsat_to_lean_module` and the
+//! arithmetic reconstructor `reconstruct_lra_proof` used NOT to produce the same
+//! thing for this query, and the difference was the entire honesty of the claim:
 //!
-//! - `prove_unsat_to_lean_module` routes a pure-Real conjunctive `unsat`
-//!   through `ProofFragment::LraDpll`, whose Lean module is a **structural
-//!   shim**: `axiom A : P`, `axiom B : ¬P`, `theorem _ : False := B A`. It
-//!   kernel-checks, it is `sorry`-free, and it contains none of the arithmetic
-//!   — the refutation is *asserted* in `B`. Reporting that as "the Farkas proof
-//!   reached the kernel" would be false.
+//! - **Until 2026-08-15** `prove_unsat_to_lean_module` routed a pure-Real
+//!   conjunctive `unsat` through `ProofFragment::LraDpll`, whose Lean module is a
+//!   **structural attestation**: `axiom A : P`, `axiom B : ¬P`,
+//!   `theorem _ : False := B A`. It kernel-checks, it is `sorry`-free, and it
+//!   contains none of the arithmetic — the refutation is *asserted* in `B`.
+//!   Reporting that as "the Farkas proof reached the kernel" would have been
+//!   false, and this example is what made it visible.
 //! - `reconstruct_lra_proof` builds the real thing: one hypothesis axiom per
 //!   core row, the scaled sum assembled with the prelude's ordered-field laws,
 //!   and `lt_irrefl` closing it. That is the term whose type-check is worth
 //!   something.
 //!
-//! So this prints the fragment the facade chose, the shim-detection verdict,
-//! and the direct reconstruction separately. It also counts the axioms the
-//! resulting module actually rests on, because the `Real` prelude is 30 asserted
-//! ordered-field laws plus one hypothesis axiom per row — this route is not, and
-//! cannot presently be, axiom-free.
+//! The `lra-dispatch` lane reordered the classifier so a conjunctive real system
+//! whose Farkas reconstruction actually builds reaches `ProofFragment::Lra`
+//! first. So the facade line below should now read `Lra` and
+//! `carries ordered-field content` for this instance — and the shim detection is
+//! KEPT, and kept as TWO independent instruments (a structural scan of the
+//! declared axiom names and types, and the module's own self-label), because a
+//! detector that is only exercised while it reports the bad case is a detector
+//! nobody notices going blind. That is not a hypothetical: the structural scan
+//! **was** broken, matched nothing on a real arithmetic module, and the
+//! self-label caught it on the first run after the dispatch was fixed.
+//! Disagreement between the two is an error in the direction that is impossible
+//! by construction, and an error in the other direction whenever the facade
+//! routed to `ProofFragment::Lra`.
+//!
+//! It also counts the axioms the resulting module actually rests on, because the
+//! `Real` prelude is 30 asserted ordered-field laws plus one hypothesis axiom
+//! per row — this route is not, and cannot presently be, axiom-free.
 //!
 //! ```sh
 //! cargo run --release -q -p axeyum-solver --features full --example infeasibility_farkas_lean -- \
@@ -42,8 +55,9 @@ use std::time::Duration;
 use axeyum_ir::TermId;
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    LraReconstructCtx, SolverConfig, lra_farkas_certificate, prove_unsat_to_lean_module,
-    reconstruct_lra_proof, unsat_core,
+    LeanModuleContent, LraReconstructCtx, ProofFragment, SolverConfig, lra_farkas_certificate,
+    prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module, reconstruct_lra_proof,
+    unsat_core,
 };
 
 fn main() -> ExitCode {
@@ -147,15 +161,33 @@ fn run() -> Result<(), String> {
     // --- what the top-level facade produces --------------------------------
     let (fragment, module) = prove_unsat_to_lean_module(&mut script.arena, &core_terms)
         .map_err(|error| format!("prove_unsat_to_lean_module: {error}"))?;
-    // The structural shim is recognizable by what it does NOT contain: no
-    // ordered-field relation applied to anything. Detected on the declared
-    // `axiom`/`theorem` types rather than a substring of the whole module,
-    // because the prelude's own declarations mention `le` no matter what.
+    // The structural attestation is recognizable by what it does NOT contain:
+    // no HYPOTHESIS axiom whose declared type is an ordered-field relation.
+    // Classify on the declared NAME and its declared TYPE, never on a substring
+    // of the whole module, because the prelude's own declarations mention `le`
+    // no matter what.
+    //
+    // This predicate was WRONG until 2026-08-15 and nothing could tell: it
+    // looked for a line starting `axiom hyp`, but the reconstructor mints
+    // `axeyum.reconstruct.lra.hyp._N`, so it returned `false` for a genuine
+    // arithmetic module too. It gave the right answer for exactly as long as the
+    // facade emitted an attestation, and the moment the dispatch was fixed it
+    // reported `STRUCTURAL ATTESTATION` for a module full of `Real.le`. The
+    // second instrument below caught it on its first run. A detector exercised
+    // only while it reports the bad case is one nobody notices going blind.
     let arith_content = module.lines().any(|line| {
-        let line = line.trim_start();
-        (line.starts_with("axiom hyp") || line.starts_with("theorem "))
-            && (line.contains(" le ") || line.contains(" lt "))
+        let Some(rest) = line.trim_start().strip_prefix("axiom ") else {
+            return false;
+        };
+        let Some((name, ty)) = rest.split_once(" : ") else {
+            return false;
+        };
+        name.contains(".lra.hyp._") && (ty.contains("Real.le") || ty.contains("Real.lt"))
     });
+    // Second, independent instrument: the module's own self-label. A structural
+    // attestation carries `STRUCTURAL_ATTESTATION_MARKER` in its header, which
+    // is what a caller holding only the source can read.
+    let labelled = LeanModuleContent::of_module_source(&module);
     println!("facade fragment     {fragment:?}");
     println!("facade module       {} line(s)", module.lines().count());
     println!(
@@ -163,9 +195,54 @@ fn run() -> Result<(), String> {
         if arith_content {
             "carries ordered-field content"
         } else {
-            "STRUCTURAL SHIM -- the arithmetic is asserted, not reconstructed"
+            "STRUCTURAL ATTESTATION -- the arithmetic is asserted, not reconstructed"
         }
     );
+    println!("facade self-label   {labelled}");
+    // Two instruments, one subject. ONE direction is impossible by
+    // construction: a structural attestation's only axioms are an opaque `Prop`
+    // and its negation, so it can never carry an `…lra.hyp._N : Real.le …`.
+    // That disagreement is always an error.
+    if arith_content && labelled == LeanModuleContent::StructuralAttestation {
+        return Err(
+            "a module self-labelled as a structural attestation declares an LRA \
+             hypothesis axiom; one of the two detectors is lying"
+                .to_owned(),
+        );
+    }
+    // The other direction is weaker: the structural scan only knows the LRA
+    // reconstructor's naming, so a theory reconstruction of some OTHER fragment
+    // reads as "no arithmetic" here, and that is the scan's coverage limit
+    // rather than a defect. It IS an error when the facade routed to `Lra`,
+    // which is exactly the case this example exists to pin.
+    if !arith_content && labelled == LeanModuleContent::TheoryReconstruction {
+        if fragment == ProofFragment::Lra {
+            return Err(
+                "the facade routed to ProofFragment::Lra but the module declares no \
+                 `lra.hyp._N` ordered-field hypothesis axiom"
+                    .to_owned(),
+            );
+        }
+        println!(
+            "facade note         the structural scan only recognizes the LRA reconstructor's \
+             axiom names; {fragment:?} is outside it"
+        );
+    }
+    // The strict front door: it returns a module only when there is reasoning in
+    // it, and a typed `NoTheoryContent` decline otherwise.
+    match prove_unsat_to_lean_theory_module(&mut script.arena, &core_terms) {
+        Ok((strict_fragment, _)) => {
+            println!("strict facade       ACCEPTED as {strict_fragment:?}");
+        }
+        Err(error) => {
+            println!("strict facade       DECLINED: {error}");
+            if require_kernel {
+                return Err(format!(
+                    "--require-kernel was given but the strict facade declined: {error}"
+                ));
+            }
+        }
+    }
     if dump {
         println!("--- facade module ---\n{module}\n--- end ---");
     }

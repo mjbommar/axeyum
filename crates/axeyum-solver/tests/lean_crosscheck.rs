@@ -2760,7 +2760,8 @@ fn disjunctive_lra_feasible_set_is_declined() {
 }
 
 /// **Regression**: the existing CONJUNCTIVE LRA refutation `x < 0 ∧ 0 ≤ x` still
-/// reconstructs without falling into the disjunctive path.
+/// reconstructs without falling into the disjunctive path — and now lands on the
+/// genuine Farkas reconstructor rather than the lazy-SMT structural attestation.
 #[test]
 fn conjunctive_lra_still_reconstructs_unchanged() {
     use axeyum_solver::ProofFragment;
@@ -2773,10 +2774,15 @@ fn conjunctive_lra_still_reconstructs_unchanged() {
         .expect("conjunctive LRA unsat still reconstructs");
     assert_eq!(
         frag,
-        ProofFragment::LraDpll,
-        "conjunctive LRA stays on a non-disjunctive LRA path"
+        ProofFragment::Lra,
+        "conjunctive LRA stays on a non-disjunctive LRA path, and reaches the \
+         reconstructor that emits arithmetic"
     );
     assert!(!source.contains("sorryAx"));
+    assert!(
+        source.contains("Real.lt_irrefl"),
+        "the module must carry the ordered-field reasoning, not an opaque prop"
+    );
 }
 
 // --- Constant-shift → concat lowering identity, kernel-certified (ROUTE B) ------

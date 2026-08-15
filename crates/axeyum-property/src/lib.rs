@@ -18,8 +18,8 @@ pub use axeyum_solver::{
     EvidenceReport, Model, ProofFragment, ProofOutcome, ReconstructError, SolverConfig,
 };
 use axeyum_solver::{
-    ModelMinimizeObjective, SolverError, UnknownKind, prove, prove_minimized_with_objectives,
-    prove_unsat_to_lean_module,
+    LeanModuleContent, ModelMinimizeObjective, SolverError, UnknownKind, prove,
+    prove_minimized_with_objectives, prove_unsat_to_lean_module,
 };
 
 /// Errors produced by the property SDK.
@@ -1023,12 +1023,43 @@ fn push_indented_block(out: &mut String, block: &str) {
 }
 
 /// A standalone Lean module proving a refuted property query.
+///
+/// **Read [`content`](Self::content) before reporting this as a proof.** Every
+/// module here kernel-checks and is `sorry`-free, but for a
+/// [`LeanModuleContent::StructuralAttestation`] route the source is a fixed
+/// 21-line shim -- an opaque `axiom P`, its negation, and the application --
+/// that establishes nothing about the property. The distinction is invisible in
+/// `fragment` alone and in `source.len()` alone.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LeanModule {
     /// The reconstruction route that produced the module.
     pub fragment: ProofFragment,
     /// Self-contained Lean 4 source for the refutation.
     pub source: String,
+}
+
+impl LeanModule {
+    /// What this module actually contains: the property's own reasoning, or a
+    /// structural attestation that carries none of it.
+    ///
+    /// Read off the rendered source (which self-labels), not off a table.
+    #[must_use]
+    pub fn content(&self) -> LeanModuleContent {
+        LeanModuleContent::of_module_source(&self.source)
+    }
+
+    /// The Lean source **only when it reconstructs the property's reasoning**;
+    /// `None` for a structural attestation.
+    ///
+    /// Use this wherever the module is going to be published, checked by an
+    /// external `lean`, or described as a machine-checked proof.
+    #[must_use]
+    pub fn theory_source(&self) -> Option<&str> {
+        match self.content() {
+            LeanModuleContent::TheoryReconstruction => Some(&self.source),
+            LeanModuleContent::StructuralAttestation => None,
+        }
+    }
 }
 
 /// A property proof attempt with optional Lean-module packaging.
@@ -1111,6 +1142,11 @@ pub struct LeanSummary {
     pub status: LeanStatus,
     /// Reconstruction fragment when a module was produced.
     pub fragment: Option<ProofFragment>,
+    /// **What the produced module contains** -- theory reasoning, or a
+    /// contentless structural attestation. `None` when no module was produced.
+    /// A summary that reported `Available` without this could not distinguish a
+    /// proof from a shim.
+    pub content: Option<LeanModuleContent>,
     /// Size of the generated Lean source, when present.
     pub source_bytes: Option<usize>,
     /// Reconstruction diagnostic for proved results outside the current Lean
@@ -1191,6 +1227,7 @@ fn summarize_lean(certificate: &ProofCertificate) -> LeanSummary {
         LeanSummary {
             status: LeanStatus::Available,
             fragment: Some(module.fragment),
+            content: Some(module.content()),
             source_bytes: Some(module.source.len()),
             error: None,
         }
@@ -1198,6 +1235,7 @@ fn summarize_lean(certificate: &ProofCertificate) -> LeanSummary {
         LeanSummary {
             status: LeanStatus::Unsupported,
             fragment: None,
+            content: None,
             source_bytes: None,
             error: Some(error.clone()),
         }
@@ -1205,6 +1243,7 @@ fn summarize_lean(certificate: &ProofCertificate) -> LeanSummary {
         LeanSummary {
             status: LeanStatus::NotApplicable,
             fragment: None,
+            content: None,
             source_bytes: None,
             error: None,
         }
