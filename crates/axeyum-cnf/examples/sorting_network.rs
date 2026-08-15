@@ -119,7 +119,13 @@ use axeyum_cnf::{
 ///
 /// `S(1..=8) = 0, 1, 3, 5, 9, 12, 16, 19` is Floyd and Knuth (1966); `S(9) = 25`
 /// and `S(10) = 29` are Codish, Cruz-Filipe, Frank and Schneider-Kamp (2014).
-/// `S(11)` is open (`33 <= S(11) <= 35`).
+///
+/// The table stops at 10 because that is where *this* encoder's reach is being
+/// measured, **not** because the literature stops there: `S(11) = 35` and
+/// `S(12) = 39` were settled by Harder (2020, arXiv:2012.04400), with the lower
+/// bounds formally verified in Isabelle/HOL. The smallest genuinely open cell
+/// for optimal *size* is therefore `S(13)`. Do not restate a stale "S(11) is
+/// open" here — that claim was in this comment and was wrong.
 const KNOWN_S: [Option<usize>; 11] = [
     None,
     Some(0),

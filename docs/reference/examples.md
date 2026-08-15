@@ -98,6 +98,7 @@ artifact, start from a clean tree and review the complete diff.
 | [`measure_evm`](../../crates/axeyum-evm/examples/measure_evm.rs) | no arguments | Regenerates the committed EVM consumer scoreboard and corpus. It is not a read-only tour. |
 | [`measure_verify`](../../crates/axeyum-verify/examples/measure_verify.rs) | no arguments | Regenerates the committed Rust-verification scoreboard and corpus. It is not a read-only tour. |
 | [`recertify_rado`](../../crates/axeyum-search/examples/recertify_rado.rs) | `<claim-id> [artifact-root]` | Rechecks one committed Rado claim from its hash-bound witness or refutation artifact; it does not discover or strengthen claims. |
+| [`sorting_network`](../../crates/axeyum-cnf/examples/sorting_network.rs) | `--n N --size K [--sym none\|first\|commute\|full\|max] [--drat] [--model]`, or `--sweep`, `--verify`, `--dimacs PATH`, `--cubes DIR` | Decides `S(n)`, the optimal sorting-network size, as sat/unsat — no optimizer and no MaxSAT. Writes files only under `--dimacs` (one CNF) and `--cubes` (one DRAT per branch); every other mode prints. `--verify` re-derives the committed `F:sorting-network-optimal-size-n{3,4,5}` facts, `--sweep` is the negative control against the published `S(n)`. |
 
 The generic release-mode form is:
 
