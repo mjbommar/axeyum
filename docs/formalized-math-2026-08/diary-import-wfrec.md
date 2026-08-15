@@ -310,8 +310,13 @@ The distinct-root count still falls by 62%.
 
 For `Init`+`Std` the corpus had to be rebuilt: the census script deletes each
 stream after reading it, so the strings lane's 500 were gone. Re-exported once
-from the same `corpus.txt` (2.7 GB, `lean4export Init Std` per declaration) so
-that *both* binaries read the identical bytes rather than two separate exports.
+from the same `corpus.txt` (3.6 GB, `lean4export Init Std` per declaration) so
+that *both* binaries read the identical bytes rather than two separate exports —
+and this time **retained**, under
+`/nas3/data/axeyum/lean-import-scale/initstd-500-streams/`, with the corpus
+list, both paired analyses and the script that produced them. The next lane can
+run its own A/B on this corpus without paying the twenty minutes of export
+again, and against bytes that are provably the same.
 
 The baseline run then reproduced the previous lane's census **exactly** — not
 approximately:
