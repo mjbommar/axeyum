@@ -34,7 +34,7 @@ most, given what this project claims:
 
 | skipped by `check.sh` | what goes unchecked |
 |---|---|
-| `gen-lean-axiom-ledger.py --check` | the **axiom ledger** — SHA-256-bound canonical types for all 65 prelude axioms. Axiom-freedom is the headline metric; on `check.sh` nothing binds it. |
+| `gen-lean-axiom-ledger.py --check` | the **axiom ledger** — SHA-256-bound canonical types for all 32 prelude axioms, and since ADR-0465 every published count, including the citations in ten documents. Axiom-freedom is the headline metric; on `check.sh` nothing binds it. |
 | `check-parity-docs.py` | Z3/Lean parity claims vs. measured evidence |
 | `gen-proof-gap-matrix.py`, `gen-proof-gap-shape-census.py` | the proof-gap inventory |
 | `gen-scoreboard.py`, `gen-measurement-provenance.py` | published numbers vs. their provenance |

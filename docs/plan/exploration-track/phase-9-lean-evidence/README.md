@@ -105,9 +105,12 @@ undischarged axiom-ledger row.
 
 ## The live governance debt
 
-`docs/plan/lean-axiom-ledger-v1.json`: **65 assumptions (30 real, 34 integer,
-1 string), all `unclassified`/`unreviewed`.** Discharging this is a prerequisite for
-R4+ claims and is the cheapest task in the phase.
+`docs/plan/lean-axiom-ledger-v1.json`: **32 prelude assumptions (30 real, 1 integer,
+1 string)**, every row classified. It was 65 with every row `unclassified`; T9.1
+classified them and the integer development was then proved out, retiring 33.
+Discharging what remains is a prerequisite for R4+ claims. The counts here are
+gated against a runtime measurement (ADR-0465), so this paragraph fails a gate
+rather than going stale.
 
 ## Prior art
 
@@ -129,7 +132,7 @@ R4+ claims and is the cheapest task in the phase.
 
 | id | title | size |
 |---|---|---|
-| [T9.1](T9.1-axiom-ledger-triage.md) | Axiom-ledger triage: classify all 65 rows | M |
+| [T9.1](T9.1-axiom-ledger-triage.md) | Axiom-ledger triage: classify every ledger row | M |
 | [T9.2](T9.2-lean-checker-binary.md) | `axeyum-lean-checker` nanoda-contract binary | M |
 | [T9.3](T9.3-evidence-rung.md) | Evidence-ladder rung in `EvidenceReport` | S |
 | [T9.4](T9.4-r6-self-challenge.md) | **R6 self-challenge artifact for one fragment** | M |

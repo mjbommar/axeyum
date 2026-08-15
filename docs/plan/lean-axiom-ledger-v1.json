@@ -1,19 +1,67 @@
 {
-  "version": 1,
+  "version": 2,
   "title": "Axeyum Lean reconstruction prelude axiom ledger",
-  "as_of": "2026-08-13",
-  "source_command": "cargo run --quiet -p axeyum-lean-kernel --example prelude_axiom_inventory",
-  "type_identity": "sha256 of Kernel::render_lean(declaration.ty) UTF-8 bytes",
-  "trust_policy": {
-    "adr": "docs/research/09-decisions/adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md",
-    "integer_assumptions": 34,
-    "publication_rule": "Any checked dependency closure using the integer prelude must disclose 34 assumptions; credited Rado rigidity uses the zero-axiom Nat prefix-deficit encoding instead."
+  "population_as_of": "2026-08-15",
+  "measurement": {
+    "axiom_rows_command": "cargo run --quiet -p axeyum-lean-kernel --example prelude_axiom_inventory",
+    "trusted_surface_command": "cargo run --quiet -p axeyum-lean-kernel --example nat_axiom_inventory",
+    "type_identity": "sha256 of Kernel::render_lean(declaration.ty) UTF-8 bytes",
+    "preludes": [
+      "integer",
+      "logic",
+      "nat",
+      "real",
+      "string"
+    ],
+    "trusted_surface": {
+      "integer": {
+        "axiom": 1,
+        "opaque": 0,
+        "quotient": 0,
+        "total_trusted": 1
+      },
+      "logic": {
+        "axiom": 0,
+        "opaque": 0,
+        "quotient": 0,
+        "total_trusted": 0
+      },
+      "nat": {
+        "axiom": 0,
+        "opaque": 0,
+        "quotient": 0,
+        "total_trusted": 0
+      },
+      "real": {
+        "axiom": 30,
+        "opaque": 0,
+        "quotient": 0,
+        "total_trusted": 30
+      },
+      "string": {
+        "axiom": 1,
+        "opaque": 0,
+        "quotient": 0,
+        "total_trusted": 1
+      }
+    },
+    "axiom_counts": {
+      "integer": 1,
+      "logic": 0,
+      "nat": 0,
+      "real": 30,
+      "string": 1,
+      "total": 32
+    }
   },
-  "expected_counts": {
-    "real": 30,
-    "integer": 34,
-    "string": 1,
-    "total": 65
+  "trust_policy": {
+    "adr": "docs/research/09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md",
+    "supersedes": "docs/research/09-decisions/adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md",
+    "integer_assumptions": 1,
+    "integer_assumption_names": [
+      "Int.euclidean_decomposition"
+    ],
+    "publication_rule": "Any checked dependency closure using the integer prelude must disclose 1 assumption (`Int.euclidean_decomposition`); credited Rado rigidity uses the zero-axiom Nat prefix-deficit encoding instead."
   },
   "classification_definitions": {
     "unclassified": "No semantic classification has been accepted yet.",
@@ -30,124 +78,19 @@
     "discharged": "A retained checked theorem artifact replaces assumption credit.",
     "rejected": "The declaration is removed or prohibited from the supported profile."
   },
+  "live_documents": [
+    "docs/plan/exploration-track/phase-9-lean-evidence/README.md",
+    "docs/plan/exploration-track/phase-9-lean-evidence/T9.1-axiom-ledger-triage.md",
+    "docs/prover-track/README.md",
+    "docs/prover-track/SYNTHESIS.md",
+    "docs/prover-track/plan/P6.0-kernel-trustworthiness.md",
+    "docs/prover-track/research/01-itp-anatomy.md",
+    "docs/prover-track/research/06-kernel-gap-analysis.md",
+    "docs/refactor-2026-08/gate-divergence-2026-08-14.md",
+    "docs/research/08-planning/research-questions.md",
+    "docs/research/08-planning/roadmap.md"
+  ],
   "entries": [
-    {
-      "prelude": "integer",
-      "name": "Int",
-      "canonical_type": "Sort (1)",
-      "type_sha256": "73d4fe359be51073c75f6c2a03507b52a55364cf0c923d65def2fa12cb438933",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "primitive-interface",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Carrier sort of the integer reconstruction profile; intentionally abstract."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.add",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Int))",
-      "type_sha256": "99eafe1ef787823aede1d24c97170433c8d770f8b3810273b569c3b5ab26da1b",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "primitive-interface",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Binary operation of the ring interface; intentionally abstract."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.add_assoc",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.add (Int.add x0 x1) x2) (Int.add x0 (Int.add x1 x2)))))",
-      "type_sha256": "9405ec939ed80e568fe1929fd63482e0907a48e8b6dbb95d2c58f81cf486b26f",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Associativity of `add`: an abelian-group axiom of the profile."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.add_comm",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Eq.{1} Int (Int.add x0 x1) (Int.add x1 x0)))",
-      "type_sha256": "595e9a1c7bf447f9f1347f3babb46d091fc129d812c39cf7d531b903c942b953",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Commutativity of `add`: an abelian-group axiom of the profile."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.add_le_add",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int.le x0 x1) -> ((x5 : Int.le x2 x3) -> Int.le (Int.add x0 x2) (Int.add x1 x3)))))))",
-      "type_sha256": "8703098c251851d0a84b8efaf8b31b091dd09ee931606c89f0b9db1427108ec5",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Additive monotonicity of `le`. Stated in the four-argument form; not derivable from the one-sided form, which this profile does not admit."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.add_lt_add_of_le_of_lt",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int.le x0 x1) -> ((x5 : Int.lt x2 x3) -> Int.lt (Int.add x0 x2) (Int.add x1 x3)))))))",
-      "type_sha256": "f4736a674bdbe79e58392817d03b945c8fea0bc3c8387fde4f99d9e480065a61",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Mixed additive monotonicity; an ordered-ring compatibility assumption connecting `add`, `le`, and `lt`."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.add_neg",
-      "canonical_type": "((x0 : Int) -> Eq.{1} Int (Int.add x0 (Int.neg x0)) Int.zero)",
-      "type_sha256": "5f8dff2caa3f9a0c45d532af52407506e3d9de23385c760328e5094f8e6c62a7",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Right inverse for `add`: an abelian-group axiom of the profile."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.add_zero",
-      "canonical_type": "((x0 : Int) -> Eq.{1} Int (Int.add x0 Int.zero) x0)",
-      "type_sha256": "8b6f4f975687dab9c145b2abe816dbb4f49e25a21fa466e9e5072f60feb0db80",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Right identity for `add`: an abelian-group axiom of the profile."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.eq_em",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Or (Eq.{1} Int x0 x1) (Not (Eq.{1} Int x0 x1))))",
-      "type_sha256": "815531ec43bb75ccb38bb94fb77863a34d9f9235fb3e78c9c07439ecfcc40d3f",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "derivable-theorem",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "planned",
-      "discharge_evidence": [],
-      "note": "Decidable equality on `Z` stated as excluded middle for `x = y`. This is a direct instance of `Classical.em` applied to the proposition `Eq Z x y`, and `Classical.em` is already declared on demand by `crates/axeyum-solver/src/reconstruct.rs` as the single genuine logical axiom of the reconstruction route. Discharging this row removes a *theory-specific* assumption in favour of the already-accepted logical one, strictly shrinking the integer profile's trusted base. Route: replace with a checked theorem term instantiating `Classical.em`."
-    },
     {
       "prelude": "integer",
       "name": "Int.euclidean_decomposition",
@@ -160,318 +103,6 @@
       "discharge_status": "retained",
       "discharge_evidence": [],
       "note": "Division with remainder. Derivable only from well-ordering or an induction principle, neither of which this profile admits over the opaque carrier `Z`; retained as a named assumption of the Diophantine/LIA route."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.le",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Prop))",
-      "type_sha256": "fb0d4590496986200c403ac1cfe3e5ad58a8be4d2fb551726c2262e1e4cc6b31",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "primitive-interface",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Order relation of the profile, declared as a primitive `Prop`-valued relation."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.le_of_lt",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt x0 x1) -> Int.le x0 x1)))",
-      "type_sha256": "12f9daa9d0684a6f29684456cb56f90d95b89917f32299d0ba70a2cd8177a578",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Connects the two primitive order relations (`lt` implies `le`). Not derivable because `lt` is a primitive, not a definition; load-bearing — `lt_trans` is derived from it."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.le_refl",
-      "canonical_type": "((x0 : Int) -> Int.le x0 x0)",
-      "type_sha256": "225ccf020467237aeef9c273c920eb77e1cdf2d2cfd33d16b15c2b85ff1bf963",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Reflexivity of `le`: a preorder axiom of the profile."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.le_total",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Or (Int.le x0 x1) (Int.le x1 x0)))",
-      "type_sha256": "7964ea1ddd7637c9f5e72388b9aae51c8066791ca42dbc7febc59d71ad5de1bb",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Totality of `le`: the axiom that makes the integer profile linearly ordered. Independent of decidable equality, so it is not implied by `eq_em`."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.le_trans",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.le x0 x1) -> ((x4 : Int.le x1 x2) -> Int.le x0 x2)))))",
-      "type_sha256": "120977f039a28529bcb6438ae595de51bc03f3ce03b1ecfbc681080ebe466388",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Transitivity of `le`: a preorder axiom of the profile."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.left_distrib",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.mul x0 (Int.add x1 x2)) (Int.add (Int.mul x0 x1) (Int.mul x0 x2)))))",
-      "type_sha256": "54570226ae27575cff7284441daddeb6786e0333c9c3c8338ab3cc40d9cc08a9",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Left distributivity: the commutative-ring axiom linking `add` and `mul`. Load-bearing — `mul_zero` is derived from it."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.lt",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Prop))",
-      "type_sha256": "fb0d4590496986200c403ac1cfe3e5ad58a8be4d2fb551726c2262e1e4cc6b31",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "primitive-interface",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Strict order relation, declared as a primitive `Prop`-valued relation independent of `le`; the two are connected only by the order-interface assumptions below."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.lt_irrefl",
-      "canonical_type": "((x0 : Int) -> Not (Int.lt x0 x0))",
-      "type_sha256": "110efe1cc3d1f368c16f520f21ccbf93d9b72825bcf99ea0faf25a6aba5880f7",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Irreflexivity of the primitive `lt`; independent of the `le` axioms."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.lt_of_le_of_lt",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.le x0 x1) -> ((x4 : Int.lt x1 x2) -> Int.lt x0 x2)))))",
-      "type_sha256": "27f076961d39a9a97f0d8889c51a89affb931e3a810fa3622bb90494ca9ff338",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Mixed transitivity of the two primitive order relations; an order-interface assumption."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.lt_of_le_of_ne",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.le x0 x1) -> ((x3 : Not (Eq.{1} Int x0 x1)) -> Int.lt x0 x1))))",
-      "type_sha256": "128cb1d7a0bc5bb9f7d8ccd178ecf38df7f10991ed97b879a96c08acb39d219d",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Strictness from a non-strict bound plus disequality. Not derivable from the admitted set, which contains no converse `lt -> ne` direction; an order-interface assumption."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.lt_of_lt_of_le",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.lt x0 x1) -> ((x4 : Int.le x1 x2) -> Int.lt x0 x2)))))",
-      "type_sha256": "99a02402ef4fa99afe3c07bca6d734c05be0f768b58c6ca6aaea4d67e5cb8291",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Mixed transitivity of the two primitive order relations; load-bearing — `lt_trans` is derived from it."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.lt_trans",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.lt x0 x1) -> ((x4 : Int.lt x1 x2) -> Int.lt x0 x2)))))",
-      "type_sha256": "52ee835f5c5c74c3f396677055ff707e53c31adf31e6ba27064fe434da809149",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "derivable-theorem",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "planned",
-      "discharge_evidence": [],
-      "note": "Derivable from the order interface: `le_of_lt` turns `lt y z` into `le y z`, and `lt_of_lt_of_le` combines it with `lt x y` to give `lt x z`. Route: replace with a checked theorem term over `le_of_lt` and `lt_of_lt_of_le`."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.mul",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Int))",
-      "type_sha256": "99eafe1ef787823aede1d24c97170433c8d770f8b3810273b569c3b5ab26da1b",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "primitive-interface",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Binary operation of the ring interface; intentionally abstract."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.mul_assoc",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.mul (Int.mul x0 x1) x2) (Int.mul x0 (Int.mul x1 x2)))))",
-      "type_sha256": "2022ec97f7bab2ae54b9c6858b8d949cdd4d17979879868c6c54ca774acc3760",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Associativity of `mul`: a commutative-ring axiom of the profile."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.mul_comm",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Eq.{1} Int (Int.mul x0 x1) (Int.mul x1 x0)))",
-      "type_sha256": "d4edb8ba8ef7d85b6a8dbbdb1b46303fd287538628221862750b891437507640",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Commutativity of `mul`: a commutative-ring axiom of the profile."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.mul_le_mul_of_nonneg_left",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.le Int.zero x0) -> ((x4 : Int.le x1 x2) -> Int.le (Int.mul x0 x1) (Int.mul x0 x2))))))",
-      "type_sha256": "09700274d10387750ded321ce969d5d0ace4a816cc73b699d6ae5d80da294a15",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Multiplicative monotonicity under a nonnegative left factor: the ordered-ring axiom for `mul`. Load-bearing — `mul_nonneg` is derived from it."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.mul_nonneg",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.le Int.zero x0) -> ((x3 : Int.le Int.zero x1) -> Int.le Int.zero (Int.mul x0 x1)))))",
-      "type_sha256": "b228baf14a1e176e55bb1b2f367e88bb1f009fd7f4caf72f334111391b7c094a",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "derivable-theorem",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "planned",
-      "discharge_evidence": [],
-      "note": "Derivable from `mul_le_mul_of_nonneg_left` instantiated at `x1 := zero`, `x2 := b`: from `0 <= a` and `0 <= b` it yields `a*0 <= a*b`, and `mul_zero` rewrites `a*0` to `0`. Route: replace with a checked theorem term over `mul_le_mul_of_nonneg_left` and `mul_zero` (itself derivable)."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.mul_one",
-      "canonical_type": "((x0 : Int) -> Eq.{1} Int (Int.mul x0 Int.one) x0)",
-      "type_sha256": "0efaaff79fe83859a46220be902384c97524b96ffd6924f8c10c50739525382e",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Right identity for `mul`: a commutative-ring axiom of the profile."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.mul_zero",
-      "canonical_type": "((x0 : Int) -> Eq.{1} Int (Int.mul x0 Int.zero) Int.zero)",
-      "type_sha256": "15b2aaf49d7e1c3c445f49c50912509a6bdc2a198e53532c30dfd93e7e2b9c01",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "derivable-theorem",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "planned",
-      "discharge_evidence": [],
-      "note": "Derivable in any ring: `left_distrib` gives `x*(0+0) = x*0 + x*0`, `add_zero` rewrites the left side to `x*0`, and cancelling with `add_neg`/`add_assoc`/`add_comm` yields `x*0 = 0`. Route: replace with a checked theorem term over `left_distrib`, `add_zero`, `add_assoc`, `add_comm`, `add_neg`."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.neg",
-      "canonical_type": "((x0 : Int) -> Int)",
-      "type_sha256": "3d4ca0eca780c74b60445fd8f9d01162f0a10f34146c015ba989b441ff95c15d",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "primitive-interface",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Additive inverse operation of the ring interface; intentionally abstract."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.no_int_between",
-      "canonical_type": "((x0 : Int) -> Not (And (Int.lt Int.zero x0) (Int.lt x0 Int.one)))",
-      "type_sha256": "1fb9cd08ac2f8b8f45027c8192d7cb0a26aea3dd823b5ee2d1c1b8c2e14a6ec4",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Discreteness: nothing lies strictly between `zero` and `one`. This is the defining separation of the integer profile from a dense ordered ring, and is consumed by the LIA cut/branch reconstruction route."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.one",
-      "canonical_type": "Int",
-      "type_sha256": "0b5f608070c6ce3bc711621b8371e71901bdf196dbdf04807b513f75346b7018",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "primitive-interface",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Multiplicative identity constant of the ring interface; intentionally abstract."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.zero",
-      "canonical_type": "Int",
-      "type_sha256": "0b5f608070c6ce3bc711621b8371e71901bdf196dbdf04807b513f75346b7018",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "primitive-interface",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Additive identity constant of the ring interface; intentionally abstract."
-    },
-    {
-      "prelude": "integer",
-      "name": "Int.zero_lt_one",
-      "canonical_type": "Int.lt Int.zero Int.one",
-      "type_sha256": "1dca56836e9ca3fa78c875df42107dfb3e82716a9a9ee5470aa2fe3e33365164",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Nontriviality of the profile; excludes the zero ring."
     },
     {
       "prelude": "real",
@@ -875,6 +506,569 @@
       "discharge_status": "retained",
       "discharge_evidence": [],
       "note": "Binary carrier operation of the string reconstruction profile; intentionally abstract. Note this row is inserted directly as `Declaration::Axiom` rather than through `declare_axiom(...)`, which is why the earlier 64-row call-site census missed it."
+    }
+  ],
+  "retired_entries": [
+    {
+      "prelude": "integer",
+      "name": "Int",
+      "canonical_type": "Sort (1)",
+      "type_sha256": "73d4fe359be51073c75f6c2a03507b52a55364cf0c923d65def2fa12cb438933",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Carrier sort of the integer reconstruction profile; intentionally abstract.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.add",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Int))",
+      "type_sha256": "99eafe1ef787823aede1d24c97170433c8d770f8b3810273b569c3b5ab26da1b",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Binary operation of the ring interface; intentionally abstract.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.add_assoc",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.add (Int.add x0 x1) x2) (Int.add x0 (Int.add x1 x2)))))",
+      "type_sha256": "9405ec939ed80e568fe1929fd63482e0907a48e8b6dbb95d2c58f81cf486b26f",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Associativity of `add`: an abelian-group axiom of the profile.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.add_comm",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Eq.{1} Int (Int.add x0 x1) (Int.add x1 x0)))",
+      "type_sha256": "595e9a1c7bf447f9f1347f3babb46d091fc129d812c39cf7d531b903c942b953",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Commutativity of `add`: an abelian-group axiom of the profile.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.add_le_add",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int.le x0 x1) -> ((x5 : Int.le x2 x3) -> Int.le (Int.add x0 x2) (Int.add x1 x3)))))))",
+      "type_sha256": "8703098c251851d0a84b8efaf8b31b091dd09ee931606c89f0b9db1427108ec5",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Additive monotonicity of `le`. Stated in the four-argument form; not derivable from the one-sided form, which this profile does not admit.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.add_lt_add_of_le_of_lt",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int.le x0 x1) -> ((x5 : Int.lt x2 x3) -> Int.lt (Int.add x0 x2) (Int.add x1 x3)))))))",
+      "type_sha256": "f4736a674bdbe79e58392817d03b945c8fea0bc3c8387fde4f99d9e480065a61",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Mixed additive monotonicity; an ordered-ring compatibility assumption connecting `add`, `le`, and `lt`.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.add_neg",
+      "canonical_type": "((x0 : Int) -> Eq.{1} Int (Int.add x0 (Int.neg x0)) Int.zero)",
+      "type_sha256": "5f8dff2caa3f9a0c45d532af52407506e3d9de23385c760328e5094f8e6c62a7",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Right inverse for `add`: an abelian-group axiom of the profile.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.add_zero",
+      "canonical_type": "((x0 : Int) -> Eq.{1} Int (Int.add x0 Int.zero) x0)",
+      "type_sha256": "8b6f4f975687dab9c145b2abe816dbb4f49e25a21fa466e9e5072f60feb0db80",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Right identity for `add`: an abelian-group axiom of the profile.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.eq_em",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Or (Eq.{1} Int x0 x1) (Not (Eq.{1} Int x0 x1))))",
+      "type_sha256": "815531ec43bb75ccb38bb94fb77863a34d9f9235fb3e78c9c07439ecfcc40d3f",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Decidable equality on `Z` stated as excluded middle for `x = y`. This is a direct instance of `Classical.em` applied to the proposition `Eq Z x y`, and `Classical.em` is already declared on demand by `crates/axeyum-solver/src/reconstruct.rs` as the single genuine logical axiom of the reconstruction route. Discharging this row removes a *theory-specific* assumption in favour of the already-accepted logical one, strictly shrinking the integer profile's trusted base. Route: replace with a checked theorem term instantiating `Classical.em`.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.le",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Prop))",
+      "type_sha256": "fb0d4590496986200c403ac1cfe3e5ad58a8be4d2fb551726c2262e1e4cc6b31",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Order relation of the profile, declared as a primitive `Prop`-valued relation.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.le_of_lt",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt x0 x1) -> Int.le x0 x1)))",
+      "type_sha256": "12f9daa9d0684a6f29684456cb56f90d95b89917f32299d0ba70a2cd8177a578",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Connects the two primitive order relations (`lt` implies `le`). Not derivable because `lt` is a primitive, not a definition; load-bearing — `lt_trans` is derived from it.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.le_refl",
+      "canonical_type": "((x0 : Int) -> Int.le x0 x0)",
+      "type_sha256": "225ccf020467237aeef9c273c920eb77e1cdf2d2cfd33d16b15c2b85ff1bf963",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Reflexivity of `le`: a preorder axiom of the profile.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.le_total",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Or (Int.le x0 x1) (Int.le x1 x0)))",
+      "type_sha256": "7964ea1ddd7637c9f5e72388b9aae51c8066791ca42dbc7febc59d71ad5de1bb",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Totality of `le`: the axiom that makes the integer profile linearly ordered. Independent of decidable equality, so it is not implied by `eq_em`.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.le_trans",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.le x0 x1) -> ((x4 : Int.le x1 x2) -> Int.le x0 x2)))))",
+      "type_sha256": "120977f039a28529bcb6438ae595de51bc03f3ce03b1ecfbc681080ebe466388",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Transitivity of `le`: a preorder axiom of the profile.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.left_distrib",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.mul x0 (Int.add x1 x2)) (Int.add (Int.mul x0 x1) (Int.mul x0 x2)))))",
+      "type_sha256": "54570226ae27575cff7284441daddeb6786e0333c9c3c8338ab3cc40d9cc08a9",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Left distributivity: the commutative-ring axiom linking `add` and `mul`. Load-bearing — `mul_zero` is derived from it.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.lt",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Prop))",
+      "type_sha256": "fb0d4590496986200c403ac1cfe3e5ad58a8be4d2fb551726c2262e1e4cc6b31",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Strict order relation, declared as a primitive `Prop`-valued relation independent of `le`; the two are connected only by the order-interface assumptions below.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.lt_irrefl",
+      "canonical_type": "((x0 : Int) -> Not (Int.lt x0 x0))",
+      "type_sha256": "110efe1cc3d1f368c16f520f21ccbf93d9b72825bcf99ea0faf25a6aba5880f7",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Irreflexivity of the primitive `lt`; independent of the `le` axioms.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.lt_of_le_of_lt",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.le x0 x1) -> ((x4 : Int.lt x1 x2) -> Int.lt x0 x2)))))",
+      "type_sha256": "27f076961d39a9a97f0d8889c51a89affb931e3a810fa3622bb90494ca9ff338",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Mixed transitivity of the two primitive order relations; an order-interface assumption.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.lt_of_le_of_ne",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.le x0 x1) -> ((x3 : Not (Eq.{1} Int x0 x1)) -> Int.lt x0 x1))))",
+      "type_sha256": "128cb1d7a0bc5bb9f7d8ccd178ecf38df7f10991ed97b879a96c08acb39d219d",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Strictness from a non-strict bound plus disequality. Not derivable from the admitted set, which contains no converse `lt -> ne` direction; an order-interface assumption.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.lt_of_lt_of_le",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.lt x0 x1) -> ((x4 : Int.le x1 x2) -> Int.lt x0 x2)))))",
+      "type_sha256": "99a02402ef4fa99afe3c07bca6d734c05be0f768b58c6ca6aaea4d67e5cb8291",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Mixed transitivity of the two primitive order relations; load-bearing — `lt_trans` is derived from it.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.lt_trans",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.lt x0 x1) -> ((x4 : Int.lt x1 x2) -> Int.lt x0 x2)))))",
+      "type_sha256": "52ee835f5c5c74c3f396677055ff707e53c31adf31e6ba27064fe434da809149",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Derivable from the order interface: `le_of_lt` turns `lt y z` into `le y z`, and `lt_of_lt_of_le` combines it with `lt x y` to give `lt x z`. Route: replace with a checked theorem term over `le_of_lt` and `lt_of_lt_of_le`.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.mul",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Int))",
+      "type_sha256": "99eafe1ef787823aede1d24c97170433c8d770f8b3810273b569c3b5ab26da1b",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Binary operation of the ring interface; intentionally abstract.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.mul_assoc",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.mul (Int.mul x0 x1) x2) (Int.mul x0 (Int.mul x1 x2)))))",
+      "type_sha256": "2022ec97f7bab2ae54b9c6858b8d949cdd4d17979879868c6c54ca774acc3760",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Associativity of `mul`: a commutative-ring axiom of the profile.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.mul_comm",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Eq.{1} Int (Int.mul x0 x1) (Int.mul x1 x0)))",
+      "type_sha256": "d4edb8ba8ef7d85b6a8dbbdb1b46303fd287538628221862750b891437507640",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Commutativity of `mul`: a commutative-ring axiom of the profile.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.mul_le_mul_of_nonneg_left",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.le Int.zero x0) -> ((x4 : Int.le x1 x2) -> Int.le (Int.mul x0 x1) (Int.mul x0 x2))))))",
+      "type_sha256": "09700274d10387750ded321ce969d5d0ace4a816cc73b699d6ae5d80da294a15",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Multiplicative monotonicity under a nonnegative left factor: the ordered-ring axiom for `mul`. Load-bearing — `mul_nonneg` is derived from it.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.mul_nonneg",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.le Int.zero x0) -> ((x3 : Int.le Int.zero x1) -> Int.le Int.zero (Int.mul x0 x1)))))",
+      "type_sha256": "b228baf14a1e176e55bb1b2f367e88bb1f009fd7f4caf72f334111391b7c094a",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Derivable from `mul_le_mul_of_nonneg_left` instantiated at `x1 := zero`, `x2 := b`: from `0 <= a` and `0 <= b` it yields `a*0 <= a*b`, and `mul_zero` rewrites `a*0` to `0`. Route: replace with a checked theorem term over `mul_le_mul_of_nonneg_left` and `mul_zero` (itself derivable).",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.mul_one",
+      "canonical_type": "((x0 : Int) -> Eq.{1} Int (Int.mul x0 Int.one) x0)",
+      "type_sha256": "0efaaff79fe83859a46220be902384c97524b96ffd6924f8c10c50739525382e",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Right identity for `mul`: a commutative-ring axiom of the profile.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.mul_zero",
+      "canonical_type": "((x0 : Int) -> Eq.{1} Int (Int.mul x0 Int.zero) Int.zero)",
+      "type_sha256": "15b2aaf49d7e1c3c445f49c50912509a6bdc2a198e53532c30dfd93e7e2b9c01",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Derivable in any ring: `left_distrib` gives `x*(0+0) = x*0 + x*0`, `add_zero` rewrites the left side to `x*0`, and cancelling with `add_neg`/`add_assoc`/`add_comm` yields `x*0 = 0`. Route: replace with a checked theorem term over `left_distrib`, `add_zero`, `add_assoc`, `add_comm`, `add_neg`.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.neg",
+      "canonical_type": "((x0 : Int) -> Int)",
+      "type_sha256": "3d4ca0eca780c74b60445fd8f9d01162f0a10f34146c015ba989b441ff95c15d",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Additive inverse operation of the ring interface; intentionally abstract.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.no_int_between",
+      "canonical_type": "((x0 : Int) -> Not (And (Int.lt Int.zero x0) (Int.lt x0 Int.one)))",
+      "type_sha256": "1fb9cd08ac2f8b8f45027c8192d7cb0a26aea3dd823b5ee2d1c1b8c2e14a6ec4",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Discreteness: nothing lies strictly between `zero` and `one`. This is the defining separation of the integer profile from a dense ordered ring, and is consumed by the LIA cut/branch reconstruction route.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.one",
+      "canonical_type": "Int",
+      "type_sha256": "0b5f608070c6ce3bc711621b8371e71901bdf196dbdf04807b513f75346b7018",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Multiplicative identity constant of the ring interface; intentionally abstract.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.zero",
+      "canonical_type": "Int",
+      "type_sha256": "0b5f608070c6ce3bc711621b8371e71901bdf196dbdf04807b513f75346b7018",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Additive identity constant of the ring interface; intentionally abstract.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.zero_lt_one",
+      "canonical_type": "Int.lt Int.zero Int.one",
+      "type_sha256": "1dca56836e9ca3fa78c875df42107dfb3e82716a9a9ee5470aa2fe3e33365164",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Nontriviality of the profile; excludes the zero ring.",
+      "retired_on": "2026-08-15",
+      "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude.rs",
+        "docs/plan/status/35-int-keystone.md",
+        "docs/plan/status/36-int-remainder.md"
+      ]
     }
   ]
 }

@@ -990,7 +990,7 @@ Out of scope:
     fail-closed source-export/official-check lane, then import pinned official
     `lean4export` NDJSON and independently admit supported declarations.
     Selected theorem-backed rewrite/CAS tactic slices follow the importer and
-    the 65-row prelude-assumption inventory. Native parser/macros, elaboration,
+    the runtime prelude-assumption inventory. Native parser/macros, elaboration,
     modules/Lake, a late untrusted version-specific `.olean` reader, LSP,
     compiler/runtime, and full pinned-mathlib compatibility are separately
     gated later phases rather than permanent exclusions. See
@@ -1581,13 +1581,19 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
 - [x] Which integer foundation and signed-defect encoding may carry credited
   Rado rigidity results?
   - [ADR-0388](../09-decisions/adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md)
-    retains the existing 34-assumption `Int` profile for solver
-    reconstruction, prohibits axiom-free claims for its dependency closure,
+    retained the then-current 34-assumption `Int` profile for solver
+    reconstruction, prohibited axiom-free claims for its dependency closure,
     and selects the subtraction-free Nat prefix invariant `A_j <= C_j` for the
     credited `M = N+1` rigidity lane. It also corrects the quotient boundary:
     Lean's privileged package has four members, while `Quot.sound` is a
     separate axiom. ADR-0365 remains independently gated on its M4 conformance
     evidence.
+  - [ADR-0465](../09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md)
+    supersedes the numeric half: ℤ was constructed over the proved ℕ
+    development, the integer prelude's 1 assumption is now
+    `Int.euclidean_decomposition` alone, and the disclosure rule is generated
+    from the measurement instead of written down. The Nat prefix-deficit
+    boundary for credited Rado rigidity is re-accepted unchanged.
 
 ## Source Pointers
 

@@ -152,7 +152,8 @@ step lean-nested-inductive-m0-tests python3 -m unittest scripts.tests.test_lean_
 step lean-nested-inductive-m0 python3 scripts/check-lean-nested-inductive-elimination.py --check
 step lean-construct-matrix-stage-b python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
 step lean-construct-matrix-product-freeze python3 scripts/freeze-lean-official-construct-matrix-product.py --check
-# The axiom ledger: the SHA-256 binding of all 65 prelude axiom types.
+# The axiom ledger: the SHA-256 binding of every prelude axiom type, and since
+# ADR-0465 every count this project publishes about the trusted prelude surface.
 # Axiom-freedom is this project's headline metric, and this step ran ONLY in
 # `just check` until 2026-08-14 -- so the documented fresh-machine gate did not
 # bind it. Found by `scripts/check-aggregate-scope.sh`, which now pins the

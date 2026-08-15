@@ -464,7 +464,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0385](adr-0385-nat-prelude.md) | A proved `Nat` prelude for the Lean kernel — `add`/`mul`/`pow`, the algebraic laws, `Nat.le`, and the `Eq` combinators, with **zero axioms** | proposed |
 | [0386](adr-0386-cas-refutation-routes.md) | Two CAS-backed refutation routes in the auto dispatch, certified by an independent expander | proposed |
 | [0387](adr-0387-fallible-composable-lean-preludes.md) | Fallible, transactional, namespaced Lean preludes for mixed mathematical environments | accepted |
-| [0388](adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md) | Retain the axiomatized Int reconstruction profile and use Nat prefix deficits for credited Rado rigidity | accepted |
+| [0388](adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md) | Retain the axiomatized Int reconstruction profile and use Nat prefix deficits for credited Rado rigidity — the 34-assumption disclosure is superseded (ℤ was constructed; the integer prelude now costs 1), the Nat-only Rado boundary is retained | superseded by ADR-0465 |
 | [0389](adr-0389-proved-nat-divisibility-foundation.md) | Proved Nat divisibility as the first Rado library extension | accepted |
 | [0390](adr-0390-proved-nat-strict-order-and-successor-inversion.md) | Proved Nat strict order and successor inversion for Rado ranges | accepted |
 | [0391](adr-0391-generic-nat-finite-range-sums.md) | Generic zero-axiom Nat finite-range sums | accepted |
@@ -541,3 +541,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0462](adr-0462-local-let-zeta-belongs-inside-whnf-core.md) | a let-local exposed during lazy delta was never unfolded; moving ζ into `whnf_no_unfolding` matches Lean's `whnf_fvar` and clears the top declined root in both scale censuses | accepted |
 | [0463](adr-0463-database-design-questions-are-answered-with-certificates.md) | Schema-design questions are decided twice and reported only with a replayable certificate; the domain model lives in `axeyum-scenarios`, not a new crate | accepted |
 | [0464](adr-0464-prelude-reuse-is-a-cloned-template-not-a-snapshot.md) | Reuse built preludes by cloning a once-built `Kernel` template on a pristine kernel; no serialization, so no deserializer on the trusted path | accepted |
+| [0465](adr-0465-the-axiom-ledger-is-derived-not-transcribed.md) | Supersedes ADR-0388's fixed 34-assumption disclosure: the integer prelude now costs **1**, the trusted total is **32**, and every published count is generated from a coverage-declaring measurement rather than authored | accepted |

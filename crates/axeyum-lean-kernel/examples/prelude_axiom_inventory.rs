@@ -39,31 +39,29 @@ fn inventory(prelude: &str, kernel: &Kernel) -> Vec<(String, String, String)> {
 }
 
 fn main() {
+    // No hard-coded population sizes live here any more (ADR-0465).  They did:
+    // `integer` was pinned at 34, the Int development was proved down to 1, and
+    // this example -- which `scripts/gen-lean-axiom-ledger.py` shells out to --
+    // spent two days exiting 101 because nothing checked its status.  An
+    // `assert_eq!` in an emit path is not a gate; it is an outage that fires
+    // when the number *improves*.  The expectation now lives in the ledger
+    // manifest, is derived from this output rather than written down, and is
+    // enforced by `gen-lean-axiom-ledger.py --check`.  Coverage is cross-checked
+    // there against `nat_axiom_inventory`, which declares a per-prelude count
+    // line even for the axiom-free preludes, so a prelude that silently stopped
+    // being built here fails that gate instead of shrinking the published total.
     let mut real = Kernel::new();
     let _ = build_arith_prelude(&mut real).expect("Real prelude must build");
     let real_rows = inventory("real", &real);
-    assert_eq!(real_rows.len(), 30);
 
     let mut integer = Kernel::new();
     let _ = build_int_prelude(&mut integer).expect("Int prelude must build");
     let integer_rows = inventory("integer", &integer);
-    // 34 -> 1: the Int development was proved out (51 derived theorems, one
-    // remaining assertion). This expectation was NOT updated with it, so this
-    // example — which `scripts/gen-lean-axiom-ledger.py` shells out to — has
-    // been panicking with exit 101, and nothing noticed because nothing checked
-    // its status. Found 2026-08-15 by the prelude-reuse differential gate.
-    assert_eq!(
-        integer_rows.len(),
-        1,
-        "integer axiom population drifted: a growth means something previously \
-         proved is now assumed, a shrink means this expectation is stale"
-    );
 
     let mut string = Kernel::new();
     let logic = build_logic_prelude(&mut string).expect("logic prelude must build");
     let _ = build_string_prelude(&mut string, logic, 2).expect("string prelude must build");
     let string_rows = inventory("string", &string);
-    assert_eq!(string_rows.len(), 1);
 
     let mut rows = real_rows;
     rows.extend(integer_rows);

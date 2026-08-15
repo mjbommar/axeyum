@@ -1,9 +1,20 @@
 # ADR-0388: Retain the axiomatized Int profile and use Nat deficits for Rado rigidity
 
-Status: accepted
-Index-summary: Retain the axiomatized Int reconstruction profile and use Nat prefix deficits for credited Rado rigidity
+Status: superseded by ADR-0465
+Index-summary: Retain the axiomatized Int reconstruction profile and use Nat prefix deficits for credited Rado rigidity — the 34-assumption disclosure is superseded (ℤ was constructed; the integer prelude now costs 1), the Nat-only Rado boundary is retained
+Index-status: superseded by ADR-0465
 
 Date: 2026-08-13
+
+> **Superseded 2026-08-15 by
+> [ADR-0465](adr-0465-the-axiom-ledger-is-derived-not-transcribed.md).** The
+> numbers below were true when this was written and are kept as the record of
+> what was decided. ℤ has since been *constructed* over the proved ℕ
+> development, so the integer prelude admits **1** assumption, not 34, and the
+> ledger's counts are now derived from a measurement rather than written down.
+> The Nat prefix-deficit boundary for credited Rado rigidity (§4–§5, and the
+> prohibition on calling an `int_prelude` closure "zero axiom") is re-accepted
+> unchanged by ADR-0465.
 
 Requirements:
 [`lean-kernel-requirements-2026-08-13.md`](../../plan/lean-kernel-requirements-2026-08-13.md),

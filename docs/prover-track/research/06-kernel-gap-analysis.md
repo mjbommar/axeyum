@@ -484,7 +484,7 @@ every axiom's *type* is kernel-checked at admission):
 |---|---|---|
 | `prelude.rs` (1085) | **Logic**: `False`, `Not`, `And`, `Or`, `Eq`, `True`, + datatype families. Built from **real `add_inductive` calls**, not axioms | **0 axioms** (9 ind / 11 ctor / 9 rec / 1 def) |
 | `arith_prelude.rs` (675) | **Axiomatized linear ordered field** ℝ for LRA/Farkas reconstruction (`:1-14`) | **30 axioms** |
-| `int_prelude.rs` (839) | **Axiomatized discretely-ordered commutative ring** ℤ for LIA/Diophantine (ADR-0042) | **34 axioms** |
+| `int_prelude.rs` (839) | ℤ **constructed** over the proved ℕ development: an inductive carrier, operations as checked definitions, ring and order laws as theorems with empty footprints. Was an axiomatized discretely-ordered commutative ring (ADR-0042) | **1 axiom** (`Int.euclidean_decomposition`); 33 retired |
 | `string_prelude.rs` (496) | String carrier + ops | **1 axiom** (`axeyum.string.append`) |
 
 **The logic prelude is the healthy one**: it is *constructed* inductively, so
@@ -593,9 +593,11 @@ Ordered by whether they *block* a goal layer or merely bound its scope.
 
 **Soundness obligations (the goal layer's results are only as good as these):**
 
-5. **Classify and discharge the 65 ledgered prelude assumptions** (Finding A).
-   Until then, every LRA/LIA reconstruction rests on 64 unproven arithmetic/
-   integer assertions, while string reconstruction rests on one opaque `append`
+5. **Classify and discharge the remaining ledgered prelude assumptions**
+   (Finding A). The integer half of this obligation has been *discharged rather
+   than classified*: ℤ is constructed, so LIA reconstruction now rests on one
+   assertion, not 34. LRA reconstruction still rests on 30 unproven arithmetic
+   assertions, while string reconstruction rests on one opaque `append`
    assumption. No official-Lean cross-check can establish those premises (§3).
    This is the largest unguarded soundness surface in the crate.
    **XL as stated, but the first 80% is mechanical**: emit each axiom type as a
@@ -663,11 +665,20 @@ a third time. This table correctly counts helper calls but incorrectly treats
 them as the complete runtime population.
 
 **Correction (runtime environment inventory, 2026-07-21):** constructing each
-prelude in an independent kernel yields **65** admitted assumptions: real 30,
-integer 34, and string 1. `axeyum.string.append` bypasses `declare_axiom(...)`
-and is inserted directly as `Declaration::Axiom`, so the helper-call census
-missed it. The [machine-checked ledger](../../plan/generated/lean-axiom-ledger.md)
-binds all 65 names to canonical type digests and supersedes this call-site count.
+prelude in an independent kernel yields admitted assumptions the call-site
+census cannot see. `axeyum.string.append` bypasses `declare_axiom(...)` and is
+inserted directly as `Declaration::Axiom`, so the helper-call census missed it.
+The [machine-checked ledger](../../plan/generated/lean-axiom-ledger.md) binds
+every name to a canonical type digest and supersedes this call-site count.
+
+**Second correction (2026-08-15):** that inventory read **65** assumptions and
+then stopped moving. ℤ has since been constructed over the proved ℕ
+development, so the runtime population is real 30, integer 1, string 1 — and
+`logic` and `nat` enumerate to zero, declared by the measurement rather than
+inferred from an empty result. Under
+[ADR-0465](../../research/09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md)
+these counts are generated from that measurement and gated, so this paragraph
+cannot go stale a third time without failing a gate.
 
 ### The ℝ and ℤ preludes cannot coexist in one `Kernel` — and it panics
 
