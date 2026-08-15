@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "id": "F:orders-fd-implication-certified",
+  "title": "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate",
+  "statement": "For the order-line schema in artifacts/instances/dbdesign/orders-schema.dbd -- 10 attributes and 7 functional dependencies -- F implies `order_id line_no -> region` and `line_uuid -> customer_email`, and F does NOT imply `sku -> customer_id` or `warehouse -> order_id`. Each implication carries an Armstrong derivation using only reflexivity, augmentation and transitivity, replayed by a checker that implements those three rules and nothing else -- in particular it does not know that attribute closure exists. Each non-implication carries a two-row relation over the schema that satisfies all seven dependencies and violates the dependency in question; that relation is the solver's own model of the Horn encoding, decoded and then evaluated against F row by row.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(and (=> (and (=> line_uuid (and order_id line_no)) (=> (and order_id line_no) (and line_uuid sku qty)) (=> order_id (and customer_id warehouse)) (=> customer_id customer_email) (=> customer_email customer_id) (=> sku unit_price) (=> warehouse region)) (=> (and order_id line_no) region)) (=> (and (=> line_uuid (and order_id line_no)) (=> (and order_id line_no) (and line_uuid sku qty)) (=> order_id (and customer_id warehouse)) (=> customer_id customer_email) (=> customer_email customer_id) (=> sku unit_price) (=> warehouse region)) (=> line_uuid customer_email)) (=> (and (not line_uuid) (not order_id) (not line_no) sku (not qty) unit_price (not customer_id) (not customer_email) (not warehouse) (not region)) (and (and (=> line_uuid (and order_id line_no)) (=> (and order_id line_no) (and line_uuid sku qty)) (=> order_id (and customer_id warehouse)) (=> customer_id customer_email) (=> customer_email customer_id) (=> sku unit_price) (=> warehouse region)) sku (not customer_id))) (=> (and (not line_uuid) (not order_id) (not line_no) (not sku) (not qty) (not unit_price) (not customer_id) (not customer_email) warehouse region) (and (and (=> line_uuid (and order_id line_no)) (=> (and order_id line_no) (and line_uuid sku qty)) (=> order_id (and customer_id warehouse)) (=> customer_id customer_email) (=> customer_email customer_id) (=> sku unit_price) (=> warehouse region)) warehouse (not order_id))))",
+    "fragment": "QF_UF",
+    "free_symbols": [
+      "line_uuid",
+      "order_id",
+      "line_no",
+      "sku",
+      "qty",
+      "unit_price",
+      "customer_id",
+      "customer_email",
+      "warehouse",
+      "region"
+    ]
+  },
+  "epistemic_status": "proved",
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "orders-implied-derivations",
+      "kind": "unsat-certificate",
+      "supports": "F implies `order_id line_no -> region` and `line_uuid -> customer_email`, each by an Armstrong derivation replayed under reflexivity, augmentation and transitivity alone.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/orders-schema.dbd --expect-checks 11 --verify-formal artifacts/instances/dbdesign/orders-fd-claims.smt2",
+      "artifact": "artifacts/instances/dbdesign/orders-schema.dbd",
+      "checkers": [
+        "axeyum-scenarios.dbdesign-armstrong-derivation-replay",
+        "axeyum-solver-horn-encoding-through-bitblast-and-sat",
+        "axeyum-solver-on-the-recorded-formal-statement"
+      ],
+      "notes": "Ran 2026-08-15 in 0.09 s warm. The derivations are 18 and 21 lines, bounded by 3|F|+3 = 24 regardless of how long the closure fixpoint took. Three INDEPENDENT re-derivations, not three names for one: (1) `check_derivation` implements the three axioms and the citation of a dependency of F and nothing else -- it does not know attribute closure exists; (2) the solver decides the same question on a Boolean Horn encoding through bit-blast, CNF and SAT, and must return `unsat`, with a disagreement between the two routes reported as a FAILURE rather than resolved; (3) `--verify-formal` dispatches artifacts/instances/dbdesign/orders-fd-claims.smt2, which asserts the NEGATION of this fact's `formal.statement`, and requires `unsat` -- so the proposition recorded in the ledger is itself machine-checked rather than transcribed."
+    },
+    {
+      "id": "orders-counterexample-relations",
+      "kind": "witness-replay",
+      "supports": "F does not imply `sku -> customer_id` or `warehouse -> order_id`, each by a two-row relation over the schema that satisfies all seven dependencies and violates the one in question.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/orders-schema.dbd --expect-checks 11 --verify-formal artifacts/instances/dbdesign/orders-fd-claims.smt2",
+      "artifact": "artifacts/instances/dbdesign/orders-schema.dbd",
+      "checkers": [
+        "axeyum-solver-model-of-the-horn-encoding",
+        "axeyum-ir-ground-evaluator-model-replay",
+        "axeyum-scenarios.dbdesign-two-row-relation-evaluation",
+        "axeyum-scenarios.dbdesign-closure-route-cross-check"
+      ],
+      "notes": "The relation is the SOLVER'S OWN MODEL, not a construction the checker then blesses: the set of attributes the model makes true is the agreement set of the two rows, and any model of the Horn encoding yields a valid counterexample, not only the least one. It passes through three gates before it counts -- `check_model` replays it against the encoding by the IR ground evaluator; `check_two_tuple_witness` evaluates all seven dependencies against the two concrete rows without ever computing a closure; and the closure route is asked the same question and must agree that the dependency is not implied. The measured agreement sets were {sku, unit_price} and {warehouse, region}."
+    },
+    {
+      "id": "dbdesign-checkers-fail-closed",
+      "kind": "instance-pin",
+      "supports": "The checkers backing this fact REJECT a false claim of every kind it makes, so a passing run is evidence rather than a report that a tool finished.",
+      "check_status": "checked",
+      "checker_command": "scripts/check-dbdesign-negative-controls.sh",
+      "artifact": "artifacts/instances/dbdesign/negative-controls/",
+      "checkers": [
+        "axeyum-dbdesign-negative-control-sweep"
+      ],
+      "notes": "22 assertions, 2.1 s warm. 13 committed instance files each pin exactly ONE false answer -- an unimplied dependency declared implied, a candidate-key list with a key missing, a list with a non-key added, a BCNF verdict flipped, a 3NF verdict flipped (which a checker conflating the two normal forms would accept), a lossy split declared lossless and the reverse, a preserved dependency set declared lost and the reverse, and a query containment in each direction -- and every one must exit non-zero. Four more assertions cover the shape of the gate itself: a wrong --expect-checks count, an instance run through the wrong checker, a --verify-formal script whose negation is SATISFIABLE, and a --verify-formal target that asserts nothing. One further control, no-expectations.dbd, pins nothing at all and must be REFUSED rather than swept -- the `40 of 162 checker runs exit 0 on completion alone` failure this ledger measured on 2026-08-15. Finally three assertions require the TRUE instances to still be accepted, without which a checker that rejected everything would pass the whole sweep. Measured this run: 22 of 22."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-15",
+    "established_by": "axeyum lane `db-design`, 2026-08-15: crates/axeyum-scenarios/src/dbdesign/ over the committed instance, driven by crates/axeyum-bench/examples/db_design_certify.rs",
+    "source": "schema authored by this lane; not extracted from any corpus",
+    "prior_art": [
+      {
+        "who": "W. W. Armstrong",
+        "what": "The reflexivity/augmentation/transitivity rules are SOUND AND COMPLETE for logical implication of functional dependencies; the completeness half is proved by exhibiting the two-tuple relation that agrees exactly on X+, which is the certificate shape used here for the negative direction. Maier's bibliographic notes credit the rules themselves to Delobel and Casey (1973) and Armstrong with the soundness/completeness proof.",
+        "where": "Dependency structures of data base relationships, Information Processing 74 (Proc. IFIP Congress, Stockholm), North-Holland, pp. 580-583",
+        "year": 1974,
+        "attribution": "citation and page range read on the bibliography pages of Abiteboul, Hull and Vianu, Foundations of Databases (1995), p. 623, and independently in Deuser and Naumov, AAAI-18, p. 6350; the theorem statement read at AHV Thm 8.2.11 p. 168 and the completeness proof at AHV Prop. 8.2.8 p. 166. This lane did NOT consult Armstrong's 1974 paper itself."
+      },
+      {
+        "who": "Catriel Beeri and Philip A. Bernstein",
+        "what": "F |= X -> Y iff Y is contained in the attribute closure X+, and the closure is computable in linear time (LINCLOSURE). This is the FINDER used here; nothing in the fact rests on it, because its output is turned into an Armstrong derivation that an independent checker replays.",
+        "where": "Computational Problems Related to the Design of Normal Form Relational Schemas, ACM Transactions on Database Systems 4(1):30-59",
+        "year": 1979,
+        "attribution": "citation from dblp BibTeX and the AHV bibliography; the linear-time attribution read on Maier, The Theory of Relational Databases (1983), Ch. 4 p. 70 and AHV Exercise 8.7. This lane did not consult the TODS paper itself."
+      }
+    ]
+  },
+  "notes": "WHAT THIS DOES NOT REST ON. The fact is deliberately independent of the COMPLETENESS half of Armstrong's theorem. The implied direction needs only SOUNDNESS of the three axioms, which is what makes a replayed derivation mean something. The unimplied direction needs no metatheorem at all: a two-row relation satisfying F and violating X -> Y is a semantic counterexample, so it refutes the implication directly rather than by appeal to a completeness result. Completeness is what guarantees such a relation always EXISTS when the implication fails; here one is exhibited, so the guarantee is not needed.\n\nIt does rest on one thing the classical statement leaves implicit and this ledger should not: every attribute domain must have at least two values, or a two-row counterexample is not constructible. That is in the axiom footprint.",
+  "proof_route": "search-certificate",
+  "axiom_footprint": [
+    "armstrong-axioms-are-sound-for-relational-fd-semantics",
+    "relational-attribute-domains-have-at-least-two-values",
+    "axeyum-scenarios.dbdesign-instance-parse-faithfulness",
+    "axeyum-scenarios.dbdesign-derivation-and-two-row-checker-replay-semantics"
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "id": "F:bcnf-decomposition-lossless-not-dependency-preserving",
+  "title": "The BCNF repair of the street/city/zip schema rejoins exactly and cannot enforce its own dependency; two other splits lose information",
+  "statement": "For the schema in artifacts/instances/dbdesign/addresses-zip.dbd -- attributes street, city, zip with `street city -> zip` and `zip -> city` -- the decomposition into (zip, city) and (zip, street) has a LOSSLESS join and does NOT preserve dependencies: `street city -> zip` is not implied by the union of the projections of F onto the two fragments. The decomposition into (street, city) and (city, zip) is LOSSY and also loses that dependency. For the order-line schema in artifacts/instances/dbdesign/orders-schema.dbd, the five-fragment split by entity is lossless AND dependency-preserving, while the split that joins order lines to customers through `sku` is lossy and loses `f_order`.\n\nEvery lossless verdict carries a chase trace -- a numbered list of symbol identifications, each one licensed by a dependency of F whose determinant the two tableau rows already agree on -- replayed onto a freshly built tableau by a checker that never chases anything itself. Every lossy verdict carries a two-row relation over the full attribute set that satisfies F, whose projections onto the fragments rejoin to a tuple the relation does not contain: a concrete spurious tuple, checked by array comparison. Every non-preservation carries a two-row relation satisfying the projected dependency set and violating the lost dependency.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(and (lossless-join addresses-zip (fragments (set zip city) (set zip street))) (not (dependency-preserving addresses-zip (fragments (set zip city) (set zip street)))) (not (lossless-join addresses-zip (fragments (set street city) (set city zip)))) (lossless-join orders-schema by-entity) (dependency-preserving orders-schema by-entity) (not (lossless-join orders-schema on-sku)) (not (dependency-preserving orders-schema on-sku)))",
+    "fragment": "QF_UF",
+    "free_symbols": [
+      "street",
+      "city",
+      "zip"
+    ]
+  },
+  "epistemic_status": "proved",
+  "depends_on": [
+    "F:orders-fd-implication-certified"
+  ],
+  "evidence": [
+    {
+      "id": "chase-traces-replayed",
+      "kind": "unsat-certificate",
+      "supports": "The BCNF split of street/city/zip and the by-entity split of the order-line schema both have lossless joins, each by a chase trace replayed onto a freshly built tableau.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/addresses-zip.dbd --expect-checks 11 && cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/orders-schema.dbd --expect-checks 11",
+      "artifact": "artifacts/instances/dbdesign/addresses-zip.dbd",
+      "checkers": [
+        "axeyum-scenarios.dbdesign-chase-trace-replay",
+        "axeyum-scenarios.dbdesign-armstrong-derivation-replay"
+      ],
+      "notes": "Traces of 1 and 7 identifications. `check_chase_trace` rebuilds the initial tableau from the schema and the fragment list, and for each step requires that the cited dependency is in F, that the two named rows ALREADY agree on its determinant, that the column lies in its dependent, that the two cells actually hold the symbols the step names, and that the distinguished symbol is never the one eliminated. It never chases anything itself, so a bug in the chase cannot produce a trace it accepts. Dependency preservation for the by-entity split carries 7 derivations of F from G and 26 of G from F, all replayed -- both directions, so G cannot be smuggled in."
+    },
+    {
+      "id": "spurious-tuple-and-lost-dependency-witnesses",
+      "kind": "witness-replay",
+      "supports": "The two lossy splits and the three lost dependencies, each by a concrete relation: a database exhibiting a spurious tuple, or two rows satisfying the projected dependency set and violating the lost dependency.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/addresses-zip.dbd --expect-checks 11 && cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/orders-schema.dbd --expect-checks 11",
+      "artifact": "artifacts/instances/dbdesign/addresses-zip.dbd",
+      "checkers": [
+        "axeyum-scenarios.dbdesign-spurious-tuple-relation-evaluation",
+        "axeyum-scenarios.dbdesign-two-row-relation-evaluation"
+      ],
+      "notes": "`check_spurious_tuple` discharges three obligations by array comparison: the relation satisfies every dependency of F, every fragment has a row projecting onto the claimed spurious tuple (so the join produces it), and the tuple is not a row. That is a complete refutation of losslessness needing NO theorem -- the negative half of this fact rests on strictly less than the positive half, which needs the soundness of the chase. Both lossy witnesses are 2-row relations. The lost-dependency witnesses are checked against the PROJECTED dependency set G (1 dependency for the zip instance, 65 for the order-line instance), which is where the claim actually lives."
+    },
+    {
+      "id": "dbdesign-checkers-fail-closed",
+      "kind": "instance-pin",
+      "supports": "The checkers backing this fact REJECT a false claim of every kind it makes, so a passing run is evidence rather than a report that a tool finished.",
+      "check_status": "checked",
+      "checker_command": "scripts/check-dbdesign-negative-controls.sh",
+      "artifact": "artifacts/instances/dbdesign/negative-controls/",
+      "checkers": [
+        "axeyum-dbdesign-negative-control-sweep"
+      ],
+      "notes": "22 assertions, 2.1 s warm. 13 committed instance files each pin exactly ONE false answer -- an unimplied dependency declared implied, a candidate-key list with a key missing, a list with a non-key added, a BCNF verdict flipped, a 3NF verdict flipped (which a checker conflating the two normal forms would accept), a lossy split declared lossless and the reverse, a preserved dependency set declared lost and the reverse, and a query containment in each direction -- and every one must exit non-zero. Four more assertions cover the shape of the gate itself: a wrong --expect-checks count, an instance run through the wrong checker, a --verify-formal script whose negation is SATISFIABLE, and a --verify-formal target that asserts nothing. One further control, no-expectations.dbd, pins nothing at all and must be REFUSED rather than swept -- the `40 of 162 checker runs exit 0 on completion alone` failure this ledger measured on 2026-08-15. Finally three assertions require the TRUE instances to still be accepted, without which a checker that rejected everything would pass the whole sweep. Measured this run: 22 of 22."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-15",
+    "established_by": "axeyum lane `db-design`, 2026-08-15: crates/axeyum-scenarios/src/dbdesign/decomposition.rs over the two committed instances",
+    "source": "the street/city/zip schema is the classical textbook example (AHV Example 11.2.10); the order-line schema was authored by this lane",
+    "prior_art": [
+      {
+        "who": "A. V. Aho, C. Beeri and J. D. Ullman",
+        "what": "The tableau chase for functional dependencies: build one row per fragment with the distinguished symbol in the columns that fragment keeps, identify symbols forced equal by a dependency, and the join is lossless exactly when some row becomes all-distinguished. AHV's notes call this paper the ancestor of the chase and credit Maier, Mendelzon and Sagiv (TODS 4(4):455-469, 1979) with articulating the chase as a named general technique.",
+        "where": "The theory of joins in relational databases, ACM Transactions on Database Systems 4(3):297-314",
+        "year": 1979,
+        "attribution": "citation from the AHV bibliography p. 622; the attribution sentence read on Maier, The Theory of Relational Databases (1983), Ch. 8 p. 194 and AHV p. 186. Primary source not consulted."
+      },
+      {
+        "who": "C. Delobel and R. G. Casey (sufficiency) and J. Rissanen (necessity)",
+        "what": "For a two-fragment decomposition under functional dependencies alone, the join is lossless iff F implies (R1 inter R2) -> R1 or (R1 inter R2) -> R2. Maier credits the `if` direction to Delobel and Casey, IBM J. Research and Development 17(5):374-386 (1973), and the `only if` direction to Rissanen, Independent components of relations, ACM TODS 2(4):317-325 (1977). Neither AHV nor Maier credits Heath (1971) for this criterion, despite the popular name `Heath's theorem`.",
+        "where": "as above",
+        "year": 1977,
+        "attribution": "attribution sentence read on Maier, Ch. 8 p. 194; the criterion itself at Maier Exercise 8.35(c) and the sufficient direction at AHV Prop. 8.2.2 p. 164. Page ranges for the two primary papers came from search indexes, not from the papers."
+      },
+      {
+        "who": "E. F. Codd (BCNF) and Abiteboul, Hull and Vianu (the counterexample)",
+        "what": "A BCNF decomposition always exists and always has the lossless join property, but is NOT guaranteed to preserve dependencies; the street/city/zip schema is the standard witness, and AHV state that NO BCNF decomposition of it preserves dependencies. 3NF, by contrast, always admits a decomposition that is both lossless and dependency-preserving -- Bernstein's synthesis algorithm (ACM TODS 1(4):277-298, 1976) delivers dependency preservation, and the lossless-join guarantee comes from the extra key fragment added by Biskup, Dayal and Bernstein (SIGMOD 1979).",
+        "where": "AHV, Foundations of Databases, Theorem 11.2.8 and Example 11.2.10, pp. 256-257; Theorem 11.2.14, p. 258",
+        "year": 1995,
+        "attribution": "theorem statements and the worked counterexample read on the cited pages of the free author PDF of AHV Ch. 11. The 3NF synthesis attribution is deliberately split between Bernstein 1976 and Biskup-Dayal-Bernstein 1979 on the strength of AHV p. 265 and Maier p. 122; citing Bernstein 1976 alone for the lossless guarantee would be wrong."
+      }
+    ]
+  },
+  "notes": "THE TWO DIRECTIONS DO NOT REST ON THE SAME THING, and the difference is worth stating because it is the opposite of the usual asymmetry. A LOSSY verdict rests on no theorem at all: the certificate is a relation that satisfies F, whose projections demonstrably rejoin to a tuple it does not contain, and the three obligations are decided by comparing arrays. A LOSSLESS verdict rests on the soundness of the chase (Aho, Beeri and Ullman 1979) -- replaying the identifications to an all-distinguished row means the join is lossless only because that theorem says so. So the negative half of this fact is strictly better supported than the positive half, and the axiom footprint says which is which.\n\nWHY THE `naive` SPLIT IS IN THE INSTANCE. Splitting street/city/zip on `city` is the decomposition a designer reaches for when they see `zip -> city` and think in terms of lookup tables. It loses information outright, and the run prints the two-row database that proves it. A tool that only ever said `not in BCNF` would give that designer no way to tell the two repairs apart.",
+  "proof_route": "search-certificate",
+  "axiom_footprint": [
+    "the-tableau-chase-is-sound-and-complete-for-lossless-join-under-fds",
+    "armstrong-axioms-are-sound-for-relational-fd-semantics",
+    "relational-attribute-domains-have-at-least-two-values",
+    "axeyum-scenarios.dbdesign-instance-parse-faithfulness",
+    "axeyum-scenarios.dbdesign-chase-and-spurious-tuple-checker-replay-semantics"
+  ]
+}

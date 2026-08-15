@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "F:conjunctive-query-containment-homomorphism-certified",
+  "title": "Six conjunctive-query containment questions decided by homomorphism and by counterexample database, agreeing across three independent routes",
+  "statement": "For the six conjunctive queries in artifacts/instances/dbdesign/view-reuse.cq: Q_verbose and Q_terse are EQUIVALENT (each contains the other), so the second `Placed` atom of Q_verbose is a redundant self-join and may be dropped; Q_us_orders is contained in Q_any_region but not conversely, so a materialised view over every region answers the US-only query and not the reverse; and neither of Q_path2 and Q_edge contains the other, so a one-hop query and a two-hop query are incomparable.\n\nEach containment carries a HOMOMORPHISM from the containing query into the frozen body of the contained one -- the Chandra-Merlin certificate -- verified by applying the map to each atom and looking the result up, and by checking that the image of the head is the frozen head tuple. Each non-containment carries the frozen body itself as a COUNTEREXAMPLE DATABASE, of one or two facts, on which the left query returns its frozen head and the right query, evaluated by exhaustive enumeration of all 16 or 27 variable assignments with no pruning, does not.\n\nAll six are decided three ways that share no code -- a backtracking search, the solver on a one-hot Boolean encoding of homomorphism existence, and the complete evaluator -- and all three agree on all six.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(and (forall ((D database)) (subset (Q_verbose D) (Q_terse D))) (forall ((D database)) (subset (Q_terse D) (Q_verbose D))) (forall ((D database)) (subset (Q_us_orders D) (Q_any_region D))) (exists ((D database)) (not (subset (Q_any_region D) (Q_us_orders D)))) (exists ((D database)) (not (subset (Q_path2 D) (Q_edge D)))) (exists ((D database)) (not (subset (Q_edge D) (Q_path2 D)))))",
+    "fragment": "none",
+    "free_symbols": [
+      "D"
+    ]
+  },
+  "epistemic_status": "proved",
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "view-reuse-homomorphisms",
+      "kind": "witness-replay",
+      "supports": "The three containments that hold, each by a homomorphism from the containing query into the frozen body of the contained one, replayed atom by atom.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-bench --example cq_containment_certify -- artifacts/instances/dbdesign/view-reuse.cq --expect-checks 6",
+      "artifact": "artifacts/instances/dbdesign/view-reuse.cq",
+      "checkers": [
+        "axeyum-scenarios.dbdesign-homomorphism-replay",
+        "axeyum-scenarios.dbdesign-backtracking-search",
+        "axeyum-solver-one-hot-encoding-through-bitblast-and-sat",
+        "axeyum-ir-ground-evaluator-model-replay"
+      ],
+      "notes": "Ran 2026-08-15 in 0.11 s warm. Four genuinely independent routes, not four names for one. The backtracking search proposes a map; `check_homomorphism` applies it to each atom and looks the image up in the frozen database, then checks the image of the head is the frozen head -- no search, no backtracking, no Chandra-Merlin. The solver decides the SAME question on a one-hot Boolean encoding (totality, functionality, one disjunction per body atom over the matching facts), its model is replayed against that encoding by the IR ground evaluator, and the decoded map is then put through the same `check_homomorphism`. Search and solver disagreeing is reported as a FAILURE. Largest certificate: four variable-to-element pairs."
+    },
+    {
+      "id": "view-reuse-counterexample-databases",
+      "kind": "exhaustive-enumeration",
+      "supports": "The three containments that fail, each by the frozen body of the left query as a concrete counterexample database on which the two queries return different answer sets.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-bench --example cq_containment_certify -- artifacts/instances/dbdesign/view-reuse.cq --expect-checks 6",
+      "artifact": "artifacts/instances/dbdesign/view-reuse.cq",
+      "checkers": [
+        "axeyum-scenarios.dbdesign-complete-evaluator-over-the-frozen-database",
+        "axeyum-scenarios.dbdesign-backtracking-search",
+        "axeyum-solver-one-hot-encoding-through-bitblast-and-sat"
+      ],
+      "notes": "16, 16 and 27 variable assignments enumerated with NO pruning and no early exit -- the point being that an exhausted search space and an unsearched one are the same output unless the count is reported, and that a space over the cap is an ERROR here rather than a silent `no`. The counterexample databases are 1 and 2 facts. Note what this does NOT use: the negative direction never appeals to Chandra-Merlin's converse (containment implies a homomorphism), which needs an infinite domain, because a concrete finite database separating the two queries refutes the containment on its own."
+    },
+    {
+      "id": "dbdesign-checkers-fail-closed",
+      "kind": "instance-pin",
+      "supports": "The checkers backing this fact REJECT a false claim of every kind it makes, so a passing run is evidence rather than a report that a tool finished.",
+      "check_status": "checked",
+      "checker_command": "scripts/check-dbdesign-negative-controls.sh",
+      "artifact": "artifacts/instances/dbdesign/negative-controls/",
+      "checkers": [
+        "axeyum-dbdesign-negative-control-sweep"
+      ],
+      "notes": "22 assertions, 2.1 s warm. 13 committed instance files each pin exactly ONE false answer -- an unimplied dependency declared implied, a candidate-key list with a key missing, a list with a non-key added, a BCNF verdict flipped, a 3NF verdict flipped (which a checker conflating the two normal forms would accept), a lossy split declared lossless and the reverse, a preserved dependency set declared lost and the reverse, and a query containment in each direction -- and every one must exit non-zero. Four more assertions cover the shape of the gate itself: a wrong --expect-checks count, an instance run through the wrong checker, a --verify-formal script whose negation is SATISFIABLE, and a --verify-formal target that asserts nothing. One further control, no-expectations.dbd, pins nothing at all and must be REFUSED rather than swept -- the `40 of 162 checker runs exit 0 on completion alone` failure this ledger measured on 2026-08-15. Finally three assertions require the TRUE instances to still be accepted, without which a checker that rejected everything would pass the whole sweep. Measured this run: 22 of 22."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-15",
+    "established_by": "axeyum lane `db-design`, 2026-08-15: crates/axeyum-scenarios/src/dbdesign/cq.rs over the committed instance, driven by crates/axeyum-bench/examples/cq_containment_certify.rs",
+    "source": "queries authored by this lane; the two-hop/one-hop pair is the classical textbook example",
+    "prior_art": [
+      {
+        "who": "Ashok K. Chandra and Philip M. Merlin",
+        "what": "The Homomorphism Theorem: for conjunctive queries q and q', q is contained in q' if and only if there is a homomorphism FROM q' TO q -- from the containing query to the contained one. Containment and equivalence of conjunctive queries are NP-complete, in the same paper. The proof of the `only if` direction freezes q's body into a database by replacing each variable with a fresh constant, which is the object used here as the counterexample database.",
+        "where": "Optimal Implementation of Conjunctive Queries in Relational Data Bases, Proc. 9th Annual ACM Symposium on Theory of Computing (STOC '77), Boulder, ACM, pp. 77-90, DOI 10.1145/800105.803397",
+        "year": 1977,
+        "attribution": "citation and page range from the dblp BibTeX record; the theorem read verbatim at AHV Theorem 6.2.3 p. 117 with the direction confirmed independently in Chekuri and Rajaraman, Conjunctive query containment revisited, TCS 239 (2000) p. 213; the NP-completeness at AHV Theorem 6.2.10 p. 120 and its attribution to [CM77] at AHV p. 135. This lane did not consult the STOC paper itself."
+      }
+    ]
+  },
+  "notes": "WHICH HALF OF CHANDRA-MERLIN THIS USES, AND WHY THAT MATTERS. Only the SOUND half -- a homomorphism implies containment -- is load-bearing for the three positive answers. The converse (containment implies a homomorphism) is the deeper direction and, as AHV Exercise 6.12a notes, it needs the underlying domain to be INFINITE. This fact never invokes it: the three negative answers are not 'no homomorphism was found, therefore no containment', they are 'here is a concrete finite database on which the two queries return different answer sets', established by enumerating every assignment. So the infinite-domain hypothesis is not in the footprint, because the argument that needs it is not in the proof.\n\nWHY THIS IS THE BEST SHOWCASE IN THE LEDGER FOR THE PROJECT'S OWN SENTENCE. Finding the homomorphism is NP-complete. Checking it is a nested loop over the atoms of one query. `untrusted fast search, trusted small checking` is not an analogy here, it is the literal shape of the artifact: the certificate for `Q_terse is contained in Q_verbose` is four variable-to-element pairs.",
+  "proof_route": "search-certificate",
+  "axiom_footprint": [
+    "chandra-merlin-soundness-a-homomorphism-into-the-frozen-body-implies-containment",
+    "conjunctive-query-set-semantics-over-the-active-domain",
+    "axeyum-scenarios.dbdesign-instance-parse-faithfulness",
+    "axeyum-scenarios.dbdesign-homomorphism-and-complete-evaluator-replay-semantics"
+  ]
+}
