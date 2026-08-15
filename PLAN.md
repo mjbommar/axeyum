@@ -1065,7 +1065,7 @@ and [`docs/mathematics-2026-08/diary-real-keystone.md`](docs/mathematics-2026-08
 that the `Real` package is an **ordered commutative ring with 1** and named the
 route that eliminates its 30 axioms without constructing a carrier: parameterise
 the consumer, not build a model. That route is now built and measured
-(ADR-0457, [`diary-ordered-ring-reconstruct.md`](../../mathematics-2026-08/diary-ordered-ring-reconstruct.md)).
+(ADR-0457, [`diary-ordered-ring-reconstruct.md`](docs/mathematics-2026-08/diary-ordered-ring-reconstruct.md)).
 
 `generalize_over_ordered_ring`
 (`crates/axeyum-solver/src/reconstruct/arithmetic/ordered_ring.rs`) λ-abstracts
