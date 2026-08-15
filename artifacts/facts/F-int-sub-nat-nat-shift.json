@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "F:int-sub-nat-nat-shift",
+  "title": "The normalized integer difference is invariant under a common shift",
+  "statement": "For all naturals m, n and k, the normalized difference of m+k and n+k is the normalized difference of m and n.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.subNatNat_add_add : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Int (Int.subNatNat (AxNat.add x0 x2) (AxNat.add x1 x2)) (Int.subNatNat x0 x1))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:nat-add-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.subNatNat_add_add",
+      "kind": "kernel-term",
+      "supports": "For all naturals m, n and k, the normalized difference of m+k and n+k is the normalized difference of m and n.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude",
+      "notes": "`build_int_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a green run of the command is a machine-checked proof. Measured 2026-08-15: 12 tests pass (a nonzero count -- the filter is not inert). A real Lean 4.30.0 kernel also read the module this prelude exports to: `scripts/check-lean-gate.sh` reports 12 suites, 49 tests, 112 real-Lean checks (floor 105)."
+    },
+    {
+      "id": "footprint-Int.subNatNat_add_add",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (nat_axiom_inventory)"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- subNatNat_add_add 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.subNatNat_add_add[[:space:]]+\\(\\('",
+      "notes": "Two independent bounds, because either alone would be weaker than it looks. (1) `Kernel::axiom_footprint` walks THIS declaration's transitive dependencies; `int_theorem_inventory` prints it as the third tab-separated column, and the regex requires that column to be EMPTY -- the type must begin immediately after the name. The negative control is in the same output: `Int.euclidean_decomposition`, the one law still asserted, prints its own name in that column and fails the same regex (measured 2026-08-15). So the check discriminates rather than merely running. (2) `nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0` for the development ZZ is constructed over. Counting `Declaration::Axiom` alone would not suffice: `Opaque` has no proof body and `Quotient` admits `Quot.sound` -- exactly the declaration a quotient-of-NxN construction would have added -- and the enumeration covers all three kinds and reports zero for each."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:integers",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:natural-numbers",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-15",
+    "established_by": "axeyum-lean-kernel build_int_prelude, lane int-remainder",
+    "source": "one of the six propositions build_int_prelude still ASSERTED after lane int-keystone constructed ZZ; this lane proved the `Int.subNatNat` borrow lemmas and derived it"
+  },
+  "notes": "The keystone lemma of this lane, and the smallest true statement about `Int.subNatNat` that is provable when its arguments are opaque. `subNatNat m n` is `Nat.rec ... (Nat.sub n m)` with `Nat.sub m n` in the zero minor; on variables neither subtraction reduces, so the term is stuck and the only thing it still respects is a common shift. The proof is induction on `k` -- `Nat.add` recurses on its second argument, so `m+(k+1)` is definitionally `(m+k)+1` and the step is the one-shot `subNatNat (m+1) (n+1) = subNatNat m n`, which is `Nat.succ_sub_succ` applied twice: once to the value and once to the scrutinee, since they sit in different holes and no single one-hole context covers both. Shifting the two anchors `subNatNat m 0 = ofNat m` and `subNatNat 0 k = negOfNat k` by this lemma is what yields the characterisations the whole rest of the development runs on. `formal.statement` is `Kernel::render_lean` of the admitted type, verbatim from `int_theorem_inventory`; `AxNat` is the renderer's emit-direction guard so that exporting our prelude does not shadow Lean's builtin `Nat`."
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "F:int-sub-nat-nat-elim",
+  "title": "The integer borrow has exactly two outcomes, and each is witnessed by a natural",
+  "statement": "For any property P of integers and any naturals m and n: if P holds of ofNat i whenever n + i = m, and P holds of negSucc i whenever m + (i+1) = n, then P holds of the normalized difference of m and n.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.subNatNat_elim : ((x0 : ((x0 : Int) -> Prop)) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> ((x4 : Eq.{1} AxNat (AxNat.add x2 x3) x1) -> x0 (Int.ofNat x3)))) -> ((x4 : ((x4 : AxNat) -> ((x5 : Eq.{1} AxNat (AxNat.add x1 (AxNat.succ x4)) x2) -> x0 (Int.negSucc x4)))) -> x0 (Int.subNatNat x1 x2))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:int-sub-nat-nat-shift",
+    "F:nat-add-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.subNatNat_elim",
+      "kind": "kernel-term",
+      "supports": "For any property P of integers and any naturals m and n: if P holds of ofNat i whenever n + i = m, and P holds of negSucc i whenever m + (i+1) = n, then P holds of the normalized difference of m and n.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude",
+      "notes": "`build_int_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a green run of the command is a machine-checked proof. Measured 2026-08-15: 12 tests pass (a nonzero count -- the filter is not inert). A real Lean 4.30.0 kernel also read the module this prelude exports to: `scripts/check-lean-gate.sh` reports 12 suites, 49 tests, 112 real-Lean checks (floor 105)."
+    },
+    {
+      "id": "footprint-Int.subNatNat_elim",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (nat_axiom_inventory)"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- subNatNat_elim 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.subNatNat_elim[[:space:]]+\\(\\('",
+      "notes": "Two independent bounds, because either alone would be weaker than it looks. (1) `Kernel::axiom_footprint` walks THIS declaration's transitive dependencies; `int_theorem_inventory` prints it as the third tab-separated column, and the regex requires that column to be EMPTY -- the type must begin immediately after the name. The negative control is in the same output: `Int.euclidean_decomposition`, the one law still asserted, prints its own name in that column and fails the same regex (measured 2026-08-15). So the check discriminates rather than merely running. (2) `nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0` for the development ZZ is constructed over. Counting `Declaration::Axiom` alone would not suffice: `Opaque` has no proof body and `Quotient` admits `Quot.sound` -- exactly the declaration a quotient-of-NxN construction would have added -- and the enumeration covers all three kinds and reports zero for each."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:integers",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:proof-by-cases",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-15",
+    "established_by": "axeyum-lean-kernel build_int_prelude, lane int-remainder",
+    "source": "one of the six propositions build_int_prelude still ASSERTED after lane int-keystone constructed ZZ; this lane proved the `Int.subNatNat` borrow lemmas and derived it"
+  },
+  "notes": "The case-analysis principle the four blocked laws were missing. Its content is that `Int.subNatNat m n` is `Int.ofNat i` exactly when `m` dominates by `i`, and `Int.negSucc j` exactly when `n` dominates by `j+1` -- and that those two cases are exhaustive, which is `Nat.le_total` turned into explicit differences by `Nat.le_dest`. The `m <= n` half must still split its difference, because a difference of `0` is the NON-borrowing case and has to be routed to the first branch. Stating the second outcome as `negSucc j` rather than `negOfNat k` is deliberate: it makes the two branches disjoint, so a caller learns the sign and not merely the magnitude. `formal.statement` is `Kernel::render_lean` of the admitted type, verbatim from `int_theorem_inventory`."
+}

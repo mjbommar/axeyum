@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:int-add-lt-add-of-le-of-lt",
+  "title": "A strict integer inequality survives addition of a non-strict one",
+  "statement": "For all integers a, b, c and d, if a <= b and c < d then a + c < b + d.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.add_lt_add_of_le_of_lt : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int.le x0 x1) -> ((x5 : Int.lt x2 x3) -> Int.lt (Int.add x0 x2) (Int.add x1 x3)))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:int-add-assoc",
+    "F:int-add-comm",
+    "F:int-add-le-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.add_lt_add_of_le_of_lt",
+      "kind": "kernel-term",
+      "supports": "For all integers a, b, c and d, if a <= b and c < d then a + c < b + d.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude",
+      "notes": "`build_int_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a green run of the command is a machine-checked proof. Measured 2026-08-15: 12 tests pass (a nonzero count -- the filter is not inert). A real Lean 4.30.0 kernel also read the module this prelude exports to: `scripts/check-lean-gate.sh` reports 12 suites, 49 tests, 112 real-Lean checks (floor 105)."
+    },
+    {
+      "id": "footprint-Int.add_lt_add_of_le_of_lt",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (nat_axiom_inventory)"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- add_lt_add_of_le_of_lt 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.add_lt_add_of_le_of_lt[[:space:]]+\\(\\('",
+      "notes": "Two independent bounds, because either alone would be weaker than it looks. (1) `Kernel::axiom_footprint` walks THIS declaration's transitive dependencies; `int_theorem_inventory` prints it as the third tab-separated column, and the regex requires that column to be EMPTY -- the type must begin immediately after the name. The negative control is in the same output: `Int.euclidean_decomposition`, the one law still asserted, prints its own name in that column and fails the same regex (measured 2026-08-15). So the check discriminates rather than merely running. (2) `nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0` for the development ZZ is constructed over. Counting `Declaration::Axiom` alone would not suffice: `Opaque` has no proof body and `Quotient` admits `Quot.sound` -- exactly the declaration a quotient-of-NxN construction would have added -- and the enumeration covers all three kinds and reports zero for each."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:ordered-ring",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:integers",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-15",
+    "established_by": "axeyum-lean-kernel build_int_prelude, lane int-remainder",
+    "source": "one of the six propositions build_int_prelude still ASSERTED after lane int-keystone constructed ZZ; this lane proved the `Int.subNatNat` borrow lemmas and derived it"
+  },
+  "notes": "The strict twin of `Int.add_le_add`, and the same three moves: destructure each hypothesis into an explicit non-negative gap, re-associate, read the conclusion off the trivial direction. The only difference is that the strict gap is a SUCCESSOR (`b = a + ofNat (i+1)`), so `Int.ofNat i + Int.ofNat (j+1)` is definitionally `Int.ofNat ((i+j)+1)` and the strict base case applies with no extra arithmetic. `formal.statement` is `Kernel::render_lean` of the admitted type, verbatim from `int_theorem_inventory`."
+}

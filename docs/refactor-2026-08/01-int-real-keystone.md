@@ -1,10 +1,12 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
-> **STATUS 2026-08-15 — the integer half is largely done.** ℤ is now CONSTRUCTED
-> over the proved ℕ development rather than asserted: 34 axioms became 6, and 20
-> `Int.*` theorems each carry an empty `axiom_footprint`. `Int.no_int_between`
-> — discreteness, previously this route's central *assumption* — is derived and
-> rests on nothing.
+> **STATUS 2026-08-15 — the integer half is done except for division.** ℤ is
+> CONSTRUCTED over the proved ℕ development rather than asserted, and its axiom
+> count has gone **34 → 6 → 1**. `int_theorem_inventory` reports **50 derived
+> theorems, all 50 with an empty `axiom_footprint`**. Every ring and order law
+> is now a theorem: `no_int_between` (discreteness, previously this route's
+> central *assumption*), both associativities, distributivity, and both additive
+> order laws.
 >
 > The design decision worth carrying forward: a **normalized-pair** construction
 > was chosen over a setoid quotient, because `Quot.sound` is admitted as
@@ -13,9 +15,21 @@
 > `axiom_footprint: []` unreachable for any integer fact. Most ring laws do not
 > distinguish the two routes; exactly one forces the quotient (`add_neg`).
 >
-> Six axioms remain, and four are blocked on one missing piece — `subNatNat`'s
-> borrow lemma. ℝ is untouched at 30 axioms and is now the whole of this item.
-> Details: [`../mathematics-2026-08/diary-int-keystone.md`](../mathematics-2026-08/diary-int-keystone.md).
+> The four laws that stalled were **one** obstruction, not four: `Int.subNatNat`
+> is a `Nat.rec` on `n − m` and is stuck on variables, so every mixed-sign
+> branch of `Int.add` is stuck. A shift lemma, two characterisations and an
+> elimination principle unblock all of them
+> ([`diary-int-remainder.md`](../mathematics-2026-08/diary-int-remainder.md)).
+>
+> **The export has now been read by a real Lean binary** —
+> `scripts/check-lean-gate.sh` at Lean 4.30.0, `12 suites, 49 tests, 112
+> real-Lean checks (floor 105)`. The previous lane flagged that as not done.
+>
+> One integer axiom remains, `euclidean_decomposition`, and it is a different
+> kind of problem: it asserts the *existence* of a quotient and remainder, so it
+> needs `Int.div`/`Int.mod` defined and specified rather than another rewriting
+> lemma. **ℝ is untouched at 30 axioms and is now effectively the whole of this
+> item.**
 
 **The finding.** Five agents working in five different crates on five different
 tasks each hit the same wall on 2026-08-14, and each reported it as a local gap.
@@ -27,7 +41,7 @@ every layer of the stack simultaneously.
 | layer | crate | state |
 |---|---|---|
 | evidence | `axeyum-scenarios` | `lib.rs:559-563` — `unreachable!("scenarios do not declare integer symbols for enumeration")`, and the same for `Sort::Real`. **No negative control about ℤ or ℝ is expressible.** |
-| library | `axeyum-lean-kernel` | `nat_prelude` **119 proved / 0 trusted**; `int_prelude` **20 proved / 6 axioms**; `arith_prelude` **0 proved / 30 axioms** |
+| library | `axeyum-lean-kernel` | `nat_prelude` **119 proved / 0 trusted**; `int_prelude` **50 proved / 1 axiom** (was 20 / 6 when this was written, and 0 / 34 before that); `arith_prelude` **0 proved / 30 axioms** — unmoved |
 | solver | `axeyum-solver` | the `∀`-route's `k=3` blocker is *integer* bound strictness: `P≥1, P·s ≥ P+1 ⊢ s ≥ 2` is `unknown`, while `⊢ s > 1` and `s > 1 ⊢ s ≥ 2` are **0 ms each** |
 | CAS bridge | `axeyum-cas` | the ideal-membership certificate is a statement about **ℝ**; the mathematics it was built for is true over **ℤ** for reasons involving integrality |
 | curriculum | `docs/curriculum` | `integers` and `rationals` are both `decidability = "computable", status = "covered"`; `reals` is `"bounded", "covered"` — while the library assumes them and the evidence layer cannot enumerate them |
@@ -87,7 +101,10 @@ bridge divisibility through executable remainder
 ```
 
 **Metric:** assumptions remaining per prelude, per release. A number a referee
-can check and a competitor cannot fake. Today: `int` 3, `arith` 3, `string` 1.
+can check and a competitor cannot fake. Measured 2026-08-15 by
+`nat_axiom_inventory`: `logic` 0, `nat` 0, `int` **1**, `arith` **30**,
+`string` 1. (The `int 3, arith 3, string 1` this line used to carry was a
+different quantity read off a different tool, and was wrong for both.)
 
 ### K2 — An UNSAT evidence route for `Int`/`Real` in `axeyum-scenarios`
 
