@@ -85,6 +85,14 @@ step frontier cargo test -p axeyum-solver --test progress_frontier --features fu
 # ... ok"; the corpus `:status` sweep sat inert that way for 15 days. Compiles
 # but does not execute (`--list`), so it is cheap.
 step gate-liveness ./scripts/check-gate-liveness.sh
+# The real-Lean gate. Every suite that hands a generated module to an EXTERNAL
+# `lean` printed `ok` on a machine where Lean 4.30.0 was installed but not on
+# `PATH` (elan keeps toolchains under ~/.elan/toolchains/), so nothing outside
+# this repository had ever read our exported bytes -- and when one finally did,
+# it REJECTED them (a5975725f). This discovers the toolchain, sets
+# AXEYUM_REQUIRE_LEAN=1 so a missing binary FAILS, and prints how many Lean
+# invocations actually happened. AXEYUM_ALLOW_NO_LEAN=1 for a machine with none.
+step lean-gate ./scripts/check-lean-gate.sh
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
 step lean-u2-test-authority-tests python3 -m unittest scripts.tests.test_lean_u2_test_authority

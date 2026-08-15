@@ -51,18 +51,12 @@ fn fixtures() -> Vec<(String, String)> {
     found
 }
 
-fn lean_bin() -> Option<PathBuf> {
-    if let Ok(path) = std::env::var("AXEYUM_LEAN_BIN") {
-        let path = PathBuf::from(path);
-        if path.is_file() {
-            return Some(path);
-        }
-    }
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|directory| directory.join("lean"))
-        .find(|candidate| candidate.is_file())
-}
+// Real-Lean toolchain discovery and skip accounting, shared with the other
+// Lean-gated suites. The replaced local copy searched only `AXEYUM_LEAN_BIN`
+// and `PATH`, so an elan-installed toolchain (which elan does NOT put on
+// `PATH`) was invisible and all 15 fixtures went unchecked behind an `ok`.
+#[path = "../../axeyum-lean-kernel/tests/support/lean_probe.rs"]
+mod lean_probe;
 
 /// The theorem a module exports, taken from its own `#print axioms` command.
 fn exported_theorem(source: &str) -> &str {
@@ -114,16 +108,7 @@ fn every_family_gate_has_a_committed_module_fixture() {
 #[test]
 fn every_committed_module_fixture_is_accepted_by_real_lean() {
     let fixtures = fixtures();
-    let Some(lean) = lean_bin() else {
-        assert_ne!(
-            std::env::var("AXEYUM_REQUIRE_LEAN").as_deref(),
-            Ok("1"),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found"
-        );
-        eprintln!(
-            "[skip] real Lean is optional locally; {} fixtures NOT checked",
-            fixtures.len()
-        );
+    let Some(lean) = lean_probe::lean_bin_or_skip("module-fixtures", fixtures.len()) else {
         return;
     };
 
@@ -163,6 +148,7 @@ fn every_committed_module_fixture_is_accepted_by_real_lean() {
     );
     let _ = std::fs::remove_dir_all(directory);
     println!("real Lean accepted {checked} committed generated-module fixtures");
+    lean_probe::report_checked("module-fixtures", checked);
 }
 
 /// Negative control: the check above must be able to fail. A fixture whose
@@ -170,12 +156,7 @@ fn every_committed_module_fixture_is_accepted_by_real_lean() {
 /// same binary, or acceptance means nothing.
 #[test]
 fn a_mutated_fixture_is_rejected_by_real_lean() {
-    let Some(lean) = lean_bin() else {
-        assert_ne!(
-            std::env::var("AXEYUM_REQUIRE_LEAN").as_deref(),
-            Ok("1"),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found"
-        );
+    let Some(lean) = lean_probe::lean_bin_or_skip("mutated-fixture-control", 1) else {
         return;
     };
     let (name, source) = fixtures()
@@ -224,4 +205,5 @@ fn a_mutated_fixture_is_rejected_by_real_lean() {
         String::from_utf8_lossy(&output.stdout)
     );
     let _ = std::fs::remove_dir_all(directory);
+    lean_probe::report_checked("mutated-fixture-control", 1);
 }

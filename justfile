@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls aggregate-scope test frontier gate-liveness moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers plan-authority links
+check: fmt fmt-all facts facts-replay clippy gate-controls aggregate-scope test frontier gate-liveness lean-gate moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers plan-authority links
 
 fmt:
     cargo fmt --all --check
@@ -93,6 +93,17 @@ frontier:
 # executing, so it is cheap.
 gate-liveness:
     ./scripts/check-gate-liveness.sh
+
+# The real-Lean gate: every suite that hands a generated module to an EXTERNAL
+# `lean` binary, with the toolchain DISCOVERED (`AXEYUM_LEAN_BIN`, `PATH`, then
+# `~/.elan/toolchains/*/bin/lean`) and `AXEYUM_REQUIRE_LEAN=1` set, so a missing
+# binary fails instead of printing a skip note and passing. It prints the number
+# of Lean invocations that actually happened and enforces a floor -- an exit
+# status cannot tell "checked 40 modules" from "checked none", and that is
+# precisely how a real Lean rejection of our exported modules stayed invisible
+# until 2026-08-14. On a machine with no Lean at all: AXEYUM_ALLOW_NO_LEAN=1.
+lean-gate:
+    ./scripts/check-lean-gate.sh
 
 # Same as `test`, but under a hard 64 GiB memory cap (scripts/mem-run.sh) so a
 # runaway allocation (e.g. an unbounded NRA / wide bit-blast blowup) aborts the

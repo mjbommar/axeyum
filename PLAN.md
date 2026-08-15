@@ -321,6 +321,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-14 | `1bc24b326` | `progress_frontier` gains a measured reference frame: per-family calibration, scaled budget, `NOT COMPARABLE` / `ADVISORY ONLY`. |
 | 2026-08-14 | `ec72fdf66` | `just check` vs `check.sh` divergence measured and pinned; the Lean axiom ledger now runs in both. |
 | 2026-08-14 | `fa4676e33` | Clippy and the workspace test sweep prove what they examined; content-addressed source freshness; 14 negative controls. |
+| 2026-08-14 | `pending` | Real-Lean gate: elan toolchain discovery, skips that cannot read as passes, and a counted `scripts/check-lean-gate.sh` in both aggregate gates. |
 | 2026-08-07 | `3576e6739` / `c92155454` / `d09e6debb` | Rejected relevance-activated bound ladders after 0/6 target decisions, exactly repartitioned all 52 A3 budget rows, refreshed the generated CI identity, and integrated the clean pushed evidence branch. |
 | 2026-08-07 | `3696e7dd5` | Confirmed repeated size-admission large cores on the selected QF_NIA pair, then rejected bounded four-group deletion after it shrank clauses but decided neither target; temporary solver code was removed. |
 | 2026-08-07 | `704318a5f` | Refreshed the complete-parity manifest's sole stale source identity after the pinned-`just` CI workflow change; outcomes, populations, gates, and parity credit are unchanged, and full parity-docs/authority/links pass. |
@@ -797,6 +798,30 @@ entry points (`scripts/check-scope.sh`, the `bench-*` recipes) and to the
 snapshot instruction lanes are given; (3) one authoritative step manifest for the
 aggregate gate, with a wrapper column, so the 66 recorded differences can shrink
 instead of only being prevented from growing.
+
+**The real-Lean gate now counts what it checked (`WIP`, lean-gate-honesty,
+2026-08-14).** Landed: ten suites that hand generated modules to an external
+`lean` binary used to print `ok` on a machine where Lean 4.30.0 was installed —
+`elan` keeps toolchains under `~/.elan/toolchains/*/bin/lean` and puts nothing on
+`PATH`, so every private `lean_bin()` concluded Lean was absent and skipped.
+Discovery now lives in one place
+(`crates/axeyum-lean-kernel/tests/support/lean_probe.rs`, shared by `#[path]`
+into both crates), an unresolvable `AXEYUM_LEAN_BIN` is an error rather than a
+fall-through (or the `/nonexistent` control proves nothing), a skip prints
+`AXEYUM-LEAN-SKIPPED <tag> not_checked=<n>` with where discovery looked, and
+`scripts/check-lean-gate.sh` sums the `AXEYUM-LEAN-CHECKED` markers and enforces
+a floor. On this box, with no environment variables set at all: **10 suites, 33
+tests, 40 real-Lean checks**, up from zero. Reverting `a5975725f`'s export fix
+makes it fail with the pre-fix signature (11 passed / 3 FAILED).
+
+Next, in priority order: (1) the defect this gate found on its first honest run —
+`lean_crosscheck`'s `quant_bv_source_instance_set` family emits proof shares Lean
+reads as `Prop`-valued statements where proof terms are required, plus
+undeclared share names; 69 of 70 families pass, and the suite is excluded from
+the gate by name until it is fixed; (2) fold `lean_crosscheck` into
+`scripts/check-lean-gate.sh` once it is (~60 s); (3) nothing yet enforces that a
+NEW suite shelling out to `lean` is added to the gate's manifest — the same
+class of hole one level up.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 

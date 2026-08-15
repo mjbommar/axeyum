@@ -18,18 +18,8 @@ use std::process::Command;
 
 use axeyum_lean_kernel::{Kernel, Lean4ExportMetadata, build_logic_prelude, build_nat_prelude};
 
-fn lean_bin() -> Option<PathBuf> {
-    if let Ok(path) = std::env::var("AXEYUM_LEAN_BIN") {
-        let path = PathBuf::from(path);
-        if path.is_file() {
-            return Some(path);
-        }
-    }
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|directory| directory.join("lean"))
-        .find(|candidate| candidate.is_file())
-}
+#[path = "support/lean_probe.rs"]
+mod lean_probe;
 
 fn replay_script() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -126,13 +116,8 @@ fn the_real_lean_kernel_accepts_an_axeyum_development_and_rejects_a_tampered_one
         "the development must be non-trivial"
     );
 
-    let Some(lean) = lean_bin() else {
-        assert_ne!(
-            std::env::var("AXEYUM_REQUIRE_LEAN").as_deref(),
-            Ok("1"),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found"
-        );
-        eprintln!("[skip] real Lean is optional locally; CI requires it");
+    // The development replay and its tampered negative control.
+    let Some(lean) = lean_probe::lean_bin_or_skip("lean4export-kernel-replay", 2) else {
         return;
     };
 
@@ -171,4 +156,5 @@ fn the_real_lean_kernel_accepts_an_axeyum_development_and_rejects_a_tampered_one
         report.contains("REAL LEAN KERNEL REJECTED"),
         "the rejection must come from the kernel: {report}"
     );
+    lean_probe::report_checked("lean4export-kernel-replay", 2);
 }

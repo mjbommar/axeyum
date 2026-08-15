@@ -17,7 +17,6 @@
 #![allow(clippy::similar_names)]
 
 use std::cell::RefCell;
-use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -30,20 +29,14 @@ use axeyum_solver::{
 };
 use axeyum_strings::{LexAtom, LexFormula, LexProblem, Seg};
 
-/// Resolve the `lean` binary: `AXEYUM_LEAN_BIN` if set, otherwise the first
-/// `lean` on `PATH`. Returns `None` (→ skip) if unavailable.
-fn lean_bin() -> Option<PathBuf> {
-    if let Ok(p) = std::env::var("AXEYUM_LEAN_BIN") {
-        let pb = PathBuf::from(p);
-        if pb.is_file() {
-            return Some(pb);
-        }
-    }
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|d| d.join("lean"))
-        .find(|c| c.is_file())
-}
+// Real-Lean toolchain discovery and skip accounting, shared with every other
+// Lean-gated suite. The replaced local copy searched only `AXEYUM_LEAN_BIN` and
+// `PATH`; elan does not put its toolchains on `PATH`, so a machine with Lean
+// 4.30 installed still took the skip path here.
+#[path = "../../axeyum-lean-kernel/tests/support/lean_probe.rs"]
+mod lean_probe;
+
+use lean_probe::{lean_bin, lean_required};
 
 // -------------------------------------------------------------------------
 // Lean cross-check harness (parallel + sliced).
@@ -295,10 +288,6 @@ fn lean_budget() -> Option<Duration> {
     }
 }
 
-fn lean_required() -> bool {
-    std::env::var("AXEYUM_REQUIRE_LEAN").as_deref() == Ok("1")
-}
-
 /// Pool size from `AXEYUM_LEAN_JOBS`, else available parallelism, clamped to the
 /// number of pending modules.
 fn lean_jobs(total: usize) -> usize {
@@ -326,15 +315,7 @@ fn run_lean_checks(label: &str, family_count: usize, cases: &[(String, String)])
         eprintln!("[lean crosscheck:{label}] no modules to check");
         return;
     }
-    if lean_bin().is_none() {
-        assert!(
-            !lean_required(),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found ({total} modules NOT checked)"
-        );
-        eprintln!(
-            "[skip] lean crosscheck:{label}: lean binary not found; install via elan or set \
-             AXEYUM_LEAN_BIN ({total} modules NOT checked)"
-        );
+    if lean_probe::lean_bin_or_skip(&format!("crosscheck-{label}"), total).is_none() {
         return;
     }
 
@@ -404,6 +385,7 @@ fn run_lean_checks(label: &str, family_count: usize, cases: &[(String, String)])
             "required Lean cross-check skipped modules due to budget"
         );
     }
+    lean_probe::report_checked(&format!("crosscheck-{label}"), checked);
 }
 
 /// **Representative Lean cross-check (default).** One reconstructed module per

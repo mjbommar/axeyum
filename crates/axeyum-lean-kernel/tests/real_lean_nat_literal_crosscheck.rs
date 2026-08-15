@@ -3,18 +3,8 @@
 use std::path::PathBuf;
 use std::process::{Command, Output};
 
-fn lean_bin() -> Option<PathBuf> {
-    if let Ok(path) = std::env::var("AXEYUM_LEAN_BIN") {
-        let path = PathBuf::from(path);
-        if path.is_file() {
-            return Some(path);
-        }
-    }
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|directory| directory.join("lean"))
-        .find(|candidate| candidate.is_file())
-}
+#[path = "support/lean_probe.rs"]
+mod lean_probe;
 
 fn run_lean(lean: &PathBuf, file: &std::path::Path) -> Output {
     Command::new(lean)
@@ -26,13 +16,8 @@ fn run_lean(lean: &PathBuf, file: &std::path::Path) -> Output {
 
 #[test]
 fn constructor_offset_recursor_and_false_controls_agree_with_lean_4_30() {
-    let Some(lean) = lean_bin() else {
-        assert_ne!(
-            std::env::var("AXEYUM_REQUIRE_LEAN").as_deref(),
-            Ok("1"),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found"
-        );
-        eprintln!("[skip] real Lean is optional locally; CI requires it");
+    // `--version` pin probe, the positive control, and the negative control.
+    let Some(lean) = lean_probe::lean_bin_or_skip("nat-literal", 3) else {
         return;
     };
 
@@ -101,4 +86,5 @@ example : nat_lit 37 = Nat.succ (nat_lit 37) := rfl
     );
 
     let _ = std::fs::remove_dir_all(directory);
+    lean_probe::report_checked("nat-literal", 3);
 }

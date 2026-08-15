@@ -6,7 +6,6 @@
 //! declined (never fabricated).
 #![cfg(feature = "full")]
 
-use std::path::PathBuf;
 use std::process::Command;
 
 use axeyum_ir::TermArena;
@@ -266,12 +265,7 @@ fn diff_mult_module_checks_in_real_lean() {
         .expect("different-multiplier interval reconstructs to a Lean module");
     assert_eq!(frag, ProofFragment::IntInequality);
 
-    let Some(bin) = lean_bin() else {
-        assert!(
-            !lean_required(),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found (1 module NOT checked)"
-        );
-        eprintln!("[skip] diff_mult: lean binary not found; set AXEYUM_LEAN_BIN to enable");
+    let Some(bin) = lean_probe::lean_bin_or_skip("diff_mult", 1) else {
         return;
     };
     let dir = std::env::temp_dir().join("axeyum_lean_diff_mult");
@@ -297,6 +291,7 @@ fn diff_mult_module_checks_in_real_lean() {
         "[lean ok] diff_mult: {}",
         stdout.trim().replace('\n', " | ")
     );
+    lean_probe::report_checked("diff_mult", 1);
 }
 
 /// `2*x = 4 ∧ x ≥ 3` over `Int`: an **equality combined with a unit-multiplier bound**.
@@ -399,12 +394,7 @@ fn eq_bound_module_checks_in_real_lean() {
         .expect("equality-and-bound reconstructs to a Lean module");
     assert_eq!(frag, ProofFragment::IntInequality);
 
-    let Some(bin) = lean_bin() else {
-        assert!(
-            !lean_required(),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found (1 module NOT checked)"
-        );
-        eprintln!("[skip] eq_bound: lean binary not found; set AXEYUM_LEAN_BIN to enable");
+    let Some(bin) = lean_probe::lean_bin_or_skip("eq_bound", 1) else {
         return;
     };
     let dir = std::env::temp_dir().join("axeyum_lean_int_eq_bound");
@@ -427,43 +417,17 @@ fn eq_bound_module_checks_in_real_lean() {
         "missing #print axioms output:\n{stdout}"
     );
     eprintln!("[lean ok] eq_bound: {}", stdout.trim().replace('\n', " | "));
+    lean_probe::report_checked("eq_bound", 1);
 }
 
-fn lean_required() -> bool {
-    std::env::var("AXEYUM_REQUIRE_LEAN").as_deref() == Ok("1")
-}
-
-/// Locate a `lean` binary (env override or `PATH`/elan); `None` ⇒ optional skip.
-fn lean_bin() -> Option<PathBuf> {
-    if let Ok(p) = std::env::var("AXEYUM_LEAN_BIN") {
-        let pb = PathBuf::from(p);
-        if pb.exists() {
-            return Some(pb);
-        }
-    }
-    let elan = dirs_home().join(".elan/bin/lean");
-    if elan.exists() {
-        return Some(elan);
-    }
-    which_lean()
-}
-
-fn dirs_home() -> PathBuf {
-    std::env::var("HOME").map(PathBuf::from).unwrap_or_default()
-}
-
-fn which_lean() -> Option<PathBuf> {
-    let out = Command::new("which").arg("lean").output().ok()?;
-    if !out.status.success() {
-        return None;
-    }
-    let path = String::from_utf8_lossy(&out.stdout).trim().to_owned();
-    if path.is_empty() {
-        None
-    } else {
-        Some(PathBuf::from(path))
-    }
-}
+// Real-Lean toolchain discovery and skip accounting. Shared with the other
+// Lean-gated suites and with `axeyum-lean-kernel`: this file used to look for
+// `~/.elan/bin/lean` (elan's SHIM directory, which does not exist unless elan
+// has been sourced) and then `which lean`, so the installed 4.30.0 toolchain
+// under `~/.elan/toolchains/*/bin/lean` was invisible and every check here
+// skipped while printing `ok`.
+#[path = "../../axeyum-lean-kernel/tests/support/lean_probe.rs"]
+mod lean_probe;
 
 /// **Real-Lean crosscheck**: the rendered integer-interval module must be accepted by
 /// a genuine `lean` binary (skips gracefully if none is installed), and
@@ -483,12 +447,7 @@ fn int_inequality_module_checks_in_real_lean() {
         .expect("integer-interval system reconstructs to a Lean module");
     assert_eq!(frag, ProofFragment::IntInequality);
 
-    let Some(bin) = lean_bin() else {
-        assert!(
-            !lean_required(),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found (1 module NOT checked)"
-        );
-        eprintln!("[skip] int_inequality: lean binary not found; set AXEYUM_LEAN_BIN to enable");
+    let Some(bin) = lean_probe::lean_bin_or_skip("int_inequality", 1) else {
         return;
     };
     let dir = std::env::temp_dir().join("axeyum_lean_int_inequality");
@@ -514,4 +473,5 @@ fn int_inequality_module_checks_in_real_lean() {
         "[lean ok] int_inequality: {}",
         stdout.trim().replace('\n', " | ")
     );
+    lean_probe::report_checked("int_inequality", 1);
 }

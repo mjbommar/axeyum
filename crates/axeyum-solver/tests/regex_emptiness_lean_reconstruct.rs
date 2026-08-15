@@ -10,7 +10,6 @@
 //! `None`, never a wrong `False`). Mirrors `diophantine_lean_reconstruct.rs`.
 #![cfg(feature = "full")]
 
-use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
 
@@ -115,12 +114,7 @@ fn regex_emptiness_module_checks_in_real_lean() {
     let module = membership_unsat_lean_module(&script, &cfg())
         .expect("regex-emptiness unsat carries a kernel-checked Lean module");
 
-    let Some(bin) = lean_bin() else {
-        assert!(
-            !lean_required(),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found (1 module NOT checked)"
-        );
-        eprintln!("[skip] regex-emptiness: lean binary not found; set AXEYUM_LEAN_BIN to enable");
+    let Some(bin) = lean_probe::lean_bin_or_skip("regex-emptiness", 1) else {
         return;
     };
     let dir = std::env::temp_dir().join("axeyum_lean_regex_emptiness");
@@ -146,40 +140,13 @@ fn regex_emptiness_module_checks_in_real_lean() {
         "[lean ok] regex-emptiness: {}",
         stdout.trim().replace('\n', " | ")
     );
+    lean_probe::report_checked("regex-emptiness", 1);
 }
 
-fn lean_required() -> bool {
-    std::env::var("AXEYUM_REQUIRE_LEAN").as_deref() == Ok("1")
-}
-
-/// Locate a `lean` binary (env override or `PATH`/elan); `None` ⇒ optional skip.
-fn lean_bin() -> Option<PathBuf> {
-    if let Ok(p) = std::env::var("AXEYUM_LEAN_BIN") {
-        let pb = PathBuf::from(p);
-        if pb.exists() {
-            return Some(pb);
-        }
-    }
-    let elan = dirs_home().join(".elan/bin/lean");
-    if elan.exists() {
-        return Some(elan);
-    }
-    which_lean()
-}
-
-fn dirs_home() -> PathBuf {
-    std::env::var("HOME").map(PathBuf::from).unwrap_or_default()
-}
-
-fn which_lean() -> Option<PathBuf> {
-    let out = Command::new("which").arg("lean").output().ok()?;
-    if !out.status.success() {
-        return None;
-    }
-    let path = String::from_utf8_lossy(&out.stdout).trim().to_owned();
-    if path.is_empty() {
-        None
-    } else {
-        Some(PathBuf::from(path))
-    }
-}
+// Real-Lean toolchain discovery and skip accounting, shared with the other
+// Lean-gated suites. The replaced local copy looked at `~/.elan/bin/lean`
+// (elan's SHIM directory, absent unless elan has been sourced) and `which lean`,
+// so an installed `~/.elan/toolchains/*/bin/lean` was invisible and this check
+// skipped while the suite printed `ok`.
+#[path = "../../axeyum-lean-kernel/tests/support/lean_probe.rs"]
+mod lean_probe;

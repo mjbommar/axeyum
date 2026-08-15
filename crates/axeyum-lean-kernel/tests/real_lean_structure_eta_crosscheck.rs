@@ -8,18 +8,8 @@
 use std::path::PathBuf;
 use std::process::{Command, Output};
 
-fn lean_bin() -> Option<PathBuf> {
-    if let Ok(path) = std::env::var("AXEYUM_LEAN_BIN") {
-        let path = PathBuf::from(path);
-        if path.is_file() {
-            return Some(path);
-        }
-    }
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|directory| directory.join("lean"))
-        .find(|candidate| candidate.is_file())
-}
+#[path = "support/lean_probe.rs"]
+mod lean_probe;
 
 fn run_lean(lean: &PathBuf, file: &std::path::Path) -> Output {
     Command::new(lean)
@@ -34,13 +24,8 @@ fn run_lean(lean: &PathBuf, file: &std::path::Path) -> Output {
 
 #[test]
 fn positive_and_false_equality_controls_agree_with_real_lean() {
-    let Some(lean) = lean_bin() else {
-        assert_ne!(
-            std::env::var("AXEYUM_REQUIRE_LEAN").as_deref(),
-            Ok("1"),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found"
-        );
-        eprintln!("[skip] real Lean is optional locally; CI requires it");
+    // The positive structure-eta control and the false-equality control.
+    let Some(lean) = lean_probe::lean_bin_or_skip("structure-eta", 2) else {
         return;
     };
 
@@ -94,4 +79,5 @@ example : AxeyumEtaPair.mk p.left p.left = p := rfl
     );
 
     let _ = std::fs::remove_dir_all(directory);
+    lean_probe::report_checked("structure-eta", 2);
 }

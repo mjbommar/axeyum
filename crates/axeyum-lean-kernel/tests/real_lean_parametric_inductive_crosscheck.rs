@@ -13,23 +13,12 @@
 //! The Lean invocation is optional locally and mandatory under
 //! `AXEYUM_REQUIRE_LEAN=1`, matching the other cross-checks in this crate.
 
-use std::path::PathBuf;
 use std::process::Command;
 
 use axeyum_lean_kernel::{Kernel, build_logic_prelude};
 
-fn lean_bin() -> Option<PathBuf> {
-    if let Ok(path) = std::env::var("AXEYUM_LEAN_BIN") {
-        let path = PathBuf::from(path);
-        if path.is_file() {
-            return Some(path);
-        }
-    }
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|directory| directory.join("lean"))
-        .find(|candidate| candidate.is_file())
-}
+#[path = "support/lean_probe.rs"]
+mod lean_probe;
 
 /// `Eq True True.intro True.intro`, proved by `Eq.refl`, with both `Eq` (2
 /// parameters, 1 index) and `True` emitted as real Lean `inductive`s.
@@ -101,13 +90,8 @@ fn parametric_indexed_inductive_is_rendered_in_lean_s_own_form() {
 #[test]
 fn parametric_indexed_inductive_module_checks_in_real_lean() {
     let source = parametric_inductive_module();
-    let Some(lean) = lean_bin() else {
-        assert_ne!(
-            std::env::var("AXEYUM_REQUIRE_LEAN").as_deref(),
-            Ok("1"),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found"
-        );
-        eprintln!("[skip] real Lean is optional locally; CI requires it");
+    // Two Lean invocations: the module, and the `@`-stripped negative control.
+    let Some(lean) = lean_probe::lean_bin_or_skip("parametric-indexed-inductive", 2) else {
         return;
     };
 
@@ -158,4 +142,5 @@ fn parametric_indexed_inductive_module_checks_in_real_lean() {
         "Lean accepted a positionally-applied implicit constructor; the `@` rule is unverified"
     );
     let _ = std::fs::remove_dir_all(directory);
+    lean_probe::report_checked("parametric-indexed-inductive", 2);
 }

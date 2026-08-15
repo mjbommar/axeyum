@@ -41,18 +41,8 @@ const SOURCES: [SourceCase; 4] = [
     },
 ];
 
-fn lean_bin() -> Option<PathBuf> {
-    if let Ok(path) = std::env::var("AXEYUM_LEAN_BIN") {
-        let path = PathBuf::from(path);
-        if path.is_file() {
-            return Some(path);
-        }
-    }
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|directory| directory.join("lean"))
-        .find(|candidate| candidate.is_file())
-}
+#[path = "support/lean_probe.rs"]
+mod lean_probe;
 
 fn run_lean(lean: &Path, directory: &Path, module: &str) -> Output {
     Command::new(lean)
@@ -74,13 +64,9 @@ fn combined_output(output: &Output) -> String {
 
 #[test]
 fn frozen_sources_repeat_against_pinned_lean_4_30() {
-    let Some(lean) = lean_bin() else {
-        assert_ne!(
-            std::env::var("AXEYUM_REQUIRE_LEAN").as_deref(),
-            Ok("1"),
-            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found"
-        );
-        eprintln!("[skip] real Lean is optional locally; CI requires it");
+    // 4 immutable sources x 2 repetitions, plus the `--version` pin probe.
+    let Some(lean) = lean_probe::lean_bin_or_skip("strict-positivity", SOURCES.len() * 2 + 1)
+    else {
         return;
     };
 
@@ -159,4 +145,5 @@ fn frozen_sources_repeat_against_pinned_lean_4_30() {
         "LEAN_STRICT_POSITIVITY_CROSSCHECK|sources=4|runs=8|accepted=2|rejected=6|diagnostics=6"
     );
     std::fs::remove_dir_all(&root).expect("remove owned strict-positivity temp root");
+    lean_probe::report_checked("strict-positivity", accepted + rejected + 1);
 }
