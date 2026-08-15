@@ -199,6 +199,67 @@ impl<'k> IntDev<'k> {
         self.itransport(a, motive, refl_case, b, h)
     }
 
+    /// `h1 : Eq Int a b`, `h2 : Eq Int b c  ⊢  Eq Int a c`.
+    pub(super) fn itrans(
+        &mut self,
+        a: ExprId,
+        b: ExprId,
+        c: ExprId,
+        h1: ExprId,
+        h2: ExprId,
+    ) -> ExprId {
+        let motive = self.ieq_motive(b, &|d, x| d.ieq(a, x));
+        self.itransport(b, motive, h1, c, h2)
+    }
+
+    /// Chain `Eq Int start …` through `(next, step)` pairs, returning the final
+    /// right-hand side and the composed proof.
+    ///
+    /// Every intermediate term only has to be **definitionally** the previous
+    /// step's right-hand side, which is what makes the branch scripts readable:
+    /// a step may be stated at whichever ι-reduct of the term is convenient.
+    pub(super) fn ichain(&mut self, start: ExprId, steps: &[(ExprId, ExprId)]) -> (ExprId, ExprId) {
+        let mut current = start;
+        let mut proof = self.irefl(start);
+        for &(next, step) in steps {
+            proof = self.itrans(start, current, next, proof, step);
+            current = next;
+        }
+        (current, proof)
+    }
+
+    /// Congruence at `Int`: `h : Eq Int a b  ⊢  Eq Int (f a) (f b)`.
+    pub(super) fn icongr(
+        &mut self,
+        a: ExprId,
+        b: ExprId,
+        h: ExprId,
+        f: &dyn Fn(&mut Self, ExprId) -> ExprId,
+    ) -> ExprId {
+        let fa = f(self, a);
+        let motive = self.ieq_motive(a, &|d, x| {
+            let fx = f(d, x);
+            d.ieq(fa, fx)
+        });
+        let refl_case = self.irefl(fa);
+        self.itransport(a, motive, refl_case, b, h)
+    }
+
+    /// From `h : Eq Nat a b` and a proof of `motive a`, derive `motive b` — the
+    /// `Nat`-indexed rewrite the `subNatNat` scripts run on, where the equation
+    /// is between naturals but the proposition being moved is about integers.
+    pub(super) fn nat_rewrite(
+        &mut self,
+        a: ExprId,
+        b: ExprId,
+        h: ExprId,
+        proof: ExprId,
+        motive: &dyn Fn(&mut Self, ExprId) -> ExprId,
+    ) -> ExprId {
+        let built = self.eq_motive(a, motive);
+        self.transport(a, built, proof, b, h)
+    }
+
     /// From `h : Eq Int p q` and a proof of `motive p`, derive `motive q`.
     ///
     /// Both directions of constructor reasoning go through this: injectivity
@@ -449,6 +510,33 @@ impl NatOps for IntDev<'_> {
     fn nat_state(&mut self) -> &mut NatState {
         &mut self.state
     }
+}
+
+/// Eliminate `witness : Exists Nat predicate` into `target`, given a
+/// `minor : ∀ (x : Nat), predicate x → target`.
+///
+/// `Exists` is a `Prop` with one non-subsingleton constructor, so its recursor
+/// eliminates only into `Prop` and carries exactly one universe parameter — the
+/// one of the *quantified* type, here `Nat : Sort 1`.
+pub(super) fn exists_elim(
+    d: &mut IntDev<'_>,
+    predicate: ExprId,
+    target: ExprId,
+    witness: ExprId,
+    minor: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let exists_name = d.int().logic.exists_;
+    let exists = d.kernel().const_(exists_name, vec![one]);
+    let exists_ty = d.apply(exists, &[nat, predicate]);
+    let motive = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, exists_ty, target)
+    };
+    let rec_name = d.int().logic.exists_rec;
+    let rec = d.kernel().const_(rec_name, vec![one]);
+    d.apply(rec, &[nat, predicate, motive, minor, witness])
 }
 
 /// Prove `stmt(targets)` by exhaustive `Int.rec` case analysis on every element

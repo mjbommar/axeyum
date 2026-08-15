@@ -41,6 +41,10 @@
 //! - **Operations** (definitions): `add`, `mul`, `neg`, `zero`, `one`.
 //! - **Relations** (definitions): `le`, `lt`, each by cases into `Nat.le` /
 //!   `Nat.lt`.
+//! - **The `subNatNat` borrow development** (see [`sub_nat_nat`]): the shift
+//!   lemma, the two characterisations, and the elimination principle that says
+//!   which constructor a normalized difference lands in. Everything that mixes
+//!   `Int.add` with a second operation or relation goes through it.
 //! - **Laws**: the order, additive, multiplicative and discreteness facts named
 //!   on the [`IntPrelude`] fields below — theorems where derived, axioms
 //!   otherwise.
@@ -73,7 +77,9 @@ mod decide;
 mod defs;
 mod ops;
 mod order;
+mod sign;
 mod statements;
+mod sub_nat_nat;
 
 use ops::IntDev;
 
@@ -107,6 +113,69 @@ pub struct IntPrelude {
     pub neg_of_nat: NameId,
     /// `Int.subNatNat : Nat → Nat → Int` — the normalized difference `m - n`.
     pub sub_nat_nat: NameId,
+
+    // --- the `subNatNat` borrow development ----------------------------------
+    /// `subNatNat_succ_succ : ∀ (m n : Nat), subNatNat (succ m) (succ n) = subNatNat m n`.
+    pub sub_nat_nat_succ_succ: NameId,
+    /// `subNatNat_add_add : ∀ (m n k : Nat), subNatNat (m+k) (n+k) = subNatNat m n`.
+    pub sub_nat_nat_add_add: NameId,
+    /// `subNatNat_add_add_left : ∀ (k m n : Nat), subNatNat (k+m) (k+n) = subNatNat m n`.
+    pub sub_nat_nat_add_add_left: NameId,
+    /// `subNatNat_zero : ∀ (m : Nat), subNatNat m 0 = ofNat m`.
+    pub sub_nat_nat_zero: NameId,
+    /// `zero_subNatNat : ∀ (k : Nat), subNatNat 0 k = negOfNat k`.
+    pub zero_sub_nat_nat: NameId,
+    /// `subNatNat_add_left : ∀ (n i : Nat), subNatNat (n+i) n = ofNat i` — the
+    /// borrow **does not** fire when the first argument dominates.
+    pub sub_nat_nat_add_left: NameId,
+    /// `subNatNat_add_right : ∀ (m k : Nat), subNatNat m (m+k) = negOfNat k` —
+    /// the borrow fires, and the answer is the negation of the excess.
+    pub sub_nat_nat_add_right: NameId,
+    /// `subNatNat_elim : ∀ (P : Int → Prop) (m n : Nat),
+    /// (∀ i, n+i = m → P (ofNat i)) → (∀ i, m+(i+1) = n → P (negSucc i)) →
+    /// P (subNatNat m n)` — the case analysis the borrow's two outcomes support.
+    pub sub_nat_nat_elim: NameId,
+
+    // --- `Int.add` against `subNatNat` and `negOfNat` -------------------------
+    /// `ofNat_add_subNatNat : ∀ m n q, ofNat m + subNatNat n q = subNatNat (m+n) q`.
+    pub of_nat_add_sub_nat_nat: NameId,
+    /// `subNatNat_add_ofNat : ∀ a b p, subNatNat a b + ofNat p = subNatNat (a+p) b`.
+    pub sub_nat_nat_add_of_nat: NameId,
+    /// `subNatNat_add_negSucc : ∀ a b p, subNatNat a b + negSucc p = subNatNat a (b+(p+1))`.
+    pub sub_nat_nat_add_neg_succ: NameId,
+    /// `negSucc_add_subNatNat : ∀ m a b, negSucc m + subNatNat a b = subNatNat a (b+(m+1))`.
+    pub neg_succ_add_sub_nat_nat: NameId,
+    /// `ofNat_add_negOfNat : ∀ u v, ofNat u + negOfNat v = subNatNat u v`.
+    pub of_nat_add_neg_of_nat: NameId,
+    /// `negOfNat_add_ofNat : ∀ v u, negOfNat v + ofNat u = subNatNat u v`.
+    pub neg_of_nat_add_of_nat: NameId,
+    /// `negOfNat_add_negOfNat : ∀ u v, negOfNat u + negOfNat v = negOfNat (u+v)`.
+    pub neg_of_nat_add_neg_of_nat: NameId,
+
+    // --- `Int.mul` against `negOfNat` and `subNatNat` -------------------------
+    /// `mul_ofNat_negOfNat : ∀ m k, ofNat m * negOfNat k = negOfNat (m*k)`.
+    pub mul_of_nat_neg_of_nat: NameId,
+    /// `mul_negOfNat_ofNat : ∀ k n, negOfNat k * ofNat n = negOfNat (k*n)`.
+    pub mul_neg_of_nat_of_nat: NameId,
+    /// `mul_negSucc_negOfNat : ∀ m k, negSucc m * negOfNat k = ofNat ((m+1)*k)`.
+    pub mul_neg_succ_neg_of_nat: NameId,
+    /// `mul_negOfNat_negSucc : ∀ k n, negOfNat k * negSucc n = ofNat (k*(n+1))`.
+    pub mul_neg_of_nat_neg_succ: NameId,
+    /// `ofNat_mul_subNatNat : ∀ m p q, ofNat m * subNatNat p q = subNatNat (m*p) (m*q)`.
+    pub of_nat_mul_sub_nat_nat: NameId,
+    /// `negSucc_mul_subNatNat :
+    /// ∀ m p q, negSucc m * subNatNat p q = subNatNat ((m+1)*q) ((m+1)*p)`.
+    pub neg_succ_mul_sub_nat_nat: NameId,
+
+    // --- the order, as a difference ------------------------------------------
+    /// `le_ofNat_add : ∀ (a : Int) (i : Nat), le a (a + ofNat i)`.
+    pub le_of_nat_add: NameId,
+    /// `le_dest : ∀ (a b : Int), le a b → ∃ (i : Nat), b = a + ofNat i`.
+    pub le_dest: NameId,
+    /// `lt_ofNat_add : ∀ (a : Int) (i : Nat), lt a (a + ofNat (i+1))`.
+    pub lt_of_nat_add: NameId,
+    /// `lt_dest : ∀ (a b : Int), lt a b → ∃ (i : Nat), b = a + ofNat (i+1)`.
+    pub lt_dest: NameId,
 
     // --- operations ----------------------------------------------------------
     /// `add : Int → Int → Int`.
@@ -205,6 +274,31 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         rec: child(kernel, "rec"),
         neg_of_nat: child(kernel, "negOfNat"),
         sub_nat_nat: child(kernel, "subNatNat"),
+        sub_nat_nat_succ_succ: child(kernel, "subNatNat_succ_succ"),
+        sub_nat_nat_add_add: child(kernel, "subNatNat_add_add"),
+        sub_nat_nat_add_add_left: child(kernel, "subNatNat_add_add_left"),
+        sub_nat_nat_zero: child(kernel, "subNatNat_zero"),
+        zero_sub_nat_nat: child(kernel, "zero_subNatNat"),
+        sub_nat_nat_add_left: child(kernel, "subNatNat_add_left"),
+        sub_nat_nat_add_right: child(kernel, "subNatNat_add_right"),
+        sub_nat_nat_elim: child(kernel, "subNatNat_elim"),
+        of_nat_add_sub_nat_nat: child(kernel, "ofNat_add_subNatNat"),
+        sub_nat_nat_add_of_nat: child(kernel, "subNatNat_add_ofNat"),
+        sub_nat_nat_add_neg_succ: child(kernel, "subNatNat_add_negSucc"),
+        neg_succ_add_sub_nat_nat: child(kernel, "negSucc_add_subNatNat"),
+        of_nat_add_neg_of_nat: child(kernel, "ofNat_add_negOfNat"),
+        neg_of_nat_add_of_nat: child(kernel, "negOfNat_add_ofNat"),
+        neg_of_nat_add_neg_of_nat: child(kernel, "negOfNat_add_negOfNat"),
+        mul_of_nat_neg_of_nat: child(kernel, "mul_ofNat_negOfNat"),
+        mul_neg_of_nat_of_nat: child(kernel, "mul_negOfNat_ofNat"),
+        mul_neg_succ_neg_of_nat: child(kernel, "mul_negSucc_negOfNat"),
+        mul_neg_of_nat_neg_succ: child(kernel, "mul_negOfNat_negSucc"),
+        of_nat_mul_sub_nat_nat: child(kernel, "ofNat_mul_subNatNat"),
+        neg_succ_mul_sub_nat_nat: child(kernel, "negSucc_mul_subNatNat"),
+        le_of_nat_add: child(kernel, "le_ofNat_add"),
+        le_dest: child(kernel, "le_dest"),
+        lt_of_nat_add: child(kernel, "lt_ofNat_add"),
+        lt_dest: child(kernel, "lt_dest"),
         add: child(kernel, "add"),
         mul: child(kernel, "mul"),
         neg: child(kernel, "neg"),
@@ -249,19 +343,13 @@ type AssertedLaw = (NameId, usize, fn(&mut IntDev<'_>, &[ExprId]) -> ExprId);
 /// Assert the laws this development has not derived.
 ///
 /// Each entry here is a standing debt: it is a true fact about `ℤ` that the
-/// construction below *could* prove, and does not yet.
+/// construction below *could* prove, and does not yet. One is left, and it is
+/// the only one that is not a ring or order law: `euclidean_decomposition`
+/// asserts the *existence* of a quotient and remainder, so discharging it needs
+/// integer division as a definition, not another rewriting lemma.
 fn declare_remaining_axioms(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();
-    let laws: [AssertedLaw; 6] = [
-        (p.add_assoc, 3, statements::add_assoc),
-        (p.mul_assoc, 3, statements::mul_assoc),
-        (p.left_distrib, 3, statements::left_distrib),
-        (p.add_le_add, 4, statements::add_le_add),
-        (
-            p.add_lt_add_of_le_of_lt,
-            4,
-            statements::add_lt_add_of_le_of_lt,
-        ),
+    let laws: [AssertedLaw; 1] = [
         // Kept last: `prelude_composition`'s rollback test conflicts on this
         // name precisely because it is the final member admitted.
         (
@@ -300,8 +388,17 @@ pub fn build_int_prelude(kernel: &mut Kernel) -> Result<IntPrelude, KernelError>
         defs::declare_normalizers(&mut d)?;
         defs::declare_operations(&mut d)?;
         defs::declare_order_definitions(&mut d)?;
+        sub_nat_nat::declare_borrow_lemmas(&mut d)?;
         order::declare_order_theorems(&mut d)?;
         algebra::declare_algebra_theorems(&mut d)?;
+        sub_nat_nat::declare_add_lemmas(&mut d)?;
+        algebra::declare_add_assoc(&mut d)?;
+        sign::declare_sign_lemmas(&mut d)?;
+        sign::declare_mul_assoc(&mut d)?;
+        sub_nat_nat::declare_mul_lemmas(&mut d)?;
+        algebra::declare_left_distrib(&mut d)?;
+        order::declare_difference_lemmas(&mut d)?;
+        order::declare_additive_order(&mut d)?;
         decide::declare_decidable_equality(&mut d)?;
         algebra::declare_ordered_multiplication(&mut d)?;
         declare_remaining_axioms(&mut d)?;

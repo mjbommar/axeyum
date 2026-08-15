@@ -140,7 +140,7 @@ fn int_prelude_admits_all_declarations() {
             k.display_name(name)
         );
     }
-    for name in derived_laws(&p) {
+    for name in derived_laws(&p).into_iter().chain(derived_lemmas(&p)) {
         assert!(
             matches!(
                 k.environment().get(name).unwrap(),
@@ -169,7 +169,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 20] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 25] {
     [
         p.le_refl,
         p.le_trans,
@@ -184,27 +184,60 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 20] {
         p.lt_of_le_of_ne,
         p.add_zero,
         p.add_comm,
+        p.add_assoc,
         p.add_neg,
+        p.add_le_add,
+        p.add_lt_add_of_le_of_lt,
         p.mul_zero,
         p.mul_one,
         p.mul_comm,
+        p.mul_assoc,
+        p.left_distrib,
         p.mul_nonneg,
         p.mul_le_mul_of_nonneg_left,
         p.eq_em,
     ]
 }
 
+/// The `subNatNat` borrow sub-development, and the sign/difference lemmas built
+/// on it. These are not laws of `ℤ` a reader would quote, but they are the
+/// working parts of five of the laws above, and a footprint that leaked into one
+/// of them would leak into the law. They are checked to exactly the same
+/// standard.
+fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 25] {
+    [
+        p.sub_nat_nat_succ_succ,
+        p.sub_nat_nat_add_add,
+        p.sub_nat_nat_add_add_left,
+        p.sub_nat_nat_zero,
+        p.zero_sub_nat_nat,
+        p.sub_nat_nat_add_left,
+        p.sub_nat_nat_add_right,
+        p.sub_nat_nat_elim,
+        p.of_nat_add_sub_nat_nat,
+        p.sub_nat_nat_add_of_nat,
+        p.sub_nat_nat_add_neg_succ,
+        p.neg_succ_add_sub_nat_nat,
+        p.of_nat_add_neg_of_nat,
+        p.neg_of_nat_add_of_nat,
+        p.neg_of_nat_add_neg_of_nat,
+        p.mul_of_nat_neg_of_nat,
+        p.mul_neg_of_nat_of_nat,
+        p.mul_neg_succ_neg_of_nat,
+        p.mul_neg_of_nat_neg_succ,
+        p.of_nat_mul_sub_nat_nat,
+        p.neg_succ_mul_sub_nat_nat,
+        p.le_of_nat_add,
+        p.le_dest,
+        p.lt_of_nat_add,
+        p.lt_dest,
+    ]
+}
+
 /// The integer laws still **asserted**. This list is the lane's standing debt;
 /// it is expected to shrink and must never grow.
-fn asserted_laws(p: &IntPrelude) -> [crate::NameId; 6] {
-    [
-        p.add_assoc,
-        p.mul_assoc,
-        p.left_distrib,
-        p.add_le_add,
-        p.add_lt_add_of_le_of_lt,
-        p.euclidean_decomposition,
-    ]
+fn asserted_laws(p: &IntPrelude) -> [crate::NameId; 1] {
+    [p.euclidean_decomposition]
 }
 
 /// Every derived law's trusted closure is **empty** — not merely "smaller".
@@ -214,7 +247,7 @@ fn asserted_laws(p: &IntPrelude) -> [crate::NameId; 6] {
 fn derived_laws_have_no_axiom_footprint() {
     let mut k = Kernel::new();
     let p = build_int_prelude(&mut k).expect("Int prelude must build");
-    for name in derived_laws(&p) {
+    for name in derived_laws(&p).into_iter().chain(derived_lemmas(&p)) {
         let footprint = k.axiom_footprint(name);
         assert!(
             footprint.is_empty(),

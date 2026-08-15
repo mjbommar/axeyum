@@ -246,6 +246,479 @@ pub(super) fn declare_algebra_theorems(d: &mut IntDev<'_>) -> Result<(), KernelE
     Ok(())
 }
 
+/// `Eq Nat ((n+1)+(q+1)) (((n+q)+1)+1)` — the carry that every branch mixing
+/// two `negSucc`s produces, since `Int.add (negSucc n) (negSucc q)` normalises
+/// its magnitude one way and `Nat.add` on two successors normalises it the
+/// other.
+fn two_successors(d: &mut IntDev<'_>, n: ExprId, q: ExprId) -> ExprId {
+    let raised = {
+        let flat = NatOps::add(d, n, q);
+        d.succ(flat)
+    };
+    let successor = d.succ(n);
+    let shifted = NatOps::add(d, successor, q);
+    let step = {
+        let name = d.int().nat.succ_add;
+        d.const_app(name, &[n, q])
+    };
+    // `(n+1)+(q+1)` is definitionally `((n+1)+q)+1`, so lifting `Nat.succ_add`
+    // under one `Nat.succ` already lands on both sides of the statement.
+    d.congr(shifted, raised, step, &|d, t| d.succ(t))
+}
+
+/// Declare `Int.add_assoc`.
+///
+/// Eight branches. The three that mix signs on both sides are the ones the
+/// borrow blocked, and each is now one application of the `subNatNat`
+/// re-association lemmas plus, at most, a `Nat` carry.
+pub(super) fn declare_add_assoc(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.add_assoc, 3, &|d, v| {
+        let stmt = statements::add_assoc(d, v);
+        let proof = case_split(d, v, &statements::add_assoc, &|d, b| {
+            let (m, n, q) = (b[0].1, b[1].1, b[2].1);
+            let p = d.int();
+            match (b[0].0, b[1].0, b[2].0) {
+                // (+,+,+): `Nat.add_assoc` under `ofNat`.
+                (Shape::OfNat, Shape::OfNat, Shape::OfNat) => {
+                    let left = {
+                        let inner = NatOps::add(d, m, n);
+                        NatOps::add(d, inner, q)
+                    };
+                    let right = {
+                        let inner = NatOps::add(d, n, q);
+                        NatOps::add(d, m, inner)
+                    };
+                    let step = {
+                        let name = p.nat.add_assoc;
+                        d.const_app(name, &[m, n, q])
+                    };
+                    d.nat_eq_to_int(left, right, step, &|d, x| d.of_nat(x))
+                }
+                // (+,+,−): the right association is a `subNatNat` absorbing an
+                // `ofNat` on its left.
+                (Shape::OfNat, Shape::OfNat, Shape::NegSucc) => {
+                    let sq = d.succ(q);
+                    let step = d.const_app(p.of_nat_add_sub_nat_nat, &[m, n, sq]);
+                    let from = {
+                        let scale = d.of_nat(m);
+                        let borrowed = d.sub_nat_nat(n, sq);
+                        d.iadd(scale, borrowed)
+                    };
+                    let to = {
+                        let sum = NatOps::add(d, m, n);
+                        d.sub_nat_nat(sum, sq)
+                    };
+                    d.isymm(from, to, step)
+                }
+                // (+,−,+): both sides absorb an `ofNat`, from opposite sides.
+                (Shape::OfNat, Shape::NegSucc, Shape::OfNat) => {
+                    let sn = d.succ(n);
+                    let start = {
+                        let borrowed = d.sub_nat_nat(m, sn);
+                        let scale = d.of_nat(q);
+                        d.iadd(borrowed, scale)
+                    };
+                    let middle = {
+                        let sum = NatOps::add(d, m, q);
+                        d.sub_nat_nat(sum, sn)
+                    };
+                    let end = {
+                        let scale = d.of_nat(m);
+                        let borrowed = d.sub_nat_nat(q, sn);
+                        d.iadd(scale, borrowed)
+                    };
+                    let first = d.const_app(p.sub_nat_nat_add_of_nat, &[m, sn, q]);
+                    let second = {
+                        let step = d.const_app(p.of_nat_add_sub_nat_nat, &[m, q, sn]);
+                        d.isymm(end, middle, step)
+                    };
+                    d.itrans(start, middle, end, first, second)
+                }
+                // (+,−,−): a `subNatNat` absorbing a `negSucc`, then the carry.
+                (Shape::OfNat, Shape::NegSucc, Shape::NegSucc) => {
+                    let sn = d.succ(n);
+                    let sq = d.succ(q);
+                    let start = {
+                        let borrowed = d.sub_nat_nat(m, sn);
+                        let negative = d.neg_succ(q);
+                        d.iadd(borrowed, negative)
+                    };
+                    let middle = {
+                        let sum = NatOps::add(d, sn, sq);
+                        d.sub_nat_nat(m, sum)
+                    };
+                    let end = {
+                        let raised = {
+                            let flat = NatOps::add(d, n, q);
+                            d.succ(flat)
+                        };
+                        let doubled = d.succ(raised);
+                        d.sub_nat_nat(m, doubled)
+                    };
+                    let first = d.const_app(p.sub_nat_nat_add_neg_succ, &[m, sn, q]);
+                    let second = {
+                        let carry = two_successors(d, n, q);
+                        let from = NatOps::add(d, sn, sq);
+                        let to = {
+                            let raised = {
+                                let flat = NatOps::add(d, n, q);
+                                d.succ(flat)
+                            };
+                            d.succ(raised)
+                        };
+                        d.nat_eq_to_int(from, to, carry, &|d, t| d.sub_nat_nat(m, t))
+                    };
+                    d.itrans(start, middle, end, first, second)
+                }
+                // (−,+,+): both sides are the same `subNatNat` absorbing `ofNat q`.
+                (Shape::NegSucc, Shape::OfNat, Shape::OfNat) => {
+                    let sm = d.succ(m);
+                    d.const_app(p.sub_nat_nat_add_of_nat, &[n, sm, q])
+                }
+                // (−,+,−): both sides absorb a `negSucc`, from opposite sides,
+                // and the two excesses differ by `Nat.add_comm`.
+                (Shape::NegSucc, Shape::OfNat, Shape::NegSucc) => {
+                    let sm = d.succ(m);
+                    let sq = d.succ(q);
+                    let start = {
+                        let borrowed = d.sub_nat_nat(n, sm);
+                        let negative = d.neg_succ(q);
+                        d.iadd(borrowed, negative)
+                    };
+                    let middle = {
+                        let sum = NatOps::add(d, sm, sq);
+                        d.sub_nat_nat(n, sum)
+                    };
+                    let swapped = {
+                        let sum = NatOps::add(d, sq, sm);
+                        d.sub_nat_nat(n, sum)
+                    };
+                    let end = {
+                        let negative = d.neg_succ(m);
+                        let borrowed = d.sub_nat_nat(n, sq);
+                        d.iadd(negative, borrowed)
+                    };
+                    let first = d.const_app(p.sub_nat_nat_add_neg_succ, &[n, sm, q]);
+                    let second = {
+                        let from = NatOps::add(d, sm, sq);
+                        let to = NatOps::add(d, sq, sm);
+                        let h = {
+                            let name = p.nat.add_comm;
+                            d.const_app(name, &[sm, sq])
+                        };
+                        d.nat_eq_to_int(from, to, h, &|d, t| d.sub_nat_nat(n, t))
+                    };
+                    let third = {
+                        let step = d.const_app(p.neg_succ_add_sub_nat_nat, &[m, n, sq]);
+                        d.isymm(end, swapped, step)
+                    };
+                    let (_, proof) =
+                        d.ichain(start, &[(middle, first), (swapped, second), (end, third)]);
+                    proof
+                }
+                // (−,−,+): the left association has already carried, so the
+                // `Nat` step runs the other way.
+                (Shape::NegSucc, Shape::NegSucc, Shape::OfNat) => {
+                    let sm = d.succ(m);
+                    let sn = d.succ(n);
+                    let start = {
+                        let raised = {
+                            let flat = NatOps::add(d, m, n);
+                            d.succ(flat)
+                        };
+                        let doubled = d.succ(raised);
+                        d.sub_nat_nat(q, doubled)
+                    };
+                    let middle = {
+                        let sum = NatOps::add(d, sn, sm);
+                        d.sub_nat_nat(q, sum)
+                    };
+                    let end = {
+                        let negative = d.neg_succ(m);
+                        let borrowed = d.sub_nat_nat(q, sn);
+                        d.iadd(negative, borrowed)
+                    };
+                    let first = {
+                        // `((m+n)+1)+1 = (n+1)+(m+1)`: commute, then uncarry.
+                        let flat = NatOps::add(d, m, n);
+                        let swapped = NatOps::add(d, n, m);
+                        let commute = {
+                            let name = p.nat.add_comm;
+                            d.const_app(name, &[m, n])
+                        };
+                        let lifted = d.congr(flat, swapped, commute, &|d, t| {
+                            let raised = d.succ(t);
+                            d.succ(raised)
+                        });
+                        let carry = two_successors(d, n, m);
+                        let from = {
+                            let raised = d.succ(flat);
+                            d.succ(raised)
+                        };
+                        let via = {
+                            let raised = d.succ(swapped);
+                            d.succ(raised)
+                        };
+                        let to = NatOps::add(d, sn, sm);
+                        let uncarry = d.symm(to, via, carry);
+                        let (_, joined) = d.chain(from, &[(via, lifted), (to, uncarry)]);
+                        d.nat_eq_to_int(from, to, joined, &|d, t| d.sub_nat_nat(q, t))
+                    };
+                    let second = {
+                        let step = d.const_app(p.neg_succ_add_sub_nat_nat, &[m, q, sn]);
+                        d.isymm(end, middle, step)
+                    };
+                    d.itrans(start, middle, end, first, second)
+                }
+                // (−,−,−): entirely inside `negSucc`, so it is `Nat.add_assoc`
+                // with one `Nat.succ_add` to line the carries up.
+                (Shape::NegSucc, Shape::NegSucc, Shape::NegSucc) => {
+                    let flat = NatOps::add(d, m, n);
+                    let raised = d.succ(flat);
+                    let start = NatOps::add(d, raised, q);
+                    let via = {
+                        let inner = NatOps::add(d, flat, q);
+                        d.succ(inner)
+                    };
+                    let step_one = {
+                        let name = p.nat.succ_add;
+                        d.const_app(name, &[flat, q])
+                    };
+                    let end = {
+                        let inner = NatOps::add(d, n, q);
+                        let bumped = d.succ(inner);
+                        NatOps::add(d, m, bumped)
+                    };
+                    let step_two = {
+                        let regroup = {
+                            let name = p.nat.add_assoc;
+                            d.const_app(name, &[m, n, q])
+                        };
+                        let from = NatOps::add(d, flat, q);
+                        let to = {
+                            let inner = NatOps::add(d, n, q);
+                            NatOps::add(d, m, inner)
+                        };
+                        d.congr(from, to, regroup, &|d, t| d.succ(t))
+                    };
+                    let (_, joined) = d.chain(start, &[(via, step_one), (end, step_two)]);
+                    d.nat_eq_to_int(start, end, joined, &|d, t| {
+                        let bumped = d.succ(t);
+                        d.neg_succ(bumped)
+                    })
+                }
+            }
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// Declare `Int.left_distrib`.
+///
+/// Eight branches again, but the shape is uniform: reduce `b + c` to whichever
+/// normal form its two signs give, push the scale through it with the
+/// `subNatNat` multiplication lemmas, and re-assemble the right-hand side with
+/// the `negOfNat` addition lemmas. `Nat.left_distrib` is the only arithmetic.
+pub(super) fn declare_left_distrib(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.left_distrib, 3, &|d, v| {
+        let stmt = statements::left_distrib(d, v);
+        let proof = case_split(d, v, &statements::left_distrib, &|d, b| {
+            let (m, n, q) = (b[0].1, b[1].1, b[2].1);
+            let p = d.int();
+            // The magnitude of the scale, and the constructor a *positive*
+            // product lands in for this sign of `a`.
+            let negative_scale = matches!(b[0].0, Shape::NegSucc);
+            let scale = if negative_scale { d.succ(m) } else { m };
+            match (b[1].0, b[2].0) {
+                // Both summands non-negative: one `Nat.left_distrib`, wrapped in
+                // `ofNat` or `negOfNat` according to the scale's sign.
+                (Shape::OfNat, Shape::OfNat) => {
+                    let sum = NatOps::add(d, n, q);
+                    let joined = NatOps::mul(d, scale, sum);
+                    let split = {
+                        let left = NatOps::mul(d, scale, n);
+                        let right = NatOps::mul(d, scale, q);
+                        NatOps::add(d, left, right)
+                    };
+                    let step = {
+                        let name = p.nat.left_distrib;
+                        d.const_app(name, &[scale, n, q])
+                    };
+                    if negative_scale {
+                        let start = d.neg_of_nat(joined);
+                        let middle = d.neg_of_nat(split);
+                        let first = d.nat_eq_to_int(joined, split, step, &|d, t| d.neg_of_nat(t));
+                        let end = {
+                            let left = NatOps::mul(d, scale, n);
+                            let right = NatOps::mul(d, scale, q);
+                            let a = d.neg_of_nat(left);
+                            let c = d.neg_of_nat(right);
+                            d.iadd(a, c)
+                        };
+                        let second = {
+                            let left = NatOps::mul(d, scale, n);
+                            let right = NatOps::mul(d, scale, q);
+                            let regroup = d.const_app(p.neg_of_nat_add_neg_of_nat, &[left, right]);
+                            d.isymm(end, middle, regroup)
+                        };
+                        d.itrans(start, middle, end, first, second)
+                    } else {
+                        d.nat_eq_to_int(joined, split, step, &|d, t| d.of_nat(t))
+                    }
+                }
+                // `b + c` normalises to `subNatNat n (q+1)`.
+                (Shape::OfNat, Shape::NegSucc) => {
+                    let sq = d.succ(q);
+                    let scaled_left = NatOps::mul(d, scale, n);
+                    let scaled_right = NatOps::mul(d, scale, sq);
+                    if negative_scale {
+                        let start = {
+                            let negative = d.neg_succ(m);
+                            let borrowed = d.sub_nat_nat(n, sq);
+                            d.imul(negative, borrowed)
+                        };
+                        let middle = d.sub_nat_nat(scaled_right, scaled_left);
+                        let end = {
+                            let a = d.neg_of_nat(scaled_left);
+                            let c = d.of_nat(scaled_right);
+                            d.iadd(a, c)
+                        };
+                        let first = d.const_app(p.neg_succ_mul_sub_nat_nat, &[m, n, sq]);
+                        let second = {
+                            let step =
+                                d.const_app(p.neg_of_nat_add_of_nat, &[scaled_left, scaled_right]);
+                            d.isymm(end, middle, step)
+                        };
+                        d.itrans(start, middle, end, first, second)
+                    } else {
+                        let start = {
+                            let positive = d.of_nat(m);
+                            let borrowed = d.sub_nat_nat(n, sq);
+                            d.imul(positive, borrowed)
+                        };
+                        let middle = d.sub_nat_nat(scaled_left, scaled_right);
+                        let end = {
+                            let a = d.of_nat(scaled_left);
+                            let c = d.neg_of_nat(scaled_right);
+                            d.iadd(a, c)
+                        };
+                        let first = d.const_app(p.of_nat_mul_sub_nat_nat, &[m, n, sq]);
+                        let second = {
+                            let step =
+                                d.const_app(p.of_nat_add_neg_of_nat, &[scaled_left, scaled_right]);
+                            d.isymm(end, middle, step)
+                        };
+                        d.itrans(start, middle, end, first, second)
+                    }
+                }
+                // `b + c` normalises to `subNatNat q (n+1)`.
+                (Shape::NegSucc, Shape::OfNat) => {
+                    let sn = d.succ(n);
+                    let scaled_left = NatOps::mul(d, scale, q);
+                    let scaled_right = NatOps::mul(d, scale, sn);
+                    if negative_scale {
+                        let start = {
+                            let negative = d.neg_succ(m);
+                            let borrowed = d.sub_nat_nat(q, sn);
+                            d.imul(negative, borrowed)
+                        };
+                        let middle = d.sub_nat_nat(scaled_right, scaled_left);
+                        let end = {
+                            let a = d.of_nat(scaled_right);
+                            let c = d.neg_of_nat(scaled_left);
+                            d.iadd(a, c)
+                        };
+                        let first = d.const_app(p.neg_succ_mul_sub_nat_nat, &[m, q, sn]);
+                        let second = {
+                            let step =
+                                d.const_app(p.of_nat_add_neg_of_nat, &[scaled_right, scaled_left]);
+                            d.isymm(end, middle, step)
+                        };
+                        d.itrans(start, middle, end, first, second)
+                    } else {
+                        let start = {
+                            let positive = d.of_nat(m);
+                            let borrowed = d.sub_nat_nat(q, sn);
+                            d.imul(positive, borrowed)
+                        };
+                        let middle = d.sub_nat_nat(scaled_left, scaled_right);
+                        let end = {
+                            let a = d.neg_of_nat(scaled_right);
+                            let c = d.of_nat(scaled_left);
+                            d.iadd(a, c)
+                        };
+                        let first = d.const_app(p.of_nat_mul_sub_nat_nat, &[m, q, sn]);
+                        let second = {
+                            let step =
+                                d.const_app(p.neg_of_nat_add_of_nat, &[scaled_right, scaled_left]);
+                            d.isymm(end, middle, step)
+                        };
+                        d.itrans(start, middle, end, first, second)
+                    }
+                }
+                // Both summands negative: `b + c` is `negSucc ((n+q)+1)`, and
+                // the scaled magnitudes need the same carry `add_assoc` used.
+                (Shape::NegSucc, Shape::NegSucc) => {
+                    let sn = d.succ(n);
+                    let sq = d.succ(q);
+                    let doubled = {
+                        let flat = NatOps::add(d, n, q);
+                        let raised = d.succ(flat);
+                        d.succ(raised)
+                    };
+                    let joined = NatOps::mul(d, scale, doubled);
+                    let split = {
+                        let left = NatOps::mul(d, scale, sn);
+                        let right = NatOps::mul(d, scale, sq);
+                        NatOps::add(d, left, right)
+                    };
+                    let distributed = {
+                        let carry = two_successors(d, n, q);
+                        let from = NatOps::add(d, sn, sq);
+                        let restored = d.symm(from, doubled, carry);
+                        let via = NatOps::mul(d, scale, from);
+                        let lifted =
+                            d.congr(doubled, from, restored, &|d, t| NatOps::mul(d, scale, t));
+                        let final_step = {
+                            let name = p.nat.left_distrib;
+                            d.const_app(name, &[scale, sn, sq])
+                        };
+                        let (_, proof) = d.chain(joined, &[(via, lifted), (split, final_step)]);
+                        proof
+                    };
+                    if negative_scale {
+                        d.nat_eq_to_int(joined, split, distributed, &|d, t| d.of_nat(t))
+                    } else {
+                        let start = d.neg_of_nat(joined);
+                        let middle = d.neg_of_nat(split);
+                        let first =
+                            d.nat_eq_to_int(joined, split, distributed, &|d, t| d.neg_of_nat(t));
+                        let end = {
+                            let left = NatOps::mul(d, scale, sn);
+                            let right = NatOps::mul(d, scale, sq);
+                            let a = d.neg_of_nat(left);
+                            let c = d.neg_of_nat(right);
+                            d.iadd(a, c)
+                        };
+                        let second = {
+                            let left = NatOps::mul(d, scale, sn);
+                            let right = NatOps::mul(d, scale, sq);
+                            let regroup = d.const_app(p.neg_of_nat_add_neg_of_nat, &[left, right]);
+                            d.isymm(end, middle, regroup)
+                        };
+                        d.itrans(start, middle, end, first, second)
+                    }
+                }
+            }
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// `fun (h_0 : tys[0]) … => body(h_0, …)` — the same binder helper the order
 /// module uses, kept local so neither module has to depend on the other.
 fn with_hypotheses(
