@@ -871,11 +871,18 @@ impl Kernel {
     /// nanoda's `get_declar_val`). Inductive ι and constructor-projection
     /// reduction are included; quotient reduction remains deferred.
     ///
-    /// Reduction happens in the **empty** local context, so rules that need a
-    /// free variable's type (K-like reduction) cannot fire on an open term
-    /// here. That is a restriction, never a widening: fewer reductions means
-    /// fewer terms identified. Callers that are already under binders should
-    /// use [`Kernel::whnf_core`] with their own context.
+    /// Reduction happens in the **empty** local context, so rules that consult
+    /// it cannot fire on an open term here: K-like reduction (which needs a
+    /// free variable's *type*) and ζ over a local `let` (which needs its
+    /// *value*) both no-op, so a let-bound variable looks irreducible. That is
+    /// a restriction, never a widening: fewer reductions means fewer terms
+    /// identified. It is also the reason a diagnostic that reduces an error's
+    /// two `ExprId`s here can stop on a bare `_fvar` the checker would have
+    /// reduced — see `wf_recursion_decline_probe`. Callers that are already
+    /// under binders should use `Kernel::whnf_core` with their own context.
+    /// (That link is deliberately plain text: `whnf_core` is private, and an
+    /// intra-doc link to it makes `cargo doc` warn — which CI turns into an
+    /// error via `RUSTDOCFLAGS="-D warnings"`.)
     ///
     /// # Panics
     ///

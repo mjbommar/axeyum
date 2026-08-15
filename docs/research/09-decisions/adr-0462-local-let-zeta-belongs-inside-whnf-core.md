@@ -70,13 +70,13 @@ that found this), and `def_eq` returned `false` on them.
 and delete the separate `whnf_local_value` pass.**
 
 ```rust
-ExprNode::FVar(fvar) => {
-    self.reduction_ctx_reads += 1;
-    match ctx.value_of(fvar) {
-        Some(value) => cursor = self.foldl_apps(value, args.iter().copied()),
-        None => return cursor,
+ExprNode::FVar(fvar) => match ctx.value_of(fvar) {
+    Some(value) => {
+        self.reduction_ctx_reads += 1;
+        cursor = self.foldl_apps(value, args.iter().copied());
     }
-}
+    None => return cursor,
+},
 ```
 
 `whnf_in` becomes `whnf_core` and is removed; the two `whnf_local_value` calls
@@ -96,8 +96,21 @@ Three properties this decision rests on, each checked rather than argued:
   component in its key and is restricted to *closed* expressions; a closed term
   cannot reach the new arm at all, since no reduction step can introduce an
   `FVar` into a closed term. The existing `reduction_ctx_reads` tripwire is
-  bumped in the new arm, so if that argument is ever wrong the assertion in
-  `whnf_no_unfolding` fires rather than the cache going quietly wrong.
+  bumped in the new arm on a **hit**, so if that argument is ever wrong the
+  assertion in `whnf_no_unfolding` fires rather than the cache going quietly
+  wrong.
+
+  A **miss** is deliberately *not* counted, and the first version of this arm
+  got that wrong: it counted every `FVar` head and the tripwire then fired on
+  two of the first 250 Mathlib streams. The mechanism is one the tripwire's own
+  doc comment does not cover. Reducing a closed expression can call *inference*
+  — K-like reduction infers its major (`k_like_major`, the single door from
+  reduction into inference) — and that inference opens **its own** binders;
+  reducing under them meets ordinary valueless locals. Their lookups return the
+  term unchanged, which is exactly what an empty context would return, so they
+  are not a dependence on the context and counting them is a false positive.
+  A hit is the context changing the reduct, which is precisely what the cache
+  key must not hide.
 * **It changes which position the rule fires in, not whether it exists.**
   Removing the new arm and re-running the suite fails **exactly two** of the
   four tests in `local_let_zeta_reduction.rs`: the delta-exposed case and the
