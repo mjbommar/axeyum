@@ -388,23 +388,52 @@ pub enum GeometryDecline {
 
 /// The prefix of the fresh inverse variables introduced by saturation.
 ///
-/// Uppercase deliberately: this crate's monomial order is pure `lex` with the
-/// alphabetically-*first* variable most significant, and `'Z' < 'a'` as bytes, so
-/// the inverse variables rank above every coordinate and `Buchberger`'s algorithm
-/// eliminates them first. That is a performance choice; ideal membership does not
-/// depend on the order.
+/// Uppercase deliberately: `'Z' < 'a'` as bytes, so under `lex` — with the
+/// alphabetically-*first* variable most significant — the inverse variables rank
+/// above every coordinate and `Buchberger`'s algorithm eliminates them first.
+/// [`geometry_limits`] now defaults to `grevlex`, where the name only breaks ties
+/// between equal-degree monomials and the effect is smaller. Either way this is a
+/// performance choice: ideal membership does not depend on the order, which is
+/// exactly why the order was safe to change.
 pub const INVERSE_PREFIX: &str = "Zinv";
 
 /// Ceilings sized for the coordinate systems classical plane theorems produce.
 ///
-/// Calibrated against the committed corpus (release build, 2026-08-14): the most
-/// expensive reduction that *succeeds* is `centroid-divides-medians` at 220 ms,
-/// and the most expensive that correctly reports a nonzero remainder is
-/// `parallelogram-diagonals-bisect`'s empty-condition attempt at 11 ms. The
-/// ceilings are roughly two orders of magnitude above both, which is enough
-/// headroom for a slightly larger system and small enough that a theorem outside
-/// this route's reach declines in minutes rather than never — see
-/// [`crate::geometry_corpus::frontier`] for the two that do.
+/// Calibrated against the committed corpus (release build, 2026-08-15): the most
+/// expensive reduction that *succeeds* is `rhombus-diagonals-perpendicular` at
+/// 21 s, and the most expensive that correctly reports a nonzero remainder is its
+/// own empty-condition attempt at 0.7 s. The ceilings leave that reduction real
+/// headroom on every axis — see [`crate::geometry_corpus::corpus`] — while
+/// staying small enough that a theorem outside this route's reach declines in
+/// minutes rather than never; [`crate::geometry_corpus::frontier`] has the one
+/// that does.
+///
+/// # Why the order is `DegRevLex`
+///
+/// `lex` is the best order for *elimination* and the worst for computing a basis,
+/// and ideal membership needs no elimination — so the theory says `grevlex`, and
+/// the theory was checked rather than quoted. Two measurements settled it, both
+/// reproducible with
+/// `cargo run -p axeyum-cas --release --example geometry_order_audit`:
+///
+/// - **The order cannot move a condition set here.** The audit runs *every*
+///   condition subset of every corpus theorem under both orders, and under both
+///   orders every subset is **decided** — `in ideal` or `not in ideal`, never
+///   declined. `certify` reports the smallest subset that succeeds, and
+///   "succeeds" is budget-relative only when some smaller subset declines; with
+///   every subset decided, the reported set is smallest *absolutely*, and no
+///   change of order can move it. That mattered because those conditions are
+///   hypotheses in the fact ledger's `formal.statement`: a silent move would have
+///   changed what six proved facts claim.
+/// - **The certificates are byte-identical.** All six artifacts that predate the
+///   switch re-serialize identically under `grevlex` — the emitter reported *6
+///   unchanged, 1 written*, the one being the newly reachable rhombus. The switch
+///   changed no evidence at all, only the cost of producing it: 1.2–2.4× faster
+///   on the six theorems both orders certify.
+///
+/// What the switch *did* change is reach: `rhombus-diagonals-perpendicular`
+/// declined under `lex` after 287.8 s on the `ReductionSteps` ceiling and
+/// certifies under `grevlex` in 21 s. It is in the corpus because of this line.
 #[must_use]
 pub fn geometry_limits() -> Limits {
     Limits {
@@ -412,7 +441,7 @@ pub fn geometry_limits() -> Limits {
         pair_iterations: 2_000,
         basis_size: 200,
         poly_terms: 8_000,
-        order: MonomialOrder::Lex,
+        order: MonomialOrder::DegRevLex,
     }
 }
 

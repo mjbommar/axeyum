@@ -16,6 +16,7 @@
 //! counterexample* and *replacing a counterexample with a configuration that does
 //! not actually break the theorem*, not only arithmetic edits.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use axeyum_cas::geometry_certify::GeometryCertificate;
@@ -126,11 +127,33 @@ fn every_committed_geometry_certificate_round_trips_byte_for_byte() {
 }
 
 fn first() -> GeometryCertificate {
-    documents()
+    saturated()
         .into_iter()
-        .find(|(_, _, certificate)| !certificate.saturations.is_empty())
+        .next()
         .expect("at least one certificate uses a non-degeneracy condition")
-        .2
+        .1
+}
+
+/// **Every** certificate that consumes a non-degeneracy condition, by name.
+///
+/// The controls below used to run against `first()` alone, which meant a newly
+/// promoted theorem inherited the *claim* that its counterexample is load-bearing
+/// without inheriting the test. `rhombus-diagonals-perpendicular` joined the
+/// corpus on 2026-08-15 and would have been exactly that: a saturated certificate
+/// whose degenerate witness nothing checked could be deleted from.
+fn saturated() -> Vec<(String, GeometryCertificate)> {
+    let all: Vec<(String, GeometryCertificate)> = documents()
+        .into_iter()
+        .filter(|(_, _, certificate)| !certificate.saturations.is_empty())
+        .map(|(name, _, certificate)| (name, certificate))
+        .collect();
+    assert!(
+        all.len() >= 2,
+        "the saturation controls must cover every saturated certificate, and there should be \
+         more than one by now; found {}",
+        all.len()
+    );
+    all
 }
 
 fn rejected(certificate: &GeometryCertificate) -> String {
@@ -164,44 +187,119 @@ fn a_conclusion_edited_by_one_is_rejected() {
 /// certificate could advertise a weak side condition and use a strong one.
 #[test]
 fn a_swapped_non_degeneracy_condition_is_rejected() {
-    let mut certificate = first();
-    certificate.saturations[0].condition = MvPoly::var(&certificate.coordinates[0]);
-    let reason = rejected(&certificate);
-    assert!(reason.contains("generator"), "unexpected reason: {reason}");
+    for (name, mut certificate) in saturated() {
+        certificate.saturations[0].condition = MvPoly::var(&certificate.coordinates[0]);
+        let reason = rejected(&certificate);
+        assert!(reason.contains("generator"), "{name}: unexpected {reason}");
+    }
 }
 
 /// Deleting the counterexample must break the certificate: this is the control
-/// that stops a proof from silently assuming non-degeneracy.
+/// that stops a proof from silently assuming non-degeneracy. Run against **every**
+/// saturated certificate, because that is the claim every one of them makes.
 #[test]
 fn removing_the_degenerate_counterexample_is_rejected() {
-    let mut certificate = first();
-    certificate.degenerate_witnesses.clear();
-    let reason = rejected(&certificate);
-    assert!(
-        reason.contains("no degenerate counterexample"),
-        "unexpected reason: {reason}"
-    );
+    for (name, mut certificate) in saturated() {
+        certificate.degenerate_witnesses.clear();
+        let reason = rejected(&certificate);
+        assert!(
+            reason.contains("no degenerate counterexample"),
+            "{name}: unexpected {reason}"
+        );
+    }
 }
 
 /// A "counterexample" that does not actually falsify a conclusion is not one.
 #[test]
 fn a_counterexample_that_does_not_break_the_theorem_is_rejected() {
-    let mut certificate = first();
-    let generic = certificate.generic_witnesses[0].assignment.clone();
-    certificate.degenerate_witnesses[0].assignment = generic;
-    let _ = rejected(&certificate);
+    for (_, mut certificate) in saturated() {
+        let generic = certificate.generic_witnesses[0].assignment.clone();
+        certificate.degenerate_witnesses[0].assignment = generic;
+        let _ = rejected(&certificate);
+    }
+}
+
+/// The sharper form of the control above, and the one that is actually hard to
+/// pass: a configuration that **does** violate the non-degeneracy condition and
+/// yet does **not** break the theorem.
+///
+/// The substitution used by `a_counterexample_that_does_not_break_the_theorem_is_rejected`
+/// is a *generic* configuration, which fails on two counts at once — it satisfies
+/// the conclusion and it does not annihilate the condition — so a checker that
+/// only tested the second would pass it. `A = (0,0)`, `B = (1,0)`, `C = (2,0)`,
+/// `D = (1,0)` is four collinear points, so `abd-not-collinear` genuinely fails,
+/// and yet the diagonals of both the parallelogram (`AC` and `BD` share the
+/// midpoint `(1,0)`) and the rhombus (`AC·BD = (2,0)·(0,0) = 0`) behave. Sitting
+/// on the degeneracy locus is not enough; a counterexample has to falsify
+/// something.
+#[test]
+fn a_counterexample_on_the_locus_that_falsifies_nothing_is_rejected() {
+    let collinear: BTreeMap<String, Rational> = [
+        ("ax", 0),
+        ("ay", 0),
+        ("bx", 1),
+        ("by", 0),
+        ("cx", 2),
+        ("cy", 0),
+        ("dx", 1),
+        ("dy", 0),
+    ]
+    .into_iter()
+    .map(|(name, value)| (name.to_string(), Rational::integer(value)))
+    .collect();
+
+    let mut covered = 0usize;
+    for (name, mut certificate) in saturated() {
+        // Only the quadrilateral theorems are coordinatised in `a..d`; the
+        // triangle ones name a `p`, and substituting there would be a different
+        // (and vacuous) experiment.
+        if certificate
+            .coordinates
+            .iter()
+            .any(|c| !collinear.contains_key(c))
+        {
+            continue;
+        }
+        assert!(
+            certificate.saturations.iter().all(|saturation| saturation
+                .condition
+                .evaluate(&collinear)
+                .expect("assigned")
+                .is_zero()),
+            "{name}: the configuration must actually violate the condition, or this control \
+             is testing nothing"
+        );
+        assert!(
+            certificate.conclusions.iter().all(|conclusion| conclusion
+                .poly
+                .evaluate(&collinear)
+                .expect("assigned")
+                .is_zero()),
+            "{name}: the configuration must NOT break the theorem, or it would be a legitimate \
+             counterexample and this control would be backwards"
+        );
+        certificate.degenerate_witnesses[0].assignment = collinear.clone();
+        let _ = rejected(&certificate);
+        covered += 1;
+    }
+    assert!(
+        covered >= 2,
+        "this control examined {covered} certificates; it is meant to cover the parallelogram \
+         and the rhombus"
+    );
 }
 
 /// A saturation the proof never used would advertise a weaker theorem than the
 /// one proved.
 #[test]
 fn an_unused_saturation_is_rejected() {
-    let mut certificate = first();
-    let index = certificate.hypotheses.len();
-    for conclusion in &mut certificate.conclusions {
-        conclusion.cofactors[index] = MvPoly::zero();
+    for (_, mut certificate) in saturated() {
+        let index = certificate.hypotheses.len();
+        for conclusion in &mut certificate.conclusions {
+            conclusion.cofactors[index] = MvPoly::zero();
+        }
+        let _ = rejected(&certificate);
     }
-    let _ = rejected(&certificate);
 }
 
 /// One certificate's cofactors against another's generators must not verify.

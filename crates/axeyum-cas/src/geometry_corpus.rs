@@ -80,6 +80,7 @@ pub fn corpus() -> Vec<GeometryProblem> {
         medians_concurrent(),
         centroid_divides_medians(),
         parallelogram_diagonals_bisect(),
+        rhombus_diagonals_perpendicular(),
     ]
 }
 
@@ -87,25 +88,59 @@ pub fn corpus() -> Vec<GeometryProblem> {
 /// route does **not** currently certify.
 ///
 /// They stay in the tree rather than being deleted because the value of a
-/// measured limit is that it is reproducible:
-/// `cargo run -p axeyum-cas --release --example geometry_probe 1 <id>`
-/// re-derives the decline. Measured 2026-08-14 on a loaded 24-core box, release
-/// build, budget `geometry_limits`:
+/// measured limit is that it is reproducible, and because a theorem here is
+/// **unproved, not unchecked**: `every_frontier_witness_is_consistent` replays
+/// every configuration a frontier entry states against its own polynomials, so a
+/// mis-stated theorem cannot hide in this list waiting for a faster search.
 ///
-/// | theorem | conditions | outcome |
-/// |---|---|---|
-/// | `rhombus-diagonals-perpendicular` | none | 4.6-8.9 s, correctly reports a nonzero remainder |
-/// | `rhombus-diagonals-perpendicular` | `abd-not-collinear` | **declined after 247-365 s** |
-/// | `euler-line` | none | no verdict within 600 s |
+/// `rhombus-diagonals-perpendicular` left this list on 2026-08-15 — it declined
+/// under `lex` and certifies under `grevlex` in 21 s — which is what the list is
+/// for. `euler-line` is what remains.
 ///
-/// The shared cause is the cost of `Buchberger`'s algorithm under the pure
-/// lexicographic order this crate uses everywhere, compounded by carrying a
-/// representation in the generators alongside every intermediate polynomial. The
-/// timings vary by a factor of two between an idle and a loaded machine, so treat
-/// them as an order of magnitude, not a baseline.
+/// # What obstructs `euler-line`, measured rather than timed
+///
+/// Two lanes recorded it as "no verdict within 600 s" and "no verdict within
+/// 1200 s under either monomial order". A duration names no obstruction, so
+/// `cargo run -p axeyum-cas --release --example geometry_obstruction euler-line`
+/// runs the reduction under a ladder of S-pair ceilings and reports what the
+/// computation was doing at each rung. Measured 2026-08-15, `grevlex`, full
+/// condition set:
+///
+/// | S-pairs processed | still queued | basis | widest polynomial |
+/// |---|---|---|---|
+/// | 2 | 10 | 5 | 28 |
+/// | 9 | 66 | 12 | 41 |
+/// | 33 | 210 | 21 | 278 |
+/// | 65 | 528 | 33 | 477 |
+///
+/// The queue is **growing faster than it drains**: 65 pairs processed leaves 528
+/// outstanding, because nearly every second pair has a nonzero remainder and each
+/// new basis element queues one pair against every existing one. The backlog is
+/// quadratic in a basis that is still growing linearly.
+///
+/// It is specifically *not* a width problem, and the control that shows it is the
+/// rhombus, which **does** finish: at 65 pairs the rhombus is carrying a
+/// 733-monomial polynomial against `euler-line`'s 477, and by 253 pairs its queue
+/// has drained completely at basis 23. `euler-line` is not computing with bigger
+/// objects, it is computing with more of them, and the closure is not in sight.
+/// Nor is it memory: peak RSS is 117 MB against a 6 GB cap.
+///
+/// One rung further, under `lex`, states it without any comparison needed:
+/// doubling the pairs processed from 65 to 129 **tripled** the backlog
+/// (1 081 → 3 403), added 36 basis elements (47 → 83), and cost **ten times** the
+/// wall clock (65.0 s → 635.4 s).
+///
+/// That points at the missing lever precisely: this `Buchberger` loop applies
+/// **no criteria** — not the coprime-leading-term (product) criterion, not the
+/// chain criterion — so it processes every pair the queue ever receives, including
+/// the ones that are known in advance to reduce to zero. Widening coefficients
+/// would not help (the rhombus decline was `ReductionSteps`, never `Overflow`),
+/// and changing the order does not help either: `lex` and `grevlex` produce the
+/// same shape of curve, which is why `grevlex` moved the rhombus and does not
+/// dent this.
 #[must_use]
 pub fn frontier() -> Vec<GeometryProblem> {
-    vec![rhombus_diagonals_perpendicular(), euler_line()]
+    vec![euler_line()]
 }
 
 /// Varignon: the midpoints of the sides of an arbitrary quadrilateral form a
@@ -496,8 +531,14 @@ fn parallelogram_diagonals_bisect() -> GeometryProblem {
     }
 }
 
-/// The diagonals of a rhombus are perpendicular. Correctly stated; on the
-/// frontier because the reduction declines. See [`frontier`].
+/// The diagonals of a rhombus are perpendicular — the corpus's first genuinely
+/// **quadratic** hypothesis system, and the theorem that the monomial-order switch
+/// moved off the frontier.
+///
+/// It differs from `parallelogram_diagonals_bisect` by exactly one hypothesis, the
+/// quadratic `|AB| = |BC|`, and that one generator is the difference between a
+/// 72 ms reduction and a 21 s one. Under `lex` it was not a difference of degree
+/// but of outcome: 287.8 s and then the `ReductionSteps` ceiling.
 fn rhombus_diagonals_perpendicular() -> GeometryProblem {
     let corners = [Pt::free("a"), Pt::free("b"), Pt::free("c"), Pt::free("d")];
     let mut hypotheses = parallelogram_hypotheses(&corners);
@@ -642,9 +683,10 @@ fn euler_line() -> GeometryProblem {
 
 #[cfg(test)]
 mod tests {
-    use super::{corpus, frontier};
+    use super::{MvPoly, corpus, euler_line, frontier};
     use crate::geometry_certify::GeometryProblem;
-    use std::collections::BTreeSet;
+    use axeyum_ir::Rational;
+    use std::collections::{BTreeMap, BTreeSet};
 
     /// Every stated configuration must be arithmetically consistent with the
     /// polynomials, whether or not the theorem certifies. This is what keeps the
@@ -746,6 +788,190 @@ mod tests {
         for problem in frontier() {
             witnesses_are_consistent(&problem);
         }
+    }
+
+    /// `euler-line` is unproved. It should not also be *unevidenced*.
+    ///
+    /// The frontier's promise is "unproved rather than unchecked", and one generic
+    /// witness is a thin reading of "checked" for a theorem nothing else confirms.
+    /// So this constructs the circumcentre and the orthocentre **exactly**, by
+    /// Cramer's rule over the rationals, for a deterministic sweep of triangles,
+    /// and asserts on every one of them that the stated hypotheses vanish, the
+    /// stated non-degeneracy condition does not, and the stated conclusion holds.
+    ///
+    /// It is not a proof — it is finitely many configurations, and the certifier
+    /// exists precisely because that is not the same thing. What it rules out is
+    /// the specific way a frontier entry rots: a mis-transcribed predicate sitting
+    /// unnoticed in the corpus because no search ever got far enough to reject it.
+    ///
+    /// The construction is also the evidence for the diagnosis in [`frontier`]:
+    /// the two systems are **linear in `O` and in `H`** with coefficients in
+    /// `ℚ[ax..cy]`, and their determinant is (twice) the very collinearity
+    /// polynomial named as the non-degeneracy condition. That is why the theorem
+    /// is true off the degeneracy locus, and why `Buchberger`'s algorithm is being
+    /// asked to rediscover Cramer's rule by monomial reduction.
+    #[test]
+    fn the_unproved_euler_line_holds_at_exactly_constructed_circumcentres() {
+        let problem = euler_line();
+        // Deterministic, and chosen so the sweep contains obtuse, right and
+        // isosceles triangles as well as generic ones.
+        let triangles: [[(i128, i128); 3]; 8] = [
+            [(0, 0), (4, 0), (1, 3)],
+            [(0, 0), (1, 0), (0, 1)],
+            [(-2, -1), (5, 2), (1, 7)],
+            [(0, 0), (6, 0), (3, 1)],
+            [(3, -4), (-5, 2), (7, 9)],
+            [(0, 0), (2, 0), (1, 5)],
+            [(-1, -1), (4, -3), (2, 6)],
+            [(10, 1), (-3, 4), (2, -8)],
+        ];
+
+        for corners in triangles {
+            let assignment = euler_configuration(corners);
+            for hypothesis in &problem.hypotheses {
+                assert!(
+                    vanishes_at(&hypothesis.poly, &assignment),
+                    "euler-line: the constructed centres violate `{}` at {corners:?}",
+                    hypothesis.id
+                );
+            }
+            for condition in &problem.nondegeneracy {
+                assert!(
+                    !vanishes_at(&condition.poly, &assignment),
+                    "euler-line: {corners:?} is degenerate for `{}`, so it proves nothing",
+                    condition.id
+                );
+            }
+            for conclusion in &problem.conclusions {
+                assert!(
+                    vanishes_at(&conclusion.poly, &assignment),
+                    "euler-line: `{}` FAILS at {corners:?} -- the theorem as stated is wrong, \
+                     not merely out of reach",
+                    conclusion.id
+                );
+            }
+
+            // The control on the control. A conclusion that vanishes at every
+            // point one hands it is not evidence of anything until it is shown to
+            // be capable of *not* vanishing: move the circumcentre off its
+            // constructed position and O, G, H must stop being collinear. Without
+            // this the sweep above would pass just as happily against the zero
+            // polynomial.
+            //
+            // Both axes are tried and only one has to break, because a *unit step
+            // along the Euler line itself* keeps the three points collinear —
+            // which is not a weakness of the control, it is the theorem. The first
+            // triangle here has a horizontal Euler line (`O = (2,1)`,
+            // `G = (5/3,1)`, `H = (1,1)`), so moving `O` in x alone leaves the
+            // conclusion satisfied. A line cannot be both horizontal and vertical,
+            // so requiring one of the two is always a real demand.
+            let broken = ["ox", "oy"].into_iter().any(|coordinate| {
+                let mut perturbed = assignment.clone();
+                let moved = assignment[coordinate]
+                    .checked_add(Rational::integer(1))
+                    .expect("no overflow");
+                perturbed.insert(coordinate.to_string(), moved);
+                problem
+                    .conclusions
+                    .iter()
+                    .any(|conclusion| !vanishes_at(&conclusion.poly, &perturbed))
+            });
+            assert!(
+                broken,
+                "euler-line: moving the circumcentre off its constructed position along either \
+                 axis left the conclusion satisfied at {corners:?}, so the sweep above proves \
+                 nothing"
+            );
+        }
+    }
+
+    fn vanishes_at(poly: &MvPoly, assignment: &BTreeMap<String, Rational>) -> bool {
+        poly.evaluate(assignment).expect("assigned").is_zero()
+    }
+
+    /// The `euler-line` coordinates for one integer triangle, with the
+    /// circumcentre and orthocentre solved **exactly** by Cramer's rule.
+    ///
+    /// Both systems are linear in the unknown centre with coefficients in
+    /// `ℚ[ax..cy]`, and in both the determinant is (twice) the collinearity
+    /// polynomial the corpus names as the non-degeneracy condition — which is why
+    /// the theorem is true off the degeneracy locus and undetermined on it.
+    fn euler_configuration(corners: [(i128, i128); 3]) -> BTreeMap<String, Rational> {
+        let [a, b, c] = corners.map(|(x, y)| (Rational::integer(x), Rational::integer(y)));
+        let sub = |u: (Rational, Rational), v: (Rational, Rational)| {
+            (
+                u.0.checked_sub(v.0).expect("no overflow"),
+                u.1.checked_sub(v.1).expect("no overflow"),
+            )
+        };
+        let dot = |u: (Rational, Rational), v: (Rational, Rational)| {
+            u.0.checked_mul(v.0)
+                .and_then(|left| {
+                    u.1.checked_mul(v.1)
+                        .and_then(|right| left.checked_add(right))
+                })
+                .expect("no overflow")
+        };
+        let twice = |u: (Rational, Rational)| {
+            let two = Rational::integer(2);
+            (
+                u.0.checked_mul(two).expect("no overflow"),
+                u.1.checked_mul(two).expect("no overflow"),
+            )
+        };
+        // Solve `[[row0], [row1]] · point = (first_rhs, second_rhs)` exactly.
+        let solve = |row0: (Rational, Rational),
+                     row1: (Rational, Rational),
+                     first_rhs: Rational,
+                     second_rhs: Rational| {
+            let cross = |left: (Rational, Rational), right: (Rational, Rational)| {
+                left.0
+                    .checked_mul(right.1)
+                    .and_then(|ad| {
+                        left.1
+                            .checked_mul(right.0)
+                            .and_then(|bc| ad.checked_sub(bc))
+                    })
+                    .expect("no overflow")
+            };
+            let det = cross(row0, row1);
+            assert!(!det.is_zero(), "the triangle must be non-degenerate");
+            let abscissa = cross((first_rhs, row0.1), (second_rhs, row1.1))
+                .checked_div(det)
+                .expect("no overflow");
+            let ordinate = cross((row0.0, first_rhs), (row1.0, second_rhs))
+                .checked_div(det)
+                .expect("no overflow");
+            (abscissa, ordinate)
+        };
+
+        // Circumcentre: 2·O·(B−A) = |B|²−|A|²,  2·O·(C−B) = |C|²−|B|².
+        let circumcentre = solve(
+            twice(sub(b, a)),
+            twice(sub(c, b)),
+            dot(b, b).checked_sub(dot(a, a)).expect("no overflow"),
+            dot(c, c).checked_sub(dot(b, b)).expect("no overflow"),
+        );
+        // Orthocentre: H·(C−B) = A·(C−B),  H·(A−C) = B·(A−C).
+        let cb = sub(c, b);
+        let ac = sub(a, c);
+        let orthocentre = solve(cb, ac, dot(a, cb), dot(b, ac));
+
+        [
+            ("ax", a.0),
+            ("ay", a.1),
+            ("bx", b.0),
+            ("by", b.1),
+            ("cx", c.0),
+            ("cy", c.1),
+            ("ox", circumcentre.0),
+            ("oy", circumcentre.1),
+            ("hx", orthocentre.0),
+            ("hy", orthocentre.1),
+        ]
+        .into_iter()
+        .map(|(name, value)| (name.to_string(), value))
+        .collect()
     }
 
     #[test]

@@ -154,6 +154,50 @@ pub enum CofactorOutcome {
     Declined(DeclineReason),
 }
 
+/// What one cofactor-tracked computation actually did, whatever it concluded.
+///
+/// A [`DeclineReason`] names the ceiling that tripped; it does **not** say how
+/// close the other ceilings were, and on a theorem that never returns it is the
+/// only thing a caller can see. That was enough to leave `euler-line` described
+/// as "no verdict in 1200 s" across two lanes — a wall-clock observation that
+/// names no obstruction. These counters name one: they say whether the cost is a
+/// basis that keeps growing, S-pairs that keep being queued, or individual
+/// polynomials that keep getting wider.
+///
+/// The counters are advisory. Nothing in the certificate depends on them, and
+/// they are recorded on the success path too, so a run that certifies can be
+/// compared against one that does not.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ReductionStats {
+    /// S-pairs taken off the queue by `Buchberger`'s loop.
+    pub pairs_processed: u64,
+    /// S-pairs ever *put on* the queue. The gap against `pairs_processed` is the
+    /// backlog outstanding when the computation stopped.
+    pub pairs_queued: u64,
+    /// S-pairs whose remainder was nonzero, so a basis element was appended. The
+    /// basis grows by exactly this many elements beyond the generators.
+    ///
+    /// `pairs_processed − basis_extensions` is the *wasted* work: pairs reduced
+    /// all the way to zero, teaching the basis nothing.
+    pub basis_extensions: u64,
+    /// Processed pairs whose two leading monomials were **coprime**.
+    ///
+    /// `Buchberger`'s first criterion (the product criterion, Cox–Little–O'Shea
+    /// §2.9 Prop. 4) says such a pair reduces to zero for free, so an
+    /// implementation that applied it would skip exactly these. This loop applies
+    /// no criteria at all; the counter measures what that costs before anyone
+    /// spends a session implementing one, since the answer "5%" and the answer
+    /// "60%" call for different work.
+    pub pairs_coprime_lead: u64,
+    /// The largest the intermediate basis got.
+    pub max_basis_len: usize,
+    /// The most monomials seen in any single intermediate polynomial or cofactor,
+    /// against [`Limits::poly_terms`].
+    pub max_poly_terms: usize,
+    /// Term-cancelling steps spent, against [`Limits::reduction_steps`].
+    pub reduction_steps_spent: u64,
+}
+
 /// A polynomial carried together with its representation in the generators:
 /// the invariant is `poly == Σ rep[i] · generators[i]`.
 #[derive(Debug, Clone)]
@@ -170,6 +214,8 @@ struct Budget {
     /// The first decline reason recorded; later failures do not overwrite it,
     /// because the first one is the cause and the rest are consequences.
     reason: Option<DeclineReason>,
+    /// Advisory counters; see [`ReductionStats`].
+    stats: ReductionStats,
 }
 
 impl Budget {
@@ -178,6 +224,7 @@ impl Budget {
             reduction_steps: limits.reduction_steps,
             limits,
             reason: None,
+            stats: ReductionStats::default(),
         }
     }
 
@@ -216,6 +263,7 @@ impl Budget {
         match self.reduction_steps.checked_sub(1) {
             Some(left) => {
                 self.reduction_steps = left;
+                self.stats.reduction_steps_spent += 1;
                 Some(())
             }
             None => self.decline(DeclineReason::ReductionSteps),
@@ -223,7 +271,9 @@ impl Budget {
     }
 
     fn capped(&mut self, poly: &MvPoly) -> Option<()> {
-        if poly.term_count() <= self.limits.poly_terms {
+        let terms = poly.term_count();
+        self.stats.max_poly_terms = self.stats.max_poly_terms.max(terms);
+        if terms <= self.limits.poly_terms {
             Some(())
         } else {
             self.decline(DeclineReason::PolyTerms)
@@ -291,14 +341,36 @@ pub fn reduce_many_with_cofactors(
     targets: &[MvPoly],
     limits: Limits,
 ) -> Vec<CofactorOutcome> {
+    reduce_many_with_cofactors_traced(generators, targets, limits).0
+}
+
+/// [`reduce_many_with_cofactors`], plus the [`ReductionStats`] the run produced.
+///
+/// Identical computation and identical outcomes — the counters are recorded
+/// either way and this entry point only hands them back. It exists because a
+/// theorem that declines, or that has not returned yet, otherwise offers a caller
+/// nothing to reason about beyond a wall clock.
+#[must_use]
+pub fn reduce_many_with_cofactors_traced(
+    generators: &[MvPoly],
+    targets: &[MvPoly],
+    limits: Limits,
+) -> (Vec<CofactorOutcome>, ReductionStats) {
     if generators.len() > limits.basis_size {
-        return vec![CofactorOutcome::Declined(DeclineReason::BasisSize); targets.len()];
+        return (
+            vec![CofactorOutcome::Declined(DeclineReason::BasisSize); targets.len()],
+            ReductionStats::default(),
+        );
     }
     let mut budget = Budget::new(limits);
     let Some(basis) = tracked_groebner_basis(generators, &mut budget) else {
-        return vec![CofactorOutcome::Declined(budget.reason()); targets.len()];
+        let stats = budget.stats;
+        return (
+            vec![CofactorOutcome::Declined(budget.reason()); targets.len()],
+            stats,
+        );
     };
-    targets
+    let outcomes: Vec<CofactorOutcome> = targets
         .iter()
         .map(|target| {
             // Each target reports its own cause: the step budget is shared, so a
@@ -320,7 +392,8 @@ pub fn reduce_many_with_cofactors(
                 None => CofactorOutcome::Declined(budget.reason()),
             }
         })
-        .collect()
+        .collect();
+    (outcomes, budget.stats)
 }
 
 /// `Σ_j quotients[j] · basis[j].rep[i]` for each generator `i` — the cofactor of
@@ -401,6 +474,8 @@ fn tracked_groebner_basis(generators: &[MvPoly], budget: &mut Budget) -> Option<
             pairs.push((lower, higher));
         }
     }
+    budget.stats.pairs_queued += pairs.len() as u64;
+    budget.stats.max_basis_len = budget.stats.max_basis_len.max(basis.len());
     // A FIFO queue over a `Vec` with an explicit cursor: deterministic order,
     // no allocation churn from the front.
     let mut cursor = 0usize;
@@ -409,8 +484,18 @@ fn tracked_groebner_basis(generators: &[MvPoly], budget: &mut Budget) -> Option<
         let (lower, higher) = pairs[cursor];
         cursor += 1;
         iterations += 1;
+        budget.stats.pairs_processed = iterations;
         if iterations > budget.limits.pair_iterations {
             return budget.decline(DeclineReason::PairIterations);
+        }
+        // Advisory only: whether Buchberger's first criterion would have skipped
+        // this pair. Counted, not acted on — see `ReductionStats`.
+        if let (Some((left, _)), Some((right, _))) = (
+            leading_term_in(budget.limits.order, &basis[lower].poly),
+            leading_term_in(budget.limits.order, &basis[higher].poly),
+        ) && left.keys().all(|variable| !right.contains_key(variable))
+        {
+            budget.stats.pairs_coprime_lead += 1;
         }
         let s_poly = tracked_s_polynomial(&basis[lower], &basis[higher], budget)?;
         let (remainder, quotients) = reduce_tracked(&s_poly, &basis, budget)?;
@@ -424,7 +509,10 @@ fn tracked_groebner_basis(generators: &[MvPoly], budget: &mut Budget) -> Option<
         for existing in 0..new_index {
             pairs.push((existing, new_index));
         }
+        budget.stats.pairs_queued += new_index as u64;
+        budget.stats.basis_extensions += 1;
         basis.push(remainder);
+        budget.stats.max_basis_len = budget.stats.max_basis_len.max(basis.len());
         if basis.len() > budget.limits.basis_size {
             return budget.decline(DeclineReason::BasisSize);
         }
@@ -545,7 +633,8 @@ fn reduce_tracked(
 #[cfg(test)]
 mod tests {
     use super::{
-        CofactorOutcome, DeclineReason, Limits, reduce_with_cofactors, unit_ideal_cofactors,
+        CofactorOutcome, DeclineReason, Limits, reduce_many_with_cofactors,
+        reduce_many_with_cofactors_traced, reduce_with_cofactors, unit_ideal_cofactors,
     };
     use crate::groebner::MonomialOrder;
     use crate::mvpoly::MvPoly;
@@ -687,6 +776,94 @@ mod tests {
             unit_ideal_cofactors(&generators, starved),
             CofactorOutcome::Declined(DeclineReason::ReductionSteps),
             "a starved budget must decline as a ceiling, not as an overflow"
+        );
+    }
+
+    /// The tracing entry point must be the same computation, not a second one:
+    /// same outcomes, and counters that describe what the loop actually did.
+    ///
+    /// The invariants asserted here are what the `euler-line` diagnosis reads —
+    /// "the queue drained" versus "the queue is still growing" is only meaningful
+    /// if `pairs_queued == pairs_processed` really does characterise a completed
+    /// basis, and if `basis_extensions` really does count the pairs that taught
+    /// the basis something.
+    #[test]
+    fn tracing_reports_the_same_outcome_and_a_consistent_account_of_the_work() {
+        let x = MvPoly::var("x");
+        let y = MvPoly::var("y");
+        let generators = vec![
+            x.add(&y).unwrap().sub(&int(3)).unwrap(),
+            x.mul(&y).unwrap().sub(&int(5)).unwrap(),
+        ];
+        let target = x.mul(&x).unwrap().add(&y.mul(&y).unwrap()).unwrap();
+        let limits = Limits::fast();
+
+        let plain = reduce_many_with_cofactors(&generators, std::slice::from_ref(&target), limits);
+        let (traced, stats) =
+            reduce_many_with_cofactors_traced(&generators, std::slice::from_ref(&target), limits);
+        assert_eq!(plain, traced, "tracing must not change the outcome");
+
+        assert!(
+            matches!(traced[0], CofactorOutcome::Reduced { .. }),
+            "this system is small enough to complete, or the invariants below are vacuous"
+        );
+        assert_eq!(
+            stats.pairs_queued, stats.pairs_processed,
+            "a completed basis has drained its queue; that equality is what distinguishes the \
+             rhombus from `euler-line`"
+        );
+        assert!(
+            stats.basis_extensions <= stats.pairs_processed,
+            "a pair can extend the basis at most once"
+        );
+        assert_eq!(
+            stats.max_basis_len as u64,
+            generators.len() as u64 + stats.basis_extensions,
+            "the basis is the generators plus one element per extension"
+        );
+        assert!(
+            stats.pairs_coprime_lead <= stats.pairs_processed,
+            "only processed pairs are inspected for coprime leading terms"
+        );
+        assert!(
+            stats.reduction_steps_spent > 0 && stats.max_poly_terms > 0,
+            "the counters must actually count; a silently-zero stat block would make every \
+             diagnosis read as 'no work happened'"
+        );
+    }
+
+    /// A run that stops on a ceiling still reports the state it reached — which is
+    /// the whole point, since the theorems worth diagnosing are the ones that do
+    /// not finish.
+    #[test]
+    fn a_run_that_declines_still_reports_what_it_did() {
+        let x = MvPoly::var("x");
+        let y = MvPoly::var("y");
+        let generators = vec![
+            x.add(&y).unwrap().sub(&int(3)).unwrap(),
+            x.mul(&y).unwrap().sub(&int(5)).unwrap(),
+            x.mul(&x)
+                .unwrap()
+                .add(&y.mul(&y).unwrap())
+                .unwrap()
+                .sub(&int(1))
+                .unwrap(),
+        ];
+        // Three generators queue three pairs up front, so a one-pair ceiling
+        // leaves a backlog that is not an artefact of the ceiling being zero.
+        let starved = Limits {
+            pair_iterations: 1,
+            ..Limits::fast()
+        };
+        let (outcomes, stats) =
+            reduce_many_with_cofactors_traced(&generators, &[x.mul(&x).unwrap()], starved);
+        assert_eq!(
+            outcomes[0],
+            CofactorOutcome::Declined(DeclineReason::PairIterations)
+        );
+        assert!(
+            stats.pairs_queued > stats.pairs_processed,
+            "a run stopped by the pair ceiling must show an outstanding backlog"
         );
     }
 

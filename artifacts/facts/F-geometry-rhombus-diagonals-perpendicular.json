@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-rhombus-diagonals-perpendicular",
+  "title": "the diagonals of a non-flat rhombus are perpendicular",
+  "statement": "Let A, B, C, D be points of the Euclidean plane. If AB is parallel to DC, BC is parallel to AD, |AB| = |BC|, and A, B, D are NOT collinear, then AC is perpendicular to BD. The non-degeneracy condition is essential and its failure is exhibited, not asserted: A = (0,0), B = (1,0), C = (2,0), D = (5,0) satisfies both parallelism hypotheses -- every direction along a line is parallel to every other -- and satisfies |AB| = |BC| = 1, while AC.BD = (2,0).(4,0) = 8, so the diagonals are not perpendicular. Sitting on the degeneracy locus is not by itself enough to break the theorem: A = (0,0), B = (1,0), C = (2,0), D = (1,0) is also collinear and its diagonals ARE perpendicular, and the checker rejects a certificate offering that configuration as its counterexample.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (forall ((ax Real) (ay Real) (bx Real) (by Real) (cx Real) (cy Real) (dx Real) (dy Real))\n  (=> (and (= (- (* (- bx ax) (- cy dy)) (* (- by ay) (- cx dx))) 0.0)\n           (= (- (* (- cx bx) (- dy ay)) (* (- cy by) (- dx ax))) 0.0)\n           (= (- (+ (* (- bx ax) (- bx ax)) (* (- by ay) (- by ay)))\n                 (+ (* (- cx bx) (- cx bx)) (* (- cy by) (- cy by)))) 0.0)\n           (not (= (- (* (- bx ax) (- dy ay)) (* (- by ay) (- dx ax))) 0.0)))\n      (= (+ (* (- cx ax) (- dx bx)) (* (- cy ay) (- dy by))) 0.0))))",
+    "fragment": "NRA",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "cx",
+      "cy",
+      "dx",
+      "dy"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "geometry.cartesian-coordinatisation-of-the-euclidean-plane",
+    "geometry.characteristic-zero-specialisation",
+    "geometry.rabinowitsch-inverse-specialisation",
+    "geometry.nondegeneracy.abd-not-collinear"
+  ],
+  "evidence": [
+    {
+      "id": "geometry-certificate-rhombus-diagonals-perpendicular",
+      "kind": "witness-replay",
+      "supports": "the saturated cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "geometry_check::check_certificate shape pass (the saturation generator is REBUILT here as `collinear(A,B,D) * Zinv0 - 1` from the condition polynomial the file declares, and compared with the generator the cofactors are taken against -- so a certificate cannot advertise one side condition and use another)",
+        "geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials; 34 cofactor terms over 4 generators)",
+        "geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion)",
+        "geometry_check::check_certificate usage pass (the saturation generator must carry a NONZERO cofactor, or the certificate would be advertising a weaker theorem than it proved)",
+        "geometry_check::check_certificate degenerate-witness pass (A = (0,0), B = (1,0), C = (2,0), D = (5,0) replayed: all three hypotheses vanish, the condition polynomial vanishes, and the conclusion does NOT)",
+        "geometry_check::check_certificate configuration pass (the unit square replayed: hypotheses vanish, the condition does not, the conclusion does)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_certificate_artifacts",
+      "artifact": "artifacts/geometry-certificates/rhombus-diagonals-perpendicular.json",
+      "notes": "The certificate uses the Rabinowitsch trick: a fresh variable Zinv0 and the generator `collinear(A,B,D) * Zinv0 - 1`. Specialising Zinv0 := 1/collinear(A,B,D) is legitimate exactly when A, B, D are not collinear, and that is the ONLY place the side condition enters. Three tamper controls in the same suite bear directly on this fact and every one of them now runs against EVERY saturated certificate rather than only the alphabetically first: DELETING the degenerate counterexample is rejected; REPLACING it with a generic configuration is rejected; and replacing it with A = (0,0), B = (1,0), C = (2,0), D = (1,0) -- which genuinely violates `abd-not-collinear` but does NOT falsify the conclusion -- is also rejected. That last one is the control that distinguishes a counterexample from a configuration that merely sits on the degeneracy locus.",
+      "measurement": "certified 2026-08-15 in 21-26 s under the degree-reverse-lexicographic monomial order: 253 S-pairs, a 23-element intermediate basis, a widest intermediate polynomial of 1678 monomials, 15788 reduction steps -- against ceilings of 2000, 200, 8000 and 50000 respectively, so 3-9x of headroom on every axis. Under the pure lexicographic order this same reduction DECLINED on the ReductionSteps ceiling after 288-302 s (measured independently by two lanes on two machines), which is why this fact did not exist before the default order changed. Reproduce the growth curve with `cargo run -p axeyum-cas --release --example geometry_obstruction -- rhombus-diagonals-perpendicular` and the order comparison with `geometry_order_audit`."
+    },
+    {
+      "id": "geometry-coordinatisation-control-rhombus",
+      "kind": "witness-replay",
+      "supports": "that the polynomials in the certificate mean the geometric predicates they are named after -- including the quadratic |AB| = |BC| hypothesis that distinguishes this theorem from `F:geometry-parallelogram-diagonals-bisect`, and the non-degeneracy condition, whose meaning is what makes or breaks this fact",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry::Point::distance equality -- computed as EXACT SURDS through simplify_radicals over CasExpr, a completely different route from the squared-distance polynomial -- agreed with the `equidistant` polynomial on the 244-configuration integer sweep",
+        "axeyum_cas::geometry::Line::is_perpendicular (orthogonal `ax + by + c = 0` normals rather than a dot product) agreed with the perpendicularity polynomial on the same sweep, with both agreeing and disagreeing branches asserted to be exercised",
+        "axeyum_cas::geometry::Line::is_parallel agreed with the parallelism polynomial on the same sweep",
+        "axeyum_cas::geometry::Point::collinear agreed with the collinearity polynomial used as the non-degeneracy condition, on the same sweep"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_encoding_agreement",
+      "artifact": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+      "notes": "The equidistance row is the one this fact adds over its parallelogram sibling. |AB| = |BC| is stated on SQUARED distances so it stays polynomial, and the control checks that against the exact irrational distances themselves rather than against another squaring -- the two are equal for non-negative reals, and that is the step a squared-distance encoding silently assumes."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-15",
+    "established_by": "lane geometry-frontier: axeyum_cas::geometry_certify (untrusted cofactor-tracked Buchberger search, minimal condition subset) + axeyum_cas::geometry_check (independent re-derivation)",
+    "source": "classical; coordinatised by the `geometry` lane, with the non-degeneracy condition DERIVED by the certifier rather than supplied, and reached by the `geometry-frontier` lane after the default monomial order changed",
+    "prior_art": [
+      {
+        "who": "Euclid",
+        "what": "the diagonals of a rhombus bisect its angles and cut one another at right angles",
+        "where": "Elements I.34 with the equilateral case; standard textbook corollary",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route, in the geometry family. The condition set is minimal ABSOLUTELY, not merely relative to the search budget: `certify` tries the empty subset first and it is DECIDED -- 0.7-0.9 s, nonzero remainder -- so the theorem is genuinely not unconditional, and no larger budget, different monomial order or better algorithm could report it as such. (Ideal membership does not depend on the monomial order; only whether a verdict is reached inside the ceilings does. That is what turns a decided subset into an absolute statement, and it is the reason the order was safe to change under this theorem as well as the six older ones.) (`geometry_order_audit` establishes the same for all six older facts, where it was previously only budget-scoped.) This theorem differs from `F:geometry-parallelogram-diagonals-bisect` by exactly one hypothesis, the quadratic |AB| = |BC|, and uses the same non-degeneracy condition; that one generator is the difference between a 72 ms reduction and a 21 s one, and under the previous default monomial order it was the difference between a proof and a decline. `geometry.nondegeneracy.abd-not-collinear` is listed in the footprint even though it also appears as a hypothesis of `formal.statement`, deliberately: on this route the footprint is the field a reader scans to see what a proof rests on, and a side condition invisible there is precisely how a mechanised geometry proof comes to be quoted as unconditional."
+}
