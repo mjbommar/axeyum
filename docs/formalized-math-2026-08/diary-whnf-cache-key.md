@@ -274,7 +274,21 @@ by one script.
 - `./scripts/check-lean-gate.sh` — 12 suites, 49 tests, 113 real-Lean checks
   (floor 105), Lean 4.30.0 discovered automatically.
 - `python3 scripts/validate-facts.py` — 0 errors.
-- `scripts/check-fact-evidence-replay.sh` — green.
+- `scripts/check-fact-evidence-replay.sh` — 85 settled facts, 159 checker runs,
+  **83 re-derived, 1 failed, 1 timed out**. Neither is mine, and both were run
+  down rather than waved past:
+  - the timeout is `F:sorting-network-optimal-size-n6` (`smt-clausal`), the
+    known-expensive cell;
+  - the failure is `F:ordered-ring-farkas-refutation`, whose evidence lives
+    entirely in `axeyum-solver` — a crate another lane is mid-edit in
+    (`src/lib.rs`, `src/reconstruct.rs`, `src/reconstruct/arithmetic.rs`
+    modified, `examples/ordered_ring_refutation.rs` untracked *and* named by one
+    of the checkers). I ran all four of its checkers directly afterwards and
+    every one exited 0. This gate shells out to `cargo` against the shared
+    worktree, which its own header warns makes a neighbouring lane's in-flight
+    work read as "your facts rotted"; that is what happened. All 31 kernel-lean
+    facts whose evidence is in `axeyum-lean-kernel` re-derived, as did the other
+    solver-side one (`F:schedule-critical-chain-infeasible`).
 - `nat_theorem_inventory` 119 theorems; `nat: axiom=0 opaque=0 quotient=0`;
   `integer: axiom=1` — unchanged.
 

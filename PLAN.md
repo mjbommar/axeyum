@@ -1505,6 +1505,16 @@ is small-eliminating so the probe shape *cannot be built* for it
 predicate in `inductive_tests::the_k_like_predicate_*`, where the controls do
 flip them.
 
+One caveat on the gates, recorded rather than smoothed over:
+`check-fact-evidence-replay.sh` reports 83/85 re-derived with one timeout (the
+known-expensive `F:sorting-network-optimal-size-n6`) and one failure,
+`F:ordered-ring-farkas-refutation` — whose evidence is entirely in
+`axeyum-solver`, a crate another lane is mid-edit in, including an *untracked*
+example one of its checkers names. All four of its checkers pass when run
+directly. That is the shared-worktree caveat the script's own header documents,
+not a rotted fact; every kernel-lean fact backed by `axeyum-lean-kernel`
+re-derived.
+
 Next: the corpus has stopped measuring at 40/40 — replace it with one that
 exercises what we know we lack (`to_cnstr_when_structure`; `cheap_proj`
 ordering in `reduce_projection`). Still open across three diaries now: the
