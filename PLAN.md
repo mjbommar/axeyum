@@ -323,7 +323,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-14 | `ec72fdf66` | `just check` vs `check.sh` divergence measured and pinned; the Lean axiom ledger now runs in both. |
 | 2026-08-14 | `fa4676e33` | Clippy and the workspace test sweep prove what they examined; content-addressed source freshness; 14 negative controls. |
 | 2026-08-14 | `27d91fa12` | Real-Lean gate: elan toolchain discovery, skips that cannot read as passes, and a counted `scripts/check-lean-gate.sh` in both aggregate gates. |
-| 2026-08-14 | `pending` | The compact Lean writer keeps regenerated-constant spines saturated; `quant_bv_source_instance_set` checks in real Lean and `lean_crosscheck` joins the gate (40 → 112 real-Lean checks). |
+| 2026-08-14 | `b4604bae7` | The compact Lean writer keeps regenerated-constant spines saturated; `quant_bv_source_instance_set` checks in real Lean and `lean_crosscheck` joins the gate (40 → 112 real-Lean checks). |
 | 2026-08-07 | `3576e6739` / `c92155454` / `d09e6debb` | Rejected relevance-activated bound ladders after 0/6 target decisions, exactly repartitioned all 52 A3 budget rows, refreshed the generated CI identity, and integrated the clean pushed evidence branch. |
 | 2026-08-07 | `3696e7dd5` | Confirmed repeated size-admission large cores on the selected QF_NIA pair, then rejected bounded four-group deletion after it shrank clauses but decided neither target; temporary solver code was removed. |
 | 2026-08-07 | `704318a5f` | Refreshed the complete-parity manifest's sole stale source identity after the pinned-`just` CI workflow change; outcomes, populations, gates, and parity credit are unchanged, and full parity-docs/authority/links pass. |

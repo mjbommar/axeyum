@@ -50,4 +50,4 @@ after each module was put through Lean 4.30.0 and accepted with a clean
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-14 | `pending` | The compact Lean writer keeps regenerated-constant spines saturated; `quant_bv_source_instance_set` checks in real Lean and `lean_crosscheck` joins the gate (40 → 112 real-Lean checks). |
+| 2026-08-14 | `b4604bae7` | The compact Lean writer keeps regenerated-constant spines saturated; `quant_bv_source_instance_set` checks in real Lean and `lean_crosscheck` joins the gate (40 → 112 real-Lean checks). |
