@@ -1001,6 +1001,28 @@ than only through a theorem hung the suite and found it.
 Full write-up:
 [`docs/mathematics-2026-08/diary-pappus-minimality.md`](docs/mathematics-2026-08/diary-pappus-minimality.md).
 
+**The shared index is not made safe by discipline, in either direction.** Two
+lanes hit the same race inside twelve minutes, once each way. `c391b36d4`
+(`lra-dispatch`) carries one line of `docs/reference/examples.md` that is this
+lane's, because `git commit -- <pathspec>` commits the *worktree* content of
+those paths and discards the hunk they had carefully staged with
+`git apply --cached`. `1725615688` (`lra-dispatch`) then carries five files that
+are this lane's — `cofactor_ansatz.rs`, `geometry_probe.rs`,
+`F-geometry-pappus-hexagon.json`, `diary-pappus-minimality.md` and one
+`examples.md` row — because the remedy for the first failure, a bare
+`git commit` after confirming `git diff --cached --numstat`, takes whatever is in
+the index at commit time, and this lane had staged into it between their check
+and their commit. Both were disclosed rather than rewritten; nothing is lost in
+either direction, and the content of both is exactly as written.
+
+The rule that follows is not a better incantation. `git commit -- <paths>` reads
+the worktree and defeats index-level hunk staging; bare `git commit` reads the
+index and is defeated by any concurrent `git add`. **There is no form of the
+command that is safe for two lanes sharing one index**, which is the same lesson
+CLAUDE.md draws for per-lane state files, arriving one level down: the index is
+per-checkout state that every lane writes. What actually works is a worktree per
+lane, or not sharing the file.
+
 **Simson, answered rather than restated.** The brief asked whether
 `geometry.characteristic-zero-specialisation` licenses the real-plane reading of
 `|BC|² ≠ 0`. It does not, and the reason is sharper than "the witnesses are
