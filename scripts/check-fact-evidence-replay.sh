@@ -24,7 +24,7 @@ cd "$(dirname "$0")/.."
 TIMEOUT="${1:-120}"
 
 python3 - "$TIMEOUT" <<'PY'
-import json, glob, subprocess, sys, time
+import json, glob, re, subprocess, sys, time
 from collections import Counter
 
 timeout = int(sys.argv[1])
@@ -49,6 +49,46 @@ def run_checker(cmd, timeout):
         return p.returncode, (tail[-1][:90] if tail else f"exit {p.returncode}"), False
     except subprocess.TimeoutExpired:
         return 124, f"TIMED OUT after {timeout}s (twice)", True
+
+
+def diagnose(cmd, timeout):
+    """Re-run a FAILED checker with stderr restored, and report what it said.
+
+    Checker commands legitimately end in `2>/dev/null`: cargo writes progress to
+    stderr, and a `| tail -1` verdict test would otherwise read the wrong line.
+    The cost is that when one fails, the reason is already discarded.
+
+    That is not hypothetical. A sorting-network checker exited 1 three times and
+    passed three times on the same unchanged fact; the cause was `/tmp` at 80%
+    under other lanes' load, and it was INDISTINGUISHABLE from a refuted claim
+    because the "No space left on device" went to /dev/null. An infrastructure
+    failure that reads as a mathematical one is the most expensive kind of false
+    alarm this gate can raise.
+
+    So on failure only -- never on the happy path, where the suppression is
+    doing its job -- strip the redirection and run it once more for the message.
+    """
+    restored = re.sub(r"\s*2>\s*/dev/null", "", cmd)
+    if restored == cmd:
+        return ""
+    try:
+        p = subprocess.run(restored, shell=True, capture_output=True, text=True,
+                           timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return "    (stderr re-run timed out)"
+    err = (p.stderr or "").strip().splitlines()
+    if not err:
+        return ""
+    hint = ""
+    joined = " ".join(err[-6:]).lower()
+    for needle, note in (("no space left", "DISK FULL -- infrastructure, not mathematics"),
+                         ("cannot allocate", "OUT OF MEMORY -- infrastructure"),
+                         ("resource temporarily unavailable", "resource exhaustion -- infrastructure"),
+                         ("permission denied", "permissions -- infrastructure")):
+        if needle in joined:
+            hint = f"    >>> {note}"
+            break
+    return "\n".join(f"    {line[:110]}" for line in err[-4:]) + (f"\n{hint}" if hint else "")
 by_route_ok, by_route_total = Counter(), Counter()
 failures = []
 started = time.time()
@@ -82,7 +122,7 @@ for fact in facts:
             timeouts.append((fact["id"], cmd, note))
         elif rc != 0:
             ok = False
-            failures.append((fact["id"], cmd, note))
+            failures.append((fact["id"], cmd, note, diagnose(cmd, timeout)))
 
     by_route_total[route] += 1
     if ok:
@@ -108,8 +148,11 @@ if timeouts:
 
 if failures:
     print("\nfailures:", file=sys.stderr)
-    for fid, cmd, note in failures:
+    for fid, cmd, note, why in failures:
         print(f"  {fid}\n    $ {cmd}\n    -> {note}", file=sys.stderr)
+        if why:
+            print("    stderr (recovered by re-running without 2>/dev/null):", file=sys.stderr)
+            print(why, file=sys.stderr)
 
 # A gate that examined nothing is a failure, not a pass. This repository has
 # shipped several that exited 0 over zero work.
