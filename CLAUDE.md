@@ -119,6 +119,14 @@ cargo fmt --all --check
 # If you must run the bare form from a `git archive` snapshot, run
 # `scripts/check-source-freshness.sh --gate <name> --touch` first, or extract
 # with `tar --touch`. Controls: scripts/tests/test-gate-scope-controls.sh.
+#
+# DO NOT hand-roll the snapshot. `W=$(scripts/lane-snapshot.sh <ref>)` extracts to
+# /data0 with `--touch` and an owner stamp, and prints only the path.
+# `mktemp -d` + `git archive | tar -x` gets BOTH halves wrong: /tmp here is a 62 G
+# **tmpfs (RAM)** -- measured 2026-08-15 at 81% full, Shmem 45.1 G of 123 G, with
+# 9.3 GB of it abandoned axeyum snapshots, a standing contributor to OOM kills on
+# this box -- and without `--touch` you get the stale-mtime trap above. Prose did
+# not fix this: of ~60 `git archive` recipes in tracked files, ONE used --touch.
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 # PRE-MERGE GATE for any string-route change: the oracle-free :status corpus

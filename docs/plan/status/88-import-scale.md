@@ -10,6 +10,22 @@ literals: 52% of `Init`+`Std`, 79% of Mathlib)** (`WIP`, import-scale,
 corpus had stopped measuring. Full write-up:
 [`docs/formalized-math-2026-08/diary-import-scale.md`](../../formalized-math-2026-08/diary-import-scale.md).
 
+> **Amended 2026-08-15 (coordinator) — the 52%/79% has since been cashed out, and
+> it did not mean what the number looks like.** `import-strings` implemented
+> String literals and re-censused with the same seeds and bounds: clean rate went
+> 43.8% → **50.8%** (`Init`+`Std`) and 19.5% → **34.8%** (Mathlib). So strings
+> bought **7 and 15 points**, not 52 and 79. What they actually bought is reach —
+> records arriving at the kernel rose **18.6×** and **86×** (34,112 → 634,291;
+> 13,710 → 1,181,015), converting `UNSUPPORTED` into `DECLINED` further in. The
+> row above is correct as *"52% of streams were blocked at strings"*; it is not a
+> forecast of clean rate, and this lane's own diary already says so at
+> [`diary-import-scale.md:299`](../../formalized-math-2026-08/diary-import-scale.md).
+> One conclusion genuinely flips: "not one Mathlib-specific root blocker" was true
+> only because strings were hiding the Mathlib — `Pi.preorder`,
+> `Prop.partialOrder`, `Function.Injective.*` and `Int.instCommRing` now top
+> Mathlib's root table and are absent from `Init`+`Std`'s. Measurements:
+> [`diary-import-strings.md`](../../formalized-math-2026-08/diary-import-strings.md).
+
 **The corpus.** `lean4export` with no constant list dumps the whole environment:
 `Init`+`Std` is 10.5M records / 96,591 declarations / 25 s / 552 MB, and Mathlib
 v4.30.0 (`c5ea0035`, built on s5 from `lake exe cache get` in 77 s) is 680,925

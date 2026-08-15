@@ -46,7 +46,10 @@ if [ "${2:-}" != "--force" ]; then
     grep -m3 -E '^error' /tmp/fact-replay-build.log | sed 's/^/  /' >&2
     echo "" >&2
     echo "  Verify against committed state instead:" >&2
-    echo "    W=\$(mktemp -d); git archive HEAD | tar -x -C \"\$W\" && (cd \"\$W\" && ./scripts/check-fact-evidence-replay.sh)" >&2
+    echo "    W=\$(scripts/lane-snapshot.sh HEAD) && (cd \"\$W\" && ./scripts/check-fact-evidence-replay.sh)" >&2
+    echo "    # NOT \`mktemp -d\` + \`git archive | tar -x\`: that lands 640 MB in /tmp (a" >&2
+    echo "    # RAM-backed tmpfs here) and omits \`--touch\`, so cargo reports passes over" >&2
+    echo "    # code it never compiled." >&2
     echo "  or re-run with --force to sweep anyway and read the result with that in mind." >&2
     exit 2
   fi

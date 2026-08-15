@@ -14,7 +14,18 @@ missing cost a 2¼-hour solve, a 90-minute test sweep, and two watchers.
 | `/nas3/data/axeyum` | nfs4 | 15.2 T | **results and evidence**: certificates, corpora, campaign logs |
 | `/nas4/data` | nfs4 | 24.5 T | overflow for the same |
 
-Two traps in that table, both paid for:
+**`/tmp` is missing from that table on purpose, and that was not enough.** It is a
+**62 G tmpfs — i.e. RAM**, and `mktemp -d` is what everyone types. Measured
+2026-08-15: `/tmp` at 81% (50 G), `Shmem` 45.1 G of a 123 G box, `MemAvailable`
+57 G. Fifteen abandoned axeyum snapshots were sitting there holding **9.3 GB of
+RAM** between them, four of them 15–20 h old, none held open by any process. A
+tmpfs page is not reclaimable under pressure the way page cache is, so this is a
+standing contributor to the OOM kills that have taken out sessions on this box —
+and a `git archive` of this repo is ~640 MB **a time**. The largest single
+consumer was 33 G of agent-session directories, which is not ours to reclaim; the
+snapshots were.
+
+Three traps in that table, all paid for:
 
 - **The NFS mount point is `/nas3/data`, not `/nas3`.** `/nas3` is a local ext4
   directory that merely *hosts* the mountpoint, so `df /nas3` reports the root
@@ -54,7 +65,39 @@ makes `cargo test` print `1 passed` for a test that must fail.
 `scripts/check-source-freshness.sh` content-hashes the build inputs and touches
 what changed; the wrappers `check-clippy-complete.sh` and
 `check-workspace-tests.sh` use it and report how many targets they examined.
-Use `tar --touch` if extracting by hand.
+
+## Stop typing the recipe: `scripts/lane-snapshot.sh`
+
+Prose did not work. Of the ~60 `git archive` recipes in tracked files — in gate
+scripts, in `CLAUDE.md`, in the `justfile`, in a dozen lane diaries, several of
+them in comments *whose entire subject is this trap* — exactly **one** used
+`tar --touch`. Every other copy sends the next lane to a RAM-backed tmpfs with
+commit-time mtimes. So the recipe is now a script:
+
+```sh
+W=$(scripts/lane-snapshot.sh)          # HEAD
+W=$(scripts/lane-snapshot.sh <ref>)    # a bisect or A/B point
+(cd "$W" && CARGO_TARGET_DIR=$(scripts/lane-snapshot.sh --target) cargo test …)
+scripts/lane-snapshot.sh --list        # who owns what, and is it complete
+scripts/lane-snapshot.sh --gc [hours]  # reclaim YOUR OWN, default 24 h
+```
+
+It extracts to `/data0`, passes `--touch`, prints only the path so it composes,
+**refuses a tmpfs scratch root** with the measurement in the error, and stamps
+`.lane-owner`/`.lane-ref` so a snapshot is attributable. `--gc` reclaims only
+your own: another lane's tree sitting idle between two cargo invocations is
+indistinguishable from an abandoned one, and guessing wrong destroys a running
+build.
+
+Two of those properties come from the script's own controls catching it out.
+Ownership is stamped **before** extraction, not after, because a 5-minute test
+timeout killed a 127-second extraction and the orphan it left had no owner file —
+unreclaimable by `--gc`, which is precisely the anonymous-orphan problem the
+script exists to end. And reuse is gated on a `.lane-complete` sentinel written
+only after `tar` returns, because the first draft handed back *any* existing
+directory: a truncated checkout would have been built against and measured as if
+it were the commit. That one is worse than a leak — it is a wrong number with no
+symptom.
 
 ## Why this is a roadmap item rather than a wiki page
 
