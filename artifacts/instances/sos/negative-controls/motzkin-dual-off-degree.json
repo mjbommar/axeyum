@@ -1,0 +1,15 @@
+{
+  "format": "axeyum-sos-certificate",
+  "version": 1,
+  "kind": "psd-not-sos",
+  "id": "motzkin-psd-not-sos",
+  "description": "The Motzkin form x^4y^2 + x^2y^4 + z^6 - 3x^2y^2z^2 is nonnegative on the reals but is not a sum of squares of polynomials. Certified both ways: an SOS decomposition of |x|^2 times the form, and a PSD moment functional that is negative on it.",
+  "variables": ["x", "y", "z"],
+  "form": {"terms": [{"monomial": [["x", 2], ["y", 2], ["z", 2]], "coefficient": [-3, 1]}, {"monomial": [["x", 2], ["y", 4]], "coefficient": [1, 1]}, {"monomial": [["x", 4], ["y", 2]], "coefficient": [1, 1]}, {"monomial": [["z", 6]], "coefficient": [1, 1]}]},
+  "multiplier": {"terms": [{"monomial": [["x", 2]], "coefficient": [1, 1]}, {"monomial": [["y", 2]], "coefficient": [1, 1]}, {"monomial": [["z", 2]], "coefficient": [1, 1]}]},
+  "half_degree": 3,
+  "certificate": {
+    "multiplied": {"squares": [{"weight": [1, 1], "square": {"terms": [{"monomial": [["x", 2], ["y", 1], ["z", 1]], "coefficient": [1, 1]}, {"monomial": [["y", 1], ["z", 3]], "coefficient": [-1, 1]}]}}, {"weight": [1, 1], "square": {"terms": [{"monomial": [["x", 1], ["y", 2], ["z", 1]], "coefficient": [1, 1]}, {"monomial": [["x", 1], ["z", 3]], "coefficient": [-1, 1]}]}}, {"weight": [1, 1], "square": {"terms": [{"monomial": [["x", 2], ["y", 2]], "coefficient": [1, 1]}, {"monomial": [["z", 4]], "coefficient": [-1, 1]}]}}, {"weight": [1, 4], "square": {"terms": [{"monomial": [["x", 1], ["y", 3]], "coefficient": [1, 1]}, {"monomial": [["x", 3], ["y", 1]], "coefficient": [-1, 1]}]}}, {"weight": [3, 4], "square": {"terms": [{"monomial": [["x", 1], ["y", 1], ["z", 2]], "coefficient": [-2, 1]}, {"monomial": [["x", 1], ["y", 3]], "coefficient": [1, 1]}, {"monomial": [["x", 3], ["y", 1]], "coefficient": [1, 1]}]}}]},
+    "dual": [[[["x", 2], ["y", 2], ["z", 2]], [9, 1]], [[["x", 2], ["y", 4]], [9, 1]], [[["x", 2], ["z", 4]], [18, 1]], [[["x", 4], ["y", 2]], [9, 1]], [[["x", 4], ["z", 2]], [72, 1]], [[["x", 6]], [450, 1]], [[["y", 2], ["z", 4]], [18, 1]], [[["y", 4], ["z", 2]], [72, 1]], [[["y", 6]], [450, 1]], [[["z", 6]], [8, 1]], [[["x", 2], ["y", 2]], [-1000, 1]]]
+  }
+}

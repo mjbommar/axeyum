@@ -83,6 +83,7 @@ pub mod permutation;
 mod ratint;
 mod series;
 pub mod sets;
+pub mod sos;
 pub mod special;
 pub mod stats;
 pub mod sturm;

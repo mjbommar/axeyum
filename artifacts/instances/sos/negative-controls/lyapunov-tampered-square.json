@@ -1,0 +1,19 @@
+{
+  "format": "axeyum-sos-certificate",
+  "version": 1,
+  "kind": "lyapunov",
+  "id": "damped-rotation-lyapunov",
+  "description": "Global exponential stability of the cubic planar field x' = -x + 10y - x(x^2+y^2), y' = -y - y(x^2+y^2), with an exactly rational certified decay rate. The naive candidate |x|^2 fails at (1,1).",
+  "variables": ["x", "y"],
+  "field": [{"terms": [{"monomial": [["x", 1]], "coefficient": [-1, 1]}, {"monomial": [["x", 1], ["y", 2]], "coefficient": [-1, 1]}, {"monomial": [["x", 3]], "coefficient": [-1, 1]}, {"monomial": [["y", 1]], "coefficient": [10, 1]}]}, {"terms": [{"monomial": [["x", 2], ["y", 1]], "coefficient": [-1, 1]}, {"monomial": [["y", 1]], "coefficient": [-1, 1]}, {"monomial": [["y", 3]], "coefficient": [-1, 1]}]}],
+  "v": {"terms": [{"monomial": [["x", 1], ["y", 1]], "coefficient": [10, 1]}, {"monomial": [["x", 2]], "coefficient": [1, 1]}, {"monomial": [["y", 2]], "coefficient": [51, 1]}]},
+  "lower": [1, 2],
+  "upper": [52, 1],
+  "decay": [2, 1],
+  "naive_failure": [["x", [1, 1]], ["y", [1, 1]]],
+  "certificate": {
+    "lower_gap": {"squares": [{"weight": [1, 2], "square": {"terms": [{"monomial": [["x", 1]], "coefficient": [1, 1]}, {"monomial": [["y", 1]], "coefficient": [10, 1]}]}}, {"weight": [1, 2], "square": {"terms": [{"monomial": [["y", 1]], "coefficient": [1, 1]}]}}]},
+    "upper_gap": {"squares": [{"weight": [1, 51], "square": {"terms": [{"monomial": [["x", 1]], "coefficient": [51, 1]}, {"monomial": [["y", 1]], "coefficient": [-5, 1]}]}}, {"weight": [26, 51], "square": {"terms": [{"monomial": [["y", 1]], "coefficient": [1, 1]}]}}]},
+    "decrease": {"squares": [{"weight": [2, 1], "square": {"terms": [{"monomial": [["x", 1], ["y", 1]], "coefficient": [6, 1]}, {"monomial": [["x", 2]], "coefficient": [1, 1]}]}}, {"weight": [2, 1], "square": {"terms": [{"monomial": [["x", 1], ["y", 1]], "coefficient": [1, 1]}, {"monomial": [["y", 2]], "coefficient": [5, 1]}]}}, {"weight": [52, 1], "square": {"terms": [{"monomial": [["x", 1], ["y", 1]], "coefficient": [1, 1]}]}}, {"weight": [52, 1], "square": {"terms": [{"monomial": [["y", 2]], "coefficient": [1, 1]}]}}]}
+  }
+}
