@@ -141,6 +141,30 @@ fn row_sum_identities() -> Vec<Identity> {
     ]
 }
 
+/// Apéry's summand, the deepest this route reaches.
+fn apery_identity() -> Identity {
+    Identity {
+        id: "apery-numbers-recurrence",
+        title: "sum_k C(n,k)^2*C(n+k,k)^2: Apery's order-2 recurrence (no closed form exists)",
+        term: {
+            let mut factors = binomial_n_k(2);
+            factors.extend(binomial_factors(
+                &form(&[("n", 1), ("k", 1)], 0),
+                &form(&[("k", 1)], 0),
+                2,
+            ));
+            HyperTerm::new(factors)
+        },
+        shift_var: "n",
+        sum_var: "k",
+        // The window starts at k = 0: at n = 0 the summand is not evaluable
+        // at a negative k, and the checker refuses a window edge it cannot
+        // evaluate. G still vanishes there, which is what it needs to.
+        options: CheckOptions::over("n", &[0, 1, 2, 3, 4, 5], (0, 12)),
+        closed_form: None,
+    }
+}
+
 /// The Vandermonde family, which carries symbolic parameters throughout.
 fn vandermonde_identities() -> Vec<Identity> {
     let mut convolution = binomial_factors(&form(&[("m", 1)], 0), &form(&[("k", 1)], 0), 1);
@@ -211,6 +235,7 @@ fn main() -> ExitCode {
 
     let mut failures = 0usize;
     let mut all = row_sum_identities();
+    all.push(apery_identity());
     all.extend(vandermonde_identities());
     for identity in all {
         let TelescopingOutcome::Found(certificate) = zeilberger(

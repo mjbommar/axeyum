@@ -308,6 +308,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-14 | `telescoping` | Creative telescoping (Zeilberger) with an independent certificate checker; 5 classical binomial identities landed as `cas-certificate` facts; 10 tamper controls reject perturbed certificates | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `artifacts/facts/F-*binomial*.json`, `artifacts/facts/F-chu-vandermonde-convolution-recurrence.json` |
 | 2026-08-14 | `telescoping-scale` | Gosper–Petkovšek derived denominator and degree bound replace the `Q` ladder and the degree sweep (Chu–Vandermonde 18.5 s -> 46.7 ms); order-2 recurrences reachable (Franel); symbolic base cases close Chu–Vandermonde's closed form; certificates serialised to `artifacts/cas-certificates/` and re-checked from file; 3 new facts | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/src/telescoping_json.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `crates/axeyum-cas/tests/telescoping_certificate_artifacts.rs`, `artifacts/cas-certificates/*.json`, `artifacts/facts/F-chu-vandermonde-convolution.json`, `artifacts/facts/F-cross-binomial-row-sum.json`, `artifacts/facts/F-franel-numbers-recurrence.json` |
 | 2026-08-14 | `geometry` | new domain on the `cas-certificate` route: coordinatisation front end + Rabinowitsch saturation + independent checker; 6 classical theorems certified with committed degenerate counterexamples for every side condition used; measured that 4 of 6 need NO non-degeneracy condition; 2 frontier theorems recorded with timings; 6 new facts | `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_check.rs`, `crates/axeyum-cas/src/geometry_json.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/tests/geometry_encoding_agreement.rs`, `crates/axeyum-cas/examples/emit_geometry_certificates.rs`, `crates/axeyum-cas/examples/geometry_probe.rs`, `artifacts/geometry-certificates/*.json`, `artifacts/facts/F-geometry-*.json` |
+| 2026-08-14 | `mvpoly-bignum` | `MvPoly::gcd` moved into an unbounded-integer ring with per-step content removal (Apéry's shift quotient: 4187-bit peak against a 127-bit type, now 76); Apéry's recurrence found and verified, with an artifact and a fact; `CofactorOutcome::Declined` split into ceiling-versus-overflow and propagated to geometry and the solver; degree-reverse-lex added to `groebner.rs`, measured at 1.3–2.2× on the geometry corpus, and shown to reach `rhombus-diagonals-perpendicular` in 23.6 s where `lex` declines after 287.8 s | `crates/axeyum-cas/src/mvpoly/big.rs`, `crates/axeyum-cas/src/mvpoly.rs`, `crates/axeyum-cas/src/groebner.rs`, `crates/axeyum-cas/src/groebner_cert.rs`, `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/lib.rs`, `crates/axeyum-solver/src/cas_poly.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `crates/axeyum-cas/examples/telescoping_search_cost.rs`, `crates/axeyum-cas/examples/geometry_probe.rs`, `crates/axeyum-cas/examples/emit_telescoping_certificates.rs`, `artifacts/cas-certificates/apery-numbers-recurrence.json`, `artifacts/facts/F-apery-numbers-recurrence.json` |
 | 2026-08-14 | `229cceb1e` | ℤ constructed over the proved ℕ development: `Int` inductive + operations as checked definitions, 20 laws derived with empty axiom footprints — including ADR-0106's decidable integer equality. `integer: axiom=34 → 6`. |
 | 2026-08-14 | `22f3db735` | `F:quantifier-negation-duality` proved: quantifier-negation duality and alpha-equivalence in the canonicalizer, and in the certificate checker independently (import backlog 10 to 9). |
 | 2026-08-14 | `pending` | FP kernel-equivalence enters the fact ledger: seven facts (4 proved, 2 refuted with pinned witnesses, 1 open as a measured parity target), each settled one by two routes sharing no code, plus `kernel_equivalence`, an exhaustive LLVM-APFloat enumerator. Measured: neither z3 4.13.3 nor bitwuzla 0.9.1 can decide any fp8 E5M2 addition query. |
@@ -322,6 +323,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-14 | `ec72fdf66` | `just check` vs `check.sh` divergence measured and pinned; the Lean axiom ledger now runs in both. |
 | 2026-08-14 | `fa4676e33` | Clippy and the workspace test sweep prove what they examined; content-addressed source freshness; 14 negative controls. |
 | 2026-08-14 | `27d91fa12` | Real-Lean gate: elan toolchain discovery, skips that cannot read as passes, and a counted `scripts/check-lean-gate.sh` in both aggregate gates. |
+| 2026-08-14 | `pending` | The compact Lean writer keeps regenerated-constant spines saturated; `quant_bv_source_instance_set` checks in real Lean and `lean_crosscheck` joins the gate (40 → 112 real-Lean checks). |
 | 2026-08-07 | `3576e6739` / `c92155454` / `d09e6debb` | Rejected relevance-activated bound ladders after 0/6 target decisions, exactly repartitioned all 52 A3 budget rows, refreshed the generated CI identity, and integrated the clean pushed evidence branch. |
 | 2026-08-07 | `3696e7dd5` | Confirmed repeated size-admission large cores on the selected QF_NIA pair, then rejected bounded four-group deletion after it shrank clauses but decided neither target; temporary solver code was removed. |
 | 2026-08-07 | `704318a5f` | Refreshed the complete-parity manifest's sole stale source identity after the pinned-`just` CI workflow change; outcomes, populations, gates, and parity credit are unchanged, and full parity-docs/authority/links pass. |
@@ -577,6 +579,99 @@ syntax emitting a `GeometryProblem`.
 Full write-up:
 [`docs/mathematics-2026-08/diary-geometry.md`](docs/mathematics-2026-08/diary-geometry.md).
 
+**Continuation lane — took the shared wall that `telescoping-scale` and
+`geometry` both hit in `crates/axeyum-cas/src/mvpoly.rs` (2026-08-14).**
+
+**(1) The multivariate GCD no longer runs in `i128`.** The failure was
+*intermediate*, and the reproduction is the whole argument: on Apéry's degree-8
+shift quotient the inputs' largest coefficient is **120**, the answer's is **6**,
+and the pseudo-remainder sequence between them passes through **4187 bits** —
+against the 127 an `i128` numerator holds. So the binding bound was on the
+scratch space, not on the question or the answer. `MvPoly::gcd` now converts to
+an unbounded-integer ring (`src/mvpoly/big.rs`), runs the same recursive
+primitive PRS there with the integer content divided out at **every** step
+(4187 bits becomes 76), and converts only the answer back. `MvPoly` itself keeps
+its `Copy` `i128` rationals and its checked contract; 163 call sites across two
+crates are untouched, and the Gröbner path — which never calls `gcd` — is
+unaffected. Chosen over a subresultant PRS because that only makes the growth
+polynomial: a large enough input still overflows, and the decline would still be
+a fact about `i128` rather than about mathematics.
+
+**(2) Apéry verifies.** `∑_k C(n,k)²·C(n+k,k)²` was the acceptance test; the
+search returns **Apéry's own recurrence** — `(n+1)³`, `−(2n+3)(17n²+51n+39)`,
+`(n+2)³`, coefficient for coefficient — in 97 ms, and the independent checker
+accepts it. Committed as an artifact (`apery-numbers-recurrence.json`,
+re-checked from the file by a sweep that never calls the search) and as
+`F:apery-numbers-recurrence`; the `cas-certificate` route is now 15 facts,
+`validate-facts.py` 0 errors. The fact claims the **recurrence only** — not the
+irrationality of `ζ(3)`, which needs the second solution and a growth estimate.
+
+Cost, measured as a real A/B (a `git archive HEAD` snapshot built clean, both
+binaries pinned to cores 0–7, best of seven): **1.10–1.26× slower** on the seven
+identities that already worked, checker times unchanged, and one identity that
+declined now verifies. Reproducible via
+`cargo run -p axeyum-cas --release --example telescoping_search_cost`, whose
+second table reports peak GCD coefficient width per identity against the 127-bit
+line — including what the *old* sequence computed, so "could not have finished"
+is a measurement rather than an inference.
+
+**(3) A decline says which kind.** `CofactorOutcome::Declined(DeclineReason)`
+splits `ReductionSteps` / `PairIterations` / `BasisSize` / `PolyTerms` from
+`Overflow`, with `is_ceiling()` drawing the line that decides whether raising a
+budget could help. Every `?` on exact arithmetic in `groebner_cert.rs` goes
+through `Budget::arith`, so the attribution is exhaustive rather than a guess.
+It propagates to `ProofOutcome::Declined(GeometryDecline)` (which also separates
+`UnverifiedWitness` — a refusal, not a resource limit) and into the solver, where
+`cas_poly.rs` had been reporting the fixed string "hit a deterministic step
+ceiling" for overflows too. Two controls, one per side: a starved budget must
+decline as `ReductionSteps`, and reducing `x²` modulo `x − 10³⁰` must decline as
+`Overflow` with every budget barely touched.
+
+**(4) Degree-reverse-lex is available and measured, and it moves the geometry
+frontier.** `MonomialOrder::{Lex, DegRevLex}` on `groebner_cert::Limits`. On the
+corpus that already certifies, `grevlex` is **1.3–2.2× faster** with identical
+verdicts and identical cofactor term counts. On the frontier it is not a
+constant factor: `rhombus-diagonals-perpendicular` with `{abd-not-collinear}`
+**declined after 287.8 s under `lex` and is IN IDEAL in 23.6 s under `grevlex`**,
+34 cofactor terms, same ceilings. A frontier theorem is reachable.
+
+And the decline it used to give is now legible: **`ceiling: ReductionSteps`,
+not an overflow.** The geometry lane suspected `i128` and recorded that as
+unestablished; it is now established, and it is not `i128` — so widening
+`MvPoly`'s arithmetic would not have moved that theorem at all.
+
+Defaults stay `Lex` in `geometry_limits()` and `ideal_limits()`, deliberately.
+`certify` returns the certificate for the **smallest condition subset that
+succeeds**, so a faster order can change *which* non-degeneracy conditions a
+certificate uses — and those conditions are hypotheses in the facts'
+`formal.statement`. Regenerating six committed certificates under a new order is
+a change to what six facts claim, not a re-render, and it belongs to the lane
+that curates the geometry corpus. `euler-line` was re-attempted under both
+orders and **remains out of reach**: 1200 s each, no verdict on even the empty
+condition subset. `grevlex` is a large lever, not a general solvent.
+
+Gates: `cargo test -p axeyum-cas` 598 lib + 38 integration + 147 doc, all green;
+the 19 telescoping tamper controls and both geometry non-degeneracy
+counterexamples still **reject**; the seven pre-existing certificate artifacts
+are byte-identical after the GCD change; `check-fact-evidence-replay.sh`
+14/14 on `cas-certificate` (15/15 with Apéry); clippy clean on
+`axeyum-cas` and `axeyum-solver` with `-D warnings`.
+
+Full write-up:
+[`docs/mathematics-2026-08/diary-mvpoly-bignum.md`](docs/mathematics-2026-08/diary-mvpoly-bignum.md).
+
+**Next for whoever picks this up, in order of payoff:** (a) switch
+`geometry_limits()` to `grevlex`, regenerate the six certificates, **check
+whether any certificate now uses a smaller condition set** (that is a change to
+what the fact claims, and the point of doing it deliberately), and promote
+`rhombus-diagonals-perpendicular` off the frontier with a fact of its own —
+the measurement says it is reachable; (b) the Gröbner path's `MvPoly` arithmetic
+is *not* the bottleneck on the rhombus (measured: `ReductionSteps`), so widen it
+only when a run actually reports `Overflow` — which is now readable rather than
+inferred; (c) `leading_integer_zeros` still declines when the leading recurrence
+coefficient mentions more than the shift variable, which a Saalschütz-type
+identity will hit.
+
 **Immediate action (`PAUSED`, Lean lane).** ADR-0452 focused-green; full gate hit
 concurrent scoreboard drift. Await refactor. No Gauss credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
@@ -774,7 +869,7 @@ including three mistakes that cost real work:
 README application/vision revision are closed. Continue only for a concrete
 stale claim; keep application maturity and sub-document links aligned, but do
 not duplicate generated capability tables or modify solver behavior to match
-prose. The user/reference/internals/crate surfaces and all 60 Cargo examples are
+prose. The user/reference/internals/crate surfaces and all 59 Cargo examples are
 indexed, and source guards reject universal proof claims.
 
 **Gate scope and the wall-clock reference frame (`WIP`, gates, 2026-08-14).**
@@ -822,6 +917,45 @@ the gate by name until it is fixed; (2) fold `lean_crosscheck` into
 `scripts/check-lean-gate.sh` once it is (~60 s); (3) nothing yet enforces that a
 NEW suite shelling out to `lean` is added to the gate's manifest — the same
 class of hole one level up.
+
+**70 of 70 proof families now check in a real Lean; the gate's exclusion is gone
+(`WIP`, quant-bv-shares, 2026-08-14).** `lean_crosscheck`'s
+`quant_bv_source_instance_set` rejection was a **printer defect, not a
+reconstruction defect** — the in-tree kernel's term was well typed throughout,
+and the whole fix is in the Lean *writer*. The compact proof-sharing pass hoisted
+a *proper prefix* of a recursor spine into its own definition
+(`def axeyum_proof_share_149 := @Or.rec P`); Lean makes an inductive's parameters
+and a recursor's motive implicit, so that definition inherits them as **leading
+implicit binders** and the bare reference `axeyum_proof_share_149 Q` silently
+re-inserted metavariables for both, putting `Q` in the `inl` minor-premise slot.
+The unknown-identifier errors were the cascade — a `def` that fails to elaborate
+never enters the environment. `lean_pp::hoisting_exposes_implicit_binders` now
+refuses to hoist an under-applied application whose spine head is a constant Lean
+regenerates; module size is unaffected (+2.2% bytes, −32% lines) because
+saturated spines and their arguments stay shareable. Measured after: 70/70
+representative modules and **163/163** exhaustive modules accepted by Lean
+4.30.0, `#print axioms` clean. `scripts/check-lean-gate.sh` with no environment
+variables set: **12 suites, 49 tests, 112 real-Lean checks** (was 40), floor
+raised 35 → 105. No fact and no ADR are owed: nothing the kernel accepted was
+ill-typed.
+
+Next, in priority order: (1) nothing still enforces that a NEW suite shelling out
+to `lean` reaches the gate's manifest — the hole `lean-gate-honesty` named, one
+level up, and the only reason this defect needed a human to notice it; (2) the
+`maxRecDepth 100000` these modules carry inline is a silent dependency on Lean's
+elaborator bound — a Lean whose default changed would move the pass/fail line
+without any of our gates saying so; (3) the same implicit-binder rule should be
+audited for `write_decl_command_with_at`'s *local* `let` shares, which are
+covered by the fix but have no dedicated fixture.
+
+Found and repaired on the way, both `a5975725f`'s debt and both confirmed against
+a `git archive HEAD` snapshot before being touched:
+`lean_pp::tests::renders_self_contained_module` still asserted `axiom False :
+Prop` (the only failing test in `axeyum-lean-kernel` on HEAD), and all 15
+`crates/axeyum-solver/tests/fixtures/lean-modules/*.lean` byte-stability fixtures
+were stale (7 failing `reconstruct::tests::*_is_byte_stable` on pristine HEAD).
+Re-blessed and re-checked through real Lean; the fixture diff contains zero
+`proof_share` lines, i.e. none of it came from this lane's change.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
@@ -1089,7 +1223,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 60 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 59 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

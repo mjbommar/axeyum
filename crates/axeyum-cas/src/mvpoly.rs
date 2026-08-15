@@ -32,6 +32,17 @@
 //! All arithmetic is overflow-safe: every fallible operation returns `None` on
 //! `i128` coefficient or `u32` exponent overflow rather than panicking. No
 //! `unsafe`, no `unwrap`/`expect` on fallible paths.
+//!
+//! The one algorithm whose *intermediates* outgrow `i128` on inputs whose
+//! coefficients and answer both fit comfortably is the GCD: a pseudo-remainder
+//! sequence swells by a factor of the leading coefficient at every degree step.
+//! [`MvPoly::gcd`] therefore runs in the unbounded-integer ring of the private
+//! `big` submodule and converts only the answer back, so a declined GCD is now a
+//! statement about the *result*, never about the scratch space. The bounded
+//! `Copy` coefficient type, and the checked contract above, are unchanged for
+//! every other operation.
+
+mod big;
 
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
@@ -39,6 +50,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use axeyum_ir::Rational;
 
 use crate::CasExpr;
+use big::BigPoly;
 
 /// A monomial: a product of variable powers such as `x²·y`.
 ///
@@ -142,6 +154,35 @@ impl Monomial {
     }
 }
 
+/// What one [`MvPoly::gcd_cost`] call observed about the coefficients it passed
+/// through. Widths are in bits of the largest coefficient *magnitude*.
+///
+/// The reference value is **127**: an `i128` numerator holds no more than that,
+/// so `peak_bits > 127` means the sequence could not have been run in this
+/// crate's bounded coefficient type, whatever the algorithm.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GcdCost {
+    /// The widest coefficient of either input.
+    pub input_bits: u64,
+    /// The widest coefficient reached anywhere in the remainder sequence.
+    pub peak_bits: u64,
+    /// The widest coefficient the sequence would reach **without** the per-step
+    /// content division — the growth the crate's previous, `i128`-bounded
+    /// primitive PRS actually ran into on the same inputs.
+    ///
+    /// A value above `127` is a proof that the old implementation could not have
+    /// finished this GCD: it is what that code computed, measured in a type wide
+    /// enough to hold it.
+    pub legacy_peak_bits: u64,
+    /// The widest coefficient of the answer.
+    pub result_bits: u64,
+    /// Pseudo-remainder steps taken across the whole recursion.
+    pub steps: u64,
+    /// Whether the answer converts back into `i128` rationals — i.e. whether
+    /// [`MvPoly::gcd`] returns `Some` for the same inputs.
+    pub fits_i128: bool,
+}
+
 /// A sparse multivariate polynomial over ℚ in canonical form.
 ///
 /// The terms are a map from [`Monomial`] to a nonzero [`Rational`] coefficient;
@@ -197,12 +238,6 @@ impl MvPoly {
             terms.insert(mono, coeff);
         }
         MvPoly { terms }
-    }
-
-    /// The polynomial `var^exp` (the constant `1` when `exp` is zero).
-    #[must_use]
-    fn monomial_power(var: &str, exp: u32) -> MvPoly {
-        MvPoly::single_term(Monomial::from_powers(&[(var, exp)]), Rational::integer(1))
     }
 
     // --- Accessors ----------------------------------------------------------
@@ -492,156 +527,65 @@ impl MvPoly {
     /// is a unit so the GCD of constants is `1`; univariate-over-ℚ inputs thus
     /// reduce to the Euclidean algorithm with the result made primitive.
     ///
-    /// `gcd(a, 0)` is `a` normalized, `gcd(0, 0)` is `0`. `None` on overflow.
-    pub fn gcd(&self, other: &MvPoly) -> Option<MvPoly> {
-        if self.is_zero() {
-            return other.normalized();
-        }
-        if other.is_zero() {
-            return self.normalized();
-        }
-        let mut vars = self.variables();
-        vars.extend(other.variables());
-        let Some(main_var) = vars.into_iter().next() else {
-            // Both are nonzero constants: their GCD is the unit 1.
-            return Some(MvPoly::constant(Rational::integer(1)));
-        };
-
-        let content_left = self.content_in(&main_var)?;
-        let content_right = other.content_in(&main_var)?;
-        let content_gcd = content_left.gcd(&content_right)?;
-
-        let prim_left = self.primitive_part_in(&main_var)?;
-        let prim_right = other.primitive_part_in(&main_var)?;
-        let prim_gcd = MvPoly::primitive_prs(&prim_left, &prim_right, &main_var)?;
-
-        content_gcd.mul(&prim_gcd)?.normalized()
-    }
-
-    /// The content of `self` with respect to `main_var`: the GCD of its
-    /// main-variable coefficients, a polynomial over the remaining variables.
-    /// `None` on overflow.
-    fn content_in(&self, main_var: &str) -> Option<MvPoly> {
-        if self.is_zero() {
-            return Some(MvPoly::zero());
-        }
-        let degree = self.degree_in(main_var);
-        let mut content = MvPoly::zero();
-        for exp in 0..=degree {
-            let coeff = self.coefficient_of(main_var, exp);
-            if coeff.is_zero() {
-                continue;
-            }
-            content = if content.is_zero() {
-                coeff
-            } else {
-                content.gcd(&coeff)?
-            };
-        }
-        content.normalized()
-    }
-
-    /// The primitive part of `self` with respect to `main_var`: the exact
-    /// quotient of `self` by its content. `None` on overflow.
-    fn primitive_part_in(&self, main_var: &str) -> Option<MvPoly> {
-        if self.is_zero() {
-            return Some(MvPoly::zero());
-        }
-        let content = self.content_in(main_var)?;
-        self.exact_div(&content)
-    }
-
-    /// The pseudo-remainder of `self` by `divisor`, both viewed as univariate in
-    /// `main_var`.
+    /// # Where the arithmetic happens
     ///
-    /// Returns an `R` with `leading_coeff(divisor)^k · self = Q · divisor + R`
-    /// for some `k` and `deg_{main_var}(R) < deg_{main_var}(divisor)`. The exact
-    /// power `k` is left implicit because the caller only uses the primitive part
-    /// of `R`, which is invariant under a coefficient-ring factor — this also
-    /// avoids the coefficient blow-up of forming `leading_coeff(divisor)^k`
-    /// explicitly. `None` on overflow.
-    fn pseudo_remainder(&self, divisor: &MvPoly, main_var: &str) -> Option<MvPoly> {
-        let divisor_degree = divisor.degree_in(main_var);
-        let divisor_lead = divisor.leading_coeff(main_var);
-        let mut remainder = self.clone();
-        while !remainder.is_zero() && remainder.degree_in(main_var) >= divisor_degree {
-            let remainder_degree = remainder.degree_in(main_var);
-            let remainder_lead = remainder.leading_coeff(main_var);
-            let shift = remainder_degree - divisor_degree;
-            // remainder ← divisor_lead·remainder − remainder_lead·main_var^shift·divisor.
-            // The two products share the leading term divisor_lead·remainder_lead·
-            // main_var^remainder_degree, which therefore cancels; the main-variable
-            // degree strictly drops, guaranteeing termination.
-            let scaled = remainder.mul(&divisor_lead)?;
-            let shift_mono = MvPoly::monomial_power(main_var, shift);
-            let subtrahend = remainder_lead.mul(&shift_mono)?.mul(divisor)?;
-            remainder = scaled.sub(&subtrahend)?;
-        }
-        Some(remainder)
+    /// The sequence itself runs over **unbounded integers** (the private `big`
+    /// submodule), not over this type's `i128` rationals. That is not an
+    /// optimization but a correctness-of-coverage fix: a pseudo-remainder step
+    /// multiplies the whole running remainder by a leading coefficient, so the
+    /// sequence passes through coefficients far larger than either the inputs or
+    /// the answer. Measured on the shift quotient of Apéry's summand, inputs
+    /// with largest coefficient `120` overflowed `i128` mid-sequence and the GCD
+    /// declined. Only the finished GCD is converted back, so `None` now means
+    /// *the answer* does not fit `i128` (or a `u32` exponent overflowed) — never
+    /// that the scratch space did not.
+    ///
+    /// `gcd(a, 0)` is `a` normalized, `gcd(0, 0)` is `0`.
+    pub fn gcd(&self, other: &MvPoly) -> Option<MvPoly> {
+        BigPoly::from_mvpoly(self)
+            .gcd(&BigPoly::from_mvpoly(other), &mut big::Cost::off())?
+            .to_mvpoly()
     }
 
-    /// The primitive-part GCD of two **primitive** polynomials `left` and
-    /// `right`, viewed as univariate in `main_var`, via the primitive
-    /// pseudo-remainder Euclidean sequence. `None` on overflow.
-    fn primitive_prs(left: &MvPoly, right: &MvPoly, main_var: &str) -> Option<MvPoly> {
-        let mut higher = left.clone();
-        let mut lower = right.clone();
-        if higher.degree_in(main_var) < lower.degree_in(main_var) {
-            std::mem::swap(&mut higher, &mut lower);
-        }
-        // A primitive polynomial of main-variable degree 0 is a unit, so the two
-        // inputs are coprime in `main_var`: their primitive-part GCD is 1.
-        if lower.degree_in(main_var) == 0 {
-            return Some(MvPoly::constant(Rational::integer(1)));
-        }
-        loop {
-            let remainder = higher.pseudo_remainder(&lower, main_var)?;
-            if remainder.is_zero() {
-                return lower.primitive_part_in(main_var);
-            }
-            if remainder.degree_in(main_var) == 0 {
-                return Some(MvPoly::constant(Rational::integer(1)));
-            }
-            higher = lower;
-            lower = remainder.primitive_part_in(main_var)?;
+    /// [`MvPoly::gcd`] with the width of the intermediate coefficients recorded.
+    ///
+    /// Same answer, same algorithm; the difference is that the returned
+    /// [`GcdCost`] says how wide the remainder sequence actually got. That number
+    /// is the difference between "this GCD is hard" and "this GCD was run in a
+    /// type too narrow to hold its own scratch space", and the second claim is
+    /// the one that was previously unfalsifiable — a declined GCD looked exactly
+    /// like an expensive one.
+    ///
+    /// This runs the sequence **twice** — once as it is, once with the per-step
+    /// content division switched off to recover [`GcdCost::legacy_peak_bits`] —
+    /// and the second run carries deliberately unreduced coefficients. It is a
+    /// diagnostic, not a hot path; callers who want the answer should use
+    /// [`MvPoly::gcd`].
+    #[must_use]
+    pub fn gcd_cost(&self, other: &MvPoly) -> GcdCost {
+        let left = BigPoly::from_mvpoly(self);
+        let right = BigPoly::from_mvpoly(other);
+        let mut cost = big::Cost::on();
+        let gcd = left.gcd(&right, &mut cost);
+        let mut unstripped = big::Cost::unstripped();
+        let _ = left.gcd(&right, &mut unstripped);
+        GcdCost {
+            input_bits: left.coefficient_bits().max(right.coefficient_bits()),
+            peak_bits: cost.peak_bits(),
+            legacy_peak_bits: unstripped.peak_bits(),
+            result_bits: gcd.as_ref().map_or(0, BigPoly::coefficient_bits),
+            steps: cost.steps(),
+            fits_i128: gcd.and_then(|poly| poly.to_mvpoly()).is_some(),
         }
     }
 
     /// This polynomial rescaled to its canonical **primitive** associate: integer
     /// coefficients with content `1` and a positive `lex`-leading coefficient.
-    /// The zero polynomial maps to itself. `None` on the (astronomically rare)
-    /// `i128` overflow while clearing denominators.
+    /// The zero polynomial maps to itself. `None` only when a coefficient of the
+    /// *normalized* form leaves the `i128` range, which requires the input to
+    /// already be that large.
     fn normalized(&self) -> Option<MvPoly> {
-        if self.is_zero() {
-            return Some(MvPoly::zero());
-        }
-        // Clear denominators: scale by the least common multiple of all of them.
-        let mut denom_lcm: i128 = 1;
-        for coeff in self.terms.values() {
-            denom_lcm = integer_lcm(denom_lcm, coeff.denominator())?;
-        }
-        // Integer numerators after scaling, and the GCD of their magnitudes.
-        let mut content: i128 = 0;
-        let mut scaled: BTreeMap<Monomial, i128> = BTreeMap::new();
-        for (mono, coeff) in &self.terms {
-            let factor = denom_lcm / coeff.denominator(); // exact: lcm is a multiple
-            let numer = coeff.numerator().checked_mul(factor)?;
-            content = integer_gcd(content, numer)?;
-            scaled.insert(mono.clone(), numer);
-        }
-        // Sign so the leading coefficient is positive.
-        let lead_mono = self.leading_monomial()?;
-        let sign: i128 = if scaled.get(&lead_mono).copied().unwrap_or(0) < 0 {
-            -1
-        } else {
-            1
-        };
-        let mut result = MvPoly::zero();
-        for (mono, numer) in scaled {
-            let reduced = (numer / content).checked_mul(sign)?;
-            result.terms.insert(mono, Rational::integer(reduced));
-        }
-        Some(result)
+        BigPoly::from_mvpoly(self).normalized().to_mvpoly()
     }
 
     // --- CasExpr interoperability ------------------------------------------
@@ -745,30 +689,6 @@ impl MvPoly {
         }
         Some(factors)
     }
-}
-
-/// The GCD of two `i128` values as a non-negative `i128`, or `None` in the
-/// degenerate case where a magnitude does not fit back in `i128` (only possible
-/// from `i128::MIN`). Never panics.
-fn integer_gcd(left: i128, right: i128) -> Option<i128> {
-    let mut current = left.unsigned_abs();
-    let mut next = right.unsigned_abs();
-    while next != 0 {
-        let remainder = current % next;
-        current = next;
-        next = remainder;
-    }
-    i128::try_from(current).ok()
-}
-
-/// The least common multiple of two non-negative `i128` values as a non-negative
-/// `i128`, or `None` on overflow. `lcm(x, 0) = 0`.
-fn integer_lcm(left: i128, right: i128) -> Option<i128> {
-    if left == 0 || right == 0 {
-        return Some(0);
-    }
-    let gcd = integer_gcd(left, right)?;
-    (left / gcd).checked_mul(right).map(i128::abs)
 }
 
 #[cfg(test)]

@@ -89,6 +89,70 @@ fn unit_map() -> BTreeMap<Exponents, Rational> {
     map
 }
 
+/// Which monomial order a `Buchberger` computation ranks leading terms by.
+///
+/// The order does not change *what* is in the ideal, only how expensive it is to
+/// find out. `lex` is the order to pick when the answer must **eliminate**
+/// variables (a triangular basis); `grevlex` is, empirically and by a large
+/// margin, the cheapest order in which to compute a basis at all. Ideal
+/// membership — the only question this crate's Gröbner consumers ask — needs no
+/// elimination, so nothing about the question requires `lex`.
+///
+/// Every order here is a well-order compatible with multiplication, which is the
+/// only property the division loop and `Buchberger`'s termination argument use
+/// (Cox–Little–O'Shea §2.2, §2.6): switching between them cannot make a
+/// computation fail to terminate or change its answer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MonomialOrder {
+    /// Pure lexicographic, alphabetically-first variable most significant. The
+    /// order [`MvPoly`]'s own division uses, and this
+    /// crate's historical default.
+    #[default]
+    Lex,
+    /// Graded reverse lexicographic: total degree first, ties broken by the
+    /// alphabetically-*last* variable in which the exponents differ, with the
+    /// **smaller** exponent there ranking higher.
+    DegRevLex,
+}
+
+/// Compare two monomials under `order`.
+pub(crate) fn order_cmp(order: MonomialOrder, left: &Exponents, right: &Exponents) -> Ordering {
+    match order {
+        MonomialOrder::Lex => lex_cmp(left, right),
+        MonomialOrder::DegRevLex => grevlex_cmp(left, right),
+    }
+}
+
+/// Compare two monomials under the graded reverse lexicographic order.
+///
+/// Total degree decides first. On a tie, scan the variables from the
+/// alphabetically-*last* backwards and take the first one where the exponents
+/// differ: the monomial with the **smaller** exponent there is the greater. The
+/// double reversal is what it says on the tin, and it is not equivalent to any
+/// lexicographic order once there are three or more variables.
+pub(crate) fn grevlex_cmp(left: &Exponents, right: &Exponents) -> Ordering {
+    let degree_left: u64 = left.values().map(|&exp| u64::from(exp)).sum();
+    let degree_right: u64 = right.values().map(|&exp| u64::from(exp)).sum();
+    match degree_left.cmp(&degree_right) {
+        Ordering::Equal => {}
+        unequal => return unequal,
+    }
+    let mut vars: BTreeSet<&str> = BTreeSet::new();
+    vars.extend(left.keys().map(String::as_str));
+    vars.extend(right.keys().map(String::as_str));
+    for var in vars.iter().rev() {
+        let mine = left.get(*var).copied().unwrap_or(0);
+        let theirs = right.get(*var).copied().unwrap_or(0);
+        match mine.cmp(&theirs) {
+            Ordering::Equal => {}
+            // Reversed deliberately: the smaller exponent in the last differing
+            // variable ranks higher.
+            unequal => return unequal.reverse(),
+        }
+    }
+    Ordering::Equal
+}
+
 /// Compare two monomials under the pure lexicographic order (alphabetically-first
 /// variable most significant), matching [`MvPoly`](crate::mvpoly::MvPoly)'s order.
 pub(crate) fn lex_cmp(left: &Exponents, right: &Exponents) -> Ordering {
@@ -253,10 +317,19 @@ fn mul_maps(
 /// The `lex`-leading `(monomial, coefficient)` of `poly`, or `None` if `poly` is
 /// the zero polynomial (or on overflow while recovering its terms).
 pub(crate) fn leading_term(poly: &MvPoly) -> Option<(Exponents, Rational)> {
+    leading_term_in(MonomialOrder::Lex, poly)
+}
+
+/// The leading `(monomial, coefficient)` of `poly` under `order`, or `None` if
+/// `poly` is the zero polynomial (or on overflow while recovering its terms).
+pub(crate) fn leading_term_in(
+    order: MonomialOrder,
+    poly: &MvPoly,
+) -> Option<(Exponents, Rational)> {
     let terms = expand(&poly.to_cas_expr())?;
     terms
         .into_iter()
-        .max_by(|left, right| lex_cmp(&left.0, &right.0))
+        .max_by(|left, right| order_cmp(order, &left.0, &right.0))
 }
 
 /// Build the single-term polynomial `coeff · monomial` as an
@@ -486,10 +559,13 @@ fn reduced_basis(basis: &[MvPoly]) -> Option<Vec<MvPoly>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{groebner_basis, ideal_contains, reduce, s_polynomial};
+    use super::{
+        Exponents, grevlex_cmp, groebner_basis, ideal_contains, lex_cmp, reduce, s_polynomial,
+    };
     use crate::mvpoly::{Monomial, MvPoly};
     use crate::{ZeroTest, equal};
     use axeyum_ir::Rational;
+    use std::cmp::Ordering;
 
     /// Integer-rational shorthand.
     fn ri(value: i128) -> Rational {
@@ -675,5 +751,76 @@ mod tests {
         // A basis element reduces to itself's normal form (zero difference).
         let zero = reduce(&basis[0], &basis).unwrap();
         assert_certified_equal(&zero, &MvPoly::zero());
+    }
+
+    /// `Exponents` from `(variable, exponent)` pairs.
+    fn mono(factors: &[(&str, u32)]) -> Exponents {
+        factors
+            .iter()
+            .map(|(name, exp)| ((*name).to_owned(), *exp))
+            .collect()
+    }
+
+    #[test]
+    fn grevlex_ranks_total_degree_first() {
+        // Cox-Little-O'Shea Example 5(i), variables x > y > z:
+        // x^4 y^7 z (degree 12) > x^4 y^2 z^3 (degree 9).
+        let bigger = mono(&[("x", 4), ("y", 7), ("z", 1)]);
+        let smaller = mono(&[("x", 4), ("y", 2), ("z", 3)]);
+        assert_eq!(grevlex_cmp(&bigger, &smaller), Ordering::Greater);
+        assert_eq!(grevlex_cmp(&smaller, &bigger), Ordering::Less);
+    }
+
+    #[test]
+    fn grevlex_breaks_ties_by_the_smaller_last_exponent() {
+        // Cox-Little-O'Shea Example 5(ii): x y^5 z^2 > x^4 y z^3, both degree 8.
+        // The last differing variable is z, and the SMALLER z exponent wins --
+        // which is also where grevlex parts company with lex, since lex prefers
+        // the larger x exponent and so orders this pair the other way round.
+        let left = mono(&[("x", 1), ("y", 5), ("z", 2)]);
+        let right = mono(&[("x", 4), ("y", 1), ("z", 3)]);
+        assert_eq!(grevlex_cmp(&left, &right), Ordering::Greater);
+        assert_eq!(lex_cmp(&left, &right), Ordering::Less);
+
+        // x^5 y z > x^4 y z^2, both degree 7.
+        let left = mono(&[("x", 5), ("y", 1), ("z", 1)]);
+        let right = mono(&[("x", 4), ("y", 1), ("z", 2)]);
+        assert_eq!(grevlex_cmp(&left, &right), Ordering::Greater);
+    }
+
+    #[test]
+    fn grevlex_is_a_total_order_with_one_as_the_minimum() {
+        // A monomial order must rank every monomial above the constant 1, which
+        // is what makes the division loop terminate.
+        let one = mono(&[]);
+        for factors in [
+            &[("x", 1)][..],
+            &[("z", 1)][..],
+            &[("x", 2), ("y", 3)][..],
+            &[("y", 1), ("z", 4)][..],
+        ] {
+            let m = mono(factors);
+            assert_eq!(grevlex_cmp(&m, &one), Ordering::Greater);
+            assert_eq!(grevlex_cmp(&one, &m), Ordering::Less);
+        }
+        assert_eq!(grevlex_cmp(&one, &one), Ordering::Equal);
+    }
+
+    #[test]
+    fn grevlex_is_compatible_with_multiplication() {
+        // a > b implies a*c > b*c -- the property Buchberger's termination and
+        // the division algorithm both rest on.
+        let a = mono(&[("x", 1), ("y", 5), ("z", 2)]);
+        let b = mono(&[("x", 4), ("y", 1), ("z", 3)]);
+        let c = mono(&[("x", 2), ("z", 7)]);
+        let scale = |m: &Exponents| -> Exponents {
+            let mut out = m.clone();
+            for (var, exp) in &c {
+                *out.entry(var.clone()).or_insert(0) += exp;
+            }
+            out
+        };
+        assert_eq!(grevlex_cmp(&a, &b), Ordering::Greater);
+        assert_eq!(grevlex_cmp(&scale(&a), &scale(&b)), Ordering::Greater);
     }
 }

@@ -95,10 +95,10 @@ pub use boolean::BoolExpr;
 pub use factor_int::{factor_expr, factor_univariate_over_q};
 pub use geometry::{Circle, Line, Point};
 pub use gosper::{geometric_power, gosper_sum};
-pub use groebner::{groebner_basis, ideal_contains, reduce};
+pub use groebner::{MonomialOrder, groebner_basis, ideal_contains, reduce};
 pub use groebner_cert::{
-    CofactorOutcome, Limits as CofactorLimits, reduce_many_with_cofactors, reduce_with_cofactors,
-    unit_ideal_cofactors,
+    CofactorOutcome, DeclineReason, Limits as CofactorLimits, reduce_many_with_cofactors,
+    reduce_with_cofactors, unit_ideal_cofactors,
 };
 pub use matrix::Matrix;
 pub use mvpoly::MvPoly;

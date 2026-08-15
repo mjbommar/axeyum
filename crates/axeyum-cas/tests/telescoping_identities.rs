@@ -340,6 +340,63 @@ fn franel_numbers_get_an_order_two_recurrence() {
     }
 }
 
+/// Apéry's summand: `∑_k C(n,k)²·C(n+k,k)²`, the sequence whose recurrence
+/// carries the irrationality proof for `ζ(3)`.
+///
+/// This identity declined until the multivariate GCD stopped being computed in
+/// `i128`. Nothing about the *search* was wrong: the derived degree bound is 2,
+/// which is exactly where the certificate lives. What failed was the
+/// pseudo-remainder sequence reducing the degree-8 shift quotient, which passes
+/// through a 4187-bit coefficient — against the 127 an `i128` numerator holds —
+/// on its way to a GCD whose own coefficients fit in three bits.
+///
+/// The recurrence that comes back is Apéry's, coefficient for coefficient.
+#[test]
+fn apery_numbers_get_aperys_own_recurrence() {
+    let mut factors = binomial_n_k(2);
+    factors.extend(binomial_factors(
+        &form(&[("n", 1), ("k", 1)], 0),
+        &form(&[("k", 1)], 0),
+        2,
+    ));
+    let term = HyperTerm::new(factors);
+    // The window starts at k = 0: at n = 0 the summand is not evaluable at a
+    // negative k (C(n+k,k) becomes C(-1,-1)), and the checker refuses a window
+    // edge it cannot evaluate. The certificate numerator carries a factor k^4,
+    // so G still vanishes at that edge, which is what the boundary layer needs.
+    let options = CheckOptions::over("n", &[0, 1, 2, 3, 4, 5], (0, 12));
+    let certificate = proved(&term, "n", "k", &options);
+    assert_eq!(certificate.order(), 2);
+
+    // (n+1)³·S(n) − (2n+3)(17n²+51n+39)·S(n+1) + (n+2)³·S(n+2) = 0.
+    let cube = |constant: i128| linear_poly(&[("n", 1)], constant).pow(3).unwrap();
+    let middle = linear_poly(&[("n", 2)], 3)
+        .mul(
+            &MvPoly::var("n")
+                .pow(2)
+                .unwrap()
+                .mul(&MvPoly::constant(Rational::integer(17)))
+                .unwrap()
+                .add(&linear_poly(&[("n", 51)], 39))
+                .unwrap(),
+        )
+        .unwrap()
+        .mul(&MvPoly::constant(Rational::integer(-1)))
+        .unwrap();
+    assert_recurrence(&certificate, &[cube(1), middle, cube(2)]);
+
+    // Independent sanity: the Apéry numbers themselves satisfy it.
+    let apery = [1i128, 5, 73, 1445, 33_001, 819_005, 21_460_825];
+    for index in 0..apery.len() - 2 {
+        let n = i128::try_from(index).unwrap();
+        assert_eq!(
+            (n + 1).pow(3) * apery[index] + (n + 2).pow(3) * apery[index + 2],
+            (2 * n + 3) * (17 * n * n + 51 * n + 39) * apery[index + 1],
+            "the certified recurrence must hold on the Apéry numbers"
+        );
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Tamper control: the symbolic base-case route must reject too.
 // ---------------------------------------------------------------------------

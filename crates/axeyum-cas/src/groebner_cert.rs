@@ -39,9 +39,19 @@
 //! (determinism is a public API promise). Exceeding a bound, or any `i128`/`u32`
 //! overflow in the exact rational arithmetic, yields [`CofactorOutcome::Declined`]
 //! — never a guessed answer.
+//!
+//! The decline carries a [`DeclineReason`], and the distinction it draws is not
+//! cosmetic. A *ceiling* says the caller asked for less work than the problem
+//! needs: raise the budget and try again. An *overflow* says the exact
+//! arithmetic left the `i128` range, which no budget changes. Reporting both as
+//! one value made a whole class of measurement impossible — a lane investigating
+//! why `euler-line` produced nothing could not tell whether it was looking at a
+//! cost problem or a width problem, and had to record "not established" in place
+//! of a result. One enum makes that measurement free.
 
 use crate::groebner::{
-    Exponents, leading_term, monomial_divides, monomial_lcm, monomial_quotient, single_term,
+    Exponents, MonomialOrder, leading_term_in, monomial_divides, monomial_lcm, monomial_quotient,
+    single_term,
 };
 use crate::mvpoly::MvPoly;
 use axeyum_ir::Rational;
@@ -62,6 +72,15 @@ pub struct Limits {
     /// Maximum monomials in any single intermediate polynomial (a cofactor
     /// included). Cofactors are the artifact that must stay small enough to check.
     pub poly_terms: usize,
+    /// The monomial order leading terms are selected by.
+    ///
+    /// A knob rather than a constant because it is the single largest lever on
+    /// the cost of a basis, and because which setting wins is a *measurement*:
+    /// `grevlex` is the standard recommendation for plain ideal membership, and
+    /// this field is what makes the comparison runnable on the corpus instead of
+    /// argued from the literature. It cannot change a verdict — only whether one
+    /// is reached inside the ceilings.
+    pub order: MonomialOrder,
 }
 
 impl Limits {
@@ -75,6 +94,7 @@ impl Limits {
             pair_iterations: 4_000,
             basis_size: 64,
             poly_terms: 512,
+            order: MonomialOrder::Lex,
         }
     }
 }
@@ -82,6 +102,38 @@ impl Limits {
 impl Default for Limits {
     fn default() -> Limits {
         Limits::fast()
+    }
+}
+
+/// Why a cofactor-tracked computation stopped without an answer.
+///
+/// Exactly one of these is a statement about the *budget* and one is a statement
+/// about the *arithmetic*: [`DeclineReason::is_ceiling`] separates them. A
+/// ceiling is worth retrying with a larger [`Limits`]; an overflow is not.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeclineReason {
+    /// The shared [`Limits::reduction_steps`] budget ran out.
+    ReductionSteps,
+    /// The [`Limits::pair_iterations`] budget ran out in `Buchberger`'s loop.
+    PairIterations,
+    /// The generator list, or the intermediate basis, exceeded
+    /// [`Limits::basis_size`].
+    BasisSize,
+    /// A single intermediate polynomial or cofactor exceeded
+    /// [`Limits::poly_terms`] monomials.
+    PolyTerms,
+    /// An exact coefficient left the `i128` range (or a `u32` exponent
+    /// overflowed). The only non-ceiling failure this module can produce: every
+    /// other `None` on these paths is guarded by a ceiling above.
+    Overflow,
+}
+
+impl DeclineReason {
+    /// Whether this decline is a tripped budget rather than an arithmetic
+    /// failure — i.e. whether a larger [`Limits`] could change the answer.
+    #[must_use]
+    pub fn is_ceiling(self) -> bool {
+        !matches!(self, DeclineReason::Overflow)
     }
 }
 
@@ -97,9 +149,9 @@ pub enum CofactorOutcome {
         /// Zero exactly when `target` lies in the ideal.
         remainder: MvPoly,
     },
-    /// A ceiling tripped or an exact coefficient left the `i128` range. Nothing
-    /// is claimed about ideal membership.
-    Declined,
+    /// The computation stopped without an answer, with the reason recorded.
+    /// Nothing is claimed about ideal membership either way.
+    Declined(DeclineReason),
 }
 
 /// A polynomial carried together with its representation in the generators:
@@ -110,20 +162,72 @@ struct Tracked {
     rep: Vec<MvPoly>,
 }
 
-/// A running step budget shared by every loop in one call.
+/// A running step budget shared by every loop in one call, together with the
+/// reason the first failure occurred.
 struct Budget {
     reduction_steps: u64,
     limits: Limits,
+    /// The first decline reason recorded; later failures do not overwrite it,
+    /// because the first one is the cause and the rest are consequences.
+    reason: Option<DeclineReason>,
 }
 
 impl Budget {
-    fn spend_reduction(&mut self) -> Option<()> {
-        self.reduction_steps = self.reduction_steps.checked_sub(1)?;
-        Some(())
+    fn new(limits: Limits) -> Budget {
+        Budget {
+            reduction_steps: limits.reduction_steps,
+            limits,
+            reason: None,
+        }
     }
 
-    fn capped(&self, poly: &MvPoly) -> Option<()> {
-        (poly.term_count() <= self.limits.poly_terms).then_some(())
+    /// Record `reason` and yield `None`, for a ceiling detected inline.
+    fn decline<T>(&mut self, reason: DeclineReason) -> Option<T> {
+        self.reason.get_or_insert(reason);
+        None
+    }
+
+    /// Pass a value through, attributing a `None` from the exact arithmetic to
+    /// [`DeclineReason::Overflow`].
+    ///
+    /// Every `?` on an `MvPoly` or [`Rational`] operation in this module goes
+    /// through here, which is what makes the ceiling/overflow split exhaustive
+    /// rather than a guess about which failure came first.
+    fn arith<T>(&mut self, value: Option<T>) -> Option<T> {
+        if value.is_none() {
+            self.reason.get_or_insert(DeclineReason::Overflow);
+        }
+        value
+    }
+
+    /// The recorded reason. Only called after a `None` has propagated, so a
+    /// reason has always been recorded; the fallback keeps the function total.
+    fn reason(&self) -> DeclineReason {
+        self.reason.unwrap_or(DeclineReason::Overflow)
+    }
+
+    /// Forget the recorded reason, so the next target in a shared-budget call
+    /// reports its own cause rather than its predecessor's.
+    fn reset_reason(&mut self) {
+        self.reason = None;
+    }
+
+    fn spend_reduction(&mut self) -> Option<()> {
+        match self.reduction_steps.checked_sub(1) {
+            Some(left) => {
+                self.reduction_steps = left;
+                Some(())
+            }
+            None => self.decline(DeclineReason::ReductionSteps),
+        }
+    }
+
+    fn capped(&mut self, poly: &MvPoly) -> Option<()> {
+        if poly.term_count() <= self.limits.poly_terms {
+            Some(())
+        } else {
+            self.decline(DeclineReason::PolyTerms)
+        }
     }
 }
 
@@ -146,12 +250,13 @@ pub fn reduce_with_cofactors(
     target: &MvPoly,
     limits: Limits,
 ) -> CofactorOutcome {
-    match reduce_with_cofactors_inner(generators, target, limits) {
+    let mut budget = Budget::new(limits);
+    match reduce_with_cofactors_inner(generators, target, &mut budget) {
         Some((cofactors, remainder)) => CofactorOutcome::Reduced {
             cofactors,
             remainder,
         },
-        None => CofactorOutcome::Declined,
+        None => CofactorOutcome::Declined(budget.reason()),
     }
 }
 
@@ -187,18 +292,19 @@ pub fn reduce_many_with_cofactors(
     limits: Limits,
 ) -> Vec<CofactorOutcome> {
     if generators.len() > limits.basis_size {
-        return vec![CofactorOutcome::Declined; targets.len()];
+        return vec![CofactorOutcome::Declined(DeclineReason::BasisSize); targets.len()];
     }
-    let mut budget = Budget {
-        reduction_steps: limits.reduction_steps,
-        limits,
-    };
+    let mut budget = Budget::new(limits);
     let Some(basis) = tracked_groebner_basis(generators, &mut budget) else {
-        return vec![CofactorOutcome::Declined; targets.len()];
+        return vec![CofactorOutcome::Declined(budget.reason()); targets.len()];
     };
     targets
         .iter()
         .map(|target| {
+            // Each target reports its own cause: the step budget is shared, so a
+            // later target may legitimately decline on a ceiling an earlier one
+            // consumed, and that is what it should say.
+            budget.reset_reason();
             let start = Tracked {
                 poly: target.clone(),
                 rep: zero_rep(generators.len()),
@@ -211,7 +317,7 @@ pub fn reduce_many_with_cofactors(
                     cofactors,
                     remainder,
                 },
-                None => CofactorOutcome::Declined,
+                None => CofactorOutcome::Declined(budget.reason()),
             }
         })
         .collect()
@@ -234,9 +340,9 @@ fn combine(
             if share.is_zero() {
                 continue;
             }
-            let product = quotient.mul(share)?;
+            let product = budget.arith(quotient.mul(share))?;
             budget.capped(&product)?;
-            *slot = slot.add(&product)?;
+            *slot = budget.arith(slot.add(&product))?;
             budget.capped(slot)?;
         }
     }
@@ -246,24 +352,20 @@ fn combine(
 fn reduce_with_cofactors_inner(
     generators: &[MvPoly],
     target: &MvPoly,
-    limits: Limits,
+    budget: &mut Budget,
 ) -> Option<(Vec<MvPoly>, MvPoly)> {
-    if generators.len() > limits.basis_size {
-        return None;
+    if generators.len() > budget.limits.basis_size {
+        return budget.decline(DeclineReason::BasisSize);
     }
-    let mut budget = Budget {
-        reduction_steps: limits.reduction_steps,
-        limits,
-    };
-    let basis = tracked_groebner_basis(generators, &mut budget)?;
+    let basis = tracked_groebner_basis(generators, budget)?;
     let start = Tracked {
         poly: target.clone(),
         rep: zero_rep(generators.len()),
     };
-    let (remainder, quotients) = reduce_tracked(&start, &basis, &mut budget)?;
+    let (remainder, quotients) = reduce_tracked(&start, &basis, budget)?;
     // `target = remainder + Σ quotients[j]·basis[j]` and `basis[j] = Σ rep[i]·gen[i]`,
     // so the cofactor of generator `i` is `Σ_j quotients[j]·basis[j].rep[i]`.
-    let cofactors = combine(&quotients, &basis, generators.len(), &mut budget)?;
+    let cofactors = combine(&quotients, &basis, generators.len(), budget)?;
     Some((cofactors, remainder.poly))
 }
 
@@ -308,7 +410,7 @@ fn tracked_groebner_basis(generators: &[MvPoly], budget: &mut Budget) -> Option<
         cursor += 1;
         iterations += 1;
         if iterations > budget.limits.pair_iterations {
-            return None;
+            return budget.decline(DeclineReason::PairIterations);
         }
         let s_poly = tracked_s_polynomial(&basis[lower], &basis[higher], budget)?;
         let (remainder, quotients) = reduce_tracked(&s_poly, &basis, budget)?;
@@ -324,7 +426,7 @@ fn tracked_groebner_basis(generators: &[MvPoly], budget: &mut Budget) -> Option<
         }
         basis.push(remainder);
         if basis.len() > budget.limits.basis_size {
-            return None;
+            return budget.decline(DeclineReason::BasisSize);
         }
     }
     Some(basis)
@@ -333,24 +435,31 @@ fn tracked_groebner_basis(generators: &[MvPoly], budget: &mut Budget) -> Option<
 /// The S-polynomial of two tracked elements, with its representation derived from
 /// theirs: `S = f·A − g·B` implies `S.rep = f·A.rep − g·B.rep`.
 fn tracked_s_polynomial(first: &Tracked, second: &Tracked, budget: &mut Budget) -> Option<Tracked> {
-    let (first_mono, first_coeff) = leading_term(&first.poly)?;
-    let (second_mono, second_coeff) = leading_term(&second.poly)?;
+    // Basis elements are never zero, so a `None` from `leading_term` here is
+    // unreachable; routing it through `arith` keeps the attribution total.
+    let order = budget.limits.order;
+    let (first_mono, first_coeff) = budget.arith(leading_term_in(order, &first.poly))?;
+    let (second_mono, second_coeff) = budget.arith(leading_term_in(order, &second.poly))?;
     let lcm = monomial_lcm(&first_mono, &second_mono);
-    let first_factor = single_term(
+    let first_inverse = budget.arith(Rational::integer(1).checked_div(first_coeff))?;
+    let first_factor = budget.arith(single_term(
         &monomial_quotient(&lcm, &first_mono),
-        Rational::integer(1).checked_div(first_coeff)?,
-    )?;
-    let second_factor = single_term(
+        first_inverse,
+    ))?;
+    let second_inverse = budget.arith(Rational::integer(1).checked_div(second_coeff))?;
+    let second_factor = budget.arith(single_term(
         &monomial_quotient(&lcm, &second_mono),
-        Rational::integer(1).checked_div(second_coeff)?,
-    )?;
-    let poly = first_factor
-        .mul(&first.poly)?
-        .sub(&second_factor.mul(&second.poly)?)?;
+        second_inverse,
+    ))?;
+    let first_scaled = budget.arith(first_factor.mul(&first.poly))?;
+    let second_scaled = budget.arith(second_factor.mul(&second.poly))?;
+    let poly = budget.arith(first_scaled.sub(&second_scaled))?;
     budget.capped(&poly)?;
     let mut rep = Vec::with_capacity(first.rep.len());
     for (left, right) in first.rep.iter().zip(second.rep.iter()) {
-        let combined = first_factor.mul(left)?.sub(&second_factor.mul(right)?)?;
+        let left_scaled = budget.arith(first_factor.mul(left))?;
+        let right_scaled = budget.arith(second_factor.mul(right))?;
+        let combined = budget.arith(left_scaled.sub(&right_scaled))?;
         budget.capped(&combined)?;
         rep.push(combined);
     }
@@ -369,37 +478,41 @@ fn reduce_tracked(
     basis: &[Tracked],
     budget: &mut Budget,
 ) -> Option<(Tracked, Vec<MvPoly>)> {
-    let leads: Vec<(Exponents, Rational)> = basis
-        .iter()
-        .map(|element| leading_term(&element.poly))
-        .collect::<Option<Vec<_>>>()?;
+    let order = budget.limits.order;
+    let leads: Vec<(Exponents, Rational)> = budget.arith(
+        basis
+            .iter()
+            .map(|element| leading_term_in(order, &element.poly))
+            .collect::<Option<Vec<_>>>(),
+    )?;
 
     let mut quotients = vec![MvPoly::zero(); basis.len()];
     let mut remainder = MvPoly::zero();
     let mut current = target.poly.clone();
     while !current.is_zero() {
         budget.spend_reduction()?;
-        let (lead_mono, lead_coeff) = leading_term(&current)?;
+        let (lead_mono, lead_coeff) = budget.arith(leading_term_in(order, &current))?;
         let mut cancelled = false;
         for (index, (element_mono, element_coeff)) in leads.iter().enumerate() {
             if !monomial_divides(element_mono, &lead_mono) {
                 continue;
             }
             let quotient_mono = monomial_quotient(&lead_mono, element_mono);
-            let quotient_coeff = lead_coeff.checked_div(*element_coeff)?;
-            let factor = single_term(&quotient_mono, quotient_coeff)?;
-            current = current.sub(&factor.mul(&basis[index].poly)?)?;
+            let quotient_coeff = budget.arith(lead_coeff.checked_div(*element_coeff))?;
+            let factor = budget.arith(single_term(&quotient_mono, quotient_coeff))?;
+            let scaled = budget.arith(factor.mul(&basis[index].poly))?;
+            current = budget.arith(current.sub(&scaled))?;
             budget.capped(&current)?;
-            quotients[index] = quotients[index].add(&factor)?;
+            quotients[index] = budget.arith(quotients[index].add(&factor))?;
             budget.capped(&quotients[index])?;
             cancelled = true;
             break;
         }
         if !cancelled {
-            let lead = single_term(&lead_mono, lead_coeff)?;
-            remainder = remainder.add(&lead)?;
+            let lead = budget.arith(single_term(&lead_mono, lead_coeff))?;
+            remainder = budget.arith(remainder.add(&lead))?;
             budget.capped(&remainder)?;
-            current = current.sub(&lead)?;
+            current = budget.arith(current.sub(&lead))?;
         }
     }
 
@@ -414,9 +527,9 @@ fn reduce_tracked(
             if share.is_zero() {
                 continue;
             }
-            let product = quotient.mul(share)?;
+            let product = budget.arith(quotient.mul(share))?;
             budget.capped(&product)?;
-            *slot = slot.sub(&product)?;
+            *slot = budget.arith(slot.sub(&product))?;
             budget.capped(slot)?;
         }
     }
@@ -431,7 +544,10 @@ fn reduce_tracked(
 
 #[cfg(test)]
 mod tests {
-    use super::{CofactorOutcome, Limits, reduce_with_cofactors, unit_ideal_cofactors};
+    use super::{
+        CofactorOutcome, DeclineReason, Limits, reduce_with_cofactors, unit_ideal_cofactors,
+    };
+    use crate::groebner::MonomialOrder;
     use crate::mvpoly::MvPoly;
     use axeyum_ir::Rational;
 
@@ -569,8 +685,41 @@ mod tests {
         };
         assert_eq!(
             unit_ideal_cofactors(&generators, starved),
-            CofactorOutcome::Declined
+            CofactorOutcome::Declined(DeclineReason::ReductionSteps),
+            "a starved budget must decline as a ceiling, not as an overflow"
         );
+    }
+
+    /// The other half of the split: an exact coefficient that leaves the `i128`
+    /// range declines as [`DeclineReason::Overflow`], with every ceiling in
+    /// `Limits::fast()` untouched.
+    ///
+    /// This is the control that makes the distinction load-bearing rather than
+    /// documentary. Reducing `x²` modulo `x − c` produces `c²` as the constant
+    /// term, so a `c` above `2^64` overflows on the second reduction step while
+    /// the step, pair, basis and term budgets are all barely used.
+    #[test]
+    fn an_overflowing_coefficient_declines_as_overflow_not_as_a_ceiling() {
+        let huge = int(1_000_000_000_000_000_000_000_000_000_000);
+        let generators = vec![MvPoly::var("x").sub(&huge).unwrap()];
+        let target = MvPoly::var("x").mul(&MvPoly::var("x")).unwrap();
+        let outcome = reduce_with_cofactors(&generators, &target, Limits::fast());
+        assert_eq!(outcome, CofactorOutcome::Declined(DeclineReason::Overflow));
+        let CofactorOutcome::Declined(reason) = outcome else {
+            panic!("expected a decline");
+        };
+        assert!(!reason.is_ceiling(), "an overflow is not a budget problem");
+
+        // The same shape with a small coefficient reduces fine, so the decline
+        // above is about the width and nothing else.
+        let small = int(3);
+        let generators = vec![MvPoly::var("x").sub(&small).unwrap()];
+        let CofactorOutcome::Reduced { remainder, .. } =
+            reduce_with_cofactors(&generators, &target, Limits::fast())
+        else {
+            panic!("declined on a small coefficient");
+        };
+        assert_eq!(remainder, int(9));
     }
 
     /// Three variables, degree 3: the shape the Rado symbolic-parameter work
@@ -609,5 +758,79 @@ mod tests {
         };
         assert!(remainder.is_zero());
         assert_eq!(recombine(&generators, &cofactors, &remainder), int(1));
+    }
+
+    /// The monomial order must be a **cost** knob and nothing else: on the same
+    /// system it must reach the same ideal-membership verdict, and the cofactor
+    /// identity it emits must recombine exactly under either setting.
+    ///
+    /// This is the control that makes `grevlex` safe to switch on. The two
+    /// orders genuinely disagree about which term leads (see
+    /// `grevlex_breaks_ties_by_the_smaller_last_exponent` in `groebner`), so the
+    /// bases here are different objects; only the answer is shared.
+    #[test]
+    fn the_monomial_order_changes_the_basis_but_not_the_verdict() {
+        let x = MvPoly::var("x");
+        let y = MvPoly::var("y");
+        let z = MvPoly::var("z");
+        // x + y + z = 0, x·y + y·z + z·x = 0, x·y·z = 1: the elementary
+        // symmetric functions of the roots of t^3 - 1. Then x^3 + y^3 + z^3 = 3.
+        let generators = vec![
+            x.add(&y).unwrap().add(&z).unwrap(),
+            x.mul(&y)
+                .unwrap()
+                .add(&y.mul(&z).unwrap())
+                .unwrap()
+                .add(&z.mul(&x).unwrap())
+                .unwrap(),
+            x.mul(&y).unwrap().mul(&z).unwrap().sub(&int(1)).unwrap(),
+        ];
+        let cube = |v: &MvPoly| v.mul(v).unwrap().mul(v).unwrap();
+        let target = cube(&x)
+            .add(&cube(&y))
+            .unwrap()
+            .add(&cube(&z))
+            .unwrap()
+            .sub(&int(3))
+            .unwrap();
+
+        for order in [MonomialOrder::Lex, MonomialOrder::DegRevLex] {
+            let limits = Limits {
+                order,
+                ..Limits::fast()
+            };
+            let CofactorOutcome::Reduced {
+                cofactors,
+                remainder,
+            } = reduce_with_cofactors(&generators, &target, limits)
+            else {
+                panic!("declined under {order:?}");
+            };
+            assert!(
+                remainder.is_zero(),
+                "x^3 + y^3 + z^3 - 3 is in the ideal under {order:?}"
+            );
+            assert_eq!(
+                recombine(&generators, &cofactors, &remainder),
+                target,
+                "the cofactor identity must be exact under {order:?}"
+            );
+        }
+
+        // And a polynomial that is NOT in the ideal stays out under both.
+        let outside = cube(&x).add(&cube(&y)).unwrap().add(&cube(&z)).unwrap();
+        for order in [MonomialOrder::Lex, MonomialOrder::DegRevLex] {
+            let limits = Limits {
+                order,
+                ..Limits::fast()
+            };
+            let CofactorOutcome::Reduced { remainder, .. } =
+                reduce_with_cofactors(&generators, &outside, limits)
+            else {
+                panic!("declined under {order:?}");
+            };
+            assert!(!remainder.is_zero(), "x^3 + y^3 + z^3 is not in the ideal");
+            assert_eq!(remainder, int(3), "and its normal form is the constant 3");
+        }
     }
 }

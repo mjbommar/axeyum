@@ -50,8 +50,8 @@ fn main() {
                 failed += 1;
                 continue;
             }
-            ProofOutcome::Declined => {
-                println!("  DECLINED {:<38} ({elapsed:.1?})", problem.id);
+            ProofOutcome::Declined(reason) => {
+                println!("  DECLINED {:<38} {reason:?} ({elapsed:.1?})", problem.id);
                 failed += 1;
                 continue;
             }

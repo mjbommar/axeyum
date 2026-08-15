@@ -57,7 +57,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::Rational;
 
-use crate::groebner_cert::{CofactorOutcome, Limits, reduce_many_with_cofactors};
+use crate::groebner::MonomialOrder;
+use crate::groebner_cert::{CofactorOutcome, DeclineReason, Limits, reduce_many_with_cofactors};
 use crate::mvpoly::MvPoly;
 
 /// A point of the plane at symbolic coordinates.
@@ -361,8 +362,28 @@ pub enum ProofOutcome {
         /// Its nonzero remainder modulo the full generator set.
         remainder: MvPoly,
     },
-    /// A ceiling tripped or the exact arithmetic overflowed. Nothing is claimed.
-    Declined,
+    /// Nothing is claimed, with the reason recorded — see [`GeometryDecline`].
+    Declined(GeometryDecline),
+}
+
+/// Why [`certify`] produced no certificate.
+///
+/// The distinction that matters most here is inside
+/// [`GeometryDecline::Reduction`]: a tripped ceiling is a statement about the
+/// budget and an overflow is a statement about `i128`, and a frontier theorem
+/// that "declines" is uninterpretable until they are told apart.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GeometryDecline {
+    /// The cofactor-tracked reduction stopped; the inner reason says whether a
+    /// ceiling tripped or the exact arithmetic left the `i128` range.
+    Reduction(DeclineReason),
+    /// More non-degeneracy conditions than the subset enumeration admits (the
+    /// power set of more than 16 conditions is not searched).
+    TooManyConditions,
+    /// A stated [`DegenerateWitness`] did not in fact break the theorem, so the
+    /// certificate's negative control would have been decorative. This is a
+    /// refusal, not a resource limit.
+    UnverifiedWitness,
 }
 
 /// The prefix of the fresh inverse variables introduced by saturation.
@@ -391,6 +412,7 @@ pub fn geometry_limits() -> Limits {
         pair_iterations: 2_000,
         basis_size: 200,
         poly_terms: 8_000,
+        order: MonomialOrder::Lex,
     }
 }
 
@@ -415,13 +437,14 @@ pub fn geometry_limits() -> Limits {
 /// Every [`DegenerateWitness`] naming a condition that ended up **unused** is
 /// dropped from the certificate, and every witness naming a used condition is
 /// verified before the certificate is returned; a witness that does not in fact
-/// break the theorem makes this return [`ProofOutcome::Declined`] rather than
+/// break the theorem makes this return
+/// [`GeometryDecline::UnverifiedWitness`] rather than
 /// emitting an artifact whose negative control is decorative.
 #[must_use]
 pub fn certify(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
     let count = problem.nondegeneracy.len();
     if count > 16 {
-        return ProofOutcome::Declined;
+        return ProofOutcome::Declined(GeometryDecline::TooManyConditions);
     }
     let targets: Vec<MvPoly> = problem
         .conclusions
@@ -440,14 +463,16 @@ pub fn certify(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
 
     // The outcome of the LAST subset tried, which is the full condition set;
     // that is the informative diagnostic when nothing certifies.
-    let mut last_failure = ProofOutcome::Declined;
+    let mut last_failure =
+        ProofOutcome::Declined(GeometryDecline::Reduction(DeclineReason::Overflow));
 
     for subset in &subsets {
         let Some((saturations, generators)) = build_generators(problem, subset) else {
             // Overflow while building a saturation generator. Skip this subset
             // rather than dropping the condition, which would prove a stronger
             // statement than the input allows.
-            last_failure = ProofOutcome::Declined;
+            last_failure =
+                ProofOutcome::Declined(GeometryDecline::Reduction(DeclineReason::Overflow));
             continue;
         };
         let outcomes = reduce_many_with_cofactors(&generators, &targets, limits);
@@ -470,9 +495,9 @@ pub fn certify(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
                         break;
                     }
                 }
-                CofactorOutcome::Declined => {
+                CofactorOutcome::Declined(reason) => {
                     all_zero = false;
-                    last_failure = ProofOutcome::Declined;
+                    last_failure = ProofOutcome::Declined(GeometryDecline::Reduction(*reason));
                     break;
                 }
             }
@@ -483,7 +508,7 @@ pub fn certify(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
         let certificate = assemble(problem, saturations, generators, cofactor_sets);
         return match verify_witnesses(problem, &certificate) {
             Ok(certificate) => ProofOutcome::Certified(Box::new(certificate)),
-            Err(()) => ProofOutcome::Declined,
+            Err(()) => ProofOutcome::Declined(GeometryDecline::UnverifiedWitness),
         };
     }
 
@@ -635,8 +660,8 @@ fn verify_witnesses(
 #[cfg(test)]
 mod tests {
     use super::{
-        Condition, Constraint, DegenerateWitness, GenericWitness, GeometryProblem, ProofOutcome,
-        Pt, certify, collinear, geometry_limits, midpoint, parallel, perpendicular,
+        Condition, Constraint, DegenerateWitness, GenericWitness, GeometryDecline, GeometryProblem,
+        ProofOutcome, Pt, certify, collinear, geometry_limits, midpoint, parallel, perpendicular,
     };
     use crate::mvpoly::MvPoly;
     use axeyum_ir::Rational;
@@ -795,8 +820,8 @@ mod tests {
         };
         assert_eq!(
             certify(&problem, geometry_limits()),
-            ProofOutcome::Declined,
-            "a decorative counterexample must block the certificate"
+            ProofOutcome::Declined(GeometryDecline::UnverifiedWitness),
+            "a decorative counterexample must block the certificate, and say why"
         );
     }
 

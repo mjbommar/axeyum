@@ -33,8 +33,8 @@
 use std::collections::BTreeMap;
 
 use axeyum_cas::{
-    CofactorLimits, CofactorOutcome, MvPoly, reduce_many_with_cofactors, reduce_with_cofactors,
-    unit_ideal_cofactors,
+    CofactorLimits, CofactorOutcome, DeclineReason, MonomialOrder, MvPoly,
+    reduce_many_with_cofactors, reduce_with_cofactors, unit_ideal_cofactors,
 };
 use axeyum_ir::{Op, Rational, Sort, TermArena, TermId, TermNode};
 
@@ -555,6 +555,10 @@ fn ideal_limits() -> CofactorLimits {
         pair_iterations: 1_500,
         basis_size: 32,
         poly_terms: 256,
+        // Unchanged from before the order became a knob. The solver's dispatch
+        // path is latency-sensitive and its certificates are committed evidence,
+        // so it does not move until the corpus measurement says to.
+        order: MonomialOrder::Lex,
     }
 }
 
@@ -676,10 +680,12 @@ pub fn cas_ideal_refutation(
                 return finish(arena, assertions, cert);
             }
         }
-        CofactorOutcome::Declined => {
-            return CasOutcome::NotRefuted(
-                "cofactor-tracked Gröbner reduction hit a deterministic step ceiling",
-            );
+        CofactorOutcome::Declined(reason) => {
+            // The message used to say "hit a deterministic step ceiling"
+            // unconditionally, which was false half the time: an `i128` overflow
+            // reached the same arm. A reader tuning `ideal_limits()` in response
+            // to an overflow is tuning the wrong knob.
+            return CasOutcome::NotRefuted(decline_message(reason));
         }
         CofactorOutcome::Reduced { .. } => {}
     }
@@ -703,6 +709,26 @@ pub fn cas_ideal_refutation(
     CasOutcome::NotRefuted(
         "no combination of the asserted equations collapsed to a constant of the refuting sign",
     )
+}
+
+/// A static explanation for each cofactor-reduction decline, keeping the
+/// ceiling/overflow distinction visible in the `unknown` reason a caller sees.
+fn decline_message(reason: DeclineReason) -> &'static str {
+    match reason {
+        DeclineReason::ReductionSteps => {
+            "cofactor-tracked Gröbner reduction hit the reduction-step ceiling"
+        }
+        DeclineReason::PairIterations => {
+            "cofactor-tracked Gröbner reduction hit the S-pair iteration ceiling"
+        }
+        DeclineReason::BasisSize => "cofactor-tracked Gröbner reduction hit the basis-size ceiling",
+        DeclineReason::PolyTerms => {
+            "cofactor-tracked Gröbner reduction hit the polynomial-size ceiling"
+        }
+        DeclineReason::Overflow => {
+            "cofactor-tracked Gröbner reduction left the exact i128 coefficient range"
+        }
+    }
 }
 
 /// Searches for a sum of atom squares whose normal form modulo the ideal is a
