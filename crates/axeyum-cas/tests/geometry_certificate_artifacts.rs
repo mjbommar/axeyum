@@ -389,8 +389,10 @@ fn a_counterexample_on_the_locus_that_falsifies_nothing_is_rejected() {
 #[test]
 fn every_used_condition_set_is_minimal_absolutely() {
     let mut checked = 0usize;
+    let mut expected = 0usize;
     for (name, certificate) in saturated() {
         let conditions = certificate.saturations.len();
+        expected += (1usize << conditions) - 1;
         assert!(
             conditions <= 8,
             "{name}: {conditions} conditions is too many to enumerate the proper subsets of"
@@ -431,6 +433,14 @@ fn every_used_condition_set_is_minimal_absolutely() {
             checked += 1;
         }
     }
+    // The count is derived from the certificates rather than written down. A
+    // hand-written total is how a gate stops measuring what it claims to: the
+    // first version of this lane's diary said "6 proper subsets" against four
+    // one-condition certificates, which is 4.
+    assert_eq!(
+        checked, expected,
+        "the enumeration must visit every proper subset of every saturated certificate"
+    );
     assert!(
         checked >= 3,
         "this test examined {checked} subsets; every saturated certificate has at least one \

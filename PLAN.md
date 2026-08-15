@@ -305,7 +305,7 @@ evidence and unrelated temporary projects were untouched.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-08-15 | `geometry-frontier` | default geometry monomial order switched to degree-reverse-lex, justified by a per-subset per-order audit showing 6 unchanged condition sets and 6 byte-identical certificates — and every subset *decided*, which upgrades the corpus's minimality claim from budget-scoped to absolute; `rhombus-diagonals-perpendicular` promoted off the frontier as the seventh certified theorem with its non-degeneracy counterexample and both tamper controls, the controls now running over every saturated certificate rather than the first; `euler-line`'s obstruction measured rather than timed (basis growth and a quadratic S-pair backlog, not width and not overflow) via new `ReductionStats` and an S-pair ladder | `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/src/groebner_cert.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/examples/geometry_order_audit.rs`, `crates/axeyum-cas/examples/geometry_obstruction.rs`, `artifacts/geometry-certificates/rhombus-diagonals-perpendicular.json`, `artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json` |
-| 2026-08-15 | `euler-linearity` | `euler-line` certified and promoted off the frontier by **linear elimination** rather than a bigger budget — 4–6 ms and 0 S-pairs against a Gröbner run that had not returned in 27 minutes — with the cofactors derived from the adjugate identity so they stay against the ORIGINAL hypothesis generators, and the `det^d` multiplier divided out through the Rabinowitsch generator (`N = 2`, so the saturation cofactor is `−conclusion·(1 + d·z)`); a multiplier the stated conditions do not license is a refusal; condition-set minimality established **absolutely** by refuting every proper subset with a committed counterexample rather than by a `2ⁿ` budget-relative audit; the on-locus-but-harmless tamper control repaired from a constant that skipped every triangle theorem into a covered table; `geometry_check.rs` untouched and the seven older certificates byte-identical | `crates/axeyum-cas/src/linear_elim.rs`, `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/src/lib.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/examples/geometry_linear_route.rs`, `crates/axeyum-cas/examples/emit_geometry_certificates.rs`, `artifacts/geometry-certificates/euler-line.json`, `artifacts/facts/F-geometry-euler-line.json` |
+| 2026-08-15 | `euler-linearity` | `euler-line` certified and promoted off the frontier by **linear elimination** rather than a bigger budget — 4–6 ms and 0 S-pairs against a Gröbner run that had not returned in 27 minutes — with the cofactors derived from the adjugate identity so they stay against the ORIGINAL hypothesis generators, and the `det^d` multiplier divided out through the Rabinowitsch generator (`N = 2`, so the saturation cofactor is `−conclusion·(1 + d·z)`); a multiplier the stated conditions do not license is a refusal; condition-set minimality established **absolutely** by refuting every proper subset with a committed counterexample rather than by a `2ⁿ` budget-relative audit; the on-locus-but-harmless tamper control repaired from a constant that skipped every triangle theorem into a covered table; `geometry_check.rs` untouched and the seven older certificates byte-identical. Pappus's hexagon theorem then also certified (three 2x2 blocks, 292 s, checker-verified) and deliberately **left on the frontier**, because its three conditions can only be necessitated as a set and the new minimality ratchet correctly refuses the budget-relative claim | `crates/axeyum-cas/src/linear_elim.rs`, `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/src/lib.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/examples/geometry_linear_route.rs`, `crates/axeyum-cas/examples/emit_geometry_certificates.rs`, `artifacts/geometry-certificates/euler-line.json`, `artifacts/facts/F-geometry-euler-line.json` |
 | 2026-08-15 | `0fc7cc357` | `Int.subNatNat`'s borrow proved (shift lemma, two characterisations, elimination principle) and five of the six remaining integer axioms discharged: `add_assoc`, `mul_assoc`, `left_distrib`, `add_le_add`, `add_lt_add_of_le_of_lt`. `integer: axiom=6 → 1`; 50 `Int` theorems, all with an empty axiom footprint; real-Lean gate green at 112 checks. |
 | 2026-08-15 | `7c7b0ca16` | `Real`'s 30 axioms measured as an ordered-ring package (no inverse/completeness/Archimedean) and modelled in the constructed ℤ: `build_int_model_of_arith` admits 22 kernel-checked witnesses, all with an empty axiom footprint and all syntactically the `Int` law. `Int.sq_nonneg` proved (`Int: 50 → 51` derived, 51 empty footprints). Measured and pinned that this kernel has **no `Quot.sound`**, so a quotient ℝ is inexpressible, not merely expensive — correcting three comments and the ℤ diary. ADR-0456. |
 | 2026-08-15 | `ordered-ring-reconstruct` | Farkas/SOS refutations generalize over the ordered-ring interface: empty `axiom_footprint`, confirmed by real Lean's `#print axioms`, with the `Real`-specific statement recovered by instantiation (ADR-0457, `F:ordered-ring-farkas-refutation`). |
@@ -875,19 +875,46 @@ detected.
 Full write-up:
 [`docs/mathematics-2026-08/diary-euler-linearity.md`](docs/mathematics-2026-08/diary-euler-linearity.md).
 
-**Next, ranked.** (1) **Simson, then Pappus** — the gate `geometry-frontier` set is
-open and the shape is right: Simson is 14 coordinates and **three 2×2 blocks** when
-the circumcircle is stated as a concyclicity determinant instead of an explicit
-centre, with the residue reducing modulo a *single* remaining generator. Its real
-cost is not the coordinate count but that `|BC|² ≠ 0` is **not** `B ≠ C` over an
-arbitrary characteristic-zero field, so the fact must name the real-plane
-assumption in its footprint. Pappus is three more 2×2 blocks. (2) Buchberger's
+**Pappus is certified and deliberately unfiled, which is the session's second
+finding.** `pappus-hexagon` is stated on `frontier()` with its witnesses replayed:
+18 coordinates, 8 hypotheses, **three 2×2 blocks** whose determinants are exactly
+its three non-degeneracy conditions, a 468-term multiplier, a 720-term residue
+that reduces in **one S-pair** against the two hypotheses the blocks did not
+consume — and a certificate the independent checker **accepts** (292 s, 3583
+cofactor terms). It took two narrowings to get there, and both are the point
+rather than tuning: reducing the residue against all eight hypotheses (six already
+consumed, every one mentioning a variable the residue no longer has) does not
+return, and adding the three Rabinowitsch generators to that reduction does not
+either — so the handover is now unconsumed *hypotheses* first, unconsumed
+*generators* only if that fails, because the saturations are what the **multiplier**
+needs, not the residue. The emitter reports **0 written, 8 unchanged** afterwards.
+
+What holds it on the frontier is not reach, it is **counterexamples**. Pappus has
+one for the condition set as a whole (six points on the x-axis; every incidence
+hypothesis vacuous; X, Y, Z free to be a triangle) and this lane found none
+isolating a *single* condition — three attempts, each collapsing differently,
+all because killing one intersection forces the two other constructed points onto
+the very line the freed point is confined to. Its minimality would therefore be
+**budget-relative** in ADR-0455's sense, and
+`every_used_condition_set_is_minimal_absolutely` refuses that. **The ratchet this
+lane added blocked the very next theorem**, which is the strongest evidence
+available that it is set where it should be.
+
+**Next, ranked.** (1) **Decide about Pappus** — isolate a single condition with a
+rational configuration (or find a smaller condition set), or relax the ratchet to a
+named justified exception and write a budget-relative fact, which ADR-0455 permits
+when warranted. Highest value because the computation is already done and what
+remains is a decision about the ledger's honesty rules. (2) **Simson**, whose
+algebra is *easier* than Pappus's (14 coordinates, three 2×2 blocks, residue modulo
+a single generator) and whose real cost is that `|BC|² ≠ 0` is **not** `B ≠ C` over
+an arbitrary characteristic-zero field — so the witnesses that would necessitate it
+are not rational, and `DegenerateWitness` holds exact rationals. (3) Buchberger's
 criteria in `groebner_cert.rs` — still worth it for the whole crate, still not what
-reaches a divergent theorem. (3) Teach the block detector to prefer determinants
+reaches a divergent theorem. (4) Teach the block detector to prefer determinants
 that divide a **declared** condition; six of eight corpus theorems decline on a
 badly-chosen multiplier and the information to choose better is in the problem.
-Reach, not soundness. (4) Audit and switch `Limits::fast()` / `ideal_limits()`.
-(5) A surface syntax for the corpus, open and recommended three times now.
+Reach, not soundness. (5) Audit and switch `Limits::fast()` / `ideal_limits()`.
+(6) A surface syntax for the corpus, open and recommended three times now.
 
 **Lane state (`WIP`, int-keystone, 2026-08-14).** ℤ is now *constructed*, not
 asserted: `Int` is an inductive over `Nat` (`Int.ofNat` / `Int.negSucc`), every

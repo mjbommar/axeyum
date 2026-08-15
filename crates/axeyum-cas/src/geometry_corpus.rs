@@ -85,10 +85,17 @@ pub fn corpus() -> Vec<GeometryProblem> {
     ]
 }
 
-/// Theorems stated here, correctly as far as the encoding goes, that the cofactor
-/// route does **not** currently certify.
+/// Theorems stated here, correctly as far as the encoding goes, that do **not**
+/// have a committed certificate.
 ///
-/// They stay in the tree rather than being deleted because the value of a
+/// Historically that meant "the search does not reach them", and for
+/// `rhombus-diagonals-perpendicular` and `euler-line` it did. It no longer has to:
+/// `pappus-hexagon` is here with a certificate the independent checker *accepts*,
+/// held back by an evidence bar rather than by a budget. Both reasons belong on
+/// one list, because from the ledger's point of view they are the same status —
+/// no fact, no artifact — and the difference is in the note, not the outcome.
+///
+/// Entries stay in the tree rather than being deleted because the value of a
 /// measured limit is that it is reproducible, and because a theorem here is
 /// **unproved, not unchecked**: `every_frontier_witness_is_consistent` replays
 /// every configuration a frontier entry states against its own polynomials, so a
@@ -128,19 +135,82 @@ pub fn corpus() -> Vec<GeometryProblem> {
 /// non-degeneracy condition, which is exactly why the Rabinowitsch generator can
 /// divide it back out and the certificate stays in the original generators.
 ///
-/// # This list is empty, and it is a queue rather than a result
+/// # `pappus-hexagon` is here even though the search **reaches** it
 ///
-/// An empty frontier is a statement about today's corpus, not about the domain.
-/// The theorems this route has not yet been *stated* for are the queue: Simson's
-/// line (14 coordinates once the circumcircle is stated as a concyclicity
-/// determinant instead of an explicit centre) and Pappus (18) are both dominated
-/// by linear constructions — feet of perpendiculars and intersections of lines —
-/// which is the shape this route was built for. They are absent because nobody
-/// has written them down with their counterexamples yet, not because they were
-/// measured and found out of reach.
+/// This entry is not a record of a failure to compute. Measured 2026-08-15,
+/// `cargo run -p axeyum-cas --release --example geometry_linear_route -- pappus-hexagon`:
+///
+/// ```text
+/// blocks=3  multiplier=468 terms, degree 6  residue=720 terms
+///     block [xx,xy] rows [2,3]  det = 8 terms
+///     block [yx,yy] rows [4,5]  det = 8 terms
+///     block [zx,zy] rows [6,7]  det = 8 terms
+///     handover over the 2 unconsumed generators: 1 S-pair, basis 2, residue in the ideal
+/// CERTIFIED in 292 s, conditions = all three, 3583 cofactor terms, checker verified
+/// ```
+///
+/// Eighteen coordinates, eight hypotheses, three 2×2 blocks: `X` is pinned by
+/// `collinear(A,E,X)` and `collinear(B,D,X)`, both linear in `X`, with determinant
+/// exactly `det(E−A, D−B)` — the theorem's own first non-degeneracy condition. The
+/// same for `Y` and `Z`. The residue that linear algebra cannot remove is 720
+/// terms and reduces against the two collinearity hypotheses the blocks did not
+/// consume in a **single S-pair**. The algebra is settled and the independent
+/// checker accepts the certificate.
+///
+/// It is on this list anyway, because what blocks it is the **counterexamples**,
+/// and that is a bar this corpus sets on purpose. The corpus requires one
+/// exact rational configuration per condition a certificate consumes: satisfying
+/// every hypothesis, annihilating that condition, and *falsifying* a conclusion.
+/// Pappus has one for the condition set **as a whole** — six points on the x-axis
+/// makes every incidence hypothesis vacuous and leaves `X`, `Y`, `Z` free to be a
+/// triangle — and this lane found none isolating a *single* condition. Three
+/// attempts, each collapsing for a different reason, all through one mechanism:
+///
+/// - `AE ∥ BD` with the lines distinct: no `X` exists, so the configuration does
+///   not satisfy the hypotheses and is not a witness at all.
+/// - `AE = BD` as lines, so `X` is free along it: that forces `A, B, D, E`
+///   collinear, hence the second line equals the first, hence *every* condition
+///   vanishes too.
+/// - `A = E`, so `collinear(A,E,X)` is vacuous and `X` is free along `BD`: the
+///   other two conditions do survive, but line `AF` becomes the second line, so
+///   `Y = D`, and line `CE` becomes the first, so `Z = B` — and `X` is already on
+///   line `BD = ZY`. The conclusion holds identically.
+///
+/// Killing one intersection forces the two *other* constructed points onto the
+/// very line the freed point is confined to. Whether that is a theorem or an
+/// accident of three attempts is open, and it is the question to settle before
+/// promoting this.
+///
+/// The consequence for the ledger is precise, and it is why a theorem the route
+/// certifies is nonetheless not filed: its condition set would be minimal only
+/// **budget-relative** in ADR-0455's sense — the empty subset is refuted by the
+/// committed counterexample, and the size-1 and size-2 subsets are *undecided*.
+/// `every_used_condition_set_is_minimal_absolutely` enumerates every proper subset
+/// and refuses that, deliberately, so the downgrade cannot happen silently.
+///
+/// So the decision waiting here is a real one and it is stated rather than made:
+/// either find a configuration isolating a single condition (or a smaller
+/// condition set), **or** relax that ratchet to a named, justified exception and
+/// write a fact whose `notes` say the minimality is budget-relative — which
+/// ADR-0455 explicitly permits when it is warranted. What the ratchet prevents is
+/// making the strong claim by default, and it is doing exactly that here. A
+/// practical note for whoever takes it: the 292 s is almost entirely the seven
+/// *failed* condition subsets, each paying a residue reduction before the
+/// multiplier refuses to divide; the subset that works is a small part of it.
+///
+/// **Simson's line** is the one after, with the same shape — three feet of
+/// perpendiculars, three 2×2 blocks, determinants `−|BC|²`, `−|CA|²`, `−|AB|²` —
+/// plus a wrinkle this corpus has already recorded: `|BC|² ≠ 0` is **not**
+/// `B ≠ C` over an arbitrary field of characteristic zero, because of the
+/// isotropic directions over ℂ. Over ℚ the two coincide, which is exactly the
+/// problem: the configurations that would witness the necessity of `|BC|² ≠ 0`
+/// are not rational, and [`DegenerateWitness`] holds exact rationals. Stating
+/// Simson honestly needs either a witness type over a quadratic extension, or a
+/// fact that names the real-plane assumption in its footprint and says what that
+/// costs.
 #[must_use]
 pub fn frontier() -> Vec<GeometryProblem> {
-    Vec::new()
+    vec![pappus_hexagon()]
 }
 
 /// Varignon: the midpoints of the sides of an arbitrary quadrilateral form a
@@ -683,6 +753,195 @@ fn euler_line() -> GeometryProblem {
                 ("hy", 1, 1),
             ]),
         }],
+    }
+}
+
+/// The eight incidence hypotheses of Pappus, split out so the problem itself
+/// stays readable: two "these three are collinear" for the carrier lines, then
+/// two per intersection point.
+fn pappus_hypotheses(first: &[Pt; 3], second: &[Pt; 3], crosses: &[Pt; 3]) -> Vec<Constraint> {
+    let [vertex_a, vertex_b, vertex_c] = first;
+    let [vertex_d, vertex_e, vertex_f] = second;
+    let [cross_x, cross_y, cross_z] = crosses;
+    vec![
+        Constraint::new(
+            "abc-collinear",
+            "A, B, C lie on one line",
+            collinear(vertex_a, vertex_b, vertex_c).expect("collinear"),
+        ),
+        Constraint::new(
+            "def-collinear",
+            "D, E, F lie on one line",
+            collinear(vertex_d, vertex_e, vertex_f).expect("collinear"),
+        ),
+        Constraint::new(
+            "x-on-ae",
+            "X lies on the line AE",
+            collinear(vertex_a, vertex_e, cross_x).expect("collinear"),
+        ),
+        Constraint::new(
+            "x-on-bd",
+            "X lies on the line BD",
+            collinear(vertex_b, vertex_d, cross_x).expect("collinear"),
+        ),
+        Constraint::new(
+            "y-on-af",
+            "Y lies on the line AF",
+            collinear(vertex_a, vertex_f, cross_y).expect("collinear"),
+        ),
+        Constraint::new(
+            "y-on-cd",
+            "Y lies on the line CD",
+            collinear(vertex_c, vertex_d, cross_y).expect("collinear"),
+        ),
+        Constraint::new(
+            "z-on-bf",
+            "Z lies on the line BF",
+            collinear(vertex_b, vertex_f, cross_z).expect("collinear"),
+        ),
+        Constraint::new(
+            "z-on-ce",
+            "Z lies on the line CE",
+            collinear(vertex_c, vertex_e, cross_z).expect("collinear"),
+        ),
+    ]
+}
+
+/// The three non-degeneracy conditions of Pappus: each says one pair of lines
+/// actually meets, and each is *exactly* the determinant of the 2x2 block that
+/// pins the corresponding intersection point.
+fn pappus_conditions(first: &[Pt; 3], second: &[Pt; 3]) -> Vec<Condition> {
+    let [vertex_a, vertex_b, vertex_c] = first;
+    let [vertex_d, vertex_e, vertex_f] = second;
+    vec![
+        Condition::new(
+            "ae-meets-bd",
+            "AE is not parallel to BD",
+            parallel(vertex_a, vertex_e, vertex_b, vertex_d).expect("parallel"),
+        ),
+        Condition::new(
+            "af-meets-cd",
+            "AF is not parallel to CD",
+            parallel(vertex_a, vertex_f, vertex_c, vertex_d).expect("parallel"),
+        ),
+        Condition::new(
+            "bf-meets-ce",
+            "BF is not parallel to CE",
+            parallel(vertex_b, vertex_f, vertex_c, vertex_e).expect("parallel"),
+        ),
+    ]
+}
+
+/// Pappus's hexagon theorem: if `A, B, C` lie on one line and `D, E, F` on
+/// another, the three "cross" intersections `X = AE ∩ BD`, `Y = AF ∩ CD` and
+/// `Z = BF ∩ CE` are collinear.
+///
+/// Eighteen coordinates and eight hypotheses, six of which are linear in the
+/// three intersection points — three 2×2 blocks whose determinants are exactly
+/// the three "these two lines are not parallel" conditions. See [`frontier`] for
+/// what this is measuring and why it is not in [`corpus`].
+fn pappus_hexagon() -> GeometryProblem {
+    let on_first = [Pt::free("a"), Pt::free("b"), Pt::free("c")];
+    let on_second = [Pt::free("d"), Pt::free("e"), Pt::free("f")];
+    let crosses = [Pt::free("x"), Pt::free("y"), Pt::free("z")];
+    let [cross_x, cross_y, cross_z] = &crosses;
+    GeometryProblem {
+        id: "pappus-hexagon".into(),
+        title: "Pappus's hexagon theorem: the three cross intersections are collinear".into(),
+        statement: "Let A, B, C be collinear and D, E, F be collinear. Let X lie on AE and on \
+                    BD, Y on AF and on CD, and Z on BF and on CE. If AE is not parallel to BD, \
+                    AF not parallel to CD, and BF not parallel to CE, then X, Y and Z are \
+                    collinear. The conditions are needed as a SET: when all six points are \
+                    collinear every incidence hypothesis is vacuous and X, Y, Z may be any three \
+                    points at all."
+            .into(),
+        coordinate_gloss: gloss(&[
+            ("a", "A"),
+            ("b", "B"),
+            ("c", "C"),
+            ("d", "D"),
+            ("e", "E"),
+            ("f", "F"),
+            ("x", "X (AE meet BD)"),
+            ("y", "Y (AF meet CD)"),
+            ("z", "Z (BF meet CE)"),
+        ]),
+        hypotheses: pappus_hypotheses(&on_first, &on_second, &crosses),
+        nondegeneracy: pappus_conditions(&on_first, &on_second),
+        conclusions: vec![Constraint::new(
+            "xyz-collinear",
+            "X, Y and Z are collinear",
+            collinear(cross_x, cross_y, cross_z).expect("collinear"),
+        )],
+        degenerate_witnesses: vec![
+            degenerate_pappus("ae-meets-bd"),
+            degenerate_pappus("af-meets-cd"),
+            degenerate_pappus("bf-meets-ce"),
+        ],
+        generic_witnesses: vec![GenericWitness {
+            description: "A=(0,0), B=(1,0), C=(3,0) on the x-axis; D=(0,2), E=(2,3), F=(4,4) on \
+                          a second line; X=(4/7,6/7), Y=(6/5,6/5), Z=(31/13,24/13)"
+                .into(),
+            assignment: at(&[
+                ("ax", 0, 1),
+                ("ay", 0, 1),
+                ("bx", 1, 1),
+                ("by", 0, 1),
+                ("cx", 3, 1),
+                ("cy", 0, 1),
+                ("dx", 0, 1),
+                ("dy", 2, 1),
+                ("ex", 2, 1),
+                ("ey", 3, 1),
+                ("fx", 4, 1),
+                ("fy", 4, 1),
+                ("xx", 4, 7),
+                ("xy", 6, 7),
+                ("yx", 6, 5),
+                ("yy", 6, 5),
+                ("zx", 31, 13),
+                ("zy", 24, 13),
+            ]),
+        }],
+    }
+}
+
+/// The one configuration that breaks Pappus: `A=(0,0)`, `B=(1,0)`, `C=(3,0)`,
+/// `D=(1,0)`, `E=(0,0)`, `F=(5,0)` — six points on the x-axis, so every
+/// incidence hypothesis holds vacuously and all three conditions vanish, while
+/// `X=(0,1)`, `Y=(2,0)`, `Z=(4,0)` is a genuine triangle.
+///
+/// It is offered for each of the three conditions because it annihilates each of
+/// them, and that is exactly as much as this lane could establish: see
+/// [`frontier`] for why no configuration isolating a *single* condition was
+/// found, and why that is what keeps this theorem out of [`corpus`].
+fn degenerate_pappus(condition_id: &str) -> DegenerateWitness {
+    DegenerateWitness {
+        condition_id: condition_id.to_string(),
+        description: "all six points on the x-axis (D=B and E=A), so every incidence hypothesis \
+                      is vacuous and X, Y, Z are unconstrained; X=(0,1), Y=(2,0), Z=(4,0) is a \
+                      triangle"
+            .into(),
+        assignment: at(&[
+            ("ax", 0, 1),
+            ("ay", 0, 1),
+            ("bx", 1, 1),
+            ("by", 0, 1),
+            ("cx", 3, 1),
+            ("cy", 0, 1),
+            ("dx", 1, 1),
+            ("dy", 0, 1),
+            ("ex", 0, 1),
+            ("ey", 0, 1),
+            ("fx", 5, 1),
+            ("fy", 0, 1),
+            ("xx", 0, 1),
+            ("xy", 1, 1),
+            ("yx", 2, 1),
+            ("yy", 0, 1),
+            ("zx", 4, 1),
+            ("zy", 0, 1),
+        ]),
     }
 }
 

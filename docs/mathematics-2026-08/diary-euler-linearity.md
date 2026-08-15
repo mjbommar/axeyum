@@ -6,8 +6,10 @@ The previous lane left a diagnosis it did not act on:
 > Buchberger is being asked to rediscover Cramer's rule by monomial reduction.
 
 It is right, and acting on it takes `euler-line` from *does not return in 27
-minutes* to a **checked certificate in 4–6 ms**. The corpus is eight theorems,
-`frontier()` is empty, and the certificate is in the original generators.
+minutes* to a **checked certificate in 4–6 ms**. The corpus is eight theorems and
+the certificate is in the original generators. The same route then reached
+**Pappus** too — and Pappus is still on the frontier, for a reason that turned out
+to be the more interesting finding (§6).
 
 ---
 
@@ -186,7 +188,10 @@ control is the proof.
 
 `every_used_condition_set_is_minimal_absolutely` states this for arbitrary subsets
 so it keeps its force when a theorem needs two, and it runs over every committed
-saturated certificate: **6 proper subsets refuted, 0 undecided.** This is a
+saturated certificate: **4 proper subsets refuted, 0 undecided** — four saturated
+certificates, each using exactly one condition, so each with exactly one proper
+subset. The count is asserted against that arithmetic rather than written down,
+because a hand-written total is how a gate stops measuring what it claims to. This is a
 cheaper and stronger instrument than the `2ⁿ` subset audit, and it is worth
 noticing that the ledger already contained the evidence — it just had not been
 read as a minimality proof.
@@ -246,31 +251,113 @@ extraction tests the *joint* degree over the block's unknowns. A detector that
 used `degree_in` alone would happily build a 2×2 "linear" system out of `x·y − 1`
 and produce a determinant that means nothing.
 
-**The `frontier()` list is empty, and that is a queue rather than a result.** Both
-remaining classical targets are dominated by linear constructions and are absent
-only because nobody has written them down yet:
+**The `frontier()` list is not empty, and the entry on it is the interesting
+part of this session.** I stated **Pappus's hexagon theorem** — 18 coordinates,
+8 hypotheses, 3 conditions — and measured it, and the result was not the one I
+expected.
 
-- **Simson's line.** Stated with the circumcircle as a *concyclicity determinant*
-  rather than an explicit centre, it is 14 coordinates (A, B, C, P and the three
-  feet), 7 hypotheses, and **three 2×2 blocks** — each foot satisfies
-  `collinear(B,C,X)` and `(X−P)·(C−B) = 0`, both linear in `X`, with determinant
-  `−|BC|²`. So it needs three conditions, `|AB|² ≠ 0`, `|BC|² ≠ 0`, `|CA|² ≠ 0`,
-  and the residue reduces modulo a **single** remaining generator, which is
-  multivariate division with no S-pairs at all. The real work is not the algebra:
-  it is that `|BC|² ≠ 0` is **not** `B ≠ C` over an arbitrary field of
-  characteristic zero (the isotropic directions over ℂ), so the fact would have to
-  name the real-plane assumption in its footprint — a point the `geometry` lane
-  already recorded and `squared_distance_vanishes_exactly_at_coincident_points`
-  already measures. Three conditions also means three counterexamples and three
-  on-locus-but-harmless controls, and those are what the coverage assertion in §3
-  will now demand.
-- **Pappus.** 18 coordinates, but the three intersection points are each pinned by
-  two collinearity hypotheses that are linear in them — three 2×2 blocks again —
-  and the residue reduces modulo the two collinearity constraints on the free
-  points.
+---
 
-Both were gated on `euler-line` by the previous lane, deliberately and correctly.
-The gate is open.
+## 6. Pappus: the route reaches it, and it is still on the frontier
+
+`cargo run -p axeyum-cas --release --example geometry_linear_route -- pappus-hexagon`:
+
+```text
+blocks=3  multiplier=468 terms, degree 6  residue=720 terms
+    block [xx,xy] rows [2,3]  det = 8 terms
+    block [yx,yy] rows [4,5]  det = 8 terms
+    block [zx,zy] rows [6,7]  det = 8 terms
+    handover over the 2 unconsumed generators: 1 S-pair, basis 2, residue in the ideal
+CERTIFIED in 292 s, conditions = all three, 3583 cofactor terms, checker verified
+```
+
+Three 2×2 blocks, exactly as the shape predicted: `X` is pinned by
+`collinear(A,E,X)` and `collinear(B,D,X)`, both linear in `X`, and the determinant
+is `det(E−A, D−B)` — the theorem's own first non-degeneracy condition. The
+multiplier is the product of the three, and the three declared conditions divide
+it exactly. **The independent checker accepts the certificate.**
+
+### The narrowing that made it work, and why it is not an optimisation
+
+The first attempt did not return. The handover was reducing the 720-term residue
+against **all eight** hypotheses — six of which the blocks had just consumed, and
+every one of which mentions a variable the residue no longer contains. Reduced
+against the two the blocks did not touch, it is a **one-S-pair** question.
+
+That fix alone was not enough either: the subset search adds the Rabinowitsch
+generators `d·z − 1` to the reduction, and three fresh variables in three
+degree-3 generators is close to the worst input `Buchberger`'s algorithm can be
+handed. So the handover is now two passes — unconsumed *hypotheses* first,
+unconsumed *generators* only if that fails — on the observation that the
+saturation generators are what the **multiplier** needs, not what the residue
+needs. With both changes the search finishes; with either missing it does not.
+
+Neither change touches the seven older certificates: the emitter reports **0
+written, 8 unchanged** afterwards.
+
+### Why it is still on the frontier
+
+Not reach. **Counterexamples.**
+
+This corpus requires one exact rational configuration per condition a certificate
+consumes: satisfying every hypothesis, annihilating *that* condition, and
+falsifying a conclusion. Pappus has one for the condition set **as a whole** — six
+points on the x-axis makes every incidence hypothesis vacuous and leaves `X`, `Y`,
+`Z` free to be a triangle — and I could not find one that isolates a single
+condition. Three attempts, each collapsing for a different reason, all through the
+same mechanism:
+
+- `AE ∥ BD` with the lines distinct: no `X` exists at all, so the configuration
+  does not satisfy the hypotheses and is not a witness.
+- `AE = BD` as lines, so `X` is free along it: that forces `A, B, D, E` collinear,
+  hence the second carrier line equals the first, hence *every* condition vanishes
+  too.
+- `A = E`, so `collinear(A,E,X)` is vacuous and `X` is free along `BD`: the other
+  two conditions do survive — but line `AF` becomes the second carrier, so `Y = D`,
+  and line `CE` becomes the first, so `Z = B`, and `X` is already on line
+  `BD = ZY`. The conclusion holds identically.
+
+Killing one intersection forces the two *other* constructed points onto the very
+line the freed point is confined to. Whether that is a theorem or an accident of
+three attempts I do not know, and saying so is the honest report.
+
+The consequence is exactly ADR-0455's distinction, arriving from the other side.
+Pappus's condition set would be minimal only **budget-relative**: the empty subset
+is refuted by the committed counterexample, and the size-1 and size-2 subsets are
+*undecided*. `every_used_condition_set_is_minimal_absolutely` enumerates every
+proper subset and refuses that — so the ratchet §3 introduced blocked the very
+next theorem, which is the strongest evidence I have that it is set where it
+should be. Filing Pappus with three conditions and a note nobody reads is what it
+prevents.
+
+So the decision is stated rather than made. The next lane either finds a
+configuration isolating a single condition (or a smaller condition set), **or**
+relaxes the ratchet to a named, justified exception and writes a fact whose
+`notes` say the minimality is budget-relative — which ADR-0455 explicitly permits
+when warranted. What it forbids is making the strong claim by default.
+
+Pappus is committed as a `frontier()` entry with its witnesses replayed, so it is
+*stated and checked* rather than described, and the measurement above is
+reproducible.
+
+### Simson, unattempted, with the wrinkle named
+
+Stated with the circumcircle as a **concyclicity determinant** rather than an
+explicit centre, Simson is 14 coordinates (A, B, C, P and three feet), 7
+hypotheses, and three 2×2 blocks again — each foot satisfies `collinear(B,C,X)`
+and `(X−P)·(C−B) = 0`, both linear in `X`, with determinant `−|BC|²`. The residue
+would reduce modulo a **single** remaining generator. The algebra is easier than
+Pappus's.
+
+Its extra wrinkle is one the `geometry` lane already recorded: `|BC|² ≠ 0` is
+**not** `B ≠ C` over an arbitrary field of characteristic zero, because of the
+isotropic directions over ℂ. Over ℚ the two coincide — which is precisely the
+problem, since the configurations that would witness the necessity of `|BC|² ≠ 0`
+are *not rational*, and `DegenerateWitness` holds exact rationals. Stating Simson
+honestly needs either a witness type over a quadratic extension, or a fact naming
+the real-plane assumption in its footprint and saying what that costs. That is a
+different kind of work from anything in this session, and guessing at it would
+have been worse than leaving it named.
 
 ---
 
@@ -280,7 +367,7 @@ The gate is open.
 |---|---|
 | `crates/axeyum-cas/src/linear_elim.rs` | the elimination engine: block detection, adjugate, cofactor-preserving substitution. Shares no code with `groebner_cert` |
 | `crates/axeyum-cas/src/geometry_certify.rs` | `certify_by_linear_elimination`, the Rabinowitsch multiplier division, `certify_any_route` |
-| `crates/axeyum-cas/src/geometry_corpus.rs` | `euler-line` promoted into `corpus()`; `frontier()` is empty and says why |
+| `crates/axeyum-cas/src/geometry_corpus.rs` | `euler-line` promoted into `corpus()`; `pappus-hexagon` stated on `frontier()` with the measurement and the blocker |
 | `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs` | the on-locus control as a covered table, and the absolute-minimality proof |
 | `crates/axeyum-cas/examples/geometry_linear_route.rs` | the like-for-like comparison against the S-pair ladder |
 | `artifacts/geometry-certificates/euler-line.json` | the eighth certificate, 32 kB, 278 cofactor terms over 5 generators |
@@ -288,16 +375,21 @@ The gate is open.
 
 ## The ranked next steps
 
-1. **Simson, then Pappus**, in that order of size — the gate the previous lane set
-   is open and the shape is right. Simson's real cost is the real-plane assumption
-   its `|AB|² ≠ 0` conditions carry, not its coordinate count.
-2. **Buchberger's criteria in `groebner_cert.rs`** — still worth it for the whole
+1. **Decide what to do about Pappus**, which is certified and unfiled. Either
+   isolate a single condition with a rational configuration (or find a smaller
+   condition set), or relax `every_used_condition_set_is_minimal_absolutely` to a
+   named exception and write a budget-relative fact. This is the highest-value
+   item because it is a decision about the ledger's honesty rules, not a
+   computation, and the computation is already done.
+2. **Simson**, whose algebra is easier than Pappus's and whose real cost is the
+   real-plane assumption its `|AB|² ≠ 0` conditions carry — see §6.
+3. **Buchberger's criteria in `groebner_cert.rs`** — still worth it for the whole
    crate (92% of the rhombus's pairs reduce to zero), still **not** the thing that
    reaches a divergent theorem. The previous lane's counters stand.
-3. **Teach the block detector to prefer determinants that divide a declared
+4. **Teach the block detector to prefer determinants that divide a declared
    condition.** Six of the eight corpus theorems decline on a multiplier the route
    chose badly, and the information needed to choose better is right there in the
    problem. This is reach, not soundness.
-4. **Audit and switch `Limits::fast()` / `ideal_limits()`** — unchanged from the
+5. **Audit and switch `Limits::fast()` / `ideal_limits()`** — unchanged from the
    previous lane's list, unchanged in priority.
-5. **A surface syntax for the corpus** — open, recommended three times now.
+6. **A surface syntax for the corpus** — open, recommended three times now.

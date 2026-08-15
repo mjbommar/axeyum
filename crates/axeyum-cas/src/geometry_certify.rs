@@ -759,9 +759,10 @@ fn linear_cofactors(
         cofactors[slot] = cofactor.clone();
     }
 
-    // What linear algebra could not remove goes to the general route, over a
-    // system that is now free of the eliminated unknowns. For `euler-line` the
-    // residue is zero and this never runs.
+    // What linear algebra could not remove goes to the general route — over the
+    // generators the blocks did **not** consume, which is the whole point of
+    // handing it over at all. For `euler-line` the residue is zero and this never
+    // runs.
     if !elimination.residue.is_zero() {
         // A zero residue is short-circuited rather than reduced, and that is not
         // bookkeeping: reducing even the zero polynomial computes a Gröbner basis
@@ -773,32 +774,90 @@ fn linear_cofactors(
                 remainder: elimination.residue.clone(),
             });
         };
-        let outcomes = reduce_many_with_cofactors(
-            generators,
-            std::slice::from_ref(&elimination.residue),
-            limits,
-        );
-        match &outcomes[0] {
-            CofactorOutcome::Reduced {
-                cofactors: extra,
-                remainder,
-            } => {
-                if !remainder.is_zero() {
-                    return Err(ProofOutcome::NotInSaturatedIdeal {
-                        conclusion_id: conclusion.id.clone(),
-                        remainder: remainder.clone(),
-                    });
+        // Narrowing is not an optimisation; without it the handover recomputes
+        // the basis this route existed to avoid. Measured on `pappus-hexagon`:
+        // the elimination clears three 2×2 blocks in milliseconds and leaves a
+        // 720-term residue free of `xx…zy`, and reducing that against all eight
+        // hypotheses — six of which are precisely the ones just consumed, and
+        // every one of which mentions a variable the residue no longer has — does
+        // not return. Against the two the blocks did not touch it is a two-
+        // generator question.
+        //
+        // There is deliberately no fallback to the full generator list. That is
+        // the route's contract: linear algebra takes the linear part, the general
+        // route takes what is left of the *rest*, and if that is not enough this
+        // route declines so `certify_any_route` can hand the whole problem to
+        // Buchberger. A fallback would reintroduce the hang on exactly the
+        // theorems the narrowing was for.
+        //
+        // Two passes, hypotheses-only first. The saturation generators `d·z − 1`
+        // are what the *multiplier* needs, not what the residue needs, and they
+        // are the worst possible input to `Buchberger`'s algorithm — a fresh
+        // variable in every one of them. On `pappus-hexagon` the residue reduces
+        // against the two unconsumed hypotheses in a single S-pair, while the same
+        // reduction with three Rabinowitsch generators added does not return; so
+        // reaching for them only when the cheap pass fails is the difference
+        // between a subset search that finishes and one that does not.
+        let consumed: BTreeSet<usize> = elimination
+            .blocks
+            .iter()
+            .flat_map(|block| block.rows.iter().copied())
+            .collect();
+        let bare: Vec<usize> = (0..hypotheses.len())
+            .filter(|index| !consumed.contains(index))
+            .collect();
+        let saturated: Vec<usize> = (0..generators.len())
+            .filter(|index| !consumed.contains(index))
+            .collect();
+        let passes: Vec<&Vec<usize>> = if bare == saturated {
+            vec![&bare]
+        } else {
+            vec![&bare, &saturated]
+        };
+
+        let mut settled = false;
+        let mut last: Option<ProofOutcome> = None;
+        for kept in passes {
+            let narrowed: Vec<MvPoly> = kept
+                .iter()
+                .map(|&index| generators[index].clone())
+                .collect();
+            let outcomes = reduce_many_with_cofactors(
+                &narrowed,
+                std::slice::from_ref(&elimination.residue),
+                limits,
+            );
+            match &outcomes[0] {
+                CofactorOutcome::Reduced {
+                    cofactors: extra,
+                    remainder,
+                } => {
+                    if !remainder.is_zero() {
+                        last = Some(ProofOutcome::NotInSaturatedIdeal {
+                            conclusion_id: conclusion.id.clone(),
+                            remainder: remainder.clone(),
+                        });
+                        continue;
+                    }
+                    for (slot, share) in kept.iter().zip(extra.iter()) {
+                        let Some(sum) = cofactors[*slot].add(share) else {
+                            return Err(overflow());
+                        };
+                        cofactors[*slot] = sum;
+                    }
+                    settled = true;
+                    break;
                 }
-                for (slot, share) in extra.iter().enumerate() {
-                    let Some(sum) = cofactors[slot].add(share) else {
-                        return Err(overflow());
-                    };
-                    cofactors[slot] = sum;
+                CofactorOutcome::Declined(reason) => {
+                    last = Some(ProofOutcome::Declined(GeometryDecline::Reduction(*reason)));
                 }
             }
-            CofactorOutcome::Declined(reason) => {
-                return Err(ProofOutcome::Declined(GeometryDecline::Reduction(*reason)));
-            }
+        }
+        if !settled {
+            return Err(last.unwrap_or_else(|| ProofOutcome::NotInSaturatedIdeal {
+                conclusion_id: conclusion.id.clone(),
+                remainder: elimination.residue.clone(),
+            }));
         }
     }
 

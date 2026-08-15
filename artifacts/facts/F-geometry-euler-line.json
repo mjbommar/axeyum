@@ -62,7 +62,7 @@
       "checker_command": "cargo test -p axeyum-cas --test geometry_certificate_artifacts",
       "artifact": "artifacts/geometry-certificates/euler-line.json",
       "notes": "The distinction ADR-0455 draws matters here more than on the six older facts, because the route that reached this theorem CANNOT establish minimality the way `geometry_order_audit` does for those: the multiplier a linear elimination divides out is an artifact of the decomposition it chose, so the route could in principle consume a condition the theorem does not need. It does not, and the proof is the counterexample rather than a search. The only proper subset of a one-element condition set is the empty one, and A = B = (0,0), C = (1,0), O = (1/2,0), H = (0,1) satisfies all four hypotheses while falsifying the conclusion -- so the conclusion is not in the plain hypothesis ideal, decided, with no budget, no monomial order and no algorithm anywhere in the argument. No larger budget, faster order or better algorithm can report this theorem as unconditional.",
-      "measurement": "1 proper subset of 1 condition refuted for this fact; 6 subsets across the 4 saturated certificates in the corpus, 0 undecided."
+      "measurement": "1 proper subset of 1 condition refuted for this fact; 4 proper subsets across the 4 saturated certificates in the corpus (each uses exactly one condition, so each has exactly one proper subset -- the empty one), 0 undecided."
     },
     {
       "id": "geometry-coordinatisation-control-euler-line",

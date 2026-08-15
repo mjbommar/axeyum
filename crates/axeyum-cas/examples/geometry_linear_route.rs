@@ -23,13 +23,90 @@
 use std::time::Instant;
 
 use axeyum_cas::geometry_certify::{
-    GeometryProblem, ProofOutcome, certify_by_linear_elimination, geometry_limits,
+    Constraint, GeometryProblem, ProofOutcome, certify_by_linear_elimination, geometry_limits,
 };
 use axeyum_cas::geometry_check::{CheckOptions, GeometryVerdict, check_certificate};
 use axeyum_cas::geometry_corpus::{corpus, frontier};
-use axeyum_cas::groebner_cert::reduce_many_with_cofactors_traced;
+use axeyum_cas::groebner_cert::{CofactorOutcome, reduce_many_with_cofactors_traced};
 use axeyum_cas::linear_elim::eliminate;
 use axeyum_cas::mvpoly::MvPoly;
+
+/// Report the elimination for one conclusion: the blocks, the multiplier, and
+/// what the handover to the general route costs once the consumed generators are
+/// dropped from it.
+fn report_elimination(hypotheses: &[MvPoly], conclusion: &Constraint) {
+    let Some(done) = eliminate(hypotheses, &conclusion.poly) else {
+        println!("  {:<24} elimination overflowed", conclusion.id);
+        return;
+    };
+    println!(
+        "  {:<24} blocks={} multiplier={} terms, deg {}  residue={} terms",
+        conclusion.id,
+        done.blocks.len(),
+        done.multiplier.term_count(),
+        done.multiplier.total_degree(),
+        done.residue.term_count()
+    );
+    for (block, power) in done.blocks.iter().zip(done.powers.iter()) {
+        println!(
+            "      block {:?} rows {:?} det={} terms ^{power}",
+            block.unknowns,
+            block.rows,
+            block.determinant.term_count()
+        );
+    }
+    // The like-for-like number. Whatever linear algebra could not remove is what
+    // a Gröbner route would still have to chew on; these are the counters
+    // `geometry_obstruction` reports for the whole problem.
+    //
+    // A zero residue is short-circuited rather than reduced, and that is not
+    // bookkeeping: reducing the zero polynomial still computes a Gröbner basis of
+    // the hypotheses, which is exactly the divergent computation this route
+    // exists to avoid. Asking for the counters unconditionally hangs on
+    // `euler-line`.
+    if done.residue.is_zero() {
+        println!(
+            "      handover to Buchberger: 0 S-pairs processed, 0 queued, basis 0 (the residue \
+             is zero -- nothing left to do)"
+        );
+        return;
+    }
+    // The generators the blocks did NOT consume -- the same narrowing
+    // `certify_by_linear_elimination` applies, and the reason it has to: on
+    // `pappus-hexagon` the un-narrowed reduction does not return, and the
+    // narrowed one is a two-generator question.
+    let consumed: std::collections::BTreeSet<usize> = done
+        .blocks
+        .iter()
+        .flat_map(|block| block.rows.iter().copied())
+        .collect();
+    let kept: Vec<MvPoly> = hypotheses
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| !consumed.contains(index))
+        .map(|(_, poly)| poly.clone())
+        .collect();
+    let (outcomes, stats) = reduce_many_with_cofactors_traced(
+        &kept,
+        std::slice::from_ref(&done.residue),
+        geometry_limits(),
+    );
+    println!(
+        "      handover to Buchberger over the {} unconsumed generator(s): {} S-pairs \
+         processed, {} queued, basis {} -> {}",
+        kept.len(),
+        stats.pairs_processed,
+        stats.pairs_queued,
+        stats.max_basis_len,
+        match &outcomes[0] {
+            CofactorOutcome::Reduced { remainder, .. } if remainder.is_zero() =>
+                "residue is in the ideal".to_string(),
+            CofactorOutcome::Reduced { remainder, .. } =>
+                format!("{}-term remainder left", remainder.term_count()),
+            CofactorOutcome::Declined(reason) => format!("declined: {reason:?}"),
+        }
+    );
+}
 
 fn main() {
     let wanted: Vec<String> = std::env::args().skip(1).collect();
@@ -47,51 +124,7 @@ fn main() {
             .collect();
 
         for conclusion in &problem.conclusions {
-            let Some(done) = eliminate(&hypotheses, &conclusion.poly) else {
-                println!("  {:<24} elimination overflowed", conclusion.id);
-                continue;
-            };
-            println!(
-                "  {:<24} blocks={} multiplier={} terms, deg {}  residue={} terms",
-                conclusion.id,
-                done.blocks.len(),
-                done.multiplier.term_count(),
-                done.multiplier.total_degree(),
-                done.residue.term_count()
-            );
-            for (block, power) in done.blocks.iter().zip(done.powers.iter()) {
-                println!(
-                    "      block {:?} rows {:?} det={} terms ^{power}",
-                    block.unknowns,
-                    block.rows,
-                    block.determinant.term_count()
-                );
-            }
-            // The like-for-like number. Whatever linear algebra could not remove
-            // is what a Gröbner route would still have to chew on; these are the
-            // counters `geometry_obstruction` reports for the whole problem.
-            //
-            // A zero residue is short-circuited rather than reduced, and that is
-            // not bookkeeping: reducing the zero polynomial still computes a
-            // Gröbner basis of the hypotheses, which is exactly the divergent
-            // computation this route exists to avoid. Asking for the counters
-            // unconditionally hangs on `euler-line`.
-            if done.residue.is_zero() {
-                println!(
-                    "      handover to Buchberger: 0 S-pairs processed, 0 queued, basis 0 \
-                     (the residue is zero -- nothing left to do)"
-                );
-            } else {
-                let (_, stats) = reduce_many_with_cofactors_traced(
-                    &hypotheses,
-                    std::slice::from_ref(&done.residue),
-                    geometry_limits(),
-                );
-                println!(
-                    "      handover to Buchberger: {} S-pairs processed, {} queued, basis {}",
-                    stats.pairs_processed, stats.pairs_queued, stats.max_basis_len
-                );
-            }
+            report_elimination(&hypotheses, conclusion);
         }
 
         let started = Instant::now();
