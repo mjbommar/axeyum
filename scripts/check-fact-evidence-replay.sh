@@ -14,8 +14,20 @@
 # replayed only the Rado cells -- convenient, because that family already had a
 # harness, which is exactly the wrong reason to choose a gate.)
 #
-# Cheap by construction: most checkers are milliseconds to a second. Anything
-# genuinely expensive is skipped by name and REPORTED, never silently dropped.
+# Cheap by construction: most checkers are milliseconds to a second. A few are
+# genuinely expensive, and this comment used to claim they were "skipped by name
+# and REPORTED". THAT MECHANISM DID NOT EXIST -- the only thing this script ever
+# skipped was a fact with no `checker_command` at all. It was a doc comment
+# asserting what the code does not do, in a script written to catch exactly that
+# class of defect, which is the whole reason the class keeps being worth naming.
+#
+# What exists now instead: an evidence row may declare `checker_seconds`, the
+# MEASURED typical runtime, and such a row gets a proportional budget rather than
+# timing out on every run. `F:sorting-network-optimal-size-n6` is the case that
+# forced it -- 490 s measured against a 120 s default, so it timed out every
+# sweep, and a gate with a permanent expected failure teaches its readers to
+# ignore it. Rows that use an extended budget are REPORTED, so the cost stays
+# visible rather than becoming invisible by annotation.
 #
 # Usage:  scripts/check-fact-evidence-replay.sh [per-checker-timeout-seconds]
 set -uo pipefail
@@ -83,6 +95,7 @@ for path in sorted(glob.glob("artifacts/facts/*.json")):
         facts.append(d)
 
 ran = failed = skipped = 0
+extended = []
 timeouts = []
 timed_out_facts = set()
 
@@ -155,21 +168,31 @@ for fact in facts:
     ok = True
     for row in rows:
         cmd = row["checker_command"]
+        # A row that declares a MEASURED cost gets a budget scaled from it. The
+        # factor is deliberately generous (2x) and floored at the caller's
+        # timeout: this box has shown 1.84x swings between core classes alone,
+        # so a budget equal to the measurement would still flake constantly.
+        declared = row.get("checker_seconds")
+        row_timeout = timeout
+        if isinstance(declared, int) and declared > 0:
+            row_timeout = max(timeout, declared * 2)
+            if row_timeout > timeout:
+                extended.append((fact["id"], declared, row_timeout))
         # A timeout is NOT evidence that a fact rotted, and reporting it as a
         # failure makes the gate's false alarms indistinguishable from its true
         # ones. Measured: the same clean ledger gives 251.8s/0 failed idle and
         # 747.7s/1 "failed" under contention, where the one failure was cargo's
         # build lock. So: retry once, then classify separately.
-        rc, note, timed_out = run_checker(cmd, timeout)
+        rc, note, timed_out = run_checker(cmd, row_timeout)
         if timed_out:
-            rc, note, timed_out = run_checker(cmd, timeout)
+            rc, note, timed_out = run_checker(cmd, row_timeout)
         ran += 1
         if timed_out:
             ok = False
             timeouts.append((fact["id"], cmd, note))
         elif rc != 0:
             ok = False
-            failures.append((fact["id"], cmd, note, diagnose(cmd, timeout)))
+            failures.append((fact["id"], cmd, note, diagnose(cmd, row_timeout)))
 
     by_route_total[route] += 1
     if ok:
@@ -192,6 +215,10 @@ elapsed = time.time() - started
 print()
 for route in sorted(by_route_total):
     print(f"  route {route:<20} {by_route_ok[route]}/{by_route_total[route]} re-derived")
+if extended:
+    print()
+    for fid, declared, budget in extended:
+        print(f"  budget    {fid:<40} declared {declared}s -> allowed {budget}s")
 ok_facts = sum(by_route_ok.values())
 print(f"\nfact-evidence-replay: {len(facts)} settled fact(s), {ran} checker run(s), "
       f"{ok_facts} re-derived, {failed} failed, {len(timed_out_facts)} timed out, "
