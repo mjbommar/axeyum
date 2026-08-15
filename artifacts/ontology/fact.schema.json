@@ -17,43 +17,31 @@
   ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": {
-      "type": "integer",
-      "const": 1
-    },
+    "schema_version": { "type": "integer", "const": 1 },
+
     "id": {
       "type": "string",
       "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$",
       "description": "Stable identifier, `F:` prefixed, e.g. `F:nat-add-comm`. Mirrors the `C:`/`TQ:` convention of the concept graph so the two can be cited side by side."
     },
-    "title": {
-      "type": "string",
-      "minLength": 1
-    },
+
+    "title": { "type": "string", "minLength": 1 },
+
     "statement": {
       "type": "string",
       "minLength": 1,
       "description": "The proposition in prose, for a human. Never the machine-readable form -- that is `formal.statement`. Kept because a formal statement alone is not reviewable."
     },
+
     "formal": {
       "type": "object",
-      "required": [
-        "language",
-        "statement",
-        "fragment"
-      ],
+      "required": ["language", "statement", "fragment"],
       "additionalProperties": false,
       "description": "What is asserted, machine-readably. This is the field that distinguishes a fact from a claim: a claim's `formal` is a generator recipe, this is the proposition itself.",
       "properties": {
         "language": {
-          "enum": [
-            "smtlib2",
-            "lean4",
-            "lean4-surface",
-            "axeyum-ir",
-            "cas-term"
-          ],
-          "description": "`smtlib2` is dispatchable to the solver; `axeyum-ir` is the internal term form.\n\n`cas-term` is the computer-algebra statement form: a `axeyum_cas::telescoping::HyperTerm` specification (a product of `\u0393(linear form)^e`, `base^(linear form)` and `polynomial^e` factors) together with a summation and a claimed closed form, rendered as text. It exists because a definite hypergeometric identity is not expressible in any of the other four: it quantifies over \u2115 so it is not `smtlib2`, and no kernel declaration for `\u0393`, `\u2211` or binomial coefficients exists, so writing it as `lean4` would name a theorem the kernel cannot state. The distinction is load-bearing \u2014 the whole point of `cas-certificate` facts is that a `cas-term` statement can be settled for ALL `n` by a polynomial identity, and mislabelling the language would make the fact look dispatchable to a machine that cannot read it.\n\n`lean4` means Lean **kernel core**, as emitted by `Kernel::render_lean` \u2014 the form `nat_theorem_inventory` prints and the form a fact should normally carry. `lean4-surface` means source syntax intended for the elaborator.\n\nThese are NOT interchangeable and the difference is observed, not theoretical: Lean's elaborator inserts pending implicit arguments when a parenthesized application closes, so `(@Eq.refl \u03b1) a` fails where the flat `@Eq.refl \u03b1 a` type-checks. A statement that is valid core can therefore be rejected as surface. One extraction lane had 19 core statements and 1 surface (an iteration the prelude cannot express) and no way to mark the difference except English prose in `notes`."
+          "enum": ["smtlib2", "lean4", "lean4-surface", "axeyum-ir", "cas-term"],
+          "description": "`smtlib2` is dispatchable to the solver; `axeyum-ir` is the internal term form.\n\n`cas-term` is the computer-algebra statement form: a `axeyum_cas::telescoping::HyperTerm` specification (a product of `Γ(linear form)^e`, `base^(linear form)` and `polynomial^e` factors) together with a summation and a claimed closed form, rendered as text. It exists because a definite hypergeometric identity is not expressible in any of the other four: it quantifies over ℕ so it is not `smtlib2`, and no kernel declaration for `Γ`, `∑` or binomial coefficients exists, so writing it as `lean4` would name a theorem the kernel cannot state. The distinction is load-bearing — the whole point of `cas-certificate` facts is that a `cas-term` statement can be settled for ALL `n` by a polynomial identity, and mislabelling the language would make the fact look dispatchable to a machine that cannot read it.\n\n`lean4` means Lean **kernel core**, as emitted by `Kernel::render_lean` — the form `nat_theorem_inventory` prints and the form a fact should normally carry. `lean4-surface` means source syntax intended for the elaborator.\n\nThese are NOT interchangeable and the difference is observed, not theoretical: Lean's elaborator inserts pending implicit arguments when a parenthesized application closes, so `(@Eq.refl α) a` fails where the flat `@Eq.refl α a` type-checks. A statement that is valid core can therefore be rejected as surface. One extraction lane had 19 core statements and 1 surface (an iteration the prelude cannot express) and no way to mark the difference except English prose in `notes`."
         },
         "statement": {
           "type": "string",
@@ -66,79 +54,48 @@
         },
         "free_symbols": {
           "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "items": { "type": "string" },
           "description": "Symbols the statement quantifies over or leaves free, so a consumer need not re-parse to know its shape."
         }
       }
     },
+
     "epistemic_status": {
-      "enum": [
-        "axiom",
-        "proved",
-        "computed",
-        "empirical",
-        "conjectured",
-        "open",
-        "refuted"
-      ],
+      "enum": ["axiom", "proved", "computed", "empirical", "conjectured", "open", "refuted"],
       "description": "**What THIS system has established.** Deliberately the SAME vocabulary as `claim.schema.json` and the math-education concept graph, plus `refuted`. A fact can be refuted; a claim, being a record of something established, cannot.\n\nThis is a statement about our ledger, NOT about mathematics. `open` here means we have not established it, whoever else may have. See `external_status`."
     },
+
     "external_status": {
-      "enum": [
-        "proved",
-        "refuted",
-        "conjectured",
-        "open",
-        "unknown"
-      ],
+      "enum": ["proved", "refuted", "conjectured", "open", "unknown"],
       "description": "**What is known to mathematics, independent of us.** Optional; omit when nobody has looked, which is different from `unknown` (nobody has looked *and we checked*).\n\nWHY THIS EXISTS. Without it, `epistemic_status: open` does double duty for two unrelated situations: `Goldbach` (nobody has proved it) and `Fermat's Last Theorem` (proved in 1995; we simply have not imported it). Both are `open` to us and only one is open. That has two concrete costs: the self-extension loop consumes `open` facts, so it would burn its queue retrying settled theorems; and the headline open-count -- a number this project reports -- becomes meaningless.\n\nThe first extraction lane hit this immediately and REFUSED to extract Fermat's Last Theorem, correctly, on the grounds that every available status would have been a lie.\n\nTHE INTERESTING COMBINATION. `epistemic_status: proved`/`computed` together with `external_status: open`/`conjectured` is not a contradiction -- it is a **new result**, this project's whole point (e.g. R_4(5(x-y)=2z) = 625). The validator surfaces these rather than rejecting them."
     },
+
     "depends_on": {
       "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$"
-      },
+      "items": { "type": "string", "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$" },
       "description": "Other facts this one rests on. This is the DAG the build order comes from -- over STATEMENTS, not topics. May be empty for a foundational fact."
     },
+
     "proof_route": {
-      "enum": [
-        "kernel-lean",
-        "imported-kernel-lean",
-        "smt-term-level",
-        "smt-clausal",
-        "search-certificate",
-        "cas-certificate",
-        "none"
-      ],
-      "description": "WHICH machine established this, because `axiom_footprint` is only meaningful \u2014 and only comparable \u2014 within a route.\n\nWHY THIS EXISTS. Two vocabularies were coexisting in `axiom_footprint` with nothing marking the difference: 17 facts carried `[]` (kernel route, axiom-free) and 14 carried `[\"axeyum-ir.bool-evaluator\", \"classical-two-valued-bool-semantics\"]` (SMT route, strings a lane had to invent because the field offered none). A reader comparing them would conclude the first group rests on less. That comparison is invalid \u2014 they are different trust bases, not different amounts of the same one.\n\nThe routes are NOT of equal strength and are not interchangeable. The logic prelude is intuitionistic and carries zero axioms of any trusted kind (measured), so excluded middle, double-negation elimination and Peirce's law are provable on `smt-term-level` and NOT obtainable on `kernel-lean` without a new axiom. A fact settled on one route is not thereby settled on the other, and a reconstruction pipeline that assumes otherwise hits an opaque wall on every classical tautology.\n\n`kernel-lean` \u2014 a proof term THIS project constructed, type-checked by our independent kernel. `imported-kernel-lean` \u2014 a proof term this project did NOT construct, translated from a pinned foreign export and admitted by our independent kernel. `smt-term-level` \u2014 exhaustive evaluation by the IR evaluator, trusting neither bit-blaster, CNF encoder nor SAT solver. `smt-clausal` \u2014 decided through CNF, with a DRAT/Alethe certificate. `search-certificate` \u2014 a combinatorial search whose result carries a replayable witness or cover. `cas-certificate` \u2014 an algebraic identity re-derived by exact polynomial arithmetic that shares no code with the search that found it (Gr\u00f6bner cofactors `target = \u03a3 c\u1d62\u00b7g\u1d62 + r`; creative-telescoping / Wilf\u2013Zeilberger certificates `\u03a3_j a_j(n)\u00b7F(n+j,k)/F(n,k) = R(n,k+1)\u00b7r(n,k) \u2212 R(n,k)`).\n\nWHY THIS IS NOT `search-certificate`. A witness or cover settles a FINITE statement: replaying it re-derives one instance, and a claim about all `n` needs one certificate per `n`. A CAS certificate is an identity in `\u211a(vars)`, so a single polynomial zero-test settles every instance at once \u2014 it is the only route here that can establish a universally quantified arithmetic statement without a kernel proof term. Conflating the two would make `axiom_footprint` incomparable in exactly the way this field exists to prevent, because their footprints differ in kind: a replayed witness assumes only the replay semantics, while an algebraic identity assumes characteristic zero, that the declared term specification denotes the intended summand, and whatever side conditions carry the identity from `\u211a(vars)` to the integers (for telescoping: that `R\u00b7F` has the same natural boundary as `F`). Those are real and `[]` is not available here.\n\nWHY `imported-kernel-lean` IS NOT `kernel-lean`. The type-checking is the same gate \u2014 `Kernel::add_declaration`, re-deriving the type from the proof term \u2014 so it is tempting to reuse the label. Two things differ, and both are the kind of difference `axiom_footprint` exists to keep visible.\n\nFirst, AUTHORSHIP. Every `kernel-lean` fact is a proposition this project constructed a proof of; that is the metric the project publishes and the number the self-extension loop is trying to raise. An imported theorem raises no such number, and a route that made the two indistinguishable would let the headline count be inflated by ingestion. The trap is specific: recording what Mathlib says does not make it checked here.\n\nSecond, TRUST BASE. `[]` on `kernel-lean` means a kernel environment admits no `Axiom`, `Opaque` or `Quotient`. An import can reach that state inside the imported environment and still rest on three things the constructed route does not: that the exporter faithfully rendered the source system's environment, that our translation of the wire format preserves meaning, and that the delivered bytes are the producer's intended export (format 3.1 has no footer, so completion is relative to the bytes handed over \u2014 the importer's own documentation says so). Those assumptions are real, so `[]` is not available on this route and the validator rejects it. Note also that the two systems' footprints are not written in the same vocabulary: for `Classical.em`, Lean's `#print axioms` reports three names while `Kernel::axiom_footprint` reports six, because our kernel classifies the whole quotient package as `Quotient` declarations. Ours is the more conservative reading, and it must not be silently reconciled to Lean's."
+      "enum": ["kernel-lean", "imported-kernel-lean", "smt-term-level", "smt-clausal", "search-certificate", "cas-certificate", "none"],
+      "description": "WHICH machine established this, because `axiom_footprint` is only meaningful — and only comparable — within a route.\n\nWHY THIS EXISTS. Two vocabularies were coexisting in `axiom_footprint` with nothing marking the difference: 17 facts carried `[]` (kernel route, axiom-free) and 14 carried `[\"axeyum-ir.bool-evaluator\", \"classical-two-valued-bool-semantics\"]` (SMT route, strings a lane had to invent because the field offered none). A reader comparing them would conclude the first group rests on less. That comparison is invalid — they are different trust bases, not different amounts of the same one.\n\nThe routes are NOT of equal strength and are not interchangeable. The logic prelude is intuitionistic and carries zero axioms of any trusted kind (measured), so excluded middle, double-negation elimination and Peirce's law are provable on `smt-term-level` and NOT obtainable on `kernel-lean` without a new axiom. A fact settled on one route is not thereby settled on the other, and a reconstruction pipeline that assumes otherwise hits an opaque wall on every classical tautology.\n\n`kernel-lean` — a proof term THIS project constructed, type-checked by our independent kernel. `imported-kernel-lean` — a proof term this project did NOT construct, translated from a pinned foreign export and admitted by our independent kernel. `smt-term-level` — exhaustive evaluation by the IR evaluator, trusting neither bit-blaster, CNF encoder nor SAT solver. `smt-clausal` — decided through CNF, with a DRAT/Alethe certificate. `search-certificate` — a combinatorial search whose result carries a replayable witness or cover. `cas-certificate` — an algebraic identity re-derived by exact polynomial arithmetic that shares no code with the search that found it (Gröbner cofactors `target = Σ cᵢ·gᵢ + r`; creative-telescoping / Wilf–Zeilberger certificates `Σ_j a_j(n)·F(n+j,k)/F(n,k) = R(n,k+1)·r(n,k) − R(n,k)`).\n\nWHY THIS IS NOT `search-certificate`. A witness or cover settles a FINITE statement: replaying it re-derives one instance, and a claim about all `n` needs one certificate per `n`. A CAS certificate is an identity in `ℚ(vars)`, so a single polynomial zero-test settles every instance at once — it is the only route here that can establish a universally quantified arithmetic statement without a kernel proof term. Conflating the two would make `axiom_footprint` incomparable in exactly the way this field exists to prevent, because their footprints differ in kind: a replayed witness assumes only the replay semantics, while an algebraic identity assumes characteristic zero, that the declared term specification denotes the intended summand, and whatever side conditions carry the identity from `ℚ(vars)` to the integers (for telescoping: that `R·F` has the same natural boundary as `F`). Those are real and `[]` is not available here.\n\nWHY `imported-kernel-lean` IS NOT `kernel-lean`. The type-checking is the same gate — `Kernel::add_declaration`, re-deriving the type from the proof term — so it is tempting to reuse the label. Two things differ, and both are the kind of difference `axiom_footprint` exists to keep visible.\n\nFirst, AUTHORSHIP. Every `kernel-lean` fact is a proposition this project constructed a proof of; that is the metric the project publishes and the number the self-extension loop is trying to raise. An imported theorem raises no such number, and a route that made the two indistinguishable would let the headline count be inflated by ingestion. The trap is specific: recording what Mathlib says does not make it checked here.\n\nSecond, TRUST BASE. `[]` on `kernel-lean` means a kernel environment admits no `Axiom`, `Opaque` or `Quotient`. An import can reach that state inside the imported environment and still rest on three things the constructed route does not: that the exporter faithfully rendered the source system's environment, that our translation of the wire format preserves meaning, and that the delivered bytes are the producer's intended export (format 3.1 has no footer, so completion is relative to the bytes handed over — the importer's own documentation says so). Those assumptions are real, so `[]` is not available on this route and the validator rejects it. Note also that the two systems' footprints are not written in the same vocabulary: for `Classical.em`, Lean's `#print axioms` reports three names while `Kernel::axiom_footprint` reports six, because our kernel classifies the whole quotient package as `Quotient` declarations. Ours is the more conservative reading, and it must not be silently reconciled to Lean's."
     },
+
     "axiom_footprint": {
       "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "What the establishing evidence rests on that was NOT itself proved. REQUIRED when `epistemic_status` is `proved`: an empty array means axiom-free and is a strictly stronger claim than an absent field. This is the metric the project publishes.\n\nONLY COMPARABLE WITHIN A `proof_route`. On `kernel-lean` these are kernel declaration names (`propext`, `Classical.choice`, `Quot.sound`) and `[]` means the environment admits no `Axiom`, `Opaque` or `Quotient` \u2014 a claim `Kernel::axiom_footprint` computes per theorem. On `smt-term-level` they name the semantic assumptions the evaluator makes; `[]` is NOT achievable there and the validator rejects it, because an empty list on that route would read as axiom-freedom the route cannot deliver."
+      "items": { "type": "string" },
+      "description": "What the establishing evidence rests on that was NOT itself proved. REQUIRED when `epistemic_status` is `proved`: an empty array means axiom-free and is a strictly stronger claim than an absent field. This is the metric the project publishes.\n\nONLY COMPARABLE WITHIN A `proof_route`. On `kernel-lean` these are kernel declaration names (`propext`, `Classical.choice`, `Quot.sound`) and `[]` means the environment admits no `Axiom`, `Opaque` or `Quotient` — a claim `Kernel::axiom_footprint` computes per theorem. On `smt-term-level` they name the semantic assumptions the evaluator makes; `[]` is NOT achievable there and the validator rejects it, because an empty list on that route would read as axiom-freedom the route cannot deliver."
     },
+
     "evidence": {
       "type": "array",
       "description": "Zero or more artifacts establishing the status. Deliberately the same shape as `claim.schema.json`'s evidence rows so one checker can walk both. A fact with `epistemic_status: open` carries an empty array -- and that is a statement, not an omission.",
       "items": {
         "type": "object",
-        "required": [
-          "id",
-          "kind",
-          "supports",
-          "check_status"
-        ],
+        "required": ["id", "kind", "supports", "check_status"],
         "additionalProperties": true,
         "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
+          "id": { "type": "string", "minLength": 1 },
           "kind": {
             "enum": [
               "kernel-term",
@@ -154,122 +111,75 @@
             ],
             "description": "`kernel-term` is a proof term an independent kernel type-checks -- the strongest. `claim-ref` points at an existing `artifacts/claims/` entry, which is how a computed value becomes evidence for a proposition."
           },
-          "supports": {
-            "type": "string",
-            "minLength": 1
-          },
-          "check_status": {
-            "enum": [
-              "checked",
-              "replay-only",
-              "not-checked"
-            ]
-          },
+          "supports": { "type": "string", "minLength": 1 },
+          "check_status": { "enum": ["checked", "replay-only", "not-checked"] },
           "checkers": {
             "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Each INDEPENDENT re-derivation of this evidence, named. `check_status` alone cannot carry this: across the first 50 evidence rows in this ledger every single one said `checked`, so the field had no discriminating power at all, while one lane had in fact validated each result three separate ways \u2014 the producing solve, `Evidence::check` against a fresh parse, and an external z3 run \u2014 with all three collapsing into that one token.\n\nCross-oracle agreement is the strongest signal this repository has and it had nowhere to go but prose. List what actually re-derived the result, e.g. [\"producing-solve\", \"Evidence::check-fresh-parse\", \"z3-4.13\"]. Two entries that share an implementation are ONE check wearing two names; the value of the list is independence, not length."
+            "items": { "type": "string" },
+            "description": "Each INDEPENDENT re-derivation of this evidence, named. `check_status` alone cannot carry this: across the first 50 evidence rows in this ledger every single one said `checked`, so the field had no discriminating power at all, while one lane had in fact validated each result three separate ways — the producing solve, `Evidence::check` against a fresh parse, and an external z3 run — with all three collapsing into that one token.\n\nCross-oracle agreement is the strongest signal this repository has and it had nowhere to go but prose. List what actually re-derived the result, e.g. [\"producing-solve\", \"Evidence::check-fresh-parse\", \"z3-4.13\"]. Two entries that share an implementation are ONE check wearing two names; the value of the list is independence, not length."
           },
-          "checker_command": {
-            "type": "string"
-          },
-          "artifact": {
-            "type": "string"
-          },
-          "notes": {
-            "type": "string"
-          },
+          "checker_command": { "type": "string" },
           "checker_seconds": {
             "type": "integer",
             "minimum": 1,
             "description": "Measured typical wall-clock seconds for `checker_command` on a quiet machine. The replay gate gives such a row a proportionally larger budget instead of timing it out every run. Record what you MEASURED, not what you hope: this exists so an expensive-but-honest checker is distinguishable from a hung one, and inflating it hides real hangs."
-          }
+          },
+          "artifact": { "type": "string" },
+          "notes": { "type": "string" }
         }
       }
     },
+
     "concept_refs": {
       "type": "array",
       "description": "Gloss and provenance only, NEVER substance. A fact must be intelligible without resolving these, so that a public repository works while a source corpus stays private.",
       "items": {
         "type": "object",
-        "required": [
-          "graph",
-          "ref"
-        ],
+        "required": ["graph", "ref"],
         "additionalProperties": true,
         "properties": {
-          "graph": {
-            "type": "string"
-          },
-          "ref": {
-            "type": "string"
-          },
-          "relation": {
-            "type": "string"
-          },
-          "resolved": {
-            "type": "boolean"
-          }
+          "graph": { "type": "string" },
+          "ref": { "type": "string" },
+          "relation": { "type": "string" },
+          "resolved": { "type": "boolean" }
         }
       }
     },
+
     "provenance": {
       "type": "object",
-      "required": [
-        "date"
-      ],
+      "required": ["date"],
       "additionalProperties": true,
       "properties": {
-        "date": {
-          "type": "string"
-        },
-        "established_by": {
-          "type": "string",
-          "description": "What settled it: a lane, a solver route, an import, or a person."
-        },
-        "source": {
-          "type": "string",
-          "description": "Where the statement came from, if extracted rather than authored."
-        },
+        "date": { "type": "string" },
+        "established_by": { "type": "string", "description": "What settled it: a lane, a solver route, an import, or a person." },
+        "source": { "type": "string", "description": "Where the statement came from, if extracted rather than authored." },
         "prior_art": {
           "type": "array",
-          "description": "Who established this outside axeyum. Required by the validator when `external_status` is settled AND we have not established it ourselves \u2014 i.e. when the literature is the only thing holding the fact up.",
+          "description": "Who established this outside axeyum. Required by the validator when `external_status` is settled AND we have not established it ourselves — i.e. when the literature is the only thing holding the fact up.",
           "items": {
             "type": "object",
             "additionalProperties": true,
             "properties": {
-              "who": {
-                "type": "string"
-              },
-              "what": {
-                "type": "string"
-              },
-              "where": {
-                "type": "string"
-              },
-              "year": {
-                "type": "integer"
-              },
+              "who": { "type": "string" },
+              "what": { "type": "string" },
+              "where": { "type": "string" },
+              "year": { "type": "integer" },
               "attribution": {
                 "type": "string",
-                "description": "How the citation itself was obtained \u2014 first-class because a lane invented it as a convention and was right to. The honest common case is \"standard textbook attribution; this lane did not consult the primary source\", which is a materially weaker claim than having read the paper and must not be silently indistinguishable from it. This project has already cited unrefereed Zenodo self-deposits as though they were published literature."
+                "description": "How the citation itself was obtained — first-class because a lane invented it as a convention and was right to. The honest common case is \"standard textbook attribution; this lane did not consult the primary source\", which is a materially weaker claim than having read the paper and must not be silently indistinguishable from it. This project has already cited unrefereed Zenodo self-deposits as though they were published literature."
               }
             }
           }
         }
       }
     },
-    "notes": {
-      "type": "string"
-    },
+
+    "notes": { "type": "string" },
+
     "supersedes": {
       "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$"
-      }
+      "items": { "type": "string", "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$" }
     }
   }
 }
