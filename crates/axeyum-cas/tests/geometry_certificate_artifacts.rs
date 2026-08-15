@@ -284,6 +284,36 @@ fn on_locus_but_harmless() -> Vec<(&'static str, BTreeMap<String, Rational>)> {
                 ("hy", 0, 1),
             ]),
         ),
+        // `pappus-hexagon`, on the locus and harmless. Six points on the x-axis
+        // with D = B and E = A: every incidence hypothesis is vacuous or forces
+        // its point onto the x-axis, and `ae-meets-bd` fails outright. `X` is the
+        // one free point (both of its lines are vacuous), and putting it back on
+        // the x-axis at (0,0) leaves X, Y, Z collinear, so the conclusion holds.
+        // The committed counterexample is this configuration with X = (0,1)
+        // instead — again one coordinate apart.
+        (
+            "six points on the x-axis with X back on it, degenerate but still collinear",
+            at(&[
+                ("ax", 0, 1),
+                ("ay", 0, 1),
+                ("bx", 1, 1),
+                ("by", 0, 1),
+                ("cx", 3, 1),
+                ("cy", 0, 1),
+                ("dx", 1, 1),
+                ("dy", 0, 1),
+                ("ex", 0, 1),
+                ("ey", 0, 1),
+                ("fx", 5, 1),
+                ("fy", 0, 1),
+                ("xx", 0, 1),
+                ("xy", 0, 1),
+                ("yx", 2, 1),
+                ("yy", 0, 1),
+                ("zx", 4, 1),
+                ("zy", 0, 1),
+            ]),
+        ),
     ]
 }
 

@@ -82,18 +82,12 @@ pub fn corpus() -> Vec<GeometryProblem> {
         parallelogram_diagonals_bisect(),
         rhombus_diagonals_perpendicular(),
         euler_line(),
+        pappus_hexagon(),
     ]
 }
 
 /// Theorems stated here, correctly as far as the encoding goes, that do **not**
 /// have a committed certificate.
-///
-/// Historically that meant "the search does not reach them", and for
-/// `rhombus-diagonals-perpendicular` and `euler-line` it did. It no longer has to:
-/// `pappus-hexagon` is here with a certificate the independent checker *accepts*,
-/// held back by an evidence bar rather than by a budget. Both reasons belong on
-/// one list, because from the ledger's point of view they are the same status —
-/// no fact, no artifact — and the difference is in the note, not the outcome.
 ///
 /// Entries stay in the tree rather than being deleted because the value of a
 /// measured limit is that it is reproducible, and because a theorem here is
@@ -101,116 +95,88 @@ pub fn corpus() -> Vec<GeometryProblem> {
 /// every configuration a frontier entry states against its own polynomials, so a
 /// mis-stated theorem cannot hide in this list waiting for a faster search.
 ///
-/// `rhombus-diagonals-perpendicular` left this list on 2026-08-15 — it declined
-/// under `lex` and certifies under `grevlex` in 21 s — and `euler-line` left it
-/// the same day, which is what the list is for.
+/// `rhombus-diagonals-perpendicular` and `euler-line` left this list on
+/// 2026-08-15, and `pappus-hexagon` left it the same day for a reason worth
+/// recording, because the entry had said the opposite.
 ///
-/// # `euler-line` was not reached by a bigger budget, and that is the point
+/// # What `pappus-hexagon` was doing here, and why it was wrong
 ///
-/// The `geometry-frontier` lane's ladder
-/// (`cargo run -p axeyum-cas --release --example geometry_obstruction euler-line`)
-/// established what obstructed it, and the answer was not a duration. Under
-/// `grevlex`, with the full condition set:
+/// Pappus sat here holding a *checker-verified* certificate — 292 s, three
+/// non-degeneracy conditions — blocked not by a budget but by
+/// `every_used_condition_set_is_minimal_absolutely`. The note said its three
+/// conditions "can only be necessitated as a set": three attempts to find a
+/// configuration isolating one had collapsed, each time because killing one
+/// intersection forced the two *other* constructed points onto the very line the
+/// freed point was confined to.
 ///
-/// | S-pairs processed | still queued | basis | widest polynomial |
-/// |---|---|---|---|
-/// | 9 | 66 | 12 | 41 |
-/// | 33 | 210 | 21 | 278 |
-/// | 65 | 528 | 33 | 477 |
+/// Every one of those observations was correct, and the conclusion drawn from
+/// them was backwards. Those collapses are not an obstruction to minimality —
+/// **they are a proof that each condition is individually redundant.** If, on
+/// every configuration where `AF ∩ CD` or `BF ∩ CE` degenerates, the freed point
+/// is trapped on the line through the other two, then the conclusion holds
+/// *without* those conditions, and the three-element set was never minimal at
+/// all. The ratchet was not refusing a claim we had not yet established; it was
+/// refusing a claim that is false.
 ///
-/// The queue grew faster than it drained, because the basis never saturated and
-/// each new element queues one pair against every existing one. Not width — the
-/// rhombus, which *finishes*, carries a 733-monomial polynomial at the same rung
-/// against `euler-line`'s 477. Not memory — 117 MB against a 6 GB cap. Under
-/// `lex`, doubling 65 → 129 pairs tripled the backlog and cost ten times the wall
-/// clock. That is divergence, and no ceiling reaches the end of it.
+/// The corrected statement is stronger and much cleaner: **any one of the three
+/// conditions suffices on its own, and none is dispensable jointly** — the empty
+/// set does not suffice, since six collinear points make every incidence
+/// hypothesis vacuous and leave `X`, `Y`, `Z` free to be a triangle. So this
+/// theorem's minimal condition sets are the three singletons, and
+/// `certify` now returns one of them.
 ///
-/// What reached it was **not** a ceiling. All four hypotheses are affine in the
-/// four unknowns `ox, oy, hx, hy` over `ℚ[ax…cy]`, so
-/// [`crate::geometry_certify::certify_by_linear_elimination`] solves the two 2×2
-/// systems by Cramer's rule and substitutes: 0 S-pairs, no basis, a zero residue,
-/// and a certificate in **6 ms** against a computation that had not returned in
-/// 27 minutes. The determinants are `4·collinear(A,B,C)` and `collinear(A,B,C)`,
-/// so the multiplier is `4·collinear(A,B,C)²` — a power of the theorem's own
-/// non-degeneracy condition, which is exactly why the Rabinowitsch generator can
-/// divide it back out and the certificate stays in the original generators.
+/// Three independent confirmations, in ascending order of strength:
 ///
-/// # `pappus-hexagon` is here even though the search **reaches** it
+/// 1. A synthetic case analysis over the strata where a constructed point is
+///    under-determined (a point is free only when its two incidence lines
+///    coincide or one is vacuous, and each such collapse forces the other two
+///    points onto that same line).
+/// 2. An exhaustive decision over `F_p` for `p = 5, 7, 11, 13, 17, 19, 23`
+///    (`examples/geometry_condition_subsets.rs`): of the eight possible
+///    zero/nonzero patterns of the three conditions, the *only* one admitting a
+///    configuration that satisfies every hypothesis and falsifies the conclusion
+///    is the one with all three zero.
+/// 3. The certificate itself, which is the decisive one — see below.
 ///
-/// This entry is not a record of a failure to compute. Measured 2026-08-15,
+/// # Why the route reported three conditions, which is the transferable lesson
+///
+/// Not a budget. The block detector always found all three intersection blocks,
+/// so the multiplier was always `c₁·c₂·c₃`, so every proper subset failed at
+/// `invert_multiplier` on [`crate::geometry_certify::GeometryDecline::UndividableMultiplier`].
+/// The route was reporting the smallest subset **its own decomposition could pay
+/// for**, which is a property of the producer, not of the theorem.
+///
+/// `licensed_blocks` fixes it by filtering the decomposition to the blocks the
+/// current subset licenses. With the one-condition subset, one block is kept, the
+/// residue is 48 terms of degree 4 over the six untouched hypotheses, and
+/// [`crate::cofactor_ansatz`] settles it in ~25 ms with every coefficient `±1`.
+/// Buchberger was killed on that same residue after **7.5 minutes** without returning, which is why
+/// the bounded-degree route is tried first.
+///
+/// Measured 2026-08-15,
 /// `cargo run -p axeyum-cas --release --example geometry_linear_route -- pappus-hexagon`:
 ///
 /// ```text
-/// blocks=3  multiplier=468 terms, degree 6  residue=720 terms
-///     block [xx,xy] rows [2,3]  det = 8 terms
-///     block [yx,yy] rows [4,5]  det = 8 terms
-///     block [zx,zy] rows [6,7]  det = 8 terms
-///     handover over the 2 unconsumed generators: 1 S-pair, basis 2, residue in the ideal
-/// CERTIFIED in 292 s, conditions = all three, 3583 cofactor terms, checker verified
+/// CERTIFIED in 6.7 ms  conditions=["ae-meets-bd"]  74 cofactor terms  checker=verified
 /// ```
 ///
-/// Eighteen coordinates, eight hypotheses, three 2×2 blocks: `X` is pinned by
-/// `collinear(A,E,X)` and `collinear(B,D,X)`, both linear in `X`, with determinant
-/// exactly `det(E−A, D−B)` — the theorem's own first non-degeneracy condition. The
-/// same for `Y` and `Z`. The residue that linear algebra cannot remove is 720
-/// terms and reduces against the two collinearity hypotheses the blocks did not
-/// consume in a **single S-pair**. The algebra is settled and the independent
-/// checker accepts the certificate.
+/// 292 s and three conditions became 6.7 ms and one, and the one is minimal
+/// **absolutely** in ADR-0455's sense: the only proper subset of a singleton is
+/// the empty set, and the committed degenerate counterexample refutes it outright
+/// with no budget anywhere in the argument.
 ///
-/// It is on this list anyway, because what blocks it is the **counterexamples**,
-/// and that is a bar this corpus sets on purpose. The corpus requires one
-/// exact rational configuration per condition a certificate consumes: satisfying
-/// every hypothesis, annihilating that condition, and *falsifying* a conclusion.
-/// Pappus has one for the condition set **as a whole** — six points on the x-axis
-/// makes every incidence hypothesis vacuous and leaves `X`, `Y`, `Z` free to be a
-/// triangle — and this lane found none isolating a *single* condition. Three
-/// attempts, each collapsing for a different reason, all through one mechanism:
+/// # What is next, and the wrinkle it carries
 ///
-/// - `AE ∥ BD` with the lines distinct: no `X` exists, so the configuration does
-///   not satisfy the hypotheses and is not a witness at all.
-/// - `AE = BD` as lines, so `X` is free along it: that forces `A, B, D, E`
-///   collinear, hence the second line equals the first, hence *every* condition
-///   vanishes too.
-/// - `A = E`, so `collinear(A,E,X)` is vacuous and `X` is free along `BD`: the
-///   other two conditions do survive, but line `AF` becomes the second line, so
-///   `Y = D`, and line `CE` becomes the first, so `Z = B` — and `X` is already on
-///   line `BD = ZY`. The conclusion holds identically.
-///
-/// Killing one intersection forces the two *other* constructed points onto the
-/// very line the freed point is confined to. Whether that is a theorem or an
-/// accident of three attempts is open, and it is the question to settle before
-/// promoting this.
-///
-/// The consequence for the ledger is precise, and it is why a theorem the route
-/// certifies is nonetheless not filed: its condition set would be minimal only
-/// **budget-relative** in ADR-0455's sense — the empty subset is refuted by the
-/// committed counterexample, and the size-1 and size-2 subsets are *undecided*.
-/// `every_used_condition_set_is_minimal_absolutely` enumerates every proper subset
-/// and refuses that, deliberately, so the downgrade cannot happen silently.
-///
-/// So the decision waiting here is a real one and it is stated rather than made:
-/// either find a configuration isolating a single condition (or a smaller
-/// condition set), **or** relax that ratchet to a named, justified exception and
-/// write a fact whose `notes` say the minimality is budget-relative — which
-/// ADR-0455 explicitly permits when it is warranted. What the ratchet prevents is
-/// making the strong claim by default, and it is doing exactly that here. A
-/// practical note for whoever takes it: the 292 s is almost entirely the seven
-/// *failed* condition subsets, each paying a residue reduction before the
-/// multiplier refuses to divide; the subset that works is a small part of it.
-///
-/// **Simson's line** is the one after, with the same shape — three feet of
-/// perpendiculars, three 2×2 blocks, determinants `−|BC|²`, `−|CA|²`, `−|AB|²` —
-/// plus a wrinkle this corpus has already recorded: `|BC|² ≠ 0` is **not**
-/// `B ≠ C` over an arbitrary field of characteristic zero, because of the
-/// isotropic directions over ℂ. Over ℚ the two coincide, which is exactly the
-/// problem: the configurations that would witness the necessity of `|BC|² ≠ 0`
-/// are not rational, and [`DegenerateWitness`] holds exact rationals. Stating
-/// Simson honestly needs either a witness type over a quadratic extension, or a
-/// fact that names the real-plane assumption in its footprint and says what that
-/// costs.
-#[must_use]
+/// **Simson's line**, with the same shape — three feet of perpendiculars, three
+/// 2×2 blocks, determinants `−|BC|²`, `−|CA|²`, `−|AB|²` — plus a wrinkle this
+/// corpus has already recorded: `|BC|² ≠ 0` is **not** `B ≠ C` over an arbitrary
+/// field of characteristic zero, because of the isotropic directions over ℂ.
+/// Over ℚ the two coincide, which is exactly the problem: the configurations that
+/// would witness the necessity of `|BC|² ≠ 0` are not rational, and
+/// [`DegenerateWitness`] holds exact rationals. See the entry itself for what
+/// this lane established about that.
 pub fn frontier() -> Vec<GeometryProblem> {
-    vec![pappus_hexagon()]
+    Vec::new()
 }
 
 /// Varignon: the midpoints of the sides of an arbitrary quadrilateral form a
@@ -838,8 +804,32 @@ fn pappus_conditions(first: &[Pt; 3], second: &[Pt; 3]) -> Vec<Condition> {
 ///
 /// Eighteen coordinates and eight hypotheses, six of which are linear in the
 /// three intersection points — three 2×2 blocks whose determinants are exactly
-/// the three "these two lines are not parallel" conditions. See [`frontier`] for
-/// what this is measuring and why it is not in [`corpus`].
+/// the three "these two lines are not parallel" conditions.
+///
+/// # One condition, not three
+///
+/// All three conditions are *stated*, because all three are the honest reading of
+/// the construction: each says the pair of lines defining one cross point
+/// actually meets. Only one of them is *used*, and that is the theorem's real
+/// content rather than an accident of the search.
+///
+/// The reason is worth stating because it took a wrong answer to find. The
+/// incidence hypotheses assert that `X`, `Y`, `Z` **exist** as points on their
+/// respective line pairs. So a configuration on which, say, `AF ∩ CD` degenerates
+/// is not one where `Y` is missing — it is one where `Y` is *under-determined*,
+/// free along a line. And every way that can happen (the two lines coincide, or
+/// one of them is vacuous because its two defining points collide) drags `X` and
+/// `Z` onto that very line, so the conclusion holds anyway. The condition is
+/// carrying no weight. The same argument applies to each condition separately,
+/// but not to all of them at once: with the whole configuration collapsed onto a
+/// single line, every hypothesis is vacuous and the conclusion is plainly false,
+/// which is exactly what [`degenerate_pappus`] exhibits.
+///
+/// So the minimal condition sets are the three singletons, `certify` returns the
+/// first of them, and that minimality is **absolute** — the only proper subset of
+/// a singleton is the empty one, and the committed counterexample refutes it with
+/// no budget in the argument. See [`frontier`] for the measurement history and
+/// for why the route reported three conditions before `licensed_blocks` existed.
 fn pappus_hexagon() -> GeometryProblem {
     let on_first = [Pt::free("a"), Pt::free("b"), Pt::free("c")];
     let on_second = [Pt::free("d"), Pt::free("e"), Pt::free("f")];
@@ -850,10 +840,11 @@ fn pappus_hexagon() -> GeometryProblem {
         title: "Pappus's hexagon theorem: the three cross intersections are collinear".into(),
         statement: "Let A, B, C be collinear and D, E, F be collinear. Let X lie on AE and on \
                     BD, Y on AF and on CD, and Z on BF and on CE. If AE is not parallel to BD, \
-                    AF not parallel to CD, and BF not parallel to CE, then X, Y and Z are \
-                    collinear. The conditions are needed as a SET: when all six points are \
-                    collinear every incidence hypothesis is vacuous and X, Y, Z may be any three \
-                    points at all."
+                    then X, Y and Z are collinear. ONE condition is enough, and it is needed: \
+                    the other two stated conditions are individually redundant (by symmetry \
+                    either of them would serve equally as the single condition), while with no \
+                    condition at all the theorem is false -- six collinear points make every \
+                    incidence hypothesis vacuous and leave X, Y, Z free to be a triangle."
             .into(),
         coordinate_gloss: gloss(&[
             ("a", "A"),
@@ -912,9 +903,14 @@ fn pappus_hexagon() -> GeometryProblem {
 /// `X=(0,1)`, `Y=(2,0)`, `Z=(4,0)` is a genuine triangle.
 ///
 /// It is offered for each of the three conditions because it annihilates each of
-/// them, and that is exactly as much as this lane could establish: see
-/// [`frontier`] for why no configuration isolating a *single* condition was
-/// found, and why that is what keeps this theorem out of [`corpus`].
+/// them, and one copy of it is all the certificate keeps: [`certify`] uses a
+/// single condition, so `assemble` filters the list down to that one witness.
+///
+/// No configuration isolating a *single* condition exists, and that is a theorem
+/// rather than a gap — it is precisely why the other two conditions are
+/// redundant. See [`pappus_hexagon`].
+///
+/// [`certify`]: crate::geometry_certify::certify
 fn degenerate_pappus(condition_id: &str) -> DegenerateWitness {
     DegenerateWitness {
         condition_id: condition_id.to_string(),

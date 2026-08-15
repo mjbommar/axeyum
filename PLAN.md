@@ -306,6 +306,7 @@ evidence and unrelated temporary projects were untouched.
 |---|---|---|
 | 2026-08-15 | `geometry-frontier` | default geometry monomial order switched to degree-reverse-lex, justified by a per-subset per-order audit showing 6 unchanged condition sets and 6 byte-identical certificates — and every subset *decided*, which upgrades the corpus's minimality claim from budget-scoped to absolute; `rhombus-diagonals-perpendicular` promoted off the frontier as the seventh certified theorem with its non-degeneracy counterexample and both tamper controls, the controls now running over every saturated certificate rather than the first; `euler-line`'s obstruction measured rather than timed (basis growth and a quadratic S-pair backlog, not width and not overflow) via new `ReductionStats` and an S-pair ladder | `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/src/groebner_cert.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/examples/geometry_order_audit.rs`, `crates/axeyum-cas/examples/geometry_obstruction.rs`, `artifacts/geometry-certificates/rhombus-diagonals-perpendicular.json`, `artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json` |
 | 2026-08-15 | `euler-linearity` | `euler-line` certified and promoted off the frontier by **linear elimination** rather than a bigger budget — 4–6 ms and 0 S-pairs against a Gröbner run that had not returned in 27 minutes — with the cofactors derived from the adjugate identity so they stay against the ORIGINAL hypothesis generators, and the `det^d` multiplier divided out through the Rabinowitsch generator (`N = 2`, so the saturation cofactor is `−conclusion·(1 + d·z)`); a multiplier the stated conditions do not license is a refusal; condition-set minimality established **absolutely** by refuting every proper subset with a committed counterexample rather than by a `2ⁿ` budget-relative audit; the on-locus-but-harmless tamper control repaired from a constant that skipped every triangle theorem into a covered table; `geometry_check.rs` untouched and the seven older certificates byte-identical. Pappus's hexagon theorem then also certified (three 2x2 blocks, 292 s, checker-verified) and deliberately **left on the frontier**, because its three conditions can only be necessitated as a set and the new minimality ratchet correctly refuses the budget-relative claim | `crates/axeyum-cas/src/linear_elim.rs`, `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/src/lib.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/examples/geometry_linear_route.rs`, `crates/axeyum-cas/examples/emit_geometry_certificates.rs`, `artifacts/geometry-certificates/euler-line.json`, `artifacts/facts/F-geometry-euler-line.json` |
+| 2026-08-15 | `pappus-minimality` | Pappus's hexagon theorem promoted into the corpus with **one** non-degeneracy condition instead of three (6.7 ms against 292 s), and its minimality established **absolutely** — the previous lane's three collapsed attempts to necessitate a single condition turned out to be a *proof that each condition is individually redundant*, confirmed three ways (synthetic strata argument; exhaustive `F_p` decision for seven primes over the committed polynomials, orbit reduction cross-checked against a full enumeration; and a **certificate for each condition in isolation**). The root cause is ADR-0460: the route's subset tests were all *decided* and therefore read as absolute under ADR-0455, but they tested the subset against a decomposition the producer had already fixed, so they were **representation-relative** — decided and wrong. Fixed by `licensed_blocks`, which lets the condition subset choose its own block decomposition. New `cofactor_ansatz` module: bounded-degree ideal membership by exact sparse linear algebra, which settles in ~25 ms with `±1` coefficients a residue Buchberger was killed on after 7.5 minutes without returning; incomplete on purpose, bounds the shape of the system and never the solve, self-checks its own identity. `geometry_check.rs` untouched across a third independent producer; the handover refuses to run when no block was consumed, which is what keeps the eight older certificates byte-identical (**8 unchanged, 1 written**) | `crates/axeyum-cas/src/cofactor_ansatz.rs`, `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/src/lib.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/examples/pappus_condition_subsets.rs`, `crates/axeyum-cas/examples/geometry_cofactor_routes.rs`, `artifacts/geometry-certificates/pappus-hexagon.json`, `artifacts/facts/F-geometry-pappus-hexagon.json`, `docs/research/09-decisions/adr-0460-a-decided-subset-test-may-still-be-a-test-of-the-route.md` |
 | 2026-08-15 | `0fc7cc357` | `Int.subNatNat`'s borrow proved (shift lemma, two characterisations, elimination principle) and five of the six remaining integer axioms discharged: `add_assoc`, `mul_assoc`, `left_distrib`, `add_le_add`, `add_lt_add_of_le_of_lt`. `integer: axiom=6 → 1`; 50 `Int` theorems, all with an empty axiom footprint; real-Lean gate green at 112 checks. |
 | 2026-08-15 | `7c7b0ca16` | `Real`'s 30 axioms measured as an ordered-ring package (no inverse/completeness/Archimedean) and modelled in the constructed ℤ: `build_int_model_of_arith` admits 22 kernel-checked witnesses, all with an empty axiom footprint and all syntactically the `Int` law. `Int.sq_nonneg` proved (`Int: 50 → 51` derived, 51 empty footprints). Measured and pinned that this kernel has **no `Quot.sound`**, so a quotient ℝ is inexpressible, not merely expensive — correcting three comments and the ℤ diary. ADR-0456. |
 | 2026-08-15 | `ordered-ring-reconstruct` | Farkas/SOS refutations generalize over the ordered-ring interface: empty `axiom_footprint`, confirmed by real Lean's `#print axioms`, with the `Real`-specific statement recovered by instantiation (ADR-0457, `F:ordered-ring-farkas-refutation`). |
@@ -918,6 +919,116 @@ badly-chosen multiplier and the information to choose better is in the problem.
 Reach, not soundness. (5) Audit and switch `Limits::fast()` / `ideal_limits()`.
 (6) A surface syntax for the corpus, open and recommended three times now.
 
+**Continuation lane, 2026-08-15.** `euler-linearity` left `pappus-hexagon`
+certified, checker-verified, and deliberately **unfiled**: 292 s, three
+non-degeneracy conditions, and a note saying the three "can only be necessitated
+as a set", so its minimality would be budget-relative and
+`every_used_condition_set_is_minimal_absolutely` refused it. The brief was to
+decide that question rather than route around it. The answer is that the premise
+was false.
+
+**Pappus's three conditions are not needed as a set. Each one suffices on its
+own.** The three-condition set was not "minimal but unprovably so" — it was **not
+minimal**. `pappus-hexagon` is the ninth certified theorem, in `corpus()`, with
+**one** condition, certified in **6.7 ms** against the previous 292 s, and its
+minimality is **absolute**: the only proper subset of a singleton is the empty
+one, and the counterexample the previous lane already committed refutes it.
+`F:geometry-pappus-hexagon`, `validate-facts.py` 99 facts / 0 errors,
+`cas-certificate` 18 facts.
+
+**The previous lane had the proof and read its sign backwards.** Its three
+attempts to isolate one condition collapsed, always because "killing one
+intersection forces the two other constructed points onto the very line the freed
+point is confined to" — recorded as an obstruction to *claiming* minimality. It is
+a **proof of redundancy**. The hypotheses assert that `X`, `Y`, `Z` *exist* on
+their line pairs, so a degenerate line pair does not lose its point, it frees it
+along a line — and every way that can happen drags the other two cross points onto
+that same line. It does not run for all three at once, which is why the empty set
+is still refuted and one condition is still needed.
+
+**Why the route said three, which is the transferable part (ADR-0460).** Not a
+budget. `detect_linear_blocks` picks its decomposition from the shape of the
+generators, so the multiplier was always `c₁·c₂·c₃` and every proper subset failed
+at `invert_multiplier` — **decisively**, since exact division always answers. Under
+ADR-0455's dichotomy that reads as the *absolute* regime, and the route's own doc
+comment said exactly that. The decided test was "can this subset divide **that**
+multiplier?", which is a question about a producer-side choice, not about the
+theorem. **Decidedness is necessary and not sufficient.** ADR-0460 refines
+ADR-0455 with a third regime — *representation-relative*: every test decided,
+against a fixed representation, therefore reporting as absolute while being wrong,
+and no amount of patience discovers it. The remedy is preferred to the disclosure:
+`licensed_blocks` admits a block only when its determinant is a nonzero rational
+times a product of powers of the conditions **currently being inverted**, so the
+subset chooses the decomposition instead of inheriting it.
+
+**`cofactor_ansatz`: bounded-degree ideal membership by exact sparse linear
+algebra.** With one block licensed the elimination leaves a 48-term degree-4
+residue over six untouched hypotheses. Buchberger was **killed at 7.5 minutes without returning**;
+the new module settles it at cofactor degree 2 in ~25 ms with every coefficient
+`±1`. It is incomplete on purpose — `NotInDegree(d)` is a *decided* statement about
+a degree slice and says nothing about the ideal — its limits bound the shape of the
+system and never the solve, and it re-expands its own answer before returning it.
+It is tried before Buchberger in the handover, and that ordering is load-bearing:
+second, the subset search never reaches the answer.
+
+**Nothing committed changed.** `geometry_check.rs` untouched — it has now not
+changed across three different producers (Buchberger, adjugate elimination, a
+Macaulay-style solve), which is the property the design rests on. Enabling the
+handover in `certify_any_route` was necessary and would otherwise have turned the
+linear route into a second general-purpose prover on theorems whose conclusion is
+in the plain hypothesis ideal, so the handover refuses to run when the elimination
+consumed **no block**. `emit_geometry_certificates`: **8 unchanged, 1 written**.
+
+**Evidence, ascending in strength.** (1) A synthetic case analysis over the strata
+where a cross point is under-determined. (2) `pappus_condition_subsets` decides the
+question exhaustively over `F_p` for `p = 5, 7, 11, 13, 17, 19, 23` — reading the
+polynomials **out of the committed corpus** and reducing them mod `p`, over every
+carrier pair up to the affine group and every solution including the
+positive-dimensional ones — and finds exactly one refuting pattern, the all-zero
+one; the orbit reduction is itself checked against a full enumeration at `p = 5`.
+(3) `each_pappus_condition_alone_certifies` demands a **certificate** for each of
+the three conditions in isolation; all three certify at cofactor degree 2. A
+certificate is a polynomial identity, so that is the statement about ℚ the sweep
+only suggested.
+
+**One bug worth recording.** `factors_into` loops forever on the zero polynomial —
+`exact_div(0, d)` is `Some(0)` for every `d`. It cannot arise from a block
+determinant, and "cannot arise" is exactly the reasoning that leaves a loop
+unguarded; the unit test written to exercise the licensing rule *directly* rather
+than only through a theorem hung the suite and found it.
+
+Full write-up:
+[`docs/mathematics-2026-08/diary-pappus-minimality.md`](docs/mathematics-2026-08/diary-pappus-minimality.md).
+
+**Simson, answered rather than restated.** The brief asked whether
+`geometry.characteristic-zero-specialisation` licenses the real-plane reading of
+`|BC|² ≠ 0`. It does not, and the reason is sharper than "the witnesses are
+irrational": the *certificate* is fine over every characteristic-zero field, and
+it is the **minimality** side where the readings come apart, in opposite
+directions. Over ℂ the isotropic directions make `|BC|² = 0` possible with
+`B ≠ C`, so the condition may be genuinely necessary — and `DegenerateWitness`
+holds exact rationals, so we could not state the witness. Over ℝ, `|BC|² = 0` is
+`B = C` and nothing else, and if that forces the conclusion (the same shape as
+Pappus) then the condition is **redundant over ℝ** and ADR-0460 forbids filing it.
+These are two different theorems and the footprint entry currently papers over the
+difference. Simson is deliberately **not** stated on `frontier()`: the missing
+piece is a decision about which field the fact is over, not a `GeometryProblem`.
+`frontier()` is empty, and `every_frontier_witness_is_consistent` says so out loud
+rather than silently examining nothing.
+
+**Next, ranked.** (1) **Simson** — decide the field first, then the algebra;
+a rational configuration is an hour's work (`A=(5,0)`, `B=(0,5)`, `C=(−3,4)`,
+`P=(4,−3)` on `x²+y²=25`, concyclicity as the 4×4 determinant, feet `(6/5,27/5)`,
+`(27/5,−1/5)`, `(6,−1)`, verified collinear). (2) **Teach
+`detect_linear_blocks` to prefer determinants a declared condition divides** —
+now half-done, since the filter *rejects* unlicensed blocks but the detector still
+proposes them; reach, not soundness. (3) **Raise
+`AnsatzLimits::geometry().max_cofactor_degree`** and measure where the corpus's
+residues stop falling to it. (4) **The `fact.schema.json` minimality field**, on
+its third instance now, and the argument for deferring is thinner because the
+wrong value here would have been the *strong* one. (5) Buchberger's criteria in
+`groebner_cert.rs`, unchanged in priority from the last two lanes' lists.
+
 **Lane state (`WIP`, int-keystone, 2026-08-14).** ℤ is now *constructed*, not
 asserted: `Int` is an inductive over `Nat` (`Int.ofNat` / `Int.negSucc`), every
 operation is a checked definition, and `integer` went **34 axioms → 6**
@@ -1301,7 +1412,7 @@ including three mistakes that cost real work:
 README application/vision revision are closed. Continue only for a concrete
 stale claim; keep application maturity and sub-document links aligned, but do
 not duplicate generated capability tables or modify solver behavior to match
-prose. The user/reference/internals/crate surfaces and all 67 Cargo examples are
+prose. The user/reference/internals/crate surfaces and all 69 Cargo examples are
 indexed, and source guards reject universal proof claims.
 
 **Gate scope and the wall-clock reference frame (`WIP`, gates, 2026-08-14).**
@@ -1917,7 +2028,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 67 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 69 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

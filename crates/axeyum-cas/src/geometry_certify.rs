@@ -57,9 +57,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::Rational;
 
+use crate::cofactor_ansatz::{AnsatzLimits, AnsatzOutcome, cofactors_by_ansatz};
 use crate::groebner::MonomialOrder;
 use crate::groebner_cert::{CofactorOutcome, DeclineReason, Limits, reduce_many_with_cofactors};
-use crate::linear_elim::eliminate;
+use crate::linear_elim::{LinearBlock, LinearElimination, detect_linear_blocks, eliminate_blocks};
 use crate::mvpoly::MvPoly;
 
 /// A point of the plane at symbolic coordinates.
@@ -669,8 +670,19 @@ pub fn certify_by_linear_elimination(
         };
         let mut cofactor_sets = Vec::with_capacity(problem.conclusions.len());
         let mut settled = true;
+        let conditions: Vec<MvPoly> = subset
+            .iter()
+            .map(|&index| problem.nondegeneracy[index].poly.clone())
+            .collect();
         for conclusion in &problem.conclusions {
-            match linear_cofactors(&hypotheses, &generators, &saturations, conclusion, handover) {
+            match linear_cofactors(
+                &hypotheses,
+                &generators,
+                &saturations,
+                &conditions,
+                conclusion,
+                handover,
+            ) {
                 Ok(cofactors) => cofactor_sets.push(cofactors),
                 Err(outcome) => {
                     last_failure = outcome;
@@ -732,9 +744,25 @@ pub fn certify_by_linear_elimination(
 /// counterexample in the certificate decides whether the condition is genuinely
 /// required, with no budget in the argument (see
 /// [`certify_by_linear_elimination`]).
+/// # Why the handover is enabled here
+///
+/// It was `None` — "the elimination must settle the conclusion by itself" — for
+/// as long as every theorem the route reached had a *zero* residue. `pappus-hexagon`
+/// is the first that does not: eliminating `AE ∩ BD` leaves 48 terms that are in
+/// the ideal of the six untouched hypotheses and are not going anywhere by
+/// linear algebra alone.
+///
+/// Enabling it is safe for a reason stronger than measurement, though it is
+/// measured too. The handover refuses to run at all when the elimination consumed
+/// **no block** (see `linear_cofactors`), so a theorem this route cannot start on
+/// still declines untouched and reaches Buchberger exactly as before. That is
+/// what keeps the six theorems whose determinant no condition licenses — Thales
+/// and friends — on the identity already committed for them, rather than on a
+/// second one this route happened to find. `emit_geometry_certificates` reports
+/// **8 unchanged** across the switch.
 #[must_use]
 pub fn certify_any_route(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
-    match certify_by_linear_elimination(problem, None) {
+    match certify_by_linear_elimination(problem, Some(limits)) {
         certified @ ProofOutcome::Certified(_) => certified,
         _ => certify(problem, limits),
     }
@@ -746,11 +774,16 @@ fn linear_cofactors(
     hypotheses: &[MvPoly],
     generators: &[MvPoly],
     saturations: &[Saturation],
+    conditions: &[MvPoly],
     conclusion: &Constraint,
     handover: Option<Limits>,
 ) -> Result<Vec<MvPoly>, ProofOutcome> {
     let overflow = || ProofOutcome::Declined(GeometryDecline::Reduction(DeclineReason::Overflow));
-    let Some(elimination) = eliminate(hypotheses, &conclusion.poly) else {
+    let blocks = licensed_blocks(
+        detect_linear_blocks(hypotheses, &conclusion.poly),
+        conditions,
+    );
+    let Some(elimination) = eliminate_blocks(hypotheses, &conclusion.poly, blocks) else {
         return Err(overflow());
     };
 
@@ -768,97 +801,32 @@ fn linear_cofactors(
         // bookkeeping: reducing even the zero polynomial computes a Gröbner basis
         // of the generators, which is exactly the divergent computation this route
         // exists to avoid.
+        // The handover exists to finish what the elimination *started*. With no
+        // block consumed the elimination did nothing at all, so handing the whole
+        // target over would silently turn this into a second general-purpose route
+        // — one that could certify a corpus theorem by a different identity than
+        // the one already committed. It declines instead, and `certify_any_route`
+        // hands the problem to Buchberger as before.
+        if elimination.blocks.is_empty() {
+            return Err(ProofOutcome::NotInSaturatedIdeal {
+                conclusion_id: conclusion.id.clone(),
+                remainder: elimination.residue.clone(),
+            });
+        }
         let Some(limits) = handover else {
             return Err(ProofOutcome::NotInSaturatedIdeal {
                 conclusion_id: conclusion.id.clone(),
                 remainder: elimination.residue.clone(),
             });
         };
-        // Narrowing is not an optimisation; without it the handover recomputes
-        // the basis this route existed to avoid. Measured on `pappus-hexagon`:
-        // the elimination clears three 2×2 blocks in milliseconds and leaves a
-        // 720-term residue free of `xx…zy`, and reducing that against all eight
-        // hypotheses — six of which are precisely the ones just consumed, and
-        // every one of which mentions a variable the residue no longer has — does
-        // not return. Against the two the blocks did not touch it is a two-
-        // generator question.
-        //
-        // There is deliberately no fallback to the full generator list. That is
-        // the route's contract: linear algebra takes the linear part, the general
-        // route takes what is left of the *rest*, and if that is not enough this
-        // route declines so `certify_any_route` can hand the whole problem to
-        // Buchberger. A fallback would reintroduce the hang on exactly the
-        // theorems the narrowing was for.
-        //
-        // Two passes, hypotheses-only first. The saturation generators `d·z − 1`
-        // are what the *multiplier* needs, not what the residue needs, and they
-        // are the worst possible input to `Buchberger`'s algorithm — a fresh
-        // variable in every one of them. On `pappus-hexagon` the residue reduces
-        // against the two unconsumed hypotheses in a single S-pair, while the same
-        // reduction with three Rabinowitsch generators added does not return; so
-        // reaching for them only when the cheap pass fails is the difference
-        // between a subset search that finishes and one that does not.
-        let consumed: BTreeSet<usize> = elimination
-            .blocks
-            .iter()
-            .flat_map(|block| block.rows.iter().copied())
-            .collect();
-        let bare: Vec<usize> = (0..hypotheses.len())
-            .filter(|index| !consumed.contains(index))
-            .collect();
-        let saturated: Vec<usize> = (0..generators.len())
-            .filter(|index| !consumed.contains(index))
-            .collect();
-        let passes: Vec<&Vec<usize>> = if bare == saturated {
-            vec![&bare]
-        } else {
-            vec![&bare, &saturated]
-        };
-
-        let mut settled = false;
-        let mut last: Option<ProofOutcome> = None;
-        for kept in passes {
-            let narrowed: Vec<MvPoly> = kept
-                .iter()
-                .map(|&index| generators[index].clone())
-                .collect();
-            let outcomes = reduce_many_with_cofactors(
-                &narrowed,
-                std::slice::from_ref(&elimination.residue),
-                limits,
-            );
-            match &outcomes[0] {
-                CofactorOutcome::Reduced {
-                    cofactors: extra,
-                    remainder,
-                } => {
-                    if !remainder.is_zero() {
-                        last = Some(ProofOutcome::NotInSaturatedIdeal {
-                            conclusion_id: conclusion.id.clone(),
-                            remainder: remainder.clone(),
-                        });
-                        continue;
-                    }
-                    for (slot, share) in kept.iter().zip(extra.iter()) {
-                        let Some(sum) = cofactors[*slot].add(share) else {
-                            return Err(overflow());
-                        };
-                        cofactors[*slot] = sum;
-                    }
-                    settled = true;
-                    break;
-                }
-                CofactorOutcome::Declined(reason) => {
-                    last = Some(ProofOutcome::Declined(GeometryDecline::Reduction(*reason)));
-                }
-            }
-        }
-        if !settled {
-            return Err(last.unwrap_or_else(|| ProofOutcome::NotInSaturatedIdeal {
-                conclusion_id: conclusion.id.clone(),
-                remainder: elimination.residue.clone(),
-            }));
-        }
+        settle_residue(
+            hypotheses,
+            generators,
+            &elimination,
+            conclusion,
+            limits,
+            &mut cofactors,
+        )?;
     }
 
     match invert_multiplier(
@@ -873,6 +841,190 @@ fn linear_cofactors(
             GeometryDecline::UndividableMultiplier,
         )),
     }
+}
+
+/// Hand whatever linear algebra could not remove to a general ideal-membership
+/// route, and fold the cofactors it returns into `cofactors`.
+///
+/// Extracted from [`linear_cofactors`] because it is a different question: that
+/// function decides *what to eliminate*, this one decides *who finishes the rest*.
+fn settle_residue(
+    hypotheses: &[MvPoly],
+    generators: &[MvPoly],
+    elimination: &LinearElimination,
+    conclusion: &Constraint,
+    limits: Limits,
+    cofactors: &mut [MvPoly],
+) -> Result<(), ProofOutcome> {
+    let overflow = || ProofOutcome::Declined(GeometryDecline::Reduction(DeclineReason::Overflow));
+    // Narrowing is not an optimisation; without it the handover recomputes
+    // the basis this route existed to avoid. Measured on `pappus-hexagon`:
+    // the elimination clears three 2×2 blocks in milliseconds and leaves a
+    // 720-term residue free of `xx…zy`, and reducing that against all eight
+    // hypotheses — six of which are precisely the ones just consumed, and
+    // every one of which mentions a variable the residue no longer has — does
+    // not return. Against the two the blocks did not touch it is a two-
+    // generator question.
+    //
+    // There is deliberately no fallback to the full generator list. That is
+    // the route's contract: linear algebra takes the linear part, the general
+    // route takes what is left of the *rest*, and if that is not enough this
+    // route declines so `certify_any_route` can hand the whole problem to
+    // Buchberger. A fallback would reintroduce the hang on exactly the
+    // theorems the narrowing was for.
+    //
+    // Two passes, hypotheses-only first. The saturation generators `d·z − 1`
+    // are what the *multiplier* needs, not what the residue needs, and they
+    // are the worst possible input to `Buchberger`'s algorithm — a fresh
+    // variable in every one of them. On `pappus-hexagon` the residue reduces
+    // against the two unconsumed hypotheses in a single S-pair, while the same
+    // reduction with three Rabinowitsch generators added does not return; so
+    // reaching for them only when the cheap pass fails is the difference
+    // between a subset search that finishes and one that does not.
+    let consumed: BTreeSet<usize> = elimination
+        .blocks
+        .iter()
+        .flat_map(|block| block.rows.iter().copied())
+        .collect();
+    let bare: Vec<usize> = (0..hypotheses.len())
+        .filter(|index| !consumed.contains(index))
+        .collect();
+    let saturated: Vec<usize> = (0..generators.len())
+        .filter(|index| !consumed.contains(index))
+        .collect();
+    let passes: Vec<&Vec<usize>> = if bare == saturated {
+        vec![&bare]
+    } else {
+        vec![&bare, &saturated]
+    };
+
+    let mut settled = false;
+    let mut last: Option<ProofOutcome> = None;
+    for kept in passes {
+        let narrowed: Vec<MvPoly> = kept
+            .iter()
+            .map(|&index| generators[index].clone())
+            .collect();
+        // Bounded-degree linear algebra first, Buchberger only if it comes
+        // back `NotInDegree`. This is not a micro-optimisation: on
+        // `pappus-hexagon`'s single-condition subset the residue is 48 terms
+        // of degree 4 over six quadrics, `crate::cofactor_ansatz` settles it
+        // in ~25 ms with every coefficient ±1, and Buchberger did not return
+        // on the same input after 7.5 minutes without returning. Ordering it
+        // second would mean the subset search never reaches the answer.
+        match cofactors_by_ansatz(&narrowed, &elimination.residue, AnsatzLimits::geometry()) {
+            AnsatzOutcome::Solved {
+                cofactors: extra, ..
+            } => {
+                for (slot, share) in kept.iter().zip(extra.iter()) {
+                    let Some(sum) = cofactors[*slot].add(share) else {
+                        return Err(overflow());
+                    };
+                    cofactors[*slot] = sum;
+                }
+                settled = true;
+                break;
+            }
+            AnsatzOutcome::NotInDegree(_) | AnsatzOutcome::Declined(_) => {}
+        }
+        let outcomes = reduce_many_with_cofactors(
+            &narrowed,
+            std::slice::from_ref(&elimination.residue),
+            limits,
+        );
+        match &outcomes[0] {
+            CofactorOutcome::Reduced {
+                cofactors: extra,
+                remainder,
+            } => {
+                if !remainder.is_zero() {
+                    last = Some(ProofOutcome::NotInSaturatedIdeal {
+                        conclusion_id: conclusion.id.clone(),
+                        remainder: remainder.clone(),
+                    });
+                    continue;
+                }
+                for (slot, share) in kept.iter().zip(extra.iter()) {
+                    let Some(sum) = cofactors[*slot].add(share) else {
+                        return Err(overflow());
+                    };
+                    cofactors[*slot] = sum;
+                }
+                settled = true;
+                break;
+            }
+            CofactorOutcome::Declined(reason) => {
+                last = Some(ProofOutcome::Declined(GeometryDecline::Reduction(*reason)));
+            }
+        }
+    }
+    if !settled {
+        return Err(last.unwrap_or_else(|| ProofOutcome::NotInSaturatedIdeal {
+            conclusion_id: conclusion.id.clone(),
+            remainder: elimination.residue.clone(),
+        }));
+    }
+    Ok(())
+}
+
+/// Keep only the blocks whose determinant the current condition subset
+/// **licenses** — that is, whose determinant is a nonzero rational times a
+/// product of powers of the subset's conditions.
+///
+/// This is the difference between a route that reports the smallest subset it can
+/// *use* and one that reports the smallest subset the theorem *needs*. The block
+/// detector picks its decomposition from the shape of the generators, knowing
+/// nothing about which conditions the caller is currently inverting; its
+/// multiplier is then whatever that decomposition produced, and
+/// [`invert_multiplier`] can only divide it by declared conditions. Filtering
+/// first means each subset is tested against the elimination *it* can pay for,
+/// instead of every subset inheriting the full decomposition's multiplier and
+/// failing for a reason that has nothing to do with the theorem.
+///
+/// `pappus-hexagon` is the case that shows the difference is not cosmetic.
+/// Unfiltered, the detector always finds all three intersection blocks, the
+/// multiplier is the product of all three conditions, and every proper subset
+/// declines on [`GeometryDecline::UndividableMultiplier`] — so the route reports
+/// three conditions. Filtered, the one-condition subset keeps one block, and the
+/// theorem certifies with **one** condition, which is the minimal set: the
+/// committed degenerate counterexample refutes the empty subset outright.
+fn licensed_blocks(blocks: Vec<LinearBlock>, conditions: &[MvPoly]) -> Vec<LinearBlock> {
+    blocks
+        .into_iter()
+        .filter(|block| factors_into(&block.determinant, conditions))
+        .collect()
+}
+
+/// Does `polynomial` factor into the `conditions` and a nonzero rational?
+///
+/// Repeated exact division, to a fixed point: exact division always terminates
+/// and always answers, so this is *decided* for every input — there is no budget
+/// anywhere in it.
+fn factors_into(polynomial: &MvPoly, conditions: &[MvPoly]) -> bool {
+    // The zero polynomial divides by everything and is never a nonzero rational,
+    // so the fixed point below is never reached: `exact_div(0, d)` is `Some(0)`
+    // forever. It cannot arise from a block determinant, which
+    // `detect_linear_blocks` guarantees nonzero — but "cannot arise" is exactly
+    // the reasoning that leaves a loop unguarded, and the unit test below hung
+    // the suite when this guard was missing.
+    if polynomial.is_zero() {
+        return false;
+    }
+    let mut remaining = polynomial.clone();
+    let mut progressed = true;
+    while progressed {
+        progressed = false;
+        for condition in conditions {
+            if condition.total_degree() == 0 {
+                continue;
+            }
+            while let Some(quotient) = remaining.exact_div(condition) {
+                remaining = quotient;
+                progressed = true;
+            }
+        }
+    }
+    !remaining.is_zero() && remaining.total_degree() == 0
 }
 
 /// Turn `multiplier · conclusion = Σ cofactorsᵢ·generatorᵢ` into
@@ -1101,8 +1253,8 @@ mod tests {
     use super::{
         Condition, Constraint, DegenerateWitness, GenericWitness, GeometryCertificate,
         GeometryDecline, GeometryProblem, ProofOutcome, Pt, certify, certify_any_route,
-        certify_by_linear_elimination, collinear, geometry_limits, midpoint, parallel,
-        perpendicular,
+        certify_by_linear_elimination, collinear, detect_linear_blocks, factors_into,
+        geometry_limits, licensed_blocks, midpoint, parallel, perpendicular,
     };
     use crate::mvpoly::MvPoly;
     use axeyum_ir::Rational;
@@ -1383,6 +1535,69 @@ mod tests {
         identity_recombines(&certificate);
     }
 
+    /// **Each** of Pappus's three non-degeneracy conditions suffices on its own.
+    ///
+    /// The committed certificate uses `ae-meets-bd`, because the subset search is
+    /// deterministic and that is the first singleton it tries. That alone would
+    /// leave open whether the other two were doing any work, and the answer is
+    /// that they are not — this theorem has three minimal condition sets, each a
+    /// singleton, related by the symmetry exchanging `(B,E)` with `(C,F)`.
+    ///
+    /// Saying so as a certificate rather than as a search that failed to refute is
+    /// what makes it a fact about ℚ rather than about the primes an exhaustive
+    /// finite-field sweep happened to cover. Each restricted problem below states
+    /// exactly one condition and carries exactly the counterexample for it, so
+    /// `certify_by_linear_elimination` has no other subset available and the
+    /// resulting identity is re-expanded here against the original generators.
+    #[test]
+    fn each_pappus_condition_alone_certifies() {
+        let full = crate::geometry_corpus::corpus()
+            .into_iter()
+            .find(|problem| problem.id == "pappus-hexagon")
+            .expect("pappus-hexagon is in the corpus");
+        assert_eq!(full.nondegeneracy.len(), 3, "three conditions are stated");
+        let mut certified = 0usize;
+        for index in 0..full.nondegeneracy.len() {
+            let condition = full.nondegeneracy[index].clone();
+            let id = condition.id.clone();
+            let restricted = GeometryProblem {
+                nondegeneracy: vec![condition],
+                degenerate_witnesses: full
+                    .degenerate_witnesses
+                    .iter()
+                    .filter(|witness| witness.condition_id == id)
+                    .cloned()
+                    .collect(),
+                ..full.clone()
+            };
+            assert_eq!(
+                restricted.degenerate_witnesses.len(),
+                1,
+                "`{id}` must keep its own counterexample"
+            );
+            let ProofOutcome::Certified(certificate) =
+                certify_by_linear_elimination(&restricted, Some(geometry_limits()))
+            else {
+                panic!("`{id}` alone must certify pappus-hexagon");
+            };
+            assert_eq!(certificate.saturations.len(), 1);
+            assert_eq!(certificate.saturations[0].condition_id, id);
+            for (slot, hypothesis) in certificate.hypotheses.iter().enumerate() {
+                assert_eq!(
+                    certificate.generators[slot], hypothesis.poly,
+                    "generator {slot} must be the stated hypothesis `{}` unchanged",
+                    hypothesis.id
+                );
+            }
+            identity_recombines(&certificate);
+            certified += 1;
+        }
+        assert_eq!(
+            certified, 3,
+            "every stated condition must have been tried on its own"
+        );
+    }
+
     /// The signature Rabinowitsch shape, generalised to a squared multiplier.
     ///
     /// The Gröbner route's saturated certificates come out with the saturation
@@ -1457,27 +1672,63 @@ mod tests {
         }
     }
 
-    /// A multiplier that is not a product of the **stated** conditions must
-    /// decline, not invent one.
+    /// A determinant that is not a product of the **stated** conditions is never
+    /// used as a multiplier — and, with a handover available, the route must not
+    /// quietly become a second general-purpose prover instead.
     ///
-    /// This is the soundness-relevant half of the route. The elimination will
-    /// cheerfully hand back `det·target = Σ uᵢhᵢ` for whatever determinant its
-    /// decomposition produced; dividing that determinant out is only legitimate
-    /// where it is nonzero, and the only place this module is allowed to get that
-    /// permission is a condition the problem declares. Thales is the case in the
-    /// corpus: the elimination clears its residue with a two-term multiplier, and
-    /// that polynomial is nobody's declared condition.
+    /// This is the soundness-relevant half of the route, and it now has two
+    /// mechanisms rather than one. `licensed_blocks` refuses the block up front,
+    /// because dividing a determinant out is only legitimate where it is nonzero
+    /// and the only place this module may get that permission is a condition the
+    /// problem declares. `invert_multiplier` still refuses at the far end, so a
+    /// decomposition that slipped through the filter cannot produce a certificate.
+    ///
+    /// Thales is the case in the corpus: the elimination would clear its residue
+    /// with a two-term multiplier, and that polynomial is nobody's declared
+    /// condition.
+    ///
+    /// The `Some(handover)` half is the one that protects the *committed*
+    /// evidence. Thales's conclusion is in the hypothesis ideal outright, so a
+    /// handover handed the whole untouched target would very likely prove it —
+    /// by a different identity than the certificate already in
+    /// `artifacts/geometry-certificates/`. The empty-block guard is what keeps
+    /// "the linear route finishes what the elimination started" a rule rather
+    /// than a hope.
     #[test]
-    fn a_multiplier_outside_the_stated_conditions_declines() {
+    fn an_unlicensed_determinant_is_never_used_as_a_multiplier() {
         let problem = crate::geometry_corpus::corpus()
             .into_iter()
             .find(|problem| problem.id == "thales-right-angle-in-semicircle")
             .expect("thales is in the corpus");
-        assert_eq!(
-            certify_by_linear_elimination(&problem, None),
-            ProofOutcome::Declined(GeometryDecline::UndividableMultiplier),
-            "the route must refuse to divide by a polynomial no condition licenses"
+        let hypotheses: Vec<MvPoly> = problem
+            .hypotheses
+            .iter()
+            .map(|hypothesis| hypothesis.poly.clone())
+            .collect();
+        let conditions: Vec<MvPoly> = problem
+            .nondegeneracy
+            .iter()
+            .map(|condition| condition.poly.clone())
+            .collect();
+        let detected = detect_linear_blocks(&hypotheses, &problem.conclusions[0].poly);
+        assert!(
+            !detected.is_empty(),
+            "the detector does find a block here; the point is that it is refused"
         );
+        assert!(
+            licensed_blocks(detected, &conditions).is_empty(),
+            "no stated condition licenses that determinant"
+        );
+        for handover in [None, Some(geometry_limits())] {
+            assert!(
+                !matches!(
+                    certify_by_linear_elimination(&problem, handover),
+                    ProofOutcome::Certified(_)
+                ),
+                "the linear route must not certify thales, handover = {}",
+                handover.is_some()
+            );
+        }
         // And the theorem is nonetheless true and unconditional, which the
         // Gröbner route establishes — so the decline above is a limitation of the
         // route, not a statement about the theorem.
@@ -1487,15 +1738,71 @@ mod tests {
         assert!(certificate.saturations.is_empty());
     }
 
+    /// `factors_into` is the whole licensing rule, so it is tested on its own
+    /// rather than only through a theorem.
+    #[test]
+    fn licensing_accepts_powers_and_rational_multiples_and_nothing_else() {
+        let x = MvPoly::var("x");
+        let y = MvPoly::var("y");
+        let condition = x.sub(&y).expect("polynomial");
+        let four = MvPoly::constant(Rational::integer(4));
+        assert!(factors_into(&condition, std::slice::from_ref(&condition)));
+        assert!(factors_into(
+            &four.mul(&condition).expect("polynomial"),
+            std::slice::from_ref(&condition)
+        ));
+        assert!(factors_into(
+            &condition.pow(3).expect("polynomial"),
+            std::slice::from_ref(&condition)
+        ));
+        assert!(
+            factors_into(&four, std::slice::from_ref(&condition)),
+            "a nonzero rational needs no condition at all"
+        );
+        assert!(
+            !factors_into(
+                &x.add(&y).expect("polynomial"),
+                std::slice::from_ref(&condition)
+            ),
+            "x + y is not a power of x − y"
+        );
+        assert!(
+            !factors_into(
+                &condition.mul(&x).expect("polynomial"),
+                std::slice::from_ref(&condition)
+            ),
+            "a leftover factor is not licensed just because part of it is"
+        );
+        assert!(
+            !factors_into(&MvPoly::zero(), std::slice::from_ref(&condition)),
+            "the zero polynomial is not a nonzero rational"
+        );
+    }
+
     /// `certify_any_route` must not disturb what the Gröbner route already
     /// proves. This is the assertion behind "7 unchanged, 1 written".
     #[test]
     fn the_route_selector_reproduces_the_groebner_certificate_exactly() {
+        // Theorems the Gröbner route cannot be *run* on here. `euler-line` and
+        // `pappus-hexagon` do not return on it inside any budget anyone waits for
+        // — that is why they exist on the linear route at all — and the rhombus
+        // returns but takes 21 s in release, which is not a unit test.
+        //
+        // The hazard this list carries is worth naming: a new divergent theorem
+        // added to the corpus and *not* added here makes this test hang rather
+        // than fail, and a hang reads like a slow machine. The count assertion
+        // below is derived from the corpus so the list cannot silently shrink,
+        // but nothing can make "does not return" cheap to probe.
+        const UNREACHED_BY_BUCHBERGER: [&str; 3] = [
+            "euler-line",
+            "rhombus-diagonals-perpendicular",
+            "pappus-hexagon",
+        ];
+        let corpus = crate::geometry_corpus::corpus();
+        let expected = corpus.len() - UNREACHED_BY_BUCHBERGER.len();
         let mut compared = 0usize;
-        for problem in crate::geometry_corpus::corpus() {
-            // `euler-line` is the one the Gröbner route does not return on, so it
-            // is excluded here by construction rather than by convenience.
-            if problem.id == "euler-line" || problem.id == "rhombus-diagonals-perpendicular" {
+        for problem in corpus {
+            if UNREACHED_BY_BUCHBERGER.contains(&problem.id.as_str()) {
                 continue;
             }
             let combined = certify_any_route(&problem, geometry_limits());
@@ -1507,6 +1814,10 @@ mod tests {
             );
             compared += 1;
         }
+        assert_eq!(
+            compared, expected,
+            "every corpus theorem the Gröbner route reaches must be compared"
+        );
         assert!(compared >= 5, "compared only {compared} theorems");
     }
 }

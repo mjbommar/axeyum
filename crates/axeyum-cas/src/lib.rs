@@ -57,6 +57,7 @@ pub mod algebraic;
 pub mod approx;
 pub mod assumptions;
 pub mod boolean;
+pub mod cofactor_ansatz;
 pub mod combinatorics;
 mod factor_int;
 pub mod geometry;

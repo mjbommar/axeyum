@@ -257,6 +257,18 @@ fn audit(problem: &GeometryProblem, tally: &mut Tally) {
     );
 }
 
+// Theorems this audit cannot be run on, because the Gröbner route does not
+// return on them at all -- which is precisely why they exist on the linear
+// route. Naming them is not a convenience: an audit that silently skipped
+// them would be indistinguishable from one that covered them, and the
+// skipped count is printed for exactly that reason.
+//
+// This list is retro-active. `euler-line` joined the corpus on 2026-08-15 and
+// this example was not updated, so from that moment an unrestricted run hung
+// rather than reporting anything -- a broken instrument that still looked
+// like a slow one. `pappus-hexagon` would have been the second.
+const UNREACHED_BY_BUCHBERGER: [&str; 2] = ["euler-line", "pappus-hexagon"];
+
 fn main() {
     let wanted: Vec<String> = std::env::args().skip(1).collect();
     println!(
@@ -266,12 +278,27 @@ fn main() {
 
     let mut tally = Tally::default();
     let mut examined = 0usize;
+    let mut skipped: Vec<String> = Vec::new();
     for problem in corpus() {
         if !wanted.is_empty() && !wanted.contains(&problem.id) {
             continue;
         }
+        if UNREACHED_BY_BUCHBERGER.contains(&problem.id.as_str()) && wanted.is_empty() {
+            skipped.push(problem.id.clone());
+            continue;
+        }
         examined += 1;
         audit(&problem, &mut tally);
+    }
+    if !skipped.is_empty() {
+        println!(
+            "SKIPPED {} theorem(s) the Gröbner route does not return on, so this audit \
+             says NOTHING about them: {}\nTheir condition sets are established minimal by \
+             refuting every proper subset with a committed counterexample instead -- see \
+             `every_used_condition_set_is_minimal_absolutely`.\n",
+            skipped.len(),
+            skipped.join(", ")
+        );
     }
     let Tally {
         agreed,
