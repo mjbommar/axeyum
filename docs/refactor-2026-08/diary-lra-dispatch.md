@@ -356,10 +356,36 @@ hunk staged via `git apply --cached --unidiff-zero`; index confirmed at
 Same setup, same index, opposite result. Recorded with the control because a
 claim about a tool is worth what its negative case is worth.
 
-So: to commit one hunk of a shared file, stage it, confirm the index with
-`git diff --cached --stat`, and commit with **no pathspec**. The risk moves from
-"the worktree silently overrides you" to "another lane staged something", which
-is at least visible in `git diff --cached`. Or — better — don't share the file.
+### And then I acted on my own advice and it was worse
+
+The paragraph that used to stand here said: stage the hunk, check
+`git diff --cached --stat`, and commit with **no pathspec**. I did exactly that
+for the commit that introduced the table above. It swept **five** of the
+`axeyum-cas` lane's files (`F-geometry-pappus-hexagon.json`, `geometry_probe.rs`,
+`cofactor_ansatz.rs`, `diary-pappus-minimality.md`, and `examples.md` again) into
+`172561568`, because a bare `git commit` commits the **whole shared index** — and
+in a shared checkout the index is not yours. CLAUDE.md says this in its first
+multi-agent bullet, in those words, and I wrote a rule that contradicted it on
+the strength of a toy repo with one lane in it.
+
+The toy repo was the defect. It measured the mechanism correctly and it could not
+measure the thing that matters, because a single-lane repo has no other lane's
+staged work in its index. A control that cannot exhibit the failure is not a
+control.
+
+**So there is no safe way to commit one hunk of a file another lane is editing.**
+Both forms lose, in opposite directions:
+
+| form | takes | loses |
+|---|---|---|
+| `git commit -- <paths>` | the **worktree** for those paths | another lane's uncommitted hunks *inside* those files |
+| `git commit` (no pathspec) | the **whole index** | another lane's *staged files*, entirely |
+
+The rule that survives is the one already in CLAUDE.md, and it is about the edit,
+not the commit: `git add <paths>` + `git commit -- <paths>`, on files where
+`git diff <path>` shows every hunk is yours. When it does not, you are sharing a
+file, and the answer is to say so and coordinate — which is what the guidance
+told me to do, and what I talked myself out of twice.
 
 ## What I would tell the next person
 

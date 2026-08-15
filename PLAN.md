@@ -1347,10 +1347,17 @@ did *not* `git add` the file, split the diff at `-U0`, and staged only my hunk
 with `git apply --cached --unidiff-zero` — `git diff --cached --stat` confirmed
 `1 insertion(+), 1 deletion(-)`. Then `git commit -m … -- <paths>` shipped two
 lines, because **`git commit -- <pathspec>` commits the WORKTREE content of those
-paths and discards what you staged for them.** The mandated pathspec is exactly
-what defeats the one tool that can separate two lanes inside one file. To commit
-a single hunk of a shared file, stage it and commit with **no pathspec** after
-checking `git diff --cached --stat` — or do not share the file.
+paths and discards what you staged for them.** Then I wrote that up recommending
+the no-pathspec form and **used it**, and `172561568` swept five more of the
+`axeyum-cas` lane's files — because a bare `git commit` commits the **whole
+shared index**, which CLAUDE.md's first multi-agent bullet says in those words.
+Both forms lose, in opposite directions: pathspec takes the worktree (loses
+another lane's hunks *inside* a shared file), no-pathspec takes the index (loses
+another lane's *staged files*). **There is no safe way to commit one hunk of a
+file another lane is editing**; the surviving rule is the existing one —
+`git add` + `git commit -- <paths>` on files where `git diff <path>` shows every
+hunk is yours, and coordinate instead when it does not. My "control" was a
+single-lane throwaway repo, which cannot exhibit the failure that matters.
 
 **Next, for whoever picks this up.** (1) The 28 non-arithmetic structural routes
 are marked, not fixed — marking turns a silent misreport into a visible gap.
