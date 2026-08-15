@@ -9,7 +9,8 @@ Outcome in one line: **the corpus is now the environment itself — all 96,591
 `Init`+`Std` declarations and all 680,925 Mathlib ones are exported and
 sampled — the binding constraint turned out to be kernel `Nat` literal
 arithmetic and is fixed, and the next one is `String` literals, which block
-52% of a random `Init`+`Std` declaration and 85% of a random Mathlib one.**
+52% of a random `Init`+`Std` declaration's closure and 79% of a random
+Mathlib one's.**
 
 ## 1. Export the environment, not a corpus
 
@@ -302,8 +303,10 @@ clean rate from this number is quoting me wrongly.
 
 ## 7. Gates
 
-- `cargo test -p axeyum-lean-kernel -p axeyum-lean-import` — green; **14 tests
-  new here** (13 in `tests/nat_literal_arithmetic.rs`, 1 in `tc_tests`).
+- `cargo test -p axeyum-lean-kernel -p axeyum-lean-import` — green; **15 tests
+  new here**: 13 in `tests/nat_literal_arithmetic.rs`, 1 in `tc_tests`
+  (`the_reconstruction_prelude_is_not_accelerated`), and 1 in
+  `tests/real_lean_nat_arithmetic_crosscheck.rs`.
 - `cargo clippy -p axeyum-lean-kernel -p axeyum-lean-import --all-targets
   --all-features -- -D warnings` — clean.
 - `./scripts/check-lean-gate.sh` — **13 suites, 50 tests, 115 real-Lean checks
