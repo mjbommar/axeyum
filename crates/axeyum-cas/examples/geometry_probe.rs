@@ -55,6 +55,17 @@ fn generators(problem: &GeometryProblem, subset: &[&Condition]) -> Vec<MvPoly> {
     generators
 }
 
+/// Theorems the Gröbner route does not return on, so an unrestricted probe would
+/// hang rather than report. Naming a theorem here is not the same as skipping it
+/// quietly: the count is printed, because an instrument that silently examines
+/// nothing reads exactly like one that found nothing.
+///
+/// Both entries are theorems the *linear* route reaches — which is why they are
+/// in the corpus at all — and both joined it after this example was written, so
+/// an unrestricted run has been hanging since `euler-line` was promoted. Pass an
+/// explicit id to probe one anyway.
+const UNREACHED_BY_BUCHBERGER: [&str; 2] = ["euler-line", "pappus-hexagon"];
+
 fn main() {
     let scale: u64 = std::env::args()
         .nth(1)
@@ -65,8 +76,13 @@ fn main() {
     let wanted: Vec<String> = std::env::args().skip(2).collect();
     println!("budget scale {scale}, order {order:?}: {limits:?}\n");
 
+    let mut skipped: Vec<String> = Vec::new();
     for problem in corpus().into_iter().chain(frontier()) {
         if !wanted.is_empty() && !wanted.contains(&problem.id) {
+            continue;
+        }
+        if wanted.is_empty() && UNREACHED_BY_BUCHBERGER.contains(&problem.id.as_str()) {
+            skipped.push(problem.id.clone());
             continue;
         }
         let targets: Vec<MvPoly> = problem.conclusions.iter().map(|c| c.poly.clone()).collect();
@@ -150,5 +166,13 @@ fn main() {
             };
             println!("    {:<35} {elapsed:>10.1?}  {verdict}   [untracked]", "");
         }
+    }
+    if !skipped.is_empty() {
+        println!(
+            "SKIPPED {} theorem(s) this route does not return on, so nothing above says \
+             anything about them: {}",
+            skipped.len(),
+            skipped.join(", ")
+        );
     }
 }

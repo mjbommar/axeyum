@@ -293,6 +293,13 @@ fn solve_at_degree(
     // The self-check. This module is a *producer*, and a producer that trusts its
     // own linear algebra is one arithmetic slip away from emitting a certificate
     // that says nothing. Re-expanding costs one multiplication per generator.
+    //
+    // A failure here reports as "not at this degree", which is conservative in
+    // the direction that matters — it can only ever cause a decline, never a
+    // wrong certificate — but it does mean an elimination bug would surface as a
+    // theorem that stopped certifying rather than as an error. That is the right
+    // trade for a route whose output is a proof, and it is worth knowing which
+    // way it fails.
     let mut combined = MvPoly::zero();
     for (cofactor, generator) in cofactors.iter().zip(generators.iter()) {
         if cofactor.is_zero() {

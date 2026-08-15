@@ -343,11 +343,23 @@ the guidance has a hole in it — index-level hunk staging, the one tool that
 *can* separate two lanes inside one file, is silently defeated by the very
 incantation the rule mandates.
 
-If you need to commit one hunk of a shared file: stage it, then commit with **no
-pathspec** (`git commit` alone commits the index), having first confirmed with
-`git diff --cached --stat` that the index holds nothing else — the risk moves
-from "the worktree overrides you" to "another lane staged something", which is at
-least visible. Or: don't share the file.
+Reproduced in a throwaway repo, with the pathspec as the only variable. Two lines
+changed in the worktree, ten padding lines apart so they are separate hunks; one
+hunk staged via `git apply --cached --unidiff-zero`; index confirmed at
+`1 insertion, 1 deletion`:
+
+| commit form | what landed |
+|---|---|
+| `git commit -m … -- f.txt` | **both** lines — the staged hunk and the other one |
+| `git commit -m …` (no pathspec) | **only** the staged line |
+
+Same setup, same index, opposite result. Recorded with the control because a
+claim about a tool is worth what its negative case is worth.
+
+So: to commit one hunk of a shared file, stage it, confirm the index with
+`git diff --cached --stat`, and commit with **no pathspec**. The risk moves from
+"the worktree silently overrides you" to "another lane staged something", which
+is at least visible in `git diff --cached`. Or — better — don't share the file.
 
 ## What I would tell the next person
 

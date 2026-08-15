@@ -9,7 +9,9 @@ was none of them, and it is better than all of them:
 > refused it was refusing a false claim rather than an unestablished one.
 
 `pappus-hexagon` is now in `corpus()` with **one** condition, certified in
-**6.7 ms** against the 292 s the three-condition certificate cost, checker-verified
+**6.7 ms** against the 292 s the three-condition certificate cost (the previous
+lane's recorded number, carried forward — the three-condition subset is no longer
+reached, so there was nothing to re-measure), checker-verified
 from the artifact, and its minimality is **absolute**: the only proper subset of a
 singleton is the empty one, and the counterexample the previous lane already
 committed refutes it.
@@ -65,7 +67,7 @@ and reduces them mod `p` term by term, so it cannot agree with a formula the
 corpus does not hold; and the affine-orbit reduction that makes `p = 23` reachable
 is itself checked — `--full` enumerates every first carrier triple and agrees at
 `p = 5` (5,580,000 configurations with all three conditions nonzero, same single
-refuting pattern, 3m44s against 6 ms).
+refuting pattern, 3m44s against 0.4 s).
 
 **Certificates, which settle it over ℚ.** A finite-field sweep is a statement about
 the primes it covered. `each_pappus_condition_alone_certifies` restricts the
