@@ -87,6 +87,14 @@ costs `Quot.sound`"; they were describing Lean's package, not ours, and the
 measurement is now a test. →
 [`01-int-real-keystone.md`](01-int-real-keystone.md), ADR-0456
 
+
+**7. Where work goes was never written down, and every element of it was learned
+by losing something.** A 2¼-hour solve, a 90-minute test sweep and two watchers
+died to `systemd-oomd` killing a cgroup under *pressure*; the recommended scratch
+disk was root-owned and unwritable; the NFS mount was probed one directory too
+high, so `df` answered a different question confidently. →
+[`06-scratch-and-snapshots.md`](06-scratch-and-snapshots.md)
+
 ## What this plan is not
 
 It is not a rewrite. The measured evidence says the architecture is sound and
