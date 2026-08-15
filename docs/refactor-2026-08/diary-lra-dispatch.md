@@ -310,6 +310,12 @@ as above; the fact belongs to the `infeasibility` lane.
   to zero tests and the count to 43. That is worth saying plainly — the gate's
   own "zero tests is a failure" ratchet is what surfaced it.
 - `validate-facts.py`: **98 facts, 0 errors**, `kernel-lean=32`, 31 axiom-free.
+- `scripts/check-fact-evidence-replay.sh 180` (snapshot, same reason):
+  **85 settled facts, 159 checker runs, 84 re-derived, 0 failed, 1 timed out,
+  0 uncovered**, 933s. `kernel-lean 32/32`. The timeout is
+  `F:sorting-network-optimal-size-n6` against my 180s per-checker limit, not a
+  failure. The two facts nearest this change — `F:schedule-critical-chain-infeasible`
+  and `F:ordered-ring-farkas-refutation` — both re-derived.
 - `scripts/check-links.sh`: all links ok.
 - `infeasibility_farkas_lean --require-kernel` on `schedule-deadline.smt2`: exits
   0 with `facade fragment Lra`.
