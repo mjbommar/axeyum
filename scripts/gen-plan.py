@@ -90,8 +90,20 @@ EXAMPLE_COUNT_TOKEN = "{{example-count}}"
 
 
 def count_cargo_examples() -> int:
-    """Cargo examples on disk -- the same population check-parity-docs counts."""
-    return sum(1 for _ in (ROOT / "crates").glob("*/examples/*.rs"))
+    """Git-TRACKED Cargo examples -- the same population check-parity-docs counts.
+
+    Tracked, not on-disk, for the same reason the lane roll-up is tracked: PLAN.md
+    is a committed artifact and must be a function of committed state. Counting
+    the worktree made `--check` fail whenever any lane had an untracked example,
+    which is most of the time in a shared checkout.
+    """
+    try:
+        out = subprocess.run(["git", "ls-files", "crates/*/examples/*.rs"],
+                             cwd=ROOT, capture_output=True, text=True, check=False)
+    except OSError:
+        return sum(1 for _ in (ROOT / "crates").glob("*/examples/*.rs"))
+    n = sum(1 for line in out.stdout.splitlines() if line.strip())
+    return n or sum(1 for _ in (ROOT / "crates").glob("*/examples/*.rs"))
 
 
 def fill_example_count(text: str) -> str:

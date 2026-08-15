@@ -660,6 +660,21 @@ def measured_snapshot() -> dict[str, int]:
     }
 
 
+
+def _tracked_examples() -> list:
+    """Git-tracked Cargo examples, or every example on disk if git is absent."""
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["git", "ls-files", "crates/*/examples/*.rs"],
+            cwd=ROOT, capture_output=True, text=True, check=False,
+        )
+    except OSError:
+        return sorted(ROOT.glob("crates/*/examples/*.rs"))
+    listed = [ROOT / line.strip() for line in out.stdout.splitlines() if line.strip()]
+    return sorted(listed) if listed else sorted(ROOT.glob("crates/*/examples/*.rs"))
+
+
 def main() -> int:
     snapshot = measured_snapshot()
     consumers = consumer_snapshot()
@@ -1511,7 +1526,16 @@ def main() -> int:
                 f"must be {expected!r}, got {actual!r}"
             )
 
-    example_paths = sorted(ROOT.glob("crates/*/examples/*.rs"))
+    # Count what is COMMITTED, not what is on disk. The docs describe the
+    # repository, and an untracked example is not part of it yet -- flagging it
+    # as undocumented asks a lane to document a file nobody else can see, and it
+    # made this gate disagree with `gen-plan.py`, which generates PLAN.md's copy
+    # of the same number from committed state. Two gates deriving one number
+    # from two different populations is how a shared counter races.
+    #
+    # Degrades to the filesystem if git is unavailable: this is a scoping rule,
+    # not a correctness gate, and it must not make the check unrunnable.
+    example_paths = sorted(_tracked_examples())
     example_catalog_text = EXAMPLE_CATALOG.read_text(encoding="utf-8")
     for path in example_paths:
         marker = f"](../../{path.relative_to(ROOT)})"
