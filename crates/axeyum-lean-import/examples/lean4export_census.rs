@@ -23,11 +23,57 @@ use std::path::PathBuf;
 
 use axeyum_lean_import::{CensusDecline, ImportLimits, census_ndjson};
 
+/// Stack for the census thread.
+///
+/// Reduction and inference recurse on term structure, and Lean's own kernel is
+/// run on a large stack for the same reason (`lean -s`). On the default 8 MB,
+/// four declarations in a 500-sample of `Init`+`Std` aborted with
+/// `thread 'main' has overflowed its stack`, which is neither an admission nor
+/// a decline and is indistinguishable at the shell from running out of memory.
+///
+/// **This fixed one of the four, and the measurement is the point.** With
+/// 512 MB `UInt16.toFin_ofNatTruncate_of_lt` imports cleanly in 3.8 s; the
+/// other three (`Char.toUpper`, `Char.utf8Size.fun_cases_unfolding`,
+/// `UInt32.ofFin_lt_iff_lt`) run *longer*, reach ~6.3 GB of heap, and overflow
+/// this stack too. They are runaway reductions, not deep-but-finite ones, and
+/// no stack size retires them — see
+/// `docs/formalized-math-2026-08/diary-import-scale.md`.
+const CENSUS_STACK_BYTES: usize = 512 * 1024 * 1024;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let worker = std::thread::Builder::new()
+        .name("census".to_owned())
+        .stack_size(CENSUS_STACK_BYTES)
+        .spawn(|| census().map_err(|error| error.to_string()))?;
+    match worker.join() {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(error)) => Err(error.into()),
+        Err(_) => Err("census thread panicked".into()),
+    }
+}
+
+fn census() -> Result<(), Box<dyn std::error::Error>> {
     let paths: Vec<PathBuf> = std::env::args_os().skip(1).map(PathBuf::from).collect();
     if paths.is_empty() {
         return Err("usage: lean4export_census <export.ndjson> [more.ndjson ...]".into());
     }
+
+    // A whole-environment export is far larger than a per-declaration one: the
+    // Lean 4.30.0 `Init`+`Std` environment is 10.5M records against ~30 for a
+    // single theorem's closure, so the default record cap refuses it outright.
+    // Overridable rather than raised, because the cap is what stops a corrupt
+    // stream from being read forever.
+    let mut limits = ImportLimits::default();
+    if let Ok(v) = std::env::var("AXEYUM_CENSUS_MAX_RECORDS") {
+        limits.max_records = v.parse()?;
+    }
+    if let Ok(v) = std::env::var("AXEYUM_CENSUS_MAX_LINE_BYTES") {
+        limits.max_line_bytes = v.parse()?;
+    }
+    // Triage on a large corpus needs the kernel's own message, not just the
+    // variant name: `DefEqMismatch` covers everything from a missing reduction
+    // rule to a genuinely ill-typed export.
+    let with_detail = std::env::var_os("AXEYUM_CENSUS_DETAIL").is_some();
 
     let mut streams_total = 0usize;
     let mut streams_clean = 0usize;
@@ -44,7 +90,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for path in &paths {
         streams_total += 1;
         let reader = BufReader::new(File::open(path)?);
-        let census = match census_ndjson(reader, ImportLimits::default()) {
+        let census = match census_ndjson(reader, limits) {
             Ok(census) => census,
             Err(error) => {
                 println!("STREAM|{}|reader-error|{error}", path.display());
@@ -92,6 +138,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cluster,
                 if cascade { "cascade" } else { "root" },
             );
+            if with_detail && !cascade {
+                println!("    DETAIL|{}", decline.detail.replace('\n', " "));
+            }
         }
     }
 

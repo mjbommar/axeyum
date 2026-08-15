@@ -47,7 +47,12 @@ cd "$(dirname "$0")/.." || exit 2
 # `lean_crosscheck`'s one-module-per-family representative slice). Set with
 # headroom so ordinary churn does not trip it; RAISING it as suites grow is the
 # ratchet working, LOWERING it needs a reason in the commit message.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-105}"
+#
+# Raised 105 -> 107 on 2026-08-15 by lane `import-scale`:
+# `real_lean_nat_arithmetic_crosscheck` adds two invocations, handing official
+# Lean 24 literal-arithmetic answers THIS kernel computed (plus a negative
+# control). Thirteen suites now; measured total 115.
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-107}"
 
 # package | features | test target
 #
@@ -70,6 +75,7 @@ axeyum-lean-kernel||real_lean_inductive_crosscheck
 axeyum-lean-kernel||real_lean_parametric_inductive_crosscheck
 axeyum-lean-kernel||real_lean_strict_positivity_crosscheck
 axeyum-lean-kernel||real_lean_nat_literal_crosscheck
+axeyum-lean-kernel||real_lean_nat_arithmetic_crosscheck
 axeyum-lean-kernel||real_lean_structure_eta_crosscheck
 axeyum-lean-kernel||real_lean_compact_share_crosscheck
 axeyum-lean-kernel||real_lean_kernel_replay

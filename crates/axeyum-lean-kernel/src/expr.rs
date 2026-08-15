@@ -90,6 +90,114 @@ impl NatLit {
     pub(crate) fn successor(&self) -> Self {
         Self(&self.0 + BigUint::from(1_u8))
     }
+
+    /// This natural as a `u32`, when it fits.
+    ///
+    /// Used only for the *bounds* of shift and power reduction, never for a
+    /// value: a natural too large to be a machine word makes the corresponding
+    /// reduction refuse to fire, which is fail-closed.
+    fn as_u32(&self) -> Option<u32> {
+        match self.0.to_u32_digits().as_slice() {
+            [] => Some(0),
+            [single] => Some(*single),
+            _ => None,
+        }
+    }
+
+    /// `x + y`.
+    pub(crate) fn checked_add(&self, other: &Self) -> Self {
+        Self(&self.0 + &other.0)
+    }
+
+    /// Lean's `Nat.sub`: truncated subtraction, `x - y = 0` when `y ≥ x`.
+    pub(crate) fn truncated_sub(&self, other: &Self) -> Self {
+        if self.0 <= other.0 {
+            Self(BigUint::default())
+        } else {
+            Self(&self.0 - &other.0)
+        }
+    }
+
+    /// `x * y`.
+    pub(crate) fn checked_mul(&self, other: &Self) -> Self {
+        Self(&self.0 * &other.0)
+    }
+
+    /// Lean's `Nat.div`: floor division with the total convention `x / 0 = 0`.
+    pub(crate) fn lean_div(&self, other: &Self) -> Self {
+        if other.is_zero() {
+            Self(BigUint::default())
+        } else {
+            Self(&self.0 / &other.0)
+        }
+    }
+
+    /// Lean's `Nat.mod`: remainder with the total convention `x % 0 = x`.
+    pub(crate) fn lean_mod(&self, other: &Self) -> Self {
+        if other.is_zero() {
+            self.clone()
+        } else {
+            Self(&self.0 % &other.0)
+        }
+    }
+
+    /// Lean's `Nat.gcd`, by Euclid. `gcd 0 y = y` and `gcd x 0 = x`.
+    pub(crate) fn gcd(&self, other: &Self) -> Self {
+        let mut a = self.0.clone();
+        let mut b = other.0.clone();
+        while b != BigUint::default() {
+            let r = &a % &b;
+            a = b;
+            b = r;
+        }
+        Self(a)
+    }
+
+    /// Lean's `Nat.pow`, refused when the exponent exceeds `max_exponent`.
+    ///
+    /// The bound is Lean's own (`ReducePowMaxExp`, `1 << 24`): a kernel that
+    /// evaluates `2 ^ 2^40` is a memory bomb, and refusing to fire leaves the
+    /// term stuck, which is fail-closed.
+    pub(crate) fn bounded_pow(&self, exponent: &Self, max_exponent: u32) -> Option<Self> {
+        let exponent = exponent.as_u32()?;
+        if exponent > max_exponent {
+            return None;
+        }
+        Some(Self(self.0.pow(exponent)))
+    }
+
+    /// `x &&& y`.
+    pub(crate) fn bitand(&self, other: &Self) -> Self {
+        Self(&self.0 & &other.0)
+    }
+
+    /// `x ||| y`.
+    pub(crate) fn bitor(&self, other: &Self) -> Self {
+        Self(&self.0 | &other.0)
+    }
+
+    /// `x ^^^ y`.
+    pub(crate) fn bitxor(&self, other: &Self) -> Self {
+        Self(&self.0 ^ &other.0)
+    }
+
+    /// `x <<< n`, refused when `n` exceeds `max_shift` (same bomb as `pow`).
+    pub(crate) fn bounded_shl(&self, shift: &Self, max_shift: u32) -> Option<Self> {
+        let shift = shift.as_u32()?;
+        if shift > max_shift {
+            return None;
+        }
+        Some(Self(&self.0 << shift))
+    }
+
+    /// `x >>> n`, i.e. `x / 2^n`. A shift wider than the value is `0`, so an
+    /// out-of-word shift needs no bound.
+    pub(crate) fn shr(&self, shift: &Self) -> Self {
+        match shift.as_u32() {
+            Some(shift) => Self(&self.0 >> shift),
+            None => Self(BigUint::default()),
+        }
+    }
 }
 
 impl fmt::Display for NatLit {

@@ -930,3 +930,52 @@ fn popping_the_local_that_justified_k_reduction_invalidates_the_entry() {
         "with the local gone, reduction has no reason to believe the major is True"
     );
 }
+
+/// The reconstruction preludes are **not** accelerated, and this is the
+/// mechanism rather than a hope.
+///
+/// `build_logic_prelude` declares `Bool` with its constructors in the order
+/// `[true, false]`. Lean's order is `[false, true]`, and `Bool.false` being
+/// constructor 0 is what `Nat.beq`'s accelerated result means. So the whole
+/// table is refused for any environment built by our preludes, every operation
+/// keeps computing by its own declared body, and nothing about the 119-theorem
+/// `nat` inventory or its empty axiom footprint can move because of this rule.
+#[test]
+fn the_reconstruction_prelude_is_not_accelerated() {
+    let mut kernel = Kernel::new();
+    let prelude = crate::build_nat_prelude(&mut kernel).expect("nat prelude must build");
+
+    let anon = kernel.anon();
+    let bool_name = kernel
+        .lookup_name_str(anon, "Bool")
+        .expect("the logic prelude declares Bool");
+    let true_ = kernel
+        .lookup_name_str(bool_name, "true")
+        .expect("Bool.true");
+    let false_ = kernel
+        .lookup_name_str(bool_name, "false")
+        .expect("Bool.false");
+    let Some(crate::Declaration::Inductive { ctor_names, .. }) = kernel.env.get(bool_name) else {
+        panic!("Bool must be an inductive");
+    };
+    assert_eq!(
+        ctor_names.as_slice(),
+        [true_, false_],
+        "this test is about our prelude's constructor order; if it changed, the \
+         acceleration guard changed meaning with it"
+    );
+
+    assert!(
+        kernel.nat_binop_table().is_none(),
+        "no literal arithmetic rule may fire in an environment whose `Bool` is \
+         not Lean's"
+    );
+    // And the prelude's own `Nat.add` still computes, by its own definition.
+    let add = kernel.const_(prelude.add, vec![]);
+    let two = kernel.lit(crate::Lit::Nat(crate::NatLit::from(2_u8)));
+    let three = kernel.lit(crate::Lit::Nat(crate::NatLit::from(3_u8)));
+    let five = kernel.lit(crate::Lit::Nat(crate::NatLit::from(5_u8)));
+    let applied = kernel.app(add, two);
+    let applied = kernel.app(applied, three);
+    assert!(kernel.def_eq(applied, five));
+}

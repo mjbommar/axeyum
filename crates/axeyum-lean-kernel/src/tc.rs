@@ -49,7 +49,7 @@
 use std::collections::HashMap;
 
 use crate::env::{Declaration, ReducibilityHint};
-use crate::expr::{ExprId, ExprNode, Lit};
+use crate::expr::{ExprId, ExprNode, Lit, NatLit};
 use crate::level::LevelId;
 use crate::name::NameId;
 use crate::{BinderInfo, Kernel};
@@ -747,6 +747,8 @@ impl Kernel {
                     } else if let Some(reduced) = self.reduce_rec(cursor, ctx) {
                         cursor = reduced;
                     } else if let Some(reduced) = self.reduce_nat_succ(cursor, ctx) {
+                        cursor = reduced;
+                    } else if let Some(reduced) = self.reduce_nat_binop(cursor, ctx) {
                         cursor = reduced;
                     } else {
                         return cursor;
@@ -1548,6 +1550,47 @@ enum NatOffset {
     Succ(ExprId),
 }
 
+/// Lean's `ReducePowMaxExp` (`kernel/type_checker.cpp`): the exponent above
+/// which `Nat.pow` is left stuck rather than evaluated. Reused as the shift
+/// bound, which Lean does not bound but which is the same memory bomb; a bound
+/// only ever refuses a reduction, so it is fail-closed relative to Lean.
+const REDUCE_POW_MAX_EXPONENT: u32 = 1 << 24;
+
+/// A binary `Nat` operation the kernel evaluates directly on literal arguments.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NatBinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    Gcd,
+    Pow,
+    Land,
+    Lor,
+    Xor,
+    ShiftLeft,
+    ShiftRight,
+    Beq,
+    Ble,
+}
+
+/// The checked declarations behind literal `Nat` arithmetic.
+#[derive(Debug, Clone)]
+pub(crate) struct NatBinOpEntries {
+    /// Environment declarations accepted as each operation, by name.
+    ops: HashMap<NameId, NatBinOp>,
+    /// `Nat.zero`, which reduction accepts in place of the literal `0`.
+    zero: NameId,
+    /// `Bool.true` / `Bool.false`, the results of the two predicates.
+    bool_true: NameId,
+    bool_false: NameId,
+}
+
+/// `None` when the environment carries no validated `Nat`/`Bool` bootstrap, in
+/// which case no literal arithmetic fires.
+pub(crate) type NatBinOpTable = Option<NatBinOpEntries>;
+
 impl Kernel {
     /// Validate the reserved declarations on which primitive Nat literals
     /// depend. Official Lean inherits these from its bootstrap; Axeyum imports
@@ -1703,6 +1746,234 @@ impl Kernel {
                 Some(self.app(succ, predecessor))
             }
         }
+    }
+
+    /// Lean's `is_nat_lit_ext`: a `Nat` literal, or the constant `Nat.zero`,
+    /// which is the same value written the other way.
+    fn nat_literal_ext(&mut self, expression: ExprId, zero: NameId) -> Option<NatLit> {
+        match self.expr_node(expression) {
+            ExprNode::Lit(Lit::Nat(value)) => Some(value.clone()),
+            ExprNode::Const(name, levels) if *name == zero && levels.is_empty() => {
+                Some(NatLit::from(0_u8))
+            }
+            _ => None,
+        }
+    }
+
+    /// The binary `Nat` operations this kernel evaluates directly on literals,
+    /// keyed by the environment's own declarations.
+    ///
+    /// Rebuilt when the environment revision moves, which is cheap: it is
+    /// sixteen name lookups and sixteen shape checks. Absent (`None`) means the
+    /// environment does not (yet) carry a validated `Nat`/`Bool` bootstrap, in
+    /// which case no arithmetic fires at all.
+    fn nat_binop_table(&mut self) -> Option<&NatBinOpEntries> {
+        let revision = self.env.revision();
+        if self.nat_binop_cache.as_ref().map(|(rev, _)| *rev) != Some(revision) {
+            let table = self.build_nat_binop_table();
+            self.nat_binop_cache = Some((revision, table));
+        }
+        self.nat_binop_cache.as_ref().and_then(|(_, t)| t.as_ref())
+    }
+
+    /// Check the shapes the literal arithmetic rules stand on.
+    ///
+    /// Every entry is admitted only if the environment declares it as a
+    /// `Definition` (never an axiom or an opaque), with **no universe
+    /// parameters** and with exactly Lean's type — `Nat → Nat → Nat` for the
+    /// arithmetic and bitwise operations, `Nat → Nat → Bool` for the two
+    /// predicates. `Bool` itself is checked the way `nat_literal_bootstrap`
+    /// checks `Nat`: a parameter-free, index-free, non-recursive inductive in
+    /// `Type` whose constructors are exactly `[Bool.false, Bool.true]` in that
+    /// order, both nullary. A missing or differently-shaped declaration simply
+    /// leaves that operation unaccelerated; nothing is assumed into existence.
+    fn build_nat_binop_table(&mut self) -> NatBinOpTable {
+        let literal = self.nat_literal_bootstrap().ok()?;
+        let anon = self.anon();
+        // Lookups, never interning: see `Kernel::lookup_name_str`. A name this
+        // environment has never heard of cannot be the operation we are looking
+        // for, so absence is simply "no rule".
+        let nat = self.lookup_name_str(anon, "Nat")?;
+        let bool_name = self.lookup_name_str(anon, "Bool")?;
+        let bool_false = self.lookup_name_str(bool_name, "false")?;
+        let bool_true = self.lookup_name_str(bool_name, "true")?;
+
+        // Shape first, interning second. `sort`/`const_` mint an expression when
+        // one does not already exist, which renumbers an export just as name
+        // interning does; both ids below are provably already present *given*
+        // that this really is Lean's `Bool` (its declared type IS `Sort 1` and
+        // its constructors' types ARE `Bool`), so the checks are ordered to
+        // establish that before either is built.
+        let declared_bool = matches!(
+            self.env.get(bool_name),
+            Some(Declaration::Inductive {
+                uparams,
+                num_params: 0,
+                num_indices: 0,
+                is_recursive: false,
+                ctor_names,
+                ..
+            }) if uparams.is_empty() && ctor_names.as_slice() == [bool_false, bool_true]
+        );
+        if !declared_bool {
+            return None;
+        }
+        let level_zero = self.level_zero();
+        let level_one = self.level_succ(level_zero);
+        let type0 = self.sort(level_one);
+        let bool_type = self.const_(bool_name, vec![]);
+        let bool_ok = matches!(
+            self.env.get(bool_name),
+            Some(Declaration::Inductive { ty, .. }) if *ty == type0
+        ) && [bool_false, bool_true]
+            .iter()
+            .enumerate()
+            .all(|(idx, ctor)| {
+                matches!(
+                    self.env.get(*ctor),
+                    Some(Declaration::Constructor {
+                        uparams,
+                        ty,
+                        inductive,
+                        num_fields: 0,
+                        idx: got,
+                        ..
+                    }) if uparams.is_empty()
+                        && *ty == bool_type
+                        && *inductive == bool_name
+                        && usize::from(*got) == idx
+                )
+            });
+        if !bool_ok {
+            return None;
+        }
+
+        // `Nat → Nat → Nat` and `Nat → Nat → Bool`. Checked by walking the two
+        // Pi layers rather than by comparing interned ids: binder *names* are
+        // part of an interned `Pi` node, and the official export spells
+        // `Nat.add`'s type with named binders, so an id comparison against a
+        // locally built arrow would silently never match. Binder annotations are
+        // likewise ignored — they do not affect definitional equality.
+        let nat_type = literal.nat_type;
+
+        let mut ops = HashMap::new();
+        for (segment, op, result) in [
+            ("add", NatBinOp::Add, nat_type),
+            ("sub", NatBinOp::Sub, nat_type),
+            ("mul", NatBinOp::Mul, nat_type),
+            ("div", NatBinOp::Div, nat_type),
+            ("mod", NatBinOp::Mod, nat_type),
+            ("gcd", NatBinOp::Gcd, nat_type),
+            ("pow", NatBinOp::Pow, nat_type),
+            ("land", NatBinOp::Land, nat_type),
+            ("lor", NatBinOp::Lor, nat_type),
+            ("xor", NatBinOp::Xor, nat_type),
+            ("shiftLeft", NatBinOp::ShiftLeft, nat_type),
+            ("shiftRight", NatBinOp::ShiftRight, nat_type),
+            ("beq", NatBinOp::Beq, bool_type),
+            ("ble", NatBinOp::Ble, bool_type),
+        ] {
+            let Some(name) = self.lookup_name_str(nat, segment) else {
+                continue;
+            };
+            let declared = match self.env.get(name) {
+                Some(Declaration::Definition { uparams, ty, .. }) if uparams.is_empty() => *ty,
+                _ => continue,
+            };
+            if self.is_binary_nat_operation(declared, nat_type, result) {
+                ops.insert(name, op);
+            }
+        }
+
+        Some(NatBinOpEntries {
+            ops,
+            zero: literal.zero,
+            bool_true,
+            bool_false,
+        })
+    }
+
+    /// Whether `ty` is exactly `nat → nat → result`, ignoring binder names and
+    /// annotations (neither affects definitional equality) but requiring the
+    /// codomain to be non-dependent — a `Pi` whose body mentions its binder is
+    /// not this shape and gets no reduction rule.
+    fn is_binary_nat_operation(&self, ty: ExprId, nat: ExprId, result: ExprId) -> bool {
+        let ExprNode::Pi(_, first_domain, first_body, _) = self.expr_node(ty) else {
+            return false;
+        };
+        let (first_domain, first_body) = (*first_domain, *first_body);
+        if first_domain != nat {
+            return false;
+        }
+        let ExprNode::Pi(_, second_domain, second_body, _) = self.expr_node(first_body) else {
+            return false;
+        };
+        *second_domain == nat && *second_body == result
+    }
+
+    /// Lean's `type_checker::reduce_nat` for the two-argument cases: a fully
+    /// applied `Nat` operation whose arguments both normalize to literals is
+    /// evaluated directly instead of unfolding its recursive definition.
+    ///
+    /// **This is what makes real Lean exports checkable at all.** `Char`,
+    /// `UInt8/16/32/64`, `USize` and `Fin` are `Nat` under bounds like `2^32`
+    /// and `1114112`, and reaching those by `Nat.succ` steps is not slow but
+    /// unbounded: measured 2026-08-15, `Option.repr` and
+    /// `Lean.Parser.Attr.extIff` each exhausted an 8 GB address space in under
+    /// two minutes without this rule and import in under a second with it.
+    ///
+    /// The trust this adds is exactly Lean's, and it is worth naming: the rule
+    /// is keyed on the *name* `Nat.add`, so an environment that declared some
+    /// other function under that name (with the right type) would be evaluated
+    /// as addition. `build_nat_binop_table` narrows that to a definition of the
+    /// exact expected type, and `nat_binop_agrees_with_unaccelerated_reduction`
+    /// pins the semantics against the imported `Init` definitions themselves.
+    fn reduce_nat_binop(&mut self, expression: ExprId, ctx: &mut LocalContext) -> Option<ExprId> {
+        let (head, arguments) = self.unfold_apps(expression);
+        if arguments.len() != 2 {
+            return None;
+        }
+        let ExprNode::Const(name, levels) = self.expr_node(head) else {
+            return None;
+        };
+        if !levels.is_empty() {
+            return None;
+        }
+        let name = *name;
+        let table = self.nat_binop_table()?;
+        let op = table.ops.get(&name).copied()?;
+        let zero = table.zero;
+        let bool_true = table.bool_true;
+        let bool_false = table.bool_false;
+
+        let left = self.whnf_core(arguments[0], ctx);
+        let left = self.nat_literal_ext(left, zero)?;
+        let right = self.whnf_core(arguments[1], ctx);
+        let right = self.nat_literal_ext(right, zero)?;
+
+        let value = match op {
+            NatBinOp::Add => left.checked_add(&right),
+            NatBinOp::Sub => left.truncated_sub(&right),
+            NatBinOp::Mul => left.checked_mul(&right),
+            NatBinOp::Div => left.lean_div(&right),
+            NatBinOp::Mod => left.lean_mod(&right),
+            NatBinOp::Gcd => left.gcd(&right),
+            NatBinOp::Pow => left.bounded_pow(&right, REDUCE_POW_MAX_EXPONENT)?,
+            NatBinOp::Land => left.bitand(&right),
+            NatBinOp::Lor => left.bitor(&right),
+            NatBinOp::Xor => left.bitxor(&right),
+            NatBinOp::ShiftLeft => left.bounded_shl(&right, REDUCE_POW_MAX_EXPONENT)?,
+            NatBinOp::ShiftRight => left.shr(&right),
+            NatBinOp::Beq => {
+                let ctor = if left == right { bool_true } else { bool_false };
+                return Some(self.const_(ctor, vec![]));
+            }
+            NatBinOp::Ble => {
+                let ctor = if left <= right { bool_true } else { bool_false };
+                return Some(self.const_(ctor, vec![]));
+            }
+        };
+        Some(self.lit(Lit::Nat(value)))
     }
 }
 

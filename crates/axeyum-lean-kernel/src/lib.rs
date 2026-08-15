@@ -288,6 +288,13 @@ pub struct Kernel {
     /// reduction step; the counter is what turns the argument into a check that
     /// a future reduction rule cannot silently invalidate.
     reduction_ctx_reads: u64,
+    /// The literal-`Nat` arithmetic rules validated against the environment, for
+    /// exactly one declaration-environment revision.
+    ///
+    /// Cached because it is consulted on every constant-headed reduction step;
+    /// keyed on the revision because admitting a declaration can bring a
+    /// previously absent `Nat.add` (or a differently-shaped one) into scope.
+    nat_binop_cache: Option<(u64, tc::NatBinOpTable)>,
     /// One-way guard set after transient tables are released for serialization.
     export_only: bool,
 
@@ -471,6 +478,20 @@ impl Kernel {
     /// Appends string component `s` to `parent`.
     pub fn name_str(&mut self, parent: NameId, s: impl Into<String>) -> NameId {
         self.intern_name(NameNode::Str(parent, s.into()))
+    }
+
+    /// Looks up `parent.s` **without interning it**.
+    ///
+    /// Reduction rules that are keyed on well-known names must use this rather
+    /// than [`Kernel::name_str`]. Interning is observable: name ids are dense
+    /// and assigned in insertion order, and the lean4export writer emits them in
+    /// that order, so a reduction that minted `Bool.true` while checking a
+    /// declaration would renumber the whole subsequent export.
+    /// `axeyum_built_prelude_round_trips` caught exactly that.
+    pub(crate) fn lookup_name_str(&self, parent: NameId, s: &str) -> Option<NameId> {
+        self.name_intern
+            .get(&NameNode::Str(parent, s.to_owned()))
+            .copied()
     }
 
     /// Appends numeric component `n` to `parent`.
