@@ -8,7 +8,7 @@ set_option linter.unusedVariables false
 -- suppresses codegen only; it does not weaken type checking.
 noncomputable section
 
-axiom False : Prop
+inductive False : Prop where
 def Not : ((x0 : Prop) -> Prop) :=
   fun (x0 : Prop) => ((x1 : x0) -> False)
 axiom Real : Sort (1)

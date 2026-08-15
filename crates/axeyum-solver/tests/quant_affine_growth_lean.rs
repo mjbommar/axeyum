@@ -28,7 +28,13 @@ fn repair_const_nterm_reconstructs_and_routes() {
         .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
             (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
         });
-    assert_eq!((source.len(), fnv1a), (52_138, 0x81ca_6c7f_fbce_3dd9));
+    // Re-pinned 2026-08-14 (was `(52_138, 0x81ca_6c7f_fbce_3dd9)`): `a5975725f` made
+    // every reachable inductive a real Lean `inductive` instead of an opaque `axiom`,
+    // which is what the module has to say for Lean's ι-reduction to match the kernel's,
+    // and it changed these bytes without re-pinning them. The new bytes are CHECKED,
+    // not merely stable: this module is accepted by Lean 4.30.0 with `#print axioms`
+    // reporting only ledger axioms and the query hypotheses, and no `sorryAx`.
+    assert_eq!((source.len(), fnv1a), (79_801, 0x0e88_e1a5_ecbf_6a7a));
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("euclidean_decomposition"));
     assert!(!source.contains("sorryAx"));

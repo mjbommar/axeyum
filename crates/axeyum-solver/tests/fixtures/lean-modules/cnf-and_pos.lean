@@ -8,14 +8,12 @@ set_option linter.unusedVariables false
 -- suppresses codegen only; it does not weaken type checking.
 noncomputable section
 
-axiom False : Prop
-axiom And : ((x0 : Prop) -> ((x1 : Prop) -> Prop))
-axiom And.intro : ((x0 : Prop) -> ((x1 : Prop) -> ((x2 : x0) -> ((x3 : x1) -> And x0 x1))))
-axiom And.rec.{u} : ((x0 : Prop) -> ((x1 : Prop) -> ((motive : ((x2 : And x0 x1) -> Sort (u))) -> ((intro : ((x3 : x0) -> ((x4 : x1) -> motive (And.intro x0 x1 x3 x4)))) -> ((t : And x0 x1) -> motive t)))))
-axiom Or : ((x0 : Prop) -> ((x1 : Prop) -> Prop))
-axiom Or.inl : ((x0 : Prop) -> ((x1 : Prop) -> ((x2 : x0) -> Or x0 x1)))
-axiom Or.inr : ((x0 : Prop) -> ((x1 : Prop) -> ((x2 : x1) -> Or x0 x1)))
-axiom Or.rec : ((x0 : Prop) -> ((x1 : Prop) -> ((motive : ((x2 : Or x0 x1) -> Prop)) -> ((inl : ((x3 : x0) -> motive (Or.inl x0 x1 x3))) -> ((inr : ((x4 : x1) -> motive (Or.inr x0 x1 x4))) -> ((t : Or x0 x1) -> motive t))))))
+inductive False : Prop where
+inductive And (x0 : Prop) (x1 : Prop) : Prop where
+  | intro : ((x2 : x0) -> ((x3 : x1) -> And x0 x1))
+inductive Or (x0 : Prop) (x1 : Prop) : Prop where
+  | inl : ((x2 : x0) -> Or x0 x1)
+  | inr : ((x2 : x1) -> Or x0 x1)
 def Not : ((x0 : Prop) -> Prop) :=
   fun (x0 : Prop) => ((x1 : x0) -> False)
 axiom axeyum.reconstruct.em._0 : ((x0 : Prop) -> Or x0 (Not x0))
@@ -24,6 +22,6 @@ axiom axeyum.reconstruct.prop._2 : Prop
 axiom axeyum.reconstruct.prop._3 : Prop
 
 theorem cnf_intro_fixture : Or (Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3))) axeyum.reconstruct.prop._2 :=
-  Or.rec (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)) (Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3))) (fun (x0 : Or (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)) (Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)))) => Or (Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3))) axeyum.reconstruct.prop._2) (fun (x0 : And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)) => Or.inr (Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3))) axeyum.reconstruct.prop._2 (And.rec.{0} axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3 (fun (x1 : And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3) => axeyum.reconstruct.prop._2) (fun (x1 : axeyum.reconstruct.prop._2) => fun (x2 : axeyum.reconstruct.prop._3) => x1) (And.rec.{0} axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3) (fun (x1 : And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)) => And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3) (fun (x1 : axeyum.reconstruct.prop._1) => fun (x2 : And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3) => x2) x0))) (fun (x0 : Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3))) => Or.inl (Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3))) axeyum.reconstruct.prop._2 x0) (axeyum.reconstruct.em._0 (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)))
+  @Or.rec (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)) (Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3))) (fun (x0 : Or (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)) (Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)))) => Or (Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3))) axeyum.reconstruct.prop._2) (fun (x0 : And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)) => @Or.inr (Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3))) axeyum.reconstruct.prop._2 (@And.rec.{0} axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3 (fun (x1 : And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3) => axeyum.reconstruct.prop._2) (fun (x1 : axeyum.reconstruct.prop._2) => fun (x2 : axeyum.reconstruct.prop._3) => x1) (@And.rec.{0} axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3) (fun (x1 : And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)) => And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3) (fun (x1 : axeyum.reconstruct.prop._1) => fun (x2 : And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3) => x2) x0))) (fun (x0 : Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3))) => @Or.inl (Not (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3))) axeyum.reconstruct.prop._2 x0) (axeyum.reconstruct.em._0 (And axeyum.reconstruct.prop._1 (And axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._3)))
 
 #print axioms cnf_intro_fixture

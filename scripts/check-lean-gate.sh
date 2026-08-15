@@ -42,25 +42,28 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 2
 
-# The floor. Measured 2026-08-14 on Lean 4.30.0: 40 real-Lean invocations across
-# the nine suites below (kernel side 19, solver side 21). Set with headroom so
-# ordinary churn does not trip it; RAISING it as suites grow is the ratchet
-# working, LOWERING it needs a reason in the commit message.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-35}"
+# The floor. Measured 2026-08-14 on Lean 4.30.0: 112 real-Lean invocations across
+# the twelve suites below (kernel side 21, solver side 91 — of which 70 are
+# `lean_crosscheck`'s one-module-per-family representative slice). Set with
+# headroom so ordinary churn does not trip it; RAISING it as suites grow is the
+# ratchet working, LOWERING it needs a reason in the commit message.
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-105}"
 
 # package | features | test target
 #
-# NOT LISTED, and named rather than passed over in silence:
-#   * `lean_crosscheck` (axeyum-solver, `full`) — the 70-family representative
-#     sweep. Running it under real Lean for the first time on 2026-08-14 found a
-#     GENUINE REJECTION: the `quant_bv_source_instance_set` family emits proof
-#     shares that Lean reads as `Prop`-valued statements where proof terms are
-#     required ("Application type mismatch … of sort `Type` but is expected to
-#     have type … of sort `Prop`", plus unknown-identifier errors). 69 of 70
-#     modules pass. That is an open writer defect, not a gate defect, and it is
-#     exactly the class this gate exists to surface. Run it directly:
-#       cargo test -p axeyum-solver --features full --test lean_crosscheck
-#     Add it here once the family is fixed; the ~60s cost is affordable.
+# `lean_crosscheck` (axeyum-solver, `full`) is the 70-family representative
+# sweep, and it is LISTED. Running it under real Lean for the first time on
+# 2026-08-14 found a genuine rejection — the `quant_bv_source_instance_set`
+# family — which was excluded here by name until it was fixed. It was a WRITER
+# defect, not a reconstruction defect: the compact proof-sharing pass hoisted a
+# *proper prefix* of a recursor spine (`def axeyum_proof_share_149 := @Or.rec P`),
+# and Lean makes an inductive's parameters and a recursor's motive implicit, so
+# the bare reference `axeyum_proof_share_149 Q` silently re-inserted them and put
+# `Q` in the wrong slot. The kernel term was well typed throughout; only the
+# module text was wrong. Fixed by keeping regenerated-constant spines saturated
+# (`lean_pp::hoisting_exposes_implicit_binders`), with the dedicated regression
+# suite `real_lean_compact_share_crosscheck` below. 70 of 70 families now pass;
+# the exhaustive `-- --ignored` run checks 163 of 163 modules.
 suites=$(
   cat <<'EOF'
 axeyum-lean-kernel||real_lean_inductive_crosscheck
@@ -68,11 +71,13 @@ axeyum-lean-kernel||real_lean_parametric_inductive_crosscheck
 axeyum-lean-kernel||real_lean_strict_positivity_crosscheck
 axeyum-lean-kernel||real_lean_nat_literal_crosscheck
 axeyum-lean-kernel||real_lean_structure_eta_crosscheck
+axeyum-lean-kernel||real_lean_compact_share_crosscheck
 axeyum-lean-kernel||real_lean_kernel_replay
 axeyum-solver|full|int_inequality_lean_reconstruct
 axeyum-solver|full|lean_module_fixtures
 axeyum-solver|full|diophantine_lean_reconstruct
 axeyum-solver|full|regex_emptiness_lean_reconstruct
+axeyum-solver|full|lean_crosscheck
 EOF
 )
 

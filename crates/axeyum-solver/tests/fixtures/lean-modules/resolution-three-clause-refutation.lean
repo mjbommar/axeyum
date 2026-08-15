@@ -8,12 +8,10 @@ set_option linter.unusedVariables false
 -- suppresses codegen only; it does not weaken type checking.
 noncomputable section
 
-axiom False : Prop
-axiom False.rec.{u} : ((motive : ((x0 : False) -> Sort (u))) -> ((t : False) -> motive t))
-axiom Or : ((x0 : Prop) -> ((x1 : Prop) -> Prop))
-axiom Or.inl : ((x0 : Prop) -> ((x1 : Prop) -> ((x2 : x0) -> Or x0 x1)))
-axiom Or.inr : ((x0 : Prop) -> ((x1 : Prop) -> ((x2 : x1) -> Or x0 x1)))
-axiom Or.rec : ((x0 : Prop) -> ((x1 : Prop) -> ((motive : ((x2 : Or x0 x1) -> Prop)) -> ((inl : ((x3 : x0) -> motive (Or.inl x0 x1 x3))) -> ((inr : ((x4 : x1) -> motive (Or.inr x0 x1 x4))) -> ((t : Or x0 x1) -> motive t))))))
+inductive False : Prop where
+inductive Or (x0 : Prop) (x1 : Prop) : Prop where
+  | inl : ((x2 : x0) -> Or x0 x1)
+  | inr : ((x2 : x1) -> Or x0 x1)
 def Not : ((x0 : Prop) -> Prop) :=
   fun (x0 : Prop) => ((x1 : x0) -> False)
 axiom axeyum.reconstruct.prop._1 : Prop
@@ -23,6 +21,6 @@ axiom axeyum.reconstruct.hyp._4 : Not axeyum.reconstruct.prop._2
 axiom axeyum.reconstruct.hyp._5 : Not axeyum.reconstruct.prop._1
 
 theorem axeyum_refutation : False :=
-  False.rec.{0} (fun (x0 : False) => False) (axeyum.reconstruct.hyp._5 (Or.rec axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._1 (fun (x0 : Or axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._1) => axeyum.reconstruct.prop._1) (fun (x0 : axeyum.reconstruct.prop._2) => False.rec.{0} (fun (x1 : False) => axeyum.reconstruct.prop._1) (axeyum.reconstruct.hyp._4 x0)) (fun (x0 : axeyum.reconstruct.prop._1) => x0) axeyum.reconstruct.hyp._3))
+  @False.rec.{0} (fun (x0 : False) => False) (axeyum.reconstruct.hyp._5 (@Or.rec axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._1 (fun (x0 : Or axeyum.reconstruct.prop._2 axeyum.reconstruct.prop._1) => axeyum.reconstruct.prop._1) (fun (x0 : axeyum.reconstruct.prop._2) => @False.rec.{0} (fun (x1 : False) => axeyum.reconstruct.prop._1) (axeyum.reconstruct.hyp._4 x0)) (fun (x0 : axeyum.reconstruct.prop._1) => x0) axeyum.reconstruct.hyp._3))
 
 #print axioms axeyum_refutation

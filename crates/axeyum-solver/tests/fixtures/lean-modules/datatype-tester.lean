@@ -8,12 +8,11 @@ set_option linter.unusedVariables false
 -- suppresses codegen only; it does not weaken type checking.
 noncomputable section
 
-axiom True : Prop
-axiom True.intro : True
-axiom False : Prop
-axiom Eq.{u} : ((x0 : Sort (u)) -> ((x1 : x0) -> ((x2 : x0) -> Prop)))
-axiom Eq.refl.{u} : ((x0 : Sort (u)) -> ((x1 : x0) -> Eq.{u} x0 x1 x1))
-axiom Eq.rec.{u._1, u} : ((x0 : Sort (u)) -> ((x1 : x0) -> ((motive : ((x2 : x0) -> ((x3 : Eq.{u} x0 x1 x2) -> Sort (u._1)))) -> ((refl : motive x1 (Eq.refl.{u} x0 x1)) -> ((x4 : x0) -> ((t : Eq.{u} x0 x1 x4) -> motive x4 t))))))
+inductive True : Prop where
+  | intro : True
+inductive False : Prop where
+inductive Eq.{u} (x0 : Sort (u)) (x1 : x0) : ((x2 : x0) -> Prop) where
+  | refl : Eq x0 x1 x1
 inductive Bool : Sort (1) where
   | true : Bool
   | false : Bool
@@ -25,6 +24,6 @@ axiom axeyum.reconstruct.fld_0._1 : α
 axiom axeyum.reconstruct.hyp._2 : Eq.{1} Bool ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x1 : α) => @Bool.true) (fun (x1 : α) => @Bool.false) x0) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._1)) @Bool.true
 
 theorem axeyum_refutation : False :=
-  Eq.rec.{0, 1} Bool ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x1 : α) => @Bool.true) (fun (x1 : α) => @Bool.false) x0) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._1)) (fun (x0 : Bool) => fun (x1 : Eq.{1} Bool ((fun (x1 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x2 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x2 : α) => @Bool.true) (fun (x2 : α) => @Bool.false) x1) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._1)) x0) => (fun (x2 : Bool) => @Bool.rec.{1} (fun (x3 : Bool) => Prop) False True x2) x0) True.intro @Bool.true axeyum.reconstruct.hyp._2
+  @Eq.rec.{0, 1} Bool ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x1 : α) => @Bool.true) (fun (x1 : α) => @Bool.false) x0) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._1)) (fun (x0 : Bool) => fun (x1 : Eq.{1} Bool ((fun (x1 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x2 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x2 : α) => @Bool.true) (fun (x2 : α) => @Bool.false) x1) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._1)) x0) => (fun (x2 : Bool) => @Bool.rec.{1} (fun (x3 : Bool) => Prop) False True x2) x0) @True.intro @Bool.true axeyum.reconstruct.hyp._2
 
 #print axioms axeyum_refutation

@@ -46,7 +46,11 @@ fn sdlx_reconstructs_genuine_nested_quantifiers_and_routes() {
         .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
             (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
         });
-    assert_eq!((source.len(), fnv1a), (33_870, 0xb048_fc57_2f8c_e975));
+    // Re-pinned 2026-08-14 (was `(33_870, 0xb048_fc57_2f8c_e975)`): `a5975725f` made
+    // every reachable inductive a real Lean `inductive` instead of an opaque `axiom`.
+    // Checked, not merely stable — Lean 4.30.0 accepts this module, `#print axioms`
+    // reports only ledger axioms and the query hypothesis, and there is no `sorryAx`.
+    assert_eq!((source.len(), fnv1a), (51_989, 0x33c9_7d4b_0b70_5040));
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("eq_em"));
     assert!(!source.contains("sorryAx"));

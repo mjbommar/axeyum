@@ -105,8 +105,12 @@ fn small_cover_generated_module_is_byte_stable() {
         .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
             (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
         });
-    assert_eq!(module.len(), 7_814);
-    assert_eq!(fnv1a, 0xeda4_bd52_aab5_6790);
+    // Re-pinned 2026-08-14 (was `7_814` / `0xeda4_bd52_aab5_6790`): `a5975725f` made
+    // every reachable inductive a real Lean `inductive` instead of an opaque `axiom`.
+    // Checked, not merely stable — Lean 4.30.0 accepts this module and `#print axioms`
+    // reports only the query hypotheses, with no `sorryAx`.
+    assert_eq!(module.len(), 15_394);
+    assert_eq!(fnv1a, 0xdb29_9664_bafe_0fe7);
 }
 
 #[test]

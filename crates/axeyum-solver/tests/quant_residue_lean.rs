@@ -39,7 +39,12 @@ fn committed_clock_rows_reconstruct_and_route() {
                 .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
                     (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
                 });
-            assert_eq!((source.len(), fnv1a), (19_615, 0x586f_b67c_0ff8_1e6a));
+            // Re-pinned 2026-08-14 (was `(19_615, 0x586f_b67c_0ff8_1e6a)`):
+            // `a5975725f` made every reachable inductive a real Lean `inductive`
+            // instead of an opaque `axiom`. Checked, not merely stable — Lean 4.30.0
+            // accepts this module, `#print axioms` reports only ledger axioms and the
+            // query hypotheses, and there is no `sorryAx`.
+            assert_eq!((source.len(), fnv1a), (33_339, 0x682a_a2a2_d64f_6caf));
         }
         assert!(source.contains("theorem axeyum_refutation : False"));
         assert!(source.contains("euclidean_decomposition"));

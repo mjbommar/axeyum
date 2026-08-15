@@ -399,7 +399,7 @@ impl Kernel {
             }
         }
         let shares = if compact {
-            self.compact_share_plan(&[goal, proof], theorem_name)
+            self.compact_share_plan(&[goal, proof], theorem_name, &at_consts)
         } else {
             LeanSharePlan::default()
         };
@@ -991,7 +991,75 @@ impl Kernel {
         order
     }
 
-    fn compact_share_candidates(&self, postorder: &[ExprId], roots: &[ExprId]) -> HashSet<ExprId> {
+    /// The number of leading `Pi` binders in the kernel type of `name`, i.e. how
+    /// many arguments saturate it. `None` when the name is not in the
+    /// environment.
+    fn decl_binder_arity(&self, name: NameId) -> Option<usize> {
+        let mut ty = self.environment().get(name)?.ty();
+        let mut arity = 0_usize;
+        while let ExprNode::Pi(_, _, body, _) = self.expr_node(ty) {
+            ty = *body;
+            arity += 1;
+        }
+        Some(arity)
+    }
+
+    /// The head and argument count of `expression`'s full application spine,
+    /// without materializing the arguments.
+    fn spine_head_and_len(&self, expression: ExprId) -> (ExprId, usize) {
+        let mut head = expression;
+        let mut len = 0_usize;
+        while let ExprNode::App(function, _) = self.expr_node(head) {
+            head = *function;
+            len += 1;
+        }
+        (head, len)
+    }
+
+    /// True when hoisting `expression` into a top-level `def` (or a `let`) would
+    /// change how Lean reads its *reference sites*.
+    ///
+    /// A `def` inherits the leading binders of the term it is bound to, and a
+    /// **bare** reference to a `def` whose type starts with *implicit* binders
+    /// makes Lean insert metavariables for them — so the next positional
+    /// argument lands in the wrong slot. The kernel term is a flat spine with
+    /// every argument explicit; hoisting a *proper prefix* of that spine is what
+    /// introduces the implicit binders, because it is exactly the constants in
+    /// `at_consts` (the constructors and recursors Lean regenerates for a real
+    /// `inductive`) whose parameters, motive and indices Lean makes implicit.
+    ///
+    /// Measured on 2026-08-14: `def axeyum_proof_share_149 := @Or.rec P` gets
+    /// type `{x1 : Prop} → {motive : Or P x1 → Prop} → …`, so
+    /// `axeyum_proof_share_149 Q` type-checks `Q` against the `inl` minor
+    /// premise and Lean rejects the module — while the kernel term
+    /// `Or.rec P Q motive m₁ m₂ t` is well typed and the in-tree kernel accepts
+    /// it. Saturated spines carry no leading binders at all, so they stay
+    /// shareable and the chunking that bounds module size is preserved.
+    fn hoisting_exposes_implicit_binders(
+        &self,
+        expression: ExprId,
+        at_consts: &BTreeSet<NameId>,
+    ) -> bool {
+        if at_consts.is_empty() || !matches!(self.expr_node(expression), ExprNode::App(_, _)) {
+            return false;
+        }
+        let (head, arguments) = self.spine_head_and_len(expression);
+        let ExprNode::Const(name, _) = self.expr_node(head) else {
+            return false;
+        };
+        if !at_consts.contains(name) {
+            return false;
+        }
+        self.decl_binder_arity(*name)
+            .is_none_or(|arity| arguments < arity)
+    }
+
+    fn compact_share_candidates(
+        &self,
+        postorder: &[ExprId],
+        roots: &[ExprId],
+        at_consts: &BTreeSet<NameId>,
+    ) -> HashSet<ExprId> {
         let mut occurrences = HashMap::<ExprId, u64>::with_capacity(postorder.len());
         for &root in roots {
             *occurrences.entry(root).or_default() = occurrences
@@ -1037,6 +1105,7 @@ impl Kernel {
                             | ExprNode::Pi(..)
                             | ExprNode::Let(..)
                     )
+                    && !self.hoisting_exposes_implicit_binders(expression, at_consts)
             })
             .collect::<Vec<_>>();
         let mut selected = candidates.into_iter().collect::<HashSet<_>>();
@@ -1069,7 +1138,8 @@ impl Kernel {
                         | ExprNode::Lam(..)
                         | ExprNode::Pi(..)
                         | ExprNode::Let(..)
-                );
+                )
+                && !self.hoisting_exposes_implicit_binders(expression, at_consts);
             if selected.contains(&expression) || (shareable && size >= COMPACT_CHUNK_TREE_NODES) {
                 selected.insert(expression);
                 size = 1;
@@ -1080,9 +1150,14 @@ impl Kernel {
         selected
     }
 
-    fn compact_share_plan(&self, roots: &[ExprId], theorem_name: &str) -> LeanSharePlan {
+    fn compact_share_plan(
+        &self,
+        roots: &[ExprId],
+        theorem_name: &str,
+        at_consts: &BTreeSet<NameId>,
+    ) -> LeanSharePlan {
         let postorder = self.expr_postorder(roots);
-        let selected = self.compact_share_candidates(&postorder, roots);
+        let selected = self.compact_share_candidates(&postorder, roots, at_consts);
 
         let mut reserved = self
             .environment()
@@ -1155,7 +1230,7 @@ impl Kernel {
         expression: ExprId,
         at_consts: &BTreeSet<NameId>,
     ) {
-        let shares = self.compact_share_plan(&[expression], "axeyum_local_expression");
+        let shares = self.compact_share_plan(&[expression], "axeyum_local_expression", at_consts);
         if shares.order.is_empty() {
             self.write_lean_without_shares(out, expression, at_consts);
             return;
@@ -1499,6 +1574,8 @@ impl Kernel {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeSet;
+
     use crate::Kernel;
 
     /// `fun (p : Prop) => p` renders to readable Lean with the de Bruijn variable
@@ -1637,16 +1714,22 @@ mod tests {
 
         assert!(module.starts_with("-- Auto-generated"), "{module}");
         assert!(module.contains("\nprelude\n"), "{module}");
-        // `False` and `h` are reachable and declared.
-        assert!(module.contains("axiom False : Prop"), "{module}");
+        // `False` and `h` are reachable and declared. `False` is an inductive, and
+        // since `a5975725f` every *reachable* inductive is emitted as a real Lean
+        // `inductive` rather than an opaque `axiom` — an axiomatized family has no
+        // ι-rule on the Lean side, so Lean's defeq would be strictly weaker than
+        // the kernel's. This assertion still read `axiom False : Prop` on HEAD and
+        // was the only failing test in this crate.
+        assert!(module.contains("inductive False : Prop where"), "{module}");
         assert!(module.contains("axiom h : False"), "{module}");
         // Unrelated prelude inductives are NOT pulled in.
         assert!(!module.contains("axiom And "), "{module}");
+        assert!(!module.contains("inductive And "), "{module}");
         // The theorem and audit close the module.
         assert!(module.contains("theorem g : False :=\n  h"), "{module}");
         assert!(module.trim_end().ends_with("#print axioms g"), "{module}");
         // `False` is declared before the theorem that uses it.
-        let false_at = module.find("axiom False").unwrap();
+        let false_at = module.find("inductive False").unwrap();
         let thm_at = module.find("theorem g").unwrap();
         assert!(
             false_at < thm_at,
@@ -1846,7 +1929,7 @@ mod tests {
         let lambda = k.lam(anon, prop, body, BinderInfo::Default);
         assert_eq!(k.num_loose_bvars(repeated_open), 1);
 
-        let plan = k.compact_share_plan(&[lambda], "open_term");
+        let plan = k.compact_share_plan(&[lambda], "open_term", &BTreeSet::new());
         assert!(plan.names.is_empty(), "open terms must not be hoisted");
     }
 
@@ -1864,7 +1947,7 @@ mod tests {
         let body = k.app(closed, closed);
         let lambda = k.lam(binder, prop, body, crate::BinderInfo::Default);
 
-        let plan = k.compact_share_plan(&[lambda], "binder_collision");
+        let plan = k.compact_share_plan(&[lambda], "binder_collision", &BTreeSet::new());
         assert!(!plan.names.is_empty());
         assert!(
             plan.names
@@ -1888,7 +1971,7 @@ mod tests {
         }
         let root = k.app(chain, chain);
 
-        let plan = k.compact_share_plan(&[root], "large_closed_dag");
+        let plan = k.compact_share_plan(&[root], "large_closed_dag", &BTreeSet::new());
         assert!(
             plan.names.len() > 16_384,
             "large proof DAGs must not fall back to tree expansion: {} shares",
@@ -1932,7 +2015,7 @@ mod tests {
             chain = k.app(chain, argument);
         }
 
-        let plan = k.compact_share_plan(&[chain], "single_use_chain");
+        let plan = k.compact_share_plan(&[chain], "single_use_chain", &BTreeSet::new());
         assert!(
             plan.names.len() >= 4,
             "single-use proof chains need bounded serialization chunks: {} shares",

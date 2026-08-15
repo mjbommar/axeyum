@@ -8,10 +8,9 @@ set_option linter.unusedVariables false
 -- suppresses codegen only; it does not weaken type checking.
 noncomputable section
 
-axiom False : Prop
-axiom Eq.{u} : ((x0 : Sort (u)) -> ((x1 : x0) -> ((x2 : x0) -> Prop)))
-axiom Eq.refl.{u} : ((x0 : Sort (u)) -> ((x1 : x0) -> Eq.{u} x0 x1 x1))
-axiom Eq.rec.{u._1, u} : ((x0 : Sort (u)) -> ((x1 : x0) -> ((motive : ((x2 : x0) -> ((x3 : Eq.{u} x0 x1 x2) -> Sort (u._1)))) -> ((refl : motive x1 (Eq.refl.{u} x0 x1)) -> ((x4 : x0) -> ((t : Eq.{u} x0 x1 x4) -> motive x4 t))))))
+inductive False : Prop where
+inductive Eq.{u} (x0 : Sort (u)) (x1 : x0) : ((x2 : x0) -> Prop) where
+  | refl : Eq x0 x1 x1
 def Not : ((x0 : Prop) -> Prop) :=
   fun (x0 : Prop) => ((x1 : x0) -> False)
 axiom α : Sort (1)
@@ -25,6 +24,6 @@ axiom axeyum.reconstruct.hyp._6 : Eq.{1} axeyum.reconstruct.dtfam._0 (@axeyum.re
 axiom axeyum.reconstruct.hyp._7 : Not (Eq.{1} α axeyum.reconstruct.fld_0._1 axeyum.reconstruct.fld_0._3)
 
 theorem axeyum_refutation : False :=
-  axeyum.reconstruct.hyp._7 (Eq.rec.{0, 1} axeyum.reconstruct.dtfam._0 (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1 axeyum.reconstruct.fld_1._2) (fun (x0 : axeyum.reconstruct.dtfam._0) => fun (x1 : Eq.{1} axeyum.reconstruct.dtfam._0 (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1 axeyum.reconstruct.fld_1._2) x0) => Eq.{1} α ((fun (x2 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x3 : axeyum.reconstruct.dtfam._0) => α) (fun (x3 : α) => fun (x4 : α) => x3) x2) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1 axeyum.reconstruct.fld_1._2)) ((fun (x2 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x3 : axeyum.reconstruct.dtfam._0) => α) (fun (x3 : α) => fun (x4 : α) => x3) x2) x0)) (Eq.refl.{1} α ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => α) (fun (x1 : α) => fun (x2 : α) => x1) x0) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1 axeyum.reconstruct.fld_1._2))) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._3 axeyum.reconstruct.fld_1._4) axeyum.reconstruct.hyp._6)
+  axeyum.reconstruct.hyp._7 (@Eq.rec.{0, 1} axeyum.reconstruct.dtfam._0 (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1 axeyum.reconstruct.fld_1._2) (fun (x0 : axeyum.reconstruct.dtfam._0) => fun (x1 : Eq.{1} axeyum.reconstruct.dtfam._0 (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1 axeyum.reconstruct.fld_1._2) x0) => Eq.{1} α ((fun (x2 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x3 : axeyum.reconstruct.dtfam._0) => α) (fun (x3 : α) => fun (x4 : α) => x3) x2) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1 axeyum.reconstruct.fld_1._2)) ((fun (x2 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x3 : axeyum.reconstruct.dtfam._0) => α) (fun (x3 : α) => fun (x4 : α) => x3) x2) x0)) (@Eq.refl.{1} α ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => α) (fun (x1 : α) => fun (x2 : α) => x1) x0) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1 axeyum.reconstruct.fld_1._2))) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._3 axeyum.reconstruct.fld_1._4) axeyum.reconstruct.hyp._6)
 
 #print axioms axeyum_refutation

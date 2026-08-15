@@ -8,13 +8,11 @@ set_option linter.unusedVariables false
 -- suppresses codegen only; it does not weaken type checking.
 noncomputable section
 
-axiom False : Prop
-axiom Eq.{u} : ((x0 : Sort (u)) -> ((x1 : x0) -> ((x2 : x0) -> Prop)))
-axiom Eq.refl.{u} : ((x0 : Sort (u)) -> ((x1 : x0) -> Eq.{u} x0 x1 x1))
-axiom Eq.rec.{u._1, u} : ((x0 : Sort (u)) -> ((x1 : x0) -> ((motive : ((x2 : x0) -> ((x3 : Eq.{u} x0 x1 x2) -> Sort (u._1)))) -> ((refl : motive x1 (Eq.refl.{u} x0 x1)) -> ((x4 : x0) -> ((t : Eq.{u} x0 x1 x4) -> motive x4 t))))))
-axiom Exists.{u} : ((x0 : Sort (u)) -> ((x1 : ((x1 : x0) -> Prop)) -> Prop))
-axiom Exists.intro.{u} : ((x0 : Sort (u)) -> ((x1 : ((x1 : x0) -> Prop)) -> ((x2 : x0) -> ((x3 : x1 x2) -> Exists.{u} x0 x1))))
-axiom Exists.rec.{u} : ((x0 : Sort (u)) -> ((x1 : ((x1 : x0) -> Prop)) -> ((motive : ((x2 : Exists.{u} x0 x1) -> Prop)) -> ((intro : ((x3 : x0) -> ((x4 : x1 x3) -> motive (Exists.intro.{u} x0 x1 x3 x4)))) -> ((t : Exists.{u} x0 x1) -> motive t)))))
+inductive False : Prop where
+inductive Eq.{u} (x0 : Sort (u)) (x1 : x0) : ((x2 : x0) -> Prop) where
+  | refl : Eq x0 x1 x1
+inductive Exists.{u} (x0 : Sort (u)) (x1 : ((x1 : x0) -> Prop)) : Prop where
+  | intro : ((x2 : x0) -> ((x3 : x1 x2) -> Exists x0 x1))
 def Not : ((x0 : Prop) -> Prop) :=
   fun (x0 : Prop) => ((x1 : x0) -> False)
 axiom α : Sort (1)
@@ -26,6 +24,6 @@ axiom axeyum.reconstruct.hyp._5 : ((x0 : α) -> Eq.{1} α (axeyum.reconstruct.fu
 axiom axeyum.reconstruct.hyp._7 : Not (Eq.{1} α axeyum.reconstruct.atom._1 axeyum.reconstruct.atom._4)
 
 theorem axeyum_refutation : False :=
-  Exists.rec.{1} α (fun (x0 : α) => Eq.{1} α (axeyum.reconstruct.func._0 x0) axeyum.reconstruct.atom._1) (fun (x0 : Exists.{1} α (fun (x0 : α) => Eq.{1} α (axeyum.reconstruct.func._0 x0) axeyum.reconstruct.atom._1)) => False) (fun (x0 : α) => fun (x1 : (fun (x1 : α) => Eq.{1} α (axeyum.reconstruct.func._0 x1) axeyum.reconstruct.atom._1) x0) => axeyum.reconstruct.hyp._7 (Eq.rec.{0, 1} α (axeyum.reconstruct.func._0 x0) (fun (x2 : α) => fun (x3 : Eq.{1} α (axeyum.reconstruct.func._0 x0) x2) => Eq.{1} α axeyum.reconstruct.atom._1 x2) (Eq.rec.{0, 1} α (axeyum.reconstruct.func._0 x0) (fun (x2 : α) => fun (x3 : Eq.{1} α (axeyum.reconstruct.func._0 x0) x2) => Eq.{1} α x2 (axeyum.reconstruct.func._0 x0)) (Eq.refl.{1} α (axeyum.reconstruct.func._0 x0)) axeyum.reconstruct.atom._1 x1) axeyum.reconstruct.atom._4 (axeyum.reconstruct.hyp._5 x0))) axeyum.reconstruct.hyp._2
+  @Exists.rec.{1} α (fun (x0 : α) => Eq.{1} α (axeyum.reconstruct.func._0 x0) axeyum.reconstruct.atom._1) (fun (x0 : Exists.{1} α (fun (x0 : α) => Eq.{1} α (axeyum.reconstruct.func._0 x0) axeyum.reconstruct.atom._1)) => False) (fun (x0 : α) => fun (x1 : (fun (x1 : α) => Eq.{1} α (axeyum.reconstruct.func._0 x1) axeyum.reconstruct.atom._1) x0) => axeyum.reconstruct.hyp._7 (@Eq.rec.{0, 1} α (axeyum.reconstruct.func._0 x0) (fun (x2 : α) => fun (x3 : Eq.{1} α (axeyum.reconstruct.func._0 x0) x2) => Eq.{1} α axeyum.reconstruct.atom._1 x2) (@Eq.rec.{0, 1} α (axeyum.reconstruct.func._0 x0) (fun (x2 : α) => fun (x3 : Eq.{1} α (axeyum.reconstruct.func._0 x0) x2) => Eq.{1} α x2 (axeyum.reconstruct.func._0 x0)) (@Eq.refl.{1} α (axeyum.reconstruct.func._0 x0)) axeyum.reconstruct.atom._1 x1) axeyum.reconstruct.atom._4 (axeyum.reconstruct.hyp._5 x0))) axeyum.reconstruct.hyp._2
 
 #print axioms axeyum_refutation
