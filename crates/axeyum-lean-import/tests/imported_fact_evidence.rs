@@ -129,9 +129,10 @@ const ROWS: &[Row] = &[
 ];
 
 fn hex(bytes: &[u8]) -> String {
+    use std::fmt::Write as _;
     let mut out = String::with_capacity(bytes.len() * 2);
     for b in bytes {
-        out.push_str(&format!("{b:02x}"));
+        let _ = write!(out, "{b:02x}");
     }
     out
 }

@@ -308,6 +308,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-15 | `0fc7cc357` | `Int.subNatNat`'s borrow proved (shift lemma, two characterisations, elimination principle) and five of the six remaining integer axioms discharged: `add_assoc`, `mul_assoc`, `left_distrib`, `add_le_add`, `add_lt_add_of_le_of_lt`. `integer: axiom=6 → 1`; 50 `Int` theorems, all with an empty axiom footprint; real-Lean gate green at 112 checks. |
 | 2026-08-15 | `7c7b0ca16` | `Real`'s 30 axioms measured as an ordered-ring package (no inverse/completeness/Archimedean) and modelled in the constructed ℤ: `build_int_model_of_arith` admits 22 kernel-checked witnesses, all with an empty axiom footprint and all syntactically the `Int` law. `Int.sq_nonneg` proved (`Int: 50 → 51` derived, 51 empty footprints). Measured and pinned that this kernel has **no `Quot.sound`**, so a quotient ℝ is inexpressible, not merely expensive — correcting three comments and the ℤ diary. ADR-0456. |
 | 2026-08-15 | `33cbe5131` | Formalized-math strand started: real Lean import measured at 13/40 with a four-cluster blocker census, `imported-kernel-lean` proof route (ADR-0454), five imported facts with pinned streams, `01-collect.md` rewritten against cited measurements. |
+| 2026-08-15 | (pending) | `Proj`/`Proj` congruence in `def_eq` closes 9 of 10 root import blockers (40-stream census: 22→37 clean, 10→1 root); first-class decline census `census_ndjson`; pinned `Nat.add_comm` capability fixture. |
 | 2026-08-14 | `19f4c769b` | Automatic hypothesis minimisation (`hypothesis_min`): two route-B Rado lemmas that stay `unknown` at 1800 s close in ~2 s with the same subsets a human found in ~32 min; the boundary is measured to be `nra.rs:107` `MAX_CROSS_PRODUCTS = 2`, not hypothesis count, and the guards are mutation-tested one deletion at a time (agent-k). |
 | 2026-08-14 | `telescoping` | Creative telescoping (Zeilberger) with an independent certificate checker; 5 classical binomial identities landed as `cas-certificate` facts; 10 tamper controls reject perturbed certificates | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `artifacts/facts/F-*binomial*.json`, `artifacts/facts/F-chu-vandermonde-convolution-recurrence.json` |
 | 2026-08-14 | `telescoping-scale` | Gosper–Petkovšek derived denominator and degree bound replace the `Q` ladder and the degree sweep (Chu–Vandermonde 18.5 s -> 46.7 ms); order-2 recurrences reachable (Franel); symbolic base cases close Chu–Vandermonde's closed form; certificates serialised to `artifacts/cas-certificates/` and re-checked from file; 3 new facts | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/src/telescoping_json.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `crates/axeyum-cas/tests/telescoping_certificate_artifacts.rs`, `artifacts/cas-certificates/*.json`, `artifacts/facts/F-chu-vandermonde-convolution.json`, `artifacts/facts/F-cross-binomial-row-sum.json`, `artifacts/facts/F-franel-numbers-recurrence.json` |
@@ -1255,6 +1256,42 @@ declines; (3) re-pin the toolchain deliberately — `lean4export` HEAD tracks
 stream and changes every pinned digest, so it is one decision made once.
 **Not** blocked on a Mathlib clone: cloning before the census is collecting
 ahead of the constraint.
+
+**The `brecOn`/`below` blocker is closed, and it was one missing congruence rule
+(`WIP`, import-brecon, 2026-08-15).** Taking over
+[`formalized-collect`](docs/plan/status/85-formalized-collect.md)'s finding, the census came
+first, because a fail-closed importer reports one blocker per stream and the
+handed-over cluster table was 27 first-blocker samples, not a census.
+`census_ndjson` (new, diagnostic-only: declines are recorded and the declaration
+**skipped**, so the staging kernel still holds only gate-accepted declarations,
+and it returns counts — never a `Kernel`) over a corpus that is now *written
+down* (`scripts/lean-import-census.sh`, 40 named `Init`/`Std` declarations) said:
+**22 of 40 streams clean, 93 declines, but only 10 distinct root blockers** —
+61 of the 93 were cascades, and the "5 `noConfusion`" and "5 `HEq`" clusters were
+each **one** declaration seen five times.
+
+Then the fix, which was not in the reducer. δ/β/ζ/ι/projection reduction already
+handle the whole `brecOn` encoding — `whnf` of `Nat.add n (succ m)` really does
+return `Nat.succ ((Nat.rec … m).1 n)`. `def_eq` was missing **`Proj`/`Proj`
+congruence** (`a.i ≡ b.i` when `a ≡ b`), which Lean has and our port dropped; two
+stuck projections one δ-step apart compared as `false`. After it: **37 of 40
+streams clean, 1 distinct root blocker**, and **`Nat.add_comm` imports** (52
+declarations, empty Lean axiom footprint). Nine of ten root blockers closed by
+one rule, because `noConfusion`, `match_n` and `casesOn` are all compiled through
+the same machinery and `below` is built from `PProd`. No new fact:
+`F:nat-add-comm` is already ours on `kernel-lean`, so the stream is pinned as a
+**capability fixture** (`"fact": null`) with a replay test instead.
+
+Next: **K-like reduction** (`to_cnstr_when_K`), which is the single remaining
+root blocker — `eq_of_heq` needs `cast α α h a ≡ a` with `h : α = α` a variable,
+and only K-like reduction gets there. Our kernel already computes the predicate
+(`is_k_like_inductive`) and uses it **only** to emit the wire `k` flag;
+`reduce_rec` never consults it. It is more soundness-sensitive than the
+projection rule (a definitional subsingleton, not a congruence), so it needs its
+own negative suite: a one-constructor `Prop` *with fields*, a non-`Prop`
+structure, and a mutual group must each stay non-reducible. Also recorded, not
+blocking: we lack `to_cnstr_when_structure`, and our `reduce_projection` uses
+full `whnf` where Lean uses `cheap_proj` (ordering, not correctness).
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 

@@ -681,6 +681,12 @@ impl<'kernel> ImportState<'kernel> {
         Ok(())
     }
 
+    /// Drop a partially buffered quotient package. Only the census driver calls
+    /// this, after recording the gate's refusal of the completed package.
+    fn reset_pending_quotient(&mut self) {
+        self.pending_quotient.clear();
+    }
+
     fn finish(&self, line: usize) -> Result<(), ImportError> {
         if self.pending_quotient.is_empty() {
             Ok(())
@@ -1522,10 +1528,155 @@ pub fn import_ndjson<R: BufRead>(
     Ok(CompletedImport { kernel, report })
 }
 
+/// Read and translate one stream, recording every **kernel decline** instead of
+/// stopping at the first one — a *diagnostic* pass, never an admission path.
+///
+/// [`import_ndjson`] is fail-closed by design, so on a stream the kernel cannot
+/// fully check it reports exactly one blocker and stops. That makes it the wrong
+/// instrument for sizing the remaining gap: at a 13/40 admission rate the first
+/// decline hides every later one. This pass answers the different question
+/// "which declarations does the trusted gate refuse, and why".
+///
+/// The distinction that keeps this sound: a declined declaration is **skipped,
+/// never admitted**. The staging kernel therefore still contains only fully
+/// checked declarations, and any later declaration that referred to a skipped
+/// one is itself declined with [`KernelError::UnknownConst`] — a *cascade*, which
+/// [`CensusReport::declines`] leaves visible for the caller to separate from a
+/// root cause. Nothing is published: this function returns counts only, never a
+/// [`Kernel`] or a [`CompletedImport`], so no caller can mistake a censused
+/// stream for an imported one.
+///
+/// Only [`ImportError::Kernel`] is recoverable here. I/O, resource, syntax,
+/// topology, and unsupported-profile errors remain fatal exactly as in
+/// [`import_ndjson`]: those say the bytes were not understood, and continuing
+/// past them would census a stream we did not read.
+///
+/// # Errors
+///
+/// Returns [`ImportError`] for I/O, resource, syntax, topology, or
+/// unsupported-profile failures. Kernel declines are reported in the census
+/// rather than returned.
+pub fn census_ndjson<R: BufRead>(
+    reader: R,
+    limits: ImportLimits,
+) -> Result<CensusReport, ImportError> {
+    let mut kernel = Kernel::new();
+    census_into_staging_kernel(reader, &mut kernel, limits)
+}
+
+/// One declaration record the trusted gate refused during a [`census_ndjson`]
+/// pass.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CensusDecline {
+    /// One-based line number of the declaration record.
+    pub line: usize,
+    /// Rendered declaration name, or `quotient package` for the quotient gate.
+    pub declaration: String,
+    /// [`KernelError`] variant name — a stable cluster key.
+    pub code: String,
+    /// Full rejection detail, for triage.
+    pub detail: String,
+}
+
+/// Counts and per-declaration declines from a [`census_ndjson`] pass.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CensusReport {
+    /// Export-format version from the first record.
+    pub format_version: String,
+    /// Official Lean version recorded by the exporter.
+    pub lean_version: String,
+    /// Number of exported declaration records seen.
+    pub declaration_records: usize,
+    /// Number of declaration records that did not decline. A quotient package
+    /// arrives as four records but is gated once, so its first three records
+    /// count here even though only the fourth could have been refused.
+    pub admitted_records: usize,
+    /// Number of kernel declarations in the staging environment at EOF. An
+    /// inductive group contributes its family, constructors, and recursor.
+    pub admitted_declarations: usize,
+    /// Every refused record, in stream order.
+    pub declines: Vec<CensusDecline>,
+}
+
+fn census_into_staging_kernel<R: BufRead>(
+    reader: R,
+    kernel: &mut Kernel,
+    limits: ImportLimits,
+) -> Result<CensusReport, ImportError> {
+    let mut declines = Vec::new();
+    let report = drive_stream(reader, kernel, limits, Some(&mut declines))?;
+    Ok(CensusReport {
+        format_version: report.format_version,
+        lean_version: report.lean_version,
+        declaration_records: report.declaration_records,
+        admitted_records: report.declaration_records - declines.len(),
+        admitted_declarations: report.admitted_declarations,
+        declines,
+    })
+}
+
+/// The `KernelError` variant name, used as the census cluster key. `KernelError`
+/// is `#[non_exhaustive]`-in-spirit (fifty-plus variants owned by another crate),
+/// so this reads the leading identifier of the `Debug` rendering rather than
+/// matching exhaustively — a match here would be a maintenance trap that fails
+/// closed on the wrong side, turning a new kernel error into a compile break in
+/// a diagnostic tool.
+fn kernel_error_code(error: &KernelError) -> String {
+    let rendered = format!("{error:?}");
+    rendered
+        .chars()
+        .take_while(|c| c.is_alphanumeric() || *c == '_')
+        .collect()
+}
+
 fn import_into_staging_kernel<R: BufRead>(
+    reader: R,
+    kernel: &mut Kernel,
+    limits: ImportLimits,
+) -> Result<ImportReport, ImportError> {
+    drive_stream(reader, kernel, limits, None)
+}
+
+/// Apply one record's outcome. Without a census sink every error is fatal — the
+/// fail-closed contract. With one, and only for [`ImportError::Kernel`], the
+/// refusal is recorded and the declaration is skipped; the staging kernel is
+/// therefore still made only of declarations the trusted gate accepted.
+fn record_outcome(
+    state: &mut ImportState<'_>,
+    outcome: Result<(), ImportError>,
+    census: Option<&mut Vec<CensusDecline>>,
+) -> Result<(), ImportError> {
+    match (outcome, census) {
+        (Ok(()), _) => Ok(()),
+        (
+            Err(ImportError::Kernel {
+                line,
+                declaration,
+                source,
+            }),
+            Some(declines),
+        ) => {
+            declines.push(CensusDecline {
+                line,
+                code: kernel_error_code(&source),
+                detail: format!("{source:?}"),
+                declaration,
+            });
+            // A refused quotient package must not leave its four buffered
+            // declarations behind, or the next `quot` record reports a spurious
+            // length error instead of its own.
+            state.reset_pending_quotient();
+            Ok(())
+        }
+        (Err(error), _) => Err(error),
+    }
+}
+
+fn drive_stream<R: BufRead>(
     mut reader: R,
     kernel: &mut Kernel,
     limits: ImportLimits,
+    mut census: Option<&mut Vec<CensusDecline>>,
 ) -> Result<ImportReport, ImportError> {
     if limits.max_line_bytes == 0 || limits.max_records == 0 {
         return Err(malformed(0, "import limits must be nonzero"));
@@ -1579,18 +1730,25 @@ fn import_into_staging_kernel<R: BufRead>(
             if record.contains_key("meta") {
                 return Err(malformed(line, "duplicate metadata record"));
             }
-            state.import_record(record, line)?;
+            let outcome = state.import_record(record, line);
+            record_outcome(&mut state, outcome, census.as_deref_mut())?;
         }
     }
     let metadata = metadata.ok_or_else(|| malformed(1, "empty stream; metadata is required"))?;
     state.finish(record_count)?;
-    let (axiom_identities, declaration_identities) = build_identity_manifest(state.kernel)
-        .map_err(|message| {
+    let (axiom_identities, declaration_identities) = if census.is_some() {
+        // Diagnostic pass: nothing is published, so there is nothing to
+        // identify. Skipping the manifest also keeps a population-scale census
+        // from paying for hashes no caller can consume.
+        (Vec::new(), Vec::new())
+    } else {
+        build_identity_manifest(state.kernel).map_err(|message| {
             malformed(
                 record_count,
                 format!("completed declaration identity manifest: {message}"),
             )
-        })?;
+        })?
+    };
     Ok(ImportReport {
         format_version: metadata.format_version,
         lean_version: metadata.lean_version,

@@ -1007,6 +1007,47 @@ impl Kernel {
             .all(|(&a, &b)| self.level_is_equiv(a, b))
     }
 
+    /// Congruence for two **stuck** projections (Lean's `is_def_eq_core`
+    /// `is_proj`/`is_proj` case, feeding `lazy_delta_proj_reduction`):
+    /// `a.i ≡ b.i` when `a ≡ b`.
+    ///
+    /// Why this is needed at all. [`Kernel::reduce_projection`] already fires
+    /// whenever the projected value WHNFs to a constructor application, so the
+    /// only projections that survive to here are stuck on a neutral value —
+    /// canonically a recursor applied to a variable. Lean's compiler emits
+    /// exactly that shape for every structurally recursive function: `Nat.add`
+    /// is `Nat.brecOn`, `Nat.brecOn` is `(Nat.brecOn.go … t F).1`, and with `t`
+    /// a variable the projection cannot reduce on either side. Without this rule
+    /// the two sides are compared only by [`Kernel::def_eq_app`], which sees two
+    /// bare `Proj` nodes with empty spines and answers `false` — so
+    /// `n + succ m ≡ succ (n + m)` was **not** definitional here and every
+    /// `rfl`-proved equation of a `brecOn`-compiled function was rejected.
+    ///
+    /// Why it is sound. This is plain congruence: `Proj` is a term former, and
+    /// substituting definitionally equal subterms into a term former yields
+    /// definitionally equal terms. It cannot identify two terms that are not
+    /// already equal, and it cannot make a stuck term reduce. The **field index
+    /// must match** — that is the entire discriminating content of the rule, and
+    /// dropping it would identify distinct fields of one structure, so the index
+    /// comparison is what the negative tests pin.
+    ///
+    /// The structure *name* recorded in the node is deliberately **not**
+    /// compared, matching Lean (`proj_idx(t_n) == proj_idx(s_n)` only). It is
+    /// not needed: `def_eq` runs on terms that have already been inferred, so
+    /// both projections are well-typed, `a ≡ b` forces their types to be def-eq,
+    /// and an inductive type's head does not reduce — hence the two nodes name
+    /// the same structure whenever they agree here. Projection *inference* owns
+    /// the name check, exactly as [`Kernel::reduce_projection`] documents for
+    /// reduction.
+    fn def_eq_proj(&mut self, x: ExprId, y: ExprId, ctx: &mut LocalContext) -> bool {
+        let (ExprNode::Proj(_, x_field, x_structure), ExprNode::Proj(_, y_field, y_structure)) =
+            (self.expr_node(x).clone(), self.expr_node(y).clone())
+        else {
+            return false;
+        };
+        x_field == y_field && self.def_eq_core(x_structure, y_structure, ctx)
+    }
+
     /// Eta-expansion (nanoda's `try_eta_expansion`): if one side is a `Lam` and
     /// the other's type WHNFs to a `Pi`, expand the non-lambda `f` into
     /// `fun (x : dom) => f x` (with a lifted `f` and a `BVar 0` argument) and
@@ -1299,6 +1340,12 @@ impl Kernel {
             DeltaResult::FoundEqResult(b) => b,
             DeltaResult::Exhausted(x_n, y_n) => {
                 if self.def_eq_const(x_n, y_n) || self.def_eq_fvar(x_n, y_n) {
+                    return true;
+                }
+                // Ordered as in Lean: `a.i =?= b.i` is tried as `a =?= b`
+                // before the spine congruence below, which cannot see through a
+                // stuck projection at all.
+                if self.def_eq_proj(x_n, y_n, ctx) {
                     return true;
                 }
                 if self.def_eq_app(x_n, y_n, ctx) {

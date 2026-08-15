@@ -66,6 +66,16 @@
       "records": 2692,
       "admitted_declarations": 106,
       "fact": "F:prop-excluded-middle-classical"
+    },
+    {
+      "file": "nat-add-comm.ndjson",
+      "declaration": "Nat.add_comm",
+      "sha256": "cf186612f5719a3775bbd94480a417dadbe0d427659fddf13e03f6854ace11d4",
+      "bytes": 60697,
+      "records": 1138,
+      "admitted_declarations": 52,
+      "fact": null,
+      "purpose": "Capability regression fixture, NOT the evidence for a fact. `Nat.add_comm` is already proved in our own kernel (`F:nat-add-comm`, proof_route kernel-lean, and it is one of the 119 theorems `nat_theorem_inventory` prints), so importing it adds no proposition to the ledger -- the same check that made the previous lane withdraw an imported `Nat.not_succ_le_zero`. What it does pin is a kernel capability: this stream is the `Nat.brecOn`/`Nat.below`/`Nat.add.match_1`/`Nat.add._f` compilation of structural recursion, and until `Proj`/`Proj` congruence landed in `def_eq` our kernel could not admit it at all. See crates/axeyum-lean-import/tests/brecon_reduction.rs."
     }
   ],
   "checked_by": [
