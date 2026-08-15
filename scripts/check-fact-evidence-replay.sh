@@ -23,6 +23,20 @@ cd "$(dirname "$0")/.."
 
 TIMEOUT="${1:-120}"
 
+# Checkers write scratch to ${TMPDIR:-/tmp} -- the sorting-network ones write a
+# cube directory of DRAT proofs, which runs to gigabytes. That default is correct
+# and portable; it is this machine that is unusual, because /tmp here is a 62 G
+# **tmpfs**, i.e. RAM. So an unattended sweep of the whole ledger quietly moves
+# several GB into memory on a box that has been losing sessions to systemd-oomd,
+# and it does it while every lane's cargo build is competing for the same RAM.
+#
+# Point it at disk when a disk-backed scratch root exists, and otherwise leave
+# the portable default alone. Explicitly-set TMPDIR always wins: a caller who
+# chose one means it.
+if [ -z "${TMPDIR:-}" ] && [ -d /data0/axeyum/scratch ]; then
+  export TMPDIR=/data0/axeyum/scratch
+fi
+
 # A build probe, BEFORE the sweep. This gate shells out to `cargo` against the
 # WORKTREE, so in a shared checkout a neighbouring lane's half-finished edit makes
 # every checker in the affected crates exit non-zero -- and the report then reads
