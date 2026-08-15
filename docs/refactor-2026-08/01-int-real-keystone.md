@@ -1,5 +1,22 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
+> **STATUS 2026-08-15 — the integer half is largely done.** ℤ is now CONSTRUCTED
+> over the proved ℕ development rather than asserted: 34 axioms became 6, and 20
+> `Int.*` theorems each carry an empty `axiom_footprint`. `Int.no_int_between`
+> — discreteness, previously this route's central *assumption* — is derived and
+> rests on nothing.
+>
+> The design decision worth carrying forward: a **normalized-pair** construction
+> was chosen over a setoid quotient, because `Quot.sound` is admitted as
+> `Declaration::Quotient`, a *trusted* kind the inventory counts. A quotient
+> would have put it in every integer footprint forever and made
+> `axiom_footprint: []` unreachable for any integer fact. Most ring laws do not
+> distinguish the two routes; exactly one forces the quotient (`add_neg`).
+>
+> Six axioms remain, and four are blocked on one missing piece — `subNatNat`'s
+> borrow lemma. ℝ is untouched at 30 axioms and is now the whole of this item.
+> Details: [`../mathematics-2026-08/diary-int-keystone.md`](../mathematics-2026-08/diary-int-keystone.md).
+
 **The finding.** Five agents working in five different crates on five different
 tasks each hit the same wall on 2026-08-14, and each reported it as a local gap.
 It is not five gaps. Integers and reals are absent, assumed, or unprovable at
@@ -10,7 +27,7 @@ every layer of the stack simultaneously.
 | layer | crate | state |
 |---|---|---|
 | evidence | `axeyum-scenarios` | `lib.rs:559-563` — `unreachable!("scenarios do not declare integer symbols for enumeration")`, and the same for `Sort::Real`. **No negative control about ℤ or ℝ is expressible.** |
-| library | `axeyum-lean-kernel` | `nat_prelude` **106 proved / 0 assumed**; `int_prelude` **0 proved / 3 assumed**; `arith_prelude` **0 proved / 3 assumed** |
+| library | `axeyum-lean-kernel` | `nat_prelude` **119 proved / 0 trusted**; `int_prelude` **20 proved / 6 axioms**; `arith_prelude` **0 proved / 30 axioms** |
 | solver | `axeyum-solver` | the `∀`-route's `k=3` blocker is *integer* bound strictness: `P≥1, P·s ≥ P+1 ⊢ s ≥ 2` is `unknown`, while `⊢ s > 1` and `s > 1 ⊢ s ≥ 2` are **0 ms each** |
 | CAS bridge | `axeyum-cas` | the ideal-membership certificate is a statement about **ℝ**; the mathematics it was built for is true over **ℤ** for reasons involving integrality |
 | curriculum | `docs/curriculum` | `integers` and `rationals` are both `decidability = "computable", status = "covered"`; `reals` is `"bounded", "covered"` — while the library assumes them and the evidence layer cannot enumerate them |

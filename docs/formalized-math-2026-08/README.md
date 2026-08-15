@@ -1,5 +1,25 @@
 # Formalized mathematics strand — August 2026
 
+> **STATUS 2026-08-15 — this strand has not been started.** It is the only one of
+> the three with no landed work: no commits since it was written, and none of its
+> five items attempted. That is a deliberate record, not an oversight to hide.
+>
+> The other two strands moved a long way in the meantime, and two of their
+> results change what this one should plan for:
+>
+> - **The Lean proof-TERM route is unavailable at our scale.** Mathlib's
+>   `lrat_proof` peaks at 96.6 GB on a 628 MB certificate; native reflection does
+>   the same instance in 8.9 GB. Any plan here that assumes importing or emitting
+>   proof terms for large results needs rewriting around reflection. See
+>   [`../refactor-2026-08/05-proof-consumption.md`](../refactor-2026-08/05-proof-consumption.md).
+> - **The export is now actually tested.** 163 of 163 modules are read by a real
+>   Lean 4.30.0, where previously zero were and the suites printed `ok` anyway.
+>   Integration claims can now be checked rather than asserted.
+>
+> Before starting: the `fact` ledger did not exist when this was written, and it
+> is the obvious import target — one file per proposition, with `proof_route` and
+> `axiom_footprint` already distinguishing what a checker actually established.
+
 The third roadmap strand, parallel to
 [engineering](../refactor-2026-08/README.md) and
 [mathematics](../mathematics-2026-08/README.md).

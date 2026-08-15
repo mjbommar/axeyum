@@ -1,5 +1,53 @@
 # Mathematics strand — August 2026
 
+## STATUS 2026-08-15 — what this strand actually produced
+
+The numbered documents below were written before any of it and **do not mention
+these domains**. Read this section first; treat `01`–`05` as the reasoning that
+led here, not as a description of the present.
+
+The ledger now holds **69 settled facts** across six domains and five
+proof routes, every one re-derived by `scripts/check-fact-evidence-replay.sh`
+rather than asserted:
+
+| domain | settled facts |
+|---|---|
+| kernel library | 22 |
+| logic / SMT | 16 |
+| summation identities | 9 |
+| numerics / FP | 6 |
+| algebraic geometry | 6 |
+| operations research | 4 |
+| algorithms | 4 |
+| combinatorics | 2 |
+
+Routes: `cas-certificate` 15, `kernel-lean` 23, `search-certificate` 8, `smt-clausal` 8, `smt-term-level` 15.
+
+Results worth naming, each with its own diary in this folder:
+
+- **Apéry's recurrence**, order 2, coefficient for coefficient — reachable only
+  after `MvPoly`'s intermediate coefficients went unbounded (4187 bits → 76).
+  Not ζ(3)'s irrationality; the recurrence.
+- **Chu–Vandermonde and Gauss as identities**, not merely recurrences, with the
+  base case *decided* at symbolic parameters rather than sampled.
+- **Six Euclidean geometry theorems** in fully generic coordinates, and the
+  measured finding that **four need no non-degeneracy condition at all**: a side
+  condition is required exactly when a theorem *locates* a point the hypotheses
+  are supposed to pin down. Incidence is free; location is not.
+- **S(3)…S(6) optimal sorting-network sizes**, with the symmetry-breaking
+  soundness control at every size — an unsound break manufactures a wrong UNSAT.
+- **fp8/fp16/fp32 kernel equivalence**, exhaustive where the width permits, and
+  a capability edge: neither z3 nor bitwuzla can decide *any* fp8 E5M2 query.
+- **ℤ constructed over proved ℕ** — 34 axioms to 6, 20 theorems with an empty
+  axiom footprint.
+- **R₄(5(x−y)=3z) = 625**, one cell of one family, and deliberately not the
+  centre of this strand.
+
+What the numbered documents still get right is the *shape* of the question —
+decide vs certify, the library, reachability. What they get wrong is the
+inventory. When they next get rewritten, derive the table above from the ledger
+instead of restating it.
+
 The companion to [`docs/refactor-2026-08/`](../refactor-2026-08/README.md).
 
 > **Before taking any item, read
