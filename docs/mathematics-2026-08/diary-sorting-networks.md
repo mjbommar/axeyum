@@ -26,7 +26,7 @@ Everything lives in `crates/axeyum-cnf/examples/sorting_network.rs`.
 | 4 | 5 | yes | monolithic, both bounds |
 | 5 | 9 | yes | monolithic, both bounds |
 | 6 | 12 | yes | **lower bound by three independent routes** (below) |
-| 7 | 16 | in progress | `size 15` refutation running |
+| 7 | 16 | **no** | `size 15` measured at ~260 core-hours; see below |
 
 All match Knuth. That is the point: this lane deliberately started at values the
 literature already knows, so the encoder is validated against ground truth
@@ -65,11 +65,19 @@ channels". It was established three ways:
 | monolithic, `--sym full` | `first` + `commute` | 1195 s (single core, s5) |
 | cube split, depth 3, `--cube-sym full` | `first` + `second` + `commute` | 151 s (51 branches, 16 cores, s6) |
 | cube split, depth 4, `--cube-sym full` | same | 138 s (322 branches, 16 cores, s7) |
+| **cube split, depth 4, `--cube-sym none`** | **none** | **1447 s (1441 branches, 16 cores, s6)** |
 
 Every cube branch streams its own DRAT proof to disk and is then **read back and
 re-checked** by the backward checker, so the peak memory stays bounded and no
 branch is believed on the solver's say-so. The depth-3 and depth-4 splits
 partition the search differently, so their agreement is not a re-run.
+
+The fourth row is the one that makes the other three worth believing. Under
+`--cube-sym none` every prefix position ranges over *every* comparator and the
+suffix gets no symmetry break, so the only reduction left standing is output-set
+**equality** — and equality needs no argument at all. Same verdict. A wrong
+UNSAT from an unsound relabelling would have had to survive removing every
+relabelling argument, which it cannot.
 
 The upper bound is the Knuth 12-comparator network, replayed over all 64 binary
 inputs by the independent checker, and separately *rediscovered* by the SAT
@@ -114,6 +122,44 @@ single `&`. Precomputing all `n!` relabelled masks per prefix once turns the
 whole pairwise reduction into a few hundred million `u128` tests.
 
 ---
+
+## Where the encoder stops: n = 7
+
+`n = 7` at `size 15` is **not** closed here, and the useful output of trying is a
+number rather than an impression.
+
+The first attempt died in a way worth recording. 16 concurrent branches at
+`depth 4` were **OOM-killed at 14.4 GB** against a 16 GB cap after 15 minutes —
+the per-branch cost is not the CNF, it is the solver's clause database plus the
+backward check of a certificate that had reached a gigabyte. The same run had
+written **15 GB of DRAT before it was 16 branches in**, on a 380-branch split.
+
+Both were fixed rather than worked around:
+
+* each branch's proof is now deleted **after** the backward checker accepts it —
+  the verdict is the artifact, and the bytes have done their job by then. A
+  rejected or unfinished certificate is never deleted. `--keep-proofs` opts back
+  in. Disk on the follow-up run stayed flat at 1.9 GB instead of climbing to
+  hundreds of gigabytes.
+* branches now report to **stderr** as they land, leaving stdout the
+  deterministic prefix-sorted report. Before this, a multi-hour run printed
+  nothing until it finished and could not be told from a hung one; the only way
+  to see progress was to count files on the NFS mount.
+
+With those in place, `n = 7`, `size 15`, `depth 6`, `--cube-sym subsume`
+measures at **~155 core-seconds per branch across 6031 branches ≈ 260
+core-hours** — about one host-week, or eleven hours across the three idle hosts.
+That is the wall, and it is a resource wall, not a soundness or correctness one.
+
+`--shard I/N` was added so that division is possible: shard `I` runs the
+branches with `index % N == I`. The wording is deliberately awkward — a shard
+prints "`NOT a bound on its own`" and specifically does *not* print the sentence
+the fact `checker_command`s match on, because a partial cover must never be
+readable as a bound.
+
+**Anyone resuming this should know the run is incomplete.** Three shards were
+left running on s1/s6/s7; a lower bound exists only when *every* shard of a
+partition has reported success, and no partial log says otherwise.
 
 ## The controls, and why each exists
 
