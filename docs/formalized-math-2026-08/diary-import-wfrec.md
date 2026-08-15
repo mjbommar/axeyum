@@ -82,13 +82,13 @@ An `FVar` arm in `whnf_no_unfolding_uncached` — this port's `whnf_core` — an
 then `whnf_local_value` and `whnf_in` are dead and deleted:
 
 ```rust
-ExprNode::FVar(fvar) => {
-    self.reduction_ctx_reads += 1;
-    match ctx.value_of(fvar) {
-        Some(value) => cursor = self.foldl_apps(value, args.iter().copied()),
-        None => return cursor,
+ExprNode::FVar(fvar) => match ctx.value_of(fvar) {
+    Some(value) => {
+        self.reduction_ctx_reads += 1;
+        cursor = self.foldl_apps(value, args.iter().copied());
     }
-}
+    None => return cursor,
+},
 ```
 
 `reduction_ctx_reads` is the existing tripwire that asserts a *closed*
@@ -141,8 +141,9 @@ the right shape of guess.
 Its family claim — that `Nat.Linear.*` and the `Std.DTreeMap.Internal.*.eq_def`
 roots are "the same family" — is **half right, and the census says which half**.
 The `eq_def` roots really were the same missing rule and are gone
-(`Std.DTreeMap.Internal.Impl.modify.eq_def` 28 → 0,
-`…Const.modify.eq_def` 28 → 0). `Nat.Linear.*` is not: it still declines after
+(`Std.DTreeMap.Internal.Impl.modify.eq_def` 58 → 0,
+`…Const.modify.eq_def` 58 → 0 on the 500-stream `Init`+`Std` pair).
+`Nat.Linear.*` is not: it still declines after
 this fix, and its pair is `Prod.rec …` against `(Nat.brecOn.go … ).1` — a
 projection of a `brecOn`, a different question. It is now the **top** root in
 both corpora. §7 has the numbers.
@@ -383,15 +384,18 @@ this file.
 
 ## 9. Gates
 
-- `cargo test -p axeyum-lean-kernel -p axeyum-lean-import` — **502 passed, 0
-  failed** in a clean `scripts/lane-snapshot.sh` of `HEAD` + this lane's files.
-  (In the shared worktree the count is higher and also green, the extra suites
-  belonging to the concurrent `kernel-reuse` lane's uncommitted work.)
+All run in a `scripts/lane-snapshot.sh` of the commit under test, never in the
+shared worktree — a concurrent `kernel-reuse` lane's in-progress
+`prelude_cache.rs` sat in this crate for most of the session and failed
+`clippy::single_match_else` until it landed, which would have made every
+worktree run of a kernel gate report that lane's state rather than mine.
+
+- `cargo test -p axeyum-lean-kernel -p axeyum-lean-import` — **512 passed, 0
+  failed** at `016190b2c` (this lane's last commit, with `kernel-reuse`'s
+  prelude-cloning work already merged in). 502 at this lane's own last code
+  commit.
 - `cargo clippy -p axeyum-lean-kernel -p axeyum-lean-import --all-targets
-  --all-features -- -D warnings` — clean **in the snapshot**. It cannot be run
-  in the shared worktree right now: `kernel-reuse`'s untracked
-  `crates/axeyum-lean-kernel/src/prelude_cache.rs` fails
-  `clippy::single_match_else`, which is that lane's file and not mine to fix.
+  --all-features -- -D warnings` — clean, same snapshot.
 - `scripts/check-lean-gate.sh` — **15 suites, 52 tests, 122 real-Lean checks**,
   floor raised 109 → 111, Lean 4.30.0. Nonzero and above floor.
 - `RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-lean-kernel --no-deps` —
