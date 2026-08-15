@@ -623,10 +623,19 @@ fn subsumption_reduce(prefixes: &[Vec<(usize, usize)>], n: usize) -> Vec<Vec<(us
 /// it in memory, then re-checks it by reading the file back.
 ///
 /// Returns `Ok((steps, bytes))` on a refutation the backward checker accepts.
+///
+/// `keep` decides whether the certificate survives its own check. At `n = 7` a
+/// single branch's proof reaches a gigabyte and a run has thousands of branches,
+/// so the default deletes each one **after** the backward checker has accepted
+/// it: what the run is claiming is that every branch was refuted *and
+/// re-checked*, and that claim is already discharged by the time the bytes are
+/// dropped. Pass `--keep-proofs` when the artifacts are wanted for offline
+/// re-validation, and budget the terabytes.
 fn refute_to_file(
     formula: &CnfFormula,
     path: &std::path::Path,
     conflicts: usize,
+    keep: bool,
 ) -> Result<(usize, u64), CubeOutcome> {
     use std::io::BufReader;
 
@@ -659,7 +668,15 @@ fn refute_to_file(
         Ok(reader) => reader,
         Err(e) => return Err(fail(format!("reopen {}: {e}", path.display()))),
     };
-    match check_drat_backward_reader(formula, reader) {
+    let verdict = check_drat_backward_reader(formula, reader);
+    // Only ever removed on the accepting path, so a rejected or unfinished
+    // certificate is always left on disk to be looked at.
+    if keep || !matches!(verdict, Ok(true)) {
+        // keep the bytes
+    } else if let Err(e) = std::fs::remove_file(path) {
+        return Err(fail(format!("remove {}: {e}", path.display())));
+    }
+    match verdict {
         Ok(true) => Ok((steps, bytes)),
         Ok(false) => Err(fail(
             "backward checker found no refutation in the proof".into(),
@@ -779,6 +796,85 @@ struct CubeResult {
     ok: bool,
 }
 
+/// Everything one cube run needs, so the worker closure can borrow it whole.
+struct CubeRun {
+    n: usize,
+    k: usize,
+    dir: String,
+    conflicts: usize,
+    depth: usize,
+    jobs: usize,
+    sym: CubeSym,
+    keep_proofs: bool,
+}
+
+impl CubeRun {
+    /// Refutes one branch: fix `prefix`, encode the remaining `k - |prefix|`
+    /// comparators against the prefix's output set, and require a DRAT proof the
+    /// backward checker accepts.
+    fn branch(&self, prefix: &[(usize, usize)]) -> CubeResult {
+        let (n, k) = (self.n, self.k);
+        let tag = prefix
+            .iter()
+            .map(|&(a, b)| format!("{a}_{b}"))
+            .collect::<Vec<_>>()
+            .join("-");
+        let inputs = prefix_outputs(prefix, n);
+        let enc = encode_core(n, k - prefix.len(), self.sym.suffix_sym(), false, &inputs);
+        let path = std::path::Path::new(&self.dir).join(format!("n{n}-k{k}-{tag}.drat"));
+        let t0 = Instant::now();
+        match refute_to_file(&enc.formula, &path, self.conflicts, self.keep_proofs) {
+            Ok((steps, bytes)) => CubeResult {
+                prefix: prefix.to_vec(),
+                line: format!(
+                    "  cube {}  {} vectors, {} clauses -> UNSAT, {steps} step(s), \
+                     {bytes} bytes, backward-checked, {:.2}s",
+                    render(prefix),
+                    inputs.len(),
+                    enc.formula.clauses().len(),
+                    t0.elapsed().as_secs_f64()
+                ),
+                ok: true,
+            },
+            Err(CubeOutcome::Sat(model)) => {
+                // The negative control for the cube route: a satisfiable branch
+                // must yield a network that really sorts, or the encoding is
+                // wrong in the direction that also produces a wrong UNSAT.
+                let line = match decode(&enc, &model) {
+                    Ok(suffix) => {
+                        let mut whole = prefix.to_vec();
+                        whole.extend(suffix);
+                        format!(
+                            "  cube {}  SAT: {} -- independent 0-1 check: {}",
+                            render(prefix),
+                            render(&whole),
+                            if sorts_all(&whole, n) {
+                                "SORTS"
+                            } else {
+                                "DOES NOT SORT"
+                            }
+                        )
+                    }
+                    Err(e) => format!(
+                        "  cube {}  SAT but the model does not decode: {e}",
+                        render(prefix)
+                    ),
+                };
+                CubeResult {
+                    prefix: prefix.to_vec(),
+                    line,
+                    ok: false,
+                }
+            }
+            Err(CubeOutcome::Failed(e)) => CubeResult {
+                prefix: prefix.to_vec(),
+                line: format!("  cube {}  FAILED: {e}", render(prefix)),
+                ok: false,
+            },
+        }
+    }
+}
+
 /// The cube split: fix a prefix, replace the network's first `depth` steps by
 /// that prefix's output set, and refute the remaining `k - depth` comparators on
 /// its own.
@@ -790,94 +886,42 @@ struct CubeResult {
 ///
 /// Each branch gets its own DRAT certificate, streamed to disk and read back for
 /// checking, which is what keeps the peak footprint bounded.
-fn cubes(
-    n: usize,
-    k: usize,
-    dir: &str,
-    conflicts: usize,
-    depth: usize,
-    jobs: usize,
-    sym: CubeSym,
-) -> i32 {
+fn cubes(run: &CubeRun) -> i32 {
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    let prefixes = cube_prefixes(n, depth, sym);
-    std::fs::create_dir_all(dir).expect("create proof dir");
+    let prefixes = cube_prefixes(run.n, run.depth, run.sym);
+    std::fs::create_dir_all(&run.dir).expect("create proof dir");
     println!(
-        "cube split at depth {depth}, cube-sym {}: {} branch(es), {jobs} worker(s)",
-        sym.label(),
-        prefixes.len()
+        "cube split at depth {}, cube-sym {}: {} branch(es), {} worker(s)",
+        run.depth,
+        run.sym.label(),
+        prefixes.len(),
+        run.jobs
     );
     let started = Instant::now();
     let next = AtomicUsize::new(0);
+    let done = AtomicUsize::new(0);
+    let total = prefixes.len();
     let results: Mutex<Vec<CubeResult>> = Mutex::new(Vec::new());
 
     std::thread::scope(|scope| {
-        for _ in 0..jobs.max(1) {
+        for _ in 0..run.jobs.max(1) {
             scope.spawn(|| {
                 loop {
                     let i = next.fetch_add(1, Ordering::SeqCst);
                     let Some(prefix) = prefixes.get(i) else { break };
-                    let tag = prefix
-                        .iter()
-                        .map(|&(a, b)| format!("{a}_{b}"))
-                        .collect::<Vec<_>>()
-                        .join("-");
-                    let inputs = prefix_outputs(prefix, n);
-                    let enc = encode_core(n, k - prefix.len(), sym.suffix_sym(), false, &inputs);
-                    let path = std::path::Path::new(dir).join(format!("n{n}-k{k}-{tag}.drat"));
-                    let t0 = Instant::now();
-                    let res = match refute_to_file(&enc.formula, &path, conflicts) {
-                        Ok((steps, bytes)) => CubeResult {
-                            prefix: prefix.clone(),
-                            line: format!(
-                                "  cube {}  {} vectors, {} clauses -> UNSAT, {steps} step(s), \
-                                 {bytes} bytes, backward-checked, {:.2}s",
-                                render(prefix),
-                                inputs.len(),
-                                enc.formula.clauses().len(),
-                                t0.elapsed().as_secs_f64()
-                            ),
-                            ok: true,
-                        },
-                        Err(CubeOutcome::Sat(model)) => {
-                            // The negative control for the cube route: a
-                            // satisfiable branch must yield a network that
-                            // really sorts, or the encoding is wrong in the
-                            // direction that also produces a wrong UNSAT.
-                            let line = match decode(&enc, &model) {
-                                Ok(suffix) => {
-                                    let mut whole = prefix.clone();
-                                    whole.extend(suffix);
-                                    format!(
-                                        "  cube {}  SAT: {} -- independent 0-1 check: {}",
-                                        render(prefix),
-                                        render(&whole),
-                                        if sorts_all(&whole, n) {
-                                            "SORTS"
-                                        } else {
-                                            "DOES NOT SORT"
-                                        }
-                                    )
-                                }
-                                Err(e) => format!(
-                                    "  cube {}  SAT but the model does not decode: {e}",
-                                    render(prefix)
-                                ),
-                            };
-                            CubeResult {
-                                prefix: prefix.clone(),
-                                line,
-                                ok: false,
-                            }
-                        }
-                        Err(CubeOutcome::Failed(e)) => CubeResult {
-                            prefix: prefix.clone(),
-                            line: format!("  cube {}  FAILED: {e}", render(prefix)),
-                            ok: false,
-                        },
-                    };
+                    let res = run.branch(prefix);
+                    // Progress goes to stderr so stdout stays the deterministic,
+                    // prefix-sorted report. A multi-hour run that prints nothing
+                    // until it finishes cannot be told from a hung one.
+                    let seen = done.fetch_add(1, Ordering::SeqCst) + 1;
+                    eprintln!(
+                        "[{seen}/{total}] {} {} after {:.1}s",
+                        render(&res.prefix),
+                        if res.ok { "ok" } else { "NOT REFUTED" },
+                        started.elapsed().as_secs_f64()
+                    );
                     results.lock().expect("results lock").push(res);
                 }
             });
@@ -894,6 +938,7 @@ fn cubes(
             eprintln!("{}", r.line);
         }
     }
+    let (n, k) = (run.n, run.k);
     if bad == 0 {
         println!(
             "n={n} size={k}: all {} cubes refuted and re-checked in {:.2}s",
@@ -1139,6 +1184,7 @@ struct Cli {
     dimacs: Option<String>,
     cube_dir: Option<String>,
     cube_sym: CubeSym,
+    keep_proofs: bool,
     generalized: bool,
     depth: usize,
     jobs: usize,
@@ -1160,6 +1206,7 @@ impl Cli {
             dimacs: None,
             cube_dir: None,
             cube_sym: CubeSym::Full,
+            keep_proofs: false,
             generalized: false,
             depth: 2,
             jobs: 1,
@@ -1243,6 +1290,7 @@ impl Cli {
                         cli.sym = Sym::COMMUTE;
                     }
                 }
+                "--keep-proofs" => cli.keep_proofs = true,
                 "--drat" => cli.want_drat = true,
                 "--model" => cli.want_model = true,
                 "--sweep" => cli.do_sweep = true,
@@ -1266,6 +1314,7 @@ fn main() {
         dimacs,
         cube_dir,
         cube_sym,
+        keep_proofs,
         generalized,
         depth,
         jobs,
@@ -1287,7 +1336,16 @@ fn main() {
     };
 
     if let Some(dir) = cube_dir {
-        std::process::exit(cubes(n, k, &dir, conflicts, depth, jobs, cube_sym));
+        std::process::exit(cubes(&CubeRun {
+            n,
+            k,
+            dir,
+            conflicts,
+            depth,
+            jobs,
+            sym: cube_sym,
+            keep_proofs,
+        }));
     }
 
     if let Some(path) = dimacs {
