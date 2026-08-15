@@ -306,6 +306,27 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   (That commit is still in history, repaired by the next one rather than rewritten:
   **a bisect crossing `ae589be97` will report a build failure unrelated to what it
   is bisecting.**)
+- **NO FORM OF `git commit` IS SAFE FOR TWO LANES SHARING ONE INDEX — use a
+  per-process index.** Measured 2026-08-15, when two lanes swept each other
+  within twelve minutes using the two *mutually exclusive* remedies:
+  `git commit -- <pathspec>` reads the **worktree** and discards your staged
+  hunks; bare `git commit` reads the **index** and is defeated by a concurrent
+  `git add`. Both lose, in opposite directions. Pathspec discipline is not a fix
+  for this, and the rules above cannot make it one.
+  The remedy is the repository's own rule one level down — per-lane state in
+  per-process environment, the same reason lane identity is `AXEYUM_AGENT`:
+
+      export GIT_INDEX_FILE="$PWD/.git/index-$AXEYUM_AGENT"
+      git read-tree HEAD          # REFRESH FIRST, EVERY TIME
+      git add <your files>
+      git commit -m "…"
+
+  `git read-tree HEAD` before every stage is not optional: a stale private index
+  **reverts** whatever other lanes committed since you created it. Verified both
+  ways — without the refresh, one lane's commit shows `a.txt | 2 --` and undoes
+  the other's landed change; with it, both edits survive and each commit carries
+  only its own file. Do not use a bare `git commit` even with a private index if
+  you have not refreshed it.
 - **Lane identity lives in the environment, not in git config.**
   `export AXEYUM_AGENT=<lane>`; the `hooks/commit-msg` hook stamps an
   `Agent:` trailer and refuses an unidentified commit. Do **not** use
