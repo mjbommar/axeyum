@@ -1018,3 +1018,104 @@ fn the_reconstruction_prelude_is_not_accelerated() {
     let applied = kernel.app(applied, three);
     assert!(kernel.def_eq(applied, five));
 }
+
+/// ζ over a **local `let`** happens inside `whnf_no_unfolding`, and only a
+/// *hit* counts as a context read.
+///
+/// Both halves are load-bearing and both were wrong at some point on
+/// 2026-08-15:
+///
+/// * Doing ζ for locals only at the def-eq entry points left a let-local that
+///   became a head *during* `lazy_delta_step` permanently unreduced, which is
+///   why `Nat.bitwise._unary` was refused (ADR-0462).
+/// * Counting a **miss** as a context read made the closed-expression tripwire
+///   in [`Kernel::whnf_no_unfolding`] fire on two of the first 250 Mathlib
+///   streams. Reduction of a *closed* expression can call inference (K-like
+///   reduction infers its major); that inference opens its own binders, and
+///   reducing under them meets ordinary valueless locals. Their lookups return
+///   the term unchanged — exactly what an empty context would give — so they
+///   are not a dependence on the context and must not be counted.
+#[test]
+fn local_let_zeta_fires_in_whnf_core_and_only_a_hit_is_a_context_read() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let type_sort = {
+        let zero = k.level_zero();
+        let one = k.level_succ(zero);
+        k.sort(one)
+    };
+    let carrier = k.name_str(anon, "N");
+    k.add_declaration(Declaration::Axiom {
+        name: carrier,
+        uparams: vec![],
+        ty: type_sort,
+    })
+    .expect("carrier axiom must admit");
+    let n_type = k.const_(carrier, vec![]);
+    let inhabitant = k.name_str(anon, "c");
+    k.add_declaration(Declaration::Axiom {
+        name: inhabitant,
+        uparams: vec![],
+        ty: n_type,
+    })
+    .expect("inhabitant axiom must admit");
+    let value = k.const_(inhabitant, vec![]);
+
+    let mut ctx = LocalContext::new();
+    let plain = ctx.fresh_fvar();
+    ctx.push(LocalDecl {
+        fvar: plain,
+        name: anon,
+        ty: n_type,
+        info: BinderInfo::Default,
+    });
+    let bound = ctx.fresh_fvar();
+    ctx.push_let(
+        LocalDecl {
+            fvar: bound,
+            name: anon,
+            ty: n_type,
+            info: BinderInfo::Default,
+        },
+        value,
+    );
+
+    // A local with no recorded value is already weak-head-normal, and looking
+    // it up is NOT a context read: the answer is the same with or without a
+    // context.
+    let plain_expr = k.fvar(plain);
+    let before = k.reduction_ctx_reads;
+    let reduced = k.whnf_no_unfolding(plain_expr, &mut ctx);
+    assert_eq!(reduced, plain_expr, "a valueless local must not reduce");
+    assert_eq!(
+        k.reduction_ctx_reads, before,
+        "a MISS must not count as a context read; counting it fired the \
+         closed-expression tripwire on real Mathlib streams"
+    );
+
+    // A let-local reduces to its value, in `whnf_no_unfolding` itself — the
+    // δ-free reduction the lazy-delta loop calls after every unfolding — and
+    // that IS a context read.
+    let bound_expr = k.fvar(bound);
+    let before = k.reduction_ctx_reads;
+    let reduced = k.whnf_no_unfolding(bound_expr, &mut ctx);
+    assert_eq!(
+        reduced, value,
+        "a let-local must ζ-reduce to its recorded value without δ"
+    );
+    assert!(
+        k.reduction_ctx_reads > before,
+        "a ζ HIT is the context changing the reduct and must be counted, or the \
+         closed-expression whnf cache loses its tripwire"
+    );
+
+    // And it happens under an application spine, not only on a bare head.
+    let applied = k.app(bound_expr, plain_expr);
+    let reduced = k.whnf_no_unfolding(applied, &mut ctx);
+    let expected = k.app(value, plain_expr);
+    assert_eq!(
+        reduced, expected,
+        "ζ must re-apply the spine, as Lean's `whnf_core` does through its \
+         `App` head"
+    );
+}

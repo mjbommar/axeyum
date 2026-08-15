@@ -764,16 +764,25 @@ impl Kernel {
                 // *during* the delta loop permanently unreduced, which is
                 // exactly the `Nat.bitwise._unary` decline: see
                 // `local_let_zeta_reduction`.
-                ExprNode::FVar(fvar) => {
-                    // Consulting the context starts here, and only an open
-                    // expression can reach it — the closed-expression tripwire
-                    // in `whnf_no_unfolding` watches this counter.
-                    self.reduction_ctx_reads += 1;
-                    match ctx.value_of(fvar) {
-                        Some(value) => cursor = self.foldl_apps(value, args.iter().copied()),
-                        None => return cursor,
+                ExprNode::FVar(fvar) => match ctx.value_of(fvar) {
+                    Some(value) => {
+                        // A *hit* is the context changing the reduct, which is
+                        // what the closed-expression tripwire in
+                        // `whnf_no_unfolding` watches for. A **miss** is not
+                        // counted, and the distinction is load-bearing rather
+                        // than fussy: reduction of a closed expression can call
+                        // inference (K-like reduction infers its major), that
+                        // inference opens *its own* binders, and reducing under
+                        // them meets ordinary valueless locals. Counting those
+                        // made the tripwire fire on two of the first 250 Mathlib
+                        // streams — on a reduct that did not depend on the
+                        // context at all. A miss returns the term unchanged,
+                        // exactly as an empty context would, so it cannot.
+                        self.reduction_ctx_reads += 1;
+                        cursor = self.foldl_apps(value, args.iter().copied());
                     }
-                }
+                    None => return cursor,
+                },
                 // Projection: normalize the projected value; when it becomes a
                 // constructor application, select the requested field after
                 // the constructor parameters and re-apply any outer spine.
