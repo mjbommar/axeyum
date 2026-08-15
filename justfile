@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls aggregate-scope test frontier gate-liveness lean-gate moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers plan-authority links
+check: fmt fmt-all facts facts-replay clippy gate-controls aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
 
 fmt:
     cargo fmt --all --check
@@ -317,6 +317,32 @@ generated-trackers:
     python3 scripts/gen-plan.py --check
     python3 -m unittest scripts.tests.test_gen_adr_index
     python3 scripts/gen-adr-index.py --check
+
+# The `axeyum-solver` decomposition ratchet (docs/refactor-2026-08/03).
+# `axeyum-solver` is 46% of the workspace and the plan is to cut crates out of
+# it. A cut point with a dependency cycle across it is not a cut point, so this
+# measures the intra-crate module graph and fails when a module that was
+# acyclic enters a cycle, or when anything outside the evidence/reconstruction
+# layer starts depending on it.
+#
+# The measurement is not a grep. Three naive versions of it disagreed: rustdoc
+# intra-doc links invent edges, `#[cfg(test)]` code invents more, and ignoring
+# the crate's own 267-entry re-export facade -- through which its modules
+# import each other -- HIDES 340. The unit tests pin all three behaviours on
+# synthetic crates and prove the ratchet can fail.
+solver-module-graph:
+    python3 -m unittest scripts.tests.test_analyze_solver_module_graph
+    python3 scripts/analyze_solver_module_graph.py --check
+
+# Process-wide Lean prelude reuse (ADR-0464) checked from OUTSIDE the crate:
+# every inventory example must print byte-identical stdout/stderr with the cache
+# on and off, AND the counters must show the cache was actually exercised in one
+# run and not the other -- "the flag changed nothing" and "the flag was ignored"
+# are otherwise the same observation. Landed 2026-08-15 but unregistered,
+# because `justfile` and `scripts/check.sh` both had another lane's uncommitted
+# edits at the time.
+prelude-reuse:
+    ./scripts/check-prelude-reuse-equivalence.sh
 
 # Prevent PLAN/STATUS/TODO from becoming competing project-level authorities.
 plan-authority:

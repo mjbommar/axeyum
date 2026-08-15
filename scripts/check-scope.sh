@@ -63,6 +63,12 @@ if [ -n "$crates" ]; then
   done
   run cargo test "${pkgs[@]}" "${feats[@]}" --lib "${skip[@]}"
   run cargo clippy "${pkgs[@]}" "${feats[@]}" --all-targets -- -D warnings
+  # Moving or adding a module in `axeyum-solver` can close a cut point the
+  # decomposition plan depends on, and nothing in the two gates above would
+  # notice. Sub-second, so it costs nothing to run whenever that crate moves.
+  if echo "$crates" | grep -qx 'crates/axeyum-solver'; then
+    run python3 scripts/analyze_solver_module_graph.py --check
+  fi
 fi
 
 # ---- Python (scripts/*.py): touched test modules + the owning lane gate ----

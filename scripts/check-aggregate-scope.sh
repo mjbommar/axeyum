@@ -75,6 +75,12 @@ def module(target):
 
 out = set()
 for raw in sys.stdin:
+    # `just -n` echoes comments that live INSIDE a recipe body, and this
+    # normalizer used to accept them as steps. The `facts` recipe has four such
+    # lines, so this gate reported four prose sentences as gate blind spots and
+    # failed on `main` -- while the divergence it exists to measure was fine.
+    if raw.lstrip().startswith("#"):
+        continue
     line = strip_wrappers(raw)
     if not line:
         continue

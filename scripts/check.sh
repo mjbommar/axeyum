@@ -187,6 +187,19 @@ step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
 step gen-plan       python3 scripts/gen-plan.py --check
 step adr-index-tests python3 -m unittest scripts.tests.test_gen_adr_index
 step adr-index      python3 scripts/gen-adr-index.py --check
+# The `axeyum-solver` decomposition ratchet (docs/refactor-2026-08/03). The
+# crate is 46% of the workspace and the plan is to cut crates out of it; a cut
+# point with a dependency cycle across it is not a cut point. Fails when a
+# module that was acyclic enters a cycle, or when anything outside the
+# evidence/reconstruction layer starts depending on it. The measurement is not a
+# grep -- doc links and `#[cfg(test)]` code invent edges, and the crate's own
+# re-export facade hides 340 real ones -- so the unit tests pin all three.
+step solver-module-graph-tests python3 -m unittest scripts.tests.test_analyze_solver_module_graph
+step solver-module-graph python3 scripts/analyze_solver_module_graph.py --check
+# Lean prelude reuse (ADR-0464) checked from outside the crate: byte-identical
+# example output with the cache on and off, plus counter liveness so "the flag
+# changed nothing" cannot pass as "the flag was ignored".
+step prelude-reuse  ./scripts/check-prelude-reuse-equivalence.sh
 # Do this script and `just check` still run the same gates? They ran 61 and 112
 # steps on 2026-08-14 while both documents claimed they were the same gate. This
 # does not sync them; it pins the divergence so it cannot GROW unnoticed.
