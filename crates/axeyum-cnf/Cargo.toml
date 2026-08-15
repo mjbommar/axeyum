@@ -22,6 +22,11 @@ rustsat-batsat.workspace = true
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 web-time.workspace = true
 
+# Pure-Rust posix_fadvise for the proof write path (refactor-2026-08 item
+# 05.1); unix-only, so wasm32 and other non-unix targets never see it.
+[target.'cfg(unix)'.dependencies]
+rustix.workspace = true
+
 [dev-dependencies]
 axeyum-bv.workspace = true
 axeyum-ir.workspace = true

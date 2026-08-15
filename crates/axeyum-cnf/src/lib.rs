@@ -73,6 +73,8 @@ pub use drat::{
     DratError, DratSink, DratStep, DratTextReader, ProofSinkError, TextProofSink, VecProofSink,
     check_drat, check_drat_streaming, parse_drat, write_drat,
 };
+#[cfg(unix)]
+pub use drat::CacheDroppingWriter;
 pub use drat_backward::{
     check_drat_backward, check_drat_backward_reader, check_drat_backward_reader_within,
     check_drat_backward_within, trim_drat_proof,

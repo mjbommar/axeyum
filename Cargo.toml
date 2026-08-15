@@ -54,6 +54,11 @@ proptest = { version = "1", default-features = false, features = ["std"] }
 z3 = { version = "0.20", default-features = false }
 # Browser-compatible monotonic clock; only used on wasm32 targets (ADR-0017).
 web-time = { version = "1" }
+# Pure-Rust (linux_raw backend) syscall wrappers, safe API surface only; used
+# on cfg(unix) for posix_fadvise(DONTNEED) on the proof write path (refactor-
+# 2026-08 item 05.1). default-features off + "fs"/"std" keeps the linux_raw
+# backend selected on this target and libc out of the dependency graph.
+rustix = { version = "1", default-features = false, features = ["fs", "std"] }
 
 [workspace.lints.rust]
 missing_docs = "warn"

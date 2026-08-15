@@ -34,7 +34,6 @@
 
 use std::env;
 use std::fs;
-use std::io::BufWriter;
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
@@ -42,6 +41,8 @@ use axeyum_cnf::{
     StreamingProofOutcome, TextProofSink, check_drat_backward, parse_dimacs, parse_drat,
     solve_with_drat_proof_streaming,
 };
+#[cfg(unix)]
+use axeyum_cnf::CacheDroppingWriter;
 
 /// Regenerates the deciding CNF exactly as `scripts/gen-rado-instance.py`
 /// does: one-hot colour variables `var(j, i) = (j-1)k + i`, at-least-one and
@@ -132,7 +133,17 @@ fn main() -> ExitCode {
     let deadline = Instant::now() + Duration::from_secs_f64(hours * 3600.0);
     let t0 = Instant::now();
     let file = fs::File::create(out_drat).expect("create drat");
-    let mut sink = TextProofSink::new(BufWriter::new(file));
+    // This certificate can run to tens of gigabytes (this is the exact
+    // producer that motivated refactor-2026-08 item 05.1: a 19.9 GB proof
+    // wrote here while three build lanes competed for page cache, and
+    // systemd-oomd killed the session cgroup). Drop written pages from the
+    // page cache as they go rather than evicting everything else resident on
+    // the box; TextProofSink already buffers internally, so no separate
+    // BufWriter is needed here.
+    #[cfg(unix)]
+    let mut sink = TextProofSink::new(CacheDroppingWriter::new(file));
+    #[cfg(not(unix))]
+    let mut sink = TextProofSink::new(file);
     let outcome = solve_with_drat_proof_streaming(&formula, Some(deadline), usize::MAX, &mut sink);
     let solve_s = t0.elapsed().as_secs_f64();
 

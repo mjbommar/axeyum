@@ -58,7 +58,6 @@
 
 use std::env;
 use std::fs;
-use std::io::BufWriter;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
@@ -67,6 +66,8 @@ use axeyum_cnf::{
     SatResult, StreamingProofOutcome, TextProofSink, check_drat_backward, parse_drat,
     solve_with_drat_proof_streaming, solve_with_rustsat_batsat_timeout,
 };
+#[cfg(unix)]
+use axeyum_cnf::CacheDroppingWriter;
 use axeyum_search::{
     ColouringFamily, MinConflictsOptions, Rado, Witness, cover, harness, min_conflicts,
 };
@@ -437,7 +438,15 @@ fn main() -> ExitCode {
             let deadline = Instant::now() + Duration::from_secs_f64(hours * 3600.0);
             let t0 = Instant::now();
             let file = fs::File::create(&out_drat).expect("create drat");
-            let mut sink = TextProofSink::new(BufWriter::new(file));
+            // This proof can run to gigabytes; drop written pages from the
+            // page cache as they go rather than evicting everything else
+            // resident on the box (refactor-2026-08 item 05.1).
+            // TextProofSink already buffers internally, so no separate
+            // BufWriter is needed here.
+            #[cfg(unix)]
+            let mut sink = TextProofSink::new(CacheDroppingWriter::new(file));
+            #[cfg(not(unix))]
+            let mut sink = TextProofSink::new(file);
             let outcome =
                 solve_with_drat_proof_streaming(&formula, Some(deadline), usize::MAX, &mut sink);
             let solve_s = t0.elapsed().as_secs_f64();

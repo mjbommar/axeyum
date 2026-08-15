@@ -644,6 +644,12 @@ fn refute_to_file(
         Ok(f) => f,
         Err(e) => return Err(fail(format!("create {}: {e}", path.display()))),
     };
+    // A refutation branch's proof can run to gigabytes; drop its pages from
+    // the OS page cache as they are written rather than evicting whatever
+    // else is resident on the box (refactor-2026-08 item 05.1).
+    #[cfg(unix)]
+    let mut sink = TextProofSink::new(axeyum_cnf::CacheDroppingWriter::new(file));
+    #[cfg(not(unix))]
     let mut sink = TextProofSink::new(file);
     let outcome = solve_with_drat_proof_streaming(formula, None, conflicts, &mut sink);
     if let Err(e) = sink.flush() {

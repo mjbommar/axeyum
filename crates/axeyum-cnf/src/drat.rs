@@ -18,7 +18,10 @@
 //! the **active clause database** rather than by the proof length, and
 //! [`DratTextReader`] produces that iterator from any [`std::io::BufRead`].
 //! [`VecProofSink`] keeps the in-RAM behavior for callers that want the whole
-//! proof as a value.
+//! proof as a value. [`CacheDroppingWriter`] (`cfg(unix)`) is a `Write` wrapper
+//! for the multi-gigabyte case: it drops each write's pages from the OS page
+//! cache as it goes, so a write-once certificate does not evict everything
+//! else resident on the box (refactor-2026-08 item 05.1).
 
 use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
@@ -380,6 +383,140 @@ impl<W: Write> DratSink for TextProofSink<W> {
 
     fn delete_clause(&mut self, lits: &[CnfLit]) -> Result<(), ProofSinkError> {
         self.emit(true, lits)
+    }
+}
+
+/// A [`Write`] wrapper that evicts pages it has just written from the OS page
+/// cache (`posix_fadvise(POSIX_FADV_DONTNEED)`), refactor-2026-08 item 05.1.
+///
+/// A write-once certificate can run to tens of gigabytes (ADR-0381's streaming
+/// sink keeps *this process's* footprint bounded, but every byte still lands in
+/// the kernel page cache on its way to disk). Left alone, that write pushes the
+/// whole proof through the cache and evicts everything else resident on the
+/// box — other build lanes' object files, other proofs — which is exactly what
+/// happened during the run that motivated this: a 19.9 GB certificate wrote
+/// while three build lanes were competing for cache, and `systemd-oomd` killed
+/// the session cgroup under the resulting pressure.
+///
+/// Wrap the target [`std::fs::File`] in this *before* handing it to
+/// [`TextProofSink::new`] for any proof that may run into the gigabytes; leave
+/// small or in-memory sinks (`Vec<u8>`, `String`) unwrapped — this type is only
+/// useful in front of something backed by a real file descriptor.
+///
+/// The advisory call is batched, not per-write: it fires once every
+/// [`CACHE_DROP_INTERVAL_BYTES`] of new data (and once more for the final
+/// partial interval, on [`flush`](Write::flush)), covering exactly the range
+/// written since the last call. Calling `fadvise` after every underlying
+/// `write` was tried first and measured 2.9x slower wall-clock than an
+/// unwrapped file for the same bytes on an NFS-backed target (9.53s vs 3.27s
+/// for 256 MiB) — the syscall itself is not free, especially over a network
+/// filesystem, and ADR-0381's sink already batches writes into 64 KiB chunks,
+/// which is too fine a granularity to advise at one syscall each. Batching to
+/// tens of megabytes keeps the number of `fadvise` calls for a multi-gigabyte
+/// proof in the hundreds rather than the hundreds of thousands, while still
+/// bounding the *marginal* page-cache growth from an unbounded proof size down
+/// to one interval.
+///
+/// Unlike `mmap`, there is no alignment requirement and no risk of dropping
+/// pages the caller has not yet asked to be persisted — any byte range is a
+/// valid `fadvise` argument. The call is best-effort: a filesystem that does
+/// not support the hint (or any other `fadvise` failure) is silently ignored,
+/// since this is a resource-usage optimization and never load-bearing for
+/// correctness. **It does not change a single byte written** — it only
+/// advises the kernel's cache, never the file's content, so output through
+/// this wrapper is byte-identical to writing directly to the inner file.
+///
+/// Only available on `cfg(unix)` (the underlying `fadvise` syscall has no
+/// portable equivalent); on other targets, including `wasm32-unknown-unknown`
+/// (ADR-0017), this type does not exist and callers fall back to the inner
+/// writer directly.
+#[cfg(unix)]
+#[derive(Debug)]
+pub struct CacheDroppingWriter<F> {
+    file: F,
+    /// Total bytes written to `file` so far.
+    written: u64,
+    /// `written` as of the last successful `fadvise` call — the offset the
+    /// next call starts from.
+    advised_through: u64,
+}
+
+/// How much new data accumulates between `fadvise(DONTNEED)` calls in
+/// [`CacheDroppingWriter`]. Large enough that the syscall count for a
+/// multi-gigabyte proof stays in the hundreds (measured: per-write-call
+/// granularity was 2.9x slower wall-clock on NFS for the same bytes); small
+/// enough that the worst-case resident footprint from one in-flight proof
+/// stays a small, fixed amount rather than growing with proof size.
+#[cfg(unix)]
+const CACHE_DROP_INTERVAL_BYTES: u64 = 64 * 1024 * 1024;
+
+#[cfg(unix)]
+impl<F> CacheDroppingWriter<F> {
+    /// Wraps `file` so its written pages are periodically dropped from the
+    /// page cache as writing proceeds.
+    pub fn new(file: F) -> Self {
+        Self {
+            file,
+            written: 0,
+            advised_through: 0,
+        }
+    }
+
+    /// Unwraps and returns the inner writer.
+    pub fn into_inner(self) -> F {
+        self.file
+    }
+}
+
+#[cfg(unix)]
+impl<F: Write + std::os::fd::AsFd> Write for CacheDroppingWriter<F> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let n = self.file.write(buf)?;
+        self.written += n as u64;
+        self.maybe_advise();
+        Ok(n)
+    }
+
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.file.write_all(buf)?;
+        self.written += buf.len() as u64;
+        self.maybe_advise();
+        Ok(())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.file.flush()?;
+        self.advise_through_current();
+        Ok(())
+    }
+}
+
+#[cfg(unix)]
+impl<F: Write + std::os::fd::AsFd> CacheDroppingWriter<F> {
+    /// Advises the kernel to drop everything written since the last advise
+    /// call, if that has crossed [`CACHE_DROP_INTERVAL_BYTES`].
+    fn maybe_advise(&mut self) {
+        if self.written.saturating_sub(self.advised_through) >= CACHE_DROP_INTERVAL_BYTES {
+            self.advise_through_current();
+        }
+    }
+
+    /// Advises the kernel to drop everything written since the last advise
+    /// call, unconditionally (used for the final partial interval on flush).
+    /// A no-op when nothing new has been written: `fadvise` treats a zero
+    /// `len` as "to end of file", which would re-advise everything already
+    /// dropped instead of doing nothing.
+    fn advise_through_current(&mut self) {
+        let offset = self.advised_through;
+        if let Some(len) = std::num::NonZeroU64::new(self.written - offset) {
+            let _ = rustix::fs::fadvise(
+                &self.file,
+                offset,
+                Some(len),
+                rustix::fs::Advice::DontNeed,
+            );
+            self.advised_through = self.written;
+        }
     }
 }
 
@@ -841,6 +978,72 @@ mod tests {
         }
         sink.finish().unwrap();
         assert_eq!(String::from_utf8(bytes).unwrap(), write_drat(&proof));
+    }
+
+    /// [`CacheDroppingWriter`] wraps a real file's write path with an advisory
+    /// `fadvise(DONTNEED)` after every write — this must never change a single
+    /// byte reaching disk. Writes the same proof through a plain `File` and
+    /// through a `CacheDroppingWriter`-wrapped `File` and checks the two files
+    /// are byte-for-byte identical (refactor-2026-08 item 05.1).
+    #[cfg(unix)]
+    #[test]
+    fn cache_dropping_writer_output_is_byte_identical_to_the_plain_file() {
+        use super::CacheDroppingWriter;
+        use std::fs;
+
+        let proof = vec![
+            DratStep::Add(vec![lit(1), lit(-2)]),
+            DratStep::Delete(vec![lit(1), lit(-2)]),
+            DratStep::Add(vec![lit(-3), lit(4), lit(-5)]),
+            DratStep::Add(vec![]),
+        ];
+
+        let tag = format!(
+            "{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
+        let plain_path = std::env::temp_dir().join(format!("axeyum_cnf_drat_plain_{tag}.drat"));
+        let advised_path =
+            std::env::temp_dir().join(format!("axeyum_cnf_drat_advised_{tag}.drat"));
+
+        let write_via = |path: &std::path::Path, wrap: bool| {
+            let file = fs::File::create(path).unwrap();
+            let write_steps = |sink: &mut dyn DratSink| {
+                for step in &proof {
+                    match step {
+                        DratStep::Add(lits) => sink.add_clause(lits).unwrap(),
+                        DratStep::Delete(lits) => sink.delete_clause(lits).unwrap(),
+                    }
+                }
+            };
+            if wrap {
+                let mut sink = TextProofSink::new(CacheDroppingWriter::new(file));
+                write_steps(&mut sink);
+                sink.finish().unwrap();
+            } else {
+                let mut sink = TextProofSink::new(file);
+                write_steps(&mut sink);
+                sink.finish().unwrap();
+            }
+        };
+
+        write_via(&plain_path, false);
+        write_via(&advised_path, true);
+
+        let plain_bytes = fs::read(&plain_path).unwrap();
+        let advised_bytes = fs::read(&advised_path).unwrap();
+        fs::remove_file(&plain_path).ok();
+        fs::remove_file(&advised_path).ok();
+
+        assert_eq!(
+            plain_bytes, advised_bytes,
+            "dropping pages from the cache must not change a single written byte"
+        );
+        assert_eq!(String::from_utf8(plain_bytes).unwrap(), write_drat(&proof));
     }
 
     #[test]
