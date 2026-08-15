@@ -170,6 +170,50 @@ pub fn equidistant(from: &Pt, to: &Pt, other_from: &Pt, other_to: &Pt) -> Option
     dist_sq(from, to)?.sub(&dist_sq(other_from, other_to)?)
 }
 
+/// `A`, `B`, `C`, `D` lie on a common circle **or** on a common line.
+///
+/// The classical concyclicity determinant, with the fourth column of ones
+/// eliminated by subtracting the first row:
+///
+/// ```text
+/// | ax ay ax²+ay² 1 |          | bx−ax  by−ay  |B|²−|A|² |
+/// | bx by bx²+by² 1 |  =  −det | cx−ax  cy−ay  |C|²−|A|² |
+/// | cx cy cx²+cy² 1 |          | dx−ax  dy−ay  |D|²−|A|² |
+/// | dx dy dx²+dy² 1 |
+/// ```
+///
+/// Stated this way it needs **no centre and no radius variable**: the circle is
+/// not constructed, only the coincidence is asserted, so a theorem about points
+/// on a circle costs no extra unknowns and no extra hypotheses. The sign carried
+/// by the row reduction is dropped — a polynomial and its negative have the same
+/// zero set and generate the same ideal.
+///
+/// The "or on a common line" is not a wart to be conditioned away. A line is a
+/// circle through the point at infinity, the determinant vanishes on both strata,
+/// and a theorem that holds on the circle stratum and fails on the line stratum
+/// would simply not certify against this hypothesis. Where the line stratum is
+/// genuinely harmless the weaker hypothesis proves the stronger theorem.
+#[must_use]
+pub fn concyclic(first: &Pt, second: &Pt, third: &Pt, fourth: &Pt) -> Option<MvPoly> {
+    let row = |point: &Pt| -> Option<[MvPoly; 3]> {
+        let delta = point.sub(first)?;
+        let lift = dot(point, point)?.sub(&dot(first, first)?)?;
+        Some([delta.x, delta.y, lift])
+    };
+    let rows = [row(second)?, row(third)?, row(fourth)?];
+    // Laplace along the first row of the 3x3, with exact rational coefficients.
+    let minor = |skip: usize| -> Option<MvPoly> {
+        let columns: Vec<usize> = (0..3).filter(|index| *index != skip).collect();
+        rows[1][columns[0]]
+            .mul(&rows[2][columns[1]])?
+            .sub(&rows[1][columns[1]].mul(&rows[2][columns[0]])?)
+    };
+    let positive = rows[0][0]
+        .mul(&minor(0)?)?
+        .add(&rows[0][2].mul(&minor(2)?)?)?;
+    positive.sub(&rows[0][1].mul(&minor(1)?)?)
+}
+
 /// The midpoint of `AB`, constructed rather than asserted.
 #[must_use]
 pub fn midpoint(from: &Pt, to: &Pt) -> Option<Pt> {
@@ -240,12 +284,116 @@ impl Condition {
     }
 }
 
-/// A concrete rational configuration that satisfies every hypothesis, **violates**
-/// a named non-degeneracy condition, and **falsifies** a conclusion.
+/// An exact element of `ℚ(i)`, the field a certificate's negative controls have
+/// to live in once the theorem is one about characteristic zero.
+///
+/// # Why the rationals are not enough
+///
+/// A cofactor identity has rational coefficients, so it holds in **every**
+/// `ℚ`-algebra — the theorem a certificate proves is a theorem of every field of
+/// characteristic zero, `ℂ` included, and never merely of the real plane. Its
+/// negative controls must therefore be able to live there too, or the ledger
+/// tests a *different* theorem than the one it files.
+///
+/// The gap is not hypothetical and `simson-line` is where it opened. Its
+/// conditions are `|BC|² ≠ 0` and friends, and over `ℝ` that is exactly `B ≠ C`,
+/// so any single collapse leaves two side lines equal, two feet equal, and the
+/// conclusion trivially true — over `ℝ` each condition is redundant. Over an
+/// algebraically closed field it is not, because `x² + y²` has the isotropic
+/// directions `(1, ±i)`: a nonzero vector can have zero square length, one foot
+/// becomes free along an isotropic line while the other two stay pinned, and the
+/// conclusion fails. The configuration that shows this has Gaussian coordinates
+/// and no rational one can replace it, because over `ℝ` it does not exist.
+///
+/// So a witness carries an optional imaginary part, [`ProofOutcome::Certified`]
+/// verifies it here, and the independent checker replays it. A witness with no
+/// imaginary part is an ordinary rational one and serialises unchanged.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Gaussian {
+    /// The real part.
+    pub real: Rational,
+    /// The coefficient of `i`.
+    pub imaginary: Rational,
+}
+
+impl Gaussian {
+    /// `a + b·i`.
+    #[must_use]
+    pub fn new(real: Rational, imaginary: Rational) -> Gaussian {
+        Gaussian { real, imaginary }
+    }
+
+    /// A rational, embedded.
+    #[must_use]
+    pub fn rational(real: Rational) -> Gaussian {
+        Gaussian {
+            real,
+            imaginary: Rational::zero(),
+        }
+    }
+
+    /// Whether this is `0`. Both components must vanish; `ℚ(i)` is a field, so
+    /// there are no nonzero elements of zero "size" to confuse this with.
+    #[must_use]
+    pub fn is_zero(&self) -> bool {
+        self.real.is_zero() && self.imaginary.is_zero()
+    }
+
+    /// Exact sum, `None` on coefficient overflow.
+    #[must_use]
+    pub fn checked_add(self, other: Gaussian) -> Option<Gaussian> {
+        Some(Gaussian {
+            real: self.real.checked_add(other.real)?,
+            imaginary: self.imaginary.checked_add(other.imaginary)?,
+        })
+    }
+
+    /// Exact product `(a+bi)(c+di) = (ac−bd) + (ad+bc)i`, `None` on overflow.
+    #[must_use]
+    pub fn checked_mul(self, other: Gaussian) -> Option<Gaussian> {
+        let real = self
+            .real
+            .checked_mul(other.real)?
+            .checked_sub(self.imaginary.checked_mul(other.imaginary)?)?;
+        let imaginary = self
+            .real
+            .checked_mul(other.imaginary)?
+            .checked_add(self.imaginary.checked_mul(other.real)?)?;
+        Some(Gaussian { real, imaginary })
+    }
+}
+
+/// Evaluate a polynomial at a `ℚ(i)`-point.
+///
+/// The rational path stays [`MvPoly::evaluate`] — this is a second code path and
+/// is deliberately not routed through the first, so a certificate whose witnesses
+/// are all rational is checked by exactly the arithmetic it was before.
+#[must_use]
+pub fn evaluate_gaussian(poly: &MvPoly, point: &BTreeMap<String, Gaussian>) -> Option<Gaussian> {
+    let mut total = Gaussian::rational(Rational::zero());
+    for (monomial, coefficient) in poly.terms() {
+        let mut value = Gaussian::rational(*coefficient);
+        for (name, power) in monomial.powers() {
+            let base = *point.get(name)?;
+            for _ in 0..power {
+                value = value.checked_mul(base)?;
+            }
+        }
+        total = total.checked_add(value)?;
+    }
+    Some(total)
+}
+
+/// A concrete configuration that satisfies every hypothesis, **violates** a named
+/// non-degeneracy condition, and **falsifies** a conclusion.
 ///
 /// This is the negative control, and it is mandatory for every condition the
 /// certificate actually uses. A theorem whose degenerate case cannot be broken
 /// did not need the condition, and [`certify`] would not have used it.
+///
+/// Coordinates are rational by default and may carry an imaginary part; see
+/// [`Gaussian`] for why the option has to exist, and
+/// [`DegenerateWitness::point`] for how the two halves combine.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DegenerateWitness {
     /// The [`Condition::id`] this configuration violates.
@@ -254,6 +402,62 @@ pub struct DegenerateWitness {
     pub description: String,
     /// Every coordinate variable of the problem, at an exact rational value.
     pub assignment: BTreeMap<String, Rational>,
+    /// The imaginary part of any coordinate that has one. Empty for a rational
+    /// witness, which is the common case and the one that serialises unchanged.
+    pub imaginary: BTreeMap<String, Rational>,
+}
+
+impl DegenerateWitness {
+    /// A purely rational witness.
+    #[must_use]
+    pub fn rational(
+        condition_id: &str,
+        description: &str,
+        assignment: BTreeMap<String, Rational>,
+    ) -> DegenerateWitness {
+        DegenerateWitness {
+            condition_id: condition_id.to_string(),
+            description: description.to_string(),
+            assignment,
+            imaginary: BTreeMap::new(),
+        }
+    }
+
+    /// Whether any coordinate has a nonzero imaginary part.
+    #[must_use]
+    pub fn is_gaussian(&self) -> bool {
+        self.imaginary.values().any(|value| !value.is_zero())
+    }
+
+    /// The configuration as a `ℚ(i)`-point, `None` if the two halves disagree
+    /// about which variables exist.
+    ///
+    /// An imaginary part naming a variable the real part does not is rejected
+    /// rather than defaulted, because a typo there would silently move the
+    /// witness to a different point and the checker would confirm the wrong one.
+    #[must_use]
+    pub fn point(&self) -> Option<BTreeMap<String, Gaussian>> {
+        if self
+            .imaginary
+            .keys()
+            .any(|name| !self.assignment.contains_key(name))
+        {
+            return None;
+        }
+        Some(
+            self.assignment
+                .iter()
+                .map(|(name, real)| {
+                    let imaginary = self
+                        .imaginary
+                        .get(name)
+                        .copied()
+                        .unwrap_or_else(Rational::zero);
+                    (name.clone(), Gaussian::new(*real, imaginary))
+                })
+                .collect(),
+        )
+    }
 }
 
 /// A concrete rational configuration satisfying every hypothesis **and** every
@@ -396,6 +600,16 @@ pub enum GeometryDecline {
     /// determinant is not the geometric one. Both are worth seeing rather than
     /// timing out over.
     UndividableMultiplier,
+    /// The problem's **own** committed counterexample satisfies every hypothesis,
+    /// keeps every stated non-degeneracy condition nonzero, and falsifies a
+    /// conclusion. The theorem as stated is false, and no budget, order or
+    /// algorithm changes that.
+    ///
+    /// This can only be reported because the subset search is pruned by the
+    /// committed witnesses ([`searchable_subsets`]): with every subset including
+    /// the full one refuted, there is nothing left to search, and saying so is far
+    /// more useful than reporting whatever the last futile reduction did.
+    RefutedByOwnWitness,
 }
 
 /// The prefix of the fresh inverse variables introduced by saturation.
@@ -457,6 +671,80 @@ pub fn geometry_limits() -> Limits {
     }
 }
 
+/// Every condition subset of `problem`, smallest first, with the ones a committed
+/// counterexample already **refutes** dropped.
+///
+/// # Why the pruning is sound, and why it is not merely an optimisation
+///
+/// A conclusion lies in the saturated ideal of a subset `S` only if it vanishes at
+/// every common zero of those generators. So one configuration that satisfies
+/// every hypothesis, keeps every condition of `S` nonzero — extending to a zero of
+/// the Rabinowitsch generators by `z := 1/d` — and **falsifies** a conclusion
+/// refutes `S` outright. Skipping it costs nothing: no search could have succeeded
+/// there, whatever its budget, order or algorithm.
+///
+/// The point is not the time saved, though on `simson-line` it is the difference
+/// between one elimination and seven futile ones. It is that ADR-0460's failure —
+/// a minimality claim that is really a claim about the producer's own
+/// decomposition — cannot arise for a subset that was never *searched*. A subset
+/// this function drops is refuted by a fact about the theorem; a subset the search
+/// rejects is rejected by a fact about the search. Making the first set as large
+/// as the committed evidence allows shrinks the second, which is exactly the
+/// direction ADR-0460 asks for.
+///
+/// The refutation is checked over `ℚ(i)` for the same reason the negative controls
+/// are: the identity being searched for has rational coefficients and is therefore
+/// a statement about every field of characteristic zero, so a `ℚ(i)` counterexample
+/// is a genuine obstruction to it. A rational witness embeds unchanged.
+#[must_use]
+pub fn searchable_subsets(problem: &GeometryProblem) -> Vec<Vec<usize>> {
+    let count = problem.nondegeneracy.len();
+    let mut subsets: Vec<Vec<usize>> = (0u32..(1u32 << count))
+        .map(|mask| {
+            (0..count)
+                .filter(|index| mask & (1 << index) != 0)
+                .collect::<Vec<usize>>()
+        })
+        .collect();
+    subsets.sort_by(|left, right| left.len().cmp(&right.len()).then_with(|| left.cmp(right)));
+    subsets.retain(|subset| !subset_is_refuted(problem, subset));
+    subsets
+}
+
+/// Whether a committed counterexample refutes this condition subset outright.
+///
+/// `subset` indexes `problem.nondegeneracy`. A `true` answer is **decided**, with
+/// no budget, monomial order or algorithm in it: the conclusion cannot lie in the
+/// saturated ideal of a generator set that has a common zero falsifying it. So a
+/// caller may use this to prune a search ([`searchable_subsets`] does) or to
+/// report a subset as settled without running a reduction at all, which is what
+/// makes an audit of a theorem like `simson-line` affordable.
+#[must_use]
+pub fn subset_is_refuted(problem: &GeometryProblem, subset: &[usize]) -> bool {
+    problem.degenerate_witnesses.iter().any(|witness| {
+        let Some(point) = witness.point() else {
+            return false;
+        };
+        let vanishes = |poly: &MvPoly| {
+            matches!(evaluate_gaussian(poly, &point), Some(value) if value.is_zero())
+        };
+        let survives = |poly: &MvPoly| {
+            matches!(evaluate_gaussian(poly, &point), Some(value) if !value.is_zero())
+        };
+        problem
+            .hypotheses
+            .iter()
+            .all(|hypothesis| vanishes(&hypothesis.poly))
+            && subset
+                .iter()
+                .all(|&index| survives(&problem.nondegeneracy[index].poly))
+            && problem
+                .conclusions
+                .iter()
+                .any(|conclusion| survives(&conclusion.poly))
+    })
+}
+
 /// Certify a geometry theorem, using as **few** non-degeneracy conditions as
 /// possible.
 ///
@@ -466,6 +754,10 @@ pub fn geometry_limits() -> Limits {
 /// deterministic. The empty subset is tried first: a theorem that is an outright
 /// ideal identity is reported as needing nothing, which is a materially stronger
 /// statement and one this module refuses to obscure.
+///
+/// Subsets a committed counterexample already refutes are skipped without being
+/// searched at all — see [`searchable_subsets`], and note that the skip strictly
+/// improves the minimality claim rather than weakening it.
 ///
 /// A subset that [declines](CofactorOutcome::Declined) is skipped, so in
 /// principle a theorem could certify with more conditions than it strictly needs.
@@ -493,14 +785,14 @@ pub fn certify(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
         .map(|conclusion| conclusion.poly.clone())
         .collect();
 
-    let mut subsets: Vec<Vec<usize>> = (0u32..(1u32 << count))
-        .map(|mask| {
-            (0..count)
-                .filter(|index| mask & (1 << index) != 0)
-                .collect::<Vec<usize>>()
-        })
-        .collect();
-    subsets.sort_by(|left, right| left.len().cmp(&right.len()).then_with(|| left.cmp(right)));
+    let subsets = searchable_subsets(problem);
+    // Nothing left to search means the FULL condition set is refuted by the
+    // problem's own counterexample: the theorem as stated is false, and no
+    // budget, order or algorithm changes that. Saying so beats reporting
+    // whatever the last futile reduction happened to do.
+    if subsets.is_empty() {
+        return ProofOutcome::Declined(GeometryDecline::RefutedByOwnWitness);
+    }
 
     // The outcome of the LAST subset tried, which is the full condition set;
     // that is the informative diagnostic when nothing certifies.
@@ -618,14 +910,23 @@ const MAX_INVERSE_POWER: u32 = 32;
 ///
 /// # Minimality
 ///
-/// Condition subsets are tried smallest-first, exactly as in [`certify`]. Here
-/// every subset test is *decided* — factoring a multiplier by exact division
-/// always terminates and always answers — so the reported set is smallest among
-/// the subsets this route can use. Whether it is smallest **absolutely** is a
-/// separate question about ideal membership, and it is answered by the degenerate
-/// counterexample: a configuration satisfying every hypothesis, keeping every
-/// condition of a subset nonzero, and falsifying the conclusion proves that
-/// subset insufficient outright, with no budget in the argument at all.
+/// Condition subsets are tried smallest-first, exactly as in [`certify`], and the
+/// ones a committed counterexample refutes are not tried at all
+/// ([`searchable_subsets`]).
+///
+/// Every subset test this route *does* run is *decided* — factoring a multiplier
+/// by exact division always terminates and always answers — so the reported set is
+/// smallest among the subsets this route can use. ADR-0460 is the reason that
+/// sentence is not the end of it: "decided" was true of `pappus-hexagon`'s
+/// three-condition answer too, and that answer was wrong, because the test was
+/// about the theorem *under a decomposition the producer chose*. Two things guard
+/// it now, and neither is a disclosure. `licensed_blocks` makes the decomposition
+/// a function of the subset, so the test stops being about a fixed choice; and the
+/// pruning above settles as many subsets as the committed evidence can by
+/// **refutation**, which is a fact about the theorem and about nothing the
+/// producer picked. What remains searched is the residue of subsets that no
+/// counterexample refutes, and on those the honest claim is still "smallest this
+/// route reached".
 ///
 /// # The handover
 ///
@@ -645,14 +946,14 @@ pub fn certify_by_linear_elimination(
     if count > 16 {
         return ProofOutcome::Declined(GeometryDecline::TooManyConditions);
     }
-    let mut subsets: Vec<Vec<usize>> = (0u32..(1u32 << count))
-        .map(|mask| {
-            (0..count)
-                .filter(|index| mask & (1 << index) != 0)
-                .collect::<Vec<usize>>()
-        })
-        .collect();
-    subsets.sort_by(|left, right| left.len().cmp(&right.len()).then_with(|| left.cmp(right)));
+    let subsets = searchable_subsets(problem);
+    // Nothing left to search means the FULL condition set is refuted by the
+    // problem's own counterexample: the theorem as stated is false, and no
+    // budget, order or algorithm changes that. Saying so beats reporting
+    // whatever the last futile reduction happened to do.
+    if subsets.is_empty() {
+        return ProofOutcome::Declined(GeometryDecline::RefutedByOwnWitness);
+    }
 
     let hypotheses: Vec<MvPoly> = problem
         .hypotheses
@@ -1208,18 +1509,24 @@ fn verify_witnesses(
         else {
             return Err(());
         };
+        // Over `ℚ(i)`, which is the field the cofactor identity is a theorem of.
+        // A rational witness embeds with a zero imaginary part and is decided by
+        // exactly the arithmetic it was before.
+        let Some(point) = witness.point() else {
+            return Err(());
+        };
         for hypothesis in &problem.hypotheses {
-            match hypothesis.poly.evaluate(&witness.assignment) {
+            match evaluate_gaussian(&hypothesis.poly, &point) {
                 Some(value) if value.is_zero() => {}
                 _ => return Err(()),
             }
         }
-        match condition.poly.evaluate(&witness.assignment) {
+        match evaluate_gaussian(&condition.poly, &point) {
             Some(value) if value.is_zero() => {}
             _ => return Err(()),
         }
         let broken = problem.conclusions.iter().any(|conclusion| {
-            matches!(conclusion.poly.evaluate(&witness.assignment), Some(value) if !value.is_zero())
+            matches!(evaluate_gaussian(&conclusion.poly, &point), Some(value) if !value.is_zero())
         });
         if !broken {
             return Err(());
@@ -1313,6 +1620,102 @@ mod tests {
         )
     }
 
+    /// A counterexample that survives the FULL condition set says the theorem is
+    /// false, and the certifier must say that rather than report a reduction.
+    ///
+    /// Written because [`GeometryDecline::RefutedByOwnWitness`] is only reachable
+    /// through [`searchable_subsets`] emptying out, which no corpus theorem does —
+    /// a variant nothing can return is decoration, and this repository has shipped
+    /// several. The fixture is the parallelogram with its counterexample moved off
+    /// the degeneracy locus: `A=(0,0)`, `B=(1,0)`, `C=(1,1)`, `D=(0,1)` is a unit
+    /// square, so `abd-not-collinear` holds, and `C` is moved to `(2,2)` so the
+    /// diagonals no longer bisect. Every hypothesis still holds, so it refutes the
+    /// full set.
+    #[test]
+    fn a_counterexample_surviving_every_condition_declines_as_a_refutation() {
+        let points = quadrilateral();
+        let diagonal_ac = midpoint(&points[0], &points[2]).expect("midpoint");
+        let diagonal_bd = midpoint(&points[1], &points[3]).expect("midpoint");
+        // `A=(0,0)`, `B=(2,0)`, `D=(0,3)`, `C=(5,3)`: `AB ∥ DC` holds (both
+        // horizontal), `A, B, D` are a genuine triangle so the condition holds
+        // too, and the diagonals' midpoints are `(5/2, 3/2)` and `(1, 3/2)`, so
+        // the conclusion fails.
+        let refuting = assign(&[
+            ("ax", 0),
+            ("ay", 0),
+            ("bx", 2),
+            ("by", 0),
+            ("cx", 5),
+            ("cy", 3),
+            ("dx", 0),
+            ("dy", 3),
+        ]);
+        let problem = GeometryProblem {
+            id: "refuted-fixture".into(),
+            title: "a stated theorem its own witness refutes".into(),
+            statement: "test fixture".into(),
+            coordinate_gloss: Vec::new(),
+            hypotheses: vec![
+                parallelogram_hypotheses(&points)
+                    .into_iter()
+                    .next()
+                    .expect("at least one hypothesis"),
+            ],
+            nondegeneracy: vec![flat_condition(&points)],
+            conclusions: vec![Constraint::new(
+                "midpoints-agree-x",
+                "the diagonals share an abscissa",
+                diagonal_ac.x.sub(&diagonal_bd.x).expect("difference"),
+            )],
+            degenerate_witnesses: vec![DegenerateWitness::rational(
+                "abd-not-collinear",
+                "not degenerate at all, and it breaks the conclusion",
+                refuting.clone(),
+            )],
+            generic_witnesses: Vec::new(),
+        };
+        // The fixture only means something if the witness really does satisfy the
+        // hypotheses, survive the condition and break the theorem, so assert all
+        // three first. The hypothesis check earns its place: the first draft of
+        // this fixture violated `AB ∥ DC`, which makes the witness refute nothing,
+        // and the symptom was a slow search rather than a clear failure.
+        for hypothesis in &problem.hypotheses {
+            assert!(
+                hypothesis
+                    .poly
+                    .evaluate(&refuting)
+                    .expect("assigned")
+                    .is_zero(),
+                "the witness must satisfy `{}`, or it refutes nothing",
+                hypothesis.id
+            );
+        }
+        assert!(
+            !problem.nondegeneracy[0]
+                .poly
+                .evaluate(&refuting)
+                .expect("assigned")
+                .is_zero(),
+            "the witness must KEEP the condition nonzero, or it refutes nothing"
+        );
+        assert!(
+            !problem.conclusions[0]
+                .poly
+                .evaluate(&refuting)
+                .expect("assigned")
+                .is_zero(),
+            "the witness must break the conclusion"
+        );
+        assert_eq!(
+            certify(&problem, geometry_limits()),
+            ProofOutcome::Declined(GeometryDecline::RefutedByOwnWitness)
+        );
+        assert_eq!(
+            certify_by_linear_elimination(&problem, None),
+            ProofOutcome::Declined(GeometryDecline::RefutedByOwnWitness)
+        );
+    }
+
     /// The simplest theorem with a genuine side condition: a parallelogram's
     /// diagonals bisect each other, which is FALSE when the four points are
     /// collinear.
@@ -1342,6 +1745,7 @@ mod tests {
             ],
             degenerate_witnesses: vec![DegenerateWitness {
                 condition_id: "abd-not-collinear".into(),
+                imaginary: BTreeMap::new(),
                 description: "four collinear points".into(),
                 assignment: assign(&[
                     ("ax", 0),
@@ -1416,6 +1820,7 @@ mod tests {
             // to bisect each other here, so it is not a counterexample.
             degenerate_witnesses: vec![DegenerateWitness {
                 condition_id: "abd-not-collinear".into(),
+                imaginary: BTreeMap::new(),
                 description: "collinear but not a counterexample".into(),
                 assignment: assign(&[
                     ("ax", 0),
@@ -1793,10 +2198,20 @@ mod tests {
         // than fail, and a hang reads like a slow machine. The count assertion
         // below is derived from the corpus so the list cannot silently shrink,
         // but nothing can make "does not return" cheap to probe.
-        const UNREACHED_BY_BUCHBERGER: [&str; 3] = [
+        const UNREACHED_BY_BUCHBERGER: [&str; 4] = [
             "euler-line",
             "rhombus-diagonals-perpendicular",
             "pappus-hexagon",
+            // `simson-line` joined the corpus on 2026-08-15 and walked straight
+            // into the hazard the paragraph above names. Fourteen coordinates and
+            // three Rabinowitsch generators: the reduction is bounded by
+            // `geometry_limits` so it does terminate, but it had not returned
+            // after 90 s in release when the run was killed, which is not a unit
+            // test. Leaving it off this list did not FAIL the test, it stalled
+            // it — and a stall reads like a slow machine rather than a defect,
+            // which is exactly what the warning above predicted and exactly how
+            // it presented.
+            "simson-line",
         ];
         let corpus = crate::geometry_corpus::corpus();
         let expected = corpus.len() - UNREACHED_BY_BUCHBERGER.len();

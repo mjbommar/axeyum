@@ -23,6 +23,12 @@ fmt-all:
 # `proved` fact with nothing checked, or an `open` one carrying evidence, fails.
 facts:
     python3 scripts/validate-facts.py
+    # A `cas-certificate` geometry fact states its theorem twice -- as SMT-LIB in
+    # `formal.statement` and as polynomials in the certificate it cites -- and
+    # nothing connected the two, so a transposed sign would leave a `proved` fact
+    # claiming something its evidence does not establish. Sub-second; three lanes
+    # did this by hand before it was a gate.
+    python3 scripts/check-geometry-fact-transcription.py
 
 # Re-run the evidence behind every settled fact, route-agnostically. `facts`
 # above checks the ledger is CONSISTENT; this checks it is still TRUE -- a fact

@@ -120,14 +120,32 @@ pub fn to_json(certificate: &GeometryCertificate) -> String {
     }
     out.push_str("  ],\n");
 
+    write_witnesses(&mut out, certificate);
+    out
+}
+
+/// The two witness arrays, split out of [`to_json`] because it is the half that
+/// grew: a degenerate witness may now carry an imaginary part, and the rule for
+/// when that is emitted needs more explanation than it needs code.
+fn write_witnesses(out: &mut String, certificate: &GeometryCertificate) {
     out.push_str("  \"degenerate_witnesses\": [\n");
     for (index, witness) in certificate.degenerate_witnesses.iter().enumerate() {
+        // `imaginary` is emitted only when there is one, so every certificate
+        // written before `ℚ(i)` witnesses existed re-serialises byte for byte.
+        // The emitter reports "unchanged" on those, which is the property that
+        // makes a format extension auditable rather than asserted.
+        let imaginary = if witness.imaginary.is_empty() {
+            String::new()
+        } else {
+            format!(", \"imaginary\": {}", write_assignment(&witness.imaginary))
+        };
         let _ = writeln!(
             out,
-            "    {{\"condition_id\": {}, \"description\": {}, \"assignment\": {}}}{}",
+            "    {{\"condition_id\": {}, \"description\": {}, \"assignment\": {}{}}}{}",
             quote(&witness.condition_id),
             quote(&witness.description),
             write_assignment(&witness.assignment),
+            imaginary,
             comma(index, certificate.degenerate_witnesses.len())
         );
     }
@@ -144,7 +162,6 @@ pub fn to_json(certificate: &GeometryCertificate) -> String {
         );
     }
     out.push_str("  ]\n}\n");
-    out
 }
 
 fn comma(index: usize, total: usize) -> &'static str {
@@ -340,6 +357,12 @@ pub fn from_json(text: &str) -> Result<GeometryCertificate, String> {
                 condition_id: item.field("condition_id")?.text()?.to_string(),
                 description: item.field("description")?.text()?.to_string(),
                 assignment: read_assignment(item.field("assignment")?)?,
+                // Absent means a rational witness, which is what the nine
+                // certificates written before this field existed carry.
+                imaginary: match item.field("imaginary") {
+                    Ok(value) => read_assignment(value)?,
+                    Err(_) => BTreeMap::new(),
+                },
             })
         })
         .collect::<Result<Vec<_>, String>>()?;

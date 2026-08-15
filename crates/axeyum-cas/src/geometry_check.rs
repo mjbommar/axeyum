@@ -35,7 +35,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::Rational;
 
-use crate::geometry_certify::GeometryCertificate;
+use crate::geometry_certify::{GeometryCertificate, evaluate_gaussian};
 use crate::mvpoly::MvPoly;
 
 /// What a verified certificate exercised.
@@ -296,8 +296,22 @@ pub fn check_certificate(
                 witness.condition_id
             ));
         };
+        // The negative controls are replayed over `ℚ(i)`, not `ℚ`, because that
+        // is the field the identity above is a theorem of: rational cofactors
+        // make it valid in every `ℚ`-algebra. A witness with no imaginary part
+        // embeds with a zero one and is decided by the same arithmetic as
+        // before; `simson-line` is the certificate that needs the other case,
+        // where `|CA|² = 0` at `C ≠ A` along an isotropic direction and no
+        // rational configuration can exhibit the condition being necessary.
+        let Some(point) = witness.point() else {
+            return reject(format!(
+                "degenerate witness for `{}` gives an imaginary part to a coordinate it does \
+                 not assign",
+                witness.condition_id
+            ));
+        };
         for hypothesis in &certificate.hypotheses {
-            match hypothesis.poly.evaluate(&witness.assignment) {
+            match evaluate_gaussian(&hypothesis.poly, &point) {
                 Some(value) if value.is_zero() => {}
                 Some(_) => {
                     return reject(format!(
@@ -313,7 +327,7 @@ pub fn check_certificate(
                 }
             }
         }
-        match saturation.condition.evaluate(&witness.assignment) {
+        match evaluate_gaussian(&saturation.condition, &point) {
             Some(value) if value.is_zero() => {}
             _ => {
                 return reject(format!(
@@ -323,7 +337,7 @@ pub fn check_certificate(
             }
         }
         let broken = certificate.conclusions.iter().any(|conclusion| {
-            matches!(conclusion.poly.evaluate(&witness.assignment), Some(value) if !value.is_zero())
+            matches!(evaluate_gaussian(&conclusion.poly, &point), Some(value) if !value.is_zero())
         });
         if !broken {
             return reject(format!(

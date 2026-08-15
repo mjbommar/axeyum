@@ -27,6 +27,13 @@
 //!    certificate, the minimality of the reported condition set is absolute
 //!    rather than scoped to the budget — and no order, budget or algorithm can
 //!    move it.
+//! 3. a `REFUTED (counterexample)` row, which is the *strongest* verdict here and
+//!    the cheapest. A subset with a committed configuration that satisfies every
+//!    hypothesis, keeps that subset's conditions nonzero and falsifies a
+//!    conclusion is settled by one evaluation, under every order and every
+//!    budget, so no reduction is run for it at all. On `simson-line` that is all
+//!    seven proper subsets — and running them instead would mean a Gröbner basis
+//!    over fourteen variables that this example does not come back from.
 //!
 //! `cargo run -p axeyum-cas --release --example geometry_order_audit [ids...]`
 //!
@@ -37,6 +44,7 @@ use std::time::{Duration, Instant};
 
 use axeyum_cas::geometry_certify::{
     Condition, GeometryProblem, INVERSE_PREFIX, ProofOutcome, certify, geometry_limits,
+    subset_is_refuted,
 };
 use axeyum_cas::geometry_corpus::corpus;
 use axeyum_cas::geometry_json::to_json;
@@ -205,6 +213,22 @@ fn audit(problem: &GeometryProblem, tally: &mut Tally) {
             )
         };
         print!("    {label:<26}");
+        // A subset a committed counterexample refutes is decided under BOTH
+        // orders and under any budget, so running a reduction on it measures the
+        // reduction rather than the theorem. Saying so costs one evaluation per
+        // witness; running it instead costs, on `simson-line`, a Gröbner basis
+        // over fourteen variables that this example would not come back from.
+        if subset_is_refuted(problem, &subset) {
+            for order in ORDERS {
+                let name = match order {
+                    MonomialOrder::Lex => "lex",
+                    MonomialOrder::DegRevLex => "grevlex",
+                };
+                print!("  {name:>7} {:>9} {:<28}", "-", "REFUTED (counterexample)");
+            }
+            println!();
+            continue;
+        }
         for (slot, order) in ORDERS.into_iter().enumerate() {
             let verdict = probe(problem, &subset, order);
             decided_under[slot] &= verdict.decided;
@@ -266,8 +290,19 @@ fn audit(problem: &GeometryProblem, tally: &mut Tally) {
 // This list is retro-active. `euler-line` joined the corpus on 2026-08-15 and
 // this example was not updated, so from that moment an unrestricted run hung
 // rather than reporting anything -- a broken instrument that still looked
-// like a slow one. `pappus-hexagon` would have been the second.
-const UNREACHED_BY_BUCHBERGER: [&str; 2] = ["euler-line", "pappus-hexagon"];
+// like a slow one. `pappus-hexagon` would have been the second, and
+// `simson-line` the third: it landed the same day, and the identically-shaped
+// list inside `geometry_certify`'s own unit test stalled for exactly this
+// reason before it was updated. Three instances of one omission is a signal
+// about the pattern rather than about any of the three lanes -- a corpus entry
+// that the general route cannot reach has to be declared in two places, and
+// nothing makes it.
+//
+// The REFUTED pruning below does not rescue this. It settles the per-subset
+// loop, where the answer is decided by a counterexample; the two `certify`
+// runs at the end still hand the FULL condition set to Buchberger, which is
+// the part that does not come back.
+const UNREACHED_BY_BUCHBERGER: [&str; 3] = ["euler-line", "pappus-hexagon", "simson-line"];
 
 fn main() {
     let wanted: Vec<String> = std::env::args().skip(1).collect();

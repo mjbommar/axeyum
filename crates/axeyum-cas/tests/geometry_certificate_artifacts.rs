@@ -19,7 +19,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use axeyum_cas::geometry_certify::GeometryCertificate;
+use axeyum_cas::geometry_certify::{GeometryCertificate, evaluate_gaussian};
 use axeyum_cas::geometry_check::{CheckOptions, GeometryVerdict, check_certificate};
 use axeyum_cas::geometry_json::{from_json, to_json};
 use axeyum_cas::mvpoly::MvPoly;
@@ -86,10 +86,27 @@ fn every_committed_geometry_certificate_re_derives() {
                     without_conditions += 1;
                 } else {
                     with_conditions += 1;
-                    assert_eq!(
+                    // At least one counterexample per used condition, not
+                    // exactly one. This was `assert_eq!` until `simson-line`,
+                    // which carries a FOURTH witness for a reason worth keeping:
+                    // its three counterexamples live in `ℚ(i)` and refute the
+                    // conditions over characteristic zero, while the fourth is
+                    // rational and says the separate thing that over the REAL
+                    // plane the theorem still needs a condition at all. Those are
+                    // two different claims and the artifact should carry both.
+                    //
+                    // Relaxing to `>=` costs nothing, because the strong half of
+                    // the old assertion is enforced by the checker rather than
+                    // here: `check_certificate` rejects a certificate with a used
+                    // condition that has no counterexample, and equally rejects a
+                    // witness naming a condition the proof does not use. So an
+                    // extra witness cannot be decorative -- it has to be a
+                    // verified counterexample for a condition actually consumed.
+                    assert!(
+                        report.degenerate_witnesses_checked >= report.conditions_used.len(),
+                        "{name}: fewer counterexamples ({}) than used conditions ({})",
                         report.degenerate_witnesses_checked,
-                        report.conditions_used.len(),
-                        "{name}: one counterexample per used condition, exactly"
+                        report.conditions_used.len()
                     );
                 }
                 checked += 1;
@@ -215,8 +232,48 @@ fn a_counterexample_that_does_not_break_the_theorem_is_rejected() {
     for (_, mut certificate) in saturated() {
         let generic = certificate.generic_witnesses[0].assignment.clone();
         certificate.degenerate_witnesses[0].assignment = generic;
+        // Substituting a rational configuration means substituting ALL of it. A
+        // leftover imaginary part would leave the witness at some third point
+        // that is neither the generic configuration nor the committed one, and
+        // the rejection would then be evidence about nothing.
+        certificate.degenerate_witnesses[0].imaginary.clear();
         let _ = rejected(&certificate);
     }
+}
+
+/// A `ℚ(i)` witness whose imaginary part is dropped stops being a counterexample,
+/// and the checker must say so.
+///
+/// This is the control on the format extension itself. `simson-line`'s witnesses
+/// are counterexamples *because* of their imaginary parts — the same real parts
+/// alone are a perfectly ordinary configuration that satisfies the theorem — so a
+/// checker that read the file and ignored the new field would accept a
+/// certificate whose negative controls prove nothing. It would also look exactly
+/// like a passing run.
+#[test]
+fn a_gaussian_counterexample_with_its_imaginary_part_dropped_is_rejected() {
+    let mut covered = 0usize;
+    for (name, mut certificate) in saturated() {
+        let Some(slot) = certificate
+            .degenerate_witnesses
+            .iter()
+            .position(axeyum_cas::geometry_certify::DegenerateWitness::is_gaussian)
+        else {
+            continue;
+        };
+        certificate.degenerate_witnesses[slot].imaginary.clear();
+        let reason = rejected(&certificate);
+        assert!(
+            reason.contains("degenerate witness"),
+            "{name}: unexpected {reason}"
+        );
+        covered += 1;
+    }
+    assert!(
+        covered >= 1,
+        "no committed certificate carries a Q(i) witness, so this control examined nothing -- \
+         which is indistinguishable from passing"
+    );
 }
 
 /// Exact rational configurations that sit **on** a degeneracy locus and yet do
@@ -314,6 +371,33 @@ fn on_locus_but_harmless() -> Vec<(&'static str, BTreeMap<String, Rational>)> {
                 ("zy", 0, 1),
             ]),
         ),
+        // `simson-line`, on the locus and harmless -- and this one is on the
+        // locus of ALL THREE conditions at once, which is the only way to be on
+        // this certificate's locus at a rational point. A = B = C = (0,0)
+        // collapses every side line, so all six foot hypotheses are vacuous and
+        // the concyclicity determinant has three equal rows; putting the three
+        // feet back on the x-axis leaves them collinear, so the conclusion holds.
+        // The committed counterexample is this configuration with X = (0,1)
+        // instead -- one coordinate apart, as with the two above.
+        (
+            "A=B=C=(0,0) with the three feet back on the x-axis, degenerate but still collinear",
+            at(&[
+                ("ax", 0, 1),
+                ("ay", 0, 1),
+                ("bx", 0, 1),
+                ("by", 0, 1),
+                ("cx", 0, 1),
+                ("cy", 0, 1),
+                ("px", 1, 1),
+                ("py", 0, 1),
+                ("xx", 0, 1),
+                ("xy", 0, 1),
+                ("yx", 2, 1),
+                ("yy", 0, 1),
+                ("zx", 4, 1),
+                ("zy", 0, 1),
+            ]),
+        ),
     ]
 }
 
@@ -370,6 +454,7 @@ fn a_counterexample_on_the_locus_that_falsifies_nothing_is_rejected() {
             );
             let mut tampered = certificate.clone();
             tampered.degenerate_witnesses[0].assignment = configuration.clone();
+            tampered.degenerate_witnesses[0].imaginary.clear();
             let _ = rejected(&tampered);
             used = true;
             covered += 1;
@@ -436,17 +521,26 @@ fn every_used_condition_set_is_minimal_absolutely() {
                 .filter(|index| mask & (1 << index) != 0)
                 .collect();
             let refuted = certificate.degenerate_witnesses.iter().any(|witness| {
+                // Over `ℚ(i)`, because the identity a certificate carries has
+                // rational coefficients and is therefore a theorem of every field
+                // of characteristic zero. A refutation only has to live in one of
+                // them to be a refutation. `simson-line` is the case that needs
+                // this: over `ℝ` no configuration isolates one of its three
+                // conditions, and over `ℚ(i)` each of them has one.
+                let Some(point) = witness.point() else {
+                    return false;
+                };
                 let hypotheses_hold = certificate.hypotheses.iter().all(|hypothesis| {
-                    matches!(hypothesis.poly.evaluate(&witness.assignment), Some(value) if value.is_zero())
+                    matches!(evaluate_gaussian(&hypothesis.poly, &point), Some(value) if value.is_zero())
                 });
                 let subset_survives = subset.iter().all(|&index| {
                     matches!(
-                        certificate.saturations[index].condition.evaluate(&witness.assignment),
+                        evaluate_gaussian(&certificate.saturations[index].condition, &point),
                         Some(value) if !value.is_zero()
                     )
                 });
                 let broken = certificate.conclusions.iter().any(|conclusion| {
-                    matches!(conclusion.poly.evaluate(&witness.assignment), Some(value) if !value.is_zero())
+                    matches!(evaluate_gaussian(&conclusion.poly, &point), Some(value) if !value.is_zero())
                 });
                 hypotheses_hold && subset_survives && broken
             });

@@ -57,6 +57,12 @@ step fmt    cargo fmt --all --check
 # for different reasons, and a disagreement between them is itself a finding.
 step fmt-all scripts/check-fmt-complete.sh
 step facts  python3 scripts/validate-facts.py
+# `facts` checks a fact against the SCHEMA; this checks its SMT-LIB
+# `formal.statement` against the certificate it cites, by evaluating both at 400
+# random rational configurations. The two are independent statements of the same
+# theorem and nothing else compares them, which is how a fact's formal statement
+# could drift from the artifact holding it up.
+step facts-transcription python3 scripts/check-geometry-fact-transcription.py
 # `facts` proves the ledger is self-consistent; this proves its evidence still
 # holds. An unchecked certificate is not evidence, and `close-fact.py` enforces
 # that at write time -- this is the same rule at gate time.
