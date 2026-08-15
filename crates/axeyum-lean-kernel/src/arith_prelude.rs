@@ -1,7 +1,19 @@
 //! The **arithmetic prelude** (ADR-0036, the P3.7 / LRA-reconstruction
-//! foundation): an axiomatized **linear ordered field**, declared into a
-//! [`Kernel`]'s environment through the trusted
+//! foundation): an axiomatized **ordered commutative ring with `1`**, declared
+//! into a [`Kernel`]'s environment through the trusted
 //! [`Kernel::add_declaration`](crate::Kernel::add_declaration) gate.
+//!
+//! The carrier is *named* `Real` because `ℝ` is the intended interpretation,
+//! but the 30 declarations below are not an axiomatization of `ℝ`: there is no
+//! multiplicative inverse and no division, so this is not a field, and there is
+//! no completeness, Archimedean, density or totality axiom either. Every axiom
+//! here is true of `ℤ`, and
+//! [`build_int_model_of_arith`](crate::build_int_model_of_arith) exhibits the
+//! interpretation with all 22 law witnesses carrying an empty
+//! [`axiom_footprint`](crate::Kernel::axiom_footprint) — a machine-checked
+//! *relative consistency* result for this package, not a discharge of it
+//! (ADR-0456). Adding a field or completeness axiom invalidates that model and
+//! makes constructing a carrier (`ℚ`, then `ℝ`) the live question again.
 //!
 //! This is the trusted base for reconstructing **LRA `la_generic` (Farkas)**
 //! proofs into kernel-checked Lean terms. A Farkas refutation is, at bottom, a

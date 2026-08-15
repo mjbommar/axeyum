@@ -28,8 +28,38 @@
 > One integer axiom remains, `euclidean_decomposition`, and it is a different
 > kind of problem: it asserts the *existence* of a quotient and remainder, so it
 > needs `Int.div`/`Int.mod` defined and specified rather than another rewriting
-> lemma. **ℝ is untouched at 30 axioms and is now effectively the whole of this
-> item.**
+> lemma.
+
+> **STATUS 2026-08-15 (later) — the ℝ half was the wrong question, twice, and
+> both corrections are measured.** The `Real` prelude's 30 declarations are not
+> an axiomatization of ℝ: there is **no inverse, no division, no completeness,
+> no Archimedean and no density axiom** — not even totality — so the package is
+> an **ordered commutative ring with 1**, every law of which is true of ℤ. And
+> this kernel's quotient package is four declarations with **no `Quot.sound`**,
+> so a Cauchy-sequence ℝ is not expensive here, it is *inexpressible*; the
+> "a quotient would put `Quot.sound` in every footprint" reasoning recorded above
+> and in three source comments describes Lean's package, not ours.
+>
+> So ℝ was not constructed and its 30 axioms are untouched. What landed is the
+> **model**: `build_int_model_of_arith` admits, for each of the 22 `Real` laws, a
+> kernel-checked theorem whose type is that axiom's type with the eight
+> carrier/operation constants substituted — computed from the environment, never
+> typed — proved by the corresponding `Int` theorem. **22/22 witnesses have an
+> empty `axiom_footprint`, and 22/22 are syntactically the `Int` law.**
+> `Int.sq_nonneg` (the one law with no ℤ counterpart) is proved; `Int` goes
+> **50 → 51 derived, all 51 axiom-free**.
+>
+> That is *relative consistency*, not a discharge — it eliminates the
+> possibility that the 30 axioms are contradictory (which would make every LRA
+> and SOS certificate vacuous with no gate noticing), and it does not make a
+> `Real` theorem out of an `Int` one. **ℚ is the right next carrier and is
+> quotient-free constructible, but nothing in the package needs it yet**; the
+> trigger is a proposed `inv`/`div`/supremum/Archimedean axiom, and a test fires
+> on that day. The route that actually *eliminates* the 30 is parameterising the
+> solver's reconstruction over the ordered-ring interface, not constructing a
+> carrier. See
+> [ADR-0456](../research/09-decisions/adr-0456-real-is-an-ordered-ring-modelled-by-int.md)
+> and [`diary-real-keystone.md`](../mathematics-2026-08/diary-real-keystone.md).
 
 **The finding.** Five agents working in five different crates on five different
 tasks each hit the same wall on 2026-08-14, and each reported it as a local gap.

@@ -4,10 +4,11 @@
 //! `Int` is Lean's own normalized representation — `Int.ofNat n` for `n ≥ 0`
 //! and `Int.negSucc n` for `-(n+1)` — so every integer has exactly one
 //! representative and `Eq Int` is ordinary propositional equality. That is the
-//! whole reason this route is taken over a setoid quotient of `ℕ × ℕ`: a
-//! quotient would make `Quot.sound` part of the trusted surface of every
-//! integer theorem, which is precisely the assumption this lane exists to
-//! remove.
+//! whole reason this route is taken over a setoid quotient of `ℕ × ℕ` — and the
+//! reason is stronger than the "a quotient would put `Quot.sound` in every
+//! footprint" this comment used to give: this kernel's quotient package has no
+//! `Quot.sound` at all, so the quotient route is not expensive here, it is
+//! inexpressible (ADR-0456).
 //!
 //! Every definition below recurses on constructors, so its defining equations
 //! hold **definitionally** (β/δ/ι) and no equation lemmas are needed:

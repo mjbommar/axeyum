@@ -21,13 +21,16 @@
 //! part this development has not yet derived.
 //!
 //! The normalized-constructor representation is deliberate. A setoid quotient
-//! of `ℕ × ℕ` is the other textbook route, and in *this* kernel it is strictly
-//! worse: `Quot`/`Quot.sound` are admitted as `Declaration::Quotient`, i.e. as
-//! trusted declarations, so every integer theorem's
-//! [`axiom_footprint`](crate::Kernel::axiom_footprint) would name `Quot.sound`
-//! forever. With `ofNat`/`negSucc` each integer has exactly one representative,
-//! `Eq Int` is ordinary propositional equality, and a derived law's footprint
-//! is genuinely empty.
+//! of `ℕ × ℕ` is the other textbook route, and in *this* kernel it is not
+//! available at all: [`Kernel::add_quotient_package`](crate::Kernel) admits
+//! exactly four declarations — `Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind` — and
+//! **there is no `Quot.sound`**, so nothing can prove two `Quot.mk`s equal and
+//! a quotient carrier has a quotient's shape with none of its content. (This
+//! paragraph used to say the route was merely *expensive*, because
+//! `Quot.sound` would enter every footprint; that describes Lean's package, not
+//! ours. Measured and pinned in ADR-0456.) With `ofNat`/`negSucc` each integer
+//! has exactly one representative, `Eq Int` is ordinary propositional equality,
+//! and a derived law's footprint is genuinely empty.
 //!
 //! ## What is declared
 //!
@@ -243,6 +246,11 @@ pub struct IntPrelude {
     pub left_distrib: NameId,
     /// `mul_nonneg : ∀ (a b : Int), le zero a → le zero b → le zero (mul a b)`.
     pub mul_nonneg: NameId,
+    /// `sq_nonneg : ∀ (a : Int), le zero (mul a a)` — *unconditional*
+    /// square-nonnegativity, sign-independent (unlike [`Self::mul_nonneg`],
+    /// which needs both factors nonnegative). This is the nonnegativity
+    /// primitive a sum-of-squares certificate rests on.
+    pub sq_nonneg: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -327,6 +335,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mul_zero: child(kernel, "mul_zero"),
         left_distrib: child(kernel, "left_distrib"),
         mul_nonneg: child(kernel, "mul_nonneg"),
+        sq_nonneg: child(kernel, "sq_nonneg"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),

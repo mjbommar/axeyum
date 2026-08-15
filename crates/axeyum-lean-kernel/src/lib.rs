@@ -51,6 +51,7 @@
 
 #![forbid(unsafe_code)]
 
+mod arith_model;
 mod arith_prelude;
 mod env;
 mod expr;
@@ -71,6 +72,7 @@ use std::fmt;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::ops::Index;
 
+pub use arith_model::{ArithModel, ArithModelLaw, build_int_model_of_arith};
 pub use arith_prelude::{ArithPrelude, build_arith_prelude};
 pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};

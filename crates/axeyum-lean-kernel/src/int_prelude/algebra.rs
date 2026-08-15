@@ -243,6 +243,29 @@ pub(super) fn declare_algebra_theorems(d: &mut IntDev<'_>) -> Result<(), KernelE
         (stmt, proof)
     })?;
 
+    // sq_nonneg : ∀ a, 0 ≤ a*a. Unconditional, unlike `mul_nonneg` — and the
+    // reason it is unconditional is structural rather than argued: `Int.mul`
+    // sends *both* same-sign branches into `Int.ofNat` (`ofNat m * ofNat m` is
+    // `ofNat (m*m)`, `negSucc m * negSucc m` is `ofNat (succ m * succ m)`), and
+    // a square is always same-sign. So neither branch has a hypothesis to use
+    // or refute; both are `Nat.zero_le` at the magnitude the branch produced.
+    d.int_theorem(p.sq_nonneg, 1, &|d, v| {
+        let stmt = statements::sq_nonneg(d, v);
+        let proof = case_split(d, v, &statements::sq_nonneg, &|d, b| {
+            let n = b[0].1;
+            let magnitude = match b[0].0 {
+                Shape::OfNat => NatOps::mul(d, n, n),
+                Shape::NegSucc => {
+                    let successor = d.succ(n);
+                    NatOps::mul(d, successor, successor)
+                }
+            };
+            let name = d.int().nat.zero_le;
+            d.const_app(name, &[magnitude])
+        });
+        (stmt, proof)
+    })?;
+
     Ok(())
 }
 

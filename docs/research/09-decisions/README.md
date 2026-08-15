@@ -532,3 +532,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0453](adr-0453-route-dependent-provability.md) | Two proof routes prove different theorems; keep the kernel constructive and make classicality an explicit, recorded assumption | proposed |
 | [0454](adr-0454-imported-kernel-lean-proof-route.md) | Foreign proof terms our kernel admits get their own `proof_route`, and cannot claim `axiom_footprint: []`. | accepted |
 | [0455](adr-0455-minimality-is-relative-to-decidedness.md) | A minimal-subset claim is absolute only if every subset test was decided; an inconclusive test forces a conservative keep and inflates the answer | accepted |
+| [0456](adr-0456-real-is-an-ordered-ring-modelled-by-int.md) | `Real`'s 30 axioms need no field, completeness or Archimedean property; `ℤ` models all 30 with empty footprints, and `Quot.sound` does not exist here | accepted |

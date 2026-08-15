@@ -192,6 +192,13 @@ pub(super) fn mul_nonneg(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     d.arrow(first, after_second)
 }
 
+/// `le zero (mul a a)`.
+pub(super) fn sq_nonneg(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
+    let zero = d.izero();
+    let square = d.imul(v[0], v[0]);
+    d.ile(zero, square)
+}
+
 /// `Not (And (lt zero a) (lt a one))`.
 pub(super) fn no_int_between(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     let zero = d.izero();
