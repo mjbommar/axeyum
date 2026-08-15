@@ -25,7 +25,7 @@
       "kind": "kernel-term",
       "supports": "For all natural numbers a and b, a + b = b + a.",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_comm",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_comm 2>/dev/null | grep -qE '^Nat\\.add_comm[[:space:]]'",
       "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check; the command both performs it and prints the admitted type, which is copied verbatim into formal.statement. Nothing here is transcribed."
     },
     {
@@ -33,7 +33,7 @@
       "kind": "instance-pin",
       "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
       "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than Declaration::Axiom alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. A per-theorem footprint (Lean's `#print axioms`) does not exist here yet."
     }
   ],

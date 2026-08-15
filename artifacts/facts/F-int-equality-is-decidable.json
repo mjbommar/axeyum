@@ -34,7 +34,7 @@
         "Kernel::axiom_footprint",
         "environment-wide trusted-surface enumeration"
       ],
-      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- eq_em",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- eq_em 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.eq_em[[:space:]]'",
       "notes": "The empty footprint is the whole content of this fact. `Or P (Not P)` for an arbitrary `P` is NOT available on this route -- the logic prelude is intuitionistic and carries zero axioms of any trusted kind, so unrestricted excluded middle would have to be added as one. This instance is decidable instead of assumed, and the two are not interchangeable. `Kernel::axiom_footprint` walks the declaration's transitive dependencies and prints an empty column; `nat_axiom_inventory` independently reports `nat: axiom=0 opaque=0 quotient=0` for the development it rests on."
     }
   ],
