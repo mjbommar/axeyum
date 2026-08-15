@@ -34,7 +34,7 @@ class LeanCompatibilityContractTests(unittest.TestCase):
         second = GEN.render(copy.deepcopy(self.data))
         self.assertEqual(first, second)
         self.assertIn("| `K1-import` |", first)
-        self.assertIn("`literal-string-typing`", first)
+        self.assertNotIn("`literal-string-typing`", first)
         self.assertNotIn("`quotient-package`", first)
         self.assertNotIn("`inductive-mutual`", first)
         self.assertNotIn("`inductive-nested`", first)
@@ -72,7 +72,7 @@ class LeanCompatibilityContractTests(unittest.TestCase):
 
         self.data = GEN.load_manifest()
         row = self.row("lean4export-flat-fixture")
-        row["decline_codes"] = ["literal-string-typing"]
+        row["decline_codes"] = ["declaration-unsafe-or-partial"]
         self.assertTrue(
             any("decline code without a declined assurance" in failure for failure in self.failures())
         )

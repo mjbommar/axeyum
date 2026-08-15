@@ -432,13 +432,52 @@ fn error_const_unknown() {
     );
 }
 
-/// String literals remain outside the typed TL2.7 Nat profile.
+/// An empty environment has no `String` bootstrap, so a string literal has no
+/// type — and the refusal names the reserved declaration rather than saying
+/// "unsupported". The environment here has never heard the name `String`, which
+/// is why the reported name is absent rather than interned: looking it up must
+/// not mint it (a minted name renumbers every subsequent export).
 #[test]
-fn error_lit_unsupported() {
+fn error_lit_without_a_string_bootstrap() {
     let mut k = Kernel::new();
     let string = k.lit(Lit::Str("deferred".into()));
     let err = k.infer(string).unwrap_err();
-    assert!(matches!(err, KernelError::UnsupportedLit), "got {err:?}");
+    assert!(
+        matches!(
+            err,
+            KernelError::StringLiteralBootstrapMismatch { string: None }
+        ),
+        "got {err:?}"
+    );
+}
+
+/// Refusing a string literal must not **mint** a name.
+///
+/// Name ids are dense and assigned in insertion order, and `lean_export` walks
+/// declarations in that order, so a single minted name renumbers an entire
+/// subsequent export. The `Nat` acceleration lane shipped exactly that bug. The
+/// `String` gate therefore does its own lookups first (which never intern) and
+/// only consults the inherited `Nat` gate (which does) once the string-specific
+/// names are known to exist — so a kernel that has never heard of
+/// `String.ofList` comes out of a failed inference byte-for-byte as it went in.
+#[test]
+fn a_refused_string_literal_interns_no_name() {
+    let mut k = Kernel::new();
+    let string = k.lit(Lit::Str("deferred".into()));
+    // The anonymous root is id 0 in every kernel and is minted by the first
+    // thing that asks for it; take the baseline after it exists so the
+    // measurement is about the *reserved* names, which is what renumbers.
+    let _ = k.anon();
+    let before = k.names.len();
+    assert!(k.infer(string).is_err());
+    assert_eq!(
+        k.names.len(),
+        before,
+        "inference minted a name while refusing"
+    );
+    // And again, to catch a cache that mints on the miss path only once.
+    assert!(k.infer(string).is_err());
+    assert_eq!(k.names.len(), before);
 }
 
 /// Error: an unbound `FVar` reaching inference.

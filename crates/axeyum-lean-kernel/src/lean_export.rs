@@ -92,14 +92,6 @@ pub enum ExportError {
         /// The declaration being emitted.
         declaration: String,
     },
-    /// A declaration contains a string literal. Format 3.1.0 has `strVal`, but
-    /// the in-tree kernel's own import profile declines it
-    /// (`literal-string-typing`), so emitting one would produce a stream this
-    /// project cannot re-admit.
-    StringLiteral {
-        /// The declaration being emitted.
-        declaration: String,
-    },
     /// A `Recursor` in the environment does not belong to any exported
     /// inductive group under Lean's `I.rec` / `I.rec_<n>` naming.
     UnclaimedRecursor {
@@ -143,9 +135,6 @@ impl fmt::Display for ExportError {
             Self::Io(error) => write!(f, "lean4export I/O error: {error}"),
             Self::FreeVariable { declaration } => {
                 write!(f, "{declaration}: free variables have no export form")
-            }
-            Self::StringLiteral { declaration } => {
-                write!(f, "{declaration}: string literals are outside this profile")
             }
             Self::UnclaimedRecursor { name } => {
                 write!(f, "{name}: recursor belongs to no exported inductive group")
@@ -899,10 +888,8 @@ impl<W: io::Write + ?Sized> Emitter<'_, W> {
                 )
             }
             ExprNode::Lit(Lit::Nat(value)) => format!("\"natVal\":\"{value}\""),
-            ExprNode::Lit(Lit::Str(_)) => {
-                return Err(ExportError::StringLiteral {
-                    declaration: label.to_owned(),
-                });
+            ExprNode::Lit(Lit::Str(value)) => {
+                format!("\"strVal\":{}", json_string(&value))
             }
         };
         // Lean's `Json` writer emits object fields in alphabetical order, so
@@ -1139,14 +1126,18 @@ fn json_string(value: &str) -> String {
     let mut out = String::with_capacity(value.len() + 2);
     out.push('"');
     for character in value.chars() {
+        // Lean's `Lean.Json.escapeAux`, verbatim: only `"`, `\`, `\n` and `\r`
+        // get a short escape; every other character below `0x20` — tab and
+        // backspace and form feed included — is written `\u00xx` with lowercase
+        // hex digits (`Nat.digitChar`), and everything at or above `0x20` is
+        // emitted raw. Writing `\t` here instead would produce a stream that
+        // parses identically and is NOT byte-identical to lean4export's, which
+        // is the only thing the round-trip gate can check.
         match character {
             '"' => out.push_str("\\\""),
             '\\' => out.push_str("\\\\"),
             '\n' => out.push_str("\\n"),
             '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            '\u{8}' => out.push_str("\\b"),
-            '\u{c}' => out.push_str("\\f"),
             control if control < ' ' => {
                 let _ = write!(out, "\\u{:04x}", u32::from(control));
             }
@@ -1204,21 +1195,35 @@ mod tests {
         ));
     }
 
+    /// The escapes are Lean's `Lean.Json.escapeAux`, not Rust's and not serde's.
+    /// Lean gives a short escape to exactly four characters -- quote, backslash,
+    /// newline and carriage return -- and writes every other character below
+    /// `0x20` as `\u00xx` with lowercase hex digits. Tab, backspace and form
+    /// feed are therefore the six-character forms, not `\t`, `\b` and
+    /// `\f`. A stream using the short forms would parse the same and would not
+    /// be byte-identical to lean4export's, which is the only thing a round-trip
+    /// gate can compare.
     #[test]
-    fn a_string_literal_is_a_typed_export_error() {
+    fn a_string_literal_is_emitted_with_lean_s_own_json_escapes() {
         let mut kernel = kernel_with_logic();
         let anonymous = kernel.anon();
         let name = kernel.name_str(anonymous, "axeyum.export.str");
-        let ty = kernel.lit(Lit::Str("axeyum".to_owned()));
+        let ty = kernel.lit(Lit::Str(
+            "a\"b\\c\nd\re\tf\u{8}g\u{c}h\u{0}i\u{7f}j\u{1f642}".to_owned(),
+        ));
         kernel.env.insert_unchecked(Declaration::Axiom {
             name,
             uparams: Vec::new(),
             ty,
         });
-        assert!(matches!(
-            export(&kernel),
-            Err(ExportError::StringLiteral { .. })
-        ));
+        let stream = export(&kernel).expect("a string literal is exportable");
+        let expected = concat!(
+            "\"strVal\":\"a\\\"b\\\\c\\nd\\re",
+            "\\u0009f\\u0008g\\u000ch\\u0000i",
+        );
+        assert!(stream.contains(expected), "{stream}");
+        // `0x7f` and astral scalars are at or above `0x20`: Lean emits them raw.
+        assert!(stream.contains("i\u{7f}j\u{1f642}\""), "{stream}");
     }
 
     #[test]

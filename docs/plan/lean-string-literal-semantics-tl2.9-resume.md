@@ -1,7 +1,18 @@
 # Resume handoff — Lean TL2.9 String-literal semantics
 
-Status: **paused after the pushed P0 source/design checkpoint; no semantic code
-has been written**
+Status: **CLOSED 2026-08-15 by lane `import-strings`.** The semantics are
+implemented, the pause below is history, and the two "honest external gates" it
+named are met: the historical export was reproduced byte-exactly (all six frozen
+properties, SHA-256 `2404a6ca…0ab4`) and it imports clean, and the pinned-Lean
+differential runs in `scripts/check-lean-gate.sh`. Read
+[`docs/formalized-math-2026-08/diary-import-strings.md`](../formalized-math-2026-08/diary-import-strings.md)
+and [ADR-0366's acceptance record](../research/09-decisions/adr-0366-preregister-lean-string-literal-semantics.md)
+instead of resuming from here; §5's "important unresolved implementation
+question" was resolved, and the answer was not the one it expected
+([ADR-0461](../research/09-decisions/adr-0461-lean-string-literal-def-eq-hook-is-unreachable.md)).
+
+The rest of this file is the 2026-07-23 pause state, retained because its source
+facts (§3) are still exact and its seam inventory (§4) is still the right map.
 
 Paused: 2026-07-23
 

@@ -315,6 +315,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-15 | (pending) | `Proj`/`Proj` congruence in `def_eq` closes 9 of 10 root import blockers (40-stream census: 22→37 clean, 10→1 root); first-class decline census `census_ndjson`; pinned `Nat.add_comm` capability fixture. |
 | 2026-08-15 | `d326c74af` | WHNF cache key split on `has_fvars` (closed → kernel, open → `LocalContext`) with a `reduction_ctx_reads` tripwire; the collision demonstrated as a test against a kept pre-fix replica; K-like reduction with a guard-by-guard controlled negative suite; import census 37/40 → **40/40**, 1 root blocker → **0**. |
 | 2026-08-15 | (pending) | Literal `Nat` arithmetic in the kernel (Lean's `reduce_nat`, 14 operations, guarded by a validated `Nat`/`Bool` bootstrap and a non-interning name lookup), with 15 new tests, guard-by-guard controls, and a real-Lean crosscheck generated from this kernel's own answers (gate floor 105 → 107, measured 115); `scripts/lean-import-scale-census.sh` censuses a seeded sample of the whole exported environment with roots separated from cascades; census example runs on a 512 MB stack and reports reader-refused streams as their own class. |
+| 2026-08-15 | (pending) | Primitive Lean `String`-literal semantics in the trusted kernel: a checked `String`/`String.ofList`/`Char.ofNat`/`List` bootstrap, the exact Unicode-scalar expansion, Lean's projection / recursor / def-eq hooks, the `strVal` wire arm, and the writer arm with Lean's own JSON escape grammar. 11 mutation controls plus hook-removal controls, a real-Lean crosscheck generated from this kernel's reducts (floor 107 → 109, measured 117), the ADR-0366 root export reproduced byte-exactly and imported clean, and a re-census of both seeded samples. |
 | 2026-08-15 | (pending) | `docs/reference/examples.md`: documented six landed Cargo examples that `check-parity-docs.py` flagged as missing — `geometry_linear_route`, `lean4export_census`, `nat_add_reduction_probe`, `arith_model_witness`, `ordered_ring_refutation` (the five named by the task), plus `prelude_build_timing` (flagged by the gate itself, not on the original list). The example-count marker in `docs/documentation-plan.md` and `PLAN.md` was already correct (67) and needed no edit. |
 | 2026-08-14 | `19f4c769b` | Automatic hypothesis minimisation (`hypothesis_min`): two route-B Rado lemmas that stay `unknown` at 1800 s close in ~2 s with the same subsets a human found in ~32 min; the boundary is measured to be `nra.rs:107` `MAX_CROSS_PRODUCTS = 2`, not hypothesis count, and the guards are mutation-tested one deletion at a time (agent-k). |
 | 2026-08-14 | `telescoping` | Creative telescoping (Zeilberger) with an independent certificate checker; 5 classical binomial identities landed as `cas-certificate` facts; 10 tamper controls reject perturbed certificates | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `artifacts/facts/F-*binomial*.json`, `artifacts/facts/F-chu-vandermonde-convolution-recurrence.json` |
@@ -1886,6 +1887,104 @@ round-trip). Roughly 1.5× this lane's `Nat` work — one focused session. Note 
 expansion is δ-reducible; that is where a port goes wrong. It buys 52%/79% of
 streams *reaching the next wall*, not 52%/79% clean — what is past strings for
 those is unmeasured. Still open across four diaries: the toolchain re-pin.
+
+**Implemented primitive Lean `String`-literal semantics end to end — checked
+bootstrap, Unicode-scalar `String.ofList` expansion, projection and recursor
+hooks, the `strVal` wire arm and the writer arm — and re-censused the seeded
+samples the previous lane measured** (`WIP`, import-strings, 2026-08-15).
+Continues [`import-scale`](docs/plan/status/88-import-scale.md), which sized this and left it.
+Full write-up:
+[`docs/formalized-math-2026-08/diary-import-strings.md`](docs/formalized-math-2026-08/diary-import-strings.md).
+Decisions: [ADR-0366](docs/research/09-decisions/adr-0366-preregister-lean-string-literal-semantics.md)
+accepted; [ADR-0461](docs/research/09-decisions/adr-0461-lean-string-literal-def-eq-hook-is-unreachable.md)
+new.
+
+**The bootstrap.** Official Lean inherits `String`/`String.ofList`/`Char.ofNat`/
+`List` from its own boot; we import into a fresh environment, so spelling alone
+would let the *stream* decide what a literal means. `String.ofList` must be a
+`Definition` of exactly `List Char → String` with no universe parameters,
+`Char.ofNat` one of exactly `Nat → Char` for the same `Char`, `List` the
+one-parameter recursive family at universe zero with `[nil, cons]` at 0/2 fields,
+and `Char`/`String` one-constructor structures named `Char.mk` and
+`String.ofByteArray`. Nothing is interned: names are looked up and every
+expression handle is read back out of a declared type, because minting a name
+renumbers a subsequent export.
+
+**The conversion is over Unicode scalars, never bytes:** `"é"` is one character
+`0xE9`, `"🙂"` is `0x1F642`, `"e\u{301}"` stays two, and nothing is normalized.
+
+**Lean's own def-eq hook cannot fire, and removing each hook in turn is how I
+know.** `try_string_lit_expansion` keys on an immediate `String.ofList` head, but
+`is_def_eq_core` runs lazy delta first and `String.ofList` is a *definition* in
+4.30 — so the head is already `String.ofByteArray` by the time the hook looks.
+The rule dates from when `String` was `structure String where mk :: (data : List
+Char)` and that constant was a constructor. Controls: projection hook removed →
+**3** tests fail; recursor hook removed → **1**; def-eq hook removed → **0**.
+What identifies a literal with a constructor application is structure eta calling
+the projection rule. The hook stays (it is in the pinned source and can only
+accept *more*), and a test pins the *mechanism* so a toolchain re-pin that makes
+`String.ofList` a constructor again fails loudly. ADR-0461.
+
+**Negative tests.** Eleven bootstrap mutations each rejecting with
+`StringLiteralBootstrapMismatch`, paired with the unmutated positive in the same
+test; byte-split, reordered, truncated and composed/decomposed controls beside
+every scalar positive; a bare constant and an `Opaque` alias both refused; a bare
+literal not expanded by ordinary `whnf`. Our reconstruction prelude cannot
+impersonate Lean's `String` **by mechanism** — its types live under
+`axeyum.string.<n>` — and the test asserts the namespace, not just the refusal.
+
+**A writer defect on the way.** `json_string` wrote `\t`/`\b`/`\f`; Lean's
+`Json.escapeAux` short-escapes only quote, backslash, newline and carriage
+return and writes every other sub-`0x20` character as `\u00xx`. Irrelevant while
+only name components were emitted; load-bearing the moment `strVal` is, because
+the difference parses identically and is not byte-identical to lean4export's.
+
+**The ADR-0366 artifact, reproduced exactly.** That ADR froze an export it said
+had never been retained or re-run. Re-exported twice from pinned Lean 4.30.0,
+byte-identical, and matching all six frozen properties including SHA-256
+`2404a6ca…0ab4`. It **imports clean** (290/290 records, 374 declarations, 0.04 s)
+and the literal *computes*: a new probe example shows the imported
+`importStringLiteral` definitionally equal to `String.ofList` over its scalars in
+Lean's own environment — through the real `ByteArray`/`List.utf8Encode` — while
+refusing the reordered list.
+
+**Checked by Lean.** `real_lean_string_literal_crosscheck` (new, registered)
+reads scalar lists back out of *this kernel's* reducts for ten payloads and has
+Lean 4.30.0 confirm each; switching our conversion to bytes makes Lean reject.
+Floor raised 107 → 109; measured 117.
+
+**Re-census, same seeded samples, same bounds.** CLEAN `Init`+`Std` 219 -> **254
+of 500**, Mathlib 78 -> **139 of 400**; `literal-string-typing` 262/315 -> **0**;
+DECLINED 16 -> **242** and 7 -> **241**. So strings bought **7 and 15 points of
+clean rate, not 52 and 79** — the previous lane was right to refuse to project.
+What they really bought is that **18.6x and 86x more declarations reach the
+trusted gate at all** (34,112 -> 634,291 records; 13,710 -> 1,181,015), because a
+stream no longer stops at its first `strVal`.
+
+Roots: 6 -> **50** (`Init`+`Std`) and 5 -> **267** (Mathlib), with 98%+ of the
+97,341 / 256,297 declines being `UnknownConst` cascades. **Every root is a
+definitional-equality failure** — `TypeMismatch`, `DeclarationValueMismatch`,
+`NotAPi` — and none is a missing construct. A new fourteen-stream class is an
+*importer* record cap, not a verdict.
+
+**The previous lane's headline flips.** "Not one Mathlib-specific root blocker"
+was true only because strings were hiding the Mathlib: `Pi.preorder`,
+`Prop.partialOrder`, `DistribLattice.ofInfSupLe._proof_4`,
+`Function.Injective.*`, `Nat.inst*`, `Int.instCommRing` now sit at the top of the
+Mathlib table and are absent from `Init`+`Std`'s, which is containers and
+`ByteArray`. Cumulatively, fixing the top 50 `Init`+`Std` roots clears **all 242**
+of its declined streams; Mathlib's top 100 clear 142 of 241.
+
+**Next binding constraint, located.** `Nat.bitwise._unary` is the top root in both
+(236/500 and 186/400 streams); its stream admits 301 of 302 records and refuses
+only the declaration, with `TypeMismatch`. It is the **well-founded-recursion
+unary helper** shape — `WellFounded.Nat.fix` over a `PSigma`-packed argument with
+an `InvImage` relation and a dependent `PSigma.casesOn` motive — and
+`Nat.Linear.Poly.denote_reverse`, `…ExprCnstr.denote_toNormPoly` and the
+`Std.DTreeMap.Internal.*.eq_def` roots are the same family. No new IR construct
+and no new bootstrap: this is a def-eq gap on a shape the kernel already
+represents, so the work is diagnosis first and the fix is unsized until the
+mismatch is exhibited as one pair of terms. Budget a session for the diagnosis.
 
 **Lane closed (`DONE`, examples-sweep, 2026-08-15).** Task was
 `docs/refactor-2026-08` finding #4 ("documents assert what the code does

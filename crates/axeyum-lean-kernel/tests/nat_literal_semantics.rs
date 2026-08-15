@@ -42,10 +42,13 @@ fn nat_literals_infer_only_against_the_checked_canonical_bootstrap() {
         nat
     );
 
+    // The `Nat` bootstrap is a *prerequisite* of the `String` one, never a
+    // substitute: this environment has canonical `Nat` and no `String.ofList`,
+    // so a string literal still has no type.
     let string = kernel.lit(Lit::Str("still deferred".into()));
     assert!(matches!(
         kernel.infer(string),
-        Err(KernelError::UnsupportedLit)
+        Err(KernelError::StringLiteralBootstrapMismatch { .. })
     ));
 }
 

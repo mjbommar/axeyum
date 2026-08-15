@@ -442,7 +442,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0363](adr-0363-preregister-source-guided-quantified-uf-default-repair.md) | Preregister one bounded source-guided Int-result UF-default retry after established quantified-UF completion routes | proposed |
 | [0364](adr-0364-preregister-profile-guided-quantified-uf-model-completion.md) | Preregister one shared-deadline SAT-only finite-profile completion loop with exact source definitions and checker-derived counterexamples | proposed |
 | [0365](adr-0365-preregister-lean-quotient-package.md) | Preregister atomic canonical Lean quotient-package admission, reduction, import, and identity | proposed |
-| [0366](adr-0366-preregister-lean-string-literal-semantics.md) | Preregister checked Lean String-literal typing and exact Unicode-scalar constructor conversion across defeq, projection, recursors, and import | proposed |
+| [0366](adr-0366-preregister-lean-string-literal-semantics.md) | Checked Lean String-literal typing and exact Unicode-scalar constructor conversion across defeq, projection, recursors, and import | accepted 2026-08-15 (evidence item 6 deferred, see the acceptance record) |
 | [0367](adr-0367-narrow-shared-guard-disjunction-split.md) | Accept a bounded SAT-BV split for large disjunctions of negated obligations with one shared antecedent | accepted |
 | [0368](adr-0368-preregister-smt-binary79-add-mul.md) | Accept operator-specific SMT `(15,64)` add/sub/mul admission behind an all-mode independent oracle sweep | accepted |
 | [0369](adr-0369-preregister-smt-binary79-division.md) | Accept SMT `(15,64)` symbolic division behind a separate all-mode independent oracle sweep | accepted |
@@ -537,3 +537,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0458](adr-0458-lean-modules-declare-whether-they-contain-reasoning.md) | A rendered Lean module carries a content class (theory reconstruction vs structural attestation); the conjunctive-LRA facade routes to the genuine Farkas reconstructor first | accepted |
 | [0459](adr-0459-kernel-nat-literal-arithmetic-is-name-keyed.md) | Literal `Nat` arithmetic in the trusted kernel, keyed on declaration name and type as Lean's kernel is | accepted |
 | [0460](adr-0460-a-decided-subset-test-may-still-be-a-test-of-the-route.md) | Decidedness is necessary but not sufficient for an absolute minimality claim; the test must also be independent of the producer's decomposition | accepted (refines [ADR-0455](adr-0455-minimality-is-relative-to-decidedness.md)) |
+| [0461](adr-0461-lean-string-literal-def-eq-hook-is-unreachable.md) | `try_string_lit_expansion` cannot fire while `String.ofList` is a definition; structure eta through the projection rule is the live route | accepted |

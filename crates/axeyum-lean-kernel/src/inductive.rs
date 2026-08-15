@@ -2801,6 +2801,11 @@ impl Kernel {
         let major = *args.get(major_idx)?;
         let major = self.whnf_core(major, ctx);
         let major = self.nat_literal_to_constructor(major).unwrap_or(major);
+        // Lean's `inductive.h` recursor hook: a String-literal major becomes the
+        // whnf of its `String.ofList` expansion before rule selection. A Nat
+        // literal exposes a constructor directly; a String literal does not,
+        // because `String.ofList` is a definition (hence the extra reduction).
+        let major = self.expand_string_literal_major(major, ctx);
         let major = self.k_like_major(&rec_rules, major, ctx).unwrap_or(major);
         let (major_ctor, major_ctor_args) = self.unfold_apps(major);
         let ExprNode::Const(major_ctor_name, _) = self.expr_node(major_ctor).clone() else {

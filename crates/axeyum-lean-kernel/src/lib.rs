@@ -295,6 +295,15 @@ pub struct Kernel {
     /// keyed on the revision because admitting a declaration can bring a
     /// previously absent `Nat.add` (or a differently-shaped one) into scope.
     nat_binop_cache: Option<(u64, tc::NatBinOpTable)>,
+    /// The reserved `String`/`List`/`Char` declarations behind literal `String`
+    /// semantics, validated against the environment, for exactly one
+    /// declaration-environment revision.
+    ///
+    /// Cached for the same reason as `nat_binop_cache`: it is consulted on every
+    /// string literal that reaches inference, definitional equality, projection
+    /// or recursor reduction, and admitting a declaration can bring a previously
+    /// absent (or differently-shaped) `String.ofList` into scope.
+    string_literal_cache: Option<(u64, tc::StringLiteralTable)>,
     /// One-way guard set after transient tables are released for serialization.
     export_only: bool,
 

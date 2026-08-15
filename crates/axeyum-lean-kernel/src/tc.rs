@@ -18,11 +18,13 @@
 //! trusted [`Kernel::add_declaration`](crate::Kernel::add_declaration)
 //! admission gate.
 //!
-//! **Deferred to a later slice** (and erroring cleanly if reached):
-//! String-literal typing/reduction (`Lit::Str` →
-//! [`KernelError::UnsupportedLit`]). Projection inference/reduction, structure
-//! eta, inductive/recursor ι-reduction, and the fixed quotient package are
-//! implemented. An
+//! Projection inference/reduction, structure eta, inductive/recursor
+//! ι-reduction, the fixed quotient package, and both literal profiles (`Nat`
+//! arithmetic, ADR-0459; `String` typing and the `String.ofList` expansion,
+//! ADR-0366) are implemented. A literal whose reserved bootstrap the environment
+//! does not carry is refused by name
+//! ([`KernelError::NatLiteralBootstrapMismatch`],
+//! [`KernelError::StringLiteralBootstrapMismatch`]) rather than guessed. An
 //! unknown `Const` name returns [`KernelError::UnknownConst`].
 //! `Opaque` declarations are admitted but never δ-unfold; `Axiom`s never
 //! unfold. None of these paths panic.
@@ -50,7 +52,7 @@ use std::collections::HashMap;
 
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{ExprId, ExprNode, Lit, NatLit};
-use crate::level::LevelId;
+use crate::level::{LevelId, LevelNode};
 use crate::name::NameId;
 use crate::{BinderInfo, Kernel};
 
@@ -117,8 +119,14 @@ pub enum KernelError {
         /// The number of universe arguments the `Const` supplied.
         got: usize,
     },
-    /// A literal outside the currently typed Nat profile reached inference.
-    /// String literal typing/reduction remains deferred to TL2.9.
+    /// A literal reached inference in an environment with no checked bootstrap
+    /// for its kind.
+    ///
+    /// Retained for back-compatibility only: both literal kinds now report the
+    /// *reserved declaration* that was absent or malformed
+    /// ([`KernelError::NatLiteralBootstrapMismatch`],
+    /// [`KernelError::StringLiteralBootstrapMismatch`]) rather than a bare
+    /// "unsupported", so nothing constructs this variant.
     UnsupportedLit,
     /// A Nat literal was used before the checked environment contained the
     /// canonical non-polymorphic `Nat`/`Nat.zero`/`Nat.succ` bootstrap.
@@ -126,6 +134,18 @@ pub enum KernelError {
         /// The reserved `Nat` name whose checked declaration was absent or
         /// malformed.
         nat: crate::name::NameId,
+    },
+    /// A String literal was used before the checked environment contained the
+    /// canonical `String`/`String.ofList`/`Char`/`Char.ofNat`/`List` bootstrap
+    /// (which in turn requires the canonical `Nat` bootstrap).
+    ///
+    /// Carries the reserved `String` name so a caller can render it; the
+    /// individual clause that failed is deliberately *not* reported, because a
+    /// partial bootstrap is never stored and no rule fires from one.
+    StringLiteralBootstrapMismatch {
+        /// The reserved `String` name, interned in the owning kernel. `None`
+        /// when the environment has never even heard the name.
+        string: Option<crate::name::NameId>,
     },
     /// The inferred type of a projected value did not have the structure name
     /// carried by the `Proj` node as its constant head.
@@ -783,6 +803,10 @@ impl Kernel {
         };
 
         let structure = self.whnf_core(structure, ctx);
+        // Lean's `reduce_proj_core`: a projected String literal becomes its
+        // `String.ofList` expansion, normalized to the structure constructor,
+        // before ordinary field selection.
+        let structure = self.expand_string_literal_major(structure, ctx);
         let (ctor_head, ctor_args) = self.unfold_apps(structure);
         let ExprNode::Const(ctor_name, _) = self.expr_node(ctor_head) else {
             return None;
@@ -1486,6 +1510,14 @@ impl Kernel {
                 if self.try_eta_structure(x_n, y_n, ctx) {
                     return true;
                 }
+                // Lean's `is_def_eq_core` tries the String-literal expansion
+                // here — after eta, on the delta-exhausted heads — and this
+                // placement is deliberate rather than convenient: trying it
+                // earlier would identify terms the pinned kernel leaves
+                // distinct.
+                if let Some(result) = self.try_string_lit_expansion(x_n, y_n, ctx) {
+                    return result;
+                }
                 false
             }
         }
@@ -1549,6 +1581,34 @@ enum NatOffset {
     Zero,
     Succ(ExprId),
 }
+
+/// Checked reserved declarations used by primitive `String` literal semantics
+/// (ADR-0366).
+///
+/// Every handle here was *read out of the environment's own declared types*
+/// rather than built locally, so validating the bootstrap interns nothing —
+/// see [`Kernel::string_literal_bootstrap`] for why that matters.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct StringLiteralBootstrap {
+    /// `String`, as the already-interned `Const String []` a literal infers to.
+    string_type: ExprId,
+    /// `Char`, as the already-interned `Const Char []` that instantiates `List`.
+    char_type: ExprId,
+    /// The universe argument `List` is applied at in `List Char` (Lean's `0`).
+    list_level: LevelId,
+    /// `String.ofList : List Char → String`.
+    of_list: NameId,
+    /// `Char.ofNat : Nat → Char`.
+    char_of_nat: NameId,
+    /// `List.nil`.
+    list_nil: NameId,
+    /// `List.cons`.
+    list_cons: NameId,
+}
+
+/// `None` when the environment carries no validated `String` bootstrap, in which
+/// case no string literal types and no expansion fires.
+pub(crate) type StringLiteralTable = Option<StringLiteralBootstrap>;
 
 /// Lean's `ReducePowMaxExp` (`kernel/type_checker.cpp`): the exponent above
 /// which `Nat.pow` is left stuck rather than evaluated. Reused as the shift
@@ -1978,6 +2038,309 @@ impl Kernel {
 }
 
 // ---------------------------------------------------------------------------
+// Primitive String literal semantics (ADR-0366)
+// ---------------------------------------------------------------------------
+
+impl Kernel {
+    /// The checked `String` bootstrap for this environment revision, or `None`
+    /// when the environment does not carry one.
+    pub(crate) fn string_literal_bootstrap(&mut self) -> Option<StringLiteralBootstrap> {
+        let revision = self.env.revision();
+        if self.string_literal_cache.as_ref().map(|(rev, _)| *rev) != Some(revision) {
+            let table = self.build_string_literal_bootstrap();
+            self.string_literal_cache = Some((revision, table));
+        }
+        self.string_literal_cache.as_ref().and_then(|(_, t)| *t)
+    }
+
+    /// Validate every reserved declaration the primitive `String` rules stand
+    /// on, and return the handles they need.
+    ///
+    /// Official Lean starts with these installed and its kernel simply trusts
+    /// the names. Axeyum imports into a fresh environment, so spelling alone
+    /// would let a declaration chosen by the *stream* decide what a literal
+    /// means. The gate therefore requires, with no partial state stored:
+    ///
+    /// - the already-checked canonical `Nat` bootstrap (`Char.ofNat`'s domain);
+    /// - `String.ofList` to be a `Definition` with **no** universe parameters
+    ///   and exactly the type `List Char → String`;
+    /// - `Char.ofNat` to be a `Definition` with no universe parameters and
+    ///   exactly the type `Nat → Char`, for the *same* `Char`;
+    /// - `List` to be the one-parameter, index-free, recursive inductive at one
+    ///   universe parameter whose constructors are `[List.nil, List.cons]` with
+    ///   field counts 0 and 2 at indices 0 and 1;
+    /// - `Char` to be a parameter-free, index-free, non-recursive inductive with
+    ///   the single constructor `Char.mk`; and
+    /// - `String` likewise, with the single constructor `String.ofByteArray`
+    ///   (Lean 4.30's representation: `String` is a *structure over `ByteArray`*,
+    ///   and `String.ofList` is a **definition**, not its constructor).
+    ///
+    /// **Nothing here is interned.** Names are looked up
+    /// ([`Kernel::lookup_name_str`]), and every expression handle returned is
+    /// read back out of a declared type rather than built — `Const String []`
+    /// is the codomain of `String.ofList`'s own declared type, `Const Char []`
+    /// its domain's argument. Minting a name renumbers a subsequent export (the
+    /// `Nat` acceleration lane shipped exactly that bug and the round-trip gate
+    /// caught it), and this runs on every literal that reaches inference.
+    ///
+    /// The inherited `Nat` gate does intern its three canonical names, so it is
+    /// consulted **after** the string-specific lookups have established that
+    /// this environment could plausibly be Lean's: an environment that has never
+    /// heard of `String.ofList` leaves this function having interned nothing.
+    fn build_string_literal_bootstrap(&mut self) -> StringLiteralTable {
+        let anon = self.anon();
+        let string_name = self.lookup_name_str(anon, "String")?;
+        let char_name = self.lookup_name_str(anon, "Char")?;
+        let list_name = self.lookup_name_str(anon, "List")?;
+        let of_list = self.lookup_name_str(string_name, "ofList")?;
+        let of_byte_array = self.lookup_name_str(string_name, "ofByteArray")?;
+        let char_mk = self.lookup_name_str(char_name, "mk")?;
+        let char_of_nat = self.lookup_name_str(char_name, "ofNat")?;
+        let list_nil = self.lookup_name_str(list_name, "nil")?;
+        let list_cons = self.lookup_name_str(list_name, "cons")?;
+        let nat = self.nat_literal_bootstrap().ok()?;
+
+        // `Char.ofNat : Nat → Char`, which is where `Char` comes from.
+        let char_of_nat_ty = match self.env.get(char_of_nat) {
+            Some(Declaration::Definition { uparams, ty, .. }) if uparams.is_empty() => *ty,
+            _ => return None,
+        };
+        let ExprNode::Pi(_, domain, char_type, _) = self.expr_node(char_of_nat_ty) else {
+            return None;
+        };
+        let (domain, char_type) = (*domain, *char_type);
+        if domain != nat.nat_type || !self.is_bare_const(char_type, char_name) {
+            return None;
+        }
+
+        // `String.ofList : List Char → String`, which is where `String`, the
+        // `List` universe argument, and the second reading of `Char` come from.
+        let of_list_ty = match self.env.get(of_list) {
+            Some(Declaration::Definition { uparams, ty, .. }) if uparams.is_empty() => *ty,
+            _ => return None,
+        };
+        let ExprNode::Pi(_, list_char, string_type, _) = self.expr_node(of_list_ty) else {
+            return None;
+        };
+        let (list_char, string_type) = (*list_char, *string_type);
+        if !self.is_bare_const(string_type, string_name) {
+            return None;
+        }
+        let ExprNode::App(list_head, list_arg) = self.expr_node(list_char) else {
+            return None;
+        };
+        let (list_head, list_arg) = (*list_head, *list_arg);
+        if list_arg != char_type {
+            return None;
+        }
+        let ExprNode::Const(head_name, head_levels) = self.expr_node(list_head) else {
+            return None;
+        };
+        if *head_name != list_name || head_levels.len() != 1 {
+            return None;
+        }
+        let list_level = head_levels[0];
+        if !matches!(self.level_node(list_level), LevelNode::Zero) {
+            return None;
+        }
+
+        // `List`: one universe parameter, one parameter, no indices, recursive,
+        // constructors `[nil, cons]` with 0 and 2 fields at indices 0 and 1.
+        let list_ok = matches!(
+            self.env.get(list_name),
+            Some(Declaration::Inductive {
+                uparams,
+                num_params: 1,
+                num_indices: 0,
+                is_recursive: true,
+                ctor_names,
+                ..
+            }) if uparams.len() == 1 && ctor_names.as_slice() == [list_nil, list_cons]
+        ) && self.is_constructor_of(list_nil, list_name, 0, 0)
+            && self.is_constructor_of(list_cons, list_name, 1, 2);
+        if !list_ok {
+            return None;
+        }
+
+        // `Char` and `String`: parameter-free, index-free, non-recursive
+        // one-constructor structures with Lean 4.30's constructor names.
+        if !(self.is_structure_with_sole_constructor(char_name, char_mk)
+            && self.is_structure_with_sole_constructor(string_name, of_byte_array))
+        {
+            return None;
+        }
+
+        Some(StringLiteralBootstrap {
+            string_type,
+            char_type,
+            list_level,
+            of_list,
+            char_of_nat,
+            list_nil,
+            list_cons,
+        })
+    }
+
+    /// Whether `expression` is exactly `Const(name, [])`.
+    fn is_bare_const(&self, expression: ExprId, name: NameId) -> bool {
+        matches!(
+            self.expr_node(expression),
+            ExprNode::Const(got, levels) if *got == name && levels.is_empty()
+        )
+    }
+
+    /// Whether `ctor` is the checked constructor of `inductive` at `idx` with
+    /// exactly `num_fields` fields (universe parameters are shared with the
+    /// parent and are checked there).
+    fn is_constructor_of(
+        &self,
+        ctor: NameId,
+        inductive: NameId,
+        idx: u16,
+        num_fields: u16,
+    ) -> bool {
+        matches!(
+            self.env.get(ctor),
+            Some(Declaration::Constructor {
+                inductive: parent,
+                idx: got_idx,
+                num_fields: got_fields,
+                ..
+            }) if *parent == inductive && *got_idx == idx && *got_fields == num_fields
+        )
+    }
+
+    /// Whether `name` is a parameter-free, index-free, non-recursive inductive
+    /// whose sole constructor is `ctor` — Lean's `structure`, with the exact
+    /// constructor name pinned.
+    fn is_structure_with_sole_constructor(&self, name: NameId, ctor: NameId) -> bool {
+        matches!(
+            self.env.get(name),
+            Some(Declaration::Inductive {
+                uparams,
+                num_params: 0,
+                num_indices: 0,
+                is_recursive: false,
+                ctor_names,
+                ..
+            }) if uparams.is_empty() && ctor_names.as_slice() == [ctor]
+        )
+    }
+
+    /// Lean's `Literal.type` for `.strVal`, gated on the checked bootstrap.
+    fn infer_string_literal(&mut self) -> Result<ExprId, KernelError> {
+        if let Some(bootstrap) = self.string_literal_bootstrap() {
+            return Ok(bootstrap.string_type);
+        }
+        let anon = self.anon();
+        Err(KernelError::StringLiteralBootstrapMismatch {
+            string: self.lookup_name_str(anon, "String"),
+        })
+    }
+
+    /// Lean's `string_lit_to_constructor` (`kernel/inductive.cpp`): a literal
+    /// becomes `String.ofList` applied to the `List Char` of its **Unicode
+    /// scalar values**, in order, each wrapped by `Char.ofNat` around a `Nat`
+    /// literal.
+    ///
+    /// Scalars, never bytes: `"é"` is one character `0xE9`, `"🙂"` is one
+    /// character `0x1F642`, and `"e\u{301}"` stays two. Rust's `chars()` is
+    /// exactly Lean's `utf8_decode` on a valid UTF-8 payload, and a Rust
+    /// `String` cannot hold a lone surrogate.
+    ///
+    /// The result is **not** a constructor application. In Lean 4.30 `String` is
+    /// a structure over `ByteArray` and `String.ofList` is an ordinary
+    /// definition, so this term is δ-reducible rather than already in whnf —
+    /// which is why every caller normalizes it before looking for a
+    /// constructor, exactly as Lean's `whnf(string_lit_to_constructor(...))`
+    /// does.
+    pub(crate) fn string_literal_to_constructor(&mut self, expression: ExprId) -> Option<ExprId> {
+        let ExprNode::Lit(Lit::Str(value)) = self.expr_node(expression).clone() else {
+            return None;
+        };
+        let bootstrap = self.string_literal_bootstrap()?;
+        let nil = self.const_(bootstrap.list_nil, vec![bootstrap.list_level]);
+        let mut list = self.app(nil, bootstrap.char_type);
+        let cons = self.const_(bootstrap.list_cons, vec![bootstrap.list_level]);
+        let cons = self.app(cons, bootstrap.char_type);
+        let of_nat = self.const_(bootstrap.char_of_nat, vec![]);
+        for scalar in value.chars().rev() {
+            let code = self.lit(Lit::Nat(NatLit::from(u32::from(scalar))));
+            let character = self.app(of_nat, code);
+            let step = self.app(cons, character);
+            list = self.app(step, list);
+        }
+        let of_list = self.const_(bootstrap.of_list, vec![]);
+        Some(self.app(of_list, list))
+    }
+
+    /// Normalize a string literal one constructor layer, for the reduction rules
+    /// whose major/projected value may be a literal. Returns the input unchanged
+    /// when it is not a literal or the environment carries no bootstrap.
+    pub(crate) fn expand_string_literal_major(
+        &mut self,
+        expression: ExprId,
+        ctx: &mut LocalContext,
+    ) -> ExprId {
+        match self.string_literal_to_constructor(expression) {
+            Some(expanded) => self.whnf_core(expanded, ctx),
+            None => expression,
+        }
+    }
+
+    /// Lean's `try_string_lit_expansion`: a literal on one side and an
+    /// **immediate** `String.ofList` application on the other are compared by
+    /// expanding the literal. Symmetric in the two argument orders, and `None`
+    /// when the shape does not apply so the caller falls through unchanged.
+    ///
+    /// **This rule is carried and unexercised, and that is a fact about Lean
+    /// 4.30 rather than about this port** (ADR-0461). `is_def_eq_core` runs
+    /// lazy delta first, and `String.ofList` is a *definition*, so a literal on
+    /// one side forces the other to unfold to `String.ofByteArray` before the
+    /// hook ever looks at it — the rule dates from when the constant it keys on
+    /// was a constructor. What identifies a literal with a constructor
+    /// application today is structure eta calling
+    /// [`Kernel::expand_string_literal_major`] through the projection rule.
+    /// Removing this function fails no test; it stays because the pinned source
+    /// has it and its only possible effect is to accept *more*.
+    fn try_string_lit_expansion(
+        &mut self,
+        x: ExprId,
+        y: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Option<bool> {
+        if let Some(result) = self.try_string_lit_expansion_core(x, y, ctx) {
+            return Some(result);
+        }
+        self.try_string_lit_expansion_core(y, x, ctx)
+    }
+
+    fn try_string_lit_expansion_core(
+        &mut self,
+        literal: ExprId,
+        other: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Option<bool> {
+        if !matches!(self.expr_node(literal), ExprNode::Lit(Lit::Str(_))) {
+            return None;
+        }
+        let bootstrap = self.string_literal_bootstrap()?;
+        // Lean compares `app_fn(s)` against the bare constant `String.ofList`,
+        // so this fires only on a one-argument application of it — never on a
+        // partial application, an over-applied spine, or an alias.
+        let ExprNode::App(head, _) = self.expr_node(other) else {
+            return None;
+        };
+        if !self.is_bare_const(*head, bootstrap.of_list) {
+            return None;
+        }
+        let expanded = self.string_literal_to_constructor(literal)?;
+        let expanded = self.whnf_core(expanded, ctx);
+        Some(self.def_eq_core(expanded, other, ctx))
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Type inference
 // ---------------------------------------------------------------------------
 
@@ -1996,8 +2359,9 @@ impl Kernel {
     /// ([`KernelError::LooseBVar`]), an unbound `FVar`
     /// ([`KernelError::UnboundFVar`]), an unknown `Const`
     /// ([`KernelError::UnknownConst`]), or a `Lit`
-    /// ([`KernelError::UnsupportedLit`]) or an invalid Nat-literal bootstrap
-    /// ([`KernelError::NatLiteralBootstrapMismatch`]).
+    /// whose reserved bootstrap is absent or malformed
+    /// ([`KernelError::NatLiteralBootstrapMismatch`],
+    /// [`KernelError::StringLiteralBootstrapMismatch`]).
     pub fn infer(&mut self, e: ExprId) -> Result<ExprId, KernelError> {
         let mut ctx = LocalContext::new();
         self.infer_core(e, &mut ctx)
@@ -2147,7 +2511,7 @@ impl Kernel {
                 self.infer_projection(type_name, field_index, structure, ctx)
             }
             ExprNode::Lit(Lit::Nat(_)) => self.infer_nat_literal(),
-            ExprNode::Lit(Lit::Str(_)) => Err(KernelError::UnsupportedLit),
+            ExprNode::Lit(Lit::Str(_)) => self.infer_string_literal(),
             ExprNode::App(..) => self.infer_app(e, ctx),
             ExprNode::Lam(name, dom, body, info) => {
                 self.infer_lambda(e, name, dom, body, info, ctx)

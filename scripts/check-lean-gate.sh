@@ -52,7 +52,13 @@ cd "$(dirname "$0")/.." || exit 2
 # `real_lean_nat_arithmetic_crosscheck` adds two invocations, handing official
 # Lean 24 literal-arithmetic answers THIS kernel computed (plus a negative
 # control). Thirteen suites now; measured total 115.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-107}"
+#
+# Raised 107 -> 109 on 2026-08-15 by lane `import-strings`:
+# `real_lean_string_literal_crosscheck` adds two more, handing official Lean ten
+# Unicode-scalar expansions read back out of THIS kernel's reducts (plus a
+# negative control covering both a byte-oriented decode and a reordered list).
+# Fourteen suites now; measured total 117.
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-109}"
 
 # package | features | test target
 #
@@ -76,6 +82,7 @@ axeyum-lean-kernel||real_lean_parametric_inductive_crosscheck
 axeyum-lean-kernel||real_lean_strict_positivity_crosscheck
 axeyum-lean-kernel||real_lean_nat_literal_crosscheck
 axeyum-lean-kernel||real_lean_nat_arithmetic_crosscheck
+axeyum-lean-kernel||real_lean_string_literal_crosscheck
 axeyum-lean-kernel||real_lean_structure_eta_crosscheck
 axeyum-lean-kernel||real_lean_compact_share_crosscheck
 axeyum-lean-kernel||real_lean_kernel_replay

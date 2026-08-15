@@ -174,7 +174,7 @@ without cloning or attempting partial rollback of kernel interners and caches.
 | `mdata` | semantically erased to its referenced expression | metadata object still shape-checked |
 | `proj` | translated and kernel checked | TL2.2-TL2.4 representation/inference/reduction admit and compute the official root; TL2.5 structure eta is now separately live and does not change this import population |
 | `natVal` | translated and kernel checked | TL2.6 provides arbitrary-precision storage; TL2.7 types only against the checked canonical `Nat` bootstrap and implements constructor/literal conversion |
-| `strVal` | typed decline `literal-string-typing` | kernel currently rejects literal inference |
+| `strVal` | translated and kernel checked | TL2.9 types a literal against the checked `String`/`String.ofList`/`Char.ofNat`/`List` bootstrap and expands it to Unicode scalars (ADR-0366) |
 | safe `axiom` | kernel admitted and axiom name reported | type must check; proposition remains an assumption |
 | safe `def` | kernel admitted | hint translated; value must check against type |
 | safe `opaque` | kernel admitted | value checks but does not unfold |

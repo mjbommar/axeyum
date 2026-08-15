@@ -579,7 +579,15 @@ impl<'kernel> ImportState<'kernel> {
                 })?;
                 self.kernel.lit(Lit::Nat(value))
             }
-            "strVal" => return Err(unsupported(line, "literal-string-typing")),
+            "strVal" => {
+                // The payload is a JSON string, so escape decoding (including
+                // `\uXXXX` surrogate pairs) and the rejection of invalid Unicode
+                // are `serde_json`'s, and the decoded value is a sequence of
+                // Unicode scalar values — exactly what Lean's kernel decodes the
+                // UTF-8 payload to. Nothing is repaired or replaced here.
+                let value = string(required(record, kind, line)?, line, kind)?;
+                self.kernel.lit(Lit::Str(value.to_owned()))
+            }
             _ => unreachable!(),
         };
         self.expressions.push(expression);

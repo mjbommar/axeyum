@@ -1,7 +1,7 @@
 {
   "version": 1,
   "title": "Axeyum Lean 4.30 compatibility assurance contract",
-  "as_of": "2026-07-23",
+  "as_of": "2026-08-15",
   "target": {
     "lean_version": "4.30.0",
     "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
@@ -30,37 +30,59 @@
     {
       "id": "K0-checker",
       "label": "Independent checker",
-      "requires": ["admitted"]
+      "requires": [
+        "admitted"
+      ]
     },
     {
       "id": "K1-import",
       "label": "Versioned declaration import",
-      "requires": ["parsed", "translated", "admitted"]
+      "requires": [
+        "parsed",
+        "translated",
+        "admitted"
+      ]
     },
     {
       "id": "K2-source",
       "label": "Native source",
-      "requires": ["parsed", "source_elaborated", "admitted"]
+      "requires": [
+        "parsed",
+        "source_elaborated",
+        "admitted"
+      ]
     },
     {
       "id": "K3-proof",
       "label": "Goals and checked tactics",
-      "requires": ["admitted", "proof_checked"]
+      "requires": [
+        "admitted",
+        "proof_checked"
+      ]
     },
     {
       "id": "K4-workflow",
       "label": "Project and editor workflow",
-      "requires": ["workflow_reproduced"]
+      "requires": [
+        "workflow_reproduced"
+      ]
     },
     {
       "id": "K5-runtime",
       "label": "Native runtime",
-      "requires": ["runtime_reproduced"]
+      "requires": [
+        "runtime_reproduced"
+      ]
     },
     {
       "id": "K6-ecosystem",
       "label": "Pinned ecosystem",
-      "requires": ["admitted", "proof_checked", "workflow_reproduced", "runtime_reproduced"]
+      "requires": [
+        "admitted",
+        "proof_checked",
+        "workflow_reproduced",
+        "runtime_reproduced"
+      ]
     }
   ],
   "decline_codes": [
@@ -84,13 +106,6 @@
       "owner": "axeyum-lean-import",
       "source_path": "crates/axeyum-lean-import/src/lib.rs",
       "source_marker": "\"format-version\""
-    },
-    {
-      "code": "literal-string-typing",
-      "meaning": "String literals await kernel typing and reduction support.",
-      "owner": "axeyum-lean-kernel",
-      "source_path": "crates/axeyum-lean-import/src/lib.rs",
-      "source_marker": "\"literal-string-typing\""
     }
   ],
   "rows": [
@@ -237,7 +252,7 @@
           "detail": "TL2.7 translates all 90 expressions, admits ten declarations with zero axioms, reduces importNatLiteral to 37, preserves values above u128, and rejects a renamed Nat.zero bootstrap."
         }
       ],
-      "residual": "This exact K1 Nat-literal root passes. General accelerated Nat operations remain TL2.8, string literals remain TL2.9, and no broader Init, Std, or mathlib closure receives credit."
+      "residual": "This exact K1 Nat-literal root passes. Accelerated Nat arithmetic (ADR-0459) and String literals (ADR-0366) are now implemented and have their own rows; no broader Init, Std, or mathlib closure receives credit."
     },
     {
       "id": "lean4export-projection-root",
@@ -303,6 +318,41 @@
         }
       ],
       "residual": "This exact K1 root passes offline; M4 official reduction differential and broader String/complete-K1 authority remain open."
+    },
+    {
+      "id": "lean4export-string-literal-root",
+      "subject": "Official String-literal dependency root",
+      "artifact_kind": "lean4export-stream",
+      "profile": "K1-import",
+      "states": {
+        "parsed": "succeeded",
+        "translated": "succeeded",
+        "admitted": "succeeded",
+        "official_admitted": "succeeded",
+        "source_elaborated": "succeeded",
+        "proof_checked": "not_attempted",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": [],
+      "evidence": [
+        {
+          "kind": "fixture",
+          "path": "docs/plan/fixtures/lean4export-v4.30-blocker-census.lean",
+          "detail": "importStringLiteral's closure, re-exported twice from pinned Lean 4.30.0 and byte-identical, reproducing all six properties ADR-0366 froze: 570807 bytes, 10339 records, 1781 names, 24 nonzero levels, 8243 expressions, 290 declaration records, SHA-256 2404a6ca64999088ee9e4aa76f3426e77fda8eed5c63f5d8ad593c6b08ae0ab4. The 570 KB stream is too large to commit and is retained content-addressably under /nas3/data/axeyum/lean-import-strings/; this is the source module it is exported from."
+        },
+        {
+          "kind": "source",
+          "path": "crates/axeyum-lean-import/examples/string_literal_reduction_probe.rs",
+          "detail": "That root admits 290 of 290 declaration records and 374 declarations with zero declines in 0.04 s, and the imported literal is definitionally equal to String.ofList over its Unicode scalars in Lean's own environment while the reordered list is refused."
+        },
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-kernel/tests/real_lean_string_literal_crosscheck.rs",
+          "detail": "Ten payloads whose scalar lists are read back out of this kernel's reducts are confirmed by official Lean 4.30.0; a byte-oriented and a reordered expansion are rejected."
+        }
+      ],
+      "residual": "This exact K1 String-literal root passes. What lies past string literals in a broader Init, Std, or mathlib closure is censused in docs/formalized-math-2026-08/diary-import-strings.md and receives no K1 credit here."
     },
     {
       "id": "official-source-selected-reconstruction",

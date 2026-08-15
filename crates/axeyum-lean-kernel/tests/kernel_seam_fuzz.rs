@@ -701,8 +701,15 @@ fn fuzz_literals_and_reduction(summary: &mut FuzzSummary) {
             assert_eq!(inferred, annotation, "wrong Nat type for {case_name}");
             summary.typed_nat_literal_hits += 1;
         } else {
+            // The logic prelude declares no `String`/`List`/`Char.ofNat`, so
+            // string literals stay fail-closed here — and the refusal names the
+            // reserved declaration that is missing rather than reporting a bare
+            // "unsupported literal".
             assert!(
-                matches!(k.infer(wrapped), Err(KernelError::UnsupportedLit)),
+                matches!(
+                    k.infer(wrapped),
+                    Err(KernelError::StringLiteralBootstrapMismatch { .. })
+                ),
                 "String literal escaped fail-closed inference for {case_name}"
             );
             summary.rejected_string_literal_hits += 1;

@@ -43,7 +43,7 @@ axeyum's kernel is missing.**
 | Admitted declarations | 8–11 | mathlib, ~10⁵–10⁶ |
 | Lean pin | 4.30, format 3.1.0 exact-string | 4.32, format 3.1.x range |
 | Nat kernel arithmetic | literal succ-folding only; **general ops are TL2.8, deferred** | full `Nat.add/sub/mul/div/mod/pow/gcd/beq/ble/land/lor/xor/shift*` |
-| String literals | **rejected fail-closed** (`lib.rs:582`, `literal-string-typing`) | typed + reducible |
+| String literals | **typed and reducible** since 2026-08-15 (ADR-0366); refused only when the environment carries no checked `String` bootstrap | typed + reducible |
 | K-like reduction | `k` flag parsed and constrained (`lib.rs:1396-1402`) but **`Declaration::Recursor` stores no K flag and `tc.rs` has no K-reduction** | implemented |
 | `max_records` | 2,000,000 default | mathlib-scale |
 | Threading | single-threaded (`&mut Kernel` everywhere) | nanoda runs 4 threads: 353 s wall / 1,226 s CPU / 8.5 GB |

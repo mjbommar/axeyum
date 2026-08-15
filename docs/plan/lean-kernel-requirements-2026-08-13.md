@@ -244,7 +244,7 @@ generated type is itself `infer`-checked; parameters + indices; **mutual**
 | **`Quot.sound` absent** | 0 hits, positive control passes; `PACKAGE_LEN = 4` (`quotient.rs:17`) — `Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind` | Quotients **compute** but carry no propositional content. `r a b → Quot.mk r a = Quot.mk r b` is not available, so **ℤ cannot be constructed as a quotient of ℕ×ℕ today.** See **R2.1** |
 | **All Nat literal arithmetic is inert** | `grep` for `Nat.add`/`mul`/`sub`/`div`/`decEq`/`gcd` fast paths in `tc.rs` → **0 hits**; `nat_literal_semantics.rs:190` asserts `Nat.add` stays inert | `Lit::Nat` is `BigUint` (ADR-0346), but only `succ`, one recursor literal layer, and offset def-eq reduce. All concrete arithmetic is **unary ι-reduction** |
 | **Unary numerals** | `NatOps::num(n)` builds `succ^n zero` (`nat_prelude.rs:1416`) | 312 is the largest value *used* in `rado_shell_arithmetic.rs` — **not a ceiling**; measured directly in §2.6 Probe 3 |
-| **String literals unsupported** | `Lit::Str` → `UnsupportedLit` (`tc.rs:1690`); ADR-0366 preregisters only | not on this document's path |
+| ~~String literals unsupported~~ | closed 2026-08-15: `Lit::Str` types against a checked `String` bootstrap and expands to Unicode scalars (ADR-0366) | not on this document's path |
 | **No `Decidable`, `Classical`, `propext`, `funext`** | 0 hits each | acceptable — all three Rado theorems are constructive (§3.4) |
 | **No `Finset`, `Multiset`, intervals, `List`** | 0 hits each | required by `lem:structure(3)`; see **R4.5** |
 | **No `Dvd` typeclass; constructive `Nat.dvd` foundation present** | `Nat.dvd := Exists (fun q => n = a*q)`, plus checked `dvd_mul` and `dvd_add` under ADR-0389 | transitivity/cancellation and congruence remain missing. See **R4.3--R4.4** |
@@ -797,7 +797,7 @@ inspection.
 | **No unit-like defeq** | agent audit | a block of conformance tests |
 | **No `MData`** | §2.5, 0 hits | export/import fidelity |
 | **No accelerated `Nat`** | §2.5; 14 operators incl. `gcd` | performance at Mathlib scale, not correctness |
-| **String route** | `Lit::Str` → `UnsupportedLit` | must target `String.ofList`; `String.mk` was removed |
+| **String route** | implemented 2026-08-15 (ADR-0366) | targets `String.ofList`, which is a *definition* in 4.30 -- see ADR-0461 for what that does to the def-eq hook |
 
 ### 4.7 What could not be verified
 

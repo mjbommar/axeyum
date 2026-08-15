@@ -15,7 +15,19 @@
 use std::io::Cursor;
 
 use axeyum_lean_import::{ImportLimits, ImportReport, import_ndjson};
-use axeyum_lean_kernel::{Kernel, Lean4ExportMetadata, build_logic_prelude, build_nat_prelude};
+use axeyum_lean_kernel::{
+    Declaration, Kernel, Lean4ExportMetadata, Lit, ReducibilityHint, build_logic_prelude,
+    build_nat_prelude,
+};
+
+// The Lean-shaped `String` environment lives with the kernel's own tests, and is
+// shared here by path rather than duplicated: both crates are `publish = false`,
+// so the cross-crate include costs nothing (`lean_probe.rs` is shared the same
+// way).
+#[path = "../../axeyum-lean-kernel/tests/support/lean_shaped_string.rs"]
+mod lean_shaped_string;
+
+use lean_shaped_string::Mutation;
 
 /// Every committed official `lean4export` v4.30 fixture.
 const FIXTURES: &[(&str, &str)] = &[
@@ -456,4 +468,162 @@ fn logic_prelude_eq_exports_two_parameters_and_one_index() {
     assert!(recursor.k, "Eq is Lean's canonical K-like inductive");
     assert_eq!(recursor.num_params, 2);
     assert_eq!(recursor.num_indices, 1);
+}
+
+/// A **string literal** survives emit / import / re-emit, payload and all.
+///
+/// The writer refused `Lit::Str` outright until 2026-08-15 (`ExportError::
+/// StringLiteral`), which was consistent while the reader refused it too. Both
+/// arms are open now, so the escape grammar is load-bearing in a way it was not
+/// before: `strVal` payloads carry newlines, tabs, quotes, NULs and astral
+/// scalars routinely, and Lean's `Json.escapeAux` gives a short escape to only
+/// four of them. The corners are asserted here rather than assumed.
+#[test]
+fn a_string_literal_round_trips_with_its_payload() {
+    let payloads = [
+        "",
+        "axeyum",
+        "a\"b\\c",
+        "\n\t\r",
+        "\u{0}\u{1f}\u{7f}",
+        "\u{e9}",
+        "e\u{301}",
+        "\u{2192}",
+        "\u{1f642}",
+    ];
+    for payload in payloads {
+        let (mut kernel, env) = lean_shaped_string::lean_shaped_kernel(Mutation::None);
+        let anon = kernel.anon();
+        let name = kernel.name_str(anon, "axeyumStringProbe");
+        let value = kernel.lit(Lit::Str(payload.to_owned()));
+        kernel
+            .add_declaration(Declaration::Definition {
+                name,
+                uparams: Vec::new(),
+                ty: env.string_type,
+                value,
+                hint: ReducibilityHint::Regular(0),
+            })
+            .unwrap_or_else(|error| panic!("{payload:?}: the probe must type-check: {error:?}"));
+
+        let metadata = Lean4ExportMetadata::axeyum("4.30.0");
+        let emitted = emit(&kernel, &metadata, "string probe");
+        let (round_tripped, report) = import(&emitted, "string probe");
+        let again = emit(&round_tripped, &metadata, "string probe (re-emitted)");
+        assert_eq!(
+            emitted, again,
+            "{payload:?}: re-emission is not byte-stable"
+        );
+        let (_, second_report) = import(&again, "string probe (re-emitted)");
+        assert_same_manifest(&report, &second_report, "string probe");
+
+        // The payload itself, not merely a declaration of the same shape: the
+        // identity manifest hashes `Lit::Str` by its raw UTF-8 bytes, so a
+        // mangled escape would change it — but reading the literal back is the
+        // check that says so in one line.
+        let recovered = round_tripped
+            .environment()
+            .iter()
+            .find_map(|(_, declaration)| {
+                (round_tripped.display_name(declaration.name()).to_string() == "axeyumStringProbe")
+                    .then(|| declaration.value())
+                    .flatten()
+            })
+            .unwrap_or_else(|| panic!("{payload:?}: the probe survived import"));
+        assert!(
+            matches!(
+                round_tripped.expr_node(recovered),
+                axeyum_lean_kernel::ExprNode::Lit(Lit::Str(got)) if got == payload
+            ),
+            "{payload:?}: payload did not survive the round trip"
+        );
+    }
+}
+
+/// The reader decodes Lean's own escape grammar, and decodes it to **scalars**.
+///
+/// Our writer emits every character at or above `0x20` raw, so a round trip
+/// alone never exercises `\uXXXX` — yet that is exactly what `lean4export` emits
+/// for a name component and what a hand-written stream may use anywhere. This
+/// rewrites one emitted payload into its escaped form and requires the identity
+/// manifest to be unchanged, then into a byte-split form and requires it to
+/// change. Equal manifests here mean the two spellings decoded to the same
+/// Unicode scalar; the second half is what stops "unchanged" from being vacuous.
+#[test]
+fn escaped_and_raw_string_payloads_decode_to_the_same_scalars() {
+    let (mut kernel, env) = lean_shaped_string::lean_shaped_kernel(Mutation::None);
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "axeyumStringProbe");
+    let value = kernel.lit(Lit::Str("\u{e9}".to_owned()));
+    kernel
+        .add_declaration(Declaration::Definition {
+            name,
+            uparams: Vec::new(),
+            ty: env.string_type,
+            value,
+            hint: ReducibilityHint::Regular(0),
+        })
+        .expect("the probe must type-check");
+
+    let metadata = Lean4ExportMetadata::axeyum("4.30.0");
+    let emitted = emit(&kernel, &metadata, "escape probe");
+    assert!(
+        emitted.contains("\"strVal\":\"\u{e9}\""),
+        "the writer emits a printable non-ASCII scalar raw, as Lean does"
+    );
+
+    let escaped = emitted.replace("\"strVal\":\"\u{e9}\"", "\"strVal\":\"\\u00e9\"");
+    assert_ne!(escaped, emitted, "the rewrite must have applied");
+    let (_, baseline) = import(&emitted, "escape probe (raw)");
+    let (_, from_escape) = import(&escaped, "escape probe (escaped)");
+    assert_same_manifest(&baseline, &from_escape, "escape probe");
+
+    // The control: the UTF-8 *bytes* of the same character, spelled as two
+    // scalars, must NOT produce the same identity.
+    let byte_split = emitted.replace("\"strVal\":\"\u{e9}\"", "\"strVal\":\"\\u00c3\\u00a9\"");
+    let (_, from_bytes) = import(&byte_split, "escape probe (byte-split)");
+    assert_ne!(
+        baseline.declaration_identities, from_bytes.declaration_identities,
+        "a byte-split payload must not hash like the scalar it encodes"
+    );
+}
+
+/// A `strVal` that is not a JSON string, and one that is not valid Unicode.
+#[test]
+fn malformed_string_literal_wire_values_reject_before_the_typing_boundary() {
+    let metadata = r#"{"meta":{"exporter":{"name":"lean4export","version":"3.1.0"},"format":{"version":"3.1.0"},"lean":{"githash":"test","version":"4.30.0"}}}"#;
+    for payload in ["123", "null", "true", "[\"a\"]", "{\"s\":\"a\"}"] {
+        let text = format!("{metadata}\n{{\"ie\":0,\"strVal\":{payload}}}\n");
+        let error = import_ndjson(Cursor::new(text.as_bytes()), ImportLimits::default())
+            .expect_err("a non-string strVal payload must reject");
+        assert!(
+            matches!(
+                error,
+                axeyum_lean_import::ImportError::Malformed { line: 2, .. }
+            ),
+            "{payload}: {error:?}"
+        );
+    }
+
+    // A lone surrogate is not a Unicode scalar value, so it is a JSON error
+    // before the kernel ever sees it -- never repaired, never replaced.
+    let text = format!("{metadata}\n{{\"ie\":0,\"strVal\":\"\\ud800\"}}\n");
+    assert!(
+        import_ndjson(Cursor::new(text.as_bytes()), ImportLimits::default()).is_err(),
+        "a lone surrogate must not import"
+    );
+
+    // The positive companion: every well-formed payload class parses.
+    for payload in [
+        r#""""#,
+        r#""ab""#,
+        r#""\u0041\u00e9""#,
+        r#""\n\t\r\u0000""#,
+        r#""\ud83d\ude42""#,
+    ] {
+        let text = format!("{metadata}\n{{\"ie\":0,\"strVal\":{payload}}}\n");
+        let completed = import_ndjson(Cursor::new(text.as_bytes()), ImportLimits::default())
+            .unwrap_or_else(|error| panic!("{payload} must import: {error}"));
+        assert_eq!(completed.report().expressions, 1, "{payload}");
+    }
 }

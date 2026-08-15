@@ -1,7 +1,8 @@
 # ADR-0366: Preregister checked Lean String-literal semantics
 
-Status: proposed
-Index-summary: Preregister checked Lean String-literal typing and exact Unicode-scalar constructor conversion across defeq, projection, recursors, and import
+Status: accepted
+Index-summary: Checked Lean String-literal typing and exact Unicode-scalar constructor conversion across defeq, projection, recursors, and import
+Index-status: accepted 2026-08-15 (evidence item 6 deferred, see the acceptance record)
 
 Date: 2026-07-23
 
@@ -9,7 +10,10 @@ Execution plan:
 [TL2.9 String-literal plan](../../plan/lean-string-literal-semantics-tl2.9-plan-2026-07-23.md)
 
 Resume status:
-[paused after pushed P0](../../plan/lean-string-literal-semantics-tl2.9-resume.md)
+[the pause is over](../../plan/lean-string-literal-semantics-tl2.9-resume.md) --
+implemented 2026-08-15 by lane `import-strings`; see the acceptance record at the
+end of this file and
+[`diary-import-strings.md`](../../formalized-math-2026-08/diary-import-strings.md).
 
 ## Context
 
@@ -239,3 +243,40 @@ and differential remain explicit acceptance gates.
 - Offline implementation can make real semantic progress, but the historical
   unretained closure and pinned-Lean differential remain honest external gates;
   zero complete K1, parity axis, or terminal-gate credit follows from P0.
+
+## Acceptance record (2026-08-15, lane `import-strings`)
+
+Implemented in `crates/axeyum-lean-kernel/src/tc.rs`
+(`StringLiteralBootstrap`, `build_string_literal_bootstrap`,
+`infer_string_literal`, `string_literal_to_constructor`,
+`expand_string_literal_major`, `try_string_lit_expansion`),
+`crates/axeyum-lean-kernel/src/inductive.rs` (the recursor hook),
+`crates/axeyum-lean-kernel/src/lean_export.rs` (the writer arm, and Lean's own
+JSON escape grammar) and `crates/axeyum-lean-import/src/lib.rs` (the `strVal`
+wire arm).
+
+Evidence, item by item:
+
+| # | state |
+|---|---|
+| 1 | **met** — eleven bootstrap mutations, each rejecting with `StringLiteralBootstrapMismatch` (`string_literal_semantics::every_bootstrap_clause_is_load_bearing`), paired with the unmutated positive in the same test |
+| 2 | **met** — empty, ASCII, NUL/control, BMP, supplementary-plane, combining and mixed payloads infer as the checked `String` |
+| 3 | **met** — scalar exactness and order, the composed/decomposed pair, and the byte-split control (`the_expansion_is_scalar_ordered_and_exact`) |
+| 4 | **met, with a correction** — implemented symmetrically at Lean's position, and *measured unreachable there*: see [ADR-0461](adr-0461-lean-string-literal-def-eq-hook-is-unreachable.md). The identification a real import uses is structure eta through the projection rule, and this ADR's wording implied the def-eq hook carried it |
+| 5 | **met** — `projecting_a_literal_computes_through_the_expansion`, `a_recursor_reduces_through_a_literal_major`, plus the non-firing controls in `the_expansion_fires_only_on_an_immediate_of_list_application` |
+| 6 | **deferred** — no 512-row generated seam grammar with a pinned digest. The string corners live in `kernel_seam_fuzz`'s literal seam (which now asserts the typed bootstrap refusal) and in the eleven mutation controls; a dedicated generated grammar was judged lower value than the real-stream evidence in items 10-12, and is recorded here as not done rather than quietly dropped |
+| 7 | **met** — `export_round_trip::malformed_string_literal_wire_values_reject_before_the_typing_boundary` (non-string payloads, lone surrogate) and `escaped_and_raw_string_payloads_decode_to_the_same_scalars` |
+| 8 | **met** — `a_string_literal_round_trips_with_its_payload` over nine payload classes; the byte-split control shows the identity distinguishes scalar sequences |
+| 9 | **met** — `cargo test -p axeyum-lean-kernel -p axeyum-lean-import` green, clippy `-D warnings` clean on both |
+| 10 | **met** — `importStringLiteral` re-exported twice from pinned Lean 4.30.0, the two streams byte-identical, and **all six frozen properties reproduced exactly**: 570,807 bytes, 10,339 records, 1,781 names, 24 nonzero levels, 8,243 expressions, 290 declaration records, SHA-256 `2404a6ca64999088ee9e4aa76f3426e77fda8eed5c63f5d8ad593c6b08ae0ab4`. Retained content-addressably at `/nas3/data/axeyum/lean-import-strings/` |
+| 11 | **met** — that root admits **clean**: 290 of 290 declaration records, 374 declarations, 0 declines, 0.04 s. `string_literal_reduction_probe` then shows the imported literal definitionally equal to `String.ofList` over its scalars in Lean's *own* environment, and refusing the reordered list |
+| 12 | **met** — `real_lean_string_literal_crosscheck`, ten payloads whose scalar lists are read back out of this kernel's reducts, all accepted by Lean 4.30.0; the negative control (byte-oriented decode, reordered list) rejected. Mutating our conversion to bytes makes Lean reject the positive module |
+| 13 | **met** — path-scoped commits with the lane's `Agent:` trailer |
+
+One design point the preregistration got right and is worth restating: the gate
+requires `String.ofList` to be a **`Definition`** of exactly `List Char → String`
+and never checks what `String`'s field contains, because the expansion's
+well-typedness comes from that declared type alone. That is why the test
+environment can declare a simpler field type than `ByteArray` without weakening
+anything the gate checks, and why the claim of agreement with *Lean* is carried
+by items 10-12 rather than by the fixture.
