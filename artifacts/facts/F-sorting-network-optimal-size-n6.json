@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "F:sorting-network-optimal-size-n6",
+  "title": "The optimal sorting network on 6 channels has exactly 12 comparators",
+  "statement": "S(6) = 12: some comparator network of 12 comparators sorts every input of length 6, and no network of 11 comparators does.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(and (exists ((n (Network 6 12))) (sorts n)) (not (exists ((n (Network 6 11))) (sorts n))))",
+    "fragment": "QF_BV",
+    "free_symbols": [
+      "n"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "smt-clausal",
+  "depends_on": [],
+  "axiom_footprint": [
+    "sortnet.encoder-faithfulness",
+    "sortnet.zero-one-principle",
+    "sortnet.symmetry-breaking-soundness"
+  ],
+  "evidence": [
+    {
+      "id": "lower-unsat-n6",
+      "kind": "unsat-certificate",
+      "supports": "no network of 11 comparators sorts all 6-input sequences",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-cdcl-monolithic-sym-full",
+        "axeyum-cdcl-cube-depth3",
+        "axeyum-cdcl-cube-depth4",
+        "axeyum-cdcl-cube-sym-none-independent"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-cnf --example sorting_network -- --n 6 --size 11 --cubes \"${TMPDIR:-/tmp}/sortnet-n6-$$\" --depth 3 --jobs 8 --cube-sym full 2>/dev/null | grep -oE 'all 51 cubes refuted')\" = 'all 51 cubes refuted'",
+      "notes": "Four routes, and they do not share a search. Monolithic --sym full: Unsat in 1195s single-core. Cube split depth 3 (51 branches) 151s and depth 4 (322 branches) 138s on 16 cores -- different partitions of the same space, so their agreement is not a re-run. The control that matters is the fourth: --cube-sym none, where every prefix position ranges over EVERY comparator and the suffix gets no symmetry break, leaving output-set equality as the only reduction -- 1441 branches, same UNSAT, 1446.61s. An unsound symmetry break manufactures a wrong UNSAT, so a verdict that survives having every relabelling argument removed is the one worth believing. Every branch streams its own DRAT proof to disk and is read back and re-checked by this repository's backward checker before it counts as refuted."
+    },
+    {
+      "id": "upper-sorts-n6",
+      "kind": "exhaustive-enumeration",
+      "supports": "an explicit 12-comparator network sorts every input",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-cdcl-model",
+        "independent-0-1-enumeration"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-cnf --example sorting_network -- --n 6 --size 12 --sym full 2>/dev/null | grep -q ': SORTS'",
+      "notes": "The witness network is replayed over all 2^6 zero-one inputs by a checker that shares no code with the SAT search. The 0-1 principle makes that sufficient for all totally ordered inputs. The size-12 network was also rediscovered independently by the SAT search under all three cube modes, each time passing the same 0-1 replay."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:sorting-algorithm",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "axeyum SAT core via the prefix/suffix cube split; symmetry-breaking soundness controlled by re-refuting under --cube-sym none",
+    "source": "lane `sorting-networks-2`",
+    "prior_art": [
+      {
+        "who": "Floyd and Knuth (1966); Knuth, TAOCP vol. 3",
+        "what": "S(n) for n <= 8 is 0,1,3,5,9,12,16,19",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "The cell the previous lane could not reach: size 11 exceeded ten minutes monolithically and was left at S(6) >= 11. The prefix/suffix reduction closed it -- fixing a prefix and encoding only the suffix against the prefix's output set took the refutation from 1195s to 151s. This is validation, not a frontier result: S(n) for optimal SIZE is settled through n = 12 (Harder 2020, arXiv:2012.04400, Isabelle/HOL-verified), and the smallest genuinely open cell is S(13)."
+}
