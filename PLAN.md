@@ -311,6 +311,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-15 | `ordered-ring-reconstruct` | Farkas/SOS refutations generalize over the ordered-ring interface: empty `axiom_footprint`, confirmed by real Lean's `#print axioms`, with the `Real`-specific statement recovered by instantiation (ADR-0457, `F:ordered-ring-farkas-refutation`). |
 | 2026-08-15 | `33cbe5131` | Formalized-math strand started: real Lean import measured at 13/40 with a four-cluster blocker census, `imported-kernel-lean` proof route (ADR-0454), five imported facts with pinned streams, `01-collect.md` rewritten against cited measurements. |
 | 2026-08-15 | (pending) | `Proj`/`Proj` congruence in `def_eq` closes 9 of 10 root import blockers (40-stream census: 22→37 clean, 10→1 root); first-class decline census `census_ndjson`; pinned `Nat.add_comm` capability fixture. |
+| 2026-08-15 | (pending) | WHNF cache key split on `has_fvars` (closed → kernel, open → `LocalContext`) with a `reduction_ctx_reads` tripwire; the collision demonstrated as a test against a kept pre-fix replica; K-like reduction with a guard-by-guard controlled negative suite; import census 37/40 → **40/40**, 1 root blocker → **0**. |
 | 2026-08-14 | `19f4c769b` | Automatic hypothesis minimisation (`hypothesis_min`): two route-B Rado lemmas that stay `unknown` at 1800 s close in ~2 s with the same subsets a human found in ~32 min; the boundary is measured to be `nra.rs:107` `MAX_CROSS_PRODUCTS = 2`, not hypothesis count, and the guards are mutation-tested one deletion at a time (agent-k). |
 | 2026-08-14 | `telescoping` | Creative telescoping (Zeilberger) with an independent certificate checker; 5 classical binomial identities landed as `cas-certificate` facts; 10 tamper controls reject perturbed certificates | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `artifacts/facts/F-*binomial*.json`, `artifacts/facts/F-chu-vandermonde-convolution-recurrence.json` |
 | 2026-08-14 | `telescoping-scale` | Gosper–Petkovšek derived denominator and degree bound replace the `Q` ladder and the degree sweep (Chu–Vandermonde 18.5 s -> 46.7 ms); order-2 recurrences reachable (Franel); symbolic base cases close Chu–Vandermonde's closed form; certificates serialised to `artifacts/cas-certificates/` and re-checked from file; 3 new facts | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/src/telescoping_json.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `crates/axeyum-cas/tests/telescoping_certificate_artifacts.rs`, `artifacts/cas-certificates/*.json`, `artifacts/facts/F-chu-vandermonde-convolution.json`, `artifacts/facts/F-cross-binomial-row-sum.json`, `artifacts/facts/F-franel-numbers-recurrence.json` |
@@ -852,8 +853,9 @@ every condition of `S` nonzero and **falsifying** a conclusion refutes `S`
 outright — no budget, no monomial order, no algorithm. The committed degenerate
 counterexample *is* such a configuration, so the ledger already held the proof and
 had not read it as one. `every_used_condition_set_is_minimal_absolutely` states it
-for arbitrary subsets: **6 proper subsets refuted across 4 saturated certificates,
-0 undecided.**
+for arbitrary subsets: **4 proper subsets refuted across 4 saturated certificates,
+0 undecided** (each uses one condition, so each has one proper subset), with the
+count asserted against that arithmetic rather than hand-written.
 
 **Non-degeneracy in full, and one control that had silently stopped applying.**
 Counterexample: `A = B = (0,0)`, `C = (1,0)`, `O = (1/2,0)`, `H = (0,1)` — every
@@ -1270,7 +1272,7 @@ including three mistakes that cost real work:
 README application/vision revision are closed. Continue only for a concrete
 stale claim; keep application maturity and sub-document links aligned, but do
 not duplicate generated capability tables or modify solver behavior to match
-prose. The user/reference/internals/crate surfaces and all 61 Cargo examples are
+prose. The user/reference/internals/crate surfaces and all 67 Cargo examples are
 indexed, and source guards reject universal proof claims.
 
 **Gate scope and the wall-clock reference frame (`WIP`, gates, 2026-08-14).**
@@ -1445,6 +1447,68 @@ Also fixed here, found in my own tool: `lean4export` **exits 0** on a constant
 it cannot find, panicking to stderr and writing a metadata-only stream — which
 the census scored as a *clean* stream. Both the script and the census example
 now reject a declaration-free export instead of counting it as a pass.
+
+**The latent cache-key unsoundness is defused and K-like reduction landed; the
+40-stream import census is 40/40 clean with zero root blockers (`WIP`,
+whnf-cache-key, 2026-08-15).** Taking over the landmine
+[`import-brecon`](docs/plan/status/86-import-brecon.md) stopped in front of. Full write-up:
+[`docs/formalized-math-2026-08/diary-whnf-cache-key.md`](docs/formalized-math-2026-08/diary-whnf-cache-key.md).
+
+**Was it real?** Yes, and it now runs as a test rather than an argument.
+`tc_tests::whnf_cache_key_collision_is_constructible` builds two
+`LocalContext`s that both mint fvar **0** — one recording it as `True`, one as
+`False` — with no declaration admitted in between, so the environment revision
+does not move either. The same `ExprId` (`True.rec … h`, `True` being K-like)
+has two different correct normal forms in them. The pre-fix algorithm is kept
+verbatim as `#[cfg(test)] whnf_core_context_free_cached` and the test runs it:
+it answers the **first** context's normal form in the second. It was **latent,
+not live** — nothing in reduction consulted a context before this commit — so no
+fact and no ADR are owed; the fix ships in the same commit as the rule that
+would have made it reachable.
+
+**The key.** Split on `has_fvars`, because that boundary has a *structural*
+argument rather than a disciplinary one. Closed expressions stay in the
+kernel-global cache: β/ζ/ι/projection/δ build only from subterms of the input
+and from (closed) environment declarations, so a reduction that did not start
+with an `FVar` can never reach a context lookup. Open expressions are memoised
+by the `LocalContext` itself, beside the `infer_cache`/`def_eq_cache` already
+there and already cleared on `push`/`pop` — which is exactly the validity domain
+an answer that depended on a local's type should have. The closed half's
+argument is enforced, not asserted: `Kernel::reduction_ctx_reads` counts context
+reads inside reduction and `whnf_no_unfolding` asserts it does not move while a
+closed term is normalized, so a future context-consulting rule trips a check
+instead of quietly invalidating the cache.
+
+**Cost: nothing measurable.** `examples/prelude_build_timing.rs` (new) over the
+two heavy preludes, release, both behaviours built from one tree — old key
+22.3/22.9 ms `nat` and 39.5/40.8 ms `integer`; shipped split 22.5/22.8 and
+39.6/40.0. Dropping open-term memoisation altogether would have cost 8–9%.
+(My first "baseline" was a stale binary and made the split look like a speed-up;
+an A/B has to be two builds of one tree.)
+
+**`pub fn whnf` did not change.** It is now `whnf` in the empty local context,
+delegating to `pub(crate) whnf_core(e, ctx)` — a restriction, never a widening,
+since without a context K cannot fire on an open term. The threading stopped at
+seven functions, not the ~55 call sites the handover estimated.
+
+**K-like reduction** (`k_like_major`, Lean's `to_cnstr_when_K`) consults the
+predicate we already computed and used only for the wire `k` flag. Guard is
+Lean's, and every clause is load-bearing: removing each in turn flips exactly
+one test. `eq_of_heq` imports; census **40 of 40 streams clean, 0 declines, 0
+root blockers** (was 37/40 with 1). No new fact — a capability, pinned by tests.
+
+The negative-suite controls also caught two of my own tests passing for the
+wrong reason: a constructor-with-fields probe is refused by the def-eq guard
+before the zero-fields clause is reached, and a mutual `Prop` group's recursor
+is small-eliminating so the probe shape *cannot be built* for it
+(`UniverseArityMismatch`). Those three clauses are now pinned directly on the
+predicate in `inductive_tests::the_k_like_predicate_*`, where the controls do
+flip them.
+
+Next: the corpus has stopped measuring at 40/40 — replace it with one that
+exercises what we know we lack (`to_cnstr_when_structure`; `cheap_proj`
+ordering in `reduce_projection`). Still open across three diaries now: the
+toolchain re-pin (4.30.0 → current).
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
@@ -1712,7 +1776,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 61 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 67 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

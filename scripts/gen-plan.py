@@ -78,6 +78,26 @@ BANNER = """> **Generated; do not edit by hand.** Sources: project-wide sections
 > lane's edit was swept into another's commit — that is what the split fixes."""
 
 
+# The Cargo-example count is a shared counter that raced four times in two days:
+# it lives in prose, must equal a filesystem fact, and every lane that adds an
+# example invalidates whatever the last lane wrote. Nobody was wrong; the number
+# was simply not derivable from where it was stored.
+#
+# So a lane's status file writes `{{example-count}}` and this fills it in.
+# `check-parity-docs.py` requires the literal string in PLAN.md, which is
+# generated -- so for that half of the check the race is now structurally gone.
+EXAMPLE_COUNT_TOKEN = "{{example-count}}"
+
+
+def count_cargo_examples() -> int:
+    """Cargo examples on disk -- the same population check-parity-docs counts."""
+    return sum(1 for _ in (ROOT / "crates").glob("*/examples/*.rs"))
+
+
+def fill_example_count(text: str) -> str:
+    return text.replace(EXAMPLE_COUNT_TOKEN, str(count_cargo_examples()))
+
+
 class PlanError(Exception):
     """A malformed source file: reported, never silently skipped."""
 
@@ -125,7 +145,7 @@ def read_lane(path: Path) -> dict[str, object]:
         "path": path.name,
         "lane": path.stem,
         "sections": {
-            name: rebase_links("\n".join(body).strip("\n"), path)
+            name: fill_example_count(rebase_links("\n".join(body).strip("\n"), path))
             for name, body in contributions.items()
         },
     }
