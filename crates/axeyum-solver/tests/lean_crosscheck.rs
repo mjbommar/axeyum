@@ -118,6 +118,9 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     qf_nra_sos_certificate_audit_rows_check_in_real_lean,
     qf_nra_even_power_audit_rows_check_in_real_lean,
     qf_nia_bounded_int_blast_audit_rows_check_in_real_lean,
+    quantified_lia_euclidean_residue_checks_in_real_lean,
+    quantified_lia_affine_growth_checks_in_real_lean,
+    quantified_lia_equality_partition_checks_in_real_lean,
     forall_refutation_checks_in_real_lean,
     exists_refutation_checks_in_real_lean,
     qf_abv_read_consistency_refutation_checks_in_real_lean,
@@ -1390,6 +1393,94 @@ fn qf_nia_bounded_int_blast_audit_rows_check_in_real_lean() {
         );
         lean_accepts(tag, &source);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Quantified-LIA reconstructions (ADR-0104 / ADR-0105 / ADR-0106).
+//
+// Each of the three families below had exactly one guard in the tree: a golden
+// `(source.len(), fnv1a)` pin in its own suite (`quant_residue_lean`,
+// `quant_affine_growth_lean`, `quant_eq_partition_lean`), each carrying a
+// comment that said in words "Checked, not merely stable — Lean 4.30.0 accepts
+// this module". Nothing checked it. None of those three suites is listed in
+// `scripts/check-lean-gate.sh`, and none of them ever shells out to `lean`, so
+// the acceptance claim was a one-off manual observation recorded as a comment —
+// the prose-guard class of `docs/refactor-2026-08/04-gates-and-truth.md`.
+//
+// The cost of that gap is measured: `0fc7cc357` (`integer: axiom=6 → 1`) grew
+// the reachable integer prelude these three modules emit, moved all three byte
+// counts, and updated only the `diophantine_lean_reconstruct` pin — which is in
+// the Lean gate. The three that were not in any gate shipped red. Registering
+// them here means a real Lean kernel reads exactly the modules those pins cover,
+// so the next prelude change re-pins against an *externally checked* module
+// instead of against whatever the producer happened to emit.
+// ---------------------------------------------------------------------------
+
+/// ADR-0104 quantified `LIA`: Euclidean-residue universals (`cvc5` `clock-3` /
+/// `clock-10`) refuted through the integer prelude's decomposition theorem.
+fn quantified_lia_euclidean_residue_checks_in_real_lean() {
+    for (tag, input) in [
+        (
+            "quant_lia_euclidean_residue_clock_3",
+            include_str!(
+                "../../../corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__clock-3.smt2"
+            ),
+        ),
+        (
+            "quant_lia_euclidean_residue_clock_10",
+            include_str!(
+                "../../../corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__clock-10.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("clock row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .expect("Euclidean-residue row reconstructs");
+        assert_eq!(fragment, ProofFragment::IntEuclideanResidue);
+        assert!(
+            !source.contains("sorryAx"),
+            "Euclidean-residue module must not use sorryAx"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
+/// ADR-0105 quantified `LIA`: the checked positive-slope affine-growth class
+/// (`cvc5` `repair-const-nterm`), reconstructed through Euclidean decomposition
+/// and guarded exact `ite` semantics.
+fn quantified_lia_affine_growth_checks_in_real_lean() {
+    let input = include_str!(
+        "../../../corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__repair-const-nterm.smt2"
+    );
+    let mut script = parse_script(input).expect("repair-const-nterm parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("affine-growth target reconstructs");
+    assert_eq!(fragment, ProofFragment::IntAffineGrowth);
+    assert!(
+        !source.contains("sorryAx"),
+        "affine-growth module must not use sorryAx"
+    );
+    lean_accepts("quant_lia_affine_growth_repair_const_nterm", &source);
+}
+
+/// ADR-0106 quantified `LIA`: a single-pivot equality partition (`cvc5`
+/// `cbqi-sdlx-fixpoint-3-dd`) with genuine nested `Int`/`Bool` binders.
+fn quantified_lia_equality_partition_checks_in_real_lean() {
+    let input = include_str!(
+        "../../../corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__cbqi-sdlx-fixpoint-3-dd.smt2"
+    );
+    let mut script = parse_script(input).expect("cbqi-sdlx row parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("equality-partition target reconstructs");
+    assert_eq!(fragment, ProofFragment::SinglePivotEqualityPartition);
+    assert!(
+        !source.contains("sorryAx"),
+        "equality-partition module must not use sorryAx"
+    );
+    lean_accepts("quant_lia_equality_partition_cbqi_sdlx", &source);
 }
 
 /// Universal: `∀x.(f x = c) ∧ ¬(f a = c)` — instantiation refutation.

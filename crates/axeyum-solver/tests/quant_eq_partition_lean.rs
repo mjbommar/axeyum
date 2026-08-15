@@ -46,11 +46,20 @@ fn sdlx_reconstructs_genuine_nested_quantifiers_and_routes() {
         .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
             (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
         });
-    // Re-pinned 2026-08-14 (was `(33_870, 0xb048_fc57_2f8c_e975)`): `a5975725f` made
-    // every reachable inductive a real Lean `inductive` instead of an opaque `axiom`.
-    // Checked, not merely stable — Lean 4.30.0 accepts this module, `#print axioms`
-    // reports only ledger axioms and the query hypothesis, and there is no `sorryAx`.
-    assert_eq!((source.len(), fnv1a), (51_989, 0x33c9_7d4b_0b70_5040));
+    // Re-pinned 2026-08-15 (was `(51_989, 0x33c9_7d4b_0b70_5040)`): `0fc7cc357`
+    // discharged five of the six remaining integer axioms (`integer: axiom=6 → 1`),
+    // so the integer laws this refutation reaches are theorems whose proof terms are
+    // now emitted. Fewer axioms, more bytes. That commit re-pinned
+    // `diophantine_lean_reconstruct` — which is in the Lean gate — and not this
+    // suite, which is in no gate; the pin shipped red.
+    //
+    // CHECKED, not merely re-typed: `lean_crosscheck`'s
+    // `quantified_lia_equality_partition_checks_in_real_lean` family, added in the
+    // same commit as this re-pin, hands this module to Lean 4.30.0 under
+    // `scripts/check-lean-gate.sh`. Accepted; `#print axioms axeyum_refutation`
+    // reports `[axeyum.reconstruct.dio.hyp._97]` — the query hypothesis alone, no
+    // ledger axiom — and there is no `sorryAx`.
+    assert_eq!((source.len(), fnv1a), (112_303, 0x285c_ec74_0c3f_95f2));
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("eq_em"));
     assert!(!source.contains("sorryAx"));

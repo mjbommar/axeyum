@@ -28,13 +28,23 @@ fn repair_const_nterm_reconstructs_and_routes() {
         .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
             (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
         });
-    // Re-pinned 2026-08-14 (was `(52_138, 0x81ca_6c7f_fbce_3dd9)`): `a5975725f` made
-    // every reachable inductive a real Lean `inductive` instead of an opaque `axiom`,
-    // which is what the module has to say for Lean's ι-reduction to match the kernel's,
-    // and it changed these bytes without re-pinning them. The new bytes are CHECKED,
-    // not merely stable: this module is accepted by Lean 4.30.0 with `#print axioms`
-    // reporting only ledger axioms and the query hypotheses, and no `sorryAx`.
-    assert_eq!((source.len(), fnv1a), (79_801, 0x0e88_e1a5_ecbf_6a7a));
+    // Re-pinned 2026-08-15 (was `(79_801, 0x0e88_e1a5_ecbf_6a7a)`): `0fc7cc357`
+    // discharged five of the six remaining integer axioms (`integer: axiom=6 → 1`),
+    // so `Int.add_assoc`, `Int.mul_assoc`, `Int.left_distrib`, `Int.add_le_add` and
+    // `Int.add_lt_add_of_le_of_lt` are theorems whose proof terms are now reachable
+    // from this refutation and therefore emitted. Fewer axioms, more bytes. That
+    // commit re-pinned `diophantine_lean_reconstruct` — which is in the Lean gate —
+    // and did not re-pin this suite, which is in no gate; the pin shipped red.
+    //
+    // These bytes are CHECKED, not merely re-typed. `lean_crosscheck`'s
+    // `quantified_lia_affine_growth_checks_in_real_lean` family, added in the same
+    // commit as this re-pin, hands exactly this module to Lean 4.30.0 under
+    // `scripts/check-lean-gate.sh`: accepted, `#print axioms axeyum_refutation`
+    // reports `[Int.euclidean_decomposition, axeyum.reconstruct.dio.hyp._14,
+    // axeyum.reconstruct.dio.x._0 … x._3]` — one ledger axiom plus the query's own
+    // parameters — and no `sorryAx`. Before that family existed, "Lean accepts this"
+    // was a comment nothing ran.
+    assert_eq!((source.len(), fnv1a), (174_524, 0x298c_fdc2_b3fe_d3d5));
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("euclidean_decomposition"));
     assert!(!source.contains("sorryAx"));

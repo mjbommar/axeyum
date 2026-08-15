@@ -39,12 +39,22 @@ fn committed_clock_rows_reconstruct_and_route() {
                 .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
                     (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
                 });
-            // Re-pinned 2026-08-14 (was `(19_615, 0x586f_b67c_0ff8_1e6a)`):
-            // `a5975725f` made every reachable inductive a real Lean `inductive`
-            // instead of an opaque `axiom`. Checked, not merely stable — Lean 4.30.0
-            // accepts this module, `#print axioms` reports only ledger axioms and the
-            // query hypotheses, and there is no `sorryAx`.
-            assert_eq!((source.len(), fnv1a), (33_339, 0x682a_a2a2_d64f_6caf));
+            // Re-pinned 2026-08-15 (was `(33_339, 0x682a_a2a2_d64f_6caf)`):
+            // `0fc7cc357` discharged five of the six remaining integer axioms
+            // (`integer: axiom=6 → 1`), so the additive/multiplicative laws this
+            // refutation reaches are theorems whose proof terms are now emitted.
+            // Fewer axioms, more bytes. That commit re-pinned
+            // `diophantine_lean_reconstruct` — which is in the Lean gate — and not
+            // this suite, which is in no gate; the pin shipped red.
+            //
+            // CHECKED, not merely re-typed: `lean_crosscheck`'s
+            // `quantified_lia_euclidean_residue_checks_in_real_lean` family, added
+            // in the same commit as this re-pin, hands this module to Lean 4.30.0
+            // under `scripts/check-lean-gate.sh`. Accepted; `#print axioms
+            // axeyum_refutation` reports `[Int.euclidean_decomposition,
+            // axeyum.reconstruct.dio.hyp._3, axeyum.reconstruct.dio.x._0]` — one
+            // ledger axiom plus the query's own parameters — and no `sorryAx`.
+            assert_eq!((source.len(), fnv1a), (83_060, 0x60e3_1e2a_5468_ff8e));
         }
         assert!(source.contains("theorem axeyum_refutation : False"));
         assert!(source.contains("euclidean_decomposition"));
