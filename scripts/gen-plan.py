@@ -310,6 +310,21 @@ def partition_tracked(paths: list[Path]) -> tuple[list[Path], list[Path]]:
     A checkout without git, or one where the query fails, degrades to including
     everything: this is a convenience guard, never a correctness gate, and it
     must not make the generator unusable.
+
+    **`git ls-files` reads the INDEX, and that is deliberate — do not "fix" it to
+    read `HEAD`.** A lane was bitten by the consequence and reported it: it
+    regenerated while another lane's status file was staged-but-uncommitted, so
+    that lane's block landed in this one's commit. Reading `git ls-tree HEAD`
+    would stop that, and would break the ordinary workflow instead: a lane
+    creating its FIRST status file could never include its own block in the same
+    commit that adds the file, and its commit would then fail `--check` the
+    moment it landed. Staging is the point at which a lane commits to publishing
+    text, so the index is the right input.
+
+    The residual exposure — one lane's staged block appearing in another's
+    commit — is real but self-correcting: `--check` disagrees until the owning
+    lane commits, which is a visible gate failure rather than lost content, and
+    the text is theirs either way. That is the trade, chosen knowingly.
     """
     try:
         result = subprocess.run(
