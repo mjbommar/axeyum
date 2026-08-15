@@ -2772,7 +2772,7 @@ impl Kernel {
     /// Returns `None` for non-recursor heads, too-few arguments, or a major that
     /// is not yet a constructor application (in which case the application is
     /// already weak-head-normal here).
-    pub(crate) fn reduce_rec(&mut self, e: ExprId) -> Option<ExprId> {
+    pub(crate) fn reduce_rec(&mut self, e: ExprId, ctx: &mut LocalContext) -> Option<ExprId> {
         let (head, args) = self.unfold_apps(e);
         let ExprNode::Const(rec_name, levels) = self.expr_node(head).clone() else {
             return None;
@@ -2799,8 +2799,9 @@ impl Kernel {
         let prefix_len = (*num_params as usize) + (*num_motives as usize) + (*num_minors as usize);
 
         let major = *args.get(major_idx)?;
-        let major = self.whnf(major);
+        let major = self.whnf_core(major, ctx);
         let major = self.nat_literal_to_constructor(major).unwrap_or(major);
+        let major = self.k_like_major(&rec_rules, major, ctx).unwrap_or(major);
         let (major_ctor, major_ctor_args) = self.unfold_apps(major);
         let ExprNode::Const(major_ctor_name, _) = self.expr_node(major_ctor).clone() else {
             return None;
@@ -2830,6 +2831,112 @@ impl Kernel {
         let r = self.foldl_apps(r, fields);
         let trailing: Vec<ExprId> = args.iter().skip(major_idx + 1).copied().collect();
         Some(self.foldl_apps(r, trailing))
+    }
+
+    /// **K-like reduction** — Lean's `to_cnstr_when_K` (`kernel/type_checker.cpp`).
+    ///
+    /// A recursor whose family is [K-like](Kernel::is_k_like_inductive) — a
+    /// single, non-mutual, `Prop`-valued family with exactly one constructor and
+    /// that constructor takes only the family's parameters — eliminates a
+    /// **definitional subsingleton**: every inhabitant of `I params indices` is
+    /// the one constructor applied to `params`. So a major premise that is
+    /// *stuck* (canonically a free variable, which is every case that occurs
+    /// under a binder) may be replaced by that constructor application, after
+    /// which ι fires normally. Without this rule `eq_of_heq` cannot be checked
+    /// at all: it needs `cast α α h a ≡ a` with `h : α = α` a **variable**, and
+    /// `cast` is `Eq.rec`, which cannot ι-reduce on a variable major.
+    ///
+    /// # Why this does not widen definitional equality unsoundly
+    ///
+    /// The replacement is guarded by exactly the check Lean uses, and that check
+    /// carries all of the rule's discriminating content:
+    ///
+    /// 1. the family must satisfy [`Kernel::is_k_like_inductive`] — `Prop`, one
+    ///    constructor, that constructor with **zero fields**, not part of a
+    ///    mutual group. Drop `Prop` and the family need not be a subsingleton;
+    ///    drop zero-fields and distinct inhabitants carry distinct data; Lean
+    ///    excludes mutual groups explicitly.
+    /// 2. the major's **inferred type** must WHNF to an application of that same
+    ///    family. A major of some other type is not an inhabitant at all.
+    /// 3. the constructor applied to the *parameters read off that type* must
+    ///    have a type definitionally equal to the major's type. This is what
+    ///    keeps an **indexed** K-like family honest: for `h : @Eq α a b` the
+    ///    candidate is `Eq.refl α a : @Eq α a a`, and the guard therefore demands
+    ///    `a ≡ b` before `h` may be treated as `Eq.refl`. Without step 3 the rule
+    ///    would prove `a = b` for arbitrary `a`, `b`.
+    ///
+    /// Inference is fail-closed here: any [`KernelError`] means K does not fire.
+    ///
+    /// # The local context, and the WHNF cache
+    ///
+    /// This is the **only** reduction rule that consults `ctx`, and it is why
+    /// the reduction path carries one at all: the major is typically a free
+    /// variable, whose type lives in the local context rather than in the
+    /// environment. That makes reduction context-dependent, which is why the
+    /// kernel-global WHNF cache is restricted to closed expressions — see
+    /// [`Kernel::whnf_no_unfolding`]. `reduction_ctx_reads` is bumped exactly
+    /// when this rule is about to consult the context, which is what the
+    /// closed-expression assertion there watches.
+    fn k_like_major(
+        &mut self,
+        rec_rules: &[RecRule],
+        major: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Option<ExprId> {
+        // (1) The family must be K-like: one rule, zero fields, `Prop`, not
+        // mutual. `is_k_like_inductive` owns the last three.
+        let [rule] = rec_rules else {
+            return None;
+        };
+        if rule.num_fields != 0 {
+            return None;
+        }
+        let ctor_name = rule.ctor_name;
+        let Some(Declaration::Constructor { inductive, .. }) = self.env.get(ctor_name) else {
+            return None;
+        };
+        let family = *inductive;
+        if !self.is_k_like_inductive(family) {
+            return None;
+        }
+        let Some(Declaration::Inductive { num_params, .. }) = self.env.get(family) else {
+            return None;
+        };
+        let num_params = usize::from(*num_params);
+
+        // An already-constructor-headed major needs no help, and re-deriving it
+        // would only cost an inference.
+        let (major_head, _) = self.unfold_apps(major);
+        if matches!(self.expr_node(major_head), ExprNode::Const(name, _) if *name == ctor_name) {
+            return None;
+        }
+
+        // Consulting the context starts here. Only an *open* major can actually
+        // read it; a closed one is typed from the environment alone, which is
+        // what keeps the kernel-global WHNF cache's context-free key sound.
+        if self.has_fvars(major) {
+            self.reduction_ctx_reads += 1;
+        }
+
+        // (2) The major's type must be an application of the family itself.
+        let major_ty = self.infer_in(major, ctx).ok()?;
+        let major_ty = self.whnf_core(major_ty, ctx);
+        let (ty_head, ty_args) = self.unfold_apps(major_ty);
+        let ExprNode::Const(ty_name, ty_levels) = self.expr_node(ty_head).clone() else {
+            return None;
+        };
+        if ty_name != family || ty_args.len() < num_params {
+            return None;
+        }
+
+        // (3) The constructor at those parameters must have the same type.
+        let ctor = self.const_(ctor_name, ty_levels);
+        let ctor_app = self.foldl_apps(ctor, ty_args[..num_params].to_vec());
+        let ctor_ty = self.infer_in(ctor_app, ctx).ok()?;
+        if !self.def_eq_in(major_ty, ctor_ty, ctx) {
+            return None;
+        }
+        Some(ctor_app)
     }
 
     /// Positional `Param ↦ level` substitution (a small public shim around the

@@ -3254,3 +3254,114 @@ fn nested_temporary_name_scanner_rejects_const_and_projection_type_mutants() {
         Err(KernelError::NestedInductiveRestorationLeak { name: temporary })
     );
 }
+
+// ---------------------------------------------------------------------------
+// The K-like predicate itself
+// ---------------------------------------------------------------------------
+//
+// `k_like_major` consults `Kernel::is_k_like_inductive`, and three of that
+// predicate's four clauses cannot be reached through the `add_declaration`
+// probes in `tests/k_like_reduction.rs`: a family whose constructor has fields,
+// or that is a mutual group member, is refused earlier — by the def-eq guard on
+// the candidate constructor's type, or (for a mutual `Prop` group) by the
+// recursor being small-eliminating and so having no probe shape at all. These
+// tests pin the clauses where they actually live.
+
+/// `True` — `Prop`, one constructor, that constructor with zero fields, not
+/// mutual — is the shape the predicate exists to recognize.
+#[test]
+fn the_k_like_predicate_accepts_a_prop_family_with_one_nullary_constructor() {
+    let mut k = Kernel::new();
+    let logic = crate::build_logic_prelude(&mut k).expect("logic prelude builds");
+    assert!(k.is_k_like_inductive(logic.true_));
+    assert!(
+        k.is_k_like_inductive(logic.eq),
+        "indexed `Eq` is K-like too"
+    );
+    assert!(
+        !k.is_k_like_inductive(logic.false_),
+        "an empty family has no constructor to substitute"
+    );
+    assert!(
+        !k.is_k_like_inductive(logic.or),
+        "two constructors is not a subsingleton"
+    );
+}
+
+/// A `Prop` family whose single constructor takes a field is **not** K-like:
+/// its inhabitants carry data, and the constructor applied to the parameters
+/// alone is not a term of the family.
+#[test]
+fn the_k_like_predicate_excludes_a_constructor_with_fields() {
+    let mut k = Kernel::new();
+    let logic = crate::build_logic_prelude(&mut k).expect("logic prelude builds");
+    let anon = k.anon();
+    let prop = k.sort_zero();
+    let true_const = k.const_(logic.true_, vec![]);
+
+    let boxed = k.name_str(anon, "BoxedPred");
+    let boxed_mk = k.name_str(boxed, "mk");
+    let boxed_const = k.const_(boxed, vec![]);
+    let ctor_ty = k.pi(anon, true_const, boxed_const, BinderInfo::Default);
+    k.add_inductive(boxed, &[], 0, prop, &[(boxed_mk, ctor_ty)])
+        .expect("BoxedPred admits");
+
+    assert!(!k.is_k_like_inductive(boxed));
+}
+
+/// A family outside `Prop` is **not** K-like even with one nullary
+/// constructor: outside `Prop` an inhabitant is data.
+#[test]
+fn the_k_like_predicate_excludes_a_non_prop_family() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let type_ = k.sort(one);
+
+    let solo = k.name_str(anon, "SoloPred");
+    let solo_mk = k.name_str(solo, "mk");
+    let solo_const = k.const_(solo, vec![]);
+    k.add_inductive(solo, &[], 0, type_, &[(solo_mk, solo_const)])
+        .expect("SoloPred admits");
+
+    assert!(!k.is_k_like_inductive(solo));
+}
+
+/// A member of a mutual group is **not** K-like, even though each family in
+/// this group would qualify in isolation. Lean excludes mutual groups from its
+/// `k` flag explicitly; this is that exclusion.
+#[test]
+fn the_k_like_predicate_excludes_mutual_groups() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let prop = k.sort_zero();
+
+    let left = k.name_str(anon, "MutLeftPred");
+    let left_mk = k.name_str(left, "lmk");
+    let left_const = k.const_(left, vec![]);
+    let right = k.name_str(anon, "MutRightPred");
+    let right_mk = k.name_str(right, "rmk");
+    let right_const = k.const_(right, vec![]);
+    k.add_mutual_inductive(
+        &[],
+        0,
+        &[
+            InductiveFamilySpec::new(left, prop, vec![(left_mk, left_const)]),
+            InductiveFamilySpec::new(right, prop, vec![(right_mk, right_const)]),
+        ],
+    )
+    .expect("the mutual group admits");
+
+    assert!(!k.is_k_like_inductive(left));
+    assert!(!k.is_k_like_inductive(right));
+
+    // The same shape declared on its own *is* K-like, so the exclusion above is
+    // the mutual clause and not something about these families.
+    let solo = k.name_str(anon, "SoloPropPred");
+    let solo_mk = k.name_str(solo, "mk");
+    let solo_const = k.const_(solo, vec![]);
+    k.add_inductive(solo, &[], 0, prop, &[(solo_mk, solo_const)])
+        .expect("SoloPropPred admits");
+    assert!(k.is_k_like_inductive(solo));
+}

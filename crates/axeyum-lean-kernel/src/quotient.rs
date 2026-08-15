@@ -12,6 +12,7 @@ use std::collections::{BTreeSet, HashSet};
 use crate::env::{Declaration, QuotKind};
 use crate::expr::{BinderInfo, ExprId, ExprNode};
 use crate::name::NameId;
+use crate::tc::LocalContext;
 use crate::{Kernel, KernelError};
 
 const PACKAGE_LEN: usize = 4;
@@ -99,7 +100,11 @@ impl Kernel {
     /// reduced to WHNF and must then be the checked package's `Quot.mk` applied
     /// to exactly three arguments. The representative is its last argument.
     /// Any arguments after the eliminator's major are reapplied to the result.
-    pub(crate) fn reduce_quotient(&mut self, expression: ExprId) -> Option<ExprId> {
+    pub(crate) fn reduce_quotient(
+        &mut self,
+        expression: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Option<ExprId> {
         let (head, arguments) = self.unfold_apps(expression);
         let ExprNode::Const(eliminator_name, _) = self.expr_node(head).clone() else {
             return None;
@@ -117,7 +122,7 @@ impl Kernel {
             return None;
         }
         let major = *arguments.get(major_position)?;
-        let major = self.whnf(major);
+        let major = self.whnf_core(major, ctx);
         let (constructor, constructor_arguments) = self.unfold_apps(major);
         let ExprNode::Const(constructor_name, _) = self.expr_node(constructor).clone() else {
             return None;
@@ -1061,7 +1066,10 @@ mod tests {
             let expression = mk_application(&mut kernel, kind, function, Some(major), &trailing);
             let applied = kernel.app(function, representative);
             let expected = kernel.apps(applied, &trailing);
-            assert_eq!(kernel.reduce_quotient(expression), Some(expected));
+            assert_eq!(
+                kernel.reduce_quotient(expression, &mut LocalContext::new()),
+                Some(expected)
+            );
         }
     }
 
@@ -1087,7 +1095,10 @@ mod tests {
         assert_eq!(kernel.whnf(reducible), representative);
 
         let underapplied = mk_application(&mut kernel, QuotKind::Lift, function, None, &[]);
-        assert_eq!(kernel.reduce_quotient(underapplied), None);
+        assert_eq!(
+            kernel.reduce_quotient(underapplied, &mut LocalContext::new()),
+            None
+        );
         assert_eq!(kernel.whnf(underapplied), underapplied);
 
         let wrong_head = kernel.const_(names.eq_refl, vec![zero]);

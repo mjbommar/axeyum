@@ -270,9 +270,24 @@ pub struct Kernel {
     /// independent of the local context, so sharing this cache across recursive
     /// checks avoids exponential re-walks of hash-consed proof DAGs.
     infer_closed_cache: HashMap<ExprId, ExprId>,
-    /// Weak-head normal forms for exactly one declaration-environment revision.
-    /// A revision change clears unreachable prior entries before lookup.
+    /// Weak-head normal forms of **closed** expressions for exactly one
+    /// declaration-environment revision. A revision change clears unreachable
+    /// prior entries before lookup.
+    ///
+    /// Closed only, deliberately: the key has no local-context component, and
+    /// local contexts collide (`LocalContext::new` restarts fvar ids at 0).
+    /// Open expressions are memoised by the context that produced them. See
+    /// `Kernel::whnf_no_unfolding` for the full argument.
     whnf_cache: (u64, HashMap<ExprId, ExprId>),
+    /// How many times reduction has consulted a [`LocalContext`].
+    ///
+    /// A tripwire, not a statistic. `Kernel::whnf_no_unfolding` asserts this
+    /// counter does not move while a **closed** expression is normalized, which
+    /// is the precondition that makes the context-free `whnf_cache` key sound.
+    /// The property is argued from closedness being preserved by every
+    /// reduction step; the counter is what turns the argument into a check that
+    /// a future reduction rule cannot silently invalidate.
+    reduction_ctx_reads: u64,
     /// One-way guard set after transient tables are released for serialization.
     export_only: bool,
 

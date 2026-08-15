@@ -619,7 +619,7 @@ impl Kernel {
     /// whose only arguments are the family's parameters. The kernel does not
     /// store the flag, so it is derived; the round-trip suite checks the
     /// derivation against every official v4.30 fixture.
-    fn is_k_like_inductive(&self, family: NameId) -> bool {
+    pub(crate) fn is_k_like_inductive(&self, family: NameId) -> bool {
         let Some(Declaration::Inductive { ty, ctor_names, .. }) = self.environment().get(family)
         else {
             return false;

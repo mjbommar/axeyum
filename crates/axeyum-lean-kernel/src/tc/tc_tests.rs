@@ -10,7 +10,7 @@
     clippy::doc_markdown
 )]
 
-use crate::expr::ExprNode;
+use crate::expr::{ExprId, ExprNode};
 use crate::level::LevelNode;
 use crate::tc::{KernelError, LocalContext, LocalDecl};
 use crate::{BinderInfo, Declaration, Kernel, Lit, build_logic_prelude};
@@ -149,6 +149,11 @@ fn beta_reduces_to_argument() {
 
 /// WHNF entries from prior declaration revisions are unreachable and are
 /// discarded before the first lookup in the new revision.
+///
+/// Both expressions here are **closed**, which is now what makes them eligible
+/// for the kernel-global cache at all; see
+/// `open_expressions_never_enter_the_context_free_whnf_cache` for the other
+/// half of the split.
 #[test]
 fn whnf_cache_retains_only_the_current_environment_revision() {
     let mut k = Kernel::new();
@@ -156,7 +161,7 @@ fn whnf_cache_retains_only_the_current_environment_revision() {
     let ty = k.sort_zero();
     let body = k.bvar(0);
     let first_lam = k.lam(anon, ty, body, BinderInfo::Default);
-    let first_arg = k.fvar(41);
+    let first_arg = k.lit(Lit::Nat(41_u8.into()));
     let first = k.app(first_lam, first_arg);
     assert_eq!(k.whnf(first), first_arg);
     assert!(k.whnf_cache.1.contains_key(&first));
@@ -170,12 +175,47 @@ fn whnf_cache_retains_only_the_current_environment_revision() {
     .expect("axiom admits");
 
     let second_lam = k.lam(anon, ty, body, BinderInfo::Default);
-    let second_arg = k.fvar(42);
+    let second_arg = k.lit(Lit::Nat(42_u8.into()));
     let second = k.app(second_lam, second_arg);
     assert_eq!(k.whnf(second), second_arg);
     assert_eq!(k.whnf_cache.0, k.env.revision());
     assert!(k.whnf_cache.1.contains_key(&second));
     assert!(!k.whnf_cache.1.contains_key(&first));
+}
+
+/// The kernel-global WHNF cache is keyed on `(environment revision, ExprId)`
+/// with **no** local-context component, so nothing whose reduction could depend
+/// on a local context may ever be stored in it.
+///
+/// `has_fvars` is the structural boundary that decides this: a closed term
+/// cannot reach a context lookup, because every reduction step builds only from
+/// subterms of the input and from (closed) environment declarations, so no
+/// `FVar` can appear part-way through. This test pins the boundary itself —
+/// reduce an expression that mentions a free variable and assert the global
+/// cache stayed empty.
+#[test]
+fn open_expressions_never_enter_the_context_free_whnf_cache() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let ty = k.sort_zero();
+    let body = k.bvar(0);
+    let identity = k.lam(anon, ty, body, BinderInfo::Default);
+    let a = k.fvar(41);
+    let open = k.app(identity, a);
+    assert!(k.has_fvars(open), "the probe expression must be open");
+
+    assert_eq!(k.whnf(open), a);
+    assert!(
+        k.whnf_cache.1.is_empty(),
+        "an open expression reached the context-free cache"
+    );
+
+    // The closed counterpart of the same redex does get cached, so the empty
+    // cache above is the `has_fvars` split and not an inert reduction path.
+    let closed_arg = k.lit(Lit::Nat(41_u8.into()));
+    let closed = k.app(identity, closed_arg);
+    assert_eq!(k.whnf(closed), closed_arg);
+    assert!(k.whnf_cache.1.contains_key(&closed));
 }
 
 /// The sole kernel rollback boundary removes the environment suffix and
@@ -680,5 +720,213 @@ fn projection_rejects_inconsistent_constructor_telescope_metadata() {
             ctor: ctor_name,
             field_index: 0,
         })
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The WHNF cache key, and the collision it used to admit
+// ---------------------------------------------------------------------------
+
+/// Build `True.rec.{1} (fun _ : True => Prop) True h` with `h` the free
+/// variable `fvar_id`, over a kernel carrying the logic prelude.
+///
+/// `True` is K-like — a `Prop` family, one constructor, that constructor with
+/// zero fields, not mutual — so this application reduces if and only if
+/// reduction can establish that `h`'s type really is `True`, which it can only
+/// learn from a local context.
+fn k_like_true_rec_probe(k: &mut Kernel, fvar_id: u64) -> (ExprId, ExprId, ExprId) {
+    let logic = build_logic_prelude(k).expect("logic prelude builds");
+    let anon = k.anon();
+    let true_const = k.const_(logic.true_, vec![]);
+    let prop = k.sort_zero();
+    // motive : True -> Sort 1, constantly `Prop`.
+    let motive = k.lam(anon, true_const, prop, BinderInfo::Default);
+    // minor : motive True.intro = Prop, i.e. any proposition; `True` will do.
+    let minor = true_const;
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let recursor = k.const_(logic.true_rec, vec![one]);
+    let applied = k.app(recursor, motive);
+    let applied = k.app(applied, minor);
+    let major = k.fvar(fvar_id);
+    let probe = k.app(applied, major);
+    (probe, minor, true_const)
+}
+
+/// K-like reduction reads the **local context**, so the same `ExprId` has two
+/// different correct weak head normal forms in two different contexts — and the
+/// two contexts collide on the fvar id that distinguishes them.
+///
+/// This is the construction the cache key had to be settled against. All three
+/// preconditions are asserted rather than assumed:
+///
+/// 1. `LocalContext::new` restarts its fvar counter at 0, so two independent
+///    contexts really do mint the *same* id for different variables;
+/// 2. `Kernel::fvar` interns, so that one id is one `ExprId` in both — the
+///    whole cache key, under the old scheme;
+/// 3. no declaration is admitted in between, so the environment revision (the
+///    only other component of the old key) does not move either.
+///
+/// The payoff is the last two assertions: the pre-fix algorithm, run verbatim,
+/// answers the *first* context's normal form in the second, while the shipped
+/// algorithm answers each context correctly.
+#[test]
+fn whnf_cache_key_collision_is_constructible() {
+    let mut k = Kernel::new();
+    let (probe, minor, true_ty) = k_like_true_rec_probe(&mut k, 0);
+    let false_ty = {
+        let anon = k.anon();
+        let false_name = k.name_str(anon, "False");
+        k.const_(false_name, vec![])
+    };
+    let anon = k.anon();
+    let revision_before = k.env.revision();
+
+    // Context A: the local `h` really is a proof of `True`.
+    let mut ctx_a = LocalContext::new();
+    let fvar_a = ctx_a.fresh_fvar();
+    assert_eq!(fvar_a, 0, "a fresh context mints fvar 0");
+    ctx_a.push(LocalDecl {
+        fvar: fvar_a,
+        name: anon,
+        ty: true_ty,
+        info: BinderInfo::Default,
+    });
+    let normal_a = k.whnf_core(probe, &mut ctx_a);
+    assert_eq!(
+        normal_a, minor,
+        "K-like reduction must fire on a major of the K-like family"
+    );
+
+    // Context B: same fvar id, different type. Nothing was admitted in between.
+    let mut ctx_b = LocalContext::new();
+    let fvar_b = ctx_b.fresh_fvar();
+    assert_eq!(fvar_b, fvar_a, "the two contexts collide on the fvar id");
+    ctx_b.push(LocalDecl {
+        fvar: fvar_b,
+        name: anon,
+        ty: false_ty,
+        info: BinderInfo::Default,
+    });
+    assert_eq!(
+        k.env.revision(),
+        revision_before,
+        "no declaration was admitted, so the old key's other component is fixed"
+    );
+
+    let normal_b = k.whnf_core(probe, &mut ctx_b);
+    assert_eq!(
+        normal_b, probe,
+        "a major that is not of the K-like family must leave the recursor stuck"
+    );
+    assert_ne!(
+        normal_a, normal_b,
+        "the same ExprId at one environment revision has two normal forms"
+    );
+
+    // Now the point. Run the pre-fix algorithm over the same two contexts.
+    let mut ctx_a = LocalContext::new();
+    let fvar = ctx_a.fresh_fvar();
+    ctx_a.push(LocalDecl {
+        fvar,
+        name: anon,
+        ty: true_ty,
+        info: BinderInfo::Default,
+    });
+    let stale_a = k.whnf_core_context_free_cached(probe, &mut ctx_a);
+    assert_eq!(stale_a, minor);
+
+    let mut ctx_b = LocalContext::new();
+    let fvar = ctx_b.fresh_fvar();
+    ctx_b.push(LocalDecl {
+        fvar,
+        name: anon,
+        ty: false_ty,
+        info: BinderInfo::Default,
+    });
+    let stale_b = k.whnf_core_context_free_cached(probe, &mut ctx_b);
+    assert_eq!(
+        stale_b, minor,
+        "the pre-fix cache returns the FIRST context's normal form in the second"
+    );
+    assert_ne!(
+        stale_b, normal_b,
+        "...which is not the second context's normal form: this is the collision"
+    );
+}
+
+/// The shipped split survives the same collision when the two contexts are
+/// exercised in the *other* order, and when the second context is entered
+/// before the first is dropped.
+#[test]
+fn context_scoped_whnf_entries_do_not_leak_between_contexts() {
+    let mut k = Kernel::new();
+    let (probe, minor, true_ty) = k_like_true_rec_probe(&mut k, 0);
+    let false_ty = {
+        let anon = k.anon();
+        let false_name = k.name_str(anon, "False");
+        k.const_(false_name, vec![])
+    };
+    let anon = k.anon();
+
+    let mut refuting = LocalContext::new();
+    let fvar = refuting.fresh_fvar();
+    refuting.push(LocalDecl {
+        fvar,
+        name: anon,
+        ty: false_ty,
+        info: BinderInfo::Default,
+    });
+    let mut admitting = LocalContext::new();
+    let fvar = admitting.fresh_fvar();
+    admitting.push(LocalDecl {
+        fvar,
+        name: anon,
+        ty: true_ty,
+        info: BinderInfo::Default,
+    });
+
+    // Both contexts are live at once and interleaved.
+    assert_eq!(k.whnf_core(probe, &mut refuting), probe);
+    assert_eq!(k.whnf_core(probe, &mut admitting), minor);
+    assert_eq!(k.whnf_core(probe, &mut refuting), probe);
+    assert_eq!(k.whnf_core(probe, &mut admitting), minor);
+    assert!(
+        !k.whnf_cache.1.contains_key(&probe),
+        "a context-dependent normal form must never reach the kernel-global cache"
+    );
+    let keys: Vec<ExprId> = k.whnf_cache.1.keys().copied().collect();
+    assert!(
+        keys.iter().all(|&key| !k.has_fvars(key)),
+        "every key in the context-free cache must be closed"
+    );
+}
+
+/// Popping the local declaration that justified a K-like reduction invalidates
+/// the memoised answer: the same `ExprId` goes back to being stuck.
+///
+/// This is what `LocalContext::push`/`pop` clearing the context-scoped cache
+/// buys, and it is why that cache does not need a discriminator of its own.
+#[test]
+fn popping_the_local_that_justified_k_reduction_invalidates_the_entry() {
+    let mut k = Kernel::new();
+    let (probe, minor, true_ty) = k_like_true_rec_probe(&mut k, 0);
+    let anon = k.anon();
+
+    let mut ctx = LocalContext::new();
+    let fvar = ctx.fresh_fvar();
+    ctx.push(LocalDecl {
+        fvar,
+        name: anon,
+        ty: true_ty,
+        info: BinderInfo::Default,
+    });
+    assert_eq!(k.whnf_core(probe, &mut ctx), minor);
+
+    ctx.pop().expect("the declaration is on the stack");
+    assert_eq!(
+        k.whnf_core(probe, &mut ctx),
+        probe,
+        "with the local gone, reduction has no reason to believe the major is True"
     );
 }

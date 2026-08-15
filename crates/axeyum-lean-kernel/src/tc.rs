@@ -486,6 +486,15 @@ pub struct LocalContext {
     /// the local-context analogue of nanoda's equality cache and prevents the
     /// same shared proof/type pair from being compared as an exponential tree.
     def_eq_cache: HashMap<(ExprId, ExprId), bool>,
+    /// Weak-head normal forms of expressions that mention free variables, and
+    /// so may have been computed by consulting this context's declarations.
+    ///
+    /// This is the context-scoped half of the WHNF cache; the closed half lives
+    /// on the kernel (see [`Kernel::whnf_no_unfolding`] for why the split is
+    /// where it is). Like `infer_cache` and `def_eq_cache`, it is valid for
+    /// exactly the current declaration stack and is cleared by `push`/`pop`;
+    /// the `u64` pins the environment revision the entries were computed at.
+    whnf_cache: (u64, HashMap<ExprId, ExprId>),
     /// Definitional values for the subset of locals introduced by `let`.
     let_values: HashMap<u64, ExprId>,
     /// Lambda nodes in a scoped open skeleton whose bodies already refer to the
@@ -520,6 +529,7 @@ impl LocalContext {
     pub fn push(&mut self, decl: LocalDecl) {
         self.infer_cache.clear();
         self.def_eq_cache.clear();
+        self.whnf_cache.1.clear();
         self.decls.push(decl);
     }
 
@@ -539,6 +549,7 @@ impl LocalContext {
         }
         self.infer_cache.clear();
         self.def_eq_cache.clear();
+        self.whnf_cache.1.clear();
         popped
     }
 
@@ -554,6 +565,25 @@ impl LocalContext {
 
     fn inferred(&self, expression: ExprId) -> Option<ExprId> {
         self.infer_cache.get(&expression).copied()
+    }
+
+    /// The context-scoped WHNF result for `expression`, if one was recorded at
+    /// the same environment `revision` and under the current declaration stack.
+    fn whnf_result(&mut self, revision: u64, expression: ExprId) -> Option<ExprId> {
+        if self.whnf_cache.0 != revision {
+            self.whnf_cache.0 = revision;
+            self.whnf_cache.1.clear();
+            return None;
+        }
+        self.whnf_cache.1.get(&expression).copied()
+    }
+
+    fn remember_whnf(&mut self, revision: u64, expression: ExprId, normalized: ExprId) {
+        if self.whnf_cache.0 != revision {
+            self.whnf_cache.0 = revision;
+            self.whnf_cache.1.clear();
+        }
+        self.whnf_cache.1.insert(expression, normalized);
     }
 
     fn remember_inferred(&mut self, expression: ExprId, ty: ExprId) {
@@ -613,8 +643,45 @@ impl Kernel {
     /// `Sort`-level simplification only. Ported from nanoda's
     /// `whnf_no_unfolding`. A head `Const`/`FVar`/`Sort`/`Pi` or `Lam` with no
     /// further arguments is already weak-head-normal here.
-    fn whnf_no_unfolding(&mut self, e: ExprId) -> ExprId {
+    ///
+    /// # Memoisation, and why it is split in two
+    ///
+    /// Reduction may consult `ctx` (K-like reduction reads the *type* of a free
+    /// variable), so a WHNF result is in general a function of
+    /// `(environment revision, expression, local context)`. The kernel-global
+    /// [`Kernel::whnf_cache`] has no context component in its key, and it cannot
+    /// gain one usefully: [`LocalContext::new`] restarts its fvar counter at 0,
+    /// and [`Kernel::check_declaration`] builds **two** fresh contexts with no
+    /// environment change between them, so one kernel-global cache spans local
+    /// contexts whose fvar ids collide while denoting different variables.
+    ///
+    /// The split below makes that key sound by construction rather than by
+    /// convention:
+    ///
+    /// - **Closed expressions** (`has_fvars == false`) go in the kernel-global
+    ///   cache. A closed term cannot observe the local context: every reduction
+    ///   step (β, ζ, ι, projection, δ) builds only from subterms of the input
+    ///   and from environment declarations, and both are closed, so no `FVar`
+    ///   can ever appear and no context lookup can ever be reached. The
+    ///   `reduction_ctx_reads` tripwire asserted here turns that argument into a
+    ///   run-time check: if a future reduction rule reads the context while
+    ///   normalizing a closed term, this assertion fires instead of the cache
+    ///   silently going wrong.
+    /// - **Open expressions** go in a cache owned by the local context itself,
+    ///   alongside the `infer_cache` and `def_eq_cache` that already live there
+    ///   and are already cleared on every `push`/`pop`. That clearing is what
+    ///   scopes an entry to the exact declaration stack that produced it, so an
+    ///   answer that depended on a local's type cannot outlive that local.
+    fn whnf_no_unfolding(&mut self, e: ExprId, ctx: &mut LocalContext) -> ExprId {
         let revision = self.env.revision();
+        if self.has_fvars(e) {
+            if let Some(normalized) = ctx.whnf_result(revision, e) {
+                return normalized;
+            }
+            let normalized = self.whnf_no_unfolding_uncached(e, ctx);
+            ctx.remember_whnf(revision, e, normalized);
+            return normalized;
+        }
         if self.whnf_cache.0 != revision {
             self.whnf_cache.0 = revision;
             self.whnf_cache.1.clear();
@@ -622,12 +689,18 @@ impl Kernel {
         if let Some(&normalized) = self.whnf_cache.1.get(&e) {
             return normalized;
         }
-        let normalized = self.whnf_no_unfolding_uncached(e);
+        let reads_before = self.reduction_ctx_reads;
+        let normalized = self.whnf_no_unfolding_uncached(e, ctx);
+        assert_eq!(
+            self.reduction_ctx_reads, reads_before,
+            "reducing a closed expression read the local context; the kernel-global \
+             whnf cache key has no context component and would be unsound"
+        );
         self.whnf_cache.1.insert(e, normalized);
         normalized
     }
 
-    fn whnf_no_unfolding_uncached(&mut self, e: ExprId) -> ExprId {
+    fn whnf_no_unfolding_uncached(&mut self, e: ExprId, ctx: &mut LocalContext) -> ExprId {
         let mut cursor = e;
         loop {
             let (head, args) = self.unfold_apps(cursor);
@@ -661,7 +734,7 @@ impl Kernel {
                 // Projection: normalize the projected value; when it becomes a
                 // constructor application, select the requested field after
                 // the constructor parameters and re-apply any outer spine.
-                ExprNode::Proj(..) => match self.reduce_projection(cursor) {
+                ExprNode::Proj(..) => match self.reduce_projection(cursor, ctx) {
                     Some(reduced) => cursor = reduced,
                     None => return cursor,
                 },
@@ -669,11 +742,11 @@ impl Kernel {
                 // constructor-headed major reduces to the matching minor applied
                 // to the constructor's fields (ADR-0036, slice 4).
                 ExprNode::Const(..) => {
-                    if let Some(reduced) = self.reduce_quotient(cursor) {
+                    if let Some(reduced) = self.reduce_quotient(cursor, ctx) {
                         cursor = reduced;
-                    } else if let Some(reduced) = self.reduce_rec(cursor) {
+                    } else if let Some(reduced) = self.reduce_rec(cursor, ctx) {
                         cursor = reduced;
-                    } else if let Some(reduced) = self.reduce_nat_succ(cursor) {
+                    } else if let Some(reduced) = self.reduce_nat_succ(cursor, ctx) {
                         cursor = reduced;
                     } else {
                         return cursor;
@@ -701,13 +774,13 @@ impl Kernel {
     /// constructor and does not re-check the structure name stored in the
     /// projection node; projection inference owns that well-typedness check,
     /// matching Lean's separation between reduction and inference.
-    fn reduce_projection(&mut self, expression: ExprId) -> Option<ExprId> {
+    fn reduce_projection(&mut self, expression: ExprId, ctx: &mut LocalContext) -> Option<ExprId> {
         let (head, trailing) = self.unfold_apps(expression);
         let ExprNode::Proj(_, field_index, structure) = self.expr_node(head).clone() else {
             return None;
         };
 
-        let structure = self.whnf(structure);
+        let structure = self.whnf_core(structure, ctx);
         let (ctor_head, ctor_args) = self.unfold_apps(structure);
         let ExprNode::Const(ctor_name, _) = self.expr_node(ctor_head) else {
             return None;
@@ -739,14 +812,68 @@ impl Kernel {
     /// nanoda's `get_declar_val`). Inductive ι and constructor-projection
     /// reduction are included; quotient reduction remains deferred.
     ///
+    /// Reduction happens in the **empty** local context, so rules that need a
+    /// free variable's type (K-like reduction) cannot fire on an open term
+    /// here. That is a restriction, never a widening: fewer reductions means
+    /// fewer terms identified. Callers that are already under binders should
+    /// use [`Kernel::whnf_core`] with their own context.
+    ///
     /// # Panics
     ///
     /// Does not panic on well-formed input.
     #[must_use]
     pub fn whnf(&mut self, e: ExprId) -> ExprId {
+        let mut ctx = LocalContext::new();
+        self.whnf_core(e, &mut ctx)
+    }
+
+    /// The **pre-fix** reduction entry point, kept so that the unsoundness it
+    /// carries can be *run* rather than argued about.
+    ///
+    /// This is `whnf_core` as it stood before the cache was split: one
+    /// kernel-global memo table keyed on `(environment revision, ExprId)` for
+    /// every expression, open or closed. With a context-consulting reduction
+    /// rule in the loop (K-like reduction) that key is wrong, and
+    /// `tc_tests::whnf_cache_key_collision_is_constructible` uses this function
+    /// to exhibit the wrong answer directly.
+    ///
+    /// `#[cfg(test)]`, and deliberately so: nothing that ships may call it.
+    #[cfg(test)]
+    pub(crate) fn whnf_core_context_free_cached(
+        &mut self,
+        e: ExprId,
+        ctx: &mut LocalContext,
+    ) -> ExprId {
         let mut cursor = e;
         loop {
-            let whnfd = self.whnf_no_unfolding(cursor);
+            let revision = self.env.revision();
+            if self.whnf_cache.0 != revision {
+                self.whnf_cache.0 = revision;
+                self.whnf_cache.1.clear();
+            }
+            let whnfd = if let Some(&normalized) = self.whnf_cache.1.get(&cursor) {
+                normalized
+            } else {
+                let normalized = self.whnf_no_unfolding_uncached(cursor, ctx);
+                self.whnf_cache.1.insert(cursor, normalized);
+                normalized
+            };
+            match self.unfold_def(whnfd) {
+                Some(next) => cursor = next,
+                None => return whnfd,
+            }
+        }
+    }
+
+    /// [`Kernel::whnf`] in an existing local context.
+    ///
+    /// The context is what lets reduction see a free variable's *type*, which
+    /// K-like reduction needs. Everything else about the two entry points is
+    /// identical.
+    pub(crate) fn whnf_core(&mut self, e: ExprId, ctx: &mut LocalContext) -> ExprId {
+        let mut cursor = e;
+        loop {
+            let whnfd = self.whnf_no_unfolding(cursor, ctx);
             match self.unfold_def(whnfd) {
                 Some(next) => cursor = next,
                 None => return whnfd,
@@ -817,11 +944,11 @@ impl Kernel {
     /// Panics if `e` is not an applied unfoldable definition (callers in
     /// lazy-delta have already established this via [`Kernel::get_applied_def`],
     /// matching nanoda's `delta`).
-    fn delta(&mut self, e: ExprId) -> ExprId {
+    fn delta(&mut self, e: ExprId, ctx: &mut LocalContext) -> ExprId {
         let unfolded = self
             .unfold_def(e)
             .expect("delta called on a non-unfoldable expression");
-        self.whnf_no_unfolding(unfolded)
+        self.whnf_no_unfolding(unfolded, ctx)
     }
 }
 
@@ -1275,13 +1402,13 @@ impl Kernel {
             let r2 = self.get_applied_def(y);
             match (r1, r2) {
                 (None, None) => return DeltaResult::Exhausted(x, y),
-                (Some(_), None) => x = self.delta(x),
-                (None, Some(_)) => y = self.delta(y),
+                (Some(_), None) => x = self.delta(x, ctx),
+                (None, Some(_)) => y = self.delta(y, ctx),
                 (Some((_, l_hint)), Some((_, r_hint))) if l_hint.is_lt(r_hint) => {
-                    y = self.delta(y);
+                    y = self.delta(y, ctx);
                 }
                 (Some((_, l_hint)), Some((_, r_hint))) if r_hint.is_lt(l_hint) => {
-                    x = self.delta(x);
+                    x = self.delta(x, ctx);
                 }
                 (Some((x_name, l_hint)), Some((y_name, r_hint))) => {
                     if let Some(r) =
@@ -1289,8 +1416,8 @@ impl Kernel {
                     {
                         return DeltaResult::FoundEqResult(r);
                     }
-                    x = self.delta(x);
-                    y = self.delta(y);
+                    x = self.delta(x, ctx);
+                    y = self.delta(y, ctx);
                 }
             }
             if let Some(quick) = self.def_eq_quick(x, y, ctx) {
@@ -1323,9 +1450,9 @@ impl Kernel {
 
         // WHNF without δ — δ is handled lazily by `lazy_delta_step` below so
         // that we unfold only as far as needed (matching nanoda).
-        let x_n = self.whnf_no_unfolding(x);
+        let x_n = self.whnf_no_unfolding(x, ctx);
         let x_n = self.whnf_local_value(x_n, ctx);
-        let y_n = self.whnf_no_unfolding(y);
+        let y_n = self.whnf_no_unfolding(y, ctx);
         let y_n = self.whnf_local_value(y_n, ctx);
 
         if let Some(quick) = self.def_eq_quick(x_n, y_n, ctx) {
@@ -1362,7 +1489,7 @@ impl Kernel {
         }
     }
 
-    fn whnf_local_value(&mut self, mut expression: ExprId, ctx: &LocalContext) -> ExprId {
+    fn whnf_local_value(&mut self, mut expression: ExprId, ctx: &mut LocalContext) -> ExprId {
         loop {
             let (head, args) = self.unfold_apps(expression);
             let ExprNode::FVar(fvar) = self.expr_node(head) else {
@@ -1372,13 +1499,13 @@ impl Kernel {
                 return expression;
             };
             expression = self.foldl_apps(value, args);
-            expression = self.whnf_no_unfolding(expression);
+            expression = self.whnf_no_unfolding(expression, ctx);
         }
     }
 
-    fn whnf_in(&mut self, mut expression: ExprId, ctx: &LocalContext) -> ExprId {
+    fn whnf_in(&mut self, mut expression: ExprId, ctx: &mut LocalContext) -> ExprId {
         loop {
-            expression = self.whnf(expression);
+            expression = self.whnf_core(expression, ctx);
             let reduced = self.whnf_local_value(expression, ctx);
             if reduced == expression {
                 return expression;
@@ -1545,7 +1672,7 @@ impl Kernel {
 
     /// The TL2.7 constructor conversion subset of Lean's Nat reducer.
     /// General arithmetic operations remain TL2.8.
-    fn reduce_nat_succ(&mut self, expression: ExprId) -> Option<ExprId> {
+    fn reduce_nat_succ(&mut self, expression: ExprId, ctx: &mut LocalContext) -> Option<ExprId> {
         let bootstrap = self.nat_literal_bootstrap().ok()?;
         let (head, arguments) = self.unfold_apps(expression);
         let ExprNode::Const(name, levels) = self.expr_node(head) else {
@@ -1554,7 +1681,7 @@ impl Kernel {
         if *name != bootstrap.succ || !levels.is_empty() || arguments.len() != 1 {
             return None;
         }
-        let argument = self.whnf(arguments[0]);
+        let argument = self.whnf_core(arguments[0], ctx);
         let ExprNode::Lit(Lit::Nat(value)) = self.expr_node(argument).clone() else {
             return None;
         };
