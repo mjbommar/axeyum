@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "id": "rado-r4-a5-b3",
+  "title": "R_4(5(x-y)=3z) = 625",
+  "statement": "The 4-colour Rado number of the equation 5(x-y) = 3z is exactly 625: every 4-colouring of {1,...,625} contains a monochromatic solution, and some 4-colouring of {1,...,624} avoids one.",
+  "epistemic_status": "computed",
+  "novelty": "new",
+  "formal": {
+    "language": "cnf-family",
+    "family": "rado-colouring-a(x-y)=bz",
+    "parameters": {
+      "a": 5,
+      "b": 3,
+      "k": 4,
+      "n": 625
+    },
+    "generator": "scripts/gen-rado-instance.py",
+    "semantics_note": "artifacts/claims/rado/SEMANTICS.md"
+  },
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:ramsey-number",
+      "relation": "exercises",
+      "resolved": true,
+      "note": "pending: no graph_pin evaluated for this claim"
+    },
+    {
+      "graph": "math-education",
+      "ref": "TQ:colouring",
+      "relation": "uses-technique",
+      "resolved": true,
+      "note": "pending: no graph_pin evaluated for this claim"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:computational-search",
+      "relation": "exercises",
+      "resolved": true,
+      "note": "pending: no graph_pin evaluated for this claim"
+    }
+  ],
+  "axeyum_refs": {
+    "fragments": [],
+    "curriculum_nodes": [
+      "propositional-logic"
+    ]
+  },
+  "provenance": {
+    "conjectured_by": "construction + literature: Chang-De Loera-Wesley Lemma 4.1 gives R_k >= a^k for gcd(a,b)=1 by the a-adic valuation colouring, and their Theorem 1.2(3) gives equality at k=3 for a >= b+2. b=3 is the LAST cell at a=5,k=4 still inside that hypothesis (5 >= 3+2 exactly), so a^4 = 625 was the prediction; b=4 lies outside it and breaks to 741.",
+    "searched_by": [
+      "axeyum native proof-producing CDCL on host s4, run as a memory-bounded transient systemd --user service (MemoryHigh=70G/MemoryMax=90G): 220,077,720 steps, 19,877,980,843 bytes of DRAT, solve 8,762.2 s",
+      "A first attempt on s0 was destroyed at 2h15m when systemd-oomd killed the entire session cgroup under memory pressure (68.36% > 50.00% for >20s, 27 processes, 83.6 GB peak). Not a kernel OOM; it kills by cgroup, so nohup is irrelevant. The re-run was isolated on an idle host and peaked well inside its throttle.",
+      "NO external solver was used anywhere in this claim (ADR-0002)"
+    ],
+    "checked_by": [
+      "check_drat_backward (ADR-0382) in the same process, 14,499.6 s -- CHECKING COST MORE THAN SEARCHING (4h02m against 2h26m)",
+      "the lower-bound colouring re-verified from its stored file three ways: the construction, the encoder's own first_monochromatic, and the family's brute-force enumerator, which shares no code with the encoder",
+      "certificate pinned by sha256 063cb60cf520b9ce3fb18b2a545680ac620c1e5ca693dad58adca4874a2cfc3a; it is NOT re-checked per commit, because a 4-hour re-check cannot be a gate"
+    ],
+    "date": "2026-08-14",
+    "machine": "solved on linux x86-64, 4 cores, 61 GiB (s1); proof moved and checked on linux x86-64, 16 cores, 123 GiB (s4)",
+    "toolchain": {
+      "axeyum_commit": "fc2020dd967fc51edca561701f63f2acaa50aaea",
+      "rustc_version": "rustc 1.94.1 (e408947bf 2026-03-25)",
+      "target": "x86_64-unknown-linux-gnu",
+      "dirty": true
+    },
+    "prior_art": [
+      {
+        "citation": "Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022 / arXiv:2210.03262",
+        "url": "https://arxiv.org/abs/2210.03262",
+        "establishes": "NEW. Table 10 of arXiv:2210.03262 is the only published four-colour table for this family: 20 cells, 13 populated (12 exact plus the bare '> 225' at (2,3)), 7 blank. (5,2) is one of the blanks. Census read from the rendered v1 PDF cell by cell and cross-checked against this repository's ledger over all 25 k=3 cells and all 12 exact k=4 cells with zero disagreements, so the blank is a real blank and not a transcription slip. OEIS full-text search for 'Rado number' returns 7 sequences, none for this family at k >= 3 colours."
+      }
+    ],
+    "graph_pin": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
+  },
+  "evidence": [
+    {
+      "id": "deciding-instance",
+      "kind": "instance-pin",
+      "supports": "the exact CNF the refutation decided, so the verdict names a formula",
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf",
+      "artifact_sha256": "a59d88ed13b8256d1bcfdf247139beede7f93945129c8d607ac3410c391cb623",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-search --example rado_dump_cnf -- a=5 b=3 k=4 n=625 out=/tmp/F_625.cnf",
+      "notes": "Pinned by REGENERATION: the bytes must come back out of the same encoder.",
+      "artifact_format": "dimacs-cnf"
+    },
+    {
+      "id": "lower-witness",
+      "kind": "witness-replay",
+      "supports": "R_4(5(x-y)=3z) > 624: the a-adic valuation colouring of [1,624] has no monochromatic solution",
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+      "artifact_sha256": "eaf9ab5ca456b91ed8304fe241990c01ae34674c709b322290c8458d3f06990f",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-search --example akb2_frontier -- verify 5 3 4 artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+      "notes": "Verified three ways: the construction, the encoder's own first_monochromatic, and the family's brute-force enumerator, which shares no code with the encoder. NOTE: this file is byte-identical to the b=2 cell's witness, which is correct and not a copy -- the a-adic valuation colouring of Lemma 4.1 depends on a and k only, never on b, so one colouring witnesses the lower bound across the whole a=5,k=4 row.",
+      "artifact_format": "colouring-text"
+    },
+    {
+      "id": "upper-drat",
+      "kind": "unsat-certificate",
+      "supports": "R_4(5(x-y)=3z) <= 625: no 4-colouring of [1,625] avoids a monochromatic solution",
+      "parameters": {
+        "a": 5,
+        "b": 3,
+        "k": 4,
+        "n": 625
+      },
+      "regeneration": {
+        "command": "cargo run --release -p axeyum-search --example akb2_frontier -- solve 5 3 4 625 F_625.drat witness-625.txt 10",
+        "produces_sha256": "063cb60cf520b9ce3fb18b2a545680ac620c1e5ca693dad58adca4874a2cfc3a",
+        "bytes": 19877980843,
+        "approx_wall_seconds": 8762.2,
+        "note": "19,877,980,843 bytes of text DRAT over 220,077,720 steps, NOT distributed. Produced in 8,762.2 s and CHECKED IN THE SAME PROCESS in 14,499.6 s -- checking cost more than searching (4h02m against 2h26m), which is the same asymmetry the b=2 cell recorded and the reason `akb2_frontier check` exists as a separate mode. Run on host s4 as a memory-bounded transient systemd service after a first attempt on s0 was killed by systemd-oomd at 2h15m."
+      },
+      "check_status": "checked",
+      "checker_command": "cargo run --release -p axeyum-search --example akb2_frontier -- solve 5 3 4 625 F_625.drat witness-625.txt 10",
+      "notes": "220,077,720 steps, 19,877,980,843 bytes. Produced AND checked in one process; the certificate lives at /nas3/data/axeyum/rado-r4-a5-b3-s4/F_625.drat, sha256 063cb60cf520b9ce3fb18b2a545680ac620c1e5ca693dad58adca4874a2cfc3a. Re-derive deliberately with `akb2_frontier check 5 3 4 625 <drat>`; it is too expensive for a per-commit gate.",
+      "distribution": "regenerable"
+    }
+  ],
+  "notes": "Both sides of the threshold, each by a different mechanism: the lower bound is a construction written down and checked, the upper bound is a machine proof re-derived by an independent checker. Neither side used an external solver."
+}

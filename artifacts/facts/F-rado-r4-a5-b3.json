@@ -2,27 +2,87 @@
   "schema_version": 1,
   "id": "F:rado-r4-a5-b3",
   "title": "The four-colour Rado number of 5(x-y) = 3z is 625",
-  "statement": "Conjecturally R_4(5(x-y)=3z) = 625. The lower bound is free from Chang-De Loera-Wesley's Lemma 4.1 (R_k >= a^k); the refutation at n = 625 is not established.",
+  "statement": "R_4(5(x-y)=3z) = 625. The lower bound is the a-adic valuation colouring of Chang-De Loera-Wesley's Lemma 4.1 (R_k >= a^k), replayed and verified three ways; the upper bound is a refutation at n = 625 with a self-checked DRAT certificate.",
   "formal": {
     "language": "smtlib2",
     "statement": "(assert (forall-colourings 625 4 (exists-mono-solution (= (* 5 (- x y)) (* 3 z)))))",
     "fragment": "QF_BV",
-    "free_symbols": ["x", "y", "z"]
+    "free_symbols": [
+      "x",
+      "y",
+      "z"
+    ]
   },
-  "epistemic_status": "open",
+  "epistemic_status": "computed",
   "external_status": "open",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "claim-rado-r4-a5-b3",
+      "kind": "claim-ref",
+      "supports": "R_4(5(x-y)=3z) = 625, both bounds, with pinned deciding instance and regeneration recipe",
+      "check_status": "checked",
+      "checkers": [
+        "validate-claims-schema-and-semantics"
+      ],
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b3/claim.json",
+      "checker_command": "python3 scripts/validate-claims.py",
+      "notes": "The claim carries the pinned CNF, the replayable lower-bound colouring, and the DRAT regeneration recipe."
+    },
+    {
+      "id": "lower-bound-replay",
+      "kind": "witness-replay",
+      "supports": "R_4(5(x-y)=3z) > 624",
+      "check_status": "checked",
+      "checkers": [
+        "akb2_frontier-encoder-view",
+        "akb2_frontier-independent-enumerator"
+      ],
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+      "checker_command": "cargo run --release -q -p axeyum-search --example akb2_frontier -- verify 5 3 4 artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+      "notes": "Cheap and real: re-verifies the colouring three ways from the stored file in ~0.1s."
+    },
+    {
+      "id": "deciding-instance-regeneration",
+      "kind": "instance-pin",
+      "supports": "the refutation's verdict names this exact formula",
+      "check_status": "checked",
+      "checkers": [
+        "rado_dump_cnf-regeneration"
+      ],
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf",
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-search --example rado_dump_cnf -- a=5 b=3 k=4 n=625 out=/tmp/rb3.cnf >/dev/null 2>&1; sha256sum /tmp/rb3.cnf | cut -d' ' -f1)\" = \"$(sha256sum artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf | cut -d' ' -f1)\"",
+      "notes": "Regeneration, not storage comparison: the bytes must come back out of the same encoder."
+    }
+  ],
   "concept_refs": [
-    { "graph": "math-education", "ref": "C:rado-number", "relation": "instance-of", "resolved": true }
+    {
+      "graph": "math-education",
+      "ref": "C:rado-number",
+      "relation": "instance-of",
+      "resolved": true
+    }
   ],
   "provenance": {
     "date": "2026-08-14",
-    "established_by": "not established",
+    "established_by": "axeyum native proof-producing CDCL (no external solver or checker, ADR-0002) on host s4, checked in-process by check_drat_backward",
     "source": "blank cell of Chang-De Loera-Wesley Table 10; inside the a >= b+2, gcd(a,b)=1 hypotheses",
     "prior_art": [
-      { "citation": "campaign lane agent-c, 2026-08-14", "establishes": "solve killed mid-run at 3h11m with 15.51 GB of proof, because the check needed ~102 GiB against a 123 GiB maximum. At the 1.5x checking ratio landed later the same day it needs ~23 GiB and is reachable." }
+      {
+        "citation": "campaign lane agent-c, 2026-08-14",
+        "establishes": "solve killed mid-run at 3h11m with 15.51 GB of proof, because the check needed ~102 GiB against a 123 GiB maximum. At the 1.5x checking ratio landed later the same day it needs ~23 GiB and is reachable."
+      },
+      {
+        "citation": "coordinator, 2026-08-14",
+        "establishes": "closed: 220,077,720 steps, 19,877,980,843 bytes of DRAT, solve 8,762.2 s, check 14,499.6 s. Checking cost MORE than searching. The earlier estimate above was right that the 1.5x checking ratio made it reachable."
+      }
     ]
   },
-  "notes": "The `open` case, and the point of the type: an empty evidence array is a STATEMENT, not an omission. This is the last blank cell of the a >= b+2 row and it is now reachable."
+  "notes": "The last blank cell of the a >= b+2 row at a=5, k=4, and the interesting one: b=3 is the LAST cell still INSIDE Chang-De Loera-Wesley's hypothesis (gcd(5,3)=1 and 5 >= 3+2 holds exactly), so 625 = a^4 confirms the k>=4 generalisation where it should hold. b=4 sits outside the hypothesis and breaks to 741, which is consistent rather than contradictory.\n\nThe certificate is NOT re-checked per commit -- a 4-hour re-check cannot be a gate -- and the axiom_footprint says so rather than implying the proof is re-derived on every run. The three checkers that DO run are cheap and real: the claim's schema and semantics, the lower-bound colouring replayed from its stored file, and the deciding CNF re-derived from the encoder and compared by hash.",
+  "proof_route": "search-certificate",
+  "axiom_footprint": [
+    "rado.encoder-faithfulness",
+    "rado.drat-checker-check_drat_backward",
+    "rado.certificate-not-re-checked-per-commit"
+  ]
 }
