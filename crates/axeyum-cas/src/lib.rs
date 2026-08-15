@@ -70,6 +70,7 @@ pub mod groebner;
 pub mod groebner_cert;
 pub mod hyperbolic;
 pub mod interval_arith;
+pub mod linear_elim;
 mod matrix;
 pub mod mvpoly;
 mod normalforms;

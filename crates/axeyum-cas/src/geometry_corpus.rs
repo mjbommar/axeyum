@@ -81,6 +81,7 @@ pub fn corpus() -> Vec<GeometryProblem> {
         centroid_divides_medians(),
         parallelogram_diagonals_bisect(),
         rhombus_diagonals_perpendicular(),
+        euler_line(),
     ]
 }
 
@@ -94,53 +95,52 @@ pub fn corpus() -> Vec<GeometryProblem> {
 /// mis-stated theorem cannot hide in this list waiting for a faster search.
 ///
 /// `rhombus-diagonals-perpendicular` left this list on 2026-08-15 — it declined
-/// under `lex` and certifies under `grevlex` in 21 s — which is what the list is
-/// for. `euler-line` is what remains.
+/// under `lex` and certifies under `grevlex` in 21 s — and `euler-line` left it
+/// the same day, which is what the list is for.
 ///
-/// # What obstructs `euler-line`, measured rather than timed
+/// # `euler-line` was not reached by a bigger budget, and that is the point
 ///
-/// Two lanes recorded it as "no verdict within 600 s" and "no verdict within
-/// 1200 s under either monomial order". A duration names no obstruction, so
-/// `cargo run -p axeyum-cas --release --example geometry_obstruction euler-line`
-/// runs the reduction under a ladder of S-pair ceilings and reports what the
-/// computation was doing at each rung. Measured 2026-08-15, `grevlex`, full
-/// condition set:
+/// The `geometry-frontier` lane's ladder
+/// (`cargo run -p axeyum-cas --release --example geometry_obstruction euler-line`)
+/// established what obstructed it, and the answer was not a duration. Under
+/// `grevlex`, with the full condition set:
 ///
 /// | S-pairs processed | still queued | basis | widest polynomial |
 /// |---|---|---|---|
-/// | 2 | 10 | 5 | 28 |
 /// | 9 | 66 | 12 | 41 |
 /// | 33 | 210 | 21 | 278 |
 /// | 65 | 528 | 33 | 477 |
 ///
-/// The queue is **growing faster than it drains**: 65 pairs processed leaves 528
-/// outstanding, because nearly every second pair has a nonzero remainder and each
-/// new basis element queues one pair against every existing one. The backlog is
-/// quadratic in a basis that is still growing linearly.
+/// The queue grew faster than it drained, because the basis never saturated and
+/// each new element queues one pair against every existing one. Not width — the
+/// rhombus, which *finishes*, carries a 733-monomial polynomial at the same rung
+/// against `euler-line`'s 477. Not memory — 117 MB against a 6 GB cap. Under
+/// `lex`, doubling 65 → 129 pairs tripled the backlog and cost ten times the wall
+/// clock. That is divergence, and no ceiling reaches the end of it.
 ///
-/// It is specifically *not* a width problem, and the control that shows it is the
-/// rhombus, which **does** finish: at 65 pairs the rhombus is carrying a
-/// 733-monomial polynomial against `euler-line`'s 477, and by 253 pairs its queue
-/// has drained completely at basis 23. `euler-line` is not computing with bigger
-/// objects, it is computing with more of them, and the closure is not in sight.
-/// Nor is it memory: peak RSS is 117 MB against a 6 GB cap.
+/// What reached it was **not** a ceiling. All four hypotheses are affine in the
+/// four unknowns `ox, oy, hx, hy` over `ℚ[ax…cy]`, so
+/// [`crate::geometry_certify::certify_by_linear_elimination`] solves the two 2×2
+/// systems by Cramer's rule and substitutes: 0 S-pairs, no basis, a zero residue,
+/// and a certificate in **6 ms** against a computation that had not returned in
+/// 27 minutes. The determinants are `4·collinear(A,B,C)` and `collinear(A,B,C)`,
+/// so the multiplier is `4·collinear(A,B,C)²` — a power of the theorem's own
+/// non-degeneracy condition, which is exactly why the Rabinowitsch generator can
+/// divide it back out and the certificate stays in the original generators.
 ///
-/// One rung further, under `lex`, states it without any comparison needed:
-/// doubling the pairs processed from 65 to 129 **tripled** the backlog
-/// (1 081 → 3 403), added 36 basis elements (47 → 83), and cost **ten times** the
-/// wall clock (65.0 s → 635.4 s).
+/// # This list is empty, and it is a queue rather than a result
 ///
-/// That points at the missing lever precisely: this `Buchberger` loop applies
-/// **no criteria** — not the coprime-leading-term (product) criterion, not the
-/// chain criterion — so it processes every pair the queue ever receives, including
-/// the ones that are known in advance to reduce to zero. Widening coefficients
-/// would not help (the rhombus decline was `ReductionSteps`, never `Overflow`),
-/// and changing the order does not help either: `lex` and `grevlex` produce the
-/// same shape of curve, which is why `grevlex` moved the rhombus and does not
-/// dent this.
+/// An empty frontier is a statement about today's corpus, not about the domain.
+/// The theorems this route has not yet been *stated* for are the queue: Simson's
+/// line (14 coordinates once the circumcircle is stated as a concyclicity
+/// determinant instead of an explicit centre) and Pappus (18) are both dominated
+/// by linear constructions — feet of perpendiculars and intersections of lines —
+/// which is the shape this route was built for. They are absent because nobody
+/// has written them down with their counterexamples yet, not because they were
+/// measured and found out of reach.
 #[must_use]
 pub fn frontier() -> Vec<GeometryProblem> {
-    vec![euler_line()]
+    Vec::new()
 }
 
 /// Varignon: the midpoints of the sides of an arbitrary quadrilateral form a
@@ -580,8 +580,13 @@ fn rhombus_diagonals_perpendicular() -> GeometryProblem {
 }
 
 /// Euler's line: the circumcentre, the centroid and the orthocentre are
-/// collinear. Correctly stated; on the frontier because the reduction does not
-/// terminate within any budget tried. See [`frontier`].
+/// collinear.
+///
+/// The theorem this corpus reached by changing *algorithm* rather than budget.
+/// Every hypothesis is affine in the four unknown coordinates `ox, oy, hx, hy`,
+/// which is why
+/// [`crate::geometry_certify::certify_by_linear_elimination`] settles it in
+/// milliseconds where the Gröbner search diverges — see [`frontier`].
 fn euler_line() -> GeometryProblem {
     let vertex_a = Pt::free("a");
     let vertex_b = Pt::free("b");
@@ -783,35 +788,48 @@ mod tests {
     }
 
     /// The frontier entries are unproved, not unchecked.
+    ///
+    /// The list is empty as of 2026-08-15 — `euler-line` was the last entry and
+    /// the linear-elimination route reached it — so this currently examines
+    /// nothing. That is stated rather than hidden: a suite that silently
+    /// exercises zero cases reads exactly like a passing one, and this repository
+    /// has shipped several gates with that property. The assertion below fires the
+    /// moment a frontier entry exists again, which is when it starts mattering.
     #[test]
     fn every_frontier_witness_is_consistent() {
-        for problem in frontier() {
-            witnesses_are_consistent(&problem);
+        let entries = frontier();
+        for problem in &entries {
+            witnesses_are_consistent(problem);
         }
+        assert!(
+            entries.is_empty()
+                || entries
+                    .iter()
+                    .all(|problem| !problem.conclusions.is_empty()),
+            "a frontier entry that concludes nothing cannot be checked"
+        );
     }
 
-    /// `euler-line` is unproved. It should not also be *unevidenced*.
+    /// `euler-line` holds at circumcentres and orthocentres constructed
+    /// **independently of the certifier**, by Cramer's rule over the rationals,
+    /// for a deterministic sweep of triangles.
     ///
-    /// The frontier's promise is "unproved rather than unchecked", and one generic
-    /// witness is a thin reading of "checked" for a theorem nothing else confirms.
-    /// So this constructs the circumcentre and the orthocentre **exactly**, by
-    /// Cramer's rule over the rationals, for a deterministic sweep of triangles,
-    /// and asserts on every one of them that the stated hypotheses vanish, the
-    /// stated non-degeneracy condition does not, and the stated conclusion holds.
+    /// Written while the theorem was on the frontier, to keep it *unproved rather
+    /// than unchecked*, and kept now that it is proved because it checks a
+    /// different thing than the certificate does. The certificate establishes a
+    /// polynomial identity; this establishes that the polynomials describe the
+    /// configurations they are named after, at concrete points, computed by a
+    /// route that shares nothing with the certifier.
     ///
-    /// It is not a proof — it is finitely many configurations, and the certifier
-    /// exists precisely because that is not the same thing. What it rules out is
-    /// the specific way a frontier entry rots: a mis-transcribed predicate sitting
-    /// unnoticed in the corpus because no search ever got far enough to reject it.
-    ///
-    /// The construction is also the evidence for the diagnosis in [`frontier`]:
-    /// the two systems are **linear in `O` and in `H`** with coefficients in
-    /// `ℚ[ax..cy]`, and their determinant is (twice) the very collinearity
+    /// It also *is* the diagnosis the linear route acts on, in miniature: both
+    /// systems are linear in the unknown centre with coefficients in `ℚ[ax..cy]`,
+    /// and in both the determinant is a multiple of the very collinearity
     /// polynomial named as the non-degeneracy condition. That is why the theorem
-    /// is true off the degeneracy locus, and why `Buchberger`'s algorithm is being
-    /// asked to rediscover Cramer's rule by monomial reduction.
+    /// is true off the degeneracy locus, why the multiplier divides back out, and
+    /// why `Buchberger`'s algorithm was being asked to rediscover Cramer's rule by
+    /// monomial reduction.
     #[test]
-    fn the_unproved_euler_line_holds_at_exactly_constructed_circumcentres() {
+    fn euler_line_holds_at_exactly_constructed_circumcentres() {
         let problem = euler_line();
         // Deterministic, and chosen so the sweep contains obtuse, right and
         // isosceles triangles as well as generic ones.

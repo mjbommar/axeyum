@@ -5,6 +5,13 @@
 //! produced, and only when its bytes differ from what is already on disk — so a
 //! regeneration that changes nothing leaves the tree clean.
 //!
+//! Which route produced a certificate is deliberately **not** recorded in the
+//! artifact. `certify_any_route` tries linear elimination and then the Gröbner
+//! search, and the certificate is the same object either way — same generators,
+//! same identity, checked by the same code. A route field would invite a reader
+//! to trust one more than the other, when the whole design is that neither is
+//! trusted at all.
+//!
 //! Run from the repository root:
 //! `cargo run -p axeyum-cas --release --example emit_geometry_certificates`
 //!
@@ -13,7 +20,7 @@
 
 use std::path::PathBuf;
 
-use axeyum_cas::geometry_certify::{ProofOutcome, certify, geometry_limits};
+use axeyum_cas::geometry_certify::{ProofOutcome, certify_any_route, geometry_limits};
 use axeyum_cas::geometry_check::{CheckOptions, GeometryVerdict, check_certificate};
 use axeyum_cas::geometry_corpus::corpus;
 use axeyum_cas::geometry_json::to_json;
@@ -33,7 +40,7 @@ fn main() {
             continue;
         }
         let started = std::time::Instant::now();
-        let outcome = certify(&problem, geometry_limits());
+        let outcome = certify_any_route(&problem, geometry_limits());
         let elapsed = started.elapsed();
         let certificate = match outcome {
             ProofOutcome::Certified(certificate) => *certificate,

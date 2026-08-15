@@ -219,73 +219,222 @@ fn a_counterexample_that_does_not_break_the_theorem_is_rejected() {
     }
 }
 
-/// The sharper form of the control above, and the one that is actually hard to
-/// pass: a configuration that **does** violate the non-degeneracy condition and
-/// yet does **not** break the theorem.
+/// Exact rational configurations that sit **on** a degeneracy locus and yet do
+/// **not** break the theorem — one usable set per coordinatisation in the corpus.
 ///
-/// The substitution used by `a_counterexample_that_does_not_break_the_theorem_is_rejected`
-/// is a *generic* configuration, which fails on two counts at once — it satisfies
-/// the conclusion and it does not annihilate the condition — so a checker that
-/// only tested the second would pass it. `A = (0,0)`, `B = (1,0)`, `C = (2,0)`,
-/// `D = (1,0)` is four collinear points, so `abd-not-collinear` genuinely fails,
-/// and yet the diagonals of both the parallelogram (`AC` and `BD` share the
-/// midpoint `(1,0)`) and the rhombus (`AC·BD = (2,0)·(0,0) = 0`) behave. Sitting
-/// on the degeneracy locus is not enough; a counterexample has to falsify
-/// something.
+/// A control that only ever applies to some certificates degrades silently as the
+/// corpus grows, which is exactly what happened before: the quadrilateral
+/// configuration below was the only one, so a triangle theorem simply skipped the
+/// hardest control in the suite. The table is keyed by nothing — each entry is
+/// tried against each certificate and the ones whose coordinates it covers are
+/// used — and the test asserts **full coverage** at the end, so the next
+/// promotion cannot quietly opt out either.
+fn on_locus_but_harmless() -> Vec<(&'static str, BTreeMap<String, Rational>)> {
+    let at = |entries: &[(&str, i128, i128)]| -> BTreeMap<String, Rational> {
+        entries
+            .iter()
+            .map(|(name, numerator, denominator)| {
+                ((*name).to_string(), Rational::new(*numerator, *denominator))
+            })
+            .collect()
+    };
+    vec![
+        // Collinear points, covering every theorem coordinatised in `a..d` and
+        // `p`. `abd-not-collinear` and `abc-not-collinear` both genuinely fail,
+        // and yet: the diagonals of the parallelogram (`AC` and `BD` share the
+        // midpoint `(1,0)`) and of the rhombus (`AC·BD = (2,0)·(0,0) = 0`) behave,
+        // and `P = (1,0)` lies on both medians *and* is the centroid, so
+        // `3P = A + B + C` holds. The committed centroid counterexample is this
+        // configuration with `P = (7,0)` instead.
+        (
+            "A=(0,0) B=(1,0) C=(2,0) D=P=(1,0), collinear and still true",
+            at(&[
+                ("ax", 0, 1),
+                ("ay", 0, 1),
+                ("bx", 1, 1),
+                ("by", 0, 1),
+                ("cx", 2, 1),
+                ("cy", 0, 1),
+                ("dx", 1, 1),
+                ("dy", 0, 1),
+                ("px", 1, 1),
+                ("py", 0, 1),
+            ]),
+        ),
+        // `euler-line`, on the locus and harmless. A = B = (0,0), C = (1,0) is
+        // collinear, so `abc-not-collinear` fails and the hypotheses stop pinning
+        // the two centres: `|OA| = |OB|` is vacuous and both perpendicularity
+        // conditions collapse to `hx = 0`. Choosing O = (1/2,0) and H = (0,0)
+        // still satisfies every hypothesis, and O, G = (1/3,0) and H all lie on
+        // the x-axis, so the conclusion holds. The committed counterexample is
+        // this configuration with H = (0,1) instead — one coordinate apart, and
+        // the difference between a counterexample and a bystander.
+        (
+            "A=B=(0,0) C=(1,0) O=(1/2,0) H=(0,0), degenerate but still collinear",
+            at(&[
+                ("ax", 0, 1),
+                ("ay", 0, 1),
+                ("bx", 0, 1),
+                ("by", 0, 1),
+                ("cx", 1, 1),
+                ("cy", 0, 1),
+                ("ox", 1, 2),
+                ("oy", 0, 1),
+                ("hx", 0, 1),
+                ("hy", 0, 1),
+            ]),
+        ),
+    ]
+}
+
+/// The sharper form of `a_counterexample_that_does_not_break_the_theorem_is_rejected`,
+/// and the one that is actually hard to pass: a configuration that **does**
+/// violate the non-degeneracy condition and yet does **not** break the theorem.
+///
+/// The substitution used by that test is a *generic* configuration, which fails on
+/// two counts at once — it satisfies the conclusion and it does not annihilate the
+/// condition — so a checker that only tested the second would pass it. Sitting on
+/// the degeneracy locus is not enough; a counterexample has to falsify something.
 #[test]
 fn a_counterexample_on_the_locus_that_falsifies_nothing_is_rejected() {
-    let collinear: BTreeMap<String, Rational> = [
-        ("ax", 0),
-        ("ay", 0),
-        ("bx", 1),
-        ("by", 0),
-        ("cx", 2),
-        ("cy", 0),
-        ("dx", 1),
-        ("dy", 0),
-    ]
-    .into_iter()
-    .map(|(name, value)| (name.to_string(), Rational::integer(value)))
-    .collect();
-
+    let candidates = on_locus_but_harmless();
     let mut covered = 0usize;
-    for (name, mut certificate) in saturated() {
-        // Only the quadrilateral theorems are coordinatised in `a..d`; the
-        // triangle ones name a `p`, and substituting there would be a different
-        // (and vacuous) experiment.
-        if certificate
-            .coordinates
-            .iter()
-            .any(|c| !collinear.contains_key(c))
-        {
-            continue;
+    let saturated = saturated();
+    let total = saturated.len();
+    for (name, certificate) in saturated {
+        let mut used = false;
+        for (description, configuration) in &candidates {
+            if certificate
+                .coordinates
+                .iter()
+                .any(|coordinate| !configuration.contains_key(coordinate))
+            {
+                continue;
+            }
+            assert!(
+                certificate.saturations.iter().all(|saturation| saturation
+                    .condition
+                    .evaluate(configuration)
+                    .expect("assigned")
+                    .is_zero()),
+                "{name}: `{description}` must actually violate the condition, or this control \
+                 is testing nothing"
+            );
+            assert!(
+                certificate.conclusions.iter().all(|conclusion| conclusion
+                    .poly
+                    .evaluate(configuration)
+                    .expect("assigned")
+                    .is_zero()),
+                "{name}: `{description}` must NOT break the theorem, or it would be a legitimate \
+                 counterexample and this control would be backwards"
+            );
+            assert!(
+                certificate.hypotheses.iter().all(|hypothesis| hypothesis
+                    .poly
+                    .evaluate(configuration)
+                    .expect("assigned")
+                    .is_zero()),
+                "{name}: `{description}` must satisfy every hypothesis, or the checker would \
+                 reject it for the wrong reason"
+            );
+            let mut tampered = certificate.clone();
+            tampered.degenerate_witnesses[0].assignment = configuration.clone();
+            let _ = rejected(&tampered);
+            used = true;
+            covered += 1;
+            break;
         }
         assert!(
-            certificate.saturations.iter().all(|saturation| saturation
-                .condition
-                .evaluate(&collinear)
-                .expect("assigned")
-                .is_zero()),
-            "{name}: the configuration must actually violate the condition, or this control \
-             is testing nothing"
+            used,
+            "{name}: no on-locus-but-harmless configuration covers this certificate's \
+             coordinates. Add one to `on_locus_but_harmless` -- skipping is how this control \
+             quietly stopped applying to a newly promoted theorem once already."
         );
+    }
+    assert_eq!(
+        covered, total,
+        "every saturated certificate must be covered by this control"
+    );
+    assert!(
+        covered >= 3,
+        "this control examined only {covered} certificates"
+    );
+}
+
+/// The condition set of every committed certificate is minimal **absolutely**,
+/// and the artifact carries the proof.
+///
+/// ADR-0455 draws the distinction: a minimal-subset claim is absolute only if
+/// every subset test was *decided*, and budget-relative otherwise. For the
+/// Gröbner route "decided" means a reduction that returned a verdict, which is a
+/// statement about a budget. Here it means something stronger and cheaper.
+///
+/// If a conclusion `c` lay in the ideal generated by the hypotheses together with
+/// `d·z − 1` for each condition `d` in a subset `S`, then `c` would vanish at
+/// every common zero of those generators. So a single configuration that
+///
+/// - satisfies every hypothesis,
+/// - keeps every condition in `S` nonzero (so `z := 1/d` extends it to a zero of
+///   the Rabinowitsch generators), and
+/// - **falsifies** a conclusion
+///
+/// refutes `S` outright, with no budget, no monomial order and no algorithm in
+/// the argument. That configuration is exactly the degenerate counterexample the
+/// checker already replays — so for every certificate using a single condition,
+/// its own negative control is the proof that the condition is required.
+///
+/// This test says so as an assertion rather than in prose, and it is stated for
+/// arbitrary subsets so it keeps its force when a theorem needs two.
+#[test]
+fn every_used_condition_set_is_minimal_absolutely() {
+    let mut checked = 0usize;
+    for (name, certificate) in saturated() {
+        let conditions = certificate.saturations.len();
         assert!(
-            certificate.conclusions.iter().all(|conclusion| conclusion
-                .poly
-                .evaluate(&collinear)
-                .expect("assigned")
-                .is_zero()),
-            "{name}: the configuration must NOT break the theorem, or it would be a legitimate \
-             counterexample and this control would be backwards"
+            conditions <= 8,
+            "{name}: {conditions} conditions is too many to enumerate the proper subsets of"
         );
-        certificate.degenerate_witnesses[0].assignment = collinear.clone();
-        let _ = rejected(&certificate);
-        covered += 1;
+        // Every PROPER subset must be refuted by some committed counterexample.
+        for mask in 0u32..(1u32 << conditions) {
+            if mask == (1u32 << conditions) - 1 {
+                continue; // the full set is what the certificate proves
+            }
+            let subset: Vec<usize> = (0..conditions)
+                .filter(|index| mask & (1 << index) != 0)
+                .collect();
+            let refuted = certificate.degenerate_witnesses.iter().any(|witness| {
+                let hypotheses_hold = certificate.hypotheses.iter().all(|hypothesis| {
+                    matches!(hypothesis.poly.evaluate(&witness.assignment), Some(value) if value.is_zero())
+                });
+                let subset_survives = subset.iter().all(|&index| {
+                    matches!(
+                        certificate.saturations[index].condition.evaluate(&witness.assignment),
+                        Some(value) if !value.is_zero()
+                    )
+                });
+                let broken = certificate.conclusions.iter().any(|conclusion| {
+                    matches!(conclusion.poly.evaluate(&witness.assignment), Some(value) if !value.is_zero())
+                });
+                hypotheses_hold && subset_survives && broken
+            });
+            let named: Vec<&str> = subset
+                .iter()
+                .map(|&index| certificate.saturations[index].condition_id.as_str())
+                .collect();
+            assert!(
+                refuted,
+                "{name}: no committed configuration refutes the condition subset {named:?}, so \
+                 the minimality of this certificate's condition set is only budget-relative and \
+                 the fact must say so (ADR-0455)"
+            );
+            checked += 1;
+        }
     }
     assert!(
-        covered >= 2,
-        "this control examined {covered} certificates; it is meant to cover the parallelogram \
-         and the rhombus"
+        checked >= 3,
+        "this test examined {checked} subsets; every saturated certificate has at least one \
+         proper subset to refute"
     );
 }
 

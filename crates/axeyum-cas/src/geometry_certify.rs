@@ -59,6 +59,7 @@ use axeyum_ir::Rational;
 
 use crate::groebner::MonomialOrder;
 use crate::groebner_cert::{CofactorOutcome, DeclineReason, Limits, reduce_many_with_cofactors};
+use crate::linear_elim::eliminate;
 use crate::mvpoly::MvPoly;
 
 /// A point of the plane at symbolic coordinates.
@@ -384,6 +385,16 @@ pub enum GeometryDecline {
     /// certificate's negative control would have been decorative. This is a
     /// refusal, not a resource limit.
     UnverifiedWitness,
+    /// [`certify_by_linear_elimination`] cleared the unknowns, but the
+    /// determinant it multiplied through by is not a product of the *stated*
+    /// non-degeneracy conditions, so there is no way to divide it back out inside
+    /// the original generator list.
+    ///
+    /// Not a resource limit either: it says the theorem needs a side condition
+    /// nobody wrote down, or that the elimination picked a decomposition whose
+    /// determinant is not the geometric one. Both are worth seeing rather than
+    /// timing out over.
+    UndividableMultiplier,
 }
 
 /// The prefix of the fresh inverse variables introduced by saturation.
@@ -544,6 +555,346 @@ pub fn certify(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
     last_failure
 }
 
+/// The largest power of a non-degeneracy condition
+/// [`certify_by_linear_elimination`] will divide out of a multiplier.
+///
+/// A ceiling rather than a natural bound: dividing by a condition polynomial
+/// strictly lowers the multiplier's degree, so the loop terminates on its own for
+/// any non-constant condition. This stops a constant one from spinning.
+const MAX_INVERSE_POWER: u32 = 32;
+
+/// Certify a geometry theorem by **linear elimination** instead of by Gröbner
+/// search, keeping the certificate in the original generators.
+///
+/// # Why this route exists
+///
+/// Classical constructions determine their points by *linear* systems: the
+/// circumcentre is the intersection of two perpendicular bisectors, the
+/// orthocentre of two altitudes, and each of those is one linear equation per
+/// coordinate over `ℚ[vertex coordinates]`. Handing those hypotheses to
+/// `Buchberger`'s algorithm asks it to rediscover Cramer's rule by monomial
+/// reduction, which for `euler-line` it does not manage: the `geometry-frontier`
+/// lane measured the basis still growing after 65 S-pairs with 528 queued and the
+/// backlog tripling per doubling.
+///
+/// [`crate::linear_elim`] does the solve directly and returns
+///
+/// ```text
+/// multiplier · conclusion  =  residue  +  Σᵢ uᵢ · hypothesisᵢ
+/// ```
+///
+/// where `multiplier` is a product of the systems' determinants.
+///
+/// # How the certificate stays in the original generators
+///
+/// Nothing here changes the generator list: it is the hypotheses followed by
+/// `d·z − 1` per condition, exactly as [`certify`] builds it, and the artifact is
+/// the same [`GeometryCertificate`] checked by the same
+/// [`crate::geometry_check::check_certificate`], which shares no code with either
+/// route. The elimination is *untrusted search* for the cofactor vector — the
+/// adjugate identity `adj(M)·(M·u + k) = det(M)·u + adj(M)·k` expresses
+/// `det(M)·uⱼ` as a polynomial free of the unknowns plus a combination of the
+/// **original** rows, so substituting it into the conclusion produces cofactors
+/// against those rows and nothing else.
+///
+/// The `multiplier` is then divided back out **inside the ideal**, not
+/// symbolically. For a condition `d` with `dᴺ` dividing the multiplier, the
+/// Rabinowitsch generator `g = d·z − 1` gives `(d·z)ᴺ = (1 + g)ᴺ`, hence
+///
+/// ```text
+/// 1  =  zᴺ·dᴺ  −  g·Σ_{i=1..N} C(N,i)·g^{i−1}
+/// ```
+///
+/// and multiplying the elimination identity by `zᴺ` and subtracting yields
+/// cofactors for the conclusion itself. For `N = 1` this collapses to the
+/// familiar shape the search route produces, where the saturation generator's
+/// cofactor is minus the conclusion; `euler-line` has `N = 2` and gets
+/// `−conclusion·(1 + d·z)`.
+///
+/// If the multiplier is **not** a product of the stated conditions (times a
+/// nonzero rational), this returns
+/// [`GeometryDecline::UndividableMultiplier`] rather than inventing a condition.
+///
+/// # Minimality
+///
+/// Condition subsets are tried smallest-first, exactly as in [`certify`]. Here
+/// every subset test is *decided* — factoring a multiplier by exact division
+/// always terminates and always answers — so the reported set is smallest among
+/// the subsets this route can use. Whether it is smallest **absolutely** is a
+/// separate question about ideal membership, and it is answered by the degenerate
+/// counterexample: a configuration satisfying every hypothesis, keeping every
+/// condition of a subset nonzero, and falsifying the conclusion proves that
+/// subset insufficient outright, with no budget in the argument at all.
+///
+/// # The handover
+///
+/// `handover` bounds the general ideal-membership work spent on whatever the
+/// elimination could **not** remove. `None` refuses it outright: the elimination
+/// must settle the conclusion by itself, which makes this route cost
+/// microseconds and never inherit the cost it exists to avoid. `Some(limits)`
+/// lets the residue — free of the eliminated unknowns, so a materially smaller
+/// question — go to [`reduce_many_with_cofactors`], which is what a theorem that
+/// is only *partly* linear needs.
+#[must_use]
+pub fn certify_by_linear_elimination(
+    problem: &GeometryProblem,
+    handover: Option<Limits>,
+) -> ProofOutcome {
+    let count = problem.nondegeneracy.len();
+    if count > 16 {
+        return ProofOutcome::Declined(GeometryDecline::TooManyConditions);
+    }
+    let mut subsets: Vec<Vec<usize>> = (0u32..(1u32 << count))
+        .map(|mask| {
+            (0..count)
+                .filter(|index| mask & (1 << index) != 0)
+                .collect::<Vec<usize>>()
+        })
+        .collect();
+    subsets.sort_by(|left, right| left.len().cmp(&right.len()).then_with(|| left.cmp(right)));
+
+    let hypotheses: Vec<MvPoly> = problem
+        .hypotheses
+        .iter()
+        .map(|hypothesis| hypothesis.poly.clone())
+        .collect();
+
+    let mut last_failure = ProofOutcome::Declined(GeometryDecline::UndividableMultiplier);
+
+    for subset in &subsets {
+        let Some((saturations, generators)) = build_generators(problem, subset) else {
+            last_failure =
+                ProofOutcome::Declined(GeometryDecline::Reduction(DeclineReason::Overflow));
+            continue;
+        };
+        let mut cofactor_sets = Vec::with_capacity(problem.conclusions.len());
+        let mut settled = true;
+        for conclusion in &problem.conclusions {
+            match linear_cofactors(&hypotheses, &generators, &saturations, conclusion, handover) {
+                Ok(cofactors) => cofactor_sets.push(cofactors),
+                Err(outcome) => {
+                    last_failure = outcome;
+                    settled = false;
+                    break;
+                }
+            }
+        }
+        if !settled {
+            continue;
+        }
+        // Every saturation must carry a nonzero cofactor somewhere, or the
+        // certificate advertises a weaker theorem than it proved and the
+        // independent checker rejects it. Smallest-first ordering makes this
+        // unreachable for a single condition, but not for two.
+        let all_used = saturations.iter().enumerate().all(|(slot, _)| {
+            cofactor_sets
+                .iter()
+                .any(|cofactors| !cofactors[problem.hypotheses.len() + slot].is_zero())
+        });
+        if !all_used {
+            last_failure = ProofOutcome::Declined(GeometryDecline::UndividableMultiplier);
+            continue;
+        }
+        let certificate = assemble(problem, saturations, generators, cofactor_sets);
+        return match verify_witnesses(problem, &certificate) {
+            Ok(certificate) => ProofOutcome::Certified(Box::new(certificate)),
+            Err(()) => ProofOutcome::Declined(GeometryDecline::UnverifiedWitness),
+        };
+    }
+
+    last_failure
+}
+
+/// Certify by whichever route reaches the theorem: linear elimination first,
+/// then the Gröbner search.
+///
+/// # Why that order, and why it does not disturb anything
+///
+/// The linear route is tried first because it is the *cheap* one — with no
+/// handover it is pure adjugate arithmetic, microseconds, and it either settles
+/// the conclusion outright or gets out of the way. The Gröbner route is second
+/// because it is the general one. Trying the expensive route first would mean
+/// `euler-line` never reaches the cheap one at all: its Gröbner reduction does
+/// not return inside any budget anyone has been willing to wait for.
+///
+/// The order is safe for the same reason the `grevlex` switch was, and it was
+/// checked the same way rather than argued: on the seven theorems that predate
+/// this route, the linear pass declines on six (its multiplier is not a product
+/// of the stated conditions) and produces the *identical* empty certificate on
+/// Varignon, so `emit_geometry_certificates` reports them all unchanged, byte for
+/// byte. What the order changes is reach, not evidence.
+///
+/// The one thing it can change is a **condition set**, and that has to be said
+/// out loud because condition sets are hypotheses in the fact ledger. The linear
+/// route's multiplier is an artifact of the decomposition it chose, so it may
+/// need to invert a condition the Gröbner route would not have used — a *weaker*
+/// theorem, conservative in the safe direction, and detectable: the degenerate
+/// counterexample in the certificate decides whether the condition is genuinely
+/// required, with no budget in the argument (see
+/// [`certify_by_linear_elimination`]).
+#[must_use]
+pub fn certify_any_route(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
+    match certify_by_linear_elimination(problem, None) {
+        certified @ ProofOutcome::Certified(_) => certified,
+        _ => certify(problem, limits),
+    }
+}
+
+/// The cofactor vector for one conclusion under one condition subset, or the
+/// outcome that explains why there is none.
+fn linear_cofactors(
+    hypotheses: &[MvPoly],
+    generators: &[MvPoly],
+    saturations: &[Saturation],
+    conclusion: &Constraint,
+    handover: Option<Limits>,
+) -> Result<Vec<MvPoly>, ProofOutcome> {
+    let overflow = || ProofOutcome::Declined(GeometryDecline::Reduction(DeclineReason::Overflow));
+    let Some(elimination) = eliminate(hypotheses, &conclusion.poly) else {
+        return Err(overflow());
+    };
+
+    let mut cofactors = vec![MvPoly::zero(); generators.len()];
+    for (slot, cofactor) in elimination.cofactors.iter().enumerate() {
+        cofactors[slot] = cofactor.clone();
+    }
+
+    // What linear algebra could not remove goes to the general route, over a
+    // system that is now free of the eliminated unknowns. For `euler-line` the
+    // residue is zero and this never runs.
+    if !elimination.residue.is_zero() {
+        // A zero residue is short-circuited rather than reduced, and that is not
+        // bookkeeping: reducing even the zero polynomial computes a Gröbner basis
+        // of the generators, which is exactly the divergent computation this route
+        // exists to avoid.
+        let Some(limits) = handover else {
+            return Err(ProofOutcome::NotInSaturatedIdeal {
+                conclusion_id: conclusion.id.clone(),
+                remainder: elimination.residue.clone(),
+            });
+        };
+        let outcomes = reduce_many_with_cofactors(
+            generators,
+            std::slice::from_ref(&elimination.residue),
+            limits,
+        );
+        match &outcomes[0] {
+            CofactorOutcome::Reduced {
+                cofactors: extra,
+                remainder,
+            } => {
+                if !remainder.is_zero() {
+                    return Err(ProofOutcome::NotInSaturatedIdeal {
+                        conclusion_id: conclusion.id.clone(),
+                        remainder: remainder.clone(),
+                    });
+                }
+                for (slot, share) in extra.iter().enumerate() {
+                    let Some(sum) = cofactors[slot].add(share) else {
+                        return Err(overflow());
+                    };
+                    cofactors[slot] = sum;
+                }
+            }
+            CofactorOutcome::Declined(reason) => {
+                return Err(ProofOutcome::Declined(GeometryDecline::Reduction(*reason)));
+            }
+        }
+    }
+
+    match invert_multiplier(
+        &conclusion.poly,
+        &elimination.multiplier,
+        saturations,
+        hypotheses.len(),
+        cofactors,
+    ) {
+        Some(cofactors) => Ok(cofactors),
+        None => Err(ProofOutcome::Declined(
+            GeometryDecline::UndividableMultiplier,
+        )),
+    }
+}
+
+/// Turn `multiplier · conclusion = Σ cofactorsᵢ·generatorᵢ` into
+/// `conclusion = Σ cofactorsᵢ′·generatorᵢ`, using the Rabinowitsch generators as
+/// the inverses they are.
+///
+/// `None` when the multiplier does not factor into the stated conditions and a
+/// nonzero rational — which is a statement about the theorem, not about a budget.
+fn invert_multiplier(
+    conclusion: &MvPoly,
+    multiplier: &MvPoly,
+    saturations: &[Saturation],
+    hypotheses: usize,
+    mut cofactors: Vec<MvPoly>,
+) -> Option<Vec<MvPoly>> {
+    let one = MvPoly::constant(Rational::integer(1));
+    let mut remaining = multiplier.clone();
+    for (slot, saturation) in saturations.iter().enumerate() {
+        if saturation.condition.total_degree() == 0 {
+            continue;
+        }
+        let mut power = 0u32;
+        while power < MAX_INVERSE_POWER {
+            match remaining.exact_div(&saturation.condition) {
+                Some(quotient) => {
+                    remaining = quotient;
+                    power += 1;
+                }
+                None => break,
+            }
+        }
+        if power == 0 {
+            continue;
+        }
+        let inverse = MvPoly::var(&saturation.var);
+        let scale = inverse.pow(power)?;
+        for cofactor in &mut cofactors {
+            *cofactor = cofactor.mul(&scale)?;
+        }
+        // `1 = zᴺ·dᴺ − g·Σ_{i=1..N} C(N,i)·g^{i−1}` with `g = d·z − 1`.
+        let generator = saturation.condition.mul(&inverse)?.sub(&one)?;
+        let mut series = MvPoly::zero();
+        let mut power_of_generator = one.clone();
+        for index in 1..=power {
+            let coefficient = binomial(power, index)?;
+            series = series
+                .add(&power_of_generator.mul(&MvPoly::constant(Rational::integer(coefficient)))?)?;
+            if index < power {
+                power_of_generator = power_of_generator.mul(&generator)?;
+            }
+        }
+        let addend = remaining.mul(conclusion)?.mul(&series)?.neg()?;
+        let index = hypotheses + slot;
+        cofactors[index] = cofactors[index].add(&addend)?;
+    }
+
+    if remaining.total_degree() > 0 {
+        return None;
+    }
+    let leftover = remaining.evaluate(&BTreeMap::new())?;
+    if leftover.is_zero() {
+        return None;
+    }
+    let reciprocal = MvPoly::constant(Rational::integer(1).checked_div(leftover)?);
+    for cofactor in &mut cofactors {
+        *cofactor = cofactor.mul(&reciprocal)?;
+    }
+    Some(cofactors)
+}
+
+/// `C(n, k)` in `i128`, `None` on overflow.
+fn binomial(n: u32, k: u32) -> Option<i128> {
+    let k = k.min(n.checked_sub(k)?);
+    let mut result: i128 = 1;
+    for step in 0..k {
+        result = result.checked_mul(i128::from(n - step))?;
+        result = result.checked_div(i128::from(step) + 1)?;
+    }
+    Some(result)
+}
+
 /// Generators for one condition subset: the hypotheses, then `d·z − 1` per
 /// condition, in the subset's ascending index order. `None` on coefficient
 /// overflow while forming a saturation generator.
@@ -689,12 +1040,33 @@ fn verify_witnesses(
 #[cfg(test)]
 mod tests {
     use super::{
-        Condition, Constraint, DegenerateWitness, GenericWitness, GeometryDecline, GeometryProblem,
-        ProofOutcome, Pt, certify, collinear, geometry_limits, midpoint, parallel, perpendicular,
+        Condition, Constraint, DegenerateWitness, GenericWitness, GeometryCertificate,
+        GeometryDecline, GeometryProblem, ProofOutcome, Pt, certify, certify_any_route,
+        certify_by_linear_elimination, collinear, geometry_limits, midpoint, parallel,
+        perpendicular,
     };
     use crate::mvpoly::MvPoly;
     use axeyum_ir::Rational;
     use std::collections::BTreeMap;
+
+    /// Re-expand `Σ uᵢ·gᵢ` and compare it with the conclusion, without any of the
+    /// machinery that produced the cofactors. This is what the independent
+    /// checker does; a route that cannot pass it has produced nothing.
+    fn identity_recombines(certificate: &GeometryCertificate) {
+        for conclusion in &certificate.conclusions {
+            let mut combined = MvPoly::zero();
+            for (cofactor, generator) in conclusion.cofactors.iter().zip(&certificate.generators) {
+                combined = combined
+                    .add(&cofactor.mul(generator).expect("product"))
+                    .expect("sum");
+            }
+            assert_eq!(
+                combined, conclusion.poly,
+                "the identity must reproduce {}",
+                conclusion.id
+            );
+        }
+    }
 
     fn assign(pairs: &[(&str, i128)]) -> BTreeMap<String, Rational> {
         pairs
@@ -916,5 +1288,166 @@ mod tests {
             ),
             "a false conclusion must never certify"
         );
+    }
+
+    /// The theorem the linear route exists for. Two 2×2 systems, a zero residue,
+    /// and an identity in the ORIGINAL generators — which is what makes it a
+    /// certificate rather than a verdict.
+    #[test]
+    fn the_linear_route_certifies_euler_line() {
+        let problem = crate::geometry_corpus::corpus()
+            .into_iter()
+            .find(|problem| problem.id == "euler-line")
+            .expect("euler-line is in the corpus");
+        let ProofOutcome::Certified(certificate) = certify_by_linear_elimination(&problem, None)
+        else {
+            panic!("the linear route must reach euler-line without any Gröbner handover");
+        };
+        assert_eq!(
+            certificate.saturations.len(),
+            1,
+            "one condition: A, B, C not collinear"
+        );
+        assert_eq!(
+            certificate.generators.len(),
+            5,
+            "four hypotheses plus d·z − 1"
+        );
+        for (index, hypothesis) in certificate.hypotheses.iter().enumerate() {
+            assert_eq!(
+                certificate.generators[index], hypothesis.poly,
+                "generator {index} must be the stated hypothesis `{}` unchanged -- a route that \
+                 substituted solved forms into the generator list would prove a different theorem",
+                hypothesis.id
+            );
+        }
+        identity_recombines(&certificate);
+    }
+
+    /// The signature Rabinowitsch shape, generalised to a squared multiplier.
+    ///
+    /// The Gröbner route's saturated certificates come out with the saturation
+    /// generator's cofactor equal to **minus the conclusion**, which is the `N = 1`
+    /// case of `1 = zᴺdᴺ − g·Σ C(N,i)g^{i−1}`. `euler-line`'s multiplier is
+    /// `4·collinear(A,B,C)²`, so `N = 2` and the cofactor must be
+    /// `−conclusion·(1 + d·z)`. Asserting the exact polynomial is what turns "the
+    /// division works" into something that would fail loudly if the binomial
+    /// series were off by a term.
+    #[test]
+    fn the_squared_multiplier_produces_the_expected_rabinowitsch_cofactor() {
+        let problem = crate::geometry_corpus::corpus()
+            .into_iter()
+            .find(|problem| problem.id == "euler-line")
+            .expect("euler-line is in the corpus");
+        let ProofOutcome::Certified(certificate) = certify_by_linear_elimination(&problem, None)
+        else {
+            panic!("euler-line must certify");
+        };
+        let saturation = &certificate.saturations[0];
+        let expected = certificate.conclusions[0]
+            .poly
+            .mul(
+                &saturation
+                    .condition
+                    .mul(&MvPoly::var(&saturation.var))
+                    .expect("d·z")
+                    .add(&MvPoly::constant(Rational::integer(1)))
+                    .expect("1 + d·z"),
+            )
+            .expect("product")
+            .neg()
+            .expect("negation");
+        assert_eq!(
+            certificate.conclusions[0].cofactors[certificate.hypotheses.len()],
+            expected,
+            "the saturation cofactor must be −conclusion·(1 + d·z)"
+        );
+    }
+
+    /// A false conclusion must not certify on this route either, and the reason
+    /// must not be a lucky decline: the elimination happily produces an identity
+    /// for `multiplier · target`, and it is the *residue* that has to stay
+    /// nonzero.
+    #[test]
+    fn the_linear_route_refuses_a_false_conclusion() {
+        let points = quadrilateral();
+        let problem = GeometryProblem {
+            id: "false".into(),
+            title: "false".into(),
+            statement: "test fixture".into(),
+            coordinate_gloss: Vec::new(),
+            hypotheses: parallelogram_hypotheses(&points),
+            nondegeneracy: vec![flat_condition(&points)],
+            conclusions: vec![Constraint::new(
+                "diagonals-perpendicular",
+                "AC ⟂ BD, which is false",
+                perpendicular(&points[0], &points[2], &points[1], &points[3]).expect("polynomial"),
+            )],
+            degenerate_witnesses: Vec::new(),
+            generic_witnesses: Vec::new(),
+        };
+        for handover in [None, Some(geometry_limits())] {
+            assert!(
+                !matches!(
+                    certify_by_linear_elimination(&problem, handover),
+                    ProofOutcome::Certified(_)
+                ),
+                "a false conclusion must never certify, handover = {}",
+                handover.is_some()
+            );
+        }
+    }
+
+    /// A multiplier that is not a product of the **stated** conditions must
+    /// decline, not invent one.
+    ///
+    /// This is the soundness-relevant half of the route. The elimination will
+    /// cheerfully hand back `det·target = Σ uᵢhᵢ` for whatever determinant its
+    /// decomposition produced; dividing that determinant out is only legitimate
+    /// where it is nonzero, and the only place this module is allowed to get that
+    /// permission is a condition the problem declares. Thales is the case in the
+    /// corpus: the elimination clears its residue with a two-term multiplier, and
+    /// that polynomial is nobody's declared condition.
+    #[test]
+    fn a_multiplier_outside_the_stated_conditions_declines() {
+        let problem = crate::geometry_corpus::corpus()
+            .into_iter()
+            .find(|problem| problem.id == "thales-right-angle-in-semicircle")
+            .expect("thales is in the corpus");
+        assert_eq!(
+            certify_by_linear_elimination(&problem, None),
+            ProofOutcome::Declined(GeometryDecline::UndividableMultiplier),
+            "the route must refuse to divide by a polynomial no condition licenses"
+        );
+        // And the theorem is nonetheless true and unconditional, which the
+        // Gröbner route establishes — so the decline above is a limitation of the
+        // route, not a statement about the theorem.
+        let ProofOutcome::Certified(certificate) = certify(&problem, geometry_limits()) else {
+            panic!("thales certifies on the general route");
+        };
+        assert!(certificate.saturations.is_empty());
+    }
+
+    /// `certify_any_route` must not disturb what the Gröbner route already
+    /// proves. This is the assertion behind "7 unchanged, 1 written".
+    #[test]
+    fn the_route_selector_reproduces_the_groebner_certificate_exactly() {
+        let mut compared = 0usize;
+        for problem in crate::geometry_corpus::corpus() {
+            // `euler-line` is the one the Gröbner route does not return on, so it
+            // is excluded here by construction rather than by convenience.
+            if problem.id == "euler-line" || problem.id == "rhombus-diagonals-perpendicular" {
+                continue;
+            }
+            let combined = certify_any_route(&problem, geometry_limits());
+            let direct = certify(&problem, geometry_limits());
+            assert_eq!(
+                combined, direct,
+                "{}: the route selector changed an existing certificate",
+                problem.id
+            );
+            compared += 1;
+        }
+        assert!(compared >= 5, "compared only {compared} theorems");
     }
 }
