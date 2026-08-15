@@ -1337,6 +1337,21 @@ axioms (21 prelude) where the example now measures **26 (17 prelude)**; its
 `checker_command` still passes because it pins the *hypothesis* count, so the
 stale number is in `notes`/`axiom_footprint`. All belong to other lanes.
 
+**Hygiene incident, disclosed: `c391b36d4` carries one line that belongs to the
+`axeyum-cas` lane** (`docs/reference/examples.md`, the `geometry_cofactor_routes`
+row). Nothing lost — the line is committed exactly as written and their worktree
+matches `HEAD` — but it is attributed to `lra-dispatch`. Not rewritten
+(`ae589be97` precedent; no history rewrites in a shared checkout). **The
+mechanism is new and the rule in CLAUDE.md has a hole:** I saw the foreign hunk,
+did *not* `git add` the file, split the diff at `-U0`, and staged only my hunk
+with `git apply --cached --unidiff-zero` — `git diff --cached --stat` confirmed
+`1 insertion(+), 1 deletion(-)`. Then `git commit -m … -- <paths>` shipped two
+lines, because **`git commit -- <pathspec>` commits the WORKTREE content of those
+paths and discards what you staged for them.** The mandated pathspec is exactly
+what defeats the one tool that can separate two lanes inside one file. To commit
+a single hunk of a shared file, stage it and commit with **no pathspec** after
+checking `git diff --cached --stat` — or do not share the file.
+
 **Next, for whoever picks this up.** (1) The 28 non-arithmetic structural routes
 are marked, not fixed — marking turns a silent misreport into a visible gap.
 (2) Multi-clause `DisjunctiveLra`: a two-clause Boolean `QF_LRA` row is outside

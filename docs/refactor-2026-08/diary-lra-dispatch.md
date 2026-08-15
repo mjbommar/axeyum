@@ -314,6 +314,41 @@ as above; the fact belongs to the `infeasibility` lane.
 - `infeasibility_farkas_lean --require-kernel` on `schedule-deadline.smt2`: exits
   0 with `facade fragment Lra`.
 
+## I swept another lane's line anyway, and the mechanism is new
+
+`c391b36d4` contains a one-line edit to `docs/reference/examples.md` that belongs
+to the `axeyum-cas` lane (`geometry_cofactor_routes`: "killed at 8 minutes" ->
+"killed at 7.5 minutes ... without returning"). Nothing was lost or corrupted —
+their line is committed exactly as they wrote it, and their worktree matches
+`HEAD` — but it is attributed to `lra-dispatch`. Disclosed rather than rewritten,
+following `ae589be97`'s precedent and CLAUDE.md's absolute bar on history
+rewrites in a shared checkout.
+
+**What is new is that I did the documented defence and it did not work.** I ran
+`git diff docs/reference/examples.md`, saw the foreign hunk, and did *not*
+`git add` the file. I split the diff at `-U0`, dropped the other lane's hunk by
+name, and applied only mine with `git apply --cached --unidiff-zero`. The index
+then held exactly my one line — `git diff --cached --stat` said `1 insertion(+),
+1 deletion(-)`, and I checked.
+
+Then I ran `git commit -m … -- <paths>`, and the commit came out with two lines
+changed.
+
+**`git commit -- <pathspec>` does not commit the index. It commits the WORKTREE
+content of those paths, discarding what you staged for them.** That is documented
+git behaviour and it is the exact opposite of what the multi-agent rule in
+CLAUDE.md leads you to expect: the rule says "pathspec-only commits, always",
+and the pathspec is precisely the thing that threw my careful staging away. So
+the guidance has a hole in it — index-level hunk staging, the one tool that
+*can* separate two lanes inside one file, is silently defeated by the very
+incantation the rule mandates.
+
+If you need to commit one hunk of a shared file: stage it, then commit with **no
+pathspec** (`git commit` alone commits the index), having first confirmed with
+`git diff --cached --stat` that the index holds nothing else — the risk moves
+from "the worktree overrides you" to "another lane staged something", which is at
+least visible. Or: don't share the file.
+
 ## What I would tell the next person
 
 **A shared emitter is a shared claim.** One helper,
