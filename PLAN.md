@@ -312,6 +312,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-15 | `33cbe5131` | Formalized-math strand started: real Lean import measured at 13/40 with a four-cluster blocker census, `imported-kernel-lean` proof route (ADR-0454), five imported facts with pinned streams, `01-collect.md` rewritten against cited measurements. |
 | 2026-08-15 | (pending) | `Proj`/`Proj` congruence in `def_eq` closes 9 of 10 root import blockers (40-stream census: 22→37 clean, 10→1 root); first-class decline census `census_ndjson`; pinned `Nat.add_comm` capability fixture. |
 | 2026-08-15 | `d326c74af` | WHNF cache key split on `has_fvars` (closed → kernel, open → `LocalContext`) with a `reduction_ctx_reads` tripwire; the collision demonstrated as a test against a kept pre-fix replica; K-like reduction with a guard-by-guard controlled negative suite; import census 37/40 → **40/40**, 1 root blocker → **0**. |
+| 2026-08-15 | (pending) | `docs/reference/examples.md`: documented six landed Cargo examples that `check-parity-docs.py` flagged as missing — `geometry_linear_route`, `lean4export_census`, `nat_add_reduction_probe`, `arith_model_witness`, `ordered_ring_refutation` (the five named by the task), plus `prelude_build_timing` (flagged by the gate itself, not on the original list). The example-count marker in `docs/documentation-plan.md` and `PLAN.md` was already correct (67) and needed no edit. |
 | 2026-08-14 | `19f4c769b` | Automatic hypothesis minimisation (`hypothesis_min`): two route-B Rado lemmas that stay `unknown` at 1800 s close in ~2 s with the same subsets a human found in ~32 min; the boundary is measured to be `nra.rs:107` `MAX_CROSS_PRODUCTS = 2`, not hypothesis count, and the guards are mutation-tested one deletion at a time (agent-k). |
 | 2026-08-14 | `telescoping` | Creative telescoping (Zeilberger) with an independent certificate checker; 5 classical binomial identities landed as `cas-certificate` facts; 10 tamper controls reject perturbed certificates | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `artifacts/facts/F-*binomial*.json`, `artifacts/facts/F-chu-vandermonde-convolution-recurrence.json` |
 | 2026-08-14 | `telescoping-scale` | Gosper–Petkovšek derived denominator and degree bound replace the `Q` ladder and the degree sweep (Chu–Vandermonde 18.5 s -> 46.7 ms); order-2 recurrences reachable (Franel); symbolic base cases close Chu–Vandermonde's closed form; certificates serialised to `artifacts/cas-certificates/` and re-checked from file; 3 new facts | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/src/telescoping_json.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `crates/axeyum-cas/tests/telescoping_certificate_artifacts.rs`, `artifacts/cas-certificates/*.json`, `artifacts/facts/F-chu-vandermonde-convolution.json`, `artifacts/facts/F-cross-binomial-row-sum.json`, `artifacts/facts/F-franel-numbers-recurrence.json` |
@@ -1546,6 +1547,17 @@ Next: the corpus has stopped measuring at 40/40 — replace it with one that
 exercises what we know we lack (`to_cnstr_when_structure`; `cheap_proj`
 ordering in `reduce_projection`). Still open across three diaries now: the
 toolchain re-pin (4.30.0 → current).
+
+**Lane closed (`DONE`, examples-sweep, 2026-08-15).** Task was
+`docs/refactor-2026-08` finding #4 ("documents assert what the code does
+not"): `python3 scripts/check-parity-docs.py` was red because six landed,
+git-tracked Cargo examples were missing from `docs/reference/examples.md`.
+Added a catalog row for each, stating the boundary/question the example
+answers rather than restating its name, verified against the example's `//!`
+header, `main`, and (for the timing/measurement claims) the landing lane's own
+status file. All three gates (`check-parity-docs.py`, `check-links.sh`,
+`gen-plan.py --check`) are green. No other lane's untracked WIP was touched;
+none was found among the flagged files.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
