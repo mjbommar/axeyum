@@ -91,16 +91,40 @@ fn run() -> Result<(), String> {
     let mut path = None;
     let mut require_kernel = false;
     let mut dump = false;
-    for arg in std::env::args().skip(1) {
+    let mut dump_axioms = false;
+    // `--expect-axioms N` exists because the fact ledger's whole promise is that
+    // a status is worth what its checker returns, and this checker returned 0 no
+    // matter what the footprint said. `F:schedule-critical-chain-infeasible`
+    // recorded 30 axioms while the code produced 26 -- four prelude laws had
+    // since become PROVED rather than asserted, which is a real shrink of the
+    // trusted surface and exactly the kind of change a ledger exists to notice.
+    // It went unnoticed because nothing compared the two. Drift in the safe
+    // direction is still drift: the same silence would hide a footprint that
+    // GREW.
+    let mut expect_axioms: Option<usize> = None;
+    let mut axioms_checked = false;
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
         match arg.as_str() {
             "--require-kernel" => require_kernel = true,
             "--dump-modules" => dump = true,
+            "--dump-axioms" => dump_axioms = true,
+            "--expect-axioms" => {
+                let raw = args
+                    .next()
+                    .ok_or("`--expect-axioms` needs a count, e.g. `--expect-axioms 26`")?;
+                expect_axioms = Some(
+                    raw.parse()
+                        .map_err(|_| format!("`--expect-axioms` wants a number, got `{raw}`"))?,
+                );
+            }
             other if other.starts_with("--") => return Err(format!("unknown flag `{other}`")),
             other => path = Some(other.to_owned()),
         }
     }
     let path = path.ok_or(
-        "usage: infeasibility_farkas_lean <file.smt2> [--require-kernel] [--dump-modules]",
+        "usage: infeasibility_farkas_lean <file.smt2> [--require-kernel] [--dump-modules] \
+         [--dump-axioms] [--expect-axioms N]",
     )?;
     let text =
         std::fs::read_to_string(&path).map_err(|error| format!("cannot read `{path}`: {error}"))?;
@@ -309,6 +333,34 @@ fn run() -> Result<(), String> {
                 rendered.len()
             );
             println!("kernel proof term   {term_bytes} bytes");
+            if dump_axioms {
+                // The fact ledger records this footprint by NAME, and until this
+                // flag existed nothing printed the names -- so the only way to
+                // fill in `axiom_footprint` was to read the module by eye, and
+                // the only way to check it was to trust that reading. Sorted, so
+                // a diff against the ledger is a diff.
+                let mut sorted = axiom_names.clone();
+                sorted.sort_unstable();
+                println!("--- axiom footprint ({}) ---", sorted.len());
+                for name in &sorted {
+                    println!("{name}");
+                }
+                println!("--- end ---");
+            }
+            if let Some(want) = expect_axioms
+                && axiom_names.len() != want
+            {
+                return Err(format!(
+                    "axiom footprint drifted: the module asserts {} axiom(s) \
+                     ({prelude} prelude + {variables} variable + {hypotheses} hypothesis) \
+                     but --expect-axioms said {want}. If this shrank, the trusted surface \
+                     got smaller and the ledger should be updated to match \
+                     (`--dump-axioms` prints the names). If it GREW, something is now \
+                     asserted that was proved before, and that is a regression.",
+                    axiom_names.len()
+                ));
+            }
+            axioms_checked = true;
             println!(
                 "kernel axioms       {} = {prelude} prelude + {variables} variable + {hypotheses} hypothesis",
                 axiom_names.len()
@@ -333,6 +385,19 @@ fn run() -> Result<(), String> {
                 ));
             }
         }
+    }
+    // A check that never ran is not a check that passed. If the kernel route
+    // stops early, every line above it still prints and the process still exits
+    // 0 -- which is precisely the "green-looking gate that examined nothing"
+    // failure this repository has shipped more than once. So `--expect-axioms`
+    // fails when it was never reached, rather than being satisfied by absence.
+    if expect_axioms.is_some() && !axioms_checked {
+        return Err(
+            "--expect-axioms was given but the kernel-lean route never produced a module, \
+             so the footprint was never compared. Treating an unreached check as a pass is \
+             how a gate ends up asserting nothing."
+                .to_owned(),
+        );
     }
     Ok(())
 }
