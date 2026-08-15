@@ -67,6 +67,7 @@ for path in sorted(glob.glob("artifacts/facts/*.json")):
 
 ran = failed = skipped = 0
 timeouts = []
+timed_out_facts = set()
 
 
 def run_checker(cmd, timeout):
@@ -158,16 +159,29 @@ for fact in facts:
         by_route_ok[route] += 1
         print(f"  ok         {fact['id']:<40} route={route} ({len(rows)} checker(s))")
     else:
-        failed += 1
-        label = "TIMEOUT" if any(t[0] == fact["id"] for t in timeouts) else "FAIL"
-        print(f"  {label:<10} {fact['id']:<40} route={route}")
+        # `failed` and `timed out` must be DISJOINT. Counting a timed-out fact in
+        # both made "1 failed, 1 timed out" read as two problems when it is one --
+        # and the whole point of separating them is that they mean different
+        # things. A fact is FAILED only if some checker genuinely exited non-zero.
+        genuinely_failed = any(f[0] == fact["id"] for f in failures)
+        if genuinely_failed:
+            failed += 1
+            print(f"  {'FAIL':<10} {fact['id']:<40} route={route}")
+        else:
+            timed_out_facts.add(fact["id"])
+            print(f"  {'TIMEOUT':<10} {fact['id']:<40} route={route}")
 
 elapsed = time.time() - started
 print()
 for route in sorted(by_route_total):
     print(f"  route {route:<20} {by_route_ok[route]}/{by_route_total[route]} re-derived")
+ok_facts = sum(by_route_ok.values())
 print(f"\nfact-evidence-replay: {len(facts)} settled fact(s), {ran} checker run(s), "
-      f"{failed} failed, {len(timeouts)} timed out, {skipped} uncovered, {elapsed:.1f}s")
+      f"{ok_facts} re-derived, {failed} failed, {len(timed_out_facts)} timed out, "
+      f"{skipped} uncovered, {elapsed:.1f}s")
+assert ok_facts + failed + len(timed_out_facts) + skipped == len(facts), (
+    "the per-fact outcome counts must partition the facts; if this fires the "
+    "summary is double-counting and cannot be read")
 if timeouts:
     print("  NOTE: a timeout is not evidence a fact rotted. Under load these are "
           "usually cargo's build lock; re-run on an idle box before believing them.",
@@ -189,5 +203,5 @@ if ran == 0:
     print("fact-evidence-replay: ran ZERO checkers — the gate examined nothing",
           file=sys.stderr)
     sys.exit(1)
-sys.exit(1 if failed else 0)
+sys.exit(1 if (failed or timed_out_facts) else 0)
 PY
