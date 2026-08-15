@@ -312,6 +312,9 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-15 | `7c7b0ca16` | `Real`'s 30 axioms measured as an ordered-ring package (no inverse/completeness/Archimedean) and modelled in the constructed ℤ: `build_int_model_of_arith` admits 22 kernel-checked witnesses, all with an empty axiom footprint and all syntactically the `Int` law. `Int.sq_nonneg` proved (`Int: 50 → 51` derived, 51 empty footprints). Measured and pinned that this kernel has **no `Quot.sound`**, so a quotient ℝ is inexpressible, not merely expensive — correcting three comments and the ℤ diary. ADR-0456. |
 | 2026-08-15 | `ordered-ring-reconstruct` | Farkas/SOS refutations generalize over the ordered-ring interface: empty `axiom_footprint`, confirmed by real Lean's `#print axioms`, with the `Real`-specific statement recovered by instantiation (ADR-0457, `F:ordered-ring-farkas-refutation`). |
 | 2026-08-15 | `lra-dispatch` | Conjunctive `QF_LRA` reaches `ProofFragment::Lra` at the Lean facade instead of the contentless `LraDpll` shim, with the first tests asserting a query reaches the real reconstructor; structural-attestation modules now self-label, are typed by `LeanModuleContent`, are cross-checked against the fragment table on every call, and are declined by `prove_unsat_to_lean_theory_module`. |
+| 2026-08-15 | `996d10826` | Four database-design facts closed by executing their checkers: FD implication with Armstrong derivations and solver-model counterexample relations (its `formal.statement` machine-checked by `--verify-formal`), candidate keys settled by a 1024-subset sweep with 384 checked counterexamples and absolute minimality per ADR-0455, lossless-join chase traces with spurious-tuple witnesses, and six CQ containments agreeing across three independent routes. |
+| 2026-08-15 | `75327842c` | ADR-0463: database design enters the stack as certificates, not verdicts. Records that the negative direction rests on less than the positive one, that "domains have at least two values" is a real assumption, and that inclusion dependencies are excluded because FD+IND implication is undecidable. |
+| 2026-08-15 | `b23b0be3f` | Relational schema design decided twice and reported only with a replayable certificate: `axeyum-scenarios/src/dbdesign/` (Armstrong derivations, two-row counterexample relations, the tableau chase, spurious-tuple witnesses, Chandra–Merlin homomorphisms), two `axeyum-bench` certifier examples, three instances that pin their own answers, and a 22-assertion negative-control gate that measures the checkers failing closed. |
 | 2026-08-15 | `6389e0194` | Three quantified-LIA golden pins repaired at their real cause (`0fc7cc357`, `integer: axiom=6 → 1`, grew the emitted proof terms), and the acceptance claim their comments made was turned into three real-Lean `lean_crosscheck` families: 70 → 73 modules, 73 of 73 checked by Lean 4.30.0. |
 | 2026-08-15 | `33cbe5131` | Formalized-math strand started: real Lean import measured at 13/40 with a four-cluster blocker census, `imported-kernel-lean` proof route (ADR-0454), five imported facts with pinned streams, `01-collect.md` rewritten against cited measurements. |
 | 2026-08-15 | (pending) | `Proj`/`Proj` congruence in `def_eq` closes 9 of 10 root import blockers (40-stream census: 22→37 clean, 10→1 root); first-class decline census `census_ndjson`; pinned `Nat.add_comm` capability fixture. |
@@ -1647,6 +1650,67 @@ past a few hundred rows.
 Full reasoning, including what a commercial IIS gives that this does not:
 [`docs/mathematics-2026-08/diary-infeasibility.md`](docs/mathematics-2026-08/diary-infeasibility.md).
 
+**Database design now has a foothold, and it is the sharpest demonstration in
+the tree of this project's own sentence (`WIP`, db-design, 2026-08-15).** The
+owner asked for the stack to be pointed at "planning, logistics, database
+design, or general numerical approximation"; planning and logistics had the
+`infeasibility` lane and database design had nothing. It fits on the merits:
+every central question of relational schema design is a *decidable logical
+implication problem whose certificate is far smaller than its decision
+procedure*. Conjunctive-query containment is the extreme case — finding the
+homomorphism is NP-complete, and the certificate for `Q_terse ⊆ Q_verbose` is
+four variable-to-element pairs.
+
+Landed: `crates/axeyum-scenarios/src/dbdesign/` (no new crate — ADR-0001, and
+ADR-0008's charter is exactly this), deciding FD implication, candidate keys,
+BCNF/3NF, lossless join, dependency preservation and CQ containment; two driver
+examples in `axeyum-bench`; three committed instances with 28 pinned
+expectations; 13 negative controls; and four facts closed by
+`scripts/close-fact.py`, which executes every checker. 37 unit tests, one
+"tampered certificate is rejected" per family. ADR-0463.
+
+Three things are worth carrying forward from this lane rather than the domain:
+
+1. **The solver's model IS the certificate.** A dependency set is a Horn theory,
+   and *any* model of `Horn(F) ∪ X ∪ {¬y}` — not just the least one — is the
+   agreement set of a two-row counterexample relation. So `sat` produces the
+   object rather than an opinion, and the object goes through `check_model` and
+   then through a checker that evaluates all of `F` row by row with no closure
+   anywhere.
+2. **The negative direction rests on LESS than the positive one**, the reverse
+   of the usual asymmetry here. Lossy needs no theorem; lossless needs the
+   soundness of the chase. Not-contained never invokes Chandra–Merlin's converse
+   (which needs an *infinite* domain). Not-implied does not need the
+   completeness half of Armstrong's theorem. Each fact's `axiom_footprint` says
+   which half it leans on.
+3. **A checker that exits 0 on completion is not evidence.**
+   `scripts/check-dbdesign-negative-controls.sh` (22 assertions, 2.1 s warm) is
+   an evidence row on all four facts: 13 instances each pinning exactly one
+   FALSE answer must all exit non-zero, plus a wrong `--expect-checks` count, an
+   instance fed to the wrong checker, a `--verify-formal` script whose negation
+   is satisfiable, one that asserts nothing, an instance pinning nothing at all
+   — and three assertions that the TRUE instances still pass, without which a
+   checker that rejected everything would sail through.
+
+Next, in priority order: (1) **3NF synthesis** — the lane decides 3NF and checks
+a given decomposition but does not construct one, and the attribution to get
+right is split (Bernstein 1976 gives dependency preservation; the lossless
+guarantee is Biskup–Dayal–Bernstein 1979); (2) **an Armstrong derivation
+reconstructed into the Lean kernel** — the derivation is already a three-rule
+proof object, which is a much shorter path to `kernel-lean` than the 5.1 MB
+Farkas term the `infeasibility` lane hit; (3) **unary inclusion dependencies
+with FDs**, the decidable fragment (Cosmadakis–Kanellakis–Vardi 1990) — full
+FD+IND implication is *undecidable* (Chandra–Vardi 1985 **and**, independently,
+Mitchell 1983) and must never be answered silently; (4) **MVDs and 4NF**, one
+`Symbol` variant away in the tableau, though a chase with EGDs can fail rather
+than terminate so the certificate story needs re-deriving; (5) **scale** — the
+candidate-key sweep is `2^n` and refuses above arity 24, which is fine for a
+schema and useless for a warehouse.
+
+Full reasoning, including the traps and one design regret (the instance format
+is a fifth parser in this tree):
+[`docs/mathematics-2026-08/diary-db-design.md`](docs/mathematics-2026-08/diary-db-design.md).
+
 **Lane extension — publishable result, replication, and evidence pinning
 (2026-08-13).** Three sibling repositories brought to a submittable state:
 both headline instances pinned by regeneration, the shipped arXiv bundle
@@ -1660,7 +1724,7 @@ including three mistakes that cost real work:
 README application/vision revision are closed. Continue only for a concrete
 stale claim; keep application maturity and sub-document links aligned, but do
 not duplicate generated capability tables or modify solver behavior to match
-prose. The user/reference/internals/crate surfaces and all 70 Cargo examples are
+prose. The user/reference/internals/crate surfaces and all 73 Cargo examples are
 indexed, and source guards reject universal proof claims.
 
 **Gate scope and the wall-clock reference frame (`WIP`, gates, 2026-08-14).**
