@@ -28,4 +28,4 @@ class of hole one level up.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-14 | `pending` | Real-Lean gate: elan toolchain discovery, skips that cannot read as passes, and a counted `scripts/check-lean-gate.sh` in both aggregate gates. |
+| 2026-08-14 | `27d91fa12` | Real-Lean gate: elan toolchain discovery, skips that cannot read as passes, and a counted `scripts/check-lean-gate.sh` in both aggregate gates. |
