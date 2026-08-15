@@ -806,6 +806,13 @@ struct CubeRun {
     jobs: usize,
     sym: CubeSym,
     keep_proofs: bool,
+    /// `(index, count)`: run only the branches with
+    /// `branch_index % count == index`. `(0, 1)` is the whole run.
+    ///
+    /// A shard's exit status covers **its own** branches only. The lower bound
+    /// is established when every shard of a partition has reported success, and
+    /// nothing in one shard's output claims more than that.
+    shard: (usize, usize),
 }
 
 impl CubeRun {
@@ -890,13 +897,29 @@ fn cubes(run: &CubeRun) -> i32 {
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    let prefixes = cube_prefixes(run.n, run.depth, run.sym);
+    let all_prefixes = cube_prefixes(run.n, run.depth, run.sym);
+    let (shard, shards) = run.shard;
+    assert!(shards >= 1 && shard < shards, "bad --shard");
+    let total_branches = all_prefixes.len();
+    let prefixes: Vec<Vec<(usize, usize)>> = all_prefixes
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| i % shards == shard)
+        .map(|(_, p)| p)
+        .collect();
     std::fs::create_dir_all(&run.dir).expect("create proof dir");
     println!(
-        "cube split at depth {}, cube-sym {}: {} branch(es), {} worker(s)",
+        "cube split at depth {}, cube-sym {}: {total_branches} branch(es){}, {} worker(s)",
         run.depth,
         run.sym.label(),
-        prefixes.len(),
+        if shards > 1 {
+            format!(
+                " -- THIS IS SHARD {shard} OF {shards}, covering {} of them; the bound needs every shard",
+                prefixes.len()
+            )
+        } else {
+            String::new()
+        },
         run.jobs
     );
     let started = Instant::now();
@@ -940,11 +963,23 @@ fn cubes(run: &CubeRun) -> i32 {
     }
     let (n, k) = (run.n, run.k);
     if bad == 0 {
-        println!(
-            "n={n} size={k}: all {} cubes refuted and re-checked in {:.2}s",
-            rows.len(),
-            started.elapsed().as_secs_f64()
-        );
+        // A shard says only what a shard can say. The unsharded wording is
+        // load-bearing: fact checker_commands match on it exactly, and it must
+        // never appear for a run that covered part of the space.
+        if shards > 1 {
+            println!(
+                "n={n} size={k}: shard {shard}/{shards} refuted and re-checked its {} of \
+                 {total_branches} cubes in {:.2}s -- NOT a bound on its own",
+                rows.len(),
+                started.elapsed().as_secs_f64()
+            );
+        } else {
+            println!(
+                "n={n} size={k}: all {} cubes refuted and re-checked in {:.2}s",
+                rows.len(),
+                started.elapsed().as_secs_f64()
+            );
+        }
         0
     } else {
         eprintln!("n={n} size={k}: {bad} of {} cube(s) unrefuted", rows.len());
@@ -1166,7 +1201,8 @@ fn usage() -> ! {
         "usage: sorting_network [--n N --size K] [--sym none|first|commute|full] [--drat]\n\
          \x20                     [--model] [--dimacs PATH] [--conflicts N]\n\
          \x20      sorting_network --n N --size K --cubes DIR [--depth D] [--jobs J]\n\
-         \x20                     [--cube-sym none|full|subsume]\n\
+         \x20                     [--cube-sym none|full|subsume] [--keep-proofs]\n\
+         \x20                     [--shard I/N]   (shard I only; the bound needs every shard)\n\
          \x20      sorting_network --sweep [--max-n N] [--drat]\n\
          \x20      sorting_network --verify"
     );
@@ -1185,6 +1221,7 @@ struct Cli {
     cube_dir: Option<String>,
     cube_sym: CubeSym,
     keep_proofs: bool,
+    shard: (usize, usize),
     generalized: bool,
     depth: usize,
     jobs: usize,
@@ -1207,6 +1244,7 @@ impl Cli {
             cube_dir: None,
             cube_sym: CubeSym::Full,
             keep_proofs: false,
+            shard: (0, 1),
             generalized: false,
             depth: 2,
             jobs: 1,
@@ -1290,6 +1328,15 @@ impl Cli {
                         cli.sym = Sym::COMMUTE;
                     }
                 }
+                "--shard" => {
+                    i += 1;
+                    cli.shard = args
+                        .get(i)
+                        .and_then(|s| s.split_once('/'))
+                        .and_then(|(a, b)| Some((a.parse().ok()?, b.parse().ok()?)))
+                        .filter(|&(a, b): &(usize, usize)| b >= 1 && a < b)
+                        .unwrap_or_else(|| usage());
+                }
                 "--keep-proofs" => cli.keep_proofs = true,
                 "--drat" => cli.want_drat = true,
                 "--model" => cli.want_model = true,
@@ -1315,6 +1362,7 @@ fn main() {
         cube_dir,
         cube_sym,
         keep_proofs,
+        shard,
         generalized,
         depth,
         jobs,
@@ -1345,6 +1393,7 @@ fn main() {
             jobs,
             sym: cube_sym,
             keep_proofs,
+            shard,
         }));
     }
 
