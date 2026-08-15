@@ -41,7 +41,10 @@ the input to this one:
 | architecture doc | 82 lines, documents **11 of 23 crates**; omits `axeyum-cas` (47,472 lines, the second-largest crate) |
 | decision records | **455 ADRs** |
 
-## The four findings this plan is built on
+## The findings this plan is built on
+
+The first four are what the plan was written from; 5–8 were measured while
+executing it, and each one corrected something this folder already asserted.
 
 **1. ℤ and ℝ are one hole running through every layer at once.** Five agents in
 five crates hit it independently and each reported it as a local gap. It is not
@@ -94,6 +97,44 @@ died to `systemd-oomd` killing a cgroup under *pressure*; the recommended scratc
 disk was root-owned and unwritable; the NFS mount was probed one directory too
 high, so `df` answered a different question confidently. →
 [`06-scratch-and-snapshots.md`](06-scratch-and-snapshots.md)
+
+
+**8. Finding 4 reaches the fact ledger: a quarter of its checkers cannot fail.**
+The ledger's whole promise is that a status is worth what its checker returns.
+Audited 2026-08-15: **40 of 162 checker runs, across 36 settled facts, exit 0 on
+completion alone** — nothing in the command makes the exit status depend on what
+the run found. Not all 40 are defects (a kernel-lean binary that builds a term
+and lets `Kernel::infer` reject it *is* a real check), but the largest family is,
+and it is the most load-bearing one:
+
+```
+$ cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- this_theorem_does_not_exist
+0 theorems
+$ echo $?
+0
+```
+
+That is the shape of `F:nat-add-comm`'s checker. Delete `add_comm` from the
+kernel and the fact stays green. `nat_axiom_inventory` is worse: it prints
+`nat: axiom=0` and exits 0 **whatever the number is**, so `axiom_footprint: []`
+on 31 kernel-lean facts — the axiom-freedom claim that is this project's headline
+metric — is asserted by nothing. All three inventory examples are plain
+`fn main()` with no `ExitCode`, no `exit`, no `assert`, no panic.
+
+It has already cost a real one. `F:schedule-critical-chain-infeasible` recorded
+30 axioms while the code produced 26 and nobody noticed, because the checker ran
+the route and exited 0 without comparing. That drift was benign — `False` and
+`Eq` had become `inductive` declarations with `Eq.rec` the recursor, a genuine
+shrink of the trusted surface — but the same silence would have hidden growth,
+which is the direction that matters. Fixed in `b94b56425`: `--dump-axioms` prints
+sorted names so a diff against the ledger is a diff, `--expect-axioms N` fails on
+drift in **either** direction, and it errors when the kernel route never produced
+a module rather than treating an unreached check as a pass.
+
+This is the CLAUDE.md Gotcha — *"an empty result from a tool that was never
+pointed at your subject is indistinguishable from a strong negative result"* —
+promoted from an agent-brief hazard to a ledger-integrity one. →
+[`04-gates-and-truth.md`](04-gates-and-truth.md)
 
 ## What this plan is not
 
