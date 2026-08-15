@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "F:sorting-network-optimal-size-n4",
+  "title": "The optimal sorting network on 4 channels has exactly 5 comparators",
+  "statement": "S(4) = 5: some comparator network of 5 comparators sorts every input of length 4, and no network of 4 comparators does.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(and (exists ((n (Network 4 5))) (sorts n)) (not (exists ((n (Network 4 4))) (sorts n))))",
+    "fragment": "QF_BV",
+    "free_symbols": [
+      "n"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "smt-clausal",
+  "depends_on": [],
+  "axiom_footprint": [
+    "sortnet.encoder-faithfulness",
+    "sortnet.zero-one-principle",
+    "sortnet.symmetry-breaking-soundness"
+  ],
+  "evidence": [
+    {
+      "id": "lower-unsat-n4",
+      "kind": "unsat-certificate",
+      "supports": "no network of 4 comparators sorts all 4-input sequences",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-cdcl-sym-full",
+        "axeyum-cdcl-sym-none-independent"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-cnf --example sorting_network -- --n 4 --size 4 --sym full 2>/dev/null | grep -oE '(Unsat|Sat)')\" = Unsat",
+      "notes": "Optimality-as-UNSAT: no optimizer and no MaxSAT is involved. The verdict is reproduced under every symmetry setting including `--sym none`, which is the control that matters -- an UNSOUND symmetry break manufactures a wrong UNSAT, and would show as Unsat under `full` but Sat under `none`."
+    },
+    {
+      "id": "upper-sorts-n4",
+      "kind": "exhaustive-enumeration",
+      "supports": "an explicit 5-comparator network sorts every input",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-cdcl-model",
+        "independent-0-1-enumeration"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-cnf --example sorting_network -- --n 4 --size 5 --sym full 2>/dev/null | grep -q SORTS",
+      "notes": "The witness network is replayed over all 2^4 zero-one inputs by a checker that shares no code with the SAT search. The 0-1 principle makes that sufficient for all totally ordered inputs."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:sorting-algorithm",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "axeyum SAT core, both bounds; symmetry-breaking soundness controlled",
+    "source": "lane `sorting-networks` (terminated on an API spend limit); completed by the coordinator",
+    "prior_art": [
+      {
+        "who": "Knuth, TAOCP vol. 3",
+        "what": "S(n) for n <= 8 is 0,1,3,5,9,12,16,19",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "A new domain for the ledger: algorithms. Deliberately started at values the literature already knows, so the encoder is validated against ground truth before any frontier claim. n=6 is NOT here: size 10 refutes in 37 s but size 11 exceeds ten minutes on this encoder, so S(6) >= 11 is all that is established locally and the run was moved to an idle host."
+}
