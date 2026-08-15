@@ -1572,6 +1572,85 @@ pub fn census_ndjson<R: BufRead>(
     census_into_staging_kernel(reader, &mut kernel, limits)
 }
 
+/// One kernel decline, with whatever the caller's inspector computed from the
+/// staging kernel that produced it. See [`probe_first_decline`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProbedDecline<T> {
+    /// One-based line number of the declaration record.
+    pub line: usize,
+    /// Rendered declaration name, or `quotient package` for the quotient gate.
+    pub declaration: String,
+    /// [`KernelError`] variant name — the same cluster key [`census_ndjson`] uses.
+    pub code: String,
+    /// Full rejection detail, for triage.
+    pub detail: String,
+    /// The inspector's result.
+    pub inspected: T,
+}
+
+/// Diagnostic: drive a stream through the trusted gate and, at the **first**
+/// kernel decline, hand `inspect` the staging kernel together with the exact
+/// [`KernelError`] that refused the record.
+///
+/// [`census_ndjson`] answers *which* declarations are refused and *why* by
+/// variant, but a [`KernelError::TypeMismatch`] carries two [`ExprId`]s and an
+/// arena index is not a diagnosis. Sizing a missing definitional-equality rule
+/// needs the two *terms*, reduced side by side in the very environment that
+/// rejected them — which cannot be reconstructed after the fact, because the
+/// staging kernel is dropped.
+///
+/// **Nothing is published and nothing is admitted.** The refused declaration is
+/// not in the kernel the inspector sees; this function returns no [`Kernel`] and
+/// no [`CompletedImport`], and after the hook runs the stream fails closed
+/// exactly as [`import_ndjson`] would. The higher-ranked bound on `inspect`
+/// means the borrow cannot outlive the call, so a caller cannot smuggle the
+/// staging kernel out and mistake it for an imported one.
+///
+/// Returns `Ok(None)` when the stream had no kernel decline at all — i.e. it
+/// would have imported cleanly.
+///
+/// # Errors
+///
+/// Returns [`ImportError`] for I/O, resource, syntax, topology, or
+/// unsupported-profile failures, exactly as [`census_ndjson`] does. A kernel
+/// decline is *not* an error here: it is the result.
+pub fn probe_first_decline<R, F, T>(
+    reader: R,
+    limits: ImportLimits,
+    inspect: F,
+) -> Result<Option<ProbedDecline<T>>, ImportError>
+where
+    R: BufRead,
+    F: for<'k> FnOnce(&'k mut Kernel, &KernelError) -> T,
+{
+    let mut kernel = Kernel::new();
+    let mut captured: Option<ProbedDecline<T>> = None;
+    let mut inspect = Some(inspect);
+    let outcome = {
+        let mut hook =
+            |kernel: &mut Kernel, line: usize, declaration: &str, error: &KernelError| {
+                let Some(inspect) = inspect.take() else {
+                    return;
+                };
+                captured = Some(ProbedDecline {
+                    line,
+                    declaration: declaration.to_owned(),
+                    code: kernel_error_code(error),
+                    detail: format!("{error:?}"),
+                    inspected: inspect(kernel, error),
+                });
+            };
+        drive_stream(reader, &mut kernel, limits, None, Some(&mut hook))
+    };
+    match outcome {
+        Ok(_) => Ok(captured),
+        // The hook fired and then the stream failed closed on that very record,
+        // which is the expected path: report the decline rather than the error.
+        Err(ImportError::Kernel { .. }) if captured.is_some() => Ok(captured),
+        Err(error) => Err(error),
+    }
+}
+
 /// One declaration record the trusted gate refused during a [`census_ndjson`]
 /// pass.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1612,7 +1691,7 @@ fn census_into_staging_kernel<R: BufRead>(
     limits: ImportLimits,
 ) -> Result<CensusReport, ImportError> {
     let mut declines = Vec::new();
-    let report = drive_stream(reader, kernel, limits, Some(&mut declines))?;
+    let report = drive_stream(reader, kernel, limits, Some(&mut declines), None)?;
     Ok(CensusReport {
         format_version: report.format_version,
         lean_version: report.lean_version,
@@ -1642,18 +1721,42 @@ fn import_into_staging_kernel<R: BufRead>(
     kernel: &mut Kernel,
     limits: ImportLimits,
 ) -> Result<ImportReport, ImportError> {
-    drive_stream(reader, kernel, limits, None)
+    drive_stream(reader, kernel, limits, None, None)
 }
 
 /// Apply one record's outcome. Without a census sink every error is fatal — the
 /// fail-closed contract. With one, and only for [`ImportError::Kernel`], the
 /// refusal is recorded and the declaration is skipped; the staging kernel is
 /// therefore still made only of declarations the trusted gate accepted.
+///
+/// `inspect`, when present, is called on the **first** kernel decline with the
+/// staging kernel and the exact [`KernelError`]. It is a diagnostic hook only:
+/// it cannot admit anything, and it runs before the census/fail-closed decision
+/// so it sees the same state either way.
 fn record_outcome(
     state: &mut ImportState<'_>,
     outcome: Result<(), ImportError>,
     census: Option<&mut Vec<CensusDecline>>,
+    inspect: Option<&mut DeclineInspector<'_>>,
 ) -> Result<(), ImportError> {
+    let outcome = match (outcome, inspect) {
+        (
+            Err(ImportError::Kernel {
+                line,
+                declaration,
+                source,
+            }),
+            Some(inspect),
+        ) => {
+            inspect(state.kernel, line, &declaration, &source);
+            Err(ImportError::Kernel {
+                line,
+                declaration,
+                source,
+            })
+        }
+        (outcome, _) => outcome,
+    };
     match (outcome, census) {
         (Ok(()), _) => Ok(()),
         (
@@ -1680,11 +1783,15 @@ fn record_outcome(
     }
 }
 
+/// Diagnostic hook invoked with the staging kernel at a decline.
+type DeclineInspector<'a> = dyn FnMut(&mut Kernel, usize, &str, &KernelError) + 'a;
+
 fn drive_stream<R: BufRead>(
     mut reader: R,
     kernel: &mut Kernel,
     limits: ImportLimits,
     mut census: Option<&mut Vec<CensusDecline>>,
+    mut inspect: Option<&mut DeclineInspector<'_>>,
 ) -> Result<ImportReport, ImportError> {
     if limits.max_line_bytes == 0 || limits.max_records == 0 {
         return Err(malformed(0, "import limits must be nonzero"));
@@ -1739,7 +1846,12 @@ fn drive_stream<R: BufRead>(
                 return Err(malformed(line, "duplicate metadata record"));
             }
             let outcome = state.import_record(record, line);
-            record_outcome(&mut state, outcome, census.as_deref_mut())?;
+            record_outcome(
+                &mut state,
+                outcome,
+                census.as_deref_mut(),
+                inspect.as_deref_mut(),
+            )?;
         }
     }
     let metadata = metadata.ok_or_else(|| malformed(1, "empty stream; metadata is required"))?;

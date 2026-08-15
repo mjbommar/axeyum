@@ -659,10 +659,12 @@ impl Kernel {
         head
     }
 
-    /// Weak head normal form **without** δ-unfolding: beta, zeta/let, and
+    /// Weak head normal form **without** δ-unfolding: beta, zeta (both the
+    /// `Let` node and a **let-bound local**, as Lean's `whnf_fvar` does), and
     /// `Sort`-level simplification only. Ported from nanoda's
-    /// `whnf_no_unfolding`. A head `Const`/`FVar`/`Sort`/`Pi` or `Lam` with no
-    /// further arguments is already weak-head-normal here.
+    /// `whnf_no_unfolding`. A head `Const`/`Sort`/`Pi`, a free variable the
+    /// context records no value for, or a `Lam` with no further arguments is
+    /// already weak-head-normal here.
     ///
     /// # Memoisation, and why it is split in two
     ///
@@ -751,6 +753,27 @@ impl Kernel {
                     let instd = self.instantiate(body, &[val]);
                     cursor = self.foldl_apps(instd, args.iter().copied());
                 }
+                // ζ over a *local* `let`: a free variable the local context
+                // records a value for unfolds to that value. This is Lean's
+                // `whnf_fvar` (`type_checker.cpp:346`), reached from the
+                // `expr_kind::FVar` arm of its `whnf_core`, and its placement
+                // *inside* `whnf_core` is the whole point — every call site
+                // gets it, including the `whnf_core(*unfold_definition(...))`
+                // inside `lazy_delta_reduction_step`. Doing ζ only at the
+                // entry points instead leaves a let-local that becomes a head
+                // *during* the delta loop permanently unreduced, which is
+                // exactly the `Nat.bitwise._unary` decline: see
+                // `local_let_zeta_reduction`.
+                ExprNode::FVar(fvar) => {
+                    // Consulting the context starts here, and only an open
+                    // expression can reach it — the closed-expression tripwire
+                    // in `whnf_no_unfolding` watches this counter.
+                    self.reduction_ctx_reads += 1;
+                    match ctx.value_of(fvar) {
+                        Some(value) => cursor = self.foldl_apps(value, args.iter().copied()),
+                        None => return cursor,
+                    }
+                }
                 // Projection: normalize the projected value; when it becomes a
                 // constructor application, select the requested field after
                 // the constructor parameters and re-apply any outer spine.
@@ -779,9 +802,10 @@ impl Kernel {
                     let level = self.simplify(level);
                     return self.sort(level);
                 }
-                // All other heads are already weak-head-normal here: FVar,
-                // Sort (applied — ill-typed but inert), Pi, BVar (loose —
-                // inert), Lit, and Lam with no args.
+                // All other heads are already weak-head-normal here: Sort
+                // (applied — ill-typed but inert), Pi, BVar (loose — inert),
+                // Lit, and Lam with no args. A *valueless* FVar returns from
+                // its own arm above.
                 _ => return cursor,
             }
         }
@@ -1216,7 +1240,7 @@ impl Kernel {
         let Ok(y_ty) = self.infer_core(y, ctx) else {
             return false;
         };
-        let y_ty = self.whnf_in(y_ty, ctx);
+        let y_ty = self.whnf_core(y_ty, ctx);
         let ExprNode::Pi(name, dom, _, info) = self.expr_node(y_ty).clone() else {
             return false;
         };
@@ -1318,7 +1342,7 @@ impl Kernel {
     fn proof_type(&mut self, e: ExprId, ctx: &mut LocalContext) -> Option<ExprId> {
         let ty = self.infer_core(e, ctx).ok()?;
         let sort = self.infer_core(ty, ctx).ok()?;
-        let sort = self.whnf_in(sort, ctx);
+        let sort = self.whnf_core(sort, ctx);
         match self.expr_node(sort) {
             ExprNode::Sort(level) => {
                 let l = *level;
@@ -1477,9 +1501,7 @@ impl Kernel {
         // WHNF without δ — δ is handled lazily by `lazy_delta_step` below so
         // that we unfold only as far as needed (matching nanoda).
         let x_n = self.whnf_no_unfolding(x, ctx);
-        let x_n = self.whnf_local_value(x_n, ctx);
         let y_n = self.whnf_no_unfolding(y, ctx);
-        let y_n = self.whnf_local_value(y_n, ctx);
 
         if let Some(quick) = self.def_eq_quick(x_n, y_n, ctx) {
             return quick;
@@ -1520,31 +1542,6 @@ impl Kernel {
                 }
                 false
             }
-        }
-    }
-
-    fn whnf_local_value(&mut self, mut expression: ExprId, ctx: &mut LocalContext) -> ExprId {
-        loop {
-            let (head, args) = self.unfold_apps(expression);
-            let ExprNode::FVar(fvar) = self.expr_node(head) else {
-                return expression;
-            };
-            let Some(value) = ctx.value_of(*fvar) else {
-                return expression;
-            };
-            expression = self.foldl_apps(value, args);
-            expression = self.whnf_no_unfolding(expression, ctx);
-        }
-    }
-
-    fn whnf_in(&mut self, mut expression: ExprId, ctx: &mut LocalContext) -> ExprId {
-        loop {
-            expression = self.whnf_core(expression, ctx);
-            let reduced = self.whnf_local_value(expression, ctx);
-            if reduced == expression {
-                return expression;
-            }
-            expression = reduced;
         }
     }
 }
@@ -2423,7 +2420,7 @@ impl Kernel {
     /// level. (nanoda's `infer_sort_of` / `ensure_sort`.)
     fn infer_sort_of(&mut self, e: ExprId, ctx: &mut LocalContext) -> Result<LevelId, KernelError> {
         let ty = self.infer_core(e, ctx)?;
-        let ty = self.whnf_in(ty, ctx);
+        let ty = self.whnf_core(ty, ctx);
         match self.expr_node(ty) {
             ExprNode::Sort(level) => Ok(*level),
             _ => Err(KernelError::NotASort { got: ty }),
@@ -2443,7 +2440,7 @@ impl Kernel {
         expected: ExprId,
         ctx: &mut LocalContext,
     ) -> Result<(), KernelError> {
-        let expected = self.whnf_in(expected, ctx);
+        let expected = self.whnf_core(expected, ctx);
         if let ExprNode::Lam(name, domain, body, info) = self.expr_node(expression).clone()
             && let ExprNode::Pi(_, expected_domain, expected_body, _) =
                 self.expr_node(expected).clone()
@@ -2543,12 +2540,12 @@ impl Kernel {
         ctx: &mut LocalContext,
     ) -> Result<ExprId, KernelError> {
         let structure_type = self.infer_core(structure, ctx)?;
-        let structure_type = self.whnf_in(structure_type, ctx);
+        let structure_type = self.whnf_core(structure_type, ctx);
         let data = self.projection_inference_data(type_name, field_index, structure_type)?;
 
         let mut cursor = self.infer_const(data.ctor_name, &data.levels)?;
         for &parameter in data.type_args.iter().take(data.num_params) {
-            cursor = self.whnf_in(cursor, ctx);
+            cursor = self.whnf_core(cursor, ctx);
             let ExprNode::Pi(_, _, body, _) = self.expr_node(cursor).clone() else {
                 return Err(KernelError::MalformedProjectionConstructor {
                     name: type_name,
@@ -2561,7 +2558,7 @@ impl Kernel {
 
         let structure_is_prop = self.type_expression_is_prop(structure_type, ctx)?;
         for previous_index in 0..field_index {
-            cursor = self.whnf_in(cursor, ctx);
+            cursor = self.whnf_core(cursor, ctx);
             let ExprNode::Pi(_, domain, body, _) = self.expr_node(cursor).clone() else {
                 return Err(KernelError::MalformedProjectionConstructor {
                     name: type_name,
@@ -2583,7 +2580,7 @@ impl Kernel {
             }
         }
 
-        cursor = self.whnf_in(cursor, ctx);
+        cursor = self.whnf_core(cursor, ctx);
         let ExprNode::Pi(_, field_type, _, _) = self.expr_node(cursor).clone() else {
             return Err(KernelError::MalformedProjectionConstructor {
                 name: type_name,
@@ -2699,7 +2696,7 @@ impl Kernel {
         ctx: &mut LocalContext,
     ) -> Result<bool, KernelError> {
         let sort = self.infer_core(expression, ctx)?;
-        let sort = self.whnf_in(sort, ctx);
+        let sort = self.whnf_core(sort, ctx);
         let ExprNode::Sort(level) = self.expr_node(sort) else {
             return Err(KernelError::NotASort { got: sort });
         };
@@ -2729,7 +2726,7 @@ impl Kernel {
             if !matches!(self.expr_node(cursor), ExprNode::Pi(..)) {
                 cursor = self.instantiate(cursor, &prior);
                 prior.clear();
-                cursor = self.whnf_in(cursor, ctx);
+                cursor = self.whnf_core(cursor, ctx);
             }
             let ExprNode::Pi(_, domain, body, _) = self.expr_node(cursor).clone() else {
                 return Err(KernelError::NotAPi { got: cursor });

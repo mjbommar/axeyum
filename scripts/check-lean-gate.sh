@@ -58,7 +58,17 @@ cd "$(dirname "$0")/.." || exit 2
 # Unicode-scalar expansions read back out of THIS kernel's reducts (plus a
 # negative control covering both a byte-oriented decode and a reordered list).
 # Fourteen suites now; measured total 117.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-109}"
+#
+# Raised 109 -> 111 on 2026-08-15 by lane `import-wfrec`:
+# `real_lean_local_let_zeta_crosscheck` adds two more, checking that official
+# Lean agrees with this kernel's verdicts on local-`let` (ζ) reduction — the
+# rule whose absence inside the lazy-delta loop refused `Nat.bitwise._unary`,
+# the top declined root in both scale censuses. The positive module also asserts
+# that the `letE` survives elaboration, so a toolchain that zeta-expands early
+# fails the suite instead of making it vacuous. Fifteen suites now;
+# measured total 122 (52 tests) — the two new ones plus three that
+# `lean_crosscheck`'s representative slice picked up since 2026-08-15.
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-111}"
 
 # package | features | test target
 #
@@ -83,6 +93,7 @@ axeyum-lean-kernel||real_lean_strict_positivity_crosscheck
 axeyum-lean-kernel||real_lean_nat_literal_crosscheck
 axeyum-lean-kernel||real_lean_nat_arithmetic_crosscheck
 axeyum-lean-kernel||real_lean_string_literal_crosscheck
+axeyum-lean-kernel||real_lean_local_let_zeta_crosscheck
 axeyum-lean-kernel||real_lean_structure_eta_crosscheck
 axeyum-lean-kernel||real_lean_compact_share_crosscheck
 axeyum-lean-kernel||real_lean_kernel_replay
