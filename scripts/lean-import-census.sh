@@ -69,7 +69,7 @@ CORPUS=(
   # --- logic ---
   and_comm
   or_comm
-  not_not
+  Classical.not_not
   Classical.em
   Classical.byContradiction
   # --- Bool / decidability ---
@@ -121,8 +121,15 @@ export_failed=()
 for name in "${CORPUS[@]}"; do
   target="$out/$name.ndjson"
   if [ ! -s "$target" ]; then
-    if ! (cd "$export_dir" && "$lake_bin" env ./.lake/build/bin/lean4export Init Std \
-          -- "$name" >"$target" 2>"$out/$name.err"); then
+    (cd "$export_dir" && "$lake_bin" env ./.lake/build/bin/lean4export Init Std \
+      -- "$name" >"$target" 2>"$out/$name.err")
+    # `lean4export` EXITS 0 on an unknown constant: it panics to stderr and
+    # writes a metadata-only stream. Measured 2026-08-15 on `not_not` (which is
+    # Mathlib, not core) -- one record, no declarations, and the census scored it
+    # as a CLEAN stream. A tool that was never pointed at your subject returns
+    # the same empty answer as a strong negative result, so both signals are
+    # checked: the panic marker, and an export with no declaration record.
+    if grep -q "^PANIC" "$out/$name.err" 2>/dev/null || [ "$(wc -l <"$target")" -lt 2 ]; then
       export_failed+=("$name")
       rm -f "$target"
       continue

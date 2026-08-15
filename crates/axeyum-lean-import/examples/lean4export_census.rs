@@ -31,6 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut streams_total = 0usize;
     let mut streams_clean = 0usize;
+    let mut streams_empty = 0usize;
     let mut records_total = 0usize;
     let mut declines_total = 0usize;
     let mut by_code: BTreeMap<String, usize> = BTreeMap::new();
@@ -52,6 +53,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         records_total += census.declaration_records;
         declines_total += census.declines.len();
+        if census.declaration_records == 0 {
+            // A stream with metadata and nothing else. `lean4export` produces
+            // exactly this, and EXITS 0, when asked for a constant that is not
+            // in the environment — it panics to stderr and writes the header
+            // anyway. Scoring it as "clean" is how a corpus entry that was never
+            // exported reads as a passing one, so it gets its own bucket.
+            streams_empty += 1;
+            println!("STREAM|{}|EMPTY-NO-DECLARATIONS", path.display());
+            continue;
+        }
         if census.declines.is_empty() {
             streams_clean += 1;
         }
@@ -85,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!(
-        "CENSUS|streams={streams_total}|clean_streams={streams_clean}|decl_records={records_total}|declines={declines_total}|distinct_root={}|distinct_cascade={}",
+        "CENSUS|streams={streams_total}|clean_streams={streams_clean}|empty_streams={streams_empty}|decl_records={records_total}|declines={declines_total}|distinct_root={}|distinct_cascade={}",
         distinct_root.len(),
         distinct_cascade.len(),
     );

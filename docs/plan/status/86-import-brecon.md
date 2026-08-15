@@ -31,12 +31,25 @@ Next: **K-like reduction** (`to_cnstr_when_K`), which is the single remaining
 root blocker — `eq_of_heq` needs `cast α α h a ≡ a` with `h : α = α` a variable,
 and only K-like reduction gets there. Our kernel already computes the predicate
 (`is_k_like_inductive`) and uses it **only** to emit the wire `k` flag;
-`reduce_rec` never consults it. It is more soundness-sensitive than the
-projection rule (a definitional subsingleton, not a congruence), so it needs its
-own negative suite: a one-constructor `Prop` *with fields*, a non-`Prop`
-structure, and a mutual group must each stay non-reducible. Also recorded, not
-blocking: we lack `to_cnstr_when_structure`, and our `reduce_projection` uses
-full `whnf` where Lean uses `cheap_proj` (ordering, not correctness).
+`reduce_rec` never consults it. It is deliberately **not** started here, because
+sizing it turned up two things the reference code does not show: (1) the guard
+is `is_def_eq(infer_type(major), …)` and the major is an **fvar**, so reduction
+needs the `LocalContext` it currently never receives — ~55 internal call sites,
+and `pub fn whnf` is public API with users outside the crate; (2) that makes
+`whnf_cache`, keyed on `(env revision, ExprId)`, **context-dependent and
+unsound** — `LocalContext::new()` restarts fvar ids at 0 and `check_declaration`
+builds two fresh contexts with no environment change between them, so the cache
+spans both. Settle the cache key before writing the rule. It also needs its own
+negative suite (one-constructor `Prop` *with fields*, non-`Prop` structure,
+mutual group must each stay non-reducible), since it asserts a definitional
+subsingleton rather than a congruence. Recorded, not blocking: we lack
+`to_cnstr_when_structure`, and `reduce_projection` uses full `whnf` where Lean
+uses `cheap_proj` (ordering, not correctness).
+
+Also fixed here, found in my own tool: `lean4export` **exits 0** on a constant
+it cannot find, panicking to stderr and writing a metadata-only stream — which
+the census scored as a *clean* stream. Both the script and the census example
+now reject a declaration-free export instead of counting it as a pass.
 
 <!-- plan-section: landed-changes -->
 

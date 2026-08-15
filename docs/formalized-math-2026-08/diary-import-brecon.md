@@ -42,7 +42,7 @@ declarations spanning `rfl` equations, recursor-encoded induction, `HEq`,
 | | |
 |---|---|
 | streams admitting completely | **22 of 40** |
-| declaration records | 1161 |
+| declaration records | 1255 |
 | declines | 93 |
 | **distinct root blockers** | **10** |
 | distinct cascade declarations | 28 |
@@ -105,6 +105,28 @@ The reason one rule covered clusters that looked unrelated is that they are not
 unrelated: `noConfusion`, `match_n` auxiliaries and `casesOn` are all compiled
 through the same `brecOn`/`below` machinery, and `below` is built from `PProd`,
 so every one of them ends in a projection out of a recursor application.
+
+## 2b. My own census tool had the repository's signature defect in it
+
+One corpus entry, `not_not`, is Mathlib and not core. `lean4export` handles that
+by **panicking to stderr and exiting 0**, having written a stream containing the
+metadata record and nothing else. My script's `if ! (…)` never fired, the census
+read one metadata record, found zero declines, and scored it a **clean stream**.
+So the first run of the corrected corpus was 40 streams of which one had never
+been exported at all, counted on the passing side.
+
+The conclusion was not affected — the numbers below are re-measured with the
+entry replaced by `Classical.not_not`, and before/after are unchanged except the
+record count (1161 → 1255) — but the failure mode is exactly the one CLAUDE.md
+warns about: *an empty result from a tool that was never pointed at your subject
+is indistinguishable from a strong negative result.* It is now checked on both
+sides. The script rejects an export whose stderr carries `PANIC` **or** whose
+stream has fewer than two records; the census example gives a declaration-free
+stream its own `EMPTY-NO-DECLARATIONS` bucket and an `empty_streams=` field, so
+it can never land in `clean_streams`.
+
+Worth stating plainly: exit status is not evidence here. `lean4export` returns 0
+for a constant it could not find.
 
 ## 3. Why widening the trusted gate here is safe, and how that is pinned
 
@@ -179,6 +201,32 @@ definitional subsingleton rather than a congruence — so it wants its own
 negative suite: a `Prop` with one constructor that *has* fields must not be
 K-reducible, a non-`Prop` single-constructor structure must not be, and a mutual
 group must not be (Lean excludes mutuals explicitly, "for simplicity").
+
+**Two obstacles the next lane should know before starting, because I hit both
+while sizing it and neither is visible from the reference code.**
+
+*The guard needs a local context that reduction does not have.* Lean's guard is
+`is_def_eq(infer_type(major), infer_type(nullary_ctor))`, and in `eq_of_heq` the
+major premise is a **free variable** — so `infer_type` needs its type, which
+lives in `LocalContext`, not in the environment. Our `whnf` /
+`whnf_no_unfolding` / `reduce_rec` chain takes no context (Lean's type checker
+carries `m_lctx` as a member; our port passes `ctx` explicitly and stops at the
+`def_eq` layer). Without the context K-like reduction silently fails to fire
+under binders, which is every case that matters. Threading it reaches ~55
+internal call sites across `tc.rs`, `inductive.rs` and `quotient.rs`, and `pub
+fn whnf(&mut self, e)` is public API with users in `axeyum-solver` and a dozen
+test files, so it must stay and gain a `whnf_in`-style sibling.
+
+*And that makes the WHNF cache context-dependent.* `Kernel::whnf_cache` is keyed
+on `(env revision, ExprId)` — sound **today** precisely because nothing in
+reduction consults `ctx` (`whnf_local_value` does, and is deliberately outside
+the cache). K-like reduction breaks that: the same `ExprId` for an fvar reduces
+differently depending on the fvar's type. And the contexts really do collide —
+`LocalContext::new()` restarts `next_fvar` at 0, and `check_declaration` builds
+**two** fresh contexts (one for the type, one for the value) with no environment
+change between them, so the cache spans both. Either the cache key grows a
+context identity, or K-reducible spines skip it. This is a soundness question,
+not a performance one, and it should be settled before the rule is written.
 
 Two further gaps are visible in the same reference function and are **not**
 blocking anything on this corpus, recorded so they are not rediscovered:
