@@ -1,0 +1,17 @@
+# NEGATIVE CONTROL -- this file states something FALSE on purpose.
+#
+# `db_design_certify` and `cq_containment_certify` MUST exit non-zero on every
+# file in this directory. A checker that only exits 0 on completion is
+# indistinguishable from one that never ran the check; these files are the
+# measurement that ours is not that. `scripts/check-dbdesign-negative-controls.sh`
+# runs them all and fails if ANY of them is accepted.
+#
+# FALSE: the extra `Placed` atom binds a fresh variable and constrains
+# nothing, so the containment does hold and minimisation is sound.
+
+query Q_verbose(cust) :- Placed(o, cust), Placed(o, cust2), Ships(o, wh)
+query Q_terse(cust)   :- Placed(o, cust), Ships(o, wh)
+query Q_path2(x, z)   :- Edge(x, y), Edge(y, z)
+query Q_edge(x, z)    :- Edge(x, z)
+
+expect notsubset : Q_verbose Q_terse

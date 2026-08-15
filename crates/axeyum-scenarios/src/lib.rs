@@ -45,6 +45,7 @@ mod arithmetic;
 mod concept;
 mod counting;
 mod coverage;
+pub mod dbdesign;
 mod exercise;
 mod functions;
 mod identities;

@@ -1,0 +1,48 @@
+# The street/city/zip schema -- the smallest instance where normalisation
+# theory says two different things, and a designer has to choose.
+#
+#   * `street city -> zip`  : an address determines its postcode.
+#   * `zip -> city`         : a postcode determines its city.
+#
+# The schema is NOT in BCNF: `zip` determines `city` without being a key. But
+# it IS in 3NF, because `city` is a *prime* attribute -- it belongs to the
+# candidate key {street, city}. That gap is the whole reason 3NF exists, and
+# this instance is the classical demonstration (Abiteboul, Hull and Vianu,
+# Example 11.2.10) that the BCNF repair costs something real: the
+# decomposition into (zip, city) and (zip, street) rejoins losslessly and
+# CANNOT enforce `street city -> zip` on either fragment. There is no BCNF
+# decomposition of this schema that preserves dependencies.
+#
+# The naive alternative -- splitting on `city` instead -- is worse still: it
+# loses information outright, and the run prints the two-row database that
+# proves it.
+
+attributes street city zip
+
+fd addr    : street city -> zip
+fd zipcity : zip -> city
+
+decomposition bcnf  : (zip city) (zip street)
+decomposition naive : (street city) (city zip)
+
+# `street city -> city` is implied but trivially so; `street zip -> city` is
+# the interesting one -- it needs transitivity through `zipcity`.
+expect implies       : street zip -> city
+expect implies       : street city -> zip
+
+# A postcode does not determine a street: the counterexample is two addresses
+# on the same postcode.
+expect notimplies    : zip -> street
+# Nor does a city determine its postcode, however tempting the reverse is.
+expect notimplies    : city -> zip
+
+# Two candidate keys, and the sweep proves there are no others.
+expect keys          : (street city) (street zip)
+
+expect bcnf          : no
+expect 3nf           : yes
+
+expect lossless      : bcnf
+expect notpreserving : bcnf
+expect lossy         : naive
+expect notpreserving : naive

@@ -1,0 +1,42 @@
+# Conjunctive queries an optimiser has to compare, and the three questions it
+# is really asking:
+#
+#   1. Is this self-join redundant?      (Q_verbose vs Q_terse)
+#   2. Can I answer this from that view? (Q_us_orders vs Q_any_region)
+#   3. Is a one-hop query the same as a two-hop one? (Q_edge vs Q_path2)
+#
+# Each is an instance of conjunctive-query containment, NP-complete, and each
+# answer here carries a certificate: a homomorphism when the containment
+# holds, and a concrete counterexample database -- the frozen body of the
+# left query -- when it does not.
+#
+# Vocabulary: `Placed(order, customer)`, `Ships(order, warehouse)`,
+# `Located(customer, region)`, `Edge(from, to)`. A lowercase-initial argument
+# is a variable; `US` is a constant, and constants are not mapped by a
+# homomorphism, which is exactly why question 2 is asymmetric.
+
+# 1. The second `Placed` atom binds a fresh variable and constrains nothing.
+#    The two queries are EQUIVALENT: containment holds in both directions, so
+#    dropping the atom is sound. This is Chandra-Merlin query minimisation.
+query Q_verbose(cust) :- Placed(o, cust), Placed(o, cust2), Ships(o, wh)
+query Q_terse(cust)   :- Placed(o, cust), Ships(o, wh)
+
+expect subset : Q_verbose Q_terse
+expect subset : Q_terse Q_verbose
+
+# 2. A materialised view over every region subsumes the US-only query, so the
+#    US query may be answered from the view. The reverse fails, and the
+#    counterexample database shows why in two facts.
+query Q_us_orders(o)  :- Placed(o, cust), Located(cust, US)
+query Q_any_region(o) :- Placed(o, cust), Located(cust, region)
+
+expect subset    : Q_us_orders Q_any_region
+expect notsubset : Q_any_region Q_us_orders
+
+# 3. Two hops are not one hop, and one hop is not two. Neither containment
+#    holds, and each direction gets its own two-fact and one-fact database.
+query Q_path2(x, z) :- Edge(x, y), Edge(y, z)
+query Q_edge(x, z)  :- Edge(x, z)
+
+expect notsubset : Q_path2 Q_edge
+expect notsubset : Q_edge Q_path2

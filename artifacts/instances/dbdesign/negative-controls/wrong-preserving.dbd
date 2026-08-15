@@ -1,0 +1,21 @@
+# NEGATIVE CONTROL -- this file states something FALSE on purpose.
+#
+# `db_design_certify` and `cq_containment_certify` MUST exit non-zero on every
+# file in this directory. A checker that only exits 0 on completion is
+# indistinguishable from one that never ran the check; these files are the
+# measurement that ours is not that. `scripts/check-dbdesign-negative-controls.sh`
+# runs them all and fails if ANY of them is accepted.
+#
+# FALSE: `addr` spans both fragments and no fragment can enforce it. This
+# is the classical price of BCNF, and a checker that missed it would be
+# giving the worst possible design advice.
+
+attributes street city zip
+
+fd addr    : street city -> zip
+fd zipcity : zip -> city
+
+decomposition bcnf  : (zip city) (zip street)
+decomposition naive : (street city) (city zip)
+
+expect preserving : bcnf

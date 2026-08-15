@@ -1,0 +1,17 @@
+# NEGATIVE CONTROL -- this file states something FALSE on purpose.
+#
+# `db_design_certify` and `cq_containment_certify` MUST exit non-zero on every
+# file in this directory. A checker that only exits 0 on completion is
+# indistinguishable from one that never ran the check; these files are the
+# measurement that ours is not that. `scripts/check-dbdesign-negative-controls.sh`
+# runs them all and fails if ANY of them is accepted.
+#
+# FALSE: one edge is not a path of two. Chandra-Merlin says there is no
+# homomorphism, and the frozen one-fact database proves it.
+
+query Q_verbose(cust) :- Placed(o, cust), Placed(o, cust2), Ships(o, wh)
+query Q_terse(cust)   :- Placed(o, cust), Ships(o, wh)
+query Q_path2(x, z)   :- Edge(x, y), Edge(y, z)
+query Q_edge(x, z)    :- Edge(x, z)
+
+expect subset : Q_edge Q_path2

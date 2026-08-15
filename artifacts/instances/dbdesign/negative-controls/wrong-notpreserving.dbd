@@ -1,0 +1,21 @@
+# NEGATIVE CONTROL -- this file states something FALSE on purpose.
+#
+# `db_design_certify` and `cq_containment_certify` MUST exit non-zero on every
+# file in this directory. A checker that only exits 0 on completion is
+# indistinguishable from one that never ran the check; these files are the
+# measurement that ours is not that. `scripts/check-dbdesign-negative-controls.sh`
+# runs them all and fails if ANY of them is accepted.
+#
+# FALSE: `keep_whole` retains the entire relation as one fragment, so the
+# projection of F onto it is F, and every dependency is trivially preserved.
+# Claiming otherwise is the false direction of the preservation test -- the
+# one a checker biased towards reporting problems would accept.
+
+attributes street city zip
+
+fd addr    : street city -> zip
+fd zipcity : zip -> city
+
+decomposition keep_whole : (street city zip) (zip city)
+
+expect notpreserving : keep_whole

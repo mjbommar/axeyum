@@ -1,0 +1,68 @@
+# An order-line schema of the shape an application actually accumulates:
+# a surrogate line key alongside the natural one, an order header folded into
+# the line, a customer with a unique login e-mail, a catalogue price, and a
+# warehouse in a region.
+#
+#   line_uuid            surrogate key minted by the application
+#   order_id, line_no    the natural key
+#   sku, qty             what was ordered
+#   unit_price           catalogue price, carried on the line
+#   customer_id          who ordered
+#   customer_email       their login, which is also unique
+#   warehouse, region    where it ships from
+#
+# Every dependency below is one a developer would state in a design review.
+# The questions the run answers are the ones that get argued about instead of
+# decided: is the natural key really a key; is the surrogate one redundant;
+# which of these columns are denormalised; and does the entity split anyone
+# would draw on a whiteboard actually preserve the information and the
+# constraints.
+#
+# 10 attributes, so the candidate-key claim is settled by sweeping all 1024
+# subsets -- every one of them either contains a reported key or is issued a
+# two-row counterexample relation that is then checked.
+
+attributes line_uuid order_id line_no sku qty unit_price customer_id customer_email warehouse region
+
+fd f_line_surrogate : line_uuid -> order_id line_no
+fd f_line_natural   : order_id line_no -> line_uuid sku qty
+fd f_order          : order_id -> customer_id warehouse
+fd f_customer_email : customer_id -> customer_email
+fd f_email_customer : customer_email -> customer_id
+fd f_sku_price      : sku -> unit_price
+fd f_warehouse      : warehouse -> region
+
+# The split any designer would draw: one table per entity.
+decomposition by_entity : (line_uuid order_id line_no sku qty) (order_id customer_id warehouse) (customer_id customer_email) (sku unit_price) (warehouse region)
+
+# The split that looks reasonable and is not: joining lines to customers
+# through the catalogue, on `sku`, which is a key of neither side.
+decomposition on_sku : (order_id line_no line_uuid sku qty unit_price) (sku customer_id customer_email warehouse region)
+
+# A four-step chain: the line determines the order, the order the warehouse,
+# the warehouse the region.
+expect implies       : order_id line_no -> region
+# And through the surrogate key, all the way to the customer's login.
+expect implies       : line_uuid -> customer_email
+
+# A catalogue entry says nothing about who bought it.
+expect notimplies    : sku -> customer_id
+# A warehouse does not determine the orders shipped from it.
+expect notimplies    : warehouse -> order_id
+
+# The surrogate key and the natural key are BOTH candidate keys, and there
+# are no others: the surrogate is not redundant, and the natural one is not
+# a convention.
+expect keys          : (line_uuid) (order_id line_no)
+
+# Five dependencies have non-superkey determinants, so the table is a
+# denormalisation; `f_order` puts non-prime attributes on the wrong side of
+# a partial dependency, so it is not even in 3NF.
+expect bcnf          : no
+expect 3nf           : no
+
+expect lossless      : by_entity
+expect preserving    : by_entity
+
+expect lossy         : on_sku
+expect notpreserving : on_sku
