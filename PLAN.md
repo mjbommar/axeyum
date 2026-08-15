@@ -1555,7 +1555,7 @@ toolchain re-pin (4.30.0 → current).
 literals: 52% of `Init`+`Std`, 79% of Mathlib)** (`WIP`, import-scale,
 2026-08-15). Continues [`whnf-cache-key`](docs/plan/status/87-whnf-cache-key.md), whose 40/40
 corpus had stopped measuring. Full write-up:
-[`docs/formalized-math-2026-08/diary-import-scale.md`](../../formalized-math-2026-08/diary-import-scale.md).
+[`docs/formalized-math-2026-08/diary-import-scale.md`](docs/formalized-math-2026-08/diary-import-scale.md).
 
 **The corpus.** `lean4export` with no constant list dumps the whole environment:
 `Init`+`Std` is 10.5M records / 96,591 declarations / 25 s / 552 MB, and Mathlib
