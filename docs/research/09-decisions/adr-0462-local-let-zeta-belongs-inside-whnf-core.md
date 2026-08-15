@@ -123,11 +123,25 @@ Three properties this decision rests on, each checked rather than argued:
 
 * `Nat.bitwise._unary` imports clean: **302 of 302 declaration records, 367
   declarations, zero declines**, from the same retained stream that refused it.
-* `Nat.Linear.*` and the `Std.DTreeMap.Internal.*.eq_def` roots — named by the
-  previous lane as "the same family" — are **not** all fixed by this.
-  `Nat.Linear.Poly.denote_reverse` still declines, and its pair is a different
-  shape (`Prod.rec` against a `Nat.brecOn.go … .1` projection). The family
-  resemblance was in the *generated-recursion* surface, not in the missing rule.
+* A paired A/B census — both binaries run concurrently on the same retained
+  streams, same bounds, compared per stream — shows the effect is far wider than
+  the one declaration. Mathlib, 76 paired streams: CLEAN 24 → 39, DECLINED
+  48 → 31, total declines 51,040 → 15,735, **distinct decline roots 167 → 64**.
+  The 129 roots that disappear are the Mathlib instance hierarchy the previous
+  lane had named as the long tail — `Pi.preorder`, `Prop.partialOrder`,
+  `DistribLattice.ofInfSupLe._proof_4`, `Function.Injective.*`, `Nat.inst*` —
+  none of them individually diagnosed. Twenty-six roots are new, because
+  declarations that used to be `UnknownConst` cascades behind a refused ancestor
+  are now reached and refuse on their own account.
+* The previous lane's "same family" claim splits. The
+  `Std.DTreeMap.Internal.*.eq_def` roots really were this rule and are gone;
+  `Nat.Linear.*` is not, still declines, and is now the **top** root in both
+  corpora. Its pair is `Prod.rec` against a projection of a *stuck*
+  `Nat.brecOn.go` application — and Lean's `lazy_delta_reduction_step` has a
+  `try_unfold_proj_app` branch for exactly that case which this port does not.
+* The cost is wall clock: a stream that used to give up at a def-eq failure now
+  keeps reducing. Four Mathlib streams moved into the 120 s RESOURCE bucket.
+  This is Lean's cost too — Lean performs the same ζ in the same place.
 * Definitional equality now accepts strictly more pairs than before. Every
   positive in `local_let_zeta_reduction.rs` is paired with a control in the same
   test that must still be refused, and
