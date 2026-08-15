@@ -364,6 +364,24 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   have legitimately staged work there, and you would drop their staging. Resync
   only your own paths, and only after confirming `git diff HEAD -- <path>` is
   empty for each.
+- **`git commit -m "…"` SILENTLY DELETES anything in backticks.** Double quotes
+  mean the shell runs each backtick span as a command and substitutes its output,
+  which for prose is almost always empty. This repository's commit messages are
+  full of backticked identifiers by convention, so the trap is universal here:
+  one message lost `` `--` ``, an entire example command line, and `` `add_neg` ``,
+  leaving sentences like "cargo swallows a flag when the command has no
+  separator". The commit is fine; the explanation of it is gone, and `git log`
+  gives no hint that anything was removed. Use a quoted heredoc — which cannot
+  substitute anything — and the message survives verbatim:
+
+      git commit -F - -- <paths> <<'MSG'
+      subject line
+
+      body with `backticks` and $vars intact
+      MSG
+
+  `git commit -m 'single quotes'` also works, but only until the message needs an
+  apostrophe.
 - **Lane identity lives in the environment, not in git config.**
   `export AXEYUM_AGENT=<lane>`; the `hooks/commit-msg` hook stamps an
   `Agent:` trailer and refuses an unidentified commit. Do **not** use
