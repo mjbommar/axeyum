@@ -494,6 +494,128 @@ fn prefix_outputs(prefix: &[(usize, usize)], n: usize) -> Vec<u32> {
 }
 
 // ---------------------------------------------------------------------------
+// permutation subsumption between prefix output sets
+// ---------------------------------------------------------------------------
+
+/// A set of `n`-bit vectors as a bitmask over `0..2^n`. `n <= 7` fits a `u128`,
+/// which makes "is this permuted set a subset of that one" a single `&`.
+type OutSet = u128;
+
+/// The largest `n` for which an output set fits [`OutSet`].
+const SUBSUME_MAX_N: usize = 7;
+
+fn outputs_mask(vectors: &[u32]) -> OutSet {
+    vectors.iter().fold(0, |m, &x| m | (1u128 << x))
+}
+
+/// Every permutation of `0..n`, in a deterministic order.
+fn permutations(n: usize) -> Vec<Vec<usize>> {
+    let mut out = Vec::new();
+    let mut cur: Vec<usize> = (0..n).collect();
+    permute_into(&mut cur, 0, &mut out);
+    out
+}
+
+fn permute_into(cur: &mut Vec<usize>, at: usize, out: &mut Vec<Vec<usize>>) {
+    if at == cur.len() {
+        out.push(cur.clone());
+        return;
+    }
+    for i in at..cur.len() {
+        cur.swap(at, i);
+        permute_into(cur, at + 1, out);
+        cur.swap(at, i);
+    }
+}
+
+/// The image of `mask` under the channel relabelling `perm` (channel `i` of the
+/// input becomes channel `perm[i]` of the output).
+fn permute_mask(mask: OutSet, perm: &[usize], n: usize) -> OutSet {
+    let mut out: OutSet = 0;
+    for x in 0..(1u32 << n) {
+        if mask & (1u128 << x) == 0 {
+            continue;
+        }
+        let mut y = 0u32;
+        for (i, &p) in perm.iter().enumerate() {
+            if bit(x, i) {
+                y |= 1 << p;
+            }
+        }
+        out |= 1u128 << y;
+    }
+    out
+}
+
+/// Reduces a prefix list by **permutation subsumption**, the reduction that
+/// makes the lower-bound search tractable past `n = 6`.
+///
+/// Write `R(P)` for [`prefix_outputs`] of a prefix `P`, and call `R` *`k`-sortable*
+/// when some standard network of `k` comparators sorts every vector in `R`. Say
+/// `R1` **subsumes** `R2` when there is a channel relabelling `pi` with
+/// `pi(R1) subset-of R2`.
+///
+/// **Lemma.** If `R1` subsumes `R2` and `R2` is `k`-sortable, then `R1` is
+/// `k`-sortable. Let `C` be a standard `k`-network sorting `R2`. For `x` in `R1`
+/// we have `pi(x)` in `R2`, so `C(pi(x))` is ascending; hence the *generalized*
+/// network `pi^-1 . C . pi` drives every `x` in `R1` into the one fixed order
+/// `pi^-1(ascending)`. Untangling (Knuth TAOCP vol. 3, 5.3.4 exercise 16, in the
+/// form Codish, Cruz-Filipe and Schneider-Kamp state it for arbitrary input sets)
+/// rewrites that into a *standard* network of the same size that genuinely sorts
+/// `R1`.
+///
+/// The contrapositive is what a lower bound uses: **refuting `R1` refutes every
+/// `R2` it subsumes.** So it is enough to refute a set of prefixes that subsumes
+/// all of them, and since `pi` preserves cardinality only a `R1` with
+/// `|R1| <= |R2|` can subsume `R2` — the surviving branches are the *easiest*
+/// ones, and their UNSAT is the strongest statement.
+///
+/// This rests on the same untangling step the `first`/`second` symmetry breaks
+/// do, so it belongs to the same `sortnet.symmetry-breaking-soundness`
+/// assumption and is **off by default**: `--subsume` opts in, and any verdict it
+/// produces must be reproduced without it.
+fn subsumption_reduce(prefixes: &[Vec<(usize, usize)>], n: usize) -> Vec<Vec<(usize, usize)>> {
+    assert!(
+        n <= SUBSUME_MAX_N,
+        "subsumption needs an output set to fit u128, so n <= {SUBSUME_MAX_N}"
+    );
+    let perms = permutations(n);
+    // For each prefix: its own output mask, its cardinality, and every
+    // relabelled image of that mask.
+    let entries: Vec<(OutSet, u32, Vec<OutSet>)> = prefixes
+        .iter()
+        .map(|p| {
+            let mask = outputs_mask(&prefix_outputs(p, n));
+            let images: Vec<OutSet> = perms.iter().map(|pi| permute_mask(mask, pi, n)).collect();
+            (mask, mask.count_ones(), images)
+        })
+        .collect();
+
+    // `a` subsumes `b` when some relabelled image of `a` is a subset of `b`.
+    let subsumes = |a: usize, b: usize| -> bool {
+        if entries[a].1 > entries[b].1 {
+            return false;
+        }
+        let target = entries[b].0;
+        entries[a].2.iter().any(|&img| img & !target == 0)
+    };
+
+    // Greedy antichain: keep `c` unless something already kept subsumes it, and
+    // drop anything kept that `c` subsumes. Subsumption is transitive (compose
+    // the relabellings), so nothing is lost when a keeper is later displaced.
+    let mut kept: Vec<usize> = Vec::new();
+    for c in 0..prefixes.len() {
+        if kept.iter().any(|&k| subsumes(k, c)) {
+            continue;
+        }
+        kept.retain(|&k| !subsumes(c, k));
+        kept.push(c);
+    }
+    kept.sort_unstable();
+    kept.into_iter().map(|i| prefixes[i].clone()).collect()
+}
+
+// ---------------------------------------------------------------------------
 // certificates on disk (ADR-0426 route: stream out, check back in)
 // ---------------------------------------------------------------------------
 
@@ -556,27 +678,85 @@ enum CubeOutcome {
     Failed(String),
 }
 
+/// How hard the cube route is allowed to lean on relabelling arguments.
+///
+/// This is the cube route's `--sym`, and it exists for the same reason: an
+/// unsound reduction of the prefix set manufactures a **wrong UNSAT**, so every
+/// verdict must be reproducible at a weaker setting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CubeSym {
+    /// No relabelling argument at all. Every position of the prefix ranges over
+    /// every comparator, and the suffix gets no symmetry break either. The only
+    /// reduction is output-set **equality**, which needs no argument: two
+    /// prefixes with the same output set pose a literally identical question.
+    None,
+    /// Position 0 is `(0, 1)`, position 1 an orbit representative, and the
+    /// suffix is commutation-ordered — the `first`, `second` and `commute`
+    /// arguments from the module header.
+    Full,
+    /// [`CubeSym::Full`] plus permutation subsumption between prefix output sets
+    /// ([`subsumption_reduce`]).
+    Subsume,
+}
+
+impl CubeSym {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "none" => Some(Self::None),
+            "full" => Some(Self::Full),
+            "subsume" => Some(Self::Subsume),
+            _ => None,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Full => "full",
+            Self::Subsume => "subsume",
+        }
+    }
+
+    /// The symmetry break applied to each branch's suffix encoding.
+    ///
+    /// `commute` is sound on the suffix alone: the bubble-sort argument runs
+    /// inside the suffix and never moves a comparator across the fixed prefix.
+    fn suffix_sym(self) -> Sym {
+        match self {
+            Self::None => Sym::NONE,
+            Self::Full | Self::Subsume => Sym::COMMUTE,
+        }
+    }
+}
+
 /// Enumerates the prefixes the cube split ranges over, deduplicated by output
 /// set.
 ///
-/// Position 0 is `(0, 1)` and position 1 an orbit representative — those are the
-/// `first` and `second` symmetry arguments. Positions `2..depth` range over
-/// **every** comparator, so the enumeration stays complete however deep it goes.
+/// Under [`CubeSym::None`] every position ranges over every comparator, so the
+/// enumeration is exhaustive with no relabelling argument. Otherwise position 0
+/// is `(0, 1)` and position 1 an orbit representative — the `first` and `second`
+/// symmetry arguments — while positions `2..depth` still range over **every**
+/// comparator, so the enumeration stays complete however deep it goes.
 ///
 /// Two prefixes with the *same* output set pose the same remaining question, so
-/// only one of each is kept. This is equality, not the literature's subsumption
-/// up to permutation; it is weaker and needs no extra argument.
-fn cube_prefixes(n: usize, depth: usize) -> Vec<Vec<(usize, usize)>> {
-    let mut prefixes: Vec<Vec<(usize, usize)>> = vec![vec![(0, 1)]];
+/// only one of each is kept. That is equality, not subsumption up to
+/// permutation; it is weaker and needs no extra argument. [`CubeSym::Subsume`]
+/// then adds the permutation reduction on top.
+fn cube_prefixes(n: usize, depth: usize, sym: CubeSym) -> Vec<Vec<(usize, usize)>> {
+    let all = comparators(n, false);
+    let reps = second_orbit_reps(n);
+    let mut prefixes: Vec<Vec<(usize, usize)>> = match sym {
+        CubeSym::None => all.iter().map(|&c| vec![c]).collect(),
+        CubeSym::Full | CubeSym::Subsume => vec![vec![(0, 1)]],
+    };
     for pos in 1..depth {
-        let choices: Vec<(usize, usize)> = if pos == 1 {
-            second_orbit_reps(n)
-        } else {
-            comparators(n, false)
+        let choices: &[(usize, usize)] = match (sym, pos) {
+            (CubeSym::Full | CubeSym::Subsume, 1) => &reps,
+            _ => &all,
         };
         let mut next = Vec::new();
         for base in &prefixes {
-            for &c in &choices {
+            for &c in choices {
                 let mut p = base.clone();
                 p.push(c);
                 next.push(p);
@@ -586,6 +766,9 @@ fn cube_prefixes(n: usize, depth: usize) -> Vec<Vec<(usize, usize)>> {
     }
     let mut seen = std::collections::BTreeSet::new();
     prefixes.retain(|p| seen.insert(prefix_outputs(p, n)));
+    if sym == CubeSym::Subsume {
+        prefixes = subsumption_reduce(&prefixes, n);
+    }
     prefixes
 }
 
@@ -607,14 +790,23 @@ struct CubeResult {
 ///
 /// Each branch gets its own DRAT certificate, streamed to disk and read back for
 /// checking, which is what keeps the peak footprint bounded.
-fn cubes(n: usize, k: usize, dir: &str, conflicts: usize, depth: usize, jobs: usize) -> i32 {
+fn cubes(
+    n: usize,
+    k: usize,
+    dir: &str,
+    conflicts: usize,
+    depth: usize,
+    jobs: usize,
+    sym: CubeSym,
+) -> i32 {
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    let prefixes = cube_prefixes(n, depth);
+    let prefixes = cube_prefixes(n, depth, sym);
     std::fs::create_dir_all(dir).expect("create proof dir");
     println!(
-        "cube split at depth {depth}: {} branch(es) after output-set dedup, {jobs} worker(s)",
+        "cube split at depth {depth}, cube-sym {}: {} branch(es), {jobs} worker(s)",
+        sym.label(),
         prefixes.len()
     );
     let started = Instant::now();
@@ -633,7 +825,7 @@ fn cubes(n: usize, k: usize, dir: &str, conflicts: usize, depth: usize, jobs: us
                         .collect::<Vec<_>>()
                         .join("-");
                     let inputs = prefix_outputs(prefix, n);
-                    let enc = encode_core(n, k - prefix.len(), Sym::COMMUTE, false, &inputs);
+                    let enc = encode_core(n, k - prefix.len(), sym.suffix_sym(), false, &inputs);
                     let path = std::path::Path::new(dir).join(format!("n{n}-k{k}-{tag}.drat"));
                     let t0 = Instant::now();
                     let res = match refute_to_file(&enc.formula, &path, conflicts) {
@@ -928,6 +1120,8 @@ fn usage() -> ! {
     eprintln!(
         "usage: sorting_network [--n N --size K] [--sym none|first|commute|full] [--drat]\n\
          \x20                     [--model] [--dimacs PATH] [--conflicts N]\n\
+         \x20      sorting_network --n N --size K --cubes DIR [--depth D] [--jobs J]\n\
+         \x20                     [--cube-sym none|full|subsume]\n\
          \x20      sorting_network --sweep [--max-n N] [--drat]\n\
          \x20      sorting_network --verify"
     );
@@ -944,6 +1138,7 @@ struct Cli {
     want_model: bool,
     dimacs: Option<String>,
     cube_dir: Option<String>,
+    cube_sym: CubeSym,
     generalized: bool,
     depth: usize,
     jobs: usize,
@@ -954,6 +1149,7 @@ struct Cli {
 }
 
 impl Cli {
+    #[allow(clippy::too_many_lines)] // a flat flag table: one arm per option
     fn parse(args: &[String]) -> Self {
         let mut cli = Self {
             n: None,
@@ -963,6 +1159,7 @@ impl Cli {
             want_model: false,
             dimacs: None,
             cube_dir: None,
+            cube_sym: CubeSym::Full,
             generalized: false,
             depth: 2,
             jobs: 1,
@@ -1033,6 +1230,13 @@ impl Cli {
                     i += 1;
                     cli.cube_dir = Some(args.get(i).cloned().unwrap_or_else(|| usage()));
                 }
+                "--cube-sym" => {
+                    i += 1;
+                    cli.cube_sym = args
+                        .get(i)
+                        .and_then(|s| CubeSym::parse(s))
+                        .unwrap_or_else(|| usage());
+                }
                 "--generalized" => {
                     cli.generalized = true;
                     if cli.sym.first || cli.sym.second {
@@ -1061,6 +1265,7 @@ fn main() {
         want_model,
         dimacs,
         cube_dir,
+        cube_sym,
         generalized,
         depth,
         jobs,
@@ -1082,7 +1287,7 @@ fn main() {
     };
 
     if let Some(dir) = cube_dir {
-        std::process::exit(cubes(n, k, &dir, conflicts, depth, jobs));
+        std::process::exit(cubes(n, k, &dir, conflicts, depth, jobs, cube_sym));
     }
 
     if let Some(path) = dimacs {
