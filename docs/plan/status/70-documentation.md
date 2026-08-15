@@ -6,5 +6,5 @@
 README application/vision revision are closed. Continue only for a concrete
 stale claim; keep application maturity and sub-document links aligned, but do
 not duplicate generated capability tables or modify solver behavior to match
-prose. The user/reference/internals/crate surfaces and all 59 Cargo examples are
+prose. The user/reference/internals/crate surfaces and all 61 Cargo examples are
 indexed, and source guards reject universal proof claims.
