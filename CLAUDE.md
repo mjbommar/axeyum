@@ -335,6 +335,35 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   the other's landed change; with it, both edits survive and each commit carries
   only its own file. Do not use a bare `git commit` even with a private index if
   you have not refreshed it.
+- **AND THEN RESYNC THE SHARED INDEX — the private-index remedy leaves a staged
+  revert of your own commit behind it.** This is the seventh incident and the
+  second one *caused by the fix*. The mechanism: you commit from a private index,
+  so `HEAD` advances, but the **shared** `.git/index` still holds the pre-commit
+  blobs for those paths. Relative to the new `HEAD` that reads as a staged
+  revert — and for a file you newly added, a staged **deletion**. The next lane
+  to run a bare `git commit` applies it, and your work disappears in a commit
+  that looks like someone else's.
+
+  Measured twice within one hour on 2026-08-15. One lane found a staged `−138`
+  revert of the golden-pin fix it had just landed, plus a staged deletion of its
+  new status file. The coordinator's was a staged **−430** revert across ten
+  files, including deleting a 130-line script that had been committed minutes
+  earlier. In both cases every file was byte-identical to `HEAD` **on disk** —
+  the content was never at risk, only the index was, which is exactly why nobody
+  noticed: `ls` and `git show` both look fine.
+
+  So after committing, from the shared index:
+
+      unset GIT_INDEX_FILE
+      git add -- <the paths you just committed>   # worktree == HEAD, so this is
+                                                  # a content no-op; it only
+                                                  # clears the staged revert
+      git diff --cached --stat HEAD               # MUST be empty
+
+  Do **not** `git read-tree HEAD` the shared index to fix this: another lane may
+  have legitimately staged work there, and you would drop their staging. Resync
+  only your own paths, and only after confirming `git diff HEAD -- <path>` is
+  empty for each.
 - **Lane identity lives in the environment, not in git config.**
   `export AXEYUM_AGENT=<lane>`; the `hooks/commit-msg` hook stamps an
   `Agent:` trailer and refuses an unidentified commit. Do **not** use
