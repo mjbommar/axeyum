@@ -2,7 +2,7 @@
 
 **The decision this strand exists to force.** `nat_prelude` is being built by
 hand, one theorem at a time — 106 proved, roughly one ADR each — while
-**232,000 theorems** sit in Mathlib next door under a permissive licence, and we
+**284,457 theorems** sit in Mathlib next door under a permissive licence, and we
 already have a reader for them.
 
 Both activities are defensible. Doing both without a stated boundary is not.
@@ -13,13 +13,13 @@ The instinct is that importing dominates. It does not, for three measured
 reasons:
 
 1. **An imported theorem carries its source's trust, not ours.** Mathlib's
-   232,000 theorems are checked by Lean's kernel. Importing them means our
+   284,457 theorems are checked by Lean's kernel. Importing them means our
    kernel *re-checks* them — which is genuinely valuable (see
    [`03`](03-integrate.md)) — but the axioms they rest on are Lean's. Our
    published metric is **assumptions remaining per prelude**, and that number is
    about *our* trusted base.
 2. **A hand-built prelude is small enough to be checked by a person.** 106
-   theorems with an ADR each is an auditable object. 232,000 is not, by anyone.
+   theorems with an ADR each is an auditable object. 284,457 is not, by anyone.
 3. **The build order teaches us what the kernel is missing.** The last 60
    commits of hand-building surfaced well-founded recursion, certified division
    and gcd's universal property as *kernel* requirements. Importing would have
@@ -59,6 +59,20 @@ kernel and reported **no axioms at all** — strictly smaller than the
 `[propext, Classical.choice, Quot.sound]` footprint a competing effort
 publishes. Mathlib's content, imported, will not be axiom-free.
 
+That test is no longer hypothetical, and it is now measured in **both**
+directions. Imported 2026-08-15: four of the five first imports
+(`Nat.le_refl`, `Nat.le_succ`, `List.nil_append`, `Bool.and_comm`)
+reach no Lean axiom at all, and `Classical.em` costs exactly
+`[propext, Classical.choice, Quot.sound]` by Lean's own `#print axioms`.
+
+But the two kernels do not spell the answer the same way: on the same imported
+`Classical.em`, `Kernel::axiom_footprint` reports **six** names, adding `Quot`,
+`Quot.mk` and `Quot.lift`, because it counts the whole quotient package as
+trusted surface. Ours is the more conservative reading. So the operational test
+below has to name **which kernel's footprint** it is comparing, or it silently
+compares two different numbers. See
+[ADR-0454](../research/09-decisions/adr-0454-imported-kernel-lean-proof-route.md).
+
 So the boundary has an operational test:
 
 > **If importing a declaration would enlarge the axiom footprint of a
@@ -79,8 +93,11 @@ an architectural argument into a number.
 
 ## What to do first
 
-1. **Write the boundary down as an ADR** when the ADR index is not being touched
-   60 times a day — until then, this document is the record.
+1. **Write the boundary down as an ADR.** The reason this was deferred is
+   gone: the ADR index is now *generated* (`python3 scripts/gen-adr-index.py`),
+   so concurrent lanes no longer contend on it. ADR-0454 settles the narrower
+   question of how an imported fact is labelled; the tier boundary in the table
+   above is still unwritten.
 2. **Instrument the axiom footprint per certificate**, so the test above is
    mechanical rather than a judgement call. Today it is one `#print axioms` line
    run by hand.

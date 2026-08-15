@@ -105,10 +105,24 @@ that makes this library *ours* rather than a re-derivation of somebody else's.
 
 ## Where import fits
 
-As **cross-validation and superstructure**, not as the strategy. We hold the only
-independent kernel that reads `lean4export`, so admitting a foreign library is a
-measurement we can uniquely produce — and it tells us where our own construction
-diverges from the world's. Useful, and secondary.
+As **cross-validation and superstructure**, not as the strategy. Admitting a
+foreign library into an independent kernel is a measurement we can nearly
+uniquely produce — and it tells us where our own construction diverges from the
+world's. Useful, and secondary.
+
+Two corrections from the first real import run, 2026-08-15
+([`01-collect.md`](01-collect.md)):
+
+- **We are not the only independent kernel that reads `lean4export`.**
+  `ammkrn/nanoda_lib` is a Rust checker that consumes the same output and was
+  pushed 2026-08-12. `digama0/lean4lean` is independently active. The claim to
+  keep is narrower and still worth having: a second kernel, in a different
+  language, with a fact ledger that records the disagreement.
+- **Import currently supplies less than this section assumes.** 13 of 40
+  well-known `Init`/`Std` theorems import; the rest are declined by our own
+  kernel's definitional equality. Superstructure via import is gated on
+  `brecOn`/`below` reduction, so the boundary below moves in favour of building
+  by default rather than by argument.
 
 The boundary in [`04-implement.md`](04-implement.md) still holds and moves in
 favour of building: at 149/day/lane, ℚ is no longer a close call.

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-le-succ",
+  "title": "Every natural number is below its successor",
+  "statement": "For every natural number n, n is less than or equal to n + 1.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((n : Nat) -> LE.le.{0} Nat instLENat n (Nat.succ n))",
+    "fragment": "Nat"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "imported-kernel-lean",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [
+    "lean4export-3.1.0-stream-faithfulness",
+    "axeyum-lean-import-wire-translation",
+    "lean4export-3.1.0-delivered-bytes-are-the-intended-export"
+  ],
+  "evidence": [
+    {
+      "id": "import-Nat.le_succ",
+      "kind": "kernel-term",
+      "supports": "`Nat.le_succ`'s Lean proof term type-checks against this statement in the independent Axeyum kernel.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-import fail-closed translation",
+        "Kernel::add_declaration (independent re-derivation of the type from the proof term)",
+        "SHA-256 pin of the exported stream bytes"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -q 'AXEYUM-IMPORT-FACT|F:nat-le-succ|'",
+      "artifact": "artifacts/lean-imports/nat-le-succ.ndjson",
+      "notes": "The command greps for this fact's own marker line rather than trusting the exit status, so a suite that compiles to zero tests -- this repository's signature defect -- fails instead of exiting 0. Measured 2026-08-15: the stream hashes to the pin in `artifacts/lean-imports/MANIFEST.json`, the fail-closed importer admits 14 declarations (it publishes nothing unless the WHOLE stream translates and every declaration passes the trusted gate), and `Kernel::render_lean` of the admitted type is `((n : AxNat) -> LE.le.{0} AxNat instLENat n (AxNat.succ n))`. `formal.statement` is that string with `render_lean`'s emit-direction `AxNat` guard undone: the renderer rewrites a root `Nat` to `AxNat` so that emitting OUR prelude does not shadow Lean's builtin `Nat`, which is correct in the emit direction and exactly backwards for an import, where the `Nat` in the stream IS Lean's builtin. The test pins both strings."
+    },
+    {
+      "id": "footprint-Nat.le_succ",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: the imported proof term reaches no Lean axiom, opaque or quotient declaration",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint (our kernel, over the imported environment)",
+        "lean 4.30.0 `#print axioms` (the source system, independently)"
+      ],
+      "checker_command": "scripts/check-imported-fact-lean-axioms.sh Nat.le_succ",
+      "notes": "Two kernels, independently. `Kernel::axiom_footprint` walks this declaration's transitive dependencies in the IMPORTED environment and reports an empty footprint; a real Lean 4.30.0 binary's `#print axioms Nat.le_succ` reports no axioms. The first three entries are the assumptions the IMPORT adds and the constructed `kernel-lean` route does not make: that the exporter faithfully rendered Lean's environment, that our NDJSON-to-kernel-term translation preserves meaning, and that the delivered bytes are the producer's intended export -- format 3.1 has no footer, so completion is relative to the bytes handed over, which `axeyum-lean-import`'s own documentation states. They are why `axiom_footprint: []` is unavailable on this route and the validator rejects it (ADR-0454)."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:order-relation",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:natural-numbers",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-15",
+    "established_by": "axeyum-lean-import, lane formalized-collect -- our independent kernel ADMITTED Lean's proof term. This project did NOT construct the proof; see proof_route.",
+    "source": "official lean4export NDJSON 3.1.0 stream artifacts/lean-imports/nat-le-succ.ndjson, declaration `Nat.le_succ` from Lean 4.30.0 `Init`",
+    "prior_art": [
+      {
+        "who": "the Lean 4 developers (leanprover/lean4)",
+        "what": "`Nat.le_succ` in the Lean 4 core library (`Init`), with its proof term",
+        "where": "leanprover/lean4 v4.30.0, githash d024af099ca4bf2c86f649261ebf59565dc8c622",
+        "year": 2026,
+        "attribution": "read directly from the pinned `lean4export` stream that this fact cites, and cross-checked against a real Lean 4.30.0 binary; this lane did not consult a paper or a secondary source."
+      }
+    ]
+  },
+  "notes": "Chosen for what it is NOT. The obvious neighbouring import, `Nat.not_succ_le_zero`, was dropped from this set after checking rather than assuming: our own Nat prelude already proves it, axiom-free, on the `kernel-lean` route (`nat_theorem_inventory` and `theorem_axiom_footprint`, measured 2026-08-15). Landing an imported fact for a proposition we had already constructed a proof of would have understated what this project holds -- and it would have made the ledger's route counts read as though the import were the only evidence.\n\nNote the two are NOT the same formal statement even though they are the same mathematics: ours is stated over the kernel's own `Nat.le`, Lean's goes through the `LE` type class as `LE.le.{0} Nat instLENat`. That gap between `same proposition` and `same statement` is the alignment problem `02-synthesize.md` describes, arriving concretely on the first five imports. `Nat.le_succ` itself is absent from our prelude, so no such collision arises here."
+}

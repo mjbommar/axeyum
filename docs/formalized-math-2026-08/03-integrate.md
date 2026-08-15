@@ -13,11 +13,21 @@ scale rather than fixture scale?
 
 ```
 axeyum-lean-import   official lean4export NDJSON 3.1.0, FAIL-CLOSED
-                     17 genuine v4.30 fixtures, 9 test suites
+                     17 genuine v4.30 fixtures, 10 test suites
 K1 (import)          5/5 — on five PINNED SINGLE-ROOT fixtures
-L3                   0/12 — the phase supplying Z, Dvd, finite sums
+real Init/Std        13 of 40 well-known theorems admitted (2026-08-15)
 population           dependency-closed Init/Std/mathlib: UNSTARTED
+L3                   0/12 — the phase supplying Z, Dvd, finite sums
 ```
+
+**Update 2026-08-15.** S1 has been run, five times over, at single-theorem
+granularity, and it moved S2 ahead of everything else. The reader handled real
+Lean output at every size tried and declined nothing; all 27 declines came from
+the kernel's definitional equality, in four clusters
+([`01-collect.md`](01-collect.md)). At a 13/40 admission rate a fail-closed
+importer reports only the FIRST blocker in a stream, so the decline census S2
+describes is not a later refinement — it is the only way to size the remaining
+work.
 
 The importer is real and its discipline is good: a private staging kernel that
 publishes only after the complete stream succeeds, so an error cannot expose a
@@ -26,9 +36,11 @@ unknown records and malformed or forward references all rejected rather than
 skipped; quotient records buffered as one exact ordered package through the
 kernel's atomic canonical-package gate.
 
-**What has never been tested is scale.** Five single-root fixtures is not a
-dependency closure, and the difference is not linear — it is the difference
-between a term and a graph with 8.4 M edges.
+**What has never been tested is scale.** The five streams committed on
+2026-08-15 ARE dependency closures — `lean4export` emits the requested constant
+plus everything it reaches — but the largest is 2,692 records and 106
+declarations, and all five together are 4,919 records. The difference from there to a population is not linear; it is the
+difference between a term and a graph with 8.4 M edges.
 
 ## The four walls this will hit, all of them already seen
 
@@ -92,7 +104,7 @@ Not "declarations admitted". This:
 > different people in a different language, accept — and where exactly does it
 > disagree?**
 
-A disagreement would be a genuinely significant finding about a library 232,000
+A disagreement would be a genuinely significant finding about a library 284,457
 theorems deep, and finding none is a strong assurance result. Either outcome is
 publishable, and axeyum is one of very few systems positioned to produce it,
 because it has a second kernel rather than a second copy of the first.

@@ -1,24 +1,34 @@
 # Formalized mathematics strand — August 2026
 
-> **STATUS 2026-08-15 — this strand has not been started.** It is the only one of
-> the three with no landed work: no commits since it was written, and none of its
-> five items attempted. That is a deliberate record, not an oversight to hide.
+> **STATUS 2026-08-15 — started.** The strand had no landed work for as long as
+> it existed; the first increment is in. What landed, and what it measured:
 >
-> The other two strands moved a long way in the meantime, and two of their
-> results change what this one should plan for:
+> - **The importer was pointed at real Lean for the first time.** 40 well-known
+>   `Init`/`Std` theorems, exported one at a time by an official `lean4export`
+>   binary and imported: **13 admitted, 27 declined**. Every decline was our
+>   *kernel* refusing a declaration on definitional equality; the reader declined
+>   nothing. The blocker census and the four clusters are in
+>   [`01-collect.md`](01-collect.md).
+> - **Five imported facts landed end to end**, each citing a SHA-256-pinned
+>   stream in `artifacts/lean-imports/` and re-derived by
+>   `scripts/check-fact-evidence-replay.sh`.
+> - **`imported-kernel-lean` is now a distinct `proof_route`**
+>   ([ADR-0454](../research/09-decisions/adr-0454-imported-kernel-lean-proof-route.md)),
+>   and it cannot claim `axiom_footprint: []`. Recording what Lean says does not
+>   make it checked here, and the ledger now refuses to let it read that way.
+>
+> Two results from the other strands still bound what this one should plan for:
 >
 > - **The Lean proof-TERM route is unavailable at our scale.** Mathlib's
 >   `lrat_proof` peaks at 96.6 GB on a 628 MB certificate; native reflection does
->   the same instance in 8.9 GB. Any plan here that assumes importing or emitting
->   proof terms for large results needs rewriting around reflection. See
+>   the same instance in 8.9 GB
+>   ([arXiv:2607.00815](https://arxiv.org/abs/2607.00815), verified). Any plan
+>   here that assumes importing or emitting proof terms for large results needs
+>   rewriting around reflection. See
 >   [`../refactor-2026-08/05-proof-consumption.md`](../refactor-2026-08/05-proof-consumption.md).
 > - **The export is now actually tested.** 163 of 163 modules are read by a real
 >   Lean 4.30.0, where previously zero were and the suites printed `ok` anyway.
 >   Integration claims can now be checked rather than asserted.
->
-> Before starting: the `fact` ledger did not exist when this was written, and it
-> is the obvious import target — one file per proposition, with `proof_route` and
-> `axiom_footprint` already distinguishing what a checker actually established.
 
 The third roadmap strand, parallel to
 [engineering](../refactor-2026-08/README.md) and
@@ -37,15 +47,22 @@ axeyum, and what do we build ourselves instead?**
 
 ## The universe, measured
 
-| library | system | size |
-|---|---|---|
-| **Mizar Mathematical Library** | Mizar | **3.7 MLOC** — oldest, arguably largest |
-| **Archive of Formal Proofs** | Isabelle/HOL | **4.8 MLOC** (roughly half is algorithm verification rather than mathematics) |
-| **Mathlib 4** | Lean 4 | **115,000+ definitions, 232,000 theorems, >1.5 M lines** |
-| **Mathematical Components** | Rocq/Coq | ~150,000 lines |
+Re-measured 2026-08-15; the earlier figures in this table were roughly a year
+stale and two of the licences were described wrongly. Sources and the full
+correction list are in [`01-collect.md`](01-collect.md).
+
+| library | system | size | licence |
+|---|---|---|---|
+| **Mizar Mathematical Library** | Mizar | ~3.7 MLOC — **unverified**, primary sites unreachable | dual GPL-3.0+ and CC BY-SA 3.0 |
+| **Archive of Formal Proofs** | Isabelle/HOL | **~5,360,300 lines, 1,017 entries, ~324,200 lemmas** (isa-afp.org) | **per entry**: BSD-style or LGPL |
+| **Mathlib 4** | Lean 4 | **135,592 definitions, 284,457 theorems** (mathlib_stats) | Apache-2.0 |
+| **Mathematical Components** | Rocq/Coq | not verified this round | not verified this round |
 
 Network analysis of Mathlib alone extracts **308,129 declarations and 8.4 M
-edges across 7,563 modules** (arXiv:2604.24797).
+edges across 7,563 modules**
+([arXiv:2604.24797](https://arxiv.org/abs/2604.24797), pinned to Mathlib commit
+`534cf0b` of 2026-02-02; verified). That figure and the `mathlib_stats` one do
+not reconcile — different snapshot, different definition of "declaration".
 
 These are the corpora we can check ourselves against, and the map of what has
 already been formalized. Their size is a *stock* built at human bandwidth over
@@ -73,7 +90,9 @@ Import stays, in a supporting role we are uniquely placed to fill:
 - We have an **independent Lean kernel** (`axeyum-lean-kernel`, 37,987 lines)
   that is not Lean, written in a different language, by different people.
 - We have a **fail-closed importer** for the official `lean4export` NDJSON
-  format, with 17 genuine v4.30 fixtures and 9 test suites.
+  format, with 17 genuine v4.30 fixtures and 10 test suites — and, since
+  2026-08-15, five SHA-256-pinned streams produced by a real exporter that back
+  facts in the ledger.
 - On 2026-08-14 the **reverse** direction closed too: Lean's own kernel accepted
   an axeyum development from an empty environment, with a tamper control.
 
@@ -89,17 +108,28 @@ whose interchange infrastructure we should consume rather than rebuild.
 Measured, not assumed:
 
 ```
-axeyum-lean-import   17 lean4export v4.30 fixtures, 9 test suites, fail-closed
+axeyum-lean-import   17 lean4export v4.30 fixtures, 10 test suites, fail-closed
 K1 (import)          5/5 — on FIVE PINNED SINGLE-ROOT FIXTURES, not authority
+REAL Init/Std import 13 of 40 well-known theorems admitted (2026-08-15)
+                     27 declined, ALL by our kernel's defeq, none by the reader
+artifacts/lean-imports  5 pinned streams, 4,919 records, 263 KB, sha256-pinned
+artifacts/facts         5 facts on proof_route `imported-kernel-lean`
 L3                   0/12 — the phase that supplies Z, Dvd, and finite sums
 dependency-closed Init/Std/mathlib population   UNSTARTED
 references/          lean4 cloned (686 MB); NO mathlib clone
 ```
 
-So the ingest path works on toy inputs and has never been pointed at a
-population. That is the gap this strand exists to close, and the requirements
+So the ingest path now works on real Lean output, at a measured 13/40 admission
+rate, and has still never been pointed at a population. The binding constraint
+turned out not to be scale: it is definitional equality on `Nat.add`, which is
+compiled through `brecOn`/`below`/`match_n` — so **`Nat.add_comm`, the most
+cited theorem in our own fact ledger, cannot be imported**. That is the gap this
+strand exists to close, and the requirements
 document already names the next step: *"use the existing `axeyum-lean-import`
-reader to ingest a dependency-closed slice."*
+reader to ingest a dependency-closed slice."* Five such slices now exist; the
+next step after them is a **decline census** rather than a bigger slice, because
+a fail-closed importer at a 13/40 rate measures only the first blocker in a
+stream.
 
 ## The four phases
 
@@ -114,7 +144,7 @@ reader to ingest a dependency-closed slice."*
    population scale rather than fixture scale.
 4. [`04-implement.md`](04-implement.md) — the boundary decision: what we import
    versus what we prove ourselves, and why `nat_prelude` is being built by hand
-   while 232,000 theorems sit next door.
+   while 284,457 theorems sit next door.
 5. [`05-throughput.md`](05-throughput.md) — **the construction plan**: the
    measured production rate, the single-file lock that caps it, and the
    self-extension loop only this architecture can run.

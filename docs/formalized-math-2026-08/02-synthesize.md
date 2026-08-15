@@ -16,7 +16,7 @@ decades:
 
 | format | scope | status |
 |---|---|---|
-| **OpenTheory** | HOL family — HOL4, HOL Light, ProofPower, Isabelle | working; its standard library has been translated onward to Dedukti |
+| **OpenTheory** | HOL family — HOL4, HOL Light, ProofPower, Isabelle | **dormant, re-check before planning on it**: the package repository is live but its newest packages date to ~2020, and the `gilith/hol-light` export fork was last pushed 2020-02-12 while mainline HOL Light ships weekly (checked 2026-08-15). Its standard library HAS been translated onward to Dedukti. |
 | **Dedukti** | universal proof checker on λΠ-calculus modulo | the most general; used as a backend to verify proofs from multiple provers |
 | **MMT / OMDoc** | logical framework in which many systems' logics are represented | the Mizar library has an OMDoc translation |
 
@@ -56,7 +56,7 @@ Three graphs exist and have never been joined:
 | graph | nodes | source |
 |---|---:|---|
 | informal concept DAG | **1,567 concepts, 2,254 prerequisite edges** | `../math-education/graph/` |
-| formal dependency graph | **308,129 declarations, 8.4 M edges** | Mathlib (LeanDojo dataset, downloadable) |
+| formal dependency graph | **308,129 declarations, 8.4 M edges** | Mathlib, per arXiv:2604.24797 at commit `534cf0b`. NOT the same thing as LeanDojo Benchmark 4, which is proof-state/tactic training data (~122,517 theorems, 259,580 tactics, 167,779 premises) and is not a kernel-level export. No published bulk `lean4export` dump of Mathlib exists (searched 2026-08-15). |
 | axeyum's routing table | **23 nodes** with decidability class and executing family | `docs/curriculum/` |
 
 Joining them answers questions none can answer alone:
@@ -92,7 +92,11 @@ the right primitive to build identity on, and it exists.
 ## What to do first
 
 1. **Download the LeanDojo Mathlib4 dependency graph.** External, cheap, and it
-   is the formal half of the join.
+   is the formal half of the join. Checked 2026-08-15: LeanDojo Benchmark 4 is
+   real and mirrored on HuggingFace, but per-mirror licences are unconfirmed and
+   it is **tactic/proof-state data, not declarations** — so it supports the join
+   on names and statements and nothing beyond that. There is no published
+   kernel-level export of Mathlib to substitute for it.
 2. **Run the three-way join** on names and statements as far as it goes, and
    publish the coverage map — including how much did *not* match, which is the
    honest half of the result.

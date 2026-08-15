@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:list-nil-append",
+  "title": "The empty list is a left identity for append",
+  "statement": "For any type and any list as, appending as to the empty list gives as.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((α : Sort (u+1)) -> ((as : List.{u} α) -> Eq.{u+1} (List.{u} α) (HAppend.hAppend.{u, u, u} (List.{u} α) (List.{u} α) (List.{u} α) (instHAppendOfAppend.{u} (List.{u} α) (List.instAppend.{u} α)) (List.nil.{u} α) as) as))",
+    "fragment": "List"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "imported-kernel-lean",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [
+    "lean4export-3.1.0-stream-faithfulness",
+    "axeyum-lean-import-wire-translation",
+    "lean4export-3.1.0-delivered-bytes-are-the-intended-export"
+  ],
+  "evidence": [
+    {
+      "id": "import-List.nil_append",
+      "kind": "kernel-term",
+      "supports": "`List.nil_append`'s Lean proof term type-checks against this statement in the independent Axeyum kernel.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-import fail-closed translation",
+        "Kernel::add_declaration (independent re-derivation of the type from the proof term)",
+        "SHA-256 pin of the exported stream bytes"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -q 'AXEYUM-IMPORT-FACT|F:list-nil-append|'",
+      "artifact": "artifacts/lean-imports/list-nil-append.ndjson",
+      "notes": "The command greps for this fact's own marker line rather than trusting the exit status, so a suite that compiles to zero tests -- this repository's signature defect -- fails instead of exiting 0. Measured 2026-08-15: the stream hashes to the pin in `artifacts/lean-imports/MANIFEST.json`, the fail-closed importer admits 33 declarations (it publishes nothing unless the WHOLE stream translates and every declaration passes the trusted gate), and `Kernel::render_lean` of the admitted type is `((α : Sort (u+1)) -> ((as : List.{u} α) -> Eq.{u+1} (List.{u} α) (HAppend.hAppend.{u, u, u} (List.{u} α) (List.{u} α) (List.{u} α) (instHAppendOfAppend.{u} (List.{u} α) (List.instAppend.{u} α)) (List.nil.{u} α) as) as))`. `formal.statement` is that string verbatim."
+    },
+    {
+      "id": "footprint-List.nil_append",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: the imported proof term reaches no Lean axiom, opaque or quotient declaration",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint (our kernel, over the imported environment)",
+        "lean 4.30.0 `#print axioms` (the source system, independently)"
+      ],
+      "checker_command": "scripts/check-imported-fact-lean-axioms.sh List.nil_append",
+      "notes": "Two kernels, independently. `Kernel::axiom_footprint` walks this declaration's transitive dependencies in the IMPORTED environment and reports an empty footprint; a real Lean 4.30.0 binary's `#print axioms List.nil_append` reports no axioms. The first three entries are the assumptions the IMPORT adds and the constructed `kernel-lean` route does not make: that the exporter faithfully rendered Lean's environment, that our NDJSON-to-kernel-term translation preserves meaning, and that the delivered bytes are the producer's intended export -- format 3.1 has no footer, so completion is relative to the bytes handed over, which `axeyum-lean-import`'s own documentation states. They are why `axiom_footprint: []` is unavailable on this route and the validator rejects it (ADR-0454)."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:identity-element",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-15",
+    "established_by": "axeyum-lean-import, lane formalized-collect -- our independent kernel ADMITTED Lean's proof term. This project did NOT construct the proof; see proof_route.",
+    "source": "official lean4export NDJSON 3.1.0 stream artifacts/lean-imports/list-nil-append.ndjson, declaration `List.nil_append` from Lean 4.30.0 `Init`",
+    "prior_art": [
+      {
+        "who": "the Lean 4 developers (leanprover/lean4)",
+        "what": "`List.nil_append` in the Lean 4 core library (`Init`), with its proof term",
+        "where": "leanprover/lean4 v4.30.0, githash d024af099ca4bf2c86f649261ebf59565dc8c622",
+        "year": 2026,
+        "attribution": "read directly from the pinned `lean4export` stream that this fact cites, and cross-checked against a real Lean 4.30.0 binary; this lane did not consult a paper or a secondary source."
+      }
+    ]
+  },
+  "notes": "The first fact in this ledger about a polymorphic data structure, and the first universe-polymorphic one: the statement quantifies over `Sort (u+1)` and the type-class resolution Lean's elaborator performed (`instHAppendOfAppend`, `List.instAppend`) is present in the admitted term. Nothing in this project constructs lists; the whole 33-declaration closure came in through the importer."
+}

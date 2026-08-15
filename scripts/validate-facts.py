@@ -78,11 +78,24 @@ LANGUAGES_ALL = {"smtlib2", "lean4", "lean4-surface", "axeyum-ir", "cas-term"}
 # It is deliberately NOT `search-certificate`: a replayed witness settles one finite
 # instance, while a polynomial identity settles every instance at once, and their
 # footprints differ in kind rather than in size.
-ROUTES = {"kernel-lean", "smt-term-level", "smt-clausal", "search-certificate",
-          "cas-certificate", "none"}
+# `imported-kernel-lean` passes through the SAME trusted gate as `kernel-lean`
+# (`Kernel::add_declaration` re-derives the type from the proof term), and is a
+# separate route anyway, for two reasons. (1) Authorship: a `kernel-lean` fact is
+# one this project constructed a proof of, which is the number the self-extension
+# loop exists to raise; an import raises no such number, and one shared label
+# would let the headline count be inflated by ingestion. (2) Trust base: an
+# import additionally assumes the exporter rendered the source environment
+# faithfully, that our wire translation preserves meaning, and that the delivered
+# bytes are the producer's intended export -- format 3.1 has no footer, so
+# completion is relative to the bytes handed over. So `[]` is unavailable here.
+ROUTES = {"kernel-lean", "imported-kernel-lean", "smt-term-level", "smt-clausal",
+          "search-certificate", "cas-certificate", "none"}
 # Only this route can deliver axiom-freedom, because only there does an empty
 # footprint correspond to a measurable fact about a kernel environment.
 AXIOM_FREE_CAPABLE = {"kernel-lean"}
+# Routes on which the proof term was NOT authored here. Reported separately from
+# the constructed count for exactly the reason above.
+IMPORTED_ROUTES = {"imported-kernel-lean"}
 
 # A status that asserts the statement was settled must be backed by something.
 ESTABLISHED = {"proved", "computed", "refuted"}
@@ -199,6 +212,17 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
                      f"real and cannot be empty, so [] would read as the strongest claim the "
                      f"project makes on evidence that cannot support it.")
 
+    # An imported proof term has an author, and it is not us. Requiring the
+    # citation structurally is what stops an import from reading as a local
+    # result: without it the only thing separating "we proved this" from "Lean
+    # proved this and we re-checked the term" is a route string a reader has to
+    # already understand.
+    if route in IMPORTED_ROUTES and not fact["provenance"].get("prior_art"):
+        fail(errors, f"{fid}: proof_route {route!r} means the proof term was authored "
+                     f"elsewhere, so provenance.prior_art must name who authored it. "
+                     f"An import that reads as a local proof is the failure this route "
+                     f"exists to prevent.")
+
     external = fact.get("external_status")
     if external is not None:
         if external not in EXTERNAL_STATUSES:
@@ -303,6 +327,13 @@ def main() -> int:
         print("  routes: " + " ".join(f"{k}={v}" for k, v in sorted(routes.items()))
               + f"; {axiom_free} axiom-free on {sorted(AXIOM_FREE_CAPABLE)[0]}"
               + " (not comparable across routes)")
+    # Constructed here vs. checked here but authored elsewhere. Reported apart
+    # because the project's headline claim is about the first number, and an
+    # ingestion pipeline can move the second one arbitrarily far.
+    imported = sum(1 for f in facts.values() if f.get("proof_route") in IMPORTED_ROUTES)
+    if imported:
+        print(f"  {imported} fact(s) on an IMPORTED route -- proof term checked here, "
+              f"authored elsewhere; not evidence of construction")
     print(f"  {multi} evidence row(s) re-derived by 2+ independent checkers")
     print(f"  external: {backlog} settled elsewhere but not here (import backlog), "
           f"{unclassified} unclassified")

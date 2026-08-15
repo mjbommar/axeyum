@@ -530,3 +530,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0451](adr-0451-checked-nat-gcd-common-divisor-characterization.md) | Checked Nat gcd common-divisor characterization | accepted |
 | [0452](adr-0452-balanced-nat-bezout-certificates.md) | Balanced Nat Bézout certificates | accepted |
 | [0453](adr-0453-route-dependent-provability.md) | Two proof routes prove different theorems; keep the kernel constructive and make classicality an explicit, recorded assumption | proposed |
+| [0454](adr-0454-imported-kernel-lean-proof-route.md) | Foreign proof terms our kernel admits get their own `proof_route`, and cannot claim `axiom_footprint: []`. | accepted |

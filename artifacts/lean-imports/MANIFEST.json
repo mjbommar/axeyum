@@ -1,0 +1,75 @@
+{
+  "schema": "axeyum-lean-import-corpus-manifest-v1",
+  "purpose": "Pinned official lean4export NDJSON streams cited by `imported-kernel-lean` facts in artifacts/facts/. A fact that names a stream must be able to name the exact bytes, the producing Lean toolchain, and the exporter revision -- an export without its producing revision is unreproducible, the same defect class the claim ledger's `instance-pin` exists to prevent.",
+  "producer": {
+    "exporter": "lean4export",
+    "exporter_repository": "https://github.com/leanprover/lean4export",
+    "exporter_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "exporter_commit_subject": "chore: bump toolchain to v4.30.0 (#34)",
+    "exporter_commit_note": "Read from the clone that built the binary (`git rev-parse HEAD`), 2026-08-15. Upstream has moved on: lean4export HEAD was `leanprover/lean4:v4.34.0-rc1` as of 2026-08-10, so this pin is four Lean releases behind and the streams below must be re-exported, not assumed forward-compatible.",
+    "format_version": "3.1.0",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "license": "Apache-2.0 (lean4export and the Lean 4 core library it exports)"
+  },
+  "reproduction": {
+    "command": "lake env ./.lake/build/bin/lean4export Init -- <Declaration> > <name>.ndjson",
+    "working_directory": "a lean4export checkout at the pinned commit, built with `lake build` under the pinned toolchain",
+    "modules": [
+      "Init"
+    ],
+    "determinism": "Verified 2026-08-15: each stream below re-exported byte-identically on a second invocation (sha256 unchanged).",
+    "notes": "`Init` alone suffices for all five declarations; no `Std` or Mathlib import is needed. The exporter emits the requested constant plus its transitive dependency closure, so each file is a self-contained dependency-closed slice."
+  },
+  "streams": [
+    {
+      "file": "nat-le-refl.ndjson",
+      "declaration": "Nat.le_refl",
+      "sha256": "087e3097a28dbbc88ed4d52a04ea17d01f96f9d1fbbf6b0c5a3eda6c5cb03cd6",
+      "bytes": 11490,
+      "records": 200,
+      "admitted_declarations": 14,
+      "fact": "F:nat-le-refl"
+    },
+    {
+      "file": "nat-le-succ.ndjson",
+      "declaration": "Nat.le_succ",
+      "sha256": "bded309d580baac0551fd94de97e692b6e3e2854d8157c247679b1fb8af04f7f",
+      "bytes": 11636,
+      "records": 204,
+      "admitted_declarations": 14,
+      "fact": "F:nat-le-succ"
+    },
+    {
+      "file": "list-nil-append.ndjson",
+      "declaration": "List.nil_append",
+      "sha256": "02d24e45d1745e9f3d973a1198314b8a3c5e60ce2e9dc3f4eead44c930e4bf14",
+      "bytes": 38786,
+      "records": 700,
+      "admitted_declarations": 33,
+      "fact": "F:list-nil-append"
+    },
+    {
+      "file": "bool-and-comm.ndjson",
+      "declaration": "Bool.and_comm",
+      "sha256": "19e3fd972bccd534660e447b445f8a80cb708752813c1d40ad9b8427045c898f",
+      "bytes": 60508,
+      "records": 1123,
+      "admitted_declarations": 48,
+      "fact": "F:bool-and-comm"
+    },
+    {
+      "file": "classical-em.ndjson",
+      "declaration": "Classical.em",
+      "sha256": "e3ad1320c85bb756a8d8f673de29542db7250cac4a3a5a485a82664ef2939e19",
+      "bytes": 146532,
+      "records": 2692,
+      "admitted_declarations": 106,
+      "fact": "F:prop-excluded-middle-classical"
+    }
+  ],
+  "checked_by": [
+    "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture",
+    "scripts/check-imported-fact-lean-axioms.sh"
+  ]
+}
