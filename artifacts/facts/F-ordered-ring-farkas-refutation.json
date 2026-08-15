@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "id": "F:ordered-ring-farkas-refutation",
+  "title": "A reconstructed Farkas refutation holds in every ordered commutative ring, and rests on no axiom",
+  "statement": "Let R be any type carrying operations add, mul, neg, zero, one and relations le, lt that satisfy the 22 laws of an ordered commutative ring with 1 (the laws the `Real` prelude asserts: seven order laws, six additive laws, nine multiplicative laws). Then there is no element x of R with x + 0 <= 0 and (-x) + (1 + 0) <= 0. The reconstructed refutation of the QF_LRA instance `x <= 0 and 1 <= x` is a proof of this, quantified over R and over all 30 interface components, and it depends on no axiom whatsoever.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((R : Sort (1)) -> ((add : ((x1 : R) -> ((x2 : R) -> R))) -> ((mul : ((x2 : R) -> ((x3 : R) -> R))) -> ((neg : ((x3 : R) -> R)) -> ((zero : R) -> ((one : R) -> ((le : ((x6 : R) -> ((x7 : R) -> Prop))) -> ((lt : ((x7 : R) -> ((x8 : R) -> Prop))) -> ((le_refl : ((x8 : R) -> le x8 x8)) -> ((le_trans : ((x9 : R) -> ((x10 : R) -> ((x11 : R) -> ((x12 : le x9 x10) -> ((x13 : le x10 x11) -> le x9 x11)))))) -> ((lt_irrefl : ((x10 : R) -> Not (lt x10 x10))) -> ((lt_trans : ((x11 : R) -> ((x12 : R) -> ((x13 : R) -> ((x14 : lt x11 x12) -> ((x15 : lt x12 x13) -> lt x11 x13)))))) -> ((lt_of_lt_of_le : ((x12 : R) -> ((x13 : R) -> ((x14 : R) -> ((x15 : lt x12 x13) -> ((x16 : le x13 x14) -> lt x12 x14)))))) -> ((lt_of_le_of_lt : ((x13 : R) -> ((x14 : R) -> ((x15 : R) -> ((x16 : le x13 x14) -> ((x17 : lt x14 x15) -> lt x13 x15)))))) -> ((le_of_lt : ((x14 : R) -> ((x15 : R) -> ((x16 : lt x14 x15) -> le x14 x15)))) -> ((add_le_add : ((x15 : R) -> ((x16 : R) -> ((x17 : R) -> ((x18 : R) -> ((x19 : le x15 x16) -> ((x20 : le x17 x18) -> le (add x15 x17) (add x16 x18)))))))) -> ((add_comm : ((x16 : R) -> ((x17 : R) -> Eq.{1} R (add x16 x17) (add x17 x16)))) -> ((add_assoc : ((x17 : R) -> ((x18 : R) -> ((x19 : R) -> Eq.{1} R (add (add x17 x18) x19) (add x17 (add x18 x19)))))) -> ((add_zero : ((x18 : R) -> Eq.{1} R (add x18 zero) x18)) -> ((add_neg : ((x19 : R) -> Eq.{1} R (add x19 (neg x19)) zero)) -> ((mul_le_mul_of_nonneg_left : ((x20 : R) -> ((x21 : R) -> ((x22 : R) -> ((x23 : le zero x20) -> ((x24 : le x21 x22) -> le (mul x20 x21) (mul x20 x22))))))) -> ((zero_lt_one : lt zero one) -> ((add_lt_add_of_le_of_lt : ((x22 : R) -> ((x23 : R) -> ((x24 : R) -> ((x25 : R) -> ((x26 : le x22 x23) -> ((x27 : lt x24 x25) -> lt (add x22 x24) (add x23 x25)))))))) -> ((mul_comm : ((x23 : R) -> ((x24 : R) -> Eq.{1} R (mul x23 x24) (mul x24 x23)))) -> ((mul_assoc : ((x24 : R) -> ((x25 : R) -> ((x26 : R) -> Eq.{1} R (mul (mul x24 x25) x26) (mul x24 (mul x25 x26)))))) -> ((mul_one : ((x25 : R) -> Eq.{1} R (mul x25 one) x25)) -> ((mul_zero : ((x26 : R) -> Eq.{1} R (mul x26 zero) zero)) -> ((left_distrib : ((x27 : R) -> ((x28 : R) -> ((x29 : R) -> Eq.{1} R (mul x27 (add x28 x29)) (add (mul x27 x28) (mul x27 x29)))))) -> ((mul_nonneg : ((x28 : R) -> ((x29 : R) -> ((x30 : le zero x28) -> ((x31 : le zero x29) -> le zero (mul x28 x29)))))) -> ((sq_nonneg : ((x29 : R) -> le zero (mul x29 x29))) -> ((x0 : R) -> ((h0 : le (add x0 zero) zero) -> ((h1 : le (add (neg x0) (add one zero)) zero) -> False)))))))))))))))))))))))))))))))))",
+    "fragment": "QF_LRA",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-ordered-ring-refutation",
+      "kind": "kernel-term",
+      "supports": "The generalized refutation type-checks: its proof term is admitted through the trusted gate, which re-derives the stated type from the term.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-checks the proof term against the inferred type)",
+        "axeyum_solver::generalize_over_ordered_ring (abstracts the 30 constants out of the term; the kernel infers the resulting forall-telescope)",
+        "ordered_ring_tests::generalized_refutation_has_an_empty_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-solver --lib --features full ordered_ring",
+      "notes": "Seven tests, a nonzero count (the filter is not inert). The generalization is a lambda-abstraction of the 30 `Real` constants out of a term `reconstruct_lra_proof` already built and gated; the statement is whatever `Kernel::infer` returns for the abstracted term, never written by hand, so an axiom whose type changed would change the hypothesis rather than silently disagree with it. `--features full` is mandatory: without it the solver's full test surface is not compiled."
+    },
+    {
+      "id": "footprint-ordered-ring-refutation",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the generalized theorem's trusted closure is empty, while the statement it replaces rests on 18 trusted declarations.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint (the same call theorem_axiom_footprint makes, made where the declaration lives)",
+        "real Lean 4.30.0 `#print axioms` on the committed module fixture"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --footprint-table | awk -F'\\t' '$1==\"ordered-ring\" && $3==\"0\" {empty++} $1==\"real-specific\" && $3==\"0\" {control++} END {exit !(empty==5 && control==0 && NR==10)}'",
+      "notes": "Two independent measurements, and a negative control inside the same output. (1) `Kernel::axiom_footprint` walks this declaration's transitive dependency closure and keeps Axiom/Opaque/Quotient; the checker requires all five `ordered-ring` rows to report size 0 AND all five `real-specific` control rows -- the SAME refutations before generalization -- to report NON-zero, over exactly 10 rows. The controls report 18, 22, 24, 7 and 10, so the check discriminates rather than merely running. It is written with `awk -F'\\t'` rather than a `\\t` regex on purpose: GNU grep does not interpret `\\t` in an ERE, and a `grep -qE '...\\t...'` form silently passed under the `ugrep` on one developer's PATH and failed under `/bin/sh`'s GNU grep -- a checker command that depends on which grep is installed is not a checker. (2) An INDEPENDENT kernel agrees: `crates/axeyum-solver/tests/fixtures/lean-modules/arithmetic-ordered-ring-farkas.lean` contains zero `axiom` lines, and Lean 4.30.0 answers `'axeyum_ordered_ring_refutation' does not depend on any axioms`. `theorem_axiom_footprint` itself CANNOT be pointed at this theorem: it builds the nat/integer/real preludes and nothing else, so grepping its output for an ordered-ring refutation returns nothing -- which reads exactly like axiom-freedom and would be evidence of nothing."
+    },
+    {
+      "id": "real-lean-ordered-ring-module",
+      "kind": "kernel-term",
+      "supports": "An independent Lean 4.30.0 kernel accepts the self-contained module and reports it axiom-free.",
+      "check_status": "checked",
+      "checkers": [
+        "Lean 4.30.0 (commit d024af099ca4bf2c86f649261ebf59565dc8c622)",
+        "lean_module_fixtures::every_committed_module_fixture_is_accepted_by_real_lean",
+        "scripts/check-lean-gate.sh"
+      ],
+      "checker_command": "scripts/check-lean-gate.sh",
+      "notes": "Measured 2026-08-15: 12 suites, 49 tests, 113 real-Lean checks (floor 105) -- one more than the 112 recorded before this fact, the added fixture. The suite also carries its own negative control (`a_mutated_fixture_is_rejected_by_real_lean`), so acceptance is not vacuous. Unlike every other arithmetic module this repository emits, this one declares no `axiom` at all; the assertion `!source.contains(\"\\naxiom \")` is part of the byte-stability test that produces it."
+    },
+    {
+      "id": "instantiation-recovers-the-real-statement",
+      "kind": "kernel-term",
+      "supports": "Nothing is lost: applying the generalized theorem to the 30 `Real` constants and to the refutation's own variable/hypothesis axioms is a kernel-checked proof of `False` whose footprint is exactly the original statement's.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-checks the application against False)",
+        "Kernel::axiom_footprint on the instantiated theorem",
+        "ordered_ring_tests::instantiating_at_real_recovers_the_original_statement",
+        "ordered_ring_tests::used_scope_instantiation_reproduces_the_original_footprint_exactly"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --require-empty",
+      "notes": "This is what makes the generalization a STRENGTHENING rather than a different claim: the old statement is a corollary, obtained by instantiation, and the kernel re-checks the application. Under the tight telescope (only the declarations the proof rests on) the recovered footprint is identical to the original's, name for name; under the full 30-binder interface it is a superset, because the instantiation deliberately mentions ring laws the proof never used. `--require-empty` fails the process if any fixture is not axiom-free or any instantiation does not recover the original."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:ordered-ring",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:linear-programming-duality",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-15",
+    "established_by": "axeyum-solver reconstruct::arithmetic::ordered_ring, lane ordered-ring-reconstruct",
+    "source": "the route ADR-0456 named as the one that eliminates the Real prelude's 30 axioms without constructing a carrier: parameterise the consumer over the ordered-ring interface rather than build a model for it"
+  },
+  "notes": "Read this next to `F:schedule-critical-chain-infeasible`, whose footprint lists 30 named axioms and which records `axiom_footprint: []` as 'not on offer and cannot be' for this route. It is on offer now, and the difference is not a stronger kernel: it is the same proof term with its assumptions moved from the environment into the theorem. The 30 declarations are still in `arith_prelude.rs` and `nat_axiom_inventory` still reports `real: axiom=30` -- reducing the trusted base was never the goal. What changed is that no reconstructed refutation DEPENDS on it. Measured across five fixtures (three Farkas shapes, one strict cycle, one sum-of-squares), 21 of the 30 are reached by at least one proof; the nine never reached are `le_trans`, `mul_le_mul_of_nonneg_left`, `add_lt_add_of_le_of_lt`, `mul_comm`, `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib` and `mul_nonneg`. Scope: the generalization operates on a finished proof term, so it reaches exactly as far as the reconstructors do -- the QF_LIA routes, which have no Farkas path to a kernel at all, are untouched, and `prove_unsat_to_lean_module` still routes a pure-Real conjunctive unsat to the contentless `LraDpll` shim."
+}

@@ -3778,6 +3778,47 @@ fn arithmetic_family_generated_source_is_byte_stable() {
     assert_lean_module_fixture("arithmetic-sum-of-squares", &source);
 }
 
+/// The **axiom-free** arithmetic module: the same Farkas refutation, generalized
+/// over the ordered-ring interface, rendered as a self-contained Lean file.
+///
+/// This one is worth a fixture for a reason the other two are not. Every other
+/// generated arithmetic module opens with a block of `axiom Real.*` lines and
+/// its `#print axioms` audit names them; this module declares **no axiom at
+/// all**, so the audit real Lean prints is the independent confirmation of the
+/// empty footprint `Kernel::axiom_footprint` measures on our side.
+#[test]
+fn ordered_ring_generalized_module_is_byte_stable_and_axiom_free() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::arithmetic::ordered_ring::{
+        RingTelescope, generalize_over_ordered_ring, render_ordered_ring_module,
+    };
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let one = arena.real_const(Rational::integer(1));
+    let upper = arena.real_le(x, zero).unwrap();
+    let lower = arena.real_le(one, x).unwrap();
+
+    let mut ctx = super::LraReconstructCtx::new();
+    let proof = super::reconstruct_lra_proof(&mut ctx, &arena, &[upper, lower])
+        .expect("linear fixture reconstructs");
+    let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
+        .expect("the linear fixture generalizes");
+    assert!(
+        generalized.footprint.is_empty(),
+        "the fixture must be axiom-free: {:?}",
+        generalized.footprint
+    );
+    let source = render_ordered_ring_module(&ctx, &generalized);
+    assert!(
+        !source.contains("\naxiom "),
+        "the generalized module must declare no axiom"
+    );
+    assert_lean_module_fixture("arithmetic-ordered-ring-farkas", &source);
+}
+
 /// **The bar**: a real `x ≤ 0 ∧ 1 ≤ x` LRA `unsat` instance reconstructs, via its
 /// REAL self-checked Farkas certificate, to a kernel-checked Lean term of type
 /// `False` over the arithmetic prelude (the baby-Farkas order chain).

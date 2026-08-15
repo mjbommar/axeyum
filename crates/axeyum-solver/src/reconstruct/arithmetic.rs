@@ -141,6 +141,13 @@ pub struct LraReconstructCtx {
     arith: ArithPrelude,
     /// Dense variable index → its opaque `R`-typed constant `NameId`.
     vars: BTreeMap<usize, NameId>,
+    /// Every hypothesis axiom minted by [`Self::hyp_axiom`], in mint order.
+    ///
+    /// Recorded because [`ordered_ring`] must abstract them back out of a
+    /// finished refutation, and a *deterministic* order is what makes the
+    /// generalized statement's binder telescope reproducible. Nothing else
+    /// reads it; a hypothesis axiom is otherwise write-only.
+    hyps: Vec<NameId>,
     /// Monotone counter for fresh, collision-free declaration names.
     next_id: u64,
 }
@@ -177,6 +184,7 @@ impl LraReconstructCtx {
             kernel,
             arith,
             vars: BTreeMap::new(),
+            hyps: Vec::new(),
             next_id: 0,
         }
     }
@@ -351,6 +359,7 @@ impl LraReconstructCtx {
                 rule: "la_generic".to_owned(),
                 detail: format!("hypothesis axiom did not admit: {e:?}"),
             })?;
+        self.hyps.push(name);
         Ok(self.kernel.const_(name, vec![]))
     }
 
@@ -4973,3 +4982,5 @@ enum Bound {
     /// `1 ≤ e` (a lower bound on `e`).
     Lower,
 }
+
+pub(crate) mod ordered_ring;

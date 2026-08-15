@@ -335,9 +335,11 @@ pub mod proofs {
         };
         pub use crate::lex_reconstruct::reconstruct_lex_clash_to_lean_module;
         pub use crate::reconstruct::{
-            LraReconstructCtx, ProofFragment, ReconstructCtx, ReconstructError,
-            declared_assumption_clauses, prove_const_shift_lowering_to_lean_module,
-            prove_unsat_to_lean, prove_unsat_to_lean_module, reconstruct_bitblast_step,
+            LraReconstructCtx, OrderedRingRefutation, ProofFragment, RING_LAW_BINDERS,
+            RING_SYMBOL_BINDERS, ReconstructCtx, ReconstructError, RingTelescope,
+            declared_assumption_clauses, generalize_over_ordered_ring,
+            prove_const_shift_lowering_to_lean_module, prove_unsat_to_lean,
+            prove_unsat_to_lean_module, reconstruct_bitblast_step,
             reconstruct_bv_alternation_counterexample_to_lean_module,
             reconstruct_bv_closed_universal_counterexample_to_lean_module,
             reconstruct_bv_conjunctive_universal_instance_to_lean_module,
@@ -349,7 +351,7 @@ pub mod proofs {
             reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof,
             reconstruct_quant_unsat_proof, reconstruct_resolution_proof,
             reconstruct_resolution_proof_compact, reconstruct_skolem_unsat_proof,
-            reconstruct_sos_proof, scan_proof_fragment,
+            reconstruct_sos_proof, render_ordered_ring_module, scan_proof_fragment,
         };
         pub use crate::regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
     }
@@ -1219,9 +1221,11 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use reconstruct::{
-            LraReconstructCtx, ProofFragment, ReconstructCtx, ReconstructError,
-            declared_assumption_clauses, prove_const_shift_lowering_to_lean_module,
-            prove_unsat_to_lean, prove_unsat_to_lean_module, reconstruct_bitblast_step,
+            LraReconstructCtx, OrderedRingRefutation, ProofFragment, RING_LAW_BINDERS,
+            RING_SYMBOL_BINDERS, ReconstructCtx, ReconstructError, RingTelescope,
+            declared_assumption_clauses, generalize_over_ordered_ring,
+            prove_const_shift_lowering_to_lean_module, prove_unsat_to_lean,
+            prove_unsat_to_lean_module, reconstruct_bitblast_step,
             reconstruct_bv_alternation_counterexample_to_lean_module,
             reconstruct_bv_closed_universal_counterexample_to_lean_module,
             reconstruct_bv_conjunctive_universal_instance_to_lean_module,
@@ -1233,7 +1237,7 @@ macro_rules! full_exports {
             reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof,
             reconstruct_quant_unsat_proof, reconstruct_resolution_proof,
             reconstruct_resolution_proof_compact, reconstruct_skolem_unsat_proof,
-            reconstruct_sos_proof, scan_proof_fragment,
+            reconstruct_sos_proof, render_ordered_ring_module, scan_proof_fragment,
         };
         #[doc(hidden)]
         pub use records::{RecordError, RecordSort};

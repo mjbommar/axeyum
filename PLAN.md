@@ -308,6 +308,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-15 | `euler-linearity` | `euler-line` certified and promoted off the frontier by **linear elimination** rather than a bigger budget — 4–6 ms and 0 S-pairs against a Gröbner run that had not returned in 27 minutes — with the cofactors derived from the adjugate identity so they stay against the ORIGINAL hypothesis generators, and the `det^d` multiplier divided out through the Rabinowitsch generator (`N = 2`, so the saturation cofactor is `−conclusion·(1 + d·z)`); a multiplier the stated conditions do not license is a refusal; condition-set minimality established **absolutely** by refuting every proper subset with a committed counterexample rather than by a `2ⁿ` budget-relative audit; the on-locus-but-harmless tamper control repaired from a constant that skipped every triangle theorem into a covered table; `geometry_check.rs` untouched and the seven older certificates byte-identical | `crates/axeyum-cas/src/linear_elim.rs`, `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/src/lib.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/examples/geometry_linear_route.rs`, `crates/axeyum-cas/examples/emit_geometry_certificates.rs`, `artifacts/geometry-certificates/euler-line.json`, `artifacts/facts/F-geometry-euler-line.json` |
 | 2026-08-15 | `0fc7cc357` | `Int.subNatNat`'s borrow proved (shift lemma, two characterisations, elimination principle) and five of the six remaining integer axioms discharged: `add_assoc`, `mul_assoc`, `left_distrib`, `add_le_add`, `add_lt_add_of_le_of_lt`. `integer: axiom=6 → 1`; 50 `Int` theorems, all with an empty axiom footprint; real-Lean gate green at 112 checks. |
 | 2026-08-15 | `7c7b0ca16` | `Real`'s 30 axioms measured as an ordered-ring package (no inverse/completeness/Archimedean) and modelled in the constructed ℤ: `build_int_model_of_arith` admits 22 kernel-checked witnesses, all with an empty axiom footprint and all syntactically the `Int` law. `Int.sq_nonneg` proved (`Int: 50 → 51` derived, 51 empty footprints). Measured and pinned that this kernel has **no `Quot.sound`**, so a quotient ℝ is inexpressible, not merely expensive — correcting three comments and the ℤ diary. ADR-0456. |
+| 2026-08-15 | `ordered-ring-reconstruct` | Farkas/SOS refutations generalize over the ordered-ring interface: empty `axiom_footprint`, confirmed by real Lean's `#print axioms`, with the `Real`-specific statement recovered by instantiation (ADR-0457, `F:ordered-ring-farkas-refutation`). |
 | 2026-08-15 | `33cbe5131` | Formalized-math strand started: real Lean import measured at 13/40 with a four-cluster blocker census, `imported-kernel-lean` proof route (ADR-0454), five imported facts with pinned streams, `01-collect.md` rewritten against cited measurements. |
 | 2026-08-15 | (pending) | `Proj`/`Proj` congruence in `def_eq` closes 9 of 10 root import blockers (40-stream census: 22→37 clean, 10→1 root); first-class decline census `census_ndjson`; pinned `Nat.add_comm` capability fixture. |
 | 2026-08-14 | `19f4c769b` | Automatic hypothesis minimisation (`hypothesis_min`): two route-B Rado lemmas that stay `unknown` at 1800 s close in ~2 s with the same subsets a human found in ~32 min; the boundary is measured to be `nra.rs:107` `MAX_CROSS_PRODUCTS = 2`, not hypothesis count, and the guards are mutation-tested one deletion at a time (agent-k). |
@@ -1059,6 +1060,57 @@ proved, and it is a solver change, not a kernel one.
 
 Full reasoning: [ADR-0456](docs/research/09-decisions/adr-0456-real-is-an-ordered-ring-modelled-by-int.md)
 and [`docs/mathematics-2026-08/diary-real-keystone.md`](docs/mathematics-2026-08/diary-real-keystone.md).
+
+**Lane state (`DONE`, ordered-ring-reconstruct, 2026-08-15).** ADR-0456 measured
+that the `Real` package is an **ordered commutative ring with 1** and named the
+route that eliminates its 30 axioms without constructing a carrier: parameterise
+the consumer, not build a model. That route is now built and measured
+(ADR-0457, [`diary-ordered-ring-reconstruct.md`](../../mathematics-2026-08/diary-ordered-ring-reconstruct.md)).
+
+`generalize_over_ordered_ring`
+(`crates/axeyum-solver/src/reconstruct/arithmetic/ordered_ring.rs`) λ-abstracts
+the 30 `Real` declarations, the per-variable constants and the per-constraint
+hypothesis axioms out of a finished, kernel-gated proof term, in dependency
+order, with every binder type computed from the environment. The kernel then
+infers the statement:
+
+```
+∀ (R : Sort 1) (add mul : R → R → R) (neg : R → R) (zero one : R)
+  (le lt : R → R → Prop), <the 22 laws> →
+  ∀ (x0 : R), le (add x0 zero) zero → le (add (neg x0) (add one zero)) zero → False
+```
+
+**Measured `axiom_footprint`: empty**, on all five fixtures (three Farkas shapes,
+a strict cycle, a sum-of-squares). The un-generalized theorem's footprint is
+printed beside it on the same run — 18, 22, 24, 7, 10 — so the zero
+discriminates. **Real Lean 4.30.0 agrees**: the committed fixture
+`arithmetic-ordered-ring-farkas.lean` declares no `axiom` at all and Lean answers
+`'axeyum_ordered_ring_refutation' does not depend on any axioms`.
+`check-lean-gate.sh` goes **112 → 113** real-Lean checks (floor 105 unchanged).
+
+**Nothing is lost.** Instantiating at `Real` — applying the theorem to the 30
+constants and the refutation's own variable/hypothesis axioms — is a term the
+kernel accepts against `False`, recovering the original statement with its
+original trusted base; under the tight telescope the recovered footprint is
+identical name for name. Recorded as `F:ordered-ring-farkas-refutation`, route
+`kernel-lean`, `axiom_footprint: []` (`validate-facts.py`: kernel-lean 31 → 32,
+axiom-free 30 → 31).
+
+**`real: axiom=30` is untouched, deliberately** — reducing the trusted base was
+never the goal. What changed is that no reconstructed refutation *depends* on it;
+the 30 are now used only to instantiate. Of the 30, 21 are reached by at least
+one fixture; the nine never reached are `le_trans`,
+`mul_le_mul_of_nonneg_left`, `add_lt_add_of_le_of_lt`, `mul_comm`, `mul_assoc`,
+`mul_one`, `mul_zero`, `left_distrib`, `mul_nonneg`.
+
+**Next, for whoever picks this up.** (1) Fix the facade dispatch so an SMT-LIB
+QF_LRA `unsat` reaches `ProofFragment::Lra` instead of the contentless `LraDpll`
+shim — generalizing the shim would produce an axiom-free theorem that says
+nothing, so the entry point is still the direct reconstructor. (2) Try the 5 MB
+schedule-deadline core through the generalization and find out what it costs;
+this lane did not, and does not imply it works. (3) The hypothesis-footprint gap
+is still open: the binders are visible in the statement now, but nothing checks
+that they are the rows they claim to be.
 
 **New lane — axeyum-proved mathematics (2026-08-12).** A full-day frontier
 run produced two previously unknown four-colour Rado numbers,
