@@ -23,6 +23,35 @@ cd "$(dirname "$0")/.."
 
 TIMEOUT="${1:-120}"
 
+# A build probe, BEFORE the sweep. This gate shells out to `cargo` against the
+# WORKTREE, so in a shared checkout a neighbouring lane's half-finished edit makes
+# every checker in the affected crates exit non-zero -- and the report then reads
+# as "your facts rotted".
+#
+# That is not hypothetical: one run showed `kernel-lean 8/23` and 21 failures
+# while another lane was mid-refactor in `int_prelude`. Sampled after that lane
+# committed, the same checkers passed in 0.9-3.2 s each. The facts were never
+# rotten; the tree did not compile.
+#
+# A gate that cannot produce a trustworthy answer must say so rather than produce
+# an untrustworthy one, so this refuses to run rather than reporting numbers a
+# reader would misread. `--force` runs anyway, with the caveat printed.
+if [ "${2:-}" != "--force" ]; then
+  if ! cargo check -q --workspace --all-features >/tmp/fact-replay-build.log 2>&1; then
+    echo "fact-evidence-replay: REFUSING TO RUN -- the worktree does not compile." >&2
+    echo "  This gate runs every checker against the worktree, so a build failure" >&2
+    echo "  makes unrelated facts look rotted. In a shared checkout that is usually" >&2
+    echo "  another lane's in-flight work, not a defect in any fact." >&2
+    echo "" >&2
+    grep -m3 -E '^error' /tmp/fact-replay-build.log | sed 's/^/  /' >&2
+    echo "" >&2
+    echo "  Verify against committed state instead:" >&2
+    echo "    W=\$(mktemp -d); git archive HEAD | tar -x -C \"\$W\" && (cd \"\$W\" && ./scripts/check-fact-evidence-replay.sh)" >&2
+    echo "  or re-run with --force to sweep anyway and read the result with that in mind." >&2
+    exit 2
+  fi
+fi
+
 python3 - "$TIMEOUT" <<'PY'
 import json, glob, re, subprocess, sys, time
 from collections import Counter
