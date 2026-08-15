@@ -25,11 +25,54 @@
 //! ```sh
 //! cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- add_neg
 //! ```
+//!
+//! # Asking for a declaration and finding none is a FAILURE
+//!
+//! Like `nat_theorem_inventory`, this backs fact-ledger `checker_command`s and
+//! until 2026-08-15 exited **0** for a name that does not exist, so a deleted
+//! theorem would have read as a re-derived fact. A named filter matching nothing
+//! now exits non-zero.
+//!
+//! `--expect-derived <n>` / `--expect-asserted <n>` pin the split (51 derived,
+//! 1 asserted as measured 2026-08-15) and fail on drift in either direction —
+//! a *growth* in the asserted count is the one that matters most, since it means
+//! something previously proved is now assumed.
+
+use std::process::ExitCode;
 
 use axeyum_lean_kernel::{Declaration, Kernel, build_int_prelude};
 
-fn main() {
-    let filter = std::env::args().nth(1).unwrap_or_default();
+fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut filter = String::new();
+    let mut expect_derived: Option<usize> = None;
+    let mut expect_asserted: Option<usize> = None;
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        let mut number = |flag: &str| -> Option<usize> {
+            let raw = iter.next()?;
+            let Ok(value) = raw.parse() else {
+                eprintln!("error: {flag} expects a number, got {raw:?}");
+                return None;
+            };
+            Some(value)
+        };
+        match arg.as_str() {
+            "--expect-derived" => match number("--expect-derived") {
+                Some(value) => expect_derived = Some(value),
+                None => return ExitCode::FAILURE,
+            },
+            "--expect-asserted" => match number("--expect-asserted") {
+                Some(value) => expect_asserted = Some(value),
+                None => return ExitCode::FAILURE,
+            },
+            other if other.starts_with("--") => {
+                eprintln!("error: unknown flag {other:?}");
+                return ExitCode::FAILURE;
+            }
+            other => other.clone_into(&mut filter),
+        }
+    }
 
     let mut kernel = Kernel::new();
     let _ = build_int_prelude(&mut kernel).expect("Int prelude must build");
@@ -78,4 +121,29 @@ fn main() {
         "Int: {derived} derived ({axiom_free} with an EMPTY axiom footprint), {asserted} still \
          asserted"
     );
+
+    let mut failed = false;
+    if !filter.is_empty() && rows.is_empty() {
+        eprintln!(
+            "error: no Int declaration matches {filter:?} -- an absent \
+             declaration is a failed check, not an empty report"
+        );
+        failed = true;
+    }
+    for (label, expected, found) in [
+        ("--expect-derived", expect_derived, derived),
+        ("--expect-asserted", expect_asserted, asserted),
+    ] {
+        if let Some(expected) = expected
+            && expected != found
+        {
+            eprintln!("error: {label} {expected}, found {found}");
+            failed = true;
+        }
+    }
+    if failed {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
+    }
 }

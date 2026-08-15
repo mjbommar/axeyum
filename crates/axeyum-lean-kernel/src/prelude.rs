@@ -216,8 +216,23 @@ fn pi_fvar(kernel: &mut Kernel, fvar: u64, ty: ExprId, body: ExprId, info: Binde
 ///
 /// Returns the trusted gate's rejection or an exact-package conflict. A failed
 /// first build leaves the environment unchanged.
-#[allow(clippy::too_many_lines)]
 pub fn build_logic_prelude(kernel: &mut Kernel) -> Result<LogicPrelude, KernelError> {
+    if let Some(PreludeValue::Logic(prelude)) =
+        crate::prelude_cache::try_restore(kernel, PreludeKey::Logic)
+    {
+        return Ok(prelude);
+    }
+    build_logic_prelude_uncached(kernel)
+}
+
+/// [`build_logic_prelude`] without the process-wide template fast path.
+///
+/// This is the route that actually runs the trusted gate, and the one the
+/// template itself is built through (ADR-0464).
+#[allow(clippy::too_many_lines)]
+pub(crate) fn build_logic_prelude_uncached(
+    kernel: &mut Kernel,
+) -> Result<LogicPrelude, KernelError> {
     if let Some(PreludeValue::Logic(prelude)) = kernel.cached_prelude(PreludeKey::Logic)? {
         return Ok(prelude);
     }

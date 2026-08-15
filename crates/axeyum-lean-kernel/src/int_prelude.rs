@@ -385,6 +385,19 @@ fn declare_remaining_axioms(d: &mut IntDev<'_>) -> Result<(), KernelError> {
 /// Returns the trusted gate's rejection or an exact-package conflict. A failed
 /// Int build leaves the pre-call environment unchanged.
 pub fn build_int_prelude(kernel: &mut Kernel) -> Result<IntPrelude, KernelError> {
+    if let Some(PreludeValue::Int(prelude)) =
+        crate::prelude_cache::try_restore(kernel, PreludeKey::Int)
+    {
+        return Ok(*prelude);
+    }
+    build_int_prelude_uncached(kernel)
+}
+
+/// [`build_int_prelude`] without the process-wide template fast path.
+///
+/// This is the route that actually runs the trusted gate, and the one the
+/// template itself is built through (ADR-0464).
+pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelude, KernelError> {
     let nat = build_nat_prelude(kernel)?;
     if let Some(PreludeValue::Int(prelude)) = kernel.cached_prelude(PreludeKey::Int)? {
         return Ok(*prelude);

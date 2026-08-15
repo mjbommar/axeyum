@@ -47,7 +47,17 @@ fn main() {
     let mut integer = Kernel::new();
     let _ = build_int_prelude(&mut integer).expect("Int prelude must build");
     let integer_rows = inventory("integer", &integer);
-    assert_eq!(integer_rows.len(), 34);
+    // 34 -> 1: the Int development was proved out (51 derived theorems, one
+    // remaining assertion). This expectation was NOT updated with it, so this
+    // example — which `scripts/gen-lean-axiom-ledger.py` shells out to — has
+    // been panicking with exit 101, and nothing noticed because nothing checked
+    // its status. Found 2026-08-15 by the prelude-reuse differential gate.
+    assert_eq!(
+        integer_rows.len(),
+        1,
+        "integer axiom population drifted: a growth means something previously \
+         proved is now assumed, a shrink means this expectation is stale"
+    );
 
     let mut string = Kernel::new();
     let logic = build_logic_prelude(&mut string).expect("logic prelude must build");

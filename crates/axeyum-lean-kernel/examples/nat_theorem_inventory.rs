@@ -25,11 +25,51 @@
 //! ```sh
 //! cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_comm
 //! ```
+//!
+//! # Asking for a theorem and finding none is a FAILURE
+//!
+//! This example is the `checker_command` of a large family of fact-ledger
+//! entries (`F:nat-add-comm` is backed by `-- add_comm`). Until 2026-08-15 it
+//! printed `0 theorems` and exited **0** for a name that does not exist, so
+//! deleting a theorem from the kernel would have left
+//! `scripts/check-fact-evidence-replay.sh` reporting the fact re-derived. A
+//! named filter that matches nothing now exits non-zero; a bare run that lists
+//! everything still exits 0, because an unfiltered inventory has no expectation
+//! to violate.
+//!
+//! `--expect-count <n>` pins the total (119 as measured 2026-08-15) and fails on
+//! drift in **either** direction: a shrink means something previously proved is
+//! gone, a growth means the pinned number is stale.
+
+use std::process::ExitCode;
 
 use axeyum_lean_kernel::{Declaration, Kernel, build_nat_prelude};
 
-fn main() {
-    let filter = std::env::args().nth(1).unwrap_or_default();
+fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut filter = String::new();
+    let mut expect_count: Option<usize> = None;
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "--expect-count" => {
+                let Some(raw) = iter.next() else {
+                    eprintln!("error: --expect-count needs a number");
+                    return ExitCode::FAILURE;
+                };
+                let Ok(value) = raw.parse() else {
+                    eprintln!("error: --expect-count expects a number, got {raw:?}");
+                    return ExitCode::FAILURE;
+                };
+                expect_count = Some(value);
+            }
+            other if other.starts_with("--") => {
+                eprintln!("error: unknown flag {other:?}");
+                return ExitCode::FAILURE;
+            }
+            other => other.clone_into(&mut filter),
+        }
+    }
 
     let mut kernel = Kernel::new();
     let _ = build_nat_prelude(&mut kernel).expect("Nat prelude must build");
@@ -56,4 +96,29 @@ fn main() {
         println!("{name}\t{binders}\t{ty}");
     }
     eprintln!("{} theorems", rows.len());
+
+    let mut failed = false;
+    if !filter.is_empty() && rows.is_empty() {
+        eprintln!(
+            "error: no Nat theorem matches {filter:?} -- an absent theorem is a \
+             failed check, not an empty report"
+        );
+        failed = true;
+    }
+    if let Some(expected) = expect_count
+        && rows.len() != expected
+    {
+        eprintln!(
+            "error: expected {expected} theorems, found {} (drift in either \
+             direction is a failure: a shrink means something previously proved \
+             is gone, a growth means the expectation is stale)",
+            rows.len()
+        );
+        failed = true;
+    }
+    if failed {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
+    }
 }

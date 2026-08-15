@@ -63,6 +63,7 @@ mod level;
 mod name;
 mod nat_prelude;
 mod prelude;
+pub mod prelude_cache;
 mod quotient;
 mod string_prelude;
 mod tc;
@@ -132,7 +133,7 @@ struct PreludePackage {
 /// `ExprId` remains a single monotonically assigned integer; segmentation is an
 /// internal allocation detail. Fixed chunks prevent a large proof arena from
 /// needing both the old and doubled `Vec` buffers live during growth.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct SegmentedVec<T> {
     chunks: Vec<Vec<T>>,
     len: usize,
@@ -191,7 +192,7 @@ impl<T> Index<usize> for SegmentedVec<T> {
 /// Sharding preserves the same insertion-ordered `ExprId` assignment while
 /// bounding any one table growth to roughly `1 / EXPR_INTERN_SHARDS` of the
 /// complete interner. The stable shard hash is not observable in output.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ExprInterner {
     shards: Vec<HashMap<u64, ExprId>>,
     collisions: HashMap<u64, Vec<ExprId>>,
@@ -242,7 +243,6 @@ impl ExprInterner {
         }
     }
 
-    #[cfg(test)]
     fn is_empty(&self) -> bool {
         self.shards.iter().all(HashMap::is_empty) && self.collisions.is_empty()
     }
@@ -255,7 +255,7 @@ impl ExprInterner {
 /// insertion order, so identical construction sequences are reproducible
 /// (determinism rule). Handles are lifetime-free `Copy` ids and must not be
 /// mixed across kernels.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Kernel {
     names: Vec<NameNode>,
     name_intern: HashMap<NameNode, NameId>,
@@ -344,6 +344,53 @@ impl Kernel {
 
     pub(crate) fn prelude_checkpoint(&self) -> usize {
         self.env.checkpoint()
+    }
+
+    /// Whether this kernel is observably identical to [`Kernel::default`].
+    ///
+    /// The precondition for restoring a prelude template (ADR-0464): a template
+    /// is a snapshot of *the whole kernel* after a build on a fresh kernel, so
+    /// it may only replace a kernel that has not yet been used for anything.
+    ///
+    /// Every field is checked, including the transient caches. They cannot hold
+    /// an entry without an interned expression to key it, so the arena checks
+    /// already imply them; they are listed anyway so that adding a field to
+    /// `Kernel` without considering this predicate is a compile error rather
+    /// than a silent hole.
+    pub(crate) fn is_pristine(&self) -> bool {
+        let Self {
+            names,
+            name_intern,
+            levels,
+            level_intern,
+            exprs,
+            expr_meta,
+            expr_intern,
+            infer_closed_cache,
+            whnf_cache,
+            reduction_ctx_reads,
+            nat_binop_cache,
+            string_literal_cache,
+            export_only,
+            env,
+            prelude_packages,
+        } = self;
+        names.is_empty()
+            && name_intern.is_empty()
+            && levels.is_empty()
+            && level_intern.is_empty()
+            && exprs.len() == 0
+            && expr_meta.len() == 0
+            && expr_intern.is_empty()
+            && infer_closed_cache.is_empty()
+            && whnf_cache.0 == 0
+            && whnf_cache.1.is_empty()
+            && *reduction_ctx_reads == 0
+            && nat_binop_cache.is_none()
+            && string_literal_cache.is_none()
+            && !*export_only
+            && env.is_pristine()
+            && prelude_packages.is_empty()
     }
 
     pub(crate) fn register_prelude(

@@ -174,8 +174,23 @@ pub struct ArithPrelude {
 ///
 /// Returns the trusted gate's rejection or an exact-package conflict. A failed
 /// Real build leaves the pre-call environment unchanged.
-#[allow(clippy::too_many_lines)]
 pub fn build_arith_prelude(kernel: &mut Kernel) -> Result<ArithPrelude, KernelError> {
+    if let Some(PreludeValue::Real(prelude)) =
+        crate::prelude_cache::try_restore(kernel, PreludeKey::Real)
+    {
+        return Ok(prelude);
+    }
+    build_arith_prelude_uncached(kernel)
+}
+
+/// [`build_arith_prelude`] without the process-wide template fast path.
+///
+/// This is the route that actually runs the trusted gate, and the one the
+/// template itself is built through (ADR-0464).
+#[allow(clippy::too_many_lines)]
+pub(crate) fn build_arith_prelude_uncached(
+    kernel: &mut Kernel,
+) -> Result<ArithPrelude, KernelError> {
     let logic = build_logic_prelude(kernel)?;
     if let Some(PreludeValue::Real(prelude)) = kernel.cached_prelude(PreludeKey::Real)? {
         return Ok(prelude);

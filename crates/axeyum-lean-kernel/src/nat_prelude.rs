@@ -512,6 +512,19 @@ pub struct NatPrelude {
 /// Returns the trusted gate's rejection or an exact-package conflict. A failed
 /// Nat build leaves the pre-call environment unchanged.
 pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError> {
+    if let Some(PreludeValue::Nat(prelude)) =
+        crate::prelude_cache::try_restore(kernel, PreludeKey::Nat)
+    {
+        return Ok(*prelude);
+    }
+    build_nat_prelude_uncached(kernel)
+}
+
+/// [`build_nat_prelude`] without the process-wide template fast path.
+///
+/// This is the route that actually runs the trusted gate, and the one the
+/// template itself is built through (ADR-0464).
+pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelude, KernelError> {
     let logic = build_logic_prelude(kernel)?;
     if let Some(PreludeValue::Nat(prelude)) = kernel.cached_prelude(PreludeKey::Nat)? {
         return Ok(*prelude);

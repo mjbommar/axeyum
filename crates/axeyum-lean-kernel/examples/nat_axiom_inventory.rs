@@ -20,8 +20,40 @@
 //! separately so its share is attributable rather than silently folded in.
 //!
 //! Measured 2026-08-14: `logic` and `nat` are 0 across all three trusted kinds,
-//! and `real`/`integer`/`string` reproduce the ledger's committed 30/34/1 — so
-//! the ledger's `Axiom`-only filter is not, in fact, under-binding today.
+//! and `real`/`integer`/`string` reproduced the ledger's then-committed 30/34/1
+//! — so the ledger's `Axiom`-only filter is not, in fact, under-binding today.
+//! Re-measured 2026-08-15: **30/1/1**. `integer` fell 34 -> 1 as the Int
+//! development was proved out, and `prelude_axiom_inventory` still asserted 34,
+//! so it had been exiting 101 unnoticed.
+//!
+//! # Printing a number is not asserting it
+//!
+//! Until 2026-08-15 this example printed `nat: axiom=0 …` and exited **0**
+//! whatever the number was. `axiom_footprint: []` on 31 kernel-lean facts — the
+//! headline claim of this project — was therefore asserted by nothing: the
+//! `checker_command` could not tell axiom-freedom from a kernel that had grown
+//! twenty axioms overnight.
+//!
+//! Two flags turn the print into a check. Both fail if the named prelude was
+//! never enumerated, so a typo is an error rather than a silent pass — the
+//! standing trap that "an empty result from a tool that was never pointed at
+//! your subject is indistinguishable from a strong negative result".
+//!
+//! ```sh
+//! nat_axiom_inventory --require-axiom-free nat --require-axiom-free logic
+//! nat_axiom_inventory --expect-axioms real=30 --expect-axioms integer=1
+//! ```
+//!
+//! `--expect-axioms` is per-prelude and not a blanket zero on purpose:
+//! `real=30` and `integer=1` are asserted **by design**, so the honest
+//! expectation is the committed number, failing on drift in either direction.
+//! Counts are over the whole trusted surface (`axiom` + `opaque` + `quotient`),
+//! matching this example's stderr summary rather than `Declaration::Axiom`
+//! alone.
+//!
+//! Measured 2026-08-15: `logic=0`, `nat=0`, `real=30`, `integer=1`, `string=1`.
+
+use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_int_prelude, build_logic_prelude,
@@ -69,7 +101,51 @@ fn inventory(prelude: &str, kernel: &Kernel) -> Vec<(String, String, String, Str
     rows
 }
 
-fn main() {
+/// `--require-axiom-free <prelude>` and `--expect-axioms <prelude>=<n>`.
+struct Expectations {
+    /// Prelude label -> expected trusted-surface size.
+    expected: Vec<(String, usize)>,
+}
+
+fn parse_args() -> Result<Expectations, String> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut expected = Vec::new();
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "--require-axiom-free" => {
+                let label = iter
+                    .next()
+                    .ok_or_else(|| "--require-axiom-free needs a prelude name".to_owned())?;
+                expected.push((label.clone(), 0));
+            }
+            "--expect-axioms" => {
+                let spec = iter
+                    .next()
+                    .ok_or_else(|| "--expect-axioms needs <prelude>=<n>".to_owned())?;
+                let (label, raw) = spec.split_once('=').ok_or_else(|| {
+                    format!("--expect-axioms expects <prelude>=<n>, got {spec:?}")
+                })?;
+                let count = raw
+                    .parse()
+                    .map_err(|_| format!("--expect-axioms expects a number, got {raw:?}"))?;
+                expected.push((label.to_owned(), count));
+            }
+            other => return Err(format!("unknown argument {other:?}")),
+        }
+    }
+    Ok(Expectations { expected })
+}
+
+fn main() -> ExitCode {
+    let expectations = match parse_args() {
+        Ok(expectations) => expectations,
+        Err(message) => {
+            eprintln!("error: {message}");
+            return ExitCode::FAILURE;
+        }
+    };
+
     // The logic prelude alone, so its own share is attributable rather than
     // folded into Nat's (`build_nat_prelude` builds logic first).
     let mut logic_only = Kernel::new();
@@ -82,8 +158,8 @@ fn main() {
 
     // The three preludes the existing ledger DOES cover, re-enumerated over the
     // full trusted surface rather than `Axiom` alone. A disagreement with the
-    // ledger's committed counts (real=30, integer=34, string=1) is a finding:
-    // it means the ledger binds less than it appears to.
+    // ledger's committed counts (real=30, integer=1, string=1 as of 2026-08-15)
+    // is a finding: it means the ledger binds less than it appears to.
     let mut real = Kernel::new();
     let _ = build_arith_prelude(&mut real).expect("Real prelude must build");
     let real_rows = inventory("real", &real);
@@ -124,5 +200,42 @@ fn main() {
             count("quotient"),
             group.len()
         );
+    }
+
+    // Turn the printed numbers into checks. A prelude named on the command line
+    // that this example does not enumerate is an ERROR, never a silent pass:
+    // "never enumerated" and "enumerated and found empty" print the same zero.
+    let mut failed = false;
+    for (label, expected) in &expectations.expected {
+        let Some((_, group)) = groups.iter().find(|(name, _)| name == label) else {
+            eprintln!(
+                "error: {label:?} is not enumerated by this example (known: {}) -- \
+                 refusing to report a check that never ran",
+                groups
+                    .iter()
+                    .map(|(name, _)| *name)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+            failed = true;
+            continue;
+        };
+        let found = group.len();
+        if found == *expected {
+            eprintln!("ok: {label} trusted surface = {found}");
+        } else {
+            eprintln!(
+                "error: {label} trusted surface = {found}, expected {expected} \
+                 (a growth means something previously proved is now assumed; a \
+                 shrink means this expectation is stale)"
+            );
+            failed = true;
+        }
+    }
+
+    if failed {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
     }
 }

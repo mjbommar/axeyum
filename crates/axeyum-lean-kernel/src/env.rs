@@ -450,6 +450,30 @@ impl Environment {
         self.declars.is_empty()
     }
 
+    /// Whether this environment is observably identical to a fresh one.
+    ///
+    /// Strictly stronger than [`Environment::is_empty`], which only inspects
+    /// `declars`: an environment that admitted declarations and then rolled
+    /// them all back is *empty* but not *pristine*, because `revision` has
+    /// moved and `insertion_log` is non-empty. Prelude template restoration
+    /// (ADR-0464) needs the stronger property, since it replaces the whole
+    /// kernel and must not discard a history a caller could still observe.
+    ///
+    /// Destructures every field so that adding one without revisiting this
+    /// predicate is a compile error.
+    pub(crate) fn is_pristine(&self) -> bool {
+        let Self {
+            declars,
+            insertion_log,
+            inductive_groups,
+            revision,
+        } = self;
+        declars.is_empty()
+            && insertion_log.is_empty()
+            && inductive_groups.is_empty()
+            && *revision == 0
+    }
+
     /// Iterate declarations in deterministic (id) order.
     pub fn iter(&self) -> impl Iterator<Item = (&NameId, &Declaration)> {
         self.declars.iter()

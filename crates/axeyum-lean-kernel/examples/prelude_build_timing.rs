@@ -8,6 +8,16 @@
 //! Output is deterministic tab-separated data:
 //! `prelude<TAB>iteration<TAB>elapsed-micros`. Aggregate downstream; the
 //! example deliberately does no statistics of its own.
+//!
+//! Since ADR-0464 a build on a pristine kernel is served from a process-wide
+//! template, so the FIRST iteration of each prelude is the construction cost and
+//! later ones are the reuse cost. Both matter and neither is the other, so the
+//! `iteration` column is load-bearing rather than a repeat count — do not
+//! average across it. Set `AXEYUM_PRELUDE_CACHE=0` to measure construction on
+//! every iteration, which is what the before/after comparison uses.
+//!
+//! The trailing stderr line reports the reuse counters, so a run that believed
+//! it had the cache off can be told apart from one that silently had it on.
 
 use std::time::Instant;
 
@@ -55,4 +65,12 @@ fn main() {
             println!("{label}\t{iteration}\t{elapsed}");
         }
     }
+    let stats = axeyum_lean_kernel::prelude_cache::stats();
+    eprintln!(
+        "prelude-cache enabled={} hits={} misses={} templates_built={}",
+        axeyum_lean_kernel::prelude_cache::enabled(),
+        stats.hits,
+        stats.misses,
+        stats.templates_built
+    );
 }
