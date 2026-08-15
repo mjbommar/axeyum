@@ -35,7 +35,7 @@ the input to this one:
 | solver public API | **267 `pub use` re-exports** over 7 direct `pub` items — a façade, not a tangle |
 | solver subsystems | quantifiers 38 modules · arithmetic 20 · arrays/BV 18 · UF 8 · strings 7 · dispatch 5 |
 | tests | 278 integration files + 83 in-source `#[cfg(test)]` modules |
-| library | `nat_prelude` **119 proved / 0 trusted**; `int_prelude` **50 proved / 1 axiom** (was 34); `arith_prelude` **0 proved / 30 axioms** |
+| library | `nat_prelude` **119 proved / 0 trusted**; `int_prelude` **51 proved / 1 axiom**; `arith_prelude` **0 proved / 30 axioms — but see below: it is not an axiomatisation of ℝ** |
 | library provenance | counts from `nat_axiom_inventory` over the FULL trusted surface (`Axiom`/`Opaque`/`Quotient`), not from counting `Declaration::Axiom` literals in source — the literal count said `3` where the real figure was `34` |
 | library growth | `nat_prelude.rs` 3,856 → **9,969 lines in 60 commits**, one session |
 | architecture doc | 82 lines, documents **11 of 23 crates**; omits `axeyum-cas` (47,472 lines, the second-largest crate) |
@@ -72,6 +72,20 @@ from uncheckable anywhere in the fleet to checkable on s0/s4. The remaining wall
 is not I/O at all: the Lean *proof-term* route peaks at 96.6 GB on a 628 MB
 certificate, so large combinatorial results have to reach Lean by reflection. →
 [`05-proof-consumption.md`](05-proof-consumption.md)
+
+
+**6. The `Real` prelude is not ℝ, and `Quot.sound` does not exist here.** Two
+measurements taken before writing any code refuted the premise of item `01`'s
+second half. The 30 `arith_prelude` declarations are 8 carrier/operation
+constants plus 22 laws, with **no `inv`, no `div`, no completeness, no
+Archimedean axiom, and not even totality** — an ordered commutative ring with 1,
+every one of whose laws is true of ℤ. Separately, this kernel's quotient package
+is `PACKAGE_LEN = 4` (`Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind`) with **no
+`Quot.sound` variant at all**, so a Cauchy-sequence ℝ is not expensive here, it
+is *inexpressible*. Three places in the codebase said the quotient route "merely
+costs `Quot.sound`"; they were describing Lean's package, not ours, and the
+measurement is now a test. →
+[`01-int-real-keystone.md`](01-int-real-keystone.md), ADR-0456
 
 ## What this plan is not
 
