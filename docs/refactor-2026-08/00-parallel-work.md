@@ -135,3 +135,40 @@ git log --since="2 hours ago" --name-only --format=""  | sort | uniq -c | sort -
 If the other lane has gone quiet, the contested set collapses and the keystone
 becomes available — at which point the ordering above reverts to the one in each
 strand's README.
+
+## Using the other hosts — a verified recipe, because three lanes got this wrong
+
+`s0 s1 s4 s5 s6 s7` are reachable over ssh and all mount `/nas3/data/axeyum`
+(NFS, ~15 TB). `s0` is this box. Verify before concluding otherwise:
+
+```sh
+ssh -o BatchMode=yes -o ConnectTimeout=8 s5 'hostname; nproc; free -g | awk "NR==2{print \$7\" GB free\"}"'
+```
+
+Long work belongs in a **memory-bounded transient unit**, not `nohup`:
+
+```sh
+ssh s5 "systemd-run --user --unit=<name> \
+  -p MemoryHigh=18G -p MemoryMax=22G \
+  -p StandardOutput=append:/nas3/data/axeyum/<dir>/<log> \
+  -p StandardError=append:/nas3/data/axeyum/<dir>/<log> \
+  -p WorkingDirectory=/tmp <binary> <args>"
+ssh s5 'systemctl --user is-active <name>'
+```
+
+`loginctl enable-linger` is set on s4 and s5, so such a unit survives ssh
+disconnect **and** the death of whatever started it. That matters: `systemd-oomd`
+killed this box's entire session cgroup on 2026-08-14 (68.36% pressure for >20 s,
+27 processes, 83.6 GB peak), taking a 2¼-hour solve and two watchers with it.
+It kills by **cgroup**, so `nohup` does not help and bystanders die with the
+cause. A binary staged to `/nas3/data/axeyum/bin/` runs on any of them.
+
+**Three lanes in one day concluded a resource was unavailable without checking:**
+one ran `which lean`, got nothing, and reported no toolchain — Lean 4.30.0 was
+installed under `~/.elan/toolchains/`, merely off `PATH`, and seven test suites
+had been printing `ok` while checking nothing. One reported `/data0` as the
+scratch disk without noticing it is root-owned and unwritable. One reported
+`server0` as "the only machine available" while `ssh s5` worked. The shape is
+always the same: a plausible probe returned empty, and empty was read as a fact
+about the world. Confirm the probe covered the subject before believing its
+zero.
