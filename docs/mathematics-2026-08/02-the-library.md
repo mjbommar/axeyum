@@ -90,7 +90,17 @@
 > Revised order: `natAbs` ✅ → `eq_one_of_dvd_one` ✅ → coprimality ✅
 > (`Nat.coprime_of_bezout_one`) → the `Rat` structure ✅ → cofactor coprimality ✅
 > (`Nat.gcd_cofactors_coprime`) → exact division ✅
-> (`Nat.div_mul_cancel_of_dvd`) → positivity ✅ → `normalize`.
+> (`Nat.div_mul_cancel_of_dvd`) → positivity ✅ → `normalize` ✅.
+>
+> **ℚ has a smart constructor.** `Rat.normalize : (num : Int) → (den : Nat) →
+> 1 ≤ den → Rat` divides through by `gcd (natAbs num) den` and discharges both
+> proof fields, so a caller supplies neither. The integer trusted surface stays
+> **0**, so ℚ rests on nothing.
+>
+> It **normalises**, and that is checked the strongest way available: `2/4` and
+> `1/2` are *definitionally the same term*, decided by `def_eq` with no lemma at
+> all, because `Nat.gcd`, `Nat.div` and `Int.rec` all compute. The same test
+> requires `1/2 ≢ 1/3`, without which the first check would be vacuous.
 >
 > **Four more, all measured as absent before building.** `Int.nat_abs_neg_of_nat`
 > (`natAbs (negOfNat k) = k`) is needed because `negOfNat` is a `Nat.rec`

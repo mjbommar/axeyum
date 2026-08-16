@@ -287,6 +287,9 @@ pub struct IntPrelude {
     pub rat: NameId,
     /// `Rat.mk : (num : Int) → (den : Nat) → 1 ≤ den → gcd (natAbs num) den = 1 → Rat`.
     pub rat_mk: NameId,
+    /// `Rat.normalize : (num : Int) → (den : Nat) → 1 ≤ den → Rat` — the smart
+    /// constructor, dividing through by `gcd (natAbs num) den`.
+    pub rat_normalize: NameId,
     /// `eq_em : ∀ (a b : Int), Or (Eq Int a b) (Not (Eq Int a b))`.
     pub eq_em: NameId,
 }
@@ -373,6 +376,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
         rat,
         rat_mk: kernel.name_str(rat, "mk"),
+        rat_normalize: kernel.name_str(rat, "normalize"),
         eq_em: child(kernel, "eq_em"),
     }
 }
@@ -440,6 +444,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
         rat::declare_rat(&mut d)?;
+        rat::declare_normalize(&mut d)?;
         Ok(prelude)
     })();
     match built {

@@ -864,3 +864,85 @@ fn rat_admits_a_normalised_pair_and_rejects_an_unreduced_one() {
         "Rat accepted 2/4, whose `reduced` field is false"
     );
 }
+
+/// `Rat.normalize` actually normalises: `2/4` and `1/2` are the *same* rational.
+///
+/// This is the strongest statement available about a smart constructor, and it
+/// needs no lemma — `Nat.gcd`, `Nat.div` and `Int.rec` all compute, so the two
+/// terms are definitionally equal and `def_eq` decides it.
+///
+/// The discrimination half matters just as much: `1/2` and `1/3` must NOT be
+/// equal, or the check above would be vacuous.
+#[test]
+fn rat_normalize_reduces_two_quarters_to_one_half() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let numeral = |k: &mut Kernel, n: usize| {
+        let mut value = k.const_(p.nat.zero, vec![]);
+        for _ in 0..n {
+            let succ = k.const_(p.nat.succ, vec![]);
+            value = k.app(succ, value);
+        }
+        value
+    };
+    let zero = k.const_(p.nat.zero, vec![]);
+    let one_le = |k: &mut Kernel, n: usize| {
+        let predecessor = numeral(k, n - 1);
+        let base = {
+            let lemma = k.const_(p.nat.zero_le, vec![]);
+            k.app(lemma, predecessor)
+        };
+        let lemma = k.const_(p.nat.le_succ_succ, vec![]);
+        let at_zero = k.app(lemma, zero);
+        let at_pred = k.app(at_zero, predecessor);
+        k.app(at_pred, base)
+    };
+    let normalize_at = |k: &mut Kernel, numerator: usize, denominator: usize| {
+        let num = {
+            let ctor = k.const_(p.of_nat, vec![]);
+            let magnitude = numeral(k, numerator);
+            k.app(ctor, magnitude)
+        };
+        let den = numeral(k, denominator);
+        let positive = one_le(k, denominator);
+        let normalize = k.const_(p.rat_normalize, vec![]);
+        let at_num = k.app(normalize, num);
+        let at_den = k.app(at_num, den);
+        k.app(at_den, positive)
+    };
+
+    let two_quarters = normalize_at(&mut k, 2, 4);
+    let one_half = normalize_at(&mut k, 1, 2);
+    assert!(
+        k.def_eq(two_quarters, one_half),
+        "normalize did not reduce 2/4 to 1/2"
+    );
+
+    // Non-vacuity: distinct rationals stay distinct.
+    let one_third = normalize_at(&mut k, 1, 3);
+    assert!(
+        !k.def_eq(one_half, one_third),
+        "1/2 and 1/3 compared equal — the check above would be meaningless"
+    );
+
+    // And a negative numerator normalises through the `negSucc` branch.
+    let minus_two_quarters = {
+        let num = {
+            let ctor = k.const_(p.neg_succ, vec![]);
+            let one = numeral(&mut k, 1);
+            k.app(ctor, one)
+        };
+        let den = numeral(&mut k, 4);
+        let positive = one_le(&mut k, 4);
+        let normalize = k.const_(p.rat_normalize, vec![]);
+        let at_num = k.app(normalize, num);
+        let at_den = k.app(at_num, den);
+        k.app(at_den, positive)
+    };
+    let inferred = k
+        .infer(minus_two_quarters)
+        .expect("normalize must accept a negSucc numerator");
+    let rendered = k.render_lean(inferred);
+    assert!(rendered.contains("Rat"), "unexpected type: {rendered}");
+}
