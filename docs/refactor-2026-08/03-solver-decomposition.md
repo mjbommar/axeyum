@@ -23,7 +23,7 @@ boundaries, and today's seams are exactly what those two items are fixing.
 > Measured by that script and re-measured before landing, not quoted. **No crate
 > was extracted**; the 267-entry façade is untouched and ADR-0001's
 > "boundary proven by use" bar has not been argued for anything yet. Lane notes:
-> [`96-solver-decomp.md`](../plan/status/96-solver-decomp.md).
+> [`96-solver-decomp.md`](../plan/archive/96-solver-decomp.md).
 >
 > Note this contradicts the "least urgent" framing above in one respect: the
 > cycle was worth breaking on its own merits, independently of `01` and `02`,

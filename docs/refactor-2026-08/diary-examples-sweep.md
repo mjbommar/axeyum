@@ -66,7 +66,7 @@ row was checked against source, not just the `//!` header:
 - `geometry_linear_route`: the header only carries the like-for-like-counters
   framing and the zero-residue short-circuit reasoning; the "4-6 ms vs 27
   minutes" figures came from the brief, so I cross-checked them against
-  `docs/plan/status/31-euler-linearity.md` and
+  `docs/plan/archive/31-euler-linearity.md` and
   `docs/mathematics-2026-08/diary-euler-linearity.md` before writing them
   into the row — both independently confirm the numbers.
 - `prelude_build_timing`: header and `main` both directly support the row
@@ -81,7 +81,7 @@ and here there wasn't one.
 
 `docs/documentation-plan.md` already read "all 67 checked-in Cargo examples"
 and `PLAN.md` (generated, via the `{{example-count}}` token in
-`docs/plan/status/70-documentation.md`) already read "all 67 Cargo examples."
+`docs/plan/archive/70-documentation.md`) already read "all 67 Cargo examples."
 `len(sorted(ROOT.glob("crates/*/examples/*.rs")))` is 67 right now, so both
 were already correct — the six missing files were catalog-row omissions, not
 a stale count. Nothing to derive or fix there this time.

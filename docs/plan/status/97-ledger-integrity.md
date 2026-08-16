@@ -49,6 +49,20 @@ axiom-freedom metric, is asserted by nothing. Re-measure the count first
 (`b94b56425` already fixed one example), then make each checker's exit status
 depend on its finding, one exercised negative control per fix.
 
+**Returned `main` to green: PLAN.md 225,019 -> 47,409 bytes** (`WIP`,
+ledger-integrity, 2026-08-16). `just check` could not pass — `plan-authority`
+failed at 233,888 bytes against a 52,000 ceiling, and had failed since
+`69d32216b`, the commit that split PLAN.md into per-lane sources. The ceiling and
+that design could not both stand: `docs/plan/global/` alone is 43,348 bytes of
+the budget, so even a 500-byte cap across 43 lanes would not have fit. Resolved
+by taking CLAUDE.md's framing literally — PLAN.md is an **active work queue** —
+and archiving finished and cut-off lanes to
+[`docs/plan/archive/`](../archive/README.md), which is not a PLAN source. Nothing
+is lost: every file moves verbatim by `git mv`, 26 of the 43 duplicate a fuller
+committed diary, and the archive README indexes all 43 with the next action each
+lane left behind, so the queue keeps its work items. Restoring a lane is a `git
+mv` back plus `gen-plan.py`.
+
 <!-- plan-section: landed-changes -->
 
 | 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
