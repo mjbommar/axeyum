@@ -22,8 +22,8 @@
       "kind": "kernel-term",
       "supports": "For all natural numbers k and n, gcd(k+1, n) = gcd(n mod (k+1), k+1). Iterating this step is the Euclidean algorithm, and it terminates because the remainder is strictly smaller than the divisor.",
       "check_status": "checked",
-      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude",
-      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a green run of the command is a machine-checked proof. Measured 2026-08-14: 28 tests pass (a nonzero count -- the filter is not inert)."
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- gcd_succ 2>/dev/null | grep -qE '^Nat\\.gcd_succ[[:space:]]'",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing the row at all is a machine-checked proof. TIGHTENED 2026-08-16: the command was `cargo test -p axeyum-lean-kernel --lib nat_prelude`, a whole-suite run that passes or fails identically for every fact citing it and would stay green if THIS theorem were deleted. It now names its own subject twice over -- `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed."
     },
     {
       "id": "footprint-Nat.gcd_succ",

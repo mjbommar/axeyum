@@ -184,3 +184,39 @@ and restoring returns 13/13.
 
 This also answers the caution recorded under finding 8. That checker is bound to
 its subject: it fails on *this* module's axiom list, not on a gate-wide pass.
+
+## Binding fact checkers to their subjects (2026-08-16)
+
+Finding 8's remaining caution: "can fail" is necessary, not sufficient — a
+checker may fail for reasons that have nothing to do with the fact it backs.
+
+**Measured.** 96 distinct `checker_command`s across the settled facts; 16 are
+shared by more than one fact. Of the shared ones, the largest family was 14
+`kernel-lean` Nat theorems all citing
+
+```
+cargo test -p axeyum-lean-kernel --lib nat_prelude
+```
+
+which passes or fails identically for every fact citing it, and — the point —
+**would stay green if the theorem in question were deleted**, because the suite
+does not mention it.
+
+**Tightened** to the form `F:nat-add-comm` already used, which names the subject
+twice over: `nat_theorem_inventory` exits non-zero for a name that does not
+exist, and the `grep -qE '^Nat\.<name>[[:space:]]'` requires the admitted
+declaration to actually be printed.
+
+**Not tightened, deliberately.** The `footprint-*` rows cite
+`--require-axiom-free nat`, which is environment-wide *on purpose*, and their
+notes already carry the argument for why that is sound: a theorem cannot depend
+on a trusted declaration the environment does not contain, so an empty trusted
+surface bounds every individual footprint by `[]`. A shared checker is not
+automatically a loose one.
+
+**The escaping bug is the lesson.** The first version wrote `\\.` where `\.` was
+meant, so all 14 stored commands exited 1 — they would have marked every one of
+those facts as failing. `validate-facts.py` passed them, correctly: it checks
+structure, not execution. Caught by extracting each stored command and running it
+verbatim, which is now how this kind of edit gets checked. Seventeen commands
+(the 14 tightened plus the 3 already in this form) run and exit 0.
