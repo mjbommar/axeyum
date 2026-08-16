@@ -161,6 +161,14 @@ step lean-construct-matrix-product-freeze python3 scripts/freeze-lean-official-c
 step lean-axiom-ledger-tests python3 -m unittest scripts.tests.test_lean_axiom_ledger
 step lean-axiom-ledger python3 scripts/gen-lean-axiom-ledger.py --check
 step foundational-resources ./scripts/check-foundational-resources.sh
+# The claim ledger's structural gates ran ONLY from `just claims` (and the
+# certificate pass, which needs the gitignored drat-trim clone, deliberately
+# stays out of both). These two need nothing external and take seconds, so the
+# no-`just` fallback had no reason to be blind to them -- and the dashboard was
+# gated by nothing anywhere, which is how it came to report 38 claims against an
+# actual 104. See docs/refactor-2026-08/gate-divergence-2026-08-14.md.
+step claims-validate python3 scripts/validate-claims.py
+step claims-dashboard python3 scripts/gen-claims-dashboard.py --check
 step rules-as-code-generate python3 scripts/gen-rules-as-code-dashboard.py
 step rules-as-code-validate python3 scripts/validate-rules-as-code.py
 step rules-as-code-query-summary python3 scripts/query-rules-as-code.py summary

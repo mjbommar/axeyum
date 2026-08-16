@@ -99,9 +99,7 @@
       "The lower bound follows from this work's main theorem with no search, the hypotheses b < a and gcd(a,b) = 1 both holding at (6,5)",
       "The shell construction predicts 1501 exactly; tightness holds at every known point on the line b = a-1 with a >= 3 and k in {3,4}, and FAILS at k = 5 (see rado-r5-a3-b2-frontier), so the prediction is a pattern and not a theorem"
     ],
-    "would_settle": [
-      "A refutation of F_1501 (the CNF for n = 1501, k = 4) would give R_4(6(x-y)=5z) = 1501 exactly and complete the k=4 row of the paper's Table 1. Not attempted here: F_313 already required ~28 GiB and a 4096-cell cube cover, and n = 1501 is substantially larger."
-    ],
+    "would_settle": "A refutation of F_1501 (the CNF for n = 1501, k = 4) would give R_4(6(x-y)=5z) = 1501 exactly and complete the k=4 row of the paper's Table 1. Not attempted here: F_313 already required ~28 GiB and a 4096-cell cube cover, and n = 1501 is substantially larger.",
     "attack_notes": "The satisfiable side is closed (the construction hands over the witness free). For the refutation, reuse the 313 recipe at greater depth: branch on more points (depth 8-10), cap per-cell conflicts, defer checking, and certify offline with certify_dumped_cover; distribute cells across s5-s7. The probe suggests concentrating splits inside the staircase-compatible subtree rather than uniformly."
   },
   "notes": "Recorded as the natural next exact-value target (roadmap R10/E1): the construction predicts 741, the k<=4 pattern supports it, SLS cannot refute it, and both certification artifact kinds plus their checkers are now promoted into the axeyum-search crate."

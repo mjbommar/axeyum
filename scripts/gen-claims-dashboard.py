@@ -13,7 +13,8 @@ read straight from the committed claim files, whose structure is enforced by
 byte-identical file (no timestamps, fully sorted).
 
 Usage:
-    python3 scripts/gen-claims-dashboard.py
+    python3 scripts/gen-claims-dashboard.py            # regenerate
+    python3 scripts/gen-claims-dashboard.py --check    # fail if stale (gated)
 
 Reads:
     artifacts/claims/*/*/claim.json
@@ -25,6 +26,7 @@ Writes:
 from __future__ import annotations
 
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -191,6 +193,16 @@ def build_markdown(claims: list[tuple[str, str, dict]]) -> str:
 
 
 def main() -> int:
+    # `--check` regenerates in memory and compares, so a stale DASHBOARD.md
+    # fails a gate instead of sitting in the tree contradicting the ledger.
+    # Until 2026-08-16 this generator was wired into NO gate at all: it had been
+    # crashing on a schema-violating `would_settle`, and the committed dashboard
+    # -- headed "Auto-generated. Do not edit by hand." -- still reported 38
+    # claims across 1 family against an actual 104 across 3, showing the
+    # flagship R_4(5(x-y)=4z) result as `open` at "> 740" when it was `computed`
+    # at exactly 741. An ungated generator is a document that rots silently.
+    check_only = "--check" in sys.argv[1:]
+
     claim_files = sorted(CLAIMS.glob("*/*/claim.json"))
     if not claim_files:
         print("no claims found under artifacts/claims/*/*/claim.json")
@@ -199,11 +211,24 @@ def main() -> int:
         (path.parent.parent.name, path.parent.name, json.loads(path.read_text()))
         for path in claim_files
     ]
-    OUT_PATH.write_text(build_markdown(claims))
-    print(
-        f"wrote {OUT_PATH.relative_to(ROOT)}: {len(claims)} claims, "
-        f"{sum(len(c['evidence']) for _f, _i, c in claims)} evidence rows"
-    )
+    rendered = build_markdown(claims)
+    rel = OUT_PATH.relative_to(ROOT)
+    rows = sum(len(c["evidence"]) for _f, _i, c in claims)
+
+    if check_only:
+        current = OUT_PATH.read_text() if OUT_PATH.exists() else None
+        if current == rendered:
+            print(f"gen-claims-dashboard: {rel} up to date "
+                  f"({len(claims)} claims, {rows} evidence rows)")
+            return 0
+        what = "is stale" if current is not None else "does not exist"
+        print(f"gen-claims-dashboard: {rel} {what} "
+              f"(ledger has {len(claims)} claims, {rows} evidence rows). "
+              f"Regenerate with `python3 scripts/gen-claims-dashboard.py`.")
+        return 1
+
+    OUT_PATH.write_text(rendered)
+    print(f"wrote {rel}: {len(claims)} claims, {rows} evidence rows")
     return 0
 
 

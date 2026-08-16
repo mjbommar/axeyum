@@ -304,6 +304,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
 | 2026-08-15 | `geometry-frontier` | default geometry monomial order switched to degree-reverse-lex, justified by a per-subset per-order audit showing 6 unchanged condition sets and 6 byte-identical certificates — and every subset *decided*, which upgrades the corpus's minimality claim from budget-scoped to absolute; `rhombus-diagonals-perpendicular` promoted off the frontier as the seventh certified theorem with its non-degeneracy counterexample and both tamper controls, the controls now running over every saturated certificate rather than the first; `euler-line`'s obstruction measured rather than timed (basis growth and a quadratic S-pair backlog, not width and not overflow) via new `ReductionStats` and an S-pair ladder | `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/src/groebner_cert.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/examples/geometry_order_audit.rs`, `crates/axeyum-cas/examples/geometry_obstruction.rs`, `artifacts/geometry-certificates/rhombus-diagonals-perpendicular.json`, `artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json` |
 | 2026-08-15 | `euler-linearity` | `euler-line` certified and promoted off the frontier by **linear elimination** rather than a bigger budget — 4–6 ms and 0 S-pairs against a Gröbner run that had not returned in 27 minutes — with the cofactors derived from the adjugate identity so they stay against the ORIGINAL hypothesis generators, and the `det^d` multiplier divided out through the Rabinowitsch generator (`N = 2`, so the saturation cofactor is `−conclusion·(1 + d·z)`); a multiplier the stated conditions do not license is a refusal; condition-set minimality established **absolutely** by refuting every proper subset with a committed counterexample rather than by a `2ⁿ` budget-relative audit; the on-locus-but-harmless tamper control repaired from a constant that skipped every triangle theorem into a covered table; `geometry_check.rs` untouched and the seven older certificates byte-identical. Pappus's hexagon theorem then also certified (three 2x2 blocks, 292 s, checker-verified) and deliberately **left on the frontier**, because its three conditions can only be necessitated as a set and the new minimality ratchet correctly refuses the budget-relative claim | `crates/axeyum-cas/src/linear_elim.rs`, `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/src/lib.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/examples/geometry_linear_route.rs`, `crates/axeyum-cas/examples/emit_geometry_certificates.rs`, `artifacts/geometry-certificates/euler-line.json`, `artifacts/facts/F-geometry-euler-line.json` |
 | 2026-08-15 | `pappus-minimality` | Pappus's hexagon theorem promoted into the corpus with **one** non-degeneracy condition instead of three (6.7 ms against 292 s), and its minimality established **absolutely** — the previous lane's three collapsed attempts to necessitate a single condition turned out to be a *proof that each condition is individually redundant*, confirmed three ways (synthetic strata argument; exhaustive `F_p` decision for seven primes over the committed polynomials, orbit reduction cross-checked against a full enumeration; and a **certificate for each condition in isolation**). The root cause is ADR-0460: the route's subset tests were all *decided* and therefore read as absolute under ADR-0455, but they tested the subset against a decomposition the producer had already fixed, so they were **representation-relative** — decided and wrong. Fixed by `licensed_blocks`, which lets the condition subset choose its own block decomposition. New `cofactor_ansatz` module: bounded-degree ideal membership by exact sparse linear algebra, which settles in ~25 ms with `±1` coefficients a residue Buchberger was killed on after 7.5 minutes without returning; incomplete on purpose, bounds the shape of the system and never the solve, self-checks its own identity. `geometry_check.rs` untouched across a third independent producer; the handover refuses to run when no block was consumed, which is what keeps the eight older certificates byte-identical (**8 unchanged, 1 written**) | `crates/axeyum-cas/src/cofactor_ansatz.rs`, `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/src/lib.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/examples/pappus_condition_subsets.rs`, `crates/axeyum-cas/examples/geometry_cofactor_routes.rs`, `artifacts/geometry-certificates/pappus-hexagon.json`, `artifacts/facts/F-geometry-pappus-hexagon.json`, `docs/research/09-decisions/adr-0460-a-decided-subset-test-may-still-be-a-test-of-the-route.md` |
@@ -2680,6 +2681,53 @@ extracted**, the 267-entry re-export façade is untouched, and ADR-0001's
 "boundary proven by use" bar has not been argued for any new crate. The lane was
 also briefed to re-measure `03-solver-decomposition.md` against the current tree
 and report where that document has gone stale; it did not get that far.
+
+**Landed the claim dashboard's gate, and the type check whose absence hid the
+bug** (`WIP`, ledger-integrity, 2026-08-16). Strand item
+[`04-gates-and-truth.md`](docs/refactor-2026-08/04-gates-and-truth.md) T1
+("every gate reports its own scope"), and finding 8's shape one level down: the
+defect was not a wrong number, it was three layers each trusting the one below.
+
+**What was actually wrong — three defects, not one.**
+
+1. `artifacts/claims/rado/rado-r4-a6-b5-frontier/claim.json` wrote `would_settle`
+   as a one-element **list**; `claim.schema.json` declares `"type": "string"`.
+2. `validate-claims.py` checked which frontier keys were *present* and never what
+   they *held*, so the ledger reported **104 claims, 0 errors** over a claim that
+   violated its own schema. The file already carries a `schema_drift()` check
+   whose comment says "a schema no code reads is decoration" — that argument
+   applied to field names but had never been extended to their types.
+3. `gen-claims-dashboard.py` therefore crashed on `fr['would_settle'].strip()`,
+   and **was wired into no gate at all** — not `check.sh`, not the `justfile`.
+
+So the committed `DASHBOARD.md`, headed *"Auto-generated. Do not edit by hand"*,
+reported **38 claims across 1 family** against an actual **104 across 3**, and
+listed the campaign's flagship result `R_4(5(x-y)=4z)` as `open` at `> 740` when
+the ledger had it `computed` at exactly **741**. Nobody edited it wrongly. Nobody
+ran it.
+
+**Both negative controls exercised, not asserted.**
+
+- The new type check was run *before* the data was fixed and rejected the real
+  claim with exit 1 — `frontier.would_settle must be a string, got list`.
+- `--check` was run against a deliberately dirtied `DASHBOARD.md` and exited 1,
+  then against the restored file and exited 0.
+
+**Gated in both aggregates, deliberately.** `--check` joins `generated-trackers`
+in the `justfile` (beside `gen-plan.py` and `gen-adr-index.py`, the other two
+generated views) and `check.sh` gains `claims-validate` and `claims-dashboard`.
+The claim ledger's structural gates previously ran only from `just claims`, which
+is not part of `just check`; both are seconds long and need nothing external, so
+the no-`just` fallback had no reason to be blind to them. The certificate pass
+stays out of both — it needs the gitignored `drat-trim` clone.
+
+**Next for this lane.** The larger half of finding 8: **40 of 162 checker runs
+across 36 settled facts exit 0 on completion alone**, including
+`nat_axiom_inventory`, which prints its number and exits 0 whatever it is — so
+`axiom_footprint: []` on 31 kernel-lean facts, this project's headline
+axiom-freedom metric, is asserted by nothing. Re-measure the count first
+(`b94b56425` already fixed one example), then make each checker's exit status
+depend on its finding, one exercised negative control per fix.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 

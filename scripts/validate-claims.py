@@ -627,6 +627,26 @@ def validate_claim(path: Path, fragment_ids: set[str], curriculum_ids: set[str],
                 fail(errors, f"{path}: frontier missing '{k}'")
             for k in set(fr) - {"known", "would_settle", "attack_notes"}:
                 fail(errors, f"{path}: frontier unknown field '{k}'")
+            # TYPES, not just names. This block previously checked which keys
+            # were present and never what they held, so a `would_settle` written
+            # as a one-element LIST passed 104 claims with 0 errors while
+            # violating claim.schema.json ("type": "string") -- and crashed
+            # gen-claims-dashboard.py, which is how it was finally noticed.
+            # A field name the checker knows and whose type it does not is the
+            # same decoration the schema_drift() check below exists to prevent.
+            if isinstance(fr.get("known"), list):
+                for i, k in enumerate(fr["known"]):
+                    if not isinstance(k, str):
+                        fail(errors, f"{path}: frontier.known[{i}] must be a string, "
+                                     f"got {type(k).__name__}")
+            elif "known" in fr:
+                fail(errors, f"{path}: frontier.known must be an array of strings, "
+                             f"got {type(fr['known']).__name__}")
+            for k in ("would_settle", "attack_notes"):
+                if k in fr and not isinstance(fr[k], str):
+                    fail(errors, f"{path}: frontier.{k} must be a string, "
+                                 f"got {type(fr[k]).__name__} "
+                                 f"(claim.schema.json declares \"type\": \"string\")")
     if status not in {"conjectured", "open"} and "frontier" in c:
         fail(errors, f"{path}: frontier is only for conjectured/open claims")
 

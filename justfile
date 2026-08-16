@@ -312,11 +312,20 @@ smtcomp-resume:
 # 67 and 60 touches in 24 hours -- because the session protocol told every lane
 # to append to them. These two gates make a hand edit a failure instead of
 # somebody else's lost line.
+#
+# The claim dashboard is the third such view and was gated by NOTHING until
+# 2026-08-16. It had been crashing (a `would_settle` written as a list, which
+# claim.schema.json forbids and validate-claims.py did not type-check), so the
+# committed file -- headed "Auto-generated. Do not edit by hand." -- still
+# reported 38 claims across 1 family against an actual 104 across 3, and showed
+# the flagship R_4(5(x-y)=4z) result as `open` at "> 740" when the ledger had it
+# `computed` at exactly 741. Nobody edited it wrongly; nobody ran it at all.
 generated-trackers:
     python3 -m unittest scripts.tests.test_gen_plan
     python3 scripts/gen-plan.py --check
     python3 -m unittest scripts.tests.test_gen_adr_index
     python3 scripts/gen-adr-index.py --check
+    python3 scripts/gen-claims-dashboard.py --check
 
 # The `axeyum-solver` decomposition ratchet (docs/refactor-2026-08/03).
 # `axeyum-solver` is 46% of the workspace and the plan is to cut crates out of
