@@ -81,6 +81,7 @@ mod euclid;
 mod nat_abs;
 mod ops;
 mod order;
+mod rat;
 mod sign;
 mod statements;
 mod sub_nat_nat;
@@ -276,6 +277,13 @@ pub struct IntPrelude {
     pub nat_abs: NameId,
     /// `of_nat_nat_abs_of_nonneg : ∀ a, 0 ≤ a → ofNat (natAbs a) = a`.
     pub of_nat_nat_abs_of_nonneg: NameId,
+
+    // --- the rationals, as a normalised structure -----------------------------
+    /// `Rat : Type` — a normalised `num/den` pair carrying its own positivity
+    /// and reducedness proofs. Not a quotient: this kernel has no `Quot.sound`.
+    pub rat: NameId,
+    /// `Rat.mk : (num : Int) → (den : Nat) → 1 ≤ den → gcd (natAbs num) den = 1 → Rat`.
+    pub rat_mk: NameId,
     /// `eq_em : ∀ (a b : Int), Or (Eq Int a b) (Not (Eq Int a b))`.
     pub eq_em: NameId,
 }
@@ -287,6 +295,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
     let anon = kernel.anon();
     let z = kernel.name_str(anon, "Int");
     let child = |kernel: &mut Kernel, name: &str| kernel.name_str(z, name);
+    let rat = kernel.name_str(anon, "Rat");
     IntPrelude {
         logic: nat.logic,
         nat,
@@ -358,6 +367,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         euclid_neg_succ: child(kernel, "euclid_neg_succ"),
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
+        rat,
+        rat_mk: kernel.name_str(rat, "mk"),
         eq_em: child(kernel, "eq_em"),
     }
 }
@@ -423,6 +434,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euclid::declare_decomposition(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
+        rat::declare_rat(&mut d)?;
         Ok(prelude)
     })();
     match built {

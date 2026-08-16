@@ -772,3 +772,95 @@ fn nat_abs_computes_and_round_trips() {
         "the round-trip lemma rests on a trusted declaration"
     );
 }
+
+/// A concrete rational is constructible, and a non-normalised one is not.
+///
+/// `Rat.mk` carries two proof fields, and this test discharges both the way a
+/// smart constructor will: positivity from `le_succ_succ`, and reducedness by
+/// `rfl` — which works only because **`Nat.gcd` computes in this kernel**.
+/// Measured here before relying on it: `gcd 1 2` is definitionally `1`, even
+/// though `gcd` is defined by well-founded recursion and `WellFounded.fix` does
+/// not generally reduce by iota.
+///
+/// The rejection half is the point. `2/4` differs from `1/2` only in that its
+/// `reduced` field is false, so if the kernel accepted it the structure would be
+/// carrying a proof obligation it does not enforce.
+#[test]
+fn rat_admits_a_normalised_pair_and_rejects_an_unreduced_one() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let numeral = |k: &mut Kernel, n: usize| {
+        let mut value = k.const_(p.nat.zero, vec![]);
+        for _ in 0..n {
+            let succ = k.const_(p.nat.succ, vec![]);
+            value = k.app(succ, value);
+        }
+        value
+    };
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+
+    // `gcd` really does reduce; the `rfl` below depends on it.
+    let one = numeral(&mut k, 1);
+    let two = numeral(&mut k, 2);
+    let gcd = k.const_(p.nat.gcd, vec![]);
+    let computed = {
+        let at_one = k.app(gcd, one);
+        k.app(at_one, two)
+    };
+    assert!(
+        k.def_eq(computed, one),
+        "gcd 1 2 must reduce to 1 for a rational's `reduced` field to be rfl"
+    );
+
+    // 1/2 : num = ofNat 1, den = 2, 1 <= 2, gcd (natAbs 1) 2 = 1.
+    let build = |k: &mut Kernel, numerator: usize, denominator: usize| {
+        let zero = k.const_(p.nat.zero, vec![]);
+        let num = {
+            let ctor = k.const_(p.of_nat, vec![]);
+            let magnitude = numeral(k, numerator);
+            k.app(ctor, magnitude)
+        };
+        let den = numeral(k, denominator);
+        // 1 <= den, for den = succ (succ .. zero): le_succ_succ zero (den-1) (zero_le _)
+        let predecessor = numeral(k, denominator - 1);
+        let positive = {
+            let base = {
+                let lemma = k.const_(p.nat.zero_le, vec![]);
+                k.app(lemma, predecessor)
+            };
+            let lemma = k.const_(p.nat.le_succ_succ, vec![]);
+            let at_zero = k.app(lemma, zero);
+            let at_pred = k.app(at_zero, predecessor);
+            k.app(at_pred, base)
+        };
+        // rfl : gcd (natAbs num) den = 1, by computation.
+        let unit = numeral(k, 1);
+        let reduced = {
+            let level = {
+                let zero = k.level_zero();
+                k.level_succ(zero)
+            };
+            let refl = k.const_(p.logic.eq_refl, vec![level]);
+            let at_ty = k.app(refl, nat_ty);
+            k.app(at_ty, unit)
+        };
+        let ctor = k.const_(p.rat_mk, vec![]);
+        let at_num = k.app(ctor, num);
+        let at_den = k.app(at_num, den);
+        let at_pos = k.app(at_den, positive);
+        k.app(at_pos, reduced)
+    };
+
+    let half = build(&mut k, 1, 2);
+    let inferred = k.infer(half).expect("1/2 must be a well-formed Rat");
+    let rendered = k.render_lean(inferred);
+    assert!(rendered.contains("Rat"), "unexpected type: {rendered}");
+
+    // 2/4 is not reduced: gcd 2 4 computes to 2, so the `rfl` cannot check.
+    let unreduced = build(&mut k, 2, 4);
+    assert!(
+        k.infer(unreduced).is_err(),
+        "Rat accepted 2/4, whose `reduced` field is false"
+    );
+}

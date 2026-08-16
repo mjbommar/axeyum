@@ -88,7 +88,22 @@
 > `∃ q, 1 = d·q`, so the remaining cases are `d = 0` (absurd) and `d = 1` (refl).
 >
 > Revised order: `natAbs` ✅ → `eq_one_of_dvd_one` ✅ → coprimality ✅
-> (`Nat.coprime_of_bezout_one`) → the `Rat` structure → `normalize`.
+> (`Nat.coprime_of_bezout_one`) → the `Rat` structure ✅ → `normalize`.
+>
+> **`Rat` is declared**, as an inductive with one constructor and four fields:
+> `num : Int`, `den : Nat`, `1 ≤ den`, and `gcd (natAbs num) den = 1`. Positivity
+> is `1 ≤ den` rather than Lean's `den ≠ 0` because our order development
+> produces and consumes exactly that shape — it is what `div_mod_exists`,
+> `mul_left_cancel_of_pos` and `dvd_add_right_cancel_of_pos` all take — so the
+> conversion Lean pays at each use is simply absent here.
+>
+> **Measured, and it decided the design: `Nat.gcd` computes in this kernel.**
+> `gcd 1 2` is definitionally `1` even though `gcd` is defined by well-founded
+> recursion and `WellFounded.fix` does not generally reduce by iota. So a
+> concrete rational's `reduced` field is discharged by `rfl`, and `1/2` is built
+> with no lemma at all. The test also requires `2/4` to be **rejected** — it
+> differs only in that its `reduced` field is false, so accepting it would mean
+> the structure carries an obligation it does not enforce.
 >
 > **Coprimality: every ingredient is present, and the obstacle is plumbing not
 > mathematics.** `d := gcd a b` divides `a` and `b` (`gcd_dvd_left`/`_right`),
