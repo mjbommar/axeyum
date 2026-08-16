@@ -109,6 +109,15 @@
 > `def_eq` that it lands on `1/1`, that `1/2 · 1/3` is `1/6`, and that `1/6` and
 > `1/2` stay distinguishable.
 >
+> **`Rat.add` and `Rat.neg` complete the basic operations.** Addition
+> renormalises for the same reason multiplication does — `1/6 + 1/3` reaches
+> `9/18` over the common denominator. Negation is the opposite case: it rebuilds
+> the pair *directly*, because `Int.nat_abs_neg` says the magnitude the `reduced`
+> field speaks of is unchanged, so no renormalisation is needed. Checked by
+> `def_eq`: `1/6 + 1/3 = 1/2`, `neg` is an involution that moves the value, and
+> `1/2 + (−1/2) = 0` — the last of which drives a genuinely negative numerator
+> through `normalize`'s `negSucc` branch.
+>
 > **Four more, all measured as absent before building.** `Int.nat_abs_neg_of_nat`
 > (`natAbs (negOfNat k) = k`) is needed because `negOfNat` is a `Nat.rec`
 > definition and so does *not* reduce on a variable — under a case split it does,

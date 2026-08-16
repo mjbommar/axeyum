@@ -192,3 +192,45 @@ impl NatAbsOps for IntDev<'_> {
         self.const_app(name, &[a])
     }
 }
+
+/// `nat_abs_neg : ∀ (n : Int), natAbs (neg n) = natAbs n`.
+///
+/// Negation preserves magnitude. `Rat.neg` needs it: negating a numerator must
+/// leave the `reduced` field provable, and that field speaks of `natAbs`.
+///
+/// Both branches are cheap once split. `neg (ofNat k)` is `negOfNat k`, so the
+/// goal is [`declare_nat_abs_neg_of_nat`]; `neg (negSucc k)` is `ofNat (succ k)`
+/// and `natAbs` computes on both sides, so it is `rfl`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_nat_abs_neg(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+
+    d.int_theorem(p.nat_abs_neg, 1, &|d, v| {
+        let statement = |d: &mut IntDev<'_>, args: &[ExprId]| {
+            let a = args[0];
+            let negated = d.ineg(a);
+            let left = d.nat_abs(negated);
+            let right = d.nat_abs(a);
+            d.eq(left, right)
+        };
+        let stmt = statement(d, v);
+        let proof = case_split(d, v, &statement, &|d, b| {
+            let magnitude = b[0].1;
+            match b[0].0 {
+                // `neg (ofNat k)` is `negOfNat k`, and `natAbs (ofNat k)` is `k`.
+                Shape::OfNat => d.const_app(p.nat_abs_neg_of_nat, &[magnitude]),
+                // `neg (negSucc k)` is `ofNat (succ k)`; both sides compute to
+                // `succ k`.
+                Shape::NegSucc => {
+                    let successor = d.succ(magnitude);
+                    d.refl(successor)
+                }
+            }
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}

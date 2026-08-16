@@ -1018,3 +1018,79 @@ fn rat_mul_renormalises_two_thirds_times_three_halves_to_one() {
         "1/6 and 1/2 compared equal — the checks above would be meaningless"
     );
 }
+
+/// `Rat.add` renormalises and `Rat.neg` is an involution.
+///
+/// `1/6 + 1/3` reaches `9/18` over the common denominator before reduction, so
+/// addition has the same obligation multiplication does. Negation is the
+/// opposite case — it rebuilds the pair directly, because `Int.nat_abs_neg`
+/// says the magnitude the `reduced` field speaks of is unchanged.
+#[test]
+fn rat_add_renormalises_and_neg_is_an_involution() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let numeral = |k: &mut Kernel, n: usize| {
+        let mut value = k.const_(p.nat.zero, vec![]);
+        for _ in 0..n {
+            let succ = k.const_(p.nat.succ, vec![]);
+            value = k.app(succ, value);
+        }
+        value
+    };
+    let zero = k.const_(p.nat.zero, vec![]);
+    let rational = |k: &mut Kernel, numerator: usize, denominator: usize| {
+        let num = {
+            let ctor = k.const_(p.of_nat, vec![]);
+            let magnitude = numeral(k, numerator);
+            k.app(ctor, magnitude)
+        };
+        let den = numeral(k, denominator);
+        let positive = {
+            let predecessor = numeral(k, denominator - 1);
+            let base = {
+                let lemma = k.const_(p.nat.zero_le, vec![]);
+                k.app(lemma, predecessor)
+            };
+            let lemma = k.const_(p.nat.le_succ_succ, vec![]);
+            let at_zero = k.app(lemma, zero);
+            let at_pred = k.app(at_zero, predecessor);
+            k.app(at_pred, base)
+        };
+        let normalize = k.const_(p.rat_normalize, vec![]);
+        let at_num = k.app(normalize, num);
+        let at_den = k.app(at_num, den);
+        k.app(at_den, positive)
+    };
+    let plus = |k: &mut Kernel, a: ExprId, b: ExprId| {
+        let add = k.const_(p.rat_add, vec![]);
+        let at_a = k.app(add, a);
+        k.app(at_a, b)
+    };
+    let negate = |k: &mut Kernel, a: ExprId| {
+        let neg = k.const_(p.rat_neg, vec![]);
+        k.app(neg, a)
+    };
+
+    // 1/6 + 1/3 = 9/18 = 1/2
+    let sixth = rational(&mut k, 1, 6);
+    let third = rational(&mut k, 1, 3);
+    let sum = plus(&mut k, sixth, third);
+    let half = rational(&mut k, 1, 2);
+    assert!(k.def_eq(sum, half), "1/6 + 1/3 did not renormalise to 1/2");
+    assert!(
+        !k.def_eq(sum, third),
+        "1/2 and 1/3 compared equal — the check above would be meaningless"
+    );
+
+    // neg is an involution, and moves the value.
+    let negated = negate(&mut k, half);
+    let twice = negate(&mut k, negated);
+    assert!(k.def_eq(twice, half), "neg is not an involution on 1/2");
+    assert!(!k.def_eq(negated, half), "neg left 1/2 unchanged");
+
+    // x + (-x) = 0
+    let cancelled = plus(&mut k, half, negated);
+    let origin = rational(&mut k, 0, 1);
+    assert!(k.def_eq(cancelled, origin), "1/2 + (-1/2) is not 0");
+}

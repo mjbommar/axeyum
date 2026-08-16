@@ -439,3 +439,168 @@ pub(super) fn declare_arithmetic(d: &mut IntDev<'_>) -> Result<(), KernelError> 
     }
     Ok(())
 }
+
+/// Admit `Rat.reduced`, `Rat.neg` and `Rat.add`.
+///
+/// `Rat.reduced` recovers the coprimality field the same way `Rat.den_pos`
+/// recovers positivity — by eliminating `Rat.rec` into `Prop`. With both fields
+/// reachable, `Rat.neg` can rebuild a value directly instead of renormalising:
+/// negation cannot break reducedness, because
+/// [`super::nat_abs::declare_nat_abs_neg`] says it does not change the
+/// magnitude the field is about.
+///
+/// `Rat.add` does renormalise, for the same reason `Rat.mul` does — `1/6 + 1/3`
+/// is `9/18` before reduction.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if a constructed term does not check.
+pub(super) fn declare_more_arithmetic(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let rat_ty = d.kernel().const_(p.rat, vec![]);
+
+    // Rat.reduced : ∀ q, gcd (natAbs (Rat.num q)) (Rat.den q) = 1
+    {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let claim = |d: &mut IntDev<'_>, x: ExprId| {
+            let numerator = d.const_app(p.rat_num, &[x]);
+            let magnitude = d.const_app(p.nat_abs, &[numerator]);
+            let denominator = d.const_app(p.rat_den, &[x]);
+            let common = NatOps::gcd(d, magnitude, denominator);
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            d.eq(common, unit)
+        };
+        let motive = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let body = claim(d, x);
+            d.lam_fv(x_fv, rat_ty, body)
+        };
+        let minor = {
+            let int_ty = d.int_ty();
+            let num_fv = d.fresh_fvar();
+            let num = d.kernel().fvar(num_fv);
+            let den_fv = d.fresh_fvar();
+            let den = d.kernel().fvar(den_fv);
+            let positive_ty = {
+                let zero = d.zero();
+                let unit = d.succ(zero);
+                NatOps::le(d, unit, den)
+            };
+            let positive_fv = d.fresh_fvar();
+            let reduced_ty = {
+                let magnitude = d.const_app(p.nat_abs, &[num]);
+                let common = NatOps::gcd(d, magnitude, den);
+                let zero = d.zero();
+                let unit = d.succ(zero);
+                d.eq(common, unit)
+            };
+            let reduced_fv = d.fresh_fvar();
+            let reduced = d.kernel().fvar(reduced_fv);
+            let with_reduced = d.lam_fv(reduced_fv, reduced_ty, reduced);
+            let with_positive = d.lam_fv(positive_fv, positive_ty, with_reduced);
+            let with_den = d.lam_fv(den_fv, nat, with_positive);
+            d.lam_fv(num_fv, int_ty, with_den)
+        };
+        let level_zero = d.kernel().level_zero();
+        let rec = d.kernel().const_(p.rat_rec, vec![level_zero]);
+        let body = d.apply(rec, &[motive, minor, q]);
+        let ty = {
+            let inner = claim(d, q);
+            d.pi_fv(q_fv, rat_ty, inner)
+        };
+        let value = d.lam_fv(q_fv, rat_ty, body);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.rat_reduced,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // Rat.neg q = Rat.mk (neg (num q)) (den q) (den_pos q) (reduced, transported)
+    {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let numerator = d.const_app(p.rat_num, &[q]);
+        let negated = d.ineg(numerator);
+        let denominator = d.const_app(p.rat_den, &[q]);
+        let positive = d.const_app(p.rat_den_pos, &[q]);
+        let reduced = d.const_app(p.rat_reduced, &[q]);
+        let magnitude = d.const_app(p.nat_abs, &[numerator]);
+        let negated_magnitude = d.const_app(p.nat_abs, &[negated]);
+        let preserved = d.const_app(p.nat_abs_neg, &[numerator]);
+        let restated = {
+            let motive = d.eq_motive(magnitude, &|d, x| {
+                let common = NatOps::gcd(d, x, denominator);
+                let zero = d.zero();
+                let unit = d.succ(zero);
+                d.eq(common, unit)
+            });
+            let back = d.symm(negated_magnitude, magnitude, preserved);
+            d.transport(magnitude, motive, reduced, negated_magnitude, back)
+        };
+        let constructor = d.kernel().const_(p.rat_mk, vec![]);
+        let body = d.apply(constructor, &[negated, denominator, positive, restated]);
+        let value = d.lam_fv(q_fv, rat_ty, body);
+        let ty = d.arrow(rat_ty, rat_ty);
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.rat_neg,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(DERIVED_HEIGHT),
+        })?;
+    }
+
+    // Rat.add x y = normalize (num x * den y + num y * den x) (den x * den y)
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+
+        let left_num = d.const_app(p.rat_num, &[x]);
+        let right_num = d.const_app(p.rat_num, &[y]);
+        let left_den = d.const_app(p.rat_den, &[x]);
+        let right_den = d.const_app(p.rat_den, &[y]);
+        let numerator = {
+            let first = {
+                let scale = d.of_nat(right_den);
+                d.imul(left_num, scale)
+            };
+            let second = {
+                let scale = d.of_nat(left_den);
+                d.imul(right_num, scale)
+            };
+            d.iadd(first, second)
+        };
+        let denominator = NatOps::mul(d, left_den, right_den);
+        let positive = {
+            let left = d.const_app(p.rat_den_pos, &[x]);
+            let right = d.const_app(p.rat_den_pos, &[y]);
+            d.const_app(p.nat.one_le_mul, &[left_den, right_den, left, right])
+        };
+        let normalize = d.kernel().const_(p.rat_normalize, vec![]);
+        let body = d.apply(normalize, &[numerator, denominator, positive]);
+        let value = {
+            let with_y = d.lam_fv(y_fv, rat_ty, body);
+            d.lam_fv(x_fv, rat_ty, with_y)
+        };
+        let ty = {
+            let inner = d.arrow(rat_ty, rat_ty);
+            d.arrow(rat_ty, inner)
+        };
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.rat_add,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(DERIVED_HEIGHT),
+        })?;
+    }
+    Ok(())
+}

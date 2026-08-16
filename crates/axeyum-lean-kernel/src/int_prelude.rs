@@ -280,6 +280,9 @@ pub struct IntPrelude {
     /// `nat_abs_neg_of_nat : ∀ k, natAbs (negOfNat k) = k` — the magnitude of a
     /// negated natural is that natural.
     pub nat_abs_neg_of_nat: NameId,
+    /// `nat_abs_neg : ∀ n, natAbs (neg n) = natAbs n` — negation preserves
+    /// magnitude.
+    pub nat_abs_neg: NameId,
 
     // --- the rationals, as a normalised structure -----------------------------
     /// `Rat : Type` — a normalised `num/den` pair carrying its own positivity
@@ -303,6 +306,13 @@ pub struct IntPrelude {
     pub rat_den_pos: NameId,
     /// `Rat.mul : Rat → Rat → Rat` — multiplication, renormalising the product.
     pub rat_mul: NameId,
+    /// `Rat.reduced : ∀ q, gcd (natAbs (Rat.num q)) (Rat.den q) = 1` — the
+    /// reducedness field, projected.
+    pub rat_reduced: NameId,
+    /// `Rat.neg : Rat → Rat` — negation, which preserves reducedness.
+    pub rat_neg: NameId,
+    /// `Rat.add : Rat → Rat → Rat` — addition over a common denominator.
+    pub rat_add: NameId,
     /// `eq_em : ∀ (a b : Int), Or (Eq Int a b) (Not (Eq Int a b))`.
     pub eq_em: NameId,
 }
@@ -387,6 +397,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
+        nat_abs_neg: child(kernel, "nat_abs_neg"),
         rat,
         rat_mk: kernel.name_str(rat, "mk"),
         rat_normalize: kernel.name_str(rat, "normalize"),
@@ -395,6 +406,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         rat_den: kernel.name_str(rat, "den"),
         rat_den_pos: kernel.name_str(rat, "den_pos"),
         rat_mul: kernel.name_str(rat, "mul"),
+        rat_reduced: kernel.name_str(rat, "reduced"),
+        rat_neg: kernel.name_str(rat, "neg"),
+        rat_add: kernel.name_str(rat, "add"),
         eq_em: child(kernel, "eq_em"),
     }
 }
@@ -461,9 +475,11 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         nat_abs::declare_nat_abs(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
+        nat_abs::declare_nat_abs_neg(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;
+        rat::declare_more_arithmetic(&mut d)?;
         Ok(prelude)
     })();
     match built {
