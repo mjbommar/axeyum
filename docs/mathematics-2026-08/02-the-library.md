@@ -87,8 +87,24 @@
 > `Nat.not_dvd_one_of_two_le` covers `d ≥ 2` and `Nat.dvd d 1` unfolds to
 > `∃ q, 1 = d·q`, so the remaining cases are `d = 0` (absurd) and `d = 1` (refl).
 >
-> Revised order: `natAbs` ✅ → `eq_one_of_dvd_one` → coprimality after division →
-> the `Rat` structure → `normalize`.
+> Revised order: `natAbs` ✅ → `eq_one_of_dvd_one` ✅ → coprimality after division
+> → the `Rat` structure → `normalize`.
+>
+> **Coprimality: every ingredient is present, and the obstacle is plumbing not
+> mathematics.** `d := gcd a b` divides `a` and `b` (`gcd_dvd_left`/`_right`),
+> hence all four products (`dvd_mul_right_of_dvd`) and both bracketed sums
+> (`dvd_add`). Bézout's `(1 + a·mn) + b·nn = a·mp + b·np` rearranges by
+> `add_assoc`/`add_comm` to `T = S + 1`, and
+> `dvd_add_right_cancel_of_pos : ∀ k m n, 1 ≤ k → k∣m → k∣(m+n) → k∣n` yields
+> `d ∣ 1`, which `eq_one_of_dvd_one` closes. A case split rules out `d = 0`,
+> where `d ∣ T` would force the successor `S + 1` to be zero.
+>
+> What stopped a first attempt was **peeling `bezout`'s four nested `Exists`**:
+> each intermediate predicate has to match exactly what `bezout_witnesses`
+> constructed, and a hand-rolled recursive peeler got that wrong. The fix is to
+> add the eliminator *beside the builder* in `nat_prelude/ops.rs`, sharing the
+> code path so the two cannot drift — the same "build the checker from the
+> builder" discipline this repository already applies to gates.
 
 **The state.** One number system is proved. The rest are assumed or absent.
 
