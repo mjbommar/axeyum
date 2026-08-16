@@ -60,7 +60,14 @@ one day:
 | `axeyum-rewrite` manifest | `precondition` is a `String`, presence-checked only — 57 rules, and the prose field was the only per-rule field carrying applicability, and the only one nothing read |
 | `axeyum-search` `colouring.rs:10` | cites `tests/encoding_parity.rs`, which **does not exist** |
 
-Three are fixed. The fourth is [`02`](02-composition.md) W3.
+**All four are now fixed.** The fourth — `colouring.rs:10` citing a
+`tests/encoding_parity.rs` that did not exist — was closed on 2026-08-16 by
+writing the test rather than deleting the claim, which is the direction
+[`02`](02-composition.md) W3 required. Worth recording how it ended: the two
+encoders agreed byte for byte on the very first run, and the Python generator of
+record agreed with both. **The invariant was true the whole time; only the guard
+was missing.** That is the good outcome, and it is also the one that makes a
+prose-only guard so easy to leave in place — nothing was ever visibly wrong.
 
 **The rule this yields**, and it is worth stating as policy: *if a comment
 describes a check, either the check exists or the comment goes — in the same

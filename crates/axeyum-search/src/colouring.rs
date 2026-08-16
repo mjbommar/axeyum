@@ -7,7 +7,15 @@
 //! `scripts/gen-rado-instance.py` on the Rado family. The Python script is the
 //! generator of record named by the claim ledger; a divergence between the two
 //! would silently invalidate every stored certificate, so
-//! `tests/encoding_parity.rs` compares them directly.
+//! `tests/encoding_parity.rs` compares them directly — in two layers, against
+//! `axeyum-cnf`'s encoder and against the Python script itself, the second
+//! failing closed if the interpreter is absent.
+//!
+//! That test did not exist until 2026-08-16. This paragraph described it for
+//! weeks while nothing ran; it was the last of the four prose-only guards found
+//! on 2026-08-14. The encoders did agree, byte for byte, on the first run — the
+//! invariant held and only the check was missing, which is the good version of
+//! that discovery and not a reason to have left it unwritten.
 //!
 //! # Variable convention
 //!

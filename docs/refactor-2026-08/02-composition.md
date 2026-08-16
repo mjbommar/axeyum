@@ -127,6 +127,17 @@ Collapse `axeyum-search`'s copy onto `axeyum_cnf::colouring`, or write
 state where the comment is deleted and the duplication remains** — that trades a
 visible defect for an invisible one.
 
+> **DONE 2026-08-16, by the second route.** `crates/axeyum-search/tests/encoding_parity.rs`
+> now checks this crate's encoder against `axeyum-cnf`'s *and* against
+> `scripts/gen-rado-instance.py`, the generator of record, with the Python layer
+> failing closed. Both agreed byte for byte on the first run.
+>
+> The duplication itself remains, deliberately: collapsing the two encoders is a
+> larger change, and with a parity gate in place a divergence can no longer ship
+> silently — which was the actual risk. The search encoder is the one cube
+> covers and local search run through, so a formula that drifted from the
+> ledger's stored CNF would have been a valid proof of the wrong statement.
+
 ### W4 — Name the composition boundaries in the dependency contract
 
 [`foundational-dag.md`](../research/08-planning/foundational-dag.md) already
