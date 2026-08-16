@@ -1105,7 +1105,7 @@ is exact:
 
 **That assumption is invisible in the LoC count.** Lean's kernel is 7,888 lines
 *plus a prelude nobody checks*. Ours is ~15,500 lines *plus 32 assumptions nobody
-has proved* (real 30 + integer 1 + string `append` 1; T6.0.6/TL3.2 — it was 65
+has proved* (real 30 + integer 0 + string `append` 1; T6.0.6/TL3.2 — it was 65
 until ℤ was constructed over the proved ℕ development). Same shape,
 and ours is worse: Lean's prelude is at least
 *definitional*, while our arithmetic carrier is an opaque `Declaration::Axiom`.

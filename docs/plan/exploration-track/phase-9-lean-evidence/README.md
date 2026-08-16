@@ -105,7 +105,7 @@ undischarged axiom-ledger row.
 
 ## The live governance debt
 
-`docs/plan/lean-axiom-ledger-v1.json`: **32 prelude assumptions (30 real, 1 integer,
+`docs/plan/lean-axiom-ledger-v1.json`: **31 prelude assumptions (30 real, 1 integer,
 1 string)**, every row classified. It was 65 with every row `unclassified`; T9.1
 classified them and the integer development was then proved out, retiring 33.
 Discharging what remains is a prerequisite for R4+ claims. The counts here are

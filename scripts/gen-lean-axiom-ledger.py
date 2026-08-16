@@ -115,6 +115,24 @@ SURFACE_COUNT_LINE = re.compile(
 )
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
+# The preludes the kernel is expected to construct, as a CONSTANT rather than as
+# whatever the measurement happened to report.
+#
+# `Measurement.preludes` is derived from `surface_counts`, so it cannot police
+# coverage: delete a prelude from the measurement and it disappears from the
+# derived list too, and the loop over "preludes that have axiom rows" never looks
+# at it.  That blind spot was harmless while every prelude carried at least one
+# axiom.  It stopped being harmless when `integer` reached zero on 2026-08-16 --
+# the ledger's STRONGEST claim is precisely "axiom-free, declared by the
+# measurement rather than inferred from an empty result", and for the three
+# axiom-free preludes (`logic`, `nat`, `integer`) that claim rested on a
+# coverage line whose absence nothing detected.  An axiom-free prelude silently
+# dropping out of the inventory would have read as "still axiom-free".
+#
+# `test_a_prelude_dropping_out_of_coverage_fails` is the control, and it went
+# green-for-the-wrong-reason the moment `integer` hit zero.
+EXPECTED_PRELUDES: tuple[str, ...] = ("integer", "logic", "nat", "real", "string")
+
 # Anchored count phrasings.  Each entry is (label, pattern, quantity-per-group).
 # Anchoring on ledger vocabulary -- prelude names, "ledger", "prelude
 # assumptions" -- is what keeps the scan from matching unrelated integers in
@@ -369,6 +387,14 @@ def cross_check(measurement: Measurement) -> None:
                 f"{AXIOM_ROWS_COMMAND.split()[-1]} emitted {observed} axiom rows, "
                 f"{TRUSTED_SURFACE_COMMAND.split()[-1]} declared "
                 f"axiom={declared['axiom']}"
+            )
+    for prelude in EXPECTED_PRELUDES:
+        if prelude not in measurement.surface_counts:
+            raise LedgerError(
+                f"{prelude!r} has no coverage line in the trusted surface "
+                "measurement; an axiom-free prelude that vanishes reads as "
+                "'still axiom-free', which is the one thing this ledger must "
+                "never say by omission"
             )
     for prelude in {row["prelude"] for row in measurement.axiom_rows}:
         if prelude not in measurement.surface_counts:

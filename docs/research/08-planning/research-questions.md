@@ -1590,9 +1590,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     evidence.
   - [ADR-0465](../09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md)
     supersedes the numeric half: ℤ was constructed over the proved ℕ
-    development, the integer prelude's 1 assumption is now
-    `Int.euclidean_decomposition` alone, and the disclosure rule is generated
-    from the measurement instead of written down. The Nat prefix-deficit
+    development, the integer prelude's 0 assumptions are what remains after
+    `Int.euclidean_decomposition` — its last one — became a theorem on
+    2026-08-15, and the disclosure rule is generated from the measurement
+    instead of written down. The Nat prefix-deficit
     boundary for credited Rado rigidity is re-accepted unchanged.
 
 ## Source Pointers

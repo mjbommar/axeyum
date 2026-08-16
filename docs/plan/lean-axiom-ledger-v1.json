@@ -1,7 +1,7 @@
 {
   "version": 2,
   "title": "Axeyum Lean reconstruction prelude axiom ledger",
-  "population_as_of": "2026-08-15",
+  "population_as_of": "2026-08-16",
   "measurement": {
     "axiom_rows_command": "cargo run --quiet -p axeyum-lean-kernel --example prelude_axiom_inventory",
     "trusted_surface_command": "cargo run --quiet -p axeyum-lean-kernel --example nat_axiom_inventory",
@@ -15,10 +15,10 @@
     ],
     "trusted_surface": {
       "integer": {
-        "axiom": 1,
+        "axiom": 0,
         "opaque": 0,
         "quotient": 0,
-        "total_trusted": 1
+        "total_trusted": 0
       },
       "logic": {
         "axiom": 0,
@@ -46,22 +46,20 @@
       }
     },
     "axiom_counts": {
-      "integer": 1,
+      "integer": 0,
       "logic": 0,
       "nat": 0,
       "real": 30,
       "string": 1,
-      "total": 32
+      "total": 31
     }
   },
   "trust_policy": {
     "adr": "docs/research/09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md",
     "supersedes": "docs/research/09-decisions/adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md",
-    "integer_assumptions": 1,
-    "integer_assumption_names": [
-      "Int.euclidean_decomposition"
-    ],
-    "publication_rule": "Any checked dependency closure using the integer prelude must disclose 1 assumption (`Int.euclidean_decomposition`); credited Rado rigidity uses the zero-axiom Nat prefix-deficit encoding instead."
+    "integer_assumptions": 0,
+    "integer_assumption_names": [],
+    "publication_rule": "The integer prelude admits no assumption; a checked dependency closure using it inherits nothing from this ledger."
   },
   "classification_definitions": {
     "unclassified": "No semantic classification has been accepted yet.",
@@ -91,19 +89,6 @@
     "docs/research/08-planning/roadmap.md"
   ],
   "entries": [
-    {
-      "prelude": "integer",
-      "name": "Int.euclidean_decomposition",
-      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt Int.zero x1) -> Exists.{1} Int (fun (x3 : Int) => Exists.{1} Int (fun (x4 : Int) => And (Eq.{1} Int x0 (Int.add (Int.mul x1 x3) x4)) (And (Int.le Int.zero x4) (Int.lt x4 x1)))))))",
-      "type_sha256": "db11d59452e63e2bf02c37d587c101862fe902da7fbfef7d3c7b1a96ee4ab945",
-      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
-      "classification": "external-assumption",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Division with remainder. Derivable only from well-ordering or an induction principle, neither of which this profile admits over the opaque carrier `Z`; retained as a named assumption of the Diophantine/LIA route."
-    },
     {
       "prelude": "real",
       "name": "Real",
@@ -522,8 +507,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -539,8 +524,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -556,8 +541,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -573,8 +558,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -590,8 +575,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -607,8 +592,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -624,8 +609,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -641,8 +626,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -658,8 +643,24 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "integer",
+      "name": "Int.euclidean_decomposition",
+      "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt Int.zero x1) -> Exists.{1} Int (fun (x3 : Int) => Exists.{1} Int (fun (x4 : Int) => And (Eq.{1} Int x0 (Int.add (Int.mul x1 x3) x4)) (And (Int.le Int.zero x4) (Int.lt x4 x1)))))))",
+      "type_sha256": "db11d59452e63e2bf02c37d587c101862fe902da7fbfef7d3c7b1a96ee4ab945",
+      "source_path": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Division with remainder. Derivable only from well-ordering or an induction principle, neither of which this profile admits over the opaque carrier `Z`; retained as a named assumption of the Diophantine/LIA route.",
+      "retired_on": "2026-08-16",
+      "retirement_note": "Discharged: Int.euclidean_decomposition became a theorem over the proved Nat development, leaving the integer prelude with no assumption at all. Its witnesses are uniform per sign case — q = negSucc a and r = ofNat (K - succ b) on the negative branch — so no case needed a new axiom.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/int_prelude/euclid.rs",
+        "artifacts/facts/F-int-euclidean-decomposition.json"
       ]
     },
     {
@@ -675,8 +676,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -692,8 +693,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -709,8 +710,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -726,8 +727,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -743,8 +744,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -760,8 +761,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -777,8 +778,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -794,8 +795,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -811,8 +812,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -828,8 +829,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -845,8 +846,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -862,8 +863,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -879,8 +880,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -896,8 +897,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -913,8 +914,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -930,8 +931,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -947,8 +948,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -964,8 +965,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -981,8 +982,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -998,8 +999,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -1015,8 +1016,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -1032,8 +1033,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -1049,8 +1050,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     },
     {
@@ -1066,8 +1067,8 @@
       "retirement_note": "Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints.",
       "retirement_evidence": [
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
-        "docs/plan/status/35-int-keystone.md",
-        "docs/plan/status/36-int-remainder.md"
+        "docs/plan/archive/35-int-keystone.md",
+        "docs/plan/archive/36-int-remainder.md"
       ]
     }
   ]

@@ -8,13 +8,13 @@ This ledger inventories declarations actually admitted as trusted after construc
 
 ## Snapshot
 
-- **32 total assumptions:** integer 1, real 30, string 1.
-- Axiom-free preludes, enumerated rather than inferred from absence: `logic`, `nat`. An axiom-free prelude emits no rows, so the measurement declares its own coverage; a prelude that silently stopped being built fails the gate instead of shrinking the total.
+- **31 total assumptions:** real 30, string 1.
+- Axiom-free preludes, enumerated rather than inferred from absence: `integer`, `logic`, `nat`. An axiom-free prelude emits no rows, so the measurement declares its own coverage; a prelude that silently stopped being built fails the gate instead of shrinking the total.
 - 0 names are shared by the isolated real and integer preludes; ADR-0387's `Int.*` / `Real.*` namespaces make the packages composable.
-- Integer trust policy: [ADR-0465](../../research/09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md) — Any checked dependency closure using the integer prelude must disclose 1 assumption (`Int.euclidean_decomposition`); credited Rado rigidity uses the zero-axiom Nat prefix-deficit encoding instead.
-- **33 assumptions have been retired** from the trusted surface since this ledger was first frozen; they are kept below rather than deleted, because a reduction in the trusted base is the result, not a smaller table.
-- Classification: derivable-theorem 3, external-assumption 20, primitive-interface 9.
-- Discharge: planned 3, retained 29.
+- Integer trust policy: [ADR-0465](../../research/09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md) — The integer prelude admits no assumption; a checked dependency closure using it inherits nothing from this ledger.
+- **34 assumptions have been retired** from the trusted surface since this ledger was first frozen; they are kept below rather than deleted, because a reduction in the trusted base is the result, not a smaller table.
+- Classification: derivable-theorem 3, external-assumption 19, primitive-interface 9.
+- Discharge: planned 3, retained 28.
 
 ## Trusted surface by prelude
 
@@ -22,7 +22,7 @@ Counts are over the whole trusted surface, not `Declaration::Axiom` alone: `Opaq
 
 | Prelude | Axiom | Opaque | Quotient | Trusted total | Ledger rows |
 |---|---|---|---|---|---|
-| `integer` | 1 | 0 | 0 | 1 | 1 |
+| `integer` | 0 | 0 | 0 | 0 | 0 |
 | `logic` | 0 | 0 | 0 | 0 | 0 |
 | `nat` | 0 | 0 | 0 | 0 | 0 |
 | `real` | 30 | 0 | 0 | 30 | 30 |
@@ -43,7 +43,6 @@ Counts are over the whole trusted surface, not `Declaration::Axiom` alone: `Opaq
 
 | Prelude | Name | Type SHA-256 | Classification | Discharge | Owner | Source |
 |---|---|---|---|---|---|---|
-| `integer` | `Int.euclidean_decomposition` | `db11d59452e63e2bf02c37d587c101862fe902da7fbfef7d3c7b1a96ee4ab945` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/int_prelude.rs) |
 | `real` | `Real` | `73d4fe359be51073c75f6c2a03507b52a55364cf0c923d65def2fa12cb438933` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
 | `real` | `Real.add` | `f2e8a9c49ce5206d637c9c5ee49f06f6a3af55513878d9f7e8e384eea3aa4f81` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
 | `real` | `Real.add_assoc` | `010706d27846e58f8806ea5c1cf86f36006509e6ba0d1fe53c30bc6a815e0375` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
@@ -80,7 +79,7 @@ Counts are over the whole trusted surface, not `Declaration::Axiom` alone: `Opaq
 
 Rows the kernel no longer admits. They are retained because the interesting fact about a trust ledger is which way it moved.
 
-Retired by date: 2026-08-15 (33).
+Retired by date: 2026-08-15 (33), 2026-08-16 (1).
 
 | Prelude | Name | Retired | Type SHA-256 | Note |
 |---|---|---|---|---|
@@ -93,6 +92,7 @@ Retired by date: 2026-08-15 (33).
 | `integer` | `Int.add_neg` | 2026-08-15 | `5f8dff2caa3f9a0c45d532af52407506e3d9de23385c760328e5094f8e6c62a7` | Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints. |
 | `integer` | `Int.add_zero` | 2026-08-15 | `8b6f4f975687dab9c145b2abe816dbb4f49e25a21fa466e9e5072f60feb0db80` | Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints. |
 | `integer` | `Int.eq_em` | 2026-08-15 | `815531ec43bb75ccb38bb94fb77863a34d9f9235fb3e78c9c07439ecfcc40d3f` | Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints. |
+| `integer` | `Int.euclidean_decomposition` | 2026-08-16 | `db11d59452e63e2bf02c37d587c101862fe902da7fbfef7d3c7b1a96ee4ab945` | Discharged: Int.euclidean_decomposition became a theorem over the proved Nat development, leaving the integer prelude with no assumption at all. Its witnesses are uniform per sign case — q = negSucc a and r = ofNat (K - succ b) on the negative branch — so no case needed a new axiom. |
 | `integer` | `Int.le` | 2026-08-15 | `fb0d4590496986200c403ac1cfe3e5ad58a8be4d2fb551726c2262e1e4cc6b31` | Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints. |
 | `integer` | `Int.le_of_lt` | 2026-08-15 | `12f9daa9d0684a6f29684456cb56f90d95b89917f32299d0ba70a2cd8177a578` | Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints. |
 | `integer` | `Int.le_refl` | 2026-08-15 | `225ccf020467237aeef9c273c920eb77e1cdf2d2cfd33d16b15c2b85ff1bf963` | Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints. |
@@ -124,7 +124,7 @@ ADR-0387 requires this set to remain empty so integer and real packages can coex
 
 None.
 
-Read this weakly: it compares **ledger rows**, and the integer prelude now contributes 1 of them, so an empty intersection here is close to arithmetically forced. The aliasing hazard ADR-0387 names is over whole environments, and that is checked in the kernel, not here.
+Read this weakly: it compares **ledger rows**, and the integer prelude now contributes 0 of them, so an empty intersection here is close to arithmetically forced. The aliasing hazard ADR-0387 names is over whole environments, and that is checked in the kernel, not here.
 
 ## Next classification gate
 
