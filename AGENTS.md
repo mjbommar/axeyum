@@ -101,6 +101,13 @@ attach evidence, flip the status, record the footprint.
 
 ## Commands
 
+**These commands assume a gate-capable host.** Measured 2026-08-16, `lean` and
+`just` existed on one fleet host of five and `cargo-deny` on none, so running
+`just check` where `just` is absent silently degrades to the narrower
+`check.sh`. The baseline, the provisioning script, and which gate needs which
+toolchain are in
+[docs/contributor-guide/fleet-hosts.md](docs/contributor-guide/fleet-hosts.md).
+
 ```sh
 just check          # fmt + clippy + test + doc + foundational resources + docs link check (preferred)
 just foundational-resources  # validates foundational atlas/example packs + generated dashboards

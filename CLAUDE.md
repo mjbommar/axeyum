@@ -132,6 +132,15 @@ and the strand that matches your work, and pick the next task.
 
 ## Commands
 
+**These commands assume a gate-capable host.** They are not equally runnable
+everywhere: measured 2026-08-16, `lean` and `just` existed on one fleet host of
+five and `cargo-deny` on none, so an agent that runs `just check` on a host
+lacking `just` silently falls back to the narrower `check.sh` and reports it as
+the gate. The capability baseline, the provisioning script, and the map of which
+gate needs which toolchain are in
+[docs/contributor-guide/fleet-hosts.md](docs/contributor-guide/fleet-hosts.md).
+Confirm the host before believing the gate.
+
 ```sh
 just check          # the fullest aggregate gate (preferred)
 just foundational-resources  # validates foundational atlas/example packs + generated dashboards

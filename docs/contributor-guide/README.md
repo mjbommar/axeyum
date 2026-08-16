@@ -21,6 +21,12 @@ evidence, executable gates, decision anchors, and the next safe action.
    [multi-agent worktree protocol](multi-agent-worktrees.md) (the model) and
    [multi-agent operations](multi-agent-operations.md) (the operating discipline:
    green-before-merge gate + cross-worktree resource rules).
+7. Before believing a gate you ran on a compute host, check
+   [fleet hosts](fleet-hosts.md) — the capability baseline a machine must meet,
+   which gate needs which toolchain, and how to provision one. A gate's scope
+   silently depends on the machine it ran on: measured 2026-08-16, `lean` and
+   `just` existed on one host of five and the fleet's Rust nightlies spanned
+   4.5 months.
 
 ## Obligations for new public surface
 
