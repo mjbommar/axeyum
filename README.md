@@ -19,6 +19,22 @@ backend.
 > answer is allowed to be big and clever; being *sure* of the answer is done by
 > code small enough to audit.
 
+> **The second idea:** *the loop.* A proof library is normally a one-way
+> pipeline — people write proofs, a kernel checks them. Axeyum is a cycle: the
+> library gives the solver facts to reason with, the solver decides goals the
+> library needs, reconstruction turns those decisions into kernel-checked terms,
+> and a [fact ledger](artifacts/facts/) records each result together with the
+> exact set of assumptions it rests on. Every arrow exists today and the cycle
+> has closed end to end. Making it turn *without a person on any arrow* is what
+> this project is for.
+
+The measure that goes with the second idea is deliberately one a reader can
+check in a single command and a competitor cannot inflate: **how many
+assumptions remain underneath a result, and how many results the system
+established with nobody writing the proof.** Not throughput, and not benchmark
+position. `python3 scripts/validate-facts.py` reports the ledger;
+`theorem_axiom_footprint` reports what any individual theorem rests on.
+
 **Choose a path:** [try a query](#start-here) ·
 [see what you can build](#what-you-can-build-with-axeyum) ·
 [understand the architecture](#how-axeyum-fits-together) ·
@@ -77,6 +93,13 @@ a design. It is competitive on selected measured solver fragments and has a
 substantial Lean-checkable proof lane. It is not a drop-in Z3 replacement, a
 conformant interactive SMT-LIB 2.7 implementation, or a replacement for the Lean
 system, angr, or Unicorn.
+
+The loop above is likewise real but not yet automatic. Each arrow has run, and
+the whole cycle has run once end to end; what does not exist is a scheduler that
+turns it without a person choosing the next goal. Both ledgers are gated rather
+than asserted — `python3 scripts/validate-facts.py` and
+`python3 scripts/validate-claims.py` re-derive them — and the honest reading of
+any status here is whatever those commands print, not whatever this file says.
 
 The current measured denominators, important negative results, and precise
 meaning of "parity" are in **[Project State](docs/PROJECT-STATE.md)**. The

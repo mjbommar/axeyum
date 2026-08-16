@@ -17,6 +17,56 @@ and proof production
 choices should not paint the IR, solver trait, or evidence formats into a
 quantifier-free corner.
 
+## The Flywheel — what the increments are for
+
+Every task here is one turn of a single cycle. Know which arrow you are on:
+
+```
+        library (proved ℕ, ℤ, …)
+             │  gives the solver facts to reason with
+             ▼
+        solver (30 logics, CAS, quantifiers)
+             │  decides goals the library needs
+             ▼
+        reconstruction  →  kernel term  →  admitted, axiom-free
+             │  becomes a library theorem
+             └──────────────────────────────┐
+                                            │
+        the concept DAG and the fact ledger ┘  say what to prove next
+```
+
+A proof library is normally a one-way pipeline: people write proofs, a kernel
+checks them. This one is a cycle, and that is the architectural bet. **Every
+arrow already exists and the cycle has closed end to end**; what it has never
+been is *automatic*, and making it automatic is the point of the work — not
+theorem count, not benchmark position. The argument and the measured production
+rate are in
+[`docs/formalized-math-2026-08/05-throughput.md`](docs/formalized-math-2026-08/05-throughput.md).
+
+Two consequences for how you work:
+
+- **The metric is the trusted base, not the output volume.** Assumptions
+  remaining per prelude, and results the system established with nobody writing
+  the proof. Read both from the kernel — `nat_theorem_inventory`,
+  `int_theorem_inventory`, `theorem_axiom_footprint`, `nat_axiom_inventory` —
+  never from source text. Grepping `Declaration::Theorem` returns 1 against 119
+  real theorems, and three separate counts of this repository's theorems were
+  wrong before anyone built the environment to look.
+- **At N lanes the ledger IS the product, so a checker that cannot fail is worse
+  than no checker.** It does not slow the flywheel; it makes it manufacture
+  unfalsifiable claims at full speed. Audited 2026-08-15: 40 of 162 checker runs
+  across 36 settled facts exit 0 on completion alone, including the inventory
+  asserting axiom-freedom. Make a checker's exit status depend on what it found,
+  and confirm a tool's *coverage* includes your subject before believing its
+  zero.
+
+The fact ledger is `artifacts/facts/` (schema `artifacts/ontology/fact.schema.json`,
+gated by `python3 scripts/validate-facts.py`): one JSON file per mathematical
+proposition, carrying a formal statement, a status, its evidence and its axiom
+footprint. It is what the self-extension loop consumes — take an `open` fact
+whose `depends_on` are established, dispatch `formal.statement`, reconstruct,
+attach evidence, flip the status, record the footprint.
+
 ## Session Protocol
 
 1. Read [PLAN.md](PLAN.md) **first** — it carries current status, the next

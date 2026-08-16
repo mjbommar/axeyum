@@ -17,6 +17,52 @@ and proof production
 choices should not paint the IR, solver trait, or evidence formats into a
 quantifier-free corner.
 
+## The Flywheel — what the increments are for
+
+Every task in this repository is one turn of a single cycle. Know which arrow
+you are standing on:
+
+```
+        library (proved ℕ, ℤ, …)
+             │  gives the solver facts to reason with
+             ▼
+        solver (30 logics, CAS, quantifiers)
+             │  decides goals the library needs
+             ▼
+        reconstruction  →  kernel term  →  admitted, axiom-free
+             │  becomes a library theorem
+             └──────────────────────────────┐
+                                            │
+        the concept DAG and the fact ledger ┘  say what to prove next
+```
+
+A proof library is normally a one-way pipeline: people write proofs, a kernel
+checks them. This one is a cycle, and that is the whole architectural bet.
+**Every arrow already exists, and the cycle has closed end to end.** What it has
+never been is *automatic*. Making it automatic is the point of the work — not
+theorem count, not benchmark position. The argument, the measured production
+rate, and the constraints on it are in
+[`docs/formalized-math-2026-08/05-throughput.md`](docs/formalized-math-2026-08/05-throughput.md);
+the three parallel roadmap strands live beside it.
+
+Two consequences that change how you work, not just how you feel about it:
+
+- **The metric is the trusted base, not the output volume.** Assumptions
+  remaining per prelude, and results the system established with nobody writing
+  the proof. A referee checks both in one command; a competitor can inflate
+  neither. Read them from the kernel, never from source text or a doc — see the
+  inventory examples under Gotchas.
+- **At N lanes the ledger IS the product, so a checker that cannot fail is worse
+  than no checker.** It does not slow the flywheel; it makes it manufacture
+  unfalsifiable claims at full speed. Audited 2026-08-15: **40 of 162 checker
+  runs across 36 settled facts exit 0 on completion alone** — nothing in the
+  command makes the exit status depend on what the run found — and that set
+  included the inventory asserting axiom-freedom, this project's headline claim.
+  So: when you attach evidence, make the exit status depend on the finding; when
+  you touch a checker, delete one guard and require that **exactly one** test
+  dies. Six of seven guards in one suite were removable with everything still
+  green, because they all rejected through one shared check.
+
 ## Working Stance — we ship toward Z3 + Lean parity
 
 This is an ambitious, **achievable** build, and the job is to *complete it* — one
@@ -39,11 +85,13 @@ verifiable increment at a time, relentlessly. Adopt a builder's mentality:
   re-validate what they produce; commit; continue.
 - **Measure what matters.** Z3 parity is a *measured* claim — keep the head-to-head
   honest (Track 1, the public corpora). Lean parity is *every unsat/valid carries a
-  machine-checkable proof*. Drive both fronts; record the pulse in PLAN.md.
+  machine-checkable proof*. Drive both fronts; record the pulse in **your lane's**
+  `docs/plan/status/<lane>.md` and regenerate — PLAN.md is a generated view and
+  you never edit it (Session Protocol, below).
 
-Keep PLAN.md framed as an **active work queue**, never as an "exhausted frontier."
-If you catch yourself concluding the work is done for now, you're wrong — re-read
-PLAN.md and pick the next task.
+Keep the queue framed as **active work**, never as an "exhausted frontier." If you
+catch yourself concluding the work is done for now, you're wrong — re-read PLAN.md
+and the strand that matches your work, and pick the next task.
 
 ## Session Protocol
 
