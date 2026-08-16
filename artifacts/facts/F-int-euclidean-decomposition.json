@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:int-euclidean-decomposition",
+  "title": "Euclidean decomposition over the integers is derived, not assumed",
+  "statement": "For all integers t and k with 0 < k, there exist integers q and r such that t = k*q + r and 0 <= r < k. Established here as a THEOREM: the integer prelude, which previously asserted this, now assumes nothing at all.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.euclidean_decomposition : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt Int.zero x1) -> Exists.{1} Int (fun (x3 : Int) => Exists.{1} Int (fun (x4 : Int) => And (Eq.{1} Int x0 (Int.add (Int.mul x1 x3) x4)) (And (Int.le Int.zero x4) (Int.lt x4 x1)))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-div-mod-exists",
+    "F:nat-div-mod-unique"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.euclidean_decomposition",
+      "kind": "kernel-term",
+      "supports": "For all integers t and k with 0 < k, there exist q and r with t = k*q + r and 0 <= r < k.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- euclidean_decomposition 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.euclidean_decomposition[[:space:]]'",
+      "notes": "The `^theorem` anchor is the whole point of this row, not decoration. Until 2026-08-16 this declaration was an `axiom`, and the same command would print an `axiom` row and FAIL the grep. So the checker discriminates exactly the change the fact records -- it is bound to this declaration's name AND to its kind, and `int_theorem_inventory` additionally exits non-zero for a name that does not exist."
+    },
+    {
+      "id": "footprint-integer",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "notes": "Enumerates the built Int environment over the FULL trusted surface (Axiom/Opaque/Quotient) and exits non-zero on any member. Environment-wide on purpose, and sound as a footprint bound for the same reason the Nat rows are: a theorem cannot depend on a trusted declaration the environment does not contain, so an empty surface bounds every individual footprint by []. Measured 2026-08-16: `ok: integer trusted surface = 0`, down from 34 when the construction began."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:euclidean-division",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-16",
+    "established_by": "axeyum-lean-kernel int_prelude (int-euclid lane)",
+    "source": "hand-built foundational library"
+  },
+  "external_status": "proved"
+}

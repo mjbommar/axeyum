@@ -39,7 +39,13 @@ Results worth naming, each with its own diary in this folder:
 - **fp8/fp16/fp32 kernel equivalence**, exhaustive where the width permits, and
   a capability edge: neither z3 nor bitwuzla can decide *any* fp8 E5M2 query.
 - **ℤ constructed over proved ℕ** — 34 axioms to 6, 20 theorems with an empty
-  axiom footprint.
+  axiom footprint. **Now 0 axioms** (2026-08-16): `Int.euclidean_decomposition`,
+  the last assumption, is a theorem, and the Diophantine reconstructions it
+  backed depend on no library axiom at all — measured under real Lean.
+- **ℚ constructed over proved ℤ** (2026-08-16) — a normalised structure with both
+  proof fields discharged by `Rat.normalize`, which *demonstrably* normalises:
+  `2/4` and `1/2` are definitionally the same term. Not a quotient; this kernel
+  has no `Quot.sound`, and Lean core's own `Rat` is a structure too.
 - **R₄(5(x−y)=3z) = 625**, one cell of one family, and deliberately not the
   centre of this strand.
 
