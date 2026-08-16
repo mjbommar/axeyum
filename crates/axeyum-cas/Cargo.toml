@@ -22,7 +22,7 @@ axeyum-ir.workspace = true
 # polynomial-geometric Z-transform composition. Public CasExpr coefficients
 # remain checked i128 rationals. These are the same pure-Rust bignum crates
 # already used unconditionally by axeyum-ir.
-num-bigint = { version = "0.4" }
+num-bigint = { version = "0.5" }
 num-rational = { version = "0.4", default-features = false, features = ["num-bigint"] }
 num-traits = { version = "0.2" }
 
