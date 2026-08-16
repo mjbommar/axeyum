@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-add-neg-inverse",
+  "title": "Rational addition renormalises and negation is an additive inverse",
+  "statement": "Rat.add returns the reduced representative of a sum (1/6 + 1/3 is 1/2, reached as 9/18), Rat.neg is an involution that moves its argument, and x + (-x) is 0. Negation alone needs no renormalisation, because negating a numerator does not change the magnitude the reducedness field constrains.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def Rat.add : ((x0 : Rat) -> ((x1 : Rat) -> Rat))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-mul-renormalises"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-rat-add-neg-inverse",
+      "kind": "kernel-term",
+      "supports": "1/6 + 1/3 is 1/2 and is not 1/3; neg is an involution on 1/2 and does move it; 1/2 + (-1/2) is 0.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_add_renormalises_and_neg_is_an_involution 2>&1 | grep -qE '^test result: ok\\. 1 passed'",
+      "notes": "Bound to this test by name, with `1 passed` required so an empty filter cannot pass. The `1/2 + (-1/2) = 0` case is the one that matters most: it is the only check here that drives a genuinely NEGATIVE numerator through Rat.normalize's negSucc branch, which the ofNat-only cases never reach."
+    },
+    {
+      "id": "footprint-rat-add-neg-inverse",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- Rat is built in the integer environment, whose trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "notes": "Rat and its operations are admitted into the same environment as the integer development, so an empty trusted surface bounds their footprints. Environment-wide on purpose: a declaration cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:rational-arithmetic",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-16",
+    "established_by": "axeyum-lean-kernel int_prelude::rat (rational-scope lane)",
+    "source": "hand-built foundational library"
+  },
+  "external_status": "proved"
+}

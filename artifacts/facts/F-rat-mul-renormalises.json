@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-mul-renormalises",
+  "title": "Rational multiplication renormalises",
+  "statement": "Rat.mul multiplies two rationals and returns the reduced representative: 2/3 * 3/2 is 1/1, not 6/6. The product of two reduced pairs need not itself be reduced, so multiplication must renormalise or the `reduced` field of the result would be unprovable.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def Rat.mul : ((x0 : Rat) -> ((x1 : Rat) -> Rat))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-normalize-reduces"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-rat-mul-renormalises",
+      "kind": "kernel-term",
+      "supports": "2/3 * 3/2 and 1/1 are the same rational; 1/2 * 1/3 is 1/6; 1/6 and 1/2 are different rationals.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_mul_renormalises_two_thirds_times_three_halves_to_one 2>&1 | grep -qE '^test result: ok\\. 1 passed'",
+      "notes": "Bound to this test by name, and `1 passed` is in the pattern deliberately: a filter matching nothing prints `0 passed` and would otherwise read as success. The test settles the equalities by `Kernel::def_eq` with no lemma -- Nat.gcd, Nat.div and Int.rec all compute -- and includes the inequality `1/6 != 1/2` so that a def_eq comparing everything equal could not make the positive checks vacuous."
+    },
+    {
+      "id": "footprint-rat-mul-renormalises",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- Rat is built in the integer environment, whose trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "notes": "Rat and its operations are admitted into the same environment as the integer development, so an empty trusted surface bounds their footprints. Environment-wide on purpose: a declaration cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:rational-arithmetic",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-16",
+    "established_by": "axeyum-lean-kernel int_prelude::rat (rational-scope lane)",
+    "source": "hand-built foundational library"
+  },
+  "external_status": "proved"
+}
