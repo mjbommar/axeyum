@@ -2807,6 +2807,9 @@ impl Kernel {
         // because `String.ofList` is a definition (hence the extra reduction).
         let major = self.expand_string_literal_major(major, ctx);
         let major = self.k_like_major(&rec_rules, major, ctx).unwrap_or(major);
+        let major = self
+            .structure_eta_major(&rec_rules, major, ctx)
+            .unwrap_or(major);
         let (major_ctor, major_ctor_args) = self.unfold_apps(major);
         let ExprNode::Const(major_ctor_name, _) = self.expr_node(major_ctor).clone() else {
             return None;
@@ -2942,6 +2945,136 @@ impl Kernel {
             return None;
         }
         Some(ctor_app)
+    }
+
+    /// **Structure-eta reduction of a stuck major premise** — Lean's
+    /// `to_cnstr_when_structure` (`kernel/inductive.h`, called from
+    /// `inductive_reduce_rec` right where this is called from
+    /// [`Kernel::reduce_rec`]).
+    ///
+    /// A recursor whose family is a **non-recursive structure** — one
+    /// constructor, zero indices, no recursive field, and not a `Prop` — can ι
+    /// even when its major premise is *stuck*, because eta for such a structure
+    /// makes every inhabitant `e` definitionally the constructor applied to its
+    /// own projections. So a stuck major is replaced by `mk params… e.0 … e.n-1`
+    /// and the rule for `mk` fires.
+    ///
+    /// Without it a recursor on a structure *variable* is permanently stuck, and
+    /// the terms Lean's compiler generates for structural recursion over a
+    /// container of pairs cannot be checked at all: `Nat.Linear.Poly.denote` is
+    /// `List.rec` over `List (Nat × Var)` whose minor is `Prod.rec` on the head
+    /// element, and checking `Nat.Linear.Poly.denote_reverse` requires reducing
+    /// that `Prod.rec` against a `p : Nat × Var` that is a bare free variable.
+    /// It was the top declined root in **both** scale censuses.
+    ///
+    /// # Why this does not widen definitional equality unsoundly
+    ///
+    /// The guard is Lean's `is_non_rec_structure` plus its `Prop` exclusion, and
+    /// each clause carries content:
+    ///
+    /// 1. **exactly one constructor** — with two, `e` need not be an application
+    ///    of *this* one, and the substitution would pick a branch arbitrarily;
+    /// 2. **zero indices** — the constructor is reconstructed from the
+    ///    parameters read off the major's type, and an index would have to be
+    ///    matched rather than reconstructed;
+    /// 3. **not recursive** — this is the same eta the kernel already admits in
+    ///    [`Kernel::try_eta_structure`], and Lean restricts it identically; a
+    ///    recursive field would make `e.i` no smaller than `e`;
+    /// 4. **not a `Prop`** — Lean excludes it explicitly. A `Prop` structure's
+    ///    inhabitants are already identified by proof irrelevance, and its
+    ///    fields are not projectable in general.
+    ///
+    /// The replacement is therefore an instance of the very structure-eta rule
+    /// [`Kernel::try_eta_structure`] already applies at def-eq; this moves it
+    /// where reduction can use it, exactly as Lean does.
+    ///
+    /// # The local context, and the WHNF cache
+    ///
+    /// Like [`Kernel::k_like_major`] this needs the major's *type*, so it is a
+    /// second door from reduction into inference and a second reader of `ctx`.
+    /// `reduction_ctx_reads` is bumped before that read, on an **open** major
+    /// only, matching `k_like_major` and the ζ arm in `whnf_no_unfolding`: a
+    /// closed major is typed from the environment alone, which is what keeps the
+    /// kernel-global WHNF cache's context-free key sound.
+    fn structure_eta_major(
+        &mut self,
+        rec_rules: &[RecRule],
+        major: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Option<ExprId> {
+        // (1) The candidate constructor is the family's first ι rule; clause (2)
+        // below is what insists it is the *only* one.
+        let ctor_name = rec_rules.first()?.ctor_name;
+        let Some(Declaration::Constructor {
+            inductive,
+            num_fields,
+            ..
+        }) = self.env.get(ctor_name)
+        else {
+            return None;
+        };
+        let family = *inductive;
+        let num_fields = usize::from(*num_fields);
+
+        // (2) `is_non_rec_structure`: one constructor, no indices, not recursive.
+        let Some(Declaration::Inductive {
+            num_params,
+            num_indices,
+            is_recursive,
+            ctor_names,
+            ..
+        }) = self.env.get(family)
+        else {
+            return None;
+        };
+        if *num_indices != 0 || *is_recursive || ctor_names.as_slice() != [ctor_name] {
+            return None;
+        }
+        let num_params = usize::from(*num_params);
+
+        // An already-constructor-headed major needs no help, and re-deriving it
+        // would only cost an inference (Lean's `is_constructor_app` guard).
+        let (major_head, _) = self.unfold_apps(major);
+        if let ExprNode::Const(head_name, _) = self.expr_node(major_head)
+            && matches!(
+                self.env.get(*head_name),
+                Some(Declaration::Constructor { .. })
+            )
+        {
+            return None;
+        }
+
+        // Consulting the context starts here; see the doc comment above.
+        if self.has_fvars(major) {
+            self.reduction_ctx_reads += 1;
+        }
+
+        // (3) The major's type must be an application of the family itself.
+        let major_ty = self.infer_in(major, ctx).ok()?;
+        let major_ty = self.whnf_core(major_ty, ctx);
+        let (ty_head, ty_args) = self.unfold_apps(major_ty);
+        let ExprNode::Const(ty_name, ty_levels) = self.expr_node(ty_head).clone() else {
+            return None;
+        };
+        if ty_name != family || ty_args.len() < num_params {
+            return None;
+        }
+
+        // (4) `Prop` structures are excluded, matching Lean.
+        if self.type_expression_is_prop(major_ty, ctx).ok()? {
+            return None;
+        }
+
+        // `expand_eta_struct`: `mk params… e.0 … e.(n-1)`, with the parameters
+        // read off the major's *type* and the universe levels off its head.
+        let ctor = self.const_(ctor_name, ty_levels);
+        let ctor_app = self.foldl_apps(ctor, ty_args[..num_params].to_vec());
+        let mut fields = Vec::with_capacity(num_fields);
+        for field_index in 0..num_fields {
+            let field_index = u32::try_from(field_index).ok()?;
+            fields.push(self.proj(family, field_index, major));
+        }
+        Some(self.foldl_apps(ctor_app, fields))
     }
 
     /// Positional `Param ↦ level` substitution (a small public shim around the

@@ -165,30 +165,59 @@ fn a_prop_family_whose_constructor_has_fields_is_not_k_reducible() {
 /// Outside `Prop` an inhabitant is data, and a reduction rule that discards the
 /// major would be discarding it. Lean's `k` flag is `Prop`-only for this
 /// reason; so is [`Kernel::is_k_like_inductive`].
+///
+/// # Why the family carries an index, and what it cost to learn
+///
+/// The obvious probe — `inductive Solo : Type where | mk : Solo` — is **not** a
+/// test of the `Prop` clause, and this file asserted for a while that it was.
+/// `Solo` is also a *non-recursive structure*, so Lean's
+/// `to_cnstr_when_structure` replaces the stuck major with `Solo.mk` and ι fires
+/// for a reason that has nothing to do with K. Real Lean 4.30.0 accepts
+/// `Solo.rec (motive := fun _ => Nat) 0 s = 0 := rfl` for an opaque `s : Solo`,
+/// and this port accepts it too since `structure_eta_major` landed
+/// (ADR-0466). The old assertion was pinning a def-eq *incompleteness*, not a
+/// soundness boundary: `def_eq(s, Solo.mk)` was already `true` on the commit
+/// before that change, by [`Kernel::try_eta_structure`].
+///
+/// One index breaks `is_non_rec_structure` (which requires `nindices == 0`) and
+/// leaves the `Prop` clause of K as the only thing that can refuse this probe —
+/// K itself is happy with indices, which is exactly how `Eq` is K-like.
 #[test]
-fn a_non_prop_family_with_one_nullary_constructor_is_not_k_reducible() {
+fn a_non_prop_indexed_family_with_one_nullary_constructor_is_not_k_reducible() {
     let mut kernel = Kernel::new();
     let logic = build_logic_prelude(&mut kernel).expect("logic prelude builds");
     let anon = kernel.anon();
     let type_ = sort_one(&mut kernel);
     let true_const = kernel.const_(logic.true_, vec![]);
+    let true_intro = kernel.const_(logic.true_intro, vec![]);
 
-    // inductive Solo : Type where | mk : Solo
+    // inductive Solo : True → Type where | mk : Solo True.intro
     let solo = kernel.name_str(anon, "Solo");
     let solo_mk = kernel.name_str(solo, "mk");
-    let solo_const = kernel.const_(solo, vec![]);
+    let solo_head = kernel.const_(solo, vec![]);
+    let solo_at_intro = kernel.app(solo_head, true_intro);
+    let family_ty = kernel.pi(anon, true_const, type_, BinderInfo::Default);
     kernel
-        .add_inductive(solo, &[], 0, type_, &[(solo_mk, solo_const)])
+        .add_inductive(solo, &[], 0, family_ty, &[(solo_mk, solo_at_intro)])
         .expect("Solo admits");
 
     let solo_rec = kernel.name_str(solo, "rec");
     let one = level_one(&mut kernel);
     let recursor = kernel.const_(solo_rec, vec![one]);
-    let motive = constant_motive(&mut kernel, solo_const);
+    // `motive : (i : True) → Solo i → Prop`, constantly `Prop`.
+    let motive = {
+        let index = kernel.bvar(0);
+        let solo_at_index = kernel.app(solo_head, index);
+        let prop = kernel.sort_zero();
+        let inner = kernel.lam(anon, solo_at_index, prop, BinderInfo::Default);
+        kernel.lam(anon, true_const, inner, BinderInfo::Default)
+    };
     let prefix = kernel.app(recursor, motive);
     let prefix = kernel.app(prefix, true_const);
+    // The recursor's index argument sits between the minors and the major.
+    let prefix = kernel.app(prefix, true_intro);
 
-    let outcome = probe_admits(&mut kernel, &logic, "Solo", prefix, solo_const);
+    let outcome = probe_admits(&mut kernel, &logic, "Solo", prefix, solo_at_intro);
     assert!(
         outcome.is_err(),
         "a non-Prop family must not be K-reducible, got {outcome:?}"

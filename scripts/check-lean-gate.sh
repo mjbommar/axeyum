@@ -68,7 +68,18 @@ cd "$(dirname "$0")/.." || exit 2
 # fails the suite instead of making it vacuous. Fifteen suites now;
 # measured total 122 (52 tests) — the two new ones plus three that
 # `lean_crosscheck`'s representative slice picked up since 2026-08-15.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-111}"
+#
+# Raised 111 -> 115 on 2026-08-15 by lane `import-projrec`:
+# `real_lean_structure_eta_recursor_crosscheck` adds FOUR — one positive module
+# and three refusals, one per claim, because Lean keeps elaborating after an
+# error and three failures in one module would be indistinguishable from one.
+# It checks that official Lean agrees on structure-eta reduction of a *stuck*
+# recursor major premise (`to_cnstr_when_structure`), the rule whose absence
+# refused `Nat.Linear.Poly.denote_reverse` — the top declined root in both scale
+# censuses after ζ landed. The positive module reads `#print axioms` back and
+# fails on `sorryAx`, so an admitted goal cannot read as agreement. Sixteen
+# suites now; measured total 126 (53 tests).
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-115}"
 
 # package | features | test target
 #
@@ -94,6 +105,7 @@ axeyum-lean-kernel||real_lean_nat_literal_crosscheck
 axeyum-lean-kernel||real_lean_nat_arithmetic_crosscheck
 axeyum-lean-kernel||real_lean_string_literal_crosscheck
 axeyum-lean-kernel||real_lean_local_let_zeta_crosscheck
+axeyum-lean-kernel||real_lean_structure_eta_recursor_crosscheck
 axeyum-lean-kernel||real_lean_structure_eta_crosscheck
 axeyum-lean-kernel||real_lean_compact_share_crosscheck
 axeyum-lean-kernel||real_lean_kernel_replay

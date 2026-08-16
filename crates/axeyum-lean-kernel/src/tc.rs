@@ -2706,7 +2706,7 @@ impl Kernel {
 
     /// Whether a type expression is a proposition: its own inferred type
     /// WHNFs to `Sort 0` in the active local context.
-    fn type_expression_is_prop(
+    pub(crate) fn type_expression_is_prop(
         &mut self,
         expression: ExprId,
         ctx: &mut LocalContext,
