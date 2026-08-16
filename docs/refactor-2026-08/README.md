@@ -35,7 +35,7 @@ the input to this one:
 | solver public API | **267 `pub use` re-exports** over 7 direct `pub` items — a façade, not a tangle |
 | solver subsystems | quantifiers 38 modules · arithmetic 20 · arrays/BV 18 · UF 8 · strings 7 · dispatch 5 |
 | tests | 278 integration files + 83 in-source `#[cfg(test)]` modules |
-| library | `nat_prelude` **119 proved / 0 trusted**; `int_prelude` **52 proved / 1 axiom**; `arith_prelude` **0 proved / 30 axioms — but see below: it is not an axiomatisation of ℝ** |
+| library | `nat_prelude` **119 proved / 0 trusted**; `int_prelude` **54 proved / 0 axioms**; `arith_prelude` **0 proved / 30 axioms — but see below: it is not an axiomatisation of ℝ** |
 | library provenance | counts from `nat_axiom_inventory` over the FULL trusted surface (`Axiom`/`Opaque`/`Quotient`), not from counting `Declaration::Axiom` literals in source — the literal count said `3` where the real figure was `34` |
 | library growth | `nat_prelude.rs` 3,856 → **9,969 lines in 60 commits**, one session |
 | architecture doc | 82 lines, documents **11 of 23 crates**; omits `axeyum-cas` (47,472 lines, the second-largest crate) |

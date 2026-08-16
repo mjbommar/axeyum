@@ -159,8 +159,9 @@ fn reuse_preserves_the_trusted_surface_invariants() {
     int_prelude::build_int_prelude(&mut int).expect("int must build");
     assert_eq!(
         trusted_surface(&int).len(),
-        1,
-        "integer's trusted surface is 1 by design"
+        0,
+        "integer must be axiom-free: Int.euclidean_decomposition, its last \
+         assumption, became a theorem on 2026-08-16"
     );
 }
 

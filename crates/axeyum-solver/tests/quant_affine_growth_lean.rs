@@ -39,12 +39,18 @@ fn repair_const_nterm_reconstructs_and_routes() {
     // These bytes are CHECKED, not merely re-typed. `lean_crosscheck`'s
     // `quantified_lia_affine_growth_checks_in_real_lean` family, added in the same
     // commit as this re-pin, hands exactly this module to Lean 4.30.0 under
-    // `scripts/check-lean-gate.sh`: accepted, `#print axioms axeyum_refutation`
-    // reports `[Int.euclidean_decomposition, axeyum.reconstruct.dio.hyp._14,
-    // axeyum.reconstruct.dio.x._0 … x._3]` — one ledger axiom plus the query's own
-    // parameters — and no `sorryAx`. Before that family existed, "Lean accepts this"
-    // was a comment nothing ran.
-    assert_eq!((source.len(), fnv1a), (174_524, 0x298c_fdc2_b3fe_d3d5));
+    // `scripts/check-lean-gate.sh`: accepted, and no `sorryAx`. Before that family
+    // existed, "Lean accepts this" was a comment nothing ran.
+    //
+    // RE-PINNED 2026-08-16, and the module GREW 174,524 -> 206,580 bytes for a
+    // good reason: `Int.euclidean_decomposition` stopped being an axiom and
+    // became a theorem, so the export now carries its proof instead of an
+    // assumption. The reference below is therefore to a derived law, not a
+    // ledger axiom. What `#print axioms axeyum_refutation` reports now has NOT
+    // been re-measured here — it previously listed that name plus the query's
+    // own `axeyum.reconstruct.dio.*` parameters, and only the first of those
+    // should have gone.
+    assert_eq!((source.len(), fnv1a), (206_580, 0xb144_c9c5_d88a_0655));
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("euclidean_decomposition"));
     assert!(!source.contains("sorryAx"));

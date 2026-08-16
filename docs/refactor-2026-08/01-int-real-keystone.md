@@ -1,5 +1,25 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
+> **STATUS 2026-08-16 — the integer half is DONE. `int_prelude` has 0 axioms.**
+> `Int.euclidean_decomposition` — the last assumption, and the only member that
+> was not a ring or order law — is now a theorem with an empty axiom footprint.
+> `nat_axiom_inventory --require-axiom-free integer` exits 0; the inventory reads
+> **54 derived (54 with an EMPTY axiom footprint), 0 still asserted**.
+>
+> It did not need `Int.div`/`Int.mod`. The statement is existential, so it is
+> discharged by supplying witnesses: `Int.lt_dest` turns `0 < k` into a positive
+> `ofNat`, `Int.rec` splits on the dividend, and each branch reads its witnesses
+> off `Nat.div_mod_exists`. The negative branch is uniform —
+> `q = negSucc a, r = ofNat (K − succ b)` — with the `succ b = K` case collapsing
+> to `r = 0` through truncated subtraction rather than a separate case. The
+> `ofNat` transfer steps are definitional, so the only propositional content is
+> the ℕ equation.
+>
+> Downstream: the two reconstruction modules in `axeyum-solver` grew (174,524 →
+> 206,580 and 83,060 → 124,121 bytes) because the export now carries a proof
+> where it carried an assumption. Re-pinned; `check-lean-gate.sh` accepts them
+> at 126 real-Lean checks.
+>
 > **STATUS 2026-08-15 — the integer half is done except for division.** ℤ is
 > CONSTRUCTED over the proved ℕ development rather than asserted, and its axiom
 > count has gone **34 → 6 → 1**. `int_theorem_inventory` reports **50 derived

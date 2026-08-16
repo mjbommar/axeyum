@@ -447,28 +447,6 @@ impl<'k> IntDev<'k> {
     /// # Errors
     ///
     /// Returns the trusted gate's rejection (a malformed statement, or a name
-    /// collision).
-    pub(super) fn int_axiom(
-        &mut self,
-        name: NameId,
-        arity: usize,
-        stmt: &dyn Fn(&mut Self, &[ExprId]) -> ExprId,
-    ) -> Result<NameId, KernelError> {
-        let int_ty = self.int_ty;
-        let fvs: Vec<u64> = (0..arity).map(|_| self.fresh_fvar()).collect();
-        let vars: Vec<ExprId> = fvs.iter().map(|&f| self.kernel.fvar(f)).collect();
-        let mut ty = stmt(self, &vars);
-        for &fv in fvs.iter().rev() {
-            ty = self.pi_fv(fv, int_ty, ty);
-        }
-        self.kernel.add_declaration(Declaration::Axiom {
-            name,
-            uparams: vec![],
-            ty,
-        })?;
-        Ok(name)
-    }
-
     /// Declare `theorem name : ∀ (x_0 … x_{arity-1} : Int), stmt := fun … => proof`.
     ///
     /// # Errors

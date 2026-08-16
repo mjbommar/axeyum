@@ -50,11 +50,15 @@ fn committed_clock_rows_reconstruct_and_route() {
             // CHECKED, not merely re-typed: `lean_crosscheck`'s
             // `quantified_lia_euclidean_residue_checks_in_real_lean` family, added
             // in the same commit as this re-pin, hands this module to Lean 4.30.0
-            // under `scripts/check-lean-gate.sh`. Accepted; `#print axioms
-            // axeyum_refutation` reports `[Int.euclidean_decomposition,
-            // axeyum.reconstruct.dio.hyp._3, axeyum.reconstruct.dio.x._0]` — one
-            // ledger axiom plus the query's own parameters — and no `sorryAx`.
-            assert_eq!((source.len(), fnv1a), (83_060, 0x60e3_1e2a_5468_ff8e));
+            // under `scripts/check-lean-gate.sh`. Accepted, and no `sorryAx`.
+            //
+            // RE-PINNED 2026-08-16: the module GREW 83,060 -> 124,121 bytes
+            // because `Int.euclidean_decomposition` became a THEOREM, so the
+            // export carries its proof rather than an assumption. What
+            // `#print axioms axeyum_refutation` reports now has not been
+            // re-measured here; it previously listed that name plus the query's
+            // own `axeyum.reconstruct.dio.*` parameters.
+            assert_eq!((source.len(), fnv1a), (124_121, 0xd017_9951_a92d_42e2));
         }
         assert!(source.contains("theorem axeyum_refutation : False"));
         assert!(source.contains("euclidean_decomposition"));

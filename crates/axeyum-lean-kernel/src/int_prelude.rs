@@ -70,7 +70,6 @@
     clippy::large_types_passed_by_value
 )]
 
-use crate::expr::ExprId;
 use crate::name::NameId;
 use crate::nat_prelude::{NatPrelude, build_nat_prelude};
 use crate::{Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue};
@@ -268,6 +267,10 @@ pub struct IntPrelude {
     /// The non-negative branch of [`Self::euclidean_decomposition`], stated over
     /// `ℕ` parameters so the divisor is positive by construction.
     pub euclid_of_nat: NameId,
+    /// `euclid_neg_succ : ∀ n m, ∃ q r, negSucc n = ofNat (succ m)*q+r ∧ 0 ≤ r ∧ r < ofNat (succ m)`.
+    ///
+    /// The negative branch of [`Self::euclidean_decomposition`].
+    pub euclid_neg_succ: NameId,
     /// `eq_em : ∀ (a b : Int), Or (Eq Int a b) (Not (Eq Int a b))`.
     pub eq_em: NameId,
 }
@@ -347,41 +350,19 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
         euclidean_decomposition: child(kernel, "euclidean_decomposition"),
         euclid_of_nat: child(kernel, "euclid_of_nat"),
+        euclid_neg_succ: child(kernel, "euclid_neg_succ"),
         eq_em: child(kernel, "eq_em"),
     }
 }
 
-/// One asserted law: its name, the arity of its `Int` telescope, and its
-/// statement builder. Kept as data so the undischarged remainder is a *list*
-/// that shrinks visibly as laws move to [`order`] and [`algebra`].
-type AssertedLaw = (NameId, usize, fn(&mut IntDev<'_>, &[ExprId]) -> ExprId);
-
-/// Assert the laws this development has not derived.
+/// Build the integer prelude: `ℤ` **constructed** over the proved `ℕ`
+/// development, and — since 2026-08-16 — asserting nothing.
 ///
-/// Each entry here is a standing debt: it is a true fact about `ℤ` that the
-/// construction below *could* prove, and does not yet. One is left, and it is
-/// the only one that is not a ring or order law: `euclidean_decomposition`
-/// asserts the *existence* of a quotient and remainder, so discharging it needs
-/// integer division as a definition, not another rewriting lemma.
-fn declare_remaining_axioms(d: &mut IntDev<'_>) -> Result<(), KernelError> {
-    let p = d.int();
-    let laws: [AssertedLaw; 1] = [
-        // Kept last: `prelude_composition`'s rollback test conflicts on this
-        // name precisely because it is the final member admitted.
-        (
-            p.euclidean_decomposition,
-            2,
-            statements::euclidean_decomposition,
-        ),
-    ];
-    for (name, arity, statement) in laws {
-        d.int_axiom(name, arity, &statement)?;
-    }
-    Ok(())
-}
-
-/// Build the integer prelude: `ℤ` constructed over the proved `ℕ` development,
-/// plus the laws not yet derived.
+/// The undischarged remainder used to be a list kept as data so it shrank
+/// visibly. It reached zero when `Int.euclidean_decomposition` became a theorem
+/// (see [`euclid`]), so the list, its type alias, and `IntDev::int_axiom` are
+/// gone with it; `int_prelude_tests::asserted_laws` is now empty and guards
+/// against one reappearing.
 ///
 /// The build is **atomic and cached**: a second call on the same kernel returns
 /// the same handles without re-declaring, and any failure rolls back every
@@ -431,7 +412,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         decide::declare_decidable_equality(&mut d)?;
         algebra::declare_ordered_multiplication(&mut d)?;
         euclid::declare_of_nat_branch(&mut d)?;
-        declare_remaining_axioms(&mut d)?;
+        euclid::declare_neg_succ_branch(&mut d)?;
+        euclid::declare_decomposition(&mut d)?;
         Ok(prelude)
     })();
     match built {

@@ -169,8 +169,11 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 26] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 29] {
     [
+        p.euclidean_decomposition,
+        p.euclid_of_nat,
+        p.euclid_neg_succ,
         p.le_refl,
         p.le_trans,
         p.lt_irrefl,
@@ -235,10 +238,14 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 25] {
     ]
 }
 
-/// The integer laws still **asserted**. This list is the lane's standing debt;
+/// The integer laws still **asserted**. This list was the lane's standing debt;
 /// it is expected to shrink and must never grow.
-fn asserted_laws(p: &IntPrelude) -> [crate::NameId; 1] {
-    [p.euclidean_decomposition]
+///
+/// It is now **empty**: `Int.euclidean_decomposition` was the last member, and
+/// it is a theorem as of 2026-08-16. An entry reappearing here is a regression —
+/// something previously proved has become an assumption.
+fn asserted_laws(_p: &IntPrelude) -> [crate::NameId; 0] {
+    []
 }
 
 /// Every derived law's trusted closure is **empty** — not merely "smaller".
