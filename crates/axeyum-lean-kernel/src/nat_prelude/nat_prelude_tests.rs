@@ -3429,3 +3429,44 @@ fn the_build_is_deterministic() {
         "every promised definition and theorem must be rendered"
     );
 }
+
+/// `Nat.eq_one_of_dvd_one` is a theorem with an empty axiom footprint, and it
+/// *applies* — instantiating it at a concrete divisor type-checks.
+///
+/// The application matters: a theorem can be admitted with a type nothing can
+/// use, and this one is the closing step for coprimality after dividing by a
+/// gcd, so the shape it will be used in is the shape worth pinning.
+#[test]
+fn eq_one_of_dvd_one_is_derived_and_applies() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let declaration = k
+        .environment()
+        .get(p.eq_one_of_dvd_one)
+        .expect("Nat.eq_one_of_dvd_one must be declared");
+    assert!(
+        matches!(declaration, Declaration::Theorem { .. }),
+        "eq_one_of_dvd_one must be a Theorem"
+    );
+    assert!(
+        k.axiom_footprint(p.eq_one_of_dvd_one).is_empty(),
+        "eq_one_of_dvd_one rests on a trusted declaration"
+    );
+
+    // Applied at a concrete divisor, the residue is `dvd 2 1 → 2 = 1`.
+    let two = {
+        let zero = k.const_(p.zero, vec![]);
+        let succ = k.const_(p.succ, vec![]);
+        let one = k.app(succ, zero);
+        k.app(succ, one)
+    };
+    let theorem = k.const_(p.eq_one_of_dvd_one, vec![]);
+    let applied = k.app(theorem, two);
+    let inferred = k.infer(applied).expect("the application must type-check");
+    let rendered = k.render_lean(inferred);
+    assert!(
+        rendered.contains("dvd") && rendered.contains("Eq"),
+        "unexpected residue type: {rendered}"
+    );
+}

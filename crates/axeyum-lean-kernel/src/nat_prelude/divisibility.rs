@@ -893,6 +893,125 @@ pub(super) fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
         (stmt, proof)
     })?;
 
+    // eq_one_of_dvd_one : ∀ d, dvd d one → Eq d one
+    // The closing step for coprimality after dividing by a gcd: once a common
+    // divisor of the two quotients is shown to divide `1`, it *is* `1`.
+    // Three cases. At zero the witness gives `1 = 0*q = 0`, which `le_refl`
+    // transported into `not_succ_le_zero` refutes. At `succ zero` the goal is
+    // `1 = 1`. At `succ (succ j)` the divisor is at least two, so
+    // `not_dvd_one_of_two_le` contradicts the hypothesis outright.
+    d.theorem(p.eq_one_of_dvd_one, 1, &|d, v| {
+        let subject = v[0];
+        let unit = d.num(1);
+        let divides_ty = d.dvd(subject, unit);
+        let conclusion = d.eq(subject, unit);
+        let stmt = d.arrow(divides_ty, conclusion);
+
+        let claim = |d: &mut NatDev<'_>, x: ExprId| {
+            let unit = d.num(1);
+            let hypothesis = d.dvd(x, unit);
+            let target = d.eq(x, unit);
+            d.arrow(hypothesis, target)
+        };
+        let explode = |d: &mut NatDev<'_>, goal: ExprId, contradiction: ExprId| {
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let level = d.kernel().level_zero();
+            let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+            let anon = d.anon_name();
+            let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+            d.apply(rec, &[motive, contradiction])
+        };
+
+        let at_zero = |d: &mut NatDev<'_>| {
+            let nat = d.nat_ty();
+            let one = d.level_one();
+            let unit = d.num(1);
+            let zero = d.zero();
+            let hypothesis_ty = d.dvd(zero, unit);
+            let hypothesis_fv = d.fresh_fvar();
+            let hypothesis = d.kernel().fvar(hypothesis_fv);
+            let goal = d.eq(zero, unit);
+            let predicate = d.dvd_predicate(zero, unit);
+            let anon = d.anon_name();
+            let motive = d
+                .kernel()
+                .lam(anon, hypothesis_ty, goal, BinderInfo::Default);
+            let minor = {
+                let q_fv = d.fresh_fvar();
+                let q = d.kernel().fvar(q_fv);
+                let product = d.mul(zero, q);
+                let equality_ty = d.eq(unit, product);
+                let e_fv = d.fresh_fvar();
+                let e = d.kernel().fvar(e_fv);
+                // `0*q = 0`, so the witness equation collapses to `1 = 0`.
+                let collapse = d.lemma(p.zero_mul, &[q]);
+                let one_eq_zero = {
+                    let motive = d.eq_motive(product, &|d, x| {
+                        let unit = d.num(1);
+                        d.eq(unit, x)
+                    });
+                    d.transport(product, motive, e, zero, collapse)
+                };
+                let reflexive = d.lemma(p.le_refl, &[unit]);
+                let upper = d.eq_motive(unit, &|d, upper| {
+                    let unit = d.num(1);
+                    d.le(unit, upper)
+                });
+                let one_le_zero = d.transport(unit, upper, reflexive, zero, one_eq_zero);
+                let contradiction = d.lemma(p.not_succ_le_zero, &[zero, one_le_zero]);
+                let body = explode(d, goal, contradiction);
+                let with_e = d.lam_fv(e_fv, equality_ty, body);
+                d.lam_fv(q_fv, nat, with_e)
+            };
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(rec, &[nat, predicate, motive, minor, hypothesis]);
+            d.lam_fv(hypothesis_fv, hypothesis_ty, body)
+        };
+
+        let at_succ = |d: &mut NatDev<'_>, k: ExprId, _ih: ExprId| {
+            let inner_claim = |d: &mut NatDev<'_>, y: ExprId| {
+                let successor = d.succ(y);
+                let unit = d.num(1);
+                let hypothesis = d.dvd(successor, unit);
+                let target = d.eq(successor, unit);
+                d.arrow(hypothesis, target)
+            };
+            let inner_zero = |d: &mut NatDev<'_>| {
+                let zero = d.zero();
+                let successor = d.succ(zero);
+                let unit = d.num(1);
+                let hypothesis_ty = d.dvd(successor, unit);
+                let hypothesis_fv = d.fresh_fvar();
+                let reflexive = d.refl(successor);
+                d.lam_fv(hypothesis_fv, hypothesis_ty, reflexive)
+            };
+            let inner_succ = |d: &mut NatDev<'_>, j: ExprId, _inner_ih: ExprId| {
+                let zero = d.zero();
+                let sj = d.succ(j);
+                let ssj = d.succ(sj);
+                let unit = d.num(1);
+                let hypothesis_ty = d.dvd(ssj, unit);
+                let hypothesis_fv = d.fresh_fvar();
+                let hypothesis = d.kernel().fvar(hypothesis_fv);
+                let two_le = {
+                    let base = d.lemma(p.zero_le, &[j]);
+                    let step = d.lemma(p.le_succ_succ, &[zero, j, base]);
+                    let one = d.succ(zero);
+                    d.lemma(p.le_succ_succ, &[one, sj, step])
+                };
+                let not_divides = d.lemma(p.not_dvd_one_of_two_le, &[ssj, two_le]);
+                let contradiction = d.apply(not_divides, &[hypothesis]);
+                let goal = d.eq(ssj, unit);
+                let body = explode(d, goal, contradiction);
+                d.lam_fv(hypothesis_fv, hypothesis_ty, body)
+            };
+            d.induct(&inner_claim, &inner_zero, &inner_succ, k)
+        };
+
+        let proof = d.induct(&claim, &at_zero, &at_succ, subject);
+        (stmt, proof)
+    })?;
+
     // not_dvd_one_add_mul_of_two_le :
     //   ∀ a t, Le two a → Not (dvd a (one+a*t))
     // A divisor of the whole sum also divides the multiple `a*t`; cancel it
