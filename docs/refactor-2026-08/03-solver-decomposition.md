@@ -8,6 +8,28 @@ Do this **after** [`01`](01-int-real-keystone.md) and
 [`02`](02-composition.md), or the split will freeze today's seams into crate
 boundaries, and today's seams are exactly what those two items are fixing.
 
+> **Started 2026-08-15.** The `solver-decomp` lane built
+> `scripts/analyze_solver_module_graph.py` (`3740597f5`) and landed the first
+> slice (`25ab64649`): quantifier certificate **data** now lives apart from its
+> checkers, because each type was defined beside its checker and that made
+> `Model` — the crate's base value type — depend on the dispatcher, the `QF_BV`
+> route, the e-graph and the theory solvers, and back to `Model`.
+>
+> | | largest dependency cycle |
+> |---|---|
+> | before | **65 modules, 115,840 lines** — half the crate |
+> | after | **24 modules, 58,215 lines** (25.8%) |
+>
+> Measured by that script and re-measured before landing, not quoted. **No crate
+> was extracted**; the 267-entry façade is untouched and ADR-0001's
+> "boundary proven by use" bar has not been argued for anything yet. Lane notes:
+> [`96-solver-decomp.md`](../plan/status/96-solver-decomp.md).
+>
+> Note this contradicts the "least urgent" framing above in one respect: the
+> cycle was worth breaking on its own merits, independently of `01` and `02`,
+> because a value type depending on the search that produces it is a defect at
+> any crate boundary. The ordering advice still holds for **extracting crates**.
+
 ## The measurement
 
 ```
