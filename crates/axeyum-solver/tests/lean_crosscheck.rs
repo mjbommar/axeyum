@@ -249,6 +249,24 @@ fn check_one_lean(tag: &str, source: &str) -> Result<(), String> {
     if !stdout.contains("axeyum_refutation") {
         return Err(format!("{tag}: missing `#print axioms` output:\n{stdout}"));
     }
+    // `int_prelude` became axiom-free on 2026-08-16, so a reconstructed proof
+    // must no longer depend on ANY `Int.*` assumption. Before that, both
+    // Diophantine modules listed `Int.euclidean_decomposition` here; measured
+    // after, the residue module reports `[axeyum.reconstruct.dio.hyp._3,
+    // axeyum.reconstruct.dio.x._0]` and the affine-growth module reports its
+    // `hyp._14` plus `x._0 … x._3` — the query's own parameters and nothing
+    // else. An `Int.` entry reappearing means the integer library regressed to
+    // an assumption, and that is worth failing a proof over rather than noting
+    // in a comment.
+    if let Some(offender) = stdout
+        .split(|c: char| !(c.is_alphanumeric() || c == '.' || c == '_'))
+        .find(|token| token.starts_with("Int."))
+    {
+        return Err(format!(
+            "{tag}: reconstructed proof depends on the integer library axiom \
+             `{offender}`, but int_prelude is axiom-free:\n{stdout}"
+        ));
+    }
     eprintln!("[lean ok] {tag}: {}", stdout.trim().replace('\n', " | "));
     Ok(())
 }

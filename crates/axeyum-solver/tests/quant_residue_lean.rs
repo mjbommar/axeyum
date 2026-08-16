@@ -54,10 +54,13 @@ fn committed_clock_rows_reconstruct_and_route() {
             //
             // RE-PINNED 2026-08-16: the module GREW 83,060 -> 124,121 bytes
             // because `Int.euclidean_decomposition` became a THEOREM, so the
-            // export carries its proof rather than an assumption. What
-            // `#print axioms axeyum_refutation` reports now has not been
-            // re-measured here; it previously listed that name plus the query's
-            // own `axeyum.reconstruct.dio.*` parameters.
+            // export carries its proof rather than an assumption. MEASURED
+            // 2026-08-16 through `lean_crosscheck`: `#print axioms
+            // axeyum_refutation` now reports `[axeyum.reconstruct.dio.hyp._3,
+            // axeyum.reconstruct.dio.x._0]` — the query's own parameters and
+            // nothing else. `Int.euclidean_decomposition` is gone, and
+            // `check_one_lean` fails any module that reintroduces an `Int.`
+            // axiom.
             assert_eq!((source.len(), fnv1a), (124_121, 0xd017_9951_a92d_42e2));
         }
         assert!(source.contains("theorem axeyum_refutation : False"));

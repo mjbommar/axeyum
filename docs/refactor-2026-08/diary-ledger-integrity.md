@@ -152,3 +152,35 @@ and `r = ofNat (K − succ b)`, the `succ b = K` case collapsing to `r = 0` on i
 own (K=3, n=4: −5 = 3·(−2)+1; K=3, n=2: −3 = 3·(−1)+0). It needs
 `Int.negOfNat_add_ofNat` and the ℕ truncated-subtraction lemmas (`sub_add_cancel`,
 `sub_eq_zero_of_le`), all of which exist.
+
+## `Int.euclidean_decomposition` is a theorem, and the refutations felt it (2026-08-16)
+
+`int_prelude` reached **0 axioms**: `Int: 54 derived (54 with an EMPTY axiom
+footprint), 0 still asserted`, and `nat_axiom_inventory --require-axiom-free
+integer` exits 0. The trusted surface went `34 → 6 → 1 → 0`.
+
+**The downstream measurement is the one that matters**, and it was left unverified
+for one commit before being closed. `axeyum-solver` reconstructs Diophantine
+refutations into Lean modules, and those modules used to rest on the axiom:
+
+```
+residue   before  [Int.euclidean_decomposition, dio.hyp._3, dio.x._0]
+          after   [dio.hyp._3, dio.x._0]
+affine    before  [Int.euclidean_decomposition, dio.hyp._14, dio.x._0 … x._3]
+          after   [dio.hyp._14, dio.x._0, x._1, x._2, x._3]
+```
+
+Measured by running `lean_crosscheck` under real Lean 4.30.0 and reading the
+`#print axioms axeyum_refutation` output, not by inference from the kernel's own
+footprint. **The reconstructed refutations now depend on no library axiom at
+all** — only on the query's own hypothesis and variables, which is what those
+entries are.
+
+That shrink is now a **gate, not a comment**: `check_one_lean` fails any module
+whose axiom list contains an `Int.` entry, since the integer library has none to
+offer. Negative control exercised by pointing the same matcher at the `axeyum.`
+prefix, which every list does contain — it fires and names the offending token,
+and restoring returns 13/13.
+
+This also answers the caution recorded under finding 8. That checker is bound to
+its subject: it fails on *this* module's axiom list, not on a gate-wide pass.

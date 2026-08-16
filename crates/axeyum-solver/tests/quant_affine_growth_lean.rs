@@ -46,10 +46,13 @@ fn repair_const_nterm_reconstructs_and_routes() {
     // good reason: `Int.euclidean_decomposition` stopped being an axiom and
     // became a theorem, so the export now carries its proof instead of an
     // assumption. The reference below is therefore to a derived law, not a
-    // ledger axiom. What `#print axioms axeyum_refutation` reports now has NOT
-    // been re-measured here — it previously listed that name plus the query's
-    // own `axeyum.reconstruct.dio.*` parameters, and only the first of those
-    // should have gone.
+    // ledger axiom. MEASURED 2026-08-16 through `lean_crosscheck`:
+    // `#print axioms axeyum_refutation` now reports
+    // `[axeyum.reconstruct.dio.hyp._14, axeyum.reconstruct.dio.x._0 … x._3]` —
+    // the query's own parameters and NOTHING ELSE. `Int.euclidean_decomposition`
+    // is gone from the list, so this refutation depends on no library axiom at
+    // all. `check_one_lean` now fails any module whose axiom list contains an
+    // `Int.` entry, so the shrink is a gate rather than a comment.
     assert_eq!((source.len(), fnv1a), (206_580, 0xb144_c9c5_d88a_0655));
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("euclidean_decomposition"));
