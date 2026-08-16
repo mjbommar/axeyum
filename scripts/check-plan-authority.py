@@ -44,16 +44,33 @@ def main() -> int:
     # keeps PLAN.md equal to those sources, so this still bounds PLAN.md.
     # `README.md` in each directory documents the format and is not emitted
     # into PLAN.md, so it is not journal either.
-    authored = sum(
-        path.stat().st_size
+    sources = [
+        path
         for directory in ("docs/plan/global", "docs/plan/status")
         for path in sorted((ROOT / directory).glob("*.md"))
         if path.name != "README.md"
-    )
+    ]
+    authored = sum(path.stat().st_size for path in sources)
     if authored > 52_000:
+        # Report the SCOPE, not just the verdict. This gate used to emit one
+        # total and the instruction "move journal/detail to a result note",
+        # which does not say which of 54 files to move or how much is enough --
+        # so the number grew 0 -> 54,398 -> 98,180 -> 233,888 in two days
+        # without anyone being told where. Naming the largest sources and the
+        # global/status split makes the failure actionable, which is
+        # docs/refactor-2026-08/04-gates-and-truth.md T1 applied to this gate.
+        by_dir: dict[str, int] = {}
+        for path in sources:
+            by_dir[path.parent.name] = by_dir.get(path.parent.name, 0) + path.stat().st_size
+        worst = sorted(sources, key=lambda p: p.stat().st_size, reverse=True)[:5]
+        detail = "; ".join(
+            f"{p.relative_to(ROOT)} {p.stat().st_size}" for p in worst
+        )
+        split = ", ".join(f"{d}/ {n}" for d, n in sorted(by_dir.items()))
         errors.append(
-            f"PLAN.md sources total {authored} bytes (>52 KB); "
-            "move journal/detail to a result note"
+            f"PLAN.md sources total {authored} bytes (>52 KB) across "
+            f"{len(sources)} files ({split}); move journal/detail to a result "
+            f"note. Largest: {detail}"
         )
     if status_path.stat().st_size > 1_500:
         errors.append("STATUS.md is no longer a compact compatibility pointer")
