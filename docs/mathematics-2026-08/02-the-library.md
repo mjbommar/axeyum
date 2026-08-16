@@ -51,7 +51,7 @@
 > | missing | note |
 > |---|---|
 > | `Int.natAbs` | trivial by `Int.rec`; `ofNat n ↦ n`, `negSucc n ↦ succ n` |
-> | `Int.div` / `Int.mod` | **genuinely new work.** The axiom did *not* need them — it is existential — so this was correctly skipped then and cannot be skipped now |
+> | `Int.div` / `Int.mod` | ~~genuinely new work~~ — **probably not needed at all, see below** |
 > | `Int.sub` | not declared; `add a (neg b)` may serve without a new definition |
 > | `Nat.Coprime` | no named notion, but `gcd a b = 1` is immediate from what is proved |
 >
@@ -61,8 +61,34 @@
 > derived theorem into the contract for the next layer — which is the flywheel
 > doing what it is for.
 >
-> Suggested order: `natAbs` → `Int.div`/`Int.mod` against the decomposition →
-> `Coprime` → the `Rat` structure → `normalize`.
+> **CORRECTED 2026-08-16, same day.** The `Int.div` row above was wrong, and it is
+> the third plan this week to shrink on contact with the construction. Lean's
+> `Rat.normalize` does call `Int.divExact`, but that is convenience with a
+> divisibility proof attached — mathematically the sign factors out, and
+> normalisation can run entirely in ℕ:
+>
+> ```text
+> normalize (num : Int) (den : Nat), by Int.rec on num:
+>   ofNat n   ↦  g = gcd n den        num' = ofNat    (n / g)      den' = den / g
+>   negSucc n ↦  g = gcd (succ n) den num' = negOfNat ((succ n)/g) den' = den / g
+> ```
+>
+> Only `Nat.div` and the two `Int` constructors, both of which exist. So `Int.div`
+> is deferred until something actually demands it, rather than built because a
+> textbook route mentioned it.
+>
+> **The real content is elsewhere**: `gcd (a/g) (b/g) = 1` for `g = gcd a b > 0`.
+> That is reachable here because `Nat.gcd_bezout` gives the balanced all-naturals
+> identity `g + m·mn + n·nn = m·mp + n·np`; dividing it through by `g`
+> (`Nat.mul_left_cancel_of_pos`, present) yields the same identity with `1` in
+> place of `g`, and then any common divisor of the quotients divides `1`.
+>
+> The one missing closing step is **`Nat.eq_one_of_dvd_one : d ∣ 1 → d = 1`**.
+> `Nat.not_dvd_one_of_two_le` covers `d ≥ 2` and `Nat.dvd d 1` unfolds to
+> `∃ q, 1 = d·q`, so the remaining cases are `d = 0` (absurd) and `d = 1` (refl).
+>
+> Revised order: `natAbs` ✅ → `eq_one_of_dvd_one` → coprimality after division →
+> the `Rat` structure → `normalize`.
 
 **The state.** One number system is proved. The rest are assumed or absent.
 
