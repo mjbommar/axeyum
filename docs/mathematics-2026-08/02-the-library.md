@@ -12,6 +12,58 @@
 > (engineering `01` K2), so that results about ℤ can carry a negative control
 > the moment ℤ exists. Today `axeyum-scenarios` `unreachable!()`s on both sorts.
 
+> **STATUS 2026-08-16 — ℤ is done (0 axioms), and ℚ is scoped. The construction
+> named below is not the one to build.**
+>
+> This document says ℚ is "a quotient of ℤ×ℤ≠0 by cross-multiplication". That is
+> the mathematics; it is not how a kernel does it, and here it is *inexpressible*
+> — this kernel's quotient package has no `Quot.sound`.
+>
+> **Prior art, read rather than guessed.** Lean 4.30.0's own source is installed
+> on this fleet, and Lean core does not use a quotient either
+> (`Init/Data/Rat/Basic.lean`):
+>
+> ```lean
+> structure Rat where
+>   num : Int
+>   den : Nat := 1
+>   den_nz : den ≠ 0
+>   reduced : num.natAbs.Coprime den
+> ```
+>
+> A structure carrying a *normalised representative* plus two proof fields, with
+> `Rat.normalize` reducing by the gcd. That is the same move this project already
+> made for ℤ — normalised pairs over a setoid quotient, chosen because
+> `Quot.sound` is admitted as a trusted `Declaration::Quotient` and would land in
+> every downstream footprint. The decision generalises, and the most-used
+> implementation of ℚ in the world agrees with it.
+>
+> **Kernel support confirmed**, not assumed: `Exists.intro` is already a
+> constructor taking a witness *and* a proof, so multi-field constructors with
+> `Prop` fields work, and structure eta is implemented in `tc.rs`.
+>
+> **Measured gap list** (from `IntPrelude`/`NatPrelude` declaration inventories,
+> not from a doc). Present: the whole ℕ division/gcd development — `div`, `mod`,
+> `gcd`, `dvd`, `div_mod_exists`/`_unique`/`_bounds`, `div_mod_exact_exists`,
+> `gcd_bezout`, `dvd_gcd_iff` — and ℤ with its ring and order laws, axiom-free.
+> Absent, and needed:
+>
+> | missing | note |
+> |---|---|
+> | `Int.natAbs` | trivial by `Int.rec`; `ofNat n ↦ n`, `negSucc n ↦ succ n` |
+> | `Int.div` / `Int.mod` | **genuinely new work.** The axiom did *not* need them — it is existential — so this was correctly skipped then and cannot be skipped now |
+> | `Int.sub` | not declared; `add a (neg b)` may serve without a new definition |
+> | `Nat.Coprime` | no named notion, but `gcd a b = 1` is immediate from what is proved |
+>
+> **The payoff worth naming:** `Int.euclidean_decomposition`, just proved, is
+> exactly the *specification* `Int.div`/`Int.mod` have to meet. Defining them by
+> sign cases over `Nat.div`/`Nat.mod` and proving they satisfy it turns a freshly
+> derived theorem into the contract for the next layer — which is the flywheel
+> doing what it is for.
+>
+> Suggested order: `natAbs` → `Int.div`/`Int.mod` against the decomposition →
+> `Coprime` → the `Rat` structure → `normalize`.
+
 **The state.** One number system is proved. The rest are assumed or absent.
 
 ```

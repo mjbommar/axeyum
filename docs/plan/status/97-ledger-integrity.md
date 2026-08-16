@@ -10,10 +10,18 @@ positives; and `plan-authority` taken from 233,888 bytes to 46,820 by archiving
 finished lanes to [`docs/plan/archive/`](../archive/README.md). Full record:
 [`diary-ledger-integrity.md`](../../refactor-2026-08/diary-ledger-integrity.md).
 
-**Next.** Discharge `Int.euclidean_decomposition`, the last `int_prelude` axiom.
-Measured: the ofNat transfer lemmas are definitional, so only the `negSucc`
-branch and Int-typed `Exists` helpers remain. Then bind its checker to the
-theorem rather than to a gate-wide run.
+**`int_prelude` is axiom-free.** `Int.euclidean_decomposition` is a theorem;
+`Int: 54 derived (54 with an EMPTY axiom footprint), 0 still asserted`, trusted
+surface `34 → 6 → 1 → 0`. Measured downstream under real Lean: the Diophantine
+reconstructions now depend on **no library axiom at all**, and `check_one_lean`
+gates that. Fourteen `kernel-lean` fact checkers were rebound from a whole-suite
+run to their own theorem.
+
+**Next.** ℚ, scoped in
+[`02-the-library.md`](../../mathematics-2026-08/02-the-library.md): build it as a
+normalised structure (as Lean core itself does), not a setoid quotient. First
+slice is `Int.natAbs`, then `Int.div`/`Int.mod` specified against the
+freshly-proved decomposition.
 
 <!-- plan-section: landed-changes -->
 
