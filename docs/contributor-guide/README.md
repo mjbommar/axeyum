@@ -26,7 +26,7 @@ evidence, executable gates, decision anchors, and the next safe action.
    which gate needs which toolchain, and how to provision one. A gate's scope
    silently depends on the machine it ran on: measured 2026-08-16, `lean` and
    `just` existed on one host of five and the fleet's Rust nightlies spanned
-   4.5 months.
+   109 days.
 
 ## Obligations for new public surface
 

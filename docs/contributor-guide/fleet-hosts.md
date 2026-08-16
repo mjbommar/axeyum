@@ -19,7 +19,7 @@ Measured 2026-08-16, before any provisioning:
 |---|---|
 | `lean` and `just` present on | **exactly one host of five** (`s5`) |
 | `cargo-deny` present on | **zero hosts** — so `cargo deny check` failed fleet-wide |
-| Rust nightly spread | `2026-03-31` on s5/s6/s2, `2026-07-11` on s4, `2026-07-12` on s7 — **a 4.5-month gap** |
+| Rust nightly spread | `2026-03-25` on s2, `2026-03-31` on s5/s6, `2026-07-11` on s4, `2026-07-12` on s7 — **109 days, 3.6 months** |
 | `just` on the box agents actually work in (`s4`) | **absent**, while `CLAUDE.md` names `just check` as *the* gate |
 
 Every one of those is the same defect wearing different clothes: **a gate's
@@ -45,12 +45,20 @@ Every row below was produced by **executing the binary**, not by `command -v`:
 | `s5` | compute, 16 c | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` |
 | `s6` | compute, 16 c | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` |
 | `s7` | compute, 16 c, largest disk | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` |
-| `s2` | **network-isolated**, 4 c — Python/ledger/NAS-IO only | — | — | — | — |
+| `s2` | compute, **4 c** — smallest; prefer it for Python/ledger/NAS-IO | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` |
 
-All four gate-capable hosts report the identical `clippy 0.1.99 (be8e82435e
-2026-07-11)` and `rustfmt 1.9.0-nightly (be8e82435e 2026-07-11)`, so a lint
-result is now reproducible across the fleet. All four have `core.hooksPath=hooks`
-and `/nas3/data` read-write.
+**All five** hosts report the identical `clippy 0.1.99 (be8e82435e 2026-07-11)`
+and `rustfmt 1.9.0-nightly (be8e82435e 2026-07-11)`, so a lint result is now
+reproducible across the fleet. All five have `core.hooksPath=hooks`,
+`/nas3/data` read-write, `~/.cargo/bin` on the non-interactive ssh `PATH`, and a
+Lean the gate can discover.
+
+> **s2 was network-isolated when first measured, and a reboot restored it.**
+> Recorded rather than quietly overwritten, because the isolated case is real
+> and will recur: it reached *nothing* external — not crates.io, GitHub, the
+> Lean release host, nor the distribution archive — and was provisioned only
+> after the reboot. Its 4 cores still make it the wrong host for a heavy build;
+> that is a sizing judgement, not a capability limit.
 
 ## The baseline
 
@@ -94,7 +102,7 @@ network) can still be provisioned:
 
 ```sh
 scripts/provision-fleet-host.sh                  # canonical, version-controlled
-/nas3/data/axeyum/bin/provision-fleet-host.sh    # staged mirror, for s2
+/nas3/data/axeyum/bin/provision-fleet-host.sh    # staged mirror, for isolated hosts
 ```
 
 Update the tracked file and re-copy the mirror; do not edit the mirror. A script
@@ -114,13 +122,22 @@ disconnection — see the recipe in
 
 ### Network-isolated hosts
 
-`s2` reaches **nothing** external — not crates.io, not GitHub, not the Lean
-release host, not even the distribution archive. It is provisioned entirely from
-`/nas3/data/axeyum/bin/`, which is why the script publishes every binary it
-builds back to the stage. A host in this state can run Python gates, ledger
-validation and NAS-side IO, and cannot build Rust or install Lean.
+A host that reaches nothing external — no crates.io, no GitHub, no Lean release
+host, not even the distribution archive — is provisioned entirely from
+`/nas3/data/axeyum/bin/`. That is why the script **publishes every binary it
+builds back to the stage**: the first host to build `just` and `cargo-deny` pays
+for all the others. Such a host can run Python gates, ledger validation and
+NAS-side IO; it cannot download a Rust toolchain or install Lean, so those must
+be copied from a sibling.
 
-**Do not conclude a host is isolated from one failed probe.** Three separate
+`s2` was in exactly this state on 2026-08-16 and a reboot restored its network,
+so it was provisioned normally in the end — but the staged path was still
+exercised and still earned its keep: `just` and `cargo-deny` were **installed
+from the stage rather than rebuilt**, which on a 4-core box is the difference
+between seconds and a long compile.
+
+**Do not conclude a host is isolated from one failed probe, and re-probe after a
+reboot.** Three separate
 lanes on 2026-08-14 reported a resource unavailable after a single empty result:
 `which lean` returned nothing while Lean 4.30.0 sat installed under `~/.elan`
 merely off `PATH`; `/data0` was called the scratch disk without noticing it was
