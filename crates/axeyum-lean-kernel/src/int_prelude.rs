@@ -78,6 +78,7 @@ use crate::{Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue};
 mod algebra;
 mod decide;
 mod defs;
+mod euclid;
 mod ops;
 mod order;
 mod sign;
@@ -262,6 +263,11 @@ pub struct IntPrelude {
     pub lt_of_le_of_ne: NameId,
     /// `euclidean_decomposition : ∀ t k, 0 < k → ∃ q r, t = k*q+r ∧ 0 ≤ r ∧ r < k`.
     pub euclidean_decomposition: NameId,
+    /// `euclid_of_nat : ∀ n m, ∃ q r, ofNat n = ofNat (succ m)*q+r ∧ 0 ≤ r ∧ r < ofNat (succ m)`.
+    ///
+    /// The non-negative branch of [`Self::euclidean_decomposition`], stated over
+    /// `ℕ` parameters so the divisor is positive by construction.
+    pub euclid_of_nat: NameId,
     /// `eq_em : ∀ (a b : Int), Or (Eq Int a b) (Not (Eq Int a b))`.
     pub eq_em: NameId,
 }
@@ -340,6 +346,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
         euclidean_decomposition: child(kernel, "euclidean_decomposition"),
+        euclid_of_nat: child(kernel, "euclid_of_nat"),
         eq_em: child(kernel, "eq_em"),
     }
 }
@@ -423,6 +430,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         order::declare_additive_order(&mut d)?;
         decide::declare_decidable_equality(&mut d)?;
         algebra::declare_ordered_multiplication(&mut d)?;
+        euclid::declare_of_nat_branch(&mut d)?;
         declare_remaining_axioms(&mut d)?;
         Ok(prelude)
     })();

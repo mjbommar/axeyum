@@ -674,3 +674,36 @@ fn the_nat_foundation_stays_axiom_free() {
         );
     }
 }
+
+/// `Int.euclid_of_nat` is a **theorem** with an empty axiom footprint — the
+/// non-negative branch of the Euclidean decomposition, derived from the
+/// axiom-free `Nat` division development rather than assumed.
+///
+/// This is the ledger-grade claim about the branch: not that it exists, but
+/// that it rests on nothing. `Int.euclidean_decomposition` is deliberately NOT
+/// asserted to be gone here — it is still an axiom, and the test that it has
+/// become a theorem belongs with the commit that discharges it.
+#[test]
+fn euclid_of_nat_is_derived_and_axiom_free() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let declaration = k
+        .environment()
+        .get(p.euclid_of_nat)
+        .expect("Int.euclid_of_nat must be declared");
+    assert!(
+        matches!(declaration, Declaration::Theorem { .. }),
+        "Int.euclid_of_nat must be a Theorem, not an assumption"
+    );
+
+    let footprint = k.axiom_footprint(p.euclid_of_nat);
+    assert!(
+        footprint.is_empty(),
+        "Int.euclid_of_nat rests on trusted declarations: {:?}",
+        footprint
+            .iter()
+            .map(|&n| k.display_name(n).to_string())
+            .collect::<Vec<_>>()
+    );
+}

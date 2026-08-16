@@ -123,3 +123,32 @@ rather than `Nat`, so the existing `shift_exists`/`exists_elim` helpers need
 `Int`-typed siblings. Then discharge the axiom, taking `int_prelude` to **0
 axioms**, and land it as a fact whose checker is bound to the theorem itself
 rather than to a gate-wide run (see the caution in finding 8).
+
+## `Int.euclid_of_nat` — the non-negative branch, proved (2026-08-16)
+
+`Int.euclid_of_nat : ∀ (n m : Nat), ∃ q r : Int, ofNat n = ofNat (succ m)·q + r
+∧ 0 ≤ r ∧ r < ofNat (succ m)` is declared, kernel-checked, and carries an
+**empty axiom footprint**. `int_theorem_inventory` goes 51 → 52 derived, 1 still
+asserted.
+
+The proof is short because the transfer steps are definitional: the witnesses are
+`ofNat a` and `ofNat b` from `Nat.div_mod_exists`, and the goal's right-hand side
+`ofNat (succ m) · ofNat a + ofNat b` *reduces* to `ofNat ((succ m)·a + b)`, so the
+only propositional content is the ℕ equation lifted by `nat_eq_to_int`. `0 ≤ ofNat b`
+reduces to `Nat.le zero b` (`zero_le`), and the upper bound is `And.right` of the
+`divMod` term, which unfolds to a conjunction.
+
+**Negative control exercised.** Repointing the test's footprint check at
+`Int.euclidean_decomposition` — still an axiom — flips exactly one test to
+FAILED with `rests on trusted declarations: ["Int.euclidean_decomposition"]`,
+and restoring it returns 277/277. The first version of that assertion printed a
+15.7 MB kernel dump because `display_name` returns a struct whose `Debug`
+includes the kernel; it now formats to a string, which is the difference between
+a control that fires and one you can read.
+
+**Not done.** The `negSucc` branch. The witnesses are worked out and checked
+numerically — for `t = negSucc n` with `divMod K n a b`, uniformly `q = negSucc a`
+and `r = ofNat (K − succ b)`, the `succ b = K` case collapsing to `r = 0` on its
+own (K=3, n=4: −5 = 3·(−2)+1; K=3, n=2: −3 = 3·(−1)+0). It needs
+`Int.negOfNat_add_ofNat` and the ℕ truncated-subtraction lemmas (`sub_add_cancel`,
+`sub_eq_zero_of_le`), all of which exist.
