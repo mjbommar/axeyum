@@ -17,6 +17,7 @@
 
 #![allow(clippy::many_single_char_names, clippy::similar_names)]
 
+use crate::BinderInfo;
 use crate::env::Declaration;
 use crate::{ExprId, Kernel, KernelError, NameId, NatOps, NatPrelude, NatState, build_nat_prelude};
 
@@ -3609,5 +3610,99 @@ fn gcd_cofactors_coprime_applies_and_its_premise_constrains() {
     assert!(
         k.infer(bad).is_err(),
         "accepted `gcd 4 8 = 2`, which is false — gcd 4 8 computes to 4"
+    );
+}
+
+/// `Nat.div_mul_cancel_of_dvd` applies concretely, and its divisibility
+/// hypothesis is what makes it true.
+///
+/// `2 * (4/2) = 4` needs a witness for `2 ∣ 4`, built as
+/// `Exists.intro … 2 (rfl : 4 = 2*2)`. The same construction at `5` requires
+/// `5 = 2*2`, which computes to `4 ≠ 5`, so it must be REJECTED — the theorem
+/// cannot be applied to a non-multiple.
+#[test]
+fn div_mul_cancel_needs_real_divisibility() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let numeral = |k: &mut Kernel, n: usize| {
+        let mut value = k.const_(p.zero, vec![]);
+        for _ in 0..n {
+            let succ = k.const_(p.succ, vec![]);
+            value = k.app(succ, value);
+        }
+        value
+    };
+    let nat_ty = k.const_(p.nat, vec![]);
+    let level = {
+        let zero = k.level_zero();
+        k.level_succ(zero)
+    };
+    let zero = k.const_(p.zero, vec![]);
+    let one = numeral(&mut k, 1);
+    let two = numeral(&mut k, 2);
+
+    // 1 <= 2
+    let positive = {
+        let base = {
+            let lemma = k.const_(p.zero_le, vec![]);
+            k.app(lemma, one)
+        };
+        let lemma = k.const_(p.le_succ_succ, vec![]);
+        let at_zero = k.app(lemma, zero);
+        let at_one = k.app(at_zero, one);
+        k.app(at_one, base)
+    };
+
+    // `Exists.intro Nat (fun q => Eq target (2*q)) 2 (rfl : target = 2*2)`
+    let witness_for = |k: &mut Kernel, target: ExprId| {
+        let predicate = {
+            // `fun (q : Nat) => Eq Nat target (2 * q)`, with `q` as de Bruijn 0.
+            let q = k.bvar(0);
+            let product = {
+                let mul = k.const_(p.mul, vec![]);
+                let at_two = k.app(mul, two);
+                k.app(at_two, q)
+            };
+            let eq = k.const_(p.logic.eq, vec![level]);
+            let at_ty = k.app(eq, nat_ty);
+            let at_lhs = k.app(at_ty, target);
+            let body = k.app(at_lhs, product);
+            let anon = k.anon();
+            k.lam(anon, nat_ty, body, BinderInfo::Default)
+        };
+        let refl = {
+            let refl = k.const_(p.logic.eq_refl, vec![level]);
+            let at_ty = k.app(refl, nat_ty);
+            k.app(at_ty, target)
+        };
+        let intro = k.const_(p.logic.exists_intro, vec![level]);
+        let at_ty = k.app(intro, nat_ty);
+        let at_pred = k.app(at_ty, predicate);
+        let at_witness = k.app(at_pred, two);
+        k.app(at_witness, refl)
+    };
+
+    let apply_at = |k: &mut Kernel, target: ExprId, divides: ExprId| {
+        let theorem = k.const_(p.div_mul_cancel_of_dvd, vec![]);
+        let at_g = k.app(theorem, two);
+        let at_n = k.app(at_g, target);
+        let at_pos = k.app(at_n, positive);
+        k.app(at_pos, divides)
+    };
+
+    let four = numeral(&mut k, 4);
+    let good_witness = witness_for(&mut k, four);
+    let good = apply_at(&mut k, four, good_witness);
+    assert!(
+        k.infer(good).is_ok(),
+        "2 divides 4, so 2 * (4/2) = 4 must be derivable"
+    );
+
+    let five = numeral(&mut k, 5);
+    let bad_witness = witness_for(&mut k, five);
+    assert!(
+        k.infer(bad_witness).is_err(),
+        "accepted a divisibility witness claiming 5 = 2*2"
     );
 }

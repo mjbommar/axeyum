@@ -2,6 +2,7 @@
 
 use super::NatPrelude;
 use super::division::declare_executable_division_spec;
+use super::helpers::and_left;
 use super::helpers::{iff_forward, iff_reverse};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
@@ -1178,5 +1179,144 @@ pub(super) fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
         };
         (stmt, proof)
     })?;
+    // div_mul_cancel_of_dvd : ∀ g n, 1 ≤ g → dvd g n → Eq (mul g (div n g)) n
+    //
+    // Exact division recovers its dividend. `Rat.normalize` divides a numerator
+    // and denominator by their gcd and then has to say what the quotients
+    // multiply back to; this is that step.
+    //
+    // `div_mod_exact_exists` gives a quotient with remainder ZERO, and
+    // `div_mod_exec` gives the executable `div`/`mod` pair for the same inputs.
+    // `div_mod_unique` identifies them, so the exact quotient IS `n / g`, and the
+    // defining equation `n = g*q + 0` collapses by `add_zero`.
+    d.theorem(p.div_mul_cancel_of_dvd, 2, &|d, values| {
+        let (divisor, dividend) = (values[0], values[1]);
+        let zero = d.zero();
+        let unit = d.succ(zero);
+        let positive_ty = d.le(unit, divisor);
+        let divides_ty = d.dvd(divisor, dividend);
+        let conclusion = {
+            let quotient = d.div(dividend, divisor);
+            let product = d.mul(divisor, quotient);
+            d.eq(product, dividend)
+        };
+        let stmt = {
+            let inner = d.arrow(divides_ty, conclusion);
+            d.arrow(positive_ty, inner)
+        };
+
+        let claim = |d: &mut NatDev<'_>, x: ExprId| {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let positive = d.le(unit, x);
+            let divides = d.dvd(x, dividend);
+            let quotient = d.div(dividend, x);
+            let product = d.mul(x, quotient);
+            let target = d.eq(product, dividend);
+            let inner = d.arrow(divides, target);
+            d.arrow(positive, inner)
+        };
+        let at_zero = |d: &mut NatDev<'_>| {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let positive_ty = d.le(unit, zero);
+            let divides_ty = d.dvd(zero, dividend);
+            let quotient = d.div(dividend, zero);
+            let product = d.mul(zero, quotient);
+            let goal = d.eq(product, dividend);
+            let positive_fv = d.fresh_fvar();
+            let positive = d.kernel().fvar(positive_fv);
+            let divides_fv = d.fresh_fvar();
+            let contradiction = d.lemma(p.not_succ_le_zero, &[zero, positive]);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let level = d.kernel().level_zero();
+            let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+            let anon = d.anon_name();
+            let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+            let body = d.apply(rec, &[motive, contradiction]);
+            let with_divides = d.lam_fv(divides_fv, divides_ty, body);
+            d.lam_fv(positive_fv, positive_ty, with_divides)
+        };
+        let at_succ = |d: &mut NatDev<'_>, k: ExprId, _ih: ExprId| {
+            let nat = d.nat_ty();
+            let one_level = d.level_one();
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let divisor = d.succ(k);
+            let positive_ty = d.le(unit, divisor);
+            let divides_ty = d.dvd(divisor, dividend);
+            let positive_fv = d.fresh_fvar();
+            let positive = d.kernel().fvar(positive_fv);
+            let divides_fv = d.fresh_fvar();
+            let divides = d.kernel().fvar(divides_fv);
+
+            let quotient = d.div(dividend, divisor);
+            let remainder = d.modulo(dividend, divisor);
+            let product = d.mul(divisor, quotient);
+            let goal = d.eq(product, dividend);
+
+            let exact = d.lemma(
+                p.div_mod_exact_exists,
+                &[divisor, dividend, positive, divides],
+            );
+            let executable = d.lemma(p.div_mod_exec, &[k, dividend]);
+
+            // ∃ q, divMod divisor dividend q 0
+            let predicate = {
+                let q_fv = d.fresh_fvar();
+                let q = d.kernel().fvar(q_fv);
+                let body = d.div_mod(divisor, dividend, q, zero);
+                d.lam_fv(q_fv, nat, body)
+            };
+            let exists_ty = {
+                let exists = d.kernel().const_(p.logic.exists_, vec![one_level]);
+                d.apply(exists, &[nat, predicate])
+            };
+            let anon = d.anon_name();
+            let motive = d.kernel().lam(anon, exists_ty, goal, BinderInfo::Default);
+            let minor = {
+                let q_fv = d.fresh_fvar();
+                let q = d.kernel().fvar(q_fv);
+                let relation_ty = d.div_mod(divisor, dividend, q, zero);
+                let relation_fv = d.fresh_fvar();
+                let relation = d.kernel().fvar(relation_fv);
+
+                // `divMod` unfolds to `(dividend = divisor*q + 0) ∧ (0 < divisor)`.
+                let scaled = d.mul(divisor, q);
+                let reconstructed = d.add(scaled, zero);
+                let equation_ty = d.eq(dividend, reconstructed);
+                let bound_ty = d.lt(zero, divisor);
+                let equation = and_left(d, equation_ty, bound_ty, relation);
+
+                // The exact quotient is the executable one.
+                let uniqueness = d.lemma(
+                    p.div_mod_unique,
+                    &[
+                        divisor, dividend, q, zero, quotient, remainder, relation, executable,
+                    ],
+                );
+                let quotient_eq_ty = d.eq(q, quotient);
+                let remainder_eq_ty = d.eq(zero, remainder);
+                let quotient_eq = and_left(d, quotient_eq_ty, remainder_eq_ty, uniqueness);
+
+                // dividend = divisor*q + 0 = divisor*q = divisor*(dividend/divisor)
+                let collapse = d.lemma(p.add_zero, &[scaled]);
+                let lifted = d.congr(q, quotient, quotient_eq, &|d, x| d.mul(divisor, x));
+                let (_reached, chained) =
+                    d.chain(reconstructed, &[(scaled, collapse), (product, lifted)]);
+                let dividend_eq = d.trans(dividend, reconstructed, product, equation, chained);
+                let body = d.symm(dividend, product, dividend_eq);
+                let with_relation = d.lam_fv(relation_fv, relation_ty, body);
+                d.lam_fv(q_fv, nat, with_relation)
+            };
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one_level]);
+            let body = d.apply(rec, &[nat, predicate, motive, minor, exact]);
+            let with_divides = d.lam_fv(divides_fv, divides_ty, body);
+            d.lam_fv(positive_fv, positive_ty, with_divides)
+        };
+        let proof = d.induct(&claim, &at_zero, &at_succ, divisor);
+        (stmt, proof)
+    })?;
+
     Ok(())
 }

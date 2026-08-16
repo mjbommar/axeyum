@@ -89,7 +89,16 @@
 >
 > Revised order: `natAbs` ✅ → `eq_one_of_dvd_one` ✅ → coprimality ✅
 > (`Nat.coprime_of_bezout_one`) → the `Rat` structure ✅ → cofactor coprimality ✅
-> (`Nat.gcd_cofactors_coprime`) → `normalize`.
+> (`Nat.gcd_cofactors_coprime`) → exact division ✅
+> (`Nat.div_mul_cancel_of_dvd`) → `normalize`.
+>
+> **`div_mul_cancel_of_dvd : ∀ g n, 1 ≤ g → g ∣ n → g · (n / g) = n`.** Measured
+> first: no such cancellation existed — the division development had
+> `div_mod_exact_exists` (a quotient with remainder *zero*) and `div_mod_exec`
+> (the executable `div`/`mod` pair) but nothing connecting them. `div_mod_unique`
+> identifies the two quotients, so the exact one **is** `n / g`, and the defining
+> equation `n = g·q + 0` collapses by `add_zero`. This is the step `normalize`
+> needs to say what its quotients multiply back to.
 >
 > **`gcd_cofactors_coprime : ∀ g a b, 1 ≤ g → gcd (g·a) (g·b) = g → gcd a b = 1`**
 > is the statement `normalize` needs, and it composes two steps: `bezout_of_scaled`

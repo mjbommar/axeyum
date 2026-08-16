@@ -498,6 +498,9 @@ pub struct NatPrelude {
     /// `Nat.gcd_cofactors_coprime : ∀ g a b, 1 ≤ g → gcd (g*a) (g*b) = g →
     /// gcd a b = 1` — the cofactors of a gcd are coprime.
     pub gcd_cofactors_coprime: NameId,
+    /// `Nat.div_mul_cancel_of_dvd : ∀ g n, 1 ≤ g → dvd g n → g * (n / g) = n` —
+    /// exact division recovers its dividend.
+    pub div_mul_cancel_of_dvd: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
     /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
@@ -698,6 +701,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_of_bezout_one: kernel.name_str(nat, "coprime_of_bezout_one"),
             bezout_of_scaled: kernel.name_str(nat, "bezout_of_scaled"),
             gcd_cofactors_coprime: kernel.name_str(nat, "gcd_cofactors_coprime"),
+            div_mul_cancel_of_dvd: kernel.name_str(nat, "div_mul_cancel_of_dvd"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
         };
