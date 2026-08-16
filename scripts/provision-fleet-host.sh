@@ -95,6 +95,20 @@ if [ -d "$HOME/.elan/elan-home/bin" ] && [ ! -e "$HOME/.elan/bin" ]; then
   ln -sfn "$HOME/.elan/elan-home/bin" "$HOME/.elan/bin" \
     && say "lean: linked .elan/bin -> elan-home/bin (elan shim)"
 fi
+# Exposing the SHIM is not the same as making it work. `~/.elan/bin/lean` is
+# elan, which resolves a toolchain from ELAN_HOME's settings.toml -- and with
+# ELAN_HOME defaulting to ~/.elan it found the symlinked toolchains but NO
+# default, so it exited "no default toolchain configured". That is worse than
+# not exposing it: check-lean-gate.sh prefers PATH over its own search, so a
+# shim on PATH SHADOWS the working toolchain binary. Measured on s7, where it
+# failed one suite and with it the fact F:ordered-ring-farkas-refutation.
+if [ -x "$HOME/.elan/bin/elan" ] && ! "$HOME/.elan/bin/lean" --version >/dev/null 2>&1; then
+  ELAN_HOME="$HOME/.elan" "$HOME/.elan/bin/elan" default \
+      "$(tr -d '[:space:]' < "$REPO/lean-toolchain" 2>/dev/null || echo leanprover/lean4:v4.30.0)" \
+      >/dev/null 2>&1 \
+    && say "lean: elan default toolchain configured (shim now resolves)" \
+    || { say "lean: elan default FAILED -- shim on PATH would shadow a working lean"; fail=1; }
+fi
 
 # --- 3b. cargo on PATH for NON-INTERACTIVE ssh ---------------------------
 # `ssh host 'script'` runs a non-interactive bash. Ubuntu's stock ~/.bashrc
@@ -150,6 +164,12 @@ v nas3       "[ -w /nas3/data ] && echo rw"
 # NON-INTERACTIVE ssh see cargo. Both were false on this fleet after the first
 # provisioning pass while every tool above reported OK.
 v lean-discoverable "ls \"\$HOME\"/.elan/toolchains/*/bin/lean 2>/dev/null | head -1"
+# If a shim exists it MUST resolve, because check-lean-gate.sh searches PATH
+# first and a broken shim there shadows the working toolchain binary. Checking
+# lean_bin() alone passed while exactly this was broken -- it resolves the
+# toolchain directly and never exercises the shim. Hosts without an elan binary
+# (s5) have no shim and correctly skip.
+v lean-shim "[ -x \"\$HOME/.elan/bin/lean\" ] && \"\$HOME/.elan/bin/lean\" --version || echo 'n/a (no shim on this host)'"
 # The PATH export is only useful if it sits ABOVE ~/.bashrc's early-return
 # guard. Assert the ORDER, not the mere presence -- a check that only greps for
 # the line would pass on the appended version, which never executes. (An
