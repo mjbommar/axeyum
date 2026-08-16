@@ -19,45 +19,13 @@ pub const QUANT_BV_MODEL_NODE_CAP: usize = 4_096;
 /// Maximum source depth admitted by the recursive proof evaluator.
 pub const QUANT_BV_MODEL_DEPTH_CAP: usize = 256;
 
-/// The independently checked proof attached to one quantified BV assertion.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum QuantifiedBvModelSatProof {
-    /// A direct universal body is true because a BV equality below its Boolean
-    /// structure has affine LSB forms that differ for every binder assignment.
-    AffineLsbUniversal,
-    /// A direct negated universal is true at this complete binder assignment.
-    NegatedUniversalWitness {
-        /// Universal binders, outermost first.
-        binders: Vec<SymbolId>,
-        /// One exact Bool/BV value for every binder.
-        values: Vec<Value>,
-    },
-    /// A directly negated existential implication is false at every binder
-    /// value because its ground facts hold, its ground conclusion is false,
-    /// and its sole binder-dependent interval implication is contained.
-    NegatedExistentialIntervalImplication {
-        /// The single existential binder named by the untouched source.
-        binder: SymbolId,
-    },
-    /// A directly negated existential implication is false at every binder
-    /// value because an exact ground-zero signed-division factor annihilates
-    /// the sole binder-dependent product obligation.
-    NegatedExistentialZeroProductImplication {
-        /// The single existential binder named by the untouched source.
-        binder: SymbolId,
-    },
-}
-
-/// A complete free-BV interpretation and source-level proof for one assertion.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QuantifiedBvModelSatCertificate {
-    /// The untouched original assertion covered by this certificate.
-    pub assertion: TermId,
-    /// Exact, strictly ordered values for every free symbol in the assertion.
-    pub free_values: Vec<(SymbolId, Value)>,
-    /// The source-level proof checked independently from candidate search.
-    pub proof: QuantifiedBvModelSatProof,
-}
+// The certificate DATA lives in `crate::quant_sat_certificates`, so `Model`
+// can carry it without depending on this checker. Re-exported here, so
+// `crate::quant_bv_model_sat_cert::...` and the crate-root facade both keep
+// resolving exactly as before.
+pub use crate::quant_sat_certificates::{
+    QuantifiedBvModelSatCertificate, QuantifiedBvModelSatProof,
+};
 
 /// Checks a quantified-BV model certificate against untouched original IR.
 #[must_use]

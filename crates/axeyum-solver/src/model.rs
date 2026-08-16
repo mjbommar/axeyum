@@ -2,8 +2,16 @@
 
 use axeyum_ir::{Assignment, FuncId, FuncValue, Rational, SortId, SymbolId, Value};
 
+// Certificate DATA only, and from ONE module. Importing these through the
+// crate-root facade resolved them to their five CHECKER modules; two of those
+// reach the dispatcher, the theory solvers and back to here, which put `Model`
+// -- the crate's base value type -- inside a dependency cycle of 65 modules and
+// 115,840 lines, half the crate. Naming the data module directly leaves a
+// largest cycle of 24. A value type may depend on the SHAPE of a certificate,
+// never on the search or checker that produces it. Measured and gated by
+// `scripts/analyze_solver_module_graph.py`.
 #[cfg(feature = "full")]
-use crate::{
+use crate::quant_sat_certificates::{
     QuantifiedBoolModelSatCertificate, QuantifiedBvModelSatCertificate,
     QuantifiedGuardSatCertificate, QuantifiedSkolemSatCertificate, QuantifiedUfModelSatCertificate,
 };

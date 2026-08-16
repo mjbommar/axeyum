@@ -19,21 +19,11 @@ pub const QUANTIFIED_UF_PROFILE_CAP: usize = 4096;
 /// Maximum number of binders in one checked universal prefix.
 pub const QUANTIFIED_UF_BINDER_CAP: usize = 16;
 
-/// Source binding for one checked almost-uninterpreted universal model.
-///
-/// The function interpretation itself lives in [`Model`]. The checker trusts
-/// neither a search-generated candidate list nor any derived profile metadata:
-/// it reconstructs the complete finite representative set from `assertion` and
-/// the model's finite function tables.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QuantifiedUfModelSatCertificate {
-    /// Exact original quantified assertion covered by this certificate.
-    pub assertion: TermId,
-    /// Exact outer source binder, redundantly recorded so stale/tampered
-    /// certificates fail closed before finite-profile evaluation. The assertion
-    /// itself binds the complete leading prefix.
-    pub binder: SymbolId,
-}
+// The certificate DATA lives in `crate::quant_sat_certificates`, so `Model`
+// can carry it without depending on this checker -- which depends on
+// `Model`. Re-exported here, so `crate::quant_uf_model_sat_cert::...` and
+// the crate-root facade both keep resolving exactly as before.
+pub use crate::quant_sat_certificates::QuantifiedUfModelSatCertificate;
 
 /// Checks an almost-uninterpreted quantified-UF model against one exact source
 /// assertion.

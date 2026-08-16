@@ -174,6 +174,9 @@ macro_rules! full_modules {
         mod quant_nested_xor_cert;
         mod quant_residue_cert;
         mod quant_sat_cert;
+        // Certificate DATA for satisfiable quantifiers, held apart from the
+        // checkers so `Model` can carry it without depending on them.
+        mod quant_sat_certificates;
         mod quant_skolemize;
         mod quant_uf_model_sat_cert;
         mod quant_unsat_universal;

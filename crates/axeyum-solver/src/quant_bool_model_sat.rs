@@ -18,7 +18,7 @@ use axeyum_ir::{
 use crate::auto::check_auto;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::proof::export_qf_bv_unsat_proof_within;
-use crate::proof::{UnsatProof, UnsatProofOutcome};
+use crate::proof::UnsatProofOutcome;
 use crate::quant_bv_instance_set_cert::{
     BvPositiveUniversalInstanceSetCertificate, BvPositiveUniversalSourceInstance,
     check_bv_positive_universal_instance_set,
@@ -47,35 +47,14 @@ pub const QUANT_BOOL_BV_MODEL_NODE_CAP: usize = 4_096;
 /// Maximum source depth admitted before recursive residual reconstruction.
 pub const QUANT_BOOL_BV_MODEL_DEPTH_CAP: usize = 256;
 
-/// Independently checked reason that a complete free-Boolean model satisfies
-/// one quantified assertion.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum QuantifiedBoolModelSatProof {
-    /// Boolean structure, bounded Boolean enumeration, and affine integer
-    /// normalization prove the untouched assertion directly (ADR-0107/0123).
-    Structural,
-    /// Opening admitted positive universals under the complete free-Boolean
-    /// model leaves a `QF_BV` validity whose negation has this checked proof.
-    PositiveUniversalQfBv {
-        /// Source-bound refutation of the deterministically rebuilt residual.
-        residual_proof: UnsatProof,
-    },
-}
-
-/// A checked free-Boolean interpretation for one original quantified assertion.
-///
-/// Values are strictly ordered by symbol ID and cover exactly the assertion's
-/// free Boolean symbols. Canonical model replay checks both this structure and
-/// agreement with the enclosing [`Model`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QuantifiedBoolModelSatCertificate {
-    /// The untouched original assertion proved by this certificate.
-    pub assertion: TermId,
-    /// Complete free-Boolean interpretation for that assertion.
-    pub values: Vec<(SymbolId, bool)>,
-    /// Independently checked source-level proof mode.
-    pub proof: QuantifiedBoolModelSatProof,
-}
+// The certificate DATA lives in `crate::quant_sat_certificates`, so `Model` can
+// carry a replayable quantified-`sat` witness without depending on this
+// checker -- which reaches the dispatcher, the QF_BV route, and back to
+// `Model`. Re-exported here, so `crate::quant_bool_model_sat::…` and the
+// crate-root facade both keep resolving exactly as before.
+pub use crate::quant_sat_certificates::{
+    QuantifiedBoolModelSatCertificate, QuantifiedBoolModelSatProof,
+};
 
 /// Independently checks a Boolean-guard SAT certificate against original IR.
 #[must_use]

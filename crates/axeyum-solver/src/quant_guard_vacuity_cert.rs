@@ -4,16 +4,11 @@ use std::collections::BTreeSet;
 
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, Value};
 
-/// A concrete outer witness that makes an exact guarded quantified assertion true.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QuantifiedGuardSatCertificate {
-    /// The untouched original assertion covered by this certificate.
-    pub assertion: TermId,
-    /// The assertion's outer existential binder.
-    pub existential: SymbolId,
-    /// A concrete bit-vector value for `existential`.
-    pub witness: Value,
-}
+// The certificate DATA lives in `crate::quant_sat_certificates`, so `Model`
+// can carry it without depending on this checker. Re-exported here, so
+// `crate::quant_guard_vacuity_cert::...` and the crate-root facade both keep
+// resolving exactly as before.
+pub use crate::quant_sat_certificates::QuantifiedGuardSatCertificate;
 
 /// Checks an exact false-equality guard below direct Bool/BV quantifier alternation.
 ///

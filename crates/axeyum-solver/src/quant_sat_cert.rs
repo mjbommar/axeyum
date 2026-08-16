@@ -13,47 +13,12 @@ use axeyum_ir::{
 
 use crate::{Model, SolverError};
 
-/// A checked Skolem witness for one supported universally closed assertion.
-///
-/// The IDs refer only to atoms in the caller's original arena. The synthesized
-/// affine/source expression is owned by the certificate, so it remains
-/// replayable when solving occurred on an arena clone.
-/// [`check_quantified_skolem_sat`] re-derives every structural fact from
-/// `assertion`; no field is trusted.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QuantifiedSkolemSatCertificate {
-    /// The exact original quantified assertion covered by this certificate.
-    pub assertion: TermId,
-    /// The leading universal binders, outermost first.
-    pub universals: Vec<SymbolId>,
-    /// The single existential binder witnessed by `witness`.
-    pub existential: SymbolId,
-    /// An owned expression recipe over original-arena terms that witnesses the
-    /// existential. Arithmetic recipes are affine. For bit-vectors, the exact
-    /// source-term encoding documented by [`AffineSkolemWitness`] is supported.
-    pub witness: AffineSkolemWitness,
-}
-
-/// Arena-stable arithmetic-affine or exact bit-vector source-term witness.
-///
-/// For `Int`/`Real`, this represents `sum(coeff_i * atom_i) + constant`.
-/// `terms` must be strictly ordered by `TermId`, contain no zero coefficient,
-/// and refer only to quantifier-free, same-sort atoms over the universal binders.
-///
-/// For a bit-vector existential, ADR-0141 defines one deliberately different,
-/// exact-source recipe: `terms` contains exactly one original-arena,
-/// quantifier-free, same-width term over only the universal binders, its
-/// coefficient is one, and `constant` is zero. The checker does not interpret
-/// rational arithmetic modulo the BV width. It substitutes that exact term into
-/// the untouched source and grants SAT only when the small checker proves the
-/// resulting equality or non-strict order by reflexivity.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AffineSkolemWitness {
-    /// Deterministically ordered `(atom, coefficient)` pairs.
-    pub terms: Vec<(TermId, Rational)>,
-    /// The affine constant.
-    pub constant: Rational,
-}
+// The certificate DATA lives in `crate::quant_sat_certificates`, so `Model` can
+// carry a replayable quantified-`sat` witness without depending on this
+// checker -- which depends on the dispatcher, which depends on everything.
+// Re-exported here, so `crate::quant_sat_cert::…` and the crate-root facade
+// both keep resolving exactly as before.
+pub use crate::quant_sat_certificates::{AffineSkolemWitness, QuantifiedSkolemSatCertificate};
 
 /// Re-checks a Skolem certificate against its exact original assertion.
 ///
