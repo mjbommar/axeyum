@@ -509,12 +509,8 @@ impl<F: Write + std::os::fd::AsFd> CacheDroppingWriter<F> {
     fn advise_through_current(&mut self) {
         let offset = self.advised_through;
         if let Some(len) = std::num::NonZeroU64::new(self.written - offset) {
-            let _ = rustix::fs::fadvise(
-                &self.file,
-                offset,
-                Some(len),
-                rustix::fs::Advice::DontNeed,
-            );
+            let _ =
+                rustix::fs::fadvise(&self.file, offset, Some(len), rustix::fs::Advice::DontNeed);
             self.advised_through = self.written;
         }
     }
@@ -1007,8 +1003,7 @@ mod tests {
                 .as_nanos()
         );
         let plain_path = std::env::temp_dir().join(format!("axeyum_cnf_drat_plain_{tag}.drat"));
-        let advised_path =
-            std::env::temp_dir().join(format!("axeyum_cnf_drat_advised_{tag}.drat"));
+        let advised_path = std::env::temp_dir().join(format!("axeyum_cnf_drat_advised_{tag}.drat"));
 
         let write_via = |path: &std::path::Path, wrap: bool| {
             let file = fs::File::create(path).unwrap();

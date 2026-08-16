@@ -37,12 +37,12 @@ use std::fs;
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
+#[cfg(unix)]
+use axeyum_cnf::CacheDroppingWriter;
 use axeyum_cnf::{
     StreamingProofOutcome, TextProofSink, check_drat_backward, parse_dimacs, parse_drat,
     solve_with_drat_proof_streaming,
 };
-#[cfg(unix)]
-use axeyum_cnf::CacheDroppingWriter;
 
 /// Regenerates the deciding CNF exactly as `scripts/gen-rado-instance.py`
 /// does: one-hot colour variables `var(j, i) = (j-1)k + i`, at-least-one and

@@ -62,12 +62,12 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
+#[cfg(unix)]
+use axeyum_cnf::CacheDroppingWriter;
 use axeyum_cnf::{
     SatResult, StreamingProofOutcome, TextProofSink, check_drat_backward, parse_drat,
     solve_with_drat_proof_streaming, solve_with_rustsat_batsat_timeout,
 };
-#[cfg(unix)]
-use axeyum_cnf::CacheDroppingWriter;
 use axeyum_search::{
     ColouringFamily, MinConflictsOptions, Rado, Witness, cover, harness, min_conflicts,
 };
