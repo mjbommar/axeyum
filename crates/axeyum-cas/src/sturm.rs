@@ -64,11 +64,35 @@ fn sign_variations(chain: &[Vec<Rational>], x: Rational) -> Option<usize> {
     Some(variations)
 }
 
+/// Is `p` a **nonzero constant**? Such a polynomial has no real roots, which is a
+/// perfectly good answer — but `poly::squarefree_part` declines at degree 0
+/// ("constant: no roots, not our job here"), so every entry point below must
+/// settle the case BEFORE calling it.
+///
+/// It did not. `isolate_real_roots` opened with `squarefree_part(p, …)?` and only
+/// then tested `degree == 0`, making that branch — comment and all — dead code,
+/// and returning `None` on a nonzero constant in flat contradiction of the
+/// function's own documented contract (`Some(vec![])` when there are no real
+/// roots). `count_real_roots_in` and `approximate_real_roots` inherited it. The
+/// effect was that a caller could not tell "no roots" from "I gave up": the
+/// solver's cross-check corpus in `axeyum-solver::nra_real_root` found it by
+/// asking both engines about `7`.
+///
+/// `None` here means the zero polynomial, where every point is a root and there
+/// is nothing to count.
+fn is_nonzero_constant(p: &[Rational]) -> Option<bool> {
+    Some(poly::rat_degree(p)? == 0)
+}
+
 /// The number of **distinct** real roots of `p` in the half-open interval
 /// `(lower, upper]`, via Sturm's theorem. `p` is an LSB-first rational polynomial.
-/// `None` if `p` is zero/constant-with-no-square-free-part or on overflow.
+/// `Some(0)` for a nonzero constant; `None` only for the zero polynomial or on
+/// overflow.
 #[must_use]
 pub fn count_real_roots_in(p: &[Rational], lower: Rational, upper: Rational) -> Option<usize> {
+    if is_nonzero_constant(p)? {
+        return Some(0); // no roots anywhere, so none in this interval either
+    }
     let squarefree = poly::squarefree_part(p, GCD_DEGREE_CAP)?;
     let chain = sturm_chain(&squarefree)?;
     let at_lower = sign_variations(&chain, lower)?;
@@ -109,11 +133,10 @@ fn cauchy_bound(p: &[Rational]) -> Option<Rational> {
 /// are no real roots. `p` is LSB-first.
 #[must_use]
 pub fn isolate_real_roots(p: &[Rational]) -> Option<Vec<(Rational, Rational)>> {
-    let squarefree = poly::squarefree_part(p, GCD_DEGREE_CAP)?;
-    let degree = poly::rat_degree(&squarefree)?;
-    if degree == 0 {
-        return Some(Vec::new()); // nonzero constant: no roots
+    if is_nonzero_constant(p)? {
+        return Some(Vec::new());
     }
+    let squarefree = poly::squarefree_part(p, GCD_DEGREE_CAP)?;
     let chain = sturm_chain(&squarefree)?;
     let bound = cauchy_bound(&squarefree)?;
     let lower = bound.checked_neg()?;
@@ -191,11 +214,15 @@ fn refine_root(
 /// Rational approximations (to within `width`) of **every** real root of a
 /// univariate rational polynomial, ascending. Each root is first isolated by
 /// [`isolate_real_roots`] (Sturm-certified), then bisected to the requested width.
-/// `None` for the zero polynomial, a non-positive `width`, or on overflow.
+/// `Some(vec![])` for a nonzero constant; `None` for the zero polynomial, a
+/// non-positive `width`, or on overflow.
 #[must_use]
 pub fn approximate_real_roots(p: &[Rational], width: Rational) -> Option<Vec<Rational>> {
     if width.numerator() <= 0 {
         return None;
+    }
+    if is_nonzero_constant(p)? {
+        return Some(Vec::new());
     }
     let squarefree = poly::squarefree_part(p, GCD_DEGREE_CAP)?;
     let intervals = isolate_real_roots(p)?;
@@ -208,6 +235,53 @@ pub fn approximate_real_roots(p: &[Rational], width: Rational) -> Option<Vec<Rat
 
 #[cfg(test)]
 mod tests {
+
+    /// A nonzero constant has no real roots, and every entry point must SAY so
+    /// rather than decline.
+    ///
+    /// Before the degree-0 guard was hoisted above `squarefree_part`, all three
+    /// returned `None` here — indistinguishable from overflow or from the zero
+    /// polynomial, and in direct contradiction of `isolate_real_roots`' own
+    /// documented contract. Negative control, run rather than asserted: restoring
+    /// the pre-fix order (guard after `squarefree_part`) fails this test and ONLY
+    /// this test — the other seven in the module stay green, which is the
+    /// measurement showing nothing else covered degree 0.
+    #[test]
+    fn nonzero_constants_report_no_roots_instead_of_declining() {
+        for value in [7i128, -7, 1, i128::MAX] {
+            let constant = vec![Rational::integer(value)];
+            assert_eq!(
+                isolate_real_roots(&constant),
+                Some(Vec::new()),
+                "isolate {value}"
+            );
+            assert_eq!(
+                count_real_roots_in(&constant, Rational::integer(-9), Rational::integer(9)),
+                Some(0),
+                "count {value}"
+            );
+            assert_eq!(
+                approximate_real_roots(&constant, Rational::new(1, 8)),
+                Some(Vec::new()),
+                "approximate {value}"
+            );
+        }
+    }
+
+    /// The zero polynomial stays `None`: every point is a root, so there is
+    /// nothing to isolate or count. This is the boundary the guard must not
+    /// swallow — `rat_degree` returns `None` there, and `is_nonzero_constant`
+    /// propagates it.
+    #[test]
+    fn the_zero_polynomial_still_declines() {
+        let zero = vec![Rational::zero()];
+        assert_eq!(isolate_real_roots(&zero), None);
+        assert_eq!(
+            count_real_roots_in(&zero, Rational::integer(-9), Rational::integer(9)),
+            None
+        );
+        assert_eq!(approximate_real_roots(&zero, Rational::new(1, 8)), None);
+    }
     use super::*;
 
     fn poly_from(coeffs: &[i128]) -> Vec<Rational> {

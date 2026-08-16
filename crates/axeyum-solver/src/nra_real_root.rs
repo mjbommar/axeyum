@@ -7682,3 +7682,222 @@ mod tests {
         }
     }
 }
+
+// ============================================================================
+// Shared corpus: the two real-algebra engines, cross-checked.
+// ============================================================================
+
+/// The workspace has **two** Sturm implementations, and until this module they
+/// had no shared test and no awareness of each other:
+///
+/// * this file's [`isolate_roots`] — the one the NRA decision procedure actually
+///   runs: exact Sturm first ([`isolate_roots_sturm`]) with a uniform-grid
+///   fallback, the solver's degree/coefficient guards, and a bisect-to-
+///   `RealAlgebraic` back end;
+/// * [`axeyum_cas::sturm`] — `count_real_roots_in` / `isolate_real_roots` over
+///   rational coefficients, with its own `sturm_chain` and `sign_variations`.
+///
+/// They share only the primitives in `axeyum_ir::poly` (`squarefree_part`,
+/// `rat_rem`, …); the chain construction, the Cauchy bound, the subdivision
+/// strategy and the caps are independent. That makes them a genuine differential
+/// pair — and it is why the fix here is a shared corpus rather than a bridge.
+/// `docs/refactor-2026-08/02-composition.md` W2 measured this file at 7,684
+/// lines against `sturm.rs`'s 303 and concluded the solver's is materially
+/// stronger, so routing the solver at the CAS version would be a **downgrade**.
+/// What was actually missing was evidence that they agree.
+///
+/// The checks are deliberately not "both return the same intervals": the two
+/// bisect differently, so equal intervals is the wrong invariant and would make
+/// the gate brittle without making it stronger. Instead each engine's answer is
+/// certified against the *other's* counter, which is the property that matters —
+/// a missed root is what turns a real `sat` into a spurious `unsat`.
+#[cfg(test)]
+mod real_algebra_parity {
+    use super::*;
+
+    /// `(description, LSB-first integer coefficients, distinct real roots)`.
+    ///
+    /// The counts are stated independently of both engines (they are known by
+    /// factorisation), so a shared bug that moved both answers together would
+    /// still be caught here.
+    const CORPUS: &[(&str, &[i128], usize)] = &[
+        ("x² − 2 → ±√2", &[-2, 0, 1], 2),
+        ("x² + 1 → none", &[1, 0, 1], 0),
+        ("x² − 4 → ±2, both rational", &[-4, 0, 1], 2),
+        ("x³ − x → −1, 0, 1", &[0, -1, 0, 1], 3),
+        ("x³ − 2 → one real cube root", &[-2, 0, 0, 1], 1),
+        (
+            "(x−1)²(x+2) = x³ − 3x + 2 → 1 (double), −2",
+            &[2, -3, 0, 1],
+            2,
+        ),
+        ("(x−1)² → 1, multiplicity collapsed", &[1, -2, 1], 1),
+        ("x⁴ − 5x² + 4 = (x²−1)(x²−4) → ±1, ±2", &[4, 0, -5, 0, 1], 4),
+        (
+            "x⁴ − 5x² + 6 = (x²−2)(x²−3) → ±√2, ±√3",
+            &[6, 0, -5, 0, 1],
+            4,
+        ),
+        ("x⁴ + 1 → none", &[1, 0, 0, 0, 1], 0),
+        ("x⁵ − x → 0, ±1", &[0, -1, 0, 0, 0, 1], 3),
+        // The separation case: two roots 1/10000 apart. A fixed grid reports this
+        // polynomial root-FREE (see `grid_misses_two_close_roots_sturm_finds_them`),
+        // so it is the one shape where an engine can silently under-count.
+        (
+            "(10000x−1)(10000x−2) → two roots 1e−4 apart",
+            &[2, -30000, 100_000_000],
+            2,
+        ),
+        // Non-squarefree with irrational roots: the squarefree reduction must fire
+        // in both engines or the counts diverge.
+        ("(x² − 2)² → ±√2, each doubled", &[4, 0, -4, 0, 1], 2),
+        // Degree 0. Kept in the corpus precisely because the engines reach the
+        // same answer by different routes — see `nonzero_constants_*` below.
+        ("7 → constant, no roots", &[7], 0),
+        ("−7 → constant, no roots", &[-7], 0),
+    ];
+
+    fn as_rational(poly: &[i128]) -> Vec<Rational> {
+        poly.iter().copied().map(Rational::integer).collect()
+    }
+
+    fn cas_isolate(poly: &[i128], name: &str) -> Vec<(Rational, Rational)> {
+        axeyum_cas::sturm::isolate_real_roots(&as_rational(poly))
+            .unwrap_or_else(|| panic!("cas engine declined on {name}"))
+    }
+
+    /// Layer 1: the engine the solver actually runs, the CAS engine, and the
+    /// independently-known factorisation all agree on the distinct-root count.
+    #[test]
+    fn both_engines_agree_with_the_known_root_counts() {
+        for (name, poly, expected) in CORPUS {
+            let solver =
+                isolate_roots(poly).unwrap_or_else(|| panic!("solver engine declined on {name}"));
+            let cas = cas_isolate(poly, name);
+            assert_eq!(solver.len(), *expected, "solver count for {name}");
+            assert_eq!(cas.len(), *expected, "cas count for {name}");
+        }
+    }
+
+    /// Degree 0, where the two engines reach the same answer by different routes.
+    ///
+    /// Both had to be fixed to get here. The CAS declined on a nonzero constant
+    /// (its `degree == 0` branch was unreachable behind `squarefree_part(…)?`,
+    /// contradicting its own documented contract); the solver's *Sturm layer*
+    /// still declines for the same underlying reason, and it is the grid fallback
+    /// in [`isolate_roots`] that supplies the empty answer. This corpus is what
+    /// found the CAS side, by asking both engines about `7`.
+    ///
+    /// Asserted rather than commented because it is what a future refactor is
+    /// most likely to break silently: drop or reorder the grid fallback and
+    /// constants start declining again, turning a decidable sign query into
+    /// `unknown` with no test to notice.
+    #[test]
+    fn nonzero_constants_are_answered_by_the_fallback_not_by_sturm() {
+        for poly in [&[7i128][..], &[-7i128][..]] {
+            assert!(
+                isolate_roots_sturm(poly).is_none(),
+                "the solver's Sturm layer declines at degree 0: {poly:?}"
+            );
+            assert_eq!(
+                isolate_roots_grid(poly).map(|r| r.len()),
+                Some(0),
+                "the grid fallback supplies the empty root set: {poly:?}"
+            );
+            assert_eq!(
+                isolate_roots(poly).map(|r| r.len()),
+                Some(0),
+                "so the dispatcher answers: {poly:?}"
+            );
+            assert_eq!(
+                axeyum_cas::sturm::isolate_real_roots(&as_rational(poly)).map(|r| r.len()),
+                Some(0),
+                "and the CAS answers directly: {poly:?}"
+            );
+        }
+    }
+
+    /// Layer 2: every root the *solver* located lies in exactly one interval the
+    /// *CAS* isolated, and every CAS interval holds exactly one root by the
+    /// *solver's* Sturm chain.
+    ///
+    /// This is the check a shared count cannot make. Two engines can agree that a
+    /// polynomial has three real roots while disagreeing about where the third
+    /// one is; only cross-containment rules that out.
+    #[test]
+    fn each_engines_roots_land_in_the_others_intervals() {
+        for (name, poly, _) in CORPUS {
+            let solver = isolate_roots(poly).expect("solver engine answers");
+            let cas = cas_isolate(poly, name);
+
+            for root in &solver {
+                let at = root.locate();
+                // The CAS intervals are half-open `(lo, hi]` and disjoint, so a
+                // root must meet exactly one. For an algebraic root the test is
+                // interval OVERLAP, not containment: the two bisections stop at
+                // different widths, so neither interval need contain the other —
+                // but a shared root forces them to meet, and disjointness of the
+                // CAS intervals still makes "exactly one" the right count.
+                let hits = cas
+                    .iter()
+                    .filter(|(lo, hi)| match root {
+                        Root::Rational(q) => *lo < *q && *q <= *hi,
+                        Root::Algebraic(a) => match a.interval() {
+                            Some((alo, ahi)) => alo <= *hi && *lo <= ahi,
+                            None => *lo < at && at <= *hi,
+                        },
+                    })
+                    .count();
+                assert_eq!(
+                    hits, 1,
+                    "solver root at ~{at:?} in {name} met {hits} cas intervals"
+                );
+            }
+
+            // The other direction. Degree 0 has no squarefree part to build a
+            // chain over, and no intervals to check either — the loop below is
+            // simply empty there.
+            let Some(squarefree) = squarefree_part(&as_rational(poly)) else {
+                assert!(
+                    cas.is_empty(),
+                    "{name} has no squarefree part but has roots"
+                );
+                continue;
+            };
+            let chain = sturm_chain(&squarefree).expect("solver chain builds");
+            for (lo, hi) in &cas {
+                let count = count_roots_in(&chain, *lo, *hi)
+                    .unwrap_or_else(|| panic!("solver chain declined on an interval of {name}"));
+                assert_eq!(
+                    count, 1,
+                    "cas interval ({lo:?}, {hi:?}] of {name} by the solver's chain"
+                );
+            }
+        }
+    }
+
+    /// Layer 3: the CAS's interval counter, over a bound containing every root of
+    /// the corpus, agrees with the known counts.
+    ///
+    /// `count_real_roots_in` is a different entry point from `isolate_real_roots`
+    /// — it never subdivides — so this exercises CAS code layer 1 does not.
+    #[test]
+    fn the_cas_counter_agrees_over_a_bound_containing_every_root() {
+        for (name, poly, expected) in CORPUS {
+            let rational = as_rational(poly);
+            let bound = Rational::integer(1_000_000);
+            let lower = bound.checked_neg().expect("bound negates");
+            let Some(count) = axeyum_cas::sturm::count_real_roots_in(&rational, lower, bound)
+            else {
+                // Degree 0: no squarefree part to count over. `isolate_real_roots`
+                // handles it explicitly and layer 1 checks that answer.
+                assert_eq!(
+                    *expected, 0,
+                    "cas counter declined on {name}, which has roots"
+                );
+                continue;
+            };
+            assert_eq!(count, *expected, "cas interval count for {name}");
+        }
+    }
+}

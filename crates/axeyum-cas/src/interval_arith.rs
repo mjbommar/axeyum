@@ -201,28 +201,32 @@ impl Interval {
         Interval::new(lower, upper)
     }
 
-    /// The absolute-value interval `{ |x| : x ∈ self }`.
+    /// The absolute-value interval `{ |x| : x ∈ self }`, or `None` on `i128`
+    /// overflow while negating an endpoint (reachable when an endpoint numerator
+    /// is `i128::MIN`).
     ///
-    /// # Panics
-    ///
-    /// Panics on `i128` overflow while negating an endpoint (only reachable when
-    /// an endpoint numerator is `i128::MIN`).
+    /// This used to return `Interval` and **panic** on that overflow, alone
+    /// among the operations here — `add`, `sub`, `mul`, `neg`, `div`, `pow` and
+    /// `new` all decline with `None`. A function that panics where its siblings
+    /// decline cannot be called from an `unknown`-first API at all, which is the
+    /// whole contract this crate sits behind: a resource limit must degrade to a
+    /// verdict, never to a crash.
     #[must_use]
-    pub fn abs(&self) -> Interval {
+    pub fn abs(&self) -> Option<Interval> {
         let zero = Rational::zero();
         if self.lower >= zero {
             // Wholly non-negative: unchanged.
-            *self
+            Some(*self)
         } else if self.upper <= zero {
             // Wholly non-positive: negate and swap endpoints.
-            let lower = self.upper.checked_neg().expect("interval abs overflow");
-            let upper = self.lower.checked_neg().expect("interval abs overflow");
-            Interval { lower, upper }
+            let lower = self.upper.checked_neg()?;
+            let upper = self.lower.checked_neg()?;
+            Some(Interval { lower, upper })
         } else {
             // Straddles zero: minimum is 0, maximum is the larger magnitude.
-            let neg_lower = self.lower.checked_neg().expect("interval abs overflow");
-            let upper = rat_max(neg_lower, self.upper).expect("interval abs overflow");
-            Interval { lower: zero, upper }
+            let neg_lower = self.lower.checked_neg()?;
+            let upper = rat_max(neg_lower, self.upper)?;
+            Some(Interval { lower: zero, upper })
         }
     }
 }
@@ -365,9 +369,41 @@ mod tests {
 
     #[test]
     fn abs_handles_sign_and_straddle() {
-        assert_eq!(ivl(1, 3).abs(), ivl(1, 3)); // non-negative
-        assert_eq!(ivl(-4, -1).abs(), ivl(1, 4)); // non-positive: reflect+swap
-        assert_eq!(ivl(-2, 3).abs(), ivl(0, 3)); // straddles: min is 0
+        assert_eq!(ivl(1, 3).abs(), Some(ivl(1, 3))); // non-negative
+        assert_eq!(ivl(-4, -1).abs(), Some(ivl(1, 4))); // non-positive: reflect+swap
+        assert_eq!(ivl(-2, 3).abs(), Some(ivl(0, 3))); // straddles: min is 0
+    }
+
+    /// The reason `abs` returns `Option`: on an `i128::MIN` endpoint it must
+    /// decline, not abort the process.
+    ///
+    /// Both fallible branches are exercised. Negative control, run rather than
+    /// asserted: restoring the old `.expect("interval abs overflow")` on the
+    /// non-positive branch makes this test report `FAILED` (libtest catches the
+    /// unwind) while `abs_handles_sign_and_straddle` still passes — so the older
+    /// test alone never covered the overflow, and this one does.
+    ///
+    /// The third branch (wholly non-negative) negates nothing and so is total;
+    /// it is asserted here to pin that it still answers on the same endpoint.
+    #[test]
+    fn abs_declines_on_an_unnegatable_endpoint() {
+        let most_negative = Rational::integer(i128::MIN);
+
+        // Wholly non-positive: reflecting the lower endpoint overflows.
+        let non_positive = Interval::new(most_negative, Rational::integer(-1))
+            .expect("lower <= upper, so the interval is well-formed");
+        assert_eq!(non_positive.abs(), None);
+
+        // Straddling zero: the maximum magnitude needs that same negation.
+        let straddling = Interval::new(most_negative, Rational::integer(1))
+            .expect("lower <= upper, so the interval is well-formed");
+        assert_eq!(straddling.abs(), None);
+
+        // Non-negative endpoints negate nothing, so `i128::MIN` on the *upper*
+        // side is answerable and must still be answered.
+        let non_negative = Interval::new(Rational::integer(0), Rational::integer(i128::MAX))
+            .expect("lower <= upper, so the interval is well-formed");
+        assert_eq!(non_negative.abs(), Some(non_negative));
     }
 
     #[test]
