@@ -3,7 +3,7 @@
 //! Three artifacts, chosen to be three different *kinds* of question rather than
 //! three instances of one. Every certificate here was found by hand -- the
 //! search is untrusted and, in this lane, it is a person with a pencil. What
-//! matters is that [`crate::sos::check`] re-derives each one from the declared
+//! matters is that [`crate::sos::check()`] re-derives each one from the declared
 //! system alone, in a few milliseconds, and rejects every tampering pinned in
 //! `scripts/check-sos-negative-controls.sh`.
 //!

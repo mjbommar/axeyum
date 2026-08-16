@@ -404,7 +404,7 @@ impl<W: Write> DratSink for TextProofSink<W> {
 /// useful in front of something backed by a real file descriptor.
 ///
 /// The advisory call is batched, not per-write: it fires once every
-/// [`CACHE_DROP_INTERVAL_BYTES`] of new data (and once more for the final
+/// `CACHE_DROP_INTERVAL_BYTES` of new data (and once more for the final
 /// partial interval, on [`flush`](Write::flush)), covering exactly the range
 /// written since the last call. Calling `fadvise` after every underlying
 /// `write` was tried first and measured 2.9x slower wall-clock than an

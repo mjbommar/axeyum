@@ -335,7 +335,7 @@ pub fn check_two_tuple_witness(
 ///
 /// # Errors
 ///
-/// If `F ⊨ X → Y`, in which case [`derive`] is the certificate to reach for.
+/// If `F ⊨ X → Y`, in which case [`derive()`] is the certificate to reach for.
 pub fn two_tuple_witness(
     schema: &Schema,
     x: AttrSet,

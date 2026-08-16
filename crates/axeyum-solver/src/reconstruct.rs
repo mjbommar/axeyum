@@ -1107,7 +1107,7 @@ pub enum ProofFragment {
 ///   the 29 unrelated routes that share the emitter — differing only in the
 ///   generated constant names and the refuter named in its header.
 ///
-/// The distinction is the same one [`crate::Evidence`]/[`crate::CheckOutcome`]
+/// The distinction is the same one [`crate::Evidence`]/[`crate::EvidenceCheck`]
 /// draw between "nothing to check" and "checked and failed": an artifact that
 /// cannot fail is not thereby a proof.
 ///

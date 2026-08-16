@@ -34,7 +34,7 @@
 //! can be established: by examining every subset of the attributes. Each of
 //! the `2^n` subsets is either a superset of a reported key, or it is issued a
 //! two-row counterexample relation which is then **checked** by
-//! [`armstrong::check_two_tuple_witness`]. The search uses closure; the
+//! [`super::armstrong::check_two_tuple_witness`]. The search uses closure; the
 //! verification does not.
 
 use super::armstrong::{
@@ -192,7 +192,7 @@ pub struct KeyCompleteness {
     /// How many were issued a two-row counterexample relation.
     pub counterexamples_built: usize,
     /// How many of those relations passed
-    /// [`armstrong::check_two_tuple_witness`]. The claim rests on this number
+    /// [`super::armstrong::check_two_tuple_witness`]. The claim rests on this number
     /// equalling the one above.
     pub counterexamples_checked: usize,
 }

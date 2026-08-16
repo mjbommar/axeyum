@@ -79,7 +79,7 @@ pub struct PreludeCacheStats {
     /// Calls that took the ordinary build path (cache off, kernel not pristine,
     /// or no template available).
     pub misses: u64,
-    /// Templates constructed, at most one per [`PreludeKey`] per process.
+    /// Templates constructed, at most one per `PreludeKey` per process.
     pub templates_built: u64,
 }
 

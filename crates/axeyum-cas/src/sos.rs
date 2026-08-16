@@ -48,7 +48,7 @@
 //!
 //! # Independence of the checker
 //!
-//! [`check`] never trusts a stated derivative. Given the vector field and the
+//! [`check()`] never trusts a stated derivative. Given the vector field and the
 //! candidate function it forms `V-dot = sum_i (dV/dx_i) * f_i` itself with
 //! [`MvPoly::derivative_in`] and [`MvPoly::mul`], and compares that against what
 //! the certificate's squares expand to. A tampered vector field therefore breaks

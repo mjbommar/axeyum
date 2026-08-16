@@ -418,7 +418,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
 ///
 /// The undischarged remainder used to be a list kept as data so it shrank
 /// visibly. It reached zero when `Int.euclidean_decomposition` became a theorem
-/// (see [`euclid`]), so the list, its type alias, and `IntDev::int_axiom` are
+/// (see the private `euclid` submodule), so the list, its type alias, and `IntDev::int_axiom` are
 /// gone with it; `int_prelude_tests::asserted_laws` is now empty and guards
 /// against one reappearing.
 ///
