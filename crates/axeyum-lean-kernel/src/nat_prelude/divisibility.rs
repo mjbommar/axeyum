@@ -1495,5 +1495,80 @@ pub(super) fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
         (stmt, proof)
     })?;
 
+    // one_le_mul : ∀ a b, 1 ≤ a → 1 ≤ b → 1 ≤ a * b
+    // Case on the RIGHT factor: at zero the second hypothesis is absurd, and at
+    // a successor `a * succ j = a*j + a` is at least `a`, which is at least 1.
+    d.theorem(p.one_le_mul, 2, &|d, values| {
+        let (left, right) = (values[0], values[1]);
+        let zero = d.zero();
+        let unit = d.succ(zero);
+        let left_ty = d.le(unit, left);
+        let right_ty = d.le(unit, right);
+        let product = d.mul(left, right);
+        let conclusion = d.le(unit, product);
+        let stmt = {
+            let inner = d.arrow(right_ty, conclusion);
+            d.arrow(left_ty, inner)
+        };
+
+        let left_fv = d.fresh_fvar();
+        let left_positive = d.kernel().fvar(left_fv);
+
+        let claim = |d: &mut NatDev<'_>, x: ExprId| {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let hypothesis = d.le(unit, x);
+            let product = d.mul(left, x);
+            let target = d.le(unit, product);
+            d.arrow(hypothesis, target)
+        };
+        let at_zero = |d: &mut NatDev<'_>| {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let hypothesis_ty = d.le(unit, zero);
+            let product = d.mul(left, zero);
+            let goal = d.le(unit, product);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let contradiction = d.lemma(p.not_succ_le_zero, &[zero, h]);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let level = d.kernel().level_zero();
+            let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+            let anon = d.anon_name();
+            let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+            let body = d.apply(rec, &[motive, contradiction]);
+            d.lam_fv(h_fv, hypothesis_ty, body)
+        };
+        let at_succ = |d: &mut NatDev<'_>, j: ExprId, _ih: ExprId| {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let successor = d.succ(j);
+            let hypothesis_ty = d.le(unit, successor);
+            let h_fv = d.fresh_fvar();
+
+            // 1 <= left <= left + left*j = left*j + left = left * succ j
+            let scaled = d.mul(left, j);
+            let shifted = d.add(left, scaled);
+            let reach = d.lemma(p.le_add_right, &[left, scaled]);
+            let bounded = d.lemma(p.le_trans, &[unit, left, shifted, left_positive, reach]);
+            let swapped = d.add(scaled, left);
+            let commute = d.lemma(p.add_comm, &[left, scaled]);
+            let product = d.mul(left, successor);
+            let expand = d.lemma(p.mul_succ, &[left, j]);
+            let back = d.symm(product, swapped, expand);
+            let (_reached, chained) = d.chain(shifted, &[(swapped, commute), (product, back)]);
+            let motive = d.eq_motive(shifted, &|d, x| {
+                let zero = d.zero();
+                let unit = d.succ(zero);
+                d.le(unit, x)
+            });
+            let body = d.transport(shifted, motive, bounded, product, chained);
+            d.lam_fv(h_fv, hypothesis_ty, body)
+        };
+        let selected = d.induct(&claim, &at_zero, &at_succ, right);
+        let proof = d.lam_fv(left_fv, left_ty, selected);
+        (stmt, proof)
+    })?;
+
     Ok(())
 }

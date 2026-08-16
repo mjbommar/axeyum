@@ -22,6 +22,7 @@
 //!   no `Quotient` primitive.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
+use crate::ExprId;
 use crate::env::Declaration;
 use crate::{IntPrelude, Kernel, build_int_prelude};
 
@@ -945,4 +946,75 @@ fn rat_normalize_reduces_two_quarters_to_one_half() {
         .expect("normalize must accept a negSucc numerator");
     let rendered = k.render_lean(inferred);
     assert!(rendered.contains("Rat"), "unexpected type: {rendered}");
+}
+
+/// `Rat.mul` renormalises: `2/3 · 3/2` is `1/1`, not `6/6`.
+///
+/// This is why multiplication cannot just multiply the stored pairs — the
+/// product of two *reduced* fractions need not be reduced, and `Rat`'s
+/// `reduced` field would then be unprovable. Routing through `Rat.normalize`
+/// fixes that, and because every operation computes, the claim is settled by
+/// `def_eq` with no lemma.
+#[test]
+fn rat_mul_renormalises_two_thirds_times_three_halves_to_one() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let numeral = |k: &mut Kernel, n: usize| {
+        let mut value = k.const_(p.nat.zero, vec![]);
+        for _ in 0..n {
+            let succ = k.const_(p.nat.succ, vec![]);
+            value = k.app(succ, value);
+        }
+        value
+    };
+    let zero = k.const_(p.nat.zero, vec![]);
+    let rational = |k: &mut Kernel, numerator: usize, denominator: usize| {
+        let num = {
+            let ctor = k.const_(p.of_nat, vec![]);
+            let magnitude = numeral(k, numerator);
+            k.app(ctor, magnitude)
+        };
+        let den = numeral(k, denominator);
+        let positive = {
+            let predecessor = numeral(k, denominator - 1);
+            let base = {
+                let lemma = k.const_(p.nat.zero_le, vec![]);
+                k.app(lemma, predecessor)
+            };
+            let lemma = k.const_(p.nat.le_succ_succ, vec![]);
+            let at_zero = k.app(lemma, zero);
+            let at_pred = k.app(at_zero, predecessor);
+            k.app(at_pred, base)
+        };
+        let normalize = k.const_(p.rat_normalize, vec![]);
+        let at_num = k.app(normalize, num);
+        let at_den = k.app(at_num, den);
+        k.app(at_den, positive)
+    };
+    let times = |k: &mut Kernel, a: ExprId, b: ExprId| {
+        let mul = k.const_(p.rat_mul, vec![]);
+        let at_a = k.app(mul, a);
+        k.app(at_a, b)
+    };
+
+    let two_thirds = rational(&mut k, 2, 3);
+    let three_halves = rational(&mut k, 3, 2);
+    let product = times(&mut k, two_thirds, three_halves);
+    let one = rational(&mut k, 1, 1);
+    assert!(
+        k.def_eq(product, one),
+        "2/3 * 3/2 did not renormalise to 1/1"
+    );
+
+    // Non-vacuity, and a product that genuinely stays a fraction.
+    let one_half = rational(&mut k, 1, 2);
+    let one_third = rational(&mut k, 1, 3);
+    let sixth = times(&mut k, one_half, one_third);
+    let one_sixth = rational(&mut k, 1, 6);
+    assert!(k.def_eq(sixth, one_sixth), "1/2 * 1/3 is not 1/6");
+    assert!(
+        !k.def_eq(sixth, one_half),
+        "1/6 and 1/2 compared equal — the checks above would be meaningless"
+    );
 }

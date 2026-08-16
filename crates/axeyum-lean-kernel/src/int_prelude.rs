@@ -290,6 +290,19 @@ pub struct IntPrelude {
     /// `Rat.normalize : (num : Int) → (den : Nat) → 1 ≤ den → Rat` — the smart
     /// constructor, dividing through by `gcd (natAbs num) den`.
     pub rat_normalize: NameId,
+    /// `Rat.num : Rat → Int` — the numerator projection.
+    /// `Rat.rec` — the kernel-generated recursor for the single-constructor
+    /// structure, which is both the projection mechanism and the way to reach
+    /// its proof fields.
+    pub rat_rec: NameId,
+    /// `Rat.num : Rat → Int` — the numerator projection.
+    pub rat_num: NameId,
+    /// `Rat.den : Rat → Nat` — the denominator projection.
+    pub rat_den: NameId,
+    /// `Rat.den_pos : ∀ q, 1 ≤ Rat.den q` — the positivity field, projected.
+    pub rat_den_pos: NameId,
+    /// `Rat.mul : Rat → Rat → Rat` — multiplication, renormalising the product.
+    pub rat_mul: NameId,
     /// `eq_em : ∀ (a b : Int), Or (Eq Int a b) (Not (Eq Int a b))`.
     pub eq_em: NameId,
 }
@@ -377,6 +390,11 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         rat,
         rat_mk: kernel.name_str(rat, "mk"),
         rat_normalize: kernel.name_str(rat, "normalize"),
+        rat_rec: kernel.name_str(rat, "rec"),
+        rat_num: kernel.name_str(rat, "num"),
+        rat_den: kernel.name_str(rat, "den"),
+        rat_den_pos: kernel.name_str(rat, "den_pos"),
+        rat_mul: kernel.name_str(rat, "mul"),
         eq_em: child(kernel, "eq_em"),
     }
 }
@@ -445,6 +463,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
+        rat::declare_arithmetic(&mut d)?;
         Ok(prelude)
     })();
     match built {

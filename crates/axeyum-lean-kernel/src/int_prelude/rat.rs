@@ -282,3 +282,160 @@ pub(super) fn declare_normalize(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     })?;
     Ok(())
 }
+
+/// Admit the projections, the positivity accessor, and `Rat.mul`.
+///
+/// `Rat` is an inductive with a single constructor, so `Rat.rec` is both the
+/// projection mechanism and the way to reach the proof fields. `Rat.den_pos`
+/// eliminates into `Prop` to recover the positivity a value was built with —
+/// which is what lets `Rat.mul` call [`declare_normalize`] without asking its
+/// caller for anything.
+///
+/// Multiplication renormalises rather than assuming the product of two reduced
+/// pairs is reduced, which it need not be: `2/3 · 3/2` has product `6/6`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if a constructed term does not check.
+pub(super) fn declare_arithmetic(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+    let one = d.level_one();
+    let anon = d.anon_name();
+    let rat_ty = d.kernel().const_(p.rat, vec![]);
+
+    // The constructor telescope, shared by every `Rat.rec` minor below.
+    let minor_over = |d: &mut IntDev<'_>,
+                      pick: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId, ExprId, ExprId) -> ExprId|
+     -> ExprId {
+        let num_fv = d.fresh_fvar();
+        let num = d.kernel().fvar(num_fv);
+        let den_fv = d.fresh_fvar();
+        let den = d.kernel().fvar(den_fv);
+        let positive_ty = {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            NatOps::le(d, unit, den)
+        };
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+        let reduced_ty = {
+            let magnitude = d.const_app(p.nat_abs, &[num]);
+            let common = NatOps::gcd(d, magnitude, den);
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            d.eq(common, unit)
+        };
+        let reduced_fv = d.fresh_fvar();
+        let reduced = d.kernel().fvar(reduced_fv);
+        let body = pick(d, num, den, positive, reduced);
+        let with_reduced = d.lam_fv(reduced_fv, reduced_ty, body);
+        let with_positive = d.lam_fv(positive_fv, positive_ty, with_reduced);
+        let with_den = d.lam_fv(den_fv, nat, with_positive);
+        d.lam_fv(num_fv, int_ty, with_den)
+    };
+
+    // Rat.num and Rat.den: plain projections into Type.
+    let project = |d: &mut IntDev<'_>,
+                   name: crate::name::NameId,
+                   result: ExprId,
+                   pick: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId, ExprId, ExprId) -> ExprId|
+     -> Result<(), KernelError> {
+        let motive = d.kernel().lam(anon, rat_ty, result, BinderInfo::Default);
+        let minor = minor_over(d, pick);
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let rec = d.kernel().const_(p.rat_rec, vec![one]);
+        let body = d.apply(rec, &[motive, minor, q]);
+        let value = d.lam_fv(q_fv, rat_ty, body);
+        let ty = d.arrow(rat_ty, result);
+        d.kernel().add_declaration(Declaration::Definition {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(DERIVED_HEIGHT),
+        })
+    };
+    project(
+        d,
+        p.rat_num,
+        int_ty,
+        &|_d, num, _den, _positive, _reduced| num,
+    )?;
+    project(d, p.rat_den, nat, &|_d, _num, den, _positive, _reduced| den)?;
+
+    // Rat.den_pos : ∀ q, 1 ≤ Rat.den q — the field, recovered.
+    {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let claim = |d: &mut IntDev<'_>, x: ExprId| {
+            let denominator = d.const_app(p.rat_den, &[x]);
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            NatOps::le(d, unit, denominator)
+        };
+        let motive = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let body = claim(d, x);
+            d.lam_fv(x_fv, rat_ty, body)
+        };
+        let minor = minor_over(d, &|_d, _num, _den, positive, _red| positive);
+        let level_zero = d.kernel().level_zero();
+        let rec = d.kernel().const_(p.rat_rec, vec![level_zero]);
+        let body = d.apply(rec, &[motive, minor, q]);
+        let ty = {
+            let inner = claim(d, q);
+            d.pi_fv(q_fv, rat_ty, inner)
+        };
+        let value = d.lam_fv(q_fv, rat_ty, body);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.rat_den_pos,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // Rat.mul x y = normalize (num x * num y) (den x * den y)
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+
+        let numerator = {
+            let left = d.const_app(p.rat_num, &[x]);
+            let right = d.const_app(p.rat_num, &[y]);
+            d.imul(left, right)
+        };
+        let left_den = d.const_app(p.rat_den, &[x]);
+        let right_den = d.const_app(p.rat_den, &[y]);
+        let denominator = NatOps::mul(d, left_den, right_den);
+        let positive = {
+            let left = d.const_app(p.rat_den_pos, &[x]);
+            let right = d.const_app(p.rat_den_pos, &[y]);
+            d.const_app(p.nat.one_le_mul, &[left_den, right_den, left, right])
+        };
+        let normalize = d.kernel().const_(p.rat_normalize, vec![]);
+        let body = d.apply(normalize, &[numerator, denominator, positive]);
+        let value = {
+            let with_y = d.lam_fv(y_fv, rat_ty, body);
+            d.lam_fv(x_fv, rat_ty, with_y)
+        };
+        let ty = {
+            let inner = d.arrow(rat_ty, rat_ty);
+            d.arrow(rat_ty, inner)
+        };
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.rat_mul,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(DERIVED_HEIGHT),
+        })?;
+    }
+    Ok(())
+}

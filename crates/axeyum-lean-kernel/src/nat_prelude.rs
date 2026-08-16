@@ -508,6 +508,8 @@ pub struct NatPrelude {
     /// `Nat.one_le_of_dvd_pos : ∀ g n, 1 ≤ n → dvd g n → 1 ≤ g` — a divisor of a
     /// positive number is positive.
     pub one_le_of_dvd_pos: NameId,
+    /// `Nat.one_le_mul : ∀ a b, 1 ≤ a → 1 ≤ b → 1 ≤ a * b`.
+    pub one_le_mul: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
     /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
@@ -712,6 +714,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             one_le_right_of_mul: kernel.name_str(nat, "one_le_right_of_mul"),
             one_le_left_of_mul: kernel.name_str(nat, "one_le_left_of_mul"),
             one_le_of_dvd_pos: kernel.name_str(nat, "one_le_of_dvd_pos"),
+            one_le_mul: kernel.name_str(nat, "one_le_mul"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
         };

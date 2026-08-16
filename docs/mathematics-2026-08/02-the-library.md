@@ -102,6 +102,13 @@
 > all, because `Nat.gcd`, `Nat.div` and `Int.rec` all compute. The same test
 > requires `1/2 ≢ 1/3`, without which the first check would be vacuous.
 >
+> **Arithmetic has started.** `Rat.num`/`Rat.den` project through `Rat.rec`,
+> `Rat.den_pos` recovers the positivity field by eliminating into `Prop`, and
+> `Rat.mul` routes through `normalize` — which it must, because the product of
+> two *reduced* pairs need not be reduced: `2/3 · 3/2` is `6/6`. Checked by
+> `def_eq` that it lands on `1/1`, that `1/2 · 1/3` is `1/6`, and that `1/6` and
+> `1/2` stay distinguishable.
+>
 > **Four more, all measured as absent before building.** `Int.nat_abs_neg_of_nat`
 > (`natAbs (negOfNat k) = k`) is needed because `negOfNat` is a `Nat.rec`
 > definition and so does *not* reduce on a variable — under a case split it does,
