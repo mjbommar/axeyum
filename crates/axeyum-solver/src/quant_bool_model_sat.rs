@@ -16,9 +16,9 @@ use axeyum_ir::{
 };
 
 use crate::auto::check_auto;
+use crate::proof::UnsatProofOutcome;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::proof::export_qf_bv_unsat_proof_within;
-use crate::proof::UnsatProofOutcome;
 use crate::quant_bv_instance_set_cert::{
     BvPositiveUniversalInstanceSetCertificate, BvPositiveUniversalSourceInstance,
     check_bv_positive_universal_instance_set,
