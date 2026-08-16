@@ -1318,5 +1318,182 @@ pub(super) fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
         (stmt, proof)
     })?;
 
+    // one_le_right_of_mul : ∀ g q, 1 ≤ g * q → 1 ≤ q
+    // A product cannot be positive with a zero factor; `mul_zero` closes it.
+    d.theorem(p.one_le_right_of_mul, 2, &|d, values| {
+        let (scale, factor) = (values[0], values[1]);
+        let zero = d.zero();
+        let unit = d.succ(zero);
+        let product = d.mul(scale, factor);
+        let hypothesis_ty = d.le(unit, product);
+        let conclusion = d.le(unit, factor);
+        let stmt = d.arrow(hypothesis_ty, conclusion);
+
+        let claim = |d: &mut NatDev<'_>, x: ExprId| {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let product = d.mul(scale, x);
+            let hypothesis = d.le(unit, product);
+            let target = d.le(unit, x);
+            d.arrow(hypothesis, target)
+        };
+        let at_zero = |d: &mut NatDev<'_>| {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let product = d.mul(scale, zero);
+            let hypothesis_ty = d.le(unit, product);
+            let goal = d.le(unit, zero);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            // `scale * 0 = 0`, so the hypothesis says `1 <= 0`.
+            let collapse = d.lemma(p.mul_zero, &[scale]);
+            let bounded = {
+                let motive = d.eq_motive(product, &|d, x| {
+                    let zero = d.zero();
+                    let unit = d.succ(zero);
+                    d.le(unit, x)
+                });
+                d.transport(product, motive, h, zero, collapse)
+            };
+            let contradiction = d.lemma(p.not_succ_le_zero, &[zero, bounded]);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let level = d.kernel().level_zero();
+            let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+            let anon = d.anon_name();
+            let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+            let body = d.apply(rec, &[motive, contradiction]);
+            d.lam_fv(h_fv, hypothesis_ty, body)
+        };
+        let at_succ = |d: &mut NatDev<'_>, j: ExprId, _ih: ExprId| {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let successor = d.succ(j);
+            let product = d.mul(scale, successor);
+            let hypothesis_ty = d.le(unit, product);
+            let h_fv = d.fresh_fvar();
+            let base = d.lemma(p.zero_le, &[j]);
+            let body = d.lemma(p.le_succ_succ, &[zero, j, base]);
+            d.lam_fv(h_fv, hypothesis_ty, body)
+        };
+        let proof = d.induct(&claim, &at_zero, &at_succ, factor);
+        (stmt, proof)
+    })?;
+
+    // one_le_left_of_mul : ∀ g q, 1 ≤ g * q → 1 ≤ g
+    // The mirror of the previous lemma, on the left factor; `zero_mul` closes it.
+    d.theorem(p.one_le_left_of_mul, 2, &|d, values| {
+        let (scale, factor) = (values[0], values[1]);
+        let zero = d.zero();
+        let unit = d.succ(zero);
+        let product = d.mul(scale, factor);
+        let hypothesis_ty = d.le(unit, product);
+        let conclusion = d.le(unit, scale);
+        let stmt = d.arrow(hypothesis_ty, conclusion);
+
+        let claim = |d: &mut NatDev<'_>, x: ExprId| {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let product = d.mul(x, factor);
+            let hypothesis = d.le(unit, product);
+            let target = d.le(unit, x);
+            d.arrow(hypothesis, target)
+        };
+        let at_zero = |d: &mut NatDev<'_>| {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let product = d.mul(zero, factor);
+            let hypothesis_ty = d.le(unit, product);
+            let goal = d.le(unit, zero);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let collapse = d.lemma(p.zero_mul, &[factor]);
+            let bounded = {
+                let motive = d.eq_motive(product, &|d, x| {
+                    let zero = d.zero();
+                    let unit = d.succ(zero);
+                    d.le(unit, x)
+                });
+                d.transport(product, motive, h, zero, collapse)
+            };
+            let contradiction = d.lemma(p.not_succ_le_zero, &[zero, bounded]);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let level = d.kernel().level_zero();
+            let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+            let anon = d.anon_name();
+            let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+            let body = d.apply(rec, &[motive, contradiction]);
+            d.lam_fv(h_fv, hypothesis_ty, body)
+        };
+        let at_succ = |d: &mut NatDev<'_>, j: ExprId, _ih: ExprId| {
+            let zero = d.zero();
+            let unit = d.succ(zero);
+            let successor = d.succ(j);
+            let product = d.mul(successor, factor);
+            let hypothesis_ty = d.le(unit, product);
+            let h_fv = d.fresh_fvar();
+            let base = d.lemma(p.zero_le, &[j]);
+            let body = d.lemma(p.le_succ_succ, &[zero, j, base]);
+            d.lam_fv(h_fv, hypothesis_ty, body)
+        };
+        let proof = d.induct(&claim, &at_zero, &at_succ, scale);
+        (stmt, proof)
+    })?;
+
+    // one_le_of_dvd_pos : ∀ g n, 1 ≤ n → dvd g n → 1 ≤ g
+    // A divisor of a positive number is positive: the witness gives `n = g*q`,
+    // and a zero divisor would force `n = 0`.
+    d.theorem(p.one_le_of_dvd_pos, 2, &|d, values| {
+        let (divisor, dividend) = (values[0], values[1]);
+        let nat = d.nat_ty();
+        let one_level = d.level_one();
+        let zero = d.zero();
+        let unit = d.succ(zero);
+        let positive_ty = d.le(unit, dividend);
+        let divides_ty = d.dvd(divisor, dividend);
+        let conclusion = d.le(unit, divisor);
+        let stmt = {
+            let inner = d.arrow(divides_ty, conclusion);
+            d.arrow(positive_ty, inner)
+        };
+
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+        let divides_fv = d.fresh_fvar();
+        let divides = d.kernel().fvar(divides_fv);
+
+        let predicate = d.dvd_predicate(divisor, dividend);
+        let anon = d.anon_name();
+        let motive = d
+            .kernel()
+            .lam(anon, divides_ty, conclusion, BinderInfo::Default);
+        let minor = {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let product = d.mul(divisor, q);
+            let equation_ty = d.eq(dividend, product);
+            let e_fv = d.fresh_fvar();
+            let e = d.kernel().fvar(e_fv);
+            // `1 <= dividend = divisor*q`, so `1 <= divisor*q`.
+            let scaled = {
+                let motive = d.eq_motive(dividend, &|d, x| {
+                    let zero = d.zero();
+                    let unit = d.succ(zero);
+                    d.le(unit, x)
+                });
+                d.transport(dividend, motive, positive, product, e)
+            };
+            let body = d.lemma(p.one_le_left_of_mul, &[divisor, q, scaled]);
+            let with_e = d.lam_fv(e_fv, equation_ty, body);
+            d.lam_fv(q_fv, nat, with_e)
+        };
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![one_level]);
+        let body = d.apply(rec, &[nat, predicate, motive, minor, divides]);
+        let proof = {
+            let with_divides = d.lam_fv(divides_fv, divides_ty, body);
+            d.lam_fv(positive_fv, positive_ty, with_divides)
+        };
+        (stmt, proof)
+    })?;
+
     Ok(())
 }

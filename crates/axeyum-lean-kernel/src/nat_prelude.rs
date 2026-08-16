@@ -501,6 +501,13 @@ pub struct NatPrelude {
     /// `Nat.div_mul_cancel_of_dvd : ∀ g n, 1 ≤ g → dvd g n → g * (n / g) = n` —
     /// exact division recovers its dividend.
     pub div_mul_cancel_of_dvd: NameId,
+    /// `Nat.one_le_right_of_mul : ∀ g q, 1 ≤ g * q → 1 ≤ q`.
+    pub one_le_right_of_mul: NameId,
+    /// `Nat.one_le_left_of_mul : ∀ g q, 1 ≤ g * q → 1 ≤ g`.
+    pub one_le_left_of_mul: NameId,
+    /// `Nat.one_le_of_dvd_pos : ∀ g n, 1 ≤ n → dvd g n → 1 ≤ g` — a divisor of a
+    /// positive number is positive.
+    pub one_le_of_dvd_pos: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
     /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
@@ -702,6 +709,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bezout_of_scaled: kernel.name_str(nat, "bezout_of_scaled"),
             gcd_cofactors_coprime: kernel.name_str(nat, "gcd_cofactors_coprime"),
             div_mul_cancel_of_dvd: kernel.name_str(nat, "div_mul_cancel_of_dvd"),
+            one_le_right_of_mul: kernel.name_str(nat, "one_le_right_of_mul"),
+            one_le_left_of_mul: kernel.name_str(nat, "one_le_left_of_mul"),
+            one_le_of_dvd_pos: kernel.name_str(nat, "one_le_of_dvd_pos"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
         };

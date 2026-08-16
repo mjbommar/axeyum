@@ -3706,3 +3706,101 @@ fn div_mul_cancel_needs_real_divisibility() {
         "accepted a divisibility witness claiming 5 = 2*2"
     );
 }
+
+/// The positivity lemmas `Rat.normalize` needs, and the hypothesis that carries
+/// them.
+///
+/// `one_le_of_dvd_pos` says a divisor of a positive number is positive. Its
+/// positivity hypothesis is about the DIVIDEND, so supplying `1 ≤ 4` while the
+/// dividend is `6` must be a type error — that is what the second half checks.
+#[test]
+fn positivity_lemmas_apply_and_track_their_dividend() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let numeral = |k: &mut Kernel, n: usize| {
+        let mut value = k.const_(p.zero, vec![]);
+        for _ in 0..n {
+            let succ = k.const_(p.succ, vec![]);
+            value = k.app(succ, value);
+        }
+        value
+    };
+    let nat_ty = k.const_(p.nat, vec![]);
+    let level = {
+        let zero = k.level_zero();
+        k.level_succ(zero)
+    };
+    let zero = k.const_(p.zero, vec![]);
+
+    // `1 <= n` for a literal successor n, via le_succ_succ on zero_le.
+    let one_le = |k: &mut Kernel, n: usize| {
+        let predecessor = numeral(k, n - 1);
+        let base = {
+            let lemma = k.const_(p.zero_le, vec![]);
+            k.app(lemma, predecessor)
+        };
+        let lemma = k.const_(p.le_succ_succ, vec![]);
+        let at_zero = k.app(lemma, zero);
+        let at_pred = k.app(at_zero, predecessor);
+        k.app(at_pred, base)
+    };
+
+    let two = numeral(&mut k, 2);
+    let four = numeral(&mut k, 4);
+    let six = numeral(&mut k, 6);
+
+    // `2 | 4`, witnessed by `4 = 2*2`.
+    let divides = {
+        let predicate = {
+            let q = k.bvar(0);
+            let product = {
+                let mul = k.const_(p.mul, vec![]);
+                let at_two = k.app(mul, two);
+                k.app(at_two, q)
+            };
+            let eq = k.const_(p.logic.eq, vec![level]);
+            let at_ty = k.app(eq, nat_ty);
+            let at_lhs = k.app(at_ty, four);
+            let body = k.app(at_lhs, product);
+            let anon = k.anon();
+            k.lam(anon, nat_ty, body, BinderInfo::Default)
+        };
+        let refl = {
+            let refl = k.const_(p.logic.eq_refl, vec![level]);
+            let at_ty = k.app(refl, nat_ty);
+            k.app(at_ty, four)
+        };
+        let intro = k.const_(p.logic.exists_intro, vec![level]);
+        let at_ty = k.app(intro, nat_ty);
+        let at_pred = k.app(at_ty, predicate);
+        let at_witness = k.app(at_pred, two);
+        k.app(at_witness, refl)
+    };
+
+    let four_positive = one_le(&mut k, 4);
+    let good = {
+        let theorem = k.const_(p.one_le_of_dvd_pos, vec![]);
+        let at_g = k.app(theorem, two);
+        let at_n = k.app(at_g, four);
+        let at_pos = k.app(at_n, four_positive);
+        k.app(at_pos, divides)
+    };
+    assert!(
+        k.infer(good).is_ok(),
+        "2 divides 4 and 4 is positive, so 2 must be positive"
+    );
+
+    // The positivity hypothesis is about the dividend: `1 <= 4` cannot stand in
+    // for `1 <= 6`.
+    let mismatched = {
+        let theorem = k.const_(p.one_le_of_dvd_pos, vec![]);
+        let at_g = k.app(theorem, two);
+        let at_n = k.app(at_g, six);
+        k.app(at_n, four_positive)
+    };
+    assert!(
+        k.infer(mismatched).is_err(),
+        "accepted `1 <= 4` as the positivity of the dividend 6"
+    );
+}

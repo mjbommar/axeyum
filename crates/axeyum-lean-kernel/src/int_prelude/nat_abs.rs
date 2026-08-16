@@ -76,6 +76,56 @@ pub(super) fn declare_nat_abs(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     Ok(())
 }
 
+/// `nat_abs_neg_of_nat : ∀ (k : Nat), natAbs (negOfNat k) = k`.
+///
+/// `negOfNat` is a `Nat.rec` definition, so it does **not** reduce on a
+/// variable — measured, not assumed. Under a case split it does: `negOfNat 0` is
+/// `ofNat 0` and `negOfNat (succ j)` is `negSucc j`, and `natAbs` computes on
+/// both constructors, so each branch closes by `rfl`.
+///
+/// The `negSucc` branch of `Rat.normalize` needs this: it builds its numerator
+/// with `negOfNat` and must then say what the `reduced` field is about.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_nat_abs_neg_of_nat(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let claim = |d: &mut IntDev<'_>, x: ExprId| {
+        let negated = d.neg_of_nat(x);
+        let magnitude = d.nat_abs(negated);
+        d.eq(magnitude, x)
+    };
+    let at_zero = |d: &mut IntDev<'_>| {
+        let zero = d.zero();
+        d.refl(zero)
+    };
+    let at_succ = |d: &mut IntDev<'_>, j: ExprId, _ih: ExprId| {
+        let successor = d.succ(j);
+        d.refl(successor)
+    };
+    let value = d.induct(&claim, &at_zero, &at_succ, k);
+
+    let ty = {
+        let body = claim(d, k);
+        d.pi_fv(k_fv, nat, body)
+    };
+    let value = d.lam_fv(k_fv, nat, value);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.nat_abs_neg_of_nat,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(())
+}
+
 /// `of_nat_nat_abs_of_nonneg : 0 ≤ a → ofNat (natAbs a) = a`.
 ///
 /// # Errors

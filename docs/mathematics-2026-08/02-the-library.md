@@ -90,7 +90,19 @@
 > Revised order: `natAbs` ✅ → `eq_one_of_dvd_one` ✅ → coprimality ✅
 > (`Nat.coprime_of_bezout_one`) → the `Rat` structure ✅ → cofactor coprimality ✅
 > (`Nat.gcd_cofactors_coprime`) → exact division ✅
-> (`Nat.div_mul_cancel_of_dvd`) → `normalize`.
+> (`Nat.div_mul_cancel_of_dvd`) → positivity ✅ → `normalize`.
+>
+> **Four more, all measured as absent before building.** `Int.nat_abs_neg_of_nat`
+> (`natAbs (negOfNat k) = k`) is needed because `negOfNat` is a `Nat.rec`
+> definition and so does *not* reduce on a variable — under a case split it does,
+> and both branches are `rfl`. Then `Nat.one_le_right_of_mul`,
+> `Nat.one_le_left_of_mul` and `Nat.one_le_of_dvd_pos`: a divisor of a positive
+> number is positive, and a product cannot be positive with a zero factor.
+>
+> Those three break a circularity worth naming. `1 ≤ den/g` would like to come
+> from `den = g·(den/g)`, but `div_mul_cancel_of_dvd` needs `1 ≤ g` first.
+> `one_le_of_dvd_pos` supplies `1 ≤ g` straight from the divisibility *witness*,
+> with no division involved, and the rest follows.
 >
 > **`div_mul_cancel_of_dvd : ∀ g n, 1 ≤ g → g ∣ n → g · (n / g) = n`.** Measured
 > first: no such cancellation existed — the division development had

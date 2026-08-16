@@ -277,6 +277,9 @@ pub struct IntPrelude {
     pub nat_abs: NameId,
     /// `of_nat_nat_abs_of_nonneg : ∀ a, 0 ≤ a → ofNat (natAbs a) = a`.
     pub of_nat_nat_abs_of_nonneg: NameId,
+    /// `nat_abs_neg_of_nat : ∀ k, natAbs (negOfNat k) = k` — the magnitude of a
+    /// negated natural is that natural.
+    pub nat_abs_neg_of_nat: NameId,
 
     // --- the rationals, as a normalised structure -----------------------------
     /// `Rat : Type` — a normalised `num/den` pair carrying its own positivity
@@ -367,6 +370,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         euclid_neg_succ: child(kernel, "euclid_neg_succ"),
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
+        nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
         rat,
         rat_mk: kernel.name_str(rat, "mk"),
         eq_em: child(kernel, "eq_em"),
@@ -434,6 +438,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euclid::declare_decomposition(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
+        nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
         rat::declare_rat(&mut d)?;
         Ok(prelude)
     })();
