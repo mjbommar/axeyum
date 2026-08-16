@@ -87,9 +87,37 @@ Euclidean rounding is not truncation. For `a = negSucc n` with `n+1 = k·q + r`,
 the witnesses are `(-q, 0)` when `r = 0` and `(-q-1, k-r)` otherwise, and the
 second needs `0 < k - r < k`.
 
-**Next for this lane.** Build that proof term, discharging the axiom and taking
-`int_prelude` to **0 axioms**. Land it as a fact with a checker bound to the
-theorem itself, not to a gate-wide run (see the caution in finding 8).
+**Read the construction, and the plan got smaller twice.** A first pass through
+the 52 `Int` theorems found no `ofNat` homomorphisms — no `ofNat_add`,
+`ofNat_mul`, `ofNat_lt` — and concluded a helper development was needed first.
+Reading `defs.rs` instead of the inventory shows that is wrong: `Int.add` and
+`Int.mul` are structural definitions that **compute on two `ofNat`
+constructors**, which is why `Int.add_zero` is proved by `d.irefl(value)` and
+nothing else. `Int.le`/`Int.lt` are likewise four-case definitions over
+`Nat.le`/`Nat.lt`, and the module's own table states
+`Int.le (ofNat m) (ofNat n) ≡ Nat.le m n`.
+
+So the transfer lemmas are **definitional**, and the non-negative branch needs no
+new lemmas at all:
+
+- `Nat.divMod d n q r` is a *definition* unfolding to `(n = d·q + r) ∧ (r < d)`,
+  so `And.left`/`And.right` apply to a `divMod` term directly.
+- `t = ofNat n`: `Nat.div_mod_exists (succ m) n` gives `q, r`; the goal
+  `ofNat n = ofNat (succ m) · ofNat q + ofNat r` reduces to
+  `ofNat n = ofNat ((succ m)·q + r)`, closed by `nat_eq_to_int` on `And.left`.
+  `0 ≤ ofNat r` reduces to `Nat.le zero r`, and `ofNat r < ofNat (succ m)` to
+  `And.right`.
+
+The remaining work is therefore **one branch**, `t = negSucc n`, plus the
+`Int.lt_dest` preamble that turns `0 < k` into `k = ofNat (succ m)`. The
+primitives are all present: `case_split` (already does `Int.rec` over
+`Shape::OfNat`/`Shape::NegSucc`), `exists_elim`, `shift_intro`, `nat_eq_to_int`.
+
+**Next for this lane.** Write that proof term — `Exists` here ranges over `Int`
+rather than `Nat`, so the existing `shift_exists`/`exists_elim` helpers need
+`Int`-typed siblings. Then discharge the axiom, taking `int_prelude` to **0
+axioms**, and land it as a fact whose checker is bound to the theorem itself
+rather than to a gate-wide run (see the caution in finding 8).
 
 <!-- plan-section: landed-changes -->
 
