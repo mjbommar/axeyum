@@ -63,6 +63,34 @@ committed diary, and the archive README indexes all 43 with the next action each
 lane left behind, so the queue keeps its work items. Restoring a lane is a `git
 mv` back plus `gen-plan.py`.
 
+**Scoped the keystone's last axiom, by measurement** (`WIP`, ledger-integrity,
+2026-08-16). Strand [`01`](../../refactor-2026-08/01-int-real-keystone.md) K1.
+`nat_axiom_inventory` confirms `integer` carries exactly **one** trusted
+declaration, `Int.euclidean_decomposition`, whose type decodes to
+`∀ a b, 0 < b → ∃ q r, a = b·q + r ∧ 0 ≤ r ∧ r < b`. Four measured facts make the
+remaining work concrete:
+
+- **It need not define `Int.div`/`Int.mod`.** The axiom is purely existential, so
+  it is discharged by supplying witnesses; the predecessor lane's diary assumed
+  definitions were required.
+- **`Int` is a real inductive** (`ofNat n` / `negSucc n`), so `Int.rec` gives the
+  sign case split. No named case-analysis theorem exists among the 52 `Int`
+  theorems, which is why this looked blocked.
+- **`Int.lt_dest`** turns the hypothesis `0 < b` into `∃ k, b = 0 + ofNat (succ k)`
+  — a positive `ofNat`, which is what the ℕ side needs.
+- **The ℕ side is already proved**: `Nat.div_mod_exists` (`1 ≤ k → ∃ q r,
+  divMod k t q r`), with `div_mod_unique`, `div_mod_bounds` and `div_mod_exec`
+  beside it, among 119 `Nat` theorems.
+
+The real work is the negative branch, exactly as the predecessor flagged:
+Euclidean rounding is not truncation. For `a = negSucc n` with `n+1 = k·q + r`,
+the witnesses are `(-q, 0)` when `r = 0` and `(-q-1, k-r)` otherwise, and the
+second needs `0 < k - r < k`.
+
+**Next for this lane.** Build that proof term, discharging the axiom and taking
+`int_prelude` to **0 axioms**. Land it as a fact with a checker bound to the
+theorem itself, not to a gate-wide run (see the caution in finding 8).
+
 <!-- plan-section: landed-changes -->
 
 | 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
