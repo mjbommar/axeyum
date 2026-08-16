@@ -78,6 +78,7 @@ mod algebra;
 mod decide;
 mod defs;
 mod euclid;
+mod nat_abs;
 mod ops;
 mod order;
 mod sign;
@@ -271,6 +272,10 @@ pub struct IntPrelude {
     ///
     /// The negative branch of [`Self::euclidean_decomposition`].
     pub euclid_neg_succ: NameId,
+    /// `natAbs : Int → Nat` — the magnitude, `ofNat n ↦ n` and `negSucc m ↦ succ m`.
+    pub nat_abs: NameId,
+    /// `of_nat_nat_abs_of_nonneg : ∀ a, 0 ≤ a → ofNat (natAbs a) = a`.
+    pub of_nat_nat_abs_of_nonneg: NameId,
     /// `eq_em : ∀ (a b : Int), Or (Eq Int a b) (Not (Eq Int a b))`.
     pub eq_em: NameId,
 }
@@ -351,6 +356,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         euclidean_decomposition: child(kernel, "euclidean_decomposition"),
         euclid_of_nat: child(kernel, "euclid_of_nat"),
         euclid_neg_succ: child(kernel, "euclid_neg_succ"),
+        nat_abs: child(kernel, "natAbs"),
+        of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         eq_em: child(kernel, "eq_em"),
     }
 }
@@ -414,6 +421,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euclid::declare_of_nat_branch(&mut d)?;
         euclid::declare_neg_succ_branch(&mut d)?;
         euclid::declare_decomposition(&mut d)?;
+        nat_abs::declare_nat_abs(&mut d)?;
+        nat_abs::declare_nat_abs_lemmas(&mut d)?;
         Ok(prelude)
     })();
     match built {

@@ -169,9 +169,10 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 29] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 30] {
     [
         p.euclidean_decomposition,
+        p.of_nat_nat_abs_of_nonneg,
         p.euclid_of_nat,
         p.euclid_neg_succ,
         p.le_refl,
@@ -712,5 +713,62 @@ fn euclid_of_nat_is_derived_and_axiom_free() {
             .iter()
             .map(|&n| k.display_name(n).to_string())
             .collect::<Vec<_>>()
+    );
+}
+
+/// `Int.natAbs` computes on both constructors by `rfl`, and the round-trip
+/// lemma is a theorem with an empty axiom footprint.
+///
+/// The `rfl` checks matter: `natAbs` is the first piece of the ℚ groundwork, and
+/// its two computation rules being definitional is what lets every later
+/// statement about a normalised rational avoid a rewrite.
+#[test]
+fn nat_abs_computes_and_round_trips() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    // natAbs (ofNat 3) ≡ 3 and natAbs (negSucc 2) ≡ 3, by conversion alone.
+    let three = {
+        let mut n = k.const_(p.nat.zero, vec![]);
+        for _ in 0..3 {
+            let succ = k.const_(p.nat.succ, vec![]);
+            n = k.app(succ, n);
+        }
+        n
+    };
+    let two = {
+        let mut n = k.const_(p.nat.zero, vec![]);
+        for _ in 0..2 {
+            let succ = k.const_(p.nat.succ, vec![]);
+            n = k.app(succ, n);
+        }
+        n
+    };
+    let nat_abs = k.const_(p.nat_abs, vec![]);
+    for magnitude in [
+        {
+            let ctor = k.const_(p.of_nat, vec![]);
+            k.app(ctor, three)
+        },
+        {
+            let ctor = k.const_(p.neg_succ, vec![]);
+            k.app(ctor, two)
+        },
+    ] {
+        let applied = k.app(nat_abs, magnitude);
+        assert!(k.def_eq(applied, three), "natAbs did not compute to 3");
+    }
+
+    let declaration = k
+        .environment()
+        .get(p.of_nat_nat_abs_of_nonneg)
+        .expect("of_nat_nat_abs_of_nonneg must be declared");
+    assert!(
+        matches!(declaration, Declaration::Theorem { .. }),
+        "of_nat_nat_abs_of_nonneg must be a Theorem"
+    );
+    assert!(
+        k.axiom_footprint(p.of_nat_nat_abs_of_nonneg).is_empty(),
+        "the round-trip lemma rests on a trusted declaration"
     );
 }
