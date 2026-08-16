@@ -81,6 +81,45 @@ else
   say "lean: installer not found at $REPO/scripts/install-pinned-lean.sh"; fail=1
 fi
 
+# scripts/check-lean-gate.sh discovers via "$ELAN_HOME|$HOME/.elan"/toolchains
+# ONLY. install-pinned-lean.sh writes to $ROOT/elan-home/toolchains, so a host
+# provisioned by it leaves the gate unable to find a Lean that is installed --
+# measured on s7, where the gate reported "no Lean binary" beside a working
+# 4.30.0. It fails closed rather than skipping, which is right, but the lane
+# still cannot run it. Normalise the layout so discovery works either way.
+if [ -d "$HOME/.elan/elan-home/toolchains" ] && [ ! -e "$HOME/.elan/toolchains" ]; then
+  ln -sfn "$HOME/.elan/elan-home/toolchains" "$HOME/.elan/toolchains" \
+    && say "lean: linked .elan/toolchains -> elan-home/toolchains (gate discovery)"
+fi
+if [ -d "$HOME/.elan/elan-home/bin" ] && [ ! -e "$HOME/.elan/bin" ]; then
+  ln -sfn "$HOME/.elan/elan-home/bin" "$HOME/.elan/bin" \
+    && say "lean: linked .elan/bin -> elan-home/bin (elan shim)"
+fi
+
+# --- 3b. cargo on PATH for NON-INTERACTIVE ssh ---------------------------
+# `ssh host 'script'` runs a non-interactive bash. Ubuntu's stock ~/.bashrc
+# returns early for those, so ~/.cargo/bin is absent and a gate dies with
+# "cargo: command not found" -- then reports the suite as ZERO tests, which
+# reads as a gate failure rather than an environment one. Measured on s5.
+# bash DOES source ~/.bashrc for ssh-launched shells, so exporting ABOVE the
+# interactivity guard fixes it.
+# It must be PREPENDED, not appended: the stock guard is near the TOP of
+# ~/.bashrc and returns before anything after it is read, so a line at the end
+# of the file never executes in the case it exists to fix.
+if ! grep -q 'AXEYUM_FLEET_PATH' "$HOME/.bashrc" 2>/dev/null; then
+  tmp=$(mktemp)
+  { printf '# AXEYUM_FLEET_PATH: cargo must be on PATH for non-interactive ssh\n'
+    printf '# gates. Kept ABOVE the interactivity guard below, which returns early\n'
+    printf '# for ssh-launched shells -- appending this would never run.\n'
+    printf 'export PATH="$HOME/.cargo/bin:$PATH"\n\n'
+    cat "$HOME/.bashrc" 2>/dev/null; } > "$tmp" \
+    && cp "$tmp" "$HOME/.bashrc" && rm -f "$tmp" \
+    && say "PATH: prepended ~/.cargo/bin to ~/.bashrc (non-interactive ssh)" \
+    || { say "PATH: ~/.bashrc edit FAILED"; fail=1; }
+else
+  say "PATH: ~/.bashrc already exports ~/.cargo/bin"
+fi
+
 # --- 4. Commit hooks in the checkout -------------------------------------
 if [ -d "$REPO/.git" ]; then
   git -C "$REPO" config core.hooksPath hooks \
@@ -106,6 +145,17 @@ v cargo-deny "\"$CARGO_BIN/cargo-deny\" --version"
 v lean       "\"\$(lean_bin)\" --version"
 v hooksPath  "git -C \"$REPO\" config --get core.hooksPath"
 v nas3       "[ -w /nas3/data ] && echo rw"
+# The two checks that matter for GATES rather than for tools: can
+# check-lean-gate.sh discover Lean where it actually looks, and does a
+# NON-INTERACTIVE ssh see cargo. Both were false on this fleet after the first
+# provisioning pass while every tool above reported OK.
+v lean-discoverable "ls \"\$HOME\"/.elan/toolchains/*/bin/lean 2>/dev/null | head -1"
+# The PATH export is only useful if it sits ABOVE ~/.bashrc's early-return
+# guard. Assert the ORDER, not the mere presence -- a check that only greps for
+# the line would pass on the appended version, which never executes. (An
+# `ssh localhost` probe would be worse still: it is unconfigured here, so it
+# falls through to a local lookup that cannot fail.)
+v bashrc-path-order "awk '/AXEYUM_FLEET_PATH/{e=NR} /^[[:space:]]*(case[[:space:]]+\\\$-|\\[ -z \"\\\$PS1\" \\])/{if(!g)g=NR} END{if(e && (!g || e<g)) print \"export@\" e \" guard@\" (g?g:\"none\")}' \"\$HOME/.bashrc\""
 
 say "=== done (fail=$fail) ==="
 exit $fail
