@@ -87,8 +87,8 @@
 > `Nat.not_dvd_one_of_two_le` covers `d ≥ 2` and `Nat.dvd d 1` unfolds to
 > `∃ q, 1 = d·q`, so the remaining cases are `d = 0` (absurd) and `d = 1` (refl).
 >
-> Revised order: `natAbs` ✅ → `eq_one_of_dvd_one` ✅ → coprimality after division
-> → the `Rat` structure → `normalize`.
+> Revised order: `natAbs` ✅ → `eq_one_of_dvd_one` ✅ → coprimality ✅
+> (`Nat.coprime_of_bezout_one`) → the `Rat` structure → `normalize`.
 >
 > **Coprimality: every ingredient is present, and the obstacle is plumbing not
 > mathematics.** `d := gcd a b` divides `a` and `b` (`gcd_dvd_left`/`_right`),
@@ -101,10 +101,14 @@
 >
 > What stopped a first attempt was **peeling `bezout`'s four nested `Exists`**:
 > each intermediate predicate has to match exactly what `bezout_witnesses`
-> constructed, and a hand-rolled recursive peeler got that wrong. The fix is to
-> add the eliminator *beside the builder* in `nat_prelude/ops.rs`, sharing the
-> code path so the two cannot drift — the same "build the checker from the
-> builder" discipline this repository already applies to gates.
+> constructed, and a hand-rolled recursive peeler got that wrong.
+>
+> **Resolved by putting the eliminator beside the builder.** `bezout_elim` in
+> `nat_prelude/bezout.rs` rebuilds the four predicates in the same order and
+> from the same `bezout_equation` the introduction form uses, so the two cannot
+> drift — the "build the checker from the builder" discipline this repository
+> applies to gates, applied to a proof term. `Nat.coprime_of_bezout_one` landed
+> on top of it: `∀ a b, bezout a b 1 → gcd a b = 1`, axiom-free.
 
 **The state.** One number system is proved. The rest are assumed or absent.
 

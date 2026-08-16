@@ -66,6 +66,98 @@ pub(super) fn bezout_after_mp_exists<D: NatOps>(
     d.apply(exists, &[nat, predicate])
 }
 
+/// Eliminate a balanced Bézout certificate into `target`.
+///
+/// `minor` receives the four witnesses `(mp, mn, np, nn)` and a proof of
+/// [`NatOps::bezout_equation`] for them, and must produce `target`.
+///
+/// The four nested predicates are rebuilt here **in the same order and from the
+/// same `bezout_equation`** that [`NatOps::bezout_witnesses`] uses, so the
+/// eliminator cannot drift from the introduction form. A first attempt peeled
+/// the existentials with a hand-rolled recursion whose intermediate predicates
+/// did not match, which is why this lives beside the builder instead.
+pub(super) fn bezout_elim<D: NatOps>(
+    d: &mut D,
+    m: ExprId,
+    n: ExprId,
+    g: ExprId,
+    target: ExprId,
+    certificate: ExprId,
+    minor: &dyn Fn(&mut D, ExprId, ExprId, ExprId, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let anon = d.anon_name();
+    let exists_name = d.prelude().logic.exists_;
+    let rec_name = d.prelude().logic.exists_rec;
+
+    let mp_fv = d.fresh_fvar();
+    let mp = d.kernel().fvar(mp_fv);
+    let mn_fv = d.fresh_fvar();
+    let mn = d.kernel().fvar(mn_fv);
+    let np_fv = d.fresh_fvar();
+    let np = d.kernel().fvar(np_fv);
+    let nn_fv = d.fresh_fvar();
+    let nn = d.kernel().fvar(nn_fv);
+
+    let equation = d.bezout_equation(m, n, g, mp, mn, np, nn);
+    let nn_predicate = d.lam_fv(nn_fv, nat, equation);
+    let exists = d.kernel().const_(exists_name, vec![one]);
+    let nn_exists = d.apply(exists, &[nat, nn_predicate]);
+    let np_predicate = d.lam_fv(np_fv, nat, nn_exists);
+    let exists = d.kernel().const_(exists_name, vec![one]);
+    let np_exists = d.apply(exists, &[nat, np_predicate]);
+    let mn_predicate = d.lam_fv(mn_fv, nat, np_exists);
+    let exists = d.kernel().const_(exists_name, vec![one]);
+    let mn_exists = d.apply(exists, &[nat, mn_predicate]);
+    let mp_predicate = d.lam_fv(mp_fv, nat, mn_exists);
+    let exists = d.kernel().const_(exists_name, vec![one]);
+    let mp_exists = d.apply(exists, &[nat, mp_predicate]);
+
+    // Innermost: consume the equation itself.
+    let equation_fv = d.fresh_fvar();
+    let equation_proof = d.kernel().fvar(equation_fv);
+    let core = minor(d, mp, mn, np, nn, equation_proof);
+    let nn_minor = {
+        let with_equation = d.lam_fv(equation_fv, equation, core);
+        d.lam_fv(nn_fv, nat, with_equation)
+    };
+
+    let np_minor = {
+        let witness_fv = d.fresh_fvar();
+        let witness = d.kernel().fvar(witness_fv);
+        let motive = d.kernel().lam(anon, nn_exists, target, BinderInfo::Default);
+        let rec = d.kernel().const_(rec_name, vec![one]);
+        let eliminated = d.apply(rec, &[nat, nn_predicate, motive, nn_minor, witness]);
+        let with_witness = d.lam_fv(witness_fv, nn_exists, eliminated);
+        d.lam_fv(np_fv, nat, with_witness)
+    };
+
+    let mn_minor = {
+        let witness_fv = d.fresh_fvar();
+        let witness = d.kernel().fvar(witness_fv);
+        let motive = d.kernel().lam(anon, np_exists, target, BinderInfo::Default);
+        let rec = d.kernel().const_(rec_name, vec![one]);
+        let eliminated = d.apply(rec, &[nat, np_predicate, motive, np_minor, witness]);
+        let with_witness = d.lam_fv(witness_fv, np_exists, eliminated);
+        d.lam_fv(mn_fv, nat, with_witness)
+    };
+
+    let mp_minor = {
+        let witness_fv = d.fresh_fvar();
+        let witness = d.kernel().fvar(witness_fv);
+        let motive = d.kernel().lam(anon, mn_exists, target, BinderInfo::Default);
+        let rec = d.kernel().const_(rec_name, vec![one]);
+        let eliminated = d.apply(rec, &[nat, mn_predicate, motive, mn_minor, witness]);
+        let with_witness = d.lam_fv(witness_fv, mn_exists, eliminated);
+        d.lam_fv(mp_fv, nat, with_witness)
+    };
+
+    let motive = d.kernel().lam(anon, mp_exists, target, BinderInfo::Default);
+    let rec = d.kernel().const_(rec_name, vec![one]);
+    d.apply(rec, &[nat, mp_predicate, motive, mp_minor, certificate])
+}
+
 fn bezout_mp_predicate<D: NatOps>(d: &mut D, m: ExprId, n: ExprId, g: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let mp_fv = d.fresh_fvar();
@@ -675,6 +767,193 @@ pub(super) fn declare_gcd_bezout(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
         let common = d.gcd(m, n);
         let target = d.bezout(m, n, common);
         (target, d.apply(all, &[m, n]))
+    })?;
+
+    // coprime_of_bezout_one : ∀ a b, bezout a b 1 → Eq (gcd a b) 1
+    //
+    // A Bézout identity whose coefficient is 1 *is* coprimality, and this is the
+    // direction ℚ needs: normalising num/den by g = gcd leaves cofactors whose
+    // own identity has coefficient 1, and a rational's `reduced` field is
+    // exactly the claim that their gcd is 1.
+    //
+    // `gcd a b` divides both arguments, hence all four products and both sums.
+    // The identity `(1 + a·mn) + b·nn = a·mp + b·np` rearranges to `T = S + 1`,
+    // and a divisor of both `S` and `S + 1` divides 1 — after ruling out the
+    // divisor being zero, where `S + 1` would have to be zero.
+    d.theorem(p.coprime_of_bezout_one, 2, &|d, values| {
+        let (a, b) = (values[0], values[1]);
+        let unit = d.num(1);
+        let common = d.gcd(a, b);
+        let hypothesis_ty = d.bezout(a, b, unit);
+        let conclusion = d.eq(common, unit);
+        let stmt = d.arrow(hypothesis_ty, conclusion);
+
+        let certificate_fv = d.fresh_fvar();
+        let certificate = d.kernel().fvar(certificate_fv);
+
+        let body = bezout_elim(
+            d,
+            a,
+            b,
+            unit,
+            conclusion,
+            certificate,
+            &|d, mp, mn, np, nn, equation| {
+                let unit = d.num(1);
+                let common = d.gcd(a, b);
+                let a_mn = d.mul(a, mn);
+                let b_nn = d.mul(b, nn);
+                let a_mp = d.mul(a, mp);
+                let b_np = d.mul(b, np);
+                let sum = d.add(a_mn, b_nn);
+                let total = d.add(a_mp, b_np);
+
+                // `(1 + a·mn) + b·nn = 1 + S = S + 1`, so `T = S + 1`.
+                let left = {
+                    let head = d.add(unit, a_mn);
+                    d.add(head, b_nn)
+                };
+                let one_plus = d.add(unit, sum);
+                let plus_one = d.add(sum, unit);
+                let assoc = d.lemma(p.add_assoc, &[unit, a_mn, b_nn]);
+                let commute = d.lemma(p.add_comm, &[unit, sum]);
+                let (_reached, rearranged) =
+                    d.chain(left, &[(one_plus, assoc), (plus_one, commute)]);
+                let flipped = d.symm(left, total, equation);
+                let total_eq = d.trans(total, left, plus_one, flipped, rearranged);
+
+                // `gcd a b` divides both sums.
+                let divides_a = d.lemma(p.gcd_dvd_left, &[a, b]);
+                let divides_b = d.lemma(p.gcd_dvd_right, &[a, b]);
+                let divides_sum = {
+                    let first = d.lemma(p.dvd_mul_right_of_dvd, &[common, a, mn, divides_a]);
+                    let second = d.lemma(p.dvd_mul_right_of_dvd, &[common, b, nn, divides_b]);
+                    d.lemma(p.dvd_add, &[common, a_mn, b_nn, first, second])
+                };
+                let divides_total = {
+                    let first = d.lemma(p.dvd_mul_right_of_dvd, &[common, a, mp, divides_a]);
+                    let second = d.lemma(p.dvd_mul_right_of_dvd, &[common, b, np, divides_b]);
+                    d.lemma(p.dvd_add, &[common, a_mp, b_np, first, second])
+                };
+                let divides_plus_one = {
+                    let motive = d.eq_motive(total, &|d, x| d.dvd(common, x));
+                    d.transport(total, motive, divides_total, plus_one, total_eq)
+                };
+
+                // ∀ x, dvd x S → dvd x (S+1) → x = 1, applied at `gcd a b`.
+                let claim = |d: &mut NatDev<'_>, x: ExprId| {
+                    let unit = d.num(1);
+                    let lower = d.dvd(x, sum);
+                    let upper = {
+                        let shifted = d.add(sum, unit);
+                        d.dvd(x, shifted)
+                    };
+                    let target = d.eq(x, unit);
+                    let tail = d.arrow(upper, target);
+                    d.arrow(lower, tail)
+                };
+                let at_zero = |d: &mut NatDev<'_>| {
+                    let unit = d.num(1);
+                    let zero = d.zero();
+                    let shifted = d.add(sum, unit);
+                    let lower_ty = d.dvd(zero, sum);
+                    let upper_ty = d.dvd(zero, shifted);
+                    let goal = d.eq(zero, unit);
+                    let lower_fv = d.fresh_fvar();
+                    let upper_fv = d.fresh_fvar();
+                    let upper = d.kernel().fvar(upper_fv);
+                    // `dvd 0 (S+1)` forces `S+1 = 0`, but `S+1` is a successor.
+                    let predicate = d.dvd_predicate(zero, shifted);
+                    let anon = d.anon_name();
+                    let motive = d.kernel().lam(anon, upper_ty, goal, BinderInfo::Default);
+                    let minor = {
+                        let q_fv = d.fresh_fvar();
+                        let q = d.kernel().fvar(q_fv);
+                        let product = d.mul(zero, q);
+                        let equality_ty = d.eq(shifted, product);
+                        let e_fv = d.fresh_fvar();
+                        let e = d.kernel().fvar(e_fv);
+                        let collapse = d.lemma(p.zero_mul, &[q]);
+                        let shifted_zero = {
+                            let motive = d.eq_motive(product, &|d, x| {
+                                let shifted = d.add(sum, unit);
+                                d.eq(shifted, x)
+                            });
+                            d.transport(product, motive, e, zero, collapse)
+                        };
+                        // `S + 1 = succ (S + 0) = succ S`, so the equation says a
+                        // successor is zero.
+                        let padded = d.add(sum, zero);
+                        let padded_succ = d.succ(padded);
+                        let successor = d.succ(sum);
+                        let step = d.lemma(p.add_succ, &[sum, zero]);
+                        let tail = d.lemma(p.add_zero, &[sum]);
+                        let lifted = d.congr(padded, sum, tail, &|d, x| d.succ(x));
+                        let (_reached, shifted_is_succ) =
+                            d.chain(shifted, &[(padded_succ, step), (successor, lifted)]);
+                        let successor_zero = {
+                            let motive = d.eq_motive(shifted, &|d, x| {
+                                let successor = d.succ(sum);
+                                d.eq(successor, x)
+                            });
+                            let base = d.symm(shifted, successor, shifted_is_succ);
+                            d.transport(shifted, motive, base, zero, shifted_zero)
+                        };
+                        let reflexive = d.lemma(p.le_refl, &[successor]);
+                        let upper_motive = d.eq_motive(successor, &|d, upper| {
+                            let successor = d.succ(sum);
+                            d.le(successor, upper)
+                        });
+                        let bounded =
+                            d.transport(successor, upper_motive, reflexive, zero, successor_zero);
+                        let contradiction = d.lemma(p.not_succ_le_zero, &[sum, bounded]);
+                        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                        let level = d.kernel().level_zero();
+                        let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+                        let anon = d.anon_name();
+                        let false_motive =
+                            d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+                        let body = d.apply(rec, &[false_motive, contradiction]);
+                        let with_e = d.lam_fv(e_fv, equality_ty, body);
+                        let nat = d.nat_ty();
+                        d.lam_fv(q_fv, nat, with_e)
+                    };
+                    let nat = d.nat_ty();
+                    let one_level = d.level_one();
+                    let rec = d.kernel().const_(p.logic.exists_rec, vec![one_level]);
+                    let eliminated = d.apply(rec, &[nat, predicate, motive, minor, upper]);
+                    let with_upper = d.lam_fv(upper_fv, upper_ty, eliminated);
+                    d.lam_fv(lower_fv, lower_ty, with_upper)
+                };
+                let at_succ = |d: &mut NatDev<'_>, k: ExprId, _ih: ExprId| {
+                    let unit = d.num(1);
+                    let zero = d.zero();
+                    let divisor = d.succ(k);
+                    let shifted = d.add(sum, unit);
+                    let lower_ty = d.dvd(divisor, sum);
+                    let upper_ty = d.dvd(divisor, shifted);
+                    let lower_fv = d.fresh_fvar();
+                    let lower = d.kernel().fvar(lower_fv);
+                    let upper_fv = d.fresh_fvar();
+                    let upper = d.kernel().fvar(upper_fv);
+                    let positive = {
+                        let base = d.lemma(p.zero_le, &[k]);
+                        d.lemma(p.le_succ_succ, &[zero, k, base])
+                    };
+                    let divides_one = d.lemma(
+                        p.dvd_add_right_cancel_of_pos,
+                        &[divisor, sum, unit, positive, lower, upper],
+                    );
+                    let body = d.lemma(p.eq_one_of_dvd_one, &[divisor, divides_one]);
+                    let with_upper = d.lam_fv(upper_fv, upper_ty, body);
+                    d.lam_fv(lower_fv, lower_ty, with_upper)
+                };
+                let general = d.induct(&claim, &at_zero, &at_succ, common);
+                d.apply(general, &[divides_sum, divides_plus_one])
+            },
+        );
+        let proof = d.lam_fv(certificate_fv, hypothesis_ty, body);
+        (stmt, proof)
     })?;
     Ok(())
 }

@@ -3470,3 +3470,69 @@ fn eq_one_of_dvd_one_is_derived_and_applies() {
         "unexpected residue type: {rendered}"
     );
 }
+
+/// `Nat.coprime_of_bezout_one` composes with the *executable* gcd: at a coprime
+/// pair, `gcd_bezout` already has the shape the theorem consumes, because
+/// `gcd 2 3` REDUCES to `1`.
+///
+/// This is the round trip ℚ will make — a Bézout certificate for the cofactors
+/// in, a `reduced` field out — so the composition is what is worth pinning, not
+/// the theorem's mere existence.
+#[test]
+fn coprime_of_bezout_one_composes_with_the_executable_gcd() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let numeral = |k: &mut Kernel, n: usize| {
+        let mut value = k.const_(p.zero, vec![]);
+        for _ in 0..n {
+            let succ = k.const_(p.succ, vec![]);
+            value = k.app(succ, value);
+        }
+        value
+    };
+
+    // `gcd_bezout 2 3 : bezout 2 3 (gcd 2 3)`, and `gcd 2 3` computes to `1`,
+    // so it is accepted where `bezout 2 3 1` is required.
+    let two = numeral(&mut k, 2);
+    let three = numeral(&mut k, 3);
+    let certificate = {
+        let lemma = k.const_(p.gcd_bezout, vec![]);
+        let applied = k.app(lemma, two);
+        k.app(applied, three)
+    };
+    let coprime = {
+        let theorem = k.const_(p.coprime_of_bezout_one, vec![]);
+        let at_a = k.app(theorem, two);
+        let at_b = k.app(at_a, three);
+        k.app(at_b, certificate)
+    };
+    let inferred = k
+        .infer(coprime)
+        .expect("coprime_of_bezout_one must accept a computed Bezout certificate");
+    let rendered = k.render_lean(inferred);
+    assert!(
+        rendered.contains("gcd"),
+        "unexpected conclusion type: {rendered}"
+    );
+
+    // The hypothesis genuinely constrains: `gcd 2 4` computes to `2`, so
+    // `gcd_bezout 2 4` is a certificate for `2`, not for `1`, and the same
+    // application must be REJECTED.
+    let four = numeral(&mut k, 4);
+    let wrong_certificate = {
+        let lemma = k.const_(p.gcd_bezout, vec![]);
+        let applied = k.app(lemma, two);
+        k.app(applied, four)
+    };
+    let misapplied = {
+        let theorem = k.const_(p.coprime_of_bezout_one, vec![]);
+        let at_a = k.app(theorem, two);
+        let at_b = k.app(at_a, three);
+        k.app(at_b, wrong_certificate)
+    };
+    assert!(
+        k.infer(misapplied).is_err(),
+        "a Bezout certificate for gcd 2 4 = 2 was accepted where 1 was required"
+    );
+}

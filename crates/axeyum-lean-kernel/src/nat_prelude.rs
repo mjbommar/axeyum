@@ -489,6 +489,9 @@ pub struct NatPrelude {
     /// `Nat.eq_one_of_dvd_one : ∀ d, dvd d one → Eq d one` — the closing step
     /// for coprimality after dividing by a gcd.
     pub eq_one_of_dvd_one: NameId,
+    /// `Nat.coprime_of_bezout_one : ∀ a b, bezout a b 1 → Eq (gcd a b) 1` — a
+    /// Bézout identity with coefficient `1` *is* coprimality.
+    pub coprime_of_bezout_one: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
     /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
@@ -686,6 +689,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_add_right_cancel_of_pos: kernel.name_str(nat, "dvd_add_right_cancel_of_pos"),
             not_dvd_one_of_two_le: kernel.name_str(nat, "not_dvd_one_of_two_le"),
             eq_one_of_dvd_one: kernel.name_str(nat, "eq_one_of_dvd_one"),
+            coprime_of_bezout_one: kernel.name_str(nat, "coprime_of_bezout_one"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
         };
