@@ -72,8 +72,43 @@ EXTERNAL_UNSETTLED = {"open", "conjectured"}
 # distinction is structural here, not a footnote.
 #
 # DECIDABLE   a decision procedure we have terminates on it. Dispatch and wait.
-DECIDABLE = {"QF_BV", "QF_LIA", "QF_LRA", "QF_NIA", "QF_NRA", "QF_UF",
-             "QF_UFLIA", "QF_ABV", "QF_SLIA", "UF"}
+#
+# This is a SEED, not the answer. An authored list of our own capabilities goes
+# stale in the direction that hurts most: it under-reports what we can do, and a
+# lane reading "NO ROUTE" skips work that is in fact dispatchable. That is not
+# hypothetical -- `QF_FP` was missing here while `F:fp8-add-monotone-rne`, whose
+# fragment is `QF_FP`, was sitting in the ledger PROVED on `smt-clausal`. The
+# tool contradicted the evidence in the very file it was reading.
+#
+# So the seed is augmented by DEMONSTRATION below: any fragment in which we have
+# already settled a fact on a terminating route is decidable by us, and the
+# ledger is the record of that. Same rule the axiom ledger just adopted in
+# ADR-0465 -- derive the number from the measurement rather than authoring it.
+DECIDABLE_SEED = {"QF_BV", "QF_LIA", "QF_LRA", "QF_NIA", "QF_NRA", "QF_UF",
+                  "QF_UFLIA", "QF_ABV", "QF_SLIA", "UF"}
+
+# Routes that terminate. A fact settled on one of these is a demonstration that
+# its fragment is reachable by search. `kernel-lean` is deliberately EXCLUDED:
+# a hand-built kernel proof of a Nat theorem says nothing about any procedure
+# terminating, and admitting it here would reintroduce the exact conflation the
+# note above describes -- Goldbach's fragment would become "decidable" the moment
+# any Nat theorem was proved.
+TERMINATING_ROUTES = {"smt-clausal", "smt-term-level", "search-certificate",
+                      "cas-certificate"}
+
+# Sentinels that are NOT fragments and must never be admitted, however they were
+# settled. `none` means "no fragment applies", so treating it as a capability is
+# a category error -- and it is not a theoretical one. The demonstration rule
+# above, on its first run, admitted `none` because a conjunctive-query-containment
+# fact carries `fragment: "none"` and was settled by `search-certificate`. The
+# immediate consequence, printed on screen, was:
+#
+#     F:collatz-reaches-one    none    DECIDABLE -- dispatch it
+#
+# which is the exact overstatement the header of this file was written about,
+# reintroduced within minutes by the fix for a DIFFERENT overstatement. A rule
+# that derives capability from evidence still has to know what counts as evidence.
+NOT_A_FRAGMENT = {"none", "None", "unknown", "", None}
 # PROOF_ROUTE quantified over an infinite domain: reachable only by constructing
 #             a proof in the kernel (induction, a lemma chain), never by search.
 #             Being in this class says a route EXISTS, not that it is feasible --
@@ -94,6 +129,31 @@ def settled(fact: dict) -> bool:
     return fact["epistemic_status"] in SETTLED
 
 
+def decidable_fragments(facts: dict[str, dict]) -> tuple[set[str], dict[str, str]]:
+    """Seed plus every fragment we have DEMONSTRABLY settled by a terminating route.
+
+    Returns the set and, for anything admitted by demonstration rather than by
+    the seed, the fact that demonstrates it -- so the report can show its work
+    instead of asserting a capability.
+    """
+    admitted = set(DECIDABLE_SEED)
+    why: dict[str, str] = {}
+    for fact in facts.values():
+        if not settled(fact):
+            continue
+        if fact.get("proof_route") not in TERMINATING_ROUTES:
+            continue
+        frag = fact["formal"]["fragment"]
+        if frag in NOT_A_FRAGMENT:
+            continue
+        if frag not in admitted:
+            admitted.add(frag)
+            why[frag] = fact["id"]
+        elif frag not in DECIDABLE_SEED and frag not in why:
+            why[frag] = fact["id"]
+    return admitted, why
+
+
 def band(fact: dict, facts: dict[str, dict]) -> str:
     status = fact["epistemic_status"]
     external = fact.get("external_status")
@@ -108,9 +168,9 @@ def band(fact: dict, facts: dict[str, dict]) -> str:
 
 
 def describe(fact: dict, facts: dict[str, dict], show_unlocks: bool,
-             unlocks: dict[str, list[str]]) -> str:
+             unlocks: dict[str, list[str]], decidable: set[str]) -> str:
     frag = fact["formal"]["fragment"]
-    if frag in DECIDABLE:
+    if frag in decidable:
         reach = "DECIDABLE — dispatch it"
     elif frag in PROOF_ROUTE:
         reach = "proof route only — needs a kernel proof, no search will close it"
@@ -149,6 +209,8 @@ def main() -> int:
     for fact in facts.values():
         bands[band(fact, facts)].append(fact)
 
+    decidable_set, admitted_by = decidable_fragments(facts)
+
     titles = {
         "research": "RESEARCH FRONTIER — open to us and unsettled in the literature",
         "backlog": "IMPORT BACKLOG — settled elsewhere, not here (formalization, not discovery)",
@@ -164,11 +226,11 @@ def main() -> int:
             print("  (none)")
             continue
         for fact in rows:
-            print(describe(fact, facts, args.unlocks, unlocks))
+            print(describe(fact, facts, args.unlocks, unlocks, decidable_set))
 
     if not args.band:
         research = bands.get("research", [])
-        decidable = [f for f in research if f["formal"]["fragment"] in DECIDABLE]
+        decidable = [f for f in research if f["formal"]["fragment"] in decidable_set]
         proofish = [f for f in research if f["formal"]["fragment"] in PROOF_ROUTE]
         print(f"\n{len(facts)} facts. Research frontier {len(research)}: "
               f"{len(decidable)} decidable by dispatch, {len(proofish)} needing a "
@@ -177,6 +239,12 @@ def main() -> int:
         if decidable:
             print("Dispatch next: " + ", ".join(f["id"] for f in sorted(
                 decidable, key=lambda f: f["id"])))
+        if admitted_by:
+            # Show the work rather than asserting the capability: each of these
+            # fragments is called decidable because a settled fact demonstrates it.
+            print("\nDecidable by demonstration (not by the authored seed):")
+            for frag in sorted(admitted_by):
+                print(f"  {frag:<10} demonstrated by {admitted_by[frag]}")
         if not research:
             print("The frontier is EMPTY. That is not success -- it means nothing in "
                   "the ledger is both unsettled outside and open here, so the next "
