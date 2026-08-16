@@ -103,7 +103,30 @@ high, so `df` answered a different question confidently. →
 The ledger's whole promise is that a status is worth what its checker returns.
 Audited 2026-08-15: **40 of 162 checker runs, across 36 settled facts, exit 0 on
 completion alone** — nothing in the command makes the exit status depend on what
-the run found. Not all 40 are defects (a kernel-lean binary that builds a term
+the run found.
+
+> **RE-MEASURED 2026-08-16 (lane `ledger-integrity`): remediated, and this
+> paragraph was steering lanes at a number that no longer holds.** The ledger now
+> carries **177 checker runs over settled facts, and every one has an exit status
+> that depends on its finding.** Verified per command family by *running* the
+> checker with input that should make it fail, not by reading the command:
+> `check-imported-fact-lean-axioms.sh` exits 1 on an unknown identifier and 0 on
+> a real one; `axeyum-fp`'s `kernel_equivalence` exits 2 on an unknown claim and
+> 1 on `MISMATCH`; `check-dbdesign-negative-controls.sh` exits 1 and additionally
+> refuses a *shrinking* control set; `check-lean-gate.sh` was observed exiting 1
+> on this very fleet when a misconfigured Lean shim shadowed the toolchain; and
+> `validate-claims.py` was observed exiting 1 the same day on a real
+> schema-violating claim. Not exercised: `check-claim-certificates.py` (one row),
+> which needs the gitignored `drat-trim` clone and takes minutes.
+>
+> Two cautions kept, because "can fail" is necessary and not sufficient. First,
+> an intermediate regex-based audit of the same ledger flagged **19** runs as
+> inert and **every one was wrong** — a heuristic over command text is not a
+> measurement of behaviour, which is the same mistake one level up. Second, a
+> checker that can fail may still be bound loosely to its subject:
+> `F:ordered-ring-farkas-refutation` cites a whole-gate run, so it fails when
+> *any* Lean suite fails rather than when its own theorem stops checking. That
+> binding, not the exit status, is the remaining work here. Not all 40 are defects (a kernel-lean binary that builds a term
 and lets `Kernel::infer` reject it *is* a real check), but the largest family is,
 and it is the most load-bearing one:
 
