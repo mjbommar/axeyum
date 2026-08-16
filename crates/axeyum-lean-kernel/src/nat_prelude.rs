@@ -492,6 +492,12 @@ pub struct NatPrelude {
     /// `Nat.coprime_of_bezout_one : ∀ a b, bezout a b 1 → Eq (gcd a b) 1` — a
     /// Bézout identity with coefficient `1` *is* coprimality.
     pub coprime_of_bezout_one: NameId,
+    /// `Nat.bezout_of_scaled : ∀ g a b, 1 ≤ g → bezout (g*a) (g*b) g →
+    /// bezout a b 1` — divide a Bézout identity through by its coefficient.
+    pub bezout_of_scaled: NameId,
+    /// `Nat.gcd_cofactors_coprime : ∀ g a b, 1 ≤ g → gcd (g*a) (g*b) = g →
+    /// gcd a b = 1` — the cofactors of a gcd are coprime.
+    pub gcd_cofactors_coprime: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
     /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
@@ -690,6 +696,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             not_dvd_one_of_two_le: kernel.name_str(nat, "not_dvd_one_of_two_le"),
             eq_one_of_dvd_one: kernel.name_str(nat, "eq_one_of_dvd_one"),
             coprime_of_bezout_one: kernel.name_str(nat, "coprime_of_bezout_one"),
+            bezout_of_scaled: kernel.name_str(nat, "bezout_of_scaled"),
+            gcd_cofactors_coprime: kernel.name_str(nat, "gcd_cofactors_coprime"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
         };

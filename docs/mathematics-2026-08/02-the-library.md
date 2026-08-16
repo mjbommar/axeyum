@@ -88,7 +88,14 @@
 > `∃ q, 1 = d·q`, so the remaining cases are `d = 0` (absurd) and `d = 1` (refl).
 >
 > Revised order: `natAbs` ✅ → `eq_one_of_dvd_one` ✅ → coprimality ✅
-> (`Nat.coprime_of_bezout_one`) → the `Rat` structure ✅ → `normalize`.
+> (`Nat.coprime_of_bezout_one`) → the `Rat` structure ✅ → cofactor coprimality ✅
+> (`Nat.gcd_cofactors_coprime`) → `normalize`.
+>
+> **`gcd_cofactors_coprime : ∀ g a b, 1 ≤ g → gcd (g·a) (g·b) = g → gcd a b = 1`**
+> is the statement `normalize` needs, and it composes two steps: `bezout_of_scaled`
+> divides a Bézout identity through by its own coefficient (distributivity,
+> associativity, then `mul_left_cancel_of_pos`), and `coprime_of_bezout_one`
+> reads the gcd off the divided identity.
 >
 > **`Rat` is declared**, as an inductive with one constructor and four fields:
 > `num : Int`, `den : Nat`, `1 ≤ den`, and `gcd (natAbs num) den = 1`. Positivity

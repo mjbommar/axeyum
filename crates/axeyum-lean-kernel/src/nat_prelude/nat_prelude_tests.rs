@@ -3536,3 +3536,78 @@ fn coprime_of_bezout_one_composes_with_the_executable_gcd() {
         "a Bezout certificate for gcd 2 4 = 2 was accepted where 1 was required"
     );
 }
+
+/// `Nat.gcd_cofactors_coprime` applies to a concrete pair, and its hypothesis
+/// genuinely constrains.
+///
+/// With `g = 2, a = 1, b = 2` the premise `gcd (2*1) (2*2) = 2` is `rfl`, since
+/// `gcd` computes, and the conclusion is `gcd 1 2 = 1`. With `a = 2, b = 4` the
+/// premise would be `gcd 4 8 = 2`, which is false — `gcd 4 8` computes to `4` —
+/// so the same `rfl` must be REJECTED. That rejection is what shows the
+/// hypothesis is load-bearing rather than decorative.
+#[test]
+fn gcd_cofactors_coprime_applies_and_its_premise_constrains() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let numeral = |k: &mut Kernel, n: usize| {
+        let mut value = k.const_(p.zero, vec![]);
+        for _ in 0..n {
+            let succ = k.const_(p.succ, vec![]);
+            value = k.app(succ, value);
+        }
+        value
+    };
+    let nat_ty = k.const_(p.nat, vec![]);
+    let level = {
+        let zero = k.level_zero();
+        k.level_succ(zero)
+    };
+
+    let two = numeral(&mut k, 2);
+    let one = numeral(&mut k, 1);
+    let zero = k.const_(p.zero, vec![]);
+    // 1 <= 2
+    let positive = {
+        let base = {
+            let lemma = k.const_(p.zero_le, vec![]);
+            k.app(lemma, one)
+        };
+        let lemma = k.const_(p.le_succ_succ, vec![]);
+        let at_zero = k.app(lemma, zero);
+        let at_one = k.app(at_zero, one);
+        k.app(at_one, base)
+    };
+
+    let apply_at = |k: &mut Kernel, a: ExprId, b: ExprId, witness: ExprId| {
+        let theorem = k.const_(p.gcd_cofactors_coprime, vec![]);
+        let at_g = k.app(theorem, two);
+        let at_a = k.app(at_g, a);
+        let at_b = k.app(at_a, b);
+        let at_pos = k.app(at_b, positive);
+        k.app(at_pos, witness)
+    };
+    // `rfl : gcd (2*a) (2*b) = 2`, which only checks when it is actually true.
+    let refl_at_two = {
+        let refl = k.const_(p.logic.eq_refl, vec![level]);
+        let at_ty = k.app(refl, nat_ty);
+        k.app(at_ty, two)
+    };
+
+    let good = apply_at(&mut k, one, two, refl_at_two);
+    let inferred = k
+        .infer(good)
+        .expect("gcd (2*1) (2*2) = 2 holds by computation");
+    let rendered = k.render_lean(inferred);
+    assert!(
+        rendered.contains("gcd"),
+        "unexpected conclusion: {rendered}"
+    );
+
+    let four = numeral(&mut k, 4);
+    let bad = apply_at(&mut k, two, four, refl_at_two);
+    assert!(
+        k.infer(bad).is_err(),
+        "accepted `gcd 4 8 = 2`, which is false — gcd 4 8 computes to 4"
+    );
+}

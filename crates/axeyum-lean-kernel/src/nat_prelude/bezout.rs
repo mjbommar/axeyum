@@ -66,6 +66,127 @@ pub(super) fn bezout_after_mp_exists<D: NatOps>(
     d.apply(exists, &[nat, predicate])
 }
 
+/// `g * ((1 + a·mn) + b·nn) = (g + (g·a)·mn) + (g·b)·nn`.
+fn expand_scaled_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    g: ExprId,
+    a: ExprId,
+    b: ExprId,
+    mn: ExprId,
+    nn: ExprId,
+) -> ExprId {
+    let p = *p;
+    let unit = d.num(1);
+    let a_mn = d.mul(a, mn);
+    let b_nn = d.mul(b, nn);
+    let head = d.add(unit, a_mn);
+    let whole = d.add(head, b_nn);
+
+    // g*(head + b·nn) = g*head + g*(b·nn)
+    let step_outer = d.lemma(p.left_distrib, &[g, head, b_nn]);
+    let g_head = d.mul(g, head);
+    let g_b_nn = d.mul(g, b_nn);
+    let split = d.add(g_head, g_b_nn);
+
+    // g*head = g*1 + g*(a·mn) = g + (g·a)·mn
+    let g_unit = d.mul(g, unit);
+    let g_a_mn = d.mul(g, a_mn);
+    let inner_split = d.add(g_unit, g_a_mn);
+    let step_inner = d.lemma(p.left_distrib, &[g, unit, a_mn]);
+    let mul_one = d.lemma(p.mul_one, &[g]);
+    let with_g = d.add(g, g_a_mn);
+    let step_unit = d.congr(g_unit, g, mul_one, &|d, x| d.add(x, g_a_mn));
+    let scaled_a = d.mul(g, a);
+    let scaled_a_mn = d.mul(scaled_a, mn);
+    let assoc = d.lemma(p.mul_assoc, &[g, a, mn]);
+    let step_assoc = {
+        let flipped = d.symm(scaled_a_mn, g_a_mn, assoc);
+        d.congr(g_a_mn, scaled_a_mn, flipped, &|d, x| d.add(g, x))
+    };
+    let head_target = d.add(g, scaled_a_mn);
+    let (_reached, head_chain) = d.chain(
+        g_head,
+        &[
+            (inner_split, step_inner),
+            (with_g, step_unit),
+            (head_target, step_assoc),
+        ],
+    );
+
+    // g*(b·nn) = (g·b)·nn
+    let scaled_b = d.mul(g, b);
+    let scaled_b_nn = d.mul(scaled_b, nn);
+    let assoc_b = d.lemma(p.mul_assoc, &[g, b, nn]);
+    let tail_chain = d.symm(scaled_b_nn, g_b_nn, assoc_b);
+
+    let after_head = d.add(head_target, g_b_nn);
+    let final_target = d.add(head_target, scaled_b_nn);
+    let step_head = d.congr(g_head, head_target, head_chain, &|d, x| d.add(x, g_b_nn));
+    let step_tail = d.congr(g_b_nn, scaled_b_nn, tail_chain, &|d, x| {
+        d.add(head_target, x)
+    });
+    let g_whole = d.mul(g, whole);
+    let (_end, chained) = d.chain(
+        g_whole,
+        &[
+            (split, step_outer),
+            (after_head, step_head),
+            (final_target, step_tail),
+        ],
+    );
+    chained
+}
+
+/// `g * (a·mp + b·np) = (g·a)·mp + (g·b)·np`.
+fn expand_scaled_right(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    g: ExprId,
+    a: ExprId,
+    b: ExprId,
+    mp: ExprId,
+    np: ExprId,
+) -> ExprId {
+    let p = *p;
+    let a_mp = d.mul(a, mp);
+    let b_np = d.mul(b, np);
+    let whole = d.add(a_mp, b_np);
+    let g_whole = d.mul(g, whole);
+    let g_a_mp = d.mul(g, a_mp);
+    let g_b_np = d.mul(g, b_np);
+    let split = d.add(g_a_mp, g_b_np);
+    let step_outer = d.lemma(p.left_distrib, &[g, a_mp, b_np]);
+
+    let scaled_a = d.mul(g, a);
+    let scaled_a_mp = d.mul(scaled_a, mp);
+    let assoc_a = d.lemma(p.mul_assoc, &[g, a, mp]);
+    let step_a = {
+        let flipped = d.symm(scaled_a_mp, g_a_mp, assoc_a);
+        d.congr(g_a_mp, scaled_a_mp, flipped, &|d, x| d.add(x, g_b_np))
+    };
+    let after_a = d.add(scaled_a_mp, g_b_np);
+
+    let scaled_b = d.mul(g, b);
+    let scaled_b_np = d.mul(scaled_b, np);
+    let assoc_b = d.lemma(p.mul_assoc, &[g, b, np]);
+    let step_b = {
+        let flipped = d.symm(scaled_b_np, g_b_np, assoc_b);
+        d.congr(g_b_np, scaled_b_np, flipped, &|d, x| d.add(scaled_a_mp, x))
+    };
+    let final_target = d.add(scaled_a_mp, scaled_b_np);
+
+    let (_end, chained) = d.chain(
+        g_whole,
+        &[
+            (split, step_outer),
+            (after_a, step_a),
+            (final_target, step_b),
+        ],
+    );
+    chained
+}
+
 /// Eliminate a balanced Bézout certificate into `target`.
 ///
 /// `minor` receives the four witnesses `(mp, mn, np, nn)` and a proof of
@@ -780,6 +901,110 @@ pub(super) fn declare_gcd_bezout(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     // The identity `(1 + a·mn) + b·nn = a·mp + b·np` rearranges to `T = S + 1`,
     // and a divisor of both `S` and `S + 1` divides 1 — after ruling out the
     // divisor being zero, where `S + 1` would have to be zero.
+    // bezout_of_scaled : ∀ g a b, 1 ≤ g → bezout (g*a) (g*b) g → bezout a b 1
+    //
+    // Divide a Bézout identity through by its own coefficient. This is the step
+    // between `gcd_bezout` and coprimality of the cofactors: normalising a
+    // rational leaves `a = g*a'` and `b = g*b'`, and what has to be shown about
+    // the quotients is exactly the identity with `1` in place of `g`.
+    //
+    // Both sides are shown equal to `g * (…)` by distributivity and
+    // associativity, and `mul_left_cancel_of_pos` removes the `g`.
+    d.theorem(p.bezout_of_scaled, 3, &|d, values| {
+        let (g, a, b) = (values[0], values[1], values[2]);
+        let unit = d.num(1);
+        let scaled_a = d.mul(g, a);
+        let scaled_b = d.mul(g, b);
+        let positive_ty = {
+            let zero = d.zero();
+            let one = d.succ(zero);
+            d.le(one, g)
+        };
+        let hypothesis_ty = d.bezout(scaled_a, scaled_b, g);
+        let conclusion = d.bezout(a, b, unit);
+        let stmt = {
+            let inner = d.arrow(hypothesis_ty, conclusion);
+            d.arrow(positive_ty, inner)
+        };
+
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+        let certificate_fv = d.fresh_fvar();
+        let certificate = d.kernel().fvar(certificate_fv);
+
+        let body = bezout_elim(
+            d,
+            scaled_a,
+            scaled_b,
+            g,
+            conclusion,
+            certificate,
+            &|d, mp, mn, np, nn, equation| {
+                let unit = d.num(1);
+                let scaled_a = d.mul(g, a);
+                let scaled_b = d.mul(g, b);
+
+                // The reduced identity, and the scaled one the hypothesis gives.
+                let reduced = d.bezout_equation(a, b, unit, mp, mn, np, nn);
+                let target_left = {
+                    let head = {
+                        let product = d.mul(a, mn);
+                        d.add(unit, product)
+                    };
+                    let tail = d.mul(b, nn);
+                    d.add(head, tail)
+                };
+                let target_right = {
+                    let first = d.mul(a, mp);
+                    let second = d.mul(b, np);
+                    d.add(first, second)
+                };
+                let _ = reduced;
+
+                // g * left, expanded down to the scaled identity's left side.
+                let scaled_left = {
+                    let head = {
+                        let product = d.mul(scaled_a, mn);
+                        d.add(g, product)
+                    };
+                    let tail = d.mul(scaled_b, nn);
+                    d.add(head, tail)
+                };
+                let scaled_right = {
+                    let first = d.mul(scaled_a, mp);
+                    let second = d.mul(scaled_b, np);
+                    d.add(first, second)
+                };
+
+                let expand_left = expand_scaled_left(d, &p, g, a, b, mn, nn);
+                let expand_right = expand_scaled_right(d, &p, g, a, b, mp, np);
+
+                // g*L = scaled_left = scaled_right = g*R
+                let g_left = d.mul(g, target_left);
+                let g_right = d.mul(g, target_right);
+                let back = d.symm(g_right, scaled_right, expand_right);
+                let (_reached, chained) = d.chain(
+                    g_left,
+                    &[
+                        (scaled_left, expand_left),
+                        (scaled_right, equation),
+                        (g_right, back),
+                    ],
+                );
+                let identity = d.lemma(
+                    p.mul_left_cancel_of_pos,
+                    &[g, target_left, target_right, positive, chained],
+                );
+                d.bezout_intro(a, b, unit, mp, mn, np, nn, identity)
+            },
+        );
+        let proof = {
+            let with_certificate = d.lam_fv(certificate_fv, hypothesis_ty, body);
+            d.lam_fv(positive_fv, positive_ty, with_certificate)
+        };
+        (stmt, proof)
+    })?;
+
     d.theorem(p.coprime_of_bezout_one, 2, &|d, values| {
         let (a, b) = (values[0], values[1]);
         let unit = d.num(1);
@@ -955,5 +1180,56 @@ pub(super) fn declare_gcd_bezout(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
         let proof = d.lam_fv(certificate_fv, hypothesis_ty, body);
         (stmt, proof)
     })?;
+    // gcd_cofactors_coprime : ∀ g a b, 1 ≤ g → gcd (g*a) (g*b) = g → gcd a b = 1
+    //
+    // The statement `Rat.normalize` needs: dividing a numerator and denominator
+    // by their gcd leaves cofactors that are coprime. `gcd_bezout` supplies a
+    // certificate for `gcd (g*a) (g*b)`, the hypothesis rewrites its coefficient
+    // to `g`, `bezout_of_scaled` divides it through, and `coprime_of_bezout_one`
+    // reads off the gcd.
+    d.theorem(p.gcd_cofactors_coprime, 3, &|d, values| {
+        let (g, a, b) = (values[0], values[1], values[2]);
+        let unit = d.num(1);
+        let scaled_a = d.mul(g, a);
+        let scaled_b = d.mul(g, b);
+        let common = d.gcd(scaled_a, scaled_b);
+        let positive_ty = {
+            let zero = d.zero();
+            let one = d.succ(zero);
+            d.le(one, g)
+        };
+        let hypothesis_ty = d.eq(common, g);
+        let conclusion = {
+            let cofactor = d.gcd(a, b);
+            d.eq(cofactor, unit)
+        };
+        let stmt = {
+            let inner = d.arrow(hypothesis_ty, conclusion);
+            d.arrow(positive_ty, inner)
+        };
+
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+        let hypothesis_fv = d.fresh_fvar();
+        let hypothesis = d.kernel().fvar(hypothesis_fv);
+
+        let certificate = d.lemma(p.gcd_bezout, &[scaled_a, scaled_b]);
+        let at_g = {
+            let motive = d.eq_motive(common, &|d, x| {
+                let scaled_a = d.mul(g, a);
+                let scaled_b = d.mul(g, b);
+                d.bezout(scaled_a, scaled_b, x)
+            });
+            d.transport(common, motive, certificate, g, hypothesis)
+        };
+        let divided = d.lemma(p.bezout_of_scaled, &[g, a, b, positive, at_g]);
+        let body = d.lemma(p.coprime_of_bezout_one, &[a, b, divided]);
+        let proof = {
+            let with_hypothesis = d.lam_fv(hypothesis_fv, hypothesis_ty, body);
+            d.lam_fv(positive_fv, positive_ty, with_hypothesis)
+        };
+        (stmt, proof)
+    })?;
+
     Ok(())
 }
