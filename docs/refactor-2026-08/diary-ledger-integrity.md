@@ -9,7 +9,7 @@ just repaired.
 
 **Landed the claim dashboard's gate, and the type check whose absence hid the
 bug** (`WIP`, ledger-integrity, 2026-08-16). Strand item
-[`04-gates-and-truth.md`](../../refactor-2026-08/04-gates-and-truth.md) T1
+[`04-gates-and-truth.md`](04-gates-and-truth.md) T1
 ("every gate reports its own scope"), and finding 8's shape one level down: the
 defect was not a wrong number, it was three layers each trusting the one below.
 
@@ -62,14 +62,14 @@ that design could not both stand: `docs/plan/global/` alone is 43,348 bytes of
 the budget, so even a 500-byte cap across 43 lanes would not have fit. Resolved
 by taking CLAUDE.md's framing literally — PLAN.md is an **active work queue** —
 and archiving finished and cut-off lanes to
-[`docs/plan/archive/`](../archive/README.md), which is not a PLAN source. Nothing
+[`docs/plan/archive/`](../plan/archive/README.md), which is not a PLAN source. Nothing
 is lost: every file moves verbatim by `git mv`, 26 of the 43 duplicate a fuller
 committed diary, and the archive README indexes all 43 with the next action each
 lane left behind, so the queue keeps its work items. Restoring a lane is a `git
 mv` back plus `gen-plan.py`.
 
 **Scoped the keystone's last axiom, by measurement** (`WIP`, ledger-integrity,
-2026-08-16). Strand [`01`](../../refactor-2026-08/01-int-real-keystone.md) K1.
+2026-08-16). Strand [`01`](01-int-real-keystone.md) K1.
 `nat_axiom_inventory` confirms `integer` carries exactly **one** trusted
 declaration, `Int.euclidean_decomposition`, whose type decodes to
 `∀ a b, 0 < b → ∃ q r, a = b·q + r ∧ 0 ≤ r ∧ r < b`. Four measured facts make the
