@@ -141,8 +141,12 @@ Three properties this rests on, each checked rather than argued:
   other two retained roots that were still declining.
 * A paired A/B census — both binaries run **concurrently on the same retained
   500-stream `Init`+`Std` corpus**, same bounds (4 jobs, 120 s, 8 GB), compared
-  per stream — is recorded in
-  [`diary-import-projrec.md`](../../formalized-math-2026-08/diary-import-projrec.md).
+  per stream — was to be recorded in a lane diary, `diary-import-projrec.md`.
+  **That file was never committed** — the lane was cut off before it landed, and
+  it exists on no ref. The headline below is therefore this ADR's own record of
+  the census and has no companion file to check it against; treat it as a result
+  reported here rather than one with retained evidence, and re-run the census if
+  it needs to be load-bearing.
   Headline: CLEAN 331 → 405 of 500, DECLINED 165 → 91, **74 streams recovered and
   none lost**; total declines 34,993 → 15,143; distinct decline roots 51 → 33.
 * **Five removal controls**, each flipping exactly one test in

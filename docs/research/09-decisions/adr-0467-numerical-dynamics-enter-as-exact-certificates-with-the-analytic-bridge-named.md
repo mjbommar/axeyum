@@ -15,7 +15,7 @@ The project's owner asked for the stack to be pointed at useful computations —
 "planning, logistics, database design, or general numerical approximation / ode
 / pde systems". Planning and logistics had schedule infeasibility, IIS cores and
 Farkas certificates reconstructed into Lean. Database design had just been built
-([ADR-0463](adr-0463-relational-database-design-enters-the-stack-as-certificates-not-verdicts.md)).
+([ADR-0463](adr-0463-database-design-questions-are-answered-with-certificates.md)).
 Numerical / ODE was the remaining named domain with nothing in it.
 
 The obvious way to do numerics in a solver stack is the wrong way. Simulating a
@@ -124,7 +124,7 @@ worth more than the two positive ones next to it.
 
 ### 4. `axeyum-cas`, not a new crate, and not `axeyum-solver`
 
-[ADR-0001](adr-0001-minimal-crate-split.md) admits a crate only once a boundary
+[ADR-0001](adr-0001-vertical-slice-first.md) admits a crate only once a boundary
 is proven by use. This module needs exactly one thing that already exists: an
 exact multivariate polynomial ring with checked rational coefficients
 (`axeyum_cas::mvpoly`). Duplicating it into `axeyum-scenarios` to keep that
