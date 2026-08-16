@@ -2556,6 +2556,131 @@ not every integer in a declared file.
 and the obvious target; ADR-0456 already names the trigger for building ℚ.
 Nothing else in the ledger is blocked.
 
+**Landed a sums-of-squares capability for polynomial dynamical systems — Lyapunov
+stability, barrier reachability, and a PSD-not-SOS witness — as exact rational
+certificates, and stopped before putting any of it in the fact ledger** (`WIP`,
+numerics, 2026-08-15). This lane was cut off mid-step by the account's monthly
+spend limit; the code, artifacts and controls are committed, the ledger entries
+are not. Decision record: [ADR-0467](docs/research/09-decisions/adr-0467-numerical-dynamics-enter-as-exact-certificates-with-the-analytic-bridge-named.md).
+
+**Why this lane existed.** The project's owner named four useful domains —
+planning, logistics, database design, and numerical / ODE / PDE. The first two
+had schedule infeasibility with Farkas certificates reconstructed into Lean, the
+third was built the same day by [`db-design`](docs/plan/status/57-db-design.md), and this was the
+last one with nothing in it.
+
+**What is in.** `61b4bc73c`, 4,027 lines: `crates/axeyum-cas/src/sos/` (`check`,
+`corpus`, `json`, `psd`), the `sos_certify` and `emit_sos_certificates` examples,
+committed Lyapunov / energy-barrier / Motzkin artifacts, a
+`sos_certificate_artifacts` test suite, and — the part worth naming —
+`scripts/gen-sos-negative-controls.py` with `scripts/check-sos-negative-controls.sh`.
+
+**Verified by the coordinator when landing the rest of the session, not inherited
+from a report this lane never wrote:**
+
+```
+scripts/check-sos-negative-controls.sh
+  21 negative control fixture(s), 36 assertion(s) run, 0 failure(s)   exit 0
+```
+
+**What is NOT done, and must not be read as done.** There is **no fact** for any
+of this. `artifacts/facts/` was untouched by `61b4bc73c`, so the capability exists
+and the self-extension loop is not closed over it: nothing in the ledger claims a
+Lyapunov result, and `fact-frontier.py` therefore cannot see this capability
+either. The obvious next step is three facts with checkers that fail when the
+claim is false, following the shape `db-design` used.
+
+**The ADR is the durable part.** ADR-0467 records that the passage from a
+pointwise polynomial inequality to a statement about *solutions* of an ODE is an
+**axiom in `axiom_footprint`, never a silent step** — the same honesty the
+`simson` lane applied to the ℝ-versus-ℚ̄ question in geometry. It was written as
+ADR-0466 and renumbered when `import-projrec` turned out to have claimed that
+number concurrently and already referenced it from code.
+
+**Implemented structure eta reduction of a stuck recursor major premise
+([ADR-0466](docs/research/09-decisions/adr-0466-structure-eta-reduces-a-stuck-recursor-major.md)),
+and stopped before measuring what it buys** (`WIP`, import-projrec, 2026-08-15).
+Cut off by the account's monthly spend limit at the words *"now the real-Lean
+crosscheck"*; landed by the coordinator in `c1d9c6f3b` after re-running its gates.
+
+**Where it came from.** [`import-wfrec`](docs/plan/status/91-import-wfrec.md) fixed a ζ-reduction
+hole and handed over `Nat.Linear.Poly.denote_reverse` as the next binding root in
+both corpora, with the mismatch already probed: `Prod.rec` (6 args) against
+`(Nat.brecOn.go.{1} … Nat.mul._f).1` (1 arg), and a named model in Lean's own
+`lazy_delta_reduction_step`.
+
+**Gates, re-run on the assembled worktree rather than inherited:**
+
+```
+cargo check --workspace --all-features                     exit 0
+cargo test -p axeyum-lean-kernel                           276 lib + every suite, 0 failed
+  --test structure_eta_recursor_major                      6 passed
+  --test real_lean_structure_eta_recursor_crosscheck       1 passed
+  --test k_like_reduction                                  7 passed
+cargo clippy -p axeyum-solver -p axeyum-lean-kernel
+  --all-targets --all-features -- -D warnings              exit 0
+```
+
+That `k_like_reduction` line matters. An earlier lane reported it **failing** in
+the shared worktree and correctly judged it *not theirs*; what it was seeing was
+this lane's edit in an intermediate state. Both readings were right at the time,
+which is the ordinary hazard of a shared checkout and the reason the private-index
+protocol exists.
+
+**What is NOT claimed.** The **paired corpus A/B was never run**, so the
+import-census effect of this rule is **unmeasured** — no CLEAN-rate movement may
+be attributed to it. `import-wfrec` retained the 500-stream `Init`+`Std` corpus
+with both paired analyses and the pairing script at
+`/nas3/data/axeyum/lean-import-scale/initstd-500-streams/` precisely so the next
+lane's A/B costs no re-export. Run that before quoting a number.
+
+**Also unresolved:** whether this rule closes `Nat.Linear.Poly.denote_reverse` at
+all. Lean's `try_unfold_proj_app` branch — the one whose comment names
+well-founded recursion explicitly — still has no counterpart here.
+
+**Measured `axeyum-solver`'s module graph, then landed the first real slice of
+refactor item [03](docs/refactor-2026-08/03-solver-decomposition.md): the
+largest dependency cycle drops from 65 modules to 24** (`WIP`, solver-decomp,
+2026-08-15). Cut off by the account's monthly spend limit one step from done —
+its last words were *"now update `model.rs` to import all five from the data
+module, and fix the module doc"* — and landed by the coordinator in `25ab64649`.
+
+**The finding.** Each quantifier certificate type was defined beside its
+**checker**. So `Model`, the crate's base value type, depended on five quantifier
+checker modules, and through two of them on the dispatcher, the `QF_BV` route,
+the e-graph, the theory solvers, and back to `Model`.
+
+| | largest cycle |
+|---|---|
+| before | **65 modules, 115,840 lines** — half the crate |
+| after | **24 modules, 58,215 lines** (25.8%) |
+
+Measured by this lane's own `scripts/analyze_solver_module_graph.py` (`3740597f5`,
+which also pins `solver-module-graph-baseline.json`), and **re-run by the
+coordinator before landing** rather than quoted from a commit message.
+
+**The rule the new module enforces:** a value type may depend on the *shape* of a
+certificate, never on the search or the checker that produces it.
+
+**Gates on the assembled worktree:**
+
+```
+cargo test -p axeyum-solver --lib --features full          1155 passed, 0 failed
+cargo clippy -p axeyum-solver -p axeyum-lean-kernel
+  --all-targets --all-features -- -D warnings              exit 0
+scripts/analyze_solver_module_graph.py                     exit 0
+```
+
+`model.rs` was already finished; the coordinator's only edit was the module doc —
+one missing pair of backticks that failed `clippy -D warnings`, which is why the
+lane's own last step was that doc.
+
+**What is NOT claimed.** This is one slice, not the decomposition. **No crate was
+extracted**, the 267-entry re-export façade is untouched, and ADR-0001's
+"boundary proven by use" bar has not been argued for any new crate. The lane was
+also briefed to re-measure `03-solver-decomposition.md` against the current tree
+and report where that document has gone stale; it did not get that far.
+
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
 Shared deadlines, CAD cancellation, deterministic LRA normalization ceilings,
