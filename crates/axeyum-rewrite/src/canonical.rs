@@ -1731,11 +1731,11 @@ fn rebuild_balanced(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<Te
     let mut terms = args.to_vec();
     while terms.len() > 1 {
         let mut next = Vec::with_capacity(terms.len().div_ceil(2));
-        let mut pairs = terms.chunks_exact(2);
-        for pair in &mut pairs {
+        let (pairs, remainder) = terms.as_chunks::<2>();
+        for pair in pairs {
             next.push(build_app(arena, op, pair)?);
         }
-        if let [last] = pairs.remainder() {
+        if let [last] = remainder {
             next.push(*last);
         }
         terms = next;

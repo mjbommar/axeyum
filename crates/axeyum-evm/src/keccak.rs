@@ -99,14 +99,13 @@ pub fn keccak256(input: &[u8]) -> [u8; 32] {
     let mut state = [0u64; 25];
 
     // Absorb full rate-sized blocks.
-    let mut blocks = input.chunks_exact(RATE);
-    for block in &mut blocks {
+    let (blocks, rem) = input.as_chunks::<RATE>();
+    for block in blocks {
         absorb(&mut state, block);
         keccak_f(&mut state);
     }
 
     // Pad the final (partial) block: 0x01 ... 0x80 (keccak/legacy pad).
-    let rem = blocks.remainder();
     let mut last = [0u8; RATE];
     last[..rem.len()].copy_from_slice(rem);
     last[rem.len()] ^= 0x01;
@@ -133,7 +132,58 @@ fn absorb(state: &mut [u64; 25], block: &[u8]) {
 
 #[cfg(test)]
 mod tests {
-    use super::keccak256;
+    use super::{absorb, keccak_f, keccak256};
+
+    /// The absorb loop, written the way it was before `as_chunks::<RATE>()`
+    /// replaced `chunks_exact(RATE)`.
+    ///
+    /// This exists because the three known-answer digests below are all SHORTER
+    /// than the 136-byte rate, so every one of them exercises only the padding
+    /// path — the multi-block loop had no coverage at all, and a refactor of it
+    /// would have shipped green.
+    // The `chunks_exact` call below is the POINT of this function: it is the
+    // code `keccak256` used before the refactor, kept verbatim as the thing to
+    // differ against. Rewriting it to `as_chunks` would compare the new
+    // implementation with itself.
+    #[allow(clippy::chunks_exact_to_as_chunks)]
+    fn keccak256_reference(input: &[u8]) -> [u8; 32] {
+        const RATE: usize = 136;
+        let mut state = [0u64; 25];
+        let mut blocks = input.chunks_exact(RATE);
+        for block in &mut blocks {
+            absorb(&mut state, block);
+            keccak_f(&mut state);
+        }
+        let rem = blocks.remainder();
+        let mut last = [0u8; RATE];
+        last[..rem.len()].copy_from_slice(rem);
+        last[rem.len()] ^= 0x01;
+        last[RATE - 1] ^= 0x80;
+        absorb(&mut state, &last);
+        keccak_f(&mut state);
+        let mut out = [0u8; 32];
+        for (i, chunk) in out.chunks_mut(8).enumerate() {
+            chunk.copy_from_slice(&state[i].to_le_bytes());
+        }
+        out
+    }
+
+    /// Every length from 0 to 3 full rates agrees with that reference —
+    /// covering zero blocks, exact multiples of the rate (where the remainder
+    /// is empty), and every partial tail.
+    #[test]
+    fn multi_block_absorption_matches_the_chunks_exact_loop() {
+        for len in 0..=(3 * 136 + 5) {
+            let input: Vec<u8> = (0..len)
+                .map(|i: usize| u8::try_from(i % 251).unwrap_or(0))
+                .collect();
+            assert_eq!(
+                keccak256(&input),
+                keccak256_reference(&input),
+                "digest diverges at input length {len}"
+            );
+        }
+    }
 
     /// keccak256("") — the canonical empty-input EVM digest.
     #[test]

@@ -430,15 +430,15 @@ fn balanced_boolean_fold(
     debug_assert!(!terms.is_empty());
     while terms.len() > 1 {
         let mut next = Vec::with_capacity(terms.len().div_ceil(2));
-        let mut pairs = terms.chunks_exact(2);
-        for pair in &mut pairs {
+        let (pairs, remainder) = terms.as_chunks::<2>();
+        for pair in pairs {
             next.push(if is_conjunction {
                 arena.and(pair[0], pair[1])?
             } else {
                 arena.or(pair[0], pair[1])?
             });
         }
-        if let [last] = pairs.remainder() {
+        if let [last] = remainder {
             next.push(*last);
         }
         terms = next;

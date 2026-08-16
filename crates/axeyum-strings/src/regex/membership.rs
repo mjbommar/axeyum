@@ -1110,8 +1110,10 @@ mod tests {
             MembershipOutcome::Sat(w) => {
                 assert_eq!(w.len(), 10_000);
                 assert!(
-                    w.chunks_exact(2)
-                        .all(|chunk| chunk == [u32::from(b'a'), u32::from(b'b')])
+                    w.as_chunks::<2>()
+                        .0
+                        .iter()
+                        .all(|chunk| *chunk == [u32::from(b'a'), u32::from(b'b')])
                 );
             }
             other => panic!("expected compact native-loop witness, got {other:?}"),

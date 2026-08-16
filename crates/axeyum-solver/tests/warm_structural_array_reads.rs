@@ -363,7 +363,7 @@ fn build_ite_tree(arena: &mut TermArena, leaf_count: usize) -> TermId {
     let mut node = 0usize;
     while level.len() > 1 {
         let mut next = Vec::with_capacity(level.len() / 2);
-        for pair in level.chunks_exact(2) {
+        for pair in level.as_chunks::<2>().0 {
             let condition = arena.bool_var(&format!("warm_node_cond_{node}")).unwrap();
             node += 1;
             next.push(arena.ite(condition, pair[0], pair[1]).unwrap());

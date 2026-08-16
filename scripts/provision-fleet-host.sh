@@ -102,7 +102,13 @@ fi
 # not exposing it: check-lean-gate.sh prefers PATH over its own search, so a
 # shim on PATH SHADOWS the working toolchain binary. Measured on s7, where it
 # failed one suite and with it the fact F:ordered-ring-farkas-refutation.
-if [ -x "$HOME/.elan/bin/elan" ] && ! "$HOME/.elan/bin/lean" --version >/dev/null 2>&1; then
+# Probe from a directory with NO `lean-toolchain` file. The repo root HAS one,
+# and elan reads it in preference to any default -- so probing there exercises
+# the wrong path and reports a working shim that fails everywhere else. That is
+# how this check passed on all five hosts while `real_lean_strict_positivity_
+# crosscheck`, which runs Lean in a temp dir, still died with "no default
+# toolchain configured".
+if [ -x "$HOME/.elan/bin/elan" ] && ! (cd / && "$HOME/.elan/bin/lean" --version >/dev/null 2>&1); then
   ELAN_HOME="$HOME/.elan" "$HOME/.elan/bin/elan" default \
       "$(tr -d '[:space:]' < "$REPO/lean-toolchain" 2>/dev/null || echo leanprover/lean4:v4.30.0)" \
       >/dev/null 2>&1 \
@@ -169,7 +175,7 @@ v lean-discoverable "ls \"\$HOME\"/.elan/toolchains/*/bin/lean 2>/dev/null | hea
 # lean_bin() alone passed while exactly this was broken -- it resolves the
 # toolchain directly and never exercises the shim. Hosts without an elan binary
 # (s5) have no shim and correctly skip.
-v lean-shim "[ -x \"\$HOME/.elan/bin/lean\" ] && \"\$HOME/.elan/bin/lean\" --version || echo 'n/a (no shim on this host)'"
+v lean-shim "[ -x \"\$HOME/.elan/bin/lean\" ] && (cd / && \"\$HOME/.elan/bin/lean\" --version) || echo 'n/a (no shim on this host)'"
 # The PATH export is only useful if it sits ABOVE ~/.bashrc's early-return
 # guard. Assert the ORDER, not the mere presence -- a check that only greps for
 # the line would pass on the appended version, which never executes. (An
