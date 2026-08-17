@@ -63,7 +63,7 @@ class EachGuardCanFail(unittest.TestCase):
 class TheTableItselfIsParsed(unittest.TestCase):
     def test_entry_and_area_counts_are_what_was_measured(self) -> None:
         recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
-        self.assertEqual(len(recs), 101)
+        self.assertEqual(len(recs), 102)
         self.assertGreaterEqual(len({r["area"] for r in recs}), 23)
         ext = {r["area"] for r in recs if CA.tier(r) == "external-artifact-checker"}
         self.assertGreaterEqual(len(ext), 11)
@@ -153,9 +153,21 @@ class ASharedRowCannotStateTwoDifferentAssurances(unittest.TestCase):
         recs = self._recs(["QF_IDL / QF_RDL", "QF_RDL"])
         self.assertEqual(CA.compound_only(recs), {"QF_IDL"})
 
-    def test_the_committed_table_discloses_the_pair_this_was_found_on(self) -> None:
+    def test_the_committed_table_still_discloses_the_logic_that_is_shared(self) -> None:
+        """QF_IDL's assurance is still stated only through `QF_IDL / QF_RDL`."""
         recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
-        self.assertLessEqual({"QF_IDL", "QF_RDL"}, CA.compound_only(recs))
+        self.assertIn("QF_IDL", CA.compound_only(recs))
+
+    def test_qf_rdl_got_its_own_row_once_it_was_gated_separately(self) -> None:
+        """The resolution of the case this class was written for. QF_RDL is now
+        handed to official Lean by `lean_crosscheck` while QF_IDL still routes
+        through ArithDpll and renders only an attestation, so the two no longer
+        share a single claim — QF_RDL states its own."""
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        self.assertNotIn("QF_RDL", CA.compound_only(recs))
+        solo = [r for r in recs if CA.logics(r["area"]) == {"QF_RDL"}]
+        self.assertTrue(solo, "QF_RDL lost its own row")
+        self.assertEqual(CA.tier(solo[0]), "external-artifact-checker")
 
 
 if __name__ == "__main__":

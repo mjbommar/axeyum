@@ -33,10 +33,19 @@ external: `check-lean-gate.sh` compiles a one-module-per-family slice that
 contains no QF_RDL module, and moving this metric by rewriting the prose it
 reads is the failure this strand exists to prevent.
 
-**Next.** Hand a `QF_RDL` module to the Lean gate — the cheapest gap closure in
-the ranking, and plumbing rather than a proof format. Then items A (generate the
-table) and C (explicit "decided, not certified" status), which are the real fix:
-this checker is a heuristic over prose and says so.
+**Done same day:** QF_RDL is handed to official Lean by `lean_crosscheck`
+(`family=qf_rdl_difference`, `representative=theory-reconstruction`, axiom
+footprint = ordered field + the query's hypotheses, no `sorryAx`), theory-family
+ratchet 33 → 34. Only after that was the table edited — gate first, transcribe
+second, because `tier` reads prose and the reverse order would move the metric
+by writing a sentence. 11 → **12 of 23 logics**, floor raised to 37.
+
+**Next.** Band 1 now holds `QF_IDL` and `SAT`. `SAT` is the same shape QF_RDL
+was: `propositional_interpolant` builds a DRAT proof, checks it, and drops it —
+`write_drat` already exists and `drat-trim` is already run by the claims gate,
+so nothing needs inventing. Then items A (generate the table) and C (explicit
+"decided, not certified" status), which are the real fix: this checker is a
+heuristic over prose and says so.
 
 <!-- plan-section: landed-changes -->
 
@@ -45,3 +54,4 @@ this checker is a heuristic over prose and says so.
 | 2026-08-17 | `pending` | Item B answered by derivation: the gap is banded by distance to an external checker, and the ranking found QF_RDL already renders a Lean theory module official Lean accepts — a "gap" logic blocked only on gate wiring. Controls: 6 new tests, incl. one proving a solved logic never appears in the queue. |
 | 2026-08-17 | `pending` | A control no gate RUNS cannot fail, so it is not a control: 63 of 137 control modules were executed by nothing, and running the 51 needing no cargo found 264 tests — 258 passing and gated for free, 6 erroring, four of them import failures against renamed scripts. Ratcheted; the gate caught its own controls being unwired. |
 | 2026-08-17 | `pending` | 44 orphaned controls adopted (257 tests, ~31s) and the baseline ratcheted 63 → 17. Fixing the scanner to join line continuations found 2 more already-wired — it had counted 3 of 44 and would have called them orphans. Corrected an overstatement: 5 of the 7 unadopted need `pytest` (absent here), 1 has an order dependency, and exactly 1 has genuinely rotted (`producer drift: Cargo.lock`). |
+| 2026-08-17 | `pending` | QF_RDL closed end to end: `lean_crosscheck` now hands official Lean a QF_RDL theory module every run (33 → 34 theory families), and only then did the table gain a QF_RDL-specific row — 11 → 12 of 23 logics externally checked. Controls: two mutations of the module are rejected by Lean; the attestation class is proven still reachable. |

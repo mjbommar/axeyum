@@ -104,6 +104,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     qf_fp_bv_defined_enum_rows_check_in_real_lean,
     qf_dt_cvc5_slice_checks_in_real_lean,
     lra_refutation_checks_in_real_lean,
+    qf_rdl_difference_refutation_checks_in_real_lean,
     qf_lra_ite_true_identity_checks_in_real_lean,
     qf_lra_dpll_audit_rows_check_in_real_lean,
     qf_lia_arith_dpll_audit_rows_check_in_real_lean,
@@ -496,7 +497,7 @@ const STRUCTURAL_ATTESTATION_FAMILY_BASELINE: usize = 41;
 /// deleting the marker from `structural_attestation_banner`: reconstruction
 /// then fails with `ModuleContentMismatch { declared: "structural-attestation",
 /// rendered: "theory-reconstruction" }` instead of quietly reclassifying.
-const THEORY_RECONSTRUCTION_FAMILY_FLOOR: usize = 33;
+const THEORY_RECONSTRUCTION_FAMILY_FLOOR: usize = 34;
 
 /// The same ratchet at module granularity: every module the exhaustive
 /// `lean_crosscheck_full` sweep would hand to Lean, not just the representative
@@ -505,7 +506,7 @@ const STRUCTURAL_ATTESTATION_MODULE_BASELINE: usize = 72;
 
 /// Module-granularity floor; the counterpart of the constant above.
 /// Measured 2026-08-17: 95 of 167 modules.
-const THEORY_RECONSTRUCTION_MODULE_FLOOR: usize = 96;
+const THEORY_RECONSTRUCTION_MODULE_FLOOR: usize = 97;
 
 /// The gate's population, split by what the modules actually contain.
 struct ContentSplit {
@@ -1232,6 +1233,49 @@ fn lra_refutation_checks_in_real_lean() {
     let (_frag, source) =
         prove_unsat_to_lean_module(&mut arena, &[a1, a2]).expect("LRA unsat reconstructs");
     lean_accepts("lra", &source);
+}
+
+/// `QF_RDL`: `x - y < 1 ∧ y - x < -2` — real difference logic.
+///
+/// Registered because the representative slice is one module per *family*, and
+/// difference logic scans into the `Lra` family: the `lra` representative above
+/// is built from `real_lt`/`real_le` directly, so until now no module from the
+/// `QF_RDL` *logic* was ever handed to `lean`. That is the whole reason `QF_RDL` sat
+/// in the certificate gap — `scripts/check-capability-assurance.py --rank` band
+/// 1, "artifact already built" — despite official Lean 4.30.0 accepting its
+/// reconstruction in 0.20s when handed one by hand on 2026-08-17, and rejecting
+/// two mutations of it.
+///
+/// The content class is asserted here rather than trusted: a family that renders
+/// the `axiom P` / `axiom ¬P` shim would still be "accepted by Lean" while
+/// containing none of the reasoning, which is exactly the confusion the
+/// theory/attestation split exists to prevent.
+fn qf_rdl_difference_refutation_checks_in_real_lean() {
+    let mut parsed = parse_script(
+        "(set-logic QF_RDL)\n\
+         (declare-fun x () Real)\n\
+         (declare-fun y () Real)\n\
+         (assert (< (- x y) 1.0))\n\
+         (assert (< (- y x) (- 2.0)))\n\
+         (check-sat)",
+    )
+    .expect("QF_RDL query parses");
+    let assertions = parsed.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut parsed.arena, &assertions)
+        .expect("QF_RDL difference refutation reconstructs");
+    assert_eq!(
+        fragment,
+        ProofFragment::Lra,
+        "QF_RDL stopped routing through the `Lra` fragment; it is that shared route \
+         that makes this module a real reconstruction"
+    );
+    assert_eq!(
+        LeanModuleContent::of_module_source(&source),
+        LeanModuleContent::TheoryReconstruction,
+        "the QF_RDL module became a structural attestation; handing that to `lean` \
+         would grow the family count without adding any checkable reasoning"
+    );
+    lean_accepts("qf_rdl_difference", &source);
 }
 
 /// `QF_LRA`: the cvc5 `ite_arith` row is `not (= x (ite true x y))`.

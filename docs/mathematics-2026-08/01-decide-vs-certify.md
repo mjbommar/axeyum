@@ -139,7 +139,7 @@ evidence says already exists:
 
 | band | meaning | logics |
 | --- | --- | --- |
-| 1 | a refutation artifact is already built — export it and point a checker at it | `QF_IDL`, `QF_RDL`, `SAT` |
+| 1 | a refutation artifact is already built — export it and point a checker at it | `QF_IDL`, `SAT` (`QF_RDL` closed 2026-08-17, below) |
 | 2 | model replay only — needs an UNSAT proof format first | `QF_AUFBV`, `QF_FP`, `QF_NIA`, `QF_S`, `incremental`, `symbolic execution` |
 | 3 | no refutation artifact named | `diagnostics`, `optimization`, `synthesis` |
 
@@ -164,20 +164,47 @@ weakened `lt`→`le`; a hypothesis sign flipped) are both rejected. `QF_IDL`
 declines because integer difference logic routes through `ArithDpll`, which has
 no theory reconstruction.
 
-So the top item of this ranking is not a proof format at all: **hand a `QF_RDL`
-module to the Lean gate.** `scripts/check-lean-gate.sh` compiles a
-one-module-per-*family* representative slice, and the `Lra` representative is not
-a `QF_RDL` module — which is why a logic that official Lean already accepts still
-counts as unchecked. The precondition is now guarded by
-`crates/axeyum-solver/tests/difference_logic_lean_content.rs` (3 tests, including
-a control proving the attestation class is still reachable); the gate wiring is
-not done, and the table is deliberately **not** edited to claim otherwise —
-moving this metric by rewriting the prose it reads would be the thing this
-strand exists to prevent.
+So the top item of this ranking was not a proof format at all: **hand a `QF_RDL`
+module to the Lean gate.** `lean_crosscheck` compiles a one-module-per-*family*
+representative slice, and the `Lra` representative is built from `real_lt`/`real_le`
+directly — no module from the QF_RDL *logic* had ever been handed to `lean`, which
+is why a logic official Lean already accepted still counted as unchecked.
 
-Three logics — `QF_AUFBV`, `QF_IDL`, `QF_RDL` — are known *only* through a
-compound row, so a quarter of the reported gap was uniform-by-assumption. The
-`--rank` output now discloses them.
+*Done the same day.* The `qf_rdl_difference` family is registered, and every run
+of the gate now reports:
+
+```text
+LEAN_CONTENT|family=15|tag=qf_rdl_difference|modules=1|theory=1|structural=0|representative=theory-reconstruction
+[lean ok] qf_rdl_difference: 'axeyum_refutation' depends on axioms:
+          [Real, Real.add, Real.add_assoc, … Real.zero_lt_one,
+           axeyum.reconstruct.lra.hyp._2, axeyum.reconstruct.lra.hyp._3, …]
+[lean crosscheck:representative] checked 75 of 75 modules … 0 FAILED
+```
+
+— the ordered-field axioms plus the query's own hypotheses, no `sorryAx`. The
+theory-family ratchet moves 33 → 34 and the module floor 96 → 97, so the gain
+cannot silently regress. The precondition is separately guarded by
+`crates/axeyum-solver/tests/difference_logic_lean_content.rs`, including a
+control proving the attestation class is still reachable, so its assertion
+cannot pass by having stopped discriminating.
+
+Only *then* was the capability table edited, and this ordering is the point.
+`tier` reads prose, so writing "Lean" into an evidence field is enough to move
+the strand's primary metric — which is why the claim had to be gated first and
+transcribed second, never the reverse. QF_RDL now carries **its own row** rather
+than the shared one: the certificate machinery genuinely covers both logics, but
+the Lean reconstruction covers only QF_RDL, and a compound row cannot say that.
+External coverage goes 36 → 37 entries and **11 → 12 of 23 logics**, with the
+floor raised to match.
+
+`QF_IDL` stays in band 1 and stays shared, which is now accurate rather than an
+artifact: its refutation really does export the same Farkas certificate, and it
+really does have no theory reconstruction.
+
+Two logics — `QF_AUFBV` and `QF_IDL` — remain known *only* through a compound
+row (it was three before QF_RDL got its own), so part of the reported gap is
+still uniform-by-assumption. The `--rank` output discloses them rather than
+leaving the number to look cleaner than it is.
 
 **C. Make "decided, not certified" an explicit status**, so the gap is visible
 in the artifact instead of discoverable only by reading a prose evidence field.

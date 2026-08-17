@@ -570,6 +570,28 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0375",
     },
     Capability {
+        area: "QF_RDL",
+        feature: "REAL difference-logic UNSAT reconstructs to a Lean THEORY module: the refutation \
+                  scans into the same `Lra` proof fragment as QF_LRA, so `prove_unsat_to_lean_module` \
+                  renders a self-contained `prelude`-mode Lean 4 proof of `False` from the axiomatized \
+                  ordered field plus the query's own hypotheses — not the `axiom P` / `axiom ¬P` \
+                  attestation shim. INTEGER difference logic (QF_IDL) is NOT covered: it routes \
+                  through ArithDpll, which has no theory reconstruction and declines",
+        assurance: Assurance::Checked,
+        evidence: "a QF_RDL module is handed to OFFICIAL Lean on every run of the crosscheck gate \
+                   (`lean_crosscheck` family `qf_rdl_difference`, `cargo test -p axeyum-solver \
+                   --features full --test lean_crosscheck`), which reports \
+                   `representative=theory-reconstruction` and `[lean ok] qf_rdl_difference` with an \
+                   axiom footprint of the ordered-field axioms plus the two query hypotheses, no \
+                   sorryAx. Handed to Lean 4.30.0 by hand the same module is accepted in 0.20s and \
+                   two independent mutations of it — a hypothesis relation weakened lt→le, a \
+                   hypothesis sign flipped — are both REJECTED, so Lean is typechecking the \
+                   refutation rather than accepting whatever it is given. Until 2026-08-17 the \
+                   family slice contained no QF_RDL module and this logic counted as having no \
+                   external checker",
+        reference: "docs/mathematics-2026-08/01-decide-vs-certify.md",
+    },
+    Capability {
         area: "QF_UFLRA",
         feature: "ONLINE Nelson–Oppen combination (check_qf_uflra_online): the online EufTheory + the \
                   online LraTheory combined by model-based equality sharing; the conjunctive fast \
