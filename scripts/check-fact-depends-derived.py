@@ -37,6 +37,14 @@ Reported, never inferred: theorem names come from each fact's own
 `checker_command`, so a fact whose command stops naming a theorem drops out of
 the enforced set rather than being silently assumed correct — and that drop-out
 is itself reported.
+
+The five that currently drop out are not a regex miss; I checked. Their evidence
+is a Rust test invocation (`cargo test -p axeyum-lean-kernel --lib
+rat_normalize_reduces_two_quarters_to_one_half`) or an example with a
+`--require-empty`-style flag, rather than `nat_theorem_inventory -- <name>`. A
+fact backed that way names no prelude theorem, so there is no proof term to read
+a dependency out of, and enforcing against it would mean guessing. Widening the
+name pattern would not help and would only make the guess look official.
 """
 
 from __future__ import annotations
