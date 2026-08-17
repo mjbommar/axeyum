@@ -42,6 +42,11 @@ on `Sort::Int` and `Sort::Real`, so **no negative control about them is even
 expressible**. Three nodes assert coverage of the sorts the stack can neither
 prove about nor produce evidence about.
 
+> **Both sentences of that last claim were re-measured on 2026-08-17 and both
+> are false.** The integer prelude is 0 axioms, and 65 negative-control
+> instances over `Sort::Int`/`Sort::Real` run today. The `unreachable!()` is
+> still there and still does nothing to evidence. See R4.
+
 ## The 23-node map against the 1,567-concept graph
 
 The sibling `math-education` repository carries **1,567 concepts**, 148
@@ -248,10 +253,155 @@ school-and-olympiad corpus — it is adversarial along the *shape* axis, not the
 A/C boundary in both corpora is a judgment call; the census file says so, and
 the B column with its `fragment` values is the part built to be argued with.
 
-**R4 — Close the ordered-field hole so reachability can grow at all.** Until
-`Sort::Int`/`Sort::Real` can carry evidence ([`02`](02-the-library.md),
-engineering strand `01`), every node above ℕ is unevidenceable in principle, and
-R1 will simply strip labels rather than earn them.
+**R4 — ~~Close the ordered-field hole so reachability can grow at all.~~ ℝ is the
+only ordered-field hole left, and it now blocks nothing.**
+
+The original item read: *"Until `Sort::Int`/`Sort::Real` can carry evidence
+([`02`](02-the-library.md), engineering strand `01`), every node above ℕ is
+unevidenceable in principle, and R1 will simply strip labels rather than earn
+them."* **Re-measured 2026-08-17. Both halves of that premise are false, and the
+prediction was already falsified by R1 above** — 19 covered / 19 running / 19
+with a negative control, nothing stripped.
+
+### The trusted surface, re-derived
+
+Not read from this document or from `02`, and not from the summary block of the
+ledger either: counted from the individual rows of
+[`docs/plan/lean-axiom-ledger-v1.json`](../plan/lean-axiom-ledger-v1.json), whose
+`entries` are the live trusted declarations and whose `retired_entries` are the
+ones that left.
+
+| prelude | trusted surface | live ledger rows | note |
+|---|---:|---:|---|
+| `nat` | 0 | 0 | |
+| `logic` | 0 | 0 | |
+| `integer` | 0 | 0 | 34 rows retired 2026-08-15 |
+| `string` | 1 | 1 | one `primitive-interface` constant |
+| `real` | 30 | 30 | 8 primitive-interface · 19 external-assumption · 3 derivable-theorem |
+
+**Total: 31, of which 30 are ℝ.** The one non-real row is
+`axeyum.string.2.append`. Two independent cross-checks from the fact ledger,
+which is written by different people at different times than the axiom ledger:
+`F:int-euclidean-decomposition`'s footprint evidence records the integer surface
+"down from 34", matching the 34 retired rows exactly; and
+[`F:ordered-ring-farkas-refutation`](../../artifacts/facts/F-ordered-ring-farkas-refutation.json)
+states its generalisation is "quantified over all 30 interface components",
+matching the 30 live real rows exactly.
+
+*Not verified here:* the ledger's two `measurement` commands are cargo examples
+(`prelude_axiom_inventory`, `nat_axiom_inventory`) and this lane could not run
+cargo. Everything above is re-derived from the artifact's rows and corroborated
+against the fact ledger; the kernel itself was not re-interrogated.
+
+### What "can carry evidence" means operationally — there are two routes, not one
+
+The original premise silently assumed one route. There are two, and they fail and
+succeed independently.
+
+**Route A — `axeyum-scenarios::Scenario::self_check`. Still closed, and the
+`unreachable!()` is still there.** `check_unsat` establishes an
+`Expectation::Unsat` by enumerating the assignment space, and it sizes that space
+by calling `sort_bits` over *every* symbol in the arena. `sort_bits` panics on
+these sorts — `crates/axeyum-scenarios/src/lib.rs:560-565`:
+
+```rust
+Sort::Int => {
+    unreachable!("scenarios do not declare integer symbols for enumeration")
+}
+Sort::Real => {
+    unreachable!("scenarios do not declare real symbols for enumeration")
+}
+```
+
+and identically in `decode_value` at `crates/axeyum-scenarios/src/lib.rs:621-626`.
+So an UNSAT *scenario* over ℤ or ℝ would panic before it enumerated anything, and
+the source agrees it never happens: all **28** scenarios over those sorts —
+`integer_catalog` 7, `real_catalog` 7, `rational_catalog` 8, `real_algebra_catalog`
+6 — are `Expectation::Sat`, and the four crate-level tests assert exactly that.
+Zero `Expectation::Unsat` appears in `integers.rs`, `reals.rs`, `rationals.rs` or
+`real_algebra.rs`.
+
+**Route B — the example-pack / SMT route. Open, and carrying the load.** An
+`.smt2` instance goes through `check_auto` to `Evidence::UnsatFarkas`, and the
+certificate is re-derived from scratch in exact rationals by a verifier sharing no
+code with the elimination that found it. This is what the `math_resource_lra_routes.rs`
+suite runs, and it is what R1's "negative control" condition measures. Counted
+from `artifacts/ontology/foundational-concepts.json` and the packs on disk:
+
+| node | instances | with a negative control | declaring an `Int`/`Real`-sorted symbol | logic |
+|---|---:|---:|---:|---|
+| `integers` | 1 | 1 | 1 | `QF_LIA` |
+| `rationals` | 24 | 24 | 24 | `QF_LRA` |
+| `reals` | 40 | 40 | 40 | `QF_LRA` |
+
+**65 negative-control instances over exactly the two sorts the premise called
+inexpressible**, every one of them declaring a symbol of that sort. The
+`unreachable!()` is a scope limit on one harness — the finite-enumeration
+self-check — not a limit on evidence. Conflating the two is what produced the
+original item, and it is the same error as reading a zero from a tool that was
+never pointed at the subject.
+
+### Which of ℝ's 30 are load-bearing — 17, and they are all the additive half
+
+Exactly one fact in the ledger carries a `Real.*` axiom footprint:
+[`F:schedule-critical-chain-infeasible`](../../artifacts/facts/F-schedule-critical-chain-infeasible.json),
+which cites **17** of the 30 (plus 9 per-problem `axeyum.reconstruct.lra.*`
+opaques, which are hypothesis and variable constants of that instance, not
+prelude). The 17 are the carrier, `add`/`neg`/`zero`/`one`, the additive group
+laws, and the order interface. The **13 nothing cites** are the entire
+multiplicative interface — `mul`, `mul_assoc`, `mul_comm`, `mul_one`, `mul_zero`,
+`mul_nonneg`, `mul_le_mul_of_nonneg_left`, `sq_nonneg`, `left_distrib` (9) — plus
+four order laws the linear route happens not to need (`le_trans`, `lt_trans`,
+`lt_of_le_of_lt`, `add_lt_add_of_le_of_lt`). That split is not a coincidence: the only route that
+reaches the `Real` prelude is *linear* arithmetic, and linear arithmetic never
+multiplies two variables.
+
+And the 17 are load-bearing only for a route that has already been superseded.
+`F:ordered-ring-farkas-refutation` lambda-abstracts all 30 `Real` constants out of
+a term `reconstruct_lra_proof` already built, and the abstracted term **depends on
+no axiom whatsoever** — the refutation holds in every ordered commutative ring,
+and its footprint checker requires five generalised rows to report size 0 while
+five real-specific controls report 18, 22, 24, 7 and 10. So the ordered-field hole
+is already closed for the linear route, by generalisation rather than by
+construction.
+
+### What R4 now is, and the next step
+
+**R4 is now only about ℝ, and ℝ is not on anyone's critical path.** It is the last
+prelude with a trusted surface above 1, that surface is 30, 13 of those rows are
+referenced by nothing at all, and the 17 that are referenced are referenced by one
+fact that a landed generalisation can already discharge. Nothing is waiting on it:
+the nodes above ℕ earn their `covered` labels through route B, which does not
+consult the prelude.
+
+Three bounded steps, in order, each independently checkable:
+
+1. **Discharge the three rows the ledger has already assigned.** `Real.lt_trans`,
+   `Real.mul_nonneg` and `Real.mul_zero` are classified `derivable-theorem` with
+   `discharge_status: planned`, and the retired integer rows carry the derivations
+   verbatim (`mul_zero` from `left_distrib` and `add_zero`; `mul_nonneg` by
+   instantiating `mul_le_mul_of_nonneg_left` at zero; `lt_trans` from `le_of_lt`
+   and `lt_of_lt_of_le`). 30 → 27, and it is bookkeeping the ledger has already
+   costed.
+2. **Re-route the one fact with a `Real.*` footprint through the ordered-ring
+   generalisation.** `F:ordered-ring-farkas-refutation`'s `--require-empty`
+   evidence already recovers a specialised statement by instantiation and re-checks
+   the application, so the machinery exists; what is missing is applying it to the
+   schedule fact. Afterwards **no fact in the ledger has a `Real.*` axiom
+   footprint**, and ℝ's entire trusted surface is unreferenced.
+3. **Then take the decision `02` step 5 asks for, which becomes cheap.** With
+   nothing depending on it, the remaining rows are either published as a declared
+   *interface* — the classification the ledger already gives 8 of them — or ℝ is
+   built over the ℚ that now exists. Do not build ℝ to close a hole; by then there
+   is no hole, only a choice.
+
+**The residue this measurement did surface is about the map, not the prelude.**
+The `reals` node advertises `axeyum_fragments = ["LRA / NRA (real-closed
+fields)"]`, and **40 of its 40 instances are `(set-logic QF_LRA)`** — zero NRA.
+The node named `reals` demonstrates linear rational arithmetic over an abstract
+ordered field. That is the same class of overclaim as the quantifier measurement
+below, it is invisible to the R1 gate for the same reason, and it is a cheaper
+thing to fix than ℝ.
 
 ## What "bounded" looks like in the corpus, measured
 
@@ -289,8 +439,10 @@ comments.
 ## The frontier, stated plainly
 
 axeyum today is a **bounded** reasoner with a strong finite core, an
-independently-checkable proof route on four areas, one number system, and a
-routing table covering 1.5% of the adjacent concept graph.
+independently-checkable proof route on four areas, **two number systems
+constructed axiom-free (ℕ and ℤ) with ℚ normalised over them, and one still
+axiomatised (ℝ, 30 rows, 13 of them referenced by nothing — R4)**, and a routing
+table covering 1.5% of the adjacent concept graph.
 
 That is a defensible position and a much better one than the field average — the
 finite core is genuinely strong, and Lean's own kernel accepts its output. But
