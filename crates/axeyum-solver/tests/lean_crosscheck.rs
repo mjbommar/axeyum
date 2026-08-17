@@ -25,7 +25,8 @@ use std::time::{Duration, Instant};
 use axeyum_ir::{Rational, Sort, TermArena};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    ProofFragment, prove_unsat_to_lean_module, reconstruct_lex_clash_to_lean_module,
+    LeanModuleContent, ProofFragment, prove_unsat_to_lean_module,
+    reconstruct_lex_clash_to_lean_module,
 };
 use axeyum_strings::{LexAtom, LexFormula, LexProblem, Seg};
 
@@ -184,7 +185,7 @@ fn collect_family(
 /// pool as the kernel checks. Each worker owns its `LEAN_SINK` (thread-local),
 /// so there is no cross-talk; a builder's structural `assert!`/`panic!` still
 /// aborts its scoped thread and fails the test via `thread::scope` join.
-fn collect_cases(per_family: Option<usize>) -> Vec<(String, String)> {
+fn collect_cases_by_family(per_family: Option<usize>) -> Vec<Vec<(String, String)>> {
     let jobs = lean_jobs(FAMILY_BUILDERS.len());
     let next = AtomicUsize::new(0);
     // Keep results indexed by family so the module order is deterministic.
@@ -210,7 +211,15 @@ fn collect_cases(per_family: Option<usize>) -> Vec<(String, String)> {
 
     per_family_out
         .into_iter()
-        .flat_map(|m| m.into_inner().unwrap())
+        .map(|m| m.into_inner().unwrap())
+        .collect()
+}
+
+/// The same sweep, flattened into one deterministic module list.
+fn collect_cases(per_family: Option<usize>) -> Vec<(String, String)> {
+    collect_cases_by_family(per_family)
+        .into_iter()
+        .flatten()
         .collect()
 }
 
@@ -433,6 +442,223 @@ fn lean_crosscheck_representative() {
 #[ignore = "corpus-scale; run explicitly: cargo test --test lean_crosscheck -- --ignored"]
 fn lean_crosscheck_full() {
     run_lean_checks("full", FAMILY_BUILDERS.len(), &collect_cases(None));
+}
+
+// -------------------------------------------------------------------------
+// What the Lean gate's number is actually made of.
+//
+// `run_lean_checks` prints ONE undifferentiated `checked N of M`, and
+// `scripts/check-lean-gate.sh` sums those per-suite totals into a single
+// headline. That number silently mixes two very different artifacts:
+//
+//   * a THEORY RECONSTRUCTION, whose `theorem` is built from the query's own
+//     translated atoms — checking it checks the reasoning; and
+//   * a STRUCTURAL ATTESTATION, which is `axiom prop : Prop`,
+//     `axiom hyp1 : prop`, `axiom hyp2 : Not prop`, `hyp2 hyp1` — the same
+//     lines for every route that shares the emitter, independent of the query.
+//     Lean accepts it, and accepting it establishes nothing about the problem.
+//
+// A headline that adds those together overstates itself. The test below splits
+// the gate's own population, PRINTS the split per family so the number is
+// readable rather than merely asserted, and ratchets it: the contentless half
+// may shrink but never grow.
+//
+// It classifies from the RENDERED SOURCE via `LeanModuleContent::of_module_source`
+// (the `STRUCTURAL_ATTESTATION_MARKER` header line), not from a table, so it
+// needs no `lean` binary and cannot be satisfied by relabelling a fragment.
+// -------------------------------------------------------------------------
+
+/// **Ratchet.** Families whose representative module — the one and only module
+/// the default `lean_crosscheck_representative` gate feeds to Lean for that
+/// family — is a contentless structural attestation.
+///
+/// Measured 2026-08-17: 41 of 73 families — a clear majority of what the
+/// default gate reports as "checked" is a module Lean cannot fail on the merits.
+///
+/// This number may only go DOWN: converting a shim route to a real
+/// reconstruction lowers it (lower the constant in the same commit), and a NEW
+/// route that reconstructs to `axiom P; axiom ¬P` raises it and fails here.
+/// That is the point — a new refuter must not be able to add itself to the Lean
+/// headline without adding any Lean-checkable reasoning.
+const STRUCTURAL_ATTESTATION_FAMILY_BASELINE: usize = 41;
+
+/// **Floor.** The other side of the same split: families whose representative
+/// module really is reconstructed from the query. May only go UP.
+///
+/// Both bounds are stated because each catches a regression the other reads as
+/// progress: deleting a theory family lowers nothing the ratchet watches, and
+/// deleting a shim family lowers the shim count — only the floor notices the
+/// first. The third way to move these numbers, *relabelling* — emitting a shim
+/// without the marker so it counts as reasoning — is blocked upstream instead:
+/// `gate_module_content` refuses to return a module whose rendered class
+/// disagrees with the routed fragment's declared class. Verified 2026-08-17 by
+/// deleting the marker from `structural_attestation_banner`: reconstruction
+/// then fails with `ModuleContentMismatch { declared: "structural-attestation",
+/// rendered: "theory-reconstruction" }` instead of quietly reclassifying.
+const THEORY_RECONSTRUCTION_FAMILY_FLOOR: usize = 32;
+
+/// The same ratchet at module granularity: every module the exhaustive
+/// `lean_crosscheck_full` sweep would hand to Lean, not just the representative
+/// one per family. Measured 2026-08-17: 72 of 167 modules.
+const STRUCTURAL_ATTESTATION_MODULE_BASELINE: usize = 72;
+
+/// Module-granularity floor; the counterpart of the constant above.
+/// Measured 2026-08-17: 95 of 167 modules.
+const THEORY_RECONSTRUCTION_MODULE_FLOOR: usize = 95;
+
+/// The gate's population, split by what the modules actually contain.
+struct ContentSplit {
+    /// Families whose *representative* module (the one the default gate checks)
+    /// is a real reconstruction, and those whose representative is a shim.
+    theory_families: usize,
+    structural_families: usize,
+    /// The same split over EVERY module the exhaustive sweep would check.
+    theory_modules: usize,
+    structural_modules: usize,
+}
+
+/// A structural attestation is not merely marked, it is shaped: an opaque
+/// proposition, its negation, and the application that closes `False`. Checking
+/// the shape keeps the marker from becoming a sticker some other emitter wears.
+fn assert_structural_shape(tag: &str, source: &str) {
+    let axioms = source
+        .lines()
+        .filter(|l| l.trim_start().starts_with("axiom "))
+        .count();
+    assert!(
+        axioms >= 3 && source.contains("theorem axeyum_refutation"),
+        "{tag}: marked as a structural attestation but does not have the shape \
+         of one ({axioms} axiom declarations)"
+    );
+}
+
+/// Classify every collected module by its rendered source and print the
+/// per-family breakdown, so the gate's headline is readable and not merely
+/// asserted. Returns the totals for the ratchet to judge.
+fn classify_and_report(families: &[Vec<(String, String)>]) -> ContentSplit {
+    let mut theory_families = 0usize;
+    let mut structural_families = 0usize;
+    let mut theory_modules = 0usize;
+    let mut structural_modules = 0usize;
+    let mut structural_tags: Vec<&str> = Vec::new();
+    let mut mixed: Vec<String> = Vec::new();
+
+    for (i, cases) in families.iter().enumerate() {
+        assert!(
+            !cases.is_empty(),
+            "family #{i} produced no Lean module; the representative gate would \
+             be short one case"
+        );
+        let classes: Vec<_> = cases
+            .iter()
+            .map(|(_, source)| LeanModuleContent::of_module_source(source))
+            .collect();
+        let shims = classes
+            .iter()
+            .filter(|c| c.is_structural_attestation())
+            .count();
+        let theory = classes.len() - shims;
+        structural_modules += shims;
+        theory_modules += theory;
+
+        for (tag, source) in cases
+            .iter()
+            .filter(|(_, s)| LeanModuleContent::of_module_source(s).is_structural_attestation())
+        {
+            assert_structural_shape(tag, source);
+        }
+
+        let representative = classes[0];
+        if representative.is_structural_attestation() {
+            structural_families += 1;
+            structural_tags.push(cases[0].0.as_str());
+        } else {
+            theory_families += 1;
+        }
+        if shims != 0 && theory != 0 {
+            mixed.push(cases[0].0.clone());
+        }
+        eprintln!(
+            "LEAN_CONTENT|family={i:02}|tag={}|modules={}|theory={theory}|structural={shims}|\
+             representative={representative}",
+            cases[0].0,
+            cases.len()
+        );
+    }
+
+    eprintln!(
+        "LEAN_CONTENT_SUMMARY|families={}|theory_families={theory_families}|\
+         structural_families={structural_families}|modules={}|theory_modules={theory_modules}|\
+         structural_modules={structural_modules}|mixed_families={}",
+        families.len(),
+        theory_modules + structural_modules,
+        mixed.len()
+    );
+    eprintln!(
+        "[lean content] {structural_families} of {} families contribute a module that contains \
+         none of the reasoning it attests to: {}",
+        families.len(),
+        structural_tags.join(", ")
+    );
+    if !mixed.is_empty() {
+        eprintln!(
+            "[lean content] families mixing both kinds of module: {}",
+            mixed.join(", ")
+        );
+    }
+
+    ContentSplit {
+        theory_families,
+        structural_families,
+        theory_modules,
+        structural_modules,
+    }
+}
+
+/// Split the Lean gate's own population into reasoning and attestation, print
+/// it per family, and ratchet the contentless half.
+///
+/// Needs no `lean` binary: the classification is read off the rendered module.
+/// The per-family `LEAN_CONTENT|…` breakdown prints under
+/// `cargo test -p axeyum-solver --features full --test lean_crosscheck \
+/// lean_crosscheck_content_split -- --nocapture` (and on any failure).
+#[test]
+fn lean_crosscheck_content_split_is_visible_and_ratcheted() {
+    let families = collect_cases_by_family(None);
+    assert_eq!(
+        families.len(),
+        FAMILY_BUILDERS.len(),
+        "one entry per registered proof family"
+    );
+    let ContentSplit {
+        theory_families,
+        structural_families,
+        theory_modules,
+        structural_modules,
+    } = classify_and_report(&families);
+
+    assert!(
+        structural_families <= STRUCTURAL_ATTESTATION_FAMILY_BASELINE,
+        "the Lean gate grew a contentless family: {structural_families} structural \
+         attestations against a baseline of {STRUCTURAL_ATTESTATION_FAMILY_BASELINE}. A new \
+         proof family must reconstruct the query, not declare `axiom P; axiom Not P`. If a \
+         route legitimately became a shim, say so in an ADR before raising this."
+    );
+    assert!(
+        theory_families >= THEORY_RECONSTRUCTION_FAMILY_FLOOR,
+        "the Lean gate lost real reconstructions: {theory_families} theory families against a \
+         floor of {THEORY_RECONSTRUCTION_FAMILY_FLOOR}"
+    );
+    assert!(
+        structural_modules <= STRUCTURAL_ATTESTATION_MODULE_BASELINE,
+        "the exhaustive Lean sweep grew contentless modules: {structural_modules} structural \
+         attestations against a baseline of {STRUCTURAL_ATTESTATION_MODULE_BASELINE}"
+    );
+    assert!(
+        theory_modules >= THEORY_RECONSTRUCTION_MODULE_FLOOR,
+        "the exhaustive Lean sweep lost real reconstructions: {theory_modules} theory modules \
+         against a floor of {THEORY_RECONSTRUCTION_MODULE_FLOOR}"
+    );
 }
 
 /// `QF_UFBV`: `f(a) = #b00 ∧ a = b ∧ ¬(f(b) = #b00)` — `Apply` + `BitVec`, refuted
