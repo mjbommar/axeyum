@@ -62,6 +62,13 @@ Modules group cleanly, by their own naming:
 | dispatch / API | 5 | `auto.rs` (9,430), `evidence.rs`, `incremental.rs` |
 | proof / evidence | 3 | `reconstruct/` |
 
+**Every count in that table is wrong and "cleanly" is wrong — measured
+2026-08-17, under `D3` below.**
+The rows sum to 99 of the crate's modules; there are 165. Re-derived from names,
+the four theory rows are 34 / 29 / 5 / 6, not 20 / 18 / 8 / 7. More to the point,
+grouping by name is not the same as grouping by *edges*, and nobody had measured
+the edges.
+
 And a feature flag already draws one boundary:
 
 ```toml
@@ -211,6 +218,100 @@ This is the same shape as the two real-algebra engines in
 [`02`](02-composition.md) W2 — two implementations of one question, no shared
 corpus — and there the corpus found a panic and a dead branch on its first run.
 
+#### Measured 2026-08-17: three of the four proposed groups are not groups
+
+D3 proposes making each theory group a directory module "with an explicit
+internal interface". A group only *has* an internal interface if its members
+talk to each other more than they talk outward. That ratio had never been taken.
+It has now, and it does not support the proposal.
+
+**Method.** Graph from `scripts/analyze_solver_module_graph.py`'s
+`build_graph` — comments, string literals and `#[cfg(test)]` code stripped, and
+all 606 item names re-exported by the `lib.rs` façade resolved back to their
+defining modules, so `use crate::{Evidence, SolverConfig};` counts as the edges
+it really is. The crate is **165 top-level modules, 225,494 code lines, 628
+distinct directed module→module edges** (1,153 call sites). Membership is by
+module *name*, since that is what the table above claimed groups the crate,
+applied in the precedence order strings → quantifiers → arrays/BV → arithmetic →
+UF → evidence → dispatch, so a name matching two groups (`uflia_online`,
+`qfabv_alethe`, `quant_bv_*` — there are 47 such) lands in the theory group
+rather than the evidence or dispatch one. That precedence is the *most
+favourable* one for D3: it maximises every theory group. An edge is **internal**
+when both endpoints are in the group and **crossing** when exactly one is.
+
+| proposed group | doc claimed | modules | code lines | internal | crossing (out / in) | internal : crossing |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| arithmetic | 20 | **34** | 60,756 | 39 | 158 (99 / 59) | **0.25** |
+| arrays / BV | 18 | **29** | 42,188 | 8 | 108 (49 / 59) | **0.07** |
+| uninterpreted functions | 8 | **5** | 8,383 | 4 | 40 (12 / 28) | **0.10** |
+| strings | 7 | **6** | 5,734 | **0** | 13 (8 / 5) | **0.00** |
+| *(quantifiers, `D2`)* | 38 | **41** | 31,541 | 33 | 146 (69 / 77) | *0.23* |
+
+Every one of these is under 1.0: **each proposed group has at least four times
+as many edges leaving it as staying inside it.** But a low ratio is expected for
+any small subset of a graph, so the number means nothing without a null. Two,
+both over the real graph with group sizes fixed, 20,000 trials, seed 20260817:
+*uniform* draws an arbitrary set of the same size; *degree-matched* draws from
+the same total-degree quintiles, so a group of hub modules is compared against
+other hubs rather than against leaves.
+
+| group | observed | uniform null | p | degree-matched null | p | verdict |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| arithmetic | 0.247 | 0.118 | 0.002 | 0.177 | 0.045 | **a real cluster** |
+| arrays / BV | 0.074 | 0.095 | 0.671 | 0.063 | 0.394 | **indistinguishable from an arbitrary set of 29 modules** |
+| UF | 0.100 | 0.008 | 0.002 | 0.014 | 0.002 | **real, and tiny** |
+| strings | 0.000 | 0.011 | 1.000 | 0.001 | 1.000 | **less connected than random** |
+| *quantifiers* | 0.226 | 0.154 | 0.102 | 0.110 | 0.012 | *real, weakly* |
+
+So, group by group:
+
+- **arithmetic — supported.** The only theory row that is both large and
+  cohesive by both nulls. It is also 70% bigger than the doc's 20 and, at
+  60,756 lines, more than a quarter of the crate. Even here the interface would
+  be wide: 99 outbound crossing edges, 46 of them into dispatch.
+- **arrays / BV — not supported, and this is the clearest result.** Eight
+  internal edges across 29 modules and 42,188 lines, which two independent nulls
+  say is what you get from *any* 29 modules. The nine `array_*` scenario modules
+  and `abv` do not form a neighbourhood; they are separately-reached leaves. Its
+  crossing edges point at `dispatch` (18 out, 12 in) and at the evidence layer
+  (41 **in** — the single largest flow into the group), not at each other. A
+  directory here relabels edges; it does not create an interface.
+- **UF — real but not worth a directory at this size.** Five modules, and three
+  of its four internal edges terminate on `euf_egraph`; that is a star, not a
+  module. Widening the name rule until every `uf`-named module joins gives 18
+  modules / 25,104 lines at ratio 0.12 — but it does so by swallowing
+  `uflia_online`, `uflra_online`, `ufbv_online` and `qfufbv_alethe`, which are
+  theory-*combination* routes and belong to two groups by construction. The
+  doc's 8 is between these two readings and matches neither.
+- **strings — not a group at all. Zero internal edges.** The six modules never
+  reference one another: `strings` and `word_alethe` have no outbound edges in
+  this crate at all, `lex_reconstruct` / `regex_reconstruct` / `word_reconstruct`
+  each have exactly one (→ `reconstruct`), and `string_theory`'s five all leave
+  the group. Their cohesion is entirely through the **external**
+  `axeyum-strings` crate, which an intra-crate graph does not model — which is
+  the 2026-08-16 finding above restated as a number. A `strings/` directory
+  would be a directory whose members are mutually unaware.
+
+And the fallback of grouping less finely does not rescue it: merging all four
+theory groups into one `theories` module gives **74 modules, 117,061 lines,
+74 internal and 273 crossing edges — ratio 0.27**, statistically no better than
+arithmetic alone at a third of the size. There is no theory-shaped partition of
+this crate that converts crossing edges into internal ones at scale, because the
+crossing edges do not run between sibling theories. Of the four groups' 319
+crossing edges, 46 are theory-to-theory (23 edges, each counted once as an
+outbound and once as an inbound); the other **273 leave the theories
+altogether** — 115 to `dispatch`, 87 to the evidence/reconstruction layer, 51 to
+modules no name rule assigns, 20 to quantifiers.
+
+**What D3 should therefore do.** Group arithmetic and stop. For arrays/BV, UF
+and strings the file move would produce a directory and no interface, and the
+"let a crate boundary be proposed once that interface stops changing" clause
+would never get an interface to watch. The edges say the actual seam in this
+crate is not between theories but between the theories and the two things they
+all reach — dispatch and evidence — which is the same obstacle `D1` hit from the
+other side (`reconstruct` reaching *down* into 55 modules). Narrowing that one
+interface is worth more than four directories.
+
 ## The precondition nobody should skip
 
 A crate split moves files. Files that move are files whose gates must actually
@@ -229,7 +330,12 @@ prove which files they examined.**
 2. `01` and `02` — because they change what the seams *are*. `02` W2 is done
    (the two real-algebra engines now share a corpus).
 3. **`D3` intra-crate grouping** — cheap, reversible, and it produces the
-   evidence that would justify `D2` or a theory crate later.
+   evidence that would justify `D2` or a theory crate later. **Narrowed
+   2026-08-17 by the edge measurement above: group arithmetic (the one group
+   with cohesion both nulls accept) and do not move arrays/BV, UF or strings.**
+   Three of the four proposed groups have fewer internal edges than an arbitrary
+   set of modules the same size — strings has *zero* — so those directories
+   would carry no interface for the later crate argument to watch.
 4. **`D1` (`reconstruct/`) — narrowing, not extracting.** The 2026-08-16
    measurement moved this from first to after `D3`: the boundary is one-way as
    claimed but 58 modules wide, so a crate today buys nothing and pins the
