@@ -246,6 +246,19 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   gated_test "solver unit sweep (full)" \
     cargo test -p axeyum-solver --lib --features full --quiet
 
+  # The KERNEL's integration suites. `cargo test --workspace --lib` above runs
+  # unit tests only and SKIPS every `tests/*.rs`, which is how
+  # `axeyum-lean-kernel --test axiom_footprint` sat RED on main for a day: the
+  # commit that made `Int.euclidean_decomposition` a theorem left three
+  # assertions still describing it as an axiom, and nothing at push time looked.
+  # CLAUDE.md warns about exactly this ("`--lib` IS NOT A SUFFICIENT PRE-MERGE
+  # GATE ON ITS OWN"), and the warning was not enough on its own.
+  #
+  # This is the crate where the trusted surface is asserted, so a stale
+  # assertion here is a stale claim about axiom-freedom. ~1.4s warm.
+  gated_test "kernel suites (unit + integration)" \
+    cargo test -p axeyum-lean-kernel --quiet
+
   # The CAPABILITY RATCHET. It exists because a 17-point `nia_unsat` frontier
   # regression once shipped and needed an 829-commit bisect to find; it is the
   # only gate that notices we got WEAKER without getting WRONG. It was not in
