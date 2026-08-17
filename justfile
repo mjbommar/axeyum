@@ -55,6 +55,11 @@ facts:
     # dependency is a failure rather than an indistinguishable silence.
     python3 -m unittest scripts.tests.test_check_fact_depends_derived
     python3 scripts/check-fact-depends-derived.py --quiet
+    # The mathematics strand's primary metric, derived rather than read: how many
+    # capabilities carry an artifact an EXTERNAL checker accepts. Agreement with
+    # an oracle is not an external check and is tiered separately.
+    python3 -m unittest scripts.tests.test_check_capability_assurance
+    python3 scripts/check-capability-assurance.py --quiet
     # The CLAIM ledger's structural pass, which `scripts/check.sh` has always run
     # and `just check` did not -- so the fallback gate checked something the
     # preferred one skipped, which is exactly the divergence

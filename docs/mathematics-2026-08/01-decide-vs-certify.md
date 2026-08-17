@@ -1,9 +1,39 @@
 # 01 — What we decide but cannot certify
 
-**The gap.** 101 capability entries across 26 areas. **Four** name a
-kernel/Lean-checked proof in their evidence field: `QF_LIA`, `QF_LRA`,
+**The gap, as first written.** 101 capability entries across 26 areas. **Four**
+name a kernel/Lean-checked proof in their evidence field: `QF_LIA`, `QF_LRA`,
 `QF_NRA`, `quantifiers`. The other 22 areas return verdicts backed by our own
 machinery and nothing an independent kernel has seen.
+
+> **RE-MEASURED 2026-08-17 — the gap is 12 areas, not 22.**
+> `scripts/check-capability-assurance.py` derives the count instead of reading
+> it:
+>
+> ```
+> CAPABILITY_ASSURANCE|entries=101|areas=23|external=36|self=48|differential=2|unclassified=15
+> areas with >=1 externally-checked capability: 11 of 23
+>   QF_ABV, QF_BV, QF_LIA, QF_LRA, QF_NRA, QF_UF, QF_UFLIA, QF_UFLRA,
+>   datatypes, quantifiers, reachability
+> ```
+>
+> The four named above are all real. **Seven more had joined them** — mostly via
+> **Carcara**, the external Alethe checker, whose acceptances the entries record
+> as `accepted (valid && !holey)`. Nobody noticed, because counting meant reading
+> 101 prose `evidence` fields, which is precisely the complaint item A makes
+> below.
+>
+> Two cautions carried into the script rather than left here. **Agreement with an
+> oracle is not an external check** — "differential vs Z3" tests the verdict, not
+> our artifact — so it gets its own tier and cannot inflate this number. And the
+> classifier is a HEURISTIC over prose: 15 entries are `unclassified` and are
+> reported as such rather than sorted into whichever tier flatters the count.
+>
+> `areas` reads 23, not 26, because the table spells some areas two ways
+> (`QF_ABV` and `QF_ABV / QF_AUFBV`; `QF_UFLIA` and `QF_UFLIA/UFLRA`). That is a
+> data-quality defect in the table, not a shrinking of scope, and it is another
+> argument for generating it.
+>
+> The floor is now gated: the externally-checked count may not fall silently.
 
 That is not a criticism of the verdicts. `Assurance::Checked` (49 entries) and
 `Assurance::Validated` (40) are real: replayed models, DRAT certificates

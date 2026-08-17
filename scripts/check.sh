@@ -65,6 +65,12 @@ step fact-depends-tests python3 -m unittest scripts.tests.test_check_fact_depend
 # (`Kernel::theorem_dependencies`) instead of being transcribed -- 18 real edges
 # were missing when this first ran, including two facts proved the same day.
 step fact-depends python3 scripts/check-fact-depends-derived.py --quiet
+step capability-assurance-tests python3 -m unittest scripts.tests.test_check_capability_assurance
+# The mathematics strand's PRIMARY metric — "does a verdict come with an artifact
+# a third party can check without trusting us?" — existed only as 101 prose
+# `evidence` fields, so it drifted unmeasured from 4 areas to 11. Derived and
+# floored now; a differential oracle is NOT counted as an external check.
+step capability-assurance python3 scripts/check-capability-assurance.py --quiet
 step smt-evidence-tests python3 -m unittest scripts.tests.test_check_smt_evidence_certified
 # Every settled SMT-route fact's own evidence command tests only the VERDICT
 # (`... | tail -1` = unsat), which passes on an UNCERTIFIED refutation --
