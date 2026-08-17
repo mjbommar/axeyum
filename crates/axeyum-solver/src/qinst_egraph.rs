@@ -222,6 +222,32 @@ pub fn prove_quantified_unsat_via_egraph(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    let mut certificate = None;
+    prove_quantified_unsat_via_egraph_with_instances(arena, assertions, config, &mut certificate)
+}
+
+/// As [`prove_quantified_unsat_via_egraph`], additionally reporting the
+/// instances that justified an `unsat`.
+///
+/// On `Ok(CheckResult::Unsat)` `certificate` holds a
+/// [`QuantifierInstanceSetCertificate`](crate::quant_instance_set_cert::QuantifierInstanceSetCertificate)
+/// **when the refutation is exactly "the caller's assertions plus checked
+/// instances"**, and `None` otherwise — a refutation reached by a sub-routine's
+/// own argument, or one whose anchor is a rewrite of the caller's list, is not
+/// described by this certificate and is not claimed. `None` is therefore normal
+/// and never an error; it simply leaves the result uncertified, exactly as
+/// before this existed.
+///
+/// # Errors
+///
+/// Propagates any [`SolverError`] from the ground solver.
+pub fn prove_quantified_unsat_via_egraph_with_instances(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    certificate: &mut Option<crate::quant_instance_set_cert::QuantifierInstanceSetCertificate>,
+) -> Result<CheckResult, SolverError> {
+    let anchor: Vec<TermId> = assertions.to_vec();
     let mut stats = QuantifierLoopStats::default();
     // Distribute top-level universals over conjunctions when that shrinks a
     // binder prefix (`∀x⃗.(A ∧ B)` ⟺ `(∀x⃗∩vars(A). A) ∧ (∀x⃗∩vars(B). B)` — a
@@ -248,10 +274,22 @@ pub fn prove_quantified_unsat_via_egraph(
             true,
             true,
             &mut stats,
+            &anchor,
+            certificate,
         );
     }
     let split = split_universal_conjunctions(arena, assertions);
-    prove_quantified_unsat_via_egraph_impl(arena, &split, &[], config, true, true, &mut stats)
+    prove_quantified_unsat_via_egraph_impl(
+        arena,
+        &split,
+        &[],
+        config,
+        true,
+        true,
+        &mut stats,
+        &anchor,
+        certificate,
+    )
 }
 
 /// One universal occurring at a position the assertion set does **not** entail
@@ -1104,6 +1142,7 @@ fn fractional_deadline(deadline: Option<Instant>, divisor: u32) -> Option<Instan
 }
 
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments)]
 fn prove_quantified_unsat_via_egraph_impl(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1112,6 +1151,13 @@ fn prove_quantified_unsat_via_egraph_impl(
     enable_online_clauses: bool,
     enable_candidate_equalities: bool,
     stats: &mut QuantifierLoopStats,
+    // The caller's own assertion list, and where to put a certificate for a
+    // ground refutation. `anchor` is NOT `assertions`: the latter is this
+    // driver's working copy, which may already be a split/extraction of the
+    // caller's and may grow by promotion. A certificate is offered only when the
+    // two coincide -- see `quant_instance_set_cert`.
+    anchor: &[TermId],
+    certificate: &mut Option<crate::quant_instance_set_cert::QuantifierInstanceSetCertificate>,
 ) -> Result<CheckResult, SolverError> {
     let deadline = config
         .timeout
@@ -1239,6 +1285,12 @@ fn prove_quantified_unsat_via_egraph_impl(
                 )?,
                 CheckResult::Unsat
             ) {
+                *certificate = crate::quant_instance_set_cert::build_instance_set_certificate(
+                    arena,
+                    anchor,
+                    &ground,
+                    &ground_derivations,
+                );
                 return Ok(CheckResult::Unsat);
             }
             return Ok(egraph_ground_limit());
@@ -1272,6 +1324,12 @@ fn prove_quantified_unsat_via_egraph_impl(
                     &format!("qf-check round={round} ground={}", ground.len()),
                 );
                 if matches!(check, CheckResult::Unsat) {
+                    *certificate = crate::quant_instance_set_cert::build_instance_set_certificate(
+                        arena,
+                        anchor,
+                        &ground,
+                        &ground_derivations,
+                    );
                     return Ok(CheckResult::Unsat);
                 }
             }
@@ -1475,6 +1533,16 @@ fn prove_quantified_unsat_via_egraph_impl(
                     stats,
                     &mut quantifier_cache,
                 )? {
+                    // The online CDCL(T) session found the conflict, but
+                    // `replay_online_refutation` re-established it against
+                    // `ground` -- so this is a ground refutation by the same
+                    // instances as every other exit, and is certifiable.
+                    *certificate = crate::quant_instance_set_cert::build_instance_set_certificate(
+                        arena,
+                        anchor,
+                        &ground,
+                        &ground_derivations,
+                    );
                     return Ok(CheckResult::Unsat);
                 }
                 online_clauses = None;
@@ -1509,6 +1577,12 @@ fn prove_quantified_unsat_via_egraph_impl(
                 CheckResult::Unsat
             )
         {
+            *certificate = crate::quant_instance_set_cert::build_instance_set_certificate(
+                arena,
+                anchor,
+                &ground,
+                &ground_derivations,
+            );
             return Ok(CheckResult::Unsat);
         }
     }
@@ -1533,7 +1607,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             &format!("nested-activity | {}", detail.join(" | ")),
         );
     }
-    finish_quantified_ground_check(
+    let finished = finish_quantified_ground_check(
         arena,
         &ground,
         config,
@@ -1541,7 +1615,16 @@ fn prove_quantified_unsat_via_egraph_impl(
         stats,
         &mut quantifier_cache,
         &generations,
-    )
+    )?;
+    if matches!(finished, CheckResult::Unsat) {
+        *certificate = crate::quant_instance_set_cert::build_instance_set_certificate(
+            arena,
+            anchor,
+            &ground,
+            &ground_derivations,
+        );
+    }
+    Ok(finished)
 }
 
 /// Whether the session-less per-round ground check is due: every round inside
@@ -8215,6 +8298,11 @@ mod tests {
                 true,
                 true,
                 &mut stats,
+                // tests exercise the verdict, not certification: an empty
+                // anchor never matches the working list, so no certificate
+                // is built and none is claimed.
+                &[],
+                &mut None,
             )
             .unwrap(),
             CheckResult::Unsat
@@ -8264,6 +8352,11 @@ mod tests {
             true,
             false,
             &mut baseline_stats,
+            // tests exercise the verdict, not certification: an empty
+            // anchor never matches the working list, so no certificate
+            // is built and none is claimed.
+            &[],
+            &mut None,
         )
         .unwrap();
         let baseline_elapsed = baseline_started.elapsed();
@@ -8287,6 +8380,11 @@ mod tests {
             true,
             true,
             &mut candidate_stats,
+            // tests exercise the verdict, not certification: an empty
+            // anchor never matches the working list, so no certificate
+            // is built and none is claimed.
+            &[],
+            &mut None,
         )
         .unwrap();
         let candidate_elapsed = candidate_started.elapsed();
@@ -8932,6 +9030,11 @@ mod tests {
             false,
             false,
             &mut fresh_loop_stats,
+            // tests exercise the verdict, not certification: an empty
+            // anchor never matches the working list, so no certificate
+            // is built and none is claimed.
+            &[],
+            &mut None,
         )
         .unwrap();
         let fresh_elapsed = fresh_started.elapsed();
@@ -8946,6 +9049,11 @@ mod tests {
             true,
             true,
             &mut online_loop_stats,
+            // tests exercise the verdict, not certification: an empty
+            // anchor never matches the working list, so no certificate
+            // is built and none is claimed.
+            &[],
+            &mut None,
         )
         .unwrap();
         let online_elapsed = online_started.elapsed();
@@ -10163,6 +10271,11 @@ mod tests {
             true,
             true,
             &mut stats,
+            // tests exercise the verdict, not certification: an empty
+            // anchor never matches the working list, so no certificate
+            // is built and none is claimed.
+            &[],
+            &mut None,
         )
         .unwrap();
 
@@ -10204,6 +10317,11 @@ mod tests {
             true,
             true,
             &mut stats,
+            // tests exercise the verdict, not certification: an empty
+            // anchor never matches the working list, so no certificate
+            // is built and none is claimed.
+            &[],
+            &mut None,
         )
         .unwrap();
 
@@ -10280,6 +10398,11 @@ mod tests {
             true,
             true,
             &mut stats,
+            // tests exercise the verdict, not certification: an empty
+            // anchor never matches the working list, so no certificate
+            // is built and none is claimed.
+            &[],
+            &mut None,
         )
         .unwrap();
 
@@ -10530,6 +10653,11 @@ mod tests {
             true,
             true,
             &mut stats,
+            // tests exercise the verdict, not certification: an empty
+            // anchor never matches the working list, so no certificate
+            // is built and none is claimed.
+            &[],
+            &mut None,
         )
         .unwrap();
         assert!(matches!(result, CheckResult::Unsat), "got {result:?}");
@@ -10599,6 +10727,11 @@ mod tests {
             true,
             true,
             &mut stats,
+            // tests exercise the verdict, not certification: an empty
+            // anchor never matches the working list, so no certificate
+            // is built and none is claimed.
+            &[],
+            &mut None,
         )
         .unwrap();
         assert!(

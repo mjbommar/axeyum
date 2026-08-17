@@ -171,6 +171,7 @@ macro_rules! full_modules {
         mod quant_guard_vacuity_cert;
         mod quant_guard_vacuity_search;
         mod quant_guarded_int;
+        mod quant_instance_set_cert;
         mod quant_negated_exists_cert;
         mod quant_negated_exists_search;
         mod quant_nested_xor_cert;
@@ -454,7 +455,8 @@ pub mod certificates {
             QuantifierGroundDerivation, QuantifierInstanceCertificate,
             check_quantifier_clause_propagation, check_quantifier_clause_propagations,
             check_quantifier_ground_derivation, instantiate_forall_via_egraph,
-            prove_quantified_unsat_via_egraph, witness_tuples_via_egraph,
+            prove_quantified_unsat_via_egraph, prove_quantified_unsat_via_egraph_with_instances,
+            witness_tuples_via_egraph,
         };
         pub use crate::quant_affine_growth_cert::{
             IntAffineGrowthRefutationCertificate, int_affine_growth_refutation,
@@ -504,6 +506,9 @@ pub mod certificates {
         };
         pub use crate::quant_guard_vacuity_cert::{
             QuantifiedGuardSatCertificate, check_quantified_guard_sat,
+        };
+        pub use crate::quant_instance_set_cert::{
+            QuantifierInstanceSetCertificate, check_quantifier_instance_set,
         };
         pub use crate::quant_negated_exists_cert::{
             NEGATED_EXISTENTIAL_BINDER_CAP, NEGATED_EXISTENTIAL_NODE_CAP,
@@ -1132,7 +1137,8 @@ macro_rules! full_exports {
             QuantifierGroundDerivation, QuantifierInstanceCertificate,
             check_quantifier_clause_propagation, check_quantifier_clause_propagations,
             check_quantifier_ground_derivation, instantiate_forall_via_egraph,
-            prove_quantified_unsat_via_egraph, witness_tuples_via_egraph,
+            prove_quantified_unsat_via_egraph, prove_quantified_unsat_via_egraph_with_instances,
+            witness_tuples_via_egraph,
         };
         #[doc(hidden)]
         pub use quant_affine_growth_cert::{
@@ -1197,6 +1203,10 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use quant_guard_vacuity_cert::{
             QuantifiedGuardSatCertificate, check_quantified_guard_sat,
+        };
+        #[doc(hidden)]
+        pub use quant_instance_set_cert::{
+            QuantifierInstanceSetCertificate, check_quantifier_instance_set,
         };
         #[doc(hidden)]
         pub use quant_negated_exists_cert::{
