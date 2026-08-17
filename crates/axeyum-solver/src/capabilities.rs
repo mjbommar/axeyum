@@ -589,7 +589,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    refutation rather than accepting whatever it is given. Until 2026-08-17 the \
                    family slice contained no QF_RDL module and this logic counted as having no \
                    external checker",
-        reference: "docs/mathematics-2026-08/01-decide-vs-certify.md",
+        reference: "ADR-0458",
     },
     Capability {
         area: "QF_UFLRA",
