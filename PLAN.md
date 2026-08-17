@@ -304,6 +304,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `f18904db7` | R3: reachability census re-derived and committed as `artifacts/reachability/r3-census.tsv` (190 rows over both corpora); the ranked tables in `04-reachability.md` are now a generated view of it, gated by `scripts/check-reachability-census.py` inside `check-foundational-resources.sh`. 13 guards, each with its own rejection path; mutation-verified that deleting any one kills exactly one test. Corpus coverage checked in both directions and reported SKIPPED, never passed, when the sibling checkout is absent. Stale numbers corrected in `04` and `05`. |
 | 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
 Older landed changes (including the 2026-08-06 A1/A2 closure commits) remain
@@ -319,6 +320,36 @@ The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
 here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
+
+**D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
+2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
+supported (arithmetic; the other three were refuted). Re-measured first, and did
+not move any files — two reasons, both in
+[`03-solver-decomposition.md`](docs/refactor-2026-08/03-solver-decomposition.md)
+under "Measured 2026-08-17 (second pass)".
+
+1. The first pass committed no script, so its membership rule is unrecoverable
+   and its arithmetic verdict does not survive re-derivation: sweeping plausible
+   boundaries moves the degree-matched p from <0.0001 (23 modules) to 0.377 (39),
+   crossing out of significance **at the 34–35 modules the first pass itself
+   reported** (p = 0.110). Only the `strings` row reproduces exactly, because
+   zero internal edges pins the set.
+2. The move fails the gate for every membership. A directory is *one* node in
+   `analyze_solver_module_graph.py`, so grouping merges nodes and creates cycles
+   no member had. Best case (23-module core): `mbp` newly enters the theory
+   core's cycle and the largest cycle grows **58,215 → 103,514 lines**, 25.8% →
+   45.8% of the crate, while its module count moves 24 → 25. Every wider
+   membership also adds `arith -> reconstruct`, destroying D1's precondition.
+
+Landed the measurement as code instead — `scripts/analyze_solver_group_collapse.py`,
+exit status is the finding — so the next lane decides this before moving a file
+rather than after.
+
+**Next:** not this. The blocker is the arithmetic ↔ `auto` / `reconstruct`
+cycle; D3's sequencing item 3 now depends on item 4 (`D1` narrowing), not the
+other way round. Whoever takes that: run
+`scripts/analyze_solver_group_collapse.py --group arith-core --check` and watch
+it go green — that is the exit criterion, and it is currently red.
 
 **Claim-dashboard gate, finding-8 re-measurement, and PLAN.md returned under its
 ceiling** (`WIP`, ledger-integrity, 2026-08-16). Three defects behind a dashboard
