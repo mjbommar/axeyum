@@ -14,20 +14,30 @@ Every SMT-route fact in the ledger attaches evidence shaped like:
 That tests the **verdict**. It does not test whether the refutation was
 *certified*, and the harness reports those separately. Measured 2026-08-17:
 
-    17 of 17 settled smt-term-level / smt-clausal instances -> certified=1
+    18 of 18 settled smt-term-level / smt-clausal instances -> certified=1
         14 kind=unsat-term-level
          2 kind=unsat-drat
          1 kind=unsat-bool-simplification
+         1 kind=unsat-quant-instance-set
 
 So the invariant holds today — by practice, not by enforcement. Nothing stops
-the eighteenth from being uncertified, and the evidence command would not
-notice. Demonstrated on `artifacts/facts/smt2/neg-barber-no-such-barber.smt2`,
-a genuinely unsatisfiable instance the solver refutes but cannot certify: the
-command shape above **exits 0** on it, reporting `kind=unsat-uncertified
-certified=0`.
+the nineteenth from being uncertified, and the evidence command would not
+notice. Demonstrated on
+`artifacts/facts/smt2/neg-no-integer-square-is-minus-one.smt2`, a genuinely
+unsatisfiable instance the solver refutes but cannot certify: the command shape
+above **exits 0** on it, reporting `kind=unsat-uncertified certified=0`.
 
 That file is therefore this check's negative control, and it is a real one
 rather than a synthetic fixture — see `probe()` below.
+
+THE CONTROL HAS ALREADY EXPIRED ONCE, which is the point of the guard that
+watches it. Until 2026-08-17 it was `neg-barber-no-such-barber.smt2`; on that
+date the `skolem-cert` lane made a skolemised refutation certify, the barber
+started reporting `kind=unsat-quant-instance-set certified=1 arena=ok`, this
+check failed on purpose, `F:barber-no-such-barber` was closed on the SMT route
+(so its instance is now SWEPT rather than a control), and the control moved
+here. Expect to do this again: a control that has become certifiable is good
+news and an action, never a defect to suppress.
 
 Reported, never inferred: certification is read from the harness's own
 `; evidence` line per instance. An instance that prints no such line is a
@@ -53,16 +63,21 @@ INSTANCE_RE = re.compile(r"artifacts/facts/smt2/[\w.\-]+\.smt2")
 EVIDENCE_RE = re.compile(r"^;\s*evidence\s+kind=(\S+)\s+certified=(\S+)", re.M)
 
 # A floor, so an extractor that stops finding instances cannot report a healthy
-# zero -- 0 uncertified of 0 is a perfect score. Measured 17 on 2026-08-17.
+# zero -- 0 uncertified of 0 is a perfect score. Measured 18 on 2026-08-17
+# (17 before F:barber-no-such-barber closed and joined the sweep).
 MIN_INSTANCES = 15
 
 # The negative control: genuinely unsat, NOT certified. See probe().
 #
-# It is the instance behind `F:barber-no-such-barber`, which stays `open`
-# precisely because an uncertified unsat is not evidence under this schema. That
-# makes it a real control rather than a synthetic one, and it is NOT swept as a
-# settled instance -- the fact is open, so `instances()` does not select it.
-PROBE = "artifacts/facts/smt2/neg-barber-no-such-barber.smt2"
+# It is the instance behind `F:no-integer-square-is-minus-one`, which stays
+# `open` precisely because an uncertified unsat is not evidence under this
+# schema. That makes it a real control rather than a synthetic one, and it is
+# NOT swept as a settled instance -- the fact is open, so `instances()` does not
+# select it. It is also cheap (measured 0 ms), so the control costs this gate
+# nothing.
+#
+# Replaced `neg-barber-no-such-barber.smt2` on 2026-08-17 -- see the module note.
+PROBE = "artifacts/facts/smt2/neg-no-integer-square-is-minus-one.smt2"
 
 
 _CLI: list[str] | None = None
@@ -187,9 +202,9 @@ def probe_failures(probe: dict[str, Any] | None) -> list[str]:
     """The negative control, and the one guard whose failure is good news.
 
     A check that only ever confirms `certified=1` cannot show it would notice
-    `certified=0`. `neg-barber.smt2` is the discriminating case: really
-    unsatisfiable, so a verdict-only checker passes it, and really uncertified,
-    so this one must be able to see the difference.
+    `certified=0`. `neg-no-integer-square-is-minus-one.smt2` is the
+    discriminating case: really unsatisfiable, so a verdict-only checker passes
+    it, and really uncertified, so this one must be able to see the difference.
     """
     if probe is None:
         return [
@@ -206,11 +221,12 @@ def probe_failures(probe: dict[str, Any] | None) -> list[str]:
     if probe["certified"] == "1":
         return [
             f"{PROBE} now reports kind={probe['kind']} certified=1. This is GOOD "
-            "NEWS and an action, not a defect: the barber sentence has become "
-            "certifiable, so F:barber-no-such-barber can be closed on the SMT "
-            "route with certified evidence. Do that, then repoint this control at "
-            "another uncertified instance -- it must not be left pointing at a "
-            "case that no longer discriminates"
+            "NEWS and an action, not a defect: this sentence has become "
+            "certifiable, so F:no-integer-square-is-minus-one can be closed on "
+            "the SMT route with certified evidence. Do that, then repoint this "
+            "control at another uncertified instance -- it must not be left "
+            "pointing at a case that no longer discriminates. This has happened "
+            "before and the procedure worked: see the module note on the barber"
         ]
     return []
 

@@ -68,7 +68,9 @@ step fact-depends python3 scripts/check-fact-depends-derived.py --quiet
 step smt-evidence-tests python3 -m unittest scripts.tests.test_check_smt_evidence_certified
 # Every settled SMT-route fact's own evidence command tests only the VERDICT
 # (`... | tail -1` = unsat), which passes on an UNCERTIFIED refutation --
-# demonstrated against neg-barber-no-such-barber.smt2. This requires certified=1.
+# demonstrated against neg-no-integer-square-is-minus-one.smt2. This requires
+# certified=1. (The control was neg-barber-no-such-barber.smt2 until 2026-08-17,
+# when that instance became certifiable and its fact was closed.)
 step smt-evidence python3 scripts/check-smt-evidence-certified.py --quiet
 # `facts` checks a fact against the SCHEMA; this checks its SMT-LIB
 # `formal.statement` against the certificate it cites, by evaluating both at 400
