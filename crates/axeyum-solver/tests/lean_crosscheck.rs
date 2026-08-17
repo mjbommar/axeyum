@@ -3000,8 +3000,21 @@ fn distinct_constructor_equality_is_not_an_injectivity_refutation() {
 }
 
 /// `QF_BV` (the foundational bit-blasting path): `bvule a b ∧ bvult b a`
-/// (`a ≤ b ∧ b < a`, `BitVec(2)`) is unsat. It lowers to core ops and the
-/// bit-level resolution refutation must type-check in real Lean.
+/// (`a ≤ b ∧ b < a`, `BitVec(2)`) is unsat, and the module reconstructed for it
+/// must type-check in real Lean.
+///
+/// **What Lean is handed here is a structural attestation, not a bit-level
+/// refutation.** This comment used to claim "the bit-level resolution refutation
+/// must type-check in real Lean"; measured 2026-08-17 by classifying the
+/// rendered module (`lean_crosscheck_content_split_is_visible_and_ratcheted`,
+/// family `qf_bv`), the source carries the attestation marker — an axiom pair
+/// and `False` by application, with no bit-vectors in it at all. Lean cannot
+/// fail that on the merits, so what this test establishes is that the module
+/// renders and kernel-checks, not that `a ≤ b ∧ b < a` was proved to Lean.
+///
+/// The refutation itself is real and is checked in Rust; only its *Lean* half is
+/// an attestation. Kept as-is deliberately — the shim is accepted for 29 routes
+/// (ADR-0458) — but the description had to stop overstating what runs.
 fn qf_bv_comparison_refutation_checks_in_real_lean() {
     let mut arena = TermArena::new();
     let mk = |a: &mut TermArena, n: &str| {

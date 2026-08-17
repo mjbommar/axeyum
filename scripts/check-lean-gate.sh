@@ -81,6 +81,21 @@ cd "$(dirname "$0")/.." || exit 2
 # suites now; measured total 126 (53 tests).
 CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-115}"
 
+# The total above counts modules Lean READ. It is not a count of propositions
+# Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s
+# 73 families emit a STRUCTURAL ATTESTATION -- `axiom prop : Prop`, `axiom hyp1 :
+# prop`, `axiom hyp2 : Not prop`, then `False` by application. Lean accepts that
+# trivially and its acceptance says nothing about the proposition. The emitter
+# takes no arena and no assertions, so its output cannot depend on the query at
+# all. `qf_bv` is one of the 41.
+#
+# So this gate reports the two halves separately, and floors the half that is
+# actually reasoning. Flooring only the sum lets theory families be replaced by
+# attestations with the headline unmoved. `lean_crosscheck` prints the split as
+# LEAN_CONTENT_SUMMARY (it classifies each rendered module by its own header
+# marker, needing no Lean binary); this reads that line.
+THEORY_FAMILY_FLOOR="${AXEYUM_LEAN_THEORY_FLOOR:-32}"
+
 # package | features | test target
 #
 # `lean_crosscheck` (axeyum-solver, `full`) is the 70-family representative
@@ -173,6 +188,7 @@ failed_suites=()
 total_checked=0
 total_tests=0
 suite_count=0
+content_summary=""
 
 while IFS='|' read -r package features target; do
   [ -n "$target" ] || continue
@@ -193,6 +209,9 @@ while IFS='|' read -r package features target; do
   checked=$(sed -n 's/.*AXEYUM-LEAN-CHECKED [^ ]* checked=\([0-9]*\).*/\1/p' "$log" |
     awk '{s+=$1} END {print s+0}')
   skipped=$(grep -c 'AXEYUM-LEAN-SKIPPED' "$log" 2>/dev/null || true)
+  if grep -q 'LEAN_CONTENT_SUMMARY|' "$log"; then
+    content_summary=$(grep -o 'LEAN_CONTENT_SUMMARY|.*' "$log" | tail -1)
+  fi
 
   total_tests=$((total_tests + tests))
   total_checked=$((total_checked + checked))
@@ -221,6 +240,40 @@ done <<<"$suites"
 echo "check-lean-gate: $suite_count suites, $total_tests tests, $total_checked real-Lean checks" \
      "(floor $CHECK_FLOOR)"
 
+# The content split. Absence is a failure, not a pass: if `lean_crosscheck` ran
+# and printed no summary, this gate has stopped being able to tell reasoning
+# from attestation, and silently reporting only the total is exactly the
+# overstatement the split exists to prevent.
+if [ -z "$content_summary" ]; then
+  echo "check-lean-gate: no LEAN_CONTENT_SUMMARY was printed, so the reasoning/attestation" \
+       "split could not be read. That is a failure: the total above counts modules Lean READ," \
+       "and without the split it reads as modules Lean PROVED." >&2
+  fail=1
+else
+  theory_families=$(sed -n 's/.*|theory_families=\([0-9]*\).*/\1/p' <<<"$content_summary")
+  structural_families=$(sed -n 's/.*|structural_families=\([0-9]*\).*/\1/p' <<<"$content_summary")
+  # A summary that is present but unparseable is the same failure as an absent
+  # one, and worse if unnoticed: empty fields would make the arithmetic below
+  # print a confident wrong split. Fail on the parse, not on its consequences.
+  if [ -z "$theory_families" ] || [ -z "$structural_families" ]; then
+    echo "check-lean-gate: LEAN_CONTENT_SUMMARY was printed but its theory/structural fields" \
+         "could not be parsed, so the split is unknown. The line was: $content_summary" >&2
+    fail=1
+    theory_families=0
+    structural_families=0
+  fi
+  echo "check-lean-gate: crosscheck content: $theory_families families carry a theory" \
+       "reconstruction, $structural_families are structural attestations (an axiom pair Lean" \
+       "accepts trivially) -- floor $THEORY_FAMILY_FLOOR on the reasoning half"
+  if [ "${theory_families:-0}" -lt "$THEORY_FAMILY_FLOOR" ]; then
+    echo "check-lean-gate: only $theory_families families carry a theory reconstruction, below" \
+         "the committed floor of $THEORY_FAMILY_FLOOR. Reasoning has been replaced by" \
+         "attestation somewhere; the total check count would not have moved. If deliberate," \
+         "lower THEORY_FAMILY_FLOOR in this file and say why." >&2
+    fail=1
+  fi
+fi
+
 if [ "$total_checked" -lt "$CHECK_FLOOR" ]; then
   echo "check-lean-gate: only $total_checked real-Lean checks ran, below the committed floor of" \
        "$CHECK_FLOOR -- checks have been lost. If that was deliberate, lower CHECK_FLOOR in this" \
@@ -232,4 +285,6 @@ if [ "$fail" -ne 0 ]; then
   [ ${#failed_suites[@]} -gt 0 ] && printf 'check-lean-gate: FAILED: %s\n' "${failed_suites[*]}" >&2
   exit 1
 fi
-echo "check-lean-gate: OK -- $total_checked modules/controls were read by a real Lean kernel"
+echo "check-lean-gate: OK -- $total_checked modules/controls were READ by a real Lean kernel" \
+     "($structural_families of $((theory_families + structural_families)) crosscheck families are" \
+     "attestations, so this is not a count of propositions proved)"
