@@ -775,7 +775,17 @@ def main() -> int:
     axiom_ledger = load_json(LEAN_AXIOM_LEDGER)
     axiom_entries = axiom_ledger["entries"]
     axiom_total = len(axiom_entries)
-    if axiom_total != int(axiom_ledger["expected_counts"]["total"]):
+    # The ledger moved to `version: 2` and restructured: `expected_counts` at the
+    # top level became `measurement.axiom_counts`, and `as_of` became
+    # `population_as_of`. This checker was not updated with it, so it died on
+    # `KeyError: 'expected_counts'` BEFORE running any of its checks -- and it
+    # runs in `just check` and not in CI, so the repository's preferred aggregate
+    # gate was failing for everyone while CI stayed green.
+    #
+    # Read the count, do not recompute it: `axiom_counts` carries its own `total`
+    # alongside the per-prelude rows, so summing the dict double-counts (62 for
+    # 31 entries).
+    if axiom_total != int(axiom_ledger["measurement"]["axiom_counts"]["total"]):
         failures.append(
             f"{LEAN_AXIOM_LEDGER.relative_to(ROOT)}: entry count does not match "
             "expected total"

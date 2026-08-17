@@ -118,6 +118,31 @@ Lean 4.30 executable reports:
 LEAN_CROSSCHECK|label=representative|families=70|modules=70|checked=70|budget_skipped=0|failed=0
 ```
 
+### 2026-08-17: 74 families, and how many of them are reasoning
+
+The population grew to 74 (`qf_bv_wide`, added because the existing `qf_bv`
+family runs at `BitVec(2)`, a width at which `term_level_enum_certifies` wins
+before bit-blasting is ever reached — so the family named for the foundational
+bit-blasting path was handing Lean a structural attestation). A fail-closed local
+run of `scripts/check-lean-gate.sh` against the pinned Lean 4.30.0 reports:
+
+```text
+[lean crosscheck:representative] checked 74 of 74 modules
+LEAN_CROSSCHECK|label=representative|families=74|modules=74|checked=74|budget_skipped=0|failed=0
+```
+
+GitHub Actions run
+[`32045171231`](https://github.com/mjbommar/axeyum/actions/runs/32045171231)
+printed the same line. That run's step still FAILED — it greps for an exact
+`families=73` pin that the new family invalidated — so this is an acceptance
+record, not a green-CI record; the pin was corrected in `2c5356679`.
+
+**Read this number the way the gate now prints it.** 41 of the 74 families emit a
+structural attestation and 33 a theory reconstruction, so `74/74 accepted` is
+74 modules READ by Lean, not 74 propositions proved. The gate reports the split
+and floors the reasoning half precisely so this line cannot be quoted as the
+stronger claim.
+
 ## First corrected remote attempt: executable identity failure
 
 GitHub Actions run
