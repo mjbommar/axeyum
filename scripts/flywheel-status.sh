@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Where the flywheel stands, in one screen, from artifacts that already exist.
+#
+# CLAUDE.md describes a cycle — library → solver → reconstruction →
+# kernel-checked theorem → ledger → DAG picks the next goal — and every arrow is
+# already measured by something committed. What was missing was anywhere to see
+# them together.
+#
+# Measured 2026-08-17: `docs/plan/generated/` holds 25 generated views, 840 KB,
+# and **24 of them are referenced from no entry point at all** — not CLAUDE.md,
+# not PLAN.md, not the justfile, not check.sh. `scripts/fact-frontier.py`, which
+# answers "what should I prove next", was referenced by nothing either; one lane
+# hand-wrote its query three times in a day without knowing it existed.
+#
+# So this is deliberately NOT new analysis. It runs the queue and reads the
+# committed generated files, and its whole job is to make what already exists
+# reachable. Anything expensive stays where it is, behind its own gate.
+#
+# Usage:  scripts/flywheel-status.sh      (or: just flywheel)
+#
+# It does not fail on a bad state — it is a view, not a gate. The gates are
+# `just check`; this tells you where to point them.
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 2
+
+section() { printf '\n\033[1m== %s ==\033[0m\n' "$1"; }
+
+section "LEDGER — what is settled, and what the DAG can hand out"
+python3 - <<'PY'
+import json, pathlib, collections
+facts = {}
+for p in pathlib.Path("artifacts/facts").glob("*.json"):
+    d = json.loads(p.read_text(encoding="utf-8"))
+    facts[d["id"]] = d
+settled = {i for i, d in facts.items() if d["epistemic_status"] in ("proved", "computed")}
+route = collections.Counter(d.get("proof_route", "-") for i, d in facts.items() if i in settled)
+# Report the STATUSES, not settled-and-the-rest. Subtracting lumps `refuted`
+# and `conjectured` in with `open`, which made this line disagree with the queue
+# below it (13 vs 10 banded) and sent me looking for facts the queue had missed.
+# It had missed none: it bands open + conjectured, and rightly leaves `refuted`
+# out. A summary that does not reconcile with the thing under it is worse than
+# no summary.
+status = collections.Counter(d["epistemic_status"] for d in facts.values())
+print(f"  {len(facts)} facts · " + " · ".join(f"{v} {k}" for k, v in sorted(status.items())))
+print("  settled by route: " + ", ".join(f"{k} {v}" for k, v in route.most_common()))
+PY
+python3 scripts/check-fact-dag.py --quiet 2>/dev/null | tail -1 | sed 's/^/  /'
+
+section "NEXT — what to work on (just next, or --unlocks for the full queue)"
+python3 scripts/fact-frontier.py 2>/dev/null | sed 's/^/  /'
+
+section "PROOF GAP — decided, certified, independently checked, Lean-reconstructed"
+if [ -f docs/plan/generated/proof-gap-matrix.md ]; then
+  sed -n '/^| Stage /,/^$/p' docs/plan/generated/proof-gap-matrix.md | sed 's/^/  /'
+  echo "  full: docs/plan/generated/proof-gap-matrix.md (regenerate: scripts/gen-proof-gap-matrix.py)"
+else
+  echo "  (docs/plan/generated/proof-gap-matrix.md absent — run scripts/gen-proof-gap-matrix.py)"
+fi
+
+section "LEAN — how much of what Lean reads is REASONING, not attestation"
+echo "  A structural attestation is an axiom pair Lean cannot fail on the merits."
+echo "  Floors live in scripts/check-lean-gate.sh; the split is printed by"
+echo "  lean_crosscheck_content_split_is_visible_and_ratcheted."
+grep -oE 'THEORY_FAMILY_FLOOR="\$\{AXEYUM_LEAN_THEORY_FLOOR:-[0-9]+\}"' scripts/check-lean-gate.sh 2>/dev/null \
+  | sed 's/^/  /' || true
+
+section "WHERE TO GO DEEPER — generated views, none of which used to be linked"
+ls docs/plan/generated/*.md 2>/dev/null | sed 's|^|  |' | head -30
+echo
+echo "  Gates:  just check   ·   scripts/check.sh (no-just fallback, NOT the same set)"
+echo "  Queue:  just next    ·   just next-unlocks"

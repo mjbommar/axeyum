@@ -21,6 +21,14 @@ fmt-all:
 # The `fact` ledger: a mathematical statement as a first-class object, with its
 # status, dependencies and evidence. Semantic rules, not just structure -- a
 # `proved` fact with nothing checked, or an `open` one carrying evidence, fails.
+# 24 of 25 generated views under docs/plan/generated/ (840 KB of analysis) were
+# referenced from NO entry point — measured 2026-08-17. The tooling was never the
+# problem; reaching it was.
+#
+# Where the flywheel stands, in one screen: ledger, queue, proof gap, Lean split.
+flywheel:
+    ./scripts/flywheel-status.sh
+
 # `fact-frontier.py` existed for a while and was referenced by NOTHING — not
 # CLAUDE.md, not PLAN.md, not this file. A queue nobody can reach is a record,
 # not a queue, so it gets a one-word name. It also warns when a fact is named by
