@@ -193,8 +193,30 @@ are **independent axes**. A fact can be `certified=1` with no Lean module. Of th
 `axiom P` shim with no reasoning. Whether any settled fact rests on one is
 unmeasured and is the obvious next audit.
 
+**Both counted proof-production errors are gone (A6's first slice).** The two
+`QF_NIA` `pow2-native` rows are the repository's two `proof_production_errors`,
+and the failure was not a missing capability. `int_blast` rejects `int.pow2`
+deliberately — exponential in its operand, so no faithful finite encoding — and
+says at the rejection site that the point is to fall through. But
+`certify_bounded_int_blast` mapped **every** `IntBlastError` to a backend error,
+so the fall-through became a hard stop:
+
+```
+check_auto_explained: unsat 0.129ms  (int-box-eval: decided unsat)
+solve:                unsat
+produce_evidence:     error ... does not support operator IntPow2
+```
+
+Two front doors disagreeing about a query decided in a tenth of a millisecond —
+recorded by the audit as `solver-error` and rendered by the CLI as `unknown`,
+which is the worse of the two because it reads as "could not tell" when the
+truth is "could, and threw it away". Now it declines: `unsat` with
+`kind=unsat-uncertified`, so the certificate gap stays visible instead of the
+verdict going missing.
+
 <!-- plan-section: landed-changes -->
 
+| 2026-08-17 | `3cc574c7` | Both counted proof-production errors closed (A6 first slice): `certify_bounded_int_blast` mapped every `IntBlastError` to a backend error, so `int_blast`'s DELIBERATE `int.pow2` decline became a hard stop and `produce_evidence` lost a verdict `check_auto` decides in 0.13ms. Now declines to `unsat` / `unsat-uncertified`, keeping the certificate gap visible. Control pins the KIND (`unsat-bounded-int-blast`), not just `is_certified`, so the route cannot silently stop being exercised. |
 | 2026-08-17 | `9853fb6c` | REVERTED `a1493099`: it shipped `certified=1` on evidence whose independent re-check FAILED (two- and four-instance shapes; the one-instance shape passed only by `TermId` coincidence). Cause is architectural — the certificate carries ids of terms created during solving, and `smtcomp_cli` re-validates against a FRESH PARSE on purpose. Adds `tests/certified_implies_revalidatable.rs`, the general invariant `is_certified()` => re-validates against an independently re-parsed arena, which per-variant suites structurally could not enforce. Both directions exercised. The driver-side certificate work (`28755674`) stands. |
 | 2026-08-17 | `pending` | QF_BV reaches Lean as REASONING: a `qf_bv_wide` crosscheck family runs `a <= b && b < a` at `BitVec(16)` and asserts the module is a theory reconstruction, not merely that Lean accepted it. The existing `qf_bv` family uses `BitVec(2)`, where `term_level_enum_certifies` wins before `ProofFragment::QfBv` is reached -- so the test named for the foundational bit-blasting path ran at a width where bit-blasting is never used. Crossover measured between 8 and 16 bits and pinned by `narrow_bv_enumerates_and_wide_bv_reconstructs`. Split moves 32 -> 33 theory families (structural unchanged at 41); both crosscheck floors and the gate's reasoning floor raised to match. Real Lean accepts it; gate reports 127 checks. |
 | 2026-08-17 | `4cd5d6f0` | `scripts/check-lean-gate.sh` reports the two halves of its headline and floors the REASONING one (`THEORY_FAMILY_FLOOR=32`), verified end-to-end under real Lean 4.30.0. Flooring only the sum is what let the gap hide: swapping a theory family for an attestation leaves the 126 unmoved. Three guards each driven to fail — raised floor, absent summary, unparseable summary. Also corrects the `qf_bv` test's doc comment, which claimed a bit-level refutation type-checks in Lean; that module is an attestation containing no bit-vectors (the refutation is real and checked in Rust). |
