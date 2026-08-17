@@ -5195,8 +5195,32 @@ pub fn certify_bounded_int_blast(
     // Blast the clamped, exactly-encoded box on a scratch arena (additive).
     let mut scratch = arena.clone();
     let clamped = clamp_to_box(&mut scratch, assertions, &proven)?;
-    let blast = axeyum_rewrite::blast_integers(&mut scratch, &clamped, proven.width)
-        .map_err(|e| SolverError::Backend(format!("int-blast failed: {e}")))?;
+    let blast = match axeyum_rewrite::blast_integers(&mut scratch, &clamped, proven.width) {
+        Ok(blast) => blast,
+        // A DECLINE, not a failure — the same distinction the `IntBoxProof` match
+        // above already draws. `int_blast` rejects an operator it has no faithful
+        // finite encoding for (`int.pow2`, whose value is exponential in its
+        // operand) *precisely so* the query falls through to a route that does
+        // handle it, and it says so at the rejection site.
+        //
+        // Mapping every `IntBlastError` to a backend error turned that
+        // fall-through into a hard stop. Measured on
+        // `QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-{2,7}.smt2`,
+        // both declared `unsat` and both decided `unsat` by `check_auto` in
+        // 0.13ms via `int-box-eval`: `produce_evidence` returned
+        // `backend failure: int-blast failed: ... does not support operator IntPow2`.
+        // The dominance audit recorded that as `solver-error` and
+        // `smtcomp_cli --evidence` rendered it `unknown` — so a missing
+        // CERTIFICATE was costing a verdict the solver already had.
+        //
+        // Other `IntBlastError`s stay errors: a constant that does not fit the
+        // chosen width, or an invalid width, are wrong-configuration bugs here,
+        // not statements that this route does not apply.
+        Err(axeyum_rewrite::IntBlastError::UnsupportedOp(_)) => return Ok(None),
+        Err(error) => {
+            return Err(SolverError::Backend(format!("int-blast failed: {error}")));
+        }
+    };
     let bv_assertions = blast.assertions().to_vec();
 
     // Emit + self-check the DRAT of the bit-blasted CNF. The blaster's
