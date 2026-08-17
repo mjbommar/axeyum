@@ -67,7 +67,9 @@ Modules group cleanly, by their own naming:
 The rows sum to 99 of the crate's modules; there are 165. Re-derived from names,
 the four theory rows are 34 / 29 / 5 / 6, not 20 / 18 / 8 / 7. More to the point,
 grouping by name is not the same as grouping by *edges*, and nobody had measured
-the edges.
+the edges. (Those re-derived counts are themselves rule-dependent and the rule
+was never committed — see the second-pass measurement under `D3`. Only the
+`strings` row reproduces exactly.)
 
 And a feature flag already draws one boundary:
 
@@ -303,7 +305,106 @@ outbound and once as an inbound); the other **273 leave the theories
 altogether** — 115 to `dispatch`, 87 to the evidence/reconstruction layer, 51 to
 modules no name rule assigns, 20 to quantifiers.
 
-**What D3 should therefore do.** Group arithmetic and stop. For arrays/BV, UF
+#### Measured 2026-08-17 (second pass): arithmetic is not a directory either
+
+The lane sent to *execute* the surviving group re-measured first, as instructed,
+and could not act on it. Two findings, in order of how much they cost.
+
+**1. The measurement above committed no script, and its verdict does not
+survive being re-derived.** Its group membership is a name rule that exists
+nowhere in the repository, so "arithmetic, 34 modules, ratio 0.247" cannot be
+reproduced — only the `strings` row can, because zero internal edges pins the
+set exactly (6 modules, 5,734 lines, 13 crossing: reproduced to the digit, which
+is what confirms the graph and edge definitions here match that lane's).
+
+Cohesion is a property of a *set*, not of the word "arithmetic". Sweeping the
+plausible boundaries, with the group membership written out literally
+(`scripts/analyze_solver_group_collapse.py --sweep`, 20,000 trials, seed
+20260817, both nulls as before):
+
+| membership | modules | lines | internal | crossing | ratio | p uniform | p degree-matched |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| core theory only | 23 | 44,840 | 27 | 111 | 0.243 | <0.0001 | <0.0001 |
+| + interpolants | 29 | 48,307 | 34 | 131 | 0.260 | <0.0001 | 0.0003 |
+| + model checking (`imc`, `pdr`) | 35 | 53,347 | 37 | 162 | 0.228 | 0.0098 | **0.110** |
+| + optimization (`optimize`, `pb`, `pbls`) | 38 | 56,308 | 37 | 172 | 0.215 | 0.064 | **0.258** |
+| + `int_reconstruct` | 39 | 65,257 | 39 | 181 | 0.215 | 0.084 | **0.377** |
+
+The verdict moves from p < 0.0001 to p = 0.38 with no code changing, and it
+crosses out of significance **at the size the first pass reported**: at 35
+modules the degree-matched null already gives p = 0.11. So the one group D3 was
+narrowed down to is cohesive only on the narrow reading, and the reported
+reading is not the narrow one. The `uf` row is likewise unrecoverable — a
+plausible five-module reading gives ratio 0.020, p = 0.21, not 0.100.
+
+`int_reconstruct` is the sharpest case: it matches an `int` name rule, and the
+stated precedence (arithmetic before evidence) therefore assigns it to
+arithmetic — but it is in the **evidence layer** by the ratchet's own baseline.
+It cannot be in both, and which one it lands in moves the answer.
+
+**2. Collapsing the group is what actually decides, and it fails for every
+membership.** A directory is *one node*: `top_level_modules` lists `src/`
+entries and `owner()` takes the first path component, so `src/arith/lia.rs` and
+`src/arith/nra.rs` are both module `arith`. Grouping therefore **merges nodes**,
+and merging nodes creates cycles between whatever the members separately
+touched. A cohesion ratio cannot see this. Simulating the move and running the
+ratchet's own `check()` on the post-move graph:
+
+| membership | modules | in cycles | largest cycle | newly cyclic |
+| --- | ---: | ---: | --- | ---: |
+| *(today)* | 166 | 41 | 24 mods / 58,215 lines | — |
+| core theory only | 144 | 34 | 25 mods / **103,514** lines | `arith`, `mbp` |
+| + interpolants | 138 | 42 | 40 mods / 155,364 lines | 10 |
+| + model checking | 132 | 44 | 42 mods / 162,220 lines | 12 |
+| + optimization | 129 | 44 | 42 mods / 164,018 lines | 12 |
+| + `int_reconstruct` | 128 | 43 | 41 mods / 164,018 lines | 12 |
+
+Every one turns the gate red. The narrow core is the only membership that does
+not also destroy the evidence layer — every wider one adds
+`arith -> reconstruct` as a back-edge from the theory core, which is precisely
+D1's precondition — and even it does this:
+
+- `mbp` newly enters the theory core's cycle. That is real, not a rename:
+  `mbp -> dpll_lia`, `mbp -> lra`, and `auto -> mbp`, so grouping `dpll_lia`
+  with `nra` closes a loop that no member had.
+- **The largest cycle goes from 58,215 to 103,514 lines — 25.8% to 45.8% of the
+  crate — while its module count goes 24 → 25.** The count says nothing
+  happened. The mass says half the crate is now one mutually-dependent unit.
+
+That second bullet is D1's lesson arriving from the other side: *"Direction was
+never the obstacle; mass was, and nothing was watching mass."* A directory does
+not create an interface; it creates a **node**, and a node in a cycle is in the
+cycle with all of its lines.
+
+A greedy search for any arithmetic subset that collapses cleanly (no new cycle
+member, no evidence back-edge, no fan-out widening, no cycle growth) bottoms out
+at four modules — `cas_certificate`, `cas_poly`, `combined_theory_lia`,
+`uflia_online` — and those are safe only because they are two existing 2-cycles
+that collapsing *erases*. That is a trick, not a group.
+
+**So no files were moved.** The gate said the grouping was wrong and the gate
+was believed. What landed instead is the measurement as code:
+`scripts/analyze_solver_group_collapse.py`, whose exit status is the finding —
+`--check` exits 1 on a grouping that would turn the ratchet red, 0 on one that
+would not, 2 on a group naming modules that do not exist (the empty-result
+trap). Controls in `scripts/tests/test_analyze_solver_group_collapse.py`,
+including a mutation test proving the cycle-mass guard is load-bearing: name the
+directory after one of its own members — the idiom this crate already uses
+(`abv.rs` + `abv/`) — and no new name enters the cycle set, so the ratchet exits
+0 while the largest cycle grows 401×. Only the mass guard catches it.
+
+**What D3 should therefore do.** Nothing, until the arithmetic ↔ `auto` /
+`reconstruct` cycle is broken. The intra-crate grouping was supposed to be the
+cheap, reversible step that produced evidence for a later crate boundary; it is
+cheap and reversible, but it produces a *worse* graph than the one it starts
+from, on the one metric D1 established as the binding one. Break the cycle
+first, then group — in that order, and re-run `--check` before moving a file.
+
+**What the first pass should have done.** Commit the script. The refutation of
+three groups is almost certainly right and it is now partly unfalsifiable: only
+the `strings` row could be re-derived, and only because a zero pins the set.
+
+**What D3 originally proposed.** Group arithmetic and stop. For arrays/BV, UF
 and strings the file move would produce a directory and no interface, and the
 "let a crate boundary be proposed once that interface stops changing" clause
 would never get an interface to watch. The edges say the actual seam in this
@@ -329,13 +430,17 @@ prove which files they examined.**
 1. `04` first — gates that prove their own scope. **Done.**
 2. `01` and `02` — because they change what the seams *are*. `02` W2 is done
    (the two real-algebra engines now share a corpus).
-3. **`D3` intra-crate grouping** — cheap, reversible, and it produces the
-   evidence that would justify `D2` or a theory crate later. **Narrowed
-   2026-08-17 by the edge measurement above: group arithmetic (the one group
-   with cohesion both nulls accept) and do not move arrays/BV, UF or strings.**
-   Three of the four proposed groups have fewer internal edges than an arbitrary
-   set of modules the same size — strings has *zero* — so those directories
-   would carry no interface for the later crate argument to watch.
+3. ~~**`D3` intra-crate grouping**~~ — **blocked 2026-08-17 by the collapse
+   measurement above, after being narrowed to arithmetic alone earlier the same
+   day.** Three of the four proposed groups have fewer internal edges than an
+   arbitrary set of modules the same size (strings has *zero*), and the fourth
+   does not survive the move: making arithmetic a directory grows the largest
+   dependency cycle from 58,215 to 103,514 lines — a quarter of the crate to
+   nearly half — because a directory is one graph node and a node in a cycle is
+   in it with all of its lines. `scripts/analyze_solver_group_collapse.py
+   --group <g> --check` decides this for any proposed group before a file moves.
+   **The blocker is now item 4, not this one:** break the arithmetic ↔ `auto` /
+   `reconstruct` cycle, then group.
 4. **`D1` (`reconstruct/`) — narrowing, not extracting.** The 2026-08-16
    measurement moved this from first to after `D3`: the boundary is one-way as
    claimed but 58 modules wide, so a crate today buys nothing and pins the
