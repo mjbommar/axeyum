@@ -468,12 +468,12 @@ routes are which** (`WIP`, evidence-certification, 2026-08-17). A
 and no assertions, so its output cannot depend on the query — it declares
 `axiom prop : Prop`, `axiom hyp1 : prop`, `axiom hyp2 : Not prop` and derives
 `False` by application. Lean accepts it, and that acceptance says nothing about
-the proposition. Measured: of the **126** real-Lean checks
-`scripts/check-lean-gate.sh` reports (the script's own floor still says ~113),
-**41 are shims** — 56% of `lean_crosscheck`'s own checks, across 27 refuters —
-including `qf_bv`, a test named for bit-vectors whose module contains no
-bit-vector reasoning. The gate reports one undifferentiated total and
-distinguishes the two nowhere.
+the proposition. Measured on arrival: of the **126** real-Lean checks
+`scripts/check-lean-gate.sh` reported, **41 were shims** — 56% of
+`lean_crosscheck`'s own checks, across 27 refuters — including `qf_bv`, a test
+named for bit-vectors whose module contains no bit-vector reasoning. The gate
+reported one undifferentiated total and distinguished the two nowhere. All three
+of those are now fixed; the current gate output is below.
 
 Five of 61 fragments had their class pinned; the other 55 recorded it only in
 the table, so editing emitter and table together moved a route from proof to
@@ -499,16 +499,16 @@ contentless refuter to the headline was entirely unguarded.
 verified end to end under real Lean 4.30.0:
 
 ```
-check-lean-gate: 16 suites, 54 tests, 126 real-Lean checks (floor 115)
-check-lean-gate: crosscheck content: 32 families carry a theory reconstruction,
-                 41 are structural attestations -- floor 32 on the reasoning half
-check-lean-gate: OK -- 126 modules/controls were READ by a real Lean kernel
-                 (41 of 73 crosscheck families are attestations, so this is not
+check-lean-gate: 16 suites, 54 tests, 127 real-Lean checks (floor 115)
+check-lean-gate: crosscheck content: 33 families carry a theory reconstruction,
+                 41 are structural attestations -- floor 33 on the reasoning half
+check-lean-gate: OK -- 127 modules/controls were READ by a real Lean kernel
+                 (41 of 74 crosscheck families are attestations, so this is not
                  a count of propositions proved)
 ```
 
 Flooring only the sum is what let this hide: swapping a theory family for an
-attestation leaves 126 unmoved. Three guards, each driven to fail — raising the
+attestation leaves the total unmoved. Three guards, each driven to fail — raising the
 theory floor exits 1 while the total stays put; an absent summary exits 1,
 because silence must not read as a pass; and a present-but-unparseable summary
 fails on the parse rather than letting the arithmetic print a confident wrong
