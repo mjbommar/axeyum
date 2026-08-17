@@ -40,6 +40,23 @@ is real work with real failures to fix, and blocking every unrelated commit
 until that is finished would just get the gate deleted. What it stops today is
 the count going UP — a NEW control that nothing runs.
 
+# What the remaining 19 are
+
+Characterised 2026-08-17 rather than left as a number. Fifteen are controls for
+the `tock-log2` / `maestro-device-id` producer series. Their subject scripts all
+still EXIST — these are not dead tests for deleted code — but the subjects
+themselves are referenced by zero or one tracked files, i.e. dormant one-off
+investigation tooling that no gate runs either. Adopting them would spend gate
+time guarding scripts nobody invokes.
+
+That is a legitimate reason not to adopt, and it is a different reason from "not
+got to it yet". The remaining four are census/validation controls that reference
+no `scripts/` subject at all; one of them
+(`test_validate_glaurung_llvm_loop_semantic_census`) is the single genuinely
+rotted control found in this sweep. So the tail of this ratchet is not a backlog
+of coverage — it is mostly tooling that should probably be deleted with its
+tests, which is a decision for whoever owns that investigation, not for a gate.
+
 A module naming itself proves nothing, so `scripts/tests/` is excluded from the
 search. `scripts/check-aggregate-scope.expected` is a pinned inventory of gate
 steps rather than a runner, but it is derived from the runners and excluding it
