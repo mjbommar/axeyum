@@ -217,7 +217,7 @@ jobs:
             lean_crosscheck_representative -- --nocapture --exact 2>&1 \
             | tee "$RUNNER_TEMP/lean-representative.log"
           grep -Fx \
-            'LEAN_CROSSCHECK|label=representative|families=73|modules=73|checked=73|budget_skipped=0|failed=0' \
+            'LEAN_CROSSCHECK|label=representative|families=74|modules=74|checked=74|budget_skipped=0|failed=0' \
             "$RUNNER_TEMP/lean-representative.log"
 
   deny:
