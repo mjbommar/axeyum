@@ -5280,6 +5280,125 @@ mod lra_dispatch_tests {
         assert_eq!(ProofFragment::Unsupported.lean_module_content(), None);
     }
 
+    /// Every fragment's content class, pinned by name.
+    ///
+    /// A `StructuralAttestation` is not a proof: the emitter
+    /// (`reconstruct_checked_structural_certificate_to_lean_module`) takes no
+    /// arena and no assertions, so its output cannot depend on the query. It
+    /// declares `axiom prop : Prop`, `axiom hyp1 : prop`, `axiom hyp2 : Not prop`
+    /// and derives `False` by application. Lean accepts it, and that acceptance
+    /// says nothing whatever about the proposition.
+    ///
+    /// So which side of this table a fragment sits on is the difference between
+    /// "machine-checked" and "asserted", and until now almost nothing pinned it.
+    /// `arithmetic_fragment_content_classes_are_declared` covers five fragments;
+    /// the other 55 that emit a module had their class recorded in exactly one
+    /// place — the table itself — so a change to the emitter AND the table
+    /// together moved a route from theory reconstruction to shim with no test
+    /// failing and the Lean gate's headline count unchanged.
+    ///
+    /// Measured 2026-08-17: of the 126 real-Lean checks `scripts/check-lean-gate.sh`
+    /// reports, 41 (32.5%) are already shims — 56% of `lean_crosscheck`'s own
+    /// checks — including `qf_bv`, where the test is named for bit-vectors and
+    /// nothing about bit-vectors reaches Lean. The gate reports one
+    /// undifferentiated total.
+    ///
+    /// This test does not object to the shim existing. It objects to a route
+    /// changing sides quietly: to move one, you must edit this list, and that
+    /// edit is the reviewable artifact.
+    #[test]
+    fn every_fragment_content_class_is_pinned_by_name() {
+        const THEORY: &[ProofFragment] = &[
+            ProofFragment::ArrayAxiom,
+            ProofFragment::BvAlternationCounterexample,
+            ProofFragment::BvClosedUniversalCounterexample,
+            ProofFragment::BvConjunctiveUniversalInstance,
+            ProofFragment::BvPairedExistentialTransfer,
+            ProofFragment::BvPositiveUniversalInstanceSet,
+            ProofFragment::BvVacuousExistsUniversalCounterexample,
+            ProofFragment::ClosedUniversalCounterexample,
+            ProofFragment::Datatype,
+            ProofFragment::Diophantine,
+            ProofFragment::DisjunctiveLra,
+            ProofFragment::Exists,
+            ProofFragment::FiniteArrayExtensionality,
+            ProofFragment::FiniteDomainPigeonhole,
+            ProofFragment::Forall,
+            ProofFragment::IntAffineGrowth,
+            ProofFragment::IntEuclideanResidue,
+            ProofFragment::IntInequality,
+            ProofFragment::IntNestedXor,
+            ProofFragment::Lra,
+            ProofFragment::NegatedExistentialWitness,
+            ProofFragment::QfAbv,
+            ProofFragment::QfBv,
+            ProofFragment::QfUf,
+            ProofFragment::QfUfBv,
+            ProofFragment::QuantifiedCounterexampleCover,
+            ProofFragment::ReflexiveDisequality,
+            ProofFragment::SinglePivotEqualityPartition,
+            ProofFragment::Sos,
+            ProofFragment::TermIdentity,
+            ProofFragment::WordEquation,
+        ];
+        const ATTESTATION: &[ProofFragment] = &[
+            ProofFragment::AlignedWriteChainCommutation,
+            ProofFragment::ArithDpll,
+            ProofFragment::BinarySearch16,
+            ProofFragment::BoolArrayReadCollapse,
+            ProofFragment::BoolEufExhaustive,
+            ProofFragment::BoolEufOnline,
+            ProofFragment::BoolSimplification,
+            ProofFragment::BoolUfExhaustive,
+            ProofFragment::BoundedIntBlast,
+            ProofFragment::BvAbstraction,
+            ProofFragment::BvDefinedEnum,
+            ProofFragment::BvForallNonconstant,
+            ProofFragment::BvUfLocal,
+            ProofFragment::ConstArrayDefaultMismatch,
+            ProofFragment::CrossStoreArrayDisequality,
+            ProofFragment::DatatypeStructural,
+            ProofFragment::FifoBc04,
+            ProofFragment::FiniteDomainEnum,
+            ProofFragment::LraDpll,
+            ProofFragment::NraEvenPower,
+            ProofFragment::SetCardinality,
+            ProofFragment::StoreChainReadback,
+            ProofFragment::TermLevelEnum,
+            ProofFragment::TwoByteMemcpy,
+            ProofFragment::TwoByteXorSwapRoundtrip,
+            ProofFragment::TwoCellXorSwap,
+            ProofFragment::TwoElementBubbleSort,
+            ProofFragment::TwoElementSelectionSort,
+            ProofFragment::UfArithCongruence,
+        ];
+
+        for fragment in THEORY {
+            assert_eq!(
+                fragment.lean_module_content(),
+                Some(LeanModuleContent::TheoryReconstruction),
+                "{fragment:?} is pinned as a theory reconstruction; if it now emits a \
+                 shim, Lean is being handed an axiom pair for it and the change must be \
+                 made here deliberately"
+            );
+        }
+        for fragment in ATTESTATION {
+            assert_eq!(
+                fragment.lean_module_content(),
+                Some(LeanModuleContent::StructuralAttestation),
+                "{fragment:?} is pinned as a structural attestation; if it now emits a \
+                 theory reconstruction that is GOOD NEWS -- move it to the THEORY list"
+            );
+        }
+        assert_eq!(ProofFragment::Unsupported.lean_module_content(), None);
+        assert_eq!(
+            THEORY.len() + ATTESTATION.len() + 1,
+            61,
+            "a fragment was added or removed without classifying it here; every \
+             variant must sit on one of the two lists or be Unsupported"
+        );
+    }
+
     /// The shim emitter's output is self-labelling: a caller holding only the
     /// rendered source can classify it without consulting the fragment.
     #[test]
