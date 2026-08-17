@@ -35,12 +35,27 @@ machinery and nothing an independent kernel has seen.
 > alone and the count is normalised — including the abbreviated prefix, since
 > `QF_UFLIA/UFLRA` names `QF_UFLRA` and not a logic called `UFLRA`.
 >
-> **11 of 23 logics** have at least one externally-checked capability. The 12
-> without are the actual queue: `QF_AUFBV`, `QF_FP`, `QF_IDL`, `QF_NIA`,
-> `QF_RDL`, `QF_S`, `SAT`, `diagnostics`, `incremental`, `optimization`,
+> **11 of 23 logics** have at least one externally-checked capability (12 as of
+> the supersede note below — `QF_RDL` closed the same day). The 12 without were
+> the actual queue: `QF_AUFBV`, `QF_FP`, `QF_IDL`, `QF_NIA`, ~~`QF_RDL`~~,
+> `QF_S`, `SAT`, `diagnostics`, `incremental`, `optimization`,
 > `symbolic execution`, `synthesis`.
 >
 > The floor is now gated: the externally-checked count may not fall silently.
+>
+> **Superseded later the same day: 12 of 23, and the queue is 11.** `QF_RDL` was
+> closed by item B below — it turned out to reconstruct to a Lean theory module
+> already, and only wanted a module in the gate's family slice. The transcript
+> above is left exactly as it was emitted (`entries=101|external=36`); it is a
+> measurement, not a status line, and hand-editing quoted output is how a
+> "derived" number quietly becomes a transcribed one. Current figures come from
+> re-running the command, which now also prints the logic-level line the strand
+> actually quotes:
+>
+> ```
+> logics: 12 of 23 have an external artifact checker; 11 do not (rank them with --rank)
+> CAPABILITY_ASSURANCE|entries=102|areas=23|external=37|...|logics_external=12|logics_total=23
+> ```
 
 That is not a criticism of the verdicts. `Assurance::Checked` (49 entries) and
 `Assurance::Validated` (40) are real: replayed models, DRAT certificates
