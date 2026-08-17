@@ -248,6 +248,22 @@ agent's staged files into an unrelated commit and had to be recovered):
 - **One writer per area**: two agents editing the same crate's sources
   concurrently is a merge hazard even with pathspec discipline — partition
   by crate/module before spawning.
+- **Check the index before you commit**: `scripts/check-shared-index.sh`.
+  The per-process-index remedy (`GIT_INDEX_FILE` + `git read-tree HEAD`) leaves
+  the SHARED index holding pre-commit blobs for the paths you just landed, which
+  relative to the new `HEAD` is a staged *revert* — and a staged *deletion* for a
+  file you newly added. The next bare `git commit` applies it, inside a commit
+  that looks like someone else's.
+
+  Nothing you would normally look at shows this: every affected file is
+  byte-identical to `HEAD` **on disk**, so `ls`, `git show` and reading the file
+  are all correct, and `git status` says `MM`, which reads as "someone is
+  mid-edit". Measured 2026-08-17: six paths in that state — including 208 lines
+  of a proof landed hours earlier — and zero genuinely staged edits.
+
+  `--fix` re-adds exactly those paths, which is safe because they are already
+  byte-identical to `HEAD`; it does not `read-tree`, so another lane's genuine
+  staging is reported and left alone.
 - If your staged set gets swept by another lane's commit: do NOT rewrite
   history; re-stage and re-commit your pathspec set on the new HEAD, then
   verify with `git show --stat`.
