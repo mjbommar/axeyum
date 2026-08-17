@@ -128,6 +128,7 @@ macro_rules! full_modules {
         mod maxsat;
         mod mbp;
         mod mbqi_model_finder;
+        mod nat_induction;
         mod nia_linearize;
         mod nia_square;
         mod nra;
@@ -424,6 +425,7 @@ pub mod certificates {
             prove_lia_unsat_by_gcd,
         };
         pub use crate::lra::{FarkasAtom, FarkasCertificate, lra_farkas_certificate};
+        pub use crate::nat_induction::prove_by_nat_induction;
         pub use crate::nra_even_power::{
             NraEvenPowerRefutationCertificate, nra_even_power_refutation,
         };
@@ -1070,6 +1072,8 @@ macro_rules! full_exports {
             max_satisfiable_weighted_model,
         };
         pub use mbp::{mbp_lia, mbp_lra};
+        #[doc(hidden)]
+        pub use nat_induction::prove_by_nat_induction;
         #[doc(hidden)]
         pub use nra::check_with_nra;
         #[doc(hidden)]
