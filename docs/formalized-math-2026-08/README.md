@@ -90,9 +90,9 @@ Import stays, in a supporting role we are uniquely placed to fill:
 - We have an **independent Lean kernel** (`axeyum-lean-kernel`, 37,987 lines)
   that is not Lean, written in a different language, by different people.
 - We have a **fail-closed importer** for the official `lean4export` NDJSON
-  format, with 17 genuine v4.30 fixtures and 10 test suites — and, since
-  2026-08-15, five SHA-256-pinned streams produced by a real exporter that back
-  facts in the ledger.
+  format, with 11 test suites — and, since 2026-08-15, six SHA-256-pinned
+  streams produced by a real exporter that back five facts in the ledger. All
+  six import clean today with `axioms=none`.
 - On 2026-08-14 the **reverse** direction closed too: Lean's own kernel accepted
   an axeyum development from an empty environment, with a tamper control.
 
@@ -105,31 +105,69 @@ whose interchange infrastructure we should consume rather than rebuild.
 
 ## Where we actually stand
 
-Measured, not assumed:
+Re-measured 2026-08-16. The previous version of this section was stale on nearly
+every line, and it was misdirecting the strand: it named as "next" work that had
+already been done in this strand's own diaries.
+
+**Verified on this host, by running it:**
 
 ```
-axeyum-lean-import   17 lean4export v4.30 fixtures, 10 test suites, fail-closed
-K1 (import)          5/5 — on FIVE PINNED SINGLE-ROOT FIXTURES, not authority
-REAL Init/Std import 13 of 40 well-known theorems admitted (2026-08-15)
-                     27 declined, ALL by our kernel's defeq, none by the reader
-artifacts/lean-imports  5 pinned streams, 4,919 records, 263 KB, sha256-pinned
+axeyum-lean-import      11 test suites, 5 examples, fail-closed reader
+artifacts/lean-imports  6 pinned streams, 6,057 records, 340 KB, sha256-pinned
+                        ALL SIX import clean today, `axioms=none`
 artifacts/facts         5 facts on proof_route `imported-kernel-lean`
-L3                   0/12 — the phase that supplies Z, Dvd, and finite sums
-dependency-closed Init/Std/mathlib population   UNSTARTED
-references/          lean4 cloned (686 MB); NO mathlib clone
+Nat prelude             128 theorems, 23 of them divisibility
+references/             EMPTY — nothing cloned on this host
 ```
 
-So the ingest path now works on real Lean output, at a measured 13/40 admission
-rate, and has still never been pointed at a population. The binding constraint
-turned out not to be scale: it is definitional equality on `Nat.add`, which is
-compiled through `brecOn`/`below`/`match_n` — so **`Nat.add_comm`, the most
-cited theorem in our own fact ledger, cannot be imported**. That is the gap this
-strand exists to close, and the requirements
-document already names the next step: *"use the existing `axeyum-lean-import`
-reader to ingest a dependency-closed slice."* Five such slices now exist; the
-next step after them is a **decline census** rather than a bigger slice, because
-a fail-closed importer at a 13/40 rate measures only the first blocker in a
-stream.
+**Cited from [`diary-import-scale.md`](diary-import-scale.md) and
+[`diary-import-strings.md`](diary-import-strings.md), NOT re-derived here** —
+reproducing them needs a built `lean4export`, which this host does not have:
+
+```
+census, seed 20260815, after string literals landed
+  Init+Std  500 sampled   CLEAN 254 (50.8%)   DECLINED 242   distinct roots 50
+  Mathlib   400 sampled   CLEAN 139 (34.8%)   DECLINED 241   distinct roots 267
+  declaration records reaching the kernel   634,291 / 1,181,015  (18.6x / 86x)
+  UNSUPPORTED `literal-string-typing`       262 / 315  ->  0 / 0
+```
+
+### What the old text got wrong
+
+- *"13 of 40 well-known theorems admitted"* — superseded by a 900-declaration
+  seeded census across `Init`+`Std` **and** Mathlib.
+- *"`Nat.add_comm` cannot be imported"* — it imports. `nat-add-comm.ndjson`
+  admits 52 declarations with `axioms=none`, verified above. The `brecOn`
+  blocker was closed by lane `import-brecon`.
+- *"dependency-closed Init/Std/mathlib population UNSTARTED"* — both were
+  censused, twice, with the corpus retained so the second run is identical
+  rather than merely equivalent.
+- *"NO mathlib clone"* — a 400-declaration Mathlib sample was censused. (Nothing
+  is cloned *now*, because `references/` is gitignored; that is a host fact, not
+  a project one.)
+- *"`L3` 0/12 — the phase that supplies ℤ, `Dvd`, and finite sums"* — L3 as an
+  **import** milestone may still be open, but its stated *motivation* is
+  overtaken: ℤ was proved out natively on 2026-08-16 (integer prelude, 0 axioms),
+  ℚ exists over it, and the Nat prelude carries 23 divisibility theorems. We no
+  longer need to import ℤ in order to have it.
+
+### The frontier, as measured rather than as planned
+
+The binding constraint is no longer scale, the reader, or string literals. It is
+a **small, enumerable set of definitional-equality failures in Lean's own
+`Init`/`Std` core** — and the strongest result this strand has produced is that
+**not one root blocker is Mathlib-specific**. Category theory, measure theory,
+affine geometry and functional analysis all check; what refuses is `Nat.bitwise`,
+`Nat.Linear`, `Fin`.
+
+Two consequences for what to do next, neither of which is "download more":
+
+1. **Diagnose the roots, which nobody has done.** The scale lane said so
+   plainly — *"I located them and did not diagnose them; that is the honest
+   state."* 50 roots in `Init`+`Std`, 267 in Mathlib, against 98%+ cascades.
+2. **`ImportLimits` record cap is now a verdict-shaped harness bound.** Fourteen
+   Mathlib streams stop at `record count exceeds 2000000`. That is not a kernel
+   refusal and must never be counted as one.
 
 ## The four phases
 

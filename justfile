@@ -217,6 +217,11 @@ rules-as-code:
 # and paired p4dfa controls. This is intentionally much cheaper than rerunning
 # the measurements it checks.
 parity-docs:
+    # The formalized-math strand's status block, re-derived from the tree. It
+    # went stale silently and routed the strand at a census that had already
+    # been run twice; see scripts/check-import-status.py.
+    python3 -m unittest scripts.tests.test_check_import_status
+    python3 scripts/check-import-status.py
     python3 -m unittest scripts.tests.test_parity_evidence
     python3 -m unittest scripts.tests.test_parity_resume
     python3 -m unittest scripts.tests.test_prototype_lean4export_reader

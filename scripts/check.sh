@@ -196,6 +196,9 @@ step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
 step gen-plan       python3 scripts/gen-plan.py --check
 step adr-index-tests python3 -m unittest scripts.tests.test_gen_adr_index
 step adr-index      python3 scripts/gen-adr-index.py --check
+# The formalized-math strand's status block, re-derived from the tree.
+step import-status-tests python3 -m unittest scripts.tests.test_check_import_status
+step import-status  python3 scripts/check-import-status.py
 # The `axeyum-solver` decomposition ratchet (docs/refactor-2026-08/03). The
 # crate is 46% of the workspace and the plan is to cut crates out of it; a cut
 # point with a dependency cycle across it is not a cut point. Fails when a
