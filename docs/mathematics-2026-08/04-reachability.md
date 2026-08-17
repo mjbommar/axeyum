@@ -66,9 +66,40 @@ measures that corpus rather than "real mathematical error".
 ## What to do
 
 **R1 — Re-derive `covered` from evidence.** A node keeps the label only if it
-names a family that runs. Four nodes name none today; three of those are the
-number systems. This is cheap and it converts the map from assertion to
-measurement.
+names a family that runs. This is cheap and it converts the map from assertion
+to measurement.
+
+**Done 2026-08-16, and it strips nothing.** `scripts/check-curriculum-coverage.py`
+now derives the flag from the source tree on every `just foundational-resources`
+run, on two conditions: the node's example packs are pulled into an executing
+`math_resource_*_routes.rs` suite, and at least one of those instances
+participates in a refutation assertion. Measured: **19 covered / 19 running /
+19 with a negative control.** No node loses the label.
+
+Two corrections to the paragraph above, both from measuring rather than reading:
+
+- *"Four nodes name none today; three of those are the number systems"* is not
+  what the map says. The four naming no family are exactly the four
+  `lean-horizon` nodes — `cardinality`, `complex`, `sequences_and_limits`,
+  `calculus` — which are the ones explicitly not claiming coverage. All 19
+  `covered` nodes name a family, and every one of those families runs.
+- The `int_prelude` premise below is stale: ℤ was proved out on 2026-08-16
+  (`Int.euclidean_decomposition` became a theorem; the integer prelude is
+  **0 axioms**, not 3), and ℚ now exists as a normalised structure over it. R4's
+  "every node above ℕ is unevidenceable in principle" no longer holds for ℤ.
+
+Condition 2 currently has no discriminating power, and the honest reason is a
+fact about the tree, not a weakness in the check: all five resource suites carry
+**zero** sat-assertion markers against 34 refutation markers — they are
+refutation suites by construction. The controls in
+`scripts/tests/test_check_curriculum_coverage.py` keep that from decaying into a
+condition that cannot fail: a synthetic sat-only route is correctly reported as
+uncontrolled, and deleting either condition kills exactly one test.
+
+What the measurement *did* surface: two packs on disk —
+`finite-integration-v0` and `real-analysis-rational-v0` — are validated
+structurally and executed by no suite at all. They belong to no `covered` node,
+so the gate stays green, but they are the honest edge of the map.
 
 **R2 — Make `bounded` say what it is bounded *by*.** Sixteen nodes share one
 word covering very different situations: bounded by bit width, by enumeration

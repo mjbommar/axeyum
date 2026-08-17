@@ -8,6 +8,10 @@ python3 scripts/gen-foundational-concepts.py
 python3 scripts/validate-foundational-concepts.py
 python3 scripts/validate-foundational-example-pack.py
 python3 scripts/check-foundational-negative-fixtures.py
+# R1 (docs/mathematics-2026-08/04-reachability.md): `covered` is re-derived
+# from evidence rather than trusted as a stored label.
+python3 -m unittest scripts.tests.test_check_curriculum_coverage
+python3 scripts/check-curriculum-coverage.py --quiet
 python3 scripts/consume-foundational-resources.py
 python3 scripts/consume-foundational-resources.py --format json >/dev/null
 python3 scripts/query-foundational-resources.py summary >/dev/null
