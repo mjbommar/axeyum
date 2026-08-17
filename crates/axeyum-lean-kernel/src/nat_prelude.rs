@@ -237,6 +237,12 @@ pub struct NatPrelude {
     pub mul_succ: NameId,
     /// `pow_zero : ∀ (n : Nat), Eq Nat (pow n zero) (succ zero)`.
     pub pow_zero: NameId,
+    /// `pow_add : ∀ (a m n : Nat), Eq Nat (pow a (add m n)) (mul (pow a m) (pow a n))`.
+    ///
+    /// The exponent law. Closes fact `F:nat-pow-add`, whose `depends_on`
+    /// (`F:nat-mul-assoc`, `F:nat-mul-comm`) were already settled — the ledger
+    /// picked this goal, which is the self-extension loop working as designed.
+    pub pow_add: NameId,
     /// `pow_succ : ∀ (n m : Nat), Eq Nat (pow n (succ m)) (mul (pow n m) n)`.
     pub pow_succ: NameId,
     /// `pred_zero : pred zero = zero`.
@@ -592,6 +598,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             mul_zero: kernel.name_str(nat, "mul_zero"),
             mul_succ: kernel.name_str(nat, "mul_succ"),
             pow_zero: kernel.name_str(nat, "pow_zero"),
+            pow_add: kernel.name_str(nat, "pow_add"),
             pow_succ: kernel.name_str(nat, "pow_succ"),
             pred_zero: kernel.name_str(nat, "pred_zero"),
             pred_succ: kernel.name_str(nat, "pred_succ"),

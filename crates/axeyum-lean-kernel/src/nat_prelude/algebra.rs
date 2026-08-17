@@ -532,6 +532,76 @@ pub(super) fn declare_multiplicative_theorems(
         );
         (stmt, proof)
     })?;
+
+    // pow_add : ∀ a m n, a^(m+n) = a^m * a^n   (induction on n)
+    //
+    // Closes fact `F:nat-pow-add`. The ledger chose it: its `depends_on`
+    // (`F:nat-mul-assoc`, `F:nat-mul-comm`) were already settled, which is the
+    // self-extension loop picking its own next goal rather than a person doing it.
+    //
+    // Both cases lean on the definitional equations rather than on rewriting,
+    // because `add` and `pow` recurse on their SECOND argument:
+    //   base  `add m zero ≡ m` and `pow a zero ≡ 1`, so the goal is
+    //         `a^m = a^m * 1` — exactly `mul_one` reversed;
+    //   step  `add m (succ j) ≡ succ (add m j)` and
+    //         `pow a (succ x) ≡ (a^x) * a`, so the goal already reads
+    //         `a^(m+j) * a = a^m * a^(succ j)` with no rewriting needed to get
+    //         there, and the chain is IH, associativity, then `pow_succ` back.
+    d.theorem(p.pow_add, 3, &|d, v| {
+        let (a, m, n) = (v[0], v[1], v[2]);
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let sum = d.add(m, x);
+            let lhs = d.pow(a, sum);
+            let pow_m = d.pow(a, m);
+            let pow_x = d.pow(a, x);
+            let rhs = d.mul(pow_m, pow_x);
+            d.eq(lhs, rhs)
+        };
+        let stmt = motive(d, n);
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                // `a^(m+0)` and `a^0` both compute, leaving `a^m = a^m * 1`.
+                let pow_m = d.pow(a, m);
+                let one = {
+                    let zero = d.zero();
+                    d.succ(zero)
+                };
+                let product = d.mul(pow_m, one);
+                // `mul_one` reads `a^m * 1 = a^m`, so the symm runs from the
+                // PRODUCT; passing these the other way round is a TypeMismatch.
+                let h = d.lemma(p.mul_one, &[pow_m]);
+                d.symm(product, pow_m, h)
+            },
+            &|d, j, ih| {
+                let pow_m = d.pow(a, m);
+                let pow_j = d.pow(a, j);
+                let sum_mj = d.add(m, j);
+                let pow_sum = d.pow(a, sum_mj);
+                // `a^(m + succ j)` computes to `a^(m+j) * a`.
+                let start = d.mul(pow_sum, a);
+                let ih_applied = d.mul(pow_m, pow_j);
+                let after_ih = d.mul(ih_applied, a);
+                let h_ih = d.congr(pow_sum, ih_applied, ih, &|d, t| d.mul(t, a));
+                let inner = d.mul(pow_j, a);
+                let associated = d.mul(pow_m, inner);
+                let h_assoc = d.lemma(p.mul_assoc, &[pow_m, pow_j, a]);
+                let succ_j = d.succ(j);
+                let pow_succ_j = d.pow(a, succ_j);
+                let end = d.mul(pow_m, pow_succ_j);
+                let h_pow = d.lemma(p.pow_succ, &[a, j]);
+                let h_pow_rev = d.symm(pow_succ_j, inner, h_pow);
+                let h_end = d.congr(inner, pow_succ_j, h_pow_rev, &|d, t| d.mul(pow_m, t));
+                let (_, proof) = d.chain(
+                    start,
+                    &[(after_ih, h_ih), (associated, h_assoc), (end, h_end)],
+                );
+                proof
+            },
+            n,
+        );
+        (stmt, proof)
+    })?;
     Ok(())
 }
 

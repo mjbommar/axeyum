@@ -1,7 +1,5 @@
 {
-  "schema_version": 1,
   "id": "F:nat-pow-add",
-  "title": "The first index law: powers add over a product",
   "statement": "For all natural numbers a, m and n, a^(m+n) = a^m * a^n.",
   "formal": {
     "language": "lean4",
@@ -13,12 +11,34 @@
       "n"
     ]
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "depends_on": [
     "F:nat-mul-assoc",
     "F:nat-mul-comm"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.pow_add",
+      "kind": "kernel-term",
+      "supports": "For all natural numbers a, m and n, a^(m+n) = a^m * a^n.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- pow_add 2>/dev/null | grep -qE '^Nat\\.pow_add[[:space:]]'",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing the row at all is a machine-checked proof. Proved by induction on the exponent `n`: the base case is `mul_one` reversed (both `a^(m+0)` and `a^0` compute definitionally), and the step chains the induction hypothesis, `mul_assoc`, and `pow_succ` backwards. The command names its own subject twice over -- `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed; verified 2026-08-16 that a fabricated name exits 1."
+    },
+    {
+      "id": "footprint-Nat.pow_add",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`theorem_axiom_footprint` reports `nat Nat.pow_add 0` directly, and `nat_axiom_inventory` bounds it: the enumeration reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, and a theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual footprint by []. Counting `Declaration::Axiom` alone would NOT suffice -- `Opaque` has no proof body and `Quotient` admits `Quot.sound` -- so the enumeration covers all three."
+    }
+  ],
+  "schema_version": 1,
+  "title": "The first index law: powers add over a product",
   "concept_refs": [
     {
       "graph": "math-education",
@@ -51,6 +71,5 @@
       }
     ]
   },
-  "notes": "Chosen deliberately as a NEAR target for the self-extension loop: `AxNat.pow`, `Nat.pow_zero` and `Nat.pow_succ` are already declared and both dependencies are proved, so this should fall to induction on n with no new definitions. Measured 2026-08-14: the prelude declares 119 theorems and no index law is among them. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names.",
-  "external_status": "proved"
+  "notes": "Chosen deliberately as a NEAR target for the self-extension loop: `AxNat.pow`, `Nat.pow_zero` and `Nat.pow_succ` are already declared and both dependencies are proved, so this should fall to induction on n with no new definitions. Measured 2026-08-14: the prelude declares 119 theorems and no index law is among them. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
 }
