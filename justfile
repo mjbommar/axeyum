@@ -60,6 +60,12 @@ facts:
     # an oracle is not an external check and is tiered separately.
     python3 -m unittest scripts.tests.test_check_capability_assurance
     python3 scripts/check-capability-assurance.py --quiet
+    # The layer under every other checker: a control that NO gate runs cannot
+    # fail, so it is not a control. Runners name modules one by one, so wiring a
+    # new one is a separate forgettable step -- measured 2026-08-17, 63 of 137
+    # control modules were executed by nothing, and 6 of them no longer import.
+    python3 -m unittest scripts.tests.test_check_control_tests_reachable
+    python3 scripts/check-control-tests-reachable.py
     # The CLAIM ledger's structural pass, which `scripts/check.sh` has always run
     # and `just check` did not -- so the fallback gate checked something the
     # preferred one skipped, which is exactly the divergence

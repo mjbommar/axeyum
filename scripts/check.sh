@@ -71,6 +71,11 @@ step capability-assurance-tests python3 -m unittest scripts.tests.test_check_cap
 # `evidence` fields, so it drifted unmeasured from 4 areas to 11. Derived and
 # floored now; a differential oracle is NOT counted as an external check.
 step capability-assurance python3 scripts/check-capability-assurance.py --quiet
+# A control that no gate RUNS cannot fail, so it is not a control. Measured
+# 2026-08-17: 63 of 137 control modules were executed by nothing, and running the
+# 51 that need no cargo found 6 that no longer even import. Ratchet, not a wall.
+step control-tests-reachable python3 scripts/check-control-tests-reachable.py
+step control-tests-reachable-controls python3 -m unittest scripts.tests.test_check_control_tests_reachable
 step smt-evidence-tests python3 -m unittest scripts.tests.test_check_smt_evidence_certified
 # Every settled SMT-route fact's own evidence command tests only the VERDICT
 # (`... | tail -1` = unsat), which passes on an UNCERTIFIED refutation --
