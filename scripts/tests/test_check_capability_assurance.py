@@ -69,5 +69,31 @@ class TheTableItselfIsParsed(unittest.TestCase):
         self.assertGreaterEqual(len(ext), 11)
 
 
+class CompoundAreaNamesCountAsTheLogicsTheyName(unittest.TestCase):
+    """The `area` field is prose and some entries span two logics. Counting raw
+    strings understates coverage; rewriting them to one name would delete the
+    fact that the capability spans both. So the string stays and the COUNT is
+    normalised."""
+
+    def test_a_compound_names_both_logics(self) -> None:
+        self.assertEqual(CA.logics("QF_ABV / QF_AUFBV"), {"QF_ABV", "QF_AUFBV"})
+
+    def test_an_abbreviated_second_element_inherits_the_prefix(self) -> None:
+        """`QF_UFLIA/UFLRA` means QF_UFLIA and QF_UFLRA. Splitting naively
+        invents a logic called `UFLRA` and inflates the denominator — measured
+        as 24 logics with a phantom alongside the real `QF_UFLRA`."""
+        self.assertEqual(CA.logics("QF_UFLIA/UFLRA"), {"QF_UFLIA", "QF_UFLRA"})
+        self.assertNotIn("UFLRA", CA.logics("QF_UFLIA/UFLRA"))
+
+    def test_a_parenthetical_gloss_is_dropped(self) -> None:
+        self.assertEqual(CA.logics("QF_S (strings)"), {"QF_S"})
+        self.assertEqual(CA.logics("SAT (propositional)"), {"SAT"})
+
+    def test_a_plain_prose_area_is_left_alone(self) -> None:
+        """Prefix inheritance must not fire on non-logic areas."""
+        self.assertEqual(CA.logics("symbolic execution"), {"symbolic execution"})
+        self.assertEqual(CA.logics("datatypes"), {"datatypes"})
+
+
 if __name__ == "__main__":
     unittest.main()

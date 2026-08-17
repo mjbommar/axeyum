@@ -28,10 +28,17 @@ machinery and nothing an independent kernel has seen.
 > classifier is a HEURISTIC over prose: 15 entries are `unclassified` and are
 > reported as such rather than sorted into whichever tier flatters the count.
 >
-> `areas` reads 23, not 26, because the table spells some areas two ways
-> (`QF_ABV` and `QF_ABV / QF_AUFBV`; `QF_UFLIA` and `QF_UFLIA/UFLRA`). That is a
-> data-quality defect in the table, not a shrinking of scope, and it is another
-> argument for generating it.
+> `areas` counts LOGICS, not `area` strings. Some entries legitimately span two
+> (`"QF_ABV / QF_AUFBV"`, `"QF_UFLIA/UFLRA"`), so counting the strings hides a
+> logic reachable only through a compound entry, while rewriting them to one
+> name would delete the fact that the capability covers both. The string is left
+> alone and the count is normalised — including the abbreviated prefix, since
+> `QF_UFLIA/UFLRA` names `QF_UFLRA` and not a logic called `UFLRA`.
+>
+> **11 of 23 logics** have at least one externally-checked capability. The 12
+> without are the actual queue: `QF_AUFBV`, `QF_FP`, `QF_IDL`, `QF_NIA`,
+> `QF_RDL`, `QF_S`, `SAT`, `diagnostics`, `incremental`, `optimization`,
+> `symbolic execution`, `synthesis`.
 >
 > The floor is now gated: the externally-checked count may not fall silently.
 

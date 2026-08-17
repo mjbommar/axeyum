@@ -167,6 +167,8 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `c2365718` `4cd5d6f0` `c5f4c04b` `078b2776` | The Lean gate stops overstating: 41 of 74 crosscheck families hand Lean an `axiom P` shim, so the headline is split, the reasoning half floored, and every fragment's class pinned by name. `qf_bv` was a WIDTH, not a defect — enumeration beats bit-blasting below ~16 bits — so `qf_bv_wide` now exercises the real reconstruction (33 theory / 41 attestation). |
 | 2026-08-17 | `3cc574c7` `502c0503` | Both counted proof-production errors closed (`int_blast`'s deliberate `int.pow2` decline was mapped to a backend error, losing a verdict `check_auto` decides in 0.13ms), and settled SMT-route facts gated on certification rather than verdict — 17 of 17, enforced. |
 | 2026-08-17 | `ea9500bc` `e97db72b` `2c535667` `f40f7dc4` | Gate repairs: `check-parity-docs.py` crashed before running a single check (hiding 14 failures); CI's crosscheck grep still pinned 73 families; and `PLAN.md`'s sources were 24 KB over a 52 KB budget, journal moved to result notes. |
+| 2026-08-17 | `07de6526` | Mathematics strand's primary metric derived and gated: 36 of 101 capabilities name an external artifact checker, across 11 of 23 logics, against a documented 4 of 26. Control: disabling the external tier drops it to 0 and the floor fires. |
+| 2026-08-17 | `pending` | Denominator counts LOGICS not `area` strings: a compound like `QF_UFLIA/UFLRA` spans two, and its abbreviated second element named a phantom `UFLRA`. The 12 logics with no external check are now an explicit queue. |
 | 2026-08-17 | `f18904db7` | R3: reachability census re-derived and committed as `artifacts/reachability/r3-census.tsv` (190 rows over both corpora); the ranked tables in `04-reachability.md` are now a generated view of it, gated by `scripts/check-reachability-census.py` inside `check-foundational-resources.sh`. 13 guards, each with its own rejection path; mutation-verified that deleting any one kills exactly one test. Corpus coverage checked in both directions and reported SKIPPED, never passed, when the sibling checkout is absent. Stale numbers corrected in `04` and `05`. |
 | 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
 Older landed changes (including the 2026-08-06 A1/A2 closure commits) remain
@@ -349,6 +351,24 @@ module, and 41 of 74 Lean-checked families prove nothing about their proposition
 — so the two must never be summed. And `just check` is red independently of this
 lane: `check-plan-authority.py` budgets the `PLAN.md` sources at 52 KB and they
 were already 57 KB before this lane existed.
+
+**The mathematics strand's primary metric drifted 4 → 11 areas unnoticed**
+(`WIP`, capability-assurance, 2026-08-17). Detail:
+[`01-decide-vs-certify.md`](docs/mathematics-2026-08/01-decide-vs-certify.md).
+
+```
+CAPABILITY_ASSURANCE|entries=101|areas=23|external=36|self=48|differential=2|unclassified=15
+```
+
+It asks "can a third party check without trusting us?" and calls that the
+strand's primary metric — but the answer lived in 101 prose `evidence` fields,
+so nobody could count it. Seven areas beyond the documented four had gained
+external checking, mostly via Carcara. Agreement with an oracle is tiered
+separately so it cannot inflate the number; 15 entries stay `unclassified`
+rather than being sorted into a flattering bucket. Now floored.
+
+**Next.** Items A (generate the table) and C (explicit "decided, not certified"
+status) are the real fix — this checker is a heuristic over prose and says so.
 
 **R3 done; the census is an artifact now, and `17` was not one** (`WIP`,
 math-r3, 2026-08-17). The 2026-08-13 misconception audit's `census.tsv` was

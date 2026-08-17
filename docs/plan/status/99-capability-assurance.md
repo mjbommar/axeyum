@@ -22,4 +22,5 @@ status) are the real fix — this checker is a heuristic over prose and says so.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-17 | `pending` | Mathematics strand's primary metric derived and gated: 36 of 101 capabilities name an external artifact checker, across 11 of 23 areas, against a documented 4 of 26. Control: disabling the external tier drops it to 0 and the floor fires. |
+| 2026-08-17 | `07de6526` | Mathematics strand's primary metric derived and gated: 36 of 101 capabilities name an external artifact checker, across 11 of 23 logics, against a documented 4 of 26. Control: disabling the external tier drops it to 0 and the floor fires. |
+| 2026-08-17 | `pending` | Denominator counts LOGICS not `area` strings: a compound like `QF_UFLIA/UFLRA` spans two, and its abbreviated second element named a phantom `UFLRA`. The 12 logics with no external check are now an explicit queue. |

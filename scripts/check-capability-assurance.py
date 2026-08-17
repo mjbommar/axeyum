@@ -83,6 +83,41 @@ def entries(text: str) -> list[dict[str, str]]:
     return out
 
 
+def logics(area: str) -> set[str]:
+    """The logic(s) an `area` string names.
+
+    The field is prose, and some entries legitimately span more than one logic:
+    `"QF_ABV / QF_AUFBV"` and `"QF_UFLIA/UFLRA"` are capabilities covering both,
+    not misspellings of a single area. Counting the raw strings therefore
+    UNDERSTATES coverage — a logic reachable only through a compound entry looks
+    absent — and rewriting them to a single name would delete the fact that the
+    capability spans two.
+
+    So the string is left alone and the COUNT is normalised instead: split on
+    `/` and `,`, drop a trailing parenthetical gloss (`"QF_S (strings)"`,
+    `"SAT (propositional)"`). Measured 2026-08-17, this moves the denominator
+    from 23 area strings to the logics they actually name.
+
+    A compound may ABBREVIATE the shared prefix: `"QF_UFLIA/UFLRA"` means
+    `QF_UFLIA` and `QF_UFLRA`, not a logic called `UFLRA`. Splitting naively
+    invents one, which inflates the denominator with a logic that does not
+    exist — measured: 24 logics instead of 23, with a phantom `UFLRA` alongside
+    the real `QF_UFLRA`. So a bare part inherits the first part's `QF_` prefix.
+    """
+    parts = [re.sub(r"\s*\(.*?\)\s*", " ", p).strip()
+             for p in re.split(r"[/,]", area)]
+    parts = [p for p in parts if p]
+    if not parts:
+        return set()
+    prefix = "QF_" if parts[0].startswith("QF_") else ""
+    out: set[str] = set()
+    for i, name in enumerate(parts):
+        if i and prefix and not name.startswith("QF_") and name.isupper():
+            name = prefix + name
+        out.add(name)
+    return out
+
+
 def tier(rec: dict[str, str]) -> str:
     ev = rec.get("evidence", "")
     if EXTERNAL.search(ev):
@@ -99,7 +134,7 @@ def main(argv: list[str]) -> int:
     recs = entries(text)
     tiers = Counter(tier(r) for r in recs)
     assurance = Counter(r.get("assurance", "?") for r in recs)
-    areas = {r["area"] for r in recs}
+    areas = {lg for r in recs for lg in logics(r["area"])}
     external = tiers["external-artifact-checker"]
 
     if "--quiet" not in argv:
@@ -110,7 +145,8 @@ def main(argv: list[str]) -> int:
             print(f"    {tiers[k]:4d}  {k}")
         if tiers["unclassified"]:
             print("  unclassified areas: " + ", ".join(sorted(
-                {r["area"] for r in recs if tier(r) == "unclassified"})))
+                {lg for r in recs if tier(r) == "unclassified"
+                 for lg in logics(r["area"])})))
 
     print(f"CAPABILITY_ASSURANCE|entries={len(recs)}|areas={len(areas)}|"
           f"external={external}|self={tiers['self-checker']}|"
