@@ -130,7 +130,10 @@ class EachConditionCanFail(unittest.TestCase):
             [node("curriculum_alpha", "covered", ["alpha-v0"])], evidence
         )
         self.assertEqual(failures, [])
-        self.assertEqual(counts, {"covered": 1, "running": 1, "with_negative_control": 1})
+        self.assertEqual(
+            {key: counts[key] for key in ("covered", "running", "with_negative_control")},
+            {"covered": 1, "running": 1, "with_negative_control": 1},
+        )
 
     def test_a_non_covered_node_is_not_policed(self) -> None:
         """`lean-horizon` nodes name no family on purpose; the gate must not
@@ -141,6 +144,55 @@ class EachConditionCanFail(unittest.TestCase):
         )
         self.assertEqual(failures, [])
         self.assertEqual(counts["covered"], 0)
+
+
+class BoundedSaysWhatItIsBoundedBy(unittest.TestCase):
+    """R2. `bounded` collapsed four different ceilings into one word."""
+
+    @staticmethod
+    def bounded_node(node_id: str, fragments: list[str]) -> dict:
+        return {
+            "id": node_id,
+            "kind": "curriculum-node",
+            "curriculum_status": "lean-horizon",
+            "decidability": "bounded",
+            "axeyum_fragments": fragments,
+            "example_packs": [],
+        }
+
+    def test_a_node_can_be_bounded_two_ways_at_once(self) -> None:
+        """`BV / enumeration (finite groups)` is bounded by a bit width AND by
+        an enumeration domain; picking one would be a fiction."""
+        kinds = CC.bound_kinds(
+            self.bounded_node("g", ["BV / enumeration (finite groups)"])
+        )
+        self.assertEqual(kinds, ["bit-width", "enumeration-domain"])
+
+    def test_each_kind_is_reachable_from_a_real_fragment(self) -> None:
+        for fragment, expected in [
+            ("LIA / BV", "bit-width"),
+            ("Counting / enumeration", "enumeration-domain"),
+            ("NRA", "real-algebraic-admission-cap"),
+            ("LRA / NRA", "arithmetic-resource-budget"),
+        ]:
+            self.assertIn(
+                expected, CC.bound_kinds(self.bounded_node("n", [fragment])), fragment
+            )
+
+    def test_an_unclassifiable_bounded_node_trips_the_ratchet(self) -> None:
+        nodes = [
+            self.bounded_node(f"curriculum_mystery_{i}", ["bounded somehow"])
+            for i in range(CC.UNCLASSIFIED_BOUND_BASELINE + 1)
+        ]
+        failures, counts, _ = CC.evaluate(nodes, {})
+        self.assertEqual(counts["unclassified_bound"], len(nodes))
+        self.assertTrue(any("collapsing again" in f for f in failures), failures)
+
+    def test_the_baseline_itself_does_not_trip(self) -> None:
+        nodes = [self.bounded_node("curriculum_mystery", ["bounded somehow"])]
+        failures, counts, _ = CC.evaluate(nodes, {})
+        self.assertEqual(counts["unclassified_bound"], CC.UNCLASSIFIED_BOUND_BASELINE)
+        self.assertEqual(failures, [])
 
 
 class TheRealTreeIsMeasuredNotAsserted(unittest.TestCase):

@@ -107,6 +107,29 @@ domain, by an admission cap like `MAX_CROSS_PRODUCTS`, or by a resource budget.
 Those have different fixes and different frontiers, and collapsing them hides
 exactly where the ceiling is.
 
+**Done 2026-08-16.** The information already existed — `axeyum_fragments` names
+the fragment each node runs in — but as free prose, one signature per node, so
+it never aggregated and could not be compared. `check-curriculum-coverage.py`
+now derives a closed vocabulary from it:
+
+| bound | nodes |
+|---|---:|
+| bit-width | 9 |
+| arithmetic-resource-budget | 7 |
+| enumeration-domain | 6 |
+| real-algebraic-admission-cap | 4 |
+| *unclassified* | 1 |
+
+Deliberately a **set**, not one label: `BV / enumeration (finite groups)` is
+bounded by a bit width *and* by an enumeration domain, and picking one would be
+a fiction. The counts therefore exceed 16.
+
+The single unclassified node is `proof_methods`, whose fragment is "Refutation
+(negate-and-decide)" — a strategy, not a ceiling. That is left honest rather
+than forced into a bucket, and pinned by a ratchet: the unclassified count may
+not grow. That is the mechanism, because one word covering four situations is
+exactly what happens when nothing objects to the second.
+
 **R3 — Run the reachability census beyond the school corpus.** The misconception
 audit is a good instrument used once on an easy corpus. Point it at something
 adversarial — the graph's `techniques`, or the `B` (out-of-fragment) rows, which

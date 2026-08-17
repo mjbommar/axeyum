@@ -150,6 +150,43 @@ def instance_evidence(paths: list[pathlib.Path] | None = None) -> dict[str, dict
     return evidence
 
 
+# R2 — what `bounded` is bounded BY.
+#
+# Sixteen curriculum nodes (101 ontology rows) share the single word `bounded`,
+# covering situations with different ceilings and different fixes: a bit width,
+# an enumeration domain, an admission cap like `MAX_CROSS_PRODUCTS`, or a
+# resource budget. Collapsing them hides where the ceiling actually is.
+#
+# The information already exists — `axeyum_fragments` names the fragment each
+# node runs in — but as free prose, one signature per node, so it does not
+# aggregate and cannot be compared. This derives a closed vocabulary from it.
+#
+# Deliberately a SET rather than one label: `BV / enumeration (finite groups)`
+# is bounded twice over, and picking one would be a fiction.
+BOUND_KINDS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("bit-width", re.compile(r"\bBV\b|bit", re.I)),
+    (
+        "enumeration-domain",
+        re.compile(r"enumerat|finite|counting|quantifiers", re.I),
+    ),
+    ("real-algebraic-admission-cap", re.compile(r"\bNRA\b", re.I)),
+    ("arithmetic-resource-budget", re.compile(r"\bLRA\b|\bLIA\b", re.I)),
+)
+
+# Bounded nodes whose fragment maps to no kind above. This is a RATCHET, not a
+# pass/fail: `proof_methods` is genuinely unclassified — "Refutation
+# (negate-and-decide)" names a strategy, not a ceiling — and pretending
+# otherwise would be the same collapse R2 is about. What must not happen is the
+# number growing, which is exactly how one word came to cover four situations.
+UNCLASSIFIED_BOUND_BASELINE = 1
+
+
+def bound_kinds(node: dict[str, Any]) -> list[str]:
+    """The kinds of bound on a node, derived from the fragments it runs in."""
+    fragments = " ".join(node.get("axeyum_fragments") or [])
+    return [name for name, pattern in BOUND_KINDS if pattern.search(fragments)]
+
+
 def curriculum_nodes() -> list[dict[str, Any]]:
     rows = json.loads(ONTOLOGY.read_text(encoding="utf-8"))["rows"]
     return [row for row in rows if row["kind"] == "curriculum-node"]
@@ -160,7 +197,13 @@ def evaluate(
 ) -> tuple[list[str], dict[str, int], list[tuple[str, int, int, int, int]]]:
     """`(failures, counts, rows)` for the `covered` nodes."""
     failures: list[str] = []
-    counts = {"covered": 0, "running": 0, "with_negative_control": 0}
+    counts = {
+        "covered": 0,
+        "running": 0,
+        "with_negative_control": 0,
+        "bounded": 0,
+        "unclassified_bound": 0,
+    }
     rows: list[tuple[str, int, int, int, int]] = []
     for node in sorted(nodes, key=lambda row: row["id"]):
         if node["curriculum_status"] != "covered":
@@ -194,6 +237,22 @@ def evaluate(
                 sum(len(evidence[p]["negative"]) for p in executing),
             )
         )
+    unclassified = [
+        node["id"]
+        for node in nodes
+        if node.get("decidability") == "bounded" and not bound_kinds(node)
+    ]
+    counts["bounded"] = sum(
+        1 for node in nodes if node.get("decidability") == "bounded"
+    )
+    counts["unclassified_bound"] = len(unclassified)
+    if len(unclassified) > UNCLASSIFIED_BOUND_BASELINE:
+        failures.append(
+            f"{len(unclassified)} bounded node(s) name no recognised bound kind "
+            f"(baseline {UNCLASSIFIED_BOUND_BASELINE}): {', '.join(sorted(unclassified))}. "
+            "`bounded` is collapsing again — either the fragment names a ceiling "
+            "the vocabulary is missing, or the node does not know its own."
+        )
     return failures, counts, rows
 
 
@@ -216,10 +275,24 @@ def main(argv: list[str]) -> int:
                 f"  {node_id:34s} packs={packs:3d} executing={executing:3d} "
                 f"instances={instances:3d} negative={negatives:3d}"
             )
+    if not quiet:
+        import collections
+
+        tally: collections.Counter[str] = collections.Counter()
+        for node in curriculum_nodes():
+            if node.get("decidability") != "bounded":
+                continue
+            for kind in bound_kinds(node) or ["UNCLASSIFIED"]:
+                tally[kind] += 1
+        print("  bounded by:")
+        for kind, count in tally.most_common():
+            print(f"    {kind:32s} {count:3d}")
     print(
         f"CURRICULUM_COVERAGE|covered={counts['covered']}|"
         f"running={counts['running']}|"
         f"with_negative_control={counts['with_negative_control']}|"
+        f"bounded={counts['bounded']}|"
+        f"unclassified_bound={counts['unclassified_bound']}|"
         f"suites={len(suites())}"
     )
     for failure in failures:
