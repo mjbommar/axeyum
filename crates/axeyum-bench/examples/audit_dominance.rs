@@ -202,6 +202,31 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
 /// calling it. String SAT has a separate limitation: its faithful replay happened
 /// inside the text front door and cannot be repeated against the bounded/empty
 /// arena view available here.
+/// Re-derive the certificate, **in the arena that produced it**.
+///
+/// "Independently" is relative to the BASELINE run — this re-parses the file and
+/// re-runs `produce_evidence` — but the check below is handed
+/// `evidence_script.arena`, the same arena the evidence was just produced on. It
+/// is therefore an in-process re-derivation, not a re-check against a fresh
+/// parse.
+///
+/// For most certificate families that distinction does not matter, because they
+/// are self-contained: `bv2nat_bound_certificate` says outright that its check
+/// "reads only the carried Alethe commands, not the arena", and DRAT objects are
+/// the same. For a certificate that carries `TermId`s, it matters a great deal —
+/// those ids name slots in the producing arena and mean nothing in another.
+///
+/// Measured 2026-08-17, at this repository's expense: a quantifier certificate
+/// that stored instance ids passed this check and FAILED when
+/// `smtcomp_cli --evidence` re-validated it against a fresh parse, reporting
+/// `certified=1` alongside `arena=FAIL`. One instance passed by allocation-order
+/// coincidence; two did not. `crates/axeyum-solver/tests/certified_implies_revalidatable.rs`
+/// is the guard for the stronger property, and it currently exercises 3 of the
+/// 49 certified evidence kinds these audits actually observe.
+///
+/// So read `evidence_checked` as "the certificate re-derives", not as "the
+/// certificate is portable". They are different claims and only one of them is
+/// measured here.
 fn independently_check_evidence(
     evidence: &Evidence,
     arena: &TermArena,
