@@ -33,6 +33,17 @@ facts:
     # dependency is a failure rather than an indistinguishable silence.
     python3 -m unittest scripts.tests.test_check_fact_depends_derived
     python3 scripts/check-fact-depends-derived.py --quiet
+    # The CLAIM ledger's structural pass, which `scripts/check.sh` has always run
+    # and `just check` did not -- so the fallback gate checked something the
+    # preferred one skipped, which is exactly the divergence
+    # `check-aggregate-scope.sh` exists to catch (it was the only unrecorded one).
+    #
+    # Only this pass moves. The `claims` recipe stays out of `check` for the
+    # reason written above it: its certificate pass re-verifies every stored UNSAT
+    # proof, takes minutes, and needs the gitignored drat-trim clone that the
+    # no-C-dependency default gate must not require. That recipe's own comment
+    # calls the first two "a seconds-long structural gate"; this is the first.
+    python3 scripts/validate-claims.py
     # A settled SMT-route fact's evidence command tests the VERDICT and not the
     # CERTIFICATION: `test "$(... | tail -1)" = unsat` exits 0 on an uncertified
     # refutation, verified against artifacts/facts/smt2/neg-barber-no-such-barber.smt2.
