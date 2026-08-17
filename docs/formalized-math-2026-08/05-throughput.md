@@ -28,6 +28,50 @@ ADR per theorem and updating tests.
 | 30 | 4,470 |
 | 100 | 14,900 |
 
+### Re-measured 2026-08-17: the burst is real, "sustained" is not
+
+The table above extrapolates from one 11 h 43 min window. Checking the same
+metric — `nat_theorem_inventory`'s count, the one that produced 33 and 106 —
+three days later:
+
+```
+2026-08-14 09:05    106 proved theorems   (this document's second datapoint)
+2026-08-17 14:00    139 proved theorems
+                    +33 in 76.9 h = 3.20 days
+```
+
+**10.3 theorems/day/lane realized, against 149/day/lane projected — 14× lower.**
+
+Read that carefully, because the obvious reading is the wrong one. It is *not*
+that the 6.2/hour measurement was wrong: a lane that spends a day on
+`nat_prelude.rs` plausibly still does that. What fails is the word **sustained**,
+and the reason is visible in what the three intervening days actually contain —
+solver routes, evidence gates, CI repairs, a false certification claim found and
+reverted, two aggregate gates that had stopped checking things. Theorem
+production is not what a lane spends its time on, and the table silently assumes
+it is.
+
+So the honest form of the projection is not `N lanes × 149/day`. It is
+`N lanes × 149/day × f`, where `f` is the fraction of lane-time spent proving,
+and `f ≈ 0.07` over the only multi-day window anyone has measured. A roadmap
+item justified by "at 149/day/lane, ℚ is no longer a close call" is being
+justified by `f = 1`.
+
+Two consequences, neither of which is "give up on the rate":
+
+- **The leverage is in `f`, not in the burst rate.** Doubling 6.2/hour is hard;
+  doubling the share of lane-time that reaches a theorem is a scheduling and
+  tooling question, and the parallel-prelude change this document already
+  proposes is the right kind of answer — it raises `f` by removing the serial
+  assembler, not by proving faster.
+- **Anything downstream of the table should be re-derived.** The `N × 149/day`
+  figures are an upper bound reachable only if lanes do nothing else, and should
+  be labelled that way wherever they are used to decide priority.
+
+Measured with the metric this document already uses; the 33 and 106 datapoints
+are taken from it rather than re-derived, so the comparison inherits whatever
+they were.
+
 And every one reports **no axioms**. That is the artifact: not volume, but volume
 on a trusted base of zero.
 
