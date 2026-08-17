@@ -1,7 +1,5 @@
 {
-  "schema_version": 1,
   "id": "F:nat-euclid-lemma",
-  "title": "Euclid's lemma: a prime dividing a product divides a factor",
   "statement": "If p is prime and p divides a*b, then p divides a or p divides b. Here `p is prime` means 2 <= p and every divisor of p is 1 or p.",
   "formal": {
     "language": "lean4",
@@ -13,12 +11,34 @@
       "b"
     ]
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "depends_on": [
     "F:nat-gcd-bezout",
     "F:nat-dvd-gcd-iff"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.euclid_lemma",
+      "kind": "kernel-term",
+      "supports": "If p is prime and p divides a*b, then p divides a or p divides b.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- euclid_lemma 2>/dev/null | grep -qE '^Nat\\.euclid_lemma[[:space:]]'",
+      "notes": "`build_nat_prelude` admits this through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing the row is a machine-checked proof. Primality is spelled inline as `2 <= p AND forall d, d | p -> d = 1 OR d = p`, matching this fact's `formal.statement` rather than a `Prime` abbreviation -- a fact is only closed by the statement it actually makes. Proof: let g = gcd p a; g | p, so primality splits g = 1 or g = p. If g = p then p = gcd p a | a. If g = 1, Bezout gives naturals with (1 + p*mn) + a*nn = p*mp + a*np; scaling by b puts it in the form b + X = Y with p | X and p | Y (using p | a*b on the a-terms), and `dvd_add_right_cancel_of_pos` yields p | b WITHOUT forming a difference, which is what makes the argument valid over the naturals. The command names its own subject twice over: the example exits non-zero for a name that does not exist, and the grep requires the admitted declaration to be printed."
+    },
+    {
+      "id": "footprint-Nat.euclid_lemma",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`theorem_axiom_footprint` reports `nat Nat.euclid_lemma 0` and `integer Nat.euclid_lemma 0` directly. `nat_axiom_inventory` bounds it: the enumeration reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, and a theorem cannot depend on a trusted declaration the environment does not contain. Counting `Declaration::Axiom` alone would NOT suffice -- `Opaque` has no proof body and `Quotient` admits `Quot.sound` -- so the enumeration covers all three."
+    }
+  ],
+  "schema_version": 1,
+  "title": "Euclid's lemma: a prime dividing a product divides a factor",
   "concept_refs": [
     {
       "graph": "math-education",
@@ -52,6 +72,5 @@
       }
     ]
   },
-  "notes": "Stated INSTEAD of unique factorisation itself, which is the concept it came from: the kernel has no list, multiset or finite-product vocabulary, so `n is a product of primes, unique up to order` cannot be written in its language at all today. Euclid's lemma is the mathematical content of the uniqueness half and IS expressible. Reachable from the stated dependencies: gcd(p, a) divides p, so it is 1 or p, and the Bezout certificate turns the first case into p | b. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names.",
-  "external_status": "proved"
+  "notes": "Stated INSTEAD of unique factorisation itself, which is the concept it came from: the kernel has no list, multiset or finite-product vocabulary, so `n is a product of primes, unique up to order` cannot be written in its language at all today. Euclid's lemma is the mathematical content of the uniqueness half and IS expressible. Reachable from the stated dependencies: gcd(p, a) divides p, so it is 1 or p, and the Bezout certificate turns the first case into p | b. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
 }

@@ -144,7 +144,7 @@ use algebra::{
     declare_additive_theorems, declare_finite_sum_theorems, declare_multiplicative_theorems,
     declare_subtraction_theorems,
 };
-use bezout::declare_gcd_bezout;
+use bezout::{declare_euclid_lemma, declare_gcd_bezout};
 use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
     declare_executable_division, declare_finite_ranges, declare_subtraction,
@@ -490,6 +490,13 @@ pub struct NatPrelude {
     pub dvd_add: NameId,
     /// `Nat.dvd_add_right_cancel_of_pos : ∀ a m n, Le one a → dvd a m → dvd a (m+n) → dvd a n`.
     pub dvd_add_right_cancel_of_pos: NameId,
+    /// `Nat.euclid_lemma : ∀ p a b, prime p → p ∣ a*b → p ∣ a ∨ p ∣ b`.
+    ///
+    /// Primality is spelled out inline as `2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p`
+    /// rather than through a `Prime` predicate, because that is the shape the
+    /// ledger's `F:nat-euclid-lemma` states and a fact is only closed by the
+    /// statement it actually makes.
+    pub euclid_lemma: NameId,
     /// `Nat.not_dvd_one_of_two_le : ∀ a, Le two a → Not (dvd a one)`.
     pub not_dvd_one_of_two_le: NameId,
     /// `Nat.eq_one_of_dvd_one : ∀ d, dvd d one → Eq d one` — the closing step
@@ -712,6 +719,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_mod_iff: kernel.name_str(nat, "dvd_mod_iff"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
             dvd_add_right_cancel_of_pos: kernel.name_str(nat, "dvd_add_right_cancel_of_pos"),
+            euclid_lemma: kernel.name_str(nat, "euclid_lemma"),
             not_dvd_one_of_two_le: kernel.name_str(nat, "not_dvd_one_of_two_le"),
             eq_one_of_dvd_one: kernel.name_str(nat, "eq_one_of_dvd_one"),
             coprime_of_bezout_one: kernel.name_str(nat, "coprime_of_bezout_one"),
@@ -743,6 +751,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_executable_gcd(&mut d, &p)?;
         declare_gcd_semantics(&mut d, &p)?;
         declare_gcd_bezout(&mut d, &p)?;
+        declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
         Ok(p)
     })();

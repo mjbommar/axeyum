@@ -1,7 +1,7 @@
 //! Bezout's identity for the executable gcd, over balanced natural parts.
 
 use super::NatPrelude;
-use super::helpers::and_left;
+use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -1231,5 +1231,280 @@ pub(super) fn declare_gcd_bezout(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
         (stmt, proof)
     })?;
 
+    Ok(())
+}
+
+/// `euclid_lemma : ∀ p a b, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) → p ∣ a·b → p ∣ a ∨ p ∣ b`.
+///
+/// Closes ledger fact `F:nat-euclid-lemma`, whose `depends_on`
+/// (`F:nat-gcd-bezout`, `F:nat-dvd-gcd-iff`) were already settled.
+///
+/// The classical argument, and the only interesting part is that it is done
+/// over ℕ with no subtraction anywhere. Let `g = gcd p a`. Since `g ∣ p`,
+/// primality gives `g = 1` or `g = p`.
+///
+/// * `g = p` — then `p = gcd p a ∣ a` directly.
+/// * `g = 1` — then Bézout gives naturals with `(1 + p·mn) + a·nn = p·mp + a·np`
+///   (the balanced all-naturals form, since ℕ has no negatives). Multiplying
+///   through by `b` puts it in the shape `b + X = Y` where `p` divides both `X`
+///   and `Y`: every summand is a multiple of `p` once `p ∣ a·b` is used on the
+///   `a·nn·b` and `a·np·b` terms. `dvd_add_right_cancel_of_pos` then yields
+///   `p ∣ b` without ever forming a difference.
+pub(super) fn declare_euclid_lemma(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.euclid_lemma, 3, &|d, v| {
+        let (prime, a, b) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let two = d.num(2);
+
+        // `∀ d, d ∣ p → d = 1 ∨ d = p`, rebuilt wherever it is needed so the
+        // hypothesis type and the type the proof consumes cannot drift apart.
+        let divisor_clause = |d: &mut NatDev<'_>| {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hyp = d.dvd(x, prime);
+            let unit = d.num(1);
+            let is_one = d.eq(x, unit);
+            let is_prime = d.eq(x, prime);
+            let disjunction = d.const_app(p.logic.or, &[is_one, is_prime]);
+            let inner = d.arrow(hyp, disjunction);
+            let nat = d.nat_ty();
+            d.pi_fv(x_fv, nat, inner)
+        };
+        let two_le = d.le(two, prime);
+        let clause = divisor_clause(d);
+        let prime_ty = d.const_app(p.logic.and, &[two_le, clause]);
+        let product = d.mul(a, b);
+        let divides_product = d.dvd(prime, product);
+        let divides_a = d.dvd(prime, a);
+        let divides_b = d.dvd(prime, b);
+        let conclusion = d.const_app(p.logic.or, &[divides_a, divides_b]);
+        let stmt = {
+            let inner = d.arrow(divides_product, conclusion);
+            d.arrow(prime_ty, inner)
+        };
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+        let product_fv = d.fresh_fvar();
+        let product_hyp = d.kernel().fvar(product_fv);
+
+        let two_le_proof = and_left(d, two_le, clause, prime_hyp);
+        let clause_proof = and_right(d, two_le, clause, prime_hyp);
+
+        let common = d.gcd(prime, a);
+        let common_divides_prime = d.lemma(p.gcd_dvd_left, &[prime, a]);
+        let split = d.apply(clause_proof, &[common, common_divides_prime]);
+        let common_is_one = d.eq(common, one);
+        let common_is_prime = d.eq(common, prime);
+
+        // `g = p`: `gcd p a ∣ a` transported along the equality is `p ∣ a`.
+        let prime_case = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let base = d.lemma(p.gcd_dvd_right, &[prime, a]);
+            let motive = d.eq_motive(common, &|d, x| d.dvd(x, a));
+            let transported = d.transport(common, motive, base, prime, h);
+            let inl = d.kernel().const_(p.logic.or_inl, vec![]);
+            let body = d.apply(inl, &[divides_a, divides_b, transported]);
+            d.lam_fv(h_fv, common_is_prime, body)
+        };
+
+        // `g = 1`: Bézout, multiplied through by `b`.
+        let unit_case = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let certificate = {
+                let base = d.lemma(p.gcd_bezout, &[prime, a]);
+                let motive = d.eq_motive(common, &|d, x| d.bezout(prime, a, x));
+                d.transport(common, motive, base, one, h)
+            };
+            let divides_b_proof = bezout_elim(
+                d,
+                prime,
+                a,
+                one,
+                divides_b,
+                certificate,
+                &|d, mp, mn, np, nn, equation| {
+                    let unit = d.num(1);
+                    let p_mn = d.mul(prime, mn);
+                    let a_nn = d.mul(a, nn);
+                    let p_mp = d.mul(prime, mp);
+                    let a_np = d.mul(a, np);
+                    let left_head = d.add(unit, p_mn);
+                    let left = d.add(left_head, a_nn);
+                    let right = d.add(p_mp, a_np);
+
+                    // Scale the identity by `b`.
+                    let scaled = d.congr(left, right, equation, &|d, t| d.mul(t, b));
+                    let left_b = d.mul(left, b);
+                    let right_b = d.mul(right, b);
+
+                    // `p` divides each scaled summand.
+                    let p_mn_b = d.mul(p_mn, b);
+                    let a_nn_b = d.mul(a_nn, b);
+                    let p_mp_b = d.mul(p_mp, b);
+                    let a_np_b = d.mul(a_np, b);
+
+                    // `(p·k)·b = p·(k·b)`, so `dvd_mul` applies after reassociating.
+                    let divides_prime_multiple = |d: &mut NatDev<'_>, k: ExprId| {
+                        let inner = d.mul(k, b);
+                        let base = d.lemma(p.dvd_mul, &[prime, inner]);
+                        let assoc = d.lemma(p.mul_assoc, &[prime, k, b]);
+                        let head = d.mul(prime, k);
+                        let flat = d.mul(head, b);
+                        let nested = d.mul(prime, inner);
+                        let back = d.symm(flat, nested, assoc);
+                        let motive = d.eq_motive(nested, &|d, x| d.dvd(prime, x));
+                        d.transport(nested, motive, base, flat, back)
+                    };
+                    // `(a·k)·b = (a·b)·k`, so `p ∣ a·b` carries over.
+                    let divides_a_multiple = |d: &mut NatDev<'_>, k: ExprId| {
+                        let base =
+                            d.lemma(p.dvd_mul_right_of_dvd, &[prime, product, k, product_hyp]);
+                        let product_k = d.mul(product, k);
+                        let a_k = d.mul(a, k);
+                        let flat = d.mul(a_k, b);
+                        // `(a·b)·k = a·(b·k) = a·(k·b) = (a·k)·b`
+                        let b_k = d.mul(b, k);
+                        let k_b = d.mul(k, b);
+                        let step1 = d.lemma(p.mul_assoc, &[a, b, k]);
+                        let nested_bk = d.mul(a, b_k);
+                        let commute = d.lemma(p.mul_comm, &[b, k]);
+                        let step2 = d.congr(b_k, k_b, commute, &|d, t| d.mul(a, t));
+                        let nested_kb = d.mul(a, k_b);
+                        let assoc_back = d.lemma(p.mul_assoc, &[a, k, b]);
+                        let step3 = d.symm(flat, nested_kb, assoc_back);
+                        let (_, chained) = d.chain(
+                            product_k,
+                            &[(nested_bk, step1), (nested_kb, step2), (flat, step3)],
+                        );
+                        let motive = d.eq_motive(product_k, &|d, x| d.dvd(prime, x));
+                        d.transport(product_k, motive, base, flat, chained)
+                    };
+
+                    let d_p_mn_b = divides_prime_multiple(d, mn);
+                    let d_a_nn_b = divides_a_multiple(d, nn);
+                    let d_p_mp_b = divides_prime_multiple(d, mp);
+                    let d_a_np_b = divides_a_multiple(d, np);
+
+                    // `X = p·mn·b + a·nn·b`, and `p ∣ X`.
+                    let excess = d.add(p_mn_b, a_nn_b);
+                    let divides_excess =
+                        d.lemma(p.dvd_add, &[prime, p_mn_b, a_nn_b, d_p_mn_b, d_a_nn_b]);
+                    // `Y = p·mp·b + a·np·b`, and `p ∣ Y`; `Y = right·b`.
+                    let total = d.add(p_mp_b, a_np_b);
+                    let divides_total =
+                        d.lemma(p.dvd_add, &[prime, p_mp_b, a_np_b, d_p_mp_b, d_a_np_b]);
+                    let right_expand = d.lemma(p.right_distrib, &[p_mp, a_np, b]);
+                    let divides_right_b = {
+                        let back = d.symm(right_b, total, right_expand);
+                        let motive = d.eq_motive(total, &|d, x| d.dvd(prime, x));
+                        d.transport(total, motive, divides_total, right_b, back)
+                    };
+
+                    // `left·b = (b + p·mn·b) + a·nn·b = b + X`.
+                    let outer = d.lemma(p.right_distrib, &[left_head, a_nn, b]);
+                    let head_b = d.mul(left_head, b);
+                    let split_outer = d.add(head_b, a_nn_b);
+                    let inner_expand = d.lemma(p.right_distrib, &[unit, p_mn, b]);
+                    let unit_b = d.mul(unit, b);
+                    let split_inner = d.add(unit_b, p_mn_b);
+                    let step_inner =
+                        d.congr(head_b, split_inner, inner_expand, &|d, t| d.add(t, a_nn_b));
+                    let with_unit = d.add(split_inner, a_nn_b);
+                    let one_mul = d.lemma(p.one_mul, &[b]);
+                    let b_plus = d.add(b, p_mn_b);
+                    let step_one = d.congr(unit_b, b, one_mul, &|d, t| {
+                        let head = d.add(t, p_mn_b);
+                        d.add(head, a_nn_b)
+                    });
+                    let flattened = d.add(b_plus, a_nn_b);
+                    let assoc = d.lemma(p.add_assoc, &[b, p_mn_b, a_nn_b]);
+                    let b_plus_excess = d.add(b, excess);
+                    let (_, left_normalised) = d.chain(
+                        left_b,
+                        &[
+                            (split_outer, outer),
+                            (with_unit, step_inner),
+                            (flattened, step_one),
+                            (b_plus_excess, assoc),
+                        ],
+                    );
+
+                    // `b + X = right·b`, so `p ∣ b + X`; commute to `X + b`.
+                    let bridge = {
+                        // `left_normalised : left·b = b + X`, so the symm runs FROM
+                        // `left·b`. Passing these the other way round is the same
+                        // slip that cost a TypeMismatch in `pow_add`.
+                        let back = d.symm(left_b, b_plus_excess, left_normalised);
+                        let (_, joined) =
+                            d.chain(b_plus_excess, &[(left_b, back), (right_b, scaled)]);
+                        joined
+                    };
+                    let divides_b_plus = {
+                        let back = d.symm(b_plus_excess, right_b, bridge);
+                        let motive = d.eq_motive(right_b, &|d, x| d.dvd(prime, x));
+                        d.transport(right_b, motive, divides_right_b, b_plus_excess, back)
+                    };
+                    let excess_plus_b = d.add(excess, b);
+                    let commute = d.lemma(p.add_comm, &[b, excess]);
+                    let divides_excess_plus = {
+                        let motive = d.eq_motive(b_plus_excess, &|d, x| d.dvd(prime, x));
+                        d.transport(
+                            b_plus_excess,
+                            motive,
+                            divides_b_plus,
+                            excess_plus_b,
+                            commute,
+                        )
+                    };
+
+                    // `1 ≤ p` from `2 ≤ p`; `1 ≤ 1 + 1 ≡ 2` computes.
+                    let one_le_two = d.lemma(p.le_add_right, &[unit, unit]);
+                    let one_le_prime =
+                        d.lemma(p.le_trans, &[unit, two, prime, one_le_two, two_le_proof]);
+                    d.lemma(
+                        p.dvd_add_right_cancel_of_pos,
+                        &[
+                            prime,
+                            excess,
+                            b,
+                            one_le_prime,
+                            divides_excess,
+                            divides_excess_plus,
+                        ],
+                    )
+                },
+            );
+            let inr = d.kernel().const_(p.logic.or_inr, vec![]);
+            let body = d.apply(inr, &[divides_a, divides_b, divides_b_proof]);
+            d.lam_fv(h_fv, common_is_one, body)
+        };
+
+        let anon = d.anon_name();
+        let split_ty = d.const_app(p.logic.or, &[common_is_one, common_is_prime]);
+        let motive = d
+            .kernel()
+            .lam(anon, split_ty, conclusion, BinderInfo::Default);
+        let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+        let body = d.apply(
+            or_rec,
+            &[
+                common_is_one,
+                common_is_prime,
+                motive,
+                unit_case,
+                prime_case,
+                split,
+            ],
+        );
+        let proof = {
+            let inner = d.lam_fv(product_fv, divides_product, body);
+            d.lam_fv(prime_fv, prime_ty, inner)
+        };
+        (stmt, proof)
+    })?;
     Ok(())
 }
