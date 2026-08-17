@@ -749,3 +749,211 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
 
     Ok(())
 }
+
+/// The two components of [`prime_condition`], so an `And` over it can be split.
+fn prime_parts(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> (ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let two = d.num(2);
+    let unit = d.num(1);
+    let lower = d.le(two, x);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let hypothesis = d.dvd(c, x);
+    let trivial = d.eq(c, unit);
+    let whole = d.eq(c, x);
+    let disjunction = d.const_app(p.logic.or, &[trivial, whole]);
+    let body = d.arrow(hypothesis, disjunction);
+    (lower, d.pi_fv(c_fv, nat, body))
+}
+
+/// `one_le_factorial : ∀ n, 1 ≤ n!` and `exists_prime_gt` — Euclid's theorem.
+///
+/// Closes ledger fact `F:nat-exists-prime-gt`. Both dependencies were settled
+/// first: `dvd_factorial_of_le` (a number divisible by everything up to `n`) and
+/// `exists_prime_dvd` (every `m ≥ 2` has a prime divisor).
+///
+/// The argument is Euclid's, done entirely over ℕ with no subtraction. Take
+/// `m = n! + 1`, which is `≥ 2` because `1 ≤ n!`, and let `q` be a prime
+/// dividing it. If `q ≤ n` then `q ∣ n!` by `dvd_factorial_of_le`, and since
+/// `q ∣ n! + 1`, `dvd_add_right_cancel_of_pos` gives `q ∣ 1` — refuted by
+/// `not_dvd_one_of_two_le`. So `n ≤ q`, and the `n = q` case falls to the same
+/// contradiction after transporting `n ≤ n` along the equality, leaving `n < q`.
+pub(super) fn declare_euclid(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+
+    d.theorem(p.one_le_factorial, 1, &|d, v| {
+        let n = v[0];
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let unit = d.num(1);
+            let value = d.factorial(x);
+            d.le(unit, value)
+        };
+        let stmt = motive(d, n);
+        let proof = d.induct(
+            &motive,
+            // `factorial zero ≡ 1`, and `1 ≤ 1 + 0 ≡ 1`.
+            &|d| {
+                let unit = d.num(1);
+                let zero = d.zero();
+                d.lemma(p.le_add_right, &[unit, zero])
+            },
+            // `factorial (succ j) ≡ factorial j * succ j`, and both factors are
+            // at least one — the second because `0 ≤ j`.
+            &|d, j, ih| {
+                let value = d.factorial(j);
+                let successor = d.succ(j);
+                let zero = d.zero();
+                let base = d.lemma(p.zero_le, &[j]);
+                let positive = d.lemma(p.le_succ_succ, &[zero, j, base]);
+                d.lemma(p.one_le_mul, &[value, successor, ih, positive])
+            },
+            n,
+        );
+        (stmt, proof)
+    })?;
+
+    d.theorem(p.exists_prime_gt, 1, &|d, v| {
+        let n = v[0];
+        let nat = d.nat_ty();
+        let level = d.level_one();
+        let unit = d.num(1);
+        let two = d.num(2);
+        let value = d.factorial(n);
+        let bound = d.add(value, unit);
+
+        let goal_predicate = |d: &mut NatDev<'_>| {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let strict = d.lt(n, q);
+            let prime = prime_condition(d, &p, q);
+            let body = d.const_app(p.logic.and, &[strict, prime]);
+            let nat = d.nat_ty();
+            d.lam_fv(q_fv, nat, body)
+        };
+        let predicate = goal_predicate(d);
+        let stmt = {
+            let exists = d.kernel().const_(p.logic.exists_, vec![level]);
+            d.apply(exists, &[nat, predicate])
+        };
+
+        // `2 ≤ n! + 1`, since `1 ≤ n!` and `1 + 1` computes to `2`.
+        let one_le_value = d.lemma(p.one_le_factorial, &[n]);
+        let two_le_bound = d.lemma(p.add_le_add_right, &[unit, unit, value, one_le_value]);
+        let source = d.lemma(p.exists_prime_dvd, &[bound, two_le_bound]);
+        let source_predicate = prime_divisor_predicate(d, &p, bound);
+
+        let minor = {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let prime_ty = prime_condition(d, &p, q);
+            let divides_ty = d.dvd(q, bound);
+            let prime_proof = and_left(d, prime_ty, divides_ty, h);
+            let divides = and_right(d, prime_ty, divides_ty, h);
+            let (lower_ty, _) = prime_parts(d, &p, q);
+            let (_, divisors_ty) = prime_parts(d, &p, q);
+            let two_le_q = and_left(d, lower_ty, divisors_ty, prime_proof);
+
+            // `1 ≤ q` from `2 ≤ q`, via `1 ≤ 1 + 1 ≡ 2`.
+            let one_le_two = d.lemma(p.le_add_right, &[unit, unit]);
+            let one_le_q = d.lemma(p.le_trans, &[unit, two, q, one_le_two, two_le_q]);
+
+            // `q ≤ n` is impossible: it would make `q` divide both `n!` and
+            // `n! + 1`, hence `1`.
+            let refute = |d: &mut NatDev<'_>, q_le_n: ExprId| {
+                let divides_factorial = d.lemma(p.dvd_factorial_of_le, &[q, n, one_le_q, q_le_n]);
+                let divides_one = d.lemma(
+                    p.dvd_add_right_cancel_of_pos,
+                    &[q, value, unit, one_le_q, divides_factorial, divides],
+                );
+                let refuted = d.lemma(p.not_dvd_one_of_two_le, &[q, two_le_q]);
+                let contradiction = d.apply(refuted, &[divides_one]);
+                absurd(d, &p, stmt, contradiction)
+            };
+
+            let conclude = |d: &mut NatDev<'_>, strict_proof: ExprId| {
+                let strict = d.lt(n, q);
+                let prime = prime_condition(d, &p, q);
+                let pair = d.const_app(
+                    p.logic.and_intro,
+                    &[strict, prime, strict_proof, prime_proof],
+                );
+                let intro = d.kernel().const_(p.logic.exists_intro, vec![level]);
+                let predicate = goal_predicate(d);
+                d.apply(intro, &[nat, predicate, q, pair])
+            };
+
+            let n_le_q_ty = d.le(n, q);
+            let q_le_n_ty = d.le(q, n);
+            let split = d.lemma(p.le_total, &[n, q]);
+
+            let forward = {
+                let le_fv = d.fresh_fvar();
+                let le_proof = d.kernel().fvar(le_fv);
+                let sharpen = d.lemma(p.lt_or_eq_of_le, &[n, q, le_proof]);
+                let strict_ty = d.lt(n, q);
+                let equal_ty = d.eq(n, q);
+                let strict_branch = {
+                    let s_fv = d.fresh_fvar();
+                    let s = d.kernel().fvar(s_fv);
+                    let body = conclude(d, s);
+                    d.lam_fv(s_fv, strict_ty, body)
+                };
+                let equal_branch = {
+                    let e_fv = d.fresh_fvar();
+                    let e = d.kernel().fvar(e_fv);
+                    // `n = q` gives `q ≤ n` by transporting `n ≤ n`.
+                    let zero = d.zero();
+                    let reflexive = d.lemma(p.le_add_right, &[n, zero]);
+                    let motive = d.eq_motive(n, &|d, x| d.le(x, n));
+                    let q_le_n = d.transport(n, motive, reflexive, q, e);
+                    let body = refute(d, q_le_n);
+                    d.lam_fv(e_fv, equal_ty, body)
+                };
+                let body = or_cases(
+                    d,
+                    &p,
+                    strict_ty,
+                    equal_ty,
+                    stmt,
+                    strict_branch,
+                    equal_branch,
+                    sharpen,
+                );
+                d.lam_fv(le_fv, n_le_q_ty, body)
+            };
+            let backward = {
+                let le_fv = d.fresh_fvar();
+                let le_proof = d.kernel().fvar(le_fv);
+                let body = refute(d, le_proof);
+                d.lam_fv(le_fv, q_le_n_ty, body)
+            };
+
+            let body = or_cases(d, &p, n_le_q_ty, q_le_n_ty, stmt, forward, backward, split);
+            let hypothesis_ty = {
+                let prime = prime_condition(d, &p, q);
+                let divides = d.dvd(q, bound);
+                d.const_app(p.logic.and, &[prime, divides])
+            };
+            let with_h = d.lam_fv(h_fv, hypothesis_ty, body);
+            d.lam_fv(q_fv, nat, with_h)
+        };
+
+        // `Exists.rec`'s motive binds the SOURCE existential, not the goal. Binding
+        // `stmt` here is a TypeMismatch whose rendered `expected` is the source
+        // predicate applied — which is what named the error.
+        let motive = {
+            let anon = d.anon_name();
+            let exists = d.kernel().const_(p.logic.exists_, vec![level]);
+            let source_ty = d.apply(exists, &[nat, source_predicate]);
+            d.kernel().lam(anon, source_ty, stmt, BinderInfo::Default)
+        };
+        let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![level]);
+        let proof = d.apply(exists_rec, &[nat, source_predicate, motive, minor, source]);
+        (stmt, proof)
+    })?;
+
+    Ok(())
+}

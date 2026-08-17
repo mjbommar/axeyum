@@ -155,7 +155,7 @@ use division::declare_euclidean_division;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use modular::declare_modular_congruence;
 use order::declare_order;
-use primes::declare_primes;
+use primes::{declare_euclid, declare_primes};
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
 /// and its constructors/recursor (re-exported from the [`LogicPrelude`] for
@@ -512,6 +512,13 @@ pub struct NatPrelude {
     /// ledger's `F:nat-euclid-lemma` states and a fact is only closed by the
     /// statement it actually makes.
     pub euclid_lemma: NameId,
+    /// `Nat.one_le_factorial : ∀ n, Le one (factorial n)`.
+    pub one_le_factorial: NameId,
+    /// `Nat.exists_prime_gt : ∀ n, ∃ p, n < p ∧ (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p)`.
+    ///
+    /// Euclid's theorem. Closes ledger fact `F:nat-exists-prime-gt`, whose two
+    /// dependencies (`F:nat-dvd-add`, `F:nat-exists-prime-dvd`) are settled.
+    pub exists_prime_gt: NameId,
     /// `Nat.not_dvd_one_of_two_le : ∀ a, Le two a → Not (dvd a one)`.
     pub not_dvd_one_of_two_le: NameId,
     /// `Nat.eq_one_of_dvd_one : ∀ d, dvd d one → Eq d one` — the closing step
@@ -774,6 +781,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_add: kernel.name_str(nat, "dvd_add"),
             dvd_add_right_cancel_of_pos: kernel.name_str(nat, "dvd_add_right_cancel_of_pos"),
             euclid_lemma: kernel.name_str(nat, "euclid_lemma"),
+            one_le_factorial: kernel.name_str(nat, "one_le_factorial"),
+            exists_prime_gt: kernel.name_str(nat, "exists_prime_gt"),
             not_dvd_one_of_two_le: kernel.name_str(nat, "not_dvd_one_of_two_le"),
             eq_one_of_dvd_one: kernel.name_str(nat, "eq_one_of_dvd_one"),
             coprime_of_bezout_one: kernel.name_str(nat, "coprime_of_bezout_one"),
@@ -813,6 +822,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
         declare_primes(&mut d, &p)?;
+        declare_euclid(&mut d, &p)?;
         Ok(p)
     })();
     match built {
