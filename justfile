@@ -23,6 +23,11 @@ fmt-all:
 # `proved` fact with nothing checked, or an `open` one carrying evidence, fails.
 facts:
     python3 scripts/validate-facts.py
+    # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
+    # "the DAG picks the next goal". 60% of facts are isolated, so proving one
+    # usually unlocks nothing; the ratchet keeps that from getting worse.
+    python3 -m unittest scripts.tests.test_check_fact_dag
+    python3 scripts/check-fact-dag.py --quiet
     # A `cas-certificate` geometry fact states its theorem twice -- as SMT-LIB in
     # `formal.statement` and as polynomials in the certificate it cites -- and
     # nothing connected the two, so a transposed sign would leave a `proved` fact
