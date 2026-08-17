@@ -1025,11 +1025,12 @@ impl Evidence {
                 )
             }
             Evidence::UnsatQuantInstanceSet(certificate) => {
-                // The replay reconstructs instances, so it needs a mutable
-                // arena. Clone rather than mutate the caller's: the rebuilt
-                // terms must not leak into a later sat model. The clone already
-                // contains the instances -- `produce_evidence` holds `&mut` and
-                // the driver added them there -- so the ids resolve.
+                // The replay re-eliminates existentials and reconstructs
+                // instances, so it needs a mutable arena. Clone rather than
+                // mutate the caller's: those skolem witnesses and rebuilt terms
+                // must not leak into a later sat model. The clone need not
+                // contain anything from the producing run -- the certificate
+                // names only the query's own terms and positions.
                 let mut scratch = arena.clone();
                 crate::quant_instance_set_cert::check_quantifier_instance_set(
                     &mut scratch,
@@ -2110,29 +2111,48 @@ fn nested_xor_evidence(arena: &TermArena, assertions: &[TermId]) -> Option<Evide
 
 /// Re-decide a quantified query by e-matching, keeping the instances it used.
 ///
-/// Unlike the other producers this one runs on the caller's `arena` rather than
-/// a clone, deliberately: the instances the driver builds must live in the arena
-/// [`Evidence::check`] will later be handed, or its ids would not resolve.
-/// `produce_evidence` holds `&mut`, so they do.
+/// Top-level existentials are eliminated first, by the same
+/// `eliminate_top_existentials` [`crate::auto::solve`] uses. Without that step
+/// a query like `∃b. ∀x. …` has no top-level universal for the driver to
+/// instantiate at all, so the whole route declined on it (`F:barber-no-such-barber`,
+/// measured `unsat-uncertified`). The elimination is carried in the certificate
+/// as a per-assertion binder COUNT and the checker redoes it in its own arena,
+/// which is what makes the witnesses nameable there -- see
+/// `quant_instance_set_cert`. On a query with no top-level existential this is
+/// the identity and the route behaves exactly as before.
 ///
-/// Declines unless the refutation is exactly "the caller's assertions plus
-/// checked instances" -- see `quant_instance_set_cert`.
+/// Unlike the other producers this one runs on the caller's `arena` rather than
+/// a clone, deliberately: the skolemised assertions and the instances the driver
+/// builds must live in one arena for the driver's own build-time replay to
+/// resolve. `produce_evidence` holds `&mut`, so they do. Nothing that lives only
+/// there reaches the certificate.
+///
+/// Declines unless the refutation is exactly "the skolemised assertions plus
+/// checked instances", and unless every binding can be named portably.
 fn quant_instance_set_certificate(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<Option<crate::quant_instance_set_cert::QuantifierInstanceSetCertificate>, SolverError> {
-    let mut certificate = None;
+    let elimination = crate::auto::eliminate_top_existentials(arena, assertions)?;
+    let mut derivations = None;
     let result = crate::qinst_egraph::prove_quantified_unsat_via_egraph_with_instances(
         arena,
-        assertions,
+        &elimination.assertions,
         config,
-        &mut certificate,
+        &mut derivations,
     )?;
     if !matches!(result, CheckResult::Unsat) {
         return Ok(None);
     }
-    Ok(certificate)
+    Ok(derivations.and_then(|derivations| {
+        crate::quant_instance_set_cert::portable_certificate(
+            arena,
+            assertions,
+            &elimination,
+            &derivations,
+        )
+    }))
 }
 
 fn quantified_structural_unsat_evidence(

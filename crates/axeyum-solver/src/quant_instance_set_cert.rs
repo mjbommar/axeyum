@@ -3,10 +3,11 @@
 //! The e-matching driver ([`crate::qinst_egraph`]) refutes a quantified query by
 //! instantiating universals at ground terms until the quantifier-free set is
 //! unsatisfiable. It already builds exact provenance for each instance —
-//! [`QuantifierInstanceCertificate`] — and already exposes an independent
-//! replay checker for it, [`check_quantifier_ground_derivation`]. What it never
-//! did was hand either to [`crate::evidence`], so the whole route reported
-//! `unsat-uncertified`: the right verdict with nothing attached.
+//! [`QuantifierInstanceCertificate`](crate::qinst_egraph::QuantifierInstanceCertificate)
+//! — and already exposes an independent replay checker for it,
+//! [`check_quantifier_ground_derivation`]. What it never did was hand either to
+//! [`crate::evidence`], so the whole route reported `unsat-uncertified`: the
+//! right verdict with nothing attached.
 //!
 //! Measured on 2026-08-17, `F:barber-no-such-barber` is the clean case. The
 //! solver skolemises `∃b. ∀x. shaves(b,x) ↔ ¬shaves(x,x)` to `!sk_0`, e-matches
@@ -27,8 +28,8 @@
 //!
 //! # Deliberately narrow
 //!
-//! A certificate is offered only when the refutation is *exactly* "original
-//! ground assertions plus checked instances". Two cases decline rather than
+//! A certificate is offered only when the refutation is *exactly* "the
+//! skolemised assertions plus checked instances". Two cases decline rather than
 //! claim:
 //!
 //! - **Promotion.** The driver may grow its own assertion list (a universal
@@ -40,17 +41,16 @@
 //!   `try_targeted_quantifier_refutations` and the candidate fixpoint each
 //!   refute by their own argument, not by the ground set. They carry their own
 //!   justifications and are out of scope here.
-//!
-//! - **Any rewriting between the query and the loop's anchor.** Instance
+//! - **Any *other* rewriting between the query and the loop's anchor.** Instance
 //!   certificates bind *syntactically* to the assertion list the driver was
 //!   given, which is not always the caller's: `prove_quantified_unsat_via_egraph`
 //!   may `split_universal_conjunctions` (an equivalence) or
-//!   `extract_nested_universals` first, and [`crate::auto`] skolemises top-level
-//!   existentials before either. Those steps are sound, but they are not
+//!   `extract_nested_universals` first. Those steps are sound, but they are not
 //!   *justified by this certificate*, and a checker that accepted the anchor on
 //!   faith would be certifying "these instances refute a set someone told me
 //!   follows from the query" — which is not the claim. So a certificate is
-//!   offered only when the anchor is the caller's list verbatim.
+//!   offered only when the anchor is the caller's list, up to the one
+//!   transformation this certificate does carry: `∃`-elimination, below.
 //!
 //! Declining leaves the route exactly where it was — `unsat-uncertified` — so a
 //! narrow certificate strictly improves on nothing and never overstates.
@@ -63,12 +63,12 @@
 //! is to upgrade what used to be a bare `Unsat(None)`, never to demote a
 //! stronger certificate to this one.
 //!
-//! # Portability: the certificate must mean something in another arena
+//! # Portability: nothing here may name a term of the producing run
 //!
-//! This carries `TermId`s, and the instances it names are terms created *during*
-//! e-matching — so they are not in the arena the query was parsed into, which is
-//! the arena a checker gets. `smtcomp_cli` re-parses the original file on
-//! purpose: "the producing solve's arena is deliberately not reused".
+//! `smtcomp_cli` re-validates against a **fresh parse of the original file**, on
+//! purpose: "the producing solve's arena is deliberately not reused". So every
+//! `TermId` created *during* solving — every instance, every skolem witness,
+//! every skolemised assertion — names a slot the checker's arena does not have.
 //!
 //! An earlier version stored the instance ids and let the driver's checker
 //! compare against them. That is not portable, and it failed in the worst way —
@@ -76,74 +76,144 @@
 //! that term at the same id, and failed for two. `certified=1` alongside a
 //! re-check that reported FAIL.
 //!
-//! So the recorded `instance` is treated as **derived data, not as the claim**.
-//! `assertion` and `bindings` are query-side terms, which a re-parse of the same
-//! file reproduces at the same ids; the checker substitutes the bindings into
-//! the assertion *in its own arena* and validates the derivation that names
-//! THAT term. The ground set is likewise rebuilt rather than stored, which also
-//! makes "nothing was smuggled into the ground set" structural: you cannot
-//! smuggle a conjunct into a set the checker constructs itself.
+//! The rule this module now follows without exception: **an id may be recorded
+//! only if it names a subterm of the caller's own assertions**, which a re-parse
+//! reproduces. Everything else is recorded *positionally* and rebuilt by the
+//! checker in its own arena:
 //!
-//! Ids that do not resolve at all — a certificate offered for a different query
-//! — are rejected before anything dereferences them. `TermArena::node`,
-//! `sort_of` and `var` index directly and panic on a foreign id, and a checker
-//! must fail closed rather than abort.
+//! - the universal an instance came from, by **index** into the skolemised
+//!   assertion list (which the checker recomputes, [`PortableInstance`]);
+//! - a binding that is a skolem witness, by **which witness of which assertion**
+//!   it is ([`PortableBinding::Witness`]);
+//! - the instance term itself: not recorded at all, but rebuilt by substituting
+//!   into the checker's own universal;
+//! - the ground set: not recorded at all, but rebuilt from the checker's own
+//!   assertions plus those instances. That also makes "nothing was smuggled into
+//!   the ground set" structural rather than a guard — you cannot smuggle a
+//!   conjunct into a set the checker constructs itself.
 //!
-//! # Still not covered: the barber
+//! The producer refuses to emit a binding it cannot classify as one of those two
+//! (`portable_certificate` returns `None`), so a term the checker could not name
+//! becomes a declined certificate rather than a `certified=1` that fails
+//! re-validation.
 //!
-//! `F:barber-no-such-barber` is `∃b. ∀x. …`, so `auto` skolemises it and the
-//! loop's anchor is not the query. It stays uncertified until the skolemisation
-//! record is itself carried — `skolemize_top_existentials` returns a bare
-//! `Vec<TermId>` and discards the assertion-to-`!sk_k` correspondence that would
-//! justify the difference. That is the next slice and is deliberately not
-//! smuggled into this one: a certificate that quietly accepted a rewritten
-//! anchor would report `certified=1` on strictly less evidence than the label
-//! claims.
+//! # The `∃`-elimination this certificate carries
+//!
+//! `F:barber-no-such-barber` is `∃b. ∀x. …`, and there is no universal to
+//! instantiate until the existential is eliminated. So the producer eliminates
+//! it — [`crate::auto::eliminate_top_existentials`], the same function
+//! [`crate::auto::solve`] uses — and the certificate records *how many* binders
+//! each assertion lost. The checker runs that same elimination on the caller's
+//! assertions, in its own arena, and requires the shape to match.
+//!
+//! Two properties make this recordable at all:
+//!
+//! - **Freshness needs no evidence.** It is the soundness condition for
+//!   `∃`-elimination, and the checker introduces the witnesses *itself*, through
+//!   the eliminator's own unused-name probe. There is nothing to take on trust
+//!   from the producer, so there is nothing the producer could lie about.
+//! - **Equisatisfiability is a property of the transformation, not of the run.**
+//!   `∃x. body` and `body[x := c]` for fresh `c` are equisatisfiable; the ground
+//!   set the checker refutes is entailed by the checker's own skolemised
+//!   assertions, and those are unsatisfiable exactly when the caller's are.
+//!
+//! Recording *only the binder counts* is what distinguishes this from two
+//! designs that were tried and reverted. Recording the skolemised assertions or
+//! the witness terms as ids panics or fails, because `TermArena::var` aborts on a
+//! symbol from another arena and the checker's fresh parse has no `!sk_0`.
+//! Recording a bare `skolemised: bool` and trusting the ids to line up fails
+//! too: this producer runs **last**, so ~20 other producers have already
+//! allocated in its arena and its ids are nowhere near a fresh parse's. Indices
+//! survive both, because an index is a fact about the query.
+
+use std::collections::{HashMap, HashSet};
 
 use axeyum_ir::{TermArena, TermId};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError};
 use crate::qinst_egraph::{QuantifierGroundDerivation, check_quantifier_ground_derivation};
 
-/// A refutation by instantiation: the instances used, and the ground set they
-/// make unsatisfiable.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QuantifierInstanceSetCertificate {
-    /// Provenance for every instance the refutation used.
+/// One ground term substituted for a universal binder, named so that it survives
+/// leaving the arena it was chosen in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PortableBinding {
+    /// A subterm of the caller's own assertions, by id.
     ///
-    /// The ground set is **not** stored. It is rebuilt by the checker from the
-    /// caller's own assertions plus these instances, which is what makes the
-    /// certificate portable: a stored set would be a list of `TermId`s from the
-    /// producing run, and those name nothing in the arena a checker is handed
-    /// (`smtcomp_cli` re-parses the file on purpose). Rebuilding also makes
-    /// "nothing was smuggled into the ground set" structural rather than a
-    /// guard — you cannot smuggle a conjunct into a set the checker constructs.
-    pub derivations: Vec<QuantifierGroundDerivation>,
+    /// This is the only id in the whole certificate, and it is sound to record
+    /// because a re-parse of the same file rebuilds the query's terms at the
+    /// same ids. The checker still confirms membership in *its* query before
+    /// dereferencing, so a certificate offered for another query fails closed
+    /// rather than aborting.
+    Query(TermId),
+    /// The witness introduced for the `index`-th (outermost-first) top-level
+    /// existential binder of caller assertion `assertion`.
+    ///
+    /// Positional because the witness *term* exists only in the producing run.
+    /// The checker resolves this against the witnesses its own elimination
+    /// introduced.
+    Witness {
+        /// Index into the caller's assertion list.
+        assertion: usize,
+        /// Which binder of that assertion, outermost first.
+        index: usize,
+    },
 }
 
-/// Build a certificate for a ground refutation, or `None` to decline.
+/// One universal instantiation, with nothing in it that names the producing run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PortableInstance {
+    /// Index into the **skolemised** assertion list — which the checker
+    /// recomputes from the caller's assertions rather than receiving.
+    pub assertion: usize,
+    /// Ground terms substituted for that universal's prefix, outermost first.
+    pub bindings: Vec<PortableBinding>,
+}
+
+/// A refutation by instantiation: the elimination performed, the instances used,
+/// and (implicitly) the ground set they make unsatisfiable.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QuantifierInstanceSetCertificate {
+    /// How many top-level existential binders each caller assertion lost,
+    /// positionally parallel to the caller's assertion list.
+    ///
+    /// All zeroes for a query with no top-level existential, which is the
+    /// common case; the barber is `[1]`. The checker re-runs the elimination
+    /// and requires its own counts to agree, so a certificate describing a
+    /// different query is rejected here rather than later by accident.
+    pub skolem_prefix: Vec<usize>,
+    /// Provenance for every instance the refutation used.
+    ///
+    /// The ground set is **not** stored — see the module note on portability.
+    pub instances: Vec<PortableInstance>,
+}
+
+/// Collect the checked derivations behind a ground refutation, or `None` to
+/// decline.
 ///
-/// `anchor` is the **caller's** assertion list. Every derivation is replayed
-/// against it here, at build time, by the same public checker the evidence
-/// layer will later use.
+/// `anchor` is the assertion list the driver was handed. Every derivation is
+/// replayed against it here, at build time, by the same public checker the
+/// evidence layer will later use.
 ///
 /// Replaying rather than comparing lists is what makes the scope rules in the
 /// module note enforced instead of merely stated. An earlier version tried to
 /// detect rewriting by testing the driver's working list against the caller's
 /// for equality; that is both too strict (an identical list can be rebuilt) and
 /// too weak (it says nothing about what the derivations actually cite). If a
-/// split, extraction, promotion or skolemisation moved the anchor, the
-/// derivations cite terms the caller never asserted, `check_quantifier_ground_derivation`
-/// fails, and no certificate is offered — which is the intended outcome, reached
-/// by checking rather than by guessing.
+/// split, extraction or promotion moved the anchor, the derivations cite terms
+/// the anchor does not contain, `check_quantifier_ground_derivation` fails, and
+/// nothing is collected — which is the intended outcome, reached by checking
+/// rather than by guessing.
+///
+/// These derivations are **not yet a certificate**: they carry the producing
+/// arena's ids. [`portable_certificate`] turns them into one, or declines.
 #[must_use]
-pub fn build_instance_set_certificate(
+pub fn collect_ground_derivations(
     arena: &mut TermArena,
     anchor: &[TermId],
     ground: &[TermId],
-    derivations: &std::collections::HashMap<TermId, QuantifierGroundDerivation>,
-) -> Option<QuantifierInstanceSetCertificate> {
-    let asserted: std::collections::HashSet<TermId> = anchor.iter().copied().collect();
+    derivations: &HashMap<TermId, QuantifierGroundDerivation>,
+) -> Option<Vec<QuantifierGroundDerivation>> {
+    let asserted: HashSet<TermId> = anchor.iter().copied().collect();
     let mut used = Vec::new();
     for &term in ground {
         if asserted.contains(&term) {
@@ -157,7 +227,83 @@ pub fn build_instance_set_certificate(
         }
         used.push(derivation.clone());
     }
-    Some(QuantifierInstanceSetCertificate { derivations: used })
+    Some(used)
+}
+
+/// Rewrite collected derivations into a certificate that names no term of the
+/// producing run, or `None` if some binding cannot be named portably.
+///
+/// `elimination` must be the one whose `assertions` were the driver's anchor,
+/// and `query` the caller's own (pre-elimination) assertion list.
+#[must_use]
+pub(crate) fn portable_certificate(
+    arena: &mut TermArena,
+    query: &[TermId],
+    elimination: &crate::auto::SkolemElimination,
+    derivations: &[QuantifierGroundDerivation],
+) -> Option<QuantifierInstanceSetCertificate> {
+    let query_terms = query_term_closure(arena, query);
+    let anchor_index: HashMap<TermId, usize> = elimination
+        .assertions
+        .iter()
+        .enumerate()
+        .map(|(index, &assertion)| (assertion, index))
+        .collect();
+    let mut witness_index: HashMap<TermId, (usize, usize)> = HashMap::new();
+    for (assertion, symbols) in elimination.witnesses.iter().enumerate() {
+        for (index, &symbol) in symbols.iter().enumerate() {
+            witness_index.insert(arena.var(symbol), (assertion, index));
+        }
+    }
+
+    let mut instances = Vec::with_capacity(derivations.len());
+    for derivation in derivations {
+        // A propagation certificate carries nested structure that this
+        // positional form does not describe. Decline rather than half-record it.
+        let QuantifierGroundDerivation::Instance(recorded) = derivation else {
+            return None;
+        };
+        let assertion = *anchor_index.get(&recorded.assertion)?;
+        let mut bindings = Vec::with_capacity(recorded.bindings.len());
+        for &binding in &recorded.bindings {
+            if let Some(&(assertion, index)) = witness_index.get(&binding) {
+                bindings.push(PortableBinding::Witness { assertion, index });
+            } else if query_terms.contains(&binding) {
+                bindings.push(PortableBinding::Query(binding));
+            } else {
+                // A term e-matching invented during the solve. It has no name a
+                // checker's arena could resolve, so there is no honest way to
+                // record it -- and recording the id anyway is exactly how a
+                // `certified=1` that fails re-validation gets shipped.
+                return None;
+            }
+        }
+        instances.push(PortableInstance {
+            assertion,
+            bindings,
+        });
+    }
+    Some(QuantifierInstanceSetCertificate {
+        skolem_prefix: elimination.witnesses.iter().map(Vec::len).collect(),
+        instances,
+    })
+}
+
+/// Every subterm of `assertions` — the terms a re-parse of the same file
+/// reproduces at the same ids, and therefore the only ones a certificate may
+/// name.
+fn query_term_closure(arena: &TermArena, assertions: &[TermId]) -> HashSet<TermId> {
+    let mut seen: HashSet<TermId> = HashSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let axeyum_ir::TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    seen
 }
 
 /// Peel a `∀`-prefix, returning its bound variables (outermost first) and body.
@@ -205,42 +351,22 @@ fn rebuild_instance(
     if vars.is_empty() || vars.len() != bindings.len() {
         return None;
     }
-    let replacements: std::collections::HashMap<TermId, TermId> = vars
+    let replacements: HashMap<TermId, TermId> = vars
         .iter()
         .map(|&var| arena.var(var))
         .zip(bindings.iter().copied())
         .collect();
-    let mut memo = std::collections::HashMap::new();
+    let mut memo = HashMap::new();
     axeyum_rewrite::replace_subterms(arena, body, &replacements, &mut memo).ok()
-}
-
-/// Whether every `TermId` the certificate cites exists in this arena.
-///
-/// Checked BEFORE anything dereferences them. `TermArena::node`, `sort_of` and
-/// `var` all index directly and panic on a foreign id, so without this a
-/// certificate from another run does not fail the check — it aborts the process.
-/// A checker must fail closed.
-fn references_resolve(arena: &TermArena, certificate: &QuantifierInstanceSetCertificate) -> bool {
-    let limit = arena.len();
-    certificate
-        .derivations
-        .iter()
-        .all(|derivation| match derivation {
-            QuantifierGroundDerivation::Instance(instance) => {
-                instance.assertion.index() < limit
-                    && instance.bindings.iter().all(|b| b.index() < limit)
-            }
-            // A propagation certificate carries nested structure whose ids are not
-            // rebuilt here; decline rather than dereference them.
-            QuantifierGroundDerivation::Propagation(_) => false,
-        })
 }
 
 /// Independently re-derive a quantifier instance-set refutation.
 ///
-/// Nothing from the producing run is consulted: each derivation is replayed
-/// against `assertions` by the driver's own public checker, every ground member
-/// is required to be asserted or derived, and the ground set is re-refuted.
+/// Nothing from the producing run is consulted: the `∃`-elimination is redone
+/// here (introducing this arena's own witnesses), each instance is rebuilt here
+/// and replayed against the resulting assertions by the driver's own public
+/// checker, every ground member is required to be asserted or derived, and the
+/// ground set is re-refuted.
 ///
 /// # Errors
 ///
@@ -254,64 +380,101 @@ pub fn check_quantifier_instance_set(
 ) -> Result<bool, SolverError> {
     use crate::qinst_egraph::QuantifierInstanceCertificate;
 
-    // (0) Fail CLOSED on an id this arena cannot resolve, before anything
-    // dereferences it. The arena indexes directly and panics on a foreign id.
-    if !references_resolve(arena, certificate) {
+    // (0) Fail CLOSED on a certificate that does not describe THIS query. Its
+    // ids may name nothing here, and the arena indexes directly and panics on a
+    // foreign id, so every reference below is resolved through a membership or
+    // bounds test before anything is dereferenced.
+    if certificate.skolem_prefix.len() != assertions.len() {
+        return Ok(false);
+    }
+    let query_terms = query_term_closure(arena, assertions);
+
+    // (1) Redo the `∃`-elimination HERE. The witnesses are this arena's, freshly
+    // named by the eliminator's own unused-name probe, so freshness -- the
+    // soundness condition -- is established rather than assumed. The recorded
+    // binder counts must agree: they are a fact about the query, and disagreement
+    // means this certificate is about a different one.
+    let Ok(elimination) = crate::auto::eliminate_top_existentials(arena, assertions) else {
+        return Ok(false);
+    };
+    if !elimination
+        .witnesses
+        .iter()
+        .map(Vec::len)
+        .eq(certificate.skolem_prefix.iter().copied())
+    {
         return Ok(false);
     }
 
-    // (1) Rebuild each instance HERE, then check the rebuilt one.
+    // (2) Rebuild each instance HERE, then check the rebuilt one.
     //
-    // This is the whole of portability. `QuantifierInstanceCertificate` records
-    // `(assertion, bindings, instance)`, and the driver's checker verifies the
-    // first two reproduce the third BY TERM ID. `assertion` and `bindings` are
-    // query-side terms, so a re-parse of the same file gives them the same ids;
-    // `instance` is created DURING solving, so its id names a slot the checker's
-    // arena does not have. Trusting it is how a certificate came to report
-    // `certified=1` while its own re-check said FAIL.
-    //
-    // So the recorded `instance` is treated as derived data, not as the claim:
-    // substitute the bindings into the assertion in this arena, and check the
-    // derivation that names THAT term.
-    let mut instances = Vec::with_capacity(certificate.derivations.len());
-    for derivation in &certificate.derivations {
-        let QuantifierGroundDerivation::Instance(recorded) = derivation else {
+    // This is the whole of portability. The certificate names a universal by
+    // index into the list step (1) just built, and each binding either by an id
+    // this query owns or by which witness of which assertion it is. Nothing is
+    // taken from the producer that could name a term this arena does not have.
+    let mut instances = Vec::with_capacity(certificate.instances.len());
+    for recorded in &certificate.instances {
+        let Some(&assertion) = elimination.assertions.get(recorded.assertion) else {
             return Ok(false);
         };
-        let Some(rebuilt) = rebuild_instance(arena, recorded.assertion, &recorded.bindings) else {
+        let mut bindings = Vec::with_capacity(recorded.bindings.len());
+        for binding in &recorded.bindings {
+            let term = match *binding {
+                PortableBinding::Query(term) => {
+                    if !query_terms.contains(&term) {
+                        return Ok(false);
+                    }
+                    term
+                }
+                PortableBinding::Witness { assertion, index } => {
+                    let Some(&symbol) = elimination
+                        .witnesses
+                        .get(assertion)
+                        .and_then(|symbols| symbols.get(index))
+                    else {
+                        return Ok(false);
+                    };
+                    arena.var(symbol)
+                }
+            };
+            bindings.push(term);
+        }
+        let Some(rebuilt) = rebuild_instance(arena, assertion, &bindings) else {
             return Ok(false);
         };
         let repaired = QuantifierGroundDerivation::Instance(QuantifierInstanceCertificate {
-            assertion: recorded.assertion,
-            bindings: recorded.bindings.clone(),
+            assertion,
+            bindings,
             instance: rebuilt,
         });
         // The driver's own public checker still does the real work: it re-peels
         // the universal, re-substitutes, and requires the assertion to be one of
-        // the caller's. Repairing the id does not weaken it -- an instance whose
-        // assertion is not asserted, or whose bindings do not fit its binders,
-        // still fails here.
-        if !check_quantifier_ground_derivation(arena, assertions, &repaired) {
+        // the skolemised list. Rebuilding the ids does not weaken it -- an
+        // instance whose assertion is not asserted, or whose bindings do not fit
+        // its binders, still fails here.
+        if !check_quantifier_ground_derivation(arena, &elimination.assertions, &repaired) {
             return Ok(false);
         }
         instances.push(rebuilt);
     }
 
-    // (2) Rebuild the ground set: the caller's non-universal assertions, plus
-    // those instances. Nothing from the producing run contributes a term.
+    // (3) Rebuild the ground set: this arena's own non-universal skolemised
+    // assertions, plus those instances. Nothing from the producing run
+    // contributes a term.
     //
     // The universals are dropped exactly as the driver's own partition drops
     // them -- their content enters through the instances. Keeping them would
     // send the check back through the quantifier front door and yield `unknown`,
     // which reads as a failed certificate rather than as the wrong question.
-    let mut ground: Vec<TermId> = assertions
+    let mut ground: Vec<TermId> = elimination
+        .assertions
         .iter()
         .copied()
         .filter(|&assertion| !is_top_level_forall(arena, assertion))
         .collect();
     ground.extend(instances);
 
-    // (3) The instances must SUFFICE. Steps (1) and (2) only establish that each
+    // (4) The instances must SUFFICE. Steps (2) and (3) only establish that each
     // instance is a legitimate consequence and that nothing else crept in; a set
     // of true-but-insufficient instances would pass both.
     match crate::auto::check_auto(arena, &ground, config) {
@@ -341,6 +504,15 @@ mod tests {
          (assert (not (= (f 5) 0)))\n\
          (check-sat)";
 
+    /// The barber: the whole point of the elimination record. Nothing here is a
+    /// universal until the existential is gone.
+    const BARBER: &str = "(set-logic UF)\n\
+         (declare-sort Person 0)\n\
+         (declare-fun shaves (Person Person) Bool)\n\
+         (assert (exists ((b Person)) \
+            (forall ((x Person)) (= (shaves b x) (not (shaves x x))))))\n\
+         (check-sat)";
+
     fn refuted(
         text: &str,
     ) -> (
@@ -351,23 +523,28 @@ mod tests {
         let mut parsed = parse_script(text).expect("script parses");
         let assertions = parsed.assertions.clone();
         let config = SolverConfig::default();
-        let mut certificate = None;
+        let elimination =
+            crate::auto::eliminate_top_existentials(&mut parsed.arena, &assertions).expect("elim");
+        let mut derivations = None;
         let result = prove_quantified_unsat_via_egraph_with_instances(
             &mut parsed.arena,
-            &assertions,
+            &elimination.assertions,
             &config,
-            &mut certificate,
+            &mut derivations,
         )
         .expect("no hard backend error");
         assert!(
             matches!(result, CheckResult::Unsat),
             "the premise of every test here: got {result:?}"
         );
-        let certificate = certificate.expect(
+        let derivations = derivations.expect(
             "a plain universal refuted by instantiation is exactly the case this \
              certificate covers; None here means the capture never fires and the \
              negative controls below would be vacuous",
         );
+        let certificate =
+            portable_certificate(&mut parsed.arena, &assertions, &elimination, &derivations)
+                .expect("every binding must be nameable, else there is no certificate to test");
         (parsed, assertions, certificate)
     }
 
@@ -375,7 +552,7 @@ mod tests {
     fn an_instantiation_refutation_produces_a_certificate_that_rechecks() {
         let (mut parsed, assertions, certificate) = refuted(ONE_INSTANCE);
         assert!(
-            !certificate.derivations.is_empty(),
+            !certificate.instances.is_empty(),
             "a refutation that used no instance would not need this route"
         );
         assert!(
@@ -392,7 +569,7 @@ mod tests {
 
     /// A tampered BINDING must be rejected.
     ///
-    /// Guard (2) of the old design — "nothing was smuggled into the ground set"
+    /// Guard (3) of the old design — "nothing was smuggled into the ground set"
     /// — is now structural: the checker builds the ground set itself, so there
     /// is nowhere to smuggle a conjunct. What remains attackable is the
     /// instance's own provenance, so that is what this attacks.
@@ -401,10 +578,8 @@ mod tests {
         let (mut parsed, assertions, certificate) = refuted(ONE_INSTANCE);
         let intruder = parsed.arena.int_const(7);
         let mut tampered = certificate.clone();
-        for derivation in &mut tampered.derivations {
-            if let QuantifierGroundDerivation::Instance(instance) = derivation {
-                instance.bindings = vec![intruder];
-            }
+        for instance in &mut tampered.instances {
+            instance.bindings = vec![PortableBinding::Query(intruder)];
         }
         // The rebuilt instance is now `f(7) = 0`, a true consequence but not the
         // one that refutes `f(5) != 0`. It must fail on SUFFICIENCY, which is
@@ -420,12 +595,13 @@ mod tests {
         );
     }
 
-    /// Guard (3). No instances at all leaves the ground set unrefuted.
+    /// Guard (4). No instances at all leaves the ground set unrefuted.
     #[test]
     fn true_but_insufficient_instances_are_rejected() {
         let (mut parsed, assertions, certificate) = refuted(ONE_INSTANCE);
         let empty = QuantifierInstanceSetCertificate {
-            derivations: Vec::new(),
+            skolem_prefix: certificate.skolem_prefix.clone(),
+            instances: Vec::new(),
         };
         assert!(
             !check_quantifier_instance_set(
@@ -491,9 +667,9 @@ mod tests {
              (check-sat)";
         let (_producing, _assertions, certificate) = refuted(TWO);
         assert!(
-            certificate.derivations.len() >= 2,
+            certificate.instances.len() >= 2,
             "this test is only meaningful with more than one instance; got {}",
-            certificate.derivations.len()
+            certificate.instances.len()
         );
         let mut fresh = parse_script(TWO).expect("re-parses");
         let fresh_assertions = fresh.assertions.clone();
@@ -508,16 +684,143 @@ mod tests {
         );
     }
 
+    /// THE SKOLEMISED CASE, re-parsed. The witness the producer instantiated at
+    /// does not exist in the checker's arena until the checker makes its own —
+    /// so this passes only if the elimination really is recorded positionally.
+    #[test]
+    fn a_skolemised_refutation_survives_an_independent_reparse() {
+        let (_producing, _assertions, certificate) = refuted(BARBER);
+        assert_eq!(
+            certificate.skolem_prefix,
+            vec![1],
+            "the barber's single assertion loses exactly one existential binder"
+        );
+        assert!(
+            certificate
+                .instances
+                .iter()
+                .flat_map(|instance| &instance.bindings)
+                .any(|binding| matches!(binding, PortableBinding::Witness { .. })),
+            "the refuting instance is the universal at its own existential's \
+             witness; if no binding is a witness this test proves nothing"
+        );
+        let mut fresh = parse_script(BARBER).expect("re-parses");
+        let fresh_assertions = fresh.assertions.clone();
+        assert!(
+            check_quantifier_instance_set(
+                &mut fresh.arena,
+                &fresh_assertions,
+                &certificate,
+                &SolverConfig::default(),
+            )
+            .expect("checker runs")
+        );
+    }
+
+    /// A recorded elimination that does not match the query's is rejected.
+    ///
+    /// The counts are a fact about the query, so disagreement means the
+    /// certificate is about a different one — and accepting it would let a
+    /// refutation of some *other* skolemisation stand in for this query's.
+    #[test]
+    fn a_mismatched_elimination_record_is_rejected() {
+        let (mut parsed, assertions, certificate) = refuted(BARBER);
+        let mut tampered = certificate.clone();
+        tampered.skolem_prefix = vec![0];
+        assert!(
+            !check_quantifier_instance_set(
+                &mut parsed.arena,
+                &assertions,
+                &tampered,
+                &SolverConfig::default(),
+            )
+            .expect("checker runs")
+        );
+        let mut wrong_length = certificate;
+        wrong_length.skolem_prefix = vec![1, 1];
+        assert!(
+            !check_quantifier_instance_set(
+                &mut parsed.arena,
+                &assertions,
+                &wrong_length,
+                &SolverConfig::default(),
+            )
+            .expect("checker runs")
+        );
+    }
+
+    /// A binding this arena cannot resolve must fail closed, not ABORT.
+    ///
+    /// This is the guard the previous test does not reach. A checker's arena is
+    /// a fresh parse and is therefore *small*; a producing arena has been
+    /// through a whole solve. So an id that is perfectly ordinary in the
+    /// producer can be past the end of the checker's arena entirely — and
+    /// `TermArena::sort_of` indexes directly, so rebuilding an instance around
+    /// such a binding is a process abort rather than a `false`. Both halves of
+    /// this test are id-resolution: a term-side id and a witness-side index.
+    #[test]
+    fn a_binding_this_arena_cannot_resolve_fails_closed() {
+        let (mut producing, _assertions, certificate) = refuted(ONE_INSTANCE);
+        // An id at the tail of the producing arena. Nothing about it is
+        // malformed there; it simply does not exist in a fresh parse.
+        let far = producing.arena.int_const(123_456);
+        let mut fresh = parse_script(ONE_INSTANCE).expect("re-parses");
+        let fresh_assertions = fresh.assertions.clone();
+        assert!(
+            far.index() >= fresh.arena.len(),
+            "this test is only meaningful when the id is out of range for the \
+             checker's arena; producing tail {} vs fresh len {}",
+            far.index(),
+            fresh.arena.len()
+        );
+
+        let mut dangling = certificate.clone();
+        for instance in &mut dangling.instances {
+            instance.bindings = vec![PortableBinding::Query(far)];
+        }
+        assert!(
+            !check_quantifier_instance_set(
+                &mut fresh.arena,
+                &fresh_assertions,
+                &dangling,
+                &SolverConfig::default(),
+            )
+            .expect("checker must return a verdict, not abort")
+        );
+
+        // The same for a witness reference: naming a witness of an assertion
+        // that has none is a lookup this arena cannot satisfy.
+        let mut absent_witness = certificate;
+        for instance in &mut absent_witness.instances {
+            instance.bindings = vec![PortableBinding::Witness {
+                assertion: 0,
+                index: 0,
+            }];
+        }
+        assert!(
+            !check_quantifier_instance_set(
+                &mut fresh.arena,
+                &fresh_assertions,
+                &absent_witness,
+                &SolverConfig::default(),
+            )
+            .expect("checker must return a verdict, not abort")
+        );
+    }
+
     /// A certificate offered for a DIFFERENT query must fail closed, not abort.
     ///
     /// Its ids may not resolve in this arena at all, and the arena indexes
-    /// directly — so without the bounds check this is a panic rather than a
+    /// directly — so without the membership tests this is a panic rather than a
     /// verdict.
     #[test]
     fn a_certificate_for_another_query_fails_closed() {
         let (_producing, _assertions, certificate) = refuted(ONE_INSTANCE);
+        // Two assertions, none existential, so the certificate's shape checks
+        // pass and the id-resolution path below is actually reached.
         let mut other = parse_script(
-            "(set-logic QF_LIA)\n(declare-fun y () Int)\n(assert (= y 1))\n(check-sat)",
+            "(set-logic QF_LIA)\n(declare-fun y () Int)\n\
+             (assert (= y 1))\n(assert (> y 0))\n(check-sat)",
         )
         .expect("parses");
         let other_assertions = other.assertions.clone();

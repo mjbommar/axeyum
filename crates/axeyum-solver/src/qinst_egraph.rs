@@ -229,14 +229,19 @@ pub fn prove_quantified_unsat_via_egraph(
 /// As [`prove_quantified_unsat_via_egraph`], additionally reporting the
 /// instances that justified an `unsat`.
 ///
-/// On `Ok(CheckResult::Unsat)` `certificate` holds a
-/// [`QuantifierInstanceSetCertificate`](crate::quant_instance_set_cert::QuantifierInstanceSetCertificate)
-/// **when the refutation is exactly "the caller's assertions plus checked
-/// instances"**, and `None` otherwise — a refutation reached by a sub-routine's
-/// own argument, or one whose anchor is a rewrite of the caller's list, is not
-/// described by this certificate and is not claimed. `None` is therefore normal
-/// and never an error; it simply leaves the result uncertified, exactly as
-/// before this existed.
+/// On `Ok(CheckResult::Unsat)` `certificate` holds the checked
+/// [`QuantifierGroundDerivation`]s **when the refutation is exactly "the
+/// caller's assertions plus checked instances"**, and `None` otherwise — a
+/// refutation reached by a sub-routine's own argument, or one whose anchor is a
+/// rewrite of the caller's list, is not described by them and is not claimed.
+/// `None` is therefore normal and never an error; it simply leaves the result
+/// uncertified, exactly as before this existed.
+///
+/// These derivations name the **producing arena's** terms and are not yet
+/// portable evidence; `quant_instance_set_cert::portable_certificate` turns them
+/// into a
+/// [`QuantifierInstanceSetCertificate`](crate::quant_instance_set_cert::QuantifierInstanceSetCertificate),
+/// or declines.
 ///
 /// # Errors
 ///
@@ -245,7 +250,7 @@ pub fn prove_quantified_unsat_via_egraph_with_instances(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
-    certificate: &mut Option<crate::quant_instance_set_cert::QuantifierInstanceSetCertificate>,
+    certificate: &mut Option<Vec<QuantifierGroundDerivation>>,
 ) -> Result<CheckResult, SolverError> {
     let anchor: Vec<TermId> = assertions.to_vec();
     let mut stats = QuantifierLoopStats::default();
@@ -1157,7 +1162,7 @@ fn prove_quantified_unsat_via_egraph_impl(
     // caller's and may grow by promotion. A certificate is offered only when the
     // two coincide -- see `quant_instance_set_cert`.
     anchor: &[TermId],
-    certificate: &mut Option<crate::quant_instance_set_cert::QuantifierInstanceSetCertificate>,
+    certificate: &mut Option<Vec<QuantifierGroundDerivation>>,
 ) -> Result<CheckResult, SolverError> {
     let deadline = config
         .timeout
@@ -1285,7 +1290,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 )?,
                 CheckResult::Unsat
             ) {
-                *certificate = crate::quant_instance_set_cert::build_instance_set_certificate(
+                *certificate = crate::quant_instance_set_cert::collect_ground_derivations(
                     arena,
                     anchor,
                     &ground,
@@ -1324,7 +1329,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                     &format!("qf-check round={round} ground={}", ground.len()),
                 );
                 if matches!(check, CheckResult::Unsat) {
-                    *certificate = crate::quant_instance_set_cert::build_instance_set_certificate(
+                    *certificate = crate::quant_instance_set_cert::collect_ground_derivations(
                         arena,
                         anchor,
                         &ground,
@@ -1537,7 +1542,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                     // `replay_online_refutation` re-established it against
                     // `ground` -- so this is a ground refutation by the same
                     // instances as every other exit, and is certifiable.
-                    *certificate = crate::quant_instance_set_cert::build_instance_set_certificate(
+                    *certificate = crate::quant_instance_set_cert::collect_ground_derivations(
                         arena,
                         anchor,
                         &ground,
@@ -1577,7 +1582,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 CheckResult::Unsat
             )
         {
-            *certificate = crate::quant_instance_set_cert::build_instance_set_certificate(
+            *certificate = crate::quant_instance_set_cert::collect_ground_derivations(
                 arena,
                 anchor,
                 &ground,
@@ -1617,7 +1622,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         &generations,
     )?;
     if matches!(finished, CheckResult::Unsat) {
-        *certificate = crate::quant_instance_set_cert::build_instance_set_certificate(
+        *certificate = crate::quant_instance_set_cert::collect_ground_derivations(
             arena,
             anchor,
             &ground,

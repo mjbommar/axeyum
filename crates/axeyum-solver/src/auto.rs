@@ -874,15 +874,54 @@ fn certify_skolemized_negated_universals(
     CheckResult::Sat(model)
 }
 
+/// What a top-level existential elimination did, recorded **without any
+/// `TermId` of its own product**.
+///
+/// A certificate for a refutation of the *skolemized* query has to explain the
+/// difference between that query and the caller's, and it cannot do so with
+/// ids: the skolemized assertions and the witness terms are created during the
+/// producing solve, so their ids name nothing in a checker's arena (which is a
+/// fresh parse of the same file, deliberately — see
+/// [`crate::quant_instance_set_cert`]). What *is* portable is the shape of the
+/// elimination: assertion `i` lost `witnesses[i].len()` existential binders,
+/// outermost first. A checker re-runs [`eliminate_top_existentials`] on the
+/// caller's assertions, obtains its **own** `assertions` and its **own**
+/// witnesses at the same positions, and reads the certificate's positional
+/// references against those.
+///
+/// Freshness — the soundness condition for eliminating `∃` — needs no recording
+/// for the same reason: whoever runs this function introduces the witnesses
+/// itself, into its own arena, through the unused-name probe below.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SkolemElimination {
+    /// The skolemized assertions, positionally parallel to the input.
+    pub(crate) assertions: Vec<TermId>,
+    /// Witness symbols introduced for each input assertion, outermost binder
+    /// first. Empty for an assertion with no top-level existential, which is
+    /// the overwhelmingly common case and leaves that assertion untouched.
+    pub(crate) witnesses: Vec<Vec<axeyum_ir::SymbolId>>,
+}
+
 fn skolemize_top_existentials(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Result<Vec<TermId>, SolverError> {
+    Ok(eliminate_top_existentials(arena, assertions)?.assertions)
+}
+
+/// As `skolemize_top_existentials`, additionally reporting the witness symbols
+/// it introduced per assertion — see [`SkolemElimination`].
+pub(crate) fn eliminate_top_existentials(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<SkolemElimination, SolverError> {
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
     let mut out = Vec::with_capacity(assertions.len());
+    let mut witnesses = Vec::with_capacity(assertions.len());
     let mut k = 0u32;
     for &a in assertions {
         let mut current = a;
+        let mut introduced = Vec::new();
         #[allow(clippy::while_let_loop)] // explicit loop reads clearer with the let-else below
         loop {
             let TermNode::App {
@@ -911,14 +950,19 @@ fn skolemize_top_existentials(
             };
             let bound = arena.var(sym);
             let fresh = arena.var(skolem);
+            introduced.push(skolem);
             let mut map: HashMap<TermId, TermId> = HashMap::new();
             map.insert(bound, fresh);
             let mut memo: HashMap<TermId, TermId> = HashMap::new();
             current = replace_subterms(arena, body, &map, &mut memo).map_err(err)?;
         }
         out.push(current);
+        witnesses.push(introduced);
     }
-    Ok(out)
+    Ok(SkolemElimination {
+        assertions: out,
+        witnesses,
+    })
 }
 
 fn normalize_top_level_quantified_counterexamples(

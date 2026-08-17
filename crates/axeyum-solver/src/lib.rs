@@ -508,7 +508,8 @@ pub mod certificates {
             QuantifiedGuardSatCertificate, check_quantified_guard_sat,
         };
         pub use crate::quant_instance_set_cert::{
-            QuantifierInstanceSetCertificate, check_quantifier_instance_set,
+            PortableBinding, PortableInstance, QuantifierInstanceSetCertificate,
+            check_quantifier_instance_set,
         };
         pub use crate::quant_negated_exists_cert::{
             NEGATED_EXISTENTIAL_BINDER_CAP, NEGATED_EXISTENTIAL_NODE_CAP,
@@ -1206,7 +1207,8 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use quant_instance_set_cert::{
-            QuantifierInstanceSetCertificate, check_quantifier_instance_set,
+            PortableBinding, PortableInstance, QuantifierInstanceSetCertificate,
+            check_quantifier_instance_set,
         };
         #[doc(hidden)]
         pub use quant_negated_exists_cert::{
