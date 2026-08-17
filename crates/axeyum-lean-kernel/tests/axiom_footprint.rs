@@ -155,23 +155,31 @@ fn int_footprints_name_only_what_a_declaration_actually_uses() {
         .iter()
         .filter(|(_, d)| matches!(d, Declaration::Axiom { .. }))
         .count();
-    // 1 integer (`euclidean_decomposition`) + 30 real. 33 of the integer
-    // prelude's original 34 are now constructed or derived; a change to either
-    // number is a real result either way.
-    assert_eq!(trusted, 31, "trusted population changed");
+    // 30 real, 0 integer. This was 31 until 2026-08-16, when
+    // `Int.euclidean_decomposition` — the integer prelude's LAST assumption —
+    // became a theorem over the proved Nat development, so all 34 of the
+    // original integer axioms are now constructed or derived. The comment here
+    // used to say "a change to either number is a real result either way", and
+    // this was that result.
+    assert_eq!(trusted, 30, "trusted population changed");
 
     declare_composite_witness(&mut kernel);
 
     // Exact, not a subset check: an over-approximation that happened to contain
     // these would pass a subset assertion while being worthless. The real half
     // drags in the carrier and the operations it is stated over, because those
-    // are assumptions too; the integer half drags in exactly one law.
+    // are assumptions too.
+    //
+    // The integer half drags in NOTHING, and that is the point of the test now.
+    // It used to contribute `Int.euclidean_decomposition`; since 2026-08-16 the
+    // integer prelude is axiom-free, so a witness stated over BOTH ℤ and ℝ
+    // carries only ℝ's assumptions. An exact assertion is what makes that
+    // visible — a subset check would have gone on passing and said nothing.
     let mut composite = footprint_names(&kernel, "combined");
     composite.sort();
     assert_eq!(
         composite,
         vec![
-            "Int.euclidean_decomposition",
             "Real",
             "Real.add",
             "Real.add_assoc",
@@ -179,14 +187,13 @@ fn int_footprints_name_only_what_a_declaration_actually_uses() {
             "Real.zero",
         ],
     );
-    assert_eq!(
-        footprint_names(&kernel, "Int.euclidean_decomposition"),
-        vec!["Int.euclidean_decomposition"],
-    );
     // Derived from the axiom-free `Nat` development: nothing at all — including
     // the four laws that were assumptions until the `subNatNat` borrow lemmas
-    // landed.
+    // landed, and `euclidean_decomposition`, which was the LAST integer axiom
+    // and became a theorem on 2026-08-16. It was asserted just above as an
+    // axiom resting on itself; it now belongs here, which is the whole result.
     for derived in [
+        "Int.euclidean_decomposition",
         "Int.add_comm",
         "Int.add_neg",
         "Int.add_assoc",
@@ -232,12 +239,19 @@ fn int_footprints_name_only_what_a_declaration_actually_uses() {
 #[test]
 fn an_axiom_rests_on_itself() {
     let mut kernel = Kernel::new();
-    let _ = build_int_prelude(&mut kernel).expect("Int prelude must build");
+    let _ = build_arith_prelude(&mut kernel).expect("Real prelude must build");
 
     // Matches Lean's `#print axioms` on an axiom. Omitting the root would let a
     // fact cite an axiom as its own axiom-free evidence.
+    //
+    // The subject was `Int.euclidean_decomposition` until 2026-08-16, when it
+    // stopped being an axiom and became a theorem — at which point this test
+    // was asserting a self-reference property of something with an EMPTY
+    // footprint, and failed. It now runs on `Real.add_comm`, which is still
+    // assumed. The real prelude's 30 axioms are where this property can be
+    // exercised at all, and if that ever reaches zero this test must move again
+    // rather than be deleted: the property is about axioms, not about ℝ.
     assert!(
-        footprint_names(&kernel, "Int.euclidean_decomposition")
-            .contains(&"Int.euclidean_decomposition".to_owned())
+        footprint_names(&kernel, "Real.add_comm").contains(&"Real.add_comm".to_owned())
     );
 }
