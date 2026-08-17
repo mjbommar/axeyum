@@ -46,6 +46,7 @@ import argparse
 import json
 import sys
 from collections import defaultdict
+import pathlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -167,8 +168,51 @@ def band(fact: dict, facts: dict[str, dict]) -> str:
     return "research" if external in EXTERNAL_UNSETTLED else "backlog"
 
 
+def gate_holds(facts: dict[str, dict]) -> dict[str, list[str]]:
+    """`fact id -> [gate script that would break if it closed]`.
+
+    DERIVED by scanning `scripts/` for fact ids, not recorded in the fact. A
+    fact does not know what depends on it, and asking authors to remember is the
+    same losing bet as hand-written `depends_on`.
+
+    The case this exists for is live. `F:no-integer-square-is-minus-one` is the
+    NEGATIVE CONTROL of `check-smt-evidence-certified.py`: it must stay `open`
+    and uncertified, because a certification gate whose control has become
+    certifiable is no longer testing anything. This queue reported it as
+    "DECIDABLE — dispatch it", which is true and, taken alone, an instruction to
+    break a gate. Closing it is FINE — the gate says so itself, in the failure it
+    raises — but only together with repointing the control at another
+    uncertified instance. That coupling was written in the checker and nowhere a
+    person picking work would look.
+
+    This is a TEXT SCAN, so it over-reports: a script that merely quotes a fact
+    id as a documentation example is flagged alongside one that genuinely reads
+    it. That is the right direction to be wrong in — the cost of checking a
+    script is small, and the cost of silently closing a gate's control is a gate
+    that no longer tests anything. The message says "check", not "breaks".
+    """
+    held: dict[str, list[str]] = {}
+    scripts = ROOT / "scripts"
+    for path in sorted(scripts.glob("*.py")) + sorted(scripts.glob("*.sh")):
+        # Skip this file: naming the example in the docstring above would
+        # otherwise make the queue report itself as a gate the fact backs.
+        if path.name == pathlib.Path(__file__).name:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for ident in facts:
+            # The bare id, or its instance-file spelling (`F:a-b` -> `a-b.smt2`).
+            stem = ident.removeprefix("F:")
+            if ident in text or f"{stem}.smt2" in text:
+                held.setdefault(ident, []).append(path.name)
+    return held
+
+
 def describe(fact: dict, facts: dict[str, dict], show_unlocks: bool,
-             unlocks: dict[str, list[str]], decidable: set[str]) -> str:
+             unlocks: dict[str, list[str]], decidable: set[str],
+             held: dict[str, list[str]] | None = None) -> str:
     frag = fact["formal"]["fragment"]
     if frag in decidable:
         reach = "DECIDABLE — dispatch it"
@@ -182,6 +226,10 @@ def describe(fact: dict, facts: dict[str, dict], show_unlocks: bool,
         line += f"\n      needs first: {', '.join(unmet)}"
     if show_unlocks and unlocks.get(fact["id"]):
         line += f"\n      would unlock: {', '.join(unlocks[fact['id']])}"
+    for gate in (held or {}).get(fact["id"], []):
+        line += (f"\n      ⚠ NAMED BY {gate} — check that script before closing this. "
+                 "It may be load-bearing there (a gate's negative control), or merely "
+                 "quoted as an example.")
     return line
 
 
@@ -196,6 +244,7 @@ def main() -> int:
         print("fact-frontier: no artifacts/facts/ directory", file=sys.stderr)
         return 2
     facts = load()
+    held = gate_holds(facts)
 
     # Reverse dependency edges: proving X frees everything that names X.
     unlocks: dict[str, list[str]] = defaultdict(list)
@@ -226,7 +275,7 @@ def main() -> int:
             print("  (none)")
             continue
         for fact in rows:
-            print(describe(fact, facts, args.unlocks, unlocks, decidable_set))
+            print(describe(fact, facts, args.unlocks, unlocks, decidable_set, held))
 
     if not args.band:
         research = bands.get("research", [])

@@ -21,6 +21,20 @@ fmt-all:
 # The `fact` ledger: a mathematical statement as a first-class object, with its
 # status, dependencies and evidence. Semantic rules, not just structure -- a
 # `proved` fact with nothing checked, or an `open` one carrying evidence, fails.
+# `fact-frontier.py` existed for a while and was referenced by NOTHING — not
+# CLAUDE.md, not PLAN.md, not this file. A queue nobody can reach is a record,
+# not a queue, so it gets a one-word name. It also warns when a fact is named by
+# a gate script: a queue that says "dispatch it" about a gate's negative control
+# is telling you to break the gate.
+#
+# What to prove next: frontier, import backlog, what is blocked and on what.
+next:
+    python3 scripts/fact-frontier.py
+
+# Everything the queue knows, including which open facts each entry would unblock.
+next-unlocks:
+    python3 scripts/fact-frontier.py --unlocks
+
 facts:
     python3 scripts/validate-facts.py
     # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
