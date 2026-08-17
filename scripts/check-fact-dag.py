@@ -45,8 +45,21 @@ FACTS = ROOT / "artifacts/facts"
 
 # The isolated FRACTION may not grow. A count would ratchet against adding
 # facts at all, which is the opposite of the intent — the ledger should grow.
-# Measured 0.602 on 2026-08-17; the slack is deliberate and small.
-MAX_ISOLATED_FRACTION = 0.62
+#
+# 0.602 → 0.569 on 2026-08-17, when `check-fact-depends-derived.py` read 18
+# missing edges out of the proof terms rather than asking anyone to write them
+# down. Tightened to match: a ratchet that records an improvement and then keeps
+# accepting the old number is not a ratchet, and this one had 3.3 points of slack
+# it no longer needs.
+#
+# The remaining slack is genuinely small, so say how small: at 62/109 = 0.569
+# this trips after about THREE new isolated facts. That is deliberate but it is
+# not free — if a legitimate batch of independent propositions lands and trips
+# it, the fix is to connect what can be connected (or to run
+# `check-fact-depends-derived.py`, which reads real edges out of proof terms),
+# and only then to raise this with the measurement in the commit message.
+# Raising it because it was in the way is how a ratchet stops meaning anything.
+MAX_ISOLATED_FRACTION = 0.58
 # A floor, so a loader that stops finding facts cannot report a healthy zero.
 MIN_FACTS = 100
 
