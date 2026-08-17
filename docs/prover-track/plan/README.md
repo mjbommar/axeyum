@@ -144,6 +144,6 @@ Each slice pays alone:
 |---|---|
 | **[ADR-0167](../../research/09-decisions/adr-0167-prover-track-entry.md)** — entry; supersedes the stale "implementing dependent type theory is out of scope" | filed, `accepted` |
 | **[ADR-0166](../../research/09-decisions/adr-0166-alethe-target-reassessment.md)** — `lean-smt` uses **CPC, not Alethe**; cvc5's Alethe has **no bit-vectors** | filed, `proposed`; resolve before choosing a new Lean proof route, with priority owned by root `PLAN.md` |
-| The prelude-assumption boundary — **65** runtime/type-digested rows; the generated ledger assigns 7 derivable, 41 external, and 17 primitive rows, while accepted TL3.2 classification and discharge remain open | T6.0.6 / TL0.4 / TL3.2 |
+| The prelude-assumption boundary — **31** runtime/type-digested rows, down from 65 as ℤ was constructed over the proved ℕ development; the generated ledger assigns 3 derivable, 19 external, and 9 primitive rows, while accepted TL3.2 classification and discharge remain open | T6.0.6 / TL0.4 / TL3.2 |
 | The prover-side generic `Refute` checker/bridge (distinct from existing solver model replay) | P6.1c |
 | **What the QF_UF 54% actually reflects** — the previous explanation was false ([note 08's correction](../research/08-solver-automation-assets.md)) | unwritten |
