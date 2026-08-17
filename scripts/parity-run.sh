@@ -681,7 +681,14 @@ fi
   echo "| protocol | ${budget_s}s wall, ${mem_gb}GiB, per-file |"
   echo "| benchmark list | \`${list}\` (sha256 ${list_sha}, ${total} files) |"
   echo "| solver commit | \`${solver_sha}\`${dirty} |"
-  echo "| load average (start / end) | ${load_start} / $(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || echo '?') — 24 cores; a high load DEPRESSES this result |"
+  # `${cores}`, NOT a hardcoded 24. A load average is uninterpretable without
+  # the core count it is relative to, which is the whole reason this field
+  # exists — and the constant made the field LIE on any other host. Measured
+  # 2026-08-17: a QF_BV evidence sweep on a 16-thread i5-12600K recorded
+  # "load 0.97 1.00 1.02 — 24 cores", so a reader comparing it to the
+  # 2026-08-02 entry on the real 24-core box could not see that the hardware
+  # had changed underneath the two numbers they were differencing.
+  echo "| load average (start / end) | ${load_start} / $(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || echo '?') — ${cores} cores; a high load DEPRESSES this result |"
   echo "| per-file detail | \`${sidecar}\` |"
   if (( disagreements > 0 )); then
     echo

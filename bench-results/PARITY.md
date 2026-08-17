@@ -747,3 +747,50 @@ A file we can refute but cannot certify counts against us; it is not dropped.
 | load average (start / end) | 5.66 8.85 7.11 / 4.65 4.83 5.66 — 24 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_UFLIA.tsv` |
 
+## QF_BV — 2026-08-17T20:21:52Z — EVIDENCE MODE
+
+Evidence mode (`PARITY_EVIDENCE=1`). Every scored number above and below is
+from the SAME default-route run at the 24s protocol budget as any other
+entry -- evidence mode only ADDS a second axeyum run per file
+(`AXEYUM_EVIDENCE=1`, 60s) that produces and re-checks a certificate.
+
+`certified / unsat` counts, over every `unsat` THE SCORED RUN PRODUCED, how many
+the evidence run also decided `unsat` **and** returned a checkable certificate for.
+A file we can refute but cannot certify counts against us; it is not dropped.
+
+| field | value |
+|---|---|
+| axeyum solved | 187/200 |
+| reference solved | 194/200 |
+| **ratio (axeyum / reference)** | **96.4%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| **certified / unsat** | **93/130 = 71.5%** |
+| re-checked here (text-only) / unsat | 79/130 = 60.8% |
+| certificates that FAILED to re-check | 0 |
+| axeyum evidence-run budget | 60s (scored run stays at 24s) |
+| both / axeyum-only / reference-only | 187 / 0 / 7 |
+| reference | `0.9.1` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_BV.txt` (sha256 6f873e15b191, 200 files) |
+| solver commit | `c799be2f7` |
+| load average (start / end) | 0.11 0.45 1.55 / 0.97 1.00 1.02 — 16 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_BV.tsv` |
+| evidence split | [`bench-results/qfbv-evidence-split-20260817/`](qfbv-evidence-split-20260817/README.md) |
+
+NOT DIRECTLY COMPARABLE TO THE 2026-08-02 QF_BV EVIDENCE ENTRY — DIFFERENT
+HARDWARE. That entry ran on the 24-core box at load 10.4–14.6; this one ran on a
+**16-thread i5-12600K** (6 P-cores + 4 E-cores) at load 0.1–1.0. The `— 24
+cores` in the generated row was a hardcoded constant, not a measurement; it is
+corrected to 16 here and `scripts/parity-run.sh` now prints the `nproc` it
+already computes. Nothing else in this entry was edited.
+
+The `certified / unsat` cell moved 92/130 → 93/130 (70.8% → 71.5%), i.e. by ONE
+file across a hardware change, a load change (10–14 → ~1) and 100+ commits.
+That is not evidence of an improvement; a quiet box is expected to win back
+borderline files on a wall-clock budget all by itself. The population is
+identical (same list sha256, same 130-unsat denominator, same 187/200 and
+96.4%), so the comparison is at least on the same benchmarks.
+
