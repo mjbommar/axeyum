@@ -59,6 +59,12 @@ step fmt-all scripts/check-fmt-complete.sh
 step facts  python3 scripts/validate-facts.py
 step fact-dag-tests python3 -m unittest scripts.tests.test_check_fact_dag
 step fact-dag python3 scripts/check-fact-dag.py --quiet
+step fact-depends-tests python3 -m unittest scripts.tests.test_check_fact_depends_derived
+# `fact-dag` measures the ledger's dependency graph; this one DERIVES it. A
+# kernel-route fact's `depends_on` is read out of the admitted proof term
+# (`Kernel::theorem_dependencies`) instead of being transcribed -- 18 real edges
+# were missing when this first ran, including two facts proved the same day.
+step fact-depends python3 scripts/check-fact-depends-derived.py --quiet
 step smt-evidence-tests python3 -m unittest scripts.tests.test_check_smt_evidence_certified
 # Every settled SMT-route fact's own evidence command tests only the VERDICT
 # (`... | tail -1` = unsat), which passes on an UNCERTIFIED refutation --

@@ -788,6 +788,47 @@ impl Kernel {
 
     /// The constants a declaration references (in its type, plus its value for
     /// `Definition`/`Theorem`/`Opaque`).
+    /// The **theorems** `name`'s statement and proof directly reference.
+    ///
+    /// The dependency walk this shares with [`Self::axiom_footprint`] already
+    /// computes the whole constant closure; that method keeps only the trusted
+    /// declarations and throws the rest away. This keeps the other half, because
+    /// the discarded half is what a fact ledger's `depends_on` is supposed to be.
+    ///
+    /// # Why derive it rather than write it down
+    ///
+    /// ADR-0465 settles that the axiom ledger is derived, not transcribed. The
+    /// same argument applies here and the evidence is stronger: measured
+    /// 2026-08-17, 65 of 109 ledger facts declare no dependency and have no
+    /// dependent, so proving one usually unlocks nothing — the arrow CLAUDE.md
+    /// calls *"the concept DAG and the fact ledger say what to prove next"* has
+    /// little to work with. Some of that isolation is honest (an SMT-LIB
+    /// propositional refutation really does not rest on a Nat lemma), but a
+    /// kernel-route fact whose proof cites four prelude theorems and declares
+    /// none is simply unrecorded, and nothing could tell the two apart.
+    ///
+    /// DIRECT references only, not the transitive closure: `depends_on` is meant
+    /// to say what a proposition immediately rests on, and the transitive set of
+    /// a late theorem is most of the prelude.
+    ///
+    /// Definitions, inductives and axioms are filtered out — a proof of
+    /// `Nat.add_comm` references `Nat` and `Nat.add`, and recording those as
+    /// dependencies would say nothing about which *propositions* it needs.
+    /// Self-reference is dropped. Names are sorted by rendered name, so the
+    /// result is stable across runs and interning orders and can be committed.
+    #[must_use]
+    pub fn theorem_dependencies(&self, name: NameId) -> Vec<NameId> {
+        let mut deps: Vec<NameId> = self
+            .decl_deps(name)
+            .into_iter()
+            .filter(|&d| d != name)
+            .filter(|&d| matches!(self.environment().get(d), Some(Declaration::Theorem { .. })))
+            .collect();
+        deps.sort_by_key(|&n| self.display_name(n).to_string());
+        deps.dedup();
+        deps
+    }
+
     fn decl_deps(&self, name: NameId) -> Vec<NameId> {
         let mut deps = Vec::new();
         if let Some(decl) = self.environment().get(name) {

@@ -28,6 +28,11 @@ facts:
     # usually unlocks nothing; the ratchet keeps that from getting worse.
     python3 -m unittest scripts.tests.test_check_fact_dag
     python3 scripts/check-fact-dag.py --quiet
+    # The same arrow, DERIVED rather than transcribed: a kernel-route fact's
+    # `depends_on` is read out of the admitted proof term, so an unrecorded
+    # dependency is a failure rather than an indistinguishable silence.
+    python3 -m unittest scripts.tests.test_check_fact_depends_derived
+    python3 scripts/check-fact-depends-derived.py --quiet
     # A settled SMT-route fact's evidence command tests the VERDICT and not the
     # CERTIFICATION: `test "$(... | tail -1)" = unsat` exits 0 on an uncertified
     # refutation, verified against artifacts/facts/smt2/neg-barber-no-such-barber.smt2.

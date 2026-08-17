@@ -17,7 +17,8 @@
   "axiom_footprint": [],
   "depends_on": [
     "F:nat-mul-assoc",
-    "F:nat-mul-comm"
+    "F:nat-mul-comm",
+    "F:nat-mul-one"
   ],
   "evidence": [
     {
