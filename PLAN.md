@@ -54,158 +54,12 @@ or a replacement for the Lean system.
 The [Lean requirements](docs/plan/lean-kernel-requirements-2026-08-13.md) are
 **WIP**. Nat is zero-axiom; Int reconstruction remains assumption-bearing.
 
-Exact pushed `e996afd83` passed `just check`; its RDL capture then failed closed
-at 196/200 because allocator arenas accumulated across files. ADR-0379 rejects
-allocator tuning and uses one inherited-limit child at a time. The isolated
-200-row trigger passed with zero stderr; the old partial stream remains
-non-credited. See the
-[result](docs/plan/qf-linear-a5-rdl-process-isolation-repair-2026-08-09.md).
-
-Exact pushed repair `5a53012e1` passed the complete external-frontier
-`just check` gate with exit 0. The preregistered V2 sequence then produced three
-structurally valid atomic 200-row captures with zero stderr and the exact
-pushed source/binary identity. QF_LRA decided 89, QF_IDL 68, and QF_RDL 105;
-the RDL stream crossed the former row-196 process boundary and completed in
-2,127,949 ms. The lossless derivation nevertheless stopped correctly:
-historical QF_LRA UNSAT control
-`sal/windowreal/windowreal-no_t_deadlock-17.smt2` returned deterministic pre-SAT
-resource `unknown` at 1,217 arithmetic atoms and 6,526 CNF variables. Gains
-elsewhere hid that loss in the aggregate count. The entire V2 sequence is
-non-credited. A bounded
-[pre-SAT boundary discriminator](docs/plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-preregistration-2026-08-10.md)
-now owns the P0 path; no residual grouping or census-based breadth change is
-authorized.
-
-The bounded repair is exact-pushed at `8a6de50ac`. Its rebuilt 11,859,344-byte
-binary (`eec4813b557165ec95afc43912ad9fc2b5400ec94db5b7134ecacd50b100867d`)
-replayed the lost control as byte-identical UNSAT in 3/3 observations at 0.10
-seconds and below 17 MiB peak RSS; both allocation-abort controls and the
-low-atom/31,944-variable IDL control retained typed pre-SAT declines. Formatting,
-strict all-feature solver Clippy, all 1,091 solver-library tests, deep-input
-16/16, online arithmetic/CDCL(T) 41/41, and both differential suites are green
-with zero disagreement. Exact pushed checkpoint `3267432a7` then passed one
-uninterrupted external-frontier `just check` in 6,410 seconds with exit 0; see the
-[result](docs/plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-result-2026-08-10.md).
-
-The `sc-39` classifier repair (`d646382e7`, gated at `b9938576b`) and the V2
-DL repair (`d1b570f91c2`, full external-frontier `just check` exit 0) are
-release-qualified. Exact-pushed `6d4718e13` completed fresh atomic QF_LRA and
-QF_IDL captures — 90/200 and 70/200, six agreeing gains, zero losses or wrong
-verdicts, all controls retained. QF_RDL is authorized but not started. Full
-detail, including the rejected non-credited streams, is in the
-[result](docs/plan/qf-linear-a5-idl-extended-dl-slice-v2-result-2026-08-11.md).
-
-A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
-main by `47d8cd956`; its retired source tip is in the 2026-08-12 branch-cleanup
-bundle. The repaired complete
-67-row census
-classifies 52 NIA-linearization budget declines, 13 former generic model-replay
-declines, one verifier rejection, and one bounded giant-`distinct` ingest
-decline. The ingest repair replaces a 4.36 GiB expansion abort with a typed
-resource limit. The 13-row diagnostic proved that absent reconstruction models
-were fabricated after typed oracle declines; `4ff9a82c6` preserves empty,
-model, declined, and inconsistent outcomes separately. A preregistered exact
-probe-model reuse experiment recovered zero of seven SAT targets, kept six
-UNSAT controls non-SAT, and was rejected without retaining its code or
-authorizing a 200-row run. The residuals are now split between five large
-DPLL/core-search targets and two integer-model reconstruction-deadline targets.
-The two-case reconstruction cluster is now rejected: both valid diagnostic
-observations entered reconstruction after the shared deadline, dense Gomory was
-size-inadmissible, and B&B ran zero nodes; a follow-up root-repair discriminator
-shifted among earlier load-sensitive stops and never produced stable mechanism
-evidence. No cap, deadline, route-order, or solver-code change was retained.
-The repeated-large-core diagnostic then confirmed size-only admission in 3/3
-direct `SAT14/1051` observations and 2/3 `SAT14/1280` observations. A separately
-preregistered, sound four-group deletion pass shrank the broad clauses but
-reduced `1051` from 192--202 to 35 lazy rounds and `1280` from 391--397 to 338,
-without deciding either target. It was rejected at the two-target gate; all
-temporary solver code was removed and no 200-row run was authorized.
-The remaining small-core pair then received the cheaper preregistered
-relevance-activated bound ladder. It emitted 470--472 checked implications on
-`p4943` and 484 on `p32598` without extra theory-oracle calls, but all six target
-observations remained `unknown`; the target gate failed and all temporary code
-was removed. This closes the five-row DPLL/core-search partition against both
-measured explanation-quality mechanisms. The 52 budget rows are now exactly
-repartitioned into 37 width-ladder timeouts, 11 all-reference-SAT pre-lowering
-clause-estimate refusals, three reference-UNSAT combined-theory timeouts, and
-one reference-UNSAT replay-detected model overflow. Fresh discrimination shows
-the four-row UNSAT tail is not a valid target for the SAT-only width ladder.
-The bounded estimate-attribution route also closed without production code.
-V1 exceeded its analysis-work cap; deduplicated v2 stayed bounded but its
-fresh-parse estimates differed from the exactly reproduced live route by 24/39
-clauses. The complete-record gate failed, so no mechanism or 200-row run is
-authorized and the 64,000,000 ceiling is unchanged. A3 yields to A4.
-The first aggregate A3 gate exposed one load-sensitive string/integer fixture:
-a hidden two-second default deadline could return `unknown` before the known
-`i = 500` witness under aggregate CPU contention. Commit `db7b426e8` removes
-that implicit clock, retains the caller's explicit timeout, and uses
-deterministic 128-candidate / 2,000-node ceilings. The repaired rerun passed
-format, stable all-target Clippy, every workspace unit/integration/differential
-test and doctest, the 1,078-test solver library, the repaired 14/14 coupling
-fixture in 15.58 s, 9/9 isolated frontier tests, both order-255 CAS moment
-proofs in 1,014.84 s, warning-denied rustdoc, QF_BV/reflection/Glaurung gates,
-foundational resources, rules-as-code, the 165-test resume aggregate, and all
-Lean contract suites. It then exited 1 in the final parity-docs stage because
-the generated complete-parity manifest still hashed `.github/workflows/ci.yml`
-before the pinned-`just` workflow repair. Commit `704318a5f` refreshes that one
-source-identity SHA-256 without changing any outcome or parity claim; complete
-parity-docs, plan authority, and links are green. Because the aggregate command
-itself did not exit 0, a final exact-head rerun was required. That rerun at
-`3586c41d9` exited 0 with the tracked tree clean: stable format and all-target
-Clippy; every workspace test and doctest; the 1,078-test solver library; the
-repaired coupling fixture; 9/9 externally stored frontier tests in 212.94 s;
-both order-255 CAS moment proofs in 940.10 s; warning-denied rustdoc; QF_BV,
-reflection, and both 162-file Glaurung policies with zero disagreement;
-foundational resources; rules-as-code; the 165-test resume aggregate in 47.125 s
-with one expected live-host skip; every Lean/process-free contract; parity docs;
-plan authority; and links. The five 20 KiB external frontier artifacts and their
-pointer were removed after recording the result. Topic `ee5042dee` was then
-pushed, merged as `0c31baf97`, and independently passed the combined-main gate
-described above. Exact-SHA hosted docs run `31192792512` and CI run
-`31192792245` at later merge `bd413357c` are separately terminal green.
-
-A2 is **DONE** on current main. The old
-`agent/smtcomp/full-preparation-live` head `3e53ca631` is 401 commits behind
-current main and was rejected as a whole. Four still-valid process-free code
-increments and their R1--R4 contracts were ported; stale root tracker changes
-were excluded. R5 exact-source build provenance is now implemented at topic
-commit `e4bb854bf`: the live CLI has no caller-selected Axeyum binary, the
-operator builds once from exact clean integrated source in a unique private
-locked/offline two-job target, and preparation schema v3 retains and replays
-the source/tool/output/binary/run/completion chain. The port passes 52 focused
-tests with 82 subtests, the 165-test resume aggregate with one expected
-live-host skip, the generated-contract check, and the scoped gate. A real
-fixture-boundary build smoke produced a 14,208,408-byte binary with the
-registered environment and removed its private target. The exact pushed topic
-`2925efea556cab59251e690c9e4e449468865d2c` passed a clean, uninterrupted
-`AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR=<external> CARGO_BUILD_JOBS=2 just check`
-with exit 0. All five frontier artifacts were written only to the external
-directory, the worktree and tracked curves remained clean, and the local and
-remote topic refs matched exactly. A prior direct
-`CARGO_BUILD_JOBS=2 just check` passed every
-code, solver, doctest, ignored moment-proof, rustdoc, profile, reflection,
-benchmark, foundational-resource, rules-as-code, and SMT-COMP resume stage,
-then exited 1 because its frontier stage used the historical tracked artifact
-location and the later scoreboard check correctly rejected those volatile
-curves. The exact committed curves were restored with no retained diff;
-`just parity-docs plan-authority links` then passed cleanly. That earlier run
-reproduces why the port's R3 external artifact isolation is required; the later
-exact-topic gate closes the topic-only gap. Integration-owner review found the
-20-commit topic strictly ahead of main with no divergence, and the synthetic
-merge preview was conflict-free. Merge `8ed5ad089` integrated the reviewed
-stack. Focused post-merge gates passed 52 readiness tests, the 165-test resume
-aggregate, resume-contract generation, plan authority, links, and
-`git diff --check`. That exact merge then passed one uninterrupted
-external-frontier `CARGO_BUILD_JOBS=2 just check` with exit 0: workspace tests
-and doctests, 9/9 frontier tests, both order-255 CAS moment proofs (939.24 s),
-warning-denied rustdoc, both 162-file Glaurung policies, generated resources,
-rules-as-code, SMT-COMP resume, Lean/process-free contract checks, parity docs,
-plan authority, and links all passed. The five frontier artifacts were
-external and the tracked tree remained clean. No host, NAS, sentinel,
-allocation, live Lean, or solver action was performed. See the
-[`A2 stale-branch audit`](docs/plan/smtcomp-a2-stale-branch-audit-2026-08-06.md)
-and
-[`R5 implementation result`](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md).
+Exact pushed repairs for the A5 (linear-arithmetic), A3 (string/integer) and
+A2 (stale-branch) streams — commit-by-commit, with the non-credited partial
+streams retained — are in the
+[A5/A3/A2 repair journal](docs/plan/a5-a3-repair-journal-2026-08.md). The
+current release returns typed `unknown` on each former abort trigger; A3 yields
+to A4.
 
 ### A1 arithmetic resource closure
 
@@ -307,17 +161,18 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
-| 2026-08-17 | `07ffe852` | The e-matching route certifies AND survives an independent re-parse: instances rebuilt in the checker's arena rather than trusted by `TermId`, ground set rebuilt rather than stored (making "nothing smuggled in" structural). One/two/four instances `certified=1 arena=ok`, against `arena=FAIL` for the last two before. Reinstates `a1493099` after `9853fb6c` reverted it. |
-| 2026-08-17 | `3cc574c7` | Both counted proof-production errors closed (A6 first slice): `int_blast`'s deliberate `int.pow2` decline was mapped to a backend error, so `produce_evidence` lost a verdict `check_auto` decides in 0.13ms. Now declines to `unsat` / `unsat-uncertified`. |
-| 2026-08-17 | `e97db72b` | `check-parity-docs.py` crashed before running a single check — it runs in `just check`, not CI, so the preferred aggregate gate failed for everyone as a traceback. Fixing it exposed 14 real failures; 2 mine, 12 other lanes' and now visible. |
+| 2026-08-17 | `07ffe852` | The e-matching route certifies AND survives an independent re-parse: instances rebuilt in the checker's arena rather than trusted by `TermId`, ground set rebuilt rather than stored. One/two/four instances `certified=1 arena=ok`, against `arena=FAIL` for the last two. Reinstates `a1493099` after `9853fb6c` reverted it. |
+| 2026-08-17 | `f40f7dc4` | Lane journal moved to a result note: `PLAN.md` sources 80,235 → 63,072 bytes. Residual excess is in `global/` and predates this lane. |
+| 2026-08-17 | `3cc574c7` | Both counted proof-production errors closed (A6 first slice): `int_blast`'s deliberate `int.pow2` decline was mapped to a backend error, losing a verdict `check_auto` decides in 0.13ms. |
+| 2026-08-17 | `e97db72b` | `check-parity-docs.py` crashed before running a single check — it runs in `just check`, not CI. Fixing it exposed 14 real failures; 12 are other lanes' and now visible. |
 | 2026-08-17 | `2c535667` | CI's representative-crosscheck grep still pinned `families=73`; the new family made it 74. Invisible to every local gate. |
-| 2026-08-17 | `9853fb6c` | REVERTED `a1493099` — it claimed `certified=1` on evidence whose independent re-check FAILED. Adds `tests/certified_implies_revalidatable.rs`: `is_certified()` must imply `Verified` against an independently re-parsed arena, which per-variant suites structurally cannot enforce. |
-| 2026-08-17 | `c2365718` | QF_BV reaches Lean as reasoning: `qf_bv_wide` runs the theorem at `BitVec(16)`, where bit-blasting actually owns it, asserting a theory reconstruction rather than mere acceptance. Split 32 → 33 theory families; both floors raised. |
-| 2026-08-17 | `4cd5d6f0` | The Lean gate reports both halves of its headline and floors the reasoning one, verified under real Lean 4.30.0. Three guards each driven to fail. Corrects the `qf_bv` doc comment, which claimed a bit-level refutation type-checks in Lean. |
-| 2026-08-17 | `c5f4c04b` | The Lean content split is measured, printed per family, and ratcheted both ways: 41 structural / 32 theory families, 72 / 95 modules, classified from rendered module source so no `lean` binary is needed. |
-| 2026-08-17 | `28755674` | The e-matching driver can report the instances that justified an `unsat`, with a checker that replays each derivation, rejects unlicensed ground members, and re-refutes the ground set. Fourth capture site found by measurement — the smallest query refutes through the online CDCL(T) session. |
-| 2026-08-17 | `078b2776` | Every `ProofFragment`'s Lean content class pinned by name. 5 of 61 were pinned before; moving `QfBv` to the attestation arm now gives 1163 passed / 1 failed, and the one is this test. |
-| 2026-08-17 | `502c0503` | Settled SMT-route facts gated on certification, not just verdict: 17 of 17 report `certified=1`, enforced rather than assumed. Seven guards, each mutation-tested to kill exactly one test. |
+| 2026-08-17 | `9853fb6c` | REVERTED `a1493099` — `certified=1` on evidence whose independent re-check FAILED. Adds `tests/certified_implies_revalidatable.rs`: `is_certified()` must imply `Verified` against a re-parsed arena. |
+| 2026-08-17 | `c2365718` | QF_BV reaches Lean as reasoning: `qf_bv_wide` runs the theorem at `BitVec(16)`, where bit-blasting owns it. Split 32 → 33 theory families. |
+| 2026-08-17 | `4cd5d6f0` | The Lean gate reports both halves of its headline and floors the reasoning one, under real Lean 4.30.0. Three guards each driven to fail. |
+| 2026-08-17 | `c5f4c04b` | Lean content split measured, printed per family, ratcheted both ways: 41 structural / 32 theory families, classified from rendered module source. |
+| 2026-08-17 | `28755674` | The e-matching driver reports the instances justifying an `unsat`; checker replays each derivation and re-refutes the ground set. |
+| 2026-08-17 | `078b2776` | Every `ProofFragment`'s Lean content class pinned by name; moving `QfBv` to the attestation arm gives 1163 passed / 1 failed. |
+| 2026-08-17 | `502c0503` | Settled SMT-route facts gated on certification, not just verdict: 17 of 17 `certified=1`, enforced. Seven guards, each mutation-tested. |
 | 2026-08-17 | `f18904db7` | R3: reachability census re-derived and committed as `artifacts/reachability/r3-census.tsv` (190 rows over both corpora); the ranked tables in `04-reachability.md` are now a generated view of it, gated by `scripts/check-reachability-census.py` inside `check-foundational-resources.sh`. 13 guards, each with its own rejection path; mutation-verified that deleting any one kills exactly one test. Corpus coverage checked in both directions and reported SKIPPED, never passed, when the sibling checkout is absent. Stale numbers corrected in `04` and `05`. |
 | 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
 Older landed changes (including the 2026-08-06 A1/A2 closure commits) remain
