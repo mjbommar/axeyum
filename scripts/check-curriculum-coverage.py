@@ -60,6 +60,7 @@ from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ONTOLOGY = ROOT / "artifacts/ontology/foundational-concepts.json"
+PACK_ROOT = ROOT / "artifacts/examples/math"
 SUITE_GLOB = "math_resource_*_routes.rs"
 
 # A call whose name carries one of these decides the instance is a negative
@@ -181,6 +182,63 @@ BOUND_KINDS: tuple[tuple[str, re.Pattern[str]], ...] = (
 UNCLASSIFIED_BOUND_BASELINE = 1
 
 
+# R2, second half — is the fragment a node NAMES the fragment it USES?
+#
+# `curriculum_reals` advertises `LRA / NRA (real-closed fields)` and all 40 of
+# its instances are `QF_LRA`. Zero NRA. That is a different defect from the
+# unclassified bound above: the node names a specific solver fragment and never
+# exercises it, so the map overstates which machinery is demonstrated.
+#
+# Measured 2026-08-17: 11 of 19 covered nodes name at least one logic no
+# instance uses — `BV` claimed by 9 and used by none of theirs, `NRA` by 3.
+# (I hand-counted 10 first, by assuming `relations_and_functions`' only gap was
+# the EUF/UF naming artefact. It also claims `BV`. The baseline comes from the
+# measurement, not from arithmetic over it.)
+# Ratcheted rather than failed, because that debt is real and pre-existing; what
+# must not happen is it growing.
+#
+# `EUF` and `UF` are the same theory under two names, so they are folded;
+# counting `relations_and_functions` as violating on EUF alone would be a naming
+# artefact rather than an overclaim.
+LOGIC_FAMILIES = ("NRA", "LRA", "LIA", "NIA", "BV", "EUF", "UF")
+NAMED_LOGIC = re.compile(r"\b(NRA|LRA|LIA|NIA|BV|EUF|UF)\b")
+UNEXERCISED_LOGIC_BASELINE = 11
+
+
+def _fold(families: set[str]) -> set[str]:
+    """`EUF` and `UF` name the same theory."""
+    return {"UF" if f == "EUF" else f for f in families}
+
+
+def logic_families(logic: str) -> set[str]:
+    """The theory families a `set-logic` value covers.
+
+    `QF_` is a quantifier prefix, not a family, and stripping it is what makes
+    `QF_LRA` count as exercising `LRA` — a first attempt used `\bLRA\b`, which
+    never matches inside `QF_LRA` because `_` is a word character, and duly
+    reported every node as violating.
+    """
+    core = logic.removeprefix("QF_")
+    return _fold({family for family in LOGIC_FAMILIES if family in core})
+
+
+def unexercised_logics(node: dict[str, Any], root: pathlib.Path) -> list[str]:
+    """Logics the node's fragment names that none of its instances use."""
+    named = _fold(set(NAMED_LOGIC.findall(" ".join(node.get("axeyum_fragments") or []))))
+    if not named:
+        return []
+    used: set[str] = set()
+    seen_any = False
+    for pack in (p["id"] for p in (node.get("example_packs") or [])):
+        for path in (root / pack).rglob("*.smt2"):
+            for line in path.read_text(errors="ignore").splitlines():
+                if "set-logic" in line:
+                    seen_any = True
+                    used |= logic_families(line.split("set-logic")[1].strip(" )"))
+                    break
+    return sorted(named - used) if seen_any else []
+
+
 def bound_kinds(node: dict[str, Any]) -> list[str]:
     """The kinds of bound on a node, derived from the fragments it runs in."""
     fragments = " ".join(node.get("axeyum_fragments") or [])
@@ -203,6 +261,7 @@ def evaluate(
         "with_negative_control": 0,
         "bounded": 0,
         "unclassified_bound": 0,
+        "unexercised_logic": 0,
     }
     rows: list[tuple[str, int, int, int, int]] = []
     for node in sorted(nodes, key=lambda row: row["id"]):
@@ -242,6 +301,21 @@ def evaluate(
         for node in nodes
         if node.get("decidability") == "bounded" and not bound_kinds(node)
     ]
+    unexercised = {
+        node["id"]: gaps
+        for node in nodes
+        if node["curriculum_status"] == "covered"
+        and (gaps := unexercised_logics(node, PACK_ROOT))
+    }
+    counts["unexercised_logic"] = len(unexercised)
+    if len(unexercised) > UNEXERCISED_LOGIC_BASELINE:
+        failures.append(
+            f"{len(unexercised)} covered node(s) name a solver logic no instance "
+            f"uses (baseline {UNEXERCISED_LOGIC_BASELINE}): "
+            + ", ".join(f"{k} {v}" for k, v in sorted(unexercised.items()))
+            + ". The map states which machinery a node demonstrates; naming a "
+            "fragment and never exercising it overstates that."
+        )
     counts["bounded"] = sum(
         1 for node in nodes if node.get("decidability") == "bounded"
     )
@@ -293,6 +367,7 @@ def main(argv: list[str]) -> int:
         f"with_negative_control={counts['with_negative_control']}|"
         f"bounded={counts['bounded']}|"
         f"unclassified_bound={counts['unclassified_bound']}|"
+        f"unexercised_logic={counts['unexercised_logic']}|"
         f"suites={len(suites())}"
     )
     for failure in failures:

@@ -195,6 +195,88 @@ class BoundedSaysWhatItIsBoundedBy(unittest.TestCase):
         self.assertEqual(failures, [])
 
 
+class ANodeMustExerciseTheLogicItNames(unittest.TestCase):
+    """R2's second half. `curriculum_reals` advertises NRA and all 40 of its
+    instances are `QF_LRA`."""
+
+    def test_qf_prefix_does_not_hide_the_family(self) -> None:
+        """`\\bLRA\\b` never matches inside `QF_LRA` — `_` is a word character —
+        and a first attempt using it reported every node as violating."""
+        self.assertEqual(CC.logic_families("QF_LRA"), {"LRA"})
+        self.assertIn("LIA", CC.logic_families("QF_UFLIA"))
+
+    def test_euf_and_uf_are_the_same_theory(self) -> None:
+        self.assertEqual(CC.logic_families("QF_EUF"), CC.logic_families("QF_UF"))
+
+    def test_a_node_using_what_it_names_has_no_gap(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            pack = pathlib.Path(root) / "good-v0"
+            pack.mkdir()
+            (pack / "a.smt2").write_text("(set-logic QF_LRA)\n", encoding="utf-8")
+            node = {
+                "id": "curriculum_good",
+                "curriculum_status": "covered",
+                "axeyum_fragments": ["LRA"],
+                "example_packs": [{"id": "good-v0"}],
+            }
+            self.assertEqual(CC.unexercised_logics(node, pathlib.Path(root)), [])
+
+    def test_a_node_naming_a_logic_it_never_uses_is_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            pack = pathlib.Path(root) / "over-v0"
+            pack.mkdir()
+            (pack / "a.smt2").write_text("(set-logic QF_LRA)\n", encoding="utf-8")
+            node = {
+                "id": "curriculum_over",
+                "curriculum_status": "covered",
+                "axeyum_fragments": ["LRA / NRA (real-closed fields)"],
+                "example_packs": [{"id": "over-v0"}],
+            }
+            self.assertEqual(CC.unexercised_logics(node, pathlib.Path(root)), ["NRA"])
+
+    def test_one_more_than_the_baseline_trips_the_ratchet(self) -> None:
+        """The guard itself, not just the measurement.
+
+        Written because deleting the ratchet killed ZERO tests: the cases above
+        exercise `unexercised_logics` and never the comparison that uses it.
+        """
+        with tempfile.TemporaryDirectory() as root:
+            pack = pathlib.Path(root) / "p-v0"
+            pack.mkdir()
+            (pack / "a.smt2").write_text("(set-logic QF_LRA)\n", encoding="utf-8")
+            nodes = [
+                {
+                    "id": f"curriculum_over{i}",
+                    "kind": "curriculum-node",
+                    "curriculum_status": "covered",
+                    "axeyum_fragments": ["NRA"],
+                    "example_packs": [{"id": "p-v0"}],
+                    "decidability": "decidable",
+                }
+                for i in range(CC.UNEXERCISED_LOGIC_BASELINE + 1)
+            ]
+            original = CC.PACK_ROOT
+            CC.PACK_ROOT = pathlib.Path(root)
+            try:
+                failures, counts, _ = CC.evaluate(nodes, {})
+            finally:
+                CC.PACK_ROOT = original
+        self.assertEqual(counts["unexercised_logic"], CC.UNEXERCISED_LOGIC_BASELINE + 1)
+        self.assertTrue(any("name a solver logic" in f for f in failures), failures)
+
+    def test_a_node_with_no_instances_is_not_accused(self) -> None:
+        """No instances is a different defect, caught by condition 1. Reporting
+        it here too would double-count and make the ratchet unreadable."""
+        with tempfile.TemporaryDirectory() as root:
+            node = {
+                "id": "curriculum_empty",
+                "curriculum_status": "covered",
+                "axeyum_fragments": ["NRA"],
+                "example_packs": [],
+            }
+            self.assertEqual(CC.unexercised_logics(node, pathlib.Path(root)), [])
+
+
 class TheRealTreeIsMeasuredNotAsserted(unittest.TestCase):
     def test_committed_curriculum_map_satisfies_both_conditions(self) -> None:
         evidence = CC.instance_evidence()
