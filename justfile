@@ -66,6 +66,9 @@ facts:
     # control modules were executed by nothing, and 6 of them no longer import.
     python3 -m unittest scripts.tests.test_check_control_tests_reachable
     python3 scripts/check-control-tests-reachable.py
+    # 44 controls that were already written and already correct, but which no
+    # gate ran. 257 tests, ~31s. The seven not adopted are listed in the script.
+    scripts/check-adopted-controls.sh
     # The CLAIM ledger's structural pass, which `scripts/check.sh` has always run
     # and `just check` did not -- so the fallback gate checked something the
     # preferred one skipped, which is exactly the divergence

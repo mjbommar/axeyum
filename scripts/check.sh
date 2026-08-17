@@ -76,6 +76,7 @@ step capability-assurance python3 scripts/check-capability-assurance.py --quiet
 # 51 that need no cargo found 6 that no longer even import. Ratchet, not a wall.
 step control-tests-reachable python3 scripts/check-control-tests-reachable.py
 step control-tests-reachable-controls python3 -m unittest scripts.tests.test_check_control_tests_reachable
+step adopted-controls scripts/check-adopted-controls.sh
 step smt-evidence-tests python3 -m unittest scripts.tests.test_check_smt_evidence_certified
 # Every settled SMT-route fact's own evidence command tests only the VERDICT
 # (`... | tail -1` = unsat), which passes on an UNCERTIFIED refutation --

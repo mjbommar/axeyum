@@ -12,10 +12,16 @@ anywhere runs it.
 Measured 2026-08-17: **63 of 137 control modules are executed by nothing in the
 repository.** Not by `justfile`, not by `scripts/check.sh`, not by any workflow,
 not by any other script. Running the 51 that need no cargo found 264 tests, of
-which 258 pass and would have been gated for free — and 6 error, four of them
-`unittest.loader._FailedTest` import failures against scripts that have since
-been renamed or removed. Those six are the point: a control rots silently the
-moment nothing runs it.
+which 258 pass and would have been gated for free — and 7 do not pass.
+
+Measured individually, the seven are less dramatic than the batch run suggested
+and worth stating exactly: **five are pytest-style and `pytest` is not installed
+here**, so they fail to import rather than having rotted; one
+(`test_diagnose_maestro_llvm_root_drift`) passes in a batch and fails alone, so
+it has an order dependency; and exactly one has genuinely rotted —
+`test_validate_glaurung_llvm_loop_semantic_census` fails with
+`ResultValidationError: producer drift: Cargo.lock`. One rotted control is a
+smaller finding than "six broken", and it is the true one.
 
 The cause is mechanical, not anyone's oversight. The runners name modules **one
 by one** — `justfile` alone names 91 — so wiring a new control is a second,
@@ -49,8 +55,10 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TESTS = ROOT / "scripts/tests"
 
-# Measured 2026-08-17. MAY ONLY GO DOWN.
-ORPHAN_BASELINE = 63
+# Measured 2026-08-17, after adopting 44 modules (`scripts/check-adopted-controls.sh`)
+# and after fixing this scanner to join line continuations, which alone revealed
+# 2 more that were already wired. MAY ONLY GO DOWN.
+ORPHAN_BASELINE = 17
 # The controls exist; if this collapses, the glob is wrong and every count lies.
 MIN_MODULES = 130
 
@@ -68,6 +76,29 @@ def tracked() -> list[str]:
     return [f for f in out if not f.startswith("scripts/tests/")]
 
 
+def logical_lines(text: str) -> list[str]:
+    r"""Join shell/`make` line continuations before scanning.
+
+    A runner that lists forty modules writes one per line under a trailing `\`,
+    so only the FIRST shares a physical line with the word `unittest`. Scanning
+    physically counted 3 of 44 when this was measured — the gate would have
+    reported the modules as orphaned while a gate was demonstrably running them,
+    and the fix that suggests itself (reformat the runner onto one line) hides a
+    scanner bug behind a style rule.
+    """
+    out: list[str] = []
+    buf = ""
+    for raw in text.splitlines():
+        if raw.rstrip().endswith("\\"):
+            buf += raw.rstrip()[:-1] + " "
+            continue
+        out.append(buf + raw)
+        buf = ""
+    if buf:
+        out.append(buf)
+    return out
+
+
 def modules_run_by(mods: set[str], text: str) -> set[str]:
     """Which of `mods` this file actually RUNS.
 
@@ -77,7 +108,7 @@ def modules_run_by(mods: set[str], text: str) -> set[str]:
     doc reference as coverage, which is the exact confusion it exists to catch.
     """
     hits: set[str] = set()
-    for line in text.splitlines():
+    for line in logical_lines(text):
         if "unittest" not in line and "pytest" not in line:
             continue
         hits.update(mod for mod in mods if mod in line)

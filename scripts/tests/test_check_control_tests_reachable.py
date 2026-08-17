@@ -50,6 +50,44 @@ class RunningAModuleIsNotTheSameAsMentioningIt(unittest.TestCase):
         self.assertEqual(CT.modules_run_by(self.MODS, text), {"test_parity_evidence"})
 
 
+class AContinuedCommandIsStillOneCommand(unittest.TestCase):
+    """A runner listing forty modules writes one per line under a trailing
+    backslash, so only the FIRST shares a physical line with `unittest`.
+    Scanning physically counted 3 of 44 — the gate would have called them
+    orphaned while a gate was demonstrably running them."""
+
+    MODS = {"test_alpha", "test_beta", "test_gamma"}
+
+    CONTINUED = (
+        "python3 -m unittest scripts.tests.test_alpha \\\n"
+        "  scripts.tests.test_beta \\\n"
+        "  scripts.tests.test_gamma\n"
+    )
+
+    def test_every_module_of_a_continued_command_counts(self) -> None:
+        self.assertEqual(CT.modules_run_by(self.MODS, self.CONTINUED), self.MODS)
+
+    def test_a_physical_scan_would_have_missed_them(self) -> None:
+        """Pins the bug itself, so a 'simplification' back to splitlines fails."""
+        physical = {
+            m
+            for line in self.CONTINUED.splitlines()
+            if "unittest" in line
+            for m in self.MODS
+            if m in line
+        }
+        self.assertEqual(physical, {"test_alpha"})
+
+    def test_a_continuation_does_not_swallow_the_next_command(self) -> None:
+        """Joining must stop at the first line without a trailing backslash, or
+        a module merely mentioned after an unrelated runner would be counted."""
+        text = (
+            "python3 -m unittest scripts.tests.test_alpha\n"
+            "# see scripts/tests/test_beta for the rest\n"
+        )
+        self.assertEqual(CT.modules_run_by(self.MODS, text), {"test_alpha"})
+
+
 class TheRatchetFires(unittest.TestCase):
     @staticmethod
     def _mods(n: int) -> set[str]:
