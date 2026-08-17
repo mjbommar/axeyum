@@ -233,3 +233,37 @@ verdict going missing.
 | 2026-08-17 | `078b2776` | Every `ProofFragment`'s Lean content class pinned by name (`every_fragment_content_class_is_pinned_by_name`). 5 of 61 were pinned before; the other 55 recorded their class only in the table, so a coordinated emitter+table edit moved a route from theory reconstruction to `axiom P` shim with nothing failing. Control measured: moving `QfBv` to the attestation arm gives 1163 passed / 1 failed, and the one is this test. Context: 41 of the Lean gate's 126 real-Lean checks (32.5%, and 56% of `lean_crosscheck`) are already shims, `qf_bv` among them; the gate reports one undifferentiated total. |
 | 2026-08-17 | `28755674` | The e-matching driver can report the instances that justified an `unsat`: `prove_quantified_unsat_via_egraph_with_instances` + `QuantifierInstanceSetCertificate` + `check_quantifier_instance_set`, which replays each derivation against the caller's assertions, rejects unlicensed ground members, and re-refutes the ground set (provenance alone would certify insufficient instances). Four capture sites; the fourth (online CDCL(T) replay) found only by measuring — the three obvious ones never fire for the smallest query. Not wired to `Evidence`: the certificate names terms created during e-matching that do not exist in the arena `Evidence::check` receives. |
 | 2026-08-17 | `502c0503` | Settled SMT-route facts gated on certification, not just verdict: `scripts/check-smt-evidence-certified.py` requires `certified=1` for all 17 `smt-term-level`/`smt-clausal` instances (the ledger's own evidence commands test only the verdict and exit 0 on an uncertified refutation — demonstrated against the barber instance). Wired into `check.sh` and `justfile`; 16s warm in release (233s in debug, 232 of it DRAT-checking two fp16 instances). Seven guards, each mutation-tested to kill exactly one test. `F:barber-no-such-barber` stays `open`; its note corrected — the solver *does* record the instantiation as a `QuantifierInstanceCertificate` with a public checker, it is simply never plumbed to the emitter. |
+
+
+## The ledger records about a quarter of what the kernel has proved
+
+Measured 2026-08-17, once `theorem_dependency_inventory` made the comparison
+possible at all:
+
+```
+kernel admits          139 theorems (Nat prelude)
+named by a ledger fact  35
+not recorded           118, of which 87 already have dependents
+```
+
+"Has dependents" means another admitted theorem's proof term cites it — so those
+87 are not obscure corners, they are load-bearing lemmas that nothing in the
+ledger mentions.
+
+**This is deliberately NOT an argument for adding 118 facts.** CLAUDE.md is
+explicit that the metric is the trusted base and the results the system
+established with nobody writing the proof — *not* output volume — and a hundred
+new rows for theorems that were already proved would move the count without
+moving anything real. It would also be the exact failure this lane spent the day
+removing: a number that reads as stronger than it is.
+
+What the measurement is good for is honesty about what the ledger IS. It is a
+curated selection of propositions worth tracking, not a mirror of the kernel,
+and until now nothing said so or could. Two consequences worth acting on:
+
+- When the DAG "picks the next goal", it picks from the curated set, so its
+  reach is bounded by curation rather than by what is provable. That is a fine
+  design, but it should be chosen rather than inherited.
+- A lemma with many dependents and no fact is a candidate worth recording *when
+  something needs it* — `Nat.bezout_of_scaled` and `Nat.coprime_of_bezout_one`
+  are on that list, and both were built for Euclid's theorem.
