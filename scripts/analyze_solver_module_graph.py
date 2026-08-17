@@ -411,7 +411,21 @@ def summarize(graph: dict, layer: list[str]) -> dict:
                 intruders.append(f"{source} -> {target}")
     largest = set(cycles[0]) if cycles else set()
     from_core = sorted(e for e in intruders if e.split(" -> ")[0] in largest)
+    # How many modules OUTSIDE the layer each layer module reaches into.
+    #
+    # `edges_into_evidence_layer` above watches the direction; this watches the
+    # WIDTH, which is what actually decides whether the layer can become a crate
+    # (candidate D1). Measured 2026-08-16, the direction was already perfect --
+    # 5 edges in, none from the theory core -- while `reconstruct` alone reached
+    # into 58 modules and 77,543 lines. A crate cut there would export 23k lines
+    # that still depend on a third of what they left. Direction was never the
+    # obstacle; mass was, and nothing was watching mass.
+    fanout = {
+        module: len(sorted(t for t in graph["edges"].get(module, ()) if t not in layer_set))
+        for module in sorted(layer_set)
+    }
     return {
+        "evidence_layer_fanout": fanout,
         "modules": len(graph["modules"]),
         "files_scanned": graph["files_scanned"],
         "test_files_skipped": graph["test_files_skipped"],
@@ -456,6 +470,15 @@ def report(summary: dict, graph: dict) -> None:
         print(f"      {', '.join(cycle['modules'])}")
     print()
     print(f"  evidence layer      {', '.join(summary['evidence_layer'])}")
+    print(
+        "  reaches out into      "
+        + ", ".join(
+            f"{module} -> {count}"
+            for module, count in sorted(summary["evidence_layer_fanout"].items())
+            if count
+        )
+        + "  <- D1 is blocked on these, not on direction"
+    )
     print(f"  edges into it from outside: {len(summary['edges_into_evidence_layer'])}")
     for edge in summary["edges_into_evidence_layer"]:
         print(f"      {edge}")
@@ -524,6 +547,32 @@ def check(summary: dict, baseline: dict) -> int:
             "up into the evidence layer. The two were strictly ordered; they "
             "are now one component."
         )
+
+    base_fanout = baseline.get("evidence_layer_fanout", {})
+    now_fanout = summary["evidence_layer_fanout"]
+    widened = sorted(
+        f"{module} {base_fanout[module]} -> {count}"
+        for module, count in now_fanout.items()
+        if module in base_fanout and count > base_fanout[module]
+    )
+    if widened:
+        failures.append(
+            "EVIDENCE LAYER FAN-OUT WIDENED: "
+            + ", ".join(widened)
+            + " -- a module in the evidence/reconstruction layer now reaches into "
+            "more of the solver than it did. This is D1's precondition: the layer "
+            "is already one-way, and what blocks extracting it as a crate is how "
+            "wide it reaches, not which way. See "
+            "docs/refactor-2026-08/03-solver-decomposition.md."
+        )
+
+    narrowed = sorted(
+        f"{module} {base_fanout[module]} -> {count}"
+        for module, count in now_fanout.items()
+        if module in base_fanout and count < base_fanout[module]
+    )
+    if narrowed:
+        print(f"progress: evidence-layer fan-out narrowed: {', '.join(narrowed)}")
 
     left = sorted(base_cycles - now_cycles)
     gone = sorted(base_intruders - now_intruders)
@@ -597,6 +646,7 @@ def main(argv: list[str]) -> int:
                 {"size": c["size"], "modules": c["modules"]} for c in summary["cycles"]
             ],
             "evidence_layer": summary["evidence_layer"],
+            "evidence_layer_fanout": summary["evidence_layer_fanout"],
             "edges_into_evidence_layer": summary["edges_into_evidence_layer"],
             "edges_from_largest_cycle_into_evidence_layer": summary[
                 "edges_from_largest_cycle_into_evidence_layer"

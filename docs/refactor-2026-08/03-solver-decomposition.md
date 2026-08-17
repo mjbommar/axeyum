@@ -142,11 +142,24 @@ so its fan-out grows with every theory. Inverting that — a theory hands back a
 certificate value that `reconstruct` consumes, rather than `reconstruct`
 naming the theory — collapses the fan-out without moving a file.
 
-So D1's precondition is a number, not a judgement: **`reconstruct`'s outbound
-module count.** It is 58. `analyze_solver_module_graph.py` already computes it
-every run, so it can be ratcheted like the cycle set. Extraction becomes an
-ADR-0001 argument worth making when that number is small; today it would move
-23k lines out and leave them depending on 77k.
+So D1's precondition is a number, not a judgement: **the outbound module count
+of each module in the layer.** `analyze_solver_module_graph.py` now records it
+and `--check` fails when it grows, exactly like the cycle set — a *narrowing*
+is reported as progress rather than punished, since a gate that failed on the
+work it exists to encourage would be worse than none:
+
+```
+reaches out into  array_bv_abs -> 1, evidence -> 67, int_reconstruct -> 9,
+                  reconstruct -> 55, smtlib -> 8
+```
+
+`reconstruct -> 55` and the table's `reconstruct alone -> 58` are the same
+measurement under two layer definitions: the gate excludes edges to the other
+six layer modules (they would travel with it into the crate), the table does
+not. The gate's number is the one to drive down.
+
+Extraction becomes an ADR-0001 argument worth making when it is small. Today it
+would move 23k lines out and leave them depending on 77k.
 
 ### D2 — quantifiers → its own crate. **Largest, weakest-tested boundary.**
 

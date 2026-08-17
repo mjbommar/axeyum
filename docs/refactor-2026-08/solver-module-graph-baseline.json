@@ -101,6 +101,15 @@
   "smtlib",
   "word_reconstruct"
  ],
+ "evidence_layer_fanout": {
+  "array_bv_abs": 1,
+  "evidence": 67,
+  "int_reconstruct": 9,
+  "reconstruct": 55,
+  "regex_reconstruct": 0,
+  "smtlib": 8,
+  "word_reconstruct": 0
+ },
  "modules_in_cycles": [
   "abv",
   "array_bv_abs",

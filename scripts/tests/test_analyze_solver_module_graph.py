@@ -183,6 +183,11 @@ class RatchetActuallyFails(unittest.TestCase):
             },
             "modules_in_cycles": summary["modules_in_cycles"],
             "evidence_layer": summary["evidence_layer"],
+            # Mirrors the `--write-baseline` payload. This helper duplicating
+            # that shape is a hazard in itself: the fan-out ratchet was written,
+            # ran green, and gated NOTHING until this line existed, because a
+            # field absent from the baseline compares against nothing.
+            "evidence_layer_fanout": summary["evidence_layer_fanout"],
             "edges_into_evidence_layer": summary["edges_into_evidence_layer"],
             "edges_from_largest_cycle_into_evidence_layer": summary[
                 "edges_from_largest_cycle_into_evidence_layer"
@@ -206,6 +211,40 @@ class RatchetActuallyFails(unittest.TestCase):
         summary = self._summary(broken, ["gamma"])
         self.assertIn("beta -> gamma", summary["edges_into_evidence_layer"])
         self.assertEqual(mg.check(summary, base), 1)
+
+    def test_the_layer_reaching_wider_fails(self) -> None:
+        """D1's precondition: the layer is already one-way; what blocks
+        extracting it as a crate is how WIDE it reaches, and nothing watched
+        width until this guard. `gamma` is the layer; it starts reaching into
+        one module and then reaches into two."""
+        crate = dict(self.ACYCLIC)
+        crate["gamma.rs"] = "pub fn other() { crate::beta::thing(); }\n"
+        base = self._baseline(self._summary(crate, ["gamma"]))
+        self.assertEqual(base["evidence_layer_fanout"]["gamma"], 1)
+
+        wider = dict(crate)
+        wider["gamma.rs"] = (
+            "pub fn other() { crate::beta::thing(); crate::alpha::go(); }\n"
+        )
+        summary = self._summary(wider, ["gamma"])
+        self.assertEqual(summary["evidence_layer_fanout"]["gamma"], 2)
+        self.assertEqual(mg.check(summary, base), 1)
+
+    def test_the_layer_reaching_narrower_is_progress_not_failure(self) -> None:
+        """A ratchet that failed on the work it exists to encourage would be
+        worse than none."""
+        wide = dict(self.ACYCLIC)
+        wide["gamma.rs"] = (
+            "pub fn other() { crate::beta::thing(); crate::alpha::go(); }\n"
+        )
+        base = self._baseline(self._summary(wide, ["gamma"]))
+        self.assertEqual(base["evidence_layer_fanout"]["gamma"], 2)
+
+        narrow = dict(self.ACYCLIC)
+        narrow["gamma.rs"] = "pub fn other() { crate::beta::thing(); }\n"
+        summary = self._summary(narrow, ["gamma"])
+        self.assertEqual(summary["evidence_layer_fanout"]["gamma"], 1)
+        self.assertEqual(mg.check(summary, base), 0)
 
     def test_losing_coverage_fails(self) -> None:
         """The inert-gate trap: measure almost nothing, exit 0.
