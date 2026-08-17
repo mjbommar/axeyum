@@ -395,6 +395,34 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0047",
     },
     Capability {
+        area: "SAT (propositional)",
+        feature: "CERTIFIED Craig interpolation (axeyum_cnf::propositional_interpolant_certified): \
+                  the SAME verified interpolant I the plain route returns, plus the two DRAT \
+                  refutations that establish Craig conditions 1 and 2 — of `A ∧ ¬I` and `I ∧ B` — \
+                  each shipped WITH the exact CNF it refutes. The formula is carried rather than \
+                  left to the consumer to rebuild because it contains the Tseitin auxiliaries \
+                  introduced for I, so an independently-encoded reconstruction would not be the \
+                  formula the proof refutes and a sound certificate would be rejected. Condition 3 \
+                  (vocabulary) carries no refutation: it is structural, checked by reading \
+                  I.vars(). BOUNDARY: this certifies the INTERPOLANT's soundness conditions, not \
+                  its logical strength — a valid but weak interpolant is still valid",
+        assurance: Assurance::Checked,
+        evidence: "both refutations are accepted by drat-trim (Marijn Heule's checker, an \
+                   INDEPENDENT C implementation), on the unit-propagation partition and on a \
+                   PHP(3,2) partition whose refutations need real resolution — 6 exported proof \
+                   steps, so the export is not demonstrated only on a one-step empty clause. Gate: \
+                   `just interpolant-certificate`, which sets AXEYUM_REQUIRE_DRAT_TRIM=1 so a \
+                   MISSING checker fails instead of skipping (verified both ways: absent binary \
+                   with the flag FAILS, without it skips). Soundness-negative controls: a \
+                   refutation with its last step removed is rejected, and a refutation checked \
+                   against A alone — satisfiable — is rejected by both check_drat and drat-trim, \
+                   so acceptance of the real certificate is not vacuous. The proofs are checked \
+                   in-tree before being handed out, so exporting does not move assurance onto the \
+                   consumer. Same skip-when-absent shape as the Carcara crosschecks the other \
+                   certified interpolants use",
+        reference: "ADR-0011/0012",
+    },
+    Capability {
         area: "QF_LIA",
         feature: "linear integer arithmetic (bit-blast + branch-and-bound simplex)",
         assurance: Assurance::Validated,

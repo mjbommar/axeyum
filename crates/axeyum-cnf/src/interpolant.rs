@@ -237,6 +237,75 @@ fn add_clause(formula: &mut CnfFormula, lits: Vec<CnfLit>) {
     let _ = formula.add_clause(CnfClause::new(lits));
 }
 
+/// A **certified** propositional Craig interpolant: the interpolant plus the two
+/// refutations that establish its soundness conditions, each independently
+/// checkable without trusting this crate.
+///
+/// Every other interpolating logic in this repository ships a `*_certified`
+/// sibling beside its plain interpolant — `qf_bv_interpolant_certified`,
+/// `qf_uf_interpolant_certified`, `lra_interpolant_certified`,
+/// `lia_interpolant_certified`, `uflra_interpolant_certified`,
+/// `uflia_interpolant_certified` — all with the same shape: the same verified
+/// `I`, plus two externally-checkable refutations. The propositional case was
+/// the one exception, which is why `SAT (propositional)` was the only
+/// interpolating area with no external checker for its artifact.
+///
+/// Nothing new is proved to build this. `verify_interpolant` already discharged
+/// both conditions with the proof-producing core and checked each DRAT with
+/// [`check_drat`]; it returned a bool and dropped the proofs on the floor.
+#[derive(Debug, Clone)]
+pub struct PropositionalInterpolantCertificate {
+    /// The verified interpolant `I` — identical to what
+    /// [`propositional_interpolant`] returns for the same `(A, B)`.
+    pub interpolant: BoolExpr,
+    /// The CNF of `A ∧ ¬I`, refuted by [`a_refutation`](Self::a_refutation).
+    ///
+    /// Carried rather than left to the caller to rebuild: it contains the
+    /// Tseitin auxiliaries introduced for `¬I`, so a reconstruction that encoded
+    /// `I` differently would not be the formula this proof refutes, and the
+    /// checker would reject a sound certificate.
+    pub a_and_not_i: CnfFormula,
+    /// The CNF of `I ∧ B`, refuted by [`b_refutation`](Self::b_refutation).
+    pub i_and_b: CnfFormula,
+    /// DRAT refutation of `A ∧ ¬I` — Craig condition 1.
+    pub a_refutation: Vec<DratStep>,
+    /// DRAT refutation of `I ∧ B` — Craig condition 2.
+    pub b_refutation: Vec<DratStep>,
+}
+
+/// Produces a [`PropositionalInterpolantCertificate`] for the unsatisfiable
+/// partition `A ∧ B`, or `None` on exactly the same conditions as
+/// [`propositional_interpolant`] declines.
+///
+/// The interpolant is byte-identical to [`propositional_interpolant`]'s: this
+/// runs the same fold and the same verification, and only keeps what that
+/// function discards. Craig condition 3 (vocabulary) is structural — every
+/// variable of `I` is shared — so it carries no refutation; a consumer checks it
+/// by reading `interpolant.vars()`, which needs no proof object.
+#[must_use]
+pub fn propositional_interpolant_certified(
+    a: &CnfFormula,
+    b: &CnfFormula,
+) -> Option<PropositionalInterpolantCertificate> {
+    let candidate = build_candidate_interpolant(a, b)?;
+    let classes = VarClasses::new(a, b);
+
+    // Condition 3 first: it is the cheap one and it gates the other two.
+    if !candidate.vars().iter().all(|&var| classes.is_global(var)) {
+        return None;
+    }
+    let (a_and_not_i, a_refutation) = unsat_with_expr_certified(a, &candidate, true)?;
+    let (i_and_b, b_refutation) = unsat_with_expr_certified(b, &candidate, false)?;
+
+    Some(PropositionalInterpolantCertificate {
+        interpolant: candidate,
+        a_and_not_i,
+        i_and_b,
+        a_refutation,
+        b_refutation,
+    })
+}
+
 /// Produces a verified propositional Craig interpolant for the unsatisfiable
 /// conjunction `A ∧ B` over a shared variable space.
 ///
@@ -248,6 +317,26 @@ fn add_clause(formula: &mut CnfFormula, lits: Vec<CnfLit>) {
 /// unverified interpolant.
 #[must_use]
 pub fn propositional_interpolant(a: &CnfFormula, b: &CnfFormula) -> Option<BoolExpr> {
+    let candidate = build_candidate_interpolant(a, b)?;
+    let classes = VarClasses::new(a, b);
+
+    // 5. Independently re-verify all three Craig conditions; decline on doubt.
+    if verify_interpolant(a, b, &classes, &candidate) {
+        Some(candidate)
+    } else {
+        None
+    }
+}
+
+/// Steps 1-4: refute `A ∧ B`, elaborate to `LRAT`, and fold the `McMillan` partial
+/// interpolants into a CANDIDATE `I`.
+///
+/// Factored out so [`propositional_interpolant`] and
+/// [`propositional_interpolant_certified`] share one construction rather than
+/// two that could drift. The result is a candidate, NOT a verified interpolant —
+/// both callers must still discharge the Craig conditions, which is where the
+/// certified form keeps its refutations.
+fn build_candidate_interpolant(a: &CnfFormula, b: &CnfFormula) -> Option<BoolExpr> {
     if a.variable_count() != b.variable_count() {
         return None;
     }
@@ -281,14 +370,7 @@ pub fn propositional_interpolant(a: &CnfFormula, b: &CnfFormula) -> Option<BoolE
     let classes = VarClasses::new(a, b);
 
     // 4. Fold the McMillan partial interpolants over the LRAT proof.
-    let candidate = fold_interpolant(&combined, a_len, &lrat, &classes)?;
-
-    // 5. Independently re-verify all three Craig conditions; decline on doubt.
-    if verify_interpolant(a, b, &classes, &candidate) {
-        Some(candidate)
-    } else {
-        None
-    }
+    fold_interpolant(&combined, a_len, &lrat, &classes)
 }
 
 /// Variable colouring for the partition `A ∧ B`.
@@ -557,6 +639,23 @@ fn verify_interpolant(
 /// derived and the DRAT proof verifies). Any other outcome — sat, resource-out,
 /// interrupt, or a proof that fails to verify — returns `false`, declining.
 fn unsat_with_expr(base: &CnfFormula, expr: &BoolExpr, negate: bool) -> bool {
+    unsat_with_expr_certified(base, expr, negate).is_some()
+}
+
+/// The same decision, **keeping the artifacts** instead of collapsing them to a
+/// bool: the exact CNF that was refuted and the DRAT proof that refutes it.
+///
+/// `unsat_with_expr` built both of these and threw them away, which is the whole
+/// reason the propositional interpolation capability was self-checked while the
+/// `QF_BV` / `QF_UF` / `QF_LRA` / `QF_LIA` / `QF_UFLRA` / `QF_UFLIA` interpolants each
+/// ship a
+/// `*_certified` sibling an outside checker can accept. Nothing new is computed
+/// here; the proof is simply returned.
+fn unsat_with_expr_certified(
+    base: &CnfFormula,
+    expr: &BoolExpr,
+    negate: bool,
+) -> Option<(CnfFormula, Vec<DratStep>)> {
     // Start from `base` over the shared space, then grow with aux Tseitin vars.
     let mut formula = CnfFormula::new(base.variable_count());
     for clause in base.clauses() {
@@ -564,7 +663,7 @@ fn unsat_with_expr(base: &CnfFormula, expr: &BoolExpr, negate: bool) -> bool {
             .add_clause(CnfClause::new(clause.lits().to_vec()))
             .is_err()
         {
-            return false;
+            return None;
         }
     }
     let lit = expr.tseitin(&mut formula);
@@ -572,10 +671,10 @@ fn unsat_with_expr(base: &CnfFormula, expr: &BoolExpr, negate: bool) -> bool {
     add_clause(&mut formula, vec![asserted]);
 
     match solve_with_drat_proof(&formula) {
-        ProofSolveOutcome::Unsat(drat) => verify_drat(&formula, &drat),
-        ProofSolveOutcome::Sat(_)
-        | ProofSolveOutcome::ResourceOut
-        | ProofSolveOutcome::Interrupted => false,
+        // The DRAT is still checked in-tree before it is handed out: exporting an
+        // unchecked proof would move work to the consumer rather than assurance.
+        ProofSolveOutcome::Unsat(drat) if verify_drat(&formula, &drat) => Some((formula, drat)),
+        _ => None,
     }
 }
 

@@ -63,7 +63,7 @@ class EachGuardCanFail(unittest.TestCase):
 class TheTableItselfIsParsed(unittest.TestCase):
     def test_entry_and_area_counts_are_what_was_measured(self) -> None:
         recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
-        self.assertEqual(len(recs), 102)
+        self.assertEqual(len(recs), 103)
         self.assertGreaterEqual(len({r["area"] for r in recs}), 23)
         ext = {r["area"] for r in recs if CA.tier(r) == "external-artifact-checker"}
         self.assertGreaterEqual(len(ext), 11)

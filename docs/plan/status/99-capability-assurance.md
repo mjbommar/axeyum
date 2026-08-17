@@ -40,10 +40,16 @@ ratchet 33 → 34. Only after that was the table edited — gate first, transcri
 second, because `tier` reads prose and the reverse order would move the metric
 by writing a sentence. 11 → **12 of 23 logics**, floor raised to 37.
 
-**Next.** Band 1 now holds `QF_IDL` and `SAT`. `SAT` is the same shape QF_RDL
-was: `propositional_interpolant` builds a DRAT proof, checks it, and drops it —
-`write_drat` already exists and `drat-trim` is already run by the claims gate,
-so nothing needs inventing. Then items A (generate the table) and C (explicit
+**`SAT` closed too.** It was the same shape QF_RDL was, and the ADR worry
+dissolved on inspection: every other interpolating area already ships a
+`*_certified` sibling (QF_BV, QF_UF, QF_LRA, QF_LIA, QF_UFLRA, QF_UFLIA), all of
+one shape, so propositional was the seventh case of an accepted pattern.
+`verify_interpolant` had already built and checked both DRAT proofs and returned
+a bool; `propositional_interpolant_certified` returns them. drat-trim accepts
+both, including on a PHP(3,2) partition needing real resolution.
+
+**Next.** Band 1 holds only `QF_IDL`, which needs a theory reconstruction for
+`ArithDpll` — research, not plumbing. The cheap half of the ranking is done. Then items A (generate the table) and C (explicit
 "decided, not certified" status), which are the real fix: this checker is a
 heuristic over prose and says so.
 
@@ -56,3 +62,4 @@ heuristic over prose and says so.
 | 2026-08-17 | `19f739a57` | 44 orphaned controls adopted (257 tests, ~31s) and the baseline ratcheted 63 → 17. Fixing the scanner to join line continuations found 2 more already-wired — it had counted 3 of 44 and would have called them orphans. Corrected an overstatement: 5 of the 7 unadopted need `pytest` (absent here), 1 has an order dependency, and exactly 1 has genuinely rotted (`producer drift: Cargo.lock`). |
 | 2026-08-17 | `60a7b4712` | QF_RDL closed end to end: `lean_crosscheck` now hands official Lean a QF_RDL theory module every run (33 → 34 theory families), and only then did the table gain a QF_RDL-specific row — 11 → 12 of 23 logics externally checked. Controls: two mutations of the module are rejected by Lean; the attestation class is proven still reachable. |
 | 2026-08-17 | `bfc16da51` | The reachability gate contradicted itself and was wrong in my favour: `check-adopted-controls.sh` documents its exclusions as "pytest-style", so those COMMENT lines contained a runner word and vouched for the two modules the comment says are NOT run. Comments are mentions now; baseline corrected 17 → 19. |
+| 2026-08-17 | `pending` | `SAT` closed: `propositional_interpolant_certified` returns the two DRAT refutations `verify_interpolant` already built and threw away; drat-trim accepts both, on PHP(3,2) as well as the trivial case. 12 → **13 of 23 logics**, floor 38, band 1 down to `QF_IDL` alone. One control was written, found vacuous (both proofs are the single step `0`), and replaced with one that discriminates. |

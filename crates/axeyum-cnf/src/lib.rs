@@ -85,7 +85,10 @@ pub use drat_resource::{
     MemoryBudget,
 };
 pub use gf2::{Gf2Outcome, Gf2Solution, Gf2System};
-pub use interpolant::{BoolExpr, propositional_interpolant};
+pub use interpolant::{
+    BoolExpr, PropositionalInterpolantCertificate, propositional_interpolant,
+    propositional_interpolant_certified,
+};
 pub use lrat::{
     LratError, LratStep, check_lrat, elaborate_drat_to_lrat, elaborate_drat_to_lrat_backward,
     parse_lrat, write_lrat,

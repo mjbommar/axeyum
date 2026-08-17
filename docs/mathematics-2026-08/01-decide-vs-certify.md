@@ -154,7 +154,7 @@ evidence says already exists:
 
 | band | meaning | logics |
 | --- | --- | --- |
-| 1 | a refutation artifact is already built — export it and point a checker at it | `QF_IDL`, `SAT` (`QF_RDL` closed 2026-08-17, below) |
+| 1 | a refutation artifact is already built — export it and point a checker at it | `QF_IDL` (`QF_RDL` and `SAT` closed 2026-08-17, below) |
 | 2 | model replay only — needs an UNSAT proof format first | `QF_AUFBV`, `QF_FP`, `QF_NIA`, `QF_S`, `incremental`, `symbolic execution` |
 | 3 | no refutation artifact named | `diagnostics`, `optimization`, `synthesis` |
 
@@ -215,6 +215,39 @@ floor raised to match.
 `QF_IDL` stays in band 1 and stays shared, which is now accurate rather than an
 artifact: its refutation really does export the same Farkas certificate, and it
 really does have no theory reconstruction.
+
+**`SAT` closed the same day, and the design question answered itself.** The
+worry was that making this capability externally checked meant designing new
+public surface, which would want an ADR. It did not: **every other interpolating
+area already ships a `*_certified` sibling beside its plain interpolant** —
+`qf_bv_interpolant_certified`, `qf_uf_interpolant_certified`,
+`lra_interpolant_certified`, `lia_interpolant_certified`,
+`uflra_interpolant_certified`, `uflia_interpolant_certified` — all of one shape:
+the same verified `I`, plus two externally-checkable refutations of the Craig
+conditions. Propositional was the seventh case of an accepted pattern, not a new
+decision.
+
+And the artifact was already built, literally. `verify_interpolant` discharged
+`A ∧ ¬I` and `I ∧ B` with the proof-producing core and checked each DRAT with
+`check_drat` — then returned a `bool` and dropped both proofs.
+`propositional_interpolant_certified` returns them. Nothing new is proved.
+
+Both refutations are accepted by **drat-trim**, an independent C implementation,
+on the trivial partition and on a `PHP(3,2)` partition needing real resolution
+(6 exported proof steps — the export is not demonstrated only on a one-step
+empty clause). Gate: `just interpolant-certificate`, which sets
+`AXEYUM_REQUIRE_DRAT_TRIM=1` so a *missing* checker fails rather than skipping;
+verified both ways.
+
+One control was written, failed, and was **replaced rather than deleted**: "the
+`A ∧ ¬I` proof must not check against the `I ∧ B` formula" is vacuous here, since
+both conjunctions refute by unit propagation and both proofs are the single step
+`0`, which legitimately checks against either. The control that discriminates is
+checking a refutation against `A` alone, which is satisfiable.
+
+External coverage: **13 of 23 logics**, gap 10, floor 38. Band 1 now holds only
+`QF_IDL`, which needs a theory reconstruction for `ArithDpll` — a real research
+step, not plumbing. The cheap half of this ranking is finished.
 
 Two logics — `QF_AUFBV` and `QF_IDL` — remain known *only* through a compound
 row (it was three before QF_RDL got its own), so part of the reported gap is

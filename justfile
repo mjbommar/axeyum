@@ -456,6 +456,17 @@ claims:
     python3 scripts/check-claim-negative-fixtures.py
     python3 scripts/check-claim-certificates.py --drat-checker references/drat-trim/drat-trim
 
+# The propositional Craig interpolant's certificate, checked by an OUTSIDE
+# implementation: the two DRAT refutations of the Craig conditions handed to
+# Marijn Heule's drat-trim rather than to our own `check_drat`.
+#
+# `AXEYUM_REQUIRE_DRAT_TRIM=1` turns a missing binary into a FAILURE. Without it
+# the suite skips the external half, which is the right default (drat-trim is a
+# gitignored clone, `just references`) but the wrong thing for a gate that exists
+# to prove a third party accepts our artifact -- a skip and a pass look identical.
+interpolant-certificate:
+    AXEYUM_REQUIRE_DRAT_TRIM=1 cargo test -p axeyum-cnf --test propositional_interpolant_certified
+
 # Run the committed micro corpus through the pure Rust BV backend.
 bench-micro:
     cargo run --release -p axeyum-bench -- corpus/micro --backend sat-bv --timeout-ms 1000 --out /tmp/axeyum-bench-micro-sat-bv.json
