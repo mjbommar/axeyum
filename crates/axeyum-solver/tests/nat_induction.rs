@@ -130,3 +130,53 @@ fn the_ordinary_front_door_does_not_already_decide_this() {
         outcome.result
     );
 }
+
+/// The soundness case that this route shipped without, found by building a
+/// corpus before wiring it into dispatch.
+///
+/// `∀n:Int. n ≥ 0` is **false** — `n = -1` falsifies it, and this repository's
+/// own front door returns exactly that witness. But base `0 ≥ 0` and step
+/// `k ≥ 0 → k+1 ≥ 0` both discharge, so a route that applies ℕ-induction to an
+/// `Int`-quantified goal answers `unsat` on a satisfiable set. Every test above
+/// carries an explicit `(=> (>= n 0) …)` guard, so they exercise only the sound
+/// branch and all six passed while this was broken.
+#[test]
+fn an_unguarded_int_universal_is_declined_not_proved() {
+    let script = "(set-logic LIA)\n\
+                  (assert (not (forall ((n Int)) (>= n 0))))\n\
+                  (check-sat)";
+    assert_eq!(
+        induction_verdict(script),
+        None,
+        "ℕ-induction cannot establish a goal quantified over all of Int; \
+         answering here is a wrong unsat"
+    );
+}
+
+/// The same hole with a recursive function, so it cannot be dismissed as an
+/// artefact of a trivial goal.
+#[test]
+fn an_unguarded_recurrence_goal_is_declined() {
+    let script = "(set-logic UFLIA)\n\
+                  (declare-fun f (Int) Int)\n\
+                  (assert (= (f 0) 0))\n\
+                  (assert (forall ((k Int)) (=> (>= k 0) (= (f (+ k 1)) (+ (f k) 2)))))\n\
+                  (assert (not (forall ((n Int)) (>= (f n) 0))))\n\
+                  (check-sat)";
+    assert_eq!(induction_verdict(script), None);
+}
+
+/// A guard this pass does not RECOGNISE is also declined.
+///
+/// `(> n (- 1))` is `n ≥ 0` over the integers, so proceeding would happen to be
+/// sound — which is exactly why it must not be relied on. The rule is "a
+/// recognised guard", not "a guard that turns out to be equivalent to one".
+#[test]
+fn an_unrecognised_guard_is_declined_rather_than_assumed_equivalent() {
+    let script = "(set-logic LIA)\n\
+                  (declare-fun g (Int) Int)\n\
+                  (assert (= (g 0) 0))\n\
+                  (assert (not (forall ((n Int)) (=> (> n (- 1)) (>= (g n) 0)))))\n\
+                  (check-sat)";
+    assert_eq!(induction_verdict(script), None);
+}

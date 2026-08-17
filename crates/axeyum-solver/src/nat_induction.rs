@@ -103,34 +103,56 @@ fn recognise(arena: &TermArena, assertions: &[TermId]) -> Option<Goal> {
         if found.is_some() {
             return None; // two goals — see the doc comment
         }
+        // No `n ≥ 0` guard ⇒ the goal is universal over all of `Int`, which
+        // ℕ-induction cannot establish. Decline rather than answer.
+        let Some(conclusion) = strip_nonneg_guard(arena, body, *var) else {
+            continue;
+        };
         found = Some(Goal {
             index,
             var: *var,
-            conclusion: strip_nonneg_guard(arena, body, *var),
+            conclusion,
         });
     }
     found
 }
 
-/// `(=> (>= n 0) concl)` ⇒ `concl`; anything else unchanged.
+/// `(=> (>= n 0) concl)` ⇒ `Some(concl)`; **`None` for anything else**.
 ///
-/// The guard is re-imposed explicitly in the step obligation, so dropping it
-/// here loses nothing — and keeping it would make the base obligation
-/// `0 ≥ 0 → concl(0)`, which is the same thing with an extra hop.
-fn strip_nonneg_guard(arena: &TermArena, body: TermId, var: axeyum_ir::SymbolId) -> TermId {
+/// Returning `None` — rather than the body unchanged — is a soundness
+/// requirement, not a stylistic one.
+///
+/// This function used to fall through to `body`, and the route proceeded. But
+/// base plus step establishes `∀n ≥ 0. concl(n)`, while the goal quantifies
+/// over all of `Int`. On
+///
+/// ```smt2
+/// (assert (not (forall ((n Int)) (>= n 0))))
+/// ```
+///
+/// the base `0 ≥ 0` and the step `k ≥ 0 → k+1 ≥ 0` both discharge, so the route
+/// answered `unsat` on an assertion set that is **satisfiable** — witness
+/// `n = -1`, which this repository's own front door returns. A wrong `unsat`
+/// is the worst failure this project can produce, and ℕ-induction applied to an
+/// `Int`-quantified goal produces it by construction.
+///
+/// So the guard is now mandatory: no recognised `n ≥ 0`, no induction. A goal
+/// genuinely universal over `Int` needs a different argument (two-sided
+/// induction, or a decision procedure), not this one.
+fn strip_nonneg_guard(
+    arena: &TermArena,
+    body: TermId,
+    var: axeyum_ir::SymbolId,
+) -> Option<TermId> {
     let TermNode::App {
         op: Op::BoolImplies,
         args,
     } = arena.node(body)
     else {
-        return body;
+        return None;
     };
     let (guard, rest) = (args[0], args[1]);
-    if is_nonneg_guard(arena, guard, var) {
-        rest
-    } else {
-        body
-    }
+    is_nonneg_guard(arena, guard, var).then_some(rest)
 }
 
 /// Whether `guard` is `n >= 0` (or `0 <= n`) for this `var`.
