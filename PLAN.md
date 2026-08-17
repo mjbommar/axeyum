@@ -307,6 +307,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
+| 2026-08-17 | `pending` | QF_BV reaches Lean as REASONING: a `qf_bv_wide` crosscheck family runs `a <= b && b < a` at `BitVec(16)` and asserts the module is a theory reconstruction, not merely that Lean accepted it. The existing `qf_bv` family uses `BitVec(2)`, where `term_level_enum_certifies` wins before `ProofFragment::QfBv` is reached -- so the test named for the foundational bit-blasting path ran at a width where bit-blasting is never used. Crossover measured between 8 and 16 bits and pinned by `narrow_bv_enumerates_and_wide_bv_reconstructs`. Split moves 32 -> 33 theory families (structural unchanged at 41); both crosscheck floors and the gate's reasoning floor raised to match. Real Lean accepts it; gate reports 127 checks. |
 | 2026-08-17 | `4cd5d6f0` | `scripts/check-lean-gate.sh` reports the two halves of its headline and floors the REASONING one (`THEORY_FAMILY_FLOOR=32`), verified end-to-end under real Lean 4.30.0. Flooring only the sum is what let the gap hide: swapping a theory family for an attestation leaves the 126 unmoved. Three guards each driven to fail — raised floor, absent summary, unparseable summary. Also corrects the `qf_bv` test's doc comment, which claimed a bit-level refutation type-checks in Lean; that module is an attestation containing no bit-vectors (the refutation is real and checked in Rust). |
 | 2026-08-17 | `a1493099` | The e-matching route CERTIFIES: `Evidence::UnsatQuantInstanceSet` wired through `produce_evidence` / `kind_label` / `recheck_certificate` / `is_certified`; a plain universal goes from `unsat-uncertified certified=0` to `unsat-quant-instance-set certified=1`. Corrects my own claim that this was blocked by arena identity — `produce_evidence` holds `&mut TermArena`, so producing on it rather than a clone puts the instances where `Evidence::check` will look. Ordering is load-bearing and was wrong first: placed early it displaced the guarded-quantifier UF Alethe cert in 5 tests, so it is now the last certifying arm. Also fixes a `clippy::match_same_arms` my previous commit put on main. |
 | 2026-08-17 | `c5f4c04b` | The Lean gate's content split is measured, printed per family, and ratcheted in both directions: 41 structural / 32 theory families, 72 / 95 modules. Classified from rendered module source, so no `lean` binary is required and the artifact classifies itself; a module claimed structural must also HAVE the shape, so the marker cannot become a sticker. Control: adding a contentless family trips the ratchet — while `lean_crosscheck_representative` raised its count 73→74 and passed, which is what was unguarded. |
@@ -516,11 +517,30 @@ refutation must type-check in real Lean", is corrected: that module is an
 attestation with no bit-vectors in it. The refutation is real and checked in
 Rust; only its Lean half is a shim.
 
-Open question, now visible
-in the printout and not yet explained: the `qf_bv`, `qf_ufbv` and `qf_abv`
-builders discard the returned fragment and route to a shim-class refuter, though
-`ProofFragment::QfBv`/`QfUfBv`/`QfAbv` are declared `TheoryReconstruction` — the
-family name and the routed fragment disagree.
+**And the `qf_bv` puzzle is closed — it was a width, not a defect.**
+`scan_ground_bv_proof_fragment` tries `term_level_enum_certifies` *before*
+falling through to `ProofFragment::QfBv`, and rightly: exhaustive term-level
+evaluation is the **stronger** Rust-side certificate, trusting neither the
+bit-blaster, the CNF encoder, nor the SAT solver. It just has no theory Lean
+module. Measured on `bvule a b ∧ bvult b a`:
+
+```
+width  2 / 4 / 8  → TermLevelEnum → StructuralAttestation
+width 16 / 32     → QfBv          → TheoryReconstruction
+```
+
+The crossover sits between 8 and 16 bits, and the `qf_bv` family uses
+`BitVec(2)` — so the test that reads as "the foundational bit-blasting path
+checks in real Lean" runs at a width where bit-blasting is never used. QF_BV
+*does* have a real reconstruction; nothing was exercising it.
+
+So a `qf_bv_wide` family now runs the same theorem at `BitVec(16)` and asserts
+the module is a theory reconstruction rather than merely that Lean accepted it —
+"Lean accepted it" is precisely what an attestation also achieves. Real Lean
+accepts it. The split moves **32 → 33 theory** families (structural unchanged at
+41), and both floors are raised to lock the gain in. The boundary itself is
+pinned by `narrow_bv_enumerates_and_wide_bv_reconstructs`, so it cannot move
+silently.
 
 **The e-matching route can now hand out the instances it used.** The driver
 built exact provenance per instance and exposed an independent replay checker,

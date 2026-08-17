@@ -151,6 +151,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     acyclicity_three_step_cycle_check_in_real_lean,
     distinct_constructor_equality_is_not_an_injectivity_refutation,
     qf_bv_comparison_refutation_checks_in_real_lean,
+    qf_bv_wide_comparison_reconstruction_checks_in_real_lean,
     qf_bv_bvredand_identity_contradiction_checks_in_real_lean,
     disjunctive_lra_case_split_checks_in_real_lean,
     const_shl_lowering_checks_in_real_lean,
@@ -495,7 +496,7 @@ const STRUCTURAL_ATTESTATION_FAMILY_BASELINE: usize = 41;
 /// deleting the marker from `structural_attestation_banner`: reconstruction
 /// then fails with `ModuleContentMismatch { declared: "structural-attestation",
 /// rendered: "theory-reconstruction" }` instead of quietly reclassifying.
-const THEORY_RECONSTRUCTION_FAMILY_FLOOR: usize = 32;
+const THEORY_RECONSTRUCTION_FAMILY_FLOOR: usize = 33;
 
 /// The same ratchet at module granularity: every module the exhaustive
 /// `lean_crosscheck_full` sweep would hand to Lean, not just the representative
@@ -504,7 +505,7 @@ const STRUCTURAL_ATTESTATION_MODULE_BASELINE: usize = 72;
 
 /// Module-granularity floor; the counterpart of the constant above.
 /// Measured 2026-08-17: 95 of 167 modules.
-const THEORY_RECONSTRUCTION_MODULE_FLOOR: usize = 95;
+const THEORY_RECONSTRUCTION_MODULE_FLOOR: usize = 96;
 
 /// The gate's population, split by what the modules actually contain.
 struct ContentSplit {
@@ -3028,6 +3029,51 @@ fn qf_bv_comparison_refutation_checks_in_real_lean() {
     let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[le, gt])
         .expect("QF_BV comparison unsat reconstructs");
     lean_accepts("qf_bv", &source);
+}
+
+/// The same `QF_BV` refutation at a width where **bit-blasting actually owns
+/// it**, so the foundational logic reaches Lean as reasoning rather than as an
+/// attestation.
+///
+/// `scan_ground_bv_proof_fragment` prefers `term_level_enum_certifies` over
+/// `ProofFragment::QfBv`, and rightly: exhaustive term-level evaluation trusts
+/// neither the bit-blaster, the CNF encoder, nor the SAT solver. But its Lean
+/// module is a structural attestation, so every narrow BV family above reaches
+/// Lean with nothing to check on the merits. Measured 2026-08-17, the crossover
+/// for this shape sits between 8 and 16 bits
+/// (`reconstruct::tests::narrow_bv_enumerates_and_wide_bv_reconstructs` pins
+/// it), and `BitVec(2)` is far below it.
+///
+/// So this is the same theorem — `a ≤ b ∧ b < a` is unsat — at `BitVec(16)`,
+/// where the reconstruction is the bit-level one the `qf_bv` family's name has
+/// always implied. It is asserted to be a theory reconstruction, not merely
+/// accepted, because "Lean accepted it" is exactly what an attestation also
+/// achieves.
+fn qf_bv_wide_comparison_reconstruction_checks_in_real_lean() {
+    let mut arena = TermArena::new();
+    let mk = |a: &mut TermArena, n: &str| {
+        let s = a.declare(n, Sort::BitVec(16)).unwrap();
+        a.var(s)
+    };
+    let a = mk(&mut arena, "a");
+    let b = mk(&mut arena, "b");
+    let le = arena.bv_ule(a, b).unwrap();
+    let gt = arena.bv_ult(b, a).unwrap();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[le, gt])
+        .expect("wide QF_BV comparison unsat reconstructs");
+    assert_eq!(
+        fragment,
+        ProofFragment::QfBv,
+        "the point of this family is the bit-blasting route; if it routed elsewhere the \
+         name would overstate again"
+    );
+    assert_eq!(
+        LeanModuleContent::of_module_source(&source),
+        LeanModuleContent::TheoryReconstruction,
+        "this family exists to put REASONING about bit-vectors in front of Lean; an \
+         attestation here would make it indistinguishable from the narrow one"
+    );
+    lean_accepts("qf_bv_wide", &source);
 }
 
 /// The curated `bvredand` row is a parser-reduction identity contradiction.

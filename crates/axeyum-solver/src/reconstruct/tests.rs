@@ -5399,6 +5399,75 @@ mod lra_dispatch_tests {
         );
     }
 
+    /// Why the `qf_bv` Lean family is an attestation: enumeration wins on narrow
+    /// widths, and only a wide one reaches the bit-blasting reconstruction.
+    ///
+    /// `scan_ground_bv_proof_fragment` tries `term_level_enum_certifies` BEFORE
+    /// falling through to `ProofFragment::QfBv`. Exhaustive term-level
+    /// evaluation is the STRONGER Rust-side certificate — it trusts neither the
+    /// bit-blaster, the CNF encoder, nor the SAT solver — so preferring it is
+    /// right. But its Lean module is a structural attestation, while `QfBv`'s is
+    /// a real reconstruction, so the choice also decides what Lean is handed.
+    ///
+    /// Measured 2026-08-17 on `bvule a b ∧ bvult b a`:
+    ///
+    /// ```text
+    ///   width  2 → TermLevelEnum → StructuralAttestation
+    ///   width  4 → TermLevelEnum → StructuralAttestation
+    ///   width  8 → TermLevelEnum → StructuralAttestation
+    ///   width 16 → QfBv          → TheoryReconstruction
+    ///   width 32 → QfBv          → TheoryReconstruction
+    /// ```
+    ///
+    /// The `lean_crosscheck` family named `qf_bv` uses `BitVec(2)`, so the test
+    /// that reads as "the foundational bit-blasting path checks in real Lean"
+    /// exercises a width at which bit-blasting is never used. That is not a
+    /// defect in the routing; it is a gap in the Lean coverage, and this test
+    /// pins the boundary so the gap cannot move silently.
+    #[test]
+    fn narrow_bv_enumerates_and_wide_bv_reconstructs() {
+        let fragment_at = |width: u32| {
+            let mut arena = TermArena::new();
+            let var = |arena: &mut TermArena, name: &str| {
+                let symbol = arena.declare(name, axeyum_ir::Sort::BitVec(width)).unwrap();
+                arena.var(symbol)
+            };
+            let a = var(&mut arena, "a");
+            let b = var(&mut arena, "b");
+            let le = arena.bv_ule(a, b).unwrap();
+            let gt = arena.bv_ult(b, a).unwrap();
+            super::scan_proof_fragment(&arena, &[le, gt])
+        };
+
+        for width in [2, 4, 8] {
+            let fragment = fragment_at(width);
+            assert_eq!(
+                fragment,
+                ProofFragment::TermLevelEnum,
+                "width {width} is small enough to enumerate exhaustively"
+            );
+            assert_eq!(
+                fragment.lean_module_content(),
+                Some(LeanModuleContent::StructuralAttestation),
+                "enumeration is checked in Rust, but its Lean module attests rather than proves"
+            );
+        }
+        for width in [16, 32] {
+            let fragment = fragment_at(width);
+            assert_eq!(
+                fragment,
+                ProofFragment::QfBv,
+                "width {width} is past the enumeration budget, so bit-blasting owns it"
+            );
+            assert_eq!(
+                fragment.lean_module_content(),
+                Some(LeanModuleContent::TheoryReconstruction),
+                "QF_BV does have a real Lean reconstruction -- it is simply not what a \
+                 2-bit query routes to"
+            );
+        }
+    }
+
     /// The shim emitter's output is self-labelling: a caller holding only the
     /// rendered source can classify it without consulting the fragment.
     #[test]

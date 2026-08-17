@@ -83,18 +83,29 @@ CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-115}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
 # Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s
-# 73 families emit a STRUCTURAL ATTESTATION -- `axiom prop : Prop`, `axiom hyp1 :
+# 74 families emit a STRUCTURAL ATTESTATION -- `axiom prop : Prop`, `axiom hyp1 :
 # prop`, `axiom hyp2 : Not prop`, then `False` by application. Lean accepts that
 # trivially and its acceptance says nothing about the proposition. The emitter
 # takes no arena and no assertions, so its output cannot depend on the query at
-# all. `qf_bv` is one of the 41.
+# all.
+#
+# `qf_bv` is one of the 41, which is worth understanding rather than deploring:
+# `scan_ground_bv_proof_fragment` prefers `term_level_enum_certifies` to
+# `ProofFragment::QfBv`, and exhaustive term-level evaluation is the STRONGER
+# Rust-side certificate -- it trusts neither the bit-blaster, the CNF encoder,
+# nor the SAT solver. It simply has no theory Lean module. That family uses
+# `BitVec(2)`, and the crossover for its shape sits between 8 and 16 bits, so it
+# never reaches bit-blasting at all. The `qf_bv_wide` family added alongside it
+# runs the same theorem at `BitVec(16)`, where the reconstruction is the
+# bit-level one the name always implied -- which is why the reasoning floor is
+# 33 and not 32.
 #
 # So this gate reports the two halves separately, and floors the half that is
 # actually reasoning. Flooring only the sum lets theory families be replaced by
 # attestations with the headline unmoved. `lean_crosscheck` prints the split as
 # LEAN_CONTENT_SUMMARY (it classifies each rendered module by its own header
 # marker, needing no Lean binary); this reads that line.
-THEORY_FAMILY_FLOOR="${AXEYUM_LEAN_THEORY_FLOOR:-32}"
+THEORY_FAMILY_FLOOR="${AXEYUM_LEAN_THEORY_FLOOR:-33}"
 
 # package | features | test target
 #
