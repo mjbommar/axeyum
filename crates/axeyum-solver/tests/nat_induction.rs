@@ -111,22 +111,58 @@ fn two_goals_are_declined_rather_than_arbitrarily_chosen() {
     assert_eq!(induction_verdict(script), None);
 }
 
-/// The claim this whole route rests on: the shipped front door does **not**
-/// already decide these.
+/// **Liveness of the dispatch wiring.** The shipped front door refutes this,
+/// and it can only be the induction rung doing it.
 ///
-/// If `solve_smtlib` returned `unsat` here, the induction route would be
-/// answering a question something else had already answered, and every test
-/// above would be measuring nothing. `f(0) = 0` with `∀k ≥ 0. f(k+1) = f(k)+2`
-/// does not entail `∀n ≥ 0. f(n) = 2n` in LIA+UF — nothing forces the
-/// unrolling to reach every `n` — so this is the gap induction fills.
+/// This test used to assert the opposite — that `solve_smtlib` did *not* return
+/// `unsat` — because the route was built but deliberately left out of
+/// [`axeyum_solver::solve`]'s ladder while its soundness was in question. That
+/// question is settled (`a32280b6a` made the `n >= 0` guard mandatory;
+/// `tests/nat_induction_adversarial.rs` probes twenty-two shapes around it), the
+/// route is now the last rung of the quantified ladder, and the claim flips.
+///
+/// The attribution is not an assumption. `f(0) = 0` with `∀k ≥ 0. f(k+1) = f(k)+2`
+/// does not entail `∀n ≥ 0. f(n) = 2n` in LIA+UF — no finite instantiation forces
+/// the unrolling to reach every `n` — so every route above the rung reports
+/// `unknown`, which is measured on this exact file in the
+/// `nat_induction_corpus` table (front-door column, `guarded_linear_closed_form`).
+/// The rung fires only on an `unknown`, so if it were removed or unreachable this
+/// assertion is what dies.
 #[test]
-fn the_ordinary_front_door_does_not_already_decide_this() {
+fn the_front_door_refutes_this_only_through_the_induction_rung() {
     let script = recurrence("(= (f n) (* 2 n))");
     let outcome = solve_smtlib(&script, &SolverConfig::default()).expect("front door runs");
     assert!(
-        !matches!(outcome.result, CheckResult::Unsat),
-        "the front door answered unsat without induction; this route would then be redundant \
-         and the tests above would prove nothing. Got: {:?}",
+        matches!(outcome.result, CheckResult::Unsat),
+        "the front door did not refute the recurrence closed form, so the ℕ-induction rung in \
+         `solve` is either gone or never reached. Got: {:?}",
+        outcome.result
+    );
+    // And the route itself decides it, so the verdict above is attributable.
+    assert_eq!(
+        induction_verdict(&script).as_deref(),
+        Some("unsat"),
+        "the front door refuted this but the induction route does not, so something else \
+         decided it and the attribution in this test's docs is wrong"
+    );
+}
+
+/// The front door must **not** inherit the bug the rung was quarantined for.
+///
+/// `∀n:Int. n ≥ 0` is false at `n = -1`, so the negation is satisfiable, and the
+/// front door answered `sat` with that witness long before the rung existed.
+/// Wiring a route that may only upgrade `unknown` → `unsat` cannot disturb a
+/// verdict that is already `sat` — this pins that it does not.
+#[test]
+fn the_front_door_still_reports_sat_for_the_unguarded_int_universal() {
+    let script = "(set-logic LIA)\n\
+                  (assert (not (forall ((n Int)) (>= n 0))))\n\
+                  (check-sat)";
+    let outcome = solve_smtlib(script, &SolverConfig::default()).expect("front door runs");
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "the front door stopped reporting sat for a satisfiable set after the induction rung \
+         was wired in. Got: {:?}",
         outcome.result
     );
 }

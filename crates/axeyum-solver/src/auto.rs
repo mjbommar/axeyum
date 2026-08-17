@@ -684,7 +684,65 @@ pub fn solve(
     // validated witness and otherwise declines (never `unsat`, never a wrong `sat`),
     // so it is safe to try before the refutation fallbacks. The validity sub-check
     // dispatches to the quantifier-free decider only, so it cannot re-enter here.
-    finish_quantified_solve(arena, assertions, &original_assertions, config, deadline)
+    finish_quantified_solve_or_induct(arena, assertions, &original_assertions, config, deadline)
+}
+
+/// [`finish_quantified_solve`], then the last rung of the quantified ladder:
+/// ℕ-induction over a guarded negated universal
+/// ([`crate::nat_induction::prove_by_nat_induction`]).
+///
+/// Placed last because it is the most expensive thing here that is not a search
+/// loop — it discharges two whole sub-queries through [`check_auto`] — and
+/// because everything above it decides strictly more shapes. It is also the only
+/// route in `solve` that can reach a goal pinned *only* by recursion equations:
+/// `f(0) = 0` plus `∀k ≥ 0. f(k+1) = f(k) + 2` does not entail `∀n ≥ 0. f(n) = 2n`
+/// by any finite instantiation, so the finite-expansion / e-graph / MBQI family
+/// above cannot refute its negation and reports `unknown` — which is exactly the
+/// input this rung consumes.
+///
+/// # Why `original_assertions`
+///
+/// **Not** the `assertions` the caller has been threading through the pipeline.
+/// By this point `normalize_top_level_quantified_counterexamples` has turned
+/// every `¬∀n. body` into `∃n. ¬body` and `skolemize_top_existentials` has turned
+/// *that* into a ground `¬body[n := !sk_0]`. The negated universal the recogniser
+/// matches on no longer exists in `assertions`; handed those, the route finds
+/// nothing and declines on every input. The raw assertion sequence still carries
+/// the shape, and the route's own soundness argument is stated against it.
+///
+/// # One direction only
+///
+/// `Unknown` → `Unsat`, and nothing else. A `sat` or an `unsat` already formed
+/// upstream is returned untouched, so no verdict this function sees can change.
+/// A backend error from the sub-queries is swallowed rather than propagated: the
+/// caller already has a well-formed `unknown`, and losing it to an error raised
+/// by a speculative rung would be a regression, not a report.
+fn finish_quantified_solve_or_induct(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    original_assertions: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    let result = finish_quantified_solve(arena, assertions, original_assertions, config, deadline)?;
+    if !matches!(result, CheckResult::Unknown(_)) {
+        return Ok(result);
+    }
+    let Some(induction_config) = config_with_remaining_timeout(config, deadline) else {
+        return Ok(result);
+    };
+    let t0 = Instant::now();
+    // The route's only verdict is `unsat`, and it is spelled out here rather
+    // than passed through, so a future widening of its return type cannot start
+    // emitting `sat` from this rung without this line changing too.
+    if let Ok(Some(CheckResult::Unsat)) =
+        crate::nat_induction::prove_by_nat_induction(arena, original_assertions, &induction_config)
+    {
+        qtrace("nat-induction", t0, "unsat");
+        return Ok(CheckResult::Unsat);
+    }
+    qtrace("nat-induction", t0, "declined");
+    Ok(result)
 }
 
 /// Extracts a **minimal unsatisfiable core** of `assertions`: the indices of a

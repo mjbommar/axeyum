@@ -21,14 +21,21 @@
 //!
 //! # Status of this suite
 //!
-//! [`nat_induction_never_contradicts_declared_status`] **FAILS as committed**,
-//! on three instances, and that is the finding rather than a broken test. The
-//! route strips a `n >= 0` guard when the goal has one
-//! (`nat_induction.rs::strip_nonneg_guard`) but proceeds anyway when it does
-//! not — and then discharges base and step over ℕ while the goal quantifies
-//! over `Int`. On `(assert (not (forall ((n Int)) (>= n 0))))` it answers
-//! `unsat` for a set that z3 and axeyum's own front door both answer `sat` for.
-//! See `corpus/regression/uflia_induction/README.md`.
+//! [`nat_induction_never_contradicts_declared_status`] **was committed red** and
+//! is now green. It failed on the three `unguarded_*` instances: the route
+//! stripped an `n >= 0` guard when the goal had one
+//! (`nat_induction.rs::strip_nonneg_guard`) but proceeded anyway when it did
+//! not, discharging base and step over ℕ while the goal quantified over `Int`.
+//! On `(assert (not (forall ((n Int)) (>= n 0))))` it answered `unsat` for a set
+//! that z3 and axeyum's own front door both answer `sat` for.
+//!
+//! `a32280b6a` made the guard mandatory. Re-measured after that fix: the three
+//! `unguarded_*` rows are declines (`-`), the four unique `unsat` decisions
+//! survive, and the contradiction count is `0`. The route is now the last rung
+//! of [`axeyum_solver::solve`]'s quantified ladder, so the **front-door** column
+//! of this table is no longer independent of the induction column — where it
+//! reads `unsat` on a guarded row, this rung is why. The adversarial shapes that
+//! justified wiring it live in `tests/nat_induction_adversarial.rs`.
 #![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
@@ -196,38 +203,51 @@ fn nat_induction_corpus_table() {
     }
 }
 
-/// The soundness gate: the induction route may never contradict a declared
-/// `:status`.
+/// The soundness gate: neither the induction route **nor the front door** may
+/// contradict a declared `:status`.
 ///
-/// Declining (`-`) and `unknown` are always fine — this route is allowed to be
-/// incomplete and says so. Answering `unsat` for a `sat` benchmark is not.
+/// Declining (`-`), `unknown`, and `timeout` are always fine — this route is
+/// allowed to be incomplete and says so. Answering `unsat` for a `sat`
+/// benchmark is not.
 ///
-/// **This test fails as committed.** See the module docs: the route proves the
-/// goal over ℕ but the SMT-LIB quantifier ranges over `Int`, so any goal
-/// without an `n >= 0` guard that happens to be false below zero is refuted
-/// anyway. It is committed red on purpose — it goes green when the route is
-/// fixed, and a version of it that passed today would be asserting the bug is
-/// not there.
+/// **This test was committed red**, failing on the three `unguarded_*`
+/// instances: the route proved the goal over ℕ while the SMT-LIB quantifier
+/// ranged over `Int`, so any goal without an `n >= 0` guard that happens to be
+/// false below zero was refuted anyway. `a32280b6a` made the guard mandatory and
+/// it went green — which is the point of having committed it red rather than
+/// writing a version that passed over the bug.
+///
+/// It now checks **both** verdict columns. While the route sat outside dispatch,
+/// only its own column could be wrong; now that it is the last rung of
+/// [`axeyum_solver::solve`], a wrong `unsat` it produces is a wrong `unsat` the
+/// front door ships, and a gate that watched only the isolated route would not
+/// see it.
 #[test]
 fn nat_induction_never_contradicts_declared_status() {
     let rows = measure();
     let decided = |v: &str| v == "sat" || v == "unsat";
-    let contradictions: Vec<String> = rows
-        .iter()
-        .filter(|r| decided(&r.induction) && r.induction != r.declared)
-        .map(|r| {
-            format!(
-                "  {}: declared {}, induction said {}",
+    let mut contradictions: Vec<String> = Vec::new();
+    for r in &rows {
+        if decided(&r.induction) && r.induction != r.declared {
+            contradictions.push(format!(
+                "  {}: declared {}, induction route said {}",
                 r.name, r.declared, r.induction
-            )
-        })
-        .collect();
+            ));
+        }
+        if decided(&r.front) && r.front != r.declared {
+            contradictions.push(format!(
+                "  {}: declared {}, FRONT DOOR said {}",
+                r.name, r.declared, r.front
+            ));
+        }
+    }
 
     assert!(
         contradictions.is_empty(),
-        "SOUNDNESS FAILURE — prove_by_nat_induction contradicts declared :status on {} of {} \
-         instances:\n{}\n\nThe route discharges base and step over ℕ but the goal quantifies \
-         over Int. Do NOT wire this into check_auto's dispatch until this is empty.",
+        "SOUNDNESS FAILURE — a declared :status is contradicted on {} of {} instances:\n{}\n\n\
+         ℕ-induction discharges base and step over ℕ; if the goal quantifies over Int without \
+         a recognised `n >= 0` guard, refuting it is a wrong unsat. The route is wired into \
+         `solve`, so this is a shipped verdict.",
         contradictions.len(),
         rows.len(),
         contradictions.join("\n")

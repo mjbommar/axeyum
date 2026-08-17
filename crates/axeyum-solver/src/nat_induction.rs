@@ -139,11 +139,7 @@ fn recognise(arena: &TermArena, assertions: &[TermId]) -> Option<Goal> {
 /// So the guard is now mandatory: no recognised `n ≥ 0`, no induction. A goal
 /// genuinely universal over `Int` needs a different argument (two-sided
 /// induction, or a decision procedure), not this one.
-fn strip_nonneg_guard(
-    arena: &TermArena,
-    body: TermId,
-    var: axeyum_ir::SymbolId,
-) -> Option<TermId> {
+fn strip_nonneg_guard(arena: &TermArena, body: TermId, var: axeyum_ir::SymbolId) -> Option<TermId> {
     let TermNode::App {
         op: Op::BoolImplies,
         args,
@@ -151,21 +147,32 @@ fn strip_nonneg_guard(
     else {
         return None;
     };
-    let (guard, rest) = (args[0], args[1]);
-    is_nonneg_guard(arena, guard, var).then_some(rest)
+    let [guard, rest] = args.as_ref() else {
+        return None;
+    };
+    is_nonneg_guard(arena, *guard, var).then_some(*rest)
 }
 
 /// Whether `guard` is `n >= 0` (or `0 <= n`) for this `var`.
+///
+/// The operands are destructured by an **exactly-two** slice pattern, not by
+/// indexing. `args[1]` before the operator is known was an index-out-of-bounds
+/// panic on any one-argument guard — `(=> (not (= n 5)) …)` is legal SMT-LIB and
+/// crashed the route (`tests/nat_induction_adversarial.rs::guard_negation_one_arg`).
+/// A route in dispatch turns that from an unreachable diagnostic into a front-door
+/// crash, so the arity is checked, not assumed.
 fn is_nonneg_guard(arena: &TermArena, guard: TermId, var: axeyum_ir::SymbolId) -> bool {
     let TermNode::App { op, args } = arena.node(guard) else {
         return false;
     };
-    let (left, right) = (args[0], args[1]);
+    let [left, right] = args.as_ref() else {
+        return false;
+    };
     let is_var = |t: TermId| matches!(arena.node(t), TermNode::Symbol(s) if *s == var);
     let is_zero = |t: TermId| matches!(arena.node(t), TermNode::IntConst(0));
     match op {
-        Op::IntGe => is_var(left) && is_zero(right),
-        Op::IntLe => is_zero(left) && is_var(right),
+        Op::IntGe => is_var(*left) && is_zero(*right),
+        Op::IntLe => is_zero(*left) && is_var(*right),
         _ => false,
     }
 }

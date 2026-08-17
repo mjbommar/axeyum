@@ -11,23 +11,26 @@ Consumed by two harnesses:
 
 - [`crates/axeyum-solver/tests/nat_induction_corpus.rs`](../../../crates/axeyum-solver/tests/nat_induction_corpus.rs)
   — measures each instance three ways (declared `:status`, `solve_smtlib`,
-  `prove_by_nat_induction`) and gates on the induction route never contradicting
-  a declared status.
+  `prove_by_nat_induction`) and gates on neither the induction route nor the
+  front door ever contradicting a declared status.
 - [`corpus_regression.rs`](../../../crates/axeyum-solver/tests/corpus_regression.rs)
   — picks these up with the rest of `corpus/regression/`, as a `check_auto`
-  soundness gate. Most go `unknown` there (a coverage gap, correctly skipped).
+  soundness gate. Most go `unknown` there, and they still do after the induction
+  route was wired in: that gate calls `check_auto` (the quantifier-*free*
+  dispatch) directly, while the induction rung lives in `solve`. So a change
+  here shows up in the `nat_induction_corpus` table, not in this one.
 
-## ⚠ Three instances currently expose a soundness bug
+## The three `unguarded_*` instances — the bug they caught, and its fix
 
 The `unguarded_*` files are **not** ordinary benchmarks; they are the minimised
-reproduction of a wrong verdict. `prove_by_nat_induction` answers `unsat` on all
-three, and all three are `sat`.
+reproduction of a wrong verdict. `prove_by_nat_induction` used to answer `unsat`
+on all three, and all three are `sat`.
 
-The mechanism: the route strips a leading `n >= 0` guard when the goal carries
-one (`nat_induction.rs::strip_nonneg_guard`), but when the goal carries **no**
-guard it proceeds anyway, discharging base and step over ℕ — while the SMT-LIB
+The mechanism: the route stripped a leading `n >= 0` guard when the goal carried
+one (`nat_induction.rs::strip_nonneg_guard`), but when the goal carried **no**
+guard it proceeded anyway, discharging base and step over ℕ — while the SMT-LIB
 quantifier ranges over `Int`. Any goal that is true on ℕ and false somewhere
-below zero is therefore refuted although it is satisfiable.
+below zero was therefore refuted although it is satisfiable.
 
 `unguarded_int_nonneg.smt2` is the whole bug in one line and needs no
 uninterpreted function at all:
@@ -37,14 +40,24 @@ uninterpreted function at all:
 ```
 
 `n = -1` refutes `∀n. n ≥ 0`, so the negation is true and the set is `sat`. Base
-(`0 ≥ 0`) and step (`k ≥ 0 → k+1 ≥ 0`) both discharge, so the route returns
+(`0 ≥ 0`) and step (`k ≥ 0 → k+1 ≥ 0`) both discharge, so the route returned
 `unsat`. z3 answers `sat`; axeyum's own `solve_smtlib` front door answers `sat`.
 
-The route is **not** in `check_auto`'s dispatch, so no shipped verdict is
-affected today. It must not be added until this is fixed. A fix has to make the
-non-negativity hypothesis explicit rather than assumed: either decline goals
-with no recognised guard, or conjoin `n >= 0` into the conclusion before
-discharging.
+**Fixed in `a32280b6a`:** a recognised `n >= 0` guard is mandatory, and
+`strip_nonneg_guard` returns `None` — a decline — for everything else. The three
+rows are declines now, the four unique `unsat` decisions survive, and the
+contradiction count is `0`.
+
+**The route is now wired into [`solve`](../../../crates/axeyum-solver/src/auto.rs)**
+as the last rung of the quantified ladder, so these three files stopped being a
+quarantine notice and became a shipped-verdict gate: if the guard check ever
+regresses, the front door itself answers `unsat` for a satisfiable set. The
+`nat_induction_corpus` gate therefore checks the front-door column as well as
+the route's own. Twenty-two further shapes around the guard condition — `<= n 0`,
+`>= 0 n`, `>= n (- 5)`, a guard on a different variable, a vacuous `true` guard,
+a one-argument `not` guard (which crashed the recogniser until the arity was
+checked rather than assumed) — are in
+[`tests/nat_induction_adversarial.rs`](../../../crates/axeyum-solver/tests/nat_induction_adversarial.rs).
 
 ## Ground truth
 
