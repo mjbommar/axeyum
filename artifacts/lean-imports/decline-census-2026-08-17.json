@@ -1,0 +1,137 @@
+{
+  "summary": {
+    "schema": "axeyum-lean-import-decline-census-v1",
+    "date": "2026-08-17",
+    "lane": "import-census",
+    "question": "Of a large, unchosen sample of official Lean declarations, how many does axeyum's kernel admit, and for each decline, which declaration fails first and in which blocker cluster?",
+    "producer": {
+      "exporter": "lean4export",
+      "exporter_repository": "https://github.com/leanprover/lean4export",
+      "exporter_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+      "exporter_commit_subject": "chore: bump toolchain to v4.30.0 (#34)",
+      "exporter_build_note": "Cloned into references/ (gitignored) at the pinned commit and built with `lake build` under the pinned toolchain. Verified byte-identical to the committed corpus: re-exporting Nat.add_comm reproduced artifacts/lean-imports/nat-add-comm.ndjson's sha256 cf186612... exactly.",
+      "format_version": "3.1.0",
+      "lean_version": "4.30.0",
+      "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+      "lean_binary": "~/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lean",
+      "license": "Apache-2.0 (lean4export and the Lean 4 core library it exports)",
+      "importer_commit": "4ee981ed138e4145d9f0e6967a74b6912fbb3754"
+    },
+    "population": {
+      "modules": [
+        "Init",
+        "Std"
+      ],
+      "non_internal_declarations": 96591,
+      "names_file": "/nas3/data/axeyum/lean-import-scale/init-std-names.tsv",
+      "note": "Init alone holds 40,812 non-internal declarations (enumerated this run); the sample frame is Init+Std so it is directly comparable to the 2026-08-15 scale census."
+    },
+    "samples": {
+      "A/initstd-500-restream": {
+        "size": 500,
+        "seed": 20260815,
+        "provenance": "The IDENTICAL 500 export streams the 2026-08-15 scale census ran, preserved at /nas3/data/axeyum/lean-import-scale/initstd-500-streams. Same bytes, new kernel: a controlled before/after, not a fresh draw."
+      },
+      "B/initstd-1000-fresh": {
+        "size": 1000,
+        "seed": 20260817,
+        "provenance": "Fresh uniform sample of the same 96,591-name frame, drawn at seed 20260817 and filtered to be DISJOINT from sample A. Exported individually at the pinned exporter commit."
+      }
+    },
+    "bounds": {
+      "parallel_pass": "6 jobs, 120 s wall, 8 GB address space, 512 MB census stack",
+      "serial_recheck": "2 jobs, 300 s wall, 16 GB address space",
+      "recheck_scope": "every declaration the parallel pass classified RESOURCE (18)",
+      "recheck_finding": "3 of 18 became CLEAN with the larger budget, so the parallel pass OVER-REPORTS the RESOURCE class. `adjudicated` carries the re-checked verdict; `outcome` carries the parallel one."
+    },
+    "outcomes_adjudicated": {
+      "CLEAN": 1481,
+      "RESOURCE": 15,
+      "EXPORT-FAILED": 3,
+      "DECLINED": 1
+    },
+    "outcomes_parallel_pass_only": {
+      "CLEAN": 1478,
+      "RESOURCE": 18,
+      "EXPORT-FAILED": 3,
+      "DECLINED": 1
+    },
+    "outcomes_by_sample": {
+      "A/initstd-500-restream": {
+        "CLEAN": 492,
+        "RESOURCE": 8
+      },
+      "B/initstd-1000-fresh": {
+        "CLEAN": 989,
+        "RESOURCE": 7,
+        "EXPORT-FAILED": 3,
+        "DECLINED": 1
+      }
+    },
+    "declines": [
+      {
+        "sampled_declaration": "Std.TreeSet.Equiv.of_forall_get?_eq",
+        "first_failing": "Std.Internal.List.getKey?_ext",
+        "first_failing_code": "TypeMismatch",
+        "cluster": "other",
+        "declines_in_stream": 5,
+        "declaration_records": 3493
+      }
+    ],
+    "decline_clusters": {
+      "other": 1
+    },
+    "resource_declarations": [
+      "BitVec.ofNatLT_uInt64ToNat._proof_1",
+      "Char.toUpper",
+      "Char.utf8Size.fun_cases_unfolding",
+      "Std.HashSet.toList_iter",
+      "Std.Tactic.BVDecide.BVExpr.bitblast._proof_11",
+      "Std.Tactic.BVDecide.BVExpr.bitblast.blastCpopLayer.go._proof_3",
+      "Std.Tactic.BVDecide.BVExpr.bitblast.blastUdiv.denote_blastDivSubtractShift_wr",
+      "Std.Tactic.BVDecide.BVExpr.bitblast.instLawfulVecOperatorRefVecBlastNeg",
+      "Std.Tactic.BVDecide.BVExpr.decEq.match_33",
+      "Std.Tactic.BVDecide.BVPred.mkUlt_denote_eq",
+      "Std.Time.ZonedDateTime.parse",
+      "Std.Time.instHSubOffsetOffset_18",
+      "UInt32.ofBitVec_ofFin",
+      "UInt32.ofFin_lt_iff_lt",
+      "_private.Std.Tactic.BVDecide.Bitblast.BVExpr.Circuit.Lemmas.Operations.Cpop.0.Std.Tactic.BVDecide.BVExpr.bitblast.denote_blastCpopLayer.go._unary"
+    ],
+    "export_failed_declarations": {
+      "names": [
+        "List.term_<:+:_",
+        "stx_,*",
+        "term_^_"
+      ],
+      "cause": "EXPORTER-side, not importer-side. `lean4export`'s CLI decodes each requested name with `Syntax.decodeNameLit`, which returns none for notation names; the binary PANICs to stderr and still EXITS 0 with a metadata-only stream. Reproduced this run for `term_^_` and `stx_,*`."
+    },
+    "negative_control": {
+      "why": "A census reporting zero declines is the exact shape of a checker that cannot fail, so the binary was shown to still report one.",
+      "method": "One token changed in stream 8 of sample A: a `thm` record's `value` expression id repointed at its own `type` id (1502 -> 1462).",
+      "unmutated": "records=124 admitted_records=124 declines=0",
+      "mutated": "records=124 admitted_records=118 declines=6 \u2014 root `Int.decNonneg._proof_1` DeclarationValueMismatch, plus 5 UnknownConst cascades."
+    },
+    "pilot_corpus_recheck": {
+      "corpus": "scripts/lean-import-census.sh, the committed 40-declaration corpus",
+      "result": "40/40 clean, 1,255 declaration records, 0 declines",
+      "note": "This is the corpus the 2026-08-15 pilot reported as 13/40. Every named representative of all four pilot clusters is in it and now imports: eq_of_heq (HEq), Nat.pow_succ (rfl-equation), List.nil_append and Nat.succ_sub_succ (other type mismatches), and the `._f`/brecOn auxiliaries inside the Nat closures."
+    },
+    "prior_root_blockers_retired": {
+      "source": "the 2026-08-15 scale census's six distinct roots",
+      "verified_individually_this_run": {
+        "Nat.bitwise._unary": "302/302 records admitted, 0 declines",
+        "Nat.Linear.Poly.denote_reverse": "105/105 records admitted, 0 declines",
+        "Nat.Linear.ExprCnstr.denote_toNormPoly": "439/439 records admitted, 0 declines",
+        "List.attach_cons": "75/75 records admitted, 0 declines",
+        "Fin.shiftRight_val": "446/446 records admitted, 0 declines"
+      },
+      "not_re_run": "_private.Std.Data.DTreeMap.Internal.Zipper.0.\u2026prependMap.eq_def \u2014 a `_private` name; its sample-A stream is CLEAN this run, which covers it."
+    },
+    "reproduce": {
+      "export": "cd references/lean4export && lake env ./.lake/build/bin/lean4export Init Std -- <Declaration> > stream.ndjson",
+      "census_one": "cargo run --release -p axeyum-lean-import --example lean4export_census -- stream.ndjson",
+      "census_many": "AXEYUM_LEAN4EXPORT=references/lean4export AXEYUM_LAKE_BIN=~/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lake scripts/lean-import-scale-census.sh --names <names.tsv> --sample 1000 --seed 20260817"
+    }
+  }
+}
