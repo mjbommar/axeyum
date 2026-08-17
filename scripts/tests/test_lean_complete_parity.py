@@ -724,7 +724,17 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("complete Lean 4.30 parity not established", markdown)
         self.assertIn("Expected / registered terminal cells: **0 / 0**", markdown)
         self.assertFalse(first["terminal"]["ready"])
-        self.assertEqual(first["bounded_snapshot"]["axiom_ledger"]["rows"], 65)
+        # Mirrors the LIVE ledger (`axiom_snapshot()` counts
+        # `lean-axiom-ledger-v1.json`'s entries), so it moves when the trusted
+        # surface does. 65 -> 31 because the real prelude's census was superseded
+        # by the runtime-derived ledger and then ℤ was proved out entirely
+        # (872aedce0): real 30 + string 1, integer 0.
+        #
+        # This assertion was stale for days and nothing said so: the adr-0344
+        # seal break on 2026-08-14 made `gen-lean-complete-parity.py --check`
+        # abort on frozen-plan drift BEFORE it ever compared generated output,
+        # so the staleness underneath was invisible until the seal was repaired.
+        self.assertEqual(first["bounded_snapshot"]["axiom_ledger"]["rows"], 31)
         self.assertEqual(
             first["bounded_snapshot"]["construct_matrix"]["independently_admitted"],
             6,

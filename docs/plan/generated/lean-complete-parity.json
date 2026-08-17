@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "863e8594365c73098da8c76cbf1bcdc87dfc7ae51532bcae18220a90d161e1dc"
+      "sha256": "5ec01789cff0ef72a6c0d5ecf9b57d995edfd9604a5e387a24c293a778c060fb"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -44,11 +44,11 @@
     },
     {
       "path": "docs/plan/lean-axiom-ledger-v1.json",
-      "sha256": "6bf005441f0ec511b8bf1ee05e77ff458128a6184913426a854dd3eeb9126d12"
+      "sha256": "510f3e81cf25093a45cd99656ab5c64b0bc386f49f9bbd56fd41d63d05133ac5"
     },
     {
       "path": "docs/plan/lean-compatibility-v1.json",
-      "sha256": "1941062fe0bc60c863af2dbef1ab91b771e5a39b1088ba7a18f95cbe16361064"
+      "sha256": "6e7574fc31071ca3194364af13ddf5be1610bd53d93586e47c20c54c9838e7c3"
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
@@ -504,11 +504,11 @@
     },
     {
       "path": "scripts/tests/test_lean_compatibility.py",
-      "sha256": "947f71c85db81a02613d541319038346c286849cc2eacda7f15f6028c00ea9eb"
+      "sha256": "6ce203c9bdd306f5890b711a023d3a97cd50f75e4817098a0e0e6d88d3e10b18"
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "762805016badbd354576d3c9d9b19c11601daf5c0444aa976ce77445db8320b7"
+      "sha256": "24b2d32266404d119f333458e6b0c666705a654e44de47c277ac8a9726a977b2"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -617,7 +617,7 @@
   },
   "bounded_snapshot": {
     "compatibility": {
-      "rows": 12,
+      "rows": 13,
       "profiles": [
         {
           "id": "K0-checker",
@@ -626,8 +626,8 @@
         },
         {
           "id": "K1-import",
-          "satisfied": 5,
-          "total": 5
+          "satisfied": 6,
+          "total": 6
         },
         {
           "id": "K2-source",
@@ -666,15 +666,15 @@
       "scope": "selected-family bounded evidence; not terminal paired cells"
     },
     "axiom_ledger": {
-      "rows": 65,
+      "rows": 31,
       "classifications": {
-        "derivable-theorem": 7,
-        "external-assumption": 41,
-        "primitive-interface": 17
+        "derivable-theorem": 3,
+        "external-assumption": 19,
+        "primitive-interface": 9
       },
       "discharge_statuses": {
-        "planned": 7,
-        "retained": 58
+        "planned": 3,
+        "retained": 28
       }
     },
     "u2_test_authority": {

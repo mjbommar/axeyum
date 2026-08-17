@@ -16,16 +16,16 @@ Inventory, a bounded profile, and a complete authority are different states. Thi
 
 These facts are regenerated from existing manifests. They are scoped evidence, not a terminal population denominator.
 
-- Compatibility contract: 12 rows.
+- Compatibility contract: 13 rows.
   - `K0-checker`: 1/1 rows satisfy that bounded profile.
-  - `K1-import`: 5/5 rows satisfy that bounded profile.
+  - `K1-import`: 6/6 rows satisfy that bounded profile.
   - `K2-source`: 0/2 rows satisfy that bounded profile.
   - `K3-proof`: 0/1 rows satisfy that bounded profile.
   - `K4-workflow`: 0/1 rows satisfy that bounded profile.
   - `K5-runtime`: 0/1 rows satisfy that bounded profile.
   - `K6-ecosystem`: 0/1 rows satisfy that bounded profile.
 - Selected construct matrix: 7 rows; 6 official accepts, 1 official rejects, 6 independently admitted, 4 computation-checked, and 0 current declines.
-- Axiom ledger: 65 rows; `derivable-theorem`=7, `external-assumption`=41, `primitive-interface`=17.
+- Axiom ledger: 31 rows; `derivable-theorem`=3, `external-assumption`=19, `primitive-interface`=9.
 - U2 registration authority: 3678 default and 3723 full-Lake CTest cases; 0 official executions, 0 Axeyum executions, and 0 paired cells. This is bounded registration evidence, not complete U2 authority.
 - U2 official CI profiles: 17 contexts, 153 cells, 111 not-run CTest attempts, and 8 exact selection sets; 0 official executions and zero parity credit.
 - U2 child-shard derivation: 5 distinct ordered memberships, 289 physical shards, 461 selection-expanded shard occurrences, and 6,451 attempt-expanded shard occurrences. All 111 attempt bindings remain not-run; execution, pairing, performance, and parity credit remain zero.
