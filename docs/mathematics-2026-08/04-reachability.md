@@ -246,6 +246,79 @@ reconstructed kernel term, without a person writing the proof. That is the
 flywheel's own arrow, and it is what the adversarial corpus independently ranks
 first.
 
+### The `induction-over-nat` row, measured — and the route is unsound (2026-08-17)
+
+`prove_by_nat_induction` (`crates/axeyum-solver/src/nat_induction.rs`) is the
+first solver route built against this row. It is exported at the crate root and
+deliberately **not** in `check_auto`'s dispatch. This is the corpus that would
+justify wiring it in. It does not: **the route reports `unsat` on three
+satisfiable instances, and must not be dispatched until that is fixed.**
+
+Twelve instances, `corpus/regression/uflia_induction/`, each measured three ways
+— declared `:status`, the shipped `solve_smtlib` front door, and the induction
+route. Harness:
+`crates/axeyum-solver/tests/nat_induction_corpus.rs`, run on `s6` with
+`--features full` (12 instances, 2 tests; a nonzero instance floor is asserted).
+
+| instance | declared | front door | induction |
+|---|---|---|---|
+| `guarded_linear_closed_form` | unsat | unknown | **unsat** |
+| `guarded_linear_nonneg` | unsat | unknown | **unsat** |
+| `guarded_monotone_step` | unsat | unknown | **unsat** |
+| `guarded_parity_range` | unsat | timeout | **unsat** |
+| `guarded_sum_gauss` | unsat | timeout | timeout |
+| `guarded_product_factorial_bound` | unsat | timeout | timeout |
+| `guarded_false_base` | sat | unknown | declined |
+| `guarded_false_step` | sat | unknown | declined |
+| `guarded_wrong_slope` | sat | unknown | declined |
+| `unguarded_int_nonneg` | sat | sat | ⚠ **unsat** |
+| `unguarded_recurrence_nonneg` | sat | timeout | ⚠ **unsat** |
+| `unguarded_int_even_or_odd` | sat | timeout | ⚠ **unsat** |
+
+The front door decides **1 of 12**. The induction route decides 7, of which 6
+are instances the front door does not decide — but only **4 of those 6 are
+correct**. The other two, plus one head-to-head contradiction, are wrong
+verdicts.
+
+**The bug.** The route strips a leading `n >= 0` guard when the goal has one
+(`strip_nonneg_guard`) and proceeds *anyway* when it does not. It then
+discharges base and step over ℕ while the SMT-LIB quantifier ranges over `Int`.
+Any goal true on ℕ and false somewhere below zero is refuted although it is
+satisfiable. The minimal reproduction needs no uninterpreted function:
+
+```smt2
+(assert (not (forall ((n Int)) (>= n 0))))   ; sat: n = -1
+```
+
+Base `0 ≥ 0` and step `k ≥ 0 → k+1 ≥ 0` both discharge, so the route answers
+`unsat`. z3 answers `sat`, and **axeyum's own front door answers `sat`** — the
+contradiction is visible inside one binary, with no external oracle.
+
+Two things this is not. It is not a shipped wrong verdict: the route is not
+reachable from `check_auto` or `solve_smtlib`, which is the one piece of good
+news here and the reason "build the corpus before wiring it in" was the right
+order. And it is not caught by the route's own suite
+(`tests/nat_induction.rs`, 6 tests, all green): every instance there carries the
+`(=> (>= n 0) …)` guard, so the suite exercises only the branch that is sound.
+A guard *present but unrecognised* (`(> n (- 1))`) is accidentally sound too —
+the implication is vacuous below zero — which is why the hole is narrow enough
+to have been missed and sharp enough to be a P0 the moment dispatch lands.
+
+The fix has to make non-negativity explicit rather than assumed: decline goals
+with no recognised guard, or conjoin `n >= 0` into the conclusion before
+discharging. `nat_induction_never_contradicts_declared_status` is committed
+**red** against the current route and goes green when either lands.
+
+**What the corpus says about the value case, once the bug is set aside.** The
+four correct new decisions are real and are exactly the advertised gap: a closed
+form, a lower bound, a monotonicity step, and a parity range, none of which the
+front door or z3 decides (z3 returns `unknown`/`timeout` on all six `unsat`
+instances). The route also stops cleanly where expected — both nonlinear step
+obligations (`sum_gauss`, `factorial_bound`) time out rather than misfire, and
+all three false-base / false-step / wrong-slope controls are declined. So the
+capability is worth having; it is the domain discipline that is missing, not the
+idea.
+
 Two limits on this, stated rather than buried. The techniques corpus is still a
 school-and-olympiad corpus — it is adversarial along the *shape* axis, not the
 *difficulty* axis, and a research-technique corpus would surface tools
