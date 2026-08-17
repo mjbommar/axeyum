@@ -30,7 +30,7 @@ use axeyum_rewrite::{
     eliminate_functions, simplify_datatypes,
 };
 
-use crate::backend::SolverError;
+use crate::error::SolverError;
 
 /// A checkable `unsat` certificate: the CNF and its DRAT refutation, both in
 /// standard text formats.

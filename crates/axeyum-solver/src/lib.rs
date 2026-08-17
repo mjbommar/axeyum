@@ -46,6 +46,7 @@ pub use axeyum_bv::{
 pub use axeyum_ir::Value;
 
 mod backend;
+mod error;
 mod incremental;
 mod layers;
 mod model;

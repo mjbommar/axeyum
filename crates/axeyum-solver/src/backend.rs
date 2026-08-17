@@ -59,43 +59,11 @@ pub enum UnknownKind {
     Other,
 }
 
-/// Errors from a backend invocation.
-///
-/// These are operational failures; an undecided query is
-/// [`CheckResult::Unknown`], not an error.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SolverError {
-    /// An assertion was not of Boolean sort.
-    NonBooleanAssertion(TermId),
-    /// The backend cannot represent part of the query.
-    Unsupported(String),
-    /// The backend failed internally (missing model, API failure).
-    Backend(String),
-    /// The input text could not be parsed (the SMT-LIB text front door).
-    Parse(String),
-}
-
-impl core::fmt::Display for SolverError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            SolverError::NonBooleanAssertion(t) => {
-                write!(f, "assertion #{} is not of Bool sort", t.index())
-            }
-            SolverError::Unsupported(what) => write!(f, "unsupported by backend: {what}"),
-            SolverError::Backend(what) => write!(f, "backend failure: {what}"),
-            SolverError::Parse(what) => write!(f, "parse error: {what}"),
-        }
-    }
-}
-
-impl core::error::Error for SolverError {}
-
-impl From<axeyum_ir::IrError> for SolverError {
-    /// An IR builder error during solving is an internal backend failure.
-    fn from(error: axeyum_ir::IrError) -> Self {
-        SolverError::Backend(error.to_string())
-    }
-}
+// `SolverError` now lives in the leaf module `crate::error` and is re-exported
+// here, so every existing `use crate::backend::SolverError` keeps working. It
+// moved to break `backend -> model -> quant_sat_certificates -> proof -> backend`:
+// `proof` was in that cycle only because it names this type. See `crate::error`.
+pub use crate::error::SolverError;
 
 /// Cold bit-vector lowering strategy.
 ///
