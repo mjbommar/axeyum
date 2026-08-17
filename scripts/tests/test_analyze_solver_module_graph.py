@@ -182,6 +182,7 @@ class RatchetActuallyFails(unittest.TestCase):
                 "edge_count": summary["edge_count"],
             },
             "modules_in_cycles": summary["modules_in_cycles"],
+            "largest_cycle_lines": summary["largest_cycle_lines"],
             "evidence_layer": summary["evidence_layer"],
             # Mirrors the `--write-baseline` payload. This helper duplicating
             # that shape is a hazard in itself: the fan-out ratchet was written,
@@ -245,6 +246,46 @@ class RatchetActuallyFails(unittest.TestCase):
         summary = self._summary(narrow, ["gamma"])
         self.assertEqual(summary["evidence_layer_fanout"]["gamma"], 1)
         self.assertEqual(mg.check(summary, base), 0)
+
+    def test_a_cycle_that_grows_in_MASS_fails_even_with_no_new_member(self) -> None:
+        """The evasion that names alone miss.
+
+        Collapsing modules into a directory merges graph nodes, so a cycle can
+        absorb far more code without a single new identifier entering it —
+        measured at 401x on a proposed `arith/` grouping while the name-based
+        guard exited 0. Here: the same two modules stay in the cycle, and one of
+        them grows.
+        """
+        cyclic = {
+            "lib.rs": "mod alpha;\nmod beta;\nmod gamma;\n",
+            "alpha.rs": "pub fn go() { crate::beta::thing(); }\n",
+            "beta.rs": "pub fn thing() { crate::alpha::go(); }\n",
+            "gamma.rs": "pub fn other() {}\n",
+        }
+        base = self._baseline(self._summary(cyclic, ["gamma"]))
+        fatter = dict(cyclic)
+        fatter["beta.rs"] = (
+            "pub fn thing() { crate::alpha::go(); }\n" + "// filler\n" * 500
+        )
+        summary = self._summary(fatter, ["gamma"])
+        self.assertEqual(
+            set(summary["modules_in_cycles"]), set(base["modules_in_cycles"]),
+            "no NEW member — that is the point",
+        )
+        self.assertGreater(summary["largest_cycle_lines"], base["largest_cycle_lines"])
+        self.assertEqual(mg.check(summary, base), 1)
+
+    def test_a_cycle_that_shrinks_is_progress_not_failure(self) -> None:
+        fat = {
+            "lib.rs": "mod alpha;\nmod beta;\nmod gamma;\n",
+            "alpha.rs": "pub fn go() { crate::beta::thing(); }\n",
+            "beta.rs": "pub fn thing() { crate::alpha::go(); }\n" + "// filler\n" * 500,
+            "gamma.rs": "pub fn other() {}\n",
+        }
+        base = self._baseline(self._summary(fat, ["gamma"]))
+        lean = dict(fat)
+        lean["beta.rs"] = "pub fn thing() { crate::alpha::go(); }\n"
+        self.assertEqual(mg.check(self._summary(lean, ["gamma"]), base), 0)
 
     def test_losing_coverage_fails(self) -> None:
         """The inert-gate trap: measure almost nothing, exit 0.

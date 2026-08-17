@@ -436,6 +436,15 @@ def summarize(graph: dict, layer: list[str]) -> dict:
             for c in cycles
         ],
         "modules_in_cycles": in_cycles,
+        # The largest cycle's LINE COUNT, not just its module count. See the
+        # guard in `check` for why the count alone is evadable.
+        "largest_cycle_lines": (
+            max((c["lines"] for c in summary_cycles), default=0)
+            if (summary_cycles := [
+                {"lines": sum(graph["lines"].get(m, 0) for m in c)} for c in cycles
+            ])
+            else 0
+        ),
         "evidence_layer": sorted(layer_set),
         "edges_into_evidence_layer": sorted(intruders),
         "edges_from_largest_cycle_into_evidence_layer": from_core,
@@ -548,6 +557,29 @@ def check(summary: dict, baseline: dict) -> int:
             "are now one component."
         )
 
+    # Cycle MASS, not just membership.
+    #
+    # `NEW CYCLE MEMBERS` above compares NAMES, and a name is evadable. Measured
+    # 2026-08-17 while testing a proposed `arith/` directory: name a new
+    # directory after one of its own members — the idiom this crate already uses
+    # (`abv.rs` beside `abv/`) — and no new name enters the cycle set, the
+    # module count barely moves, and this gate exits 0 while the largest cycle
+    # grows **401x** in lines. Collapsing modules into a directory merges graph
+    # nodes (`owner()` takes the first path component), so it can fuse cycles
+    # without introducing a single new identifier.
+    #
+    # A shrink is progress and is reported, never failed.
+    base_lines = baseline.get("largest_cycle_lines", 0)
+    now_lines = summary.get("largest_cycle_lines", 0)
+    if base_lines and now_lines > base_lines:
+        failures.append(
+            f"LARGEST CYCLE GREW: {base_lines:,} -> {now_lines:,} lines. The module "
+            "count can stay flat while a cycle absorbs half the crate — that is "
+            "what mass catches and names do not."
+        )
+    elif base_lines and now_lines < base_lines:
+        print(f"progress: largest cycle {base_lines:,} -> {now_lines:,} lines")
+
     base_fanout = baseline.get("evidence_layer_fanout", {})
     now_fanout = summary["evidence_layer_fanout"]
     widened = sorted(
@@ -642,6 +674,7 @@ def main(argv: list[str]) -> int:
                 "edge_count": summary["edge_count"],
             },
             "modules_in_cycles": summary["modules_in_cycles"],
+            "largest_cycle_lines": summary["largest_cycle_lines"],
             "cycles": [
                 {"size": c["size"], "modules": c["modules"]} for c in summary["cycles"]
             ],
