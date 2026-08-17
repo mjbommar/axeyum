@@ -50,6 +50,32 @@ class RunningAModuleIsNotTheSameAsMentioningIt(unittest.TestCase):
         self.assertEqual(CT.modules_run_by(self.MODS, text), {"test_parity_evidence"})
 
 
+class ACommentIsAMentionHoweverRunnerishItLooks(unittest.TestCase):
+    """Found by the gate contradicting itself. `check-adopted-controls.sh`
+    documents its exclusions with "pytest-style; `pytest` is not installed", so
+    those COMMENT lines contained the word `pytest`, qualified as runner lines,
+    and vouched for the exact modules the comment says are not run — two modules
+    counted as covered because a comment explained why they were not."""
+
+    MODS = {"test_alpha", "test_beta"}
+
+    def test_a_comment_naming_a_module_and_a_runner_word_is_not_a_run(self) -> None:
+        text = "#   test_alpha  ) pytest-style; `pytest` is not installed here\n"
+        self.assertEqual(CT.modules_run_by(self.MODS, text), set())
+
+    def test_an_indented_comment_is_still_a_comment(self) -> None:
+        text = "    # python3 -m unittest scripts.tests.test_alpha  (disabled)\n"
+        self.assertEqual(CT.modules_run_by(self.MODS, text), set())
+
+    def test_a_real_run_beside_a_comment_still_counts(self) -> None:
+        """The control: ignoring comments must not swallow the command."""
+        text = (
+            "#   test_alpha  ) excluded, pytest-style\n"
+            "python3 -m unittest scripts.tests.test_beta\n"
+        )
+        self.assertEqual(CT.modules_run_by(self.MODS, text), {"test_beta"})
+
+
 class AContinuedCommandIsStillOneCommand(unittest.TestCase):
     """A runner listing forty modules writes one per line under a trailing
     backslash, so only the FIRST shares a physical line with `unittest`.

@@ -55,10 +55,12 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TESTS = ROOT / "scripts/tests"
 
-# Measured 2026-08-17, after adopting 44 modules (`scripts/check-adopted-controls.sh`)
-# and after fixing this scanner to join line continuations, which alone revealed
-# 2 more that were already wired. MAY ONLY GO DOWN.
-ORPHAN_BASELINE = 17
+# Measured 2026-08-17, after adopting 44 modules (`scripts/check-adopted-controls.sh`),
+# after fixing this scanner to join line continuations (which revealed 2 more that
+# were already wired), and after making it ignore COMMENT lines (which had been
+# crediting 2 modules because a comment explained why they were NOT run).
+# MAY ONLY GO DOWN.
+ORPHAN_BASELINE = 19
 # The controls exist; if this collapses, the glob is wrong and every count lies.
 MIN_MODULES = 130
 
@@ -109,6 +111,15 @@ def modules_run_by(mods: set[str], text: str) -> set[str]:
     """
     hits: set[str] = set()
     for line in logical_lines(text):
+        if line.lstrip().startswith("#"):
+            # A COMMENT naming a module is a mention, however runner-ish it
+            # looks. Found by this gate contradicting itself: the adopted-controls
+            # script documents its exclusions with "pytest-style; `pytest` is not
+            # installed", so those comment lines contained the word `pytest`,
+            # qualified as runner lines, and vouched for the exact modules the
+            # comment says are NOT run. Two modules were counted as covered
+            # because a comment explained why they were not.
+            continue
         if "unittest" not in line and "pytest" not in line:
             continue
         hits.update(mod for mod in mods if mod in line)
