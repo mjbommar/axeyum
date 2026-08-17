@@ -229,8 +229,13 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target/prepush-gate}"
     # test count: a single `cargo test --test a --test b` call would still pass
     # the emptiness check if only one of the four had been gated out. They share
     # the build, so the extra invocations cost effectively nothing.
+    # `string_route_parity` is the only check that relates the workspace's TWO
+    # string decision procedures to each other. The shipped composition cannot:
+    # the online route only ever fills the bounded route's `unknown` gaps, so a
+    # wrong verdict from either is invisible to the other by construction.
     for suite in online_string_front_door word_first_fallback \
-                 qf_slia_fixed_splice stoi_len_abstraction; do
+                 qf_slia_fixed_splice stoi_len_abstraction \
+                 string_route_parity; do
       gated_test "string front door: $suite" \
         cargo test -p axeyum-solver --features full --quiet --test "$suite"
     done

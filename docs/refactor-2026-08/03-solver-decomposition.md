@@ -180,6 +180,37 @@ Note that `axeyum-strings` **already exists** as a separate crate (7,883 lines)
 while seven string modules live in the solver. Clarifying that division is worth
 more than a new crate.
 
+**Measured 2026-08-16.** The division is not messy, and it is not
+engine-versus-plumbing either. There are **two independent string routes** plus
+a shared evidence layer:
+
+| | lines | what it is |
+| --- | ---: | --- |
+| `axeyum-strings` (crate) | 7,885 | the unbounded symbolic engine — regex derivatives, arrangements, word-equation inference, lex order, refutation, derivation checking |
+| `axeyum-solver::strings` | 1,305 | the **bounded** route: strings as `(len, content)` bit-vectors, no new IR sort, regex by Thompson NFA over bounded positions. The BMC fragment |
+| `axeyum-solver::string_theory` | 1,962 | the online CDCL(T) driver, which consumes the crate |
+| `word_alethe`, `word_reconstruct`, `lex_reconstruct`, `regex_reconstruct` | 3,629 | evidence and proof emission |
+
+`strings.rs` references `axeyum_strings` **zero** times, and that is correct
+rather than duplication: it is a different decision procedure for the same
+theory. Every other module here references the crate 2–11 times.
+
+So the boundary is already clean, and D3's string question is not "which side
+does this file belong on". It is this:
+
+**Both routes decide `str.in_re`, and nothing compares them.** The composition
+is deliberately complementary — `apply_word_route` "adds `sat` only where the
+verdict is `unknown`", and `upgrade_bounded_string_unknown` turns `unknown` into
+`unsat` via the unbounded abstraction. Each route only ever fills the other's
+gaps, so **in the shipped product the two can never be observed disagreeing**.
+A wrong verdict from either is invisible to the other by construction. No test
+runs both on an instance both can decide; the string differential fuzzes all
+compare a single route against Z3.
+
+This is the same shape as the two real-algebra engines in
+[`02`](02-composition.md) W2 — two implementations of one question, no shared
+corpus — and there the corpus found a panic and a dead branch on its first run.
+
 ## The precondition nobody should skip
 
 A crate split moves files. Files that move are files whose gates must actually
