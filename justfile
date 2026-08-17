@@ -28,6 +28,12 @@ facts:
     # usually unlocks nothing; the ratchet keeps that from getting worse.
     python3 -m unittest scripts.tests.test_check_fact_dag
     python3 scripts/check-fact-dag.py --quiet
+    # A settled SMT-route fact's evidence command tests the VERDICT and not the
+    # CERTIFICATION: `test "$(... | tail -1)" = unsat` exits 0 on an uncertified
+    # refutation, verified against artifacts/facts/smt2/neg-barber-no-such-barber.smt2.
+    # 17 of 17 such instances are certified today -- by practice, not enforcement.
+    python3 -m unittest scripts.tests.test_check_smt_evidence_certified
+    python3 scripts/check-smt-evidence-certified.py --quiet
     # A `cas-certificate` geometry fact states its theorem twice -- as SMT-LIB in
     # `formal.statement` and as polynomials in the certificate it cites -- and
     # nothing connected the two, so a transposed sign would leave a `proved` fact

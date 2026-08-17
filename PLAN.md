@@ -306,6 +306,7 @@ evidence and unrelated temporary projects were untouched.
 |---|---|---|
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
+| 2026-08-17 | `pending` | Settled SMT-route facts gated on certification, not just verdict: `scripts/check-smt-evidence-certified.py` requires `certified=1` for all 17 `smt-term-level`/`smt-clausal` instances (the ledger's own evidence commands test only the verdict and exit 0 on an uncertified refutation — demonstrated against the barber instance). Wired into `check.sh` and `justfile`; 16s warm in release (233s in debug, 232 of it DRAT-checking two fp16 instances). Seven guards, each mutation-tested to kill exactly one test. `F:barber-no-such-barber` stays `open`; its note corrected — the solver *does* record the instantiation as a `QuantifierInstanceCertificate` with a public checker, it is simply never plumbed to the emitter. |
 | 2026-08-17 | `f18904db7` | R3: reachability census re-derived and committed as `artifacts/reachability/r3-census.tsv` (190 rows over both corpora); the ranked tables in `04-reachability.md` are now a generated view of it, gated by `scripts/check-reachability-census.py` inside `check-foundational-resources.sh`. 13 guards, each with its own rejection path; mutation-verified that deleting any one kills exactly one test. Corpus coverage checked in both directions and reported SKIPPED, never passed, when the sibling checkout is absent. Stale numbers corrected in `04` and `05`. |
 | 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
 Older landed changes (including the 2026-08-06 A1/A2 closure commits) remain
@@ -405,6 +406,63 @@ run to their own theorem.
 normalised structure (as Lean core itself does), not a setoid quotient. First
 slice is `Int.natAbs`, then `Int.div`/`Int.mod` specified against the
 freshly-proved decomposition.
+
+**Settled SMT-route facts are now gated on `certified=1`, not just on the
+verdict** (`WIP`, evidence-certification, 2026-08-17). The
+[`ledger-integrity`](docs/plan/status/97-ledger-integrity.md) lane re-measured finding 8 as
+remediated — 177/177 checker runs *can* fail. That is true and it is not
+sufficient: a run can fail on the wrong axis. Every settled `smt-term-level` /
+`smt-clausal` fact carries evidence shaped
+`test "$(… smtcomp_cli --evidence <i>.smt2 | tail -1)" = unsat`, which tests
+the **verdict** and is blind to whether the refutation produced a **checkable
+object**. Verified, not argued: that exact command shape **exits 0** on
+`artifacts/facts/smt2/neg-barber-no-such-barber.smt2`, which reports
+`kind=unsat-uncertified certified=0`.
+
+Measured: **17 of 17** gated instances are `certified=1` (14 `unsat-term-level`,
+2 `unsat-drat`, 1 `unsat-bool-simplification`). So the invariant held by
+practice, with nothing enforcing it.
+`scripts/check-smt-evidence-certified.py` now enforces it, using the barber as a
+**real** negative control rather than a synthetic one — genuinely unsat, so a
+verdict-only checker accepts it; genuinely uncertified, so a certification-aware
+one must not. If it ever reports `certified=1` the check fails *on purpose*,
+saying the fact can now be closed and the control must be repointed.
+
+All seven guards were mutation-tested: delete any one and **exactly one** test
+dies. (The first mutation run reported a wrong casualty — deleting the *verdict*
+guard killed the *floor* test — which was stale `.pyc` reuse from rewriting one
+filename inside a timestamp tick: the repository's documented cargo mtime trap,
+in Python. Fixed with per-guard filenames and `dont_write_bytecode`.)
+
+**`F:barber-no-such-barber` stays `open`, and one claim in its note was wrong.**
+The note said the instantiation step was "one no component of ours performed or
+recorded". Measured with `AXEYUM_QTRACE=1`, the solver performs it and records
+it: `auto::solve` skolemizes to `!sk_0`, the e-graph route admits exactly one
+instance, and `check_auto` refutes `p = ¬p`. That instance becomes a
+`QuantifierInstanceCertificate` (`qinst_egraph.rs:2737`) which already has a
+public independent checker, `check_quantifier_ground_derivation` (`:2821`). It
+is never plumbed out — `ground_derivations` (`:1162`) is function-local and dies
+at each `return Ok(Unsat)`, `skolemize_top_existentials` (`auto.rs:889`) returns
+a bare `Vec<TermId>` discarding the assertion→`!sk_k` correspondence, and
+`evidence.rs` references neither (grep: 0). `prove_unsat_to_lean` declines at
+`skolem_alethe.rs:102-105`, whose slice requires the existential's body to be a
+quantifier-free equality; the barber's body is a universal. The reconstruction
+path is not failing to reconstruct — it is **re-deriving the instantiation from
+scratch with weaker tools** than the decider that already succeeded. Control:
+the fully instantiated ground formula reconstructs kernel-checked today.
+
+**Next.** Slice 4 of that analysis, because it is orthogonal and the widest win:
+thread the decider's instantiation certificates out and add an `Evidence`
+variant whose `check` calls the existing public checker. That upgrades the whole
+e-matching route from `unsat-uncertified` to certified, not just the barber.
+Slices 1–3 (widen the ∀ emitter's witness vocabulary; make its ground tail
+pluggable; relax the `Exists` body restriction) close the barber itself.
+
+Caveat carried forward, not yet acted on: `certified=` and Lean reconstruction
+are **independent axes**. A fact can be `certified=1` with no Lean module. Of the
+61 `ProofFragment` variants, 29 are `StructuralAttestation` — a ~21-line
+`axiom P` shim with no reasoning. Whether any settled fact rests on one is
+unmeasured and is the obvious next audit.
 
 **R3 done; the census is an artifact now, and `17` was not one** (`WIP`,
 math-r3, 2026-08-17). The 2026-08-13 misconception audit's `census.tsv` was
