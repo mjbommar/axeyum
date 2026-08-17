@@ -195,10 +195,7 @@ fn the_corpus_actually_exercises_certified_evidence() {
         certified.len(),
         rows.len()
     );
-    let verified = rows
-        .iter()
-        .filter(|row| row.outcome.is_verified())
-        .count();
+    let verified = rows.iter().filter(|row| row.outcome.is_verified()).count();
     assert!(
         verified >= 3,
         "only {verified} rows re-validated against a fresh parse; this test cannot \
