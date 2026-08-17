@@ -267,3 +267,38 @@ and until now nothing said so or could. Two consequences worth acting on:
 - A lemma with many dependents and no fact is a candidate worth recording *when
   something needs it* — `Nat.bezout_of_scaled` and `Nat.coprime_of_bezout_one`
   are on that list, and both were built for Euclid's theorem.
+
+
+## The induction keystone does not turn the flywheel yet, and for the same reason
+
+Measured 2026-08-17 on the four `corpus/regression/uflia_induction` instances the
+ℕ-induction route actually decides:
+
+```
+guarded_linear_closed_form   unsat-uncertified certified=0   4.1 s
+guarded_linear_nonneg        unsat-uncertified certified=0   3.7 s
+guarded_monotone_step        unsat-uncertified certified=0   6.5 s
+guarded_parity_range         unsat-uncertified certified=0  23.0 s
+```
+
+The route decides them and certifies nothing — the same state as
+`F:barber-no-such-barber`, and for a related reason: these are quantified
+refutations whose justification is not carried out to the evidence layer.
+
+That matters for how the day's two threads relate. The keystone was ranked first
+on the reachability census and it landed; but a solver capability only turns the
+flywheel when its results can enter the ledger, and `epistemic_status` records
+what **we** established, not what we decided. Recording these four as `proved` on
+uncertified evidence would be precisely the overstatement this lane spent the day
+removing.
+
+**So they were deliberately NOT added, and the reason is not squeamishness.**
+Adding four isolated `open` facts would also have tripped the isolation ratchet
+this lane tightened hours earlier (0.58, about three facts of headroom) — the
+guard catching its own author, which is the outcome a ratchet is for.
+
+The productive reading: certification (tasks #23/#25) is not a side-quest next to
+the induction work; it is what makes the induction work count. Four concrete
+propositions are waiting on it, and they are cheap to check against once a
+quantified refutation can certify — they are already in the regression corpus
+with their declared verdicts.
