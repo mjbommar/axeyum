@@ -12,6 +12,12 @@ python3 scripts/check-foundational-negative-fixtures.py
 # from evidence rather than trusted as a stored label.
 python3 -m unittest scripts.tests.test_check_curriculum_coverage
 python3 scripts/check-curriculum-coverage.py --quiet
+# R3 (same document): the reachability census is an artifact, and the ranked
+# feature request in the strand doc is a generated view of it. The 2026-08-13
+# census was never committed, which is how its "17 out of fragment" reached two
+# documents without an artifact behind it; re-derived, it is 16.
+python3 -m unittest scripts.tests.test_check_reachability_census
+python3 scripts/check-reachability-census.py --quiet
 python3 scripts/consume-foundational-resources.py
 python3 scripts/consume-foundational-resources.py --format json >/dev/null
 python3 scripts/query-foundational-resources.py summary >/dev/null

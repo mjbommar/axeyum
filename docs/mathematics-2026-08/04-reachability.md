@@ -42,26 +42,28 @@ on `Sort::Int` and `Sort::Real`, so **no negative control about them is even
 expressible**. Three nodes assert coverage of the sorts the stack can neither
 prove about nor produce evidence about.
 
-## The 23-node map against the 1,566-concept graph
+## The 23-node map against the 1,567-concept graph
 
-The sibling `math-education` repository carries **1,566 concepts**, 148
+The sibling `math-education` repository carries **1,567 concepts**, 148
 misconceptions, 88 people, 61 works and 42 techniques, over an RDF/OWL/SKOS
 ontology with content authored in YAML and projected into the vocabulary.
 
 The curriculum is the **routing table** that should connect that content to
-axeyum's decidable fragments. It has 23 entries against 1,566 concepts — a ratio
+axeyum's decidable fragments. It has 23 entries against 1,567 concepts — a ratio
 of roughly 1:68. The claim ledger already references the graph (435 concept
 refs, now all resolved and pinned), so the wiring exists; the routing table is
 simply almost empty.
 
-That is not an argument for 1,566 curriculum nodes. It is an argument that
+That is not an argument for 1,567 curriculum nodes. It is an argument that
 **nobody has asked, systematically, which mathematics this stack can reach** —
-and the corpus audit is the only time anyone has: of 148 misconceptions, **86
-(58.5%) were formalisable and refutable, 17 were out of fragment, 44 were not
-checkable propositions at all.** That is the first honest reachability
-measurement the project has, and its author flagged the caveat that a
-*school*-mathematics corpus overlaps our fragments by construction, so 58.5%
-measures that corpus rather than "real mathematical error".
+and the corpus audit is the only time anyone had, until R3 below re-ran it: of
+148 misconceptions, **85 (57.8%) are formalisable and refutable, 16 are out of
+fragment, 46 are not checkable propositions at all** (the audit reported
+86 / 17 / 44; see R3 for the four rows that moved and why). That is the first
+honest reachability measurement the project has, and its author flagged the
+caveat that a *school*-mathematics corpus overlaps our fragments by
+construction, so 57.8% measures that corpus rather than "real mathematical
+error".
 
 ## What to do
 
@@ -133,8 +135,118 @@ exactly what happens when nothing objects to the second.
 **R3 — Run the reachability census beyond the school corpus.** The misconception
 audit is a good instrument used once on an easy corpus. Point it at something
 adversarial — the graph's `techniques`, or the `B` (out-of-fragment) rows, which
-already *name the fragment each would need*. Those 17 rows are a
-ranked feature request written by the mathematics itself.
+already *name the fragment each would need*. Those rows are a ranked feature
+request written by the mathematics itself.
+
+**Done 2026-08-17, and the 17 does not survive re-derivation.** Measured against
+the sibling `math-education` graph at commit `ce3e2a5` — 148 misconception files
+and 42 technique files, *unchanged since the 2026-08-13 audit*, so nothing below
+is drift. The census is now committed as
+[`artifacts/reachability/r3-census.tsv`](../../artifacts/reachability/r3-census.tsv)
+and every table in this section is a generated view of it, pinned by
+`scripts/check-reachability-census.py`.
+
+<!-- R3-TOTALS:BEGIN generated from artifacts/reachability/r3-census.tsv -->
+
+| corpus | rows | A (reachable) | B (out of fragment) | C (not an obligation) |
+|---|---:|---:|---:|---:|
+| misconception | 148 | 85 | 16 | 46 |
+| technique | 42 | 11 | 19 | 12 |
+
+<!-- R3-TOTALS:END -->
+
+(The misconception row totals 148 rather than 147 because the one deprecated
+entry is carried in the file as `DEP`; the live denominator is 147, as before.)
+
+<!-- R3-RANKING:BEGIN generated from artifacts/reachability/r3-census.tsv -->
+
+| fragment it would need | rows | from misconceptions | from techniques |
+|---|---:|---:|---:|
+| induction-over-nat | 16 | 0 | 16 |
+| limits-and-convergence | 7 | 7 | 0 |
+| cardinality | 3 | 2 | 1 |
+| metatheory | 3 | 3 | 0 |
+| extended-reals | 2 | 2 | 0 |
+| higher-order-quantification | 1 | 1 | 0 |
+| quantified-ring-identities | 1 | 0 | 1 |
+| transcendental-reals | 1 | 1 | 0 |
+| unbounded-transition-systems | 1 | 0 | 1 |
+
+<!-- R3-RANKING:END -->
+
+**The 17 was wrong in two directions at once, and neither error was findable.**
+The 2026-08-13 audit's `census.tsv` was never committed — `RESULT.md` survives
+and tells the reader to regenerate the counts with an `awk` line over a file
+that does not exist. So the number reached this document and
+[`05`](05-the-mathematics-dag.md) with no artifact behind it. Re-derived:
+
+- Its cardinality bucket is "(3): `all-infinities-are-the-same`,
+  `you-could-list-them-if-you-tried-harder`, **plus the reals-are-listable
+  framing**". That third item is not a corpus row — it is the *second distractor
+  form inside* `you-could-list-them-if-you-tried-harder.md`. `grep -ril
+  'uncountab\|countabl\|cantor'` over the 148 returns those two files and no
+  other. A distractor was counted as a row.
+- `infinity-minus-infinity-is-zero` is out of fragment and is in no bucket of
+  the 17. Its own file says the stated answer of 0 is wrong and the true limit
+  is 5 — an indeterminate form, as squarely `limits-and-convergence` as the
+  seven rows that were counted.
+- `angle-size-depends-on-arm-length` was declined as "real/trigonometric
+  geometry". Measured against the fragment table it is not out of fragment:
+  invariance of an angle under positive scaling of either arm is the polynomial
+  identity `(u·v)²·|λu|²|μv|² = (λu·μv)²·|u|²|v|²`, which ring normalisation
+  decides. Moved to A. This one is a judgment call and is marked `CONTESTED` in
+  the census rather than asserted.
+
+Net: **16, not 17**, and the A/B/C split is 85 / 16 / 46 against the audit's
+86 / 17 / 44 — both summing to 147, so the disagreement is four specific rows,
+not a different denominator. The share of the school corpus we can refute is
+**57.8%**, not 58.5%.
+
+Two further corrections from the same measurement. The graph carries **1,567**
+concepts, not the 1,566 this document stated in four places above until today:
+1,567 files, 1,567 distinct ids, but the default locale collates `C:trend-line`
+and `C:trendline` as equal, so `sort -u` reports 1,566 where `LC_ALL=C sort -u`
+reports 1,567 — a collation artefact read as a duplicate. And
+`truth-table-only-for-hard-problems` is a **second** instance of the defect the
+audit reported for `fraction-is-two-numbers-not-one`: its distractor's stated
+conclusion ("if it rains I bring an umbrella" and its contrapositive mean the
+same thing) is *true*; only the "no need to check" is wrong. A negative-control
+suite that treats distractors uniformly would mark a correct answer wrong.
+
+**The adversarial corpus answers a different question, and gives a different
+top item.** The 42 `techniques` are not propositions, so they do not stress
+which *statements* we can make — they stress which *proof shapes* we can
+discharge. Classified the same three ways: 11 reachable, 19 out of fragment, 12
+that are search heuristics rather than proof steps (exactly the 12 the corpus
+itself marks `epistemic_status: empirical`). And **16 of the 19 want one thing**:
+induction over ℕ as a discharged schema — directly (`proof-by-induction`,
+`strong-induction`), as an equivalent (`well-ordering`, `infinite-descent`,
+`extremal-principle`, `monovariant`), or because the technique's obligation is
+schematic in a size parameter (`pigeonhole`, `colouring`, `double-counting`,
+`telescoping`, `parity-argument`, `recursion-technique`, `divide-and-conquer`,
+`symmetry-argument`, `construction-proof`, `bijection-argument`).
+
+That reorders the roadmap this document was carrying. The school corpus said
+**limits first, cardinality second**, and it still does — those are 7 and 3 of
+its 16. The techniques corpus says **induction first, by more than a factor of
+two**, and induction is the one entry on the ranked list that is *not* a missing
+logic: the kernel has an inductive `Nat` with a real ι-computing `Nat.rec`
+(`crates/axeyum-lean-kernel/src/nat_prelude.rs`), and R1 above records the
+integer prelude at 0 axioms — while the curriculum map records the
+`induction` node's fragment as
+`LIA / BV (base + step instances)` — **instances, not the schema**. So the
+largest single item the mathematics is asking for is not a new theory. It is
+closing the loop that already exists, from a goal to an induction schema to a
+reconstructed kernel term, without a person writing the proof. That is the
+flywheel's own arrow, and it is what the adversarial corpus independently ranks
+first.
+
+Two limits on this, stated rather than buried. The techniques corpus is still a
+school-and-olympiad corpus — it is adversarial along the *shape* axis, not the
+*difficulty* axis, and a research-technique corpus would surface tools
+(spectral, homological, model-theoretic) that appear here not at all. And the
+A/C boundary in both corpora is a judgment call; the census file says so, and
+the B column with its `fragment` values is the part built to be argued with.
 
 **R4 — Close the ordered-field hole so reachability can grow at all.** Until
 `Sort::Int`/`Sort::Real` can carry evidence ([`02`](02-the-library.md),

@@ -97,9 +97,18 @@ With D1's annotation and 2,254 edges, this becomes a graph computation:
 - **beyond the horizon** — and *why*, which is more useful than the fact.
 
 The corpus audit already produced a small version of this by hand: of 148
-misconceptions, **86 formalisable and refutable, 17 out of fragment (each naming
-the fragment it needs), 44 not checkable propositions**. Those 17 are the
+misconceptions, **85 formalisable and refutable, 16 out of fragment (each naming
+the fragment it needs), 46 not checkable propositions**. Those 16 are the
 prototype of D2's middle tier.
+
+(Those were 86 / 17 / 44 here until 2026-08-17, quoted from an audit whose
+census file was never committed. Re-derived and now committed as
+[`artifacts/reachability/r3-census.tsv`](../../artifacts/reachability/r3-census.tsv):
+one of the 17 was a *distractor form* counted as a corpus row and one genuine
+out-of-fragment row was missing. The same measurement extends the census to the
+graph's 42 `techniques`, where 19 more rows are out of fragment and 16 of those
+want one thing — induction over ℕ as a discharged schema. See R3 in
+[`04`](04-reachability.md).)
 
 ### D3 — Align our informal DAG against Mathlib's formal one
 

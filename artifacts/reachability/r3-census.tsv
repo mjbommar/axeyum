@@ -1,0 +1,220 @@
+# R3 reachability census -- docs/mathematics-2026-08/04-reachability.md
+#
+# Measured 2026-08-17 against the sibling `math-education` graph at commit
+# ce3e2a5 (2026-08-13, unchanged since): 148 misconception files (147 live,
+# one `status: deprecated`) and 42 technique files.
+#
+# This file exists because the 2026-08-13 misconception census was never
+# committed. Only its prose survived, in
+# docs/campaign-2026-08-13/agent-j-misconceptions/RESULT.md, so its headline
+# "17 out of fragment" could not be re-derived by anyone -- and it does not
+# survive re-derivation. See the R3 section of 04-reachability.md.
+#
+# Columns: corpus, slug, class, fragment, note.
+#
+#   class A -- the obligation is discharged in a fragment axeyum decides today
+#           (for a misconception: formalisable and refutable; for a technique:
+#           the technique's characteristic obligation is finite by nature).
+#   class B -- a genuine obligation, out of every fragment axeyum decides.
+#           `fragment` names what it would need. NON-EMPTY EXACTLY FOR B.
+#   class C -- not a checkable obligation at all (for a misconception: not a
+#           proposition; for a technique: a search heuristic, not a proof step).
+#   class DEP -- deprecated in the corpus, excluded from the denominator.
+#
+# The A/C boundary is a judgment call and is not what this file is for; the B
+# set and its `fragment` column are the load-bearing content, because they are
+# the ranked feature request R3 asked for.
+#
+# Re-derive the ranking with scripts/check-reachability-census.py, which also
+# pins the table in 04-reachability.md against it.
+corpus	slug	class	fragment	note
+misconception	a-best-fit-line-must-pass-through-the-most-points	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	a-chart-of-real-numbers-cant-mislead	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	a-complement-is-one-other-outcome	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	a-dataset-answers-any-question-about-its-topic	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	a-drawn-trendline-proves-a-strong-relationship	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	a-fairer-voting-method-must-exist-we-just-havent-found-it	B	higher-order-quantification	Arrow: the quantifier ranges over social welfare functions, i.e. over a function space, not over a finite domain of values.
+misconception	a-good-fit-can-be-extended-indefinitely	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	a-limit-is-a-value-you-cant-quite-reach	B	limits-and-convergence	A limit is defined by an epsilon-delta condition with quantifier alternation over the reals; nothing in the finite core can state it.
+misconception	a-limit-is-just-a-good-approximation	B	limits-and-convergence	Requires the exact value of a limit, i.e. the limit operator itself, not an approximation of it.
+misconception	a-numbered-claim-is-data	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	a-plus-b-squared-equals-a-squared-plus-b-squared	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	a-scatter-plot-can-pair-any-two-values	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	a-solid-trendline-is-measured-everywhere	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	a-square-is-not-a-rectangle	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	a-year-is-exactly-365-days	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	accurate-test-means-positive-result-is-reliable	DEP		status: deprecated in the corpus; excluded from the 147 denominator.
+misconception	add-numerators-and-denominators	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	adjacent-means-the-hypotenuse	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	all-infinities-are-the-same	B	cardinality	Comparison of infinite cardinals.
+misconception	all-natural-spirals-are-golden-spirals	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	all-primes-are-odd	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	all-transformations-preserve-size	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	always-work-strictly-left-to-right	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	an-event-is-one-outcome	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	angle-size-depends-on-arm-length	A		CONTESTED: the 2026-08-13 census classed this B (real/trigonometric geometry). Angle equality under positive scaling of either ray is the polynomial identity (u.v)^2 |lam u|^2 |mu v|^2 = (lam u . mu v)^2 |u|^2 |v|^2, decided by ring normalisation.
+misconception	any-expression-with-a-variable-is-a-polynomial	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	any-p-below-05-is-a-real-finding	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	any-rule-is-a-function	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	area-and-perimeter-conflated	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	average-always-means-the-mean	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	average-describes-everything	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	average-is-typical	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	average-must-be-a-data-value	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	axis-scale-does-not-matter	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	base-rate-neglect-error	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	bigger-denominator-means-bigger-fraction	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	bigger-number-has-more-factors	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	bigger-sample-fixes-bias	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	calculator-is-always-right	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	cannot-subtract-bigger-from-smaller	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	circle-has-no-sides-confusion	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	compound-growth-looks-linear-at-first	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	conjoining-like-terms-wrongly	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	correlation-implies-causation	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	counterexample-is-just-an-exception	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	decimal-expansion-must-end	B	limits-and-convergence	A repeating decimal is the sum of an infinite geometric series; stating equality needs convergence.
+misconception	diagonal-tally-stroke-is-not-counted	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	different-event-labels-mean-no-overlap	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	different-letters-must-differ	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	distribute-only-the-first-term	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	distributivity-works-for-any-two-operations	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	division-makes-smaller	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	doubling-side-doubles-area	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	doubling-side-doubles-volume	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	elevation-and-depression-are-different-sizes	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	equal-means-looks-the-same	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	equal-shares-means-envy-free	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	equals-is-directional	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	equals-means-answer-follows	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	equivalent-fraction-changes-one-part	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	even-means-ends-in-even-digit	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	every-fourth-year-is-a-leap-year	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	everything-commutes	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	examples-are-proof	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	expected-value-is-the-most-likely-outcome	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	exponent-means-multiply-by-exponent	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	exponent-means-multiply-by-itself-times	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	extreme-result-implies-lasting-change	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	fraction-is-two-numbers	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	fraction-is-two-numbers-not-one	A		The 2026-08-13 census reports this distractor's stated conclusion (3/4 > 1/2) is true; only the reasoning is wrong.
+misconception	function-notation-means-multiply	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	gamblers-fallacy-belief	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	godel-means-math-is-broken	B	metatheory	A statement about what a consistent formal system can prove about itself.
+misconception	graph-is-a-picture-of-the-situation	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	halting-problem-means-cant-debug	B	metatheory	Undecidability: no single algorithm decides halting for every program.
+misconception	imaginary-numbers-are-not-real	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	inequality-has-one-answer	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	infinitely-many-steps-cant-add-to-a-finite-amount	B	limits-and-convergence	Convergence of an infinite series of positive terms.
+misconception	infinity-is-a-number	B	extended-reals	Arithmetic on infinity as an object of an extended ordered structure.
+misconception	infinity-is-a-very-big-number	B	extended-reals	Duplicate framing of the same extended-real claim.
+misconception	infinity-minus-infinity-is-zero	B	limits-and-convergence	Indeterminate form: lim (n+5)-n = 5, not 0. MISSED by the 2026-08-13 census, which named only seven limit rows.
+misconception	irrational-means-cannot-be-drawn	A		The operative proposition is 'sqrt 2 has an exact point', i.e. exists x. x^2 = 2 and x > 0 -- single-variable algebraic, a complete QF_NRA route.
+misconception	law-of-averages-corrects-past-outcomes	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	letters-stand-for-objects	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	liar-paradox-is-just-wordplay	B	metatheory	Self-reference and the limits of a formal system's own truth predicate.
+misconception	loan-total-is-just-principal	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	longer-decimal-is-bigger	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	longer-word-problem-is-harder	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	mathematics-is-about-speed	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	matrix-multiplication-is-entrywise	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	minus-sign-means-subtract-only	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	minute-hand-past-six-means-past-the-hour	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	missing-data-can-be-safely-ignored	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	more-decimals-is-just-more-digits	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	more-digits-means-more-precise	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	more-examples-always-strengthens-a-belief	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	multiplication-makes-bigger	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	negative-exponent-means-negative-answer	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	negative-times-negative-confusion	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	observed-frequency-is-the-true-probability	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	odd-plus-odd-is-odd	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	one-example-proves-it	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	one-is-prime	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	only-one-right-method	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	outcomes-that-look-alike-can-be-lumped	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	outliers-should-always-be-removed	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	p-value-is-probability-hypothesis-true	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	passing-tests-proves-program-correct	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	percentage-increase-then-decrease-cancels	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	percentage-over-100-impossible	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	pi-equals-22-over-7	B	transcendental-reals	pi is not nameable in any algebraic fragment; refuting 22/7 needs pi as an analytic constant.
+misconception	point-nine-recurring-is-less-than-one	B	limits-and-convergence	0.999... = 1 is a statement about a series limit.
+misconception	probability-of-rare-event-is-zero	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	probability-of-two-options-is-always-half	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	proof-is-just-checking-lots	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	proof-means-formal-symbols	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	proof-needs-symbols	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	random-means-patternless	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	random-means-uniform	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	ratio-is-just-a-fraction-of-the-total	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	rounding-twice	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	same-letter-can-differ	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	selected-evidence-proves-a-rule	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	sequence-pattern-is-unique	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	set-order-or-duplicates-matter	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	shape-must-sit-flat-to-be-a-square	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	significant-means-important	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	small-sample-extreme-result-is-meaningful	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	small-sample-is-representative	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	square-root-of-a-sum	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	stacked-percent-discounts-add	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	steeper-means-faster-always	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	studying-winners-explains-winning	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	subtract-clock-digits-like-whole-numbers	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	survivorship-bias-error	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	the-second-probability-stays-the-same	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	three-points-in-a-row-is-a-trend	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	time-order-does-not-matter-in-a-series	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	truth-table-only-for-hard-problems	C		Second instance of the defect the 2026-08-13 census reported for fraction-is-two-numbers-not-one: the distractor's stated CONCLUSION ('these mean the same thing') is TRUE -- it is the contrapositive. Only the 'no need to check' is wrong.
+misconception	unit-conversion-multiply-always	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	variable-is-a-label-not-a-number	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	vector-addition-just-adds-magnitudes	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	winning-most-votes-means-majority	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	you-could-list-them-if-you-tried-harder	B	cardinality	Uncountability of the reals. Its SECOND distractor is the 'reals-are-listable framing' that the 2026-08-13 census counted as a separate third row.
+misconception	zero-is-neither	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	zero-is-not-a-number	C		Not a checkable mathematical proposition (epistemic, definitional, process, perceptual or empirical).
+misconception	zero-is-not-even	A		Formalisable and refutable in a fragment axeyum decides today.
+misconception	zero-point-nine-repeating-is-slightly-less-than-one	B	limits-and-convergence	Duplicate framing of the same series limit; also denies the archimedean property.
+technique	algebraic-manipulation	B	quantified-ring-identities	The general obligation is a universally quantified ring identity over Z; only fixed-width instances are decided today.
+technique	bijection-argument	B	induction-over-nat	Finite half needs cardinality of an n-element set for ALL n; the infinite half needs `cardinality`.
+technique	change-representation	C		A search heuristic for finding a proof, not a step in one.
+technique	colouring	B	induction-over-nat	The 8x8 instance is SAT-sized; the parametric board is a schema over n.
+technique	complementary-counting	A		Finite sample space, exact rational probability.
+technique	construction-proof	B	induction-over-nat	'For every n >= 3 build a witness' is a schema, not an instance.
+technique	contrapositive	A		Propositional equivalence -- Bool/SAT.
+technique	counterexample	A		Refutation by witness: this IS the negate-and-decide identity.
+technique	diagonal-argument	B	cardinality	No list can be complete: uncountability.
+technique	dimensional-check	C		A soundness filter, not a proof step; has a decidable shadow in a sort system.
+technique	direct-proof	A		A chain of accepted inferences is exactly a kernel proof term.
+technique	divide-and-conquer	B	induction-over-nat	Correctness of the recursive split is induction over the size parameter.
+technique	double-counting	B	induction-over-nat	The handshake lemma quantifies over all finite graphs.
+technique	draw-a-diagram	C		Externalisation heuristic.
+technique	estimation-technique	C		Approximation heuristic; has a decidable shadow in interval arithmetic.
+technique	exhaustive-search	A		Finite enumeration -- the stack's core competence.
+technique	extremal-principle	B	induction-over-nat	Rests on a least element existing -- the well-ordering principle.
+technique	generalize-then-specialize	C		Problem-selection heuristic.
+technique	guess-and-check	C		Candidate-generation heuristic.
+technique	infinite-descent	B	induction-over-nat	Well-founded induction over N, stated as a descent.
+technique	invariant	B	unbounded-transition-systems	An inductive invariant over an unbounded reachable set; axeyum-verify does bounded model checking, which is the k-step approximation.
+technique	invariant-under-operation	A		Case check over a finite set of move types.
+technique	look-for-a-pattern	C		Conjecture formation, explicitly not a proof.
+technique	make-a-table	C		Presentation heuristic.
+technique	monovariant	B	induction-over-nat	Termination via a strictly decreasing measure -- well-foundedness.
+technique	parity-argument	B	induction-over-nat	Finite modular instances are decided; the general n is a schema.
+technique	pigeonhole	B	induction-over-nat	Bounded pigeonhole checks exist; the principle itself is quantified over n and k.
+technique	proof-by-cases	A		Finite, exhaustive case split.
+technique	proof-by-contradiction	A		Assume the negation and decide.
+technique	proof-by-induction	B	induction-over-nat	The curriculum node `induction` runs in 'LIA / BV (base + step instances)' -- instances, not the schema.
+technique	recursion-technique	B	induction-over-nat	Finite recurrence prefixes are replayed; a closed form for all n is induction.
+technique	reductio-ad-absurdum	A		Same obligation as proof-by-contradiction.
+technique	sanity-check	C		Verification heuristic against an independent bound.
+technique	simplify-the-problem	C		Problem-reduction heuristic.
+technique	solve-a-smaller-case	C		Intuition-building heuristic.
+technique	strong-induction	B	induction-over-nat	Course-of-values induction.
+technique	substitution-technique	A		Equality-preserving replacement -- EUF congruence closure plus the rewrite manifest.
+technique	symmetry-argument	B	induction-over-nat	Finite group actions are enumerable; invariance for a general n-element structure is a schema.
+technique	systematic-listing	A		Finite enumeration with a generation rule.
+technique	telescoping	B	induction-over-nat	A closed form for the partial sum at every N.
+technique	well-ordering	B	induction-over-nat	Every non-empty subset of N has a least element -- the principle induction is equivalent to.
+technique	working-backwards	C		Search-direction heuristic.
