@@ -3,19 +3,57 @@
 #
 # Catches the class of failure that reached main on 2026-07-03: a pushed SHA
 # that does not COMPILE (a shared-index sweep published a re-export one commit
-# before its definition — 5ad952b8), and formatting drift. Deliberately fast
-# (~seconds hot) so the docs lane's cadence is unaffected: pushes that touch
-# no Rust/TOML skip the cargo steps entirely. The heavy gates (clippy, tests,
-# rustdoc) stay in CI and `just check` — this hook only guarantees "main
-# always compiles and is formatted".
+# before its definition — 5ad952b8), and formatting drift.
+#
+# This is a HEAVY gate, and as of 2026-08-16 that is a deliberate choice rather
+# than a drift — but this comment claimed the opposite ("deliberately fast
+# (~seconds hot)", "the heavy gates stay in CI") long after the hook had
+# acquired the workspace unit sweep, the solver `--lib` sweep, the capability
+# frontier ratchet and ten integration suites. Pushes touching no Rust/TOML
+# still skip the cargo steps entirely; everything else pays the full battery.
+# Measured warm on s4:
+#
+#   cargo check --workspace          0s     (free once the cache is warm)
+#   cargo fmt --all --check          3s
+#   corpus :status sweep            13s
+#   cargo test --workspace --lib   224s
+#   solver unit sweep (full)        30s
+#   capability frontier ratchet    216s
+#   integration suites x4           ~1s
+#   evidence suite                  70s
+#   ---------------------------------------
+#   total                          557s
+#
+# Every one of those was added because something reached `main`. The per-step
+# seconds are printed on every run so the cost stays visible and future growth
+# is a decision rather than a drift.
 #
 # Gates the PUSHED COMMIT, not the working tree. The old hook ran `cargo check`
 # over the working tree, so an unrelated agent's uncommitted WIP (a shared
 # checkout always has some) failed the gate for a perfectly good pushed SHA —
 # forcing a `--no-verify` that defeats the whole mechanism (happened 2026-07-06).
-# We instead check out the exact pushed SHA into a throwaway **detached
-# worktree** (never `git stash`, which would clobber a sibling lane's WIP) and
-# run the gate there. A shared `CARGO_TARGET_DIR` keeps it warm (~seconds hot).
+# We instead check out the exact pushed SHA into a **detached worktree** (never
+# `git stash`, which would clobber a sibling lane's WIP) and run the gate there,
+# against a persistent `CARGO_TARGET_DIR` that keeps it warm (~seconds hot).
+#
+# That last claim was FALSE for as long as the worktree came from `mktemp -d`.
+# Cargo bakes absolute paths into its fingerprints, so a fresh random path per
+# push invalidated every unit and the "warm" cache rebuilt the whole 236k-line
+# workspace cold, EVERY TIME -- ~10 minutes a push. Measured 2026-08-16: three
+# distinct `/tmp/axeyum-prepush.XXXXXX` paths were baked into one 14 GB shared
+# cache. The comment on CARGO_TARGET_DIR below had already identified the
+# mechanism (it is why the gate got its own target dir) without noticing it was
+# also destroying the gate's own caching.
+#
+# Worse, `/tmp` here is a 62 G **tmpfs -- RAM**, so every push also extracted a
+# full worktree into memory on a box where abandoned snapshots are a documented
+# contributor to OOM kills (CLAUDE.md), and `scripts/lane-snapshot.sh` already
+# exists to keep this kind of scratch on /data0.
+#
+# So the worktree path is now STABLE and PER-LANE, on disk, and reused across
+# pushes. Per-lane because two lanes pushing at once must not share one checkout
+# (the same reason lane identity is $AXEYUM_AGENT); stable because that is the
+# entire point of a warm cache.
 #
 # Install (per checkout): git config core.hooksPath hooks
 set -euo pipefail
@@ -52,16 +90,60 @@ fi
 # code state is the one that must compile; earlier ones are its ancestors).
 target_sha="${shas_to_gate[-1]}"
 
-# A throwaway detached worktree holding exactly the pushed tree — isolated from
-# whatever uncommitted WIP sits in this checkout.
-tmp_wt="$(mktemp -d "${TMPDIR:-/tmp}/axeyum-prepush.XXXXXX")"
-cleanup() {
-  git -C "$REPO_ROOT" worktree remove --force "$tmp_wt" >/dev/null 2>&1 || rm -rf "$tmp_wt"
+# A persistent, per-lane detached worktree holding exactly the pushed tree —
+# isolated from whatever uncommitted WIP sits in this checkout.
+#
+# Deliberately NOT `mktemp -d`: see the header. A stable path is what makes the
+# cache below actually warm. Prefer a real disk; fall back inside the repo's
+# target dir; only then /tmp. Override with $AXEYUM_PREPUSH_ROOT.
+gate_root() {
+  if [ -n "${AXEYUM_PREPUSH_ROOT:-}" ]; then
+    printf '%s\n' "$AXEYUM_PREPUSH_ROOT"; return
+  fi
+  local base
+  for base in /data0/axeyum/prepush "$REPO_ROOT/target/prepush-worktrees"; do
+    if mkdir -p "$base" 2>/dev/null && [ -w "$base" ]; then
+      printf '%s\n' "$base"; return
+    fi
+  done
+  printf '%s\n' "${TMPDIR:-/tmp}/axeyum-prepush"
 }
-trap cleanup EXIT
+GATE_ROOT="$(gate_root)"
+mkdir -p "$GATE_ROOT"
+tmp_wt="$GATE_ROOT/worktree"
+
+# ONE root for every lane, serialized by flock — deliberately not per-lane.
+#
+# Keying this by $AXEYUM_AGENT would give each lane its own COLD cache and its
+# own ~14 GB target dir, which is the very cost this change exists to remove.
+# Sharing one warm cache and taking the lock is strictly better, and the
+# serialization is a feature rather than a price: CLAUDE.md's standing rule on
+# this box is one cargo job at a time (parallel cargo has crashed s1 AND s4), so
+# two lanes must not run this gate concurrently anyway.
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"$GATE_ROOT/.lock"
+  flock 9
+fi
 
 echo "pre-push: Rust/TOML changed — compile + fmt gate on pushed SHA ${target_sha:0:12} (mem-capped)" >&2
-git -C "$REPO_ROOT" worktree add --detach --quiet "$tmp_wt" "$target_sha"
+
+# Reuse the worktree when it is one of ours; rebuild it otherwise. `--force`
+# plus `clean -xdf` make the tree byte-identical to the pushed commit, so the
+# gate still examines exactly what is being pushed and nothing else.
+#
+# `git checkout` stamps only the files it CHANGES, with the current time — so
+# unchanged files keep their mtimes (a legitimate cache hit) and changed ones
+# look new. That is why this is safe where `git archive | tar -x` is not: the
+# stale-mtime trap in CLAUDE.md comes from tar restoring COMMIT times, which can
+# put content behind a warm cache and let a gate pass over code it never
+# compiled. Checkout cannot do that.
+if ! { git -C "$tmp_wt" rev-parse --git-dir >/dev/null 2>&1 \
+       && git -C "$tmp_wt" checkout --detach --force --quiet "$target_sha" 2>/dev/null; }; then
+  rm -rf "$tmp_wt"
+  git -C "$REPO_ROOT" worktree prune
+  git -C "$REPO_ROOT" worktree add --detach --quiet "$tmp_wt" "$target_sha"
+fi
+git -C "$tmp_wt" clean -xdfq
 
 # A DEDICATED target dir for the gate — persistent, so it stays warm across
 # pushes, but NOT shared with the main checkout's.
@@ -77,7 +159,10 @@ git -C "$REPO_ROOT" worktree add --detach --quiet "$tmp_wt" "$target_sha"
 # `cargo test --workspace --lib` fails (different feature unification selects a
 # different cached binary). Recovery was `cargo clean -p axeyum-cnf`; the fix is
 # to never let this gate write artifacts the main build will pick up.
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target/prepush-gate}"
+# Kept beside the worktree so the pair moves together and stays per-lane: two
+# lanes sharing one target dir would thrash each other's fingerprints for the
+# same path reason described in the header.
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
 (
   cd "$tmp_wt"
 
@@ -87,10 +172,23 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target/prepush-gate}"
   # alone — which is exactly how the corpus sweep below sat inert for 15 days
   # (see its comment). Mechanism over vigilance: any future feature gate that
   # empties a suite now breaks the push instead of quietly passing it.
+  # Per-step wall clock, always reported. A gate whose cost is invisible grows
+  # without anyone deciding to grow it: this hook's header still described a
+  # "deliberately fast (~seconds hot)" compile-and-fmt check long after it had
+  # acquired the workspace unit sweep, the solver `--lib` sweep, the capability
+  # frontier ratchet and ten integration suites. Printing the seconds is what
+  # makes that visible at the moment someone is paying for it.
+  step_seconds() {
+    local start=$SECONDS label="$1"
+    shift
+    "$@" || return 1
+    echo "pre-push:   ${label} — $((SECONDS - start))s" >&2
+  }
+
   gated_test() {
     local label="$1"
     shift
-    local out
+    local out start=$SECONDS
     if ! out="$(MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh "$@" 2>&1)"; then
       printf '%s\n' "$out" >&2
       echo "pre-push: FAILED — $label" >&2
@@ -102,10 +200,13 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target/prepush-gate}"
            "it; this step is inert, not passing)" >&2
       return 1
     fi
+    echo "pre-push:   ${label} — $((SECONDS - start))s" >&2
   }
 
-  MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh cargo check --workspace --quiet
-  cargo fmt --all --check
+  gate_started=$SECONDS
+  step_seconds "cargo check --workspace" \
+    env MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh cargo check --workspace --quiet
+  step_seconds "cargo fmt --all --check" cargo fmt --all --check
   # The oracle-free :status corpus sweep (~6s warm): CI's copy caught a
   # vacuous-sat harness hole (f5b00c72) only AFTER the SHA was public —
   # a wrong verdict must never leave the machine when a 6-second local
@@ -242,3 +343,4 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target/prepush-gate}"
   fi
 )
 echo "pre-push: gate green (pushed SHA compiles, is formatted, corpus- and unit-sound)" >&2
+echo "pre-push: total ${SECONDS}s" >&2
