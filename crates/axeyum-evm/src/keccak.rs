@@ -145,6 +145,13 @@ mod tests {
     // code `keccak256` used before the refactor, kept verbatim as the thing to
     // differ against. Rewriting it to `as_chunks` would compare the new
     // implementation with itself.
+    // `chunks_exact_to_as_chunks` is a NIGHTLY-only clippy lint. On stable the
+    // name does not exist, so `-D warnings` turns it into `unknown lint` and
+    // fails the build -- which is exactly what happened: this crate broke CI's
+    // clippy job (stable) while `cargo clippy --workspace --all-targets
+    // --all-features` stayed green on the repo's pinned nightly. `allow(
+    // unknown_lints)` is what makes the pair portable across both.
+    #[allow(unknown_lints)]
     #[allow(clippy::chunks_exact_to_as_chunks)]
     fn keccak256_reference(input: &[u8]) -> [u8; 32] {
         const RATE: usize = 136;
