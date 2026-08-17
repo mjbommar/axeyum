@@ -461,16 +461,6 @@ pub enum Evidence {
     /// checker re-proves each sufficient cube against its exact universal
     /// instance and re-proves closure of the weakened ground skeleton.
     UnsatQuantifiedCounterexampleCover(QuantifiedCounterexampleCoverCertificate),
-    /// Unsatisfiable by **e-matching**: universals instantiated at ground terms
-    /// until the quantifier-free set is refuted. The checker replays every
-    /// instance against the untouched assertions with the driver's own public
-    /// checker, rejects a ground member that is neither asserted nor derived,
-    /// and **re-refutes the ground set** — provenance alone would certify a pile
-    /// of true-but-insufficient instances.
-    ///
-    /// This is the route that previously reported `unsat-uncertified` for every
-    /// query it decided, despite recording exactly the provenance needed.
-    UnsatQuantInstanceSet(crate::quant_instance_set_cert::QuantifierInstanceSetCertificate),
     /// Unsatisfiable, certified **at the term level** by exhaustive evaluation
     /// over the finite symbol domain — the strongest `QF_BV` `unsat` evidence,
     /// trusting neither the bit-blaster, CNF encoder, nor SAT solver (only the
@@ -759,7 +749,6 @@ impl Evidence {
             Evidence::UnsatQuantifiedCounterexampleCover(_) => {
                 "unsat-quantified-counterexample-cover"
             }
-            Evidence::UnsatQuantInstanceSet(_) => "unsat-quant-instance-set",
             Evidence::UnsatTermLevel { .. } => "unsat-term-level",
             Evidence::UnsatFiniteDomainEnum { .. } => "unsat-finite-domain-enum",
             Evidence::UnsatBvDefinedEnum(_) => "unsat-bv-defined-enum",
@@ -1024,20 +1013,6 @@ impl Evidence {
                     certificate,
                 )
             }
-            Evidence::UnsatQuantInstanceSet(certificate) => {
-                // The replay reconstructs instances, so it needs a mutable
-                // arena. Clone rather than mutate the caller's: the rebuilt
-                // terms must not leak into a later sat model. The clone already
-                // contains the instances -- `produce_evidence` holds `&mut` and
-                // the driver added them there -- so the ids resolve.
-                let mut scratch = arena.clone();
-                crate::quant_instance_set_cert::check_quantifier_instance_set(
-                    &mut scratch,
-                    assertions,
-                    certificate,
-                    &SolverConfig::default(),
-                )
-            }
             Evidence::UnsatBvPairedExistentialTransfer(certificate) => {
                 crate::quant_bv_paired_exists_cert::check_bv_paired_existential_transfer(
                     arena,
@@ -1129,7 +1104,6 @@ impl Evidence {
                 | Evidence::UnsatBvPairedExistentialTransfer(_)
                 | Evidence::UnsatEqualityPartition(_)
                 | Evidence::UnsatQuantifiedCounterexampleCover(_)
-                | Evidence::UnsatQuantInstanceSet(_)
                 | Evidence::UnsatBvUfLocal(_)
                 | Evidence::UnsatSetCardinality(_)
                 | Evidence::UnsatFarkas(_)
@@ -2108,33 +2082,6 @@ fn nested_xor_evidence(arena: &TermArena, assertions: &[TermId]) -> Option<Evide
         .map(Evidence::UnsatIntNestedXor)
 }
 
-/// Re-decide a quantified query by e-matching, keeping the instances it used.
-///
-/// Unlike the other producers this one runs on the caller's `arena` rather than
-/// a clone, deliberately: the instances the driver builds must live in the arena
-/// [`Evidence::check`] will later be handed, or its ids would not resolve.
-/// `produce_evidence` holds `&mut`, so they do.
-///
-/// Declines unless the refutation is exactly "the caller's assertions plus
-/// checked instances" -- see `quant_instance_set_cert`.
-fn quant_instance_set_certificate(
-    arena: &mut TermArena,
-    assertions: &[TermId],
-    config: &SolverConfig,
-) -> Result<Option<crate::quant_instance_set_cert::QuantifierInstanceSetCertificate>, SolverError> {
-    let mut certificate = None;
-    let result = crate::qinst_egraph::prove_quantified_unsat_via_egraph_with_instances(
-        arena,
-        assertions,
-        config,
-        &mut certificate,
-    )?;
-    if !matches!(result, CheckResult::Unsat) {
-        return Ok(None);
-    }
-    Ok(certificate)
-}
-
 fn quantified_structural_unsat_evidence(
     arena: &TermArena,
     assertions: &[TermId],
@@ -2971,18 +2918,6 @@ pub fn produce_evidence(
                 direct
             } else if let Some(bounded) = bounded_int_blast_evidence(arena, assertions)? {
                 bounded
-            } else if let Some(certificate) =
-                quant_instance_set_certificate(arena, assertions, config)?
-            {
-                // LAST among the certifying arms, deliberately. This re-runs
-                // e-matching and describes the refutation only as "assertions
-                // plus checked instances", which is weaker and more generic than
-                // every Alethe certificate above it. Placed earlier it SHADOWED
-                // them: measured, it displaced the guarded-quantifier UF Alethe
-                // cert in four `evidence_finite_quant_uf_cert` tests and one in
-                // `evidence`. Its job is to upgrade what used to be a bare
-                // `Unsat(None)`, never to displace a stronger certificate.
-                (Evidence::UnsatQuantInstanceSet(certificate), Vec::new())
             } else if config.timeout.is_some() {
                 // The remaining fallback is an optional reduced-CNF DRAT export
                 // for BV-reducible theories. It can spend substantial time outside
@@ -3863,7 +3798,6 @@ pub fn prove(
         | Evidence::UnsatBvPairedExistentialTransfer(_)
         | Evidence::UnsatEqualityPartition(_)
         | Evidence::UnsatQuantifiedCounterexampleCover(_)
-        | Evidence::UnsatQuantInstanceSet(_)
         | Evidence::UnsatBvUfLocal(_)
         | Evidence::UnsatSetCardinality(_)
         | Evidence::UnsatFarkas(_)
