@@ -26,10 +26,9 @@ as stronger than it was:
   checker's arena rather than trusted by `TermId`, and the ground set is rebuilt
   rather than stored. One/two/four instances all `certified=1 arena=ok`.
 
-**Next.** Carry the skolemisation record so a skolemised refutation can certify
-(unblocked now that portability is solved); that closes `F:barber-no-such-barber`
-and with it every query whose top-level existentials are eliminated. Then A6's
-remainder: split the 38 QF_BV bare-UNSAT rows by route provenance.
+**Next.** A6's remainder, now scoped: the "38 QF_BV bare-UNSAT rows" are
+evidence-production TIMEOUTS (`PARITY.md` 92/130), and the per-file detail is
+gitignored — so it is a measurement run, not desk analysis.
 
 **Two standing cautions for anyone quoting these numbers.** `certified=` and Lean
 reconstruction are *independent axes* — a fact can be certified with no Lean
@@ -40,6 +39,7 @@ were already 57 KB before this lane existed.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-17 | `7337f708` `caaf2906` | A SKOLEMISED refutation certifies: the elimination is recorded POSITIONALLY (binder counts, anchor by index, a binding as "the k-th witness of assertion i"), so the checker re-runs the eliminator in its own arena and no producer-side id is trusted. `F:barber-no-such-barber` closes on `smt-clausal` with a NON-EMPTY axiom footprint naming skolemisation and universal instantiation. The negative control failed on purpose and moved to `F:no-integer-square-is-minus-one`; the gate now sweeps 18/18. |
 | 2026-08-17 | `ae13cd6e` | A kernel fact's `depends_on` is DERIVED from the proof term, not transcribed: `Kernel::theorem_dependencies` keeps the half of the constant closure `axiom_footprint` discards. 18 edges were missing — two of them on facts proved the same day, by hand. Isolation 65 → 62. Restraints pinned by tests; the vacuity floor had no test until mutation-checking found it killed zero. |
 | 2026-08-17 | `07ffe852` `9853fb6c` `28755674` | The e-matching route certifies, on the third design. It first shipped `certified=1` on evidence whose independent re-check said FAIL (one instance passed by `TermId` coincidence, two did not); reverted, then made portable — instances rebuilt in the checker's arena, ground set rebuilt rather than stored. `tests/certified_implies_revalidatable.rs` is the guard that caught it and now licenses it. |
 | 2026-08-17 | `c2365718` `4cd5d6f0` `c5f4c04b` `078b2776` | The Lean gate stops overstating: 41 of 74 crosscheck families hand Lean an `axiom P` shim, so the headline is split, the reasoning half floored, and every fragment's class pinned by name. `qf_bv` was a WIDTH, not a defect — enumeration beats bit-blasting below ~16 bits — so `qf_bv_wide` now exercises the real reconstruction (33 theory / 41 attestation). |
