@@ -307,15 +307,17 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
-| 2026-08-17 | `3cc574c7` | Both counted proof-production errors closed (A6 first slice): `certify_bounded_int_blast` mapped every `IntBlastError` to a backend error, so `int_blast`'s DELIBERATE `int.pow2` decline became a hard stop and `produce_evidence` lost a verdict `check_auto` decides in 0.13ms. Now declines to `unsat` / `unsat-uncertified`, keeping the certificate gap visible. Control pins the KIND (`unsat-bounded-int-blast`), not just `is_certified`, so the route cannot silently stop being exercised. |
-| 2026-08-17 | `9853fb6c` | REVERTED `a1493099`: it shipped `certified=1` on evidence whose independent re-check FAILED (two- and four-instance shapes; the one-instance shape passed only by `TermId` coincidence). Cause is architectural — the certificate carries ids of terms created during solving, and `smtcomp_cli` re-validates against a FRESH PARSE on purpose. Adds `tests/certified_implies_revalidatable.rs`, the general invariant `is_certified()` => re-validates against an independently re-parsed arena, which per-variant suites structurally could not enforce. Both directions exercised. The driver-side certificate work (`28755674`) stands. |
-| 2026-08-17 | `pending` | QF_BV reaches Lean as REASONING: a `qf_bv_wide` crosscheck family runs `a <= b && b < a` at `BitVec(16)` and asserts the module is a theory reconstruction, not merely that Lean accepted it. The existing `qf_bv` family uses `BitVec(2)`, where `term_level_enum_certifies` wins before `ProofFragment::QfBv` is reached -- so the test named for the foundational bit-blasting path ran at a width where bit-blasting is never used. Crossover measured between 8 and 16 bits and pinned by `narrow_bv_enumerates_and_wide_bv_reconstructs`. Split moves 32 -> 33 theory families (structural unchanged at 41); both crosscheck floors and the gate's reasoning floor raised to match. Real Lean accepts it; gate reports 127 checks. |
-| 2026-08-17 | `4cd5d6f0` | `scripts/check-lean-gate.sh` reports the two halves of its headline and floors the REASONING one (`THEORY_FAMILY_FLOOR=32`), verified end-to-end under real Lean 4.30.0. Flooring only the sum is what let the gap hide: swapping a theory family for an attestation leaves the 126 unmoved. Three guards each driven to fail — raised floor, absent summary, unparseable summary. Also corrects the `qf_bv` test's doc comment, which claimed a bit-level refutation type-checks in Lean; that module is an attestation containing no bit-vectors (the refutation is real and checked in Rust). |
-| 2026-08-17 | `a1493099` | The e-matching route CERTIFIES: `Evidence::UnsatQuantInstanceSet` wired through `produce_evidence` / `kind_label` / `recheck_certificate` / `is_certified`; a plain universal goes from `unsat-uncertified certified=0` to `unsat-quant-instance-set certified=1`. Corrects my own claim that this was blocked by arena identity — `produce_evidence` holds `&mut TermArena`, so producing on it rather than a clone puts the instances where `Evidence::check` will look. Ordering is load-bearing and was wrong first: placed early it displaced the guarded-quantifier UF Alethe cert in 5 tests, so it is now the last certifying arm. Also fixes a `clippy::match_same_arms` my previous commit put on main. |
-| 2026-08-17 | `c5f4c04b` | The Lean gate's content split is measured, printed per family, and ratcheted in both directions: 41 structural / 32 theory families, 72 / 95 modules. Classified from rendered module source, so no `lean` binary is required and the artifact classifies itself; a module claimed structural must also HAVE the shape, so the marker cannot become a sticker. Control: adding a contentless family trips the ratchet — while `lean_crosscheck_representative` raised its count 73→74 and passed, which is what was unguarded. |
-| 2026-08-17 | `078b2776` | Every `ProofFragment`'s Lean content class pinned by name (`every_fragment_content_class_is_pinned_by_name`). 5 of 61 were pinned before; the other 55 recorded their class only in the table, so a coordinated emitter+table edit moved a route from theory reconstruction to `axiom P` shim with nothing failing. Control measured: moving `QfBv` to the attestation arm gives 1163 passed / 1 failed, and the one is this test. Context: 41 of the Lean gate's 126 real-Lean checks (32.5%, and 56% of `lean_crosscheck`) are already shims, `qf_bv` among them; the gate reports one undifferentiated total. |
-| 2026-08-17 | `28755674` | The e-matching driver can report the instances that justified an `unsat`: `prove_quantified_unsat_via_egraph_with_instances` + `QuantifierInstanceSetCertificate` + `check_quantifier_instance_set`, which replays each derivation against the caller's assertions, rejects unlicensed ground members, and re-refutes the ground set (provenance alone would certify insufficient instances). Four capture sites; the fourth (online CDCL(T) replay) found only by measuring — the three obvious ones never fire for the smallest query. Not wired to `Evidence`: the certificate names terms created during e-matching that do not exist in the arena `Evidence::check` receives. |
-| 2026-08-17 | `502c0503` | Settled SMT-route facts gated on certification, not just verdict: `scripts/check-smt-evidence-certified.py` requires `certified=1` for all 17 `smt-term-level`/`smt-clausal` instances (the ledger's own evidence commands test only the verdict and exit 0 on an uncertified refutation — demonstrated against the barber instance). Wired into `check.sh` and `justfile`; 16s warm in release (233s in debug, 232 of it DRAT-checking two fp16 instances). Seven guards, each mutation-tested to kill exactly one test. `F:barber-no-such-barber` stays `open`; its note corrected — the solver *does* record the instantiation as a `QuantifierInstanceCertificate` with a public checker, it is simply never plumbed to the emitter. |
+| 2026-08-17 | `07ffe852` | The e-matching route certifies AND survives an independent re-parse: instances rebuilt in the checker's arena rather than trusted by `TermId`, ground set rebuilt rather than stored (making "nothing smuggled in" structural). One/two/four instances `certified=1 arena=ok`, against `arena=FAIL` for the last two before. Reinstates `a1493099` after `9853fb6c` reverted it. |
+| 2026-08-17 | `3cc574c7` | Both counted proof-production errors closed (A6 first slice): `int_blast`'s deliberate `int.pow2` decline was mapped to a backend error, so `produce_evidence` lost a verdict `check_auto` decides in 0.13ms. Now declines to `unsat` / `unsat-uncertified`. |
+| 2026-08-17 | `e97db72b` | `check-parity-docs.py` crashed before running a single check — it runs in `just check`, not CI, so the preferred aggregate gate failed for everyone as a traceback. Fixing it exposed 14 real failures; 2 mine, 12 other lanes' and now visible. |
+| 2026-08-17 | `2c535667` | CI's representative-crosscheck grep still pinned `families=73`; the new family made it 74. Invisible to every local gate. |
+| 2026-08-17 | `9853fb6c` | REVERTED `a1493099` — it claimed `certified=1` on evidence whose independent re-check FAILED. Adds `tests/certified_implies_revalidatable.rs`: `is_certified()` must imply `Verified` against an independently re-parsed arena, which per-variant suites structurally cannot enforce. |
+| 2026-08-17 | `c2365718` | QF_BV reaches Lean as reasoning: `qf_bv_wide` runs the theorem at `BitVec(16)`, where bit-blasting actually owns it, asserting a theory reconstruction rather than mere acceptance. Split 32 → 33 theory families; both floors raised. |
+| 2026-08-17 | `4cd5d6f0` | The Lean gate reports both halves of its headline and floors the reasoning one, verified under real Lean 4.30.0. Three guards each driven to fail. Corrects the `qf_bv` doc comment, which claimed a bit-level refutation type-checks in Lean. |
+| 2026-08-17 | `c5f4c04b` | The Lean content split is measured, printed per family, and ratcheted both ways: 41 structural / 32 theory families, 72 / 95 modules, classified from rendered module source so no `lean` binary is needed. |
+| 2026-08-17 | `28755674` | The e-matching driver can report the instances that justified an `unsat`, with a checker that replays each derivation, rejects unlicensed ground members, and re-refutes the ground set. Fourth capture site found by measurement — the smallest query refutes through the online CDCL(T) session. |
+| 2026-08-17 | `078b2776` | Every `ProofFragment`'s Lean content class pinned by name. 5 of 61 were pinned before; moving `QfBv` to the attestation arm now gives 1163 passed / 1 failed, and the one is this test. |
+| 2026-08-17 | `502c0503` | Settled SMT-route facts gated on certification, not just verdict: 17 of 17 report `certified=1`, enforced rather than assumed. Seven guards, each mutation-tested to kill exactly one test. |
 | 2026-08-17 | `f18904db7` | R3: reachability census re-derived and committed as `artifacts/reachability/r3-census.tsv` (190 rows over both corpora); the ranked tables in `04-reachability.md` are now a generated view of it, gated by `scripts/check-reachability-census.py` inside `check-foundational-resources.sh`. 13 guards, each with its own rejection path; mutation-verified that deleting any one kills exactly one test. Corpus coverage checked in both directions and reported SKIPPED, never passed, when the sibling checkout is absent. Stale numbers corrected in `04` and `05`. |
 | 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
 Older landed changes (including the 2026-08-06 A1/A2 closure commits) remain
@@ -464,217 +466,41 @@ normalised structure (as Lean core itself does), not a setoid quotient. First
 slice is `Int.natAbs`, then `Int.div`/`Int.mod` specified against the
 freshly-proved decomposition.
 
-**32.5% of the Lean gate's headline is an axiom shim, and nothing pinned which
-routes are which** (`WIP`, evidence-certification, 2026-08-17). A
-`StructuralAttestation` module is not a proof: the shared emitter takes no arena
-and no assertions, so its output cannot depend on the query — it declares
-`axiom prop : Prop`, `axiom hyp1 : prop`, `axiom hyp2 : Not prop` and derives
-`False` by application. Lean accepts it, and that acceptance says nothing about
-the proposition. Measured on arrival: of the **126** real-Lean checks
-`scripts/check-lean-gate.sh` reported, **41 were shims** — 56% of
-`lean_crosscheck`'s own checks, across 27 refuters — including `qf_bv`, a test
-named for bit-vectors whose module contains no bit-vector reasoning. The gate
-reported one undifferentiated total and distinguished the two nowhere. All three
-of those are now fixed; the current gate output is below.
+**Certification is now gated on being re-derivable, not on being claimed**
+(`WIP`, evidence-certification, 2026-08-17). Full record:
+[`diary-evidence-certification.md`](docs/refactor-2026-08/diary-evidence-certification.md).
 
-Five of 61 fragments had their class pinned; the other 55 recorded it only in
-the table, so editing emitter and table together moved a route from proof to
-shim silently. `every_fragment_content_class_is_pinned_by_name` closes that,
-and the control is measured, not asserted: moving `QfBv` to the attestation arm
-(a clean-compiling change) turns 1164 passed / 0 failed into **1163 passed / 1
-failed, and the one is this test**. Before it, nothing in the workspace caught
-that move.
+Three measurements drove the day, each a claim that was true in a way that read
+as stronger than it was:
 
-`lean_crosscheck` now measures and ratchets that split, classifying from the
-**rendered module source** (`LeanModuleContent::of_module_source`) rather than
-from the fragment table — the artifact classifies itself, and no `lean` binary
-is needed. Measured: **41 structural / 32 theory families**, and **72 / 95
-modules** across the exhaustive sweep, which nobody had counted. Two families
-are *mixed* — representative theory, other rows shims — so a representative-only
-view undercounts. Ratcheted in both directions, because deleting a theory family
-moves nothing a shim-count ratchet watches. The control is the point: adding a
-duplicate contentless family trips it, while `lean_crosscheck_representative`
-happily raised its own count 73 → 74 and **passed** — so until now, adding a
-contentless refuter to the headline was entirely unguarded.
+- **Ledger.** Settled SMT-route facts test the *verdict* (`… | tail -1` =
+  `unsat`) and are blind to certification. 17 of 17 happened to be
+  `certified=1`; nothing enforced it. Now gated, with the barber instance as a
+  real negative control — genuinely unsat, genuinely uncertified.
+- **Lean gate.** Of 74 crosscheck families, **41 hand Lean a structural
+  attestation** — an axiom pair it cannot fail on the merits. The gate reported
+  one undifferentiated total; it now prints both halves and floors the
+  *reasoning* one, because flooring the sum lets reasoning be swapped for
+  attestation with the headline unmoved. `qf_bv` was one of the 41: not a defect
+  but a **width**, since enumeration beats bit-blasting below ~16 bits.
+  `qf_bv_wide` now exercises the real reconstruction (33 theory / 41 attestation).
+- **My own claim.** I wired the e-matching route to `Evidence` and shipped
+  `certified=1` on evidence whose independent re-check said FAIL. Reverted, then
+  fixed properly: the certificate is portable now — instances are rebuilt in the
+  checker's arena rather than trusted by `TermId`, and the ground set is rebuilt
+  rather than stored. One/two/four instances all `certified=1 arena=ok`.
 
-**The gate itself now reports both halves and floors the reasoning one**,
-verified end to end under real Lean 4.30.0:
+**Next.** Carry the skolemisation record so a skolemised refutation can certify
+(unblocked now that portability is solved); that closes `F:barber-no-such-barber`
+and with it every query whose top-level existentials are eliminated. Then A6's
+remainder: split the 38 QF_BV bare-UNSAT rows by route provenance.
 
-```
-check-lean-gate: 16 suites, 54 tests, 127 real-Lean checks (floor 115)
-check-lean-gate: crosscheck content: 33 families carry a theory reconstruction,
-                 41 are structural attestations -- floor 33 on the reasoning half
-check-lean-gate: OK -- 127 modules/controls were READ by a real Lean kernel
-                 (41 of 74 crosscheck families are attestations, so this is not
-                 a count of propositions proved)
-```
-
-Flooring only the sum is what let this hide: swapping a theory family for an
-attestation leaves the total unmoved. Three guards, each driven to fail — raising the
-theory floor exits 1 while the total stays put; an absent summary exits 1,
-because silence must not read as a pass; and a present-but-unparseable summary
-fails on the parse rather than letting the arithmetic print a confident wrong
-split. The `qf_bv` test's own comment, which claimed "the bit-level resolution
-refutation must type-check in real Lean", is corrected: that module is an
-attestation with no bit-vectors in it. The refutation is real and checked in
-Rust; only its Lean half is a shim.
-
-**And the `qf_bv` puzzle is closed — it was a width, not a defect.**
-`scan_ground_bv_proof_fragment` tries `term_level_enum_certifies` *before*
-falling through to `ProofFragment::QfBv`, and rightly: exhaustive term-level
-evaluation is the **stronger** Rust-side certificate, trusting neither the
-bit-blaster, the CNF encoder, nor the SAT solver. It just has no theory Lean
-module. Measured on `bvule a b ∧ bvult b a`:
-
-```
-width  2 / 4 / 8  → TermLevelEnum → StructuralAttestation
-width 16 / 32     → QfBv          → TheoryReconstruction
-```
-
-The crossover sits between 8 and 16 bits, and the `qf_bv` family uses
-`BitVec(2)` — so the test that reads as "the foundational bit-blasting path
-checks in real Lean" runs at a width where bit-blasting is never used. QF_BV
-*does* have a real reconstruction; nothing was exercising it.
-
-So a `qf_bv_wide` family now runs the same theorem at `BitVec(16)` and asserts
-the module is a theory reconstruction rather than merely that Lean accepted it —
-"Lean accepted it" is precisely what an attestation also achieves. Real Lean
-accepts it. The split moves **32 → 33 theory** families (structural unchanged at
-41), and both floors are raised to lock the gain in. The boundary itself is
-pinned by `narrow_bv_enumerates_and_wide_bv_reconstructs`, so it cannot move
-silently.
-
-**The e-matching route can now hand out the instances it used.** The driver
-built exact provenance per instance and exposed an independent replay checker,
-then dropped the map at every `return Ok(Unsat)`.
-`prove_quantified_unsat_via_egraph_with_instances` reports a
-`QuantifierInstanceSetCertificate`; `check_quantifier_instance_set` replays every
-derivation against the caller's assertions, rejects a ground member that is
-neither asserted nor derived, **and re-refutes the ground set** — checking only
-provenance would certify true-but-insufficient instances. Four capture sites,
-the fourth found by measurement: the smallest possible query (`∀x. f(x)=0` with
-`f(5)≠0`) refutes through the *online CDCL(T)* session, not through any of the
-three obvious checks.
-
-**I wired it to `Evidence`, shipped a false certification claim, and reverted
-it.** I had recorded this as blocked by arena identity, then argued myself out of
-that on the grounds that `produce_evidence` holds `&mut TermArena`. True of the
-in-process path; false of the path the gate uses. `smtcomp_cli` re-validates
-against a **fresh parse** on purpose — "the producing solve's arena is
-deliberately not reused" — and ids from one arena mean nothing in another:
-
-```
-one instance     kind=unsat-quant-instance-set certified=1 arena=ok
-two instances    kind=unsat-quant-instance-set certified=1 arena=FAIL
-four instances   kind=unsat-quant-instance-set certified=1 arena=FAIL
-```
-
-`certified=1` while the independent re-check FAILED, which is the soundness-alarm
-state. The single-instance row passed because the checker happened to rebuild its
-instance at the same `TermId` — allocation order presented as verification, and
-the reason "it passed" was not evidence that it worked. Reverted (`9853fb6c`);
-the route reports `unsat-uncertified` again, which is true.
-
-**The guard that should have existed now does.**
-`tests/certified_implies_revalidatable.rs` asserts one invariant across evidence
-kinds: `is_certified()` implies `Verified` when re-checked against an
-independently re-parsed arena. Per-variant suites structurally could not catch
-this — each exercises the variant its author added, so a new variant arrives
-under no general obligation. Both directions exercised: reapplying the reverted
-wiring fails it, naming both offending rows, and a second test requires ≥3 rows
-to be certified *and* verified so a world where nothing certifies cannot pass by
-saying nothing.
-
-*Ordering was the real hazard, and I got it wrong first.* Placed among the
-specialised quantified producers it **shadowed** stronger evidence — four
-`evidence_finite_quant_uf_cert` tests and one in `evidence` lost their
-guarded-quantifier UF Alethe certificate to this generic one. It is now the last
-certifying arm, immediately before the bare fallback: the job is to upgrade what
-was `Unsat(None)`, never to demote a stronger certificate.
-
-*The remaining work is exactly the portability I first named:* carry instances
-as reconstructable data (assertion + bindings are query-side and reproduce in any
-parse) and have the checker rebuild them in **its** arena, comparing structurally
-rather than by id — and rebuild the ground set from verified pieces rather than
-trusting the recorded ids. Only then can this be `Evidence`.
-
-**Settled SMT-route facts are gated on `certified=1`, not just on the
-verdict.** The
-[`ledger-integrity`](docs/plan/status/97-ledger-integrity.md) lane re-measured finding 8 as
-remediated — 177/177 checker runs *can* fail. That is true and it is not
-sufficient: a run can fail on the wrong axis. Every settled `smt-term-level` /
-`smt-clausal` fact carries evidence shaped
-`test "$(… smtcomp_cli --evidence <i>.smt2 | tail -1)" = unsat`, which tests
-the **verdict** and is blind to whether the refutation produced a **checkable
-object**. Verified, not argued: that exact command shape **exits 0** on
-`artifacts/facts/smt2/neg-barber-no-such-barber.smt2`, which reports
-`kind=unsat-uncertified certified=0`.
-
-Measured: **17 of 17** gated instances are `certified=1` (14 `unsat-term-level`,
-2 `unsat-drat`, 1 `unsat-bool-simplification`). So the invariant held by
-practice, with nothing enforcing it.
-`scripts/check-smt-evidence-certified.py` now enforces it, using the barber as a
-**real** negative control rather than a synthetic one — genuinely unsat, so a
-verdict-only checker accepts it; genuinely uncertified, so a certification-aware
-one must not. If it ever reports `certified=1` the check fails *on purpose*,
-saying the fact can now be closed and the control must be repointed.
-
-All seven guards were mutation-tested: delete any one and **exactly one** test
-dies. (The first mutation run reported a wrong casualty — deleting the *verdict*
-guard killed the *floor* test — which was stale `.pyc` reuse from rewriting one
-filename inside a timestamp tick: the repository's documented cargo mtime trap,
-in Python. Fixed with per-guard filenames and `dont_write_bytecode`.)
-
-**`F:barber-no-such-barber` stays `open`, and one claim in its note was wrong.**
-The note said the instantiation step was "one no component of ours performed or
-recorded". Measured with `AXEYUM_QTRACE=1`, the solver performs it and records
-it: `auto::solve` skolemizes to `!sk_0`, the e-graph route admits exactly one
-instance, and `check_auto` refutes `p = ¬p`. That instance becomes a
-`QuantifierInstanceCertificate` (`qinst_egraph.rs:2737`) which already has a
-public independent checker, `check_quantifier_ground_derivation` (`:2821`). It
-is never plumbed out — `ground_derivations` (`:1162`) is function-local and dies
-at each `return Ok(Unsat)`, `skolemize_top_existentials` (`auto.rs:889`) returns
-a bare `Vec<TermId>` discarding the assertion→`!sk_k` correspondence, and
-`evidence.rs` references neither (grep: 0). `prove_unsat_to_lean` declines at
-`skolem_alethe.rs:102-105`, whose slice requires the existential's body to be a
-quantifier-free equality; the barber's body is a universal. The reconstruction
-path is not failing to reconstruct — it is **re-deriving the instantiation from
-scratch with weaker tools** than the decider that already succeeded. Control:
-the fully instantiated ground formula reconstructs kernel-checked today.
-
-**Next.** Slice 4 of that analysis, because it is orthogonal and the widest win:
-thread the decider's instantiation certificates out and add an `Evidence`
-variant whose `check` calls the existing public checker. That upgrades the whole
-e-matching route from `unsat-uncertified` to certified, not just the barber.
-Slices 1–3 (widen the ∀ emitter's witness vocabulary; make its ground tail
-pluggable; relax the `Exists` body restriction) close the barber itself.
-
-Caveat carried forward, not yet acted on: `certified=` and Lean reconstruction
-are **independent axes**. A fact can be `certified=1` with no Lean module. Of the
-61 `ProofFragment` variants, 29 are `StructuralAttestation` — a ~21-line
-`axiom P` shim with no reasoning. Whether any settled fact rests on one is
-unmeasured and is the obvious next audit.
-
-**Both counted proof-production errors are gone (A6's first slice).** The two
-`QF_NIA` `pow2-native` rows are the repository's two `proof_production_errors`,
-and the failure was not a missing capability. `int_blast` rejects `int.pow2`
-deliberately — exponential in its operand, so no faithful finite encoding — and
-says at the rejection site that the point is to fall through. But
-`certify_bounded_int_blast` mapped **every** `IntBlastError` to a backend error,
-so the fall-through became a hard stop:
-
-```
-check_auto_explained: unsat 0.129ms  (int-box-eval: decided unsat)
-solve:                unsat
-produce_evidence:     error ... does not support operator IntPow2
-```
-
-Two front doors disagreeing about a query decided in a tenth of a millisecond —
-recorded by the audit as `solver-error` and rendered by the CLI as `unknown`,
-which is the worse of the two because it reads as "could not tell" when the
-truth is "could, and threw it away". Now it declines: `unsat` with
-`kind=unsat-uncertified`, so the certificate gap stays visible instead of the
-verdict going missing.
+**Two standing cautions for anyone quoting these numbers.** `certified=` and Lean
+reconstruction are *independent axes* — a fact can be certified with no Lean
+module, and 41 of 74 Lean-checked families prove nothing about their proposition
+— so the two must never be summed. And `just check` is red independently of this
+lane: `check-plan-authority.py` budgets the `PLAN.md` sources at 52 KB and they
+were already 57 KB before this lane existed.
 
 **R3 done; the census is an artifact now, and `17` was not one** (`WIP`,
 math-r3, 2026-08-17). The 2026-08-13 misconception audit's `census.tsv` was
