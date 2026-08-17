@@ -97,15 +97,18 @@ CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-115}"
 # `BitVec(2)`, and the crossover for its shape sits between 8 and 16 bits, so it
 # never reaches bit-blasting at all. The `qf_bv_wide` family added alongside it
 # runs the same theorem at `BitVec(16)`, where the reconstruction is the
-# bit-level one the name always implied -- which is why the reasoning floor is
-# 33 and not 32.
+# bit-level one the name always implied -- which is why the reasoning floor was
+# 33 and not 32. Raised to 34 on 2026-08-17 when `qf_rdl_difference` was added:
+# the representative slice is one module per FAMILY and real difference logic
+# scans into the `Lra` family, so no module from the QF_RDL *logic* had ever been
+# handed to `lean` -- and it reconstructs rather than attests.
 #
 # So this gate reports the two halves separately, and floors the half that is
 # actually reasoning. Flooring only the sum lets theory families be replaced by
 # attestations with the headline unmoved. `lean_crosscheck` prints the split as
 # LEAN_CONTENT_SUMMARY (it classifies each rendered module by its own header
 # marker, needing no Lean binary); this reads that line.
-THEORY_FAMILY_FLOOR="${AXEYUM_LEAN_THEORY_FLOOR:-33}"
+THEORY_FAMILY_FLOOR="${AXEYUM_LEAN_THEORY_FLOOR:-34}"
 
 # package | features | test target
 #

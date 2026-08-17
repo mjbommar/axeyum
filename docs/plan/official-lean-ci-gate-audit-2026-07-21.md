@@ -131,6 +131,21 @@ run of `scripts/check-lean-gate.sh` against the pinned Lean 4.30.0 reports:
 LEAN_CROSSCHECK|label=representative|families=74|modules=74|checked=74|budget_skipped=0|failed=0
 ```
 
+**Superseded 2026-08-17 — the block above is the run as it was measured on
+2026-07-21 and is left unedited; a dated audit that gets rewritten when a number
+moves stops being evidence.** A `qf_rdl_difference` family was added, because the
+representative slice is one module per FAMILY and real difference logic scans
+into the `Lra` family, so no module from the QF_RDL *logic* had ever been handed
+to `lean`. Re-run against the same pinned Lean 4.30.0:
+
+```text
+[lean crosscheck:representative] checked 75 of 75 modules
+LEAN_CROSSCHECK|label=representative|families=75|modules=75|checked=75|budget_skipped=0|failed=0
+```
+
+The added family is a theory reconstruction, not an attestation, so the split
+moves 33 → 34 reasoning families against an unchanged 41 attestations.
+
 GitHub Actions run
 [`32045171231`](https://github.com/mjbommar/axeyum/actions/runs/32045171231)
 printed the same line. That run's step still FAILED — it greps for an exact

@@ -102,10 +102,13 @@ not be described as serialized proof replay.
 The broader audit still records 58 uncertified occurrences, eight independently
 checked results without Lean reconstruction, and two QF_NIA `IntPow2`
 proof-production errors. The current official-source proof-family population has
-a retained local Lean 4.30 result of 74/74 accepted. That number is modules Lean
-READ, not propositions Lean PROVED: measured 2026-08-17, 41 of the 74 families
+a retained local Lean 4.30 result of 75/75 accepted. That number is modules Lean
+READ, not propositions Lean PROVED: measured 2026-08-17, 41 of the 75 families
 emit a structural attestation — an axiom pair Lean cannot fail on the merits —
-and 33 carry a theory reconstruction. `scripts/check-lean-gate.sh` now reports
+and 34 carry a theory reconstruction. The 75th is `qf_rdl_difference`, added
+2026-08-17: real difference logic scans into the same `Lra` fragment as QF_LRA,
+so it reconstructs rather than attests, and the family slice had never contained
+a module from that logic. `scripts/check-lean-gate.sh` now reports
 the two halves separately and floors the reasoning one. Corrected remote attestation
 and exhaustive execution remain open.
 
