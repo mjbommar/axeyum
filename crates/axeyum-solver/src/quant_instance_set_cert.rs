@@ -55,26 +55,35 @@
 //! Declining leaves the route exactly where it was — `unsat-uncertified` — so a
 //! narrow certificate strictly improves on nothing and never overstates.
 //!
-//! # Not yet wired to [`crate::evidence`], and the reason is structural
+//! It is also offered **last** among the certifying routes in `produce_evidence`.
+//! "Assertions plus checked instances" is weaker and more generic than any
+//! Alethe certificate, and placed earlier it displaces them: measured, an
+//! earlier placement took over four `evidence_finite_quant_uf_cert` tests and
+//! one in `evidence` from the guarded-quantifier UF Alethe certificate. The job
+//! is to upgrade what used to be a bare `Unsat(None)`, never to demote a
+//! stronger certificate to this one.
+//!
+//! # Wiring to [`crate::evidence`]: why the arena is not a problem
 //!
 //! This carries `TermId`s, and the instances it names are terms *created during*
-//! e-matching — they do not exist in the arena the query came in on.
-//! [`Evidence::check`](crate::Evidence::check) is handed that original arena, so
-//! it cannot resolve them. Every certificate family already wired to `Evidence`
-//! avoids this by being arena-independent: `bv2nat_bound_certificate` says so
-//! outright, carrying Alethe commands that `check_alethe_lra` reads "not the
-//! arena".
+//! e-matching, so they are not in the arena the query was parsed into. That
+//! looks fatal — a certificate naming ids a checker cannot resolve — and it is
+//! not, for one reason: `produce_evidence` holds `&mut TermArena`, and
+//! `quant_instance_set_certificate` runs the driver on **that** arena rather
+//! than on a clone. The instances are therefore added to the very arena
+//! [`Evidence::check`](crate::Evidence::check) is later handed, and its own
+//! working clone inherits them.
 //!
-//! Interning does **not** rescue it. It would have to be true that rebuilding
-//! the instances in a fresh clone assigns identical ids, which holds only if the
-//! same terms are built in the same order — a property nothing enforces and no
-//! test would catch when it broke.
+//! This is load-bearing and easy to undo by accident: producing the certificate
+//! from a scratch clone (the shape most producers here use) would leave every id
+//! dangling, and the recheck would report a failure that has nothing to do with
+//! the mathematics. The producer says so at its definition.
 //!
-//! So wiring this to `Evidence` needs the certificate made arena-independent
-//! first (compare reconstructed instances structurally, or carry the instances
-//! as data rather than as ids). That is the next slice. Until then the checker
-//! is public API, exercised by the tests below, and the route's reported
-//! evidence is unchanged — `unsat-uncertified`, as before.
+//! What this does **not** buy is a certificate that survives leaving the
+//! process. These ids mean nothing to a different arena, so this cannot be
+//! serialised and re-checked later the way an Alethe proof can. Making it
+//! portable means carrying the instances as data rather than as ids — worth
+//! doing, and a separate slice from this one.
 //!
 //! # Consequence: the barber is not yet covered
 //!
@@ -191,8 +200,12 @@ pub fn check_quantifier_instance_set(
     // of true-but-insufficient instances.
     match crate::auto::check_auto(arena, &certificate.ground, config) {
         Ok(CheckResult::Unsat) => Ok(true),
-        Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) => Ok(false),
-        Err(SolverError::Unsupported(_)) => Ok(false),
+        // A ground set that is satisfiable, undecided, or outside the dispatch's
+        // fragment all mean the same thing here: this certificate does not
+        // establish its refutation. None of the three is a hard error.
+        Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
+            Ok(false)
+        }
         Err(error) => Err(error),
     }
 }
