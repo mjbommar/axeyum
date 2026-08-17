@@ -307,6 +307,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
+| 2026-08-17 | `4cd5d6f0` | `scripts/check-lean-gate.sh` reports the two halves of its headline and floors the REASONING one (`THEORY_FAMILY_FLOOR=32`), verified end-to-end under real Lean 4.30.0. Flooring only the sum is what let the gap hide: swapping a theory family for an attestation leaves the 126 unmoved. Three guards each driven to fail — raised floor, absent summary, unparseable summary. Also corrects the `qf_bv` test's doc comment, which claimed a bit-level refutation type-checks in Lean; that module is an attestation containing no bit-vectors (the refutation is real and checked in Rust). |
 | 2026-08-17 | `a1493099` | The e-matching route CERTIFIES: `Evidence::UnsatQuantInstanceSet` wired through `produce_evidence` / `kind_label` / `recheck_certificate` / `is_certified`; a plain universal goes from `unsat-uncertified certified=0` to `unsat-quant-instance-set certified=1`. Corrects my own claim that this was blocked by arena identity — `produce_evidence` holds `&mut TermArena`, so producing on it rather than a clone puts the instances where `Evidence::check` will look. Ordering is load-bearing and was wrong first: placed early it displaced the guarded-quantifier UF Alethe cert in 5 tests, so it is now the last certifying arm. Also fixes a `clippy::match_same_arms` my previous commit put on main. |
 | 2026-08-17 | `c5f4c04b` | The Lean gate's content split is measured, printed per family, and ratcheted in both directions: 41 structural / 32 theory families, 72 / 95 modules. Classified from rendered module source, so no `lean` binary is required and the artifact classifies itself; a module claimed structural must also HAVE the shape, so the marker cannot become a sticker. Control: adding a contentless family trips the ratchet — while `lean_crosscheck_representative` raised its count 73→74 and passed, which is what was unguarded. |
 | 2026-08-17 | `078b2776` | Every `ProofFragment`'s Lean content class pinned by name (`every_fragment_content_class_is_pinned_by_name`). 5 of 61 were pinned before; the other 55 recorded their class only in the table, so a coordinated emitter+table edit moved a route from theory reconstruction to `axiom P` shim with nothing failing. Control measured: moving `QfBv` to the attestation arm gives 1163 passed / 1 failed, and the one is this test. Context: 41 of the Lean gate's 126 real-Lean checks (32.5%, and 56% of `lean_crosscheck`) are already shims, `qf_bv` among them; the gate reports one undifferentiated total. |
@@ -493,9 +494,29 @@ duplicate contentless family trips it, while `lean_crosscheck_representative`
 happily raised its own count 73 → 74 and **passed** — so until now, adding a
 contentless refuter to the headline was entirely unguarded.
 
-*Not yet done:* `scripts/check-lean-gate.sh` itself still prints ONE
-undifferentiated total and floors the sum rather than the theory half. **Do not
-quote the 126 as "modules Lean proved" until then.** Open question, now visible
+**The gate itself now reports both halves and floors the reasoning one**,
+verified end to end under real Lean 4.30.0:
+
+```
+check-lean-gate: 16 suites, 54 tests, 126 real-Lean checks (floor 115)
+check-lean-gate: crosscheck content: 32 families carry a theory reconstruction,
+                 41 are structural attestations -- floor 32 on the reasoning half
+check-lean-gate: OK -- 126 modules/controls were READ by a real Lean kernel
+                 (41 of 73 crosscheck families are attestations, so this is not
+                 a count of propositions proved)
+```
+
+Flooring only the sum is what let this hide: swapping a theory family for an
+attestation leaves 126 unmoved. Three guards, each driven to fail — raising the
+theory floor exits 1 while the total stays put; an absent summary exits 1,
+because silence must not read as a pass; and a present-but-unparseable summary
+fails on the parse rather than letting the arithmetic print a confident wrong
+split. The `qf_bv` test's own comment, which claimed "the bit-level resolution
+refutation must type-check in real Lean", is corrected: that module is an
+attestation with no bit-vectors in it. The refutation is real and checked in
+Rust; only its Lean half is a shim.
+
+Open question, now visible
 in the printout and not yet explained: the `qf_bv`, `qf_ufbv` and `qf_abv`
 builders discard the returned fragment and route to a shim-class refuter, though
 `ProofFragment::QfBv`/`QfUfBv`/`QfAbv` are declared `TheoryReconstruction` — the
