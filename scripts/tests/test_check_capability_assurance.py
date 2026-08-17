@@ -95,6 +95,33 @@ class CompoundAreaNamesCountAsTheLogicsTheyName(unittest.TestCase):
         self.assertEqual(CA.logics("datatypes"), {"datatypes"})
 
 
+class LogicCoverageIsTheNumberTheStrandQuotes(unittest.TestCase):
+    """The strand states its metric as "N of 23 logics", but only the ENTRY
+    count was ever emitted, so the quoted figure came from ad-hoc snippets that
+    each recomputed it — which is how it drifted before. It is derived and
+    printed now."""
+
+    def test_covered_logics_and_the_gap_partition_the_whole_set(self) -> None:
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        allg = {lg for r in recs for lg in CA.logics(r["area"])}
+        covered = {
+            lg
+            for r in recs
+            if CA.tier(r) == "external-artifact-checker"
+            for lg in CA.logics(r["area"])
+        }
+        self.assertEqual(covered | set(CA.rank(recs)), allg)
+        self.assertEqual(covered & set(CA.rank(recs)), set())
+
+    def test_a_compound_row_covers_every_logic_it_names(self) -> None:
+        """Entry count and logic count differ precisely here, which is why one
+        cannot stand in for the other."""
+        recs = [
+            {"area": "QF_ABV / QF_AUFBV", "evidence": "checked by Lean", "feature": "f"}
+        ]
+        self.assertEqual(CA.rank(recs), {})
+
+
 class TheGapIsRankedByDistanceToAnExternalChecker(unittest.TestCase):
     """Strand item B. The ranking is derived because a written one rots: item B
     itself names `QF_UF` and `datatypes` as candidates, and both have since

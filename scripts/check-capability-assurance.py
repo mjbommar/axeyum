@@ -71,7 +71,7 @@ BANDS = {
 }
 
 # The externally-checked count may not FALL. Measured 2026-08-17: 36 entries
-# across 11 of 23 areas.
+# across 12 of 23 logics (11 when written; QF_RDL was gated 2026-08-17).
 #
 # This is the strand's primary metric, and the reason it needs a floor is that
 # it had drifted UNMEASURED. `01-decide-vs-certify.md` said "Four name a
@@ -226,10 +226,23 @@ def main(argv: list[str]) -> int:
         if shared:
             print("  assurance never stated per logic: " + ", ".join(sorted(shared)))
 
+    covered = {
+        lg
+        for r in recs
+        if tier(r) == "external-artifact-checker"
+        for lg in logics(r["area"])
+    }
+    if "--quiet" not in argv:
+        print(
+            f"  logics: {len(covered)} of {len(areas)} have an external artifact "
+            f"checker; {len(areas) - len(covered)} do not (rank them with --rank)"
+        )
+
     print(f"CAPABILITY_ASSURANCE|entries={len(recs)}|areas={len(areas)}|"
           f"external={external}|self={tiers['self-checker']}|"
           f"differential={tiers['differential-only']}|"
-          f"unclassified={tiers['unclassified']}")
+          f"unclassified={tiers['unclassified']}|"
+          f"logics_external={len(covered)}|logics_total={len(areas)}")
 
     failures = []
     if len(recs) < MIN_ENTRIES:
