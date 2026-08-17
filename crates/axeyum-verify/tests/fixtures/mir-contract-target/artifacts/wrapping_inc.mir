@@ -247,7 +247,7 @@ alloc1 (size: 12, align: 1) {
 fn wrapping_inc__axeyum_verdict() -> Verdict {
     let mut _0: axeyum_verify::Verdict;
     let _1: axeyum_verify::ContractProgram;
-    let mut _2: std::result::Result<axeyum_verify::Verdict, axeyum_solver::backend::SolverError>;
+    let mut _2: std::result::Result<axeyum_verify::Verdict, axeyum_solver::error::SolverError>;
     let _3: &axeyum_verify::ContractProgram;
     let _4: &axeyum_solver::backend::SolverConfig;
     let _5: axeyum_solver::backend::SolverConfig;
@@ -272,7 +272,7 @@ fn wrapping_inc__axeyum_verdict() -> Verdict {
 
     bb3: {
         _6 = const "axeyum-verify: solver hard error";
-        _0 = std::result::Result::<Verdict, axeyum_solver::backend::SolverError>::expect(move _2, move _6) -> [return: bb4, unwind: bb6];
+        _0 = std::result::Result::<Verdict, axeyum_solver::error::SolverError>::expect(move _2, move _6) -> [return: bb4, unwind: bb6];
     }
 
     bb4: {

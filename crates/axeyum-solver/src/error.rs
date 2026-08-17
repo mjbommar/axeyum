@@ -7,7 +7,9 @@
 //! certificate data. Anything that merely needs to *report* a failure was
 //! therefore dragged into that graph, which is how
 //!
-//!     backend → model → quant_sat_certificates → proof → backend
+//! ```text
+//! backend → model → quant_sat_certificates → proof → backend
+//! ```
 //!
 //! closed into a four-module cycle when `quant_sat_certificates` was split out
 //! (25ab64649). `proof` was in it for one reason: it names `SolverError` in its

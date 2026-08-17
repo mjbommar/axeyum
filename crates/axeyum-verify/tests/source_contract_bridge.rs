@@ -199,6 +199,40 @@ fn generated_contract_exactly_matches_the_hand_built_declaration() {
 /// nightly. Resolving on a newer toolchain can select crates whose
 /// `rust-version` the pinned one cannot satisfy, and `--locked` would then fail
 /// only in CI.
+///
+/// # There is a THIRD copy of these hashes, and nothing checks it
+///
+/// `artifacts/SHA256SUMS` records the same six digests. **No test reads it** —
+/// this function carries its own copy — so it silently went stale when the lock
+/// was refreshed on 2026-08-16 and every gate stayed green. Verify it by hand
+/// after any change here:
+///
+/// ```sh
+/// (cd crates/axeyum-verify/tests/fixtures/mir-contract-target && \
+///   sha256sum -c artifacts/SHA256SUMS)
+/// ```
+///
+/// # A solver-internal module move invalidates the capture
+///
+/// `wrapping_inc.mir` is byte-exact MIR, and MIR names types by their
+/// **canonical defining path** — not by any re-export. Moving `SolverError`
+/// from `axeyum_solver::backend` to `axeyum_solver::error` kept every one of the
+/// ~60 `use` sites compiling and still changed two lines of the captured module:
+///
+/// ```text
+/// -  let mut _2: Result<Verdict, axeyum_solver::backend::SolverError>;
+/// +  let mut _2: Result<Verdict, axeyum_solver::error::SolverError>;
+/// ```
+///
+/// So this artifact is coupled to the solver's *internal* module layout, and a
+/// refactor that touches a type appearing in the fixture's MIR must refresh it.
+/// That is the artifact being honest, not a defect — but it means the refresh is
+/// part of such a change, and `mir_bytes` in `capture-summary.json` plus
+/// `CAPTURED_MIR.len()` below move with it. Re-capture with the
+/// `axeyum-mir-build` binary using the pinned cargo/rustc, exactly as
+/// `run_scalar_contract_capture` invokes it; two independent captures must come
+/// out byte-identical, which is what `provenance.json`'s
+/// `fresh_capture_byte_identical` records.
 #[test]
 fn committed_capture_is_authenticated_and_root_independent() {
     let root = fixture_root();
@@ -217,11 +251,11 @@ fn committed_capture_is_authenticated_and_root_independent() {
         ),
         (
             "artifacts/wrapping_inc.mir",
-            "7d5b14b60fc40316a534b183d090fcf0e9dc21ab13a5a318d9fee0c8c30840a8",
+            "b1e7b19e5e36f28f4bb631d95fd7f18c42786447a87e9b1cce8dccf180bd1a64",
         ),
         (
             "artifacts/capture-summary.json",
-            "6bbf7b883d62b189bd566f7b2d2260582b79ba2e9ecd21e8d75badd11b236c28",
+            "67603fb13b954551924745d51f80f91374ac17e6a51afeb0684a330d152a5b2e",
         ),
         (
             "artifacts/provenance.json",
@@ -235,7 +269,7 @@ fn committed_capture_is_authenticated_and_root_independent() {
     assert!(summary.contains("\"target_dir\":\"$TARGET_DIR\""));
     assert!(summary.contains("\"output\":\"$OUTPUT\""));
     assert!(!summary.contains(env!("CARGO_MANIFEST_DIR")));
-    assert_eq!(CAPTURED_MIR.len(), 10_124);
+    assert_eq!(CAPTURED_MIR.len(), 10_120);
 }
 
 #[test]
