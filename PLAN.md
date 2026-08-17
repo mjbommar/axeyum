@@ -307,6 +307,8 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
+| 2026-08-17 | `a1493099` | The e-matching route CERTIFIES: `Evidence::UnsatQuantInstanceSet` wired through `produce_evidence` / `kind_label` / `recheck_certificate` / `is_certified`; a plain universal goes from `unsat-uncertified certified=0` to `unsat-quant-instance-set certified=1`. Corrects my own claim that this was blocked by arena identity — `produce_evidence` holds `&mut TermArena`, so producing on it rather than a clone puts the instances where `Evidence::check` will look. Ordering is load-bearing and was wrong first: placed early it displaced the guarded-quantifier UF Alethe cert in 5 tests, so it is now the last certifying arm. Also fixes a `clippy::match_same_arms` my previous commit put on main. |
+| 2026-08-17 | `c5f4c04b` | The Lean gate's content split is measured, printed per family, and ratcheted in both directions: 41 structural / 32 theory families, 72 / 95 modules. Classified from rendered module source, so no `lean` binary is required and the artifact classifies itself; a module claimed structural must also HAVE the shape, so the marker cannot become a sticker. Control: adding a contentless family trips the ratchet — while `lean_crosscheck_representative` raised its count 73→74 and passed, which is what was unguarded. |
 | 2026-08-17 | `078b2776` | Every `ProofFragment`'s Lean content class pinned by name (`every_fragment_content_class_is_pinned_by_name`). 5 of 61 were pinned before; the other 55 recorded their class only in the table, so a coordinated emitter+table edit moved a route from theory reconstruction to `axiom P` shim with nothing failing. Control measured: moving `QfBv` to the attestation arm gives 1163 passed / 1 failed, and the one is this test. Context: 41 of the Lean gate's 126 real-Lean checks (32.5%, and 56% of `lean_crosscheck`) are already shims, `qf_bv` among them; the gate reports one undifferentiated total. |
 | 2026-08-17 | `28755674` | The e-matching driver can report the instances that justified an `unsat`: `prove_quantified_unsat_via_egraph_with_instances` + `QuantifierInstanceSetCertificate` + `check_quantifier_instance_set`, which replays each derivation against the caller's assertions, rejects unlicensed ground members, and re-refutes the ground set (provenance alone would certify insufficient instances). Four capture sites; the fourth (online CDCL(T) replay) found only by measuring — the three obvious ones never fire for the smallest query. Not wired to `Evidence`: the certificate names terms created during e-matching that do not exist in the arena `Evidence::check` receives. |
 | 2026-08-17 | `502c0503` | Settled SMT-route facts gated on certification, not just verdict: `scripts/check-smt-evidence-certified.py` requires `certified=1` for all 17 `smt-term-level`/`smt-clausal` instances (the ledger's own evidence commands test only the verdict and exit 0 on an uncertified refutation — demonstrated against the barber instance). Wired into `check.sh` and `justfile`; 16s warm in release (233s in debug, 232 of it DRAT-checking two fp16 instances). Seven guards, each mutation-tested to kill exactly one test. `F:barber-no-such-barber` stays `open`; its note corrected — the solver *does* record the instantiation as a `QuantifierInstanceCertificate` with a public checker, it is simply never plumbed to the emitter. |
@@ -479,10 +481,25 @@ and the control is measured, not asserted: moving `QfBv` to the attestation arm
 failed, and the one is this test**. Before it, nothing in the workspace caught
 that move.
 
-*Not yet done:* the gate still prints one number. Splitting it needs the suites
-to report their class — most `report_checked` counts are hardcoded literals, not
-tallies — so that is its own slice. **Do not quote the 126 as "modules Lean
-proved" until then.**
+`lean_crosscheck` now measures and ratchets that split, classifying from the
+**rendered module source** (`LeanModuleContent::of_module_source`) rather than
+from the fragment table — the artifact classifies itself, and no `lean` binary
+is needed. Measured: **41 structural / 32 theory families**, and **72 / 95
+modules** across the exhaustive sweep, which nobody had counted. Two families
+are *mixed* — representative theory, other rows shims — so a representative-only
+view undercounts. Ratcheted in both directions, because deleting a theory family
+moves nothing a shim-count ratchet watches. The control is the point: adding a
+duplicate contentless family trips it, while `lean_crosscheck_representative`
+happily raised its own count 73 → 74 and **passed** — so until now, adding a
+contentless refuter to the headline was entirely unguarded.
+
+*Not yet done:* `scripts/check-lean-gate.sh` itself still prints ONE
+undifferentiated total and floors the sum rather than the theory half. **Do not
+quote the 126 as "modules Lean proved" until then.** Open question, now visible
+in the printout and not yet explained: the `qf_bv`, `qf_ufbv` and `qf_abv`
+builders discard the returned fragment and route to a shim-class refuter, though
+`ProofFragment::QfBv`/`QfUfBv`/`QfAbv` are declared `TheoryReconstruction` — the
+family name and the routed fragment disagree.
 
 **The e-matching route can now hand out the instances it used.** The driver
 built exact provenance per instance and exposed an independent replay checker,
@@ -496,12 +513,25 @@ the fourth found by measurement: the smallest possible query (`∀x. f(x)=0` wit
 `f(5)≠0`) refutes through the *online CDCL(T)* session, not through any of the
 three obvious checks.
 
-*Blocked, structurally, not mechanically:* it is not wired to `Evidence`. The
-certificate carries `TermId`s naming terms **created during** e-matching, which
-do not exist in the arena `Evidence::check` is handed. Every family already
-wired is arena-independent for this reason. Interning does not rescue it — that
-needs identical rebuild order, which nothing enforces and no test would catch.
-Making the certificate arena-independent is the next slice.
+**And it is now wired — I was wrong that it could not be.** I recorded this as
+blocked by arena identity: the certificate names terms created *during*
+e-matching, which are not in the arena the query was parsed into. The premise is
+right and the conclusion was not. `produce_evidence` holds `&mut TermArena`, so
+the producer runs the driver on **that** arena instead of a scratch clone, and
+the instances land in the arena `Evidence::check` is later handed. A plain
+universal now reports `kind=unsat-quant-instance-set certified=1 arena=ok`.
+
+*Ordering was the real hazard, and I got it wrong first.* Placed among the
+specialised quantified producers it **shadowed** stronger evidence — four
+`evidence_finite_quant_uf_cert` tests and one in `evidence` lost their
+guarded-quantifier UF Alethe certificate to this generic one. It is now the last
+certifying arm, immediately before the bare fallback: the job is to upgrade what
+was `Unsat(None)`, never to demote a stronger certificate.
+
+*Still true:* the certificate is not **portable**. Its ids mean nothing to
+another arena, so unlike an Alethe proof it cannot be serialised and re-checked
+in a later process. Carrying the instances as data is a separate slice. The
+barber also still needs the skolemisation record.
 
 **Settled SMT-route facts are gated on `certified=1`, not just on the
 verdict.** The
