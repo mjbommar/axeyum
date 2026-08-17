@@ -178,6 +178,27 @@ fn generated_contract_exactly_matches_the_hand_built_declaration() {
     }
 }
 
+/// # Refreshing the fixture's `Cargo.lock`
+///
+/// `Cargo.lock` below is one of the six authenticated files, and the fixture
+/// builds itself with `--locked`. So the lock goes stale on its own schedule —
+/// a yanked upstream version, or the workspace graph moving under it — and
+/// `cargo_mir_build`'s `scalar_profile_reproduces_the_committed_root_independent_capture`
+/// fails with "cannot update the lock file ... because --locked was passed".
+///
+/// **The lock and the hash here must move in the same commit.** Refreshing one
+/// alone trades one red test for another; that is exactly what happened on
+/// 2026-08-13 (see `docs/plan/rado-publishable-result-2026-08-13.md`) and it
+/// happened again on 2026-08-16, which is why this note exists. Precedent for
+/// the class: 6261fae11, 083a5f7df.
+///
+/// Regenerate with `cargo generate-lockfile` in the fixture directory, then
+/// verify against the toolchain CI actually pins for that job —
+/// `nightly-2026-05-01` (ADR-0287, rustc `f53b654a8`) — with
+/// `cargo +nightly-2026-05-01 metadata --locked`, NOT with the repo's default
+/// nightly. Resolving on a newer toolchain can select crates whose
+/// `rust-version` the pinned one cannot satisfy, and `--locked` would then fail
+/// only in CI.
 #[test]
 fn committed_capture_is_authenticated_and_root_independent() {
     let root = fixture_root();
@@ -188,7 +209,7 @@ fn committed_capture_is_authenticated_and_root_independent() {
         ),
         (
             "Cargo.lock",
-            "ee512098776a99dc35b6b84134108fd5a82ca8d2c562ffa22b7584d022694ee5",
+            "b10b0e169afd2b1f797de553cd23475101fdc607907eadf5282e4d45ffe5b8f6",
         ),
         (
             "src/lib.rs",
