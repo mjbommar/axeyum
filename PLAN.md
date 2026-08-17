@@ -307,6 +307,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
+| 2026-08-17 | `9853fb6c` | REVERTED `a1493099`: it shipped `certified=1` on evidence whose independent re-check FAILED (two- and four-instance shapes; the one-instance shape passed only by `TermId` coincidence). Cause is architectural — the certificate carries ids of terms created during solving, and `smtcomp_cli` re-validates against a FRESH PARSE on purpose. Adds `tests/certified_implies_revalidatable.rs`, the general invariant `is_certified()` => re-validates against an independently re-parsed arena, which per-variant suites structurally could not enforce. Both directions exercised. The driver-side certificate work (`28755674`) stands. |
 | 2026-08-17 | `pending` | QF_BV reaches Lean as REASONING: a `qf_bv_wide` crosscheck family runs `a <= b && b < a` at `BitVec(16)` and asserts the module is a theory reconstruction, not merely that Lean accepted it. The existing `qf_bv` family uses `BitVec(2)`, where `term_level_enum_certifies` wins before `ProofFragment::QfBv` is reached -- so the test named for the foundational bit-blasting path ran at a width where bit-blasting is never used. Crossover measured between 8 and 16 bits and pinned by `narrow_bv_enumerates_and_wide_bv_reconstructs`. Split moves 32 -> 33 theory families (structural unchanged at 41); both crosscheck floors and the gate's reasoning floor raised to match. Real Lean accepts it; gate reports 127 checks. |
 | 2026-08-17 | `4cd5d6f0` | `scripts/check-lean-gate.sh` reports the two halves of its headline and floors the REASONING one (`THEORY_FAMILY_FLOOR=32`), verified end-to-end under real Lean 4.30.0. Flooring only the sum is what let the gap hide: swapping a theory family for an attestation leaves the 126 unmoved. Three guards each driven to fail — raised floor, absent summary, unparseable summary. Also corrects the `qf_bv` test's doc comment, which claimed a bit-level refutation type-checks in Lean; that module is an attestation containing no bit-vectors (the refutation is real and checked in Rust). |
 | 2026-08-17 | `a1493099` | The e-matching route CERTIFIES: `Evidence::UnsatQuantInstanceSet` wired through `produce_evidence` / `kind_label` / `recheck_certificate` / `is_certified`; a plain universal goes from `unsat-uncertified certified=0` to `unsat-quant-instance-set certified=1`. Corrects my own claim that this was blocked by arena identity — `produce_evidence` holds `&mut TermArena`, so producing on it rather than a clone puts the instances where `Evidence::check` will look. Ordering is load-bearing and was wrong first: placed early it displaced the guarded-quantifier UF Alethe cert in 5 tests, so it is now the last certifying arm. Also fixes a `clippy::match_same_arms` my previous commit put on main. |
@@ -554,13 +555,34 @@ the fourth found by measurement: the smallest possible query (`∀x. f(x)=0` wit
 `f(5)≠0`) refutes through the *online CDCL(T)* session, not through any of the
 three obvious checks.
 
-**And it is now wired — I was wrong that it could not be.** I recorded this as
-blocked by arena identity: the certificate names terms created *during*
-e-matching, which are not in the arena the query was parsed into. The premise is
-right and the conclusion was not. `produce_evidence` holds `&mut TermArena`, so
-the producer runs the driver on **that** arena instead of a scratch clone, and
-the instances land in the arena `Evidence::check` is later handed. A plain
-universal now reports `kind=unsat-quant-instance-set certified=1 arena=ok`.
+**I wired it to `Evidence`, shipped a false certification claim, and reverted
+it.** I had recorded this as blocked by arena identity, then argued myself out of
+that on the grounds that `produce_evidence` holds `&mut TermArena`. True of the
+in-process path; false of the path the gate uses. `smtcomp_cli` re-validates
+against a **fresh parse** on purpose — "the producing solve's arena is
+deliberately not reused" — and ids from one arena mean nothing in another:
+
+```
+one instance     kind=unsat-quant-instance-set certified=1 arena=ok
+two instances    kind=unsat-quant-instance-set certified=1 arena=FAIL
+four instances   kind=unsat-quant-instance-set certified=1 arena=FAIL
+```
+
+`certified=1` while the independent re-check FAILED, which is the soundness-alarm
+state. The single-instance row passed because the checker happened to rebuild its
+instance at the same `TermId` — allocation order presented as verification, and
+the reason "it passed" was not evidence that it worked. Reverted (`9853fb6c`);
+the route reports `unsat-uncertified` again, which is true.
+
+**The guard that should have existed now does.**
+`tests/certified_implies_revalidatable.rs` asserts one invariant across evidence
+kinds: `is_certified()` implies `Verified` when re-checked against an
+independently re-parsed arena. Per-variant suites structurally could not catch
+this — each exercises the variant its author added, so a new variant arrives
+under no general obligation. Both directions exercised: reapplying the reverted
+wiring fails it, naming both offending rows, and a second test requires ≥3 rows
+to be certified *and* verified so a world where nothing certifies cannot pass by
+saying nothing.
 
 *Ordering was the real hazard, and I got it wrong first.* Placed among the
 specialised quantified producers it **shadowed** stronger evidence — four
@@ -569,10 +591,11 @@ guarded-quantifier UF Alethe certificate to this generic one. It is now the last
 certifying arm, immediately before the bare fallback: the job is to upgrade what
 was `Unsat(None)`, never to demote a stronger certificate.
 
-*Still true:* the certificate is not **portable**. Its ids mean nothing to
-another arena, so unlike an Alethe proof it cannot be serialised and re-checked
-in a later process. Carrying the instances as data is a separate slice. The
-barber also still needs the skolemisation record.
+*The remaining work is exactly the portability I first named:* carry instances
+as reconstructable data (assertion + bindings are query-side and reproduce in any
+parse) and have the checker rebuild them in **its** arena, comparing structurally
+rather than by id — and rebuild the ground set from verified pieces rather than
+trusting the recorded ids. Only then can this be `Evidence`.
 
 **Settled SMT-route facts are gated on `certified=1`, not just on the
 verdict.** The
