@@ -251,7 +251,5 @@ fn an_axiom_rests_on_itself() {
     // assumed. The real prelude's 30 axioms are where this property can be
     // exercised at all, and if that ever reaches zero this test must move again
     // rather than be deleted: the property is about axioms, not about ℝ.
-    assert!(
-        footprint_names(&kernel, "Real.add_comm").contains(&"Real.add_comm".to_owned())
-    );
+    assert!(footprint_names(&kernel, "Real.add_comm").contains(&"Real.add_comm".to_owned()));
 }
