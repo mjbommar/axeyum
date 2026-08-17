@@ -17,10 +17,29 @@ external checking, mostly via Carcara. Agreement with an oracle is tiered
 separately so it cannot inflate the number; 15 entries stay `unclassified`
 rather than being sorted into a flattering bucket. Now floored.
 
-**Next.** Items A (generate the table) and C (explicit "decided, not certified"
-status) are the real fix — this checker is a heuristic over prose and says so.
+**Item B is done, and derived** (`--rank`, also in `just flywheel`): the 12
+unchecked logics are banded by *distance to an external checker*, not by
+opinion. Band 1 — `QF_IDL`, `QF_RDL`, `SAT` — already build a refutation
+artifact; `propositional_interpolant` constructs a DRAT proof, checks it with
+`check_drat`, and returns `Option<BoolExpr>`, dropping the artifact on the floor.
+
+Ranking exposed a defect in the metric itself: `tier` is per *row*, and three
+logics (`QF_AUFBV`, `QF_IDL`, `QF_RDL`) are known only through a compound row,
+so a quarter of the gap was uniform-by-assumption. Measured, `QF_IDL / QF_RDL`
+genuinely differ — QF_RDL renders a 47 KB Lean theory reconstruction that
+official Lean 4.30.0 accepts (two mutations rejected), QF_IDL renders only an
+attestation. The table is deliberately **not** edited to claim QF_RDL as
+external: `check-lean-gate.sh` compiles a one-module-per-family slice that
+contains no QF_RDL module, and moving this metric by rewriting the prose it
+reads is the failure this strand exists to prevent.
+
+**Next.** Hand a `QF_RDL` module to the Lean gate — the cheapest gap closure in
+the ranking, and plumbing rather than a proof format. Then items A (generate the
+table) and C (explicit "decided, not certified" status), which are the real fix:
+this checker is a heuristic over prose and says so.
 
 <!-- plan-section: landed-changes -->
 
 | 2026-08-17 | `07de6526` | Mathematics strand's primary metric derived and gated: 36 of 101 capabilities name an external artifact checker, across 11 of 23 logics, against a documented 4 of 26. Control: disabling the external tier drops it to 0 and the floor fires. |
-| 2026-08-17 | `pending` | Denominator counts LOGICS not `area` strings: a compound like `QF_UFLIA/UFLRA` spans two, and its abbreviated second element named a phantom `UFLRA`. The 12 logics with no external check are now an explicit queue. |
+| 2026-08-17 | `a8a862133` | Denominator counts LOGICS not `area` strings: a compound like `QF_UFLIA/UFLRA` spans two, and its abbreviated second element named a phantom `UFLRA`. The 12 logics with no external check are now an explicit queue. |
+| 2026-08-17 | `pending` | Item B answered by derivation: the gap is banded by distance to an external checker, and the ranking found QF_RDL already renders a Lean theory module official Lean accepts — a "gap" logic blocked only on gate wiring. Controls: 6 new tests, incl. one proving a solved logic never appears in the queue. |

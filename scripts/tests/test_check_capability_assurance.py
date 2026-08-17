@@ -95,5 +95,68 @@ class CompoundAreaNamesCountAsTheLogicsTheyName(unittest.TestCase):
         self.assertEqual(CA.logics("datatypes"), {"datatypes"})
 
 
+class TheGapIsRankedByDistanceToAnExternalChecker(unittest.TestCase):
+    """Strand item B. The ranking is derived because a written one rots: item B
+    itself names `QF_UF` and `datatypes` as candidates, and both have since
+    become externally checked."""
+
+    @staticmethod
+    def _recs(rows: list[tuple[str, str]]) -> list[dict[str, str]]:
+        return [{"area": a, "evidence": e, "feature": "f"} for a, e in rows]
+
+    def test_an_existing_refutation_artifact_is_band_one(self) -> None:
+        """A DRAT proof that is built and discarded is plumbing, not research."""
+        recs = self._recs([
+            ("QF_LRA", "checked by Lean"),
+            ("SAT", "the DRAT certificate is checked by check_drat"),
+        ])
+        self.assertEqual(CA.rank(recs)["SAT"][0], 1)
+
+    def test_a_model_replay_without_a_refutation_artifact_is_band_two(self) -> None:
+        recs = self._recs([
+            ("QF_LRA", "checked by Lean"),
+            ("QF_S", "every sat model is replayed through the ground evaluator"),
+        ])
+        self.assertEqual(CA.rank(recs)["QF_S"][0], 2)
+
+    def test_no_named_artifact_at_all_is_band_three(self) -> None:
+        recs = self._recs([
+            ("QF_LRA", "checked by Lean"),
+            ("synthesis", "the enumerator terminates"),
+        ])
+        self.assertEqual(CA.rank(recs)["synthesis"][0], 3)
+
+    def test_an_externally_checked_logic_is_not_in_the_gap_at_all(self) -> None:
+        """The control: ranking must not offer work on a solved logic."""
+        recs = self._recs([("QF_LRA", "reconstructed and checked by Lean")])
+        self.assertNotIn("QF_LRA", CA.rank(recs))
+
+
+class ASharedRowCannotStateTwoDifferentAssurances(unittest.TestCase):
+    """`tier` is per ROW, so `QF_IDL / QF_RDL` asserts one tier for both. Measured
+    2026-08-17 that is wrong for exactly that row: QF_RDL renders a Lean theory
+    reconstruction (official Lean 4.30.0 accepts it; two mutations rejected) and
+    QF_IDL renders only a structural attestation. The number cannot express that,
+    so it must at least disclose it."""
+
+    @staticmethod
+    def _recs(rows: list[str]) -> list[dict[str, str]]:
+        return [{"area": a, "evidence": "e", "feature": "f"} for a in rows]
+
+    def test_a_logic_seen_only_in_a_compound_row_is_disclosed(self) -> None:
+        recs = self._recs(["QF_IDL / QF_RDL", "QF_LRA"])
+        self.assertEqual(CA.compound_only(recs), {"QF_IDL", "QF_RDL"})
+
+    def test_a_logic_with_its_own_row_is_not_disclosed(self) -> None:
+        """The control: having a row of its own is what makes the tier that
+        logic's own claim, even when it also appears in a compound row."""
+        recs = self._recs(["QF_IDL / QF_RDL", "QF_RDL"])
+        self.assertEqual(CA.compound_only(recs), {"QF_IDL"})
+
+    def test_the_committed_table_discloses_the_pair_this_was_found_on(self) -> None:
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        self.assertLessEqual({"QF_IDL", "QF_RDL"}, CA.compound_only(recs))
+
+
 if __name__ == "__main__":
     unittest.main()

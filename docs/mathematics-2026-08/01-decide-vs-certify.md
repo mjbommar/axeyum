@@ -128,9 +128,56 @@ hand.** A 1,858-line hand-written table of what the system can do is the same
 category of artifact as a guard that exists only in a comment. It should be
 generated, or at minimum gated against the routes it describes.
 
-**B. Rank the 21 by how much a certificate would be worth.** They are not
-equal. `QF_UF` and `datatypes` have small, well-understood proof formats.
-`QF_FP` and strings do not. Ranking honestly beats attempting uniformly.
+**B. Rank the gap by how much a certificate would be worth.** *Done
+2026-08-17, and derived rather than written down* — `python3
+scripts/check-capability-assurance.py --rank` (also in `just flywheel`). This
+item originally named `QF_UF` and `datatypes` as candidates to rank; both are
+externally checked now, which is exactly why the ranking cannot live in prose.
+
+The band is *distance to an external checker*, read off what each logic's
+evidence says already exists:
+
+| band | meaning | logics |
+| --- | --- | --- |
+| 1 | a refutation artifact is already built — export it and point a checker at it | `QF_IDL`, `QF_RDL`, `SAT` |
+| 2 | model replay only — needs an UNSAT proof format first | `QF_AUFBV`, `QF_FP`, `QF_NIA`, `QF_S`, `incremental`, `symbolic execution` |
+| 3 | no refutation artifact named | `diagnostics`, `optimization`, `synthesis` |
+
+Band 1 is plumbing, not research, and one row of it is already further along
+than the table can say. `propositional_interpolant` calls `solve_with_drat_proof`,
+checks the proof with `check_drat`, and returns `Option<BoolExpr>` — **the DRAT
+artifact is constructed and dropped**, so no external checker can ever see it.
+
+**The shared-row defect, and what it hid.** `tier` is per *row*, and
+`QF_IDL / QF_RDL` is one row, so both logics carry one assurance claim. Measured
+2026-08-17 they do not deserve the same one:
+
+```text
+qf_rdl  scan=Lra        -> TheoryReconstruction, 47538 bytes
+qf_idl  scan=ArithDpll  -> DECLINED: emits only a structural attestation
+```
+
+`QF_RDL` refutations scan into `Lra` — the same fragment as `QF_LRA`, which *is*
+externally checked. Handed to official Lean 4.30.0 by hand, that module is
+accepted in 0.20s, and two independent mutations of it (a hypothesis relation
+weakened `lt`→`le`; a hypothesis sign flipped) are both rejected. `QF_IDL`
+declines because integer difference logic routes through `ArithDpll`, which has
+no theory reconstruction.
+
+So the top item of this ranking is not a proof format at all: **hand a `QF_RDL`
+module to the Lean gate.** `scripts/check-lean-gate.sh` compiles a
+one-module-per-*family* representative slice, and the `Lra` representative is not
+a `QF_RDL` module — which is why a logic that official Lean already accepts still
+counts as unchecked. The precondition is now guarded by
+`crates/axeyum-solver/tests/difference_logic_lean_content.rs` (3 tests, including
+a control proving the attestation class is still reachable); the gate wiring is
+not done, and the table is deliberately **not** edited to claim otherwise —
+moving this metric by rewriting the prose it reads would be the thing this
+strand exists to prevent.
+
+Three logics — `QF_AUFBV`, `QF_IDL`, `QF_RDL` — are known *only* through a
+compound row, so a quarter of the reported gap was uniform-by-assumption. The
+`--rank` output now discloses them.
 
 **C. Make "decided, not certified" an explicit status**, so the gap is visible
 in the artifact instead of discoverable only by reading a prose evidence field.

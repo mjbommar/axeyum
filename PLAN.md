@@ -168,7 +168,8 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `3cc574c7` `502c0503` | Both counted proof-production errors closed (`int_blast`'s deliberate `int.pow2` decline was mapped to a backend error, losing a verdict `check_auto` decides in 0.13ms), and settled SMT-route facts gated on certification rather than verdict — 17 of 17, enforced. |
 | 2026-08-17 | `ea9500bc` `e97db72b` `2c535667` `f40f7dc4` | Gate repairs: `check-parity-docs.py` crashed before running a single check (hiding 14 failures); CI's crosscheck grep still pinned 73 families; and `PLAN.md`'s sources were 24 KB over a 52 KB budget, journal moved to result notes. |
 | 2026-08-17 | `07de6526` | Mathematics strand's primary metric derived and gated: 36 of 101 capabilities name an external artifact checker, across 11 of 23 logics, against a documented 4 of 26. Control: disabling the external tier drops it to 0 and the floor fires. |
-| 2026-08-17 | `pending` | Denominator counts LOGICS not `area` strings: a compound like `QF_UFLIA/UFLRA` spans two, and its abbreviated second element named a phantom `UFLRA`. The 12 logics with no external check are now an explicit queue. |
+| 2026-08-17 | `a8a862133` | Denominator counts LOGICS not `area` strings: a compound like `QF_UFLIA/UFLRA` spans two, and its abbreviated second element named a phantom `UFLRA`. The 12 logics with no external check are now an explicit queue. |
+| 2026-08-17 | `pending` | Item B answered by derivation: the gap is banded by distance to an external checker, and the ranking found QF_RDL already renders a Lean theory module official Lean accepts — a "gap" logic blocked only on gate wiring. Controls: 6 new tests, incl. one proving a solved logic never appears in the queue. |
 | 2026-08-17 | `f18904db7` | R3: reachability census re-derived and committed as `artifacts/reachability/r3-census.tsv` (190 rows over both corpora); the ranked tables in `04-reachability.md` are now a generated view of it, gated by `scripts/check-reachability-census.py` inside `check-foundational-resources.sh`. 13 guards, each with its own rejection path; mutation-verified that deleting any one kills exactly one test. Corpus coverage checked in both directions and reported SKIPPED, never passed, when the sibling checkout is absent. Stale numbers corrected in `04` and `05`. |
 | 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
 Older landed changes (including the 2026-08-06 A1/A2 closure commits) remain
@@ -367,8 +368,26 @@ external checking, mostly via Carcara. Agreement with an oracle is tiered
 separately so it cannot inflate the number; 15 entries stay `unclassified`
 rather than being sorted into a flattering bucket. Now floored.
 
-**Next.** Items A (generate the table) and C (explicit "decided, not certified"
-status) are the real fix — this checker is a heuristic over prose and says so.
+**Item B is done, and derived** (`--rank`, also in `just flywheel`): the 12
+unchecked logics are banded by *distance to an external checker*, not by
+opinion. Band 1 — `QF_IDL`, `QF_RDL`, `SAT` — already build a refutation
+artifact; `propositional_interpolant` constructs a DRAT proof, checks it with
+`check_drat`, and returns `Option<BoolExpr>`, dropping the artifact on the floor.
+
+Ranking exposed a defect in the metric itself: `tier` is per *row*, and three
+logics (`QF_AUFBV`, `QF_IDL`, `QF_RDL`) are known only through a compound row,
+so a quarter of the gap was uniform-by-assumption. Measured, `QF_IDL / QF_RDL`
+genuinely differ — QF_RDL renders a 47 KB Lean theory reconstruction that
+official Lean 4.30.0 accepts (two mutations rejected), QF_IDL renders only an
+attestation. The table is deliberately **not** edited to claim QF_RDL as
+external: `check-lean-gate.sh` compiles a one-module-per-family slice that
+contains no QF_RDL module, and moving this metric by rewriting the prose it
+reads is the failure this strand exists to prevent.
+
+**Next.** Hand a `QF_RDL` module to the Lean gate — the cheapest gap closure in
+the ranking, and plumbing rather than a proof format. Then items A (generate the
+table) and C (explicit "decided, not certified" status), which are the real fix:
+this checker is a heuristic over prose and says so.
 
 **R3 done; the census is an artifact now, and `17` was not one** (`WIP`,
 math-r3, 2026-08-17). The 2026-08-13 misconception audit's `census.tsv` was

@@ -58,6 +58,10 @@ else
   echo "  (docs/plan/generated/proof-gap-matrix.md absent — run scripts/gen-proof-gap-matrix.py)"
 fi
 
+section "CERTIFICATE GAP — logics we decide but no external checker reads"
+python3 scripts/check-capability-assurance.py --rank --quiet 2>/dev/null \
+  | grep -v '^CAPABILITY_ASSURANCE|' | sed 's/^/  /'
+
 section "LEAN — how much of what Lean reads is REASONING, not attestation"
 echo "  A structural attestation is an axiom pair Lean cannot fail on the merits."
 echo "  Floors live in scripts/check-lean-gate.sh; the split is printed by"

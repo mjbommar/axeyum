@@ -51,6 +51,25 @@ SELF = re.compile(r"check_drat|recheck|replay|re-deriv|independent(ly)? check", 
 # Verdict agreement, not artifact checking.
 DIFFERENTIAL = re.compile(r"differential|vs\.? Z3|vs\.? cvc5|oracle", re.I)
 
+# --- ranking the gap (strand item B) ------------------------------------
+# What an external checker would need to CONSUME. A logic whose evidence already
+# names a refutation artifact is a plumbing job; one that names only a model
+# replay needs an UNSAT proof format first, which is a research question.
+UNSAT_ARTIFACT = re.compile(
+    r"\bDRAT\b|\bLRAT\b|Farkas|resolution proof|unsat core|certificate", re.I
+)
+# `replay` unanchored: the table says "model replay" in one row and "is REPLAYED
+# through the ground evaluator" in the next, and they mean the same thing. Band 1
+# is tested first, so widening here cannot steal a logic that has a refutation
+# artifact.
+SAT_ARTIFACT = re.compile(r"replay|witness|model is (re)?checked", re.I)
+
+BANDS = {
+    1: "artifact already built — export it and point a checker at it",
+    2: "model replay only — needs an UNSAT proof format first",
+    3: "no refutation artifact named",
+}
+
 # The externally-checked count may not FALL. Measured 2026-08-17: 36 entries
 # across 11 of 23 areas.
 #
@@ -129,6 +148,49 @@ def tier(rec: dict[str, str]) -> str:
     return "unclassified"
 
 
+def rank(recs: list[dict[str, str]]) -> dict[str, tuple[int, set[str]]]:
+    """Gap logics banded by how far they are from an external check.
+
+    Derived, because a written-down ranking rots: item B names `QF_UF` and
+    `datatypes` as candidates to rank, and both are externally checked already.
+
+    Same caveat as `tier`: this reads the evidence PROSE, so it reports what the
+    table claims exists, not what the code emits. It is a queue, not a gate.
+    """
+    external = {
+        lg
+        for r in recs
+        if tier(r) == "external-artifact-checker"
+        for lg in logics(r["area"])
+    }
+    out: dict[str, tuple[int, set[str]]] = {}
+    for lg in {lg for r in recs for lg in logics(r["area"])} - external:
+        ev = " ".join(
+            r.get("evidence", "") for r in recs if lg in logics(r["area"])
+        )
+        hits = {h.lower() for h in UNSAT_ARTIFACT.findall(ev)}
+        band = 1 if hits else (2 if SAT_ARTIFACT.search(ev) else 3)
+        out[lg] = (band, hits)
+    return out
+
+
+def compound_only(recs: list[dict[str, str]]) -> set[str]:
+    """Logics whose assurance is never stated on their own.
+
+    `tier` is per ROW, so a row named `QF_IDL / QF_RDL` asserts one tier for both
+    logics. Measured 2026-08-17 that is wrong for exactly that row: QF_RDL
+    reconstructs to a Lean theory module and QF_IDL renders only an attestation
+    (`crates/axeyum-solver/tests/difference_logic_lean_content.rs`). Reported so
+    the gap list carries its own uncertainty.
+    """
+    solo = {
+        lg for r in recs if len(logics(r["area"])) == 1 for lg in logics(r["area"])
+    }
+    return {
+        lg for r in recs if len(logics(r["area"])) > 1 for lg in logics(r["area"])
+    } - solo
+
+
 def main(argv: list[str]) -> int:
     text = TABLE.read_text(encoding="utf-8")
     recs = entries(text)
@@ -147,6 +209,22 @@ def main(argv: list[str]) -> int:
             print("  unclassified areas: " + ", ".join(sorted(
                 {lg for r in recs if tier(r) == "unclassified"
                  for lg in logics(r["area"])})))
+
+    if "--rank" in argv:
+        banded = rank(recs)
+        shared = compound_only(recs)
+        print(f"  gap ranked by distance to an external checker ({len(banded)} logics):")
+        for band in sorted(BANDS):
+            members = sorted(lg for lg, (b, _) in banded.items() if b == band)
+            if not members:
+                continue
+            print(f"    band {band} — {BANDS[band]}")
+            for lg in members:
+                hits = ", ".join(sorted(banded[lg][1])) or "-"
+                mark = "  [tier shared with another logic]" if lg in shared else ""
+                print(f"      {lg:<20} artifact: {hits}{mark}")
+        if shared:
+            print("  assurance never stated per logic: " + ", ".join(sorted(shared)))
 
     print(f"CAPABILITY_ASSURANCE|entries={len(recs)}|areas={len(areas)}|"
           f"external={external}|self={tiers['self-checker']}|"
