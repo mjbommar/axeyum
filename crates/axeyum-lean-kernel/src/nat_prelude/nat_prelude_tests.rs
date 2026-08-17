@@ -3804,3 +3804,100 @@ fn positivity_lemmas_apply_and_track_their_dividend() {
         "accepted `1 <= 4` as the positivity of the dividend 6"
     );
 }
+
+/// `Nat.factorial` **computes**, and `dvd_factorial_of_le` applies to concrete
+/// arguments with a conclusion that reduces to a true divisibility fact.
+///
+/// The computation half is the load-bearing control, not decoration. Both
+/// recursion rules hold definitionally, so a step that multiplied by `j` instead
+/// of `succ j` would still type-check, `factorial_zero`/`factorial_succ` would
+/// still be admitted as stated, and `dvd_factorial_of_le` would still be
+/// admitted — about the constantly-zero function, which everything divides.
+/// Reduction to numerals with negative controls beside it is what excludes that.
+#[test]
+fn factorial_computes_and_every_positive_bound_divides_it() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let at_zero = f.factorial(zero);
+    assert!(f.k.def_eq(at_zero, one), "0! must reduce to 1");
+    let at_one = f.factorial(one);
+    assert!(f.k.def_eq(at_one, one), "1! must reduce to 1");
+
+    let four = f.num(4);
+    let twenty_four = f.num(24);
+    let at_four = f.factorial(four);
+    assert!(f.k.def_eq(at_four, twenty_four), "4! must reduce to 24");
+
+    let five = f.num(5);
+    let one_twenty = f.num(120);
+    let at_five = f.factorial(five);
+    assert!(f.k.def_eq(at_five, one_twenty), "5! must reduce to 120");
+
+    // NEGATIVE reduction controls: `def_eq` must not be vacuously true here, and
+    // the zero-collapse a mis-stepped recursion would produce must be visible.
+    assert!(!f.k.def_eq(at_four, zero), "4! must NOT be def-eq to 0");
+    assert!(
+        !f.k.def_eq(at_five, twenty_four),
+        "5! must NOT be def-eq to 24"
+    );
+
+    // `1 <= 3` and `3 <= 5`, built from the `Le` constructors.
+    let three = f.num(3);
+    let two = f.num(2);
+    let one_le_three = {
+        let base = f.lemma(p.le_refl, &[one]);
+        let to_two = f.lemma(p.le_step, &[one, one, base]);
+        f.lemma(p.le_step, &[one, two, to_two])
+    };
+    let three_le_five = {
+        let base = f.lemma(p.le_refl, &[three]);
+        let to_four = f.lemma(p.le_step, &[three, three, base]);
+        f.lemma(p.le_step, &[three, four, to_four])
+    };
+
+    let applied = f.lemma(
+        p.dvd_factorial_of_le,
+        &[three, five, one_le_three, three_le_five],
+    );
+    let inferred =
+        f.k.infer(applied)
+            .expect("1 <= 3 and 3 <= 5, so the theorem applies at (3, 5)");
+    let expected = {
+        let target = f.factorial(five);
+        f.dvd(three, target)
+    };
+    assert!(f.k.def_eq(inferred, expected));
+    // The conclusion is about the NUMBER 120, not an opaque application.
+    let concrete = f.dvd(three, one_twenty);
+    assert!(
+        f.k.def_eq(inferred, concrete),
+        "the admitted conclusion must reduce to `3 divides 120`"
+    );
+
+    // Both hypotheses are load-bearing, and the kernel checks the indices:
+    // `3 <= 5` is not `3 <= 3`, and it is not `1 <= 3` either.
+    let wrong_bound = {
+        let theorem = f.k.const_(p.dvd_factorial_of_le, vec![]);
+        let at_divisor = f.k.app(theorem, three);
+        let at_bound = f.k.app(at_divisor, three);
+        let at_positive = f.k.app(at_bound, one_le_three);
+        f.k.app(at_positive, three_le_five)
+    };
+    assert!(
+        f.k.infer(wrong_bound).is_err(),
+        "accepted a proof of `3 <= 5` where `3 <= 3` was required"
+    );
+    let wrong_positivity = {
+        let theorem = f.k.const_(p.dvd_factorial_of_le, vec![]);
+        let at_divisor = f.k.app(theorem, three);
+        let at_bound = f.k.app(at_divisor, five);
+        f.k.app(at_bound, three_le_five)
+    };
+    assert!(
+        f.k.infer(wrong_positivity).is_err(),
+        "accepted a proof of `3 <= 5` as the positivity hypothesis `1 <= 3`"
+    );
+}

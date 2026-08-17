@@ -1570,5 +1570,155 @@ pub(super) fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
         (stmt, proof)
     })?;
 
+    // dvd_factorial_of_le : ∀ d n, 1 ≤ d → d ≤ n → dvd d (factorial n)
+    //
+    // The first of the two ingredients Euclid's theorem (`F:nat-exists-prime-gt`)
+    // is missing: a single number that EVERY positive `d ≤ n` divides. Combined
+    // with the already-proved `not_dvd_one_add_mul_of_two_le` it is what makes
+    // `1 + n!` have no divisor in `[2, n]`; the remaining gap is "every `m ≥ 2`
+    // has a prime divisor", which needs minimisation over `lt_well_founded`.
+    //
+    // Induction on `n`, with the ORDER hypothesis inside the motive (the
+    // positivity hypothesis is fixed and stays outside), because the step needs
+    // to apply the induction hypothesis at a strictly smaller bound:
+    //
+    //   zero    `d ≤ 0` and `1 ≤ d` chain to `1 ≤ 0`, which `not_succ_le_zero`
+    //           refutes; `False.rec` supplies the goal.
+    //   succ j  `lt_or_eq_of_le` splits `d ≤ succ j` into `d < succ j` or
+    //           `d = succ j`. `factorial (succ j) ≡ factorial j * succ j` holds
+    //           DEFINITIONALLY, so neither branch rewrites the goal to reach it:
+    //             * `d < succ j` is `succ d ≤ succ j`, so `le_of_succ_le_succ`
+    //               gives `d ≤ j`, the induction hypothesis gives
+    //               `d ∣ factorial j`, and `dvd_mul_right_of_dvd` multiplies by
+    //               `succ j`;
+    //             * `d = succ j` uses `dvd_mul (succ j) (factorial j)`, commutes
+    //               the product into the definitional shape, and transports the
+    //               divisor back along `succ j = d` — note the `symm`, since the
+    //               branch hypothesis reads `d = succ j` and the transport has to
+    //               run the other way.
+    d.theorem(p.dvd_factorial_of_le, 2, &|d, values| {
+        let (divisor, bound) = (values[0], values[1]);
+        let zero = d.zero();
+        let unit = d.succ(zero);
+        let positive_ty = d.le(unit, divisor);
+        let order_ty = d.le(divisor, bound);
+        let conclusion = {
+            let target = d.factorial(bound);
+            d.dvd(divisor, target)
+        };
+        let stmt = {
+            let inner = d.arrow(order_ty, conclusion);
+            d.arrow(positive_ty, inner)
+        };
+
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+
+        // The motive carries the order hypothesis so the step can weaken it.
+        let claim = |d: &mut NatDev<'_>, x: ExprId| {
+            let hypothesis = d.le(divisor, x);
+            let factorial = d.factorial(x);
+            let target = d.dvd(divisor, factorial);
+            d.arrow(hypothesis, target)
+        };
+
+        let at_zero = |d: &mut NatDev<'_>| {
+            let zero = d.zero();
+            let hypothesis_ty = d.le(divisor, zero);
+            let goal = {
+                let factorial = d.factorial(zero);
+                d.dvd(divisor, factorial)
+            };
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            // 1 ≤ divisor ≤ 0, i.e. `Le (succ zero) zero`, which is refutable.
+            let unit = d.succ(zero);
+            let one_le_zero = d.lemma(p.le_trans, &[unit, divisor, zero, positive, h]);
+            let contradiction = d.lemma(p.not_succ_le_zero, &[zero, one_le_zero]);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let level = d.kernel().level_zero();
+            let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+            let anon = d.anon_name();
+            let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+            let body = d.apply(rec, &[motive, contradiction]);
+            d.lam_fv(h_fv, hypothesis_ty, body)
+        };
+
+        let at_succ = |d: &mut NatDev<'_>, j: ExprId, ih: ExprId| {
+            let successor = d.succ(j);
+            let hypothesis_ty = d.le(divisor, successor);
+            let target = {
+                let factorial = d.factorial(successor);
+                d.dvd(divisor, factorial)
+            };
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let strict_ty = d.lt(divisor, successor);
+            let equal_ty = d.eq(divisor, successor);
+            let split_ty = d.const_app(p.logic.or, &[strict_ty, equal_ty]);
+            let split = d.lemma(p.lt_or_eq_of_le, &[divisor, successor, h]);
+            let anon = d.anon_name();
+            let split_motive = d.kernel().lam(anon, split_ty, target, BinderInfo::Default);
+
+            // `d < succ j` unfolds to `succ d ≤ succ j`, so the bound drops to `j`.
+            let strict_minor = {
+                let strict_fv = d.fresh_fvar();
+                let strict = d.kernel().fvar(strict_fv);
+                let smaller = d.lemma(p.le_of_succ_le_succ, &[divisor, j, strict]);
+                let inherited = d.apply(ih, &[smaller]);
+                let prior = d.factorial(j);
+                // `factorial j * succ j` IS `factorial (succ j)` definitionally.
+                let body = d.lemma(
+                    p.dvd_mul_right_of_dvd,
+                    &[divisor, prior, successor, inherited],
+                );
+                d.lam_fv(strict_fv, strict_ty, body)
+            };
+
+            // `d = succ j`: the last factor of `factorial (succ j)` is the divisor.
+            let equal_minor = {
+                let equal_fv = d.fresh_fvar();
+                let equal = d.kernel().fvar(equal_fv);
+                let prior = d.factorial(j);
+                let left_product = d.mul(successor, prior);
+                let right_product = d.mul(prior, successor);
+                let canonical = d.lemma(p.dvd_mul, &[successor, prior]);
+                let commute = d.lemma(p.mul_comm, &[successor, prior]);
+                let reoriented = {
+                    let motive = d.eq_motive(left_product, &|d, x| d.dvd(successor, x));
+                    d.transport(left_product, motive, canonical, right_product, commute)
+                };
+                // `equal : d = succ j`, and the transport replaces `succ j` by
+                // `d`, so it needs the equation the OTHER way round.
+                let reverse = d.symm(divisor, successor, equal);
+                let motive = d.eq_motive(successor, &|d, x| {
+                    let factorial = d.factorial(successor);
+                    d.dvd(x, factorial)
+                });
+                let body = d.transport(successor, motive, reoriented, divisor, reverse);
+                d.lam_fv(equal_fv, equal_ty, body)
+            };
+
+            let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+            let body = d.apply(
+                or_rec,
+                &[
+                    strict_ty,
+                    equal_ty,
+                    split_motive,
+                    strict_minor,
+                    equal_minor,
+                    split,
+                ],
+            );
+            d.lam_fv(h_fv, hypothesis_ty, body)
+        };
+
+        let selected = d.induct(&claim, &at_zero, &at_succ, bound);
+        let proof = d.lam_fv(positive_fv, positive_ty, selected);
+        (stmt, proof)
+    })?;
+
     Ok(())
 }

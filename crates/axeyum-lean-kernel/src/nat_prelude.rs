@@ -206,6 +206,15 @@ pub struct NatPrelude {
     pub gcd: NameId,
     /// `Nat.sumRange : (Nat → Nat) → Nat → Nat`.
     pub sum_range: NameId,
+    /// `Nat.factorial : Nat → Nat`, by structural recursion on its argument:
+    /// `factorial zero ≡ 1` and `factorial (succ n) ≡ factorial n * succ n`
+    /// hold **definitionally** (β/δ/ι), exactly as for [`pow`](Self::pow), so a
+    /// proof can step through them without an explicit rewrite.
+    ///
+    /// The first half of Euclid's theorem (`F:nat-exists-prime-gt`): the number
+    /// that every `d` with `1 ≤ d ≤ n` divides. See
+    /// [`dvd_factorial_of_le`](Self::dvd_factorial_of_le).
+    pub factorial: NameId,
     /// `Nat.pred : Nat → Nat`, with `pred zero = zero`.
     pub pred: NameId,
     /// `Nat.sub : Nat → Nat → Nat`, truncated at zero and recursive in the
@@ -269,6 +278,10 @@ pub struct NatPrelude {
     pub mul_sum_range: NameId,
     /// `mul_sumRange_pow : ∀ a n, a * sumRange (a^·) n = sumRange (a^(·+1)) n`.
     pub mul_sum_range_pow: NameId,
+    /// `factorial_zero : factorial zero = succ zero`.
+    pub factorial_zero: NameId,
+    /// `factorial_succ : ∀ n, factorial (succ n) = factorial n * succ n`.
+    pub factorial_succ: NameId,
 
     // --- additive theorems ---------------------------------------------------
     /// `zero_add : ∀ (n : Nat), Eq Nat (add zero n) n`.
@@ -523,6 +536,15 @@ pub struct NatPrelude {
     pub one_le_of_dvd_pos: NameId,
     /// `Nat.one_le_mul : ∀ a b, 1 ≤ a → 1 ≤ b → 1 ≤ a * b`.
     pub one_le_mul: NameId,
+    /// `Nat.dvd_factorial_of_le : ∀ d n, Le 1 d → Le d n → dvd d (factorial n)`.
+    ///
+    /// Every positive number at most `n` divides `n!`. This is the first of the
+    /// two ingredients Euclid's theorem (`F:nat-exists-prime-gt`) needs — the
+    /// number divisible by everything in range — and it is what makes
+    /// `1 + n!` have no divisor in `[2, n]`. The other ingredient, "every
+    /// `m ≥ 2` has a prime divisor" by minimisation over
+    /// [`lt_well_founded`](Self::lt_well_founded), is not yet declared.
+    pub dvd_factorial_of_le: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
     /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
@@ -592,6 +614,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             mod_: kernel.name_str(nat, "mod"),
             gcd: kernel.name_str(nat, "gcd"),
             sum_range: kernel.name_str(nat, "sumRange"),
+            factorial: kernel.name_str(nat, "factorial"),
             pred: kernel.name_str(nat, "pred"),
             sub: kernel.name_str(nat, "sub"),
             div_zero: kernel.name_str(nat, "div_zero"),
@@ -619,6 +642,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_range_congr: kernel.name_str(nat, "sumRange_congr"),
             mul_sum_range: kernel.name_str(nat, "mul_sumRange"),
             mul_sum_range_pow: kernel.name_str(nat, "mul_sumRange_pow"),
+            factorial_zero: kernel.name_str(nat, "factorial_zero"),
+            factorial_succ: kernel.name_str(nat, "factorial_succ"),
             zero_add: kernel.name_str(nat, "zero_add"),
             succ_add: kernel.name_str(nat, "succ_add"),
             add_comm: kernel.name_str(nat, "add_comm"),
@@ -730,6 +755,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             one_le_left_of_mul: kernel.name_str(nat, "one_le_left_of_mul"),
             one_le_of_dvd_pos: kernel.name_str(nat, "one_le_of_dvd_pos"),
             one_le_mul: kernel.name_str(nat, "one_le_mul"),
+            dvd_factorial_of_le: kernel.name_str(nat, "dvd_factorial_of_le"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
         };

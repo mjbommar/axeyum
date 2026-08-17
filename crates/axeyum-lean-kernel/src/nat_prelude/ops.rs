@@ -376,6 +376,12 @@ pub trait NatOps {
         self.const_app(name, &[f, n])
     }
 
+    /// `Nat.factorial n`.
+    fn factorial(&mut self, n: ExprId) -> ExprId {
+        let name = self.prelude().factorial;
+        self.const_app(name, &[n])
+    }
+
     /// `Nat.le x y` (the `Prop` `x ≤ y`).
     fn le(&mut self, x: ExprId, y: ExprId) -> ExprId {
         let f = self.prelude().le;

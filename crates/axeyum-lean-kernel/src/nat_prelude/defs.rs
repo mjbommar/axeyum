@@ -571,6 +571,48 @@ pub(super) fn declare_finite_ranges(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
         value,
         hint: ReducibilityHint::Regular(2),
     })?;
+
+    // factorial zero ≡ 1 ; factorial (succ j) ≡ factorial j * succ j
+    //
+    // Unary, so `define_binary` does not apply and the `Nat.rec` application is
+    // spelled out the way `pred` is. The recursor eliminates into `Nat` (level
+    // `1`), the motive is the constant family `fun _ => Nat`, and the step takes
+    // the predecessor `j` together with the recursive value `ih = factorial j`.
+    //
+    // Writing it this way — rather than via an equation lemma — is what makes
+    // both computation rules hold DEFINITIONALLY (β/δ/ι), so
+    // `dvd_factorial_of_le` can read `dvd d (factorial (succ j))` and
+    // `dvd d (factorial j * succ j)` as the same proposition with no rewrite.
+    // `factorial_zero`/`factorial_succ` below are therefore `refl` proofs and
+    // exist only so callers can rewrite by name.
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, nat, nat, BinderInfo::Default);
+    let base = d.num(1);
+    let step = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let successor = d.succ(j);
+        let body = d.mul(ih, successor);
+        let with_ih = d.lam_fv(ih_fv, nat, body);
+        d.lam_fv(j_fv, nat, with_ih)
+    };
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let one = d.level_one();
+    let rec = d.kernel().const_(p.rec, vec![one]);
+    let body = d.apply(rec, &[motive, base, step, n]);
+    let value = d.lam_fv(n_fv, nat, body);
+    let ty = d.arrow(nat, nat);
+    // Strictly greater delta height than `mul` (2), the only definition it calls.
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.factorial,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(3),
+    })?;
     Ok(())
 }
 
@@ -698,5 +740,21 @@ pub(super) fn declare_defining_equations(
         };
         d.declare_theorem(p.sum_range_succ, ty, value)?;
     }
+    // factorial_zero : factorial zero = 1
+    d.theorem(p.factorial_zero, 0, &|d, _v| {
+        let zero = d.zero();
+        let lhs = d.factorial(zero);
+        let one = d.num(1);
+        (d.eq(lhs, one), d.refl(one))
+    })?;
+    // factorial_succ : ∀ n, factorial (succ n) = factorial n * succ n
+    d.theorem(p.factorial_succ, 1, &|d, v| {
+        let n = v[0];
+        let successor = d.succ(n);
+        let lhs = d.factorial(successor);
+        let prior = d.factorial(n);
+        let rhs = d.mul(prior, successor);
+        (d.eq(lhs, rhs), d.refl(rhs))
+    })?;
     Ok(())
 }
