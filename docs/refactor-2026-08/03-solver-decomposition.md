@@ -105,6 +105,49 @@ to having that proof, not a plan of record.
 
 This is the one where "proven by use" is arguably already satisfied.
 
+**Measured 2026-08-16, and the ranking does not survive it.** Every claim above
+is true. The one that was never measured is the *width* of the boundary, and
+that is what decides whether a crate can be cut. Using
+`scripts/analyze_solver_module_graph.py`'s own resolved graph (facade items
+included, so `crate::abv::…` call sites count):
+
+| candidate crate | layer lines | depends on | those lines | inbound edges |
+| --- | ---: | ---: | ---: | ---: |
+| the evidence layer, as the analyzer defines it (7 modules) | 41,405 | **71 modules** | 83,660 | 5 |
+| the reconstruct family, dropping `evidence` and `smtlib` | 34,278 | **57 modules** | 71,979 | 10 |
+| `reconstruct` alone | 23,497 | **58 modules** | 77,543 | 8 |
+| `evidence` alone | 4,272 | **72 modules** | 115,160 | 1 |
+
+There is no cut that yields a small trusted core. However the line is drawn,
+the extracted crate would depend on 57–72 modules and 72k–115k lines of what
+remains — between 32% and 51% of the crate. That is not a boundary; it is a
+layer sitting on top of nearly the whole solver.
+
+The *direction* is exactly as claimed — 5 edges in, and nothing from the theory
+core — so the fix is not to invert anything. Nor are the inbound edges the
+obstacle: `solver → reconstruct` is two one-line delegating methods on the
+façade (`prove_unsat_to_lean`, `prove_unsat_to_lean_module`,
+`solver.rs:183-198`), and the other three (`lex_reconstruct`,
+`lia_interpolant`, `uflia_interpolant`) are evidence-shaped modules that would
+join the new crate. **The obstacle is mass, and mass is measurable.**
+
+The reason is visible in one line of `reconstruct/direct.rs:923`:
+
+```rust
+let cert = crate::abv::const_array_default_mismatch_refutation(arena, assertions)
+```
+
+Reconstruction reaches into each theory to *pull* its refutation constructor,
+so its fan-out grows with every theory. Inverting that — a theory hands back a
+certificate value that `reconstruct` consumes, rather than `reconstruct`
+naming the theory — collapses the fan-out without moving a file.
+
+So D1's precondition is a number, not a judgement: **`reconstruct`'s outbound
+module count.** It is 58. `analyze_solver_module_graph.py` already computes it
+every run, so it can be ratcheted like the cycle set. Extraction becomes an
+ADR-0001 argument worth making when that number is small; today it would move
+23k lines out and leave them depending on 77k.
+
 ### D2 — quantifiers → its own crate. **Largest, weakest-tested boundary.**
 
 38 modules and the biggest single file in the workspace after `abv.rs`. Size is
@@ -138,10 +181,19 @@ prove which files they examined.**
 
 ## Sequencing
 
-1. `04` first — gates that prove their own scope.
-2. `01` and `02` — because they change what the seams *are*.
-3. `D1` (`reconstruct/`) — the one boundary already proven by use.
-4. `D3` intra-crate grouping — cheap, reversible, and it produces the evidence
-   that would justify `D2` or a theory crate later.
+1. `04` first — gates that prove their own scope. **Done.**
+2. `01` and `02` — because they change what the seams *are*. `02` W2 is done
+   (the two real-algebra engines now share a corpus).
+3. **`D3` intra-crate grouping** — cheap, reversible, and it produces the
+   evidence that would justify `D2` or a theory crate later.
+4. **`D1` (`reconstruct/`) — narrowing, not extracting.** The 2026-08-16
+   measurement moved this from first to after `D3`: the boundary is one-way as
+   claimed but 58 modules wide, so a crate today buys nothing and pins the
+   fan-out in place. The work is inverting the theory→certificate pull and
+   watch the number fall; the crate is what that earns.
 5. `D2` and theory crates — only with a boundary argument that ADR-0001 would
    accept, and an ADR to match.
+
+The reordering is itself the point of `analyze_solver_module_graph.py`: `D1`
+was ranked first on four true qualitative claims, and one number that nobody
+had taken moved it two places down.
