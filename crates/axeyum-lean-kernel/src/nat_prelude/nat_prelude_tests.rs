@@ -224,6 +224,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.not_dvd_one_of_two_le,
         p.not_dvd_one_add_mul_of_two_le,
         p.valuation_at_two_mul_sq,
+        p.le_of_dvd,
+        p.two_le_succ_or_eq_one,
+        p.least_divisor_search,
+        p.exists_prime_dvd,
     ]
 }
 
@@ -3426,7 +3430,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        19 + 117,
+        19 + 121,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -3900,4 +3904,176 @@ fn factorial_computes_and_every_positive_bound_divides_it() {
         f.k.infer(wrong_positivity).is_err(),
         "accepted a proof of `3 <= 5` as the positivity hypothesis `1 <= 3`"
     );
+}
+
+/// `∃ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) ∧ p ∣ m` — the statement, not just
+/// the name, plus the two lemmas it rests on applied to concrete numbers.
+///
+/// The **statement** check is the load-bearing control here. Nothing in this
+/// slice is a `Definition`, so there is no degenerate computation rule to guard
+/// against: the kernel re-checks each proof term against its stated type, and a
+/// witness that was not actually prime (say `m` itself at `m = 6`) would be
+/// rejected outright. What the kernel cannot notice is a statement that is
+/// *weaker than intended* — spelling the primality lower bound `1 ≤ p` instead
+/// of `2 ≤ p` still type-checks, still admits, and is still provable by the same
+/// argument, but it is satisfied by `p = 1`, whose only divisor is `1`. Euclid's
+/// theorem cannot be closed with it. So the admitted type is compared against an
+/// independently built term, with that exact weakening as the negative control.
+#[test]
+fn every_number_at_least_two_has_a_prime_divisor() {
+    /// `∃ x, (bound ≤ x ∧ ∀ c, c ∣ x → c = 1 ∨ c = x) ∧ x ∣ m`, built here
+    /// rather than read back from the prelude.
+    fn prime_divisor_of(f: &mut Fixture, bound: u32, m: ExprId) -> ExprId {
+        let p = f.p;
+        let nat = f.nat_ty();
+        let level = f.level_one();
+        let lower_bound = f.num(bound);
+        let unit = f.num(1);
+        let predicate = {
+            let x_fv = f.fresh_fvar();
+            let x = f.k.fvar(x_fv);
+            let lower = f.le(lower_bound, x);
+            let divisors = {
+                let c_fv = f.fresh_fvar();
+                let c = f.k.fvar(c_fv);
+                let hypothesis = f.dvd(c, x);
+                let trivial = f.eq(c, unit);
+                let whole = f.eq(c, x);
+                let disjunction = f.const_app(p.logic.or, &[trivial, whole]);
+                let body = f.arrow(hypothesis, disjunction);
+                f.pi_fv(c_fv, nat, body)
+            };
+            let prime = f.const_app(p.logic.and, &[lower, divisors]);
+            let divides = f.dvd(x, m);
+            let body = f.const_app(p.logic.and, &[prime, divides]);
+            f.lam_fv(x_fv, nat, body)
+        };
+        let exists = f.k.const_(p.logic.exists_, vec![level]);
+        f.apply(exists, &[nat, predicate])
+    }
+
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+
+    // `1 <= 6` and `2 <= 6`, built from the `Le` constructors.
+    let le_chain = |f: &mut Fixture, from: ExprId, steps: &[ExprId]| {
+        let mut proof = f.lemma(p.le_refl, &[from]);
+        for &rung in steps {
+            proof = f.lemma(p.le_step, &[from, rung, proof]);
+        }
+        proof
+    };
+    let five = f.num(5);
+    let one_le_six = le_chain(&mut f, one, &[one, two, three, four, five]);
+    let two_le_six = le_chain(&mut f, two, &[two, three, four, five]);
+
+    // --- the admitted STATEMENT, compared against an independent build -------
+    let declared = {
+        let theorem = f.k.const_(p.exists_prime_dvd, vec![]);
+        f.k.infer(theorem)
+            .expect("`Nat.exists_prime_dvd` must be in the environment")
+    };
+    let expected = {
+        let m_fv = f.fresh_fvar();
+        let m = f.k.fvar(m_fv);
+        let hypothesis = f.le(two, m);
+        let conclusion = prime_divisor_of(&mut f, 2, m);
+        let body = f.arrow(hypothesis, conclusion);
+        let nat = f.nat_ty();
+        f.pi_fv(m_fv, nat, body)
+    };
+    assert!(
+        f.k.def_eq(declared, expected),
+        "the admitted type is not `∀ m, 2 <= m → ∃ p, (2 <= p ∧ ∀ d, d | p → d = 1 ∨ d = p) ∧ p | m`"
+    );
+    // NEGATIVE control: the `1 <= p` weakening is a DIFFERENT proposition. It
+    // would still be provable and still admit, and `p = 1` would satisfy it.
+    let weakened = {
+        let m_fv = f.fresh_fvar();
+        let m = f.k.fvar(m_fv);
+        let hypothesis = f.le(two, m);
+        let conclusion = prime_divisor_of(&mut f, 1, m);
+        let body = f.arrow(hypothesis, conclusion);
+        let nat = f.nat_ty();
+        f.pi_fv(m_fv, nat, body)
+    };
+    assert!(
+        !f.k.def_eq(declared, weakened),
+        "`2 <= p` and `1 <= p` must not be the same statement — `p = 1` satisfies the second"
+    );
+
+    // --- applied to a concrete COMPOSITE number -----------------------------
+    let applied = f.lemma(p.exists_prime_dvd, &[six, two_le_six]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("2 <= 6, so the theorem applies at m = 6");
+    let expected_at_six = prime_divisor_of(&mut f, 2, six);
+    assert!(
+        f.k.def_eq(inferred, expected_at_six),
+        "the conclusion at 6 must be `∃ p, prime p ∧ p | 6`"
+    );
+    // The hypothesis is load-bearing and the kernel checks its index.
+    let wrong_hypothesis = {
+        let theorem = f.k.const_(p.exists_prime_dvd, vec![]);
+        let at_six = f.k.app(theorem, six);
+        f.k.app(at_six, one_le_six)
+    };
+    assert!(
+        f.k.infer(wrong_hypothesis).is_err(),
+        "accepted `1 <= 6` where `2 <= 6` was required"
+    );
+
+    // --- the bound `le_of_dvd` supplies, and its positivity guard -----------
+    let three_divides_six = {
+        let level = f.level_one();
+        let nat = f.nat_ty();
+        let predicate = f.dvd_predicate(three, six);
+        let witness = f.refl(six);
+        let intro = f.k.const_(p.logic.exists_intro, vec![level]);
+        f.apply(intro, &[nat, predicate, two, witness])
+    };
+    let bounded = f.lemma(p.le_of_dvd, &[three, six, one_le_six, three_divides_six]);
+    let bound_ty =
+        f.k.infer(bounded)
+            .expect("3 divides 6 and 6 is positive, so 3 <= 6");
+    let expected_bound = f.le(three, six);
+    assert!(f.k.def_eq(bound_ty, expected_bound));
+    // Positivity is not decoration: `2 | 0` holds, and `2 <= 0` does not. The
+    // hypothesis is the only thing standing between them.
+    let zero = f.zero();
+    let two_divides_zero = f.lemma(p.dvd_zero, &[two]);
+    let unguarded = {
+        let theorem = f.k.const_(p.le_of_dvd, vec![]);
+        let at_divisor = f.k.app(theorem, two);
+        let at_target = f.k.app(at_divisor, zero);
+        let at_positive = f.k.app(at_target, one_le_six);
+        f.k.app(at_positive, two_divides_zero)
+    };
+    assert!(
+        f.k.infer(unguarded).is_err(),
+        "accepted `1 <= 6` as the positivity of 0, which would yield `2 <= 0`"
+    );
+
+    // --- the search these rest on, and the successor dichotomy --------------
+    let searched = f.lemma(p.least_divisor_search, &[six, six]);
+    assert!(
+        f.k.infer(searched).is_ok(),
+        "the least-divisor search must apply at (k, m) = (6, 6)"
+    );
+    let dichotomy = f.lemma(p.two_le_succ_or_eq_one, &[three]);
+    let dichotomy_ty =
+        f.k.infer(dichotomy)
+            .expect("the successor dichotomy must apply at j = 3");
+    let expected_dichotomy = {
+        let big = f.le(two, four);
+        let small = f.eq(four, one);
+        f.const_app(p.logic.or, &[big, small])
+    };
+    assert!(f.k.def_eq(dichotomy_ty, expected_dichotomy));
 }

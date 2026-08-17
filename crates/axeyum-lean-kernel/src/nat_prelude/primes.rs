@@ -1,0 +1,751 @@
+//! Primality over `Nat`: the **least divisor `≥ 2`** construction and the
+//! theorem it exists for — every `m ≥ 2` has a prime divisor.
+//!
+//! This is the second of the two ingredients `F:nat-exists-prime-gt` (Euclid's
+//! theorem) was missing; the first, `dvd_factorial_of_le`, is in
+//! [`super::divisibility`].
+//!
+//! Primality is spelled **inline** as `2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p`,
+//! matching `F:nat-euclid-lemma` and `F:nat-exists-prime-gt`, because the
+//! prelude has no `Prime` predicate and a fact is only closed by the statement
+//! it actually makes.
+//!
+//! ## Why there is no well-founded recursion here
+//!
+//! The obvious route is strong induction on `m` through `lt_well_founded`:
+//! either `m` is prime, or it splits and the induction hypothesis applies to a
+//! proper divisor. That route needs to *decide* primality of `m`, which is a
+//! bounded `∀` — and deciding a bounded `∀` constructively is itself a bounded
+//! search. So the search is done directly, by ordinary `Nat.rec` on the bound,
+//! and it returns the **least** divisor `≥ 2` rather than any divisor. Least is
+//! what makes primality free: a proper divisor of the least one would be a
+//! smaller divisor of `m`.
+//!
+//! Nothing here is classical. `dvd d m` is decided at each step by reducing
+//! `Nat.beq (Nat.mod m d) 0`, whose two branches are separated by the checked
+//! `div_mod_remainder_eq_zero_iff_dvd`.
+
+use super::NatPrelude;
+use super::helpers::{and_left, and_right, iff_forward, iff_reverse};
+use super::ops::{NatDev, NatOps};
+use crate::BinderInfo;
+use crate::KernelError;
+use crate::expr::ExprId;
+
+/// `∀ e, 2 ≤ e → e < x → ¬ (e ∣ m)` — the minimality side condition carried by
+/// the least-divisor search.
+fn min_condition(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, x: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let two = d.num(2);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let lower = d.le(two, e);
+    let strict = d.lt(e, x);
+    let divides = d.dvd(e, m);
+    let not_divides = d.const_app(p.logic.not, &[divides]);
+    let inner = d.arrow(strict, not_divides);
+    let body = d.arrow(lower, inner);
+    d.pi_fv(e_fv, nat, body)
+}
+
+/// `fun x => 2 ≤ x ∧ (x ∣ m ∧ ∀ e, 2 ≤ e → e < x → ¬ (e ∣ m))`.
+fn least_predicate(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let two = d.num(2);
+    let lower = d.le(two, x);
+    let divides = d.dvd(x, m);
+    let minimal = min_condition(d, p, m, x);
+    let tail = d.const_app(p.logic.and, &[divides, minimal]);
+    let body = d.const_app(p.logic.and, &[lower, tail]);
+    d.lam_fv(x_fv, nat, body)
+}
+
+/// `∃ x, 2 ≤ x ∧ (x ∣ m ∧ ∀ e, 2 ≤ e → e < x → ¬ (e ∣ m))`.
+fn least_found(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let predicate = least_predicate(d, p, m);
+    let exists = d.kernel().const_(p.logic.exists_, vec![one]);
+    d.apply(exists, &[nat, predicate])
+}
+
+/// `∀ c, 2 ≤ c → c ≤ k → ¬ (c ∣ m)` — nothing in `[2, k]` divides `m`.
+fn none_up_to(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, k: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let two = d.num(2);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let lower = d.le(two, c);
+    let upper = d.le(c, k);
+    let divides = d.dvd(c, m);
+    let not_divides = d.const_app(p.logic.not, &[divides]);
+    let inner = d.arrow(upper, not_divides);
+    let body = d.arrow(lower, inner);
+    d.pi_fv(c_fv, nat, body)
+}
+
+/// The search's disjunction at bound `k`: either the least divisor `≥ 2` has
+/// already been found, or nothing in `[2, k]` divides `m`.
+fn search_claim(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, k: ExprId) -> ExprId {
+    let found = least_found(d, p, m);
+    let none = none_up_to(d, p, m, k);
+    d.const_app(p.logic.or, &[found, none])
+}
+
+/// `2 ≤ x ∧ ∀ c, c ∣ x → c = 1 ∨ c = x` — primality, spelled inline.
+fn prime_condition(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let two = d.num(2);
+    let unit = d.num(1);
+    let lower = d.le(two, x);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let hypothesis = d.dvd(c, x);
+    let trivial = d.eq(c, unit);
+    let whole = d.eq(c, x);
+    let disjunction = d.const_app(p.logic.or, &[trivial, whole]);
+    let body = d.arrow(hypothesis, disjunction);
+    let divisors = d.pi_fv(c_fv, nat, body);
+    d.const_app(p.logic.and, &[lower, divisors])
+}
+
+/// `fun x => (2 ≤ x ∧ ∀ c, c ∣ x → c = 1 ∨ c = x) ∧ x ∣ m`.
+fn prime_divisor_predicate(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let prime = prime_condition(d, p, x);
+    let divides = d.dvd(x, m);
+    let body = d.const_app(p.logic.and, &[prime, divides]);
+    d.lam_fv(x_fv, nat, body)
+}
+
+/// `False.rec` into `goal` from a proof of `False`.
+fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let level = d.kernel().level_zero();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+    d.apply(rec, &[motive, contradiction])
+}
+
+/// `Or.rec` with a non-dependent motive.
+#[allow(clippy::too_many_arguments)]
+fn or_cases(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    left_ty: ExprId,
+    right_ty: ExprId,
+    goal: ExprId,
+    left_minor: ExprId,
+    right_minor: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let anon = d.anon_name();
+    let split_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
+    let motive = d.kernel().lam(anon, split_ty, goal, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(
+        rec,
+        &[left_ty, right_ty, motive, left_minor, right_minor, proof],
+    )
+}
+
+/// `le_of_dvd`, `two_le_succ_or_eq_one`, `least_divisor_search`, and
+/// `exists_prime_dvd`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let one = d.level_one();
+
+    // le_of_dvd : ∀ a n, 1 ≤ n → a ∣ n → a ≤ n
+    //
+    // A divisor of a POSITIVE number is bounded by it. `a ∣ n` gives `n = a*q`;
+    // `n` positive forces `q` positive (`one_le_right_of_mul`), so
+    // `a = a*1 ≤ a*q = n` by left monotonicity of multiplication. The
+    // positivity hypothesis is not decoration: `2 ∣ 0` and `0` is not `≥ 2`.
+    d.theorem(p.le_of_dvd, 2, &|d, v| {
+        let (a, n) = (v[0], v[1]);
+        let unit = d.num(1);
+        let positive_ty = d.le(unit, n);
+        let divides_ty = d.dvd(a, n);
+        let conclusion = d.le(a, n);
+        let stmt = {
+            let inner = d.arrow(divides_ty, conclusion);
+            d.arrow(positive_ty, inner)
+        };
+
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+        let divides_fv = d.fresh_fvar();
+        let divides = d.kernel().fvar(divides_fv);
+
+        let predicate = d.dvd_predicate(a, n);
+        let anon = d.anon_name();
+        let motive = d
+            .kernel()
+            .lam(anon, divides_ty, conclusion, BinderInfo::Default);
+        let minor = {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let product = d.mul(a, q);
+            let equation_fv = d.fresh_fvar();
+            let equation_ty = d.eq(n, product);
+            let equation = d.kernel().fvar(equation_fv);
+
+            // 1 ≤ n, transported along n = a*q, gives 1 ≤ a*q, hence 1 ≤ q.
+            let product_positive = {
+                let motive = d.eq_motive(n, &|d, x| {
+                    let unit = d.num(1);
+                    d.le(unit, x)
+                });
+                d.transport(n, motive, positive, product, equation)
+            };
+            let q_positive = d.lemma(p.one_le_right_of_mul, &[a, q, product_positive]);
+
+            // a*1 ≤ a*q, then rewrite a*1 to a and a*q back to n.
+            let scaled = d.lemma(p.mul_le_mul_left, &[a, unit, q, q_positive]);
+            let a_times_one = d.mul(a, unit);
+            let collapse = d.lemma(p.mul_one, &[a]);
+            let bounded_by_product = {
+                let motive = d.eq_motive(a_times_one, &|d, x| d.le(x, product));
+                d.transport(a_times_one, motive, scaled, a, collapse)
+            };
+            let reversed = d.symm(n, product, equation);
+            let body = {
+                let motive = d.eq_motive(product, &|d, x| d.le(a, x));
+                d.transport(product, motive, bounded_by_product, n, reversed)
+            };
+            let with_equation = d.lam_fv(equation_fv, equation_ty, body);
+            d.lam_fv(q_fv, nat, with_equation)
+        };
+        let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(exists_rec, &[nat, predicate, motive, minor, divides]);
+        let with_divides = d.lam_fv(divides_fv, divides_ty, body);
+        let proof = d.lam_fv(positive_fv, positive_ty, with_divides);
+        (stmt, proof)
+    })?;
+
+    // two_le_succ_or_eq_one : ∀ j, 2 ≤ succ j ∨ succ j = 1
+    //
+    // The only successor below 2 is 1. Case analysis on `j` alone — the
+    // induction hypothesis is unused — which is exactly the dichotomy the
+    // divisor search needs before it may offer `succ j` as a witness.
+    d.theorem(p.two_le_succ_or_eq_one, 1, &|d, v| {
+        let j = v[0];
+        let sj = d.succ(j);
+        let two = d.num(2);
+        let unit = d.num(1);
+        let big_ty = d.le(two, sj);
+        let small_ty = d.eq(sj, unit);
+        let stmt = d.const_app(p.logic.or, &[big_ty, small_ty]);
+
+        let claim = |d: &mut NatDev<'_>, x: ExprId| {
+            let sx = d.succ(x);
+            let two = d.num(2);
+            let unit = d.num(1);
+            let big = d.le(two, sx);
+            let small = d.eq(sx, unit);
+            d.const_app(p.logic.or, &[big, small])
+        };
+        let at_zero = |d: &mut NatDev<'_>| {
+            let zero = d.zero();
+            let szero = d.succ(zero);
+            let two = d.num(2);
+            let unit = d.num(1);
+            let big = d.le(two, szero);
+            let small = d.eq(szero, unit);
+            let proof = d.refl(szero);
+            d.const_app(p.logic.or_inr, &[big, small, proof])
+        };
+        let at_succ = |d: &mut NatDev<'_>, i: ExprId, _ih: ExprId| {
+            let si = d.succ(i);
+            let ssi = d.succ(si);
+            let zero = d.zero();
+            let unit = d.num(1);
+            let two = d.num(2);
+            let big = d.le(two, ssi);
+            let small = d.eq(ssi, unit);
+            // 0 ≤ i, so 1 ≤ succ i, so 2 ≤ succ (succ i).
+            let base = d.lemma(p.zero_le, &[i]);
+            let stepped = d.lemma(p.le_succ_succ, &[zero, i, base]);
+            let proof = d.lemma(p.le_succ_succ, &[unit, si, stepped]);
+            d.const_app(p.logic.or_inl, &[big, small, proof])
+        };
+        let proof = d.induct(&claim, &at_zero, &at_succ, j);
+        (stmt, proof)
+    })?;
+
+    // least_divisor_search :
+    //   ∀ k m, (∃ x, 2 ≤ x ∧ (x ∣ m ∧ ∀ e, 2 ≤ e → e < x → ¬ (e ∣ m)))
+    //          ∨ (∀ c, 2 ≤ c → c ≤ k → ¬ (c ∣ m))
+    //
+    // Ordinary `Nat.rec` on the bound `k`. The left disjunct carries NO bound on
+    // the witness, so once found it is simply carried forward — the right
+    // disjunct is the only half that grows with `k`.
+    //
+    //   zero      nothing is both ≥ 2 and ≤ 0.
+    //   succ j    the induction hypothesis at `j` either already found the least
+    //             divisor (carry it) or ruled out all of `[2, j]`. In the second
+    //             case `two_le_succ_or_eq_one` first asks whether `succ j` is
+    //             even a candidate; if `succ j = 1` the range `[2, succ j]` is
+    //             still empty. Otherwise `succ j ∣ m` is DECIDED by reducing
+    //             `beq (mod m (succ j)) 0`, the two branches separated by
+    //             `div_mod_remainder_eq_zero_iff_dvd` applied to `div_mod_exec`:
+    //               * divides — `succ j` is the witness, and its minimality is
+    //                 precisely the right disjunct at `j`, since `e < succ j` is
+    //                 `succ e ≤ succ j`;
+    //               * does not — a `c` in `[2, succ j]` is either `< succ j`
+    //                 (the hypothesis at `j` applies) or equal to `succ j` (the
+    //                 branch's own non-divisibility, transported).
+    d.theorem(p.least_divisor_search, 2, &|d, v| {
+        let (k, m) = (v[0], v[1]);
+        let stmt = search_claim(d, &p, m, k);
+
+        let claim = |d: &mut NatDev<'_>, x: ExprId| search_claim(d, &p, m, x);
+
+        let at_zero = |d: &mut NatDev<'_>| {
+            let zero = d.zero();
+            let found = least_found(d, &p, m);
+            let none = none_up_to(d, &p, m, zero);
+            let two = d.num(2);
+            let unit = d.num(1);
+
+            let c_fv = d.fresh_fvar();
+            let c = d.kernel().fvar(c_fv);
+            let lower_ty = d.le(two, c);
+            let lower_fv = d.fresh_fvar();
+            let lower = d.kernel().fvar(lower_fv);
+            let upper_ty = d.le(c, zero);
+            let upper_fv = d.fresh_fvar();
+            let upper = d.kernel().fvar(upper_fv);
+
+            let two_le_zero = d.lemma(p.le_trans, &[two, c, zero, lower, upper]);
+            let contradiction = d.lemma(p.not_succ_le_zero, &[unit, two_le_zero]);
+            let goal = {
+                let divides = d.dvd(c, m);
+                d.const_app(p.logic.not, &[divides])
+            };
+            let body = absurd(d, &p, goal, contradiction);
+            let with_upper = d.lam_fv(upper_fv, upper_ty, body);
+            let with_lower = d.lam_fv(lower_fv, lower_ty, with_upper);
+            let none_proof = d.lam_fv(c_fv, nat, with_lower);
+            d.const_app(p.logic.or_inr, &[found, none, none_proof])
+        };
+
+        let at_succ = |d: &mut NatDev<'_>, j: ExprId, ih: ExprId| {
+            let sj = d.succ(j);
+            let zero = d.zero();
+            let two = d.num(2);
+            let unit = d.num(1);
+            let target = search_claim(d, &p, m, sj);
+            let found = least_found(d, &p, m);
+            let none_j = none_up_to(d, &p, m, j);
+            let none_sj = none_up_to(d, &p, m, sj);
+
+            // Already found at `j`: carry the witness unchanged.
+            let carry = {
+                let found_fv = d.fresh_fvar();
+                let witness = d.kernel().fvar(found_fv);
+                let body = d.const_app(p.logic.or_inl, &[found, none_sj, witness]);
+                d.lam_fv(found_fv, found, body)
+            };
+
+            // Nothing in `[2, j]`: extend the range to `succ j`.
+            let extend = {
+                let none_fv = d.fresh_fvar();
+                let none = d.kernel().fvar(none_fv);
+
+                let big_ty = d.le(two, sj);
+                let small_ty = d.eq(sj, unit);
+                let dichotomy = d.lemma(p.two_le_succ_or_eq_one, &[j]);
+
+                // `succ j = 1`: `[2, succ j]` is still empty.
+                let degenerate = {
+                    let small_fv = d.fresh_fvar();
+                    let small = d.kernel().fvar(small_fv);
+                    let c_fv = d.fresh_fvar();
+                    let c = d.kernel().fvar(c_fv);
+                    let lower_ty = d.le(two, c);
+                    let lower_fv = d.fresh_fvar();
+                    let lower = d.kernel().fvar(lower_fv);
+                    let upper_ty = d.le(c, sj);
+                    let upper_fv = d.fresh_fvar();
+                    let upper = d.kernel().fvar(upper_fv);
+
+                    let upper_one = {
+                        let motive = d.eq_motive(sj, &|d, x| d.le(c, x));
+                        d.transport(sj, motive, upper, unit, small)
+                    };
+                    let two_le_one = d.lemma(p.le_trans, &[two, c, unit, lower, upper_one]);
+                    let one_le_zero = d.lemma(p.le_of_succ_le_succ, &[unit, zero, two_le_one]);
+                    let contradiction = d.lemma(p.not_succ_le_zero, &[zero, one_le_zero]);
+                    let goal = {
+                        let divides = d.dvd(c, m);
+                        d.const_app(p.logic.not, &[divides])
+                    };
+                    let body = absurd(d, &p, goal, contradiction);
+                    let with_upper = d.lam_fv(upper_fv, upper_ty, body);
+                    let with_lower = d.lam_fv(lower_fv, lower_ty, with_upper);
+                    let none_proof = d.lam_fv(c_fv, nat, with_lower);
+                    let injected = d.const_app(p.logic.or_inr, &[found, none_sj, none_proof]);
+                    d.lam_fv(small_fv, small_ty, injected)
+                };
+
+                // `2 ≤ succ j`: decide `succ j ∣ m` by reduction.
+                let candidate = {
+                    let big_fv = d.fresh_fvar();
+                    let big = d.kernel().fvar(big_fv);
+
+                    let remainder = d.modulo(m, sj);
+                    let quotient = d.div(m, sj);
+                    let condition = d.beq(remainder, zero);
+                    let exec = d.lemma(p.div_mod_exec, &[j, m]);
+                    let specification = d.lemma(
+                        p.div_mod_remainder_eq_zero_iff_dvd,
+                        &[sj, m, quotient, remainder, exec],
+                    );
+                    let remainder_zero_ty = d.eq(remainder, zero);
+                    let divides_ty = d.dvd(sj, m);
+                    let forward = iff_forward(d, remainder_zero_ty, divides_ty, specification);
+                    let reverse = iff_reverse(d, remainder_zero_ty, divides_ty, specification);
+
+                    // `succ j` divides: it is the least such divisor.
+                    let divides_branch = {
+                        let witness_fv = d.fresh_fvar();
+                        let witness = d.kernel().fvar(witness_fv);
+                        let true_value = d.bool_true();
+                        let witness_ty = d.bool_eq(condition, true_value);
+                        let remainder_zero =
+                            d.lemma(p.eq_of_beq_eq_true, &[remainder, zero, witness]);
+                        let divides = d.apply(forward, &[remainder_zero]);
+
+                        let minimal = {
+                            let e_fv = d.fresh_fvar();
+                            let e = d.kernel().fvar(e_fv);
+                            let lower_ty = d.le(two, e);
+                            let lower_fv = d.fresh_fvar();
+                            let lower = d.kernel().fvar(lower_fv);
+                            let strict_ty = d.lt(e, sj);
+                            let strict_fv = d.fresh_fvar();
+                            let strict = d.kernel().fvar(strict_fv);
+                            // `e < succ j` IS `succ e ≤ succ j`.
+                            let bounded = d.lemma(p.le_of_succ_le_succ, &[e, j, strict]);
+                            let body = d.apply(none, &[e, lower, bounded]);
+                            let with_strict = d.lam_fv(strict_fv, strict_ty, body);
+                            let with_lower = d.lam_fv(lower_fv, lower_ty, with_strict);
+                            d.lam_fv(e_fv, nat, with_lower)
+                        };
+
+                        let minimal_ty = min_condition(d, &p, m, sj);
+                        let tail_ty = d.const_app(p.logic.and, &[divides_ty, minimal_ty]);
+                        let tail = d.const_app(
+                            p.logic.and_intro,
+                            &[divides_ty, minimal_ty, divides, minimal],
+                        );
+                        let pair = d.const_app(p.logic.and_intro, &[big_ty, tail_ty, big, tail]);
+                        let predicate = least_predicate(d, &p, m);
+                        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                        let existential = d.apply(intro, &[nat, predicate, sj, pair]);
+                        let injected = d.const_app(p.logic.or_inl, &[found, none_sj, existential]);
+                        d.lam_fv(witness_fv, witness_ty, injected)
+                    };
+
+                    // `succ j` does not divide: the empty range extends.
+                    let refutes_branch = {
+                        let witness_fv = d.fresh_fvar();
+                        let witness = d.kernel().fvar(witness_fv);
+                        let false_value = d.bool_false();
+                        let witness_ty = d.bool_eq(condition, false_value);
+
+                        let not_divides = {
+                            let assumed_fv = d.fresh_fvar();
+                            let assumed = d.kernel().fvar(assumed_fv);
+                            let remainder_zero = d.apply(reverse, &[assumed]);
+                            let true_value = d.bool_true();
+                            let holds =
+                                d.lemma(p.beq_eq_true_of_eq, &[remainder, zero, remainder_zero]);
+                            let flipped = d.bool_symm(condition, false_value, witness);
+                            let impossible =
+                                d.bool_trans(false_value, condition, true_value, flipped, holds);
+                            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                            let body = d.false_true_elim(false_ty, impossible);
+                            d.lam_fv(assumed_fv, divides_ty, body)
+                        };
+
+                        let c_fv = d.fresh_fvar();
+                        let c = d.kernel().fvar(c_fv);
+                        let lower_ty = d.le(two, c);
+                        let lower_fv = d.fresh_fvar();
+                        let lower = d.kernel().fvar(lower_fv);
+                        let upper_ty = d.le(c, sj);
+                        let upper_fv = d.fresh_fvar();
+                        let upper = d.kernel().fvar(upper_fv);
+
+                        let goal = {
+                            let divides = d.dvd(c, m);
+                            d.const_app(p.logic.not, &[divides])
+                        };
+                        let strict_ty = d.lt(c, sj);
+                        let equal_ty = d.eq(c, sj);
+                        let split = d.lemma(p.lt_or_eq_of_le, &[c, sj, upper]);
+                        let strict_minor = {
+                            let strict_fv = d.fresh_fvar();
+                            let strict = d.kernel().fvar(strict_fv);
+                            let bounded = d.lemma(p.le_of_succ_le_succ, &[c, j, strict]);
+                            let body = d.apply(none, &[c, lower, bounded]);
+                            d.lam_fv(strict_fv, strict_ty, body)
+                        };
+                        let equal_minor = {
+                            let equal_fv = d.fresh_fvar();
+                            let equal = d.kernel().fvar(equal_fv);
+                            // The transport replaces `succ j` by `c`, so it needs
+                            // the equation the other way round.
+                            let reversed = d.symm(c, sj, equal);
+                            let motive = d.eq_motive(sj, &|d, x| {
+                                let divides = d.dvd(x, m);
+                                d.const_app(p.logic.not, &[divides])
+                            });
+                            let body = d.transport(sj, motive, not_divides, c, reversed);
+                            d.lam_fv(equal_fv, equal_ty, body)
+                        };
+                        let body = or_cases(
+                            d,
+                            &p,
+                            strict_ty,
+                            equal_ty,
+                            goal,
+                            strict_minor,
+                            equal_minor,
+                            split,
+                        );
+                        let with_upper = d.lam_fv(upper_fv, upper_ty, body);
+                        let with_lower = d.lam_fv(lower_fv, lower_ty, with_upper);
+                        let none_proof = d.lam_fv(c_fv, nat, with_lower);
+                        let injected = d.const_app(p.logic.or_inr, &[found, none_sj, none_proof]);
+                        d.lam_fv(witness_fv, witness_ty, injected)
+                    };
+
+                    // `Bool.rec` on the branch condition, with the condition's own
+                    // reflexivity supplying the equation each branch consumes.
+                    let bool_ty = d.bool_ty();
+                    let motive = {
+                        let selector_fv = d.fresh_fvar();
+                        let selector = d.kernel().fvar(selector_fv);
+                        let equation = d.bool_eq(condition, selector);
+                        let body = d.arrow(equation, target);
+                        d.lam_fv(selector_fv, bool_ty, body)
+                    };
+                    let level = d.kernel().level_zero();
+                    let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level]);
+                    let selected = d.apply(
+                        bool_rec,
+                        &[motive, divides_branch, refutes_branch, condition],
+                    );
+                    let reflexivity = d.bool_refl(condition);
+                    let body = d.apply(selected, &[reflexivity]);
+                    d.lam_fv(big_fv, big_ty, body)
+                };
+
+                let body = or_cases(
+                    d, &p, big_ty, small_ty, target, candidate, degenerate, dichotomy,
+                );
+                d.lam_fv(none_fv, none_j, body)
+            };
+
+            or_cases(d, &p, found, none_j, target, carry, extend, ih)
+        };
+
+        let proof = d.induct(&claim, &at_zero, &at_succ, k);
+        (stmt, proof)
+    })?;
+
+    // exists_prime_dvd :
+    //   ∀ m, 2 ≤ m → ∃ p, (2 ≤ p ∧ ∀ d, d ∣ p → d = 1 ∨ d = p) ∧ p ∣ m
+    //
+    // The second of the two ingredients `F:nat-exists-prime-gt` needs. Run the
+    // search at bound `m` itself: its right disjunct claims nothing in `[2, m]`
+    // divides `m`, which `dvd_refl` and `le_refl` refute outright, so the left
+    // disjunct always fires and hands over the LEAST divisor `d ≥ 2`.
+    //
+    // That `d` is prime for free. A divisor `c` of `d` is positive
+    // (`one_le_of_dvd_pos`, using `1 ≤ d`) and divides `m` (`dvd_trans`), so
+    // either `c = 1`, or `2 ≤ c` — and then `c ≤ d` (`le_of_dvd`) leaves only
+    // `c < d`, which minimality refutes, or `c = d`.
+    d.theorem(p.exists_prime_dvd, 1, &|d, v| {
+        let m = v[0];
+        let two = d.num(2);
+        let unit = d.num(1);
+        let zero = d.zero();
+        let lower_ty = d.le(two, m);
+        let predicate = prime_divisor_predicate(d, &p, m);
+        let target = {
+            let exists = d.kernel().const_(p.logic.exists_, vec![one]);
+            d.apply(exists, &[nat, predicate])
+        };
+        let stmt = d.arrow(lower_ty, target);
+
+        let lower_fv = d.fresh_fvar();
+        let lower = d.kernel().fvar(lower_fv);
+
+        let found = least_found(d, &p, m);
+        let none = none_up_to(d, &p, m, m);
+        let search = d.lemma(p.least_divisor_search, &[m, m]);
+
+        // The right disjunct is self-refuting at `k = m`: `m ∣ m` and `m ≤ m`.
+        let exhausted = {
+            let none_fv = d.fresh_fvar();
+            let none_proof = d.kernel().fvar(none_fv);
+            let reflexive = d.lemma(p.le_refl, &[m]);
+            let divides = d.lemma(p.dvd_refl, &[m]);
+            let contradiction = d.apply(none_proof, &[m, lower, reflexive, divides]);
+            let body = absurd(d, &p, target, contradiction);
+            d.lam_fv(none_fv, none, body)
+        };
+
+        let harvest = {
+            let witness_fv = d.fresh_fvar();
+            let witness = d.kernel().fvar(witness_fv);
+            let least_pred = least_predicate(d, &p, m);
+            let anon = d.anon_name();
+            let motive = d.kernel().lam(anon, found, target, BinderInfo::Default);
+            let minor = {
+                let divisor_fv = d.fresh_fvar();
+                let divisor = d.kernel().fvar(divisor_fv);
+                let bundle_fv = d.fresh_fvar();
+                let bundle = d.kernel().fvar(bundle_fv);
+
+                let lower_divisor_ty = d.le(two, divisor);
+                let divides_ty = d.dvd(divisor, m);
+                let minimal_ty = min_condition(d, &p, m, divisor);
+                let tail_ty = d.const_app(p.logic.and, &[divides_ty, minimal_ty]);
+                let bundle_ty = d.const_app(p.logic.and, &[lower_divisor_ty, tail_ty]);
+
+                let lower_divisor = and_left(d, lower_divisor_ty, tail_ty, bundle);
+                let tail = and_right(d, lower_divisor_ty, tail_ty, bundle);
+                let divides = and_left(d, divides_ty, minimal_ty, tail);
+                let minimal = and_right(d, divides_ty, minimal_ty, tail);
+
+                // 1 ≤ 2 ≤ divisor.
+                let one_le_two = {
+                    let base = d.lemma(p.zero_le, &[unit]);
+                    d.lemma(p.le_succ_succ, &[zero, unit, base])
+                };
+                let positive =
+                    d.lemma(p.le_trans, &[unit, two, divisor, one_le_two, lower_divisor]);
+
+                let divisors = {
+                    let c_fv = d.fresh_fvar();
+                    let c = d.kernel().fvar(c_fv);
+                    let hypothesis_ty = d.dvd(c, divisor);
+                    let hypothesis_fv = d.fresh_fvar();
+                    let hypothesis = d.kernel().fvar(hypothesis_fv);
+                    let trivial_ty = d.eq(c, unit);
+                    let whole_ty = d.eq(c, divisor);
+                    let goal = d.const_app(p.logic.or, &[trivial_ty, whole_ty]);
+
+                    let c_positive =
+                        d.lemma(p.one_le_of_dvd_pos, &[c, divisor, positive, hypothesis]);
+                    let c_divides_m = d.lemma(p.dvd_trans, &[c, divisor, m, hypothesis, divides]);
+
+                    let strict_ty = d.lt(unit, c);
+                    let equal_ty = d.eq(unit, c);
+                    let split = d.lemma(p.lt_or_eq_of_le, &[unit, c, c_positive]);
+
+                    // 1 < c, i.e. 2 ≤ c: minimality forces c = divisor.
+                    let strict_minor = {
+                        let strict_fv = d.fresh_fvar();
+                        let strict = d.kernel().fvar(strict_fv);
+                        let bounded = d.lemma(p.le_of_dvd, &[c, divisor, positive, hypothesis]);
+                        let inner_strict_ty = d.lt(c, divisor);
+                        let inner_equal_ty = d.eq(c, divisor);
+                        let inner_split = d.lemma(p.lt_or_eq_of_le, &[c, divisor, bounded]);
+                        let below_minor = {
+                            let below_fv = d.fresh_fvar();
+                            let below = d.kernel().fvar(below_fv);
+                            let contradiction = d.apply(minimal, &[c, strict, below, c_divides_m]);
+                            let body = absurd(d, &p, goal, contradiction);
+                            d.lam_fv(below_fv, inner_strict_ty, body)
+                        };
+                        let equal_minor = {
+                            let equal_fv = d.fresh_fvar();
+                            let equal = d.kernel().fvar(equal_fv);
+                            let body = d.const_app(p.logic.or_inr, &[trivial_ty, whole_ty, equal]);
+                            d.lam_fv(equal_fv, inner_equal_ty, body)
+                        };
+                        let body = or_cases(
+                            d,
+                            &p,
+                            inner_strict_ty,
+                            inner_equal_ty,
+                            goal,
+                            below_minor,
+                            equal_minor,
+                            inner_split,
+                        );
+                        d.lam_fv(strict_fv, strict_ty, body)
+                    };
+
+                    // 1 = c, so c = 1 — note the orientation.
+                    let equal_minor = {
+                        let equal_fv = d.fresh_fvar();
+                        let equal = d.kernel().fvar(equal_fv);
+                        let oriented = d.symm(unit, c, equal);
+                        let body = d.const_app(p.logic.or_inl, &[trivial_ty, whole_ty, oriented]);
+                        d.lam_fv(equal_fv, equal_ty, body)
+                    };
+
+                    let body = or_cases(
+                        d,
+                        &p,
+                        strict_ty,
+                        equal_ty,
+                        goal,
+                        strict_minor,
+                        equal_minor,
+                        split,
+                    );
+                    let with_hypothesis = d.lam_fv(hypothesis_fv, hypothesis_ty, body);
+                    d.lam_fv(c_fv, nat, with_hypothesis)
+                };
+
+                let prime_ty = prime_condition(d, &p, divisor);
+                let divisors_ty = {
+                    let c_fv = d.fresh_fvar();
+                    let c = d.kernel().fvar(c_fv);
+                    let hypothesis = d.dvd(c, divisor);
+                    let trivial = d.eq(c, unit);
+                    let whole = d.eq(c, divisor);
+                    let disjunction = d.const_app(p.logic.or, &[trivial, whole]);
+                    let body = d.arrow(hypothesis, disjunction);
+                    d.pi_fv(c_fv, nat, body)
+                };
+                let prime = d.const_app(
+                    p.logic.and_intro,
+                    &[lower_divisor_ty, divisors_ty, lower_divisor, divisors],
+                );
+                let pair = d.const_app(p.logic.and_intro, &[prime_ty, divides_ty, prime, divides]);
+                let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                let body = d.apply(intro, &[nat, predicate, divisor, pair]);
+                let with_bundle = d.lam_fv(bundle_fv, bundle_ty, body);
+                d.lam_fv(divisor_fv, nat, with_bundle)
+            };
+            let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(exists_rec, &[nat, least_pred, motive, minor, witness]);
+            d.lam_fv(witness_fv, found, body)
+        };
+
+        let selected = or_cases(d, &p, found, none, target, harvest, exhausted, search);
+        let proof = d.lam_fv(lower_fv, lower_ty, selected);
+        (stmt, proof)
+    })?;
+
+    Ok(())
+}

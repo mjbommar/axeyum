@@ -137,6 +137,7 @@ mod helpers;
 mod modular;
 mod ops;
 mod order;
+mod primes;
 
 pub use ops::{NatDev, NatOps, NatState};
 
@@ -154,6 +155,7 @@ use division::declare_euclidean_division;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use modular::declare_modular_congruence;
 use order::declare_order;
+use primes::declare_primes;
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
 /// and its constructors/recursor (re-exported from the [`LogicPrelude`] for
@@ -542,13 +544,40 @@ pub struct NatPrelude {
     /// two ingredients Euclid's theorem (`F:nat-exists-prime-gt`) needs — the
     /// number divisible by everything in range — and it is what makes
     /// `1 + n!` have no divisor in `[2, n]`. The other ingredient, "every
-    /// `m ≥ 2` has a prime divisor" by minimisation over
-    /// [`lt_well_founded`](Self::lt_well_founded), is not yet declared.
+    /// `m ≥ 2` has a prime divisor", is
+    /// [`exists_prime_dvd`](Self::exists_prime_dvd).
     pub dvd_factorial_of_le: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
     /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
     pub valuation_at_two_mul_sq: NameId,
+    /// `Nat.le_of_dvd : ∀ a n, Le 1 n → dvd a n → Le a n`.
+    ///
+    /// A divisor of a **positive** number is bounded by it. The positivity
+    /// hypothesis is load-bearing: `2 ∣ 0` and `2 ≤ 0` is false.
+    pub le_of_dvd: NameId,
+    /// `Nat.two_le_succ_or_eq_one : ∀ j, Or (Le two (succ j)) (Eq (succ j) one)`.
+    ///
+    /// The only successor below `2` is `1` — the dichotomy the least-divisor
+    /// search needs before it may offer `succ j` as a candidate divisor.
+    pub two_le_succ_or_eq_one: NameId,
+    /// `Nat.least_divisor_search : ∀ k m, Or (∃ x, Le two x ∧ (dvd x m ∧ ∀ e, Le two e → Lt e x → Not (dvd e m))) (∀ c, Le two c → Le c k → Not (dvd c m))`.
+    ///
+    /// Bounded search for the **least** divisor `≥ 2` of `m`, by ordinary
+    /// `Nat.rec` on the bound `k`. Constructive: each step decides `succ j ∣ m`
+    /// by reducing `beq (mod m (succ j)) 0`, with the two branches separated by
+    /// [`div_mod_remainder_eq_zero_iff_dvd`](Self::div_mod_remainder_eq_zero_iff_dvd).
+    pub least_divisor_search: NameId,
+    /// `Nat.exists_prime_dvd : ∀ m, Le two m → ∃ p, (Le two p ∧ ∀ d, dvd d p → Or (Eq d one) (Eq d p)) ∧ dvd p m`.
+    ///
+    /// Every `m ≥ 2` has a prime divisor — the second of the two ingredients
+    /// Euclid's theorem (`F:nat-exists-prime-gt`) needs, the first being
+    /// [`dvd_factorial_of_le`](Self::dvd_factorial_of_le). Primality is spelled
+    /// inline because the prelude has no `Prime` predicate. The prime is the
+    /// least divisor `≥ 2` supplied by
+    /// [`least_divisor_search`](Self::least_divisor_search); minimality is
+    /// exactly what makes it prime.
+    pub exists_prime_dvd: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -758,6 +787,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_factorial_of_le: kernel.name_str(nat, "dvd_factorial_of_le"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
+            le_of_dvd: kernel.name_str(nat, "le_of_dvd"),
+            two_le_succ_or_eq_one: kernel.name_str(nat, "two_le_succ_or_eq_one"),
+            least_divisor_search: kernel.name_str(nat, "least_divisor_search"),
+            exists_prime_dvd: kernel.name_str(nat, "exists_prime_dvd"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -779,6 +812,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_gcd_bezout(&mut d, &p)?;
         declare_euclid_lemma(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
+        declare_primes(&mut d, &p)?;
         Ok(p)
     })();
     match built {

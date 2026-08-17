@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-exists-prime-dvd",
+  "title": "Every natural number at least 2 has a prime divisor",
+  "statement": "For every natural number m with 2 <= m there is a p with 2 <= p, every divisor of p equal to 1 or to p, and p dividing m. Here `p is prime` is spelled out inline rather than named, because the prelude has no Prime predicate.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.exists_prime_dvd : ((m : AxNat) -> ((hm : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) m) -> Exists.{1} AxNat (fun (p : AxNat) => And (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) p) (((d : AxNat) -> ((hd : AxNat.dvd d p) -> Or (Eq.{1} AxNat d (AxNat.succ AxNat.zero)) (Eq.{1} AxNat d p))))) (AxNat.dvd p m))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "m",
+      "p"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-div-mod-exists",
+    "F:nat-dvd-add"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.exists_prime_dvd",
+      "kind": "kernel-term",
+      "supports": "For every m with 2 <= m there is a prime p dividing m, with primality spelled inline.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- exists_prime_dvd 2>/dev/null | tr '\\t' ' ' | grep -qF 'Nat.exists_prime_dvd 4 ((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> Exists.{1} AxNat (fun (x2 : AxNat) => And (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x2) (((x3 : AxNat) -> ((x4 : AxNat.dvd x3 x2) -> Or (Eq.{1} AxNat x3 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x3 x2))))) (AxNat.dvd x2 x0))))'",
+      "notes": "The grep pins the WHOLE rendered type, not the name, and that is the point of this row rather than tidiness. `build_nat_prelude` admits the declaration through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type -- so the kernel already refuses a false theorem, and a witness that was not prime (say `m` itself at `m = 6`) never gets in. What the kernel cannot notice is a statement that is WEAKER than intended. Measured 2026-08-17: spelling the primality lower bound `1 <= p` instead of `2 <= p` still type-checks, still admits, still passes every existing test including axiom-freedom and the determinism count -- and is satisfied by `p = 1`, whose only divisor is 1, which closes nothing. That mutation was run: exactly one test died (`every_number_at_least_two_has_a_prime_divisor`, which compares the admitted type against an independently built term) and 288 others passed. A name-only grep would have survived it, so this command greps the `AxNat.succ (AxNat.succ AxNat.zero)` bound inside the existential explicitly. `nat_theorem_inventory` additionally exits non-zero for a name that does not exist."
+    },
+    {
+      "id": "footprint-Nat.exists_prime_dvd",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, so this theorem's footprint is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`theorem_axiom_footprint` reports `nat Nat.exists_prime_dvd 0` and `integer Nat.exists_prime_dvd 0` directly, along with 0 for the three supporting theorems `le_of_dvd`, `two_le_succ_or_eq_one` and `least_divisor_search`. `nat_axiom_inventory` bounds all of them at once: the enumeration reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, and a theorem cannot depend on a trusted declaration the environment does not contain. Counting `Declaration::Axiom` alone would NOT suffice -- `Opaque` has no proof body and `Quotient` admits `Quot.sound` -- so the enumeration covers all three, and the flag makes the exit status depend on the finding rather than on the run completing."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:prime-number",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:divisibility",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:infinitude-of-primes",
+      "relation": "key-lemma-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-17",
+    "established_by": "axeyum-lean-kernel nat_prelude::primes (nat-prime-divisor lane)",
+    "source": "the second of the two ingredients `F:nat-exists-prime-gt` was recorded as missing; statement authored here",
+    "prior_art": [
+      {
+        "who": "Euclid",
+        "what": "Elements, Book VII, Proposition 31",
+        "year": -300,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Proved WITHOUT well-founded recursion, and the reason is worth recording because the previous lane's note predicted the opposite route. Strong induction on m through `lt_well_founded` needs to DECIDE primality of m, which is a bounded universal quantification; deciding one constructively is itself a bounded search, so the search is done directly instead, by ordinary `Nat.rec` on the bound. `Nat.least_divisor_search : forall k m, (exists x, 2 <= x AND (x | m AND forall e, 2 <= e -> e < x -> NOT (e | m))) OR (forall c, 2 <= c -> c <= k -> NOT (c | m))` returns the LEAST divisor >= 2, and leastness is what makes primality free: a divisor c of the least divisor d also divides m, is positive by `one_le_of_dvd_pos`, and is bounded by d by the new `le_of_dvd`, so it is 1, or it is >= 2 and below d -- which minimality refutes -- or it is d. Running the search at k = m always fires the left disjunct, since its right disjunct claims nothing in [2, m] divides m and `dvd_refl`/`le_refl` refute that. Nothing here is classical: each step decides `succ j | m` by reducing `beq (mod m (succ j)) 0`, with the two branches separated by the checked `div_mod_remainder_eq_zero_iff_dvd` applied to `div_mod_exec`. Three supporting theorems landed with it: `Nat.le_of_dvd` (a divisor of a positive number is bounded by it -- the positivity hypothesis is load-bearing, since 2 | 0 and 2 <= 0 is false), `Nat.two_le_succ_or_eq_one`, and `Nat.least_divisor_search`. formal.statement is written in the SAME core rendering the kernel emits for its own theorems; binders carry readable names rather than the kernel's positional `x0, x1, ...`, which is a pretty-printing difference only."
+}
