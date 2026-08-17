@@ -57,16 +57,15 @@ fn main() -> ExitCode {
     let mut theorems: Vec<(String, Vec<String>)> = kernel
         .environment()
         .iter()
-        .filter_map(|(name, decl)| {
-            matches!(decl, Declaration::Theorem { .. }).then(|| {
-                let rendered = kernel.display_name(*name).to_string();
-                let deps = kernel
-                    .theorem_dependencies(*name)
-                    .into_iter()
-                    .map(|d| kernel.display_name(d).to_string())
-                    .collect();
-                (rendered, deps)
-            })
+        .filter(|(_, decl)| matches!(decl, Declaration::Theorem { .. }))
+        .map(|(name, _)| {
+            let rendered = kernel.display_name(*name).to_string();
+            let deps = kernel
+                .theorem_dependencies(*name)
+                .into_iter()
+                .map(|d| kernel.display_name(d).to_string())
+                .collect();
+            (rendered, deps)
         })
         .collect();
     theorems.sort();
