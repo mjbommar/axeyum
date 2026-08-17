@@ -253,6 +253,39 @@ the B column with its `fragment` values is the part built to be argued with.
 engineering strand `01`), every node above ℕ is unevidenceable in principle, and
 R1 will simply strip labels rather than earn them.
 
+## What "bounded" looks like in the corpus, measured
+
+Measured 2026-08-17, over the 223 instances backing the 19 `covered` nodes
+(215 SMT-LIB + 8 DIMACS):
+
+**Zero contain a quantifier.** Not one `(forall …)` or `(exists …)` outside a
+comment.
+
+That is the concrete meaning of the frontier statement below, and it is worth
+having as a number rather than as an adjective. The corpus does not merely
+*happen* to be finite; every proposition the covered curriculum demonstrates is
+propositional or quantifier-free.
+
+Two things this is **not**, both checked before writing it down:
+
+- It is not the map overclaiming. `curriculum_induction`'s fragment reads
+  `LIA / BV (base + step instances)` — it says *instances*, and it delivers
+  instances. Its two packs are a `QF_LIA` contradiction asserting that a finite
+  replay over `k = 0..8` found no step counterexample. That is bounded checking
+  honestly labelled, not induction mislabelled.
+- It is not something the R1 gate catches, and cannot be. R1 asks whether a
+  node's family *runs* and whether it *can fail*; both hold here. A pack can
+  satisfy both conditions while demonstrating something weaker than the node's
+  topic, and no purely structural check distinguishes "exercises the fragment"
+  from "exercises the topic". Recorded as a known limit of that gate rather
+  than papered over.
+
+A first heuristic for this measurement flagged two nodes and both were false
+positives — the `forall` it found in `finite-predicate-v0` is in DIMACS
+*comments* describing the encoding, and `relations_and_functions`' "finite
+domains" refers to EUF domains, not quantification. The number above excludes
+comments.
+
 ## The frontier, stated plainly
 
 axeyum today is a **bounded** reasoner with a strong finite core, an
