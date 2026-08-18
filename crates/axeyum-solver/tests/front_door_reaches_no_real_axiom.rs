@@ -140,9 +140,16 @@ fn the_shipped_front_door_never_builds_the_real_axiom_package() {
             !source.contains("sorryAx"),
             "{label}: the emitted module contains `sorryAx`"
         );
+        let builds = arith_prelude_builds();
+        // Printed before it is asserted, so `--nocapture` carries the
+        // measurement itself and not just a pass/fail. Fact evidence anchors on
+        // these lines.
+        println!(
+            "FRONT_DOOR_REACH {label} | fragment={fragment:?} module={} arith_prelude_builds={builds}",
+            source.len()
+        );
         assert_eq!(
-            arith_prelude_builds(),
-            0,
+            builds, 0,
             "{label}: the shipped front door built the Real axiom package. Its module can \
              still be footprint-clean -- the IntFarkas arm abstracted the 30 constants back \
              out and instantiated at Z -- and that is exactly the failure this counter \
@@ -154,9 +161,10 @@ fn the_shipped_front_door_never_builds_the_real_axiom_package() {
     // counter does move. Without this an `arith_prelude_builds` that had been
     // wired to a constant would pass every assertion in this test.
     let _real = LraReconstructCtx::try_new().expect("the Real package still builds");
+    let after_control = arith_prelude_builds();
+    println!("FRONT_DOOR_REACH control | arith_prelude_builds={after_control}");
     assert_eq!(
-        arith_prelude_builds(),
-        1,
+        after_control, 1,
         "the build counter did not move when the Real package was built on purpose, so the \
          zeros above measure nothing"
     );
