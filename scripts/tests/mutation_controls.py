@@ -79,6 +79,36 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "        if current != rendered:",
                 "        if False:",
             ),
+            (
+                "remote-collision: non-numbered filename is skipped, not crashed",
+                "        if match is None:\n            continue",
+                "        if False:\n            continue",
+            ),
+            (
+                "remote-collision: BOTH sides must have a file the other lacks",
+                "        if local_only and remote_only:",
+                "        if True:",
+            ),
+            (
+                "check-remote: unresolvable ref is SKIPPED before comparing",
+                "    if commit is None:",
+                "    if False:",
+            ),
+            (
+                "check-remote: staleness is measured, not assumed fresh",
+                "    stale = age is None or age > max_staleness_hours * 3600.0",
+                "    stale = False",
+            ),
+            (
+                "check-remote: a found collision fails the gate",
+                "    if collisions:",
+                "    if False:",
+            ),
+            (
+                "--check-remote CLI flag actually routes to check_remote",
+                "    if args.check_remote:\n        return check_remote(",
+                "    if False:\n        return check_remote(",
+            ),
         ],
     ),
     "plan": (

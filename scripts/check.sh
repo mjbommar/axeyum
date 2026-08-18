@@ -276,6 +276,23 @@ step prelude-reuse  ./scripts/check-prelude-reuse-equivalence.sh
 step aggregate-scope ./scripts/check-aggregate-scope.sh
 step plan-authority python3 scripts/check-plan-authority.py
 step links         ./scripts/check-links.sh
+# ADR numbers are a shared append point ACROSS CHECKOUTS, which `adr-index`
+# above cannot see (it only reads this working tree): two lanes in two clones
+# can each read "the highest number I can see", allocate the same one for two
+# different decisions, and merge clean, because the filenames differ by slug
+# so git never conflicts. Measured 2026-08-18: `origin/main` and this branch
+# had claimed 0471-0474 twice, AND (found live, by this exact gate)
+# 0468-0470 a second time. `--check-remote` diffs this tree's ADR numbers
+# against `origin/main`'s and fails on a real collision, naming it and the
+# next free number; it does NOT fail when `origin/main` is unresolvable (no
+# fetch, no `origin`, not a git checkout) or, on a clean result, when the
+# fetched ref is stale beyond `--max-staleness-hours` -- see `check_remote`'s
+# docstring in gen-adr-index.py for why fail-open is the deliberate side of
+# that trade in both cases, and how a found collision is NOT forgiven by
+# either one. Unlike the justfile's `check` recipe, `step` here never aborts
+# the run on a failing step, so this can stay next to `adr-index` without
+# hiding whether `links` (or anything else) passed.
+step adr-remote-collisions python3 scripts/gen-adr-index.py --check-remote
 
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2

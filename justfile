@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
+check: fmt fmt-all facts facts-replay clippy gate-controls aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions
 
 fmt:
     cargo fmt --all --check
@@ -492,6 +492,27 @@ deny:
 
 links:
     ./scripts/check-links.sh
+
+# ADR numbers are a shared append point ACROSS CHECKOUTS: `gen-adr-index.py
+# --check` only ever reads this working tree, so two lanes in two clones can
+# each read "the highest number I can see", allocate the same one for two
+# different decisions, and merge clean (the filenames differ by slug, so git
+# never conflicts) -- measured 2026-08-18, `origin/main` and this branch had
+# claimed 0471-0474 twice AND (found live, by this gate) 0468-0470 a second
+# time. `--check-remote` diffs this tree's ADR numbers against
+# `origin/main`'s and fails on a real collision, naming it and the next free
+# number. Deliberately does NOT fail when `origin/main` is unresolvable (no
+# fetch, no `origin`, not a git checkout) -- see the docstring on
+# `check_remote` in gen-adr-index.py for why fail-open there is the right
+# side of the trade, and why a STALE fetch is handled differently again. Kept
+# LAST in `check`'s dependency list, unlike `adr-index` above (folded into
+# `generated-trackers`): `just` aborts a recipe chain at the first failing
+# dependency, and this one is expected to fail for real stretches of time
+# (fixing a live collision means renumbering every cross-reference to the
+# ADRs it names, which is its own task) -- putting it last means a collision
+# here does not hide whether fmt/clippy/tests/links/etc. passed.
+adr-remote-collisions:
+    python3 scripts/gen-adr-index.py --check-remote
 
 # The ADR-0380 claim-ledger gates: structural/referential/epistemic validation of
 # every artifacts/claims/**/claim.json, the negative fixtures that prove the

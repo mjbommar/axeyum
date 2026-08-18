@@ -186,6 +186,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `pending` | binding coverage: +20 bound (105 → 125), 124 modules proved content-free, and the converse direction measured at 286/531 |
 | 2026-08-18 | `pending` | `scripts/cargo-serialized.sh`: heavy cargo now takes an flock and a memory ceiling, because "serialize" was prose and prose does not hold a lock (two dev boxes downed, one agent session OOM-killed). **`MemoryMax` alone does not bite** — it *is* applied (`memory.max` = 67108864) and a 400 MB allocation still succeeds by swapping, on a box whose 7 G of swap is 6 G full. With `MemorySwapMax=0` the same allocation is SIGKILLed by the cgroup (137), host untouched. `--self-check` proves it per host and discriminates: `AXEYUM_CARGO_SWAP=1G` flips it to `SURVIVED`, exit 1. |
 | 2026-08-18 | `pending` | `local-ci.sh`, the declared authoritative gate for `main`, cannot run on any fleet host and never has (`cargo nextest` 101, `rustup run 1.88.0` 1, on s4/s5/s7). Now refuses to start rather than limp, `--record` leaves a tracked per-(sha,host) JSON, and `provision-fleet-host.sh` installs the prerequisites (`1.88.0` needs `--profile minimal`, else rustup fails on `miri`/`cranelift` inherited from the nightly profile). The record carries per-step TEST COUNTS and marks a step that exited 0 having run zero tests as `vacuous`. |
+| 2026-08-18 | (pending) | `gen-adr-index.py --check-remote`: cross-checkout ADR-number collision detector, wired into `just check` and `check.sh`; found a second live collision (0468-0470) beyond the one already fixed today (471-474) |
 | 2026-08-18 | `pending` | **ADR-0479: ℂ is constructed over the constructed ℝ at zero trusted declarations, and ℂ's absence of an order becomes a theorem.** `Complex` is `mk : CReal → CReal → Complex` with `Complex.Equiv` componentwise — no quotient at either level, so `Quot.sound` is never needed. Every ℂ law reduces by δι to two `CReal.Equiv` obligations that are *algebraic*, so they are **decided, not hand-derived**: `complex/ring.rs` normalizes a `CReal` expression to a sorted multiset of signed monomials with opposite pairs cancelled and emits the `Equiv` proof, declaring nothing (every function returns a proof term, in `shifted_bound_le`'s style), so the `CReal` namespace and the trusted surface are untouched by construction. `add` and `mul` are the same commutative monoid, so the reassociation machinery is `rsum_perm`/`iprod_perm` written once against an `Op` tag, one level up and over a *defined* equality — the transcription ADR-0468 predicted. Landed with `conj`, `normSq`, `mul_conj` (`z·z̄ = ‖z‖²`, the law that needs the cancellation pass) and `normSq_nonneg` into `CReal`'s existing nonneg cone. **The finding that is not a construction:** `Complex.no_compatible_order : ∀ le lt, le_refl → lt_irrefl → lt_of_le_of_lt → add_le_add → le_congr → sq_nonneg → zero_lt_one → False`, proved directly with no classical step, so the 13 order laws are refuted rather than skipped. |
 | 2026-08-18 | `590e2ff8c` | **ADR-0468 phase R2 completes: all 22 ordered-ring laws hold over the constructed ℝ.** `mul_assoc`, `left_distrib` and `mul_le_mul_of_nonneg_left` land, plus `mul_congr` — the fifth congruence obligation and the R4 prerequisite. The four were one problem: each compares two products whose *sampling indices differ*, so `CReal.mul`'s exact estimate is unavailable and the naive bound is `C/(n+1)` for a `C > 2`. Two new pieces make that enough. `CReal.Equiv.of_bounded` — **`Equiv` only needs the difference to be `O(1/n)`; the constant is free** — is `Equiv.trans`'s argument with one term deleted, closing on `Rat.le_of_le_add_natDivSucc`, whose numerator is a `Nat` *parameter* so a symbolic `K` is as good as a literal; and `Rat.nat_index_compose` says **Bishop's sampling indices are closed under composition** (the additive shift `2n+1` is the `c = 1` case), so every nested index reads back at `n` through one `natDivSucc_le_scaled`. `mul_le_mul_of_nonneg_left` needed no estimate at all, exactly as costed — it is `left_distrib` + `mul_nonneg` + `mul_congr`. **22 of 22**, 58 declarations, trusted surface still 0, and the count is now read out of the kernel: `CRealPrelude::ordered_ring_laws` must name 22 *distinct* footprint-empty theorems matching `RatPrelude::ring_laws` position by position, asserted by the example's exit status and three tests, verified by deleting `mul_assoc`. |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
@@ -990,6 +991,40 @@ installs none of the three prerequisites. **`main` has no heavy pre-merge gate
 and has not had one.**
 
 Detail and older landed rows moved to [`../notes/99-capability-assurance.md`](docs/plan/notes/99-capability-assurance.md).
+
+**`gen-adr-index.py --check-remote` detects an ADR number two checkouts both
+claimed, before merge (`DONE`, agent-adr-numbering, 2026-08-18).** `--check`
+only ever reads this working tree, so it could not see `origin/main` reusing
+0471-0474 (fixed earlier today, `61906c585`/`cd19e54ea`) — and while building
+this gate, it found the SAME defect had already recurred: 0468-0470 are ALSO
+claimed twice, live, right now. `--check-remote` diffs local `adr-NNNN-*.md`
+filenames against `--remote-ref`'s (default `origin/main`) tree via `git
+ls-tree`; a number where each side has a file the other lacks is a collision,
+reported with the exact files and the next free number.
+
+Deliberate, documented trade: an unresolvable ref (no fetch, no `origin`)
+**SKIPs, exit 0** — failing closed would redden every offline lane for a
+reason no code fixes. A resolvable-but-stale ref (`.git/FETCH_HEAD` older than
+`--max-staleness-hours`, default 24) downgrades a CLEAN result to ADVISORY,
+still exit 0 by default (`--require-fresh` makes it exit 1) — a clean verdict
+on stale data is confidently wrong, which CLAUDE.md rates worse than no check.
+A COLLISION found on stale data is never forgiven by either mode.
+
+Wired last in `just check`'s dependency list and beside `adr-index` in
+`check.sh` (see comments at both sites for why "last" matters for `just`
+specifically). 6 new guards, each mutation-verified to kill EXACTLY one test
+(`python3 scripts/tests/mutation_controls.py adr-index` — all green).
+
+**Left undone, on purpose:** did not renumber the live 0468-0470 collision.
+Fixing it means touching ~50 files (facts, plan docs, rustdoc, `.rs` source)
+the same way 471-474 was fixed, and several of those files
+(`crates/axeyum-solver/src/reconstruct/arithmetic/ordered_ring.rs` and its
+tests) had another lane's uncommitted WIP in them at the time — editing them
+was off-limits per CLAUDE.md's multi-agent rules. **Consequence: `just check`
+and `./scripts/check.sh` are RED on this branch right now**, on the new
+`adr-remote-collisions` step, for a real and correctly-reported reason. Detail
+and full demo transcripts in
+[`../notes/agent-adr-numbering.md`](docs/plan/notes/agent-adr-numbering.md).
 
 **ADR-0479: ℂ is built, it is free, and its missing order is REFUTED rather than
 omitted (`WIP`, agent-complex-foundation, 2026-08-18).** `Complex` — a
