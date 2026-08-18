@@ -13,6 +13,7 @@
 #   scripts/local-ci.sh --moment   # also run the #[ignore]d order-255 proofs
 #   scripts/local-ci.sh --record   # ...and leave a COMMITTABLE run record
 #   scripts/local-ci.sh --preflight-only   # can THIS host run the gate at all?
+#   scripts/local-ci.sh --no-worktree      # gate the WORKING TREE (see below)
 #
 # WHY --record EXISTS. Hosted CI's own comment calls this script "the
 # authoritative gate for main". Measured 2026-08-18, four independent ways, it
@@ -37,6 +38,10 @@
 #                            kept separate so it never clobbers agent worktrees.
 #   AXEYUM_LOCAL_CI_LOG      log dir (default: <repo>/artifacts/local-ci)
 #   AXEYUM_LOCAL_CI_RECORDS  record dir (default: <repo>/artifacts/local-ci-runs)
+#   AXEYUM_LOCAL_CI_WORKTREE_ROOT  where the detached gate worktree lives
+#                            (default: /data0/axeyum/local-ci, then
+#                            <repo>/target/local-ci-worktree, then $TMPDIR)
+#   AXEYUM_LOCAL_CI_LOCK_WAIT  seconds to wait for the gate lock (default 10800)
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -45,10 +50,13 @@ cd "$REPO_ROOT" || exit 2
 WITH_MOMENT=0
 RECORD=0
 PREFLIGHT_ONLY=0
+WORKTREE=1
 for a in "$@"; do case "$a" in
   --moment) WITH_MOMENT=1 ;;
   --record) RECORD=1 ;;
   --preflight-only) PREFLIGHT_ONLY=1 ;;
+  --worktree) WORKTREE=1 ;;
+  --no-worktree) WORKTREE=0 ;;
 esac; done
 
 # Isolated target dir: full --all-features build (incl. linked libz3) must not
@@ -105,6 +113,99 @@ fi
 if [ "$PREFLIGHT_ONLY" = 1 ]; then
   echo "LOCAL_CI_PREFLIGHT|host=$(uname -n)|verdict=runnable"
   exit 0
+fi
+
+# WORKTREE ISOLATION. This script used to gate the WORKING TREE, and in a shared
+# checkout -- which this one always is, several lanes editing at once -- that
+# means another lane's uncommitted work decides whether the authoritative gate
+# for `main` passes. It is not hypothetical: the FIRST run of this gate ever
+# completed (2026-08-18, a6ee37c6a) had to be driven from a hand-built detached
+# worktree, because `cargo fmt --all --check` and `clippy -D warnings` were
+# otherwise about to be handed a sibling lane's half-finished edit to
+# `crates/axeyum-solver/examples/front_door_carrier.rs`. Whatever verdict that
+# produced would have been unattributable to the SHA the record names.
+#
+# `hooks/pre-push` already solved exactly this and this is the same solution,
+# for the same reason its header gives: check the COMMIT out into a stable,
+# on-disk, flock'd detached worktree and run the gate there. Never `git stash`
+# (it destroys a sibling lane's WIP) and never `mktemp -d` (/tmp here is a tmpfs
+# -- RAM -- and a fresh path per run rebakes every cargo fingerprint cold).
+#
+# A record names a SHA, so it must have measured that SHA and nothing else.
+# `--no-worktree` restores the old behaviour for the one case that wants it: a
+# lane pre-validating uncommitted work before it commits.
+local_ci_gate_root() {
+  if [ -n "${AXEYUM_LOCAL_CI_WORKTREE_ROOT:-}" ]; then
+    printf '%s\n' "$AXEYUM_LOCAL_CI_WORKTREE_ROOT"; return
+  fi
+  local base
+  for base in /data0/axeyum/local-ci "$1/target/local-ci-worktree"; do
+    if mkdir -p "$base" 2>/dev/null && [ -w "$base" ]; then
+      printf '%s\n' "$base"; return
+    fi
+  done
+  printf '%s\n' "${TMPDIR:-/tmp}/axeyum-local-ci"
+}
+
+# Materialize commit $2 of the repo at $1 into a reusable detached worktree and
+# print its path. `checkout --force` + `clean -xdf` make the tree byte-identical
+# to the commit. `git checkout` stamps only the files it CHANGES, with the
+# CURRENT time, so unchanged files keep a legitimately warm cargo cache while
+# changed ones look new -- which is why this is safe where `git archive | tar -x`
+# is not (tar restores COMMIT times and can leave content BEHIND a warm cache,
+# letting a gate pass over code it never compiled; CLAUDE.md).
+prepare_worktree() {
+  local repo="$1" sha="$2" root wt
+  root="$(local_ci_gate_root "$repo")" || return 1
+  mkdir -p "$root" || return 1
+  wt="$root/worktree"
+  if ! { git -C "$wt" rev-parse --git-dir >/dev/null 2>&1 \
+         && git -C "$wt" checkout --detach --force --quiet "$sha" 2>/dev/null; }; then
+    rm -rf "$wt"
+    git -C "$repo" worktree prune >/dev/null 2>&1
+    git -C "$repo" worktree add --detach --quiet "$wt" "$sha" || return 1
+  fi
+  git -C "$wt" clean -xdfq || return 1
+  printf '%s\n' "$wt"
+}
+
+if [ "$WORKTREE" = 1 ] && [ -z "${AXEYUM_LOCAL_CI_IN_WORKTREE:-}" ]; then
+  GATE_SHA="$(git rev-parse HEAD 2>/dev/null)"
+  if [ -z "$GATE_SHA" ]; then
+    echo "local-ci: not a git checkout -- cannot isolate; gating this tree as-is." >&2
+  else
+    GATE_ROOT="$(local_ci_gate_root "$REPO_ROOT")"
+    mkdir -p "$GATE_ROOT"
+    # ONE root for every lane, serialized -- deliberately not per-lane, for the
+    # reason hooks/pre-push gives: a per-lane root hands each lane its own COLD
+    # ~15 GB cache, and this box's standing rule is one heavy cargo job at a
+    # time (parallel cargo has crashed s1 AND s4). Exit 75 (EX_TEMPFAIL) rather
+    # than 1 on lock timeout, so a queued gate is never read as a test failure
+    # -- the same convention as scripts/cargo-serialized.sh.
+    exec 9>"$GATE_ROOT/.lock"
+    if command -v flock >/dev/null 2>&1; then
+      flock -n 9 || echo "local-ci: another lane holds the gate lock; waiting..." >&2
+      flock -w "${AXEYUM_LOCAL_CI_LOCK_WAIT:-10800}" 9 || {
+        echo "local-ci: gate lock not acquired in time (exit 75 = queued, NOT a failure)" >&2
+        exit 75
+      }
+    fi
+    GATE_WT="$(prepare_worktree "$REPO_ROOT" "$GATE_SHA")" || {
+      echo "local-ci: could not materialize a detached worktree for $GATE_SHA" >&2
+      exit 4
+    }
+    GATE_DIRTY="$(git -C "$REPO_ROOT" status --porcelain 2>/dev/null | wc -l)"
+    echo "== local-ci: gating COMMIT ${SHA} in ${GATE_WT} (checkout has ${GATE_DIRTY} uncommitted path(s), IGNORED) =="
+    # Logs and the record belong to the real checkout, not the throwaway tree --
+    # `artifacts/local-ci-runs/` is the tracked answer to "did the gate pass on
+    # this SHA", so it must land where it can be committed.
+    export AXEYUM_LOCAL_CI_IN_WORKTREE=1
+    export AXEYUM_LOCAL_CI_LOG="$LOG_DIR"
+    export AXEYUM_LOCAL_CI_RECORDS="${AXEYUM_LOCAL_CI_RECORDS:-$REPO_ROOT/artifacts/local-ci-runs}"
+    # Re-exec the gate script AT THAT COMMIT: the gate that runs should be the
+    # one the commit ships, not the one the dirty checkout happens to hold.
+    exec "$GATE_WT/scripts/local-ci.sh" "$@" --no-worktree
+  fi
 fi
 
 JOBS="$(nproc)"

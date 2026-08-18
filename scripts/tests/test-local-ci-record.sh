@@ -84,7 +84,78 @@ EOF
   bash "$WORK/harness.sh" || fail=1
 }
 
+# --- 3. worktree isolation: the gate must measure the COMMIT, not the tree ----
+#
+# This script gates a shared checkout that always has some other lane's
+# uncommitted work in it. Before 2026-08-18 it ran against that tree, so a
+# sibling lane's half-finished edit could red the authoritative gate for a SHA
+# that is perfectly fine -- and the record would name that SHA. The property
+# under test is exactly one thing: what `prepare_worktree` hands back must equal
+# the COMMIT, with the dirty worktree's content nowhere in it.
+#
+# Extracted from the real script by sed, like the blocks above, so a rename or a
+# reshape of the functions fails here loudly instead of testing a stale copy.
+worktree() {
+  local wsrc="$WORK/src" got want
+  if ! grep -q '^prepare_worktree() {' "$SCRIPT" || ! grep -q '^local_ci_gate_root() {' "$SCRIPT"; then
+    echo "FAIL: could not find prepare_worktree/local_ci_gate_root in $SCRIPT — testing nothing"
+    fail=1; return
+  fi
+  { sed -n '/^local_ci_gate_root() {/,/^}/p' "$SCRIPT"
+    sed -n '/^prepare_worktree() {/,/^}/p' "$SCRIPT"
+  } > "$WORK/wt-harness.sh"
+
+  rm -rf "$wsrc"; mkdir -p "$wsrc"
+  ( cd "$wsrc" \
+    && git init -q . \
+    && git config user.email t@t && git config user.name t \
+    && git config commit.gpgsign false \
+    && printf 'COMMITTED\n' > f.txt \
+    && git add f.txt && git -c core.hooksPath=/dev/null commit -qm c1 ) >/dev/null 2>&1 \
+    || { echo "FAIL: could not build the throwaway repo"; fail=1; return; }
+  # A sibling lane's uncommitted work, of both kinds that have actually bitten:
+  # a modified tracked file, and an untracked file cargo/fmt would still see.
+  printf 'ANOTHER LANE WIP\n' > "$wsrc/f.txt"
+  printf 'ANOTHER LANE WIP\n' > "$wsrc/g.txt"
+
+  # The worktree is REUSED across runs (that is what keeps the cargo cache warm),
+  # so the second call is the one that matters: leftovers from a crashed or
+  # interrupted previous gate -- a stray untracked file, a modified tracked file
+  # -- must not survive into the next run's measurement. Calling it once would
+  # test a freshly-created tree, where `--force` and `clean -xdf` are both
+  # no-ops and the assertions below hold vacuously.
+  cat >> "$WORK/wt-harness.sh" <<EOF
+set -uo pipefail
+export AXEYUM_LOCAL_CI_WORKTREE_ROOT="$WORK/gateroot"
+sha=\$(git -C "$wsrc" rev-parse HEAD)
+wt=\$(prepare_worktree "$wsrc" "\$sha") || { echo "prepare_worktree failed (1st)"; exit 1; }
+printf 'LEFTOVER STRAY\n' > "\$wt/g.txt"
+printf 'LEFTOVER EDIT\n'  > "\$wt/f.txt"
+wt=\$(prepare_worktree "$wsrc" "\$sha") || { echo "prepare_worktree failed (2nd)"; exit 1; }
+printf 'CONTENT %s\n' "\$(cat "\$wt/f.txt")"
+printf 'STRAY %s\n' "\$( [ -e "\$wt/g.txt" ] && echo present || echo absent)"
+printf 'HEAD %s\n' "\$(git -C "\$wt" rev-parse HEAD)"
+printf 'SRCDIRTY %s\n' "\$(git -C "$wsrc" status --porcelain | wc -l)"
+EOF
+  got=$(bash "$WORK/wt-harness.sh" 2>&1)
+  want_sha=$(git -C "$wsrc" rev-parse HEAD)
+  chkline() {
+    if printf '%s\n' "$got" | grep -qxF "$1"; then echo "ok   worktree:$2"
+    else echo "FAIL worktree:$2 — got: $(printf '%s\n' "$got" | tr '\n' '|')"; fail=1; fi
+  }
+  # The gate sees the commit...
+  chkline "CONTENT COMMITTED" "tracked file is the COMMITTED content, not a leftover edit"
+  # ...and does not see the untracked file either (`clean -xdf`).
+  chkline "STRAY absent"      "a leftover untracked file does not survive into the next run"
+  chkline "HEAD $want_sha"    "gate worktree is detached at the requested SHA"
+  # ...and the sibling lane's WIP is still there afterwards. A gate that
+  # "isolated" by stashing or checking out would read 0 here, and that is the
+  # one failure mode this whole change must never introduce.
+  chkline "SRCDIRTY 2"        "sibling lane's uncommitted work is untouched"
+}
+
 counts
 verdicts
+worktree
 if [ "$fail" = 0 ]; then echo "LOCAL_CI_RECORD_CONTROLS|ok"; else echo "LOCAL_CI_RECORD_CONTROLS|FAILED" >&2; fi
 exit "$fail"
