@@ -96,16 +96,55 @@ pinned in `scripts/tests/test_check_lra_hypothesis_binding.py`.
 
 Advertised scope is the part people believe, so it is a measurement here, not an
 estimate. Swept 2026-08-18 over all **1404** committed `.smt2` files. **270** of
-them render a Lean module at all, and those 270 split exactly three ways:
+them render a Lean module at all, and those 270 split exactly four ways:
 
     135  BOUND       every rendered hypothesis bound back to an `(assert …)` line
      95  STRUCTURAL  every rendered TERM is a subterm of the query, injectively
-     19  ATTESTED    the module transcribes NOTHING; verified to be content-free
-     20  DECLINED    none of the three — not pinned, not checked, listed by name
+     10  ANCHORED    the query FORCES the disequality the module assumes, uniquely
+      9  ATTESTED    the module transcribes NOTHING; verified to be content-free
+     20  DECLINED    none of the four — not pinned, not checked, listed by name
 
 `scripts/lra-hypothesis-binding-instances.txt` pins the 135;
 `scripts/hypothesis-binding-structural-instances.txt` pins the 95;
-`scripts/hypothesis-binding-attestations.txt` pins the 19 and names the 20.
+`scripts/hypothesis-binding-anchored-instances.txt` pins the 10;
+`scripts/hypothesis-binding-attestations.txt` pins the 9 and names the 20.
+
+ANCHORED is the newest and the weakest of the three checked verdicts, and it
+exists because the structural binder correctly refuses a module whose two equated
+sides are both BARE constants — an injective map onto two of the query's symbols
+exists for any query with two symbols, so a match there would show nothing. That
+refusal left thirteen `ArrayAxiom`/`TermIdentity` instances whose entire module is
+
+    axiom axeyum.reconstruct.hyp._2 : Eq.{1} α atom._0 atom._1
+    axiom axeyum.reconstruct.hyp._3 : Not (Eq.{1} α atom._0 atom._1)
+
+pinned as content-free. The second axiom is the interesting one: the module
+ASSUMES the query's disequality and nothing in Lean checks that the query says
+so. Anchoring checks it, from the `.smt2` text, by propagating a required truth
+value down each `(assert …)` — through `not`/`and`/`or`/`=>`, through `distinct`,
+and through the one-bit-vector encoding a BTOR-derived file writes Booleans in
+(`(= #b1 t)`, `bvand`/`bvor`/`bvnot`, `(ite c #b1 #b0)`) — and collecting the
+pairs the assertions FORCE unequal. Propagation stops wherever the value is not
+forced: an `or` under a true polarity, an `xor`, an n-ary `=` under a false
+polarity and an `ite` without the Boolean branch pair all contribute nothing,
+because each entails a disjunction rather than a fact.
+
+The pinned requirement is that the query force EXACTLY ONE such disequality the
+module's rendered sides can stand for. That uniqueness is what makes it an anchor
+rather than a formality, and it bites on the same thirteen: THREE are refused and
+stay attested. `solver__array__ext27.btor.smt2` forces four leaf disequalities
+and a bare module does not say which; the two `unsat__replace_all__not-first-only`
+files force none at all.
+
+What anchoring does NOT show is stated in
+`scripts/hypothesis-binding-anchored-instances.txt` and repeated here because it
+is the honest half: for the three `TermIdentity` rows the correspondence is
+pinned by structure as well (`(ite true x y)` is a four-node term of the file),
+but for the seven bare-pair `ArrayAxiom` rows it is pinned ONLY by uniqueness —
+those seven modules are byte-identical, so each anchors against any of the
+others' queries. It rules out a module assuming a disequality the query does not
+entail, and a query that entails none or several. It does not identify which
+symbols a bare `atom._0` means.
 A 270th instance, `neg-no-self-negating-proposition.smt2`, renders no theory
 module at all any more: its was *self-refuting* and its route now declines.
 The three bound routes are `lra.hyp._N` (Real Farkas), `lra.int_hyp._N` (Int
@@ -119,7 +158,7 @@ Farkas) and `dio.hyp._N` (Int Diophantine).
   any assertion, so there is no assertion for it to bind to. An unrecognized
   `axeyum.reconstruct.*` axiom fails the run rather than being skipped, so these
   stay visible rather than silently blessed.
-- **The 19 attestations transcribe nothing, and that is the finding, not a
+- **The 9 attestations transcribe nothing, and that is the finding, not a
   gap this closes.** Their correspondence to the query lives in the Rust
   certificate and is checked there. What is checked here is only that each really
   is the content-free skeleton it claims to be. A *self-refuting* module — one
@@ -201,10 +240,11 @@ MIN_REQUIRED_MUTATIONS = 1200
 # A floor on the attestation class is a floor on HONESTY, not on coverage, so it
 # moves DOWN when a route stops attesting and starts reconstructing -- which is
 # what happened on 2026-08-18, when the 9 `Sos` rows left this class for the
-# bound manifest and took it from 28 to 19. Lowering it is a reviewable act for
-# the same reason raising it would be: it is the count of Lean evidence this
-# repository publishes as transcribing nothing.
-MIN_ATTESTATIONS = 16
+# bound manifest and took it from 28 to 19, and again the same day when 10 of
+# the 13 bare-leaf rows became `anchored` and took it from 19 to 9. Lowering it
+# is a reviewable act for the same reason raising it would be: it is the count of
+# Lean evidence this repository publishes as transcribing nothing.
+MIN_ATTESTATIONS = 8
 # The converse direction, measured rather than assumed: how many of the spine's
 # `(assert …)` rows a rendered hypothesis actually stands for. 296 of 541 --
 # barely over half. That is not a soundness hole (a refutation of a subset
@@ -1078,6 +1118,276 @@ def bind_structural(source: str, path: pathlib.Path) -> tuple[bool, str, int]:
 
 
 # ---------------------------------------------------------------------------
+# Assertion anchoring: the query ENTAILS the disequality the module assumes
+# ---------------------------------------------------------------------------
+#
+# The structural binder above refuses a module whose two equated sides are both
+# bare opaque constants, and it is right to: an injective map onto two of the
+# query's symbols exists for any query with two symbols, so a match would show
+# nothing. That refusal left 13 instances (10 `ArrayAxiom`, 3 `TermIdentity`)
+# pinned as content-free attestations, whose modules are all literally
+#
+#     axiom axeyum.reconstruct.hyp._2 : Eq.{1} α atom._0 atom._1
+#     axiom axeyum.reconstruct.hyp._3 : Not (Eq.{1} α atom._0 atom._1)
+#
+# -- one assumed array-axiom/identity conclusion and one assumed disequality.
+# What is NOT checked anywhere in Lean is that the second one is the query's:
+# the module simply assumes it.
+#
+# Anchoring checks exactly that, from the `.smt2` TEXT, and it is a different
+# question from the structural one. Not "is this term in the file" but:
+#
+#     do the query's own assertions FORCE `lhs = rhs` to be false --
+#     and is that the ONLY disequality they force which this module's
+#     rendered sides could stand for?
+#
+# `forced_disequalities` answers the first half by propagating a required truth
+# value down each `(assert …)`, through the Boolean connectives and through the
+# one-bit-vector encoding BTOR-derived files use for them (`(= #b1 t)`,
+# `bvand`/`bvor`/`bvnot`, `(ite c #b1 #b0)`). It propagates only where the value
+# is forced -- an `or` under a true polarity, an `ite` with a non-Boolean pair of
+# branches, an `xor`, an n-ary `=` under a false polarity all contribute nothing.
+# Fail-closed: a shape it does not model yields no forced disequality, so a
+# module claiming to descend from one stays unanchored and its instance fails.
+#
+# The UNIQUENESS half is what makes this a check rather than a formality, and it
+# is where the honest limit sits. For a module whose sides carry structure (the
+# `TermIdentity` route renders `x` against `(ite true x y)`) the correspondence
+# is pinned by that structure, and a corrupted module names a term the file does
+# not contain. For a module whose sides are BARE constants, the correspondence is
+# pinned only by there being exactly one candidate: two different queries that
+# each force exactly one leaf disequality accept each other's module, because the
+# two modules are byte-identical. What anchoring rules out, and what `attested`
+# did not, is a module assuming a disequality the query does NOT entail, and a
+# query that entails none, or several.
+#
+# That the requirement bites is not a claim -- it is measured on the same 13:
+# three of them are refused and stay attested. `solver__array__ext27.btor.smt2`
+# forces FOUR leaf disequalities (`i0≠i1`, `v5≠v6`, `i0≠i2`, `i1≠i2`) and the
+# bare module does not say which; the two `unsat__replace_all__not-first-only`
+# files force NONE, because their single assertion is a forced-TRUE equality
+# whose sides the arena constant-folded (the rewrite residue, as for `ext10`).
+
+ANCHORED_MANIFEST = ROOT / "scripts/hypothesis-binding-anchored-instances.txt"
+# Measured 2026-08-18: 10 instances, 29 rendered term nodes, 26 corruptions
+# caught. The node floor is what sees a renderer degrading the `TermIdentity`
+# route back to bare constants: those would still anchor (a bare pair is the
+# weakest thing that can), and would anchor on uniqueness alone.
+MIN_ANCHORED = 8
+MIN_ANCHORED_NODES = 26
+MIN_ANCHORED_MUTATIONS = 20
+
+# The Boolean values a one-bit vector stands for in the BTOR-derived encoding,
+# and the `Bool` literals. Deliberately narrow: `#b1` is a Boolean only because
+# the surrounding `(= #b1 t)` / `(ite c #b1 #b0)` idiom makes it one, and a wider
+# literal (`#b1111`) is not admitted at all, so propagation can never leave the
+# one-bit fragment where `bvand`/`bvor`/`bvnot` ARE conjunction/disjunction/
+# negation.
+_BIT_TRUE = frozenset({"#b1", "true"})
+_BIT_FALSE = frozenset({"#b0", "false"})
+
+# Heads that are conjunction/disjunction/negation, at whichever of the two sorts.
+_NOT_HEADS = frozenset({"not", "bvnot"})
+_AND_HEADS = frozenset({"and", "bvand"})
+_OR_HEADS = frozenset({"or", "bvor"})
+
+
+def anchored_instances() -> list[str]:
+    return _manifest(ANCHORED_MANIFEST)
+
+
+def _bit_value(term) -> bool | None:
+    """`True`/`False` if `term` is a Boolean literal in either sort, else `None`."""
+    if not isinstance(term, str):
+        return None
+    if term in _BIT_TRUE:
+        return True
+    if term in _BIT_FALSE:
+        return False
+    return None
+
+
+def forced_disequalities(path: pathlib.Path) -> list[tuple[object, object]]:
+    """Every pair `(L, R)` this query's assertions force to be UNEQUAL.
+
+    Shares no code with `bind_structural`'s matcher and none with the arithmetic
+    binder: this decides what the FILE entails, and it must not be able to reach
+    that verdict through machinery whose job is to read the module.
+
+    Polarity is propagated only where it is forced. `or` under a true polarity,
+    `and` under a false one, `xor`, an `ite` whose branches are not the Boolean
+    pair, and an n-ary `=` under a false polarity all stop the walk -- each of
+    them entails a disjunction, not a fact, and treating one as a fact is exactly
+    the transcription bug this file exists to catch.
+    """
+    forms = sexprs(path.read_text(encoding="utf-8"))
+    stack: list[tuple[object, bool]] = []
+    for form in forms:
+        if isinstance(form, list) and len(form) == 2 and form[0] == "assert":
+            try:
+                stack.append((_smt_term(form[1], {}), True))
+            except Unsupported:
+                continue
+
+    found: list[tuple[object, object]] = []
+    keys: set = set()
+    seen: set = set()
+
+    def record(left, right) -> None:
+        key = (left, right) if repr(left) <= repr(right) else (right, left)
+        if key in keys:
+            return
+        keys.add(key)
+        found.append((left, right))
+
+    while stack:
+        term, value = stack.pop()
+        if (term, value) in seen:
+            continue
+        seen.add((term, value))
+        if isinstance(term, str):
+            continue
+        head, args = term[0], term[1:]
+        if head in _NOT_HEADS and len(args) == 1:
+            stack.append((args[0], not value))
+        elif head in _AND_HEADS and value:
+            stack.extend((arg, True) for arg in args)
+        elif head in _OR_HEADS and not value:
+            stack.extend((arg, False) for arg in args)
+        elif head == "=>" and not value and len(args) == 2:
+            stack.append((args[0], True))
+            stack.append((args[1], False))
+        elif head == "ite" and len(args) == 3:
+            then_bit, else_bit = _bit_value(args[1]), _bit_value(args[2])
+            if then_bit is True and else_bit is False:
+                stack.append((args[0], value))
+            elif then_bit is False and else_bit is True:
+                stack.append((args[0], not value))
+        elif head == "distinct" and value:
+            # `(distinct a b c)` is PAIRWISE distinct, so every pair is forced.
+            for i, left in enumerate(args):
+                for right in args[i + 1 :]:
+                    record(left, right)
+        elif head == "=" and len(args) == 2:
+            if not value:
+                record(args[0], args[1])
+                continue
+            # `(= #b1 t)` is how a BTOR-derived file asserts the Boolean `t`.
+            # The literal side fixes the other side's value; two literals fix
+            # nothing, and neither does a wider constant.
+            left_bit, right_bit = _bit_value(args[0]), _bit_value(args[1])
+            if left_bit is not None and right_bit is None:
+                stack.append((args[1], left_bit))
+            elif right_bit is not None and left_bit is None:
+                stack.append((args[0], right_bit))
+    return found
+
+
+def _is_negated_equality(ty: str) -> bool:
+    """Is the rendered type `Not (Eq.{1} α L R)` rather than the bare equality?"""
+    try:
+        expr = lean_expr(ty)
+    except Unsupported:
+        return False
+    return isinstance(expr, list) and len(expr) == 2 and expr[0] == "Not"
+
+
+def bind_anchored(source: str, path: pathlib.Path) -> tuple[bool, str, int]:
+    """`(anchored, why not, matched term nodes)` for a rendered module.
+
+    The module must state ONE equality and its negation over the same two
+    rendered terms -- the shape both routes emit -- and the query must force
+    exactly one disequality those two terms can stand for.
+    """
+    sides: tuple[object, object] | None = None
+    declared: set[str] = set()
+    disequality = False
+    for line in source.splitlines():
+        match = AXIOM_LINE.match(line.strip())
+        if not match:
+            continue
+        name, ty = match.group(1), match.group(2).strip()
+        if ty.count("(") != ty.count(")"):
+            return (False, f"{name}: the rendered type is not balanced on one line", 0)
+        if not name.startswith(QUERY_NAMESPACE):
+            if (name, ty) != ATTESTATION_SORT_AXIOM:
+                return (
+                    False,
+                    f"`{name} : {ty}` is not the opaque sort `α : Sort (1)`",
+                    0,
+                )
+            continue
+        if name.startswith(ATTESTATION_HYP_PREFIXES):
+            pair = _equated_sides(ty)
+            if pair is None:
+                return (False, f"{name} is not an equality between two rendered terms", 0)
+            if sides is None:
+                sides = pair
+            elif pair != sides:
+                return (
+                    False,
+                    f"{name} equates a different pair of terms than the module's other "
+                    "hypotheses; anchoring covers a module that states ONE equality and "
+                    "its negation, and cannot say which of several a query entails",
+                    0,
+                )
+            disequality = disequality or _is_negated_equality(ty)
+            continue
+        declared.add(name)
+    if sides is None:
+        return (False, "the module states no equality between rendered terms", 0)
+    if not disequality:
+        return (
+            False,
+            "the module assumes no DISEQUALITY, so there is nothing here for the "
+            "query to have to entail",
+            0,
+        )
+
+    forced = forced_disequalities(path)
+    matches: list[dict[str, str]] = []
+    for left, right in forced:
+        for candidate in ((left, right), (right, left)):
+            phi = _match(sides[0], candidate[0], {})
+            if phi is None:
+                continue
+            phi = _match(sides[1], candidate[1], phi)
+            if phi is None:
+                continue
+            matches.append(phi)
+            # One orientation is enough: `=` is symmetric, so the two readings of
+            # the SAME query pair are one candidate, not two.
+            break
+    if not matches:
+        return (
+            False,
+            f"this query's assertions force {len(forced)} disequalities and the "
+            "module's rendered sides stand for none of them, so the disequality it "
+            "assumes is not one the file entails",
+            0,
+        )
+    if len(matches) > 1:
+        return (
+            False,
+            f"this query forces {len(matches)} different disequalities that the "
+            "module's rendered sides could stand for, so WHICH one the module assumes "
+            "is not determined by anything -- an anchor that picks one of several is "
+            "not an anchor",
+            0,
+        )
+    phi = matches[0]
+    for name in declared:
+        if name not in phi:
+            return (
+                False,
+                f"{name} is declared but no rendered term binds it, so the module "
+                "carries a constant with no query counterpart",
+                0,
+            )
+    return (True, "", _lean_nodes(sides[0]) + _lean_nodes(sides[1]))
+
+
+# ---------------------------------------------------------------------------
 # Opaque-skeleton attestations
 # ---------------------------------------------------------------------------
 #
@@ -1829,15 +2139,17 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--no-self-check", action="store_true")
     parser.add_argument(
         "--expect",
-        choices=("bound", "structural", "attested"),
+        choices=("bound", "structural", "anchored", "attested"),
         default="bound",
         help="the verdict every --instance must reach. `bound` (the default) "
         "requires the module's hypotheses to bind to the query's assertions; "
         "`structural` requires every rendered term to be a subterm of the query "
-        "under one injective correspondence; `attested` requires it to be a "
-        "content-free opaque skeleton AND to fail the structural check. Which "
-        "verdict is required comes from the MANIFEST when no --instance is given, "
-        "so an instance cannot quietly move between the three.",
+        "under one injective correspondence; `anchored` requires the query's own "
+        "assertions to FORCE the disequality the module assumes, and to force "
+        "exactly one the module could stand for; `attested` requires it to be a "
+        "content-free opaque skeleton AND to fail both the structural and the "
+        "anchored check. Which verdict is required comes from the MANIFEST when no "
+        "--instance is given, so an instance cannot quietly move between the four.",
     )
     parser.add_argument("--min-instances", type=int, default=MIN_INSTANCES)
     parser.add_argument("--min-hypotheses", type=int, default=MIN_HYPOTHESES)
@@ -1852,6 +2164,11 @@ def main(argv: list[str]) -> int:
     parser.add_argument(
         "--min-structural-mutations", type=int, default=MIN_STRUCTURAL_MUTATIONS
     )
+    parser.add_argument("--min-anchored", type=int, default=MIN_ANCHORED)
+    parser.add_argument("--min-anchored-nodes", type=int, default=MIN_ANCHORED_NODES)
+    parser.add_argument(
+        "--min-anchored-mutations", type=int, default=MIN_ANCHORED_MUTATIONS
+    )
     parser.add_argument("--min-represented", type=int, default=MIN_REPRESENTED)
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
@@ -1861,6 +2178,7 @@ def main(argv: list[str]) -> int:
     else:
         targets = [(pathlib.Path(p), "bound") for p in manifest_instances()]
         targets += [(pathlib.Path(p), "structural") for p in structural_instances()]
+        targets += [(pathlib.Path(p), "anchored") for p in anchored_instances()]
         targets += [(pathlib.Path(p), "attested") for p in attestation_instances()]
     instances = [path for path, want in targets if want == "bound"]
     if args.module is not None and len(targets) != 1:
@@ -1877,6 +2195,10 @@ def main(argv: list[str]) -> int:
     structural_nodes = 0
     structural_caught = 0
     structural_accepted = 0
+    anchored = 0
+    anchored_nodes = 0
+    anchored_caught = 0
+    anchored_accepted = 0
     spine_assertions = 0
     represented = 0
     escaped: list[str] = []
@@ -1921,6 +2243,35 @@ def main(argv: list[str]) -> int:
                 print(f"  {instance} [{fragment}] structural, {nodes} term nodes bound")
             continue
 
+        if want == "anchored":
+            ok, why, nodes = bind_anchored(source, path)
+            if not ok:
+                failures.append(
+                    f"{instance}: pinned as anchored to an asserted disequality, but {why}"
+                )
+                continue
+            anchored += 1
+            anchored_nodes += nodes
+            if not args.no_self_check:
+                # Corrupt this module's own statement and require the corruption
+                # to stop being the disequality THIS query forces. For a module
+                # whose sides are bare constants only `retarget-leaf` and
+                # `collapse-two-constants` apply -- there is no application to
+                # damage -- and both are caught by the match against the query's
+                # forced pairs, not by anything internal to the module.
+                for kind in STRUCTURAL_MUTATIONS:
+                    mutant = mutate_structural_module(source, kind)
+                    if mutant is None:
+                        continue
+                    mutated, _why, _nodes = bind_anchored(mutant, path)
+                    if mutated:
+                        anchored_accepted += 1
+                    else:
+                        anchored_caught += 1
+            if args.verbose:
+                print(f"  {instance} [{fragment}] anchored, {nodes} term nodes")
+            continue
+
         if want == "attested":
             # The guard that keeps the two classes from absorbing each other. An
             # attestation's claim is that nothing relates the module to the
@@ -1935,6 +2286,21 @@ def main(argv: list[str]) -> int:
                     f"{instance}: pinned as a content-free attestation, but its rendered "
                     f"terms ARE {nodes} nodes of this query under an injective renaming. "
                     "It transcribes something; pin it as `structural`"
+                )
+                continue
+            # The same guard, one notch weaker and therefore one notch harder to
+            # stay on the right side of: an attestation also claims the query does
+            # not ENTAIL what the module assumes. If it does -- uniquely -- the
+            # instance belongs in the anchored manifest. Without this the anchored
+            # class could never grow, because a module that started being
+            # anchorable would sit green in this one.
+            anchored_anyway, _why, _nodes = bind_anchored(source, path)
+            if anchored_anyway:
+                failures.append(
+                    f"{instance}: pinned as a content-free attestation, but this query "
+                    "FORCES exactly one disequality its rendered sides can stand for. "
+                    "The module's assumption is entailed by the file; pin it as "
+                    "`anchored`"
                 )
                 continue
             ok, why, vacuous = classify_attestation(source)
@@ -2049,7 +2415,9 @@ def main(argv: list[str]) -> int:
         f"mutants_caught={caught_mutations}|mutants_accepted={accepted_mutations}|"
         f"unjustified={len(escaped)}|structural={structural}|"
         f"structural_nodes={structural_nodes}|structural_caught={structural_caught}|"
-        f"structural_accepted={structural_accepted}|attested={attested}|"
+        f"structural_accepted={structural_accepted}|anchored={anchored}|"
+        f"anchored_nodes={anchored_nodes}|anchored_caught={anchored_caught}|"
+        f"anchored_accepted={anchored_accepted}|attested={attested}|"
         f"attested_vacuous={attested_vacuous}|spine_assertions={spine_assertions}|"
         f"represented_assertions={represented}|failures={len(failures)}"
     )
@@ -2088,6 +2456,25 @@ def main(argv: list[str]) -> int:
                 f"{args.min_structural_nodes}). The instance count alone cannot see a "
                 "renderer that degraded to bare constants: those still bind, and bind "
                 "vacuously"
+            )
+    if any(want == "anchored" for _p, want in targets):
+        if anchored < args.min_anchored:
+            failures.append(
+                f"only {anchored} modules were anchored to a disequality their query "
+                f"forces (floor {args.min_anchored})"
+            )
+        if anchored_nodes < args.min_anchored_nodes:
+            failures.append(
+                f"only {anchored_nodes} rendered term nodes were anchored (floor "
+                f"{args.min_anchored_nodes}). The instance count alone cannot see a "
+                "renderer that degraded a structured side back to a bare constant: a "
+                "bare pair still anchors, on uniqueness alone"
+            )
+        if not args.no_self_check and anchored_caught < args.min_anchored_mutations:
+            failures.append(
+                f"only {anchored_caught} corruptions of an anchored module were CAUGHT "
+                f"(floor {args.min_anchored_mutations}). An anchor that holds whatever "
+                "the module says is not an anchor"
             )
     if total_hypotheses < args.min_hypotheses:
         failures.append(

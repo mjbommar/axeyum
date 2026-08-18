@@ -157,14 +157,18 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
         "scripts.tests.test_check_lra_hypothesis_binding",
         [
             (
+                # `bind`'s search moved into `_bind_monomial` when the degree-2
+                # fragment landed; the guard is the same one, and the find-string
+                # carries the two lines after it so it cannot drift onto the
+                # sort check immediately below.
                 "injectivity of the renaming",
-                "            if cand_var in used:\n                continue",
-                "            if False:\n                continue",
+                "            if target in next_used:\n                ok = False\n                break\n            if not sort_compatible",
+                "            if False:\n                ok = False\n                break\n            if not sort_compatible",
             ),
             (
                 "sort-soundness of the renaming",
-                "            if not sort_compatible(carriers.get(var), sorts.get(cand_var)):\n                continue",
-                "            if False:\n                continue",
+                "            if not sort_compatible(carriers.get(factor), sorts.get(target)):\n                ok = False\n                break\n            next_phi = {**next_phi, factor: target}",
+                "            if False:\n                ok = False\n                break\n            next_phi = {**next_phi, factor: target}",
             ),
             (
                 "search completeness (all permutations, not the first)",
@@ -224,8 +228,8 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
             ),
             (
                 "an unknown rendered leaf is not a fresh variable",
-                "        if expr.startswith(QUERY_NAMESPACE):\n            return ({expr: Fraction(1)}, Fraction(0))",
-                "        if True:\n            return ({expr: Fraction(1)}, Fraction(0))",
+                "        if expr.startswith(QUERY_NAMESPACE):\n            return ({(expr,): Fraction(1)}, Fraction(0))",
+                "        if True:\n            return ({(expr,): Fraction(1)}, Fraction(0))",
             ),
             (
                 "an `Eq` at the wrong sort is not an equality between query terms",
@@ -325,6 +329,69 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "the converse direction counts UNrendered rows as unrepresented",
                 "        if index < len(assertions) and renamed.intersection(assertions[index]):",
                 "        if True:",
+            ),
+            (
+                # `_AND_HEADS` / `_OR_HEADS` are propagated under OPPOSITE
+                # polarities on purpose. Making the `or` rule fire under a true
+                # polarity turns a disjunction into a fact, which is the whole
+                # class of bug anchoring exists to refuse.
+                "anchor: an `or` under a true polarity is not a fact",
+                "        elif head in _OR_HEADS and not value:",
+                "        elif head in _OR_HEADS:",
+            ),
+            (
+                "anchor: an `ite` needs the Boolean branch pair to be descended",
+                "            if then_bit is True and else_bit is False:\n                stack.append((args[0], value))",
+                "            if True:\n                stack.append((args[0], value))",
+            ),
+            (
+                "anchor: an asserted EQUALITY is not a disequality",
+                "            if not value:\n                record(args[0], args[1])",
+                "            if True:\n                record(args[0], args[1])",
+            ),
+            (
+                "anchor: `distinct` is only a disequality under a true polarity",
+                'elif head == "distinct" and value:',
+                'elif head == "distinct":',
+            ),
+            (
+                "anchor: the module must state a DISEQUALITY",
+                "    if not disequality:",
+                "    if False:",
+            ),
+            (
+                "anchor: every hypothesis equates the same pair",
+                "            elif pair != sides:",
+                "            elif False:",
+            ),
+            (
+                "anchor: the forced disequality must be UNIQUE",
+                "    if len(matches) > 1:",
+                "    if False:",
+            ),
+            (
+                "anchor: a module the query forces nothing for is refused",
+                "    if not matches:",
+                "    if False and not matches:",
+            ),
+            (
+                # Duplicated in `bind_structural` and `classify_attestation`, so
+                # the find-string carries the following line to pin WHICH copy.
+                "anchor: a declared constant no rendered term uses is refused",
+                "    phi = matches[0]\n    for name in declared:\n        if name not in phi:",
+                "    phi = matches[0]\n    for name in declared:\n        if False:",
+            ),
+            (
+                # Same shape as the structural/attestation copies above; the
+                # find-string carries the `bind_anchored` message that follows it.
+                "anchor: no axiom beyond the opaque sort",
+                "            if (name, ty) != ATTESTATION_SORT_AXIOM:\n                return (\n                    False,\n                    f\"`{name} : {ty}` is not the opaque sort `α : Sort (1)`\",\n                    0,\n                )",
+                "            if False:\n                return (\n                    False,\n                    f\"`{name} : {ty}` is not the opaque sort `α : Sort (1)`\",\n                    0,\n                )",
+            ),
+            (
+                "an attestation the query ENTAILS is not an attestation",
+                "            anchored_anyway, _why, _nodes = bind_anchored(source, path)\n            if anchored_anyway:",
+                "            anchored_anyway, _why, _nodes = bind_anchored(source, path)\n            if False:",
             ),
         ],
     ),

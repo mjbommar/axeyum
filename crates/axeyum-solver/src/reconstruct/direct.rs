@@ -437,8 +437,25 @@ fn reconstruct_term_identity_to_lean_module(
         })?;
 
     let mut ctx = ReconstructCtx::new();
-    let lhs = term_identity_term_expr(&mut ctx, cert.lhs);
-    let rhs = term_identity_term_expr(&mut ctx, cert.rhs);
+    // Render the certificate's two sides as the query's own terms, on the same
+    // budgeted rule the array-axiom route uses. `cert.assertion` IS the query
+    // conjunct `not (= lhs rhs)`, so the rendered `Not (Eq α lhs rhs)` is a
+    // transcription of an `(assert ...)` line and not a fresh vocabulary --
+    // which is what lets `scripts/check-lra-hypothesis-binding.py` relate it to
+    // the file and, crucially, FAIL when it does not match.
+    let structural = query_term_nodes(arena, &[cert.lhs, cert.rhs])
+        .is_some_and(|nodes| nodes <= ARRAY_AXIOM_MAX_RENDERED_NODES);
+    let (lhs, rhs) = if structural {
+        (
+            query_term_expr(&mut ctx, arena, cert.lhs),
+            query_term_expr(&mut ctx, arena, cert.rhs),
+        )
+    } else {
+        (
+            term_identity_term_expr(&mut ctx, cert.lhs),
+            term_identity_term_expr(&mut ctx, cert.rhs),
+        )
+    };
     let eq_prop = ctx.mk_eq(lhs, rhs);
     let eq_proof = fresh_axiom(&mut ctx, eq_prop, "term_identity")?;
     let diseq_prop = ctx.mk_not(eq_prop);
@@ -448,6 +465,9 @@ fn reconstruct_term_identity_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+/// One opaque constant for a whole term: the over-budget fallback, matching
+/// [`array_axiom_term_expr`]. A module built from these says nothing about the
+/// query.
 fn term_identity_term_expr(ctx: &mut ReconstructCtx, term: TermId) -> ExprId {
     let name = ctx.atom_const(&format!("term_identity_term_{}", term.index()));
     ctx.kernel.const_(name, vec![])

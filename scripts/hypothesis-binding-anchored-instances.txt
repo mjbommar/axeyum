@@ -1,0 +1,71 @@
+# Instances whose rendered Lean module assumes a disequality the query's own
+# assertions FORCE to be false -- and force uniquely.
+#
+# These are the modules the STRUCTURAL binder cannot grip and is right not to.
+# Their whole content is
+#
+#     axiom axeyum.reconstruct.hyp._2 : Eq.{1} α <lhs> <rhs>
+#     axiom axeyum.reconstruct.hyp._3 : Not (Eq.{1} α <lhs> <rhs>)
+#
+# one assumed `ArrayAxiom`/`TermIdentity` conclusion and one assumed disequality,
+# and for ten of them `<lhs>`/`<rhs>` are BARE query leaves (`a0`, `a2`, `v1`,
+# `v2`, …). A structural match of a bare pair against the file shows nothing: an
+# injective map onto two of the query's symbols exists for any query with two
+# symbols. So `bind_structural` refuses them, and they sat in
+# `hypothesis-binding-attestations.txt` as content-free.
+#
+# Anchoring asks the other question, and it is the one the module's second axiom
+# actually raises: the module ASSUMES `¬(lhs = rhs)` and nothing in Lean checks
+# that the query says so. `forced_disequalities` reads the `.smt2` TEXT and
+# propagates a required truth value down each `(assert …)` -- through `not`/
+# `and`/`or`/`=>`, through the one-bit-vector encoding BTOR files use for them
+# (`(= #b1 t)`, `bvand`/`bvor`/`bvnot`, `(ite c #b1 #b0)`), and through
+# `distinct` -- collecting every pair the assertions force UNEQUAL. It propagates
+# only where the value is forced; an `or` under a true polarity, an `xor`, or an
+# `ite` without the Boolean branch pair stops the walk and contributes nothing.
+#
+#     ext7          ¬(a0 = a2)   from  (bvnot (bvor … (ite (= a0 a2) #b1 #b0)))
+#     ext15         ¬(a0 = a3)   from  (bvnot (ite (= a0 a3) #b1 #b0))
+#     ext13/16/23/26 ¬(a0 = a1)  from  (ite (distinct a0 a1) #b1 #b0)
+#     extarraywrite1 ¬(v1 = v2)  from  (bvnot (ite (= v1 v2) #b1 #b0))
+#     ite / ite_arith ¬(x = (ite true x y))  from the assertion itself
+#
+# The pinned requirement is that the query force EXACTLY ONE disequality the
+# module's rendered sides can stand for. That is the difference between an anchor
+# and a formality, and it bites: of the 13 candidates, THREE are refused and stay
+# attested. `solver__array__ext27.btor.smt2` forces four leaf disequalities
+# (`i0≠i1`, `v5≠v6`, `i0≠i2`, `i1≠i2`) and a bare module does not say which; the
+# two `unsat__replace_all__not-first-only` files force NONE, their one assertion
+# being a forced-TRUE equality whose sides the arena constant-folded.
+#
+# WHAT THIS DOES NOT SHOW, stated because it is the interesting half. For the
+# three `TermIdentity` rows the correspondence is additionally pinned by
+# structure -- `(ite true x y)` is a four-node term of the file and a corrupted
+# module names one it does not contain. For the seven bare-pair `ArrayAxiom` rows
+# it is pinned ONLY by uniqueness: those seven modules are byte-identical to one
+# another, so each anchors against any of the others' queries. What anchoring
+# rules out, and `attested` did not, is a module assuming a disequality the query
+# does not entail, and a query that entails none or several. It does not show
+# that `lhs = rhs` follows from the array axioms -- that is still an assumed
+# hypothesis, re-derived in Rust and not here.
+#
+# ANCHORED AND STRUCTURAL ARE NOT NESTED, AND THEY OVERLAP. Measured 2026-08-18:
+# 63 of the 95 rows in `hypothesis-binding-structural-instances.txt` ALSO anchor
+# -- their query asserts the disequality outright rather than leaving it a
+# congruence conclusion. They are left pinned `structural` because that is the
+# stronger statement about them (every term node matched, not just the pair), and
+# because moving them would move the structural node floor without adding a
+# check. The 32 that do not anchor are the congruence-conclusion case the
+# structural verdict was created for. A later lane wanting BOTH verdicts on one
+# instance would need the manifests to stop being mutually exclusive; today they
+# are, and `TheAnchoredManifestIsRealAndOnlyGrows` pins that.
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext13.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext15.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext16.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext23.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext26.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext7.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__extarraywrite1.btor.smt2
+corpus/public-curated/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__ite_arith.smt2
+corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__ite.smt2
+corpus/regression/cvc5/qf_lra/cvc5__cli__regress0__ite_arith.smt2

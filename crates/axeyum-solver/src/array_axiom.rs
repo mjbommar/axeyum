@@ -32,7 +32,18 @@ pub enum ArrayAxiomKind {
 /// the checked array axiom schemas above.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ArrayAxiomRefutationCertificate {
-    /// The original top-level disequality assertion.
+    /// The query assertion (or top-level conjunct of one) this refutation rests
+    /// on.
+    ///
+    /// **Not always a disequality**, and the difference matters to anything
+    /// trying to relate the rendered module back to the file. On the
+    /// `match_disequality` path it *is* the conjunct `not (= lhs rhs)`. On the
+    /// read-congruence path it is the whole assertion the probe walked — for a
+    /// BTOR-derived file, a bit-blasted `(= #b1 (bvand … (ite (distinct a0 a1)
+    /// #b1 #b0)))` — and `¬(lhs = rhs)` is something that assertion *entails*
+    /// rather than states. `scripts/check-lra-hypothesis-binding.py` covers both
+    /// by propagating a forced truth value down the assertion in Python
+    /// (`forced_disequalities`) instead of pattern-matching a disequality.
     pub assertion: TermId,
     /// The left side of the asserted equality inside the negation.
     pub lhs: TermId,

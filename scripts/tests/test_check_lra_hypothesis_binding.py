@@ -677,21 +677,6 @@ class TheDegreeTwoBindingDiscriminates(unittest.TestCase):
     (check-sat)
     """
 
-    # A query whose cross term forces φ to be ORDER-REVERSING. The linear `aa`
-    # pins `x._1 -> aa`, so the rendered monomial `(x._0, x._1)` has to land on
-    # the query's `(aa, zz)` with `x._0 -> zz`. Renaming factor by factor in
-    # place then yields `("zz", "aa")` — which is not the sorted atom the query
-    # side produced, so a `_rename` that skipped the re-sort would reject this
-    # FAITHFUL module. Names chosen so the two orders actually differ: with
-    # `x._0 -> aa` they would coincide and the control would be vacuous.
-    REVERSING_QUERY = """
-    (set-logic QF_NRA)
-    (declare-fun aa () Real)
-    (declare-fun zz () Real)
-    (assert (< (+ (* zz aa) aa) 0.0))
-    (check-sat)
-    """
-
     def _module(self, lhs: str) -> str:
         return f"""
 axiom Real : Sort (1)
@@ -742,6 +727,18 @@ theorem axeyum_refutation : False := trivial
         phi, _h, _a, detail = run(self._module(lhs), self.QUERY)
         self.assertIsNone(phi, detail)
 
+    # A query whose cross term forces φ to be ORDER-REVERSING: the linear `zz`
+    # pins `x._1 -> zz`, so the rendered `(x._0, x._1)` has to land on the query's
+    # `(aa, zz)` with `x._0 -> aa`. Renaming factor-by-factor without re-sorting
+    # yields `("zz", "aa")`, which is not the atom the query side produced.
+    REVERSING_QUERY = """
+    (set-logic QF_NRA)
+    (declare-fun aa () Real)
+    (declare-fun zz () Real)
+    (assert (< (+ (* zz aa) zz) 0.0))
+    (check-sat)
+    """
+
     def test_a_renamed_monomial_is_re_sorted_before_it_is_compared(self) -> None:
         """φ need not preserve the order of a monomial's factors.
 
@@ -753,8 +750,8 @@ theorem axeyum_refutation : False := trivial
         lhs = f"(Real.add (Real.mul {X0} {X1}) {X1})"
         phi, _h, _a, detail = run(self._module(lhs), self.REVERSING_QUERY)
         self.assertIsNotNone(phi, detail)
-        self.assertEqual(phi[X0], "zz")
-        self.assertEqual(phi[X1], "aa")
+        self.assertEqual(phi[X0], "aa")
+        self.assertEqual(phi[X1], "zz")
 
     def test_a_consistent_renaming_of_the_carriers_still_binds(self) -> None:
         """The positive control. A checker that rejects every quadratic module
@@ -1348,6 +1345,484 @@ def _read(query: str):
         return HB.read_query(path)
     finally:
         path.unlink()
+
+
+# ---------------------------------------------------------------------------
+# Assertion anchoring
+# ---------------------------------------------------------------------------
+
+# The BTOR-derived shape the 7 bare-pair `ArrayAxiom` rows have: `a0 = a1` and
+# `a1 = a2` are forced TRUE, `a0 = a2` is forced FALSE, and the whole thing is
+# encoded as one-bit vectors under `(= #b1 …)`.
+ANCHOR_QUERY = """
+(set-logic QF_ABV)
+(declare-const a0 (Array (_ BitVec 8) (_ BitVec 8)))
+(declare-const a1 (Array (_ BitVec 8) (_ BitVec 8)))
+(declare-const a2 (Array (_ BitVec 8) (_ BitVec 8)))
+(assert (= #b1 (bvnot (bvor (bvnot (bvand (ite (= a0 a1) #b1 #b0) \
+(ite (= a1 a2) #b1 #b0))) (ite (= a0 a2) #b1 #b0)))))
+(check-sat)
+"""
+
+# Both sides bare: the structural binder refuses this, and is right to.
+ANCHOR_MODULE = """
+axiom α : Sort (1)
+axiom axeyum.reconstruct.atom._0 : α
+axiom axeyum.reconstruct.atom._1 : α
+axiom axeyum.reconstruct.hyp._2 : Eq.{1} α axeyum.reconstruct.atom._0 \
+axeyum.reconstruct.atom._1
+axiom axeyum.reconstruct.hyp._3 : Not (Eq.{1} α axeyum.reconstruct.atom._0 \
+axeyum.reconstruct.atom._1)
+theorem axeyum_refutation : False := axeyum.reconstruct.hyp._3 axeyum.reconstruct.hyp._2
+"""
+
+# The `TermIdentity` shape, whose sides DO carry structure: `x` against
+# `(ite true x y)`, and the disequality is the whole `(assert …)` line.
+IDENTITY_QUERY = """
+(set-logic QF_LRA)
+(declare-fun x () Real)
+(declare-fun y () Real)
+(assert (not (= x (ite true x y))))
+(check-sat)
+"""
+
+IDENTITY_MODULE = """
+axiom α : Sort (1)
+axiom axeyum.reconstruct.atom._0 : α
+axiom axeyum.reconstruct.atom._1 : α
+axiom axeyum.reconstruct.atom._2 : α
+axiom axeyum.reconstruct.func._3 : ((x0 : α) -> ((x1 : α) -> ((x2 : α) -> α)))
+axiom axeyum.reconstruct.hyp._4 : Eq.{1} α axeyum.reconstruct.atom._0 \
+(axeyum.reconstruct.func._3 axeyum.reconstruct.atom._1 axeyum.reconstruct.atom._0 \
+axeyum.reconstruct.atom._2)
+axiom axeyum.reconstruct.hyp._5 : Not (Eq.{1} α axeyum.reconstruct.atom._0 \
+(axeyum.reconstruct.func._3 axeyum.reconstruct.atom._1 axeyum.reconstruct.atom._0 \
+axeyum.reconstruct.atom._2))
+theorem axeyum_refutation : False := axeyum.reconstruct.hyp._5 axeyum.reconstruct.hyp._4
+"""
+
+
+class ForcedDisequalitiesPropagateOnlyWhereForced(unittest.TestCase):
+    """The half of anchoring that reads the `.smt2` file. It must find the
+    disequalities the assertions ENTAIL and, much more importantly, must not
+    invent one from a shape that entails only a disjunction."""
+
+    def _forced(self, query: str):
+        path = _query_file(query)
+        try:
+            return HB.forced_disequalities(path)
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_a_negated_equality_is_forced(self) -> None:
+        self.assertEqual(
+            self._forced("(assert (not (= a b)))"), [("a", "b")]
+        )
+
+    def test_a_binary_distinct_is_forced(self) -> None:
+        self.assertEqual(self._forced("(assert (distinct a b))"), [("a", "b")])
+
+    def test_an_n_ary_distinct_forces_every_pair(self) -> None:
+        self.assertEqual(
+            sorted(self._forced("(assert (distinct a b c))")),
+            [("a", "b"), ("a", "c"), ("b", "c")],
+        )
+
+    def test_a_conjunct_of_an_asserted_and_is_forced(self) -> None:
+        self.assertEqual(
+            self._forced("(assert (and (> a 0) (not (= a b))))"), [("a", "b")]
+        )
+
+    def test_a_disjunct_of_an_asserted_or_is_NOT_forced(self) -> None:
+        """`(or ¬(a = b) φ)` entails a disjunction, not a fact. Reading one
+        branch of it as forced is precisely the transcription bug this file
+        exists to catch, so the walk stops."""
+        self.assertEqual(self._forced("(assert (or (not (= a b)) (> a 0)))"), [])
+
+    def test_an_ite_without_the_boolean_branch_pair_is_NOT_descended(self) -> None:
+        self.assertEqual(
+            self._forced("(assert (= #b1 (ite (not (= a b)) c d)))"), []
+        )
+
+    def test_an_asserted_equality_is_not_a_disequality(self) -> None:
+        self.assertEqual(self._forced("(assert (= a b))"), [])
+
+    def test_a_distinct_under_a_FALSE_polarity_forces_nothing(self) -> None:
+        """`¬(distinct a b)` says they ARE equal. Reading `distinct` as a
+        disequality wherever it appears, rather than only where the assertions
+        force it true, would invent the exact opposite fact."""
+        self.assertEqual(self._forced("(assert (not (distinct a b)))"), [])
+
+    def test_an_n_ary_distinct_under_a_FALSE_polarity_forces_nothing(self) -> None:
+        self.assertEqual(self._forced("(assert (not (distinct a b c)))"), [])
+
+    def test_an_n_ary_equality_under_a_negation_is_NOT_forced(self) -> None:
+        """`¬(a = b = c)` says SOME pair differs, not which. Fail-closed."""
+        self.assertEqual(self._forced("(assert (not (= a b c)))"), [])
+
+    def test_the_one_bit_vector_encoding_of_a_negation(self) -> None:
+        """`(= #b1 (bvnot (ite (= a b) #b1 #b0)))` is how a BTOR-derived file
+        writes `¬(a = b)`. Three separate rules have to compose to see it."""
+        self.assertEqual(
+            self._forced("(assert (= #b1 (bvnot (ite (= a b) #b1 #b0))))"),
+            [("a", "b")],
+        )
+
+    def test_the_same_shape_without_the_bvnot_forces_nothing(self) -> None:
+        """The twin of the test above: without it, a propagator that ignored
+        polarity entirely would pass both."""
+        self.assertEqual(
+            self._forced("(assert (= #b1 (ite (= a b) #b1 #b0)))"), []
+        )
+
+    def test_a_bvor_under_a_true_polarity_is_NOT_descended(self) -> None:
+        self.assertEqual(
+            self._forced(
+                "(assert (= #b1 (bvor (bvnot (ite (= a b) #b1 #b0)) (ite (= c d) #b1 #b0))))"
+            ),
+            [],
+        )
+
+    def test_a_bvor_under_a_false_polarity_IS_descended(self) -> None:
+        self.assertEqual(
+            self._forced(
+                "(assert (= #b0 (bvor (ite (= a b) #b1 #b0) (ite (= c d) #b1 #b0))))"
+            ),
+            [("c", "d"), ("a", "b")],
+        )
+
+    def test_a_wider_literal_never_enters_the_one_bit_fragment(self) -> None:
+        """`bvand` is conjunction only at width 1. The propagation can only be
+        entered through `#b1`/`#b0`, so a wide equality contributes nothing."""
+        self.assertEqual(
+            self._forced("(assert (= #b1111 (bvand p q)))"), []
+        )
+
+    def test_a_let_binding_is_expanded_before_propagating(self) -> None:
+        self.assertEqual(
+            self._forced("(assert (let ((t (= a b))) (not t)))"), [("a", "b")]
+        )
+
+
+class AnAnchoredModuleAssumesWhatTheQueryEntails(unittest.TestCase):
+    """A module whose two sides are bare constants carries no structure to match
+    — `bind_structural` refuses it and is right to. What it DOES claim is that
+    the query entails `¬(lhs = rhs)`, and nothing in Lean checks that. Anchoring
+    does, and pins the correspondence by requiring the query to force exactly one
+    disequality the module could stand for."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.query = _query_file(ANCHOR_QUERY)
+        cls.identity = _query_file(IDENTITY_QUERY)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.query.unlink(missing_ok=True)
+        cls.identity.unlink(missing_ok=True)
+
+    def test_the_bare_fixture_anchors(self) -> None:
+        ok, why, nodes = HB.bind_anchored(ANCHOR_MODULE, self.query)
+        self.assertTrue(ok, why)
+        self.assertEqual(nodes, 2)
+
+    def test_the_bare_fixture_is_NOT_structurally_bindable(self) -> None:
+        """The two verdicts are answers to different questions, and this fixture
+        is the case that separates them. Without this the anchored class could be
+        quietly folded into the structural one."""
+        ok, why, _n = HB.bind_structural(ANCHOR_MODULE, self.query)
+        self.assertFalse(ok)
+        self.assertIn("carries no structure", why)
+
+    def test_the_same_query_with_the_negation_REMOVED_does_not_anchor(self) -> None:
+        """The sharpest control here: identical symbols, identical equalities,
+        identical module — only the polarity differs. A checker that matched the
+        pair against any `(= L R)` in the file, rather than against the ones the
+        file FORCES false, passes this and must not."""
+        flipped = _query_file(
+            ANCHOR_QUERY.replace(
+                "(bvnot (bvor (bvnot (bvand (ite (= a0 a1) #b1 #b0) "
+                "(ite (= a1 a2) #b1 #b0))) (ite (= a0 a2) #b1 #b0)))",
+                "(bvand (bvand (ite (= a0 a1) #b1 #b0) (ite (= a1 a2) #b1 #b0)) "
+                "(ite (= a0 a2) #b1 #b0))",
+            )
+        )
+        try:
+            ok, why, _n = HB.bind_anchored(ANCHOR_MODULE, flipped)
+            self.assertFalse(ok)
+            self.assertIn("force 0 disequalities", why)
+        finally:
+            flipped.unlink(missing_ok=True)
+
+    def test_a_query_forcing_several_is_refused_as_ambiguous(self) -> None:
+        """`solver__array__ext27.btor.smt2`, in miniature: four forced leaf
+        disequalities and a module that does not say which it means. An anchor
+        that picks one of several is not an anchor — this is the requirement that
+        keeps the class from being a formality, and it declines a real corpus
+        instance."""
+        ambiguous = _query_file(
+            "(assert (and (not (= i0 i1)) (not (= v5 v6)) (not (= i0 i2))))"
+        )
+        try:
+            ok, why, _n = HB.bind_anchored(ANCHOR_MODULE, ambiguous)
+            self.assertFalse(ok)
+            self.assertIn("3 different disequalities", why)
+        finally:
+            ambiguous.unlink(missing_ok=True)
+
+    def test_a_query_forcing_none_is_refused(self) -> None:
+        """The two `unsat__replace_all__not-first-only` rows, in miniature."""
+        none = _query_file("(assert (= a b))")
+        try:
+            ok, why, _n = HB.bind_anchored(ANCHOR_MODULE, none)
+            self.assertFalse(ok)
+            self.assertIn("force 0 disequalities", why)
+        finally:
+            none.unlink(missing_ok=True)
+
+    def test_a_forced_pair_of_equal_sides_cannot_bind_two_names(self) -> None:
+        """`solver__array__ext10.btor.smt2` forces `¬(a0 = a0)` and nothing else.
+        Injectivity refuses it, which is why that instance stays attested."""
+        reflexive = _query_file("(assert (not (= a0 a0)))")
+        try:
+            ok, _why, _n = HB.bind_anchored(ANCHOR_MODULE, reflexive)
+            self.assertFalse(ok)
+        finally:
+            reflexive.unlink(missing_ok=True)
+
+    def test_a_bare_side_never_stands_for_a_compound_forced_term(self) -> None:
+        """`cvc5__redand-eliminate.smt2` forces one disequality, between two
+        APPLICATIONS the rewriter produced. A bare constant cannot stand for
+        one, so that instance stays attested rather than anchoring vacuously."""
+        compound = _query_file("(assert (not (= (bvredand x) (bvcomp x #b111111))))")
+        try:
+            ok, _why, _n = HB.bind_anchored(ANCHOR_MODULE, compound)
+            self.assertFalse(ok)
+        finally:
+            compound.unlink(missing_ok=True)
+
+    def test_a_module_stating_no_disequality_is_refused(self) -> None:
+        positive = "\n".join(
+            line
+            for line in ANCHOR_MODULE.splitlines()
+            if "hyp._3" not in line and "theorem" not in line
+        )
+        ok, why, _n = HB.bind_anchored(positive, self.query)
+        self.assertFalse(ok)
+        self.assertIn("assumes no DISEQUALITY", why)
+
+    def test_two_hypotheses_over_DIFFERENT_pairs_are_refused(self) -> None:
+        """Anchoring identifies one pair. A module equating two different pairs
+        would need the query to entail a specific one of them, and nothing here
+        says which — so the shape is refused rather than guessed at."""
+        mixed = ANCHOR_MODULE.replace(
+            "axiom axeyum.reconstruct.hyp._2 : Eq.{1} α axeyum.reconstruct.atom._0 "
+            "axeyum.reconstruct.atom._1",
+            "axiom axeyum.reconstruct.hyp._2 : Eq.{1} α axeyum.reconstruct.atom._1 "
+            "axeyum.reconstruct.atom._0",
+        )
+        self.assertNotEqual(mixed, ANCHOR_MODULE)
+        ok, why, _n = HB.bind_anchored(mixed, self.query)
+        self.assertFalse(ok)
+        self.assertIn("a different pair", why)
+
+    def test_an_axiom_beyond_the_opaque_sort_is_refused(self) -> None:
+        smuggled = ANCHOR_MODULE.replace(
+            "axiom α : Sort (1)", "axiom α : Sort (1)\naxiom Int.one : Int"
+        )
+        ok, why, _n = HB.bind_anchored(smuggled, self.query)
+        self.assertFalse(ok)
+        self.assertIn("opaque sort", why)
+
+    def test_a_declared_constant_no_rendered_term_uses_is_refused(self) -> None:
+        spare = ANCHOR_MODULE.replace(
+            "axiom axeyum.reconstruct.hyp._2",
+            "axiom axeyum.reconstruct.atom._9 : α\naxiom axeyum.reconstruct.hyp._2",
+        )
+        ok, why, _n = HB.bind_anchored(spare, self.query)
+        self.assertFalse(ok)
+        self.assertIn("no rendered term binds it", why)
+
+    def test_retargeting_a_leaf_is_caught(self) -> None:
+        damaged = HB.mutate_structural_module(ANCHOR_MODULE, "retarget-leaf")
+        self.assertIsNotNone(damaged)
+        ok, _why, _n = HB.bind_anchored(damaged, self.query)
+        self.assertFalse(ok)
+
+    def test_collapsing_two_constants_is_caught(self) -> None:
+        damaged = HB.mutate_structural_module(ANCHOR_MODULE, "collapse-two-constants")
+        self.assertIsNotNone(damaged)
+        ok, _why, _n = HB.bind_anchored(damaged, self.query)
+        self.assertFalse(ok)
+
+    def test_the_structured_identity_fixture_anchors(self) -> None:
+        ok, why, nodes = HB.bind_anchored(IDENTITY_MODULE, self.identity)
+        self.assertTrue(ok, why)
+        self.assertEqual(nodes, 1 + 4)
+
+    def test_swapping_the_identity_arguments_is_caught(self) -> None:
+        """`(ite true x y)` becomes `(ite x true y)`, which the file does not
+        contain. Only the match against the query can catch it — no name is
+        added or removed — and it is the structure that makes THIS module's
+        correspondence pinned by more than uniqueness."""
+        damaged = HB.mutate_structural_module(IDENTITY_MODULE, "swap-arguments")
+        self.assertIsNotNone(damaged)
+        ok, _why, _n = HB.bind_anchored(damaged, self.identity)
+        self.assertFalse(ok)
+
+    def test_dropping_an_identity_argument_is_caught(self) -> None:
+        damaged = HB.mutate_structural_module(IDENTITY_MODULE, "drop-argument")
+        self.assertIsNotNone(damaged)
+        ok, _why, _n = HB.bind_anchored(damaged, self.identity)
+        self.assertFalse(ok)
+
+    def test_the_bare_module_does_NOT_anchor_against_the_identity_query(self) -> None:
+        """The honest limit, driven rather than asserted. The identity query
+        forces exactly one disequality, but its sides are `x` and a four-node
+        `ite`, so a bare pair cannot stand for it. Two queries whose forced pairs
+        are both LEAVES would accept each other's bare module — that is what the
+        anchored manifest says out loud."""
+        ok, _why, _n = HB.bind_anchored(ANCHOR_MODULE, self.identity)
+        self.assertFalse(ok)
+
+
+class TheAnchoredManifestIsRealAndOnlyGrows(unittest.TestCase):
+    def test_every_pinned_instance_exists(self) -> None:
+        pinned = HB.anchored_instances()
+        # `corpus/` is excluded from the mutation harness's scratch tree, so its
+        # absence there is not a manifest defect; everything else must be present.
+        if not (ROOT / "corpus").is_dir():
+            pinned = [p for p in pinned if not p.startswith("corpus/")]
+        missing = [p for p in pinned if not (ROOT / p).is_file()]
+        self.assertEqual(missing, [])
+
+    def test_the_manifest_meets_its_own_floor(self) -> None:
+        self.assertGreaterEqual(len(HB.anchored_instances()), HB.MIN_ANCHORED)
+
+    def test_no_instance_is_pinned_in_two_classes(self) -> None:
+        anchored = set(HB.anchored_instances())
+        for other in (
+            HB.manifest_instances(),
+            HB.structural_instances(),
+            HB.attestation_instances(),
+        ):
+            self.assertEqual(anchored & set(other), set())
+
+
+class TheFourVerdictsCannotAbsorbEachOther(unittest.TestCase):
+    """Each verdict is a different claim, and the run must refuse an instance
+    pinned to the wrong one. The `attested` claim is the fragile one: it says the
+    module relates to the query in NO way, and it silently stopped being true for
+    six instances once before."""
+
+    def _run_driver(self, module: str, query: str, *extra: str) -> int:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as scratch:
+            qpath = pathlib.Path(scratch) / "q.smt2"
+            mpath = pathlib.Path(scratch) / "m.lean"
+            qpath.write_text(query, encoding="utf-8")
+            mpath.write_text(module, encoding="utf-8")
+            return HB.main(
+                [
+                    "--instance", str(qpath),
+                    "--module", str(mpath),
+                    "--no-build",
+                    "--no-self-check",
+                    "--min-instances", "0",
+                    "--min-hypotheses", "0",
+                    "--min-required-mutations", "0",
+                    "--min-attestations", "0",
+                    "--min-represented", "0",
+                    "--min-structural", "0",
+                    "--min-structural-nodes", "0",
+                    "--min-structural-mutations", "0",
+                    "--min-anchored", "0",
+                    "--min-anchored-nodes", "0",
+                    "--min-anchored-mutations", "0",
+                    *extra,
+                ]
+            )
+
+    def test_the_anchored_fixture_passes_when_pinned_anchored(self) -> None:
+        self.assertEqual(
+            self._run_driver(ANCHOR_MODULE, ANCHOR_QUERY, "--expect", "anchored"), 0
+        )
+
+    def test_an_anchorable_module_pinned_as_attested_fails(self) -> None:
+        """The anti-absorption guard for the new class. An attestation claims the
+        query says nothing about what the module assumes; if the query FORCES it,
+        uniquely, that claim is false. Without this the anchored class could
+        never grow, because an instance that became anchorable would sit green in
+        the attested one."""
+        self.assertEqual(
+            self._run_driver(ANCHOR_MODULE, ANCHOR_QUERY, "--expect", "attested"), 1
+        )
+
+    def test_the_same_module_IS_attested_against_a_query_that_forces_nothing(
+        self,
+    ) -> None:
+        """The twin. Without it the test above would pass against a driver that
+        failed every `attested` run."""
+        self.assertEqual(
+            self._run_driver(ANCHOR_MODULE, "(assert (= a b))", "--expect", "attested"),
+            0,
+        )
+
+    def test_an_unanchorable_module_pinned_as_anchored_fails(self) -> None:
+        self.assertEqual(
+            self._run_driver(ANCHOR_MODULE, "(assert (= a b))", "--expect", "anchored"),
+            1,
+        )
+
+    def test_a_structural_module_pinned_as_attested_fails_without_anchoring(
+        self,
+    ) -> None:
+        """The OTHER anti-absorption guard, driven where only it can fire. The
+        structural fixture's own query also anchors, so a test using it would
+        pass with the structural guard removed — the anchored guard would catch
+        it instead, and the structural one would sit there untested. This query
+        contains both rendered terms and forces no disequality at all, so only
+        `bind_structural` can refuse the `attested` pin."""
+        self.assertEqual(
+            self._run_driver(
+                STRUCTURAL_MODULE,
+                "(assert (bvult (select (store a i v) j) (select a j)))",
+                "--expect",
+                "attested",
+            ),
+            1,
+        )
+
+    def test_a_structural_module_ALSO_anchors_when_the_query_forces_it(self) -> None:
+        """The two verdicts are not nested but they do overlap, and it is worth
+        knowing where. `STRUCTURAL_QUERY` asserts the disequality outright, so
+        this module is both structurally bound AND anchored. Measured over the
+        corpus, 63 of the 95 pinned `structural` rows are in that position."""
+        self.assertEqual(
+            self._run_driver(
+                STRUCTURAL_MODULE, STRUCTURAL_QUERY, "--expect", "anchored"
+            ),
+            0,
+        )
+
+    def test_a_structural_module_does_NOT_anchor_on_a_congruence_conclusion(
+        self,
+    ) -> None:
+        """The other 32, and the reason `structural` exists as its own verdict:
+        the module's equality is the CONCLUSION of a congruence derivation, and
+        no assertion says the query forces it false. Both of the module's terms
+        are still subterms of this query — so only the polarity separates this
+        case from the one above."""
+        self.assertEqual(
+            self._run_driver(
+                STRUCTURAL_MODULE,
+                "(assert (bvult (select (store a i v) j) (select a j)))",
+                "--expect",
+                "anchored",
+            ),
+            1,
+        )
 
 
 if __name__ == "__main__":

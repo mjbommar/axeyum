@@ -23,24 +23,31 @@
 # transcribe: a module whose rendered terms are subterms of the `.smt2` file
 # fails here and belongs in `hypothesis-binding-structural-instances.txt`.
 #
-# 2026-08-18: this list was 124, then 28, and is now 19. 95 of the 124 moved to
-# the structural manifest -- 89 `ArrayAxiom` because the emitter stopped
+# 2026-08-18: this list was 124, then 28, then 19, and is now 9. 95 of the 124
+# moved to the structural manifest -- 89 `ArrayAxiom` because the emitter stopped
 # collapsing each whole term into one opaque constant, and 6 `QfAbv`/`QfUf` that
 # were structural all along and were misfiled by a check that read VOCABULARY
 # rather than SHAPE. The 124th was self-refuting and its route now declines. The
 # 9 `Sos` rows left after that moved to the BOUND manifest later the same day:
 # the route now reconstructs them (see below), so they transcribe the query and
-# are checked against it.
+# are checked against it. Ten of the 13 bare-leaf rows then moved to
+# `hypothesis-binding-anchored-instances.txt`.
 #
 # WHAT IS LEFT, and why each really does transcribe nothing. Measured, not
-# assumed: every one of the 19 was run through the structural binder and refused.
+# assumed: every one of the 9 was run through BOTH the structural binder and the
+# anchoring check, and refused by both.
 #
-#   13  BOTH SIDES ARE BARE CONSTANTS (10 `ArrayAxiom`, 3 `TermIdentity`). The
-#       module says two of this file's terms are equal and not equal, without
-#       saying WHICH two: an injective map onto two query symbols exists for any
-#       query with two symbols, so a match here would show nothing.
+#    3  BARE SIDES THE QUERY DOES NOT PIN. The module says two of this file's
+#       terms are equal and not equal without saying WHICH two, and unlike the 10
+#       that moved, the file does not force exactly one such disequality:
+#       `solver__array__ext27.btor.smt2` forces FOUR (`i0≠i1`, `v5≠v6`, `i0≠i2`,
+#       `i1≠i2`) and an anchor that picks one of four is not an anchor; the two
+#       `unsat__replace_all__not-first-only` rows force NONE, their single
+#       assertion being a forced-TRUE equality whose sides the arena
+#       constant-folded, which puts them in the rewrite class below.
 #    4  `FiniteArrayExtensionality`: `Not (And (Eq α a b) (Eq α c d))` over four
-#       bare constants -- the same nothing, with a conjunction around it.
+#       bare constants -- the same nothing, with a conjunction around it. There
+#       is no bare `Not (Eq …)` for the anchor to take hold of either.
 #    2  THE RENDERED TERM IS THE OUTPUT OF A REWRITE, not of the source text.
 #       `cvc5__redand-eliminate.smt2` asserts `(bvredand x)`; the certificate is
 #       about `bvcomp x (bvnot #b000000)`, which the rewriter produced and which
@@ -50,25 +57,19 @@
 #       precise, small residue of the general problem: to bind them one would
 #       have to certify the REWRITE as well as the transcription, which is a
 #       different object (a rewrite-step certificate) and a different check.
+#       Anchoring reaches neither: `redand-eliminate` forces exactly one
+#       disequality, but between two APPLICATIONS a bare constant cannot stand
+#       for, and `ext10` forces only `¬(a0 = a0)`, which no injective renaming of
+#       two distinct module names admits.
 corpus/public-curated/bvred/cvc5__redand-eliminate.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext10.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext13.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext15.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext16.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext23.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext26.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext27.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext7.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__extarraywrite1.btor.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom1.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom2.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom3.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom4.smt2
-corpus/public-curated/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__ite_arith.smt2
 corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2
 corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2
-corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__ite.smt2
-corpus/regression/cvc5/qf_lra/cvc5__cli__regress0__ite_arith.smt2
 
 # THE `Sos` ROUTE, 2026-08-18. The nine rows that used to sit here were the
 # degree-2 SOS certificates whose `LDLᵀ` linear forms have a NONZERO AFFINE ROW
