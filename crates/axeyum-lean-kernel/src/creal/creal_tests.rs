@@ -53,7 +53,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 24] = [
+    let expected: [(&str, crate::NameId, &str); 31] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -78,6 +78,13 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.add_neg", p.add_neg, "theorem"),
         ("CReal.add_zero", p.add_zero, "theorem"),
         ("CReal.add_assoc", p.add_assoc, "theorem"),
+        ("CReal.le", p.le, "def"),
+        ("CReal.le_refl", p.le_refl, "theorem"),
+        ("CReal.le_trans", p.le_trans, "theorem"),
+        ("CReal.add_le_add", p.add_le_add, "theorem"),
+        ("CReal.le_of_equiv", p.le_of_equiv, "theorem"),
+        ("CReal.equiv_of_le_le", p.equiv_of_le_le, "theorem"),
+        ("CReal.not_le_one_zero", p.not_le_one_zero, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -168,6 +175,39 @@ fn the_setoid_laws_have_the_statements_adr_0468_specifies() {
         "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> \
          CReal.Equiv (CReal.add (CReal.add x0 x1) x2) \
          (CReal.add x0 (CReal.add x1 x2)))))"
+    );
+    // The three order laws. Unlike the additive ones these are the `Real`
+    // package's statements VERBATIM — none of them mentions `Eq`, so there is
+    // no equality to replace by `Equiv` (ADR-0468, Measurement 2).
+    assert_eq!(
+        rendered(&mut kernel, p.le_refl),
+        "((x0 : CReal) -> CReal.le x0 x0)"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.le_trans),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.le x0 x1) -> \
+         ((x4 : CReal.le x1 x2) -> CReal.le x0 x2)))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.add_le_add),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
+         ((x4 : CReal.le x0 x1) -> ((x5 : CReal.le x2 x3) -> \
+         CReal.le (CReal.add x0 x2) (CReal.add x1 x3)))))))"
+    );
+    // The order is the order OF this setoid, not an unexamined relation that
+    // happens to satisfy three laws.
+    assert_eq!(
+        rendered(&mut kernel, p.le_of_equiv),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.Equiv x0 x1) -> CReal.le x0 x1)))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.equiv_of_le_le),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.le x0 x1) -> \
+         ((x3 : CReal.le x1 x0) -> CReal.Equiv x0 x1))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.not_le_one_zero),
+        "Not (CReal.le CReal.one CReal.zero)"
     );
     assert_eq!(
         rendered(&mut kernel, p.add_congr),
@@ -325,5 +365,50 @@ fn the_add_zero_route_cannot_prove_add_one() {
         refused.is_err(),
         "the kernel accepted `Equiv (add x one) x`, so the add_zero route is not \
          checking which sequence the shifted index samples"
+    );
+}
+
+/// **`CReal.le` discriminates.** `le_refl`, `le_trans` and `add_le_add` all
+/// hold — footprint-free — of the relation that relates every pair, so an
+/// order that separates nothing would satisfy every law proved about it. This
+/// is the negative control for `CReal.not_le_one_zero`: the identical script,
+/// pointed at `le zero one`, which is TRUE and must therefore be refused as a
+/// `Not`.
+#[test]
+fn the_order_discrimination_route_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let rat = p.rat;
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, rat.int);
+    let nat_p = rat.int.nat;
+
+    // The two constants, swapped: `le zero one` holds, so `Not` of it does not.
+    let one_real = d.kernel().const_(p.one, vec![]);
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let claim = d.const_app(p.le, &[zero_real, one_real]);
+    let stmt = d.not(claim);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let index = d.num(3);
+    let instance = d.apply(h, &[index]);
+    let one_nat = d.num(1);
+    let zero_nat = d.zero();
+    let stripped = d.lemma(nat_p.le_of_succ_le_succ, &[one_nat, zero_nat, instance]);
+    let absurd = d.lemma(nat_p.not_succ_le_zero, &[zero_nat, stripped]);
+    let value = d.lam_fv(h_fv, claim, absurd);
+    let name = d.kernel().name_str(anon, "Check.not_le_zero_one");
+    let refused = d.kernel().add_declaration(crate::Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: stmt,
+        value,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted `Not (CReal.le CReal.zero CReal.one)`, which is false — \
+         the order discrimination witness proves nothing"
     );
 }

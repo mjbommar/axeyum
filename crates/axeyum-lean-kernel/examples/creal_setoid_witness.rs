@@ -27,7 +27,10 @@
 //!    for the empty type with empty footprints; and
 //! 4. `CReal.Equiv.not_zero_one` is present, so `CReal.Equiv` is **not** the
 //!    total relation. An equivalence relation that relates everything is still
-//!    an equivalence relation.
+//!    an equivalence relation; and
+//! 5. `CReal.not_le_one_zero` is present, so `CReal.le` is not the total
+//!    relation either. `le_refl`, `le_trans` and `add_le_add` all hold, with
+//!    empty footprints, of the order that relates every pair.
 //!
 //! # How far the ordered-field structure gets (ADR-0468 phase R2, partial)
 //!
@@ -38,8 +41,9 @@
 //! sequences doubles the error, and sampling twice as deep halves each modulus
 //! back, exactly, with no slack.
 //!
-//! Of the 22 ordered-ring laws, **4 hold in `Equiv` form** here — the whole
-//! additive group: `add_comm`, `add_neg`, `add_zero` and `add_assoc`. The
+//! Of the 22 ordered-ring laws, **7 hold** here: four in `Equiv` form — the whole
+//! — the whole additive group: `add_comm`, `add_neg`, `add_zero`,
+//! `add_assoc` — and three verbatim: `le_refl`, `le_trans`, `add_le_add`. The
 //! first two are *pointwise*: their two sides sample at the same index, so
 //! `Equiv.of_pointwise` reduces each to one `Rat` law. The other two are not,
 //! and are the reason `Equiv` had to be an equivalence relation first —
@@ -47,7 +51,27 @@
 //! `(x+y)+z` samples `x` at `2(2n+1)+1` where `x+(y+z)` samples it at `2n+1`.
 //! Both close on regularity plus one inequality, `1/(2n+2) + 1/(n+1) ≤
 //! 2/(n+1)`, read at the common denominator `2n+2` as `3 ≤ 4`. Monotonicity of
-//! `Rat.natDivSucc` in its *index* is not needed and was not built.
+//! `Rat.natDivSucc` in its *index* is not needed and was not built. The other
+//! three are the order laws below, which restate verbatim.
+//!
+//! # The order (ADR-0468 phase R2, continued)
+//!
+//! `CReal.le` is Bishop's order, `∀ n, x_n − y_n ≤ 2/(n+1)` — the one-sided
+//! reading of `Equiv`, which is why `le_trans` is `Equiv.trans` with the lower
+//! half deleted: the same four-term estimate at an arbitrary index, sharing
+//! `telescope_four` and `six_term_bound` with it verbatim, and the same
+//! Archimedean lemma. `le_refl`, `le_trans` and `add_le_add` are the `Real`
+//! package's statements **unchanged**: none of them mentions `Eq`, so unlike
+//! the additive laws they needed no `Equiv` restatement.
+//!
+//! `le_of_equiv` and `equiv_of_le_le` pin it down: `Equiv` is the two-sided
+//! bound, `le` its upper half, and having both halves is having `Equiv` back.
+//! A `le` weakened to `≤ 100/(n+1)` would satisfy all three order laws and
+//! close neither.
+//!
+//! `le_total` is **absent on purpose**. It holds for `ℚ` and does not lift —
+//! `∀ x y, le x y ∨ le y x` over the reals is not constructively provable —
+//! and nothing here assumes it.
 //!
 //! # What this does NOT claim
 //!
@@ -93,6 +117,13 @@ fn main() {
         ("CReal.add_neg", p.add_neg),
         ("CReal.add_zero", p.add_zero),
         ("CReal.add_assoc", p.add_assoc),
+        ("CReal.le", p.le),
+        ("CReal.le_refl", p.le_refl),
+        ("CReal.le_trans", p.le_trans),
+        ("CReal.add_le_add", p.add_le_add),
+        ("CReal.le_of_equiv", p.le_of_equiv),
+        ("CReal.equiv_of_le_le", p.equiv_of_le_le),
+        ("CReal.not_le_one_zero", p.not_le_one_zero),
     ];
 
     let mut failed = false;
@@ -146,6 +177,10 @@ fn main() {
         kernel.environment().get(p.not_zero_one),
         Some(Declaration::Theorem { .. })
     );
+    let ordered = matches!(
+        kernel.environment().get(p.not_le_one_zero),
+        Some(Declaration::Theorem { .. })
+    );
     if !inhabited {
         eprintln!(
             "FAIL: CReal.ofRat is not a checked definition, so CReal.Regular has no \
@@ -159,6 +194,14 @@ fn main() {
             "FAIL: CReal.Equiv.not_zero_one is not a checked theorem, so nothing says \
              CReal.Equiv separates any two reals. The total relation is an equivalence \
              relation too."
+        );
+        failed = true;
+    }
+    if !ordered {
+        eprintln!(
+            "FAIL: CReal.not_le_one_zero is not a checked theorem, so nothing says \
+             CReal.le separates any two reals. le_refl, le_trans and add_le_add all \
+             hold of the order that relates every pair."
         );
         failed = true;
     }
@@ -180,7 +223,7 @@ fn main() {
     eprintln!(
         "ℝ as a Bishop setoid over the constructed ℚ: {} declarations admitted, \
          trusted surface = {} ({}); carrier inhabited = {inhabited}, \
-         Equiv discriminates = {discriminating}",
+         Equiv discriminates = {discriminating}, le discriminates = {ordered}",
         admitted.len(),
         trusted.len(),
         if trusted.is_empty() {
@@ -199,8 +242,9 @@ fn main() {
     eprintln!(
         "reflexivity, symmetry and transitivity of CReal.Equiv all hold at ZERO \
          trusted declarations; transitivity is the only consumer of \
-         Rat.le_of_le_add_natDivSucc (the Archimedean property of ℚ). 4 of the \
-         22 ordered-ring laws hold in Equiv form: the additive group is closed \
-         (add_comm, add_neg, add_zero, add_assoc)"
+         Rat.le_of_le_add_natDivSucc (the Archimedean property of ℚ). 7 of the \
+         22 ordered-ring laws hold: the additive group in Equiv form \
+         (add_comm, add_neg, add_zero, add_assoc) and three order laws \
+         verbatim (le_refl, le_trans, add_le_add)"
     );
 }

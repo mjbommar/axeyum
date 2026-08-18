@@ -195,6 +195,56 @@ pub struct CRealPrelude {
     /// index and `Equiv.of_pointwise` does not apply. Regularity closes the
     /// gap, and the slack is paid by [`shifted_bound_le`].
     pub add_zero: NameId,
+    /// `CReal.le : CReal → CReal → Prop` —
+    /// `le x y := ∀ n, seq x n − seq y n ≤ 2/(n+1)`.
+    ///
+    /// Bishop's order, and the **one-sided** reading of `Equiv`: `Equiv x y`
+    /// is exactly `le x y ∧ le y x` unfolded. That is not a coincidence to be
+    /// exploited later, it is why the order laws cost so little here — every
+    /// estimate `Equiv` needed is already one-sided inside, and the two-sided
+    /// version was the expensive packaging.
+    ///
+    /// **`le` is not decidable and no totality law is stated.** `le_or_lt`
+    /// holds for `ℚ` and does not lift: `∀ x y, le x y ∨ le y x` over the reals
+    /// is not constructively provable, and nothing below assumes it.
+    pub le: NameId,
+    /// `CReal.le_refl : ∀ x, le x x` — one of the 22, and verbatim: it
+    /// mentions no `Eq`, so unlike the additive laws it does not have to be
+    /// restated over `Equiv`.
+    pub le_refl: NameId,
+    /// `CReal.le_trans : ∀ x y z, le x y → le y z → le x z` — one of the 22,
+    /// verbatim, and the **upper half of `Equiv.trans`**: the same four-term
+    /// estimate at an arbitrary index `j`, the same
+    /// [`telescope_four`]/[`six_term_bound`], the same Archimedean lemma —
+    /// with `Rat.add_le_add` in place of `Rat.bounds_add` and no negated
+    /// branch at all.
+    pub le_trans: NameId,
+    /// `CReal.add_le_add : ∀ x x' y y', le x x' → le y y' →
+    /// le (add x y) (add x' y')` — one of the 22, verbatim. Exact, like
+    /// `add_congr`: two `2/(2n+2)` bounds sum to `2/(n+1)` with no slack.
+    pub add_le_add: NameId,
+    /// `CReal.le_of_equiv : ∀ x y, Equiv x y → le x y`.
+    ///
+    /// Half of the coherence between the order and the setoid's equality, and
+    /// it is a projection: `Equiv` *is* the two-sided bound whose upper half is
+    /// `le`.
+    pub le_of_equiv: NameId,
+    /// `CReal.equiv_of_le_le : ∀ x y, le x y → le y x → Equiv x y`.
+    ///
+    /// The other half — **antisymmetry up to `Equiv`** — and the reason the
+    /// three order laws are laws about *this* order rather than about some
+    /// coarser relation that happens to satisfy them. A `le` weakened to
+    /// `≤ 100/(n+1)` would still be reflexive, transitive and additive; it
+    /// would not close this.
+    pub equiv_of_le_le: NameId,
+    /// `CReal.not_le_one_zero : Not (le one zero)`.
+    ///
+    /// The **discrimination** witness for the order, and the reason the three
+    /// laws above are worth anything: `le_refl`, `le_trans` and `add_le_add`
+    /// all hold, footprint-free, of the relation that relates everything. This
+    /// exhibits a pair `le` separates, by computation — at index `3` the claim
+    /// is `1 ≤ 1/2`, which unfolds through `Int.le` to `Nat.le 2 1`.
+    pub not_le_one_zero: NameId,
     /// `CReal.add_assoc : ∀ x y z, Equiv (add (add x y) z) (add x (add y z))`
     /// — one of the 22, and the analytic one: `(x+y)+z` samples `x` at
     /// `2(2n+1)+1` while `x+(y+z)` samples it at `2n+1`, and `z` the other way
@@ -234,6 +284,13 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         add_neg: kernel.name_str(creal, "add_neg"),
         add_zero: kernel.name_str(creal, "add_zero"),
         add_assoc: kernel.name_str(creal, "add_assoc"),
+        le: kernel.name_str(creal, "le"),
+        le_refl: kernel.name_str(creal, "le_refl"),
+        le_trans: kernel.name_str(creal, "le_trans"),
+        add_le_add: kernel.name_str(creal, "add_le_add"),
+        le_of_equiv: kernel.name_str(creal, "le_of_equiv"),
+        equiv_of_le_le: kernel.name_str(creal, "equiv_of_le_le"),
+        not_le_one_zero: kernel.name_str(creal, "not_le_one_zero"),
     }
 }
 
@@ -269,7 +326,8 @@ pub fn build_creal_prelude(kernel: &mut Kernel) -> Result<CRealPrelude, KernelEr
         declare_pointwise(&mut d, prelude)?;
         declare_negation(&mut d, prelude)?;
         declare_addition(&mut d, prelude)?;
-        declare_additive_laws(&mut d, prelude)
+        declare_additive_laws(&mut d, prelude)?;
+        declare_order(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -472,6 +530,162 @@ fn shifted_bound_le(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
     rat_eq_rewrite(d, four_s, two_n, widen_right, moved, &|d, t| {
         rle(d, rat, start, t)
     })
+}
+
+/// The **quantity** half of Bishop's four-term estimate:
+/// `(a − p) + ((p − q) + ((q − r) + (r − b))) = a − b`, three applications of
+/// the telescoping identity from the inside out.
+///
+/// Returns `(start, target, proof)` with `proof : Eq Rat start target`. Nothing
+/// here is a rearrangement — the four differences are combined right-nested
+/// precisely so that they chain — and nothing here depends on *which* bound
+/// each difference carries, which is why the two-sided `Equiv.trans` and the
+/// one-sided [`CReal.le_trans`](CRealPrelude::le_trans) share it verbatim.
+fn telescope_four(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    head: ExprId,
+    first_mid: ExprId,
+    second_mid: ExprId,
+    third_mid: ExprId,
+    tail: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let rat = p.rat;
+    let u1 = rsub(d, rat, head, first_mid);
+    let u2 = rsub(d, rat, first_mid, second_mid);
+    let u3 = rsub(d, rat, second_mid, third_mid);
+    let u4 = rsub(d, rat, third_mid, tail);
+    let q34 = radd(d, u3, u4);
+    let q234 = radd(d, u2, q34);
+    let q1234 = radd(d, u1, q234);
+    let target = rsub(d, rat, head, tail);
+
+    let mid_second = rsub(d, rat, second_mid, tail);
+    let mid_first = rsub(d, rat, first_mid, tail);
+    let step34 = d.lemma(rat.sub_add_sub, &[second_mid, third_mid, tail]);
+    let step234 = d.lemma(rat.sub_add_sub, &[first_mid, second_mid, tail]);
+    let step1234 = d.lemma(rat.sub_add_sub, &[head, first_mid, tail]);
+    let q234_reduced = radd(d, u2, mid_second);
+    let staged = radd(d, u1, q234_reduced);
+    let first = rcongr(d, q34, mid_second, step34, &|d, t| {
+        let inner = radd(d, u2, t);
+        radd(d, u1, inner)
+    });
+    let second = rcongr(d, q234_reduced, mid_first, step234, &|d, t| radd(d, u1, t));
+    let q1234_reduced = radd(d, u1, mid_first);
+    let (_, quantity) = rchain(
+        d,
+        q1234,
+        &[(staged, first), (q1234_reduced, second), (target, step1234)],
+    );
+    (q1234, target, quantity)
+}
+
+/// The **bound** half of Bishop's four-term estimate:
+/// `(1/(n+1) + 1/(j+1)) + (2/(j+1) + (2/(j+1) + (1/(j+1) + 1/(n+1))))` fused
+/// into `2/(n+1) + 6/(j+1)`, which is the form the Archimedean lemma consumes.
+///
+/// Returns `(start, target, proof)` with `proof : Eq Rat start target`. Six
+/// summands over two denominators; `rsum_perm` sorts them and
+/// `Rat.natDivSucc_add` fuses each group, and the sort is done by the shared
+/// helper rather than inline because that is where a proof of this size goes
+/// wrong silently.
+fn six_term_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    n: ExprId,
+    j: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let rat = p.rat;
+    let b1 = modulus(d, p, n, j);
+    let b2 = div_succ(d, p, 2, j);
+    let b3 = div_succ(d, p, 2, j);
+    let b4 = modulus(d, p, j, n);
+    let c34 = radd(d, b3, b4);
+    let c234 = radd(d, b2, c34);
+    let c1234 = radd(d, b1, c234);
+    // The bound rearranges: (A+Bj) + (Cj + (Cj + (Bj+A))) = 2/(n+1) + 6/(j+1).
+    let a_atom = div_succ(d, p, 1, n);
+    let b_atom = div_succ(d, p, 1, j);
+    let c_atom = div_succ(d, p, 2, j);
+    let flat_atoms = [a_atom, b_atom, c_atom, c_atom, b_atom, a_atom];
+    let sorted_atoms = [a_atom, a_atom, b_atom, c_atom, c_atom, b_atom];
+    let flatten = rsum_append(d, rat, &flat_atoms[..2], &flat_atoms[2..]);
+    let flat = rsum(d, rat, &flat_atoms);
+    let permute = rsum_perm(d, rat, &flat_atoms, &sorted_atoms);
+    let sorted = rsum(d, rat, &sorted_atoms);
+
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let three = div_succ(d, p, 3, j);
+    let five = div_succ(d, p, 5, j);
+    let six = div_succ(d, p, 6, j);
+    let fuse_inner = d.lemma(rat.nat_div_succ_add, &[two_nat, one_nat, j]);
+    let cb = radd(d, c_atom, b_atom);
+    let after_inner = rcongr(d, cb, three, fuse_inner, &|d, t| {
+        let level1 = radd(d, c_atom, t);
+        let level2 = radd(d, b_atom, level1);
+        let level3 = radd(d, a_atom, level2);
+        radd(d, a_atom, level3)
+    });
+    let sorted_1 = {
+        let level1 = radd(d, c_atom, three);
+        let level2 = radd(d, b_atom, level1);
+        let level3 = radd(d, a_atom, level2);
+        radd(d, a_atom, level3)
+    };
+    let three_nat = d.num(3);
+    let fuse_mid = d.lemma(rat.nat_div_succ_add, &[two_nat, three_nat, j]);
+    let c3 = radd(d, c_atom, three);
+    let after_mid = rcongr(d, c3, five, fuse_mid, &|d, t| {
+        let level2 = radd(d, b_atom, t);
+        let level3 = radd(d, a_atom, level2);
+        radd(d, a_atom, level3)
+    });
+    let sorted_2 = {
+        let level2 = radd(d, b_atom, five);
+        let level3 = radd(d, a_atom, level2);
+        radd(d, a_atom, level3)
+    };
+    let five_nat = d.num(5);
+    let fuse_outer = d.lemma(rat.nat_div_succ_add, &[one_nat, five_nat, j]);
+    let b5 = radd(d, b_atom, five);
+    let after_outer = rcongr(d, b5, six, fuse_outer, &|d, t| {
+        let level3 = radd(d, a_atom, t);
+        radd(d, a_atom, level3)
+    });
+    let sorted_3 = {
+        let level3 = radd(d, a_atom, six);
+        radd(d, a_atom, level3)
+    };
+    let regroup = {
+        let forward = d.lemma(rat.add_assoc, &[a_atom, a_atom, six]);
+        let flat_pair = {
+            let aa = radd(d, a_atom, a_atom);
+            radd(d, aa, six)
+        };
+        rsymm(d, flat_pair, sorted_3, forward)
+    };
+    let aa = radd(d, a_atom, a_atom);
+    let flat_pair = radd(d, aa, six);
+    let fuse_head = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, n]);
+    let head_bound = div_succ(d, p, 2, n);
+    let after_head = rcongr(d, aa, head_bound, fuse_head, &|d, t| radd(d, t, six));
+    let final_bound = radd(d, head_bound, six);
+    let (_, bound_chain) = rchain(
+        d,
+        c1234,
+        &[
+            (flat, flatten),
+            (sorted, permute),
+            (sorted_1, after_inner),
+            (sorted_2, after_mid),
+            (sorted_3, after_outer),
+            (flat_pair, regroup),
+            (final_bound, after_head),
+        ],
+    );
+    (c1234, final_bound, bound_chain)
 }
 
 // --- the definitions --------------------------------------------------------
@@ -831,109 +1045,11 @@ fn declare_transitivity(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kerne
         let q1234 = radd(d, u1, q234);
         let c1234 = radd(d, b1, c234);
 
-        // The quantity telescopes: (a−b) + (b−c) = a−c, three times, from the
-        // inside out. Nothing here is a rearrangement — the four differences
-        // were combined right-nested precisely so that they would chain.
-        let mid_yn = rsub(d, rat, yj, tail);
-        let mid_xn = rsub(d, rat, xj, tail);
-        let step34 = d.lemma(rat.sub_add_sub, &[yj, zj, tail]);
-        let step234 = d.lemma(rat.sub_add_sub, &[xj, yj, tail]);
-        let step1234 = d.lemma(rat.sub_add_sub, &[head, xj, tail]);
-        let q234_reduced = radd(d, u2, mid_yn);
-        let staged = radd(d, u1, q234_reduced);
-        let first = rcongr(d, q34, mid_yn, step34, &|d, t| {
-            let inner = radd(d, u2, t);
-            radd(d, u1, inner)
-        });
-        let second = rcongr(d, q234_reduced, mid_xn, step234, &|d, t| radd(d, u1, t));
-        let q1234_reduced = radd(d, u1, mid_xn);
-        let (_, quantity) = rchain(
-            d,
-            q1234,
-            &[(staged, first), (q1234_reduced, second), (target, step1234)],
-        );
-
-        // The bound rearranges: (A+Bj) + (Cj + (Cj + (Bj+A))) = 2/(n+1) + 6/(j+1).
-        let a_atom = div_succ(d, p, 1, n);
-        let b_atom = div_succ(d, p, 1, j);
-        let c_atom = div_succ(d, p, 2, j);
-        let flat_atoms = [a_atom, b_atom, c_atom, c_atom, b_atom, a_atom];
-        let sorted_atoms = [a_atom, a_atom, b_atom, c_atom, c_atom, b_atom];
-        let flatten = rsum_append(d, rat, &flat_atoms[..2], &flat_atoms[2..]);
-        let flat = rsum(d, rat, &flat_atoms);
-        let permute = rsum_perm(d, rat, &flat_atoms, &sorted_atoms);
-        let sorted = rsum(d, rat, &sorted_atoms);
-
-        let one_nat = d.num(1);
-        let two_nat = d.num(2);
-        let three = div_succ(d, p, 3, j);
-        let five = div_succ(d, p, 5, j);
-        let six = div_succ(d, p, 6, j);
-        let fuse_inner = d.lemma(rat.nat_div_succ_add, &[two_nat, one_nat, j]);
-        let cb = radd(d, c_atom, b_atom);
-        let after_inner = rcongr(d, cb, three, fuse_inner, &|d, t| {
-            let level1 = radd(d, c_atom, t);
-            let level2 = radd(d, b_atom, level1);
-            let level3 = radd(d, a_atom, level2);
-            radd(d, a_atom, level3)
-        });
-        let sorted_1 = {
-            let level1 = radd(d, c_atom, three);
-            let level2 = radd(d, b_atom, level1);
-            let level3 = radd(d, a_atom, level2);
-            radd(d, a_atom, level3)
-        };
-        let three_nat = d.num(3);
-        let fuse_mid = d.lemma(rat.nat_div_succ_add, &[two_nat, three_nat, j]);
-        let c3 = radd(d, c_atom, three);
-        let after_mid = rcongr(d, c3, five, fuse_mid, &|d, t| {
-            let level2 = radd(d, b_atom, t);
-            let level3 = radd(d, a_atom, level2);
-            radd(d, a_atom, level3)
-        });
-        let sorted_2 = {
-            let level2 = radd(d, b_atom, five);
-            let level3 = radd(d, a_atom, level2);
-            radd(d, a_atom, level3)
-        };
-        let five_nat = d.num(5);
-        let fuse_outer = d.lemma(rat.nat_div_succ_add, &[one_nat, five_nat, j]);
-        let b5 = radd(d, b_atom, five);
-        let after_outer = rcongr(d, b5, six, fuse_outer, &|d, t| {
-            let level3 = radd(d, a_atom, t);
-            radd(d, a_atom, level3)
-        });
-        let sorted_3 = {
-            let level3 = radd(d, a_atom, six);
-            radd(d, a_atom, level3)
-        };
-        let regroup = {
-            let forward = d.lemma(rat.add_assoc, &[a_atom, a_atom, six]);
-            let flat_pair = {
-                let aa = radd(d, a_atom, a_atom);
-                radd(d, aa, six)
-            };
-            rsymm(d, flat_pair, sorted_3, forward)
-        };
-        let aa = radd(d, a_atom, a_atom);
-        let flat_pair = radd(d, aa, six);
-        let fuse_head = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, n]);
-        let head_bound = div_succ(d, p, 2, n);
-        let after_head = rcongr(d, aa, head_bound, fuse_head, &|d, t| radd(d, t, six));
-        let final_bound = radd(d, head_bound, six);
-        let (_, bound_chain) = rchain(
-            d,
-            c1234,
-            &[
-                (flat, flatten),
-                (sorted, permute),
-                (sorted_1, after_inner),
-                (sorted_2, after_mid),
-                (sorted_3, after_outer),
-                (flat_pair, regroup),
-                (final_bound, after_head),
-            ],
-        );
+        // The quantity telescopes and the bound fuses — both are functions of
+        // the five sample points and of `(n, j)` alone, so both are shared with
+        // `CReal.le_trans`, which runs the *upper half* of this same estimate.
+        let (_, _, quantity) = telescope_four(d, p, head, xj, yj, zj, tail);
+        let (_, final_bound, bound_chain) = six_term_bound(d, p, n, j);
 
         let at_quantity = rat_eq_rewrite(d, q1234, target, quantity, w1234, &|d, t| {
             within(d, p, t, c1234)
@@ -1980,6 +2096,422 @@ fn declare_additive_laws(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
             name: p.add_assoc,
             uparams: vec![],
             ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// `CReal.le`, Bishop's order, and the three of the 22 order laws that do not
+/// mention multiplication.
+///
+/// **These three restate verbatim**, which the additive laws did not: none of
+/// `le_refl`, `le_trans`, `add_le_add` mentions `Eq`, so there is no equality
+/// to replace by `Equiv` and the `Real` package's statement is the statement
+/// proved here. That is ADR-0468's Measurement 2, cashed.
+///
+/// The order is *not* decidable and `le_total` is deliberately absent: it holds
+/// for `ℚ`, and `∀ x y, le x y ∨ le y x` over the reals is not constructively
+/// provable. Nothing here needs it — the one place a classical development
+/// would say "suppose not" is `le_trans`, and that is a case split on nothing:
+/// the estimate holds for every index `j`, and the Archimedean property of `ℚ`
+/// turns "for every `j`" into the bound.
+fn declare_order(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rle = crate::rat_prelude::ops::rle;
+
+    // le x y := ∀ n, Rat.le (seq x n − seq y n) (2/(n+1)).
+    {
+        let prop = d.kernel().sort_zero();
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let left = sample(d, p, x, n);
+        let right = sample(d, p, y, n);
+        let difference = rsub(d, rat, left, right);
+        let bound = div_succ(d, p, 2, n);
+        let claim = rle(d, rat, difference, bound);
+        let body = d.pi_fv(n_fv, nat, claim);
+        let value = {
+            let with_y = d.lam_fv(y_fv, carrier, body);
+            d.lam_fv(x_fv, carrier, with_y)
+        };
+        let ty = {
+            let inner = d.arrow(carrier, prop);
+            d.arrow(carrier, inner)
+        };
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.le,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 7),
+        })?;
+    }
+
+    // le_refl : le x x. `x_n − x_n = 0`, and `0 ≤ 2/(n+1)`.
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let body = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let point = sample(d, p, x, n);
+            let difference = rsub(d, rat, point, point);
+            let bound = div_succ(d, p, 2, n);
+            let zero = rzero(d, rat);
+            let collapse = d.lemma(rat.sub_self, &[point]);
+            let restore = rsymm(d, difference, zero, collapse);
+            let two = d.num(2);
+            let nonneg = d.lemma(rat.zero_le_nat_div_succ, &[two, n]);
+            let at_index = rat_eq_rewrite(d, zero, difference, restore, nonneg, &|d, t| {
+                rle(d, rat, t, bound)
+            });
+            d.lam_fv(n_fv, nat, at_index)
+        };
+        let value = d.lam_fv(x_fv, carrier, body);
+        let ty = {
+            let conclusion = d.const_app(p.le, &[x, x]);
+            d.pi_fv(x_fv, carrier, conclusion)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.le_refl,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // le_trans : le x y → le y z → le x z.
+    //
+    // Chaining the two hypotheses at `n` gives `x_n − z_n ≤ 4/(n+1)`, which is
+    // not what the order asks for and no rearrangement fixes. Bishop compares
+    // at an arbitrary third index `j` instead, where the two hypotheses cost
+    // `2/(j+1)` each and regularity pays the two round trips, and the
+    // Archimedean property of `ℚ` discharges the resulting `6/(j+1)`. This is
+    // `Equiv.trans` with the lower half deleted.
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let first_ty = d.const_app(p.le, &[x, y]);
+        let second_ty = d.const_app(p.le, &[y, z]);
+        let hxy_fv = d.fresh_fvar();
+        let hxy = d.kernel().fvar(hxy_fv);
+        let hyz_fv = d.fresh_fvar();
+        let hyz = d.kernel().fvar(hyz_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+
+        let head = sample(d, p, x, n);
+        let tail = sample(d, p, z, n);
+        let target = rsub(d, rat, head, tail);
+        let goal_bound = div_succ(d, p, 2, n);
+
+        let hypothesis = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let xj = sample(d, p, x, j);
+            let yj = sample(d, p, y, j);
+            let zj = sample(d, p, z, j);
+            let u1 = rsub(d, rat, head, xj);
+            let u2 = rsub(d, rat, xj, yj);
+            let u3 = rsub(d, rat, yj, zj);
+            let u4 = rsub(d, rat, zj, tail);
+            let b1 = modulus(d, p, n, j);
+            let b2 = div_succ(d, p, 2, j);
+            let b3 = div_succ(d, p, 2, j);
+            let b4 = modulus(d, p, j, n);
+
+            // Only the UPPER half of each regularity bound is read; the two
+            // hypotheses are one-sided already.
+            let w1 = d.lemma(p.regular, &[x, n, j]);
+            let w4 = d.lemma(p.regular, &[z, j, n]);
+            let (_, r1) = halves(d, p, u1, b1, w1);
+            let r2 = d.apply(hxy, &[j]);
+            let r3 = d.apply(hyz, &[j]);
+            let (_, r4) = halves(d, p, u4, b4, w4);
+
+            // Right-nested, so the quantities telescope in the same order.
+            let s34 = d.lemma(rat.add_le_add, &[u3, b3, u4, b4, r3, r4]);
+            let q34 = radd(d, u3, u4);
+            let c34 = radd(d, b3, b4);
+            let s234 = d.lemma(rat.add_le_add, &[u2, b2, q34, c34, r2, s34]);
+            let q234 = radd(d, u2, q34);
+            let c234 = radd(d, b2, c34);
+            let s1234 = d.lemma(rat.add_le_add, &[u1, b1, q234, c234, r1, s234]);
+            let q1234 = radd(d, u1, q234);
+            let c1234 = radd(d, b1, c234);
+
+            let (_, _, quantity) = telescope_four(d, p, head, xj, yj, zj, tail);
+            let (_, final_bound, bound_chain) = six_term_bound(d, p, n, j);
+            let at_quantity = rat_eq_rewrite(d, q1234, target, quantity, s1234, &|d, t| {
+                rle(d, rat, t, c1234)
+            });
+            let moved = rat_eq_rewrite(d, c1234, final_bound, bound_chain, at_quantity, &|d, t| {
+                rle(d, rat, target, t)
+            });
+            d.lam_fv(j_fv, nat, moved)
+        };
+        let six_nat = d.num(6);
+        let at_index = d.lemma(
+            rat.le_of_le_add_nat_div_succ,
+            &[target, goal_bound, six_nat, hypothesis],
+        );
+        let value = {
+            let over_n = d.lam_fv(n_fv, nat, at_index);
+            let with_second = d.lam_fv(hyz_fv, second_ty, over_n);
+            let with_first = d.lam_fv(hxy_fv, first_ty, with_second);
+            let with_z = d.lam_fv(z_fv, carrier, with_first);
+            let with_y = d.lam_fv(y_fv, carrier, with_z);
+            d.lam_fv(x_fv, carrier, with_y)
+        };
+        let ty = {
+            let conclusion = d.const_app(p.le, &[x, z]);
+            let after_second = d.arrow(second_ty, conclusion);
+            let after_first = d.arrow(first_ty, after_second);
+            let with_z = d.pi_fv(z_fv, carrier, after_first);
+            let with_y = d.pi_fv(y_fv, carrier, with_z);
+            d.pi_fv(x_fv, carrier, with_y)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.le_trans,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // add_le_add : le x x' → le y y' → le (add x y) (add x' y').
+    //
+    // Exact, like `add_congr`: both hypotheses are read at the shifted index
+    // `2n+1` where each costs `2/(2n+2)`, and `2/(2n+2) = 1/(n+1)`, so the two
+    // together are `2/(n+1)` with no slack and no weakening.
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let x2_fv = d.fresh_fvar();
+        let x2 = d.kernel().fvar(x2_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let y2_fv = d.fresh_fvar();
+        let y2 = d.kernel().fvar(y2_fv);
+        let first_ty = d.const_app(p.le, &[x, x2]);
+        let second_ty = d.const_app(p.le, &[y, y2]);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+
+        let index = shift(d, n);
+        let a = sample(d, p, x, index);
+        let b = sample(d, p, y, index);
+        let c = sample(d, p, x2, index);
+        let e = sample(d, p, y2, index);
+        let dx = rsub(d, rat, a, c);
+        let dy = rsub(d, rat, b, e);
+        let component = div_succ(d, p, 2, index);
+        let wx = d.apply(h1, &[index]);
+        let wy = d.apply(h2, &[index]);
+        let combined = d.lemma(rat.add_le_add, &[dx, component, dy, component, wx, wy]);
+        let summed_quantity = radd(d, dx, dy);
+        let summed_bound = radd(d, component, component);
+
+        let left_sum = radd(d, a, b);
+        let right_sum = radd(d, c, e);
+        let goal_quantity = rsub(d, rat, left_sum, right_sum);
+        let split = d.lemma(rat.sub_add_add, &[a, b, c, e]);
+        let restore = rsymm(d, goal_quantity, summed_quantity, split);
+        let at_quantity = rat_eq_rewrite(
+            d,
+            summed_quantity,
+            goal_quantity,
+            restore,
+            combined,
+            &|d, t| rle(d, rat, t, summed_bound),
+        );
+
+        // `2/(2n+2) + 2/(2n+2) = 1/(n+1) + 1/(n+1) = 2/(n+1)`.
+        let halved = div_succ(d, p, 1, n);
+        let halve = d.lemma(rat.nat_div_succ_halve, &[n]);
+        let after_left = rcongr(d, component, halved, halve, &|d, t| radd(d, t, component));
+        let staged = radd(d, halved, component);
+        let after_right = rcongr(d, component, halved, halve, &|d, t| radd(d, halved, t));
+        let doubled = radd(d, halved, halved);
+        let one_nat = d.num(1);
+        let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, n]);
+        let goal_bound = div_succ(d, p, 2, n);
+        let (_, bound_chain) = rchain(
+            d,
+            summed_bound,
+            &[
+                (staged, after_left),
+                (doubled, after_right),
+                (goal_bound, fuse),
+            ],
+        );
+        let at_index = rat_eq_rewrite(
+            d,
+            summed_bound,
+            goal_bound,
+            bound_chain,
+            at_quantity,
+            &|d, t| rle(d, rat, goal_quantity, t),
+        );
+        let value = {
+            let over_n = d.lam_fv(n_fv, nat, at_index);
+            let with2 = d.lam_fv(h2_fv, second_ty, over_n);
+            let with1 = d.lam_fv(h1_fv, first_ty, with2);
+            let with_y2 = d.lam_fv(y2_fv, carrier, with1);
+            let with_y = d.lam_fv(y_fv, carrier, with_y2);
+            let with_x2 = d.lam_fv(x2_fv, carrier, with_y);
+            d.lam_fv(x_fv, carrier, with_x2)
+        };
+        let ty = {
+            let left = d.const_app(p.add, &[x, y]);
+            let right = d.const_app(p.add, &[x2, y2]);
+            let conclusion = d.const_app(p.le, &[left, right]);
+            let after2 = d.arrow(second_ty, conclusion);
+            let after1 = d.arrow(first_ty, after2);
+            let with_y2 = d.pi_fv(y2_fv, carrier, after1);
+            let with_y = d.pi_fv(y_fv, carrier, with_y2);
+            let with_x2 = d.pi_fv(x2_fv, carrier, with_y);
+            d.pi_fv(x_fv, carrier, with_x2)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.add_le_add,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // le_of_equiv : Equiv x y → le x y, and equiv_of_le_le : the converse from
+    // both directions.
+    //
+    // Together these say `le` is the order OF this setoid: `Equiv` is the
+    // two-sided bound, `le` its upper half, and having both halves is having
+    // `Equiv` back. Without them "three order laws hold" is a statement about
+    // an unexamined relation — a `le` weakened to `≤ 100/(n+1)` satisfies all
+    // three and closes neither of these.
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let a = sample(d, p, x, n);
+        let b = sample(d, p, y, n);
+        let forward = rsub(d, rat, a, b);
+        let backward = rsub(d, rat, b, a);
+        let bound = div_succ(d, p, 2, n);
+        let negated = rneg(d, bound);
+
+        // le_of_equiv: the upper half of the two-sided bound, projected.
+        {
+            let hypothesis = equiv(d, p, x, y);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let instance = d.apply(h, &[n]);
+            let (_, upper) = halves(d, p, forward, bound, instance);
+            let value = {
+                let over_n = d.lam_fv(n_fv, nat, upper);
+                let with_h = d.lam_fv(h_fv, hypothesis, over_n);
+                let with_y = d.lam_fv(y_fv, carrier, with_h);
+                d.lam_fv(x_fv, carrier, with_y)
+            };
+            let ty = {
+                let conclusion = d.const_app(p.le, &[x, y]);
+                let inner = d.arrow(hypothesis, conclusion);
+                let with_y = d.pi_fv(y_fv, carrier, inner);
+                d.pi_fv(x_fv, carrier, with_y)
+            };
+            d.kernel().add_declaration(Declaration::Theorem {
+                name: p.le_of_equiv,
+                uparams: vec![],
+                ty,
+                value,
+            })?;
+        }
+
+        // equiv_of_le_le: the second hypothesis, negated, IS the lower half —
+        // `−(y_n − x_n) = x_n − y_n` by `Rat.neg_sub`.
+        {
+            let first_ty = d.const_app(p.le, &[x, y]);
+            let second_ty = d.const_app(p.le, &[y, x]);
+            let h1_fv = d.fresh_fvar();
+            let h1 = d.kernel().fvar(h1_fv);
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let upper = d.apply(h1, &[n]);
+            let reverse = d.apply(h2, &[n]);
+            let flipped = d.lemma(rat.neg_le_neg, &[backward, bound, reverse]);
+            let negated_backward = rneg(d, backward);
+            let rewrite = d.lemma(rat.neg_sub, &[b, a]);
+            let lower = rat_eq_rewrite(d, negated_backward, forward, rewrite, flipped, &|d, t| {
+                rle(d, rat, negated, t)
+            });
+            let lower_ty = rle(d, rat, negated, forward);
+            let upper_ty = rle(d, rat, forward, bound);
+            let pair = and_intro(d, p, lower_ty, upper_ty, lower, upper);
+            let value = {
+                let over_n = d.lam_fv(n_fv, nat, pair);
+                let with2 = d.lam_fv(h2_fv, second_ty, over_n);
+                let with1 = d.lam_fv(h1_fv, first_ty, with2);
+                let with_y = d.lam_fv(y_fv, carrier, with1);
+                d.lam_fv(x_fv, carrier, with_y)
+            };
+            let ty = {
+                let conclusion = equiv(d, p, x, y);
+                let after2 = d.arrow(second_ty, conclusion);
+                let after1 = d.arrow(first_ty, after2);
+                let with_y = d.pi_fv(y_fv, carrier, after1);
+                d.pi_fv(x_fv, carrier, with_y)
+            };
+            d.kernel().add_declaration(Declaration::Theorem {
+                name: p.equiv_of_le_le,
+                uparams: vec![],
+                ty,
+                value,
+            })?;
+        }
+    }
+
+    // not_le_one_zero : Not (le one zero) — the order discriminates.
+    //
+    // At index `3` the hypothesis says `1 − 0 ≤ 2/4`, i.e. `1 ≤ 1/2`. Every
+    // term in that is closed, so `Rat.le` unfolds through `Int.le` to
+    // `Nat.le 2 1` by pure reduction, and two Nat lemmas finish it.
+    {
+        let nat_p = rat.int.nat;
+        let one_real = d.kernel().const_(p.one, vec![]);
+        let zero_real = d.kernel().const_(p.zero, vec![]);
+        let claim = d.const_app(p.le, &[one_real, zero_real]);
+        let stmt = d.not(claim);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let index = d.num(3);
+        let instance = d.apply(h, &[index]);
+        let one_nat = d.num(1);
+        let zero_nat = d.zero();
+        let stripped = d.lemma(nat_p.le_of_succ_le_succ, &[one_nat, zero_nat, instance]);
+        let absurd = d.lemma(nat_p.not_succ_le_zero, &[zero_nat, stripped]);
+        let value = d.lam_fv(h_fv, claim, absurd);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.not_le_one_zero,
+            uparams: vec![],
+            ty: stmt,
             value,
         })?;
     }
