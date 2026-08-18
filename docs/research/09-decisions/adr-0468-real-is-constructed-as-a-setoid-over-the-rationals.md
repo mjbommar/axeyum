@@ -182,10 +182,15 @@ Re-verified rather than quoted from ADR-0456:
 Swept across code, docs, ADRs and the fact ledger. The IR's `Sort` enum has no
 complex sort; no SMT-LIB logic in scope involves ℂ; and every decision procedure
 is real- or rational-valued. Real algebraic numbers (ADR-0038, ADR-0046) are
-*real-root isolation* — `nra_real_root.rs`, `sturm.rs`, `poly.rs` and
-`real_algebraic.rs` contain zero occurrences of complex/imaginary/algebraically-closed
-between them. The Nullstellensatz route in `cas_poly.rs` deliberately argues over
-"any field containing ℚ" so it never needs algebraic closure. There is no CAD.
+*real-root isolation*: grepping `nra_real_root.rs`, `sturm.rs`, `poly.rs` and
+`real_algebraic.rs` for `complex|imaginary|algebraically closed` returns exactly
+**one** hit across all four, and it is `#[allow(clippy::type_complexity)]` —
+i.e. zero substantive occurrences. (Stated as the raw count rather than as
+"zero", because a claim written as a grep result has to survive re-running the
+grep, and this one did not the first time.) The Nullstellensatz route in
+`cas_poly.rs:591` is explicit that it never needs algebraic closure — "The
+system then has no common zero over any field containing ℚ, so none over ℝ and
+none over ℤ." There is no CAD.
 
 Two *shipped* consumers of a small piece of ℂ exist, and neither is analytic:
 
