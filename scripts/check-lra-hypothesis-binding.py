@@ -266,8 +266,11 @@ MIN_REQUIRED_MUTATIONS = 1200
 # bound manifest and took it from 28 to 19, and again the same day when 10 of
 # the 13 bare-leaf rows became `anchored` and took it from 19 to 9. Lowering it
 # is a reviewable act for the same reason raising it would be: it is the count of
-# Lean evidence this repository publishes as transcribing nothing.
-MIN_ATTESTATIONS = 8
+# Lean evidence this repository publishes as transcribing nothing. It moved again
+# on 2026-08-18, from 8 to 5, when the `FiniteArrayExtensionality` emitter stopped
+# collapsing each `(select a i)` into one opaque constant and its 4 rows became
+# structural.
+MIN_ATTESTATIONS = 5
 # The converse direction, measured rather than assumed: how many of the spine's
 # `(assert …)` rows a rendered hypothesis actually stands for. 296 of 541 --
 # barely over half. That is not a soundness hole (a refutation of a subset
@@ -921,9 +924,9 @@ STRUCTURAL_MANIFEST = ROOT / "scripts/hypothesis-binding-structural-instances.tx
 # the one that matters: the instance count alone cannot see a renderer that
 # degraded to bare constants, because those would still be "structural" and
 # would bind vacuously.
-MIN_STRUCTURAL = 94
-MIN_STRUCTURAL_NODES = 2950
-MIN_STRUCTURAL_MUTATIONS = 350
+MIN_STRUCTURAL = 98
+MIN_STRUCTURAL_NODES = 3300
+MIN_STRUCTURAL_MUTATIONS = 370
 
 # `let` and the quantifiers need a binder environment; everything else is a
 # plain head-and-arguments tree.
@@ -1051,8 +1054,59 @@ def _match(lean, smt, phi: dict[str, str]) -> dict[str, str] | None:
     return phi
 
 
+def _eq_nodes(expr) -> list | None:
+    """Every `Eq.{1} α L R` in a type built from `Not`, `And` and `Eq`.
+
+    `None` if the type uses anything else — fail-closed, and deliberately a
+    CLOSED grammar: widening it is how the structural verdict would come to
+    cover shapes whose rendered terms nobody checked. `Or` and `Iff` are absent
+    on purpose. A negated conjunction is not a fact about either conjunct, but
+    that does not matter here: this walker is only used to collect the TERMS the
+    module names, and every one of them still has to be a subterm of the query.
+    What the module *asserts* about them is the anchor's question, not this one.
+
+    The shape that motivated it is `FiniteArrayExtensionality`, whose refutation
+    is `¬(r₁ ∧ … ∧ rₙ)` against the reads `r₁ … rₙ` — n equalities under one
+    negated conjunction rather than one equality and its negation.
+    """
+    out: list = []
+
+    def walk(node) -> bool:
+        if isinstance(node, str):
+            return False
+        head = node[0]
+        if head == "Not" and len(node) == 2:
+            return walk(node[1])
+        if head == "And" and len(node) == 3:
+            return walk(node[1]) and walk(node[2])
+        if head in EQ_HEADS and len(node) == 4:
+            out.append(node)
+            return True
+        return False
+
+    return out if walk(expr) else None
+
+
+def _equated_terms(ty: str) -> list | None:
+    """Every term a rendered hypothesis equates, across the whole `Not`/`And` tree."""
+    try:
+        expr = lean_expr(ty)
+    except Unsupported:
+        return None
+    nodes = _eq_nodes(expr)
+    if not nodes:
+        return None
+    return [side for node in nodes for side in (node[2], node[3])]
+
+
 def _equated_sides(ty: str) -> tuple[object, object] | None:
-    """The two sides of `Eq.{1} α L R` (optionally under `Not`), as trees."""
+    """The two sides of `Eq.{1} α L R` (optionally under `Not`), as trees.
+
+    Deliberately NOT `_equated_terms`: anchoring covers a module that states one
+    equality and its negation, and must keep refusing anything else. A module
+    equating several pairs cannot say which disequality a query is supposed to
+    force.
+    """
     try:
         expr = lean_expr(ty)
     except Unsupported:
@@ -1064,7 +1118,21 @@ def _equated_sides(ty: str) -> tuple[object, object] | None:
     return (expr[2], expr[3])
 
 
-def bind_structural(source: str, path: pathlib.Path) -> tuple[bool, str, int]:
+def _lean_leaf_names(term) -> frozenset[str]:
+    """Every opaque name a rendered term mentions, head constants included."""
+    if isinstance(term, str):
+        return frozenset({term})
+    out: set[str] = set()
+    if isinstance(term[0], str):
+        out.add(term[0])
+    for arg in term[1:]:
+        out |= _lean_leaf_names(arg)
+    return frozenset(out)
+
+
+def bind_structural(
+    source: str, path: pathlib.Path, budget: int = 200_000
+) -> tuple[bool, str, int]:
     """`(bound, why not, matched term nodes)` for a rendered module.
 
     Shares no code with the arithmetic binder and none with the attestation
@@ -1086,10 +1154,15 @@ def bind_structural(source: str, path: pathlib.Path) -> tuple[bool, str, int]:
                 return (False, f"`{name} : {ty}` is not the opaque sort `α : Sort (1)`", 0)
             continue
         if name.startswith(ATTESTATION_HYP_PREFIXES):
-            pair = _equated_sides(ty)
-            if pair is None:
-                return (False, f"{name} is not an equality between two rendered terms", 0)
-            sides.extend(pair)
+            terms = _equated_terms(ty)
+            if terms is None:
+                return (
+                    False,
+                    f"{name} is not built from `Not`, `And` and equalities between "
+                    "rendered terms",
+                    0,
+                )
+            sides.extend(terms)
             continue
         declared.add(name)
     if not sides:
@@ -1102,26 +1175,49 @@ def bind_structural(source: str, path: pathlib.Path) -> tuple[bool, str, int]:
         return (False, "every rendered term is a bare opaque constant, so it carries no structure", 0)
 
     buckets = query_subterms(path)
-    # Largest first: the constrained sides pin the renaming before the loose ones
-    # get to guess, which is a search order, not a soundness property -- every
-    # side still has to match.
-    order = sorted(range(len(sides)), key=lambda i: -_lean_nodes(sides[i]))
+    names = [_lean_leaf_names(side) for side in sides]
+    state = {"nodes": 0, "exhausted": False}
 
-    def extend(index: int, phi: dict[str, str]) -> dict[str, str] | None:
-        if index == len(order):
+    def extend(remaining: frozenset[int], phi: dict[str, str]) -> dict[str, str] | None:
+        if not remaining:
             return phi
-        side = sides[order[index]]
+        # The MOST CONSTRAINED side next, recomputed at every step: the one
+        # sharing the most already-bound names, breaking ties on the smaller
+        # candidate bucket. A static largest-first order was enough while every
+        # module equated one or two terms; `FiniteArrayExtensionality` equates
+        # sixteen terms of identical size over a query holding sixteen identical
+        # shapes, and the static order let the search bind them in an arbitrary
+        # sequence and backtrack over the whole space. This is a search ORDER,
+        # not a soundness property -- every side still has to match.
+        def constraint(i: int) -> tuple:
+            side = sides[i]
+            key = (_lean_nodes(side), _lean_arity(side))
+            return (-len(names[i] & phi.keys()), len(buckets.get(key, ())))
+
+        index = min(remaining, key=constraint)
+        side = sides[index]
         key = (_lean_nodes(side), _lean_arity(side))
+        rest = remaining - {index}
         for candidate in buckets.get(key, ()):
+            state["nodes"] += 1
+            if state["nodes"] > budget:
+                state["exhausted"] = True
+                return None
             next_phi = _match(side, candidate, phi)
             if next_phi is None:
                 continue
-            found = extend(index + 1, next_phi)
+            found = extend(rest, next_phi)
             if found is not None:
                 return found
+            if state["exhausted"]:
+                return None
         return None
 
-    phi = extend(0, {})
+    phi = extend(frozenset(range(len(sides))), {})
+    if state["exhausted"]:
+        # A search that gave up must never read as a pass, and must not read as a
+        # refutation either: it is this checker failing to decide, so say so.
+        return (False, f"structural search exhausted its {budget}-node budget", 0)
     if phi is None:
         return (
             False,
@@ -2022,9 +2118,8 @@ def mutate_structural(ty: str, kind: str) -> str | None:
         expr = lean_expr(ty)
     except Unsupported:
         return None
-    negated = isinstance(expr, list) and len(expr) == 2 and expr[0] == "Not"
-    body = expr[1] if negated else expr
-    if isinstance(body, str) or len(body) != 4 or body[0] not in EQ_HEADS:
+    eqs = _eq_nodes(expr)
+    if not eqs:
         return None
 
     def first_app(node):
@@ -2046,7 +2141,11 @@ def mutate_structural(ty: str, kind: str) -> str | None:
         for item in node[1:]:
             leaves(item, out)
 
-    sides = [body[2], body[3]]
+    # Every side of every equality in the type, so the corruption reaches a
+    # `¬(r₁ ∧ … ∧ rₙ)` module too. Corrupting only the first conjunct of one of
+    # those would leave the controls looking live while most of the statement
+    # went unmutated.
+    sides = [side for node in eqs for side in (node[2], node[3])]
     if kind in ("swap-arguments", "drop-argument"):
         target = next((first_app(side) for side in sides if first_app(side)), None)
         if target is None:

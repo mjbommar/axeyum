@@ -1430,11 +1430,41 @@ fn reconstruct_finite_array_extensionality_to_lean_module(
     }
 
     let mut ctx = ReconstructCtx::new();
+    // Render every read as the query's own term when the whole module fits the
+    // budget, and as one opaque constant per read when it does not. The decision
+    // is taken ONCE for all of them, so a module never mixes the two: a reader
+    // (and `scripts/check-lra-hypothesis-binding.py`) sees either a structure it
+    // can match against the `.smt2` file or a skeleton that says nothing, never
+    // a structure with some reads hollowed out.
+    //
+    // Collapsing each `(select a i)` into a bare `atom._N` was how this route
+    // was written, and nothing about the certificate required it -- the reads
+    // are the query's own `TermId`s. The cost was measurable: all four committed
+    // `FiniteArrayExtensionality` instances were pinned as transcribing NOTHING
+    // in `scripts/hypothesis-binding-attestations.txt`, for the same reason and
+    // by the same mechanism as the 89 `ArrayAxiom` rows that left that list
+    // earlier on 2026-08-18.
+    let reads: Vec<TermId> = cert
+        .read_equalities
+        .iter()
+        .flat_map(|read| [read.lhs_read, read.rhs_read])
+        .collect();
+    let structural = query_term_nodes(arena, &reads)
+        .is_some_and(|nodes| nodes <= ARRAY_AXIOM_MAX_RENDERED_NODES);
     let mut props = Vec::with_capacity(cert.read_equalities.len());
     let mut witnesses = Vec::with_capacity(cert.read_equalities.len());
     for read in &cert.read_equalities {
-        let lhs = finite_array_read_expr(&mut ctx, read.lhs_read);
-        let rhs = finite_array_read_expr(&mut ctx, read.rhs_read);
+        let (lhs, rhs) = if structural {
+            (
+                query_term_expr(&mut ctx, arena, read.lhs_read),
+                query_term_expr(&mut ctx, arena, read.rhs_read),
+            )
+        } else {
+            (
+                finite_array_read_expr(&mut ctx, read.lhs_read),
+                finite_array_read_expr(&mut ctx, read.rhs_read),
+            )
+        };
         let prop = ctx.mk_eq(lhs, rhs);
         let witness = fresh_axiom(&mut ctx, prop, "assume")?;
         props.push(prop);

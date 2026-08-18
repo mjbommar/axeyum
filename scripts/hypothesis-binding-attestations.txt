@@ -23,7 +23,7 @@
 # transcribe: a module whose rendered terms are subterms of the `.smt2` file
 # fails here and belongs in `hypothesis-binding-structural-instances.txt`.
 #
-# 2026-08-18: this list was 124, then 28, then 19, and is now 9. 95 of the 124
+# 2026-08-18: this list was 124, then 28, then 19, then 9, and is now 5. 95 of the 124
 # moved to the structural manifest -- 89 `ArrayAxiom` because the emitter stopped
 # collapsing each whole term into one opaque constant, and 6 `QfAbv`/`QfUf` that
 # were structural all along and were misfiled by a check that read VOCABULARY
@@ -34,7 +34,7 @@
 # `hypothesis-binding-anchored-instances.txt`.
 #
 # WHAT IS LEFT, and why each really does transcribe nothing. Measured, not
-# assumed: every one of the 9 was run through BOTH the structural binder and the
+# assumed: every one of the 5 was run through BOTH the structural binder and the
 # anchoring check, and refused by both.
 #
 #    3  BARE SIDES THE QUERY DOES NOT PIN. The module says two of this file's
@@ -45,9 +45,17 @@
 #       `unsat__replace_all__not-first-only` rows force NONE, their single
 #       assertion being a forced-TRUE equality whose sides the arena
 #       constant-folded, which puts them in the rewrite class below.
-#    4  `FiniteArrayExtensionality`: `Not (And (Eq α a b) (Eq α c d))` over four
-#       bare constants -- the same nothing, with a conjunction around it. There
-#       is no bare `Not (Eq …)` for the anchor to take hold of either.
+#       (The 4 `FiniteArrayExtensionality` rows that used to sit here left on
+#       2026-08-18 and are now in `hypothesis-binding-structural-instances.txt`.
+#       They were `Not (And (Eq α a b) (Eq α c d))` over bare constants, and the
+#       reason was the emitter, not the certificate: the reads ARE the query's
+#       own `TermId`s and `reconstruct_finite_array_extensionality_to_lean_module`
+#       collapsed each `(select a i)` into one `atom._N`. It now renders them
+#       structurally, exactly as `ProofFragment::ArrayAxiom` was made to do
+#       earlier the same day, and all four bind: 360 matched term nodes, and
+#       every one of the four corruptions of each is caught. They do not anchor
+#       -- a negated conjunction is not a fact about either conjunct -- so
+#       `structural` is their verdict and the anchored pin would be refused.)
 #    2  THE RENDERED TERM IS THE OUTPUT OF A REWRITE, not of the source text.
 #       `cvc5__redand-eliminate.smt2` asserts `(bvredand x)`; the certificate is
 #       about `bvcomp x (bvnot #b000000)`, which the rewriter produced and which
@@ -64,10 +72,6 @@
 corpus/public-curated/bvred/cvc5__redand-eliminate.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext10.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext27.btor.smt2
-corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom1.smt2
-corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom2.smt2
-corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom3.smt2
-corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom4.smt2
 corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2
 corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2
 

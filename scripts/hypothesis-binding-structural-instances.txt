@@ -42,7 +42,17 @@
 # anchor; if a query starts forcing the disequality its module assumes, this
 # gate fails rather than going on recording the weaker statement.
 #
-# Measured 2026-08-18: 32 instances, 844 matched term nodes.
+# 2026-08-18, LATER STILL: 36, not 32. The 4 `FiniteArrayExtensionality` rows
+# joined from `hypothesis-binding-attestations.txt`. Nothing about the
+# certificate changed -- its reads are the query's own `TermId`s and always
+# were; the emitter collapsed each `(select a i)` into one opaque `atom._N`, so
+# a module that had every term of the file in it reached Lean saying nothing.
+# The same defect, and the same fix, as the 89 `ArrayAxiom` rows earlier the
+# same day. Their refutation is `¬(r₁ ∧ … ∧ rₙ)` rather than one equality and
+# its negation, which is why they bind structurally and do NOT anchor: a negated
+# conjunction is not a fact about either conjunct.
+#
+# Measured 2026-08-18: 36 instances, 1204 matched term nodes.
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw32.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond11.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond18.btor.smt2
@@ -65,9 +75,13 @@ corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__a
 corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__issue9519.smt2
 corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__proj-issue321.smt2
 corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress0__arith__integers__ackermann4.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom1.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom1uf.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom2.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom2uf.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom3.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom3uf.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom4.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom4uf.smt2
 corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__arrays__issue9041.smt2
 corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__bv__issue10057.smt2

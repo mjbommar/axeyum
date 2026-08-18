@@ -394,6 +394,23 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "            anchored_anyway, _why, _nodes = bind_anchored(source, path)\n            if False:",
             ),
             (
+                # The conjunction walker must reach BOTH conjuncts. Short-circuit
+                # it and a `¬(r₁ ∧ … ∧ rₙ)` module binds on r₁ alone, with the
+                # other n−1 rendered terms never compared to the file at all.
+                "structural: every conjunct's terms are collected, not just the first",
+                "            return walk(node[1]) and walk(node[2])",
+                "            return walk(node[1]) or walk(node[2])",
+            ),
+            (
+                # A backtracking matcher that runs forever is a gate that never
+                # reports; one that gives up quietly is a gate that passes. The
+                # budget must exist AND its verdict must be distinct from a
+                # refusal.
+                "structural: the search budget is enforced",
+                '            state["nodes"] += 1\n            if state["nodes"] > budget:',
+                '            state["nodes"] += 1\n            if False:',
+            ),
+            (
                 # The anti-absorption guard in the direction that only appeared
                 # once the four verdicts became a PARTITION: a row pinned
                 # `structural` that also anchors must be refused, or the stronger

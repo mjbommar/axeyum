@@ -1713,6 +1713,176 @@ class AnAnchoredModuleAssumesWhatTheQueryEntails(unittest.TestCase):
         self.assertFalse(ok)
 
 
+# ---------------------------------------------------------------------------
+# A negated conjunction of equalities — the `FiniteArrayExtensionality` shape
+# ---------------------------------------------------------------------------
+
+CONJUNCTION_QUERY = """
+(set-logic QF_AUFBV)
+(declare-fun a () (Array (_ BitVec 1) (_ BitVec 1)))
+(declare-fun b () (Array (_ BitVec 1) (_ BitVec 1)))
+(assert (= (select a (_ bv0 1)) (select b (_ bv0 1))))
+(assert (= (select a (_ bv1 1)) (select b (_ bv1 1))))
+(assert (not (= a b)))
+(check-sat)
+"""
+
+# The module `ProofFragment::FiniteArrayExtensionality` renders for that query:
+# every read spelled out, and the refutation `¬(r₀ ∧ r₁)` rather than one
+# equality and its negation. atom._0 = a, atom._1 = (_ bv0 1), func._2 = select,
+# atom._3 = b, atom._5 = (_ bv1 1).
+_R0 = (
+    "(axeyum.reconstruct.func._2 axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._1) "
+    "(axeyum.reconstruct.func._2 axeyum.reconstruct.atom._3 axeyum.reconstruct.atom._1)"
+)
+_R1 = (
+    "(axeyum.reconstruct.func._2 axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._5) "
+    "(axeyum.reconstruct.func._2 axeyum.reconstruct.atom._3 axeyum.reconstruct.atom._5)"
+)
+CONJUNCTION_MODULE = f"""
+axiom α : Sort (1)
+axiom axeyum.reconstruct.atom._0 : α
+axiom axeyum.reconstruct.atom._1 : α
+axiom axeyum.reconstruct.func._2 : ((x0 : α) -> ((x1 : α) -> α))
+axiom axeyum.reconstruct.atom._3 : α
+axiom axeyum.reconstruct.atom._5 : α
+axiom axeyum.reconstruct.hyp._4 : Eq.{{1}} α {_R0}
+axiom axeyum.reconstruct.hyp._6 : Eq.{{1}} α {_R1}
+axiom axeyum.reconstruct.hyp._7 : Not (And (Eq.{{1}} α {_R0}) (Eq.{{1}} α {_R1}))
+theorem axeyum_refutation : False := trivial
+"""
+
+
+class ANegatedConjunctionOfEqualitiesIsStructural(unittest.TestCase):
+    """`FiniteArrayExtensionality` refutes `¬(r₁ ∧ … ∧ rₙ)`, not `t = u` and its
+    negation. All four committed instances were pinned as transcribing NOTHING
+    until 2026-08-18 — not because the certificate lacked the terms (its reads
+    are the query's own `TermId`s) but because the emitter collapsed each
+    `(select a i)` into one opaque constant, and then no checker could see the
+    shape either. Both halves are fixed; this pins the checker half."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.query = _query_file(CONJUNCTION_QUERY)
+
+    def test_the_conjunction_module_binds_structurally(self) -> None:
+        ok, why, nodes = HB.bind_structural(CONJUNCTION_MODULE, self.query)
+        self.assertTrue(ok, why)
+        # Four rendered terms of three nodes each, counted twice: once in the
+        # two `Eq` hypotheses and once inside the negated conjunction.
+        self.assertEqual(nodes, 24)
+
+    def test_it_does_NOT_anchor(self) -> None:
+        """A negated conjunction is not a fact about either conjunct, so there is
+        no single disequality for the query to have to force. `structural` is the
+        whole verdict these four earn, and the anchored pin must be refused."""
+        ok, why, _n = HB.bind_anchored(CONJUNCTION_MODULE, self.query)
+        self.assertFalse(ok)
+        self.assertIn("equates a different pair", why)
+
+    def test_a_term_the_file_does_not_contain_is_refused(self) -> None:
+        """The twin for the acceptance above. `(select (_ bv1 1) a)` is a
+        three-node application of the same arity, so only the match against the
+        query's own subterms can reject it."""
+        damaged = CONJUNCTION_MODULE.replace(
+            "axeyum.reconstruct.func._2 axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._5",
+            "axeyum.reconstruct.func._2 axeyum.reconstruct.atom._5 axeyum.reconstruct.atom._0",
+        )
+        self.assertNotEqual(damaged, CONJUNCTION_MODULE)
+        ok, _why, _n = HB.bind_structural(damaged, self.query)
+        self.assertFalse(ok)
+
+    def test_EVERY_conjunct_is_checked_not_just_the_first(self) -> None:
+        """The conjunction walker must collect both sides of both conjuncts. If
+        it short-circuited, a module whose SECOND conjunct names a term the file
+        does not contain would still bind — and the corruption above would be
+        caught only by the standalone `hyp._6`, which a renderer need not emit."""
+        second_only = "\n".join(
+            line
+            for line in CONJUNCTION_MODULE.splitlines()
+            if "axeyum.reconstruct.hyp._6" not in line
+            and "axeyum.reconstruct.hyp._4" not in line
+        ).replace(
+            "axeyum.reconstruct.func._2 axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._5",
+            "axeyum.reconstruct.func._2 axeyum.reconstruct.atom._5 axeyum.reconstruct.atom._0",
+        )
+        ok, _why, _n = HB.bind_structural(second_only, self.query)
+        self.assertFalse(ok)
+
+    def test_the_same_module_without_the_corruption_still_binds(self) -> None:
+        """Without this twin the test above would pass against a binder that
+        refused every module carrying only the conjunction."""
+        conjunction_only = "\n".join(
+            line
+            for line in CONJUNCTION_MODULE.splitlines()
+            if "axeyum.reconstruct.hyp._6" not in line
+            and "axeyum.reconstruct.hyp._4" not in line
+        )
+        ok, why, nodes = HB.bind_structural(conjunction_only, self.query)
+        self.assertTrue(ok, why)
+        self.assertEqual(nodes, 12)
+
+    def test_a_connective_outside_the_grammar_is_refused(self) -> None:
+        """The grammar is `Not`, `And` and `Eq`, and it is CLOSED. `Or` is not a
+        typo for `And`: a disjunction of equalities says something weaker, and
+        admitting it here would let a module state a weaker fact while its terms
+        went on matching."""
+        widened = CONJUNCTION_MODULE.replace("Not (And ", "Not (Or ")
+        ok, why, _n = HB.bind_structural(widened, self.query)
+        self.assertFalse(ok)
+        self.assertIn("is not built from", why)
+
+    def test_every_corruption_of_the_conjunction_is_caught(self) -> None:
+        applied = 0
+        for kind in HB.STRUCTURAL_MUTATIONS:
+            mutant = HB.mutate_structural_module(CONJUNCTION_MODULE, kind)
+            if mutant is None:
+                continue
+            applied += 1
+            ok, _why, _n = HB.bind_structural(mutant, self.query)
+            self.assertFalse(ok, kind)
+        self.assertEqual(applied, len(HB.STRUCTURAL_MUTATIONS))
+
+
+class TheStructuralSearchHasABudget(unittest.TestCase):
+    """A backtracking matcher over sixteen same-sized sides and sixteen same-sized
+    candidates is not obviously terminating in useful time, and the
+    `FiniteArrayExtensionality` modules are exactly that shape — measured
+    2026-08-18, `smtextarrayaxiom3` ran unbounded for minutes under the old
+    static side ordering. A budget without a distinct verdict would be worse than
+    none: a search that gave up must read as neither a pass NOR a refutation."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.query = _query_file(CONJUNCTION_QUERY)
+
+    def test_an_exhausted_budget_is_not_a_pass(self) -> None:
+        ok, why, nodes = HB.bind_structural(CONJUNCTION_MODULE, self.query, budget=1)
+        self.assertFalse(ok)
+        self.assertIn("exhausted", why)
+        self.assertEqual(nodes, 0)
+
+    def test_the_same_module_binds_inside_the_real_budget(self) -> None:
+        ok, why, _n = HB.bind_structural(CONJUNCTION_MODULE, self.query)
+        self.assertTrue(ok, why)
+
+    def test_the_exhaustion_verdict_is_distinguishable_from_a_refutation(self) -> None:
+        """The two failures must not be told apart only by a human reading prose:
+        an exhausted budget is this checker failing to decide, a refusal is the
+        module failing to transcribe, and a regression that turned every instance
+        into the former would otherwise look like a corpus of caught defects."""
+        _ok, exhausted, _n = HB.bind_structural(
+            CONJUNCTION_MODULE, self.query, budget=1
+        )
+        widened = CONJUNCTION_MODULE.replace(
+            "axeyum.reconstruct.func._2 axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._5",
+            "axeyum.reconstruct.func._2 axeyum.reconstruct.atom._5 axeyum.reconstruct.atom._0",
+        )
+        _ok, refused, _n = HB.bind_structural(widened, self.query)
+        self.assertNotEqual(exhausted, refused)
+        self.assertNotIn("exhausted", refused)
+
+
 class TheAnchoredManifestIsRealAndOnlyGrows(unittest.TestCase):
     def test_every_pinned_instance_exists(self) -> None:
         pinned = HB.anchored_instances()
