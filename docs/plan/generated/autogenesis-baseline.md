@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:48a6fdd1159da2ca947c41921b809e8cac7a8681f7389dbfcf2011c38f3e0556`
+Source identity: `sha256:3c6c4c2d230faf250910e97b9c79927199d8dec125d456a7712c474981288dad`
 
 ## Ledger and chain substrate
 
@@ -27,8 +27,8 @@ the remaining facts stay explicit rather than being guessed.
 | `A1-real-derived-chain` | replay-candidate | kernel ledger graph has 52 edges at depth 6 and 0 unsettled nodes | qualify a primary and fallback with proof-derived dependency and pre-B counterfactual |
 | `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | broaden the structural grammar and bind plans into typed evidence |
 | `A1-operational-unlock-control` | fixture | catalog search produces B; a durable fixture event makes the same A target ready and fresh A depends on B | repeat the causal unlock on an authoritative open fact |
-| `A1-machine-selection` | partial | content-addressed authoritative frontier selects exactly one matching fact and refuses every unregistered candidate | execute only the selected registered operation and bind its result to the frontier identity |
-| `A1-typed-dispatch-evidence` | partial | registry has fixture and authoritative producer/checker contracts; route-specific code can produce and recheck the authoritative certificate | add a typed executor and derive the authoritative evidence row and transaction without caller-authored shell |
+| `A1-machine-selection` | partial | content-addressed authoritative frontier selects exactly one matching fact; typed execution binds the frontier, registry, fact, source bytes, and clean commit | consume the normalized execution receipt in a typed transaction adapter |
+| `A1-typed-dispatch-evidence` | partial | the authoritative registry fixes the driver, input artifact, budget, and expected evidence label; the executor normalizes only certified fresh-arena observations | derive the authoritative evidence row and transaction without caller-authored shell |
 | `A1-atomic-admission` | fixture | fixture fact admission has compare-and-swap, fsynced intent, durable event, and fault recovery | admit one genuinely open authoritative fact with matching typed evidence |
 | `A1-admission-triggered-retry` | fixture | durable fixture admission event derives B-to-A readiness and gates the post-B catalog | generalize the readiness input from counterfactual snapshot to authoritative frontier state |
 | `A1-clean-reproduction` | fixture | retained exact-commit command regenerates B, transaction, event, readiness, pre-A failure, and post-B success | repeat the same replay for an authoritative acquisition |
@@ -37,8 +37,9 @@ the remaining facts stay explicit rather than being guessed.
 
 | Seam | State | Owner | Gap | Source |
 |---|---|---|---|---|
-| `goal-selection` | partial | fact frontier | machine frontier selects one exact fact with an authoritative operation; no executor yet consumes that selection | `scripts/fact-frontier.py` |
+| `goal-selection` | partial | fact frontier | machine frontier selects one exact fact and the typed executor consumes that identity; no transaction adapter consumes the execution receipt | `scripts/fact-frontier.py` |
 | `route-dispatch` | partial | operation registry | one authoritative producer/checker contract exists; typed execution and transaction preparation remain route-specific | `artifacts/autogenesis/operations.json` |
+| `operation-execution` | partial | typed operation executor | one authoritative SMT driver emits a normalized replayable receipt; no second driver or transaction adapter exists | `scripts/execute-autogenesis-operation.py` |
 | `evidence-assembly` | manual | transactional closer | the caller authors the evidence rows and route metadata | `scripts/close-fact.py` |
 | `checker-selection` | partial | evidence registry | fixture and first authoritative checkers are typed; the manual closer still accepts caller-authored shell text | `artifacts/autogenesis/operations.json` |
 | `ledger-transition` | fixture | transactional closer | compare-and-swap plus roll-forward recovery is fixture-only; the first matching authoritative evidence lacks a typed transaction adapter | `scripts/apply-autogenesis-fact-transaction.py` |

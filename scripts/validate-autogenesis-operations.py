@@ -16,6 +16,7 @@ REGISTRY = ROOT / "artifacts/autogenesis/operations.json"
 ID_RE = re.compile(r"^[a-z0-9]+(?:[a-z0-9./-]*[a-z0-9])?$")
 FACT_ID_RE = re.compile(r"^F:[a-z0-9]+(?:-[a-z0-9]+)*$")
 SCOPES = {"counterfactual-fixture-only", "authoritative"}
+EXECUTION_DRIVERS = {"axeyum-bench/smtcomp-evidence-v1"}
 ADMISSION_CONTRACTS = {
     ("proved", "kernel-lean", "kernel-term", "must-be-empty"),
     (
@@ -81,6 +82,55 @@ def validate_endpoint(value: Any, label: str, root: pathlib.Path) -> None:
         raise RegistryError(f"{label}.implementation does not exist: {implementation}")
 
 
+def repository_file(value: Any, label: str, root: pathlib.Path) -> pathlib.Path:
+    if not isinstance(value, str) or not value:
+        raise RegistryError(f"{label} must be a nonempty repository-relative path")
+    relative = pathlib.PurePosixPath(value)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise RegistryError(f"{label} must be repository-relative")
+    resolved_root = root.resolve()
+    resolved = (root / relative).resolve()
+    if not resolved.is_relative_to(resolved_root):
+        raise RegistryError(f"{label} escapes the repository")
+    if not resolved.is_file():
+        raise RegistryError(f"{label} does not exist: {relative}")
+    return resolved
+
+
+def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
+    if not isinstance(value, dict):
+        raise RegistryError(f"{label} must be an object")
+    exact_keys(
+        value,
+        {
+            "driver",
+            "implementation",
+            "input_fact_id",
+            "input_artifact",
+            "timeout_seconds",
+            "expected_evidence_label",
+        },
+        label,
+    )
+    if value["driver"] not in EXECUTION_DRIVERS:
+        raise RegistryError(f"{label}.driver is unsupported")
+    if not isinstance(value["input_fact_id"], str) or not FACT_ID_RE.fullmatch(
+        value["input_fact_id"]
+    ):
+        raise RegistryError(f"{label}.input_fact_id is invalid")
+    repository_file(value["implementation"], f"{label}.implementation", root)
+    artifact = repository_file(value["input_artifact"], f"{label}.input_artifact", root)
+    expected_artifact_root = (root / "artifacts/facts/smt2").resolve()
+    if not artifact.is_relative_to(expected_artifact_root) or artifact.suffix != ".smt2":
+        raise RegistryError(f"{label}.input_artifact is not a fact SMT-LIB instance")
+    timeout = value["timeout_seconds"]
+    if type(timeout) is not int or not 1 <= timeout <= 900:
+        raise RegistryError(f"{label}.timeout_seconds must be an integer in 1..900")
+    label_value = value["expected_evidence_label"]
+    if not isinstance(label_value, str) or not ID_RE.fullmatch(label_value):
+        raise RegistryError(f"{label}.expected_evidence_label is invalid")
+
+
 def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
     if not isinstance(registry, dict):
         raise RegistryError("registry must be an object")
@@ -98,18 +148,25 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
         label = f"operations[{index}]"
         if not isinstance(operation, dict):
             raise RegistryError(f"{label} must be an object")
-        exact_keys(
-            operation,
-            {"id", "scope", "applicability", "producer", "checker", "admission"},
-            label,
-        )
+        scope = operation.get("scope")
+        operation_fields = {
+            "id",
+            "scope",
+            "applicability",
+            "producer",
+            "checker",
+            "admission",
+        }
+        if scope == "authoritative":
+            operation_fields.add("executor")
+        exact_keys(operation, operation_fields, label)
         operation_id = operation["id"]
         if not isinstance(operation_id, str) or not ID_RE.fullmatch(operation_id):
             raise RegistryError(f"{label}.id is not a stable operation id")
         if operation_id in seen:
             raise RegistryError(f"duplicate operation id {operation_id!r}")
         seen.add(operation_id)
-        if operation["scope"] not in SCOPES:
+        if scope not in SCOPES:
             raise RegistryError(f"{label}.scope is unsupported")
         applicability = operation["applicability"]
         if not isinstance(applicability, dict):
@@ -142,6 +199,8 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                 raise RegistryError(f"{label} applicability does not match {fact_id}")
         validate_endpoint(operation["producer"], f"{label}.producer", root)
         validate_endpoint(operation["checker"], f"{label}.checker", root)
+        if scope == "authoritative":
+            validate_executor(operation["executor"], f"{label}.executor", root)
         admission = operation["admission"]
         if not isinstance(admission, dict):
             raise RegistryError(f"{label}.admission must be an object")
@@ -158,7 +217,32 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
         )
         if admission_contract not in ADMISSION_CONTRACTS:
             raise RegistryError(f"{label}.admission is outside the v1 contract")
-        if operation["scope"] == "authoritative":
+        if scope == "authoritative":
+            executor = operation["executor"]
+            if executor["input_fact_id"] not in fact_ids or fact_ids != [
+                executor["input_fact_id"]
+            ]:
+                raise RegistryError(
+                    f"{label}.executor must bind the sole applicable fact id"
+                )
+            expected_artifact_name = (
+                "neg-" + executor["input_fact_id"].removeprefix("F:") + ".smt2"
+            )
+            if pathlib.PurePosixPath(executor["input_artifact"]).name != expected_artifact_name:
+                raise RegistryError(
+                    f"{label}.executor input artifact does not match its fact id"
+                )
+            if (
+                executor["driver"] == "axeyum-bench/smtcomp-evidence-v1"
+                and (
+                    applicability["formal_languages"] != ["smtlib2"]
+                    or admission["proof_route"] != "smt-term-level"
+                    or admission["evidence_kind"] != "unsat-certificate"
+                )
+            ):
+                raise RegistryError(
+                    f"{label}.executor driver is inconsistent with applicability/admission"
+                )
             for fact_id in fact_ids:
                 fact_path = root / "artifacts/facts" / (
                     fact_id.replace("F:", "F-") + ".json"

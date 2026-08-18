@@ -82,8 +82,8 @@ facts:
     python3 scripts/validate-claims.py
     # A settled SMT-route fact's evidence command tests the VERDICT and not the
     # CERTIFICATION: `test "$(... | tail -1)" = unsat` exits 0 on an uncertified
-    # refutation, verified against artifacts/facts/smt2/neg-barber-no-such-barber.smt2.
-    # 17 of 17 such instances are certified today -- by practice, not enforcement.
+    # refutation, verified against a dedicated uncertified integer-square fixture.
+    # 18 of 18 such instances are certified today -- by practice, not enforcement.
     python3 -m unittest scripts.tests.test_check_smt_evidence_certified
     python3 scripts/check-smt-evidence-certified.py --quiet
     # A `cas-certificate` geometry fact states its theorem twice -- as SMT-LIB in
@@ -404,6 +404,7 @@ generated-trackers:
     python3 scripts/validate-autogenesis-operations.py
     python3 -m unittest scripts.tests.test_validate_autogenesis_operations
     python3 -m unittest scripts.tests.test_fact_frontier
+    python3 -m unittest scripts.tests.test_execute_autogenesis_operation
     python3 -m unittest scripts.tests.test_gen_autogenesis_baseline
     python3 -m unittest scripts.tests.test_create_autogenesis_snapshot
     python3 -m unittest scripts.tests.test_create_autogenesis_proposer_catalog

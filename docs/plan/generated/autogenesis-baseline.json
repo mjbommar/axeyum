@@ -25,15 +25,15 @@
       "state": "fixture"
     },
     {
-      "evidence": "content-addressed authoritative frontier selects exactly one matching fact and refuses every unregistered candidate",
+      "evidence": "content-addressed authoritative frontier selects exactly one matching fact; typed execution binds the frontier, registry, fact, source bytes, and clean commit",
       "id": "A1-machine-selection",
-      "next": "execute only the selected registered operation and bind its result to the frontier identity",
+      "next": "consume the normalized execution receipt in a typed transaction adapter",
       "state": "partial"
     },
     {
-      "evidence": "registry has fixture and authoritative producer/checker contracts; route-specific code can produce and recheck the authoritative certificate",
+      "evidence": "the authoritative registry fixes the driver, input artifact, budget, and expected evidence label; the executor normalizes only certified fresh-arena observations",
       "id": "A1-typed-dispatch-evidence",
-      "next": "add a typed executor and derive the authoritative evidence row and transaction without caller-authored shell",
+      "next": "derive the authoritative evidence row and transaction without caller-authored shell",
       "state": "partial"
     },
     {
@@ -588,7 +588,7 @@
   },
   "manual_seams": [
     {
-      "gap": "machine frontier selects one exact fact with an authoritative operation; no executor yet consumes that selection",
+      "gap": "machine frontier selects one exact fact and the typed executor consumes that identity; no transaction adapter consumes the execution receipt",
       "id": "goal-selection",
       "owner": "fact frontier",
       "source": "scripts/fact-frontier.py",
@@ -599,6 +599,13 @@
       "id": "route-dispatch",
       "owner": "operation registry",
       "source": "artifacts/autogenesis/operations.json",
+      "state": "partial"
+    },
+    {
+      "gap": "one authoritative SMT driver emits a normalized replayable receipt; no second driver or transaction adapter exists",
+      "id": "operation-execution",
+      "owner": "typed operation executor",
+      "source": "scripts/execute-autogenesis-operation.py",
       "state": "partial"
     },
     {
@@ -659,12 +666,12 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "48a6fdd1159da2ca947c41921b809e8cac7a8681f7389dbfcf2011c38f3e0556",
+    "digest": "3c6c4c2d230faf250910e97b9c79927199d8dec125d456a7712c474981288dad",
     "inputs": [
       {
-        "bytes": 2230,
+        "bytes": 2648,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "04cfe1141f62d95a0b82e1be545faa88239938903eb68df3a2cb311ba67decf9"
+        "sha256": "09291f3580726a227d44c23c28b2fff5642c74858df6dc64cca4d3a2e0c7f85a"
       },
       {
         "bytes": 3519,
@@ -1247,9 +1254,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 72285,
+        "bytes": 72353,
         "path": "justfile",
-        "sha256": "3a029203af5aa1e3856e16dc8bc290806589b52b22066cdbbf8971a736a6f7e9"
+        "sha256": "1183fc203bd397a71eef0af5cc84f35449b98dac7da66b051620f0c669d323ea"
       },
       {
         "bytes": 10192,
@@ -1302,9 +1309,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 21837,
+        "bytes": 21949,
         "path": "scripts/check.sh",
-        "sha256": "fad53c0f7e94e211f1970c8ed0cf7b2b4f8e6aac59c326a37ec7ccd60002610c"
+        "sha256": "3b8a775396f83d1396793c487f1ae0e08b8d37fb71eae6dbca632fca158e5379"
       },
       {
         "bytes": 6846,
@@ -1342,14 +1349,19 @@
         "sha256": "cb7b1b6ed2cb8f268b6adac42cc1bfb4ff3b99ce9e85b438c23790b4ce92c9e1"
       },
       {
+        "bytes": 11371,
+        "path": "scripts/execute-autogenesis-operation.py",
+        "sha256": "776327d743253431a2bb337c16ed9dfd76e6f046314bde62d2811638647ffb24"
+      },
+      {
         "bytes": 23819,
         "path": "scripts/fact-frontier.py",
         "sha256": "4dd8164fc8a1e384cbb9686e1d380444018847ca85ebd5095566db4e3d49d73a"
       },
       {
-        "bytes": 24405,
+        "bytes": 24907,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "84e8f39431f60be68ad70c49822b1e755b37f73005542dd0102d3c9aad2546d8"
+        "sha256": "a3cf4252a435e6ec8783219d79510092e3ab0343775a56593d1b8c8a7bfe2651"
       },
       {
         "bytes": 17112,
@@ -1397,9 +1409,9 @@
         "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
       },
       {
-        "bytes": 7738,
+        "bytes": 11479,
         "path": "scripts/validate-autogenesis-operations.py",
-        "sha256": "6dedb1208feeba8e0db6488f44f8b21cf2a1d95182ee2c1d0703c0b6df37e06c"
+        "sha256": "29606bd3f4988e9c806b35ee92c500e398027e6f64714c0b6f574c55d200b58b"
       },
       {
         "bytes": 2711,

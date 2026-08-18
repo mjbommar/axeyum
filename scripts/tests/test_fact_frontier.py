@@ -90,20 +90,15 @@ class MachineFrontierTests(unittest.TestCase):
     def test_only_exact_authoritative_operation_can_license_selection(self) -> None:
         facts = frontier.load()
         registry = frontier.load_operation_registry()
-        operation = copy.deepcopy(registry["operations"][0])
-        operation["scope"] = "authoritative"
-        operation["applicability"] = {
-            "fact_ids": ["F:goldbach-strong"],
-            "formal_languages": ["lean4"],
-            "fragments": ["Nat"],
-        }
+        operation = copy.deepcopy(registry["operations"][1])
         registry["operations"] = [operation]
         selected = frontier.build_machine_frontier(facts, registry)
         self.assertEqual(
             selected["selection"]["selected_fact_id"],
-            "F:goldbach-strong",
+            "F:no-integer-square-is-minus-one",
         )
         operation["scope"] = "counterfactual-fixture-only"
+        del operation["executor"]
         refused = frontier.build_machine_frontier(facts, registry)
         self.assertIsNone(refused["selection"]["selected_fact_id"])
 

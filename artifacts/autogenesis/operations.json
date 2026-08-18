@@ -49,6 +49,14 @@
         "input_kind": "axeyum-original-assertions-and-certificate",
         "output_kind": "axeyum-source-bound-certificate-verdict"
       },
+      "executor": {
+        "driver": "axeyum-bench/smtcomp-evidence-v1",
+        "implementation": "crates/axeyum-bench/examples/smtcomp_cli.rs",
+        "input_fact_id": "F:no-integer-square-is-minus-one",
+        "input_artifact": "artifacts/facts/smt2/neg-no-integer-square-is-minus-one.smt2",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "unsat-int-quadratic-negative-discriminant"
+      },
       "admission": {
         "epistemic_status": "proved",
         "proof_route": "smt-term-level",

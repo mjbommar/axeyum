@@ -59,6 +59,7 @@ STATIC_SOURCES = (
     Path("scripts/check-fact-depends-derived.py"),
     Path("scripts/fact-frontier.py"),
     Path("scripts/validate-autogenesis-operations.py"),
+    Path("scripts/execute-autogenesis-operation.py"),
     Path("artifacts/autogenesis/operations.json"),
     Path("scripts/close-fact.py"),
     Path("scripts/gen-proof-gap-matrix.py"),
@@ -88,7 +89,7 @@ SEAMS = (
         "owner": "fact frontier",
         "source": "scripts/fact-frontier.py",
         "marker": "content-addressed authoritative queue",
-        "gap": "machine frontier selects one exact fact with an authoritative operation; no executor yet consumes that selection",
+        "gap": "machine frontier selects one exact fact and the typed executor consumes that identity; no transaction adapter consumes the execution receipt",
     },
     {
         "id": "route-dispatch",
@@ -97,6 +98,14 @@ SEAMS = (
         "source": "artifacts/autogenesis/operations.json",
         "marker": "smt-int-quadratic-negative-discriminant-v1",
         "gap": "one authoritative producer/checker contract exists; typed execution and transaction preparation remain route-specific",
+    },
+    {
+        "id": "operation-execution",
+        "state": "partial",
+        "owner": "typed operation executor",
+        "source": "scripts/execute-autogenesis-operation.py",
+        "marker": "Callers supply none of",
+        "gap": "one authoritative SMT driver emits a normalized replayable receipt; no second driver or transaction adapter exists",
     },
     {
         "id": "evidence-assembly",
@@ -361,14 +370,14 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
         {
             "id": "A1-machine-selection",
             "state": seam_state.get("goal-selection", "missing"),
-            "evidence": "content-addressed authoritative frontier selects exactly one matching fact and refuses every unregistered candidate",
-            "next": "execute only the selected registered operation and bind its result to the frontier identity",
+            "evidence": "content-addressed authoritative frontier selects exactly one matching fact; typed execution binds the frontier, registry, fact, source bytes, and clean commit",
+            "next": "consume the normalized execution receipt in a typed transaction adapter",
         },
         {
             "id": "A1-typed-dispatch-evidence",
-            "state": "partial",
-            "evidence": "registry has fixture and authoritative producer/checker contracts; route-specific code can produce and recheck the authoritative certificate",
-            "next": "add a typed executor and derive the authoritative evidence row and transaction without caller-authored shell",
+            "state": seam_state.get("operation-execution", "missing"),
+            "evidence": "the authoritative registry fixes the driver, input artifact, budget, and expected evidence label; the executor normalizes only certified fresh-arena observations",
+            "next": "derive the authoritative evidence row and transaction without caller-authored shell",
         },
         {
             "id": "A1-atomic-admission",

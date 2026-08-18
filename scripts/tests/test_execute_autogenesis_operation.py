@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""Mutation controls for authoritative Autogenesis operation execution."""
+
+from __future__ import annotations
+
+import copy
+import importlib.util
+import pathlib
+import unittest
+
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+SCRIPT = ROOT / "scripts/execute-autogenesis-operation.py"
+SPEC = importlib.util.spec_from_file_location("execute_autogenesis_operation", SCRIPT)
+assert SPEC is not None and SPEC.loader is not None
+execution = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(execution)
+
+
+class OperationExecutionTests(unittest.TestCase):
+    def setUp(self) -> None:
+        frontier_module = execution.load_module("frontier_for_test", execution.FRONTIER_SCRIPT)
+        self.frontier = frontier_module.build_machine_frontier(frontier_module.load())
+        self.fact, self.operation, self.registry = execution.selected_inputs(self.frontier)
+        self.observation = {
+            "verdict": "unsat",
+            "evidence_label": "unsat-int-quadratic-negative-discriminant",
+            "certified": True,
+            "recheck": "na",
+            "arena": "ok",
+        }
+
+    def receipt(self):
+        return execution.build_receipt(
+            frontier=self.frontier,
+            fact=self.fact,
+            operation=self.operation,
+            registry=self.registry,
+            git_commit="a" * 40,
+            observation=self.observation,
+        )
+
+    def test_receipt_binds_selection_registry_fact_input_and_commit(self) -> None:
+        receipt = self.receipt()
+        identity = receipt["identity"]
+        self.assertEqual(identity["fact_id"], "F:no-integer-square-is-minus-one")
+        self.assertEqual(
+            identity["operation_id"],
+            "smt-int-quadratic-negative-discriminant-v1",
+        )
+        self.assertEqual(identity["frontier_sha256"], self.frontier["frontier_sha256"])
+        self.assertEqual(receipt["acceptance"]["caller_authored_command"], False)
+        execution.verify_receipt(receipt, receipt)
+
+    def test_each_assurance_field_is_required(self) -> None:
+        for field, value in (
+            ("verdict", "unknown"),
+            ("evidence_label", "unsat-uncertified"),
+            ("certified", False),
+            ("recheck", "FAIL"),
+            ("arena", "none:uncertified-unsat"),
+        ):
+            with self.subTest(field=field):
+                changed = dict(self.observation)
+                changed[field] = value
+                with self.assertRaisesRegex(execution.ExecutionError, "source-bound"):
+                    execution.build_receipt(
+                        frontier=self.frontier,
+                        fact=self.fact,
+                        operation=self.operation,
+                        registry=self.registry,
+                        git_commit="a" * 40,
+                        observation=changed,
+                    )
+
+    def test_parser_rejects_missing_or_duplicated_evidence(self) -> None:
+        with self.assertRaisesRegex(execution.ExecutionError, "observed 0"):
+            execution.parse_observation("unsat\n")
+        line = (
+            "; evidence kind=unsat-int-quadratic-negative-discriminant "
+            "certified=1 recheck=na arena=ok ms=0\n"
+        )
+        with self.assertRaisesRegex(execution.ExecutionError, "observed 2"):
+            execution.parse_observation(line + line + "unsat\n")
+
+    def test_rehashed_mutation_is_still_stale(self) -> None:
+        expected = self.receipt()
+        changed = copy.deepcopy(expected)
+        changed["acceptance"]["source_bound"] = False
+        changed["execution_sha256"] = execution.digest(
+            {key: value for key, value in changed.items() if key != "execution_sha256"}
+        )
+        with self.assertRaisesRegex(execution.ExecutionError, "stale"):
+            execution.verify_receipt(changed, expected)
+
+    def test_frontier_without_one_exact_selection_refuses_execution(self) -> None:
+        changed = copy.deepcopy(self.frontier)
+        changed["selection"]["selected_fact_id"] = None
+        changed["selection"]["admissible_fact_ids"] = []
+        changed["selection"]["outcome"] = "refused-no-admissible-candidate"
+        changed["frontier_sha256"] = execution.digest(
+            {key: value for key, value in changed.items() if key != "frontier_sha256"}
+        )
+        with self.assertRaisesRegex(execution.ExecutionError, "invalid"):
+            execution.selected_inputs(changed)
+
+
+if __name__ == "__main__":
+    unittest.main()
