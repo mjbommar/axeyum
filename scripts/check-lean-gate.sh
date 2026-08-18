@@ -122,7 +122,16 @@ cd "$(dirname "$0")/.." || exit 2
 # whether OUR kernel admits anything Lean's refuses, and on its first run it
 # found one (`tc.rs` `check_core` skipped the sort check on a lambda binder
 # domain). Measured total 219 (56 tests).
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-208}"
+#
+# Raised 208 -> 212 on 2026-08-18 by lane `lean-prelude-module`:
+# `real_lean_shared_prelude_crosscheck` adds FOUR, and it is the first suite that
+# hands Lean a module set rather than a module -- a shared development compiled
+# to an `.olean` plus a query module that `import`s it (ADR-0482). Two of the
+# four are negative controls, because the positive result is otherwise
+# indistinguishable from an import that did nothing: the query module checked
+# with `LEAN_PATH=""` must FAIL, and a module that re-declares what its import
+# supplies must FAIL. Eighteen suites now.
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-212}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
 # Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s
@@ -180,6 +189,7 @@ axeyum-lean-kernel||real_lean_local_let_zeta_crosscheck
 axeyum-lean-kernel||real_lean_structure_eta_recursor_crosscheck
 axeyum-lean-kernel||real_lean_structure_eta_crosscheck
 axeyum-lean-kernel||real_lean_compact_share_crosscheck
+axeyum-lean-kernel||real_lean_shared_prelude_crosscheck
 axeyum-lean-kernel||real_lean_kernel_replay
 axeyum-lean-import||real_lean_wire_differential
 axeyum-solver|full|int_inequality_lean_reconstruct

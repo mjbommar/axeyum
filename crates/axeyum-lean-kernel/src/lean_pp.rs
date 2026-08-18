@@ -162,6 +162,111 @@ impl LeanModuleOutput for String {
     }
 }
 
+/// A **shared prelude module**: the development a family of query modules cites,
+/// emitted once as its own Lean module instead of inlined into every one of
+/// them.
+///
+/// # Why this exists
+///
+/// A refutation over the constructed reals inlines the whole ℕ/ℤ/ℚ/setoid
+/// development with every proof body. Measured 2026-08-18 on the shipped front
+/// door: the emitted module is 1,304,276 bytes, of which **the refutation's own
+/// theorem term is 4,193** — 0.16%. The other 99.84% is identical for every
+/// query over the same carrier. Emitting it once and `import`ing it takes the
+/// per-query module to single-digit kilobytes.
+///
+/// # What a third party has to do
+///
+/// This is a strictly weaker artefact than the self-contained module it
+/// replaces, and the difference is worth stating rather than hiding behind the
+/// byte count: a single file is checked by `lean Query.lean` and nothing else,
+/// whereas the split needs the prelude compiled first and found on `LEAN_PATH`.
+///
+/// ```text
+/// lean -o <dir>/<Name>.olean <dir>/<Name>.lean
+/// LEAN_PATH=<dir> lean <dir>/Query.lean
+/// ```
+///
+/// [`Self::check_script`] emits exactly those two lines for a given directory,
+/// so the recipe is generated from the artefact rather than copied from prose.
+/// `#print axioms` traverses imported proofs, so the axiom-freedom claim is
+/// unchanged — the query module's `#print axioms` reports the same footprint it
+/// reported when the development was inlined.
+#[derive(Clone, Debug)]
+pub struct LeanPreludeModule {
+    name: String,
+    source: String,
+    provided: BTreeSet<NameId>,
+}
+
+impl LeanPreludeModule {
+    /// The Lean module name a query module `import`s. This must also be the
+    /// artefact's file stem: Lean resolves `import Foo.Bar` to `Foo/Bar.olean`
+    /// under a `LEAN_PATH` entry.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// The module source.
+    #[must_use]
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+
+    /// The file name this module must be written to for `import` to resolve.
+    #[must_use]
+    pub fn file_name(&self) -> String {
+        format!("{}.lean", self.name.replace('.', "/"))
+    }
+
+    /// The declaration names this module supplies — what a query module must
+    /// **not** re-declare.
+    #[must_use]
+    pub fn provided(&self) -> &BTreeSet<NameId> {
+        &self.provided
+    }
+
+    /// How many declarations this module supplies.
+    #[must_use]
+    pub fn provided_len(&self) -> usize {
+        self.provided.len()
+    }
+
+    /// The two commands a third party runs to check a query module against this
+    /// prelude, given the directory both files were written to. Generated from
+    /// the artefact so the recipe cannot drift from the module name.
+    ///
+    /// `--root` is not optional. Lean derives a file's module name from its path
+    /// relative to the root directory, which defaults to the working directory,
+    /// so without it `lean -o /tmp/x/M.olean /tmp/x/M.lean` run from anywhere
+    /// else fails with `input file ... must be contained in root directory`.
+    #[must_use]
+    pub fn check_script(&self, directory: &str, query_file: &str) -> String {
+        format!(
+            "lean --root {directory} -o {directory}/{name}.olean {directory}/{name}.lean\n\
+             LEAN_PATH={directory} lean --root {directory} {directory}/{query_file}\n",
+            name = self.name
+        )
+    }
+}
+
+/// Which of the three module shapes a banner opens.
+///
+/// The three differ only in their header comment, whether an `import` line
+/// follows `prelude`, and whether they declare Lean's compiler-internal
+/// constants -- which must appear exactly once across a module set.
+#[derive(Clone, Copy)]
+enum BannerKind<'a> {
+    /// One file that declares everything it cites (the historical shape, and
+    /// still what the shipped front door emits).
+    SelfContained,
+    /// The shared development a family of query modules imports.
+    SharedPrelude,
+    /// A query module whose shared development is `import`ed by module name.
+    Importing(&'a str),
+}
+
 struct IoLeanModuleOutput<'a, W: std::io::Write + ?Sized> {
     writer: &'a mut W,
     error: Option<std::io::Error>,
@@ -402,6 +507,87 @@ impl Kernel {
         }
     }
 
+    /// Render the **shared prelude module** holding every declaration reachable
+    /// from `roots`, to be compiled once and `import`ed by the query modules
+    /// [`Self::render_lean_module_compact_importing`] renders.
+    ///
+    /// `roots` are declaration names, typically every name in the carrier
+    /// context's environment before any query-specific symbol was admitted
+    /// (`kernel.environment().iter().map(|(n, _)| *n)`). Rendering is
+    /// deterministic, so two contexts built the same way produce a byte-identical
+    /// prelude — which is what makes "emit once, import many" sound rather than
+    /// merely convenient.
+    ///
+    /// `module_name` must be a valid Lean module name and must match the file
+    /// stem the source is written to.
+    ///
+    /// The returned module carries no theorem and no `#print axioms`: it is a
+    /// development, not a claim.
+    #[must_use]
+    pub fn render_lean_prelude_module(
+        &self,
+        module_name: &str,
+        roots: &[NameId],
+    ) -> LeanPreludeModule {
+        let order = self.reachable_decl_order_from_names(roots);
+        let mut source = String::new();
+        Self::write_module_banner(&mut source, BannerKind::SharedPrelude);
+        let (owned_by_lean, at_consts, real_inductives) = self.lean_owned_constants(&order, &[]);
+        self.write_decl_blocks(
+            &mut source,
+            &order,
+            &real_inductives,
+            &owned_by_lean,
+            &at_consts,
+            &BTreeSet::new(),
+            true,
+        );
+        // Everything in `order` is supplied by this module once compiled --
+        // including the constructors and recursors it did NOT write out, because
+        // Lean regenerates those from the `inductive` commands it did.
+        let provided: BTreeSet<NameId> = order.into_iter().collect();
+        LeanPreludeModule {
+            name: module_name.to_owned(),
+            source,
+            provided,
+        }
+    }
+
+    /// Render a **query module** that `import`s `prelude_module` instead of
+    /// inlining the development it supplies.
+    ///
+    /// Semantically this is [`Self::render_lean_module_compact_with_inductives`]
+    /// with the shared declarations removed and an `import` line in their place;
+    /// the theorem term, the `@`-application decisions, and the `#print axioms`
+    /// tail are identical. Checking it requires the prelude compiled to an
+    /// `.olean` on `LEAN_PATH` — see [`LeanPreludeModule::check_script`].
+    ///
+    /// `prelude_module` must have been rendered from **this** kernel: names are
+    /// interned per kernel, so a [`LeanPreludeModule`] from another one would
+    /// suppress the wrong declarations.
+    #[must_use]
+    pub fn render_lean_module_compact_importing(
+        &self,
+        theorem_name: &str,
+        goal: ExprId,
+        proof: ExprId,
+        real_inductives: &[NameId],
+        prelude_module: &LeanPreludeModule,
+    ) -> String {
+        let mut out = String::new();
+        self.write_lean_module_shaped(
+            &mut out,
+            theorem_name,
+            goal,
+            proof,
+            real_inductives,
+            true,
+            &prelude_module.provided,
+            Some(&prelude_module.name),
+        );
+        out
+    }
+
     fn render_lean_module_impl(
         &self,
         theorem_name: &str,
@@ -422,18 +608,54 @@ impl Kernel {
         out
     }
 
-    /// The fixed module preamble: `prelude` mode, the codegen section, the
+    /// The fixed module preamble: `prelude` mode, an optional `import` of a
+    /// separately-compiled shared module, the codegen section, the
     /// recursion-depth option, and Lean's compiler-internal constants.
+    ///
+    /// `import_module` is `Some(name)` for a **query** module in the split
+    /// layout ([`Kernel::render_lean_module_compact_importing`]). Lean requires
+    /// `prelude` and every `import` to precede all other commands, so the import
+    /// is written immediately after `prelude`. The compiler-internal constants
+    /// are then **omitted**, because the imported module already declares them
+    /// and Lean rejects a redeclaration -- the option lines are module-scoped and
+    /// are repeated.
     ///
     /// Its own function because it is long, fixed text and
     /// [`Self::write_lean_module_impl`] is over `clippy::too_many_lines`
     /// with it inline -- a lint that fires on STABLE and not on nightly.
-    fn write_module_banner<O: LeanModuleOutput>(out: &mut O) {
+    fn write_module_banner<O: LeanModuleOutput>(out: &mut O, kind: BannerKind<'_>) {
+        let _ = out.write_str(match kind {
+            BannerKind::SelfContained => {
+                "-- Auto-generated by axeyum-lean-kernel: a self-contained re-check of a\n\
+                 -- reconstructed refutation. `prelude` avoids clashing with Lean core.\n\
+                 prelude\n"
+            }
+            BannerKind::SharedPrelude => {
+                "-- Auto-generated by axeyum-lean-kernel: the SHARED development a family\n\
+                 -- of query modules imports. It proves nothing on its own; it carries the\n\
+                 -- declarations every refutation over this carrier cites. Compile it to an\n\
+                 -- `.olean` and put its directory on `LEAN_PATH`.\n\
+                 -- `prelude` avoids clashing with Lean core.\n\
+                 prelude\n"
+            }
+            BannerKind::Importing(_) => {
+                "-- Auto-generated by axeyum-lean-kernel: a re-check of a reconstructed\n\
+                 -- refutation against a separately-compiled shared development.\n\
+                 -- `prelude` avoids clashing with Lean core.\n\
+                 prelude\n"
+            }
+        });
+        if let BannerKind::Importing(module) = kind {
+            let _ = write!(
+                out,
+                "-- The shared development is emitted once by\n\
+                 -- `Kernel::render_lean_prelude_module`. Build it to `{module}.olean`\n\
+                 -- first and point `LEAN_PATH` at the directory holding it.\n\
+                 import {module}\n"
+            );
+        }
         let _ = out.write_str(
-            "-- Auto-generated by axeyum-lean-kernel: a self-contained re-check of a\n\
-         -- reconstructed refutation. `prelude` avoids clashing with Lean core.\n\
-         prelude\n\
-         set_option linter.unusedVariables false\n\
+            "set_option linter.unusedVariables false\n\
          -- These declarations are proofs, not programs: a recursor-based `def`\n\
          -- has no compiled code and Lean's code generator declines it\n\
          -- (\"code generator does not support recursor `T.rec` yet\"). The section\n\
@@ -451,8 +673,16 @@ impl Kernel {
          -- raises the\n\
          -- ELABORATOR's recursion counter and nothing else: the kernel still\n\
          -- checks every term, and `#print axioms` is unaffected.\n\
-         set_option maxRecDepth 65536\n\n\
-         -- Lean's own compiler-internal constants, which `Init.Prelude` declares\n\
+         set_option maxRecDepth 65536\n\n",
+        );
+        // The compiler-internal constants are declared exactly ONCE across a
+        // module set: an importing module gets them from the import, and Lean
+        // rejects a redeclaration ("has already been declared").
+        if matches!(kind, BannerKind::Importing(_)) {
+            return;
+        }
+        let _ = out.write_str(
+            "-- Lean's own compiler-internal constants, which `Init.Prelude` declares\n\
          -- (`unsafe axiom lcErased : Type`) and `prelude` mode therefore omits.\n\
          -- Lean 4.34 runs code generation over a Prop-valued inductive that\n\
          -- carries data -- `Or`, `Exists`, `Nat.le` -- and its IR names these, so\n\
@@ -479,68 +709,59 @@ impl Kernel {
         real_inductives: &[NameId],
         compact: bool,
     ) {
+        self.write_lean_module_shaped(
+            out,
+            theorem_name,
+            goal,
+            proof,
+            real_inductives,
+            compact,
+            &BTreeSet::new(),
+            None,
+        );
+    }
+
+    /// The one module writer, in the three shapes [`BannerKind`] names.
+    ///
+    /// `provided` is the set of declaration names a separately-compiled imported
+    /// module already supplies: they are **skipped** here (Lean rejects a
+    /// redeclaration) but still counted when deciding which constants need an
+    /// `@`-application, because that is a property of the constant and not of
+    /// which file declares it. `import_module` is `Some` exactly when `provided`
+    /// is non-empty in the intended use, but the two are independent parameters
+    /// so a test can vary one without the other.
+    #[allow(clippy::too_many_arguments)]
+    fn write_lean_module_shaped<O: LeanModuleOutput>(
+        &self,
+        out: &mut O,
+        theorem_name: &str,
+        goal: ExprId,
+        proof: ExprId,
+        real_inductives: &[NameId],
+        compact: bool,
+        provided: &BTreeSet<NameId>,
+        import_module: Option<&str>,
+    ) {
         let order = self.reachable_decl_order(&[goal, proof]);
-        // Every reachable inductive is rendered as a real Lean `inductive`, not
-        // as an opaque `axiom`. An axiomatized family has no ι-reduction rule on
-        // the Lean side, so Lean's definitional equality is strictly weaker than
-        // the kernel's and any proof whose `Eq.refl` needs a recursor to
-        // *compute* is rejected — see [`Self::render_lean_module_with_inductives`].
-        // `real_inductives` remains an explicit request (it is what a caller uses
-        // to state the dependency), but it is a subset of what is emitted.
-        let mut all_inductives: BTreeSet<NameId> = order
-            .iter()
-            .copied()
-            .filter(|n| {
-                matches!(
-                    self.environment().get(*n),
-                    Some(Declaration::Inductive { .. })
-                )
-            })
-            .collect();
-        all_inductives.extend(real_inductives.iter().copied());
-        let all_inductives: Vec<NameId> = all_inductives.into_iter().collect();
+        let (owned_by_lean, at_consts, all_inductives) =
+            self.lean_owned_constants(&order, real_inductives);
         let real_inductives: &[NameId] = &all_inductives;
-        Self::write_module_banner(out);
-        // The constructor/recursor names Lean will auto-generate for the real
-        // inductives — emit nothing for them (Lean owns them). The recursor names
-        // are also the `@`-application set: Lean makes their `motive` implicit, so
-        // the kernel's explicit-motive recursor term must apply them with `@`.
-        let mut owned_by_lean: std::collections::BTreeSet<NameId> =
-            std::collections::BTreeSet::new();
-        let mut at_consts: std::collections::BTreeSet<NameId> = std::collections::BTreeSet::new();
-        for &ind in real_inductives {
-            if let Some(Declaration::Inductive { ctor_names, .. }) = self.environment().get(ind) {
-                for &c in ctor_names {
-                    owned_by_lean.insert(c);
-                    // Lean makes an inductive's parameters **implicit** in its
-                    // constructors regardless of how the parameter binders were
-                    // written (`@List.nil : {α : Type u} → List α`). The kernel
-                    // term applies them positionally, so every regenerated
-                    // constructor must be applied with `@`. For a parameterless
-                    // family this is a no-op.
-                    at_consts.insert(c);
-                }
-                let rec = self.name_of_rec(ind);
-                owned_by_lean.insert(rec);
-                at_consts.insert(rec);
-            }
-        }
-        for name in &order {
-            if owned_by_lean.contains(name) {
-                continue;
-            }
-            if real_inductives.contains(name)
-                && let Some(block) = self.render_real_inductive(*name)
-            {
-                out.append_owned(block);
-                let _ = out.write_char('\n');
-                continue;
-            }
-            if let Some(decl) = self.environment().get(*name) {
-                self.write_decl_command_with_at(out, decl, &at_consts, compact);
-                let _ = out.write_char('\n');
-            }
-        }
+        Self::write_module_banner(
+            out,
+            match import_module {
+                Some(module) => BannerKind::Importing(module),
+                None => BannerKind::SelfContained,
+            },
+        );
+        self.write_decl_blocks(
+            out,
+            &order,
+            real_inductives,
+            &owned_by_lean,
+            &at_consts,
+            provided,
+            compact,
+        );
         let shares = if compact {
             self.compact_share_plan(&[goal, proof], theorem_name, &at_consts)
         } else {
@@ -567,6 +788,95 @@ impl Kernel {
             self.write_lean_without_shares(out, proof, &at_consts);
         }
         let _ = write!(out, "\n\n#print axioms {theorem_name}\n");
+    }
+
+    /// The constants Lean itself owns in a module covering `order`, and the ones
+    /// that must be applied with `@`.
+    ///
+    /// Every reachable inductive is rendered as a real Lean `inductive`, not as
+    /// an opaque `axiom`. An axiomatized family has no ι-reduction rule on the
+    /// Lean side, so Lean's definitional equality is strictly weaker than the
+    /// kernel's and any proof whose `Eq.refl` needs a recursor to *compute* is
+    /// rejected — see [`Self::render_lean_module_with_inductives`].
+    /// `requested` remains an explicit request (it is what a caller uses to state
+    /// the dependency), but it is a subset of what is emitted.
+    ///
+    /// Returns `(owned_by_lean, at_consts, inductives)`: the constructor and
+    /// recursor names Lean auto-generates (emit nothing for them), the
+    /// `@`-application set — Lean makes an inductive's parameters and a
+    /// recursor's motive **implicit**, so the kernel's positional applications
+    /// must be written with `@` — and the inductives themselves in a stable
+    /// order.
+    ///
+    /// This is computed over the WHOLE reachable set, never over the subset a
+    /// particular module writes out: whether a constant needs `@` is a property
+    /// of the constant, not of which file declares it, and a query module that
+    /// imports its inductives must still apply their constructors with `@`.
+    fn lean_owned_constants(
+        &self,
+        order: &[NameId],
+        requested: &[NameId],
+    ) -> (BTreeSet<NameId>, BTreeSet<NameId>, Vec<NameId>) {
+        let mut all_inductives: BTreeSet<NameId> = order
+            .iter()
+            .copied()
+            .filter(|n| {
+                matches!(
+                    self.environment().get(*n),
+                    Some(Declaration::Inductive { .. })
+                )
+            })
+            .collect();
+        all_inductives.extend(requested.iter().copied());
+        let all_inductives: Vec<NameId> = all_inductives.into_iter().collect();
+
+        let mut owned_by_lean: BTreeSet<NameId> = BTreeSet::new();
+        let mut at_consts: BTreeSet<NameId> = BTreeSet::new();
+        for &ind in &all_inductives {
+            if let Some(Declaration::Inductive { ctor_names, .. }) = self.environment().get(ind) {
+                for &c in ctor_names {
+                    owned_by_lean.insert(c);
+                    at_consts.insert(c);
+                }
+                let rec = self.name_of_rec(ind);
+                owned_by_lean.insert(rec);
+                at_consts.insert(rec);
+            }
+        }
+        (owned_by_lean, at_consts, all_inductives)
+    }
+
+    /// Emit one top-level command per declaration in `order`, skipping the
+    /// constructors/recursors Lean regenerates from an emitted `inductive`
+    /// (`owned_by_lean`) and anything an imported module already supplies
+    /// (`provided`).
+    #[allow(clippy::too_many_arguments)]
+    fn write_decl_blocks<O: LeanModuleOutput>(
+        &self,
+        out: &mut O,
+        order: &[NameId],
+        real_inductives: &[NameId],
+        owned_by_lean: &BTreeSet<NameId>,
+        at_consts: &BTreeSet<NameId>,
+        provided: &BTreeSet<NameId>,
+        compact: bool,
+    ) {
+        for name in order {
+            if owned_by_lean.contains(name) || provided.contains(name) {
+                continue;
+            }
+            if real_inductives.contains(name)
+                && let Some(block) = self.render_real_inductive(*name)
+            {
+                out.append_owned(block);
+                let _ = out.write_char('\n');
+                continue;
+            }
+            if let Some(decl) = self.environment().get(*name) {
+                self.write_decl_command_with_at(out, decl, at_consts, compact);
+                let _ = out.write_char('\n');
+            }
+        }
     }
 
     /// The recursor name `I.rec` an inductive `I` generates: the `Recursor`
@@ -892,18 +1202,48 @@ impl Kernel {
         trusted
     }
 
+    /// The environment declarations reachable from `roots` — every constant a
+    /// module rendering `roots` would have to declare, in dependency order.
+    ///
+    /// Public because a **shared prelude module** is defined by a root set the
+    /// caller chooses, and the obvious choice — "every declaration in the carrier
+    /// context" — is the wrong one. Measured 2026-08-18 on the constructed-real
+    /// carrier: the context holds 445 declarations, a refutation reaches 280 of
+    /// them, and two of the 165 it does not reach (`CReal.Equiv.not_zero_one`,
+    /// `CReal.not_le_one_zero`) are **rejected by Lean 4.30.0** although the
+    /// in-tree kernel admits them. Rooting a shared module at the whole
+    /// environment therefore produces a file Lean will not compile, for reasons
+    /// that have nothing to do with the refutations importing it. Intersecting
+    /// this answer with the carrier snapshot gives a root set that is both
+    /// shared and checkable.
+    #[must_use]
+    pub fn declarations_reached(&self, roots: &[ExprId]) -> Vec<NameId> {
+        self.reachable_decl_order(roots)
+    }
+
     /// The environment declarations reachable from `roots` (transitively through
     /// each declaration's type and — for definitions/theorems/opaques — value),
     /// in dependency order (a declaration appears after every declaration it
     /// references). Names not present in the environment are skipped.
     fn reachable_decl_order(&self, roots: &[ExprId]) -> Vec<NameId> {
-        // Reachability closure over constant references.
-        let mut needed: std::collections::BTreeSet<NameId> = std::collections::BTreeSet::new();
-        let mut work: Vec<NameId> = Vec::new();
         let mut seed = Vec::new();
         for &r in roots {
             self.collect_const_deps(r, &mut seed);
         }
+        self.decl_order_from_seed(seed)
+    }
+
+    /// [`Self::reachable_decl_order`] rooted at declaration **names** rather than
+    /// at expressions — what a shared prelude module is defined by, since it has
+    /// no goal or proof term to walk from.
+    fn reachable_decl_order_from_names(&self, roots: &[NameId]) -> Vec<NameId> {
+        self.decl_order_from_seed(roots.to_vec())
+    }
+
+    fn decl_order_from_seed(&self, seed: Vec<NameId>) -> Vec<NameId> {
+        // Reachability closure over constant references.
+        let mut needed: std::collections::BTreeSet<NameId> = std::collections::BTreeSet::new();
+        let mut work: Vec<NameId> = Vec::new();
         for n in seed {
             if needed.insert(n) {
                 work.push(n);
@@ -1088,6 +1428,21 @@ impl Kernel {
     /// as `axeyum.reconstruct.dtrec._N`), so remapping the root `Nat` segment is
     /// unambiguous and affects only the prelude's computational naturals — the
     /// in-tree kernel and its stored names are untouched (this is pure rendering).
+    /// A name **as an emitted Lean module spells it**, which is not the same
+    /// string as [`Self::display_name`].
+    ///
+    /// Two rules diverge, and both bite anything that tries to match a
+    /// `#print axioms` footprint against `axiom` lines in a module: a numeric
+    /// name component is not a legal Lean identifier on its own, so
+    /// `axeyum.reconstruct.x.0` is emitted as `axeyum.reconstruct.x._0`; and the
+    /// kernel's computational naturals are rooted at `AxNat` so they do not
+    /// shadow Lean's `Nat`. Comparing display names to module text silently
+    /// reports "not covered" for an artefact that is perfectly correct.
+    #[must_use]
+    pub fn lean_name(&self, id: NameId) -> String {
+        self.render_name(id)
+    }
+
     fn render_name(&self, id: NameId) -> String {
         match self.name_node(id) {
             NameNode::Anonymous => String::new(),
@@ -2708,5 +3063,250 @@ mod tests {
             plan.names.len()
         );
         assert_eq!(plan.names.len(), plan.order.len());
+    }
+
+    // ---------------------------------------------------------------------
+    // The shared prelude module (`render_lean_prelude_module` +
+    // `render_lean_module_compact_importing`).
+    // ---------------------------------------------------------------------
+
+    /// A kernel carrying the logical prelude plus a query on top of it: `hna`
+    /// refutes `ha`, and the shared development is everything the prelude
+    /// builder admitted.
+    ///
+    /// Returns `(kernel, carrier_names, goal, proof)`. `carrier_names` is the
+    /// environment snapshot taken BEFORE the query symbols were admitted — the
+    /// definition of "shared" a caller has to supply.
+    fn split_fixture() -> (Kernel, Vec<crate::NameId>, ExprId, ExprId) {
+        let mut k = Kernel::new();
+        let logic = crate::build_logic_prelude(&mut k).expect("logic prelude must build");
+        let carrier: Vec<crate::NameId> = k.environment().iter().map(|(n, _)| *n).collect();
+
+        let anon = k.anon();
+        let prop = k.sort_zero();
+        let false_ = k.const_(logic.false_, vec![]);
+
+        let a_name = k.name_str(anon, "A");
+        k.add_declaration(crate::Declaration::Axiom {
+            name: a_name,
+            uparams: vec![],
+            ty: prop,
+        })
+        .expect("A admits");
+        let a = k.const_(a_name, vec![]);
+
+        let ha_name = k.name_str(anon, "ha");
+        k.add_declaration(crate::Declaration::Axiom {
+            name: ha_name,
+            uparams: vec![],
+            ty: a,
+        })
+        .expect("ha admits");
+
+        let not_a = k.pi(anon, a, false_, crate::BinderInfo::Default);
+        let refutes = k.name_str(anon, "hna");
+        k.add_declaration(crate::Declaration::Axiom {
+            name: refutes,
+            uparams: vec![],
+            ty: not_a,
+        })
+        .expect("hna admits");
+
+        let ha = k.const_(ha_name, vec![]);
+        let hna = k.const_(refutes, vec![]);
+        let proof = k.app(hna, ha);
+        (k, carrier, false_, proof)
+    }
+
+    /// The split is a partition, not a duplication: every declaration the
+    /// self-contained module writes out is written by exactly one of the two
+    /// halves.
+    ///
+    /// This is the property that makes the byte saving real rather than a
+    /// relabelling, and the property Lean enforces from the other side — a
+    /// declaration emitted twice is `has already been declared`.
+    #[test]
+    fn a_shared_prelude_and_its_query_module_declare_disjoint_names() {
+        let (k, carrier, goal, proof) = split_fixture();
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        let query = k.render_lean_module_compact_importing("q", goal, proof, &[], &shared);
+
+        let declared = |source: &str| -> BTreeSet<String> {
+            source
+                .lines()
+                .filter_map(|line| {
+                    let rest = line
+                        .strip_prefix("axiom ")
+                        .or_else(|| line.strip_prefix("def "))
+                        .or_else(|| line.strip_prefix("theorem "))
+                        .or_else(|| line.strip_prefix("opaque "))
+                        .or_else(|| line.strip_prefix("inductive "))?;
+                    Some(rest.split([' ', '.']).next()?.to_owned())
+                })
+                .collect()
+        };
+        let shared_names = declared(shared.source());
+        let query_names = declared(&query);
+        assert!(
+            !shared_names.is_empty() && !query_names.is_empty(),
+            "both halves must declare something, or the disjointness below is vacuous"
+        );
+        let both: Vec<&String> = shared_names.intersection(&query_names).collect();
+        assert!(
+            both.is_empty(),
+            "the query module re-declares names the import supplies: {both:?}"
+        );
+        // The query's OWN symbols are in the query half and nowhere else.
+        for symbol in ["A", "ha", "hna"] {
+            assert!(
+                query_names.contains(symbol),
+                "the query module must declare its own `{symbol}`:\n{query}"
+            );
+        }
+        // And the shared half carries the development.
+        assert!(
+            shared_names.contains("False"),
+            "the shared module must carry the logical prelude:\n{}",
+            shared.source()
+        );
+    }
+
+    /// The query module names its import, and only its import, as the source of
+    /// the shared development.
+    #[test]
+    fn a_query_module_imports_the_shared_module_by_name() {
+        let (k, carrier, goal, proof) = split_fixture();
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        let query = k.render_lean_module_compact_importing("q", goal, proof, &[], &shared);
+
+        let prelude_line = query
+            .lines()
+            .position(|line| line == "prelude")
+            .expect("a `prelude` line");
+        let import_line = query
+            .lines()
+            .position(|line| line == "import AxeyumShared")
+            .unwrap_or_else(|| panic!("the query module must import the shared module:\n{query}"));
+        assert!(
+            import_line > prelude_line,
+            "Lean requires `prelude` before any `import`:\n{query}"
+        );
+        // Lean rejects an `import` that follows any other command.
+        let first_command = query
+            .lines()
+            .position(|line| {
+                !line.is_empty()
+                    && !line.starts_with("--")
+                    && line != "prelude"
+                    && !line.starts_with("import ")
+            })
+            .expect("some command");
+        assert!(
+            import_line < first_command,
+            "every `import` must precede every command:\n{query}"
+        );
+        assert_eq!(shared.file_name(), "AxeyumShared.lean");
+        assert!(shared.check_script("/d", "Q.lean").contains("LEAN_PATH=/d"));
+    }
+
+    /// Lean's compiler-internal constants are declared exactly ONCE across the
+    /// module set. Declaring them in both halves is `has already been declared`;
+    /// declaring them in neither is `Unknown constant lcErased` under a
+    /// toolchain that runs codegen over a Prop-valued inductive carrying data.
+    #[test]
+    fn the_codegen_constants_are_declared_in_exactly_one_half() {
+        let (k, carrier, goal, proof) = split_fixture();
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        let query = k.render_lean_module_compact_importing("q", goal, proof, &[], &shared);
+        for constant in ["lcErased", "lcAny", "lcVoid"] {
+            let declaration = format!("unsafe axiom {constant} : Type");
+            assert!(
+                shared.source().contains(&declaration),
+                "the shared module must declare `{constant}`"
+            );
+            assert!(
+                !query.contains(&declaration),
+                "the query module must not RE-declare `{constant}`; Lean rejects that:\n{query}"
+            );
+        }
+    }
+
+    /// The elaborator options are module-scoped in Lean and do NOT travel
+    /// through an `import`, so both halves must set them. `maxRecDepth` in
+    /// particular: the shared development binds thousands of nested `let`s and
+    /// the query module's own theorem term does too.
+    #[test]
+    fn both_halves_set_the_module_scoped_elaborator_options() {
+        let (k, carrier, goal, proof) = split_fixture();
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        let query = k.render_lean_module_compact_importing("q", goal, proof, &[], &shared);
+        for option in ["set_option maxRecDepth 65536", "noncomputable section"] {
+            assert!(shared.source().contains(option), "shared module: {option}");
+            assert!(query.contains(option), "query module: {option}");
+        }
+    }
+
+    /// The claim the split is FOR. Everything but the query's own declarations
+    /// and its theorem term moves out of the per-query module.
+    #[test]
+    fn the_query_module_is_much_smaller_than_the_self_contained_one() {
+        let (k, carrier, goal, proof) = split_fixture();
+        let whole = k.render_lean_module_compact("q", goal, proof);
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        let query = k.render_lean_module_compact_importing("q", goal, proof, &[], &shared);
+        // At this fixture's scale the fixed banner dominates both files, so the
+        // measurable claim is that the DEVELOPMENT left the query module, not a
+        // ratio. The ratio is measured where the development is large:
+        // `examples/shared_prelude_module.rs` on the constructed-real carrier.
+        assert!(
+            query.len() < whole.len(),
+            "whole {} B, query {} B, shared {} B",
+            whole.len(),
+            query.len(),
+            shared.source().len()
+        );
+        assert!(
+            whole.contains("inductive False") && !query.contains("inductive False"),
+            "the development must be in the shared half only:\n{query}"
+        );
+        // The audit command still closes the query module: `#print axioms`
+        // traverses imported proofs, so the footprint claim is unmoved.
+        assert!(query.trim_end().ends_with("#print axioms q"), "{query}");
+    }
+
+    /// A shared module has no theorem and makes no claim; it is a development.
+    #[test]
+    fn a_shared_prelude_module_states_no_theorem() {
+        let (k, carrier, _, _) = split_fixture();
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        assert!(
+            !shared
+                .source()
+                .lines()
+                .any(|line| line.starts_with("#print axioms")),
+            "a development module must not carry an audit command"
+        );
+        assert!(
+            !shared.source().contains("\nimport "),
+            "the shared module is the root of the import graph"
+        );
+        assert!(shared.provided_len() > 10, "{}", shared.provided_len());
+    }
+
+    /// Rendering is deterministic, which is what makes "emit once, import many"
+    /// sound: two contexts built the same way must produce a byte-identical
+    /// shared module, or a per-query prelude would be needed after all.
+    #[test]
+    fn two_identically_built_contexts_render_the_same_shared_module() {
+        let (first, first_names, _, _) = split_fixture();
+        let (second, second_names, _, _) = split_fixture();
+        assert_eq!(
+            first
+                .render_lean_prelude_module("AxeyumShared", &first_names)
+                .source(),
+            second
+                .render_lean_prelude_module("AxeyumShared", &second_names)
+                .source()
+        );
     }
 }

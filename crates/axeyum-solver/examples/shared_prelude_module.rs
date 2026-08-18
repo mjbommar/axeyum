@@ -16,11 +16,21 @@
 //! * the per-query module size, self-contained against split;
 //! * that the shared module is **byte-identical** across fixtures — the property
 //!   that makes "emit once, import many" sound rather than merely convenient;
-//! * that the `axiom` lines across BOTH halves still equal
-//!   `Kernel::axiom_footprint`, which is the invariant
+//! * that the two halves together still COVER `Kernel::axiom_footprint`, which
+//!   is the split's form of the invariant
 //!   `front_door_carrier --require-axiom-free` enforces on the single file. A
 //!   smaller artefact that drops a declaration the kernel footprint still
-//!   contains is a regression however good the byte count looks.
+//!   contains is a regression however good the byte count looks. It is coverage
+//!   and not a line count because the shared half legitimately carries axioms a
+//!   given refutation never reaches — see `footprint_is_covered`.
+//!
+//! # What splitting the module found
+//!
+//! The obvious root set for the shared half — every declaration in the carrier
+//! context — emits a file **Lean 4.30.0 refuses**. Two `CReal` theorems the
+//! in-tree kernel admits are rejected by Lean, and they had never been in an
+//! emitted module because no refutation reaches them. `reached_carrier` explains
+//! the measurement; ADR-0482 records the decision it forced.
 //!
 //! # What a third party has to do, stated rather than hidden
 //!
@@ -44,8 +54,9 @@
 //!
 //! `--require-split` makes the exit status depend on the finding: nonzero unless
 //! every fixture's query module is at least 50x smaller than its self-contained
-//! form, the shared module is identical across fixtures, and the two halves'
-//! `axiom` lines together equal the kernel footprint.
+//! form, the shared module is identical across fixtures, the two halves cover
+//! the kernel footprint exactly, and every refutation still rests on zero
+//! carrier axioms.
 
 use std::collections::BTreeSet;
 
