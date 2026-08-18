@@ -121,10 +121,11 @@ then composes two catalog-only searches: a target-independent structural-plan
 grammar produces fresh B, and the identical A target receives no proof before B
 but a fresh, B-dependent proof afterward under the same budget. The chain is
 now bound to an internal typed B evidence handoff and a replay-derived,
-zero-ledger-write episode transition. The post-B readiness path does not yet
-consume an accepted-transition event and no durable ledger transaction has
-occurred, so this remains an operational unlock control rather than
-Autogenesis-1 credit.
+zero-ledger-write episode transition. A checked accepted-transition event is
+now required to construct the post-B catalog, so the snapshot alone cannot
+unlock A. This remains a counterfactual phase projection rather than frontier
+recomputation from a durable ledger transition, so it is an operational unlock
+control rather than Autogenesis-1 credit.
 
 ## Phase summary
 

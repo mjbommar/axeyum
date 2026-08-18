@@ -35,7 +35,7 @@ operationally reachable.
 | A was unavailable before B | The identical A target under the identical route policy and budget receives no credit before B | Fixture | Bind the result into a replayed episode transaction |
 | B was established | Catalog-only structural search produces typed, content-addressed, kernel-checked evidence for fresh B | Fixture | Fresh-process replay of the staged transition bundle |
 | B became durable knowledge | Atomic application after fresh-process replay and fact validation | Missing | Episode-wide transaction boundary |
-| A became newly ready | Readiness changes only after the accepted B event | Missing | Accepted-transition event and snapshot recomputation |
+| A became newly ready | Readiness changes only after the accepted B event | Fixture | Replace phase projection with frontier recomputation from durable state |
 | A was established using B | Fresh proof is accepted and its dependency on B is derived from the proof term | Fixture | Transactional admission and readiness event |
 | Corruption cannot receive credit | Independent mutations of statement, evidence, checker, dependency, footprint, and status all reject | Missing | Typed episode and evidence identities |
 | The sequence reproduces | Clean checkout repeats the same accepted transitions from retained inputs | Missing | Replay command and portable artifact bundle |
@@ -129,13 +129,23 @@ episode overlay. Re-running the creator with `--verify` reconstructs the
 expected transition from the snapshot and typed receipt rather than trusting
 the staged JSON.
 
+The checked transition now emits a third object,
+`axeyum-autogenesis-accepted-transition-event`. Post-B catalog construction
+requires the complete receipt → transition → event chain and independently
+rederives it; the snapshot alone can no longer expose B. The event digest is
+bound into the catalog consumed by the sandboxed proposer. An explicit negative
+control requests `post_b` with no event and must fail before catalog creation.
+`stage-autogenesis-premise.sh` is the single shared producer for this chain, so
+the apply-search and proposer-isolation gates cannot quietly implement different
+acceptance rules.
+
 This establishes an operational-unlock and catalog-only search substrate, not
 Autogenesis-1. The chain remains preregistered by a human; route dispatch is
 still shell orchestration; the B change is an episode-local bootstrap overlay,
-not a durable ledger admission; the post-B catalog does not yet consume an
-accepted-transition event; and the full kernel search has not yet been replayed
-from a retained bundle in a clean process. No transaction or programme credit
-is claimed. A clean, exact-commit evidence bundle can be retained
+not a durable ledger admission; event-gated phase projection is not yet a
+frontier recomputation from durable state; and the full kernel search has not
+yet been replayed from a retained bundle in a clean process. No transaction or
+programme credit is claimed. A clean, exact-commit evidence bundle can be retained
 outside Git with `--retain NEW-DIRECTORY`; the repository keeps only the
 generator, gates, and content identities rather than vendoring execution
 artifacts.
@@ -233,8 +243,8 @@ useful primitive, not the Autogenesis transaction boundary.
 
 ### Foundation 2 — make knowledge trigger work
 
-1. Emit an accepted-transition event only after durable admission.
-2. Recompute the frontier from the new snapshot digest.
+1. Replace the bootstrap event with one emitted only after durable admission.
+2. Recompute the frontier from the new durable-state digest.
 3. Record why A changed from ineligible to eligible.
 4. Suppress retries whose full episode identity has not changed.
 

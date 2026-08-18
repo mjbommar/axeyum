@@ -16,6 +16,7 @@ from typing import Any
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BASELINE = ROOT / "docs/plan/generated/autogenesis-baseline.json"
 SNAPSHOT_SCRIPT = ROOT / "scripts/create-autogenesis-snapshot.py"
+EVENT_SCRIPT = ROOT / "scripts/create-autogenesis-accepted-event.py"
 
 
 class CatalogError(RuntimeError):
@@ -26,6 +27,17 @@ def load_snapshot_module():
     spec = importlib.util.spec_from_file_location("create_autogenesis_snapshot", SNAPSHOT_SCRIPT)
     if spec is None or spec.loader is None:
         raise CatalogError(f"cannot load {SNAPSHOT_SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_event_module():
+    spec = importlib.util.spec_from_file_location(
+        "create_autogenesis_accepted_event_for_catalog", EVENT_SCRIPT
+    )
+    if spec is None or spec.loader is None:
+        raise CatalogError(f"cannot load {EVENT_SCRIPT}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -132,6 +144,7 @@ def build_catalog(
     phase: str,
     facts: dict[str, dict[str, Any]],
     inventory: dict[str, dict[str, Any]],
+    accepted_event: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if phase not in {"pre_b", "pre_a", "post_b"}:
         raise CatalogError(f"unsupported phase {phase!r}")
@@ -161,11 +174,16 @@ def build_catalog(
         }
         for name in sorted(visible)
     ]
+    if phase != "post_b" and accepted_event is not None:
+        raise CatalogError("accepted-transition events are valid only for post_b")
     if phase == "pre_b":
         target = premise
     elif phase == "pre_a":
         target = consequent
     else:
+        if accepted_event is None:
+            raise CatalogError("post_b requires a verified accepted-transition event")
+        verify_event_projection(snapshot, accepted_event)
         accepted = phase_policy.get("accepted_episode_facts")
         if not isinstance(accepted, list) or len(accepted) != 1:
             raise CatalogError("post_b must expose exactly one accepted episode fact")
@@ -205,8 +223,66 @@ def build_catalog(
         },
         "entries": sorted(entries, key=lambda entry: entry["name"]),
     }
+    if accepted_event is not None:
+        catalog["accepted_transition_event_sha256"] = accepted_event["event_sha256"]
     catalog["catalog_sha256"] = digest(catalog)
     return catalog
+
+
+def verify_event_projection(
+    snapshot: dict[str, Any], accepted_event: dict[str, Any]
+) -> None:
+    if (
+        accepted_event.get("schema_version") != 1
+        or accepted_event.get("kind")
+        != "axeyum-autogenesis-accepted-transition-event"
+        or accepted_event.get("event_type") != "episode-fact-accepted"
+        or accepted_event.get("sequence") != 1
+    ):
+        raise CatalogError("post_b input is not the first accepted-fact event")
+    claimed = accepted_event.get("event_sha256")
+    unsigned = dict(accepted_event)
+    unsigned.pop("event_sha256", None)
+    if not isinstance(claimed, str) or digest(unsigned) != claimed:
+        raise CatalogError("accepted-transition event digest is invalid")
+    identity = accepted_event.get("identity")
+    state_change = accepted_event.get("state_change")
+    if not isinstance(identity, dict) or not isinstance(state_change, dict):
+        raise CatalogError("accepted-transition event payload is malformed")
+    premise_id = snapshot["chain"]["premise"]["fact_id"]
+    if (
+        identity.get("episode_id") != snapshot.get("episode_id")
+        or identity.get("snapshot_sha256") != snapshot.get("snapshot_sha256")
+        or identity.get("fact_id") != premise_id
+    ):
+        raise CatalogError("accepted-transition event identity does not match snapshot")
+    if (
+        state_change.get("from_phase") != "pre_b"
+        or state_change.get("to_phase") != "post_b"
+        or state_change.get("accepted_episode_facts")
+        != snapshot["phases"]["post_b"].get("accepted_episode_facts")
+    ):
+        raise CatalogError("accepted-transition event does not authorize snapshot post_b")
+    if accepted_event.get("authoritative_ledger_writes") != []:
+        raise CatalogError("bootstrap accepted event contains ledger writes")
+
+
+def verify_event_chain(
+    *,
+    snapshot: dict[str, Any],
+    evidence: dict[str, Any],
+    transition: dict[str, Any],
+    accepted_event: dict[str, Any],
+) -> None:
+    module = load_event_module()
+    try:
+        expected = module.build_event(
+            snapshot=snapshot, evidence=evidence, transition=transition
+        )
+        module.verify_event(accepted_event, expected)
+    except module.EventError as error:
+        raise CatalogError(f"accepted-transition event chain failed: {error}") from error
+    verify_event_projection(snapshot, accepted_event)
 
 
 def verify_catalog(catalog: dict[str, Any], expected: dict[str, Any]) -> None:
@@ -229,23 +305,63 @@ def verify_catalog(catalog: dict[str, Any], expected: dict[str, Any]) -> None:
         raise CatalogError("catalog is internally valid but stale against current inputs")
 
 
-def derive(snapshot_path: pathlib.Path, phase: str) -> dict[str, Any]:
+def derive(
+    snapshot_path: pathlib.Path,
+    phase: str,
+    *,
+    premise_evidence_path: pathlib.Path | None = None,
+    premise_transition_path: pathlib.Path | None = None,
+    accepted_event_path: pathlib.Path | None = None,
+) -> dict[str, Any]:
     snapshot = json.loads(snapshot_path.read_text())
     _module, facts = verify_snapshot_current(snapshot, ROOT)
     inventory = theorem_type_inventory(ROOT)
-    return build_catalog(snapshot=snapshot, phase=phase, facts=facts, inventory=inventory)
+    accepted_event = None
+    paths = (premise_evidence_path, premise_transition_path, accepted_event_path)
+    if phase == "post_b":
+        if any(path is None for path in paths):
+            raise CatalogError(
+                "post_b requires premise evidence, transition, and accepted event"
+            )
+        evidence = json.loads(premise_evidence_path.read_text())
+        transition = json.loads(premise_transition_path.read_text())
+        accepted_event = json.loads(accepted_event_path.read_text())
+        verify_event_chain(
+            snapshot=snapshot,
+            evidence=evidence,
+            transition=transition,
+            accepted_event=accepted_event,
+        )
+    elif any(path is not None for path in paths):
+        raise CatalogError("accepted-transition inputs are valid only for post_b")
+    return build_catalog(
+        snapshot=snapshot,
+        phase=phase,
+        facts=facts,
+        inventory=inventory,
+        accepted_event=accepted_event,
+    )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--snapshot", required=True, type=pathlib.Path)
     parser.add_argument("--phase", required=True, choices=("pre_b", "pre_a", "post_b"))
+    parser.add_argument("--premise-evidence", type=pathlib.Path)
+    parser.add_argument("--premise-transition", type=pathlib.Path)
+    parser.add_argument("--accepted-transition-event", type=pathlib.Path)
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--output", type=pathlib.Path)
     action.add_argument("--verify", type=pathlib.Path)
     args = parser.parse_args()
     try:
-        expected = derive(args.snapshot.resolve(), args.phase)
+        expected = derive(
+            args.snapshot.resolve(),
+            args.phase,
+            premise_evidence_path=args.premise_evidence,
+            premise_transition_path=args.premise_transition,
+            accepted_event_path=args.accepted_transition_event,
+        )
         if args.verify is not None:
             verify_catalog(json.loads(args.verify.read_text()), expected)
             print(f"AUTOGENESIS_CATALOG_OK|{expected['catalog_sha256']}|{args.verify.resolve()}")

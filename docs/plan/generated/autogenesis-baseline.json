@@ -659,7 +659,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "4adf1d76b35f5ed2c1535579c0682d832b4f87d10f2daae79f3f9310818b0e34",
+    "digest": "690334d6af3d6ea0eaa702ecc1538755bb11f6761d6de3da475b1e9c60a0776d",
     "inputs": [
       {
         "bytes": 3519,
@@ -1247,9 +1247,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 71415,
+        "bytes": 71492,
         "path": "justfile",
-        "sha256": "bc1836ec79ef16079fab2fd9132ab498960c453c868420e2f53d16d4ba3f1725"
+        "sha256": "81584598195d842fef28eff58e5a944e240debe05cd359307fcc33e626eb1400"
       },
       {
         "bytes": 2896,
@@ -1267,9 +1267,9 @@
         "sha256": "4ca7f8a489610cede17b3ab4cecc4dc4813fcab2230c42cc0d3e3fb76ca32081"
       },
       {
-        "bytes": 10408,
+        "bytes": 9752,
         "path": "scripts/check-autogenesis-apply-search.sh",
-        "sha256": "ba95cb603ab2bf26567bd84523372123866a7e40fde1bc2a50a9d2adaead8b03"
+        "sha256": "53846054fc08354a639c2e810f2ff5c4fe94d53b2d1bda21d69adff32c71008d"
       },
       {
         "bytes": 3677,
@@ -1282,9 +1282,9 @@
         "sha256": "b95ff058b0fd33cfa5ef2743587c4b2db25a2cef5ff72529e0ff474951926d65"
       },
       {
-        "bytes": 2183,
+        "bytes": 2588,
         "path": "scripts/check-autogenesis-proposer-isolation.sh",
-        "sha256": "9a51f46e7cd615f7c4edf0ecc3e12d6a142e195acd81644d0423e475159f8ba0"
+        "sha256": "7df95fd87205480864089aa764e4f244dc06f4abf2cc1697f5fdea3505f92e84"
       },
       {
         "bytes": 6597,
@@ -1297,14 +1297,19 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 21105,
+        "bytes": 21216,
         "path": "scripts/check.sh",
-        "sha256": "7b5747834be6f24023265006414c10184529b5360441a2cd65700fa181223c68"
+        "sha256": "f4e161e51cbe40d188a48a1ad75f33d5334ea6df7a2c4a8cb4c48f8cd32aac76"
       },
       {
         "bytes": 6846,
         "path": "scripts/close-fact.py",
         "sha256": "1946ed9f4d89dffed5cc57ed0f88cf5c5ed7f3b49c6ecb497c3e2862775c4d8a"
+      },
+      {
+        "bytes": 4919,
+        "path": "scripts/create-autogenesis-accepted-event.py",
+        "sha256": "71e352e4fd277f290c6405982e0589c019674764368ef05e1738b3d2a91e62c3"
       },
       {
         "bytes": 8648,
@@ -1317,9 +1322,9 @@
         "sha256": "06b6758f7422c1750d2752ef4a92eee74523ff6ab062b123cd5a7bb546cc4a71"
       },
       {
-        "bytes": 10401,
+        "bytes": 15214,
         "path": "scripts/create-autogenesis-proposer-catalog.py",
-        "sha256": "050b4928fcd4a679155b6c46bc0ae1c8b604d349b1aa249ab9d769647af0d421"
+        "sha256": "d21403a5a94b215fababa937281dec4326372e8535989113aa166623c2022898"
       },
       {
         "bytes": 9468,
@@ -1332,9 +1337,9 @@
         "sha256": "db6757cc801ed3996d0ba3c40ba55123e2855e8944054c2a391b46ff5678b81b"
       },
       {
-        "bytes": 22972,
+        "bytes": 23080,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "7b5f39133ba23949620de068eb08e34d9d8153b000aa9236e386c17e82f25291"
+        "sha256": "e7e0b1811e389e536690a8294f6846add321a5f1e5b067944e280188bc808823"
       },
       {
         "bytes": 17112,
@@ -1347,9 +1352,14 @@
         "sha256": "f9ceaa822e1d7c090f79608b238276c8921581f151a6b814648e95f6e5b87f00"
       },
       {
-        "bytes": 2631,
+        "bytes": 3627,
         "path": "scripts/run-autogenesis-python-proposer.sh",
-        "sha256": "1f1b1f07b1f86489e8e7b665e0e8f8cf03fd651dc318cd2d8cb5177bd4cd277a"
+        "sha256": "e42311b7dd0d5a931208d24283971dbd61ffab318d81dffd4e5f88cee5cf4a74"
+      },
+      {
+        "bytes": 4699,
+        "path": "scripts/stage-autogenesis-premise.sh",
+        "sha256": "fcfc52779c96981c43857c81b0fa8a9579f9649c380dbb8c5881123cf38656cd"
       },
       {
         "bytes": 1688,

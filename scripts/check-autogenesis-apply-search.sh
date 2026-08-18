@@ -44,37 +44,58 @@ python3 scripts/create-autogenesis-snapshot.py \
   --consequent F:nat-mul-one \
   --output "$scratch/snapshot.json" >/dev/null
 
+mkdir "$scratch/pre_a-output"
 python3 scripts/create-autogenesis-proposer-catalog.py \
   --snapshot "$scratch/snapshot.json" \
-  --phase pre_b \
-  --output "$scratch/pre_b-catalog.json" >/dev/null
-mkdir "$scratch/pre_b-induction-output"
+  --phase pre_a \
+  --output "$scratch/pre_a-catalog.json" >/dev/null
 scripts/run-autogenesis-python-proposer.sh \
   --snapshot "$scratch/snapshot.json" \
-  --catalog "$scratch/pre_b-catalog.json" \
-  --output-dir "$scratch/pre_b-induction-output" \
-  --program scripts/autogenesis-induction-proposer.py >/dev/null
-python3 scripts/verify-autogenesis-induction-proposals.py \
-  --catalog "$scratch/pre_b-catalog.json" \
-  --bundle "$scratch/pre_b-induction-output/induction-plans.json" \
-  --tsv "$scratch/pre_b-induction-output/induction-plans.tsv" >/dev/null
+  --catalog "$scratch/pre_a-catalog.json" \
+  --output-dir "$scratch/pre_a-output" \
+  --program scripts/autogenesis-apply-proposer.py >/dev/null
+python3 scripts/verify-autogenesis-apply-proposals.py \
+  --catalog "$scratch/pre_a-catalog.json" \
+  --bundle "$scratch/pre_a-output/apply-plans.json" \
+  --tsv "$scratch/pre_a-output/apply-plans.tsv" >/dev/null
 
-for phase in pre_a post_b; do
-  mkdir "$scratch/$phase-output"
-  python3 scripts/create-autogenesis-proposer-catalog.py \
-    --snapshot "$scratch/snapshot.json" \
-    --phase "$phase" \
-    --output "$scratch/$phase-catalog.json" >/dev/null
-  scripts/run-autogenesis-python-proposer.sh \
-    --snapshot "$scratch/snapshot.json" \
-    --catalog "$scratch/$phase-catalog.json" \
-    --output-dir "$scratch/$phase-output" \
-    --program scripts/autogenesis-apply-proposer.py >/dev/null
-  python3 scripts/verify-autogenesis-apply-proposals.py \
-    --catalog "$scratch/$phase-catalog.json" \
-    --bundle "$scratch/$phase-output/apply-plans.json" \
-    --tsv "$scratch/$phase-output/apply-plans.tsv" >/dev/null
-done
+scripts/stage-autogenesis-premise.sh \
+  --snapshot "$scratch/snapshot.json" \
+  --output-dir "$scratch" \
+  --budget "$premise_budget" >/dev/null
+
+transition_chain=(
+  --premise-evidence "$scratch/premise-evidence.json"
+  --premise-transition "$scratch/premise-transition.json"
+  --accepted-transition-event "$scratch/premise-accepted-event.json"
+)
+if python3 scripts/create-autogenesis-proposer-catalog.py \
+  --snapshot "$scratch/snapshot.json" \
+  --phase post_b \
+  --output "$scratch/unauthorized-post_b-catalog.json" \
+  >"$scratch/unauthorized-post_b.stdout" \
+  2>"$scratch/unauthorized-post_b.stderr"; then
+  echo "post-B catalog unexpectedly opened without an accepted event" >&2
+  exit 1
+fi
+grep -qF 'post_b requires premise evidence, transition, and accepted event' \
+  "$scratch/unauthorized-post_b.stderr"
+mkdir "$scratch/post_b-output"
+python3 scripts/create-autogenesis-proposer-catalog.py \
+  --snapshot "$scratch/snapshot.json" \
+  --phase post_b \
+  "${transition_chain[@]}" \
+  --output "$scratch/post_b-catalog.json" >/dev/null
+scripts/run-autogenesis-python-proposer.sh \
+  --snapshot "$scratch/snapshot.json" \
+  --catalog "$scratch/post_b-catalog.json" \
+  --output-dir "$scratch/post_b-output" \
+  --program scripts/autogenesis-apply-proposer.py \
+  "${transition_chain[@]}" >/dev/null
+python3 scripts/verify-autogenesis-apply-proposals.py \
+  --catalog "$scratch/post_b-catalog.json" \
+  --bundle "$scratch/post_b-output/apply-plans.json" \
+  --tsv "$scratch/post_b-output/apply-plans.tsv" >/dev/null
 
 read -r pre_bundle pre_catalog pre_candidate < <(
   python3 - "$scratch" <<'PY'
@@ -109,40 +130,10 @@ PY
   exit 1
 }
 
-premise_result=$(cargo run -q -p axeyum-lean-kernel \
-  --example autogenesis_induction_plan_check -- \
-  --plans "$scratch/pre_b-induction-output/induction-plans.tsv" \
-  --candidate "$premise_candidate" \
-  --budget "$premise_budget" \
-  --expect proved \
-  --bundle-sha256 "$premise_bundle" \
-  --catalog-sha256 "$premise_catalog" \
-  --evidence-output "$scratch/premise-kernel-evidence.tsv")
+premise_result=$(<"$scratch/premise-result.txt")
 grep -qxF \
   "AUTOGENESIS_INDUCTION_RESULT|phase=pre_b|attempted=2|budget=$premise_budget|outcome=proved|plan_rank=2" \
   <<<"$premise_result"
-python3 scripts/create-autogenesis-premise-evidence.py \
-  --snapshot "$scratch/snapshot.json" \
-  --catalog "$scratch/pre_b-catalog.json" \
-  --bundle "$scratch/pre_b-induction-output/induction-plans.json" \
-  --plans "$scratch/pre_b-induction-output/induction-plans.tsv" \
-  --kernel-evidence "$scratch/premise-kernel-evidence.tsv" \
-  --output "$scratch/premise-evidence.json" >/dev/null
-python3 scripts/create-autogenesis-premise-evidence.py \
-  --snapshot "$scratch/snapshot.json" \
-  --catalog "$scratch/pre_b-catalog.json" \
-  --bundle "$scratch/pre_b-induction-output/induction-plans.json" \
-  --plans "$scratch/pre_b-induction-output/induction-plans.tsv" \
-  --kernel-evidence "$scratch/premise-kernel-evidence.tsv" \
-  --verify "$scratch/premise-evidence.json" >/dev/null
-python3 scripts/create-autogenesis-premise-transition.py \
-  --snapshot "$scratch/snapshot.json" \
-  --premise-evidence "$scratch/premise-evidence.json" \
-  --output "$scratch/premise-transition.json" >/dev/null
-python3 scripts/create-autogenesis-premise-transition.py \
-  --snapshot "$scratch/snapshot.json" \
-  --premise-evidence "$scratch/premise-evidence.json" \
-  --verify "$scratch/premise-transition.json" >/dev/null
 
 pre_result=$(cargo run -q -p axeyum-lean-kernel \
   --example autogenesis_apply_plan_check -- \
@@ -211,8 +202,9 @@ premise_catalog = json.load(open(root / "pre_b-catalog.json"))
 premise_bundle = json.load(open(root / "pre_b-induction-output/induction-plans.json"))
 premise_evidence = json.load(open(root / "premise-evidence.json"))
 premise_transition = json.load(open(root / "premise-transition.json"))
+premise_event = json.load(open(root / "premise-accepted-event.json"))
 report = {
-    "schema_version": 4,
+    "schema_version": 5,
     "kind": "axeyum-autogenesis-apply-experiment",
     "git_commit": baseline["git_commit"],
     "baseline_source_sha256": baseline["baseline_source_sha256"],
@@ -228,6 +220,7 @@ report = {
         "accepted_plan_rank": 2,
         "evidence_sha256": premise_evidence["evidence_sha256"],
         "transition_sha256": premise_transition["transition_sha256"],
+        "accepted_event_sha256": premise_event["event_sha256"],
         "result": sys.argv[4],
     },
     "pre_a": {
@@ -255,4 +248,4 @@ PY
   trap - EXIT
 fi
 
-echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved+typed-evidence+staged-transition|target=A|budget=$budget|pre_a=no-proof|post_b=proved|dependency=episode-premise|ledger_writes=0"
+echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved+accepted-event|target=A|budget=$budget|pre_a=no-proof|post_b=proved|readiness=event-driven|dependency=episode-premise|ledger_writes=0"

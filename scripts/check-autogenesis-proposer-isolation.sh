@@ -11,15 +11,25 @@ python3 scripts/create-autogenesis-snapshot.py \
   --premise F:nat-zero-add \
   --consequent F:nat-mul-one \
   --output "$scratch/snapshot.json" >/dev/null
+scripts/stage-autogenesis-premise.sh \
+  --snapshot "$scratch/snapshot.json" \
+  --output-dir "$scratch" >/dev/null
+transition_chain=(
+  --premise-evidence "$scratch/premise-evidence.json"
+  --premise-transition "$scratch/premise-transition.json"
+  --accepted-transition-event "$scratch/premise-accepted-event.json"
+)
 python3 scripts/create-autogenesis-proposer-catalog.py \
   --snapshot "$scratch/snapshot.json" \
   --phase post_b \
+  "${transition_chain[@]}" \
   --output "$scratch/catalog.json" >/dev/null
 scripts/run-autogenesis-python-proposer.sh \
   --snapshot "$scratch/snapshot.json" \
   --catalog "$scratch/catalog.json" \
   --output-dir "$scratch/output" \
-  --program scripts/tests/fixtures/autogenesis-proposer-probe.py >/dev/null
+  --program scripts/tests/fixtures/autogenesis-proposer-probe.py \
+  "${transition_chain[@]}" >/dev/null
 
 python3 - "$scratch/catalog.json" "$scratch/output/probe-result.json" <<'PY'
 import json
@@ -46,6 +56,7 @@ if scripts/run-autogenesis-python-proposer.sh \
   --catalog "$scratch/catalog.json" \
   --output-dir "$scratch/output" \
   --program scripts/tests/fixtures/autogenesis-proposer-probe.py \
+  "${transition_chain[@]}" \
   >"$scratch/nonempty.stdout" 2>"$scratch/nonempty.stderr"; then
   echo "proposer isolation unexpectedly reused a nonempty output directory" >&2
   exit 1

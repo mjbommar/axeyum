@@ -54,7 +54,33 @@ class CatalogTests(unittest.TestCase):
             "Nat.B": {"arity": 1, "canonical_type": "BType"},
             "Nat.C": {"arity": 0, "canonical_type": "CType"},
         }
-        return dict(snapshot=snapshot, phase=phase, facts=facts, inventory=inventory)
+        event = {
+            "schema_version": 1,
+            "kind": "axeyum-autogenesis-accepted-transition-event",
+            "event_type": "episode-fact-accepted",
+            "sequence": 1,
+            "identity": {
+                "episode_id": "episode",
+                "snapshot_sha256": "snapshot",
+                "fact_id": "F:B",
+            },
+            "state_change": {
+                "from_phase": "pre_b",
+                "to_phase": "post_b",
+                "accepted_episode_facts": snapshot["phases"]["post_b"][
+                    "accepted_episode_facts"
+                ],
+            },
+            "authoritative_ledger_writes": [],
+        }
+        event["event_sha256"] = MODULE.digest(event)
+        return dict(
+            snapshot=snapshot,
+            phase=phase,
+            facts=facts,
+            inventory=inventory,
+            accepted_event=event if phase == "post_b" else None,
+        )
 
     def test_pre_b_contains_types_but_no_proof_fields(self):
         catalog = MODULE.build_catalog(**self.inputs("pre_b"))
@@ -69,6 +95,26 @@ class CatalogTests(unittest.TestCase):
         self.assertIn("Autogenesis.E.premise", names)
         self.assertNotIn("Nat.B", names)
         self.assertEqual(catalog["target"]["name"], "Autogenesis.E.consequent")
+        self.assertEqual(
+            catalog["accepted_transition_event_sha256"],
+            self.inputs("post_b")["accepted_event"]["event_sha256"],
+        )
+
+    def test_post_b_without_event_rejects(self):
+        inputs = self.inputs("post_b")
+        inputs["accepted_event"] = None
+        with self.assertRaisesRegex(MODULE.CatalogError, "requires"):
+            MODULE.build_catalog(**inputs)
+
+    def test_rehashed_event_for_wrong_fact_rejects(self):
+        inputs = self.inputs("post_b")
+        event = inputs["accepted_event"]
+        event["identity"]["fact_id"] = "F:wrong"
+        event["event_sha256"] = MODULE.digest(
+            {key: value for key, value in event.items() if key != "event_sha256"}
+        )
+        with self.assertRaisesRegex(MODULE.CatalogError, "identity"):
+            MODULE.build_catalog(**inputs)
 
     def test_pre_a_has_same_target_as_post_b_without_episode_premise(self):
         pre = MODULE.build_catalog(**self.inputs("pre_a"))
