@@ -339,6 +339,14 @@ def build_machine_frontier(
             if dependency not in facts or not settled(facts[dependency])
         )
         fragment = fact["formal"]["fragment"]
+        registered_operation_ids = matching_operations(fact, operations)
+        reviewed_gate_mentions = {
+            mention
+            for operation in operations
+            if operation["id"] in registered_operation_ids
+            for mention in operation.get("reviewed_gate_mentions", [])
+        }
+        gate_mentions = set(held.get(fact_id, []))
         entries.append(
             {
                 "fact_id": fact_id,
@@ -350,8 +358,14 @@ def build_machine_frontier(
                 "dependency_ready": not missing,
                 "missing_dependencies": missing,
                 "route_class": route_class(fragment, decidable),
-                "registered_operation_ids": matching_operations(fact, operations),
-                "gate_mentions": sorted(held.get(fact_id, [])),
+                "registered_operation_ids": registered_operation_ids,
+                "gate_mentions": sorted(gate_mentions),
+                "unreviewed_gate_mentions": sorted(
+                    gate_mentions.difference(reviewed_gate_mentions)
+                ),
+                "stale_reviewed_gate_mentions": sorted(
+                    reviewed_gate_mentions.difference(gate_mentions)
+                ),
                 "would_unlock": sorted(unlocks.get(fact_id, [])),
             }
         )
@@ -373,8 +387,12 @@ def build_machine_frontier(
             reasons.append("no-supported-route")
         if not entry["registered_operation_ids"]:
             reasons.append("no-registered-operation")
-        if entry["gate_mentions"]:
+        elif len(entry["registered_operation_ids"]) != 1:
+            reasons.append("ambiguous-registered-operation")
+        if entry["unreviewed_gate_mentions"]:
             reasons.append("gate-coupling-review-required")
+        if entry["stale_reviewed_gate_mentions"]:
+            reasons.append("stale-gate-coupling-review")
         rationale.append({"fact_id": entry["fact_id"], "rejected_by": reasons})
         if not reasons:
             admissible.append(entry["fact_id"])

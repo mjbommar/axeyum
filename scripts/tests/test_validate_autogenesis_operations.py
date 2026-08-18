@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_one_authoritative_operation(self) -> None:
+    def test_committed_registry_has_one_fixture_and_two_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 2)
+        self.assertEqual(len(self.registry["operations"]), 3)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
@@ -39,6 +39,13 @@ class OperationRegistryTests(unittest.TestCase):
         self.assertEqual(
             authoritative["executor"]["driver"],
             "axeyum-bench/smtcomp-evidence-v1",
+        )
+        kernel = self.registry["operations"][2]
+        self.assertEqual(kernel["scope"], "authoritative")
+        self.assertEqual(kernel["applicability"]["fact_ids"], ["F:nat-zero-add"])
+        self.assertEqual(
+            kernel["executor"]["driver"],
+            "axeyum-lean-kernel/nat-zero-add-induction-v1",
         )
 
     def test_duplicate_operation_id_is_rejected(self) -> None:
@@ -69,6 +76,21 @@ class OperationRegistryTests(unittest.TestCase):
         mutated = copy.deepcopy(self.registry)
         del mutated["operations"][1]["executor"]
         with self.assertRaisesRegex(registry_module.RegistryError, "missing=.*executor"):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_gate_review_and_kernel_executor_scope_are_exact(self) -> None:
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][2]["reviewed_gate_mentions"] = []
+        registry_module.validate_registry(mutated, ROOT)
+
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][2]["reviewed_gate_mentions"].append("missing.sh")
+        with self.assertRaisesRegex(registry_module.RegistryError, "gate mention"):
+            registry_module.validate_registry(mutated, ROOT)
+
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][2]["executor"]["target_theorem"] = "Nat.add_zero"
+        with self.assertRaisesRegex(registry_module.RegistryError, "target"):
             registry_module.validate_registry(mutated, ROOT)
 
     def test_executor_cannot_escape_or_name_an_unknown_driver(self) -> None:

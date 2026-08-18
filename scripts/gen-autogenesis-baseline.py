@@ -92,7 +92,7 @@ SEAMS = (
         "owner": "fact frontier",
         "source": "scripts/fact-frontier.py",
         "marker": "content-addressed authoritative queue",
-        "gap": "one proof-derived B-to-A chain is operationally qualified for engineering but has no authoritative kernel operations; the live fact frontier has no admissible chain write",
+        "gap": "the qualified chain's B now has an exact authoritative kernel operation; A still has none, and the live settled ledger correctly selects neither",
     },
     {
         "id": "chain-qualification",
@@ -108,15 +108,15 @@ SEAMS = (
         "owner": "operation registry",
         "source": "artifacts/autogenesis/operations.json",
         "marker": "smt-int-quadratic-negative-discriminant-v1",
-        "gap": "one authoritative producer/checker contract has completed end to end; no second driver or chain operation is registered",
+        "gap": "authoritative SMT and exact Nat.zero_add kernel drivers exist; the dependent Nat.mul_one operation remains missing",
     },
     {
         "id": "operation-execution",
-        "state": "authoritative",
+        "state": "authoritative-multi-route",
         "owner": "typed operation executor",
         "source": "scripts/execute-autogenesis-operation.py",
         "marker": "Callers supply none of",
-        "gap": "one authoritative SMT driver emitted and replayed a normalized receipt; no second driver exists",
+        "gap": "SMT and exact Nat.zero_add kernel drivers emit normalized replayable receipts; the chain's A driver remains missing",
     },
     {
         "id": "evidence-assembly",
@@ -384,8 +384,8 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
         {
             "id": "A1-typed-dispatch-evidence",
             "state": seam_state.get("operation-execution", "missing"),
-            "evidence": "the authoritative registry fixed the driver, input, budget, expected label, and footprint; execution, transaction preparation, admission, and settled-fact replay completed without caller-authored metadata",
-            "next": "repeat with a second operation family and a dependent consequent",
+            "evidence": "the registry now fixes both the admitted SMT route and an exact fresh-kernel Nat.zero_add route; B's typed receipt, axiom-free transaction, and settled-fact replay work without caller-authored metadata",
+            "next": "run B from a clean reconstructed checkout and add the dependent Nat.mul_one operation",
         },
         {
             "id": "A1-atomic-admission",

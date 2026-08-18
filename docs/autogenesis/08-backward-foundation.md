@@ -438,6 +438,16 @@ execution receipt for B, followed by the corresponding operation for A. A
 fallback remains unmeasured; it is useful resilience work, not permission to
 delay the primary's authority path.
 
+The first authority step is now implemented without broadening the fixture
+checker. `authoritative-kernel-nat-zero-add-induction-v1` applies to B alone,
+constructs its proof-body-free goal catalog from the selected formal statement,
+enumerates two structural induction plans, and checks the accepted proof in a
+fresh kernel. The observed result is plan rank 2 of 2, exact canonical type,
+empty axiom footprint, and no retained-answer dependency. The typed receipt,
+authoritative transaction adapter, and settled-fact replay all accept it. A
+reviewed three-script gate-mention list is exact: a new unreviewed mention blocks
+selection. This is B route authority, not yet a B admission or an A route.
+
 ### Foundation 1 — make one closure portable
 
 1. Define internal goal-snapshot and episode values; do not publish a schema

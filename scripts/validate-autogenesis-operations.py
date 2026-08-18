@@ -16,7 +16,10 @@ REGISTRY = ROOT / "artifacts/autogenesis/operations.json"
 ID_RE = re.compile(r"^[a-z0-9]+(?:[a-z0-9./-]*[a-z0-9])?$")
 FACT_ID_RE = re.compile(r"^F:[a-z0-9]+(?:-[a-z0-9]+)*$")
 SCOPES = {"counterfactual-fixture-only", "authoritative"}
-EXECUTION_DRIVERS = {"axeyum-bench/smtcomp-evidence-v1"}
+EXECUTION_DRIVERS = {
+    "axeyum-bench/smtcomp-evidence-v1",
+    "axeyum-lean-kernel/nat-zero-add-induction-v1",
+}
 ADMISSION_CONTRACTS = {
     ("proved", "kernel-lean", "kernel-term", "must-be-empty"),
     (
@@ -100,29 +103,47 @@ def repository_file(value: Any, label: str, root: pathlib.Path) -> pathlib.Path:
 def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
     if not isinstance(value, dict):
         raise RegistryError(f"{label} must be an object")
-    exact_keys(
-        value,
-        {
+    common = {
             "driver",
             "implementation",
             "input_fact_id",
-            "input_artifact",
             "timeout_seconds",
             "expected_evidence_label",
-        },
-        label,
-    )
-    if value["driver"] not in EXECUTION_DRIVERS:
+    }
+    driver = value.get("driver")
+    if driver not in EXECUTION_DRIVERS:
         raise RegistryError(f"{label}.driver is unsupported")
+    if driver == "axeyum-bench/smtcomp-evidence-v1":
+        expected = common | {"input_artifact"}
+    elif driver == "axeyum-lean-kernel/nat-zero-add-induction-v1":
+        expected = common | {"target_theorem", "denied_theorems", "budget"}
+    else:
+        expected = common
+    exact_keys(value, expected, label)
     if not isinstance(value["input_fact_id"], str) or not FACT_ID_RE.fullmatch(
         value["input_fact_id"]
     ):
         raise RegistryError(f"{label}.input_fact_id is invalid")
     repository_file(value["implementation"], f"{label}.implementation", root)
-    artifact = repository_file(value["input_artifact"], f"{label}.input_artifact", root)
-    expected_artifact_root = (root / "artifacts/facts/smt2").resolve()
-    if not artifact.is_relative_to(expected_artifact_root) or artifact.suffix != ".smt2":
-        raise RegistryError(f"{label}.input_artifact is not a fact SMT-LIB instance")
+    if driver == "axeyum-bench/smtcomp-evidence-v1":
+        artifact = repository_file(value["input_artifact"], f"{label}.input_artifact", root)
+        expected_artifact_root = (root / "artifacts/facts/smt2").resolve()
+        if not artifact.is_relative_to(expected_artifact_root) or artifact.suffix != ".smt2":
+            raise RegistryError(f"{label}.input_artifact is not a fact SMT-LIB instance")
+    else:
+        theorem = value["target_theorem"]
+        if not isinstance(theorem, str) or not re.fullmatch(r"Nat\.[A-Za-z0-9_']+", theorem):
+            raise RegistryError(f"{label}.target_theorem is invalid")
+        denied = nonempty_strings(value["denied_theorems"], f"{label}.denied_theorems")
+        if theorem not in denied:
+            raise RegistryError(f"{label}.denied_theorems must include the retained target")
+        if theorem != "Nat.zero_add" or denied != ["Nat.mul_one", "Nat.zero_add"]:
+            raise RegistryError(
+                f"{label} exceeds the v1 kernel checker's exact target/deny scope"
+            )
+        budget = value["budget"]
+        if budget != 2:
+            raise RegistryError(f"{label}.budget must be exactly 2 for the v1 checker")
     timeout = value["timeout_seconds"]
     if type(timeout) is not int or not 1 <= timeout <= 900:
         raise RegistryError(f"{label}.timeout_seconds must be an integer in 1..900")
@@ -159,6 +180,8 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
         }
         if scope == "authoritative":
             operation_fields.add("executor")
+            if "reviewed_gate_mentions" in operation:
+                operation_fields.add("reviewed_gate_mentions")
         exact_keys(operation, operation_fields, label)
         operation_id = operation["id"]
         if not isinstance(operation_id, str) or not ID_RE.fullmatch(operation_id):
@@ -201,6 +224,16 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
         validate_endpoint(operation["checker"], f"{label}.checker", root)
         if scope == "authoritative":
             validate_executor(operation["executor"], f"{label}.executor", root)
+            mentions = operation.get("reviewed_gate_mentions", [])
+            if not isinstance(mentions, list) or len(mentions) != len(set(mentions)):
+                raise RegistryError(f"{label}.reviewed_gate_mentions must be a unique list")
+            for mention in mentions:
+                if (
+                    not isinstance(mention, str)
+                    or pathlib.PurePosixPath(mention).name != mention
+                    or not (root / "scripts" / mention).is_file()
+                ):
+                    raise RegistryError(f"{label} has invalid reviewed gate mention")
         admission = operation["admission"]
         if not isinstance(admission, dict):
             raise RegistryError(f"{label}.admission must be an object")
@@ -243,20 +276,30 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                 raise RegistryError(
                     f"{label}.executor must bind the sole applicable fact id"
                 )
-            expected_artifact_name = (
-                "neg-" + executor["input_fact_id"].removeprefix("F:") + ".smt2"
-            )
-            if pathlib.PurePosixPath(executor["input_artifact"]).name != expected_artifact_name:
-                raise RegistryError(
-                    f"{label}.executor input artifact does not match its fact id"
-                )
             if (
                 executor["driver"] == "axeyum-bench/smtcomp-evidence-v1"
-                and (
+            ):
+                expected_artifact_name = (
+                    "neg-" + executor["input_fact_id"].removeprefix("F:") + ".smt2"
+                )
+                if pathlib.PurePosixPath(executor["input_artifact"]).name != expected_artifact_name:
+                    raise RegistryError(
+                        f"{label}.executor input artifact does not match its fact id"
+                    )
+                if (
                     applicability["formal_languages"] != ["smtlib2"]
                     or admission["proof_route"] != "smt-term-level"
                     or admission["evidence_kind"] != "unsat-certificate"
-                )
+                ):
+                    raise RegistryError(
+                        f"{label}.executor driver is inconsistent with applicability/admission"
+                    )
+            elif (
+                applicability["formal_languages"] != ["lean4"]
+                or applicability["fragments"] != ["Nat"]
+                or admission["proof_route"] != "kernel-lean"
+                or admission["evidence_kind"] != "kernel-term"
+                or admission["axiom_footprint"] != []
             ):
                 raise RegistryError(
                     f"{label}.executor driver is inconsistent with applicability/admission"

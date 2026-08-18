@@ -31,10 +31,10 @@
       "state": "partial"
     },
     {
-      "evidence": "the authoritative registry fixed the driver, input, budget, expected label, and footprint; execution, transaction preparation, admission, and settled-fact replay completed without caller-authored metadata",
+      "evidence": "the registry now fixes both the admitted SMT route and an exact fresh-kernel Nat.zero_add route; B's typed receipt, axiom-free transaction, and settled-fact replay work without caller-authored metadata",
       "id": "A1-typed-dispatch-evidence",
-      "next": "repeat with a second operation family and a dependent consequent",
-      "state": "authoritative"
+      "next": "run B from a clean reconstructed checkout and add the dependent Nat.mul_one operation",
+      "state": "authoritative-multi-route"
     },
     {
       "evidence": "one real selected fact recovered from an intentional post-intent stop through compare-and-swap, fsynced journal, atomic replacement, and durable event",
@@ -588,7 +588,7 @@
   },
   "manual_seams": [
     {
-      "gap": "one proof-derived B-to-A chain is operationally qualified for engineering but has no authoritative kernel operations; the live fact frontier has no admissible chain write",
+      "gap": "the qualified chain's B now has an exact authoritative kernel operation; A still has none, and the live settled ledger correctly selects neither",
       "id": "goal-selection",
       "owner": "fact frontier",
       "source": "scripts/fact-frontier.py",
@@ -602,18 +602,18 @@
       "state": "qualified-primary-fixture"
     },
     {
-      "gap": "one authoritative producer/checker contract has completed end to end; no second driver or chain operation is registered",
+      "gap": "authoritative SMT and exact Nat.zero_add kernel drivers exist; the dependent Nat.mul_one operation remains missing",
       "id": "route-dispatch",
       "owner": "operation registry",
       "source": "artifacts/autogenesis/operations.json",
       "state": "partial"
     },
     {
-      "gap": "one authoritative SMT driver emitted and replayed a normalized receipt; no second driver exists",
+      "gap": "SMT and exact Nat.zero_add kernel drivers emit normalized replayable receipts; the chain's A driver remains missing",
       "id": "operation-execution",
       "owner": "typed operation executor",
       "source": "scripts/execute-autogenesis-operation.py",
-      "state": "authoritative"
+      "state": "authoritative-multi-route"
     },
     {
       "gap": "the first authoritative adapter derives its evidence row and route metadata; other routes through the manual closer remain caller-authored",
@@ -673,12 +673,12 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "574604d6dda1252090fba22d310515c1aef394d4cb04933c4d6e525c691f5fe7",
+    "digest": "0d223154726521fe15a75022ed17615d522b1a71794ba436ade1d2be496498e2",
     "inputs": [
       {
-        "bytes": 2892,
+        "bytes": 4601,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "f24c21f96b40f562e0085c24f0c762092aab426d2d4130dca675b1939a924d14"
+        "sha256": "ef0cc0705a2f1f0441af7aa67c44c0be4697dae6a553169056a9abba8c0ddc66"
       },
       {
         "bytes": 3519,
@@ -1291,9 +1291,9 @@
         "sha256": "be51051e66d990696f495596327242c94e6ed2e543875f4646f18dda5ff61b88"
       },
       {
-        "bytes": 6020,
+        "bytes": 7440,
         "path": "scripts/check-autogenesis-fact-operation.py",
-        "sha256": "04a6851abc3ddadddf12a12821bfb464ad244503a942dfb2f801d5f047541792"
+        "sha256": "37b7402d67a63ccd633e8938d994ff994ac1dd0c0783ddf87f3a6795f10e12e7"
       },
       {
         "bytes": 3677,
@@ -1366,19 +1366,19 @@
         "sha256": "cb7b1b6ed2cb8f268b6adac42cc1bfb4ff3b99ce9e85b438c23790b4ce92c9e1"
       },
       {
-        "bytes": 11523,
+        "bytes": 19048,
         "path": "scripts/execute-autogenesis-operation.py",
-        "sha256": "085c1e483a3c2ef8f82d5dcce9705a2c99dcf7f4520f5ce508d20e06816e05b9"
+        "sha256": "ad2e6b3b9061bf8ff710c073de5f6a884d3e4d96851cf86b21dd77feeb0753c2"
       },
       {
-        "bytes": 26985,
+        "bytes": 27844,
         "path": "scripts/fact-frontier.py",
-        "sha256": "aaf93fae515051f392abb0f19f7e0f9e01516342aa5beda42c27b5a68ff43c1c"
+        "sha256": "fb367504828dc9aa0d09ecf349b645eb33b83402b69c53df65e43e937271526c"
       },
       {
-        "bytes": 25973,
+        "bytes": 25992,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "aa568d31109d992dc7536534bb78bff4459f1bbbfc0cd1798e4d411f7bfd8d3c"
+        "sha256": "9d4f40d20e4c86ae23c6556809ee8ee67df89ae09f95eca0aa9925bc621c917c"
       },
       {
         "bytes": 17112,
@@ -1386,9 +1386,9 @@
         "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
       },
       {
-        "bytes": 21035,
+        "bytes": 22197,
         "path": "scripts/prepare-autogenesis-fact-transaction.py",
-        "sha256": "09a618d026ac0a2ad748150a67514ab7d85e4625bdaa9dc7c2e43f8372f3c07c"
+        "sha256": "24874acf5fda5bc2af1a0f77d6e42b97014e540487788800bc77c20daa592ea0"
       },
       {
         "bytes": 10990,
@@ -1431,9 +1431,9 @@
         "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
       },
       {
-        "bytes": 11745,
+        "bytes": 14152,
         "path": "scripts/validate-autogenesis-operations.py",
-        "sha256": "4097689851a2f3ef5161f549404fc943f93a3eb147f1fbc91185551b8f1b41a8"
+        "sha256": "cde2b42e5dd26882a474cd531ab5be4168ae8d0a3a9be75d231d5e7aaba652e1"
       },
       {
         "bytes": 2711,

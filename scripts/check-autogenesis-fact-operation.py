@@ -44,6 +44,13 @@ def byte_digest(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
+def formal_type(fact: dict[str, Any]) -> str:
+    statement = (fact.get("formal") or {}).get("statement")
+    if not isinstance(statement, str) or " : " not in statement:
+        raise FactOperationError("kernel fact has no theorem type")
+    return statement.split(" : ", 1)[1]
+
+
 def checker_command(fact_id: str) -> str:
     path = f"artifacts/facts/{fact_id.replace('F:', 'F-')}.json"
     return f"python3 scripts/check-autogenesis-fact-operation.py --fact {path}"
@@ -84,17 +91,34 @@ def check_fact(
     operation = matches[0]
     admission = operation["admission"]
     executor = operation["executor"]
-    expected_binding = {
+    expected_binding: dict[str, Any] = {
         "id": operation["id"],
         "operation_sha256": digest(operation),
         "registry_sha256_at_execution": binding.get("registry_sha256_at_execution"),
         "execution_sha256": binding.get("execution_sha256"),
         "frontier_sha256": binding.get("frontier_sha256"),
-        "input_artifact": executor["input_artifact"],
-        "input_artifact_sha256": byte_digest(
-            (ROOT / executor["input_artifact"]).read_bytes()
-        ),
     }
+    if executor["driver"] == "axeyum-bench/smtcomp-evidence-v1":
+        expected_binding.update(
+            {
+                "input_artifact": executor["input_artifact"],
+                "input_artifact_sha256": byte_digest(
+                    (ROOT / executor["input_artifact"]).read_bytes()
+                ),
+            }
+        )
+    elif executor["driver"] == "axeyum-lean-kernel/nat-zero-add-induction-v1":
+        expected_binding.update(
+            {
+                "target_theorem": executor["target_theorem"],
+                "formal_statement_sha256": byte_digest(
+                    fact["formal"]["statement"].encode()
+                ),
+                "budget": executor["budget"],
+            }
+        )
+    else:
+        raise FactOperationError("fact operation uses an unsupported driver")
     if binding != expected_binding:
         raise FactOperationError("fact checker-operation binding is stale or mutated")
     for field in (
@@ -116,13 +140,24 @@ def check_fact(
     ):
         raise FactOperationError("fact admission fields differ from the registered operation")
     observation = runner(operation)
-    expected_observation = {
-        "verdict": "unsat",
-        "evidence_label": executor["expected_evidence_label"],
-        "certified": True,
-        "recheck": "na",
-        "arena": "ok",
-    }
+    if executor["driver"] == "axeyum-bench/smtcomp-evidence-v1":
+        expected_observation = {
+            "verdict": "unsat",
+            "evidence_label": executor["expected_evidence_label"],
+            "certified": True,
+            "recheck": "na",
+            "arena": "ok",
+        }
+    else:
+        expected_observation = {
+            "verdict": "proved",
+            "evidence_label": executor["expected_evidence_label"],
+            "canonical_type": formal_type(fact),
+            "axiom_footprint": [],
+            "retained_answer_dependencies": [],
+            "attempted": executor["budget"],
+            "accepted_plan_rank": executor["budget"],
+        }
     if observation != expected_observation:
         raise FactOperationError(
             f"registered operation no longer replays: observed={observation!r}"

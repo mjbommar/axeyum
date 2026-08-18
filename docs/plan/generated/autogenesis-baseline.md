@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:574604d6dda1252090fba22d310515c1aef394d4cb04933c4d6e525c691f5fe7`
+Source identity: `sha256:0d223154726521fe15a75022ed17615d522b1a71794ba436ade1d2be496498e2`
 
 ## Ledger and chain substrate
 
@@ -28,7 +28,7 @@ the remaining facts stay explicit rather than being guessed.
 | `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | broaden the structural grammar and bind plans into typed evidence |
 | `A1-operational-unlock-control` | fixture | catalog search produces B; a durable fixture event makes the same A target ready and fresh A depends on B | repeat the causal unlock on an authoritative open fact |
 | `A1-machine-selection` | partial | content-addressed authoritative frontier selected exactly one matching fact, which typed execution and admission consumed; the post-state refuses all remaining unregistered candidates | register and qualify an actual B-to-A chain operation rather than another isolated leaf |
-| `A1-typed-dispatch-evidence` | authoritative | the authoritative registry fixed the driver, input, budget, expected label, and footprint; execution, transaction preparation, admission, and settled-fact replay completed without caller-authored metadata | repeat with a second operation family and a dependent consequent |
+| `A1-typed-dispatch-evidence` | authoritative-multi-route | the registry now fixes both the admitted SMT route and an exact fresh-kernel Nat.zero_add route; B's typed receipt, axiom-free transaction, and settled-fact replay work without caller-authored metadata | run B from a clean reconstructed checkout and add the dependent Nat.mul_one operation |
 | `A1-atomic-admission` | authoritative | one real selected fact recovered from an intentional post-intent stop through compare-and-swap, fsynced journal, atomic replacement, and durable event | reproduce the accepted acquisition from a second clean checkout |
 | `A1-admission-triggered-retry` | authoritative-leaf | the durable authoritative event binds exact before/after frontiers; the admitted leaf leaves newly_ready empty rather than manufacturing an unlock | repeat against an authoritative B-to-A edge and schedule A only from the event-derived delta |
 | `A1-clean-reproduction` | authoritative-leaf | a second isolated clean checkout reproduced selection, certified execution, intent-fault recovery, authoritative admission, settled-fact replay, and the honest empty leaf readiness delta | extend the same replay boundary through an authoritative B-to-A acquisition |
@@ -37,10 +37,10 @@ the remaining facts stay explicit rather than being guessed.
 
 | Seam | State | Owner | Gap | Source |
 |---|---|---|---|---|
-| `goal-selection` | partial | fact frontier | one proof-derived B-to-A chain is operationally qualified for engineering but has no authoritative kernel operations; the live fact frontier has no admissible chain write | `scripts/fact-frontier.py` |
+| `goal-selection` | partial | fact frontier | the qualified chain's B now has an exact authoritative kernel operation; A still has none, and the live settled ledger correctly selects neither | `scripts/fact-frontier.py` |
 | `chain-qualification` | qualified-primary-fixture | proof-derived chain catalog | the Nat.zero_add to Nat.mul_one primary replays with pre-B no-credit and post-B success; no fallback is measured and fixture qualification grants no write authority | `scripts/create-autogenesis-chain-catalog.py` |
-| `route-dispatch` | partial | operation registry | one authoritative producer/checker contract has completed end to end; no second driver or chain operation is registered | `artifacts/autogenesis/operations.json` |
-| `operation-execution` | authoritative | typed operation executor | one authoritative SMT driver emitted and replayed a normalized receipt; no second driver exists | `scripts/execute-autogenesis-operation.py` |
+| `route-dispatch` | partial | operation registry | authoritative SMT and exact Nat.zero_add kernel drivers exist; the dependent Nat.mul_one operation remains missing | `artifacts/autogenesis/operations.json` |
+| `operation-execution` | authoritative-multi-route | typed operation executor | SMT and exact Nat.zero_add kernel drivers emit normalized replayable receipts; the chain's A driver remains missing | `scripts/execute-autogenesis-operation.py` |
 | `evidence-assembly` | partial | transactional closer | the first authoritative adapter derives its evidence row and route metadata; other routes through the manual closer remain caller-authored | `scripts/close-fact.py` |
 | `checker-selection` | partial | evidence registry | fixture and first authoritative checkers are typed; the manual closer still accepts caller-authored shell text | `artifacts/autogenesis/operations.json` |
 | `ledger-transition` | authoritative | transactional closer | one authoritative compare-and-swap recovered from a durable intent; multi-fact admission remains deferred | `scripts/apply-autogenesis-fact-transaction.py` |

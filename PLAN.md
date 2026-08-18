@@ -158,13 +158,6 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
-| 2026-08-18 | `2abe2652d..a90255a92` | Programme through typed fixture operation replay. |
-| 2026-08-18 | `5c38bf95d` | First authoritative registered evidence route; exact machine frontier selects one matching open fact. |
-| 2026-08-18 | `dbd6f3e00..5ac434ef9` | Typed execution receipt and prepared authoritative transaction replayed; zero live writes. |
-| 2026-08-18 | `313203bd4..f6e59f87b` | First authoritative fact admitted and recovered; durable event recomputed an honest empty readiness delta. |
-| 2026-08-18 | `f8651ec98` | Second isolated clean worktree reproduced selection, certified execution, crash recovery, admission, and leaf readiness; external bundle retained. |
-| 2026-08-18 | `ac0c39d84..0bb49769b` | Integrated human chain enumeration, corrected declared-edge overcount by intersecting the kernel inventory, and gated a content-addressed 23-edge structural catalog. |
-| 2026-08-18 | `pending` | Primary Nat B -> A experiment replay-qualified for selection with zero write authority; fixture transaction scope escalation closed. |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
@@ -192,22 +185,10 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Phase 0 WIP.** Exact pushed commit `f6e59f87b` contains the first real
-authoritative admission. It selected and proved
-`F:no-integer-square-is-minus-one`, stopped after durable intent with the fact
-unchanged, recovered through compare-and-swap, replayed the settled operation,
-and derived an event-bound readiness delta with `newly_ready: []`. Exact pushed
-commit `f8651ec98` then reproduced the acquisition from a second isolated clean
-worktree; retained replay `7dc1ad8d...` passed every semantic identity and
-fault-recovery check. Exact pushed commit `0bb49769b` corrects chain authority:
-52 authored kernel-subgraph edges become 23 genuinely proof-derived edges when
-intersected with the kernel inventory. The retained primary
-`F:nat-zero-add -> F:nat-mul-one` experiment replayed cleanly and is selected by
-qualified catalog `95e8c8d...`, with authoritative-write power explicitly
-false. Next: register an authoritative kernel executor for B, then A; measure a
-fallback without weakening the primary path. The leaf validates infrastructure,
-and the fixture chain validates causality, but neither receives Autogenesis-1
-production credit.
+**Phase 0 WIP.** Leaf admission/recovery and the proof-derived B -> A chain are
+retained in `docs/autogenesis/`. The exact `Nat.zero_add` kernel operation is
+green without rewriting settled B. Next: replay B from a clean reconstructed
+checkout, then authorize A's episode-local apply route.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

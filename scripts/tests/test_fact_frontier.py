@@ -105,6 +105,7 @@ class MachineFrontierTests(unittest.TestCase):
         )
         operation["scope"] = "counterfactual-fixture-only"
         del operation["executor"]
+        operation.pop("reviewed_gate_mentions", None)
         refused = frontier.build_machine_frontier(facts, registry)
         self.assertIsNone(refused["selection"]["selected_fact_id"])
 
@@ -114,6 +115,56 @@ class MachineFrontierTests(unittest.TestCase):
         changed["F:backlog"]["depends_on"] = ["F:missing"]
         with self.assertRaisesRegex(frontier.FrontierError, "stale"):
             frontier.verify_machine_frontier(actual, changed)
+
+    def test_exact_gate_review_allows_kernel_b_and_new_mention_rejects(self) -> None:
+        facts = frontier.load()
+        target = copy.deepcopy(facts["F:nat-zero-add"])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[target["id"]] = target
+        registry = frontier.load_operation_registry()
+        kernel = copy.deepcopy(registry["operations"][2])
+        registry["operations"] = [kernel]
+        selected = frontier.build_machine_frontier(facts, registry)
+        self.assertEqual(selected["selection"]["selected_fact_id"], "F:nat-zero-add")
+        entry = next(row for row in selected["entries"] if row["fact_id"] == target["id"])
+        self.assertEqual(entry["unreviewed_gate_mentions"], [])
+
+        kernel["reviewed_gate_mentions"] = kernel["reviewed_gate_mentions"][:-1]
+        refused = frontier.build_machine_frontier(facts, registry)
+        self.assertIsNone(refused["selection"]["selected_fact_id"])
+
+        kernel["reviewed_gate_mentions"] = [
+            *registry["operations"][0]["reviewed_gate_mentions"],
+            "validate-facts.py",
+        ]
+        refused = frontier.build_machine_frontier(facts, registry)
+        entry = next(row for row in refused["entries"] if row["fact_id"] == target["id"])
+        self.assertEqual(entry["stale_reviewed_gate_mentions"], ["validate-facts.py"])
+        self.assertIsNone(refused["selection"]["selected_fact_id"])
+
+    def test_multiple_authoritative_operations_are_not_admissible(self) -> None:
+        facts = frontier.load()
+        target = copy.deepcopy(facts["F:nat-zero-add"])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[target["id"]] = target
+        registry = frontier.load_operation_registry()
+        kernel = copy.deepcopy(registry["operations"][2])
+        duplicate = copy.deepcopy(kernel)
+        duplicate["id"] = "authoritative-kernel-nat-zero-add-induction-v1-alternate"
+        registry["operations"] = [kernel, duplicate]
+        refused = frontier.build_machine_frontier(facts, registry)
+        rationale = next(
+            row for row in refused["selection"]["rationale"]
+            if row["fact_id"] == target["id"]
+        )
+        self.assertIn("ambiguous-registered-operation", rationale["rejected_by"])
+        self.assertIsNone(refused["selection"]["selected_fact_id"])
 
     def test_live_loader_rejects_duplicate_fact_identity(self) -> None:
         original = frontier.FACTS

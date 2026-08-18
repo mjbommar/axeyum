@@ -69,6 +69,49 @@
           "negative-discriminant-quadratic-root-theorem"
         ]
       }
+    },
+    {
+      "id": "authoritative-kernel-nat-zero-add-induction-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-apply-search.sh",
+        "check-autogenesis-induction-search.sh",
+        "check-autogenesis-proposer-isolation.sh"
+      ],
+      "applicability": {
+        "fact_ids": ["F:nat-zero-add"],
+        "formal_languages": ["lean4"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "catalog-structural-nat-induction-v1",
+        "implementation": "scripts/autogenesis-induction-proposer.py",
+        "input_kind": "axeyum-authoritative-kernel-goal-catalog",
+        "output_kind": "axeyum-autogenesis-induction-proposals"
+      },
+      "checker": {
+        "operation": "axeyum-lean-kernel/autogenesis-induction-plan-check-v1",
+        "implementation": "crates/axeyum-lean-kernel/examples/autogenesis_induction_plan_check.rs",
+        "input_kind": "axeyum-autogenesis-induction-proposals",
+        "output_kind": "axeyum-autogenesis-kernel-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-kernel/nat-zero-add-induction-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:nat-zero-add",
+        "target_theorem": "Nat.zero_add",
+        "denied_theorems": ["Nat.mul_one", "Nat.zero_add"],
+        "budget": 2,
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }

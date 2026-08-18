@@ -232,6 +232,33 @@ def build_authoritative_transaction(
         raise TransactionError("typed execution digest is invalid")
     executor = operation["executor"]
     operation_sha = digest(operation)
+    if executor["driver"] == "axeyum-bench/smtcomp-evidence-v1":
+        execution_input_binding = {
+            "input_artifact": executor["input_artifact"],
+            "input_artifact_sha256": identity["input_artifact_sha256"],
+        }
+        result_description = "source-bound certified refutation"
+        replay_description = (
+            "exact source artifact and requires its fresh-arena certified result"
+        )
+    elif executor["driver"] == "axeyum-lean-kernel/nat-zero-add-induction-v1":
+        expected_statement_sha = hashlib.sha256(
+            before_fact["formal"]["statement"].encode()
+        ).hexdigest()
+        if identity.get("formal_statement_sha256") != expected_statement_sha:
+            raise TransactionError("kernel execution does not bind formal.statement")
+        execution_input_binding = {
+            "target_theorem": executor["target_theorem"],
+            "formal_statement_sha256": expected_statement_sha,
+            "budget": executor["budget"],
+        }
+        result_description = "fresh-kernel axiom-free proof"
+        replay_description = (
+            "formal statement through the registered fresh-kernel operation and "
+            "requires an axiom-free result without retained-answer dependencies"
+        )
+    else:
+        raise TransactionError("authoritative operation uses an unsupported driver")
     after_fact = json.loads(json.dumps(before_fact))
     after_fact["epistemic_status"] = admission["epistemic_status"]
     after_fact["proof_route"] = admission["proof_route"]
@@ -256,14 +283,12 @@ def build_authoritative_transaction(
                 ],
                 "execution_sha256": execution_sha,
                 "frontier_sha256": identity["frontier_sha256"],
-                "input_artifact": executor["input_artifact"],
-                "input_artifact_sha256": identity["input_artifact_sha256"],
+                **execution_input_binding,
             },
             "artifact": f"sha256:{execution_sha}",
             "notes": (
                 "Derived from a clean-commit typed execution receipt. The "
-                "registered fact-operation checker replays the exact source "
-                "artifact and requires its fresh-arena certified result; no "
+                f"registered fact-operation checker replays the {replay_description}; no "
                 "caller-authored route, footprint, checker, or shell command "
                 "is accepted."
             ),
@@ -278,7 +303,7 @@ def build_authoritative_transaction(
     closure_note = (
         "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact "
         f"fact for registered operation `{operation['id']}`; execution receipt "
-        f"`{execution_sha}` produced a source-bound certified refutation, and "
+        f"`{execution_sha}` produced a {result_description}, and "
         "the typed transaction derived this status, route, footprint, evidence "
         "row, checker, and provenance without caller-authored admission metadata."
     )
@@ -318,7 +343,7 @@ def build_authoritative_transaction(
             "arguments": {
                 "fact_id": fact_id,
                 "execution_sha256": execution_sha,
-                "input_artifact_sha256": identity["input_artifact_sha256"],
+                **execution_input_binding,
             },
         },
         "authoritative_write": {

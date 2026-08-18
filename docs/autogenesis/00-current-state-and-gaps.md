@@ -142,7 +142,7 @@ do not capture the reasoning state that preceded a result.
 
 | Existing component | Immediate engineering gap | Why it blocks the loop |
 |---|---|---|
-| `fact-frontier.py` | Authoritative operations for both facts in the selected B -> A chain | The proof-derived catalog qualifies `nat-zero-add -> nat-mul-one` under counterfactual search, but explicitly grants no ledger-write authority |
+| `fact-frontier.py` | Authoritative operation for A and event-driven two-write orchestration | The qualified B now has an exact fresh-kernel authoritative operation; A remains fixture-only and the qualified catalog itself grants no write authority |
 | Fact schema | Candidate/attempt identity is absent by design | Attempts and knowledge need separate schemas |
 | Solver `Evidence` | No route-neutral portable result envelope for closure | The closer cannot derive ledger evidence safely |
 | Reconstruction | No generic obligation-composition interface | Multi-step plans cannot become one kernel proof |

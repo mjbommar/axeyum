@@ -222,6 +222,57 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
                         registry=registry,
                     )
 
+    def test_authoritative_kernel_delta_remains_axiom_free_and_replayable(self):
+        executor = MODULE.load_module(
+            "executor_for_kernel_transaction_test", MODULE.EXECUTOR_SCRIPT
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_kernel_transaction_test", executor.FRONTIER_SCRIPT
+        )
+        facts = frontier_module.load()
+        target = copy.deepcopy(facts["F:nat-zero-add"])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[target["id"]] = target
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
+        observation = {
+            "verdict": "proved",
+            "evidence_label": "kernel-term-axiom-free",
+            "canonical_type": executor.formal_type(before),
+            "axiom_footprint": [],
+            "retained_answer_dependencies": [],
+            "attempted": 2,
+            "accepted_plan_rank": 2,
+        }
+        execution_receipt = executor.build_receipt(
+            frontier=frontier,
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="c" * 40,
+            observation=observation,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution_receipt,
+            operation=operation,
+            registry=registry,
+        )
+        after = transaction["authoritative_write"]["after_fact"]
+        self.assertEqual(after["proof_route"], "kernel-lean")
+        self.assertEqual(after["axiom_footprint"], [])
+        binding = after["evidence"][0]["checker_operation"]
+        self.assertEqual(binding["target_theorem"], "Nat.zero_add")
+        self.assertNotIn("input_artifact", binding)
+        checker = MODULE.load_module(
+            "fact_checker_for_kernel_transaction_test", MODULE.FACT_OPERATION_SCRIPT
+        )
+        checked = checker.check_fact(after, lambda _operation: observation)
+        self.assertEqual(checked["operation_id"], operation["id"])
+
 
 if __name__ == "__main__":
     unittest.main()
