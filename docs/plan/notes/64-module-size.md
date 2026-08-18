@@ -71,11 +71,11 @@ i.e. **7.7x**. Per declaration: `CReal.mul_assoc` 62.6x, `CReal.add_assoc`
 
 | fixture | before | after | factor |
 | --- | --- | --- | --- |
-| strict-bound | 2,623,005 B | **1,303,499 B** | 2.01x |
-| three-row | 2,673,154 B | **1,329,314 B** | 2.01x |
-| sos-square | 2,551,806 B | **1,441,470 B** | 1.77x |
-| strict-bound over `Real` (control) | 8,898 B | 7,358 B | 1.21x |
-| three-row over `Real` (control) | 40,740 B | 21,770 B | 1.87x |
+| strict-bound | 2,623,005 B | **1,304,276 B** | 2.01x |
+| three-row | 2,673,154 B | **1,330,091 B** | 2.01x |
+| sos-square | 2,551,806 B | **1,442,247 B** | 1.77x |
+| strict-bound over `Real` (control) | 8,898 B | 8,135 B | 1.09x |
+| three-row over `Real` (control) | 40,740 B | 22,547 B | 1.81x |
 
 Carrier axioms 0/0/0 against the `Real` control's 12/17/8, and the module's
 `axiom` lines still equal `Kernel::axiom_footprint` (3/5/2) —
@@ -122,3 +122,47 @@ contract: `lean_crosscheck`'s 77 families, `lean_module_fixtures`,
 hand a **single file** to `lean`, and the prelude would need compiling to
 `.olean` with `LEAN_PATH` set before any query module could be read. That is an
 ADR plus a harness change, and it should be taken as its own increment.
+
+## Real Lean, and the one thing that broke
+
+`scripts/check-lean-gate.sh`: **OK -- 17 suites, 59 tests, 462 real-Lean checks
+(floor 208)**, every suite confirming
+`/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lean`,
+`Lean (version 4.30.0, …, commit d024af099ca4bf2c86f649261ebf59565dc8c622)` --
+the pin. `lean_crosscheck` is **77 of 77 families**; the reasoning half is 37
+families against its floor of 37.
+
+The first run was 76 of 77. `qf_nra_sos_plus_constant` was rejected with
+`maximum recursion depth has been reached`, and the cause is worth recording
+because it is a property of the fix, not of the proof: **a `let` chain is
+nested syntax**. `let a := …; let b := …; body` is one syntax level per
+binding, and the emitted constructed-carrier module binds **2,897** of them
+inside one distributivity lemma -- against Lean 4.30.0's default `maxRecDepth`
+of 512. The module banner now sets `maxRecDepth 65536`, which raises the
+*elaborator's* counter and nothing else: every term is still kernel-checked and
+`#print axioms` is unaffected.
+
+Two knock-ons, both recorded rather than papered over. The banner text must not
+contain the substring `Real`, because a sibling guard asserts a module over the
+constructed carrier never spells the axiomatized package's name and reads the
+whole file as one string -- the first draft cited the lemma by name and failed
+it. And `write_lean_module_impl` went over `clippy::too_many_lines` on
+**stable** (nightly does not carry that lint), so the banner is its own
+function; the gate to run is
+`rustup run stable cargo clippy --workspace --all-targets --all-features -- -D warnings`.
+
+## Mutation checks on the guards this added
+
+| mutation | tests that died |
+| --- | --- |
+| drop `key.1 == ROOT_SCOPE \|\| lam_scopes.contains(&key.1)` from `shareable` | **exactly 1** -- `a_repeated_term_under_a_pi_binder_is_not_shared` (361 passed, 1 failed) |
+| key every share by node alone (`normalize` always returns `ROOT_SCOPE`) | **3** -- the two above plus `scoped_plan_shares_open_terms_inside_the_binder_that_binds_them` (359 passed, 3 failed) |
+
+The second is a mechanism removal rather than a single guard, so three deaths
+is the expected signature; what matters is that the first mutation killed one
+test and only one, so the three are not all rejecting through one shared check.
+
+**One line is knowingly unguarded**: the closed-node normalization inside
+`body_scope`. Removing it keeps planner and writer in step (both call it), so
+nothing observable breaks -- sharing is merely lost. It is a size property, not
+a soundness one, and no test asserts it.
