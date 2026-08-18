@@ -174,7 +174,7 @@ evidence says already exists:
 
 | band | meaning | logics |
 | --- | --- | --- |
-| 1 | a refutation artifact is already built — export it and point a checker at it | `QF_IDL` (`QF_RDL` and `SAT` closed 2026-08-17, below) |
+| 1 | a refutation artifact is already built — export it and point a checker at it | **empty** — `QF_RDL`, `SAT`, `QF_IDL` all closed 2026-08-17 |
 | 2 | model replay only — needs an UNSAT proof format first | `QF_AUFBV`, `QF_FP`, `QF_NIA`, `QF_S`, `incremental`, `symbolic execution` |
 | 3 | no refutation artifact named | `diagnostics`, `optimization`, `synthesis` |
 
@@ -232,9 +232,45 @@ the Lean reconstruction covers only QF_RDL, and a compound row cannot say that.
 External coverage goes 36 → 37 entries and **11 → 12 of 23 logics**, with the
 floor raised to match.
 
-`QF_IDL` stays in band 1 and stays shared, which is now accurate rather than an
-artifact: its refutation really does export the same Farkas certificate, and it
-really does have no theory reconstruction.
+**`QF_IDL` closed too, and it was the largest of the three.** It really did have
+no theory reconstruction — but neither did *any* conjunctive integer system whose
+rational relaxation is already infeasible. `x > 5 ∧ x < 3` routed to `ArithDpll`
+and rendered an `axiom P` / `axiom ¬P` shim, while an ordinary Farkas
+combination refutes it.
+
+Both halves of the fix were in the repository, unjoined. `generalize_over_ordered_ring`
+abstracts a Farkas refutation over the 22 laws of an ordered commutative ring —
+possible because Farkas uses ring operations and order and never division —
+leaving an axiom-free theorem true in *any* model. `build_int_model_of_arith`
+exhibits ℤ as a model of all 22, every witness with an empty footprint. Nothing
+had instantiated at it.
+
+`ProofFragment::IntFarkas` does, end to end: relax to find the combination,
+abstract, instantiate at ℤ, discharge the binders against the query's own
+integer variables and constraints. **The claim is never relaxed** — the
+combination is carried out in the integers, so the module is a theorem about
+`Int`, not about a real embedding. Official Lean compiles one module per logic
+on every gate run, and the axiom footprint is the query's own data and nothing
+else:
+
+```text
+[lean ok] qf_idl_int_farkas: 'axeyum_refutation' depends on axioms:
+          [int_hyp._10, int_hyp._11, int_var._8, int_var._9]
+```
+
+No `Real` axioms, no ring laws, no `sorryAx`. Two families rather than one
+because the slice checks one module per *family*, and a logic without its own is
+not covered even when it shares a reconstructor — the exact trap QF_RDL was in.
+The theory/attestation split moved **34 → 37 families against 40**, and a
+committed QF_LIA corpus row moved with it, from attesting to reasoning.
+
+The route declines what it cannot do: `3x ≥ 1 ∧ 3x ≤ 2` is LP-feasible and
+infeasible only over ℤ, so no Farkas combination exists, and it stays with the
+integer-inequality reconstructor (ADR-0042).
+
+**Band 1 is now empty**, and external coverage is **14 of 23 logics**, gap 9.
+What is left is band 2 — six logics with no UNSAT proof format — and band 3.
+Those are research, not plumbing, which is the honest end of this ranking.
 
 **`SAT` closed the same day, and the design question answered itself.** The
 worry was that making this capability externally checked meant designing new

@@ -180,6 +180,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `pending` | `instantiate_at_int_model`: a Farkas refutation, generalized over the ordered ring, instantiated at ℤ — `∀ (x0 x1 x2 : Int), … → False`, kernel-checked, **axiom footprint empty**. The machinery for both halves existed; nothing had joined them. Not yet dispatched, so no capability row. Controls: the statement is asserted to mention `Int`, conclude `False`, and keep 3 variables + 4 hypotheses, since an empty footprint on a vacuous statement proves nothing. |
 | 2026-08-17 | `pending` | The motivating query closed as a measurement: `x > 5 ∧ x < 3` — the `(set-logic QF_LIA)` instance that renders a structural attestation today — has an axiom-free integer refutation, `∀ (x0 : Int), 5-x<0 → x-3<0 → False`. The reasoning is available; only the dispatch that reaches for it is missing. |
 | 2026-08-17 | `pending` | `refutation_over_int_axioms` closes the integer route: the ∀-statement's binders are discharged against fresh `Int` axioms, giving a kernel-checked `False` and a 221 KB module **official Lean 4.30.0 accepts** — and REJECTS when one hypothesis relation is swapped, so acceptance is not vacuous. Content class is `TheoryReconstruction`, not the attestation those queries render today. Still undispatched: fragment + routing + a crosscheck family are the remaining slice. |
+| 2026-08-17 | `pending` | `ProofFragment::IntFarkas` dispatched: `QF_LIA` and `QF_IDL` conjunctive systems whose rational relaxation is infeasible now reconstruct instead of attesting, with a crosscheck family each (footprint = the query's own vars/hyps, no Real axioms, no sorryAx). Split 34 → 37 theory families vs 40; a committed QF_LIA corpus row moved with it. Declines integer-only infeasibility (3x≥1 ∧ 3x≤2). **Band 1 empty**; 13 → 14 of 23 logics, floor 39. |
 | 2026-08-17 | `f18904db7` | R3: reachability census re-derived and committed as `artifacts/reachability/r3-census.tsv` (190 rows over both corpora); the ranked tables in `04-reachability.md` are now a generated view of it, gated by `scripts/check-reachability-census.py` inside `check-foundational-resources.sh`. 13 guards, each with its own rejection path; mutation-verified that deleting any one kills exactly one test. Corpus coverage checked in both directions and reported SKIPPED, never passed, when the sibling checkout is absent. Stale numbers corrected in `04` and `05`. |
 | 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
 Older landed changes (including the 2026-08-06 A1/A2 closure commits) remain
@@ -409,7 +410,11 @@ one shape, so propositional was the seventh case of an accepted pattern.
 a bool; `propositional_interpolant_certified` returns them. drat-trim accepts
 both, including on a PHP(3,2) partition needing real resolution.
 
-**Next.** Band 1 holds only `QF_IDL`. Chasing it turned up something larger: a
+**Band 1 is empty as of 2026-08-17** — `QF_RDL`, `SAT`, `QF_IDL` all closed.
+14 of 23 logics externally checked, gap 9, floor 39. What remains is band 2 (six
+logics with no UNSAT proof format) and band 3: research, not plumbing.
+
+Chasing `QF_IDL` turned up something larger: a
 conjunctive integer system whose *rational* relaxation is already infeasible
 (`x > 5 ∧ x < 3`, `x - y ≤ 1 ∧ y - x ≤ -3`) has an ordinary Farkas refutation,
 yet every such query routes to `ArithDpll` and renders a structural attestation

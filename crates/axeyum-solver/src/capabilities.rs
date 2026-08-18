@@ -716,6 +716,37 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0458",
     },
     Capability {
+        area: "QF_LIA / QF_IDL",
+        feature: "INTEGER linear UNSAT reconstructs to a Lean THEORY module when the RATIONAL \
+                  relaxation is already infeasible (ProofFragment::IntFarkas): the Farkas \
+                  combination is found on the faithful real relaxation, abstracted over the 22 \
+                  laws of an ordered commutative ring — possible because Farkas uses ring \
+                  operations and order and NEVER division — and instantiated at ℤ, which models \
+                  all 22 with empty witness footprints. The claim is not relaxed: the combination \
+                  is carried out in the integers themselves, so the module is a theorem about \
+                  Int, not about a real embedding. BOUNDARY: conjunctive systems whose relaxation \
+                  is infeasible. An integer-ONLY infeasibility (3x >= 1 AND 3x <= 2, LP-feasible \
+                  on x in [1/3, 2/3]) has no Farkas combination at all and is DECLINED here — \
+                  that case belongs to the integer-inequality reconstructor (ADR-0042)",
+        assurance: Assurance::Checked,
+        checked_by: CheckedBy::ExternalChecker,
+        evidence: "official Lean compiles a module from EACH logic on every run of the crosscheck \
+                   gate — families `qf_lia_int_farkas` and `qf_idl_int_farkas`, both reporting \
+                   `representative=theory-reconstruction`. The axiom footprint is the query's own \
+                   data and nothing else (`[int_hyp._10, int_hyp._11, int_var._8, int_var._9]` for \
+                   QF_IDL): no Real axioms, no ring laws, no sorryAx — the generalized refutation \
+                   is axiom-free and ℤ's law witnesses have empty footprints, so nothing survives \
+                   into the composite. Two families rather than one because the slice checks one \
+                   module per FAMILY, and a logic without its own is not covered even when it \
+                   shares a reconstructor — the exact reason QF_RDL counted as unchecked while \
+                   Lean would have accepted it. Lean also REJECTS the module when one hypothesis \
+                   relation is swapped, so acceptance is not vacuous. Until 2026-08-17 both logics \
+                   routed to ArithDpll and rendered an `axiom P` / `axiom Not P` shim containing \
+                   none of the reasoning; the theory/attestation split moved 34 -> 37 families \
+                   against 40, and a committed QF_LIA corpus row moved with it",
+        reference: "ADR-0456/0458",
+    },
+    Capability {
         area: "QF_UFLRA",
         feature: "ONLINE Nelson–Oppen combination (check_qf_uflra_online): the online EufTheory + the \
                   online LraTheory combined by model-based equality sharing; the conjunctive fast \

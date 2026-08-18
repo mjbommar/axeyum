@@ -108,7 +108,7 @@ CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-115}"
 # attestations with the headline unmoved. `lean_crosscheck` prints the split as
 # LEAN_CONTENT_SUMMARY (it classifies each rendered module by its own header
 # marker, needing no Lean binary); this reads that line.
-THEORY_FAMILY_FLOOR="${AXEYUM_LEAN_THEORY_FLOOR:-34}"
+THEORY_FAMILY_FLOOR="${AXEYUM_LEAN_THEORY_FLOOR:-37}"
 
 # package | features | test target
 #
