@@ -87,9 +87,23 @@ Both `just check` and the shell fallback run the standalone dual checker.
   solver unit sweeps, kernel suites, capability frontier, and selected
   integrations.
 
-These checks establish a bounded witness infrastructure and one checked degree.
-They do not establish the conjecture through degree 400 unless every degree has
-its own admitted artifact, and they do not establish the universal theorem.
+Commit `6e1372073` adds deterministic sparse enumeration, honest
+found/exhausted/candidate-limit receipts, content-bound sharded manifests, and a
+standalone shard checker. Five single-threaded jobs then ran exact source commit
+`6e1372073` on s1, s4, s5, s6, and s7. Commit `d308c7bc1` admits the complete
+uncompressed result and makes both aggregate gates check it:
+
+- exactly 400 ordered degree rows, all found, no exhaustion or candidate limit;
+- 227 trinomials, 172 pentanomials, and the degree-one polynomial `x`;
+- 38,679 candidates tested, with degree 349 hardest at 870 candidates;
+- every child artifact rehashed and accepted by both algebraic checkers; and
+- a producer-identity mutation rejected by the cross-shard population checker.
+
+The post-range CAS gate passes 664 library tests with two intentional ignores,
+all integration/doctest groups, all-target warning-denied Clippy, formatting,
+links, aggregate-scope parity, and the new finite-range gate. These checks now
+establish the conjecture for every degree `1 <= n <= 400` under both implemented
+checkers. They do not establish the universal theorem.
 
 ## Exact theorem program
 
@@ -112,13 +126,11 @@ Hayes-class/group-algebra formula at degrees `2 ell` and `2 ell+1`.
 
 ## Next execution boundary
 
-1. Add deterministic half-degree candidate enumeration and sharded range
-   manifests whose output is accepted only after canonical dual checking.
-2. Run bounded, thermally conservative shards on s1, s4, s5, s6, and s7; retain
-   explicit missing/failed degrees rather than completion credit.
-3. Use the counts and character data to test proposed exact recurrences, not as
+1. Use the counts and character data to test proposed exact recurrences, not as
    a substitute for proof.
-4. Formalize reciprocity and the eventual positivity lemma through the Lean
+2. Specialize Gao's Hayes-class formula to the identity principal-unit class at
+   degrees `2 ell` and `2 ell+1`, preserving every sign and square-root term.
+3. Formalize reciprocity and the eventual positivity lemma through the Lean
    kernel route; only then create a universal established fact in the ledger.
-5. Add a finite-field SMT surface only if a real query consumer justifies its
+4. Add a finite-field SMT surface only if a real query consumer justifies its
    total semantics, model lifting, replay, and proof evidence.

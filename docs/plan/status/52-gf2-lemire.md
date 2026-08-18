@@ -19,21 +19,26 @@ class modulo `x^ceil(n/2)`.  The current mathematical blocker is a positivity
 theorem at that exact fixed-field half-degree boundary; Gao's Hayes-class
 formula is the first target for specialization.
 
-The portable boundary is now complete for bounded witnesses. `98f2d953f` adds
+The portable boundary is complete for bounded witnesses. `98f2d953f` adds
 canonical JSON, a dense-coefficient second checker, and a standalone dual-check
 CLI; `b678ec7e6` adds the fail-closed producer. `3718aab11` commits and gates the
 188,458-byte degree-400 certificate (SHA-256 `30ae3f33...383d5`) from both
-aggregate check paths. This is one checked degree, not the range through 400 and
-not the universal theorem.
+aggregate check paths.
 
-**Next.** Add deterministic candidate enumeration and sharded manifests, then
-run bounded, thermally conservative search/check shards on s1, s4, s5, s6, and
-s7. Fleet completion alone earns no credit. In parallel, derive an exact
-identity-class recurrence or sharpened positive count, then reconstruct the
-reciprocal and central lemmas through the kernel and fact ledger before claiming
-a universal proof.
+`6e1372073` adds deterministic sparse shards and exact population checking.
+Five single-threaded jobs on s1/s4/s5/s6/s7 produced 400/400 found receipts with
+no exhaustion or candidate limit. `d308c7bc1` admits and gates every child:
+227 trinomials, 172 pentanomials, degree-one `x`, 38,679 candidates total, and a
+maximum of 870 at degree 349. This establishes the finite range `1..=400` under
+both implemented checkers, not the universal theorem.
+
+**Next.** Specialize Gao's Hayes-class/group-algebra formula to the identity
+principal-unit class at degrees `2 ell` and `2 ell+1`; derive an exact recurrence
+or a genuinely positive bound. Then reconstruct reciprocity and the central
+lemma through the kernel and fact ledger before claiming a universal proof.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-18 | `6e1372073` `d308c7bc1` | Added deterministic content-bound search shards; five hosts produced and the repository admitted 400/400 dual-checked degrees, with finite-range credit explicitly separated from the universal conjecture. |
 | 2026-08-18 | `98f2d953f` `b678ec7e6` `3718aab11` | Added canonical bounded artifacts, an algebraically separate dense checker, standalone producer/checker CLIs, and the dual-gated degree-400 witness; completion does not claim the universal theorem. |
 | 2026-08-18 | `81321fc65` | Added bounded bit-packed `GF(2)[x]`, untrusted Rabin certificate production, independent identity checking, exhaustive degree-10 oracle agreement, certificate mutations, the exact Lemire theorem contract, and accepted ADR-0480. |
