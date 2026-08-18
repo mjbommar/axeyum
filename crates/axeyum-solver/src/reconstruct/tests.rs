@@ -5568,7 +5568,7 @@ mod array_axiom_transcription {
 
     use super::super::prove_unsat_to_lean_module;
 
-    /// `¬(select(store(a, i, v), j) = ite(i = j, v, select(a, j)))`, the McCarthy
+    /// `¬(select(store(a, i, v), j) = ite(i = j, v, select(a, j)))`, the `McCarthy`
     /// read-over-write axiom denied.
     fn mccarthy(arena: &mut TermArena) -> Vec<TermId> {
         let a = arena.array_var("a", 4, 8).expect("array a");
