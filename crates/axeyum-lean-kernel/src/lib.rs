@@ -79,7 +79,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::ops::Index;
 
 pub use arith_model::{ArithModel, ArithModelLaw, build_int_model_of_arith};
-pub use arith_prelude::{ArithPrelude, build_arith_prelude};
+pub use arith_prelude::{ArithPrelude, arith_prelude_builds, build_arith_prelude};
 pub use characterization::{
     Characterization, CharacterizationEntry, CharacterizationKind, IntCategoricity,
     IntCharacterization, NatCharacterization, Weakening, build_characterization,

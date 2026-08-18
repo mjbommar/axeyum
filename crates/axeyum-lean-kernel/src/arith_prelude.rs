@@ -47,12 +47,49 @@
 //! `u := 1` because the carrier is `Sort 1`.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
+use core::sync::atomic::{AtomicUsize, Ordering};
+
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::name::NameId;
 use crate::{
     BinderInfo, Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue, build_logic_prelude,
 };
+
+/// How many times [`build_arith_prelude`] has been called in this process.
+///
+/// The `Real` package is the repository's entire remaining trusted surface, and
+/// every claim that a route no longer depends on it has so far been checked by
+/// reading the finished proof term's
+/// [`axiom_footprint`](Kernel::axiom_footprint). That is the right check for a
+/// *term*, and it is not the same question as whether the route **reached** the
+/// axioms: `reconstruct_int_farkas_to_lean_module` refuted over `Real`,
+/// abstracted the 30 constants back out and instantiated at `ℤ`, so its module
+/// named no `Real` axiom while the route built all 30 of them — and that stood
+/// for a day after the front door was announced as axiom-free, because nothing
+/// could observe the construction.
+///
+/// This counter can. It is incremented by the public entry point only, so it
+/// counts *consumers* asking for the package; the template warm-up path in
+/// [`prelude_cache`](crate::prelude_cache) goes through
+/// `build_arith_prelude_uncached` and is deliberately not counted.
+///
+/// It is process-global and therefore only meaningful in a process that is not
+/// building the package concurrently for another reason — read it from a single
+/// test in its own binary, or from an example, never from one test among many
+/// running in parallel.
+static ARITH_PRELUDE_BUILDS: AtomicUsize = AtomicUsize::new(0);
+
+/// Read [`ARITH_PRELUDE_BUILDS`] — how many times a consumer has asked for the
+/// axiomatized `Real` package in this process.
+///
+/// Zero after running a reconstruction route means that route reached no
+/// carrier axiom at all, which is a strictly stronger statement than its proof
+/// term having an empty `Real` footprint.
+#[must_use]
+pub fn arith_prelude_builds() -> usize {
+    ARITH_PRELUDE_BUILDS.load(Ordering::Relaxed)
+}
 
 /// The interned names produced by [`build_arith_prelude`]: the carrier, the
 /// field/order operations, and every axiom of the linear ordered field, plus the
@@ -219,6 +256,7 @@ impl ArithPrelude {
 /// Returns the trusted gate's rejection or an exact-package conflict. A failed
 /// Real build leaves the pre-call environment unchanged.
 pub fn build_arith_prelude(kernel: &mut Kernel) -> Result<ArithPrelude, KernelError> {
+    ARITH_PRELUDE_BUILDS.fetch_add(1, Ordering::Relaxed);
     if let Some(PreludeValue::Real(prelude)) =
         crate::prelude_cache::try_restore(kernel, PreludeKey::Real)
     {

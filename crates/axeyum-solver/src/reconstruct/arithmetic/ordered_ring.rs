@@ -779,18 +779,35 @@ pub fn refutation_over_int_axioms(
 /// The whole pipeline, for a conjunctive integer system whose rational
 /// relaxation is already infeasible:
 ///
-/// 1. relax `Int` to `Real` faithfully (fresh symbols, injective map),
-/// 2. refute the relaxation by Farkas — [`reconstruct_lra_proof`],
-/// 3. abstract that proof over the 22 ordered-ring laws — axiom-free,
-/// 4. instantiate at `ℤ`, which models all 22 with empty footprints,
-/// 5. discharge the binders against the query's own integer variables and
-///    constraints, giving `False`,
-/// 6. render.
+/// 1. relax `Int` to `Real` faithfully (fresh symbols, injective map) — the
+///    relaxation is a *search* device, used to find the Farkas combination,
+/// 2. refute it by Farkas directly **in a context over the constructed
+///    integers** ([`LraReconstructCtx::try_new_over_integers`]),
+/// 3. render.
 ///
-/// No step relaxes the CLAIM. The relaxation is used only to find the Farkas
-/// combination; the combination is then carried out in `ℤ` itself, because it
-/// uses ring operations and order and never division. What comes back is a
-/// theorem about the integers, not about their real embedding.
+/// No step relaxes the CLAIM. The combination is carried out in `ℤ` itself,
+/// because it uses ring operations and order and never division. What comes
+/// back is a theorem about the integers, not about their real embedding.
+///
+/// # Why this no longer goes through the `Real` package
+///
+/// Until 2026-08-18 this route built [`LraReconstructCtx::new`] — the
+/// axiomatized `Real` package, this repository's entire remaining trusted
+/// surface — refuted there, abstracted the proof over the 22 ordered-ring laws
+/// with [`generalize_over_ordered_ring`], and instantiated the result at `ℤ`
+/// through [`instantiate_at_int_model`]. The finished term named no `Real`
+/// axiom, so the emitted module was already clean; but the route *constructed*
+/// 30 axioms to produce it, and it was the **only shipped route that still
+/// did** — `prove_unsat_to_lean_module`'s other arithmetic fragments moved to
+/// `CReal` in `a6ee37c6a`, and this one was missed because
+/// `examples/front_door_carrier.rs` had no integer fixture to measure it with.
+///
+/// `ℤ` satisfies the same interface with all 30 declarations *proved*
+/// (`RingSignature: From<IntPrelude>`), so the abstract-then-instantiate
+/// detour buys nothing here: refuting in the integer context lands on the same
+/// statement without the intermediate assumptions. Those two functions remain
+/// public — the ℤ-model result they carry is worth having — but nothing
+/// shipped calls them.
 ///
 /// # Errors
 ///
@@ -816,11 +833,8 @@ pub fn reconstruct_int_farkas_to_lean_module(
         });
     };
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::try_new_over_integers()?;
     let proof = reconstruct_lra_proof(&mut ctx, &scratch, &relaxed_assertions)?;
-    let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)?;
-    let at_int = instantiate_at_int_model(&mut ctx, &generalized)?;
-    let closed = refutation_over_int_axioms(&mut ctx, &at_int)?;
 
     let false_ = {
         let logic_false = ctx.arith.logic.false_;
@@ -828,7 +842,7 @@ pub fn reconstruct_int_farkas_to_lean_module(
     };
     Ok(ctx
         .kernel
-        .render_lean_module("axeyum_refutation", false_, closed.proof))
+        .render_lean_module("axeyum_refutation", false_, proof))
 }
 
 /// A closed integer refutation: `False`, from declared integer axioms.
