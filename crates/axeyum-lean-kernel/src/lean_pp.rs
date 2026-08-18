@@ -356,7 +356,22 @@ impl Kernel {
              -- has no compiled code and Lean's code generator declines it\n\
              -- (\"code generator does not support recursor `T.rec` yet\"). The section\n\
              -- suppresses codegen only; it does not weaken type checking.\n\
-             noncomputable section\n\n",
+             noncomputable section\n\n\
+             -- Lean's own compiler-internal constants, which `Init.Prelude` declares\n\
+             -- (`unsafe axiom lcErased : Type`) and `prelude` mode therefore omits.\n\
+             -- Lean 4.34 runs code generation over a Prop-valued inductive that\n\
+             -- carries data -- `Or`, `Exists`, `Nat.le` -- and its IR names these, so\n\
+             -- without them the module dies on `Unknown constant lcErased` before any\n\
+             -- proof is checked. Measured 2026-08-17: 21 of 77 crosscheck families were\n\
+             -- rejected by 4.34.0-rc1 and accepted by 4.30.0, which is why the gate's\n\
+             -- verdict depended on which toolchain happened to be installed.\n\
+             --\n\
+             -- They are compiler-only: no proof term mentions them, so they do NOT\n\
+             -- enter any `#print axioms` footprint. Asserted, not assumed, by\n\
+             -- `codegen_constants_are_declared_but_never_in_the_footprint`.\n\
+             unsafe axiom lcErased : Type\n\
+             unsafe axiom lcAny : Type\n\
+             unsafe axiom lcVoid : Type\n\n",
         );
         // The constructor/recursor names Lean will auto-generate for the real
         // inductives — emit nothing for them (Lean owns them). The recursor names

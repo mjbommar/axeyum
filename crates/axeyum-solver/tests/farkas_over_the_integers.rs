@@ -464,3 +464,74 @@ fn an_integer_only_infeasibility_is_declined() {
          has a solution (x in [1/3, 2/3]), so there is no Farkas combination to find"
     );
 }
+
+/// The codegen constants are emitted, and they stay OUT of the footprint.
+///
+/// `prelude` mode omits `Init.Prelude`'s `unsafe axiom lcErased : Type` and its
+/// siblings, and Lean 4.34 runs code generation over any `Prop`-valued inductive
+/// carrying data (`Or`, `Exists`, `Nat.le`), whose IR names them. Measured
+/// 2026-08-17, 21 of 77 crosscheck families were rejected by 4.34.0-rc1 and
+/// accepted by 4.30.0 — so the gate's verdict depended on which toolchain
+/// happened to be installed. The header declares them now.
+///
+/// They are compiler-only and no proof term mentions them, so they must NOT
+/// appear in any `#print axioms` footprint. That is the property this asserts,
+/// because if it ever failed the axiom-freedom claim would break silently while
+/// every module still compiled.
+#[test]
+fn codegen_constants_are_declared_but_never_in_the_footprint() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").expect("int variable");
+    let five = arena.int_const(5);
+    let three = arena.int_const(3);
+    let a1 = arena.int_lt(five, x).expect("5 < x");
+    let a2 = arena.int_lt(x, three).expect("x < 3");
+    let module = reconstruct_int_farkas_to_lean_module(&arena, &[a1, a2]).expect("module");
+
+    for constant in ["lcErased", "lcAny", "lcVoid"] {
+        assert!(
+            module.contains(&format!("unsafe axiom {constant} : Type")),
+            "the module no longer declares `{constant}`; Lean 4.34+ will reject it in \
+             `prelude` mode with `Unknown constant {constant}` before checking any proof"
+        );
+    }
+
+    let Some(lean) = lean_binary() else {
+        eprintln!("SKIP: no lean binary for the footprint check");
+        return;
+    };
+    let dir = std::env::temp_dir().join(format!("axeyum-codegen-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("scratch dir");
+    let path = dir.join("m.lean");
+    std::fs::write(&path, &module).expect("write");
+    let out = std::process::Command::new(&lean)
+        .arg(&path)
+        .output()
+        .expect("lean runs");
+    let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+    let _ = std::fs::remove_dir_all(&dir);
+
+    assert!(
+        out.status.success(),
+        "official Lean rejected the module:\n{stderr}\n{stdout}"
+    );
+    let axioms = stdout
+        .lines()
+        .skip_while(|l| !l.contains("depends on axioms"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert!(
+        !axioms.is_empty(),
+        "no `depends on axioms` line, so this test proved nothing about the footprint"
+    );
+    for constant in ["lcErased", "lcAny", "lcVoid"] {
+        assert!(
+            !axioms.contains(constant),
+            "`{constant}` entered the reported axiom footprint: {axioms}. It is a \
+             compiler-internal constant and a proof that depends on one is not the \
+             axiom-free artifact this route claims to produce"
+        );
+    }
+    println!("  codegen constants declared, footprint clean: {axioms}");
+}

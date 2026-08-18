@@ -50,9 +50,17 @@ fn two_x_eq_one_reconstructs_to_false() {
         .fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
             (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3)
         });
+    // Moved 2026-08-17 by +863 bytes: the module header now declares Lean's
+    // compiler-internal `lcErased`/`lcAny`/`lcVoid`. `prelude` mode omits
+    // `Init.Prelude`, and Lean 4.34 runs codegen over Prop-valued inductives
+    // carrying data, so without them 21 of 77 crosscheck families died on
+    // `Unknown constant lcErased` under 4.34.0-rc1 while passing under 4.30.0.
+    // The delta is exactly the header text; no proof bytes changed, and the
+    // constants stay out of every axiom footprint (asserted separately in
+    // `farkas_over_the_integers::codegen_constants_are_declared_but_never_in_the_footprint`).
     assert_eq!(
         (source.len(), source_fnv),
-        (1_142_494, 0x5b5e_ef27_d46f_b7d5)
+        (1_143_357, 0x5f74_8fa1_f17e_52df)
     );
     assert_eq!(
         scan_proof_fragment(&arena, &[e1, e2]),
