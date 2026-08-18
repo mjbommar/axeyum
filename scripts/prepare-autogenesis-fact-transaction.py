@@ -67,6 +67,10 @@ def build_transaction(
     event: dict[str, Any],
     source_is_authoritative: bool,
 ) -> dict[str, Any]:
+    if source_is_authoritative:
+        raise TransactionError(
+            "counterfactual fixture operation cannot prepare an authoritative write"
+        )
     validate_before(before_fact)
     fact_id = before_fact.get("id")
     evidence_identity = evidence.get("identity")

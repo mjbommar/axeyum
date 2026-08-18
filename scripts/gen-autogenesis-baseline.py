@@ -92,7 +92,15 @@ SEAMS = (
         "owner": "fact frontier",
         "source": "scripts/fact-frontier.py",
         "marker": "content-addressed authoritative queue",
-        "gap": "the first exact selection was executed and admitted; the current frontier has no remaining admissible operation and no registered B-to-A chain",
+        "gap": "one proof-derived B-to-A chain is operationally qualified for engineering but has no authoritative kernel operations; the live fact frontier has no admissible chain write",
+    },
+    {
+        "id": "chain-qualification",
+        "state": "qualified-primary-fixture",
+        "owner": "proof-derived chain catalog",
+        "source": "scripts/create-autogenesis-chain-catalog.py",
+        "marker": "authoritative_write_authority",
+        "gap": "the Nat.zero_add to Nat.mul_one primary replays with pre-B no-credit and post-B success; no fallback is measured and fixture qualification grants no write authority",
     },
     {
         "id": "route-dispatch",
@@ -351,12 +359,9 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
         },
         {
             "id": "A1-real-derived-chain",
-            "state": chain_state,
-            "evidence": (
-                f"kernel ledger graph has {kernel['edges']} edges at depth {kernel['max_depth']} "
-                f"and {unsettled} unsettled nodes"
-            ),
-            "next": "qualify a primary and fallback with proof-derived dependency and pre-B counterfactual",
+            "state": seam_state.get("chain-qualification", chain_state),
+            "evidence": "the exact proof-derived catalog qualifies Nat.zero_add -> Nat.mul_one against a replayed same-target B/no-A/then-A experiment while granting no authoritative-write power",
+            "next": "measure a fallback and register authoritative kernel operations for both primary facts",
         },
         {
             "id": "A1-proof-leakage-boundary",

@@ -162,6 +162,18 @@ and readiness derivation. The complete external bundle at
 This closes clean authoritative **leaf** reproduction. The selected fact unlocks
 no descendant, so it still receives no Autogenesis-1 compounding credit.
 
+Chain authority is now narrower and stronger. The kernel subgraph contains 52
+authored `depends_on` edges, but only 23 are confirmed as direct dependencies by
+the checked proof terms; the content-addressed catalog refuses to equate those
+sets. The existing `F:nat-zero-add -> F:nat-mul-one` two-search experiment
+replayed at exact commit `a90255a92` and qualifies the primary chain: same A
+target, pre-B budget exhausted with no proof, B produced axiom-free, durable
+fixture event, then A proved using the episode-local B. Qualified catalog
+`95e8c8d401441b98793259d79f95cda485493b81c996c08f0d1df998285c925b`
+selects it for engineering while explicitly granting no authoritative-write
+authority. The next bridge is therefore operation authority for B and A, not
+more chain prose.
+
 ## Phase summary
 
 | Phase | Future state | Decisive exit |

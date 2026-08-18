@@ -7,10 +7,10 @@
       "state": "fixture"
     },
     {
-      "evidence": "kernel ledger graph has 52 edges at depth 6 and 0 unsettled nodes",
+      "evidence": "the exact proof-derived catalog qualifies Nat.zero_add -> Nat.mul_one against a replayed same-target B/no-A/then-A experiment while granting no authoritative-write power",
       "id": "A1-real-derived-chain",
-      "next": "qualify a primary and fallback with proof-derived dependency and pre-B counterfactual",
-      "state": "replay-candidate"
+      "next": "measure a fallback and register authoritative kernel operations for both primary facts",
+      "state": "qualified-primary-fixture"
     },
     {
       "evidence": "proof-body-free catalog plus Bubblewrap repository/network isolation control",
@@ -588,11 +588,18 @@
   },
   "manual_seams": [
     {
-      "gap": "the first exact selection was executed and admitted; the current frontier has no remaining admissible operation and no registered B-to-A chain",
+      "gap": "one proof-derived B-to-A chain is operationally qualified for engineering but has no authoritative kernel operations; the live fact frontier has no admissible chain write",
       "id": "goal-selection",
       "owner": "fact frontier",
       "source": "scripts/fact-frontier.py",
       "state": "partial"
+    },
+    {
+      "gap": "the Nat.zero_add to Nat.mul_one primary replays with pre-B no-credit and post-B success; no fallback is measured and fixture qualification grants no write authority",
+      "id": "chain-qualification",
+      "owner": "proof-derived chain catalog",
+      "source": "scripts/create-autogenesis-chain-catalog.py",
+      "state": "qualified-primary-fixture"
     },
     {
       "gap": "one authoritative producer/checker contract has completed end to end; no second driver or chain operation is registered",
@@ -666,7 +673,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "b30472d11e92441b8ea06d2911f7df2cc8ed2877a080a71b1a0f617643267567",
+    "digest": "574604d6dda1252090fba22d310515c1aef394d4cb04933c4d6e525c691f5fe7",
     "inputs": [
       {
         "bytes": 2892,
@@ -1329,9 +1336,9 @@
         "sha256": "71e352e4fd277f290c6405982e0589c019674764368ef05e1738b3d2a91e62c3"
       },
       {
-        "bytes": 11020,
+        "bytes": 20459,
         "path": "scripts/create-autogenesis-chain-catalog.py",
-        "sha256": "f21df7696786f927aeaa663c2b66f2de0a8de3aa9097b81f33186e77b717b5be"
+        "sha256": "f593645e0464401022074d3e3e86fa52a1ee953f5afba36ac1bdf74ed1ca3c6b"
       },
       {
         "bytes": 9953,
@@ -1369,9 +1376,9 @@
         "sha256": "aaf93fae515051f392abb0f19f7e0f9e01516342aa5beda42c27b5a68ff43c1c"
       },
       {
-        "bytes": 25456,
+        "bytes": 25973,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "16cbe50f2438b3ef8647407172145fa57d5cb566bca1162a43975f76cb76be77"
+        "sha256": "aa568d31109d992dc7536534bb78bff4459f1bbbfc0cd1798e4d411f7bfd8d3c"
       },
       {
         "bytes": 17112,
@@ -1379,9 +1386,9 @@
         "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
       },
       {
-        "bytes": 20876,
+        "bytes": 21035,
         "path": "scripts/prepare-autogenesis-fact-transaction.py",
-        "sha256": "576a4020544ad5abbdc4417ae9363b416608db4f110760d930fc745f803c7bc3"
+        "sha256": "09a618d026ac0a2ad748150a67514ab7d85e4625bdaa9dc7c2e43f8372f3c07c"
       },
       {
         "bytes": 10990,

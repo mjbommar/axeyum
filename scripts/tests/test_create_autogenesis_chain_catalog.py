@@ -3,6 +3,8 @@ from __future__ import annotations
 import copy
 import importlib.util
 import pathlib
+import json
+import tempfile
 import unittest
 
 
@@ -91,6 +93,144 @@ class ChainCatalogTests(unittest.TestCase):
             "F:authored-only",
             [row["consequent"]["fact_id"] for row in catalog["candidates"]],
         )
+
+    def qualification_files(self, root: pathlib.Path):
+        snapshot = {
+            "chain": {
+                "premise": {"fact_id": "F:B", "retained_theorem": "Nat.b"},
+                "consequent": {"fact_id": "F:A", "retained_theorem": "Nat.a"},
+                "derived_direct_edge": "Nat.b -> Nat.a",
+            },
+            "controls": {
+                "same_search_policy_and_budget_pre_and_post_b": True,
+                "pre_b_requires_no_credit": True,
+                "post_b_requires_new_premise_dependency": True,
+                "retained_fact_evidence_never_becomes_visible": True,
+                "proposer_must_not_receive_retained_proof_bodies": True,
+            },
+            "phases": {
+                "post_b": {
+                    "accepted_episode_facts": [
+                        {"declaration": "Autogenesis.E.premise"}
+                    ]
+                }
+            },
+        }
+        snapshot["snapshot_sha256"] = MODULE.digest(snapshot)
+        readiness = {
+            "newly_ready": ["F:A"],
+            "cause": {
+                "admitted_fact_id": "F:B",
+                "derived_dependency_edge": "F:B -> F:A",
+            },
+            "target": {
+                "fact_id": "F:A",
+                "before": {"missing_dependencies": ["F:B"]},
+                "after": {"eligible": True},
+            },
+            "authoritative_ledger_writes": 0,
+            "fixture_writes": 1,
+        }
+        readiness["readiness_delta_sha256"] = MODULE.digest(readiness)
+        evidence = {
+            "identity": {"fact_id": "F:B"},
+            "result": {"outcome": "proved"},
+            "acceptance": {
+                "independent_kernel_checked": True,
+                "axiom_footprint": [],
+                "retained_answer_dependencies": [],
+            },
+        }
+        evidence["evidence_sha256"] = MODULE.digest(evidence)
+        transaction = {"precondition": {"source_is_authoritative": False}}
+        transaction["transaction_sha256"] = MODULE.digest(transaction)
+        pre_catalog = {
+            "target": {"source_fact_id": "F:A", "name": "Autogenesis.E.A"}
+        }
+        pre_catalog["catalog_sha256"] = MODULE.digest(pre_catalog)
+        post_catalog = {
+            "target": {"source_fact_id": "F:A", "name": "Autogenesis.E.A"}
+        }
+        post_catalog["catalog_sha256"] = MODULE.digest(post_catalog)
+        post_bundle = {
+            "plans": [
+                {
+                    "theorem": "Autogenesis.E.premise",
+                    "catalog_origin": "accepted-episode",
+                }
+            ]
+        }
+        post_bundle["bundle_sha256"] = MODULE.digest(post_bundle)
+        report = {
+            "schema_version": 8,
+            "kind": "axeyum-autogenesis-apply-experiment",
+            "git_commit": "a" * 40,
+            "snapshot_sha256": snapshot["snapshot_sha256"],
+            "premise_fact_id": "F:B",
+            "target_fact_id": "F:A",
+            "same_target": True,
+            "controls": {
+                "denied_retained_answers": ["Nat.a", "Nat.b"],
+                "proposer_isolated": True,
+                "expected_outcome_mismatch_rejected": True,
+                "after_fact_fault_recovered": True,
+            },
+            "premise": {
+                "evidence_sha256": evidence["evidence_sha256"],
+                "readiness_delta_sha256": readiness["readiness_delta_sha256"],
+                "fact_transaction_sha256": transaction["transaction_sha256"],
+                "result": "AUTOGENESIS_INDUCTION_RESULT|phase=pre_b|attempted=2|budget=2|outcome=proved|plan_rank=2",
+            },
+            "pre_a": {
+                "catalog_sha256": pre_catalog["catalog_sha256"],
+                "result": "AUTOGENESIS_APPLY_RESULT|phase=pre_a|attempted=3|budget=3|outcome=no-proof|theorem=-"
+            },
+            "post_b": {
+                "catalog_sha256": post_catalog["catalog_sha256"],
+                "bundle_sha256": post_bundle["bundle_sha256"],
+                "result": "AUTOGENESIS_APPLY_RESULT|phase=post_b|attempted=1|budget=3|outcome=proved|theorem=Autogenesis.E.premise"
+            },
+        }
+        report["experiment_sha256"] = MODULE.digest(report)
+        values = {
+            "snapshot.json": snapshot,
+            "readiness-delta.json": readiness,
+            "premise-evidence.json": evidence,
+            "fact-transaction-proposal.json": transaction,
+            "pre_a-catalog.json": pre_catalog,
+            "post_b-catalog.json": post_catalog,
+            "post_b-output/apply-plans.json": post_bundle,
+            "experiment.json": report,
+        }
+        for relative, value in values.items():
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(value))
+
+    def test_counterfactual_qualification_selects_but_grants_no_write_authority(self):
+        facts, graph = self.inputs()
+        structural = MODULE.build_catalog(facts, graph, theorem_of)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            self.qualification_files(root)
+            qualified = MODULE.apply_counterfactual_qualification(structural, root)
+            self.assertEqual(
+                qualified["selection"]["outcome"],
+                "selected-qualified-counterfactual-chain",
+            )
+            self.assertFalse(qualified["selection"]["authoritative_write_authority"])
+
+            report_path = root / "experiment.json"
+            report = json.loads(report_path.read_text())
+            report["pre_a"]["result"] = report["pre_a"]["result"].replace(
+                "outcome=no-proof", "outcome=proved"
+            )
+            report["experiment_sha256"] = MODULE.digest(
+                {key: value for key, value in report.items() if key != "experiment_sha256"}
+            )
+            report_path.write_text(json.dumps(report))
+            with self.assertRaisesRegex(MODULE.ChainCatalogError, "sequence"):
+                MODULE.apply_counterfactual_qualification(structural, root)
 
 
 if __name__ == "__main__":

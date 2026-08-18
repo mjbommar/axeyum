@@ -142,13 +142,13 @@ do not capture the reasoning state that preceded a result.
 
 | Existing component | Immediate engineering gap | Why it blocks the loop |
 |---|---|---|
-| `fact-frontier.py` | Machine-readable selection of a proof-derived B -> A chain | The first authoritative leaf now binds and reproduces the whole transaction; no registered dependent chain is presently admissible |
+| `fact-frontier.py` | Authoritative operations for both facts in the selected B -> A chain | The proof-derived catalog qualifies `nat-zero-add -> nat-mul-one` under counterfactual search, but explicitly grants no ledger-write authority |
 | Fact schema | Candidate/attempt identity is absent by design | Attempts and knowledge need separate schemas |
 | Solver `Evidence` | No route-neutral portable result envelope for closure | The closer cannot derive ledger evidence safely |
 | Reconstruction | No generic obligation-composition interface | Multi-step plans cannot become one kernel proof |
 | Kernel dependency inventory | Mapping from kernel constants back to fact IDs is partial | Newly admitted facts cannot always derive ledger edges |
 | `close-fact.py` | Shell commands in caller-authored rows | Command text is too weak as a typed trust boundary |
-| Fact DAG | 63/110 isolated overall; generated baseline finds 40 `kernel-lean` facts, 52 internal edges, 6 isolated, depth 6 | Existing proofs form a bootstrap replay curriculum, but all kernel nodes are settled and no counterfactual knowledge snapshot exists |
+| Fact DAG | 63/110 isolated overall; 52 authored internal kernel-subgraph edges narrow to 23 direct proof-derived edges across 10 consequents | One primary is operationally qualified; 14 named kernel facts remain outside dependency-inventory coverage and no fallback is measured |
 | Capability matrices | Primarily capability reporting | Declines are not converted into ranked reusable work |
 | Benchmark corpora | Measure solver verdicts | Do not measure autonomous acquisition or human intervention |
 | Plan generation | Syntactic consistency only | Semantically stale next actions can still pass |

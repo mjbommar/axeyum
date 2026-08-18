@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:b30472d11e92441b8ea06d2911f7df2cc8ed2877a080a71b1a0f617643267567`
+Source identity: `sha256:574604d6dda1252090fba22d310515c1aef394d4cb04933c4d6e525c691f5fe7`
 
 ## Ledger and chain substrate
 
@@ -24,7 +24,7 @@ the remaining facts stay explicit rather than being guessed.
 | Requirement | State | Current evidence | Next falsifiable step |
 |---|---|---|---|
 | `A1-fixed-input-identity` | fixture | baseline source digest plus retained exact-clean-commit captures | bind the first authoritative acquisition to the same identity contract |
-| `A1-real-derived-chain` | replay-candidate | kernel ledger graph has 52 edges at depth 6 and 0 unsettled nodes | qualify a primary and fallback with proof-derived dependency and pre-B counterfactual |
+| `A1-real-derived-chain` | qualified-primary-fixture | the exact proof-derived catalog qualifies Nat.zero_add -> Nat.mul_one against a replayed same-target B/no-A/then-A experiment while granting no authoritative-write power | measure a fallback and register authoritative kernel operations for both primary facts |
 | `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | broaden the structural grammar and bind plans into typed evidence |
 | `A1-operational-unlock-control` | fixture | catalog search produces B; a durable fixture event makes the same A target ready and fresh A depends on B | repeat the causal unlock on an authoritative open fact |
 | `A1-machine-selection` | partial | content-addressed authoritative frontier selected exactly one matching fact, which typed execution and admission consumed; the post-state refuses all remaining unregistered candidates | register and qualify an actual B-to-A chain operation rather than another isolated leaf |
@@ -37,7 +37,8 @@ the remaining facts stay explicit rather than being guessed.
 
 | Seam | State | Owner | Gap | Source |
 |---|---|---|---|---|
-| `goal-selection` | partial | fact frontier | the first exact selection was executed and admitted; the current frontier has no remaining admissible operation and no registered B-to-A chain | `scripts/fact-frontier.py` |
+| `goal-selection` | partial | fact frontier | one proof-derived B-to-A chain is operationally qualified for engineering but has no authoritative kernel operations; the live fact frontier has no admissible chain write | `scripts/fact-frontier.py` |
+| `chain-qualification` | qualified-primary-fixture | proof-derived chain catalog | the Nat.zero_add to Nat.mul_one primary replays with pre-B no-credit and post-B success; no fallback is measured and fixture qualification grants no write authority | `scripts/create-autogenesis-chain-catalog.py` |
 | `route-dispatch` | partial | operation registry | one authoritative producer/checker contract has completed end to end; no second driver or chain operation is registered | `artifacts/autogenesis/operations.json` |
 | `operation-execution` | authoritative | typed operation executor | one authoritative SMT driver emitted and replayed a normalized receipt; no second driver exists | `scripts/execute-autogenesis-operation.py` |
 | `evidence-assembly` | partial | transactional closer | the first authoritative adapter derives its evidence row and route metadata; other routes through the manual closer remain caller-authored | `scripts/close-fact.py` |

@@ -136,6 +136,17 @@ class FactTransactionTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.TransactionError, "cannot claim"):
             MODULE.verify_transaction(mutated, expected)
 
+    def test_fixture_operation_cannot_escalate_to_authoritative_write(self):
+        before, evidence, transition, event = self.inputs()
+        with self.assertRaisesRegex(MODULE.TransactionError, "counterfactual"):
+            MODULE.build_transaction(
+                before_fact=before,
+                evidence=evidence,
+                transition=transition,
+                event=event,
+                source_is_authoritative=True,
+            )
+
 
 class AuthoritativeFactTransactionTests(unittest.TestCase):
     def inputs(self):

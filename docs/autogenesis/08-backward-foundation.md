@@ -334,6 +334,18 @@ The global isolation count therefore does not establish that Autogenesis-1
 needs a new hundred-fact nursery. Most isolated facts belong to routes where an
 independent proposition may correctly have no theorem dependency.
 
+The first chain enumerator then exposed an important distinction. It counted 52
+`depends_on` edges between kernel-route facts as "derivable," but the dependency
+gate is intentionally one-way: every proof-term edge must be declared, while an
+extra authored mathematical dependency is permitted. Exact intersection with
+the kernel theorem inventory yields **23 direct proof-derived edges across 10
+consequents**, all axiom-free. Fourteen named integer facts are absent from the
+inventory and remain explicit coverage gaps rather than being treated as
+isolated. Catalog
+`76afb7043caa988f658fbe1fdd1edca5688f1744c20ce93ead266b2aa64ec821`
+retains the exact structural result outside Git at
+`/nas3/data/axeyum/autogenesis/chains/0bb49769b/catalog.json`.
+
 ### B. The live ledger can demonstrate a new B -> A transition directly
 
 **Contradicted at this snapshot.** All 40 `kernel-lean` facts are already
@@ -408,6 +420,23 @@ interface rather than wrapping it.
    budget, and measure B itself through its intended route.
 5. Preregister one primary and one fallback only after those measurements are
    reproducible.
+
+**Primary status.** `F:nat-zero-add -> F:nat-mul-one` is now structurally exact
+and operationally qualified. The complete retained experiment at
+`a90255a92` replayed again from its exact clean commit: B was produced
+axiom-free, the identical A target exhausted its pre-B budget with no proof, the
+durable fixture event made A ready, and post-B A was proved using the
+episode-local B while both retained answers remained denied. Qualified catalog
+`95e8c8d401441b98793259d79f95cda485493b81c996c08f0d1df998285c925b`
+selects it for engineering and says `authoritative_write_authority: false`.
+
+The explicit false matters. Review found that the fixture transaction adapter
+could previously infer authority from a canonical path even though its
+registered operation was fixture-only. That escalation is now rejected. The
+next required implementation is a separately registered authoritative kernel
+execution receipt for B, followed by the corresponding operation for A. A
+fallback remains unmeasured; it is useful resilience work, not permission to
+delay the primary's authority path.
 
 ### Foundation 1 — make one closure portable
 

@@ -243,8 +243,207 @@ def verify_catalog(actual: dict[str, Any], expected: dict[str, Any]) -> None:
         raise ChainCatalogError("chain catalog is stale or mutated")
 
 
+def parse_result(raw: Any, prefix: str) -> dict[str, str]:
+    if not isinstance(raw, str):
+        raise ChainCatalogError(f"{prefix} result is not text")
+    fields = raw.split("|")
+    if not fields or fields[0] != prefix:
+        raise ChainCatalogError(f"{prefix} result has the wrong kind")
+    parsed: dict[str, str] = {}
+    for field in fields[1:]:
+        key, separator, value = field.partition("=")
+        if not separator or not key or key in parsed:
+            raise ChainCatalogError(f"{prefix} result fields are malformed")
+        parsed[key] = value
+    return parsed
+
+
+def load_json(root: pathlib.Path, relative: str) -> dict[str, Any]:
+    value = json.loads((root / relative).read_text())
+    if not isinstance(value, dict):
+        raise ChainCatalogError(f"{relative} is not a JSON object")
+    return value
+
+
+def verify_addressed(value: dict[str, Any], field: str, label: str) -> str:
+    unsigned = dict(value)
+    claimed = unsigned.pop(field, None)
+    if not isinstance(claimed, str) or digest(unsigned) != claimed:
+        raise ChainCatalogError(f"{label} digest is missing or invalid")
+    return claimed
+
+
+def apply_counterfactual_qualification(
+    catalog: dict[str, Any], experiment_root: pathlib.Path
+) -> dict[str, Any]:
+    """Select one structural edge only after the retained two-search episode closes."""
+    report = load_json(experiment_root, "experiment.json")
+    snapshot = load_json(experiment_root, "snapshot.json")
+    readiness = load_json(experiment_root, "readiness-delta.json")
+    evidence = load_json(experiment_root, "premise-evidence.json")
+    transaction = load_json(experiment_root, "fact-transaction-proposal.json")
+    pre_catalog = load_json(experiment_root, "pre_a-catalog.json")
+    post_catalog = load_json(experiment_root, "post_b-catalog.json")
+    post_bundle = load_json(experiment_root, "post_b-output/apply-plans.json")
+
+    report_sha = verify_addressed(report, "experiment_sha256", "experiment")
+    snapshot_sha = verify_addressed(snapshot, "snapshot_sha256", "snapshot")
+    readiness_sha = verify_addressed(
+        readiness, "readiness_delta_sha256", "readiness delta"
+    )
+    evidence_sha = verify_addressed(evidence, "evidence_sha256", "premise evidence")
+    transaction_sha = verify_addressed(
+        transaction, "transaction_sha256", "fact transaction"
+    )
+    pre_catalog_sha = verify_addressed(pre_catalog, "catalog_sha256", "pre-A catalog")
+    post_catalog_sha = verify_addressed(
+        post_catalog, "catalog_sha256", "post-B catalog"
+    )
+    post_bundle_sha = verify_addressed(
+        post_bundle, "bundle_sha256", "post-B proposal bundle"
+    )
+    if (
+        report.get("schema_version") != 8
+        or report.get("kind") != "axeyum-autogenesis-apply-experiment"
+    ):
+        raise ChainCatalogError("qualification artifact identity is invalid")
+    if (
+        report.get("snapshot_sha256") != snapshot_sha
+        or (report.get("premise") or {}).get("evidence_sha256") != evidence_sha
+        or (report.get("premise") or {}).get("readiness_delta_sha256")
+        != readiness_sha
+        or (report.get("premise") or {}).get("fact_transaction_sha256")
+        != transaction_sha
+        or (report.get("pre_a") or {}).get("catalog_sha256") != pre_catalog_sha
+        or (report.get("post_b") or {}).get("catalog_sha256") != post_catalog_sha
+        or (report.get("post_b") or {}).get("bundle_sha256") != post_bundle_sha
+    ):
+        raise ChainCatalogError("qualification report does not bind its artifacts")
+
+    premise_id = report.get("premise_fact_id")
+    consequent_id = report.get("target_fact_id")
+    candidates = [
+        row
+        for row in catalog.get("candidates") or []
+        if row["premise"]["fact_id"] == premise_id
+        and row["consequent"]["fact_id"] == consequent_id
+    ]
+    if len(candidates) != 1:
+        raise ChainCatalogError("qualification does not name one structural candidate")
+    candidate = candidates[0]
+    chain = snapshot.get("chain") or {}
+    premise = chain.get("premise") or {}
+    consequent = chain.get("consequent") or {}
+    denied = sorted([premise.get("retained_theorem"), consequent.get("retained_theorem")])
+    if (
+        premise.get("fact_id") != premise_id
+        or consequent.get("fact_id") != consequent_id
+        or premise.get("retained_theorem") != candidate["premise"]["theorem"]
+        or consequent.get("retained_theorem") != candidate["consequent"]["theorem"]
+        or chain.get("derived_direct_edge")
+        != f"{candidate['premise']['theorem']} -> {candidate['consequent']['theorem']}"
+        or not all((snapshot.get("controls") or {}).values())
+        or sorted((report.get("controls") or {}).get("denied_retained_answers") or [])
+        != denied
+        or (report.get("controls") or {}).get("proposer_isolated") is not True
+        or (report.get("controls") or {}).get("expected_outcome_mismatch_rejected")
+        is not True
+        or (report.get("controls") or {}).get("after_fact_fault_recovered") is not True
+        or report.get("same_target") is not True
+    ):
+        raise ChainCatalogError("qualification proof-leakage or chain controls failed")
+
+    premise_result = parse_result(
+        (report.get("premise") or {}).get("result"),
+        "AUTOGENESIS_INDUCTION_RESULT",
+    )
+    pre_result = parse_result(
+        (report.get("pre_a") or {}).get("result"), "AUTOGENESIS_APPLY_RESULT"
+    )
+    post_result = parse_result(
+        (report.get("post_b") or {}).get("result"), "AUTOGENESIS_APPLY_RESULT"
+    )
+    accepted = ((snapshot.get("phases") or {}).get("post_b") or {}).get(
+        "accepted_episode_facts"
+    )
+    episode_declaration = accepted[0].get("declaration") if isinstance(accepted, list) and len(accepted) == 1 else None
+    if (
+        premise_result.get("outcome") != "proved"
+        or pre_result.get("phase") != "pre_a"
+        or pre_result.get("outcome") != "no-proof"
+        or pre_result.get("attempted") != pre_result.get("budget")
+        or post_result.get("phase") != "post_b"
+        or post_result.get("outcome") != "proved"
+        or post_result.get("theorem") != episode_declaration
+    ):
+        raise ChainCatalogError("qualification does not prove the required B/no-A/then-A sequence")
+
+    target = readiness.get("target") or {}
+    if (
+        readiness.get("newly_ready") != [consequent_id]
+        or (readiness.get("cause") or {}).get("admitted_fact_id") != premise_id
+        or (readiness.get("cause") or {}).get("derived_dependency_edge")
+        != f"{premise_id} -> {consequent_id}"
+        or target.get("fact_id") != consequent_id
+        or (target.get("before") or {}).get("missing_dependencies") != [premise_id]
+        or (target.get("after") or {}).get("eligible") is not True
+        or readiness.get("authoritative_ledger_writes") != 0
+        or readiness.get("fixture_writes") != 1
+        or (evidence.get("identity") or {}).get("fact_id") != premise_id
+        or (evidence.get("result") or {}).get("outcome") != "proved"
+        or (evidence.get("acceptance") or {}).get("independent_kernel_checked")
+        is not True
+        or (evidence.get("acceptance") or {}).get("axiom_footprint") != []
+        or (evidence.get("acceptance") or {}).get("retained_answer_dependencies")
+        != []
+        or (transaction.get("precondition") or {}).get("source_is_authoritative")
+        is not False
+    ):
+        raise ChainCatalogError("qualification evidence, readiness, or fixture scope is invalid")
+    plans = post_bundle.get("plans")
+    if (
+        (pre_catalog.get("target") or {}).get("source_fact_id") != consequent_id
+        or pre_catalog.get("target") != post_catalog.get("target")
+        or not isinstance(plans, list)
+        or not plans
+        or not isinstance(plans[0], dict)
+        or plans[0].get("theorem") != episode_declaration
+        or plans[0].get("catalog_origin") != "accepted-episode"
+    ):
+        raise ChainCatalogError("qualification target or accepted-premise plan changed")
+
+    qualified = json.loads(json.dumps(catalog))
+    structural_sha = qualified.pop("catalog_sha256")
+    selected = next(
+        row for row in qualified["candidates"] if row["chain_id"] == candidate["chain_id"]
+    )
+    selected["qualification"] = {
+        "state": "qualified-counterfactual-fixture",
+        "experiment_sha256": report_sha,
+        "experiment_git_commit": report.get("git_commit"),
+        "snapshot_sha256": snapshot_sha,
+        "readiness_delta_sha256": readiness_sha,
+        "premise_evidence_sha256": evidence_sha,
+        "same_target_pre_b_no_credit": True,
+        "b_produced_axiom_free": True,
+        "post_b_a_produced_from_episode_b": True,
+        "proof_leakage_controls_passed": True,
+        "authoritative_write_authority": False,
+    }
+    qualified["selection"] = {
+        "outcome": "selected-qualified-counterfactual-chain",
+        "selected_chain_id": candidate["chain_id"],
+        "structural_catalog_sha256": structural_sha,
+        "qualification_experiment_sha256": report_sha,
+        "authoritative_write_authority": False,
+    }
+    qualified["catalog_sha256"] = digest(qualified)
+    return qualified
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--qualification-experiment", type=pathlib.Path)
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--check", action="store_true")
     action.add_argument("--json", action="store_true")
@@ -259,6 +458,10 @@ def main() -> int:
                 f"dependency inventory returned only {len(graph)} theorems"
             )
         catalog = build_catalog(load_facts(), graph, dependencies.theorem_of)
+        if args.qualification_experiment is not None:
+            catalog = apply_counterfactual_qualification(
+                catalog, args.qualification_experiment.resolve()
+            )
         if args.check:
             print(
                 f"AUTOGENESIS_CHAIN_CATALOG_OK|{catalog['catalog_sha256']}|"

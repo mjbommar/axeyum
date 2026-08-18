@@ -50,6 +50,13 @@ catalog. It:
    pre-B no-credit, B production, post-B A production with a newly derived B
    dependency, and proof-leakage isolation.
 
+Qualification mode consumes the complete retained experiment rather than a
+caller-authored verdict. It verifies content identities for the experiment,
+snapshot, B evidence, transaction, readiness delta, pre/post catalogs, and
+post-B plan bundle; checks the B/no-A/then-A outcomes and leakage controls; and
+binds the selected structural chain to that experiment. The resulting selection
+explicitly carries `authoritative_write_authority: false`.
+
 The human `fact-frontier.py --chains` view now consumes the same exact catalog
 logic. Both aggregate gate paths build the catalog and run its mutation tests.
 
@@ -60,6 +67,13 @@ proof-derived direct edges, 10 distinct consequents, and 14 named kernel facts
 missing from the inventory. All 23 observed edges are axiom-free. The previous
 52-edge count is retained in history as a useful but broader count of authored
 kernel-subgraph edges; it is not Autogenesis chain authority.
+
+The retained `F:nat-zero-add -> F:nat-mul-one` experiment at exact commit
+`a90255a92` replayed cleanly again: B proved axiom-free, the identical pre-B A
+search exhausted its budget with no proof, the durable fixture admission made A
+ready, and post-B A proved using the episode-local B. Qualified catalog digest
+`95e8c8d401441b98793259d79f95cda485493b81c996c08f0d1df998285c925b`
+selects that chain for engineering while granting no authoritative-write power.
 
 Mutation controls prove that an authored-only edge is excluded, a derived edge
 missing from `depends_on` fails, duplicate theorem-to-fact identity fails, an
