@@ -33,8 +33,8 @@
       "kind": "kernel-term",
       "supports": "CReal.no_total_inverse is a checked Theorem -- not an axiom, not an opaque -- with an empty footprint, and the witness example's EXIT STATUS depends on its presence.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE 'no total inverse exists = true')\" = 1 && test \"$(printf '%s\\n' \"$out\" | grep -cE '71 declarations admitted, trusted surface = 0 \\(empty\\)')\" = 1",
-      "notes": "Two anchors on one run: the guard flag, and the declaration count (71 at the time of writing; a slice that adds declarations bumps it deliberately) with the trusted surface on the same line. Deleting declare_no_total_inverse flips the example to exit 1 with a matching FAIL line and kills exactly two tests (measured); the count anchor stops the row surviving a build that quietly dropped declarations."
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE 'no total inverse exists = true')\" = 1 && test \"$(printf '%s\\n' \"$out\" | grep -cE '76 declarations admitted, trusted surface = 0 \\(empty\\)')\" = 1",
+      "notes": "Two anchors on one run: the guard flag, and the declaration count (76 at the time of writing; a slice that adds declarations bumps it deliberately) with the trusted surface on the same line. Deleting declare_no_total_inverse flips the example to exit 1 with a matching FAIL line and kills exactly two tests (measured); the count anchor stops the row surviving a build that quietly dropped declarations."
     },
     {
       "id": "real-inverse-modulus-cannot-be-extracted",
@@ -72,5 +72,5 @@
     "established_by": "axeyum-lean-kernel creal::field (ADR-0481; agent-creal-field lane)",
     "source": "Bishop-style constructive analysis: the inverse is defined on the reals APART from zero, and the apartness must carry the separating modulus"
   },
-  "notes": "WHAT THIS DOES NOT SAY. It does not say CReal.inv exists -- it is not built, and this fact is precisely about the shape its signature must have. It does not say the reals apart from zero are exactly the reals not equal to zero: CReal.not_equiv_of_apart is ONE-WAY, and the converse is Markov's principle, which is neither proved nor assumed here. It does not say a Prop hypothesis blocks a Type-valued definition -- that reading is wrong, and the distinction is the point: a function may take a Prop and return a Type, it may not BRANCH on one, which is why the one-sided PosBound works where the disjunctive Apart does not."
+  "notes": "WHAT THIS DOES NOT SAY. It does not say CReal.inv exists. It did not when this fact was written -- this fact is precisely about the shape its signature must have -- and it does now (ADR-0487, F:real-inverse-is-built-and-well-defined), with exactly the signature stated here. It does not say the reals apart from zero are exactly the reals not equal to zero: CReal.not_equiv_of_apart is ONE-WAY, and the converse is Markov's principle, which is neither proved nor assumed here. It does not say a Prop hypothesis blocks a Type-valued definition -- that reading is wrong, and the distinction is the point: a function may take a Prop and return a Type, it may not BRANCH on one, which is why the one-sided PosBound works where the disjunctive Apart does not."
 }
