@@ -109,7 +109,18 @@ and 37 carry a theory reconstruction. The 75th is `qf_rdl_difference`, added
 2026-08-17: real difference logic scans into the same `Lra` fragment as QF_LRA,
 so it reconstructs rather than attests, and the family slice had never contained
 a module from that logic. `scripts/check-lean-gate.sh` now reports
-the two halves separately and floors the reasoning one. Corrected remote attestation
+the two halves separately and floors the reasoning one. **And the reasoning half is
+an upper bound, not a count.** `LeanModuleContent::of_module_source` classifies
+by the PRESENCE of a structural-attestation marker, so a shim that simply does
+not carry one is counted as theory reconstruction by default. Measured
+2026-08-18: family `qf_nra_sos_plus_constant` reported `modules=2 theory=2
+structural=0` while both of its modules said nothing whatever about their
+queries — a `prop._0` wrapper had fired in place of the real SOS reconstructor.
+The Lean split cannot see that class of shim; the instrument that can is the
+transcription binding gate (`scripts/check-lra-hypothesis-binding.py`), which
+classified exactly those instances as `attested`. Read the two together, and
+treat a rise in `theory_families` unaccompanied by a rise in `bound`/`structural`
+as unexplained rather than as progress. Corrected remote attestation
 and exhaustive execution remain open.
 
 Across the retained broad UNSAT denominator, **259 / 327** outcomes satisfy the
