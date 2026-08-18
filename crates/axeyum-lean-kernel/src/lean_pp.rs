@@ -461,7 +461,20 @@ impl Kernel {
              -- has no compiled code and Lean's code generator declines it\n\
              -- (\"code generator does not support recursor `T.rec` yet\"). The section\n\
              -- suppresses codegen only; it does not weaken type checking.\n\
-             noncomputable section\n\n\
+             noncomputable section\n\
+             -- Scope-aware sharing (see `ScopeId`) binds repeated subterms with\n\
+             -- `let`, and a `let` chain is NESTED syntax: one binding per level.\n\
+             -- Measured 2026-08-18, the constructed-carrier module binds 2,897\n\
+             -- of them inside one distributivity lemma alone, and Lean 4.30.0\n\
+             -- rejected the file at that declaration with `maximum recursion\n\
+             -- depth has been reached` -- the default limit is 512. (No carrier\n\
+             -- name appears in this banner on purpose: a sibling guard asserts a\n\
+             -- module over the constructed carrier never spells the axiomatized\n\
+             -- package's name, and it reads the whole file as one string.) This\n\
+             -- raises the\n\
+             -- ELABORATOR's recursion counter and nothing else: the kernel still\n\
+             -- checks every term, and `#print axioms` is unaffected.\n\
+             set_option maxRecDepth 65536\n\n\
              -- Lean's own compiler-internal constants, which `Init.Prelude` declares\n\
              -- (`unsafe axiom lcErased : Type`) and `prelude` mode therefore omits.\n\
              -- Lean 4.34 runs code generation over a Prop-valued inductive that\n\

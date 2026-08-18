@@ -7,6 +7,19 @@ set_option linter.unusedVariables false
 -- ("code generator does not support recursor `T.rec` yet"). The section
 -- suppresses codegen only; it does not weaken type checking.
 noncomputable section
+-- Scope-aware sharing (see `ScopeId`) binds repeated subterms with
+-- `let`, and a `let` chain is NESTED syntax: one binding per level.
+-- Measured 2026-08-18, the constructed-carrier module binds 2,897
+-- of them inside one distributivity lemma alone, and Lean 4.30.0
+-- rejected the file at that declaration with `maximum recursion
+-- depth has been reached` -- the default limit is 512. (No carrier
+-- name appears in this banner on purpose: a sibling guard asserts a
+-- module over the constructed carrier never spells the axiomatized
+-- package's name, and it reads the whole file as one string.) This
+-- raises the
+-- ELABORATOR's recursion counter and nothing else: the kernel still
+-- checks every term, and `#print axioms` is unaffected.
+set_option maxRecDepth 65536
 
 -- Lean's own compiler-internal constants, which `Init.Prelude` declares
 -- (`unsafe axiom lcErased : Type`) and `prelude` mode therefore omits.
