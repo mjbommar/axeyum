@@ -647,7 +647,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "850ee2b0bb00e9db6678b12caf1d7d70b18f583cf2e6626e46772e269ccdb512",
+    "digest": "afb749be9af0bab65f6bb6120177a5b8c62bd45a3583ba5192c4f3f0ee47675a",
     "inputs": [
       {
         "bytes": 3519,
@@ -1205,9 +1205,9 @@
         "sha256": "ca3d41c6386a4d75424052a0f44ea4d794a8d139b8f98bd4d1c14e32913a19aa"
       },
       {
-        "bytes": 5789,
+        "bytes": 14663,
         "path": "crates/axeyum-lean-kernel/examples/theorem_knowledge_audit.rs",
-        "sha256": "453221034589962257ca61a81067effa632c9b64a6121710142f1eb5e5b3b278"
+        "sha256": "05dddd7a636f3baf93aa43e5cd874e9994e7252303507bc11b2b8ea017454e0f"
       },
       {
         "bytes": 9662,
@@ -1220,9 +1220,19 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 70432,
+        "bytes": 70548,
         "path": "justfile",
-        "sha256": "f65e19ffc1e9576d98f91f80de72ab49126a037990a84de7d6147eccad9cf411"
+        "sha256": "2c727cdb7edba7e7ad17802eb6bfc8b535ade240b954e3727254ddcc0d0a51fc"
+      },
+      {
+        "bytes": 5999,
+        "path": "scripts/check-aggregate-scope.expected",
+        "sha256": "4ca7f8a489610cede17b3ab4cecc4dc4813fcab2230c42cc0d3e3fb76ca32081"
+      },
+      {
+        "bytes": 1498,
+        "path": "scripts/check-autogenesis-knowledge-controls.sh",
+        "sha256": "b95ff058b0fd33cfa5ef2743587c4b2db25a2cef5ff72529e0ff474951926d65"
       },
       {
         "bytes": 6597,
@@ -1235,9 +1245,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 19989,
+        "bytes": 20075,
         "path": "scripts/check.sh",
-        "sha256": "958054f38d90bfd6ed8a9c1f8e9ef1ad44dabf476efb86eb5942072c9b38c276"
+        "sha256": "e70a694300563b0f91b83c690840b8b3d1aba1734490a26cf25b20118cc060f4"
       },
       {
         "bytes": 6846,
@@ -1245,9 +1255,9 @@
         "sha256": "1946ed9f4d89dffed5cc57ed0f88cf5c5ed7f3b49c6ecb497c3e2862775c4d8a"
       },
       {
-        "bytes": 9135,
+        "bytes": 9204,
         "path": "scripts/create-autogenesis-snapshot.py",
-        "sha256": "91d71bd9f4acd28bb30fefa0db7505530b98ca4e0ee8dd49d56f0b19446be353"
+        "sha256": "0ca76de3c0d32138f7c0d800f3a7def46ad6e8565aaa0437d412f4dab32f33fa"
       },
       {
         "bytes": 14525,
@@ -1255,9 +1265,9 @@
         "sha256": "db6757cc801ed3996d0ba3c40ba55123e2855e8944054c2a391b46ff5678b81b"
       },
       {
-        "bytes": 21263,
+        "bytes": 21376,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "efb3ffdb5f7069aaba4fd980e8b5ae2137342a4463c84bd11157528afa9eb462"
+        "sha256": "80aca6efab62946f2c7f380dfb38129e3ee1a42b0ceccb60e3701307852e59cf"
       },
       {
         "bytes": 17112,

@@ -64,6 +64,17 @@ be checked with `theorem_knowledge_audit`, whose deny/require decisions use the
 full transitive declaration closure, so hiding a forbidden proof behind a
 helper theorem does not pass.
 
+This audit proves term dependency, not historical provenance. If a proposer is
+given a retained theorem's raw proof body and copies that expression under a
+fresh name, the resulting term is extensionally indistinguishable from an
+independent reconstruction. Therefore the search process must receive a
+sanitized theorem catalog containing visible names and types but no withheld
+proof bodies. The full environment belongs only in the separate checker
+process. `scripts/check-autogenesis-knowledge-controls.sh` establishes the
+current positive boundary (fresh exact-type proof using B) and rejects direct
+and helper-mediated reuse of retained A as well as a fresh B that aliases
+retained B; process isolation remains the next foundation task.
+
 ## Assumptions tested now
 
 ### A. The ledger has a usable chain substrate

@@ -200,6 +200,7 @@ def build_snapshot(
             "pre_b_requires_no_credit": True,
             "post_b_requires_new_premise_dependency": True,
             "retained_fact_evidence_never_becomes_visible": True,
+            "proposer_must_not_receive_retained_proof_bodies": True,
         },
     }
     snapshot["snapshot_sha256"] = digest(snapshot)

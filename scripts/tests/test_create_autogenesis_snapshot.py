@@ -59,6 +59,9 @@ class SnapshotTests(unittest.TestCase):
             post["required_dependencies"],
         )
         self.assertNotEqual(post["required_dependencies"], ["Nat.zero_add"])
+        self.assertTrue(
+            snapshot["controls"]["proposer_must_not_receive_retained_proof_bodies"]
+        )
 
     def test_snapshot_is_deterministic_and_content_sensitive(self):
         inputs = self.inputs()

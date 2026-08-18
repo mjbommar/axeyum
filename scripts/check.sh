@@ -99,6 +99,7 @@ step facts-replay ./scripts/check-fact-evidence-replay.sh
 # `scripts/tests/test-gate-scope-controls.sh`.
 step clippy ./scripts/check-clippy-complete.sh
 step gate-controls ./scripts/tests/test-gate-scope-controls.sh
+step autogenesis-knowledge-controls ./scripts/check-autogenesis-knowledge-controls.sh
 # `frontier_*` runs in its own serialized step below: those ratchets are
 # wall-clock-budget based, so contention from the rest of the suite shrinks the
 # measured frontier and reports a false REGRESSION (measured 2026-07-30).
