@@ -46,8 +46,8 @@ use super::RatPrelude;
 use super::archimedean::mixed_theorem;
 use super::group::{rsub, rsum, rsum_append, rsum_perm};
 use super::ops::{
-    den, den_pos, den_z, normalize, num, one_le_succ, radd, rat_eq_rewrite, rat_theorem, rchain,
-    rcongr, req, rle, rlt, rmul, rneg, rsymm, rzero,
+    den, den_pos, den_z, nat_eq_to_rat, nat_rewrite_prop, normalize, num, one_le_succ, radd,
+    rat_eq_rewrite, rat_theorem, rchain, rcongr, req, rle, rlt, rmul, rneg, rsymm, rzero,
 };
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -750,6 +750,173 @@ fn declare_nat_div_succ_product(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(),
         let (_, proof) = rchain(d, total, &[(fused, fuse), (target, congr)]);
         (stmt, proof)
     })?;
+
+    // nat_index_compose : (a+1)·((b+1)·n + b) + a = (D+1)·n + D, D = (a+1)·b + a.
+    //
+    // **Bishop's sampling indices are closed under composition, and this is the
+    // ℕ identity that says so.** `CReal.mul` samples at `(c+1)·n + c` and
+    // `CReal.add` at `2n+1`, which IS `(1+1)·n + 1`; every nested product —
+    // `mul (mul x y) z`, `mul x (add y z)` — therefore samples at an index of
+    // the same shape, and [`Self::nat_div_succ_le_scaled`] applies to it
+    // unchanged. Without this each nesting would need its own ad-hoc index
+    // arithmetic.
+    mixed_theorem(
+        d,
+        p.nat_index_compose,
+        &[nat_ty, nat_ty, nat_ty],
+        &|d, v| {
+            let (a, b, n) = (v[0], v[1], v[2]);
+            let sa = d.succ(a);
+            let sb = d.succ(b);
+            let inner = {
+                let scaled = NatOps::mul(d, sb, n);
+                NatOps::add(d, scaled, b)
+            };
+            let outer = NatOps::mul(d, sa, inner);
+            let start = NatOps::add(d, outer, a);
+            let composed = {
+                let scaled = NatOps::mul(d, sa, b);
+                NatOps::add(d, scaled, a)
+            };
+            let target = {
+                let factor = d.succ(composed);
+                let scaled = NatOps::mul(d, factor, n);
+                NatOps::add(d, scaled, composed)
+            };
+            let stmt = d.eq(start, target);
+
+            let deep = NatOps::mul(d, sb, n);
+            let head = NatOps::mul(d, sa, deep);
+            let side = NatOps::mul(d, sa, b);
+            let opened_inner = NatOps::add(d, head, side);
+            let distrib = d.lemma(nat.left_distrib, &[sa, deep, b]);
+            let opened = NatOps::add(d, opened_inner, a);
+            let step_open = NatOps::congr(d, outer, opened_inner, distrib, &|d, t| {
+                NatOps::add(d, t, a)
+            });
+            let regrouped = NatOps::add(d, head, composed);
+            let step_assoc = d.lemma(nat.add_assoc, &[head, side, a]);
+            let flat_head = NatOps::mul(d, sa, sb);
+            let flattened = NatOps::mul(d, flat_head, n);
+            let step_flat = {
+                let forward = d.lemma(nat.mul_assoc, &[sa, sb, n]);
+                let back = NatOps::symm(d, flattened, head, forward);
+                NatOps::congr(d, head, flattened, back, &|d, t| {
+                    NatOps::add(d, t, composed)
+                })
+            };
+            let staged_flat = NatOps::add(d, flattened, composed);
+            // `(a+1)·(b+1) = (a+1)·b + (a+1)`, and `Nat.add ((a+1)·b) (succ a)`
+            // IS `succ ((a+1)·b + a)` = `succ D`.
+            let successor = d.succ(composed);
+            let step_succ = {
+                let expand = d.lemma(nat.mul_succ, &[sa, b]);
+                NatOps::congr(d, flat_head, successor, expand, &|d, t| {
+                    let scaled = NatOps::mul(d, t, n);
+                    NatOps::add(d, scaled, composed)
+                })
+            };
+            let (_, proof) = NatOps::chain(
+                d,
+                start,
+                &[
+                    (opened, step_open),
+                    (regrouped, step_assoc),
+                    (staged_flat, step_flat),
+                    (target, step_succ),
+                ],
+            );
+            (stmt, proof)
+        },
+    )?;
+
+    // natDivSucc_le_scaled : k/((c+1)·n + c + 1) ≤ k/(n+1).
+    //
+    // **The general index-comparison lemma, and it is still not antitonicity.**
+    // A sampling index of the form `(c+1)·n + c` — Bishop's product index, and
+    // every composite of it — is deeper than `n`, and the bound at that depth
+    // has to be read back at `n`. `natDivSucc_le_add_left` widens the numerator
+    // `k ↦ k·(c+1)` at the SAME index, `natDivSucc_mul` factors it as
+    // `k/1 · (c+1)/(index+1)`, and `natDivSucc_scale` reads the second factor
+    // as `1/(n+1)`. Three steps, one denominator each, and no ordering of
+    // `natDivSucc` in its index is ever used.
+    mixed_theorem(
+        d,
+        p.nat_div_succ_le_scaled,
+        &[nat_ty, nat_ty, nat_ty],
+        &|d, v| {
+            let (k, c, n) = (v[0], v[1], v[2]);
+            let factor = d.succ(c);
+            let scaled = NatOps::mul(d, factor, n);
+            let index = NatOps::add(d, scaled, c);
+            let base = d.const_app(p.nat_div_succ, &[k, index]);
+            let target = d.const_app(p.nat_div_succ, &[k, n]);
+            let stmt = rle(d, p, base, target);
+
+            let extra = NatOps::mul(d, k, c);
+            let grown = d.lemma(p.nat_div_succ_le_add_left, &[k, extra, index]);
+            let widened_numerator = NatOps::add(d, k, extra);
+            let scaled_numerator = NatOps::mul(d, k, factor);
+            let numerator_eq = {
+                let commute = d.lemma(nat.add_comm, &[k, extra]);
+                let mirrored = NatOps::add(d, extra, k);
+                let expand = d.lemma(nat.mul_succ, &[k, c]);
+                let back = NatOps::symm(d, scaled_numerator, mirrored, expand);
+                NatOps::trans(
+                    d,
+                    widened_numerator,
+                    mirrored,
+                    scaled_numerator,
+                    commute,
+                    back,
+                )
+            };
+            let at_scaled = nat_rewrite_prop(
+                d,
+                widened_numerator,
+                scaled_numerator,
+                numerator_eq,
+                grown,
+                &|d, t| {
+                    let moved = d.const_app(p.nat_div_succ, &[t, index]);
+                    rle(d, p, base, moved)
+                },
+            );
+
+            let zero_nat = d.num(0);
+            let unit_scale = d.const_app(p.nat_div_succ, &[k, zero_nat]);
+            let deep = d.const_app(p.nat_div_succ, &[factor, index]);
+            let factored = rmul(d, unit_scale, deep);
+            let fused = d.const_app(p.nat_div_succ, &[scaled_numerator, index]);
+            let fuse = d.lemma(p.nat_div_succ_mul, &[k, factor, index]);
+            let split = rsymm(d, factored, fused, fuse);
+            let at_factored = rat_eq_rewrite(d, fused, factored, split, at_scaled, &|d, t| {
+                rle(d, p, base, t)
+            });
+
+            let one_nat = d.num(1);
+            let shallow = d.const_app(p.nat_div_succ, &[one_nat, n]);
+            let scale = d.lemma(p.nat_div_succ_scale, &[c, n]);
+            let rescaled = rcongr(d, deep, shallow, scale, &|d, t| rmul(d, unit_scale, t));
+            let inner = rmul(d, unit_scale, shallow);
+            let final_fuse = d.lemma(p.nat_div_succ_mul, &[k, one_nat, n]);
+            let final_numerator = NatOps::mul(d, k, one_nat);
+            let almost = d.const_app(p.nat_div_succ, &[final_numerator, n]);
+            let trim = d.lemma(nat.mul_one, &[k]);
+            let tidy = nat_eq_to_rat(d, final_numerator, k, trim, &|d, t| {
+                d.const_app(p.nat_div_succ, &[t, n])
+            });
+            let (_, chain) = rchain(
+                d,
+                factored,
+                &[(inner, rescaled), (almost, final_fuse), (target, tidy)],
+            );
+            let proof = rat_eq_rewrite(d, factored, target, chain, at_factored, &|d, t| {
+                rle(d, p, base, t)
+            });
+            (stmt, proof)
+        },
+    )?;
 
     // natDivSucc_le_one : 1/(j+1) ≤ 1/1.
     //

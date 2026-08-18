@@ -1,46 +1,56 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
-> **STATUS 2026-08-18 (latest) — `mul` landed, and it is 19 of 22. The costing
-> that made `mul` the keystone blocker was wrong in the direction that
-> mattered.** That costing — repeated in this document and in two agent briefs —
-> said the blocker was a canonical bound on a representative, "which Mathlib
-> takes from `CauSeq`'s *existential* modulus and a fixed modulus does not
-> supply." Measured: with a **fixed** modulus, regularity at `n = 0` bounds every
-> sample by `|x_0| + 2` outright. There is nothing to extract, and
+> **STATUS 2026-08-18 (latest) — ADR-0468 phase R2 is COMPLETE: all 22
+> ordered-commutative-ring laws hold over the constructed ℝ, at trusted surface
+> 0. The costing that made `mul` the keystone blocker was wrong in the direction
+> that mattered.** That costing — repeated in this document and in two agent
+> briefs — said the blocker was a canonical bound on a representative, "which
+> Mathlib takes from `CauSeq`'s *existential* modulus and a fixed modulus does
+> not supply." Measured: with a **fixed** modulus, regularity at `n = 0` bounds
+> every sample by `|x_0| + 2` outright. There is nothing to extract, and
 > `CReal.bound x := natAbs (num (seq x 0)) + 1` is a projection. What a fixed
 > modulus genuinely lacks is the ℕ-valued `K`, and the bridge is two `Int` facts
 > about `Int.natAbs` that *compute* — `Int.le` is a four-case definition, so
 > `Int.le (negSucc m) (ofNat (succ m))` reduces to `True`.
 >
 > `CReal.mul` samples at `(c+1)·n + c` with `c := bound x + bound y + 1`, written
-> as a successor so `c + 1` **is** `Kx + Ky` and ℕ-subtraction never appears. The
-> estimate closes **exactly**: the four terms
-> `Kx/(A+1) + Kx/(B+1) + Ky/(A+1) + Ky/(B+1)` fuse in the numerator to the
-> regularity bound, with no weakening step, because `natDivSucc_scale` reads
-> `(c+1)/((c+1)·n + c + 1)` as `1/(n+1)`. **`Rat.natDivSucc` antitone in its
-> index — the ~250-line lemma dodged three times now — is still not built and
-> still not needed.**
+> as a successor so `c + 1` **is** `Kx + Ky` and ℕ-subtraction never appears. Its
+> own regularity estimate closes **exactly**, with no weakening step, because
+> `natDivSucc_scale` reads `(c+1)/((c+1)·n + c + 1)` as `1/(n+1)`. **`Rat.natDivSucc`
+> antitone in its index — the ~250-line lemma now dodged four times — is still
+> not built and still not needed.**
 >
-> Five of the eight land: `mul_comm`, `mul_one`, `mul_zero` in `Equiv` form,
-> `mul_nonneg` and `sq_nonneg` verbatim. **53 declarations, trusted surface still
-> 0**, every footprint empty:
-> `cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness`. Two new
-> vacuity guards, because `mul_zero`, `mul_comm` and `sq_nonneg` all hold —
-> footprint-free — of `fun _ _ => zero`: `CReal.ofRat_mul` pins the *operation*
-> on the whole embedded ℚ, and `CReal.not_equiv_mul_one_one_zero` refuses the
-> constant-zero product by computation. Verified load-bearing by deletion, and by
-> a negative control the kernel refuses.
+> The other four laws (`mul_assoc`, `left_distrib`, `mul_le_mul_of_nonneg_left`)
+> and `mul_congr` were **one** problem, not four: each compares two products
+> whose *sampling indices differ*, so the exact estimate is unavailable and the
+> naive bound is `C/(n+1)` for a `C > 2`. Two pieces make that enough.
+> `CReal.Equiv.of_bounded` — **`Equiv` only needs the difference to be `O(1/n)`;
+> the constant is free** — is `Equiv.trans`'s argument with one term deleted,
+> closing on `Rat.le_of_le_add_natDivSucc`, whose numerator is a `Nat`
+> *parameter*, so a symbolic constant built from the factors' bounds is as
+> acceptable as a literal. And `Rat.nat_index_compose` says Bishop's sampling
+> indices are **closed under composition**, with the additive shift `2n+1` as
+> the `c = 1` case, so every nested index reads back at `n` through one lemma.
+> `mul_le_mul_of_nonneg_left` then needed no estimate at all: it is
+> `left_distrib` + `mul_nonneg` + `mul_congr`.
 >
-> **Three of the 22 remain, and they are one problem, not three.** `mul_assoc`,
-> `left_distrib` and `mul_le_mul_of_nonneg_left` each compare two products whose
-> *sampling indices differ* — `mul x (add y z)` and `add (mul x y) (mul x z)`
-> agree at no index and their shifts are not even equal as naturals. So does
-> `mul_congr`, the fifth congruence obligation and an R4 prerequisite. All four
-> go through the arbitrary-third-index argument `Equiv.trans` already runs on,
-> closing on `Rat.le_of_le_add_natDivSucc` with a **symbolic** `k` (its `k` is a
-> `Nat` parameter, so that is allowed). `mul_le_mul_of_nonneg_left` is
-> *downstream* of `left_distrib`, not a fourth estimate — do `left_distrib`
-> first.
+> **58 declarations, trusted surface 0**, every footprint empty:
+> `cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness`. The count
+> is read out of the kernel, not asserted here — `CRealPrelude::ordered_ring_laws`
+> must name 22 *distinct* footprint-empty theorems matching `RatPrelude::ring_laws`
+> position by position, and the example's exit status depends on it (verified by
+> deleting `mul_assoc`). Two further vacuity guards for the product, because
+> `mul_zero`, `mul_comm` and `sq_nonneg` all hold footprint-free of
+> `fun _ _ => zero`: `CReal.ofRat_mul` pins the *operation* on the whole embedded
+> ℚ, and `CReal.not_equiv_mul_one_one_zero` refuses the constant-zero product by
+> computation.
+>
+> **What this does not do is move `real: 30`.** Nine of the 22 mention `Eq` in
+> the `Real` package and are stated over `CReal.Equiv` here, because `Eq CReal`
+> is not the equality of real numbers. Making that substitution good is phase
+> R4 — instantiating R3's generalized telescope at this carrier — and only after
+> R4 do the 30 retire *by deletion*. The remaining ℝ work (completeness, `inv`,
+> `√`) is separate ADRs and none of it is one of the 22.
 
 > **STATUS 2026-08-18 (later) — R3 landed, and the distance to `real: 0` is
 > longer than ADR-0468's end-state paragraph reads.** That paragraph says the 30

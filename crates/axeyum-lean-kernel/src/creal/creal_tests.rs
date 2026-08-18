@@ -3,10 +3,26 @@
 use super::{CRealPrelude, build_creal_prelude};
 use crate::{Declaration, Kernel};
 
+/// A built `CReal` kernel, as a **clone of one template**.
+///
+/// The full development is now 58 declarations over the constructed ℚ and takes
+/// tens of seconds to type-check; seventeen tests each building it from scratch
+/// dominated this crate's test time. The argument for cloning is
+/// [`prelude_cache`](crate::prelude_cache)'s, verbatim: prelude construction is
+/// a deterministic function of the empty kernel, so the template equals what a
+/// fresh build would produce, and every declaration in it entered through
+/// `Kernel::add_declaration` under the full type checker exactly once.
+/// `creal_prelude_builds` deliberately does **not** use this — it is the test
+/// that exercises the real build.
 fn built() -> (Kernel, CRealPrelude) {
-    let mut kernel = Kernel::new();
-    let prelude = build_creal_prelude(&mut kernel).expect("CReal prelude must build");
-    (kernel, prelude)
+    use std::sync::OnceLock;
+    static TEMPLATE: OnceLock<(Kernel, CRealPrelude)> = OnceLock::new();
+    let (kernel, prelude) = TEMPLATE.get_or_init(|| {
+        let mut kernel = Kernel::new();
+        let prelude = build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        (kernel, prelude)
+    });
+    (kernel.clone(), *prelude)
 }
 
 /// The build itself, with the kernel's rejection **rendered**. A `Debug` of
@@ -53,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 53] = [
+    let expected: [(&str, crate::NameId, &str); 58] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -113,6 +129,15 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.not_equiv_mul_one_one_zero",
             p.not_equiv_mul_one_one_zero,
+            "theorem",
+        ),
+        ("CReal.Equiv.of_bounded", p.equiv_of_bounded, "theorem"),
+        ("CReal.mul_congr", p.mul_congr, "theorem"),
+        ("CReal.left_distrib", p.left_distrib, "theorem"),
+        ("CReal.mul_assoc", p.mul_assoc, "theorem"),
+        (
+            "CReal.mul_le_mul_of_nonneg_left",
+            p.mul_le_mul_of_nonneg_left,
             "theorem",
         ),
     ];
@@ -318,6 +343,32 @@ fn the_setoid_laws_have_the_statements_adr_0468_specifies() {
     assert_eq!(
         rendered(&mut kernel, p.sq_nonneg),
         "((x0 : CReal) -> CReal.le CReal.zero (CReal.mul x0 x0))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.mul_assoc),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> \
+         CReal.Equiv (CReal.mul (CReal.mul x0 x1) x2) \
+         (CReal.mul x0 (CReal.mul x1 x2)))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.left_distrib),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> \
+         CReal.Equiv (CReal.mul x0 (CReal.add x1 x2)) \
+         (CReal.add (CReal.mul x0 x1) (CReal.mul x0 x2)))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.mul_le_mul_of_nonneg_left),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> \
+         ((x3 : CReal.le CReal.zero x0) -> ((x4 : CReal.le x1 x2) -> \
+         CReal.le (CReal.mul x0 x1) (CReal.mul x0 x2))))))"
+    );
+    // The fifth congruence obligation — not one of the 22, and the R4
+    // prerequisite ADR-0468 calls the setoid's real tax.
+    assert_eq!(
+        rendered(&mut kernel, p.mul_congr),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
+         ((x4 : CReal.Equiv x0 x1) -> ((x5 : CReal.Equiv x2 x3) -> \
+         CReal.Equiv (CReal.mul x0 x2) (CReal.mul x1 x3)))))))"
     );
     // The two witnesses that stop the five above being satisfiable by a
     // degenerate product. `ofRat_mul` pins the OPERATION on the embedded `ℚ`;
@@ -759,5 +810,83 @@ fn the_order_discrimination_route_can_fail() {
         refused.is_err(),
         "the kernel accepted `Not (CReal.le CReal.zero CReal.one)`, which is false — \
          the order discrimination witness proves nothing"
+    );
+}
+
+/// **The headline count, read out of the kernel.**
+///
+/// `CRealPrelude::ordered_ring_laws` is the 22 in the `Real` package's own
+/// declaration order — the same order `RatPrelude::ring_laws` uses — and every
+/// entry must be a checked `Theorem` with an empty axiom footprint. A dropped,
+/// duplicated or demoted law fails here rather than shrinking a sentence in a
+/// document nobody re-derives.
+#[test]
+fn all_twenty_two_ordered_ring_laws_are_checked_theorems_over_creal() {
+    let (kernel, p) = built();
+    let laws = p.ordered_ring_laws();
+    assert_eq!(laws.len(), 22);
+    let mut names: Vec<String> = laws
+        .into_iter()
+        .map(|law| kernel.display_name(law).to_string())
+        .collect();
+    names.sort();
+    names.dedup();
+    assert_eq!(
+        names.len(),
+        22,
+        "the ordered-ring law list must have 22 DISTINCT entries; a repeated \
+         name would inflate the count without proving anything"
+    );
+    for (index, law) in p.ordered_ring_laws().into_iter().enumerate() {
+        let rendered = kernel.display_name(law).to_string();
+        let declaration = kernel
+            .environment()
+            .get(law)
+            .unwrap_or_else(|| panic!("ring law #{index} ({rendered}) is not declared at all"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "ring law #{index} ({rendered}) must be a checked Theorem"
+        );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(law)
+            .into_iter()
+            .map(|name| kernel.display_name(name).to_string())
+            .collect();
+        assert!(
+            footprint.is_empty(),
+            "ring law #{index} ({rendered}) rests on {footprint:?}"
+        );
+    }
+}
+
+/// The `CReal` and `Rat` law lists are the **same 22 laws in the same order**,
+/// name for name under their own namespaces.
+///
+/// Without this the two lists could drift — `CReal` could quietly omit
+/// `mul_assoc` and add a second `mul_comm` — and both would still be "22
+/// checked theorems". `build_rat_model_of_arith` pairs `RatPrelude::ring_laws`
+/// positionally with the `Real` package, so this is what says `CReal`'s list is
+/// the same interface and not merely the same length.
+#[test]
+fn the_creal_law_list_matches_the_rat_law_list_position_by_position() {
+    let (kernel, p) = built();
+    let real: Vec<String> = p
+        .ordered_ring_laws()
+        .into_iter()
+        .map(|law| kernel.display_name(law).to_string())
+        .collect();
+    let rational: Vec<String> = p
+        .rat
+        .ring_laws()
+        .into_iter()
+        .map(|law| kernel.display_name(law).to_string())
+        .collect();
+    let strip = |full: &str| -> String { full.split('.').skip(1).collect::<Vec<_>>().join(".") };
+    let real_tails: Vec<String> = real.iter().map(|name| strip(name)).collect();
+    let rational_tails: Vec<String> = rational.iter().map(|name| strip(name)).collect();
+    assert_eq!(
+        real_tails, rational_tails,
+        "CReal's ordered-ring law list must be the SAME 22 laws in the SAME \
+         order as Rat's, or the two are not the same interface"
     );
 }

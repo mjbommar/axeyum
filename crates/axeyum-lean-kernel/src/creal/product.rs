@@ -91,7 +91,8 @@ use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::group::{rsub, rsum, rsum_append, rsum_perm};
 use crate::rat_prelude::ops::{
-    num, radd, rat_eq_rewrite, rchain, rcongr, rle, rmul, rneg, rone, rrefl, rsymm, rtrans, rzero,
+    nat_eq_to_rat, nat_rewrite_prop, num, radd, rat_eq_rewrite, rchain, rcongr, rle, rmul, rneg,
+    rone, rrefl, rsymm, rtrans, rzero,
 };
 
 use super::{
@@ -109,10 +110,15 @@ pub(super) fn declare_product(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     declare_bound(d, p)?;
     declare_bound_within(d, p)?;
     declare_mul(d, p)?;
+    declare_equiv_of_bounded(d, p)?;
+    declare_mul_congr(d, p)?;
+    declare_left_distrib(d, p)?;
+    declare_mul_assoc(d, p)?;
     declare_of_rat_mul(d, p)?;
     declare_pointwise_laws(d, p)?;
     declare_mul_one(d, p)?;
     declare_nonneg_laws(d, p)?;
+    declare_mul_le_mul(d, p)?;
     declare_discrimination(d, p)
 }
 
@@ -159,75 +165,292 @@ fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.mul, &[x, y])
 }
 
-/// From `h : Eq Nat a b`, derive `Eq Rat (f a) (f b)`.
+/// `CReal.add x y`.
+fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.add, &[x, y])
+}
+
+/// `Rat.le (natDivSucc k ((c+1)·n + c)) (natDivSucc k n)` — a bound read at a
+/// product index, brought back to `n`.
+fn index_le(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, c: ExprId, n: ExprId) -> ExprId {
+    d.lemma(p.rat.nat_div_succ_le_scaled, &[k, c, n])
+}
+
+/// The same at a **composed** index `(a+1)·((b+1)·n + b) + a`.
 ///
-/// The `ℕ → ℚ` companion of
-/// [`IntDev::nat_eq_to_int`](crate::int_prelude::ops::IntDev). Every index
-/// identity in this module — `bound x + bound y = bound y + bound x`,
-/// `Kx + Ky = c + 1` — is a `ℕ` equation whose consequence is a `ℚ` one.
-fn nat_eq_to_rat(
+/// `Rat.nat_index_compose` says that shape *is* a product index in `n`, so this
+/// is one rewrite followed by [`index_le`]. Bishop's additive shift `2n+1` is
+/// the `a = 1` case, which is why `CReal.add` nested inside `CReal.mul` needs
+/// no arithmetic of its own.
+fn composed_index_le(
     d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k: ExprId,
     a: ExprId,
     b: ExprId,
-    h: ExprId,
-    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+    n: ExprId,
 ) -> ExprId {
-    let fa = f(d, a);
-    let motive = NatOps::eq_motive(d, a, &|d, x| {
-        let fx = f(d, x);
-        crate::rat_prelude::ops::req(d, fa, fx)
-    });
-    let refl_case = rrefl(d, fa);
-    NatOps::transport(d, a, motive, refl_case, b, h)
+    let rat = p.rat;
+    let inner = mul_index(d, b, n);
+    let outer = mul_index(d, a, inner);
+    let composed = {
+        let factor = d.succ(a);
+        let scaled = NatOps::mul(d, factor, b);
+        NatOps::add(d, scaled, a)
+    };
+    let flattened = mul_index(d, composed, n);
+    let base = index_le(d, p, k, composed, n);
+    let forward = d.lemma(rat.nat_index_compose, &[a, b, n]);
+    let back = NatOps::symm(d, outer, flattened, forward);
+    let shallow = div_succ_at(d, p, k, n);
+    nat_rewrite_prop(d, flattened, outer, back, base, &|d, t| {
+        let deep = div_succ_at(d, p, k, t);
+        rle(d, rat, deep, shallow)
+    })
 }
 
-/// From `h : Eq Nat a b` and a proof of `motive a`, derive `motive b`.
-fn nat_rewrite_prop(
-    d: &mut IntDev<'_>,
-    a: ExprId,
-    b: ExprId,
-    h: ExprId,
-    proof: ExprId,
-    motive: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
-) -> ExprId {
-    let built = NatOps::eq_motive(d, a, motive);
-    NatOps::transport(d, a, built, proof, b, h)
-}
-
-/// `Eq Nat (1 + j) (succ j)` — `Nat.add j 1` **is** `succ j`, so one
-/// `Nat.add_comm` is the whole proof.
-fn one_add_eq_succ(d: &mut IntDev<'_>, p: CRealPrelude, j: ExprId) -> ExprId {
-    let nat = p.rat.int.nat;
-    let one_nat = d.num(1);
-    d.lemma(nat.add_comm, &[one_nat, j])
-}
-
-/// `Rat.le (natDivSucc 1 ((c+1)·n + c)) (natDivSucc 1 n)` — the deeper sample's
-/// modulus is at most the shallower one's.
+/// `Within r (natDivSucc a n)` and `Within s (natDivSucc b n)` give
+/// `Within (r + s) (natDivSucc (a + b) n)`.
 ///
-/// **Not** antitonicity of `natDivSucc`: the numerator is widened `1 ↦ 1 + c`
-/// at the *same* index, and then `natDivSucc_scale` reads
-/// `(c+1)/((c+1)·n + c + 1)` as `1/(n+1)`. One denominator throughout, for a
-/// shift `c` that varies with the two factors.
-fn index_modulus_le(d: &mut IntDev<'_>, p: CRealPrelude, c: ExprId, n: ExprId) -> ExprId {
+/// Every crude estimate below is a sum of terms already read back at `n`, so
+/// this is the only combining step any of them needs: `bounds_add` followed by
+/// `natDivSucc_add`, with the numerators doing the bookkeeping.
+fn fuse_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    left: ExprId,
+    left_numerator: ExprId,
+    right: ExprId,
+    right_numerator: ExprId,
+    n: ExprId,
+    left_proof: ExprId,
+    right_proof: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let left_bound = div_succ_at(d, p, left_numerator, n);
+    let right_bound = div_succ_at(d, p, right_numerator, n);
+    let (ll, lu) = halves(d, p, left, left_bound, left_proof);
+    let (rl, ru) = halves(d, p, right, right_bound, right_proof);
+    let combined = d.lemma(
+        rat.bounds_add,
+        &[left, left_bound, right, right_bound, ll, lu, rl, ru],
+    );
+    let summed = radd(d, left_bound, right_bound);
+    let total = NatOps::add(d, left_numerator, right_numerator);
+    let target = div_succ_at(d, p, total, n);
+    let fuse = d.lemma(rat.nat_div_succ_add, &[left_numerator, right_numerator, n]);
+    let quantity = radd(d, left, right);
+    rat_eq_rewrite(d, summed, target, fuse, combined, &|d, t| {
+        within(d, p, quantity, t)
+    })
+}
+
+/// `Within (seq u i − seq u j) (natDivSucc 2 n)`, given for each of `i` and `j`
+/// a proof that its modulus is at most `1/(n+1)`.
+///
+/// **This is where the crude estimates get their slack.** The exact bookkeeping
+/// `CReal.mul`'s own regularity achieves is not available across two different
+/// shifts, and it does not have to be:
+/// [`declare_equiv_of_bounded`] accepts any constant.
+fn regular_between(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    high: ExprId,
+    low: ExprId,
+    high_le: ExprId,
+    low_le: ExprId,
+    n: ExprId,
+) -> ExprId {
     let rat = p.rat;
     let one_nat = d.num(1);
-    let index = mul_index(d, c, n);
-    let base = div_succ(d, p, 1, index);
-    let widened_numerator = NatOps::add(d, one_nat, c);
-    let grown = d.lemma(rat.nat_div_succ_le_add_left, &[one_nat, c, index]);
-    let successor = d.succ(c);
-    let commute = one_add_eq_succ(d, p, c);
-    let at_successor =
-        nat_rewrite_prop(d, widened_numerator, successor, commute, grown, &|d, t| {
-            let moved = div_succ_at(d, p, t, index);
-            rle(d, rat, base, moved)
-        });
-    let scaled = div_succ_at(d, p, successor, index);
-    let scale = d.lemma(rat.nat_div_succ_scale, &[c, n]);
-    let target = div_succ(d, p, 1, n);
-    rat_eq_rewrite(d, scaled, target, scale, at_successor, &|d, t| {
-        rle(d, rat, base, t)
+    let quantity = {
+        let a = sample(d, p, u, high);
+        let b = sample(d, p, u, low);
+        rsub(d, rat, a, b)
+    };
+    let spread = modulus(d, p, high, low);
+    let witness = d.lemma(p.regular, &[u, high, low]);
+    let high_atom = div_succ(d, p, 1, high);
+    let low_atom = div_succ(d, p, 1, low);
+    let shallow = div_succ(d, p, 1, n);
+    let grown = d.lemma(
+        rat.add_le_add,
+        &[high_atom, shallow, low_atom, shallow, high_le, low_le],
+    );
+    let doubled = radd(d, shallow, shallow);
+    let target = div_succ(d, p, 2, n);
+    let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, n]);
+    let order = rat_eq_rewrite(d, doubled, target, fuse, grown, &|d, t| {
+        rle(d, rat, spread, t)
+    });
+    weaken(d, p, quantity, spread, target, witness, order)
+}
+
+/// `Within (seq u j − seq v j) (natDivSucc 2 n)` from `Equiv u v`, given
+/// `2/(j+1) ≤ 2/(n+1)`.
+fn equiv_between(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    index: ExprId,
+    index_order: ExprId,
+    n: ExprId,
+    hypothesis: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let quantity = {
+        let a = sample(d, p, u, index);
+        let b = sample(d, p, v, index);
+        rsub(d, rat, a, b)
+    };
+    let deep = div_succ(d, p, 2, index);
+    let target = div_succ(d, p, 2, n);
+    let instance = d.apply(hypothesis, &[index]);
+    weaken(d, p, quantity, deep, target, instance, index_order)
+}
+
+/// `Within (seq u i − seq v j) (natDivSucc (2+2) n)` from `Equiv u v`.
+///
+/// The telescope `u_i − v_j = (u_i − u_j) + (u_j − v_j)` — regularity of `u`
+/// across the two indices, then the hypothesis at the second one.
+fn cross_gap(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    high: ExprId,
+    low: ExprId,
+    high_le: ExprId,
+    low_le: ExprId,
+    low_order: ExprId,
+    n: ExprId,
+    hypothesis: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let two_nat = d.num(2);
+    let a = sample(d, p, u, high);
+    let b = sample(d, p, u, low);
+    let c = sample(d, p, v, low);
+    let first = rsub(d, rat, a, b);
+    let second = rsub(d, rat, b, c);
+    let head = regular_between(d, p, u, high, low, high_le, low_le, n);
+    let tail = equiv_between(d, p, u, v, low, low_order, n, hypothesis);
+    let fused = fuse_at(d, p, first, two_nat, second, two_nat, n, head, tail);
+    let summed = radd(d, first, second);
+    let target_quantity = rsub(d, rat, a, c);
+    let telescope = d.lemma(rat.sub_add_sub, &[a, b, c]);
+    let total = NatOps::add(d, two_nat, two_nat);
+    let bound = div_succ_at(d, p, total, n);
+    rat_eq_rewrite(d, summed, target_quantity, telescope, fused, &|d, t| {
+        within(d, p, t, bound)
+    })
+}
+
+/// `Within (a·b − c·e) (natDivSucc (ka·g₁ + ke·g₂) n)`.
+///
+/// **The shape every remaining product law reduces to.** `Rat.mul_sub_mul`
+/// splits the difference as `a·(b − e) + (a − c)·e`, and each summand pairs a
+/// factor bounded by a *canonical magnitude* (`ka`, `ke`) with a factor bounded
+/// by a *gap* already read back at `n` (`g₁`, `g₂`). The two gap numerators are
+/// separate because `mul_assoc` needs them to be — its outer application has a
+/// plain regularity gap on one side and a whole nested product estimate on the
+/// other.
+#[allow(clippy::too_many_arguments)]
+fn product_gap(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    e: ExprId,
+    ka: ExprId,
+    ke: ExprId,
+    g1: ExprId,
+    g2: ExprId,
+    n: ExprId,
+    a_bound: ExprId,
+    e_bound: ExprId,
+    gap_be: ExprId,
+    gap_ac: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let zero_nat = d.num(0);
+    let ba = div_succ_at(d, p, ka, zero_nat);
+    let be = div_succ_at(d, p, ke, zero_nat);
+    let gap_first = div_succ_at(d, p, g1, n);
+    let gap_second = div_succ_at(d, p, g2, n);
+    let first_quantity = rsub(d, rat, b, e);
+    let second_quantity = rsub(d, rat, a, c);
+
+    let ba_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[ka, zero_nat]);
+    let gap_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[g2, n]);
+    let (al, au) = halves(d, p, a, ba, a_bound);
+    let (el, eu) = halves(d, p, e, be, e_bound);
+    let (bl, bu) = halves(d, p, first_quantity, gap_first, gap_be);
+    let (cl, cu) = halves(d, p, second_quantity, gap_second, gap_ac);
+
+    let head = d.lemma(
+        rat.bounds_mul,
+        &[a, ba, first_quantity, gap_first, ba_nonneg, al, au, bl, bu],
+    );
+    let tail = d.lemma(
+        rat.bounds_mul,
+        &[
+            second_quantity,
+            gap_second,
+            e,
+            be,
+            gap_nonneg,
+            cl,
+            cu,
+            el,
+            eu,
+        ],
+    );
+    let head_term = rmul(d, a, first_quantity);
+    let tail_term = rmul(d, second_quantity, e);
+    let head_bound = rmul(d, ba, gap_first);
+    let tail_bound = rmul(d, gap_second, be);
+    let head_numerator = NatOps::mul(d, ka, g1);
+    let tail_numerator = NatOps::mul(d, ke, g2);
+    let head_target = div_succ_at(d, p, head_numerator, n);
+    let tail_target = div_succ_at(d, p, tail_numerator, n);
+    let head_fuse = d.lemma(rat.nat_div_succ_mul, &[ka, g1, n]);
+    let head_at = rat_eq_rewrite(d, head_bound, head_target, head_fuse, head, &|d, t| {
+        within(d, p, head_term, t)
+    });
+    let tail_at = {
+        let swap = d.lemma(rat.mul_comm, &[gap_second, be]);
+        let swapped = rmul(d, be, gap_second);
+        let fuse = d.lemma(rat.nat_div_succ_mul, &[ke, g2, n]);
+        let (_, chain) = rchain(d, tail_bound, &[(swapped, swap), (tail_target, fuse)]);
+        rat_eq_rewrite(d, tail_bound, tail_target, chain, tail, &|d, t| {
+            within(d, p, tail_term, t)
+        })
+    };
+    let fused = fuse_at(
+        d,
+        p,
+        head_term,
+        head_numerator,
+        tail_term,
+        tail_numerator,
+        n,
+        head_at,
+        tail_at,
+    );
+    let summed = radd(d, head_term, tail_term);
+    let left_product = rmul(d, a, b);
+    let right_product = rmul(d, c, e);
+    let goal_quantity = rsub(d, rat, left_product, right_product);
+    let split = d.lemma(rat.mul_sub_mul, &[a, b, c, e]);
+    let back = rsymm(d, goal_quantity, summed, split);
+    let total_numerator = NatOps::add(d, head_numerator, tail_numerator);
+    let total_bound = div_succ_at(d, p, total_numerator, n);
+    rat_eq_rewrite(d, summed, goal_quantity, back, fused, &|d, t| {
+        within(d, p, t, total_bound)
     })
 }
 
@@ -744,6 +967,905 @@ fn declare_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     })
 }
 
+// --- the closing lemma -------------------------------------------------------
+
+/// `equiv_of_bounded : ∀ x y (K : Nat), (∀ n, Within (x_n − y_n) (K/(n+1))) →
+/// Equiv x y`.
+///
+/// **`Equiv` only needs the difference to be `O(1/n)` — the constant is free.**
+/// This is what makes the product laws whose two sides sample at *different*
+/// indices provable at all: the exact `2/(n+1)` bookkeeping `CReal.mul`'s own
+/// regularity achieves is not available across two different shifts, and it
+/// does not have to be.
+///
+/// It is `Equiv.trans`'s argument with one term deleted. Compare at an
+/// arbitrary third index `j`:
+///
+/// ```text
+/// |x_n − y_n| ≤ |x_n − x_j| + |x_j − y_j| + |y_j − y_n|
+///             ≤ (1/(n+1) + 1/(j+1)) + K/(j+1) + (1/(j+1) + 1/(n+1))
+///              = 2/(n+1) + (K+2)/(j+1)
+/// ```
+///
+/// and the `(K+2)/(j+1)` is discharged by the **Archimedean property of ℚ**,
+/// whose numerator is a `Nat` *parameter* — so a symbolic constant built out of
+/// the two factors' `CReal.bound`s is as acceptable as a literal. That is the
+/// whole reason the crude estimates below are allowed to be crude.
+fn declare_equiv_of_bounded(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let hypothesis = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let a = sample(d, p, x, n);
+        let b = sample(d, p, y, n);
+        let difference = rsub(d, rat, a, b);
+        let bound = div_succ_at(d, p, k, n);
+        let claim = within(d, p, difference, bound);
+        d.pi_fv(n_fv, nat, claim)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let head = sample(d, p, x, n);
+    let tail = sample(d, p, y, n);
+    let target = rsub(d, rat, head, tail);
+    let goal_bound = div_succ(d, p, 2, n);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let inner_numerator = NatOps::add(d, one_nat, k);
+    let slack_numerator = NatOps::add(d, one_nat, inner_numerator);
+
+    // The estimate at an arbitrary index `j`, as a function of `j`.
+    let estimate = |d: &mut IntDev<'_>, j: ExprId| -> (ExprId, ExprId) {
+        let xj = sample(d, p, x, j);
+        let yj = sample(d, p, y, j);
+        let u1 = rsub(d, rat, head, xj);
+        let u2 = rsub(d, rat, xj, yj);
+        let u3 = rsub(d, rat, yj, tail);
+        let b1 = modulus(d, p, n, j);
+        let b2 = div_succ_at(d, p, k, j);
+        let b3 = modulus(d, p, j, n);
+
+        let w1 = d.lemma(p.regular, &[x, n, j]);
+        let w2 = d.apply(h, &[j]);
+        let w3 = d.lemma(p.regular, &[y, j, n]);
+        let (l1, r1) = halves(d, p, u1, b1, w1);
+        let (l2, r2) = halves(d, p, u2, b2, w2);
+        let (l3, r3) = halves(d, p, u3, b3, w3);
+
+        let w23 = d.lemma(rat.bounds_add, &[u2, b2, u3, b3, l2, r2, l3, r3]);
+        let q23 = radd(d, u2, u3);
+        let c23 = radd(d, b2, b3);
+        let (l23, r23) = halves(d, p, q23, c23, w23);
+        let w123 = d.lemma(rat.bounds_add, &[u1, b1, q23, c23, l1, r1, l23, r23]);
+        let q123 = radd(d, u1, q23);
+        let c123 = radd(d, b1, c23);
+
+        // The quantity telescopes: `(a − x_j) + ((x_j − y_j) + (y_j − b))`.
+        let mid = rsub(d, rat, xj, tail);
+        let inner_step = d.lemma(rat.sub_add_sub, &[xj, yj, tail]);
+        let outer_step = d.lemma(rat.sub_add_sub, &[head, xj, tail]);
+        let staged = radd(d, u1, mid);
+        let first = rcongr(d, q23, mid, inner_step, &|d, t| radd(d, u1, t));
+        let (_, quantity) = rchain(d, q123, &[(staged, first), (target, outer_step)]);
+
+        // The bound fuses: `(A+B) + (C + (B+A)) = 2/(n+1) + (K+2)/(j+1)`.
+        let a_atom = div_succ(d, p, 1, n);
+        let b_atom = div_succ(d, p, 1, j);
+        let c_atom = div_succ_at(d, p, k, j);
+        let flat_atoms = [a_atom, b_atom, c_atom, b_atom, a_atom];
+        let sorted_atoms = [a_atom, a_atom, b_atom, b_atom, c_atom];
+        let flatten = rsum_append(d, rat, &flat_atoms[..2], &flat_atoms[2..]);
+        let flat = rsum(d, rat, &flat_atoms);
+        let permute = rsum_perm(d, rat, &flat_atoms, &sorted_atoms);
+        let sorted = rsum(d, rat, &sorted_atoms);
+        let head_pair = radd(d, a_atom, a_atom);
+        let tail_triple = rsum(d, rat, &sorted_atoms[2..]);
+        let paired = {
+            let forward = rsum_append(d, rat, &sorted_atoms[..2], &sorted_atoms[2..]);
+            let target_term = radd(d, head_pair, tail_triple);
+            rsymm(d, target_term, sorted, forward)
+        };
+        let pair_target = radd(d, head_pair, tail_triple);
+        let fuse_head = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, n]);
+        let after_head = rcongr(d, head_pair, goal_bound, fuse_head, &|d, t| {
+            radd(d, t, tail_triple)
+        });
+        let staged_head = radd(d, goal_bound, tail_triple);
+        let inner_pair = radd(d, b_atom, c_atom);
+        let inner_fused = div_succ_at(d, p, inner_numerator, j);
+        let fuse_inner = d.lemma(rat.nat_div_succ_add, &[one_nat, k, j]);
+        let after_inner = rcongr(d, inner_pair, inner_fused, fuse_inner, &|d, t| {
+            let outer = radd(d, b_atom, t);
+            radd(d, goal_bound, outer)
+        });
+        let staged_inner = {
+            let outer = radd(d, b_atom, inner_fused);
+            radd(d, goal_bound, outer)
+        };
+        let outer_pair = radd(d, b_atom, inner_fused);
+        let slack = div_succ_at(d, p, slack_numerator, j);
+        let fuse_outer = d.lemma(rat.nat_div_succ_add, &[one_nat, inner_numerator, j]);
+        let after_outer = rcongr(d, outer_pair, slack, fuse_outer, &|d, t| {
+            radd(d, goal_bound, t)
+        });
+        let final_bound = radd(d, goal_bound, slack);
+        let (_, bound_chain) = rchain(
+            d,
+            c123,
+            &[
+                (flat, flatten),
+                (sorted, permute),
+                (pair_target, paired),
+                (staged_head, after_head),
+                (staged_inner, after_inner),
+                (final_bound, after_outer),
+            ],
+        );
+
+        let at_quantity = rat_eq_rewrite(d, q123, target, quantity, w123, &|d, t| {
+            within(d, p, t, c123)
+        });
+        let moved = rat_eq_rewrite(d, c123, final_bound, bound_chain, at_quantity, &|d, t| {
+            within(d, p, target, t)
+        });
+        (final_bound, moved)
+    };
+
+    // Upper half, then the same estimate negated for the lower half — exactly
+    // `Equiv.trans`'s shape, and for the same reason.
+    let upper_hypothesis = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let (bound, proof) = estimate(d, j);
+        let (_, upper) = halves(d, p, target, bound, proof);
+        d.lam_fv(j_fv, nat, upper)
+    };
+    let upper = d.lemma(
+        rat.le_of_le_add_nat_div_succ,
+        &[target, goal_bound, slack_numerator, upper_hypothesis],
+    );
+    let negated_target = rneg(d, target);
+    let lower_hypothesis = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let (bound, proof) = estimate(d, j);
+        let (low, high) = halves(d, p, target, bound, proof);
+        let flipped = d.lemma(rat.bounds_neg, &[target, bound, low, high]);
+        let negated_bound = rneg(d, bound);
+        let inner_lower = rle(d, rat, negated_bound, negated_target);
+        let inner_upper = rle(d, rat, negated_target, bound);
+        let body = d.and_right(inner_lower, inner_upper, flipped);
+        d.lam_fv(j_fv, nat, body)
+    };
+    let lower_raw = d.lemma(
+        rat.le_of_le_add_nat_div_succ,
+        &[
+            negated_target,
+            goal_bound,
+            slack_numerator,
+            lower_hypothesis,
+        ],
+    );
+    let lower_negated = d.lemma(rat.neg_le_neg, &[negated_target, goal_bound, lower_raw]);
+    let twice = rneg(d, negated_target);
+    let cancel = d.lemma(rat.neg_neg, &[target]);
+    let negated_goal = rneg(d, goal_bound);
+    let lower = rat_eq_rewrite(d, twice, target, cancel, lower_negated, &|d, t| {
+        rle(d, rat, negated_goal, t)
+    });
+    let lower_ty = rle(d, rat, negated_goal, target);
+    let upper_ty = rle(d, rat, target, goal_bound);
+    let pair = {
+        let intro = p.rat.int.logic.and_intro;
+        d.const_app(intro, &[lower_ty, upper_ty, lower, upper])
+    };
+    let _ = two_nat;
+
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, pair);
+        let with_h = d.lam_fv(h_fv, hypothesis, over_n);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_y = d.lam_fv(y_fv, carrier, with_k);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let conclusion = equiv(d, p, x, y);
+        let after_h = d.arrow(hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, after_h);
+        let with_y = d.pi_fv(y_fv, carrier, with_k);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.equiv_of_bounded,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `mul_congr : ∀ x x' y y', Equiv x x' → Equiv y y' →
+/// Equiv (mul x y) (mul x' y')`.
+///
+/// The **fifth congruence obligation**, and the one ADR-0468 calls the setoid's
+/// real tax. It is not one of the 22, and it is a prerequisite for phase R4.
+///
+/// It is the first law whose two sides sample at indices derived from
+/// *different* bounds: `mul x y` samples at `(c+1)·n + c` and `mul x' y'` at
+/// `(c'+1)·n + c'`, with no relation between `c` and `c'`. The exact estimate
+/// `CReal.mul`'s own regularity achieves is therefore unavailable, and the
+/// naive bound is `C/(n+1)` for a `C > 2` — which is exactly what
+/// [`declare_equiv_of_bounded`] is for. Split the difference with
+/// `Rat.mul_sub_mul`, bound one factor of each summand by its canonical
+/// magnitude and the other by regularity-plus-hypothesis read back at `n`, and
+/// the constant comes out as `Kx·4 + Ky'·4`.
+fn declare_mul_congr(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let x2_fv = d.fresh_fvar();
+    let x2 = d.kernel().fvar(x2_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let y2_fv = d.fresh_fvar();
+    let y2 = d.kernel().fvar(y2_fv);
+    let first_ty = equiv(d, p, x, x2);
+    let second_ty = equiv(d, p, y, y2);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let left = cmul(d, p, x, y);
+    let right = cmul(d, p, x2, y2);
+    let two_nat = d.num(2);
+    let gap_numerator = NatOps::add(d, two_nat, two_nat);
+    let kx = magnitude_of(d, p, x);
+    let ky2 = magnitude_of(d, p, y2);
+    let head_numerator = NatOps::mul(d, kx, gap_numerator);
+    let tail_numerator = NatOps::mul(d, ky2, gap_numerator);
+    let total_numerator = NatOps::add(d, head_numerator, tail_numerator);
+
+    let at_index = {
+        let one_nat = d.num(1);
+        let shift = mul_shift(d, p, x, y);
+        let mirrored = mul_shift(d, p, x2, y2);
+        let high = mul_index(d, shift, n);
+        let low = mul_index(d, mirrored, n);
+        let high_le = index_le(d, p, one_nat, shift, n);
+        let low_le = index_le(d, p, one_nat, mirrored, n);
+        let low_order = index_le(d, p, two_nat, mirrored, n);
+        let a = sample(d, p, x, high);
+        let b = sample(d, p, y, high);
+        let a2 = sample(d, p, x2, low);
+        let b2 = sample(d, p, y2, low);
+        let _ = (a2, b2);
+
+        let x_gap_proof = cross_gap(d, p, x, x2, high, low, high_le, low_le, low_order, n, h1);
+        let high_le = index_le(d, p, one_nat, shift, n);
+        let low_le = index_le(d, p, one_nat, mirrored, n);
+        let low_order = index_le(d, p, two_nat, mirrored, n);
+        let y_gap_proof = cross_gap(d, p, y, y2, high, low, high_le, low_le, low_order, n, h2);
+        let bx_witness = d.lemma(p.bound_within, &[x, high]);
+        let by2_witness = d.lemma(p.bound_within, &[y2, low]);
+        let a2 = sample(d, p, x2, low);
+        let b2 = sample(d, p, y2, low);
+        product_gap(
+            d,
+            p,
+            a,
+            b,
+            a2,
+            b2,
+            kx,
+            ky2,
+            gap_numerator,
+            gap_numerator,
+            n,
+            bx_witness,
+            by2_witness,
+            y_gap_proof,
+            x_gap_proof,
+        )
+    };
+
+    let witness = d.lam_fv(n_fv, nat, at_index);
+    let body = d.lemma(p.equiv_of_bounded, &[left, right, total_numerator, witness]);
+    let value = {
+        let with_second = d.lam_fv(h2_fv, second_ty, body);
+        let with_first = d.lam_fv(h1_fv, first_ty, with_second);
+        let with_y2 = d.lam_fv(y2_fv, carrier, with_first);
+        let with_y = d.lam_fv(y_fv, carrier, with_y2);
+        let with_x2 = d.lam_fv(x2_fv, carrier, with_y);
+        d.lam_fv(x_fv, carrier, with_x2)
+    };
+    let ty = {
+        let conclusion = equiv(d, p, left, right);
+        let after_second = d.arrow(second_ty, conclusion);
+        let after_first = d.arrow(first_ty, after_second);
+        let with_y2 = d.pi_fv(y2_fv, carrier, after_first);
+        let with_y = d.pi_fv(y_fv, carrier, with_y2);
+        let with_x2 = d.pi_fv(x2_fv, carrier, with_y);
+        d.pi_fv(x_fv, carrier, with_x2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mul_congr,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `left_distrib : ∀ x y z, Equiv (mul x (add y z)) (add (mul x y) (mul x z))`
+/// — one of the 22, in `Equiv` form.
+///
+/// Every index in sight is different: the left side samples `x` at
+/// `(c₁+1)·n + c₁` and `y`, `z` one additive shift deeper still, while the right
+/// side samples `x` twice more, at two *further* product indices derived from
+/// `mulShift x y` and `mulShift x z`. Nothing agrees anywhere, and the shifts
+/// are not equal as naturals.
+///
+/// What makes it tractable is that all four indices are the **same shape**:
+/// `Rat.nat_index_compose` says a product index of a product index is a product
+/// index, and Bishop's additive shift `2n+1` *is* the `c = 1` case — so
+/// [`composed_index_le`] reads every one of them back at `n` and the whole
+/// estimate is `O(1/n)` with a symbolic constant, which is all
+/// [`declare_equiv_of_bounded`] asks for.
+fn declare_left_distrib(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let sum = cadd(d, p, y, z);
+    let left = cmul(d, p, x, sum);
+    let right = {
+        let first = cmul(d, p, x, y);
+        let second = cmul(d, p, x, z);
+        cadd(d, p, first, second)
+    };
+
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let kx = magnitude_of(d, p, x);
+    let ky = magnitude_of(d, p, y);
+    let kz = magnitude_of(d, p, z);
+    let head_numerator = {
+        let a = NatOps::mul(d, kx, two_nat);
+        let b = NatOps::mul(d, ky, two_nat);
+        NatOps::add(d, a, b)
+    };
+    let tail_numerator = {
+        let a = NatOps::mul(d, kx, two_nat);
+        let b = NatOps::mul(d, kz, two_nat);
+        NatOps::add(d, a, b)
+    };
+    let total_numerator = NatOps::add(d, head_numerator, tail_numerator);
+
+    let at_index = {
+        let outer = mul_shift(d, p, x, sum);
+        let left_shift = mul_shift(d, p, x, y);
+        let right_shift = mul_shift(d, p, x, z);
+        let deep = mul_index(d, outer, n);
+        let shifted = mul_index(d, one_nat, n);
+        let inner = mul_index(d, one_nat, deep);
+        let left_index = mul_index(d, left_shift, shifted);
+        let right_index = mul_index(d, right_shift, shifted);
+
+        let xa = sample(d, p, x, deep);
+        let yt = sample(d, p, y, inner);
+        let zt = sample(d, p, z, inner);
+        let xp = sample(d, p, x, left_index);
+        let yp = sample(d, p, y, left_index);
+        let xq = sample(d, p, x, right_index);
+        let zq = sample(d, p, z, right_index);
+
+        // The first summand, `x_A·y_T − x_P·y_P`.
+        let head = {
+            let gap_y = {
+                let inner_le = composed_index_le(d, p, one_nat, one_nat, outer, n);
+                let left_le = composed_index_le(d, p, one_nat, left_shift, one_nat, n);
+                regular_between(d, p, y, inner, left_index, inner_le, left_le, n)
+            };
+            let gap_x = {
+                let deep_le = index_le(d, p, one_nat, outer, n);
+                let left_le = composed_index_le(d, p, one_nat, left_shift, one_nat, n);
+                regular_between(d, p, x, deep, left_index, deep_le, left_le, n)
+            };
+            let x_bound = d.lemma(p.bound_within, &[x, deep]);
+            let y_bound = d.lemma(p.bound_within, &[y, left_index]);
+            product_gap(
+                d, p, xa, yt, xp, yp, kx, ky, two_nat, two_nat, n, x_bound, y_bound, gap_y, gap_x,
+            )
+        };
+        // The second summand, `x_A·z_T − x_Q·z_Q`.
+        let tail = {
+            let gap_z = {
+                let inner_le = composed_index_le(d, p, one_nat, one_nat, outer, n);
+                let right_le = composed_index_le(d, p, one_nat, right_shift, one_nat, n);
+                regular_between(d, p, z, inner, right_index, inner_le, right_le, n)
+            };
+            let gap_x = {
+                let deep_le = index_le(d, p, one_nat, outer, n);
+                let right_le = composed_index_le(d, p, one_nat, right_shift, one_nat, n);
+                regular_between(d, p, x, deep, right_index, deep_le, right_le, n)
+            };
+            let x_bound = d.lemma(p.bound_within, &[x, deep]);
+            let z_bound = d.lemma(p.bound_within, &[z, right_index]);
+            product_gap(
+                d, p, xa, zt, xq, zq, kx, kz, two_nat, two_nat, n, x_bound, z_bound, gap_z, gap_x,
+            )
+        };
+        let head_term = {
+            let a = rmul(d, xa, yt);
+            let b = rmul(d, xp, yp);
+            rsub(d, rat, a, b)
+        };
+        let tail_term = {
+            let a = rmul(d, xa, zt);
+            let b = rmul(d, xq, zq);
+            rsub(d, rat, a, b)
+        };
+        let fused = fuse_at(
+            d,
+            p,
+            head_term,
+            head_numerator,
+            tail_term,
+            tail_numerator,
+            n,
+            head,
+            tail,
+        );
+        let summed = radd(d, head_term, tail_term);
+
+        // The quantity: `(x_A·y_T + x_A·z_T) − (x_P·y_P + x_Q·z_Q)`, and the
+        // left half is `x_A·(y_T + z_T)` — the `ℚ` distributive law, once.
+        let first_product = rmul(d, xa, yt);
+        let second_product = rmul(d, xa, zt);
+        let third_product = rmul(d, xp, yp);
+        let fourth_product = rmul(d, xq, zq);
+        let opened_left = radd(d, first_product, second_product);
+        let right_sum = radd(d, third_product, fourth_product);
+        let split = d.lemma(
+            rat.sub_add_add,
+            &[first_product, second_product, third_product, fourth_product],
+        );
+        let opened_difference = rsub(d, rat, opened_left, right_sum);
+        let back = rsymm(d, opened_difference, summed, split);
+        let inner_sum = radd(d, yt, zt);
+        let folded = rmul(d, xa, inner_sum);
+        let distrib = d.lemma(rat.left_distrib, &[xa, yt, zt]);
+        let fold = rsymm(d, folded, opened_left, distrib);
+        let goal_quantity = rsub(d, rat, folded, right_sum);
+        let refold = rcongr(d, opened_left, folded, fold, &|d, t| {
+            rsub(d, rat, t, right_sum)
+        });
+        let (_, quantity) = rchain(
+            d,
+            summed,
+            &[(opened_difference, back), (goal_quantity, refold)],
+        );
+        let total_bound = div_succ_at(d, p, total_numerator, n);
+        rat_eq_rewrite(d, summed, goal_quantity, quantity, fused, &|d, t| {
+            within(d, p, t, total_bound)
+        })
+    };
+
+    let witness = d.lam_fv(n_fv, nat, at_index);
+    let body = d.lemma(p.equiv_of_bounded, &[left, right, total_numerator, witness]);
+    let value = {
+        let with_z = d.lam_fv(z_fv, carrier, body);
+        let with_y = d.lam_fv(y_fv, carrier, with_z);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let conclusion = equiv(d, p, left, right);
+        let with_z = d.pi_fv(z_fv, carrier, conclusion);
+        let with_y = d.pi_fv(y_fv, carrier, with_z);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.left_distrib,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Chain `Equiv start …` through `(next, step)` pairs, the way
+/// [`rchain`] chains `Eq`.
+fn equiv_chain(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    start: ExprId,
+    steps: &[(ExprId, ExprId)],
+) -> (ExprId, ExprId) {
+    let mut current = start;
+    let mut proof = d.lemma(p.equiv_refl, &[start]);
+    for &(next, step) in steps {
+        proof = d.lemma(p.equiv_trans, &[start, current, next, proof, step]);
+        current = next;
+    }
+    (current, proof)
+}
+
+/// `mul_assoc : ∀ x y z, Equiv (mul (mul x y) z) (mul x (mul y z))` — one of
+/// the 22, in `Equiv` form.
+///
+/// The last of the eight, and the one with a **nested** sampling index on each
+/// side: the left samples `x` and `y` at a product index *of* a product index,
+/// the right does the same to `y` and `z`. `Rat.nat_index_compose` is what
+/// makes that shape reducible at all.
+///
+/// It is also the only law that needs [`product_gap`] **twice**, at two levels:
+/// once on `x_P·y_P − x_B·y_Q`, and again on the outside with that whole
+/// estimate as one of its two gaps — which is why `product_gap` takes two
+/// separate gap numerators rather than one.
+fn declare_mul_assoc(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let inner_left = cmul(d, p, x, y);
+    let inner_right = cmul(d, p, y, z);
+    let left = cmul(d, p, inner_left, z);
+    let right = cmul(d, p, x, inner_right);
+
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let zero_nat = d.num(0);
+    let kx = magnitude_of(d, p, x);
+    let ky = magnitude_of(d, p, y);
+    let kz = magnitude_of(d, p, z);
+    let pair_numerator = NatOps::mul(d, kx, ky);
+    let inner_numerator = {
+        let a = NatOps::mul(d, kx, two_nat);
+        let b = NatOps::mul(d, ky, two_nat);
+        NatOps::add(d, a, b)
+    };
+    let total_numerator = {
+        let head = NatOps::mul(d, pair_numerator, two_nat);
+        let tail = NatOps::mul(d, kz, inner_numerator);
+        NatOps::add(d, head, tail)
+    };
+
+    let at_index = {
+        let outer_left = mul_shift(d, p, inner_left, z);
+        let deep_left = mul_shift(d, p, x, y);
+        let outer_right = mul_shift(d, p, x, inner_right);
+        let deep_right = mul_shift(d, p, y, z);
+        let shallow_left = mul_index(d, outer_left, n);
+        let pair_index = mul_index(d, deep_left, shallow_left);
+        let shallow_right = mul_index(d, outer_right, n);
+        let mirror_index = mul_index(d, deep_right, shallow_right);
+
+        let xp = sample(d, p, x, pair_index);
+        let yp = sample(d, p, y, pair_index);
+        let za = sample(d, p, z, shallow_left);
+        let xb = sample(d, p, x, shallow_right);
+        let yq = sample(d, p, y, mirror_index);
+        let zq = sample(d, p, z, mirror_index);
+
+        // `|x_P·y_P| ≤ Kx·Ky`, the canonical magnitude of a product.
+        let bx = bound_value(d, p, x);
+        let by = bound_value(d, p, y);
+        let pair_bound = {
+            let x_witness = d.lemma(p.bound_within, &[x, pair_index]);
+            let y_witness = d.lemma(p.bound_within, &[y, pair_index]);
+            let nonneg = d.lemma(rat.zero_le_nat_div_succ, &[kx, zero_nat]);
+            let (xl, xu) = halves(d, p, xp, bx, x_witness);
+            let (yl, yu) = halves(d, p, yp, by, y_witness);
+            let product = d.lemma(rat.bounds_mul, &[xp, bx, yp, by, nonneg, xl, xu, yl, yu]);
+            let raw = rmul(d, bx, by);
+            let target = div_succ_at(d, p, pair_numerator, zero_nat);
+            let fuse = d.lemma(rat.nat_div_succ_mul, &[kx, ky, zero_nat]);
+            let quantity = rmul(d, xp, yp);
+            rat_eq_rewrite(d, raw, target, fuse, product, &|d, t| {
+                within(d, p, quantity, t)
+            })
+        };
+
+        // The inner estimate, `x_P·y_P − x_B·y_Q`.
+        let inner_gap = {
+            let gap_y = {
+                let pair_le = composed_index_le(d, p, one_nat, deep_left, outer_left, n);
+                let mirror_le = composed_index_le(d, p, one_nat, deep_right, outer_right, n);
+                regular_between(d, p, y, pair_index, mirror_index, pair_le, mirror_le, n)
+            };
+            let gap_x = {
+                let pair_le = composed_index_le(d, p, one_nat, deep_left, outer_left, n);
+                let shallow_le = index_le(d, p, one_nat, outer_right, n);
+                regular_between(d, p, x, pair_index, shallow_right, pair_le, shallow_le, n)
+            };
+            let x_bound = d.lemma(p.bound_within, &[x, pair_index]);
+            let y_bound = d.lemma(p.bound_within, &[y, mirror_index]);
+            product_gap(
+                d, p, xp, yp, xb, yq, kx, ky, two_nat, two_nat, n, x_bound, y_bound, gap_y, gap_x,
+            )
+        };
+
+        // The outer estimate, with the inner one as its second gap.
+        let gap_z = {
+            let shallow_le = index_le(d, p, one_nat, outer_left, n);
+            let mirror_le = composed_index_le(d, p, one_nat, deep_right, outer_right, n);
+            regular_between(
+                d,
+                p,
+                z,
+                shallow_left,
+                mirror_index,
+                shallow_le,
+                mirror_le,
+                n,
+            )
+        };
+        let z_bound = d.lemma(p.bound_within, &[z, mirror_index]);
+        let pair_term = rmul(d, xp, yp);
+        let mirror_pair = rmul(d, xb, yq);
+        let estimate = product_gap(
+            d,
+            p,
+            pair_term,
+            za,
+            mirror_pair,
+            zq,
+            pair_numerator,
+            kz,
+            two_nat,
+            inner_numerator,
+            n,
+            pair_bound,
+            z_bound,
+            gap_z,
+            inner_gap,
+        );
+
+        // `(x_B·y_Q)·z_Q = x_B·(y_Q·z_Q)`, which is the right-hand sample.
+        let flat = rmul(d, mirror_pair, zq);
+        let nested = {
+            let tail = rmul(d, yq, zq);
+            rmul(d, xb, tail)
+        };
+        let regroup = d.lemma(rat.mul_assoc, &[xb, yq, zq]);
+        let head = rmul(d, pair_term, za);
+        let source = rsub(d, rat, head, flat);
+        let goal_quantity = rsub(d, rat, head, nested);
+        let moved = rcongr(d, flat, nested, regroup, &|d, t| rsub(d, rat, head, t));
+        let total_bound = div_succ_at(d, p, total_numerator, n);
+        rat_eq_rewrite(d, source, goal_quantity, moved, estimate, &|d, t| {
+            within(d, p, t, total_bound)
+        })
+    };
+
+    let witness = d.lam_fv(n_fv, nat, at_index);
+    let body = d.lemma(p.equiv_of_bounded, &[left, right, total_numerator, witness]);
+    let value = {
+        let with_z = d.lam_fv(z_fv, carrier, body);
+        let with_y = d.lam_fv(y_fv, carrier, with_z);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let conclusion = equiv(d, p, left, right);
+        let with_z = d.pi_fv(z_fv, carrier, conclusion);
+        let with_y = d.pi_fv(y_fv, carrier, with_z);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mul_assoc,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `mul_le_mul_of_nonneg_left : ∀ x y z, le zero x → le y z →
+/// le (mul x y) (mul x z)` — one of the 22, **verbatim**.
+///
+/// The only one of the eight that is not an estimate at all. Once
+/// [`declare_left_distrib`] and [`declare_mul_congr`] exist it is the textbook
+/// argument, and every step is an application of a law already proved:
+/// `z − y ≥ 0`, so `x·(z − y) ≥ 0` by `mul_nonneg`, and `x·z` is
+/// `Equiv`-equal to `x·y + x·(z − y)`, which is at least `x·y`. That is why the
+/// costing put it downstream of `left_distrib` rather than budgeting a fourth
+/// index estimate for it — and why doing `left_distrib` first was worth two of
+/// the three remaining laws.
+fn declare_mul_le_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let czero = d.kernel().const_(p.zero, vec![]);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let first_ty = d.const_app(p.le, &[czero, x]);
+    let second_ty = d.const_app(p.le, &[y, z]);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let negated = d.const_app(p.neg, &[y]);
+    let gap = cadd(d, p, z, negated);
+    let cancelled = cadd(d, p, y, negated);
+
+    // `0 ≤ z − y`.
+    let nonneg_gap = {
+        let reflexive = d.lemma(p.le_refl, &[negated]);
+        let shifted = d.lemma(p.add_le_add, &[y, z, negated, negated, h2, reflexive]);
+        let cancel = d.lemma(p.add_neg, &[y]);
+        let gap_refl = d.lemma(p.equiv_refl, &[gap]);
+        d.lemma(
+            p.le_congr,
+            &[cancelled, czero, gap, gap, cancel, gap_refl, shifted],
+        )
+    };
+    let scaled_gap = cmul(d, p, x, gap);
+    let nonneg_scaled = d.lemma(p.mul_nonneg, &[x, gap, h1, nonneg_gap]);
+
+    // `Equiv (y + (z − y)) z`.
+    let combined = cadd(d, p, y, gap);
+    let plain_sum = cadd(d, p, y, z);
+    let regrouped = cadd(d, p, plain_sum, negated);
+    let mirrored_sum = cadd(d, p, z, y);
+    let swapped = cadd(d, p, mirrored_sum, negated);
+    let nested = cadd(d, p, z, cancelled);
+    let padded = cadd(d, p, z, czero);
+    let restored = {
+        let assoc = d.lemma(p.add_assoc, &[y, z, negated]);
+        let opened = d.lemma(p.equiv_symm, &[regrouped, combined, assoc]);
+        let commute = d.lemma(p.add_comm, &[y, z]);
+        let negated_refl = d.lemma(p.equiv_refl, &[negated]);
+        let reordered = d.lemma(
+            p.add_congr,
+            &[
+                plain_sum,
+                mirrored_sum,
+                negated,
+                negated,
+                commute,
+                negated_refl,
+            ],
+        );
+        let regroup = d.lemma(p.add_assoc, &[z, y, negated]);
+        let z_refl = d.lemma(p.equiv_refl, &[z]);
+        let cancel = d.lemma(p.add_neg, &[y]);
+        let collapse = d.lemma(p.add_congr, &[z, z, cancelled, czero, z_refl, cancel]);
+        let trim = d.lemma(p.add_zero, &[z]);
+        let (_, proof) = equiv_chain(
+            d,
+            p,
+            combined,
+            &[
+                (regrouped, opened),
+                (swapped, reordered),
+                (nested, regroup),
+                (padded, collapse),
+                (z, trim),
+            ],
+        );
+        proof
+    };
+
+    // `Equiv (x·z) (x·y + x·(z − y))`.
+    let scaled_left = cmul(d, p, x, y);
+    let scaled_right = cmul(d, p, x, z);
+    let scaled_combined = cmul(d, p, x, combined);
+    let expanded = cadd(d, p, scaled_left, scaled_gap);
+    let opened = {
+        let distrib = d.lemma(p.left_distrib, &[x, y, gap]);
+        let x_refl = d.lemma(p.equiv_refl, &[x]);
+        let congr = d.lemma(p.mul_congr, &[x, x, combined, z, x_refl, restored]);
+        let back = d.lemma(p.equiv_symm, &[scaled_combined, scaled_right, congr]);
+        d.lemma(
+            p.equiv_trans,
+            &[scaled_right, scaled_combined, expanded, back, distrib],
+        )
+    };
+
+    // `x·y ≤ x·y + x·(z − y)`, then move the right-hand side back to `x·z`.
+    let body = {
+        let reflexive = d.lemma(p.le_refl, &[scaled_left]);
+        let grown = d.lemma(
+            p.add_le_add,
+            &[
+                scaled_left,
+                scaled_left,
+                czero,
+                scaled_gap,
+                reflexive,
+                nonneg_scaled,
+            ],
+        );
+        let padded_left = cadd(d, p, scaled_left, czero);
+        let trim = d.lemma(p.add_zero, &[scaled_left]);
+        let sum_refl = d.lemma(p.equiv_refl, &[expanded]);
+        let trimmed = d.lemma(
+            p.le_congr,
+            &[
+                padded_left,
+                scaled_left,
+                expanded,
+                expanded,
+                trim,
+                sum_refl,
+                grown,
+            ],
+        );
+        let back = d.lemma(p.equiv_symm, &[scaled_right, expanded, opened]);
+        let left_refl = d.lemma(p.equiv_refl, &[scaled_left]);
+        d.lemma(
+            p.le_congr,
+            &[
+                scaled_left,
+                scaled_left,
+                expanded,
+                scaled_right,
+                left_refl,
+                back,
+                trimmed,
+            ],
+        )
+    };
+
+    let value = {
+        let with_second = d.lam_fv(h2_fv, second_ty, body);
+        let with_first = d.lam_fv(h1_fv, first_ty, with_second);
+        let with_z = d.lam_fv(z_fv, carrier, with_first);
+        let with_y = d.lam_fv(y_fv, carrier, with_z);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let conclusion = d.const_app(p.le, &[scaled_left, scaled_right]);
+        let after_second = d.arrow(second_ty, conclusion);
+        let after_first = d.arrow(first_ty, after_second);
+        let with_z = d.pi_fv(z_fv, carrier, after_first);
+        let with_y = d.pi_fv(y_fv, carrier, with_z);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mul_le_mul_of_nonneg_left,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 // --- the laws ---------------------------------------------------------------
 
 /// `of_rat_mul : ∀ q r, Equiv (mul (ofRat q) (ofRat r)) (ofRat (q·r))`.
@@ -930,7 +2052,8 @@ fn declare_mul_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelErro
 
         let one_atom = div_succ(d, p, 1, n);
         let deep_atom = div_succ(d, p, 1, index);
-        let deep_le = index_modulus_le(d, p, shift, n);
+        let one_nat = d.num(1);
+        let deep_le = index_le(d, p, one_nat, shift, n);
         let shallow_refl = d.lemma(rat.le_refl, &[one_atom]);
         let widened = d.lemma(
             rat.add_le_add,
@@ -945,7 +2068,6 @@ fn declare_mul_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelErro
         );
         let doubled = radd(d, one_atom, one_atom);
         let target_bound = div_succ(d, p, 2, n);
-        let one_nat = d.num(1);
         let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, n]);
         let order = rat_eq_rewrite(d, doubled, target_bound, fuse, widened, &|d, t| {
             rle(d, rat, spread, t)

@@ -425,6 +425,28 @@ pub struct RatPrelude {
     /// which is what stops `CReal.mul`'s estimate from degenerating into a
     /// product of two rationals whose projections are opaque.
     pub nat_div_succ_mul: NameId,
+    /// `Rat.nat_index_compose : ∀ (a b n : Nat),
+    /// Nat.add (Nat.mul (a+1) (Nat.add (Nat.mul (b+1) n) b)) a
+    ///   = Nat.add (Nat.mul (D+1) n) D`, where `D = Nat.add (Nat.mul (a+1) b) a`.
+    ///
+    /// **Bishop's sampling indices are closed under composition.** `CReal.mul`
+    /// samples at `(c+1)·n + c` and `CReal.add` at `2n+1`, which *is*
+    /// `(1+1)·n + 1`, so every nested product samples at an index of the same
+    /// shape and [`Self::nat_div_succ_le_scaled`] applies to it unchanged.
+    /// Without this, each nesting would need its own index arithmetic.
+    pub nat_index_compose: NameId,
+    /// `Rat.natDivSucc_le_scaled : ∀ (k c n : Nat),
+    /// Rat.le (natDivSucc k (Nat.add (Nat.mul (c+1) n) c)) (natDivSucc k n)`.
+    ///
+    /// **The general index-comparison lemma**, and it is still not
+    /// antitonicity of `natDivSucc`. A sampling index of the shape
+    /// `(c+1)·n + c` — Bishop's product index, and every composite of it — is
+    /// deeper than `n`, and a bound read at that depth has to come back to `n`.
+    /// [`Self::nat_div_succ_le_add_left`] widens the numerator `k ↦ k·(c+1)` at
+    /// the *same* index, [`Self::nat_div_succ_mul`] factors it, and
+    /// [`Self::nat_div_succ_scale`] reads the deep factor as `1/(n+1)`: three
+    /// steps, one denominator each.
+    pub nat_div_succ_le_scaled: NameId,
     /// `Rat.natDivSucc_le_one : ∀ (j : Nat),
     /// Rat.le (natDivSucc 1 j) (natDivSucc 1 0)`.
     ///
@@ -591,6 +613,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         bounds_mul: child(kernel, "bounds_mul"),
         neg_mul_le_of_bounds: child(kernel, "neg_mul_le_of_bounds"),
         nat_div_succ_mul: child(kernel, "natDivSucc_mul"),
+        nat_index_compose: child(kernel, "nat_index_compose"),
+        nat_div_succ_le_scaled: child(kernel, "natDivSucc_le_scaled"),
         nat_div_succ_le_one: child(kernel, "natDivSucc_le_one"),
         int_le_nat_abs: child(kernel, "int_le_natAbs"),
         int_neg_nat_abs_le: child(kernel, "int_neg_natAbs_le"),

@@ -248,6 +248,42 @@ pub(crate) fn rcongr(
     rtransport(d, a, motive, refl_case, b, h)
 }
 
+/// From `h : Eq Nat a b`, derive `Eq Rat (f a) (f b)`.
+///
+/// The `ℕ → ℚ` companion of
+/// [`IntDev::nat_eq_to_int`](crate::int_prelude::ops::IntDev::nat_eq_to_int).
+/// Every `Rat.natDivSucc` identity whose content lives in the *numerator* or
+/// the *index* is a `ℕ` equation whose consequence is a `ℚ` one, and this is
+/// the only way across.
+pub(crate) fn nat_eq_to_rat(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = NatOps::eq_motive(d, a, &|d, x| {
+        let fx = f(d, x);
+        req(d, fa, fx)
+    });
+    let refl_case = rrefl(d, fa);
+    NatOps::transport(d, a, motive, refl_case, b, h)
+}
+
+/// From `h : Eq Nat a b` and a proof of `motive a`, derive `motive b`.
+pub(crate) fn nat_rewrite_prop(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    proof: ExprId,
+    motive: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let built = NatOps::eq_motive(d, a, motive);
+    NatOps::transport(d, a, built, proof, b, h)
+}
+
 /// From `h : Eq Rat p q` and a proof of `motive p`, derive `motive q`.
 pub(crate) fn rat_eq_rewrite(
     d: &mut IntDev<'_>,

@@ -358,6 +358,20 @@ pub struct CRealPrelude {
     /// reads each as the regularity bound on the nose. No slack, no weakening,
     /// and `Rat.natDivSucc` still never needed antitone in its index.
     pub mul: NameId,
+    /// `CReal.equiv_of_bounded : ∀ x y (K : Nat),
+    /// (∀ n, Within (seq x n − seq y n) (Rat.natDivSucc K n)) → Equiv x y`.
+    ///
+    /// **`Equiv` only needs the difference to be `O(1/n)`; the constant is
+    /// free.** It is `Equiv.trans`'s argument with one term deleted, closed by
+    /// the Archimedean property of ℚ — whose numerator is a `Nat` *parameter*,
+    /// so a symbolic constant built out of the factors' `CReal.bound`s is as
+    /// acceptable as a literal. Every law whose two sides sample at *different*
+    /// indices goes through this.
+    pub equiv_of_bounded: NameId,
+    /// `CReal.mul_congr : ∀ x x' y y', Equiv x x' → Equiv y y' →
+    /// Equiv (mul x y) (mul x' y')` — the **fifth congruence obligation**, not
+    /// one of the 22, and a prerequisite for ADR-0468 phase R4.
+    pub mul_congr: NameId,
     /// `CReal.ofRat_mul : ∀ q r, Equiv (mul (ofRat q) (ofRat r)) (ofRat (q·r))`
     /// — `CReal.mul` restricted to the embedded `ℚ` **is** `Rat.mul`.
     ///
@@ -376,6 +390,21 @@ pub struct CRealPrelude {
     /// `CReal.mul_zero : ∀ x, Equiv (mul x zero) zero` — one of the 22, in
     /// `Equiv` form, and pointwise: `Rat.mul_zero` at every index.
     pub mul_zero: NameId,
+    /// `CReal.mul_assoc : ∀ x y z,
+    /// Equiv (mul (mul x y) z) (mul x (mul y z))` — one of the 22, in `Equiv`
+    /// form, and the only law with a **nested** sampling index on each side.
+    pub mul_assoc: NameId,
+    /// `CReal.mul_le_mul_of_nonneg_left : ∀ x y z, le zero x → le y z →
+    /// le (mul x y) (mul x z)` — one of the 22, **verbatim**, and the only one
+    /// of the eight that is not an estimate: it is
+    /// [`Self::left_distrib`] plus [`Self::mul_nonneg`] plus
+    /// [`Self::mul_congr`].
+    pub mul_le_mul_of_nonneg_left: NameId,
+    /// `CReal.left_distrib : ∀ x y z,
+    /// Equiv (mul x (add y z)) (add (mul x y) (mul x z))` — one of the 22, in
+    /// `Equiv` form, and the first law whose two sides agree at **no** index
+    /// and whose sampling shifts are not even equal as naturals.
+    pub left_distrib: NameId,
     /// `CReal.mul_nonneg : ∀ x y, le zero x → le zero y → le zero (mul x y)` —
     /// one of the 22, verbatim.
     ///
@@ -393,6 +422,52 @@ pub struct CRealPrelude {
     /// and `sq_nonneg` all hold, footprint-free, of `fun _ _ => zero`; this
     /// refuses that product by computation, through [`Self::of_rat_mul`].
     pub not_equiv_mul_one_one_zero: NameId,
+}
+
+impl CRealPrelude {
+    /// The 22 ordered-commutative-ring laws over `CReal`, in the **declaration
+    /// order of the `Real` package** — the same order
+    /// [`RatPrelude::ring_laws`](crate::RatPrelude::ring_laws) uses, so the two
+    /// lists line up entry by entry.
+    ///
+    /// **Thirteen are the `Real` package's statements verbatim.** The other
+    /// nine — `add_comm`, `add_assoc`, `add_zero`, `add_neg`, `mul_comm`,
+    /// `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib` — mention `Eq` in
+    /// the axiomatized package and are stated here over
+    /// [`CReal.Equiv`](Self::equiv) instead, because `Eq CReal` is **not** the
+    /// equality of real numbers. That is ADR-0468's Measurement 2, and it is
+    /// the whole reason a setoid was the reachable construction: the laws that
+    /// do not mention `Eq` need no restatement at all.
+    ///
+    /// This list exists so that "22 of 22" is read out of the kernel by a test
+    /// rather than asserted in prose.
+    #[must_use]
+    pub fn ordered_ring_laws(&self) -> [NameId; 22] {
+        [
+            self.le_refl,
+            self.le_trans,
+            self.lt_irrefl,
+            self.lt_trans,
+            self.lt_of_lt_of_le,
+            self.lt_of_le_of_lt,
+            self.le_of_lt,
+            self.add_le_add,
+            self.add_comm,
+            self.add_assoc,
+            self.add_zero,
+            self.add_neg,
+            self.mul_le_mul_of_nonneg_left,
+            self.zero_lt_one,
+            self.add_lt_add_of_le_of_lt,
+            self.mul_comm,
+            self.mul_assoc,
+            self.mul_one,
+            self.mul_zero,
+            self.left_distrib,
+            self.mul_nonneg,
+            self.sq_nonneg,
+        ]
+    }
 }
 
 fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
@@ -447,10 +522,15 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bound_within: kernel.name_str(creal, "bound_within"),
         mul_shift: kernel.name_str(creal, "mulShift"),
         mul: kernel.name_str(creal, "mul"),
+        equiv_of_bounded: kernel.name_str(equiv, "of_bounded"),
+        mul_congr: kernel.name_str(creal, "mul_congr"),
         of_rat_mul: kernel.name_str(creal, "ofRat_mul"),
         mul_comm: kernel.name_str(creal, "mul_comm"),
         mul_one: kernel.name_str(creal, "mul_one"),
         mul_zero: kernel.name_str(creal, "mul_zero"),
+        mul_assoc: kernel.name_str(creal, "mul_assoc"),
+        mul_le_mul_of_nonneg_left: kernel.name_str(creal, "mul_le_mul_of_nonneg_left"),
+        left_distrib: kernel.name_str(creal, "left_distrib"),
         mul_nonneg: kernel.name_str(creal, "mul_nonneg"),
         sq_nonneg: kernel.name_str(creal, "sq_nonneg"),
         not_equiv_mul_one_one_zero: kernel.name_str(creal, "not_equiv_mul_one_one_zero"),

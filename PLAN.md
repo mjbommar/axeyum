@@ -169,6 +169,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `3076b6ae0` | the one Lean module `rfl` refuted on its own: root-caused to a degenerate `(t, t)` witness, the route now declines, and a self-refuting attestation FAILS the run instead of being counted |
 | 2026-08-18 | `8e4894de4` | `ArrayAxiom` renders the query's own terms; a third `structural` verdict binds 95 modules to their query's subterms, 359 of 372 corruptions caught, and the attested class drops 124 → 28 with an anti-absorption guard |
 | 2026-08-18 | `pending` | binding coverage: +20 bound (105 → 125), 124 modules proved content-free, and the converse direction measured at 286/531 |
+| 2026-08-18 | `PENDING4` | **ADR-0468 phase R2 completes: all 22 ordered-ring laws hold over the constructed ℝ.** `mul_assoc`, `left_distrib` and `mul_le_mul_of_nonneg_left` land, plus `mul_congr` — the fifth congruence obligation and the R4 prerequisite. The four were one problem: each compares two products whose *sampling indices differ*, so `CReal.mul`'s exact estimate is unavailable and the naive bound is `C/(n+1)` for a `C > 2`. Two new pieces make that enough. `CReal.Equiv.of_bounded` — **`Equiv` only needs the difference to be `O(1/n)`; the constant is free** — is `Equiv.trans`'s argument with one term deleted, closing on `Rat.le_of_le_add_natDivSucc`, whose numerator is a `Nat` *parameter* so a symbolic `K` is as good as a literal; and `Rat.nat_index_compose` says **Bishop's sampling indices are closed under composition** (the additive shift `2n+1` is the `c = 1` case), so every nested index reads back at `n` through one `natDivSucc_le_scaled`. `mul_le_mul_of_nonneg_left` needed no estimate at all, exactly as costed — it is `left_distrib` + `mul_nonneg` + `mul_congr`. **22 of 22**, 58 declarations, trusted surface still 0, and the count is now read out of the kernel: `CRealPrelude::ordered_ring_laws` must name 22 *distinct* footprint-empty theorems matching `RatPrelude::ring_laws` position by position, asserted by the example's exit status and three tests, verified by deleting `mul_assoc`. |
 | 2026-08-18 | `PENDING3` | ℝ gets **multiplication**: `CReal.mul` at Bishop's product index `(c+1)·n + c` with `c := bound x + bound y + 1`, plus `CReal.bound` (a *projection*, `natAbs (num (seq x 0)) + 1`) and `bound_within`. Five of the 22 land — `mul_comm`, `mul_one`, `mul_zero` in `Equiv` form, `mul_nonneg` and `sq_nonneg` **verbatim** — taking it to **19 of 22**, 53 declarations, trusted surface still 0. The canonical bound is cheap after all: the fixed modulus bounds every sample by `\|x_0\| + 2` at `n = 0` with nothing to extract, and the ℕ bridge is two computing `Int.natAbs` facts. The estimate closes **exactly** — the four product terms fuse to the regularity bound with no weakening step — and `Rat.natDivSucc` is still never needed antitone in its index. Eleven new ℚ lemmas (`bounds_mul`, `neg_mul_le_of_bounds`, `mul_sub_mul`, `natDivSucc_mul`, `natDivSucc_le_one`, `bounds_num`, …), all axiom-free. `ofRat_mul` + `not_equiv_mul_one_one_zero` are the product's discrimination witnesses, verified load-bearing by deletion (three tests die, every other row stays green) and by a refused negative control. |
 | 2026-08-18 | `PENDING2` | `Rat.natDivSucc_scale` and `Rat.natDivSucc_le_add_left`: the two ℚ lemmas that take **`natDivSucc` antitone in its index** off `CReal.mul`'s path. `scale` generalises `natDivSucc_halve` to an arbitrary factor (`halve` is its `c = 1` instance definitionally, and the kernel is asked to confirm the subsumption, not a doc comment); `le_add_left` is monotonicity in the numerator, stated additively so ℕ-subtraction never appears. Together `1/(K(n+1)) ≤ 1/(n+1)` becomes `1 ≤ K` at one denominator, for **any** K — which is what the fixed-shift trick behind `add_zero`/`add_assoc` was thought not to generalise to. |
 | 2026-08-18 | `PENDING` | ℝ gets the **strict order**: `CReal.lt x y := ∃ (q : Rat), 0 < q ∧ le (add x (ofRat q)) y` — the gap carried as a rational rather than recomputed as an index, which is what makes `lt_trans` work where the naive `∃ n, y_n − x_n > 2/(n+1)` cannot. Seven of the 22 land **verbatim** (`lt_irrefl`, `lt_trans`, `lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`, `zero_lt_one`, `add_lt_add_of_le_of_lt`), plus `le_add_of_nonneg` and the `le_congr`/`lt_congr` the R4 equality slot asks for. `lt_irrefl` is the Archimedean property's second consumer; `zero_lt_one` + `lt_irrefl` are the strict order's discrimination witnesses and the example's exit status depends on both (verified by deleting each). **14 of 22**, 42 declarations, trusted surface still 0. |
@@ -1323,25 +1324,37 @@ the same gate-first discipline QF_RDL followed. That wiring is the next slice. T
 "decided, not certified" status), which are the real fix: this checker is a
 heuristic over prose and says so.
 
-**ℝ is built, it is free, and 19 of the 22 ordered-ring laws hold over it —
-`mul` exists and the 3 that remain are the 3 that compare products sampled at
-different indices (`WIP`, agent-creal-mul, 2026-08-18).** ADR-0468 phase R1 is
-complete and R2 is nearly so: `CReal` — a Bishop setoid of regular ℚ-sequences —
-with `Equiv` **reflexive, symmetric and transitive**, `zero`/`one`/`neg`/`add`
-with the `neg`/`add` congruences, the whole additive group, Bishop's order, the
-strict order, and now **`CReal.mul`**. Fifty-three declarations, every axiom
-footprint empty, whole trusted surface **0**:
+**ADR-0468 phase R2 is COMPLETE: ℝ is built, it is free, and ALL 22
+ordered-commutative-ring laws hold over it (`WIP`, agent-creal-mul,
+2026-08-18).** `CReal` — a Bishop setoid of regular ℚ-sequences — with `Equiv`
+**reflexive, symmetric and transitive**, `zero`/`one`/`neg`/`add`/`mul`, all
+five congruence obligations, the additive group, Bishop's order, the strict
+order and the product. Fifty-eight declarations, every axiom footprint empty,
+whole trusted surface **0**:
 `cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness`. No
 `Quot.sound`, no `funext`, no `propext`; the kernel did not change.
 
-**19 of the 22, and they split into two kinds.** Seven hold in `Equiv` form —
+**The count is read out of the kernel, not asserted here.**
+`CRealPrelude::ordered_ring_laws` is the 22 in the `Real` package's own
+declaration order — the same order `RatPrelude::ring_laws` uses — and both the
+example's exit status and two tests require every entry to be a *distinct*,
+checked, footprint-empty `Theorem`. A third test asserts the `CReal` and `Rat`
+lists are the same 22 names position by position, so `CReal` cannot quietly drop
+`mul_assoc` and repeat `mul_comm` and still report 22. Verified by mutation:
+dropping `declare_mul_assoc` flips the example to exit 1 with the matching
+message and leaves every other row green.
+
+**22 of 22, and they split into two kinds.** Nine hold in `Equiv` form —
 `add_comm`, `add_neg`, `mul_comm`, `mul_zero` (pointwise, one `Rat` law each
-through `Equiv.of_pointwise`) and `add_zero`, `add_assoc`, `mul_one` (**not**
-pointwise: their two sides are equal at no index, and only `Equiv` can relate
-them). Twelve restate **verbatim** — `le_refl`, `le_trans`, `add_le_add`,
-`lt_irrefl`, `lt_trans`, `lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`,
-`zero_lt_one`, `add_lt_add_of_le_of_lt`, `mul_nonneg`, `sq_nonneg` — because
-none of them mentions `Eq`, which is ADR-0468's Measurement 2 cashed.
+through `Equiv.of_pointwise`) and `add_zero`, `add_assoc`, `mul_one`,
+`mul_assoc`, `left_distrib` (**not** pointwise: their two sides are equal at no
+index, and only `Equiv` can relate them). Thirteen restate **verbatim** —
+`le_refl`, `le_trans`, `add_le_add`, `lt_irrefl`, `lt_trans`, `lt_of_lt_of_le`,
+`lt_of_le_of_lt`, `le_of_lt`, `zero_lt_one`, `add_lt_add_of_le_of_lt`,
+`mul_nonneg`, `sq_nonneg`, `mul_le_mul_of_nonneg_left` — because none of them
+mentions `Eq`, which is ADR-0468's Measurement 2 cashed. `mul_congr`, the fifth
+congruence obligation and the R4 prerequisite ADR-0468 calls the setoid's real
+tax, is proved too; it is not one of the 22.
 
 **`add_zero` and `add_assoc` did not need the missing ℚ lemma.** The previous
 costing put both behind `Rat.natDivSucc` antitone in its index (~250 lines).
@@ -1481,30 +1494,41 @@ turn `1/(K(n+1)) ≤ 1/(n+1)` into `1 ≤ K` at one denominator. **`Rat.natDivSu
 antitone in its index — the ~250-line lemma dodged twice — is not needed for
 `mul` either**, and on current evidence should stay unbuilt.
 
-*What is left: 3 of the 22, plus `mul_congr`, and they are all one problem.*
-`mul_assoc`, `left_distrib` and `mul_le_mul_of_nonneg_left` each compare two
-products whose **sampling indices differ** — `mul x (add y z)` and
+**The last four were one problem, and the fix was to make the constant free.**
+`mul_assoc`, `left_distrib`, `mul_le_mul_of_nonneg_left` and `mul_congr` all
+compare two products whose **sampling indices differ** — `mul x (add y z)` and
 `add (mul x y) (mul x z)` agree at no index and their `mulShift`s are not even
-equal as naturals — so the pointwise route and the single-regularity route both
-close. `mul_congr` (the fifth congruence obligation, a prerequisite for R4) has
-the same shape: `mul x y` and `mul x' y'` sample at indices derived from
-*different* bounds, and the naive estimate gives `C/(n+1)` for a constant
-`C > 2`.
+equal as naturals — so `CReal.mul`'s own *exact* estimate is unavailable and the
+naive bound is `C/(n+1)` for some `C > 2`. Two new pieces make that enough:
 
-The route, costed but not walked: all four go through the arbitrary-third-index
-argument `Equiv.trans` already runs on. Bound `|a_n − b_n| ≤ 2/(n+1) +
-2/(j+1) + |a_j − b_j|` by regularity of the two products, bound `|a_j − b_j| ≤
-C/(j+1)` for a **symbolic** `C` built from the two shifts, and discharge the
-whole `(2+C)/(j+1)` with `Rat.le_of_le_add_natDivSucc` — whose `k` is a `Nat`
-*parameter*, so a symbolic constant is fine. Two ℚ pieces are already built and
-unused: `Rat.mul_sub_mul` (`a·b − c·e = a·(b − e) + (a − c)·e`, the split every
-one of them needs) and `Rat.bounds_mul`. The missing ℕ step is
-`K ≤ K·K'` from `K' ≥ 1`, i.e. `K·(c'+1) = K + K·c'`, which `natDivSucc_mul`
-then turns into the cross-index comparison. Estimate: `mul_congr` ~400–600
-lines, `mul_assoc` and `left_distrib` similar each, and
-`mul_le_mul_of_nonneg_left` is **downstream of `left_distrib`** (from
-`z − y ≥ 0`, `x·(z−y) ≥ 0` and `x·z ≡ x·y + x·(z−y)`) rather than a fourth
-estimate — so do `left_distrib` first.
+- `CReal.Equiv.of_bounded : (∀ n, |x_n − y_n| ≤ K/(n+1)) → Equiv x y`. **`Equiv`
+  only needs the difference to be `O(1/n)`; the constant is free.** It is
+  `Equiv.trans`'s argument with one term deleted, and it closes on
+  `Rat.le_of_le_add_natDivSucc` — whose numerator is a `Nat` **parameter**, so a
+  symbolic `K` built out of the factors' `CReal.bound`s is as acceptable as a
+  literal. It is the Archimedean property's *third* consumer.
+- `Rat.nat_index_compose : (a+1)·((b+1)·n + b) + a = (D+1)·n + D`. **Bishop's
+  sampling indices are closed under composition**, and the additive shift `2n+1`
+  *is* the `a = 1` case — so every nested index (`mul` inside `mul`, `add`
+  inside `mul`) reads back at `n` through one instance of
+  `Rat.natDivSucc_le_scaled`, and no nesting needs arithmetic of its own.
+
+With those, each law is `Rat.mul_sub_mul` plus `Rat.bounds_mul` at one or two
+levels, and the constants are pure bookkeeping (`Kx·4 + Ky'·4` for `mul_congr`,
+`(Kx·Ky)·2 + Kz·(Kx·2 + Ky·2)` for `mul_assoc`).
+`mul_le_mul_of_nonneg_left` needed **no estimate at all**, exactly as costed:
+`z − y ≥ 0`, so `x·(z − y) ≥ 0` by `mul_nonneg`, and `left_distrib` plus
+`mul_congr` say `x·z` is `Equiv`-equal to `x·y + x·(z − y)`. Doing
+`left_distrib` before `mul_assoc` was worth two of the three.
+
+*The cost that did land somewhere.* Type-checking the development is now ~45 s
+in a debug build, up from ~9 s, and `mul_assoc`/`left_distrib` are most of it —
+their proof terms nest `product_gap` inside `product_gap`. The `creal` test
+module builds one template and clones it (`prelude_cache`'s argument verbatim;
+`creal_prelude_builds` still does a real build), which took the module from
+140 s back to 75 s. `PreludeKey` has no `CReal` variant, so
+`crate::prelude_cache` does not cover it; that is the next lever if this becomes
+a gate problem.
 
 **`real: axiom=30` is unchanged, deliberately.** ADR-0468 retires those by
 *deletion* in phase R4 — once `generalize_over_ordered_ring` grows an equality

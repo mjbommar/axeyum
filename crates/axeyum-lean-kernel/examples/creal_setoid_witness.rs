@@ -42,7 +42,12 @@
 //!    footprint-free — of `fun _ _ => zero`. `ofRat_mul` pins the *operation*
 //!    on the whole embedded `ℚ` rather than asserting a property of it, and
 //!    `not_equiv_mul_one_one_zero` refuses the constant-zero product by
-//!    computation.
+//!    computation; and
+//! 8. `CRealPrelude::ordered_ring_laws` names **22 distinct** declarations and
+//!    every one of them is a checked, footprint-empty `Theorem`. The headline
+//!    count is read out of the kernel through that list and nowhere else, so a
+//!    dropped or duplicated law flips the exit status rather than shrinking a
+//!    sentence in a document.
 //!
 //! # How far the ordered-field structure gets (ADR-0468 phase R2, partial)
 //!
@@ -92,6 +97,26 @@
 //! **not** say any sample of `x` is non-negative, only that each sits above
 //! `−2/(j+1)`, so the product's lower bound trades that residue against the
 //! other factor's canonical magnitude.
+//!
+//! # `mul_assoc`, `left_distrib`, `mul_congr`: the constant is free
+//!
+//! Those three, and `mul_le_mul_of_nonneg_left` behind them, compare two
+//! products whose sampling indices **differ** — `mul x (add y z)` and
+//! `add (mul x y) (mul x z)` agree at no index and their shifts are not equal
+//! as naturals — so `CReal.mul`'s own exact estimate is unavailable and the
+//! naive bound is `C/(n+1)` for some `C > 2`. `CReal.Equiv.of_bounded` is what
+//! makes that enough: `Equiv` only needs the difference to be `O(1/n)`, and the
+//! Archimedean lemma's numerator is a `Nat` **parameter**, so a symbolic
+//! constant built from the factors' `CReal.bound`s is as acceptable as a
+//! literal. It is `Equiv.trans`'s argument with one term deleted, and it is the
+//! Archimedean property's third consumer.
+//!
+//! The other half is `Rat.nat_index_compose`: a product index *of* a product
+//! index is a product index, and Bishop's additive shift `2n+1` is the `c = 1`
+//! case — so every nested sampling index in sight reads back at `n` through one
+//! lemma. `mul_le_mul_of_nonneg_left` then needs no estimate at all: `z − y ≥ 0`
+//! gives `x·(z − y) ≥ 0` by `mul_nonneg`, and `left_distrib` plus `mul_congr`
+//! say `x·z` is `Equiv`-equal to `x·y + x·(z − y)`.
 //!
 //! # The order (ADR-0468 phase R2, continued)
 //!
@@ -145,18 +170,15 @@
 //! # What this does NOT claim
 //!
 //! `Eq CReal` is not the equality of real numbers — `CReal.Equiv` is, and every
-//! statement about reals will say so. **Three of the 22 are still missing**:
-//! `mul_assoc`, `left_distrib` and `mul_le_mul_of_nonneg_left`. All three
-//! compare two products sampled at *different* indices — `mul x (add y z)` and
-//! `add (mul x y) (mul x z)` agree at no index and their shifts are not even
-//! equal as naturals — so each needs the arbitrary-third-index estimate
-//! `Equiv.trans` runs on, plus the Archimedean lemma. `CReal.mul_congr`, the
-//! fifth of the setoid's congruence obligations, is missing for the same
-//! reason and is a prerequisite for phase R4.
-//! Completeness, division and `√` are each a separate ADR. And the `Real`
-//! package's 30 axioms are **unchanged** by this: ADR-0468 retires them by
-//! *deletion* in phase R4, once consumers are generalized, not by exhibiting a
-//! model.
+//! statement about reals will say so. Nine of the 22 are therefore **not** the
+//! `Real` package's statements: they mention `Eq` there and `CReal.Equiv` here.
+//! That is the substitution ADR-0468 phase R4 has to make good, by
+//! instantiating the generalized telescope's equality slot — this example does
+//! not claim it has been made.
+//! Completeness, division, `inv` and `√` are each a separate ADR; none of them
+//! is one of the 22. And the `Real` package's 30 axioms are **unchanged** by
+//! this: ADR-0468 retires them by *deletion* in phase R4, once consumers are
+//! generalized, not by exhibiting a model.
 
 #![allow(clippy::too_many_lines)]
 
@@ -223,7 +245,34 @@ fn main() {
             "CReal.not_equiv_mul_one_one_zero",
             p.not_equiv_mul_one_one_zero,
         ),
+        ("CReal.Equiv.of_bounded", p.equiv_of_bounded),
+        ("CReal.mul_congr", p.mul_congr),
+        ("CReal.left_distrib", p.left_distrib),
+        ("CReal.mul_assoc", p.mul_assoc),
+        (
+            "CReal.mul_le_mul_of_nonneg_left",
+            p.mul_le_mul_of_nonneg_left,
+        ),
     ];
+
+    // (8): the headline count itself, read out of the kernel. Every one of the
+    // 22 ordered-ring laws must be a checked Theorem with an empty footprint,
+    // and the list must have 22 DISTINCT entries — a repeated name would
+    // inflate the count without proving anything.
+    let mut law_names: Vec<String> = p
+        .ordered_ring_laws()
+        .into_iter()
+        .map(|law| kernel.display_name(law).to_string())
+        .collect();
+    law_names.sort();
+    law_names.dedup();
+    let laws_distinct = law_names.len() == 22;
+    let laws_proved = p.ordered_ring_laws().into_iter().all(|law| {
+        matches!(
+            kernel.environment().get(law),
+            Some(Declaration::Theorem { .. })
+        ) && kernel.axiom_footprint(law).is_empty()
+    });
 
     let mut failed = false;
     println!("declaration\tkind\tfootprint");
@@ -347,6 +396,21 @@ fn main() {
         );
         failed = true;
     }
+    if !laws_distinct {
+        eprintln!(
+            "FAIL: CRealPrelude::ordered_ring_laws does not name 22 DISTINCT \
+             declarations, so the count is inflated by a repeat."
+        );
+        failed = true;
+    }
+    if !laws_proved {
+        eprintln!(
+            "FAIL: not every entry of CRealPrelude::ordered_ring_laws is a \
+             checked, footprint-empty Theorem. The '22 of 22' claim is read \
+             from this list and nowhere else."
+        );
+        failed = true;
+    }
     if !mul_discriminates {
         eprintln!(
             "FAIL: CReal.not_equiv_mul_one_one_zero is not a checked theorem, so \
@@ -370,13 +434,14 @@ fn main() {
         failed = true;
     }
 
+    let all_laws = laws_distinct && laws_proved;
     eprintln!(
         "ℝ as a Bishop setoid over the constructed ℚ: {} declarations admitted, \
          trusted surface = {} ({}); carrier inhabited = {inhabited}, \
          Equiv discriminates = {discriminating}, le discriminates = {ordered}, \
          lt inhabited = {strictly_inhabited}, lt irreflexive = {strictly_irreflexive}, \
          mul agrees with Rat.mul on ℚ = {multiplicative}, mul discriminates = \
-         {mul_discriminates}",
+         {mul_discriminates}; all 22 ordered-ring laws proved = {all_laws}",
         admitted.len(),
         trusted.len(),
         if trusted.is_empty() {
@@ -394,16 +459,14 @@ fn main() {
     }
     eprintln!(
         "reflexivity, symmetry and transitivity of CReal.Equiv all hold at ZERO \
-         trusted declarations; Equiv.trans and CReal.lt_irrefl are the two \
-         consumers of Rat.le_of_le_add_natDivSucc (the Archimedean property of \
-         ℚ). 19 of the 22 ordered-ring laws hold: the additive group in Equiv \
-         form (add_comm, add_neg, add_zero, add_assoc), ten order laws \
-         verbatim (le_refl, le_trans, add_le_add, lt_irrefl, lt_trans, \
-         lt_of_lt_of_le, lt_of_le_of_lt, le_of_lt, zero_lt_one, \
-         add_lt_add_of_le_of_lt), and five product laws (mul_comm, mul_one and \
-         mul_zero in Equiv form; mul_nonneg and sq_nonneg verbatim). The 3 that \
-         remain are mul_assoc, left_distrib and mul_le_mul_of_nonneg_left — \
-         each compares two products sampled at DIFFERENT indices, so each needs \
-         the arbitrary-third-index estimate Equiv.trans runs on"
+         trusted declarations; Equiv.trans, CReal.lt_irrefl and \
+         CReal.Equiv.of_bounded are the three consumers of \
+         Rat.le_of_le_add_natDivSucc (the Archimedean property of ℚ). ALL 22 \
+         ordered-commutative-ring laws hold over the constructed ℝ. Thirteen \
+         are the Real package's statements VERBATIM; the other nine mention Eq \
+         there and are stated over CReal.Equiv here, because Eq CReal is not \
+         the equality of real numbers. CReal.mul_congr — the fifth congruence \
+         obligation, not one of the 22 — is proved too, so the ordered-ring \
+         interface ADR-0468 phase R4 instantiates is complete"
     );
 }
