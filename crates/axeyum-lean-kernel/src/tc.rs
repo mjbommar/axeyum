@@ -1129,7 +1129,8 @@ impl Kernel {
     ///
     /// Not `pub(crate)`, for two reasons that are the same reason. The inductive
     /// gate does its own type checking and never routes through
-    /// [`Kernel::check_declaration`], so it has to run this check itself or
+    /// `Kernel::check_declaration` (private, hence unlinked), so it has to run
+    /// this check itself or
     /// inductives are the one declaration kind whose universe parameters stay
     /// decorative. And a *recursor* record on an import stream is checked by
     /// comparison against the recursor this kernel generated, never admitted —
