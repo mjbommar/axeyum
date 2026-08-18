@@ -1,6 +1,7 @@
 # Authoritative B admission result
 
-Date: 2026-08-18  
+Date: 2026-08-18
+
 Implementation commit: `f4dc0d4f18a816ba9f468e3c3b8a68fdcd349859`
 
 ## Result
