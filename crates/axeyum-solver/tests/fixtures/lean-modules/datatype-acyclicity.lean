@@ -8,6 +8,22 @@ set_option linter.unusedVariables false
 -- suppresses codegen only; it does not weaken type checking.
 noncomputable section
 
+-- Lean's own compiler-internal constants, which `Init.Prelude` declares
+-- (`unsafe axiom lcErased : Type`) and `prelude` mode therefore omits.
+-- Lean 4.34 runs code generation over a Prop-valued inductive that
+-- carries data -- `Or`, `Exists`, `Nat.le` -- and its IR names these, so
+-- without them the module dies on `Unknown constant lcErased` before any
+-- proof is checked. Measured 2026-08-17: 21 of 77 crosscheck families were
+-- rejected by 4.34.0-rc1 and accepted by 4.30.0, which is why the gate's
+-- verdict depended on which toolchain happened to be installed.
+--
+-- They are compiler-only: no proof term mentions them, so they do NOT
+-- enter any `#print axioms` footprint. Asserted, not assumed, by
+-- `codegen_constants_are_declared_but_never_in_the_footprint`.
+unsafe axiom lcErased : Type
+unsafe axiom lcAny : Type
+unsafe axiom lcVoid : Type
+
 inductive True : Prop where
   | intro : True
 inductive AxNat : Sort (1) where
