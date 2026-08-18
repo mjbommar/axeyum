@@ -608,7 +608,15 @@ impl Kernel {
     /// whose only arguments are the family's parameters. The kernel does not
     /// store the flag, so it is derived; the round-trip suite checks the
     /// derivation against every official v4.30 fixture.
-    pub(crate) fn is_k_like_inductive(&self, family: NameId) -> bool {
+    ///
+    /// Public because an *importer* has to check the flag too, and there is
+    /// exactly one right answer to check against. Believing a family is K-like
+    /// licenses reducing a recursor application whose major premise is not a
+    /// constructor, so an import that accepted the wire's `k` on trust would be
+    /// taking a soundness-critical decision from the stream. Reading it here
+    /// instead of reimplementing the predicate is the point of exposing it.
+    #[must_use]
+    pub fn is_k_like_inductive(&self, family: NameId) -> bool {
         let Some(Declaration::Inductive { ty, ctor_names, .. }) = self.environment().get(family)
         else {
             return false;

@@ -18,10 +18,22 @@ nothing can be silently satisfied by Lean's own `Init` (in particular the
 quotient package is added from the stream, never inherited — adding it twice is
 a kernel error).
 
-Recursors and constructors carried by an `inductive` record are deliberately
-**not** replayed: Lean generates them itself from the family declaration, which
-is the stronger check — our exported recursor must then agree with the one
-Lean's kernel derives, or a later declaration that mentions it fails to check.
+Recursors and constructors carried by an `inductive` record are not handed to
+`addDeclCore` — Lean generates them itself from the family declaration. Until
+2026-08-18 that meant they were not checked at all: measured on the logic
+prelude, 225 of 603 expression records (37% of the stream) were reachable ONLY
+from a recursor type or an ι-reduction rule, so damaging any of them was
+invisible to this script and Lean "accepted" bytes it never read. The old claim
+that a later declaration mentioning the recursor would catch it is only true
+when such a declaration exists, and in a small development it does not.
+
+So every `inductive` record is now checked a second way: after `addDeclCore`
+succeeds, each family, constructor and recursor the record carries is looked up
+in the environment Lean just built and compared field by field against what
+Lean's own kernel generated — arities, `cidx`, `k`, the ι-rules, and the types
+themselves up to universe-parameter position and binder names. A disagreement
+prints `LEAN KERNEL REGENERATION MISMATCH` and exits nonzero. This makes the
+recursor half of the stream a real verdict rather than an unread field.
 -/
 import Lean
 open Lean
@@ -49,12 +61,16 @@ private structure Tables where
   levels : Array Level := #[Level.zero]
   exprs : Array Expr := #[]
 
-private def levelParams (tables : Tables) (value : Json) : IO (List Name) := do
+/-- Read a JSON array of name-table indices. -/
+private def nameList (tables : Tables) (value : Json) : IO (List Name) := do
   let entries ← jArr value
   let mut out := #[]
   for entry in entries do
     out := out.push tables.names[(← jNat entry)]!
   return out.toList
+
+/-- A declaration's universe parameters are a name list; the spelling reads better. -/
+private abbrev levelParams := nameList
 
 private def levelArgs (tables : Tables) (value : Json) : IO (List Level) := do
   let entries ← jArr value
@@ -95,6 +111,162 @@ private def addDeclKernelChecked (env : Environment) (declaration : Declaration)
     | exact env.addDeclCore 0 0 declaration none true  -- Lean >= 4.34
     | exact env.addDeclCore 0 declaration none true    -- Lean 4.30 (pinned)
 
+/-
+Comparing an exported declaration against the one Lean's kernel generated needs
+a normal form, because the two disagree on things a kernel does not care about:
+universe parameters are chosen names, binder names are hints, and `BinderInfo`
+is elaborator metadata that `addDeclCore` ignores. Universe parameters are
+mapped to their POSITION in the declaration's own `levelParams`, so the
+comparison is sensitive to their order (which is type-relevant — the motive
+universe leads a recursor) but not to their spelling.
+-/
+private def positionOf (names : List Name) (needle : Name) : Option Nat :=
+  let rec go : List Name → Nat → Option Nat
+    | [], _ => none
+    | head :: rest, i => if head == needle then some i else go rest (i + 1)
+  go names 0
+
+private def normLevel (params : List Name) : Level → Level
+  | .zero => .zero
+  | .succ l => .succ (normLevel params l)
+  | .max a b => .max (normLevel params a) (normLevel params b)
+  | .imax a b => .imax (normLevel params a) (normLevel params b)
+  | .param n => match positionOf params n with
+    | some i => .param (Name.mkNum `uparam i)
+    | none => .param n
+  | .mvar m => .mvar m
+
+private partial def normExpr (params : List Name) : Expr → Expr
+  | .bvar i => .bvar i
+  | .fvar f => .fvar f
+  | .mvar m => .mvar m
+  | .sort l => .sort (normLevel params l)
+  | .const n us => .const n (us.map (normLevel params))
+  | .app f a => .app (normExpr params f) (normExpr params a)
+  | .lam _ t b _ => .lam .anonymous (normExpr params t) (normExpr params b) .default
+  | .forallE _ t b _ => .forallE .anonymous (normExpr params t) (normExpr params b) .default
+  | .letE _ t v b _ =>
+      .letE .anonymous (normExpr params t) (normExpr params v) (normExpr params b) false
+  | .lit l => .lit l
+  | .mdata _ e => normExpr params e
+  | .proj n i s => .proj n i (normExpr params s)
+
+private structure Disagreement where
+  what : String
+  ours : String
+  theirs : String
+
+private def missing (what kind : String) : List Disagreement :=
+  [{ what, ours := kind, theirs := "no such constant in the environment Lean built" }]
+
+private def natAgrees (what : String) (ours theirs : Nat) : List Disagreement :=
+  if ours == theirs then [] else [{ what, ours := toString ours, theirs := toString theirs }]
+
+private def boolAgrees (what : String) (ours theirs : Bool) : List Disagreement :=
+  if ours == theirs then [] else [{ what, ours := toString ours, theirs := toString theirs }]
+
+private def nameAgrees (what : String) (ours theirs : Name) : List Disagreement :=
+  if ours == theirs then [] else [{ what, ours := toString ours, theirs := toString theirs }]
+
+private def namesAgree (what : String) (ours theirs : List Name) : List Disagreement :=
+  if ours == theirs then []
+  else [{ what, ours := toString ours, theirs := toString theirs }]
+
+/-
+Structural equality after normalization, falling back to Lean's own kernel
+definitional equality.
+
+The fallback is not a convenience: our importer's mirror of this check
+(`validate_generated_recursor`) compares the exported and generated recursor
+types with `def_eq`, so a mutant that produced a DEFEQ-but-not-syntactic variant
+would be admitted by us and "refused" here on a difference no kernel cares
+about — a fabricated violation in the one place that must not fabricate. Asking
+`Kernel.isDefEqGuarded` puts both sides on the same criterion.
+-/
+private def typeAgrees (env : Environment) (what : String) (ourParams : List Name) (ourType : Expr)
+    (theirParams : List Name) (theirType : Expr) : List Disagreement :=
+  let a := normExpr ourParams ourType
+  let b := normExpr theirParams theirType
+  if a == b then []
+  else if Lean.Kernel.isDefEqGuarded env {} a b then []
+  else [{ what, ours := toString a, theirs := toString b }]
+
+/--
+Check every family, constructor and recursor an `inductive` record carries
+against the constant Lean's kernel generated for it.
+
+Returns the disagreements; an empty list means the exported record and Lean's
+own regeneration describe the same declarations.
+-/
+private def inductiveAgreesWithLean (env : Environment) (tables : Tables) (entry : Json) :
+    IO (List Disagreement) := do
+  let mut found : List Disagreement := []
+  let types ← jArr (← jField entry "types")
+  let ctors ← jArr (← jField entry "ctors")
+  let recs ← jArr (← jField entry "recs")
+  let lookup (name : Name) : IO (Option ConstantInfo) := pure (env.find? name)
+  for family in types do
+    let name := tables.names[(← jFieldNat family "name")]!
+    let ourParams ← levelParams tables (← jField family "levelParams")
+    match ← lookup name with
+    | some (.inductInfo value) =>
+      found := found
+        ++ natAgrees s!"{name}.numParams" (← jFieldNat family "numParams") value.numParams
+        ++ natAgrees s!"{name}.numIndices" (← jFieldNat family "numIndices") value.numIndices
+        ++ natAgrees s!"{name}.numNested" (← jFieldNat family "numNested") value.numNested
+        ++ boolAgrees s!"{name}.isRec" (← jBool (← jField family "isRec")) value.isRec
+        -- `isReflexive` is deliberately NOT compared: our importer reads it and
+        -- discards it as descriptive frontend metadata, and Lean's kernel
+        -- derives its own. A difference there is something neither kernel would
+        -- act on, so reporting it would manufacture a violation.
+        ++ namesAgree s!"{name}.ctors" (← nameList tables (← jField family "ctors"))
+             value.ctors
+        ++ namesAgree s!"{name}.all" (← nameList tables (← jField family "all")) value.all
+        ++ natAgrees s!"{name}.levelParams.length" ourParams.length value.levelParams.length
+        ++ typeAgrees env s!"{name}.type" ourParams tables.exprs[(← jFieldNat family "type")]!
+             value.levelParams value.type
+    | _ => found := found ++ missing (toString name) "an inductive family"
+  for ctor in ctors do
+    let name := tables.names[(← jFieldNat ctor "name")]!
+    let ourParams ← levelParams tables (← jField ctor "levelParams")
+    match ← lookup name with
+    | some (.ctorInfo value) =>
+      found := found
+        ++ nameAgrees s!"{name}.induct" tables.names[(← jFieldNat ctor "induct")]! value.induct
+        ++ natAgrees s!"{name}.cidx" (← jFieldNat ctor "cidx") value.cidx
+        ++ natAgrees s!"{name}.numParams" (← jFieldNat ctor "numParams") value.numParams
+        ++ natAgrees s!"{name}.numFields" (← jFieldNat ctor "numFields") value.numFields
+        ++ natAgrees s!"{name}.levelParams.length" ourParams.length value.levelParams.length
+        ++ typeAgrees env s!"{name}.type" ourParams tables.exprs[(← jFieldNat ctor "type")]!
+             value.levelParams value.type
+    | _ => found := found ++ missing (toString name) "a constructor"
+  for recursor in recs do
+    let name := tables.names[(← jFieldNat recursor "name")]!
+    let ourParams ← levelParams tables (← jField recursor "levelParams")
+    match ← lookup name with
+    | some (.recInfo value) =>
+      found := found
+        ++ natAgrees s!"{name}.numParams" (← jFieldNat recursor "numParams") value.numParams
+        ++ natAgrees s!"{name}.numIndices" (← jFieldNat recursor "numIndices") value.numIndices
+        ++ natAgrees s!"{name}.numMotives" (← jFieldNat recursor "numMotives") value.numMotives
+        ++ natAgrees s!"{name}.numMinors" (← jFieldNat recursor "numMinors") value.numMinors
+        ++ boolAgrees s!"{name}.k" (← jBool (← jField recursor "k")) value.k
+        ++ namesAgree s!"{name}.all" (← nameList tables (← jField recursor "all")) value.all
+        ++ natAgrees s!"{name}.levelParams.length" ourParams.length value.levelParams.length
+        ++ typeAgrees env s!"{name}.type" ourParams tables.exprs[(← jFieldNat recursor "type")]!
+             value.levelParams value.type
+      let rules ← jArr (← jField recursor "rules")
+      found := found ++ natAgrees s!"{name}.rules.length" rules.size value.rules.length
+      for (rule, theirs) in rules.toList.zip value.rules do
+        let ctor := tables.names[(← jFieldNat rule "ctor")]!
+        found := found
+          ++ nameAgrees s!"{name}.rule.{ctor}.ctor" ctor theirs.ctor
+          ++ natAgrees s!"{name}.rule.{ctor}.nfields" (← jFieldNat rule "nfields") theirs.nfields
+          ++ typeAgrees env s!"{name}.rule.{ctor}.rhs" ourParams
+               tables.exprs[(← jFieldNat rule "rhs")]! value.levelParams theirs.rhs
+    | _ => found := found ++ missing (toString name) "a recursor"
+  return found
+
 def main (args : List String) : IO UInt32 := do
   -- A result that does not name its checker is not evidence: every run says
   -- which Lean kernel produced the verdict below, on stdout, unconditionally.
@@ -108,6 +280,8 @@ def main (args : List String) : IO UInt32 := do
   let mut pendingQuot := 0
   let mut declarations := 0
   let mut inductives := 0
+  let mut regenerationCheck : Option Json := none
+  let mut regenerationsChecked := 0
   let mut lineNumber := 0
   for rawLine in content.splitOn "\n" do
     let line := rawLine.trimAscii.toString
@@ -240,6 +414,7 @@ def main (args : List String) : IO UInt32 := do
             type := tables.exprs[(← jFieldNat family "type")]!
             ctors := constructors.toList : InductiveType }
         inductives := inductives + 1
+        regenerationCheck := some entry
         pure (some (.inductDecl uparams numParams families.toList false))
       else
         throw (IO.userError s!"line {lineNumber}: unknown declaration record")
@@ -248,10 +423,26 @@ def main (args : List String) : IO UInt32 := do
       | .ok next =>
         env := next
         declarations := declarations + 1
+        -- `addDeclCore` accepting an `inductDecl` says nothing about the
+        -- constructors and recursors the record CARRIES: Lean derived its own
+        -- and never looked at ours. Compare them, or those bytes are unread.
+        if let some entry := regenerationCheck then
+          regenerationCheck := none
+          let found ← inductiveAgreesWithLean env tables entry
+          unless found.isEmpty do
+            IO.eprintln s!"line {lineNumber}: LEAN KERNEL REGENERATION MISMATCH: the \
+exported inductive record disagrees with the {found.length} field(s) Lean's own kernel \
+generated for it:"
+            for disagreement in found do
+              IO.eprintln s!"  {disagreement.what}: exported {disagreement.ours} \
+but Lean's kernel generated {disagreement.theirs}"
+            return 1
+          regenerationsChecked := regenerationsChecked + 1
       | .error exception =>
         let message ← (exception.toMessageData {}).toString
         IO.eprintln s!"line {lineNumber}: REAL LEAN KERNEL REJECTED the declaration: {message}"
         return 1
   IO.println s!"lean4export replay: the real Lean kernel accepted {declarations} declaration records \
-({inductives} inductive groups), environment now holds {env.constants.toList.length} constants"
+({inductives} inductive groups, {regenerationsChecked} of them also compared field-by-field \
+against Lean's own regeneration), environment now holds {env.constants.toList.length} constants"
   return 0

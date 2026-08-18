@@ -1414,6 +1414,28 @@ impl<'kernel> ImportState<'kernel> {
         if expected_all.len() > 1 && is_k_target {
             return Err(malformed(line, "mutual recursor may not be a K target"));
         }
+        // `k` is not descriptive metadata. It licenses ι-reduction of a
+        // recursor application whose major premise is not a constructor, so a
+        // wrong flag on the wire is a wrong reduction rule for every consumer
+        // that trusts it. Every other recursor field is compared against the
+        // one this kernel generated; `k` was the one that was not, and the
+        // kernel-vs-kernel differential found it on 2026-08-18 — flipping it
+        // was admitted here and contradicted by the recursor Lean's kernel
+        // generated for the same family.
+        //
+        // The two cases above already pin `k = false` for nested and mutual
+        // recursors, which is the whole reason they are checked first; what
+        // remains is the single-family case, where the kernel's own predicate
+        // is the answer.
+        if !is_nested
+            && expected_all.len() == 1
+            && is_k_target != self.kernel.is_k_like_inductive(expected_all[0])
+        {
+            return Err(malformed(
+                line,
+                "exported recursor K-like flag differs from the kernel-derived one",
+            ));
+        }
         let all = self.name_array(required(rec, "all", line)?, line, "inductive.rec.all")?;
         if all != expected_all {
             return Err(malformed(

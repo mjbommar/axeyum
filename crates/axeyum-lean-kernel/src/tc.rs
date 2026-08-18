@@ -319,6 +319,20 @@ pub enum KernelError {
         /// Family whose generated recursor contract disagreed.
         family: crate::name::NameId,
     },
+    /// A declaration's type or value mentioned a universe parameter that the
+    /// declaration does not bind.
+    ///
+    /// Lean's kernel calls this an `invalid reference to undefined universe
+    /// level parameter`. It is not a hygiene rule: `Const(c, us)` substitutes
+    /// `us` positionally for `c`'s DECLARED parameters, so a parameter that is
+    /// not declared is never substituted at any instantiation site and leaks
+    /// into every use as a universe nobody chose.
+    UndeclaredUniverseParam {
+        /// The declaration that mentioned it.
+        declaration: crate::name::NameId,
+        /// The universe parameter that is free in the declaration.
+        param: crate::name::NameId,
+    },
     /// A declaration's type did not infer/WHNF to a `Sort` (every declaration's
     /// type must itself be a type).
     DeclarationTypeNotASort {
@@ -1045,6 +1059,8 @@ impl Kernel {
     /// # Errors
     ///
     /// Returns [`KernelError::DeclarationExists`] for a duplicate name,
+    /// [`KernelError::UndeclaredUniverseParam`] if the type or value mentions a
+    /// universe parameter the declaration does not bind,
     /// [`KernelError::DeclarationTypeNotASort`] if the type is not a type,
     /// [`KernelError::DeclarationValueMismatch`] if a value's type does not
     /// match the declared type, or any [`KernelError`] surfaced while inferring
@@ -1067,6 +1083,24 @@ impl Kernel {
     /// Check one declaration's ordinary type/value contract without inserting
     /// it. Privileged package gates use this after their own shape validation.
     pub(crate) fn check_declaration(&mut self, decl: &Declaration) -> Result<(), KernelError> {
+        // (1b) Universe closure: every `Param` the type or the value mentions
+        // must be one this declaration binds.
+        //
+        // This has to come first and has to be its own check, because the two
+        // that follow are *relative*: inference and def-eq treat an unbound
+        // `Param` exactly like a bound one, so they hold just as well with a
+        // free `u` on both sides. Nothing else in the kernel ever compares the
+        // parameters occurring in a term against the parameters the
+        // declaration declares, which left the binding list decorative.
+        for expr in [Some(decl.ty()), decl.value()].into_iter().flatten() {
+            if let Some(param) = self.undeclared_universe_param(expr, decl.uparams()) {
+                return Err(KernelError::UndeclaredUniverseParam {
+                    declaration: decl.name(),
+                    param,
+                });
+            }
+        }
+
         // (2) The declared type must itself be a type (infer to a `Sort`).
         let ty = decl.ty();
         let mut ctx = LocalContext::new();
@@ -1089,6 +1123,77 @@ impl Kernel {
         }
 
         Ok(())
+    }
+
+    /// The first universe parameter `e` mentions that is not in `bound`, if any.
+    ///
+    /// `pub(crate)` because the inductive gate does its own type checking and
+    /// never routes through [`Kernel::check_declaration`] — it has to run this
+    /// check itself or inductives are the one declaration kind whose universe
+    /// parameters stay decorative.
+    ///
+    /// Expressions are interned DAGs, so the walk memoizes on `ExprId`; without
+    /// that a shared subterm is revisited once per reference and a large
+    /// prelude declaration is exponential.
+    pub(crate) fn undeclared_universe_param(&self, e: ExprId, bound: &[NameId]) -> Option<NameId> {
+        let mut seen = std::collections::HashSet::new();
+        let mut stack = vec![e];
+        while let Some(current) = stack.pop() {
+            if !seen.insert(current) {
+                continue;
+            }
+            match self.expr_node(current) {
+                ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Lit(_) => {}
+                ExprNode::Sort(level) => {
+                    if let Some(stray) = self.undeclared_level_param(*level, bound) {
+                        return Some(stray);
+                    }
+                }
+                ExprNode::Const(_, levels) => {
+                    for &level in levels {
+                        if let Some(stray) = self.undeclared_level_param(level, bound) {
+                            return Some(stray);
+                        }
+                    }
+                }
+                ExprNode::Proj(_, _, structure) => stack.push(*structure),
+                ExprNode::App(function, argument) => {
+                    stack.push(*function);
+                    stack.push(*argument);
+                }
+                ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                    stack.push(*ty);
+                    stack.push(*body);
+                }
+                ExprNode::Let(_, ty, value, body) => {
+                    stack.push(*ty);
+                    stack.push(*value);
+                    stack.push(*body);
+                }
+            }
+        }
+        None
+    }
+
+    /// The first universe parameter in `level` that is not in `bound`, if any.
+    fn undeclared_level_param(&self, level: LevelId, bound: &[NameId]) -> Option<NameId> {
+        let mut stack = vec![level];
+        while let Some(current) = stack.pop() {
+            match self.level_node(current) {
+                LevelNode::Zero => {}
+                LevelNode::Succ(inner) => stack.push(*inner),
+                LevelNode::Max(left, right) | LevelNode::IMax(left, right) => {
+                    stack.push(*left);
+                    stack.push(*right);
+                }
+                LevelNode::Param(name) => {
+                    if !bound.contains(name) {
+                        return Some(*name);
+                    }
+                }
+            }
+        }
+        None
     }
 }
 
