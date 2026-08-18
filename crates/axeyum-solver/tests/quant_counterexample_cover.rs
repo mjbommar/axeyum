@@ -109,8 +109,22 @@ fn small_cover_generated_module_is_byte_stable() {
     // every reachable inductive a real Lean `inductive` instead of an opaque `axiom`.
     // Checked, not merely stable — Lean 4.30.0 accepts this module and `#print axioms`
     // reports only the query hypotheses, with no `sorryAx`.
-    assert_eq!(module.len(), 15_394);
-    assert_eq!(fnv1a, 0xdb29_9664_bafe_0fe7);
+    // RE-PINNED 2026-08-18, +1_640 bytes, and the delta is HEADER TEXT ONLY --
+    // no proof byte changed, which is why the same +1_640 lands on four
+    // unrelated modules. Two commits moved it, neither of them wrongly:
+    //   +863  `b760fd6ae` declares Lean's codegen constants
+    //         (`unsafe axiom lcErased/lcAny/lcVoid`); without them 21 of 77
+    //         crosscheck families died under Lean 4.34.0-rc1.
+    //   +777  `46724faec` adds `set_option maxRecDepth 65536`; a scope-shared
+    //         `let` chain is nested syntax and 2,897 bindings in one lemma blow
+    //         Lean 4.30.0's default of 512.
+    // Each re-pinned only the golden module that sits in a gate (the
+    // diophantine/Farkas ones) and not this suite, which sits in none -- the
+    // third time that exact pattern has shipped a red pin (see `6389e0194`,
+    // 2026-08-15). Caught by the FIRST completed run of `scripts/local-ci.sh`:
+    // `artifacts/local-ci-runs/a6ee37c6a-s4.json`.
+    assert_eq!(module.len(), 17_034);
+    assert_eq!(fnv1a, 0x37ba_f149_294b_a7f1);
 }
 
 #[test]

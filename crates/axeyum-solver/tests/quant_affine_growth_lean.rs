@@ -53,7 +53,21 @@ fn repair_const_nterm_reconstructs_and_routes() {
     // is gone from the list, so this refutation depends on no library axiom at
     // all. `check_one_lean` now fails any module whose axiom list contains an
     // `Int.` entry, so the shrink is a gate rather than a comment.
-    assert_eq!((source.len(), fnv1a), (206_580, 0xb144_c9c5_d88a_0655));
+    // RE-PINNED 2026-08-18, +1_640 bytes, and the delta is HEADER TEXT ONLY --
+    // no proof byte changed, which is why the same +1_640 lands on four
+    // unrelated modules. Two commits moved it, neither of them wrongly:
+    //   +863  `b760fd6ae` declares Lean's codegen constants
+    //         (`unsafe axiom lcErased/lcAny/lcVoid`); without them 21 of 77
+    //         crosscheck families died under Lean 4.34.0-rc1.
+    //   +777  `46724faec` adds `set_option maxRecDepth 65536`; a scope-shared
+    //         `let` chain is nested syntax and 2,897 bindings in one lemma blow
+    //         Lean 4.30.0's default of 512.
+    // Each re-pinned only the golden module that sits in a gate (the
+    // diophantine/Farkas ones) and not this suite, which sits in none -- the
+    // third time that exact pattern has shipped a red pin (see `6389e0194`,
+    // 2026-08-15). Caught by the FIRST completed run of `scripts/local-ci.sh`:
+    // `artifacts/local-ci-runs/a6ee37c6a-s4.json`.
+    assert_eq!((source.len(), fnv1a), (208_220, 0x8802_0af8_ce24_3503));
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("euclidean_decomposition"));
     assert!(!source.contains("sorryAx"));

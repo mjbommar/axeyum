@@ -61,7 +61,21 @@ fn committed_clock_rows_reconstruct_and_route() {
             // nothing else. `Int.euclidean_decomposition` is gone, and
             // `check_one_lean` fails any module that reintroduces an `Int.`
             // axiom.
-            assert_eq!((source.len(), fnv1a), (124_121, 0xd017_9951_a92d_42e2));
+            // RE-PINNED 2026-08-18, +1_640 bytes, and the delta is HEADER TEXT ONLY --
+            // no proof byte changed, which is why the same +1_640 lands on four
+            // unrelated modules. Two commits moved it, neither of them wrongly:
+            //   +863  `b760fd6ae` declares Lean's codegen constants
+            //         (`unsafe axiom lcErased/lcAny/lcVoid`); without them 21 of 77
+            //         crosscheck families died under Lean 4.34.0-rc1.
+            //   +777  `46724faec` adds `set_option maxRecDepth 65536`; a scope-shared
+            //         `let` chain is nested syntax and 2,897 bindings in one lemma blow
+            //         Lean 4.30.0's default of 512.
+            // Each re-pinned only the golden module that sits in a gate (the
+            // diophantine/Farkas ones) and not this suite, which sits in none -- the
+            // third time that exact pattern has shipped a red pin (see `6389e0194`,
+            // 2026-08-15). Caught by the FIRST completed run of `scripts/local-ci.sh`:
+            // `artifacts/local-ci-runs/a6ee37c6a-s4.json`.
+            assert_eq!((source.len(), fnv1a), (125_761, 0x1a11_6c08_58c3_d8fc));
         }
         assert!(source.contains("theorem axeyum_refutation : False"));
         assert!(source.contains("euclidean_decomposition"));
