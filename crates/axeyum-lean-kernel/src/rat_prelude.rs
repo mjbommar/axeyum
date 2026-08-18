@@ -107,6 +107,10 @@ pub struct RatPrelude {
     /// reals, and stating it positively is what lets `CReal`'s inverse consume
     /// it without a sign decision it cannot make.
     pub mul_inv_cancel: NameId,
+    /// `Rat.natDivSucc_pos : ∀ (k j : Nat), Nat.le 1 k →
+    /// Rat.lt Rat.zero (Rat.natDivSucc k j)` — the **strict** companion of
+    /// [`Self::zero_le_nat_div_succ`].
+    pub nat_div_succ_pos: NameId,
     /// `Rat.sub_mul : ∀ a b w, Rat.sub (Rat.mul a w) (Rat.mul b w) =
     /// Rat.mul (Rat.sub a b) w` — the right-hand distributive law over a
     /// difference, which is [`Self::mul_sub_mul`] with its first summand
@@ -567,6 +571,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         inv: child(kernel, "inv"),
         mul_inv_cancel: child(kernel, "mul_inv_cancel"),
         inv_pos: child(kernel, "inv_pos"),
+        nat_div_succ_pos: child(kernel, "natDivSucc_pos"),
         sub_mul: child(kernel, "sub_mul"),
         mul_inv_sub_one: child(kernel, "mul_inv_sub_one"),
         inv_sub_inv: child(kernel, "inv_sub_inv"),

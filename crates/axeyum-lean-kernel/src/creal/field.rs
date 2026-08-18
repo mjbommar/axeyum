@@ -36,12 +36,29 @@
 //! `Or` is a `Prop`, so `Or.rec` eliminates only into `Prop`. Every law here
 //! lands in `Prop` and none of them notices. A *definition* would:
 //! `inv : (x : CReal) → Apart x zero → CReal` is **not** definable, because
-//! choosing which reciprocal to compute means eliminating the disjunction into
-//! `Type`. That is not a limitation of this kernel — it is the reason CoRN
-//! carries apartness in `CProp` (a `Type`-valued logic) rather than in `Prop`,
-//! and the reason the inverse here takes the separating modulus as an explicit
-//! `Nat` argument. See `super::CRealPrelude::apart` for the statement of that
-//! trade and [`declare_no_total_inverse`] for the half of it that is a theorem.
+//! choosing which of the two reciprocals to compute means eliminating the
+//! disjunction into `Type`. That is not a limitation of this kernel — it is the
+//! reason CoRN carries apartness in `CProp`, a `Type`-valued logic, rather than
+//! in `Prop`.
+//!
+//! **But the `Prop`-ness of the hypothesis is not the obstruction, and that is
+//! worth being exact about.** A function may take a `Prop` argument and return
+//! a `Type`; what it may not do is *branch* on it. So the one-sided
+//! [`PosBound`](super::CRealPrelude::pos_bound) — `1/(k+1) ≤ x`, no
+//! disjunction anywhere — supports
+//!
+//! ```text
+//! inv : (x : CReal) → (k : Nat) → PosBound x k → CReal
+//! ```
+//!
+//! outright, because the proof is only ever used to discharge `CReal.mk`'s
+//! `Prop`-valued regularity field while the representative sequence depends on
+//! `k` alone. The thing that must be data is the **modulus**, not the proof.
+//! [`pos_bound_of_lt`](super::CRealPrelude::pos_bound_of_lt) is the other half
+//! of that story: `0 < x` and `∃ k, PosBound x k` are the same proposition, so
+//! the modulus always exists — and it exists inside an `Exists`, which is a
+//! `Prop`, so no amount of proof gets it out. See
+//! [`declare_no_total_inverse`] for the half of the trade that is a theorem.
 //!
 //! ## The one theorem that is about what is *missing*
 //!
@@ -58,7 +75,12 @@ use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 
-use super::{CRealPrelude, DERIVED_HEIGHT, clt, creal_ty, equiv};
+use super::{
+    CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, cle, clt, creal_ty, div_succ, embed, equiv,
+    gap_elim, gap_halves, gap_intro,
+};
+use crate::rat_prelude::group::rsub;
+use crate::rat_prelude::ops::{radd, rat_eq_rewrite, rat_ty, rle, rneg, rzero};
 
 /// `CReal.Apart x y`.
 fn apart(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
@@ -91,7 +113,267 @@ pub(super) fn declare_field(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     declare_apart(d, p)?;
     declare_apart_laws(d, p)?;
     declare_apart_zero_one(d, p)?;
-    declare_no_total_inverse(d, p)
+    declare_no_total_inverse(d, p)?;
+    declare_of_rat_le(d, p)?;
+    declare_pos_bound(d, p)?;
+    declare_pos_of_pos_bound(d, p)?;
+    declare_pos_bound_of_lt(d, p)
+}
+
+/// `Equiv y (add zero y)`, as a proof term — there is no `CReal.zero_add`, the
+/// 22 name `add_zero` only.
+fn zero_add_back(d: &mut IntDev<'_>, p: CRealPrelude, y: ExprId) -> ExprId {
+    let zero = czero(d, p);
+    let padded = cadd(d, p, zero, y);
+    let flipped = cadd(d, p, y, zero);
+    let commute = d.lemma(p.add_comm, &[zero, y]);
+    let collapse = d.lemma(p.add_zero, &[y]);
+    let forward = d.lemma(p.equiv_trans, &[padded, flipped, y, commute, collapse]);
+    d.lemma(p.equiv_symm, &[padded, y, forward])
+}
+
+/// `CReal.PosBound x k`.
+fn pos_bound(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, k: ExprId) -> ExprId {
+    d.const_app(p.pos_bound, &[x, k])
+}
+
+/// `ofRat_le : ∀ a b, Rat.le a b → CReal.le (ofRat a) (ofRat b)`.
+///
+/// The embedding `ℚ ↪ ℝ` is monotone, and it is not an estimate: both sides
+/// sample at the *same* index, the difference is `a − b ≤ 0`, and `0` is below
+/// every `2/(n+1)`.
+fn declare_of_rat_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let rat_carrier = rat_ty(d);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hypothesis = rle(d, rat, a, b);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let difference = rsub(d, rat, a, b);
+    let bound = div_succ(d, p, 2, n);
+    let zero = rzero(d, rat);
+    let opposite = rneg(d, b);
+    let reflexive = d.lemma(rat.le_refl, &[opposite]);
+    let shifted = d.lemma(rat.add_le_add, &[a, b, opposite, opposite, h, reflexive]);
+    let cancelled = radd(d, b, opposite);
+    let vanish = d.lemma(rat.add_neg, &[b]);
+    let nonpositive = rat_eq_rewrite(d, cancelled, zero, vanish, shifted, &|d, t| {
+        rle(d, rat, difference, t)
+    });
+    let two = d.num(2);
+    let bound_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[two, n]);
+    let at_index = d.lemma(
+        rat.le_trans,
+        &[difference, zero, bound, nonpositive, bound_nonneg],
+    );
+
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, at_index);
+        let with_h = d.lam_fv(h_fv, hypothesis, over_n);
+        let with_b = d.lam_fv(b_fv, rat_carrier, with_h);
+        d.lam_fv(a_fv, rat_carrier, with_b)
+    };
+    let ty = {
+        let left = embed(d, p, a);
+        let right = embed(d, p, b);
+        let conclusion = cle(d, p, left, right);
+        let inner = d.arrow(hypothesis, conclusion);
+        let with_b = d.pi_fv(b_fv, rat_carrier, inner);
+        d.pi_fv(a_fv, rat_carrier, with_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_rat_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.PosBound x k := CReal.le (CReal.ofRat (Rat.natDivSucc 1 k)) x`.
+fn declare_pos_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let prop = d.kernel().sort_zero();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let gap = div_succ(d, p, 1, k);
+    let embedded = embed(d, p, gap);
+    let body = cle(d, p, embedded, x);
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, body);
+        d.lam_fv(x_fv, carrier, with_k)
+    };
+    let ty = {
+        let inner = d.arrow(nat, prop);
+        d.arrow(carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.pos_bound,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 9),
+    })
+}
+
+/// `pos_of_pos_bound : ∀ x k, PosBound x k → lt zero x` — a witnessed bound is
+/// positivity.
+fn declare_pos_of_pos_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hypothesis = pos_bound(d, p, x, k);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let zero = czero(d, p);
+    let gap = div_succ(d, p, 1, k);
+    let embedded = embed(d, p, gap);
+    let unit = d.num(1);
+    let unit_positive = {
+        let nat_prelude = p.rat.int.nat;
+        d.lemma(nat_prelude.le_refl, &[unit])
+    };
+    let positive = d.lemma(rat.nat_div_succ_pos, &[unit, k, unit_positive]);
+    let padded = cadd(d, p, zero, embedded);
+    let restore = zero_add_back(d, p, embedded);
+    let reflexive = d.lemma(p.equiv_refl, &[x]);
+    let bounded = d.lemma(p.le_congr, &[embedded, padded, x, x, restore, reflexive, h]);
+
+    let rat_zero = rzero(d, rat);
+    let strict = crate::rat_prelude::ops::rlt(d, rat, rat_zero, gap);
+    let reached = cle(d, p, padded, x);
+    let pair = and_intro(d, p, strict, reached, positive, bounded);
+    let witness = gap_intro(d, p, zero, x, gap, pair);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, witness);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(x_fv, carrier, with_k)
+    };
+    let ty = {
+        let conclusion = clt(d, p, zero, x);
+        let inner = d.arrow(hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        d.pi_fv(x_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pos_of_pos_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `pos_bound_of_lt : ∀ x, lt zero x → ∃ (k : Nat), PosBound x k`.
+///
+/// **The theorem that says exactly what the real inverse's domain is, and
+/// exactly why it cannot be a `Prop`.** Together with
+/// [`pos_of_pos_bound`](CRealPrelude::pos_of_pos_bound) it says `0 < x` and
+/// `∃ k, 1/(k+1) ≤ x` are the same proposition — so the separating modulus
+/// always exists — and the `Exists` is a `Prop`, so `Exists.rec` eliminates
+/// only into `Prop` and that `k` can **never** be extracted into a `CReal`.
+/// An inverse must therefore take `k` as an explicit `Nat` argument; no amount
+/// of proof gets it out of the existential.
+///
+/// The modulus is *computed*, not searched for:
+/// [`Rat.natDivSucc_lt_of_pos`](crate::RatPrelude::nat_div_succ_lt_of_pos)
+/// gives `1/(1·den q + 1) < q` from the rational gap `q` the strict order
+/// already carries, so `k := 1 · den q`.
+fn declare_pos_bound_of_lt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let one_level = d.level_one();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let zero = czero(d, p);
+    let hypothesis = clt(d, p, zero, x);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let predicate = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = pos_bound(d, p, x, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let target = {
+        let exists_name = rat.int.logic.exists_;
+        let exists = d.kernel().const_(exists_name, vec![one_level]);
+        d.apply(exists, &[nat, predicate])
+    };
+
+    let minor = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let rat_carrier = rat_ty(d);
+        let rat_zero = rzero(d, rat);
+        let positive = crate::rat_prelude::ops::rlt(d, rat, rat_zero, q);
+        let embedded_gap = embed(d, p, q);
+        let padded = cadd(d, p, zero, embedded_gap);
+        let reached = cle(d, p, padded, x);
+        let pair_ty = d.and(positive, reached);
+        let pair_fv = d.fresh_fvar();
+        let pair = d.kernel().fvar(pair_fv);
+        let (strict, bounded) = gap_halves(d, p, zero, x, q, pair);
+
+        // `k := 1 · den q`, the index the Archimedean witness computes.
+        let unit = d.num(1);
+        let denominator = crate::rat_prelude::ops::den(d, q);
+        let modulus = crate::nat_prelude::NatOps::mul(d, unit, denominator);
+        let sharper = d.lemma(rat.nat_div_succ_lt_of_pos, &[unit, q, strict]);
+        let gap = div_succ(d, p, 1, modulus);
+        let weaker = d.lemma(rat.le_of_lt, &[gap, q, sharper]);
+        let embedded = d.lemma(p.of_rat_le, &[gap, q, weaker]);
+        let lifted = embed(d, p, gap);
+        let restore = zero_add_back(d, p, embedded_gap);
+        let shifted = d.lemma(p.le_of_equiv, &[embedded_gap, padded, restore]);
+        let stepped = d.lemma(
+            p.le_trans,
+            &[lifted, embedded_gap, padded, embedded, shifted],
+        );
+        let reached_bound = d.lemma(p.le_trans, &[lifted, padded, x, stepped, bounded]);
+
+        let intro_name = rat.int.logic.exists_intro;
+        let intro = d.kernel().const_(intro_name, vec![one_level]);
+        let witness = d.apply(intro, &[nat, predicate, modulus, reached_bound]);
+        let with_pair = d.lam_fv(pair_fv, pair_ty, witness);
+        d.lam_fv(q_fv, rat_carrier, with_pair)
+    };
+
+    let eliminated = gap_elim(d, p, zero, x, target, h, minor);
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, eliminated);
+        d.lam_fv(x_fv, carrier, with_h)
+    };
+    let ty = {
+        let inner = d.arrow(hypothesis, target);
+        d.pi_fv(x_fv, carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pos_bound_of_lt,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 /// `CReal.Apart x y := Or (lt x y) (lt y x)`.

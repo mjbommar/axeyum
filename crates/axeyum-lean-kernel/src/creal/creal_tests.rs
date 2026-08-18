@@ -5,7 +5,7 @@ use crate::{Declaration, Kernel};
 
 /// A built `CReal` kernel, as a **clone of one template**.
 ///
-/// The full development is now 65 declarations over the constructed ℚ and takes
+/// The full development is now 69 declarations over the constructed ℚ and takes
 /// tens of seconds to type-check; seventeen tests each building it from scratch
 /// dominated this crate's test time. The argument for cloning is
 /// [`prelude_cache`](crate::prelude_cache)'s, verbatim: prelude construction is
@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 65] = [
+    let expected: [(&str, crate::NameId, &str); 69] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -147,6 +147,10 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.not_equiv_of_apart", p.not_equiv_of_apart, "theorem"),
         ("CReal.apart_zero_one", p.apart_zero_one, "theorem"),
         ("CReal.no_total_inverse", p.no_total_inverse, "theorem"),
+        ("CReal.ofRat_le", p.of_rat_le, "theorem"),
+        ("CReal.PosBound", p.pos_bound, "def"),
+        ("CReal.pos_of_pos_bound", p.pos_of_pos_bound, "theorem"),
+        ("CReal.pos_bound_of_lt", p.pos_bound_of_lt, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -1052,4 +1056,55 @@ fn the_no_total_inverse_route_cannot_refute_a_universally_zero_product() {
          (take f := fun _ => zero). The no_total_inverse script would then close \
          for any right-hand side, and its content would be nil."
     );
+}
+
+/// **`0 < x` and `∃ k, 1/(k+1) ≤ x` are the same proposition — and that is
+/// exactly why the inverse cannot take a `Prop` as its domain.**
+///
+/// The two directions are asserted verbatim. `pos_bound_of_lt` says the
+/// separating modulus always exists; `Exists` is a `Prop`, so `Exists.rec`
+/// eliminates only into `Prop` and the `k` can never be extracted into a
+/// `CReal`. `PosBound x k` is a `Prop` *about a `Nat` the caller supplies*,
+/// which is why a function may take it and still return a `CReal`.
+#[test]
+fn positivity_and_a_witnessed_modulus_are_the_same_proposition() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.pos_of_pos_bound),
+        "((x0 : CReal) -> ((x1 : AxNat) -> ((x2 : CReal.PosBound x0 x1) -> \
+         CReal.lt CReal.zero x0)))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.pos_bound_of_lt),
+        "((x0 : CReal) -> ((x1 : CReal.lt CReal.zero x0) -> \
+         Exists.{1} AxNat (fun (x2 : AxNat) => CReal.PosBound x0 x2)))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.of_rat_le),
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat.le x0 x1) -> \
+         CReal.le (CReal.ofRat x0) (CReal.ofRat x1))))"
+    );
+    for (label, name) in [
+        ("ofRat_le", p.of_rat_le),
+        ("pos_of_pos_bound", p.pos_of_pos_bound),
+        ("pos_bound_of_lt", p.pos_bound_of_lt),
+    ] {
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "CReal.{label} rests on {footprint:?}");
+    }
 }

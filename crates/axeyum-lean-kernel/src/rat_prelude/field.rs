@@ -87,7 +87,98 @@ pub(super) fn declare_field_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_inv_pos(d, p)?;
     declare_sub_mul(d, p)?;
     declare_inverse_identities(d, p)?;
-    declare_inv_antitone(d, p)
+    declare_inv_antitone(d, p)?;
+    declare_nat_div_succ_pos(d, p)
+}
+
+/// `Rat.natDivSucc_pos : ∀ (k j : Nat), 1 ≤ k → 0 < k/(j+1)`.
+///
+/// The **strict** companion of
+/// [`zero_le_natDivSucc`](super::RatPrelude::zero_le_nat_div_succ), and the
+/// same proof with `le` replaced by `lt` throughout: `normalize_cross` reads
+/// `num r · (j+1)` as `ofNat (k · den r)`, which is positive because both
+/// factors are, and cancelling the positive `(j+1)` leaves `0 < num r`.
+///
+/// It exists because the real inverse's domain is stated as
+/// `1/(k+1) ≤ x`, and turning that back into `0 < x` needs the rational bound
+/// to be strictly positive — the non-strict version would make the witnessed
+/// form of positivity strictly weaker than positivity.
+fn declare_nat_div_succ_pos(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = p.int.nat;
+    let nat_ty = d.nat_ty();
+    super::archimedean::mixed_theorem(d, p.nat_div_succ_pos, &[nat_ty, nat_ty], &|d, v| {
+        let (k, j) = (v[0], v[1]);
+        let value = d.const_app(p.nat_div_succ, &[k, j]);
+        let zero_rat = rzero(d, p);
+        let positive_hypothesis = {
+            let unit = d.num(1);
+            NatOps::le(d, unit, k)
+        };
+        let claim = rlt(d, p, zero_rat, value);
+        let stmt = d.arrow(positive_hypothesis, claim);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let numerator = d.of_nat(k);
+        let denominator = d.succ(j);
+        let positive = one_le_succ(d, j);
+        let representative = normalize(d, numerator, denominator, positive);
+        let actual = num(d, representative);
+        let actual_den = den(d, representative);
+        let actual_den_z = d.of_nat(actual_den);
+        let denominator_z = d.of_nat(denominator);
+        let zero = d.izero();
+
+        // `num r · (j+1) = ofNat k · ofNat (den r) = ofNat (k · den r) > 0`.
+        let cross = d.lemma(p.normalize_cross, &[numerator, denominator, positive]);
+        let product = d.imul(numerator, actual_den_z);
+        let product_positive = {
+            let magnitude = NatOps::mul(d, k, actual_den);
+            let den_positive = den_pos(d, representative);
+            let magnitude_positive = d.lemma(nat.one_le_mul, &[k, actual_den, h, den_positive]);
+            d.lemma(p.int_of_nat_pos, &[magnitude, magnitude_positive])
+        };
+        let scaled = d.imul(actual, denominator_z);
+        let back = d.isymm(scaled, product, cross);
+        let scaled_positive = d.int_eq_rewrite(product, scaled, back, product_positive, &|d, x| {
+            d.ilt(zero, x)
+        });
+        let zero_scaled = d.imul(zero, denominator_z);
+        let restore = d.lemma(p.int_zero_mul, &[denominator_z]);
+        let rebalanced = {
+            let inverse = d.isymm(zero_scaled, zero, restore);
+            d.int_eq_rewrite(zero, zero_scaled, inverse, scaled_positive, &|d, x| {
+                d.ilt(x, scaled)
+            })
+        };
+        let cancelled = d.lemma(
+            p.int_lt_of_mul_lt_mul_right,
+            &[zero, actual, denominator, positive, rebalanced],
+        );
+
+        // `0 < num r` IS `0 < r`, after unpadding both cross-products.
+        let unit_nat = d.num(1);
+        let unit = d.of_nat(unit_nat);
+        let padded_right = d.imul(actual, unit);
+        let strip_right = d.lemma(p.int.mul_one, &[actual]);
+        let at_right = {
+            let inverse = d.isymm(padded_right, actual, strip_right);
+            d.int_eq_rewrite(actual, padded_right, inverse, cancelled, &|d, x| {
+                d.ilt(zero, x)
+            })
+        };
+        let padded_left = d.imul(zero, actual_den_z);
+        let strip_left = d.lemma(p.int_zero_mul, &[actual_den_z]);
+        let at_left = {
+            let inverse = d.isymm(padded_left, zero, strip_left);
+            d.int_eq_rewrite(zero, padded_left, inverse, at_right, &|d, x| {
+                d.ilt(x, padded_right)
+            })
+        };
+        let proof = d.lam_fv(h_fv, positive_hypothesis, at_left);
+        (stmt, proof)
+    })
 }
 
 /// `1 · a = a`, as a proof term. There is no `Rat.one_mul` — the 22 name

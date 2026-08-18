@@ -458,6 +458,28 @@ pub struct CRealPrelude {
     /// partial" is a proved obstruction here rather than a scoping note. The
     /// field analogue of `Complex.no_compatible_order`.
     pub no_total_inverse: NameId,
+    /// `CReal.ofRat_le : ∀ a b, Rat.le a b → CReal.le (ofRat a) (ofRat b)` —
+    /// the embedding `ℚ ↪ ℝ` is monotone.
+    pub of_rat_le: NameId,
+    /// `CReal.PosBound : CReal → Nat → Prop` —
+    /// `PosBound x k := le (ofRat (Rat.natDivSucc 1 k)) x`.
+    ///
+    /// **The domain of the multiplicative inverse**, with its modulus carried
+    /// as data. `0 < x` is a `Prop` and cannot be eliminated into `Type`;
+    /// `PosBound x k` is a `Prop` *about a `Nat` the caller supplies*, and a
+    /// function may take it as an argument and still return a `CReal`, because
+    /// the proof is only ever used to discharge a `Prop`-valued field.
+    pub pos_bound: NameId,
+    /// `CReal.pos_of_pos_bound : ∀ x k, PosBound x k → lt zero x`.
+    pub pos_of_pos_bound: NameId,
+    /// `CReal.pos_bound_of_lt : ∀ x, lt zero x → ∃ (k : Nat), PosBound x k`.
+    ///
+    /// With [`Self::pos_of_pos_bound`] this says `0 < x` and
+    /// `∃ k, 1/(k+1) ≤ x` are the **same proposition** — the separating modulus
+    /// always exists — while `Exists` is a `Prop`, so the `k` can never be
+    /// extracted into a `CReal`. That pair is the precise statement of why the
+    /// inverse takes its modulus as an argument.
+    pub pos_bound_of_lt: NameId,
 }
 
 impl CRealPrelude {
@@ -577,6 +599,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         not_equiv_of_apart: kernel.name_str(creal, "not_equiv_of_apart"),
         apart_zero_one: kernel.name_str(creal, "apart_zero_one"),
         no_total_inverse: kernel.name_str(creal, "no_total_inverse"),
+        of_rat_le: kernel.name_str(creal, "ofRat_le"),
+        pos_bound: kernel.name_str(creal, "PosBound"),
+        pos_of_pos_bound: kernel.name_str(creal, "pos_of_pos_bound"),
+        pos_bound_of_lt: kernel.name_str(creal, "pos_bound_of_lt"),
     }
 }
 

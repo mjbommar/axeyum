@@ -267,6 +267,10 @@ fn main() {
         ("CReal.not_equiv_of_apart", p.not_equiv_of_apart),
         ("CReal.apart_zero_one", p.apart_zero_one),
         ("CReal.no_total_inverse", p.no_total_inverse),
+        ("CReal.ofRat_le", p.of_rat_le),
+        ("CReal.PosBound", p.pos_bound),
+        ("CReal.pos_of_pos_bound", p.pos_of_pos_bound),
+        ("CReal.pos_bound_of_lt", p.pos_bound_of_lt),
     ];
 
     // (8): the headline count itself, read out of the kernel. Every one of the
@@ -517,6 +521,11 @@ fn main() {
          Bishop's apartness, lt both ways — is defined with its four laws, and \
          CReal.no_total_inverse REFUTES every total multiplicative inverse, so \
          the field structure is missing as a proved obstruction and not as a \
-         scoping note (ADR-0473)"
+         scoping note. CReal.pos_of_pos_bound and CReal.pos_bound_of_lt make \
+         the inverse's domain precise in both directions: 0 < x and \
+         (∃ k, 1/(k+1) ≤ x) are the SAME proposition, so the separating \
+         modulus always exists — and Exists is a Prop, so it can never be \
+         extracted into a CReal, which is why an inverse must take k as an \
+         explicit Nat (ADR-0473)"
     );
 }
