@@ -178,6 +178,9 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `b91b6dac5` | The four ordered-field lemmas ℝ's inverse is written in — `sub_mul`, `mul_inv_sub_one`, `inv_sub_inv`, `inv_le_of_pos_le` — from `mul_inv_cancel` and the 22 alone, so each transcribes one level up. |
 | 2026-08-18 | `6375d7746` | **ℚ is a FIELD.** `Rat.mul_inv_cancel : 0 < q → q·q⁻¹ = 1`, axiom-free: the one proof here about the representation, since `Rat.inv q` is stuck until `num q` is in constructor form. The `negSucc` branch needs no lemma — `Int.lt Int.zero (negSucc m)` **ι-reduces to `False`**. Guard: `Rat.inv (2/1)` REDUCES to `1/2`; the identical script pointed at `= 2/1` is REFUSED. |
 | 2026-08-18 | `baf81fd66` | ℝ gets **Bishop apartness**, verbatim rather than encoded — `CReal.lt` already carries the separation as a rational gap. Four laws, `not_equiv_of_apart` ONE-WAY (its converse is Markov's principle), and `CReal.no_total_inverse`. |
+| 2026-08-18 | 570b5c738 | **The interface as a telescope, and it is the same over ℤ.** `ring_interface_telescope` + `examples/ring_interface_pin.rs`, 30 of 30 byte-identical. Also repaired a test `61906c585` swept in broken, and the finding behind it: a `NameId` is an INDEX, so a signature read against another *populated* kernel resolves silently to `Nat.le`, `Nat.beq_refl`, … rather than failing. |
+| 2026-08-18 | 9ab8d7977 | **The negative control at one axiom instead of thirty.** `build_control_carrier`, three mutations, one test dead each. |
+| 2026-08-18 | 6c08c906f | **ADR-0486** + `F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers`. |
 | 2026-08-18 | `c9223e4` | binding: the converse number says which side of the check the missing 245 rows are on — `undecomposable_spine=0` measured and gated, `represented` is a maximum matching rather than an overlap. |
 | 2026-08-18 | `b9d2f0a` | binding: the 4 `FiniteArrayExtensionality` rows were never content-free — the emitter collapsed each `(select a i)`; `attested` 9 → 5, `structural` 98 → 102 with 360 new matched term nodes. |
 | 2026-08-18 | `a25b18a` | binding: 66 rows were recording the weaker of two true statements — four verdicts become a partition with two-sided pins; `anchored` 10 → 73, `structural_anchored=66` new. |
@@ -760,6 +763,40 @@ the **same** `Prop`, so the modulus always exists and can never be extracted.
 **`CReal.inv` itself is NOT built**; design fixed and cost measured in
 [`../notes/creal-field.md`](docs/plan/notes/creal-field.md), which is also where the
 next task is.
+
+**Both of ADR-0480's reasons for keeping the 30 axioms are discharged in
+principle; the rows have not moved (`WIP`, agent-shrink-control, 2026-08-18).**
+`real: axiom=30` is unchanged and I did not force it down — "what stops it"
+below is the finding.
+
+**The specification, measured rather than asserted.** ADR-0480 says the
+30-binder telescope "is the interface, assuming nothing" — true only if the
+telescope read off an axiom-free development says the *same* thing as the one
+read off `Real`. `examples/ring_interface_pin.rs` compares them: **30 binders,
+30 identical, 0 differing**, so the ledger's 30 SHA-256 type pins can be carried
+by a development whose trusted surface is `0`. The gate fails on a mutated
+subject: transposing `le_refl`/`le_trans` in `From<IntPrelude>` gives `28
+identical, 2 differing`, exit 1 — the transposition an earlier lane found no
+test could see.
+
+**The control cannot be shrunk; it has to be inverted.** `Real` is an *opaque*
+carrier, so nothing over it is definable and every law must be assumed — the
+floor is the whole signature. `build_control_carrier` goes the other way: the
+axiom-free `Int` development with exactly **one** deliberate axiom, typed as
+`Int.lt_irrefl`, the step every Farkas chain ends on. Measured: the control run
+reaches `["axeyum.control.assumed_lt_irrefl"]`, the same refutation over
+untouched ℤ reaches `[]`. Three mutations, one test dead each. The control axiom
+is **provably redundant** — discharged by a footprint-empty theorem in the same
+environment, which `Real`'s relatively-consistent 30 are not.
+
+**What stops the retirement, and it is not mathematics.** `build_arith_prelude`
+must go before rows can retire; blocked on the three relative-consistency models
+(`int`/`rat`/`creal`) re-expressed as telescope instantiations with two standing
+facts riding on them, a new home for `arith_prelude_builds()`, and the ledger's
+own control — its population must go `real: 30` → `control: 1` in **one**
+change, since landing the control as a new row first publishes a trusted surface
+of **31**. 29 `.rs` files name the package.
+[Notes](docs/plan/notes/66-shrink-control.md).
 
 **66 instances were recording the weaker of two true statements, 4 more were
 recording nothing at all, and the converse number could not be read** (`WIP`,
