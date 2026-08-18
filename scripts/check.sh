@@ -86,6 +86,13 @@ step adopted-controls scripts/check-adopted-controls.sh
 # from every non-test caller of `Environment::insert_unchecked`. 5,129 function
 # lines of 29,929 in axeyum-lean-kernel/src. Pins the admission gates and the SET
 # of files on the path -- which is how `lean_export.rs` turned up inside it.
+# The SMT-LIB -> rendered-statement transcription: item 3 of the residual trust
+# surface, and the one it calls weaker than the kernel. Every hypothesis axiom a
+# reconstructed module declares must bind back to an `(assert ...)` line of the
+# query, with both sides normalized by independent Python parsers. Self-corrupts
+# and requires the corruption to be caught.
+step lra-hypothesis-binding python3 scripts/check-lra-hypothesis-binding.py
+step lra-hypothesis-binding-controls python3 -m unittest scripts.tests.test_check_lra_hypothesis_binding
 step kernel-trusted-core python3 scripts/check-kernel-trusted-core.py
 step kernel-trusted-core-controls python3 -m unittest scripts.tests.test_check_kernel_trusted_core
 step smt-evidence-tests python3 -m unittest scripts.tests.test_check_smt_evidence_certified

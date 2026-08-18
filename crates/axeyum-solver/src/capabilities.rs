@@ -410,6 +410,37 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0015",
     },
     Capability {
+        area: "QF_LRA / QF_LIA",
+        feature: "MECHANICAL BINDING from the rendered Lean statement back to the query TEXT \
+                  (prove_unsat_to_lean_theory_module), dumped by the \
+                  lean_hypothesis_binding_dump example and gated by \
+                  scripts/check-lra-hypothesis-binding.py: \
+                  the module a reconstruction emits declares the query's constraints as its OWN \
+                  axioms (`axeyum.reconstruct.lra.hyp._N` / `.int_hyp._N`) and proves False from \
+                  them, so Lean accepting the proof says nothing about whether those axioms are the \
+                  `.smt2` file's `(assert ...)` lines. Closes item 3 of the residual trust surface — \
+                  the link that note ranks as WEAKER THAN THE KERNEL — for the two arithmetic \
+                  hypothesis routes. BOUNDARY: linear atoms only; the SOS route's `Real.mul` \
+                  monomials and every non-arithmetic hypothesis namespace are DECLINED, not \
+                  skipped — an unrecognized `axeyum.reconstruct.*` axiom fails the run",
+        assurance: Assurance::Checked,
+        evidence: "both sides are re-parsed and re-normalized in Python, sharing no code with each \
+                   other or with axeyum-smtlib, because the renderer emits `x > 5` as `-x + 5 < 0` \
+                   and normalization is exactly where a transcription bug would hide. Every rendered \
+                   hypothesis must be an atom the query ENTAILS under one injective, sort-respecting \
+                   renaming (injective because a non-injective renaming can make a satisfiable query \
+                   look refuted; `Int` carriers may not stand for `Real` symbols); every axiom in the \
+                   module must be a carrier, a bound hypothesis, or a pinned prelude law, so \
+                   `axiom smuggled : False` cannot pass unread. The backtracking search is \
+                   UNTRUSTED — whatever it returns is re-derived by an independent verify pass that \
+                   shares no control flow with it. Measured 2026-08-17: 105 pinned instances, 248 \
+                   hypotheses, 0 failures; every run corrupts each hypothesis five ways (869 caught, \
+                   329 accepted and re-verified) so the gate cannot pass without its detector \
+                   firing. 12 guards, each driven to failure in scripts/tests/mutation_controls.py",
+        checked_by: CheckedBy::SelfChecker,
+        reference: "docs/prover-track/research/13-residual-trust-surface.md",
+    },
+    Capability {
         area: "QF_LRA",
         feature: "ONLINE incremental LRA theory solver (LraTheory: assert/push/pop + Farkas conflict \
                   cores) + a DPLL(T) driver (check_qf_lra_online) — the warm theory engine for online \

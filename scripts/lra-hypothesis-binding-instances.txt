@@ -1,0 +1,126 @@
+# Instances pinned to `scripts/check-lra-hypothesis-binding.py`.
+#
+# Each is an UNSAT query whose Lean refutation module reconstructs real theory
+# content (not a structural attestation) through one of the two arithmetic
+# hypothesis routes, and for which the rendered hypotheses were mechanically
+# bound back to the query's own `(assert …)` lines. Derived, not guessed: swept
+# from the committed corpora on 2026-08-17 by running the dumper over every
+# `.smt2` and keeping the ones that both render a theory module and bind.
+#
+# A RATCHET. Adding a line is routine; removing one means a query that used to
+# have a verified transcription no longer does, and is a reviewable act.
+#
+# Known NOT covered, and why (so a later sweep does not re-discover them as
+# news):
+#   corpus/public-curated/synthetic/QF_NRA/graduated/nra-*  (10 files)
+#       the Sum-of-Squares route renders `Real.mul` monomials; this checker
+#       models the LINEAR fragment only and declines rather than guessing.
+#   artifacts/examples/math/induction-obligations-v0/smt2/
+#       bounded-step-counterexample-count-lia-conflict.smt2
+#       routes through `axeyum.reconstruct.prop._N`/`hyp._N`, a namespace
+#       outside the two arithmetic routes.
+artifacts/examples/math/affine-geometry-v0/smt2/bad-collinearity-determinant-farkas-conflict.smt2
+artifacts/examples/math/affine-geometry-v0/smt2/bad-distance-preservation-farkas-conflict.smt2
+artifacts/examples/math/affine-geometry-v0/smt2/bad-midpoint-image-y-farkas-conflict.smt2
+artifacts/examples/math/bounded-dynamics-v0/smt2/bad-invariant-bound-farkas-conflict.smt2
+artifacts/examples/math/bounded-dynamics-v0/smt2/bad-threshold-step-farkas-conflict.smt2
+artifacts/examples/math/bounded-dynamics-v0/smt2/bad-transition-step-farkas-conflict.smt2
+artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2
+artifacts/examples/math/complex-algebraic-v0/smt2/bad-norm-squared-farkas-conflict.smt2
+artifacts/examples/math/complex-algebraic-v0/smt2/bad-product-real-part-farkas-conflict.smt2
+artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-conjugation-product-imaginary-farkas-conflict.smt2
+artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2
+artifacts/examples/math/convexity-rational-v0/smt2/bad-midpoint-convexity-farkas-conflict.smt2
+artifacts/examples/math/coordinate-geometry-v0/smt2/bad-distance-squared-farkas-conflict.smt2
+artifacts/examples/math/coordinate-geometry-v0/smt2/bad-midpoint-x-farkas-conflict.smt2
+artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-degenerate-multiplier-farkas-conflict.smt2
+artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-free-gradient-farkas-conflict.smt2
+artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-inactive-slack-farkas-conflict.smt2
+artifacts/examples/math/finite-arnoldi-iteration-v0/smt2/bad-arnoldi-h21-farkas-conflict.smt2
+artifacts/examples/math/finite-barycentric-interpolation-v0/smt2/bad-barycentric-value-farkas-conflict.smt2
+artifacts/examples/math/finite-cauchy-riemann-shadow-v0/smt2/bad-derivative-real-part-farkas-conflict.smt2
+artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2
+artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-interpolation-sample-farkas-conflict.smt2
+artifacts/examples/math/finite-cholesky-decomposition-v0/smt2/bad-cholesky-product-entry-farkas-conflict.smt2
+artifacts/examples/math/finite-circle-geometry-v0/smt2/bad-line-intersection-farkas-conflict.smt2
+artifacts/examples/math/finite-circle-geometry-v0/smt2/bad-radius-farkas-conflict.smt2
+artifacts/examples/math/finite-condition-number-v0/smt2/bad-condition-number-farkas-conflict.smt2
+artifacts/examples/math/finite-confusion-matrix-v0/smt2/bad-precision-farkas-conflict.smt2
+artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-opposite-angle-farkas-conflict.smt2
+artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-ptolemy-farkas-conflict.smt2
+artifacts/examples/math/finite-dag-topological-order-v0/smt2/bad-topological-edge-order-lia-conflict.smt2
+artifacts/examples/math/finite-decision-tree-gini-v0/smt2/bad-weighted-gini-farkas-conflict.smt2
+artifacts/examples/math/finite-difference-derivatives-v0/smt2/bad-finite-difference-value-farkas-conflict.smt2
+artifacts/examples/math/finite-divided-differences-v0/smt2/bad-interpolation-value-farkas-conflict.smt2
+artifacts/examples/math/finite-entropy-information-gain-v0/smt2/bad-weighted-entropy-farkas-conflict.smt2
+artifacts/examples/math/finite-flow-cut-v0/smt2/bad-flow-value-cut-bound-farkas-conflict.smt2
+artifacts/examples/math/finite-gaussian-elimination-v0/smt2/bad-eliminated-rhs-farkas-conflict.smt2
+artifacts/examples/math/finite-hitting-times-v0/smt2/bad-expected-time-farkas-conflict.smt2
+artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inverse-distance-product-farkas-conflict.smt2
+artifacts/examples/math/finite-jordan-chain-v0/smt2/bad-jordan-chain-farkas-conflict.smt2
+artifacts/examples/math/finite-kkt-v0/smt2/bad-complementarity-farkas-conflict.smt2
+artifacts/examples/math/finite-kkt-v0/smt2/bad-stationarity-farkas-conflict.smt2
+artifacts/examples/math/finite-k-means-clustering-v0/smt2/bad-centroid-x-farkas-conflict.smt2
+artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/bad-squared-distance-farkas-conflict.smt2
+artifacts/examples/math/finite-lanczos-iteration-v0/smt2/bad-lanczos-beta1-farkas-conflict.smt2
+artifacts/examples/math/finite-ldlt-decomposition-v0/smt2/bad-ldlt-diagonal-farkas-conflict.smt2
+artifacts/examples/math/finite-linear-discriminant-v0/smt2/bad-fisher-direction-farkas-conflict.smt2
+artifacts/examples/math/finite-line-search-v0/smt2/bad-armijo-farkas-conflict.smt2
+artifacts/examples/math/finite-line-search-v0/smt2/bad-descent-direction-farkas-conflict.smt2
+artifacts/examples/math/finite-lu-decomposition-v0/smt2/bad-lu-multiplier-farkas-conflict.smt2
+artifacts/examples/math/finite-naive-bayes-classifier-v0/smt2/bad-posterior-farkas-conflict.smt2
+artifacts/examples/math/finite-operator-v0/smt2/bad-l1-sum-norm-farkas-conflict.smt2
+artifacts/examples/math/finite-operator-v0/smt2/bad-operator-bound-farkas-conflict.smt2
+artifacts/examples/math/finite-orthogonal-diagonalization-v0/smt2/bad-spectral-eigenvalue-farkas-conflict.smt2
+artifacts/examples/math/finite-perceptron-v0/smt2/bad-weight-update-farkas-conflict.smt2
+artifacts/examples/math/finite-pivoted-lu-decomposition-v0/smt2/bad-pivot-sign-farkas-conflict.smt2
+artifacts/examples/math/finite-polar-decomposition-v0/smt2/bad-polar-diagonal-farkas-conflict.smt2
+artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2
+artifacts/examples/math/finite-projected-gradient-v0/smt2/bad-projected-decrease-farkas-conflict.smt2
+artifacts/examples/math/finite-random-variables-v0/smt2/bad-expectation-through-pushforward-farkas-conflict.smt2
+artifacts/examples/math/finite-real-schur-decomposition-v0/smt2/bad-schur-superdiagonal-farkas-conflict.smt2
+artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-affine-step-farkas-conflict.smt2
+artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-fibonacci-value-farkas-conflict.smt2
+artifacts/examples/math/finite-roc-auc-v0/smt2/bad-auc-farkas-conflict.smt2
+artifacts/examples/math/finite-sdp-v0/smt2/bad-objective-farkas-conflict.smt2
+artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2
+artifacts/examples/math/finite-shortest-path-v0/smt2/bad-shorter-distance-potential-bound-farkas-conflict.smt2
+artifacts/examples/math/finite-singular-value-shadow-v0/smt2/bad-singular-value-bound-farkas-conflict.smt2
+artifacts/examples/math/finite-walsh-hadamard-transform-v0/smt2/bad-transform-coefficient-farkas-conflict.smt2
+artifacts/examples/math/finite-wolfe-line-search-v0/smt2/bad-wolfe-curvature-farkas-conflict.smt2
+artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2
+artifacts/examples/math/incidence-geometry-v0/smt2/bad-incidence-farkas-conflict.smt2
+artifacts/examples/math/incidence-geometry-v0/smt2/bad-intersection-x-farkas-conflict.smt2
+artifacts/examples/math/inner-product-spaces-rational-v0/smt2/bad-inner-product-farkas-conflict.smt2
+artifacts/examples/math/inner-product-spaces-rational-v0/smt2/bad-projection-orthogonality-farkas-conflict.smt2
+artifacts/examples/math/least-squares-regression-v0/smt2/bad-coefficients-farkas-conflict.smt2
+artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2
+artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2
+artifacts/examples/math/linear-algebra-rational-v0/smt2/singular-system-inconsistent-farkas-conflict.smt2
+artifacts/examples/math/linear-optimization-v0/smt2/objective-threshold-farkas-conflict.smt2
+artifacts/examples/math/matrix-invariants-v0/smt2/bad-characteristic-polynomial-farkas-conflict.smt2
+artifacts/examples/math/matrix-invariants-v0/smt2/bad-trace-invariant-farkas-conflict.smt2
+artifacts/examples/math/metric-continuity-v0/smt2/bad-delta-farkas-conflict.smt2
+artifacts/examples/math/metric-continuity-v0/smt2/bad-open-ball-preimage-farkas-conflict.smt2
+artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2
+artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2
+artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-solution-box-upper-bound-farkas-conflict.smt2
+artifacts/examples/math/orientation-area-geometry-v0/smt2/bad-affine-area-scaling-farkas-conflict.smt2
+artifacts/examples/math/orientation-area-geometry-v0/smt2/bad-orientation-farkas-conflict.smt2
+artifacts/examples/math/polynomial-factorization-rational-v0/smt2/irreducible-quadratic-discriminant-farkas-conflict.smt2
+artifacts/examples/math/random-matrix-finite-v0/smt2/bad-expected-rank-farkas-conflict.smt2
+artifacts/examples/math/random-matrix-finite-v0/smt2/bad-trace-moment-farkas-conflict.smt2
+artifacts/examples/math/rationals-lra-v0/smt2/order-transitivity-farkas-conflict.smt2
+artifacts/examples/math/reals-rcf-shadow-v0/smt2/negative-discriminant-farkas-conflict.smt2
+artifacts/examples/math/rigid-configuration-geometry-v0/smt2/bad-rigid-distance-table-farkas-conflict.smt2
+artifacts/examples/math/rigid-configuration-geometry-v0/smt2/bad-translation-image-x-farkas-conflict.smt2
+artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-eigenpair-farkas-conflict.smt2
+artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-rayleigh-quotient-farkas-conflict.smt2
+artifacts/instances/infeasibility/loadplan-hazmat.smt2
+artifacts/instances/infeasibility/roster-icu-night.smt2
+artifacts/instances/infeasibility/schedule-deadline.smt2
+corpus/regression/cvc5/qf_lia/cvc5__cli__regress0__dump-unsat-core-full.smt2
+corpus/regression/qf_lra/unsat_empty_interval.smt2
+corpus/regression/qf_lra/unsat_sum_conflict.smt2
+docs/rules-as-code/examples/benefit-eligibility-v0/smt2/monotonicity-bool-qf-lia-conflict.smt2
+docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/phaseout-monotonicity-bool-qf-lia-conflict.smt2

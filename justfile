@@ -105,6 +105,21 @@ facts:
     # claiming something its evidence does not establish. Sub-second; three lanes
     # did this by hand before it was a gate.
     python3 scripts/check-geometry-fact-transcription.py
+    # THE WEAKEST LINK IN THE TRUST CHAIN, until this landed. A reconstructed
+    # UNSAT declares the query's constraints as the Lean module's OWN axioms and
+    # proves False from them -- and nothing checked that those axioms are what
+    # the `.smt2` said. A dropped negation would typecheck, report a clean axiom
+    # footprint, and be worthless
+    # (docs/prover-track/research/13-residual-trust-surface.md item 3).
+    #
+    # Binds every rendered `lra.hyp._N`/`int_hyp._N` back to an `(assert ...)`
+    # line, both sides parsed in Python so a bug in the renderer's normalizer
+    # cannot cancel out. 105 instances, 248 hypotheses, ~31s + the example build.
+    # Corrupts each hypothesis five ways on every run and requires the
+    # corruptions to be caught, because a checker that cannot fail is worse than
+    # none.
+    python3 -m unittest scripts.tests.test_check_lra_hypothesis_binding
+    python3 scripts/check-lra-hypothesis-binding.py
 
 # Re-run the evidence behind every settled fact, route-agnostically. `facts`
 # above checks the ledger is CONSISTENT; this checks it is still TRUE -- a fact

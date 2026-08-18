@@ -152,6 +152,72 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
             ),
         ],
     ),
+    "lra-hypothesis-binding": (
+        "scripts/check-lra-hypothesis-binding.py",
+        "scripts.tests.test_check_lra_hypothesis_binding",
+        [
+            (
+                "injectivity of the renaming",
+                "            if cand_var in used:\n                continue",
+                "            if False:\n                continue",
+            ),
+            (
+                "sort-soundness of the renaming",
+                "            if not sort_compatible(carriers.get(var), sorts.get(cand_var)):\n                continue",
+                "            if False:\n                continue",
+            ),
+            (
+                "search completeness (all permutations, not the first)",
+                "                found = extend(index + 1, next_phi, next_used, origins + (origin,))\n                if found is not None:\n                    return found",
+                "                return extend(index + 1, next_phi, next_used, origins + (origin,))",
+            ),
+            (
+                "unaccounted-axiom guard",
+                "    if unaccounted:\n        return (None, [], set(), \"; \".join(unaccounted))",
+                "    if False:\n        return (None, [], set(), \"; \".join(unaccounted))",
+            ),
+            (
+                "carrier is an opaque constant of the right sort",
+                "            if ty != carrier_hit:",
+                "            if False:",
+            ),
+            (
+                "re-check of whatever the search returned",
+                "    problems = verify_binding(phi, hypotheses, allowed, carriers, sorts)\n    if problems:",
+                "    problems = verify_binding(phi, hypotheses, allowed, carriers, sorts)\n    if False:",
+            ),
+            (
+                "re-check: every renamed hypothesis is a query atom",
+                "        if _rename(atom, phi) not in allowed:",
+                "        if False:",
+            ),
+            (
+                "re-check: injectivity",
+                "        if target in seen:",
+                "        if False:",
+            ),
+            (
+                "sign is not normalized away on an inequality",
+                '    if rel == "=":',
+                "    if True:",
+            ),
+            (
+                "a disjunction entails neither disjunct",
+                '    if (head == "and" and polarity) or (head == "or" and not polarity):',
+                '    if head in ("and", "or"):',
+            ),
+            (
+                "a disequality entails neither bound",
+                '    if head == "=" and polarity and len(args) >= 2:',
+                '    if head == "=" and len(args) >= 2:',
+            ),
+            (
+                "an unknown rendered leaf is not a fresh variable",
+                "        if expr.startswith(QUERY_NAMESPACE):\n            return ({expr: Fraction(1)}, Fraction(0))",
+                "        if True:\n            return ({expr: Fraction(1)}, Fraction(0))",
+            ),
+        ],
+    ),
 }
 
 
