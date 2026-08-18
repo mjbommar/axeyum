@@ -161,6 +161,10 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `4b5613e26` | `check-fact-derived-numbers.py`: every number a fact asserts about its own `axiom_footprint` re-derived from the array. Fixes `F:schedule-critical-chain-infeasible` (prose 30 vs array 26, plus an obsolete facade paragraph found by re-measuring: `Lra`/62 lines, not a 21-line shim) and the example's stale module doc. 52 of 3,243 prose numbers bound, denominator printed every run; 7 guards, each deletion kills exactly 1 test; wired into both `just check` (`facts`) and `check.sh` so `check-aggregate-scope.sh` records no new divergence. |
 | 2026-08-18 | `24578036f` | `gen-lean-axiom-ledger.py`: coverage command gains `--include-constructed` (on `--release`, 12x faster), `EXPECTED_PRELUDES` gains `rat`/`creal`/`complex`, and measurement drift is reported per prelude **with its direction** — REGRESSION / IMPROVEMENT / COVERAGE LOST / ADDED / RESHAPED, each with the re-pin command. Ledger now pins 8 groups by value (was 6); 39 tests (was 24); 11-mutation control registered in `mutation_controls.py`, no survivors. Already wired in both `check.sh` and `just check`, so no new gate divergence. |
 | 2026-08-18 | `7646b2c04` | `reject_self_refuting_module` at `gate_module_content` — the one boundary every route's module crosses; the Python predicate widened from one shape to the property and run over EVERY class; DECLINED pinned two-sided in its own manifest; the shadowed attested-path copy deleted after the mutation control that used to kill a test reported SURVIVED. 6 mutations, 0 survivors; 9 Rust unit tests, each with its discriminating twin. |
+| 2026-08-18 | `31442bd5d` | `quant_{affine_growth,counterexample_cover,eq_partition,residue}` — four golden Lean-module pins re-pinned at cause (+1 640 header bytes from `b760fd6ae` and `46724faec`), unredding `main`. Found by the first completed run of the authoritative gate. |
+| 2026-08-18 | `e069afa03` | `local-ci`: the zero-test guard could not fire on the workspace sweep — nextest's summary is indented and the pattern was `^`-anchored. Fixtures now captured from the tool; a test step whose count is unparseable is `unreadable` (89), not `pass`. |
+| 2026-08-18 | `69c12646c` | `artifacts/local-ci-runs/a6ee37c6a-s4.json` — first completed run of `scripts/local-ci.sh` in this repository's history. FAIL, 6401 s, 4 of 7511. |
+| 2026-08-18 | `a2841965e` | `local-ci` gates the COMMIT, not the working tree: stable flock'd detached worktree, `--no-worktree` opt-out, controls mutation-tested. |
 | 2026-08-18 | `2abe2652d` | Authored the nine-phase Autogenesis programme and bounded Autogenesis-1 plan. |
 | 2026-08-18 | `00f998ccb` | ℤ categoricity: the existence half of the universal property (`iter` + three preservation equations, making `Int` the initial ℤ-structure) and `categorical` — every generated aperiodic ℤ-structure is in structure-preserving bijection with `Int`, universe-polymorphic. `iso` is the constructed two-sided-inverse form, honest about hypothesising the back-map. 32 theorems, all footprints empty; 22 injected weakenings each refused at their own declaration, now bracketed by `reached_declaration` on the near side too. |
 | 2026-08-18 | `a2a36590b` | `F:int-categoricity` recorded, and `F:int-characterization`'s "not proved that they determine it" caveat removed because it stopped being true. Every checker anchored on the declaration name AND the empty-footprint column, each run with its subject mangled: 0 on the finding, 1 on the mangle. |
@@ -326,6 +330,36 @@ snapshot. Migrating it is the reals lane's call; loosening it here is the one
 outcome worse than under-covering.
 
 Detail in [`../notes/102-attestation-gap.md`](docs/plan/notes/102-attestation-gap.md).
+
+**`scripts/local-ci.sh` has now completed once, and it was RED** (`WIP`,
+local-ci-run, 2026-08-18). Hosted CI has called it "the authoritative gate for
+`main`" since it existed; nothing had ever run it. The record is
+[`artifacts/local-ci-runs/a6ee37c6a-s4.json`](artifacts/local-ci-runs/a6ee37c6a-s4.json):
+**6401 s (1 h 47 m), 7511 tests, 7507 passed, 4 failed, 32 skipped.**
+
+The four were deterministic and one cause: `b760fd6ae` (+863) and `46724faec`
+(+777) added **1 640 bytes of module header** to every emitted Lean module and
+each re-pinned only the golden module that sits in a gate. Third recurrence;
+`6389e0194` documented it for three of these same suites on 2026-08-15.
+Re-pinned at cause, green. The structural point is not the pins: **no pre-merge
+gate runs those four `tests/*.rs` suites** — `--lib` skips integration targets —
+so the only reader of those pins was the gate nobody ran.
+
+Two defects in the gate itself, both found by running it:
+
+- It gated the **WORKING TREE**. In a shared checkout that means a sibling
+  lane's uncommitted work decides whether a SHA passes. Now gates a detached
+  worktree at the commit, `hooks/pre-push`'s own solution (`a2841965e`).
+- `count_tests` anchored nextest's summary at `^`; nextest indents it five
+  spaces. It never matched, so the recorder wrote `tests: -1` for the 7511-test
+  step and the zero-test rule **could not fire on the sweep it exists for** —
+  the control's fixture was typed from the docs, not captured (`e069afa03`).
+
+Cost is not core-bound: 2.47x parallelism on 16 cores, five single-test
+binaries being 40% of the wall. Next: a timer on s5/s7 — which **measured today
+cannot run it** (no stable, no 1.88.0, no nextest; 342 and 422 commits behind) —
+read by a freshness step inside `just check`, not by a dashboard.
+Detail in [`../notes/102-local-ci-run.md`](docs/plan/notes/102-local-ci-run.md).
 
 **Programme specified; implementation not authorized** (`WIP`,
 autogenesis-program, 2026-08-18). If selected, execute only Phase 0 in the
