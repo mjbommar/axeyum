@@ -183,6 +183,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `pending` | `ProofFragment::IntFarkas` dispatched: `QF_LIA` and `QF_IDL` conjunctive systems whose rational relaxation is infeasible now reconstruct instead of attesting, with a crosscheck family each (footprint = the query's own vars/hyps, no Real axioms, no sorryAx). Split 34 → 37 theory families vs 40; a committed QF_LIA corpus row moved with it. Declines integer-only infeasibility (3x≥1 ∧ 3x≤2). **Band 1 empty**; 13 → 14 of 23 logics, floor 39. |
 | 2026-08-17 | `pending` | Qualified the "axiom-free" claim against official Lean rather than leaving it to be overread: instantiating at Lean core's standard `Int` costs `propext` — a FLOOR, since every core `Int` ring/order lemma carries it — so axiom-freedom over the standard ℤ is unreachable by anyone. Our empty footprint follows from instantiating at our own constructed ℤ (zero axioms, but no proved bridge to Lean's). Even bridged, this route lands at `propext` vs `omega`'s `propext + Quot.sound` on the identical goal. |
 | 2026-08-17 | `f18904db7` | R3: reachability census re-derived and committed as `artifacts/reachability/r3-census.tsv` (190 rows over both corpora); the ranked tables in `04-reachability.md` are now a generated view of it, gated by `scripts/check-reachability-census.py` inside `check-foundational-resources.sh`. 13 guards, each with its own rejection path; mutation-verified that deleting any one kills exactly one test. Corpus coverage checked in both directions and reported SKIPPED, never passed, when the sibling checkout is absent. Stale numbers corrected in `04` and `05`. |
+| 2026-08-17 | `pending` | ADR-0468: ℝ is a Bishop setoid over ℚ at **zero** trusted declarations, with `creal_shape_probe` measuring the carrier's admissibility against a `funext` negative control; ℂ scoped and deferred. |
 | 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
 Older landed changes (including the 2026-08-06 A1/A2 closure commits) remain
 in Git and their dated result notes; this table is deliberately bounded to
@@ -465,6 +466,36 @@ that are pure ℕ schemas (`telescoping`, `parity-argument`, `pigeonhole` at
 fixed hole count). Second, the census wants a third corpus — its two are both
 school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
+
+**ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
+[ADR-0468](docs/research/09-decisions/adr-0468-real-is-constructed-as-a-setoid-over-the-rationals.md)
+decides **a Bishop setoid of regular ℚ-sequences** — no quotient, no cuts.
+ADR-0456's two rejections were both correct and its conclusion did not follow:
+equality does not have to be `Eq`. Measured, not argued —
+`cargo run -q -p axeyum-lean-kernel --example creal_shape_probe` admits the
+carrier, its recursor, the representative projection (large elimination) and the
+setoid relation over the *constructed* `Rat` with a **trusted surface of 0**, and
+a `funext` negative control in a second kernel returns a non-empty footprint so
+the zero is discriminating. The price is counted too: **9 of 30** `Real`
+declarations mention `Eq`, so 13 of the 22 laws are discharged verbatim and 9
+only in `Equiv` form — the order fragment Farkas actually uses is untouched.
+Adding `Quot.sound` instead would read `real: axiom=0 quotient=5` and put
+`[Quot.sound]` in every real footprint permanently; Dedekind costs two trusted
+items, not fewer.
+
+**Next:** R1 is **unblocked**. The ADR's first draft said ℚ had no order — true
+of `int_prelude/rat.rs`, false of `rat_prelude.rs`, which `agent-rationals`
+landed in the worktree mid-draft with `le`/`lt`/`inv`/`sub`/`div` and all 22
+ordered-ring laws. The correction is recorded in the ADR rather than quietly
+fixed. The only gap left is `1/(n+1)` (one definition), and writing `|a| ≤ b` as
+`−b ≤ a ∧ a ≤ b` removes the `Rat.abs` dependency entirely. So: R1 carrier
+(~10 decls), R2 ordered
+ring + congruences (~35), R3 the one thing outside the kernel — ADR-0457's
+telescope gains an equality slot (`RING_BINDER_NAMES` 30 → 39), R4 the model
+witness. ℂ is scoped and **deferred with a finding**: nothing in the solver needs
+it, and the only shipped complex arithmetic is exact ℚ(i) in
+`axeyum-cas/src/geometry_certify.rs`, which wants a ring over ℚ and not ℝ
+underneath — so ℚ(i) before ℂ, if either.
 
 ### A1 and A2 — `DONE`, archived
 

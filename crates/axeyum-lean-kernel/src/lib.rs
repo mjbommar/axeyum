@@ -65,7 +65,6 @@ mod nat_prelude;
 mod prelude;
 pub mod prelude_cache;
 mod quotient;
-mod rat_prelude;
 mod string_prelude;
 mod tc;
 
@@ -88,7 +87,6 @@ pub use prelude::{
     DatatypeFamily, DatatypeInductive, LogicPrelude, RecField, RecursiveDatatypeFamily,
     build_logic_prelude,
 };
-pub use rat_prelude::{RatPrelude, build_rat_prelude};
 pub use string_prelude::{StringPrelude, build_string_prelude};
 pub use tc::{KernelError, LocalContext, LocalDecl};
 
