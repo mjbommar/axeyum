@@ -112,6 +112,10 @@ It derives a content-addressed B -> A overlay without editing committed facts;
 [`theorem_knowledge_audit`](../../crates/axeyum-lean-kernel/examples/theorem_knowledge_audit.rs)
 then rejects required/forbidden dependency violations over the full transitive
 kernel closure.
+[`create-autogenesis-proposer-catalog.py`](../../scripts/create-autogenesis-proposer-catalog.py)
+projects that snapshot to names and canonical types only, and the Python
+proposer runner supplies the verified catalog through an OS sandbox with no
+checkout, retained proof bodies, inherited environment, or network.
 
 ## Phase summary
 

@@ -19,6 +19,7 @@ Measured 2026-08-16, before any provisioning:
 |---|---|
 | `lean` and `just` present on | **exactly one host of five** (`s5`) |
 | `cargo-deny` present on | **zero hosts** — so `cargo deny check` failed fleet-wide |
+| `bubblewrap` proposer sandbox | **all five named hosts** report 0.11.1 (re-measured 2026-08-18) |
 | Rust nightly spread | `2026-03-25` on s2, `2026-03-31` on s5/s6, `2026-07-11` on s4, `2026-07-12` on s7 — **109 days, 3.6 months** |
 | `just` on the box agents actually work in (`s4`) | **absent**, while `CLAUDE.md` names `just check` as *the* gate |
 
@@ -72,6 +73,7 @@ reports a result from one.
 | `clippy`, `rustfmt`, `rust-src` components | `-D warnings` gate and `scripts/check-fmt-complete.sh` | `cargo clippy -V; rustfmt -V` |
 | `just` | `just check` is the only full aggregate gate | `just --version` |
 | `cargo-deny` | `cargo deny check` is a `just check` step | `cargo-deny --version` |
+| `bubblewrap` | Autogenesis proposers receive a catalog without gaining checkout, proof-body, or network access | `bwrap --version`; provisioning also executes a minimal sandbox |
 | Lean at the **repo pin** (`lean-toolchain`) | the axiom ledger, `check-lean-gate.sh`, and export verification all shell out to a real `lean` | run the binary — see the two layouts below |
 | `core.hooksPath=hooks` in the checkout | `hooks/commit-msg` stamps the `Agent:` trailer; `hooks/pre-push` is the pre-merge gate | `git config --get core.hooksPath` |
 | `/nas3/data` mounted read-write | shared artifacts, logs, staged binaries | `[ -w /nas3/data ]` |
@@ -159,6 +161,7 @@ the left column must run on a host that satisfies the right one.
 | kernel / library / export | `scripts/check-lean-gate.sh`, the Lean axiom ledger | **Lean at the repo pin** |
 | linear arithmetic | the z3 differential fuzzes (`--features z3`) | `GITHUB_TOKEN` for the `z3/gh-release` fetch |
 | ledgers, claims, facts | `validate-facts.py`, `validate-claims.py`, `check-links.sh` | Python only — runs anywhere |
+| Autogenesis proposer isolation | `scripts/check-autogenesis-proposer-isolation.sh` | Python + `bubblewrap` |
 
 The Lean row is the one that shapes scheduling. Two of the three roadmap strands
 are Lean-bound, so before this baseline existed they both serialised onto the

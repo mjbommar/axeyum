@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:afb749be9af0bab65f6bb6120177a5b8c62bd45a3583ba5192c4f3f0ee47675a`
+Source identity: `sha256:3070818f2a4f77922efbed0ead146fb56ab7dc9a717ae04f09cae410a06286f4`
 
 ## Ledger and chain substrate
 
@@ -25,6 +25,7 @@ the remaining facts stay explicit rather than being guessed.
 |---|---|---|---|
 | `A1-fixed-input-identity` | ready | baseline source digest plus clean execution capture | capture the preregistered experiment at an exact clean commit |
 | `A1-real-derived-chain` | replay-candidate | kernel ledger graph has 52 edges at depth 6 and 0 unsettled nodes | qualify a primary and fallback with proof-derived dependency and pre-B counterfactual |
+| `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | make a real proof-search adapter consume only the sandbox catalog |
 | `A1-machine-selection` | missing | selection remains a human choice from text output | content-address a machine-readable frontier snapshot and rationale |
 | `A1-typed-dispatch-evidence` | missing | route dispatch, evidence assembly, and checker selection remain caller-authored | exercise one typed adapter and registered checker operation |
 | `A1-atomic-admission` | partial | single fact rollback exists; an episode-wide transaction does not | stage and replay a proposed fact delta before atomic application |

@@ -56,6 +56,24 @@ for tool in just cargo-deny; do
   fi
 done
 
+# --- 2b. Bubblewrap proposer isolation ----------------------------------
+# Autogenesis proposers must not see retained proof bodies, the checkout, or
+# the network. A catalog without an OS boundary is only a convention. All five
+# fleet hosts had bubblewrap 0.11.1 on 2026-08-18; retain installation here so
+# a replacement host cannot silently run a weaker aggregate gate.
+if ! command -v bwrap >/dev/null 2>&1; then
+  say "bubblewrap: installing OS package..."
+  if sudo -n apt-get update >/dev/null 2>&1 \
+      && sudo -n apt-get install -y bubblewrap >/dev/null 2>&1; then
+    say "bubblewrap: installed ($(bwrap --version 2>&1 | head -1))"
+  else
+    say "bubblewrap: install FAILED -- Autogenesis proposer isolation cannot run"
+    fail=1
+  fi
+else
+  say "bubblewrap: already present ($(bwrap --version 2>&1 | head -1))"
+fi
+
 # --- 3. Pinned Lean ------------------------------------------------------
 # TWO valid layouts, and knowing only one is how the first version of this
 # script reported "lean: installed" over a host that had none:
@@ -162,6 +180,8 @@ v clippy     "\"$CARGO_BIN/cargo\" clippy -V"
 v rustfmt    "\"$CARGO_BIN/rustfmt\" --version"
 v just       "\"$CARGO_BIN/just\" --version"
 v cargo-deny "\"$CARGO_BIN/cargo-deny\" --version"
+v bubblewrap "bwrap --version"
+v bwrap-sandbox "bwrap --ro-bind /usr /usr /usr/bin/true && echo runnable"
 v lean       "\"\$(lean_bin)\" --version"
 v hooksPath  "git -C \"$REPO\" config --get core.hooksPath"
 v nas3       "[ -w /nas3/data ] && echo rw"

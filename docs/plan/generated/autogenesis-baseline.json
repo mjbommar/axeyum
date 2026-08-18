@@ -13,6 +13,12 @@
       "state": "replay-candidate"
     },
     {
+      "evidence": "proof-body-free catalog plus Bubblewrap repository/network isolation control",
+      "id": "A1-proof-leakage-boundary",
+      "next": "make a real proof-search adapter consume only the sandbox catalog",
+      "state": "fixture"
+    },
+    {
       "evidence": "selection remains a human choice from text output",
       "id": "A1-machine-selection",
       "next": "content-address a machine-readable frontier snapshot and rationale",
@@ -647,7 +653,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "afb749be9af0bab65f6bb6120177a5b8c62bd45a3583ba5192c4f3f0ee47675a",
+    "digest": "3070818f2a4f77922efbed0ead146fb56ab7dc9a717ae04f09cae410a06286f4",
     "inputs": [
       {
         "bytes": 3519,
@@ -1220,9 +1226,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 70548,
+        "bytes": 70743,
         "path": "justfile",
-        "sha256": "2c727cdb7edba7e7ad17802eb6bfc8b535ade240b954e3727254ddcc0d0a51fc"
+        "sha256": "45469cfc42fd6312c633d4062b5790e183b16d648b29a415570f534aa91043ca"
       },
       {
         "bytes": 5999,
@@ -1235,6 +1241,11 @@
         "sha256": "b95ff058b0fd33cfa5ef2743587c4b2db25a2cef5ff72529e0ff474951926d65"
       },
       {
+        "bytes": 2183,
+        "path": "scripts/check-autogenesis-proposer-isolation.sh",
+        "sha256": "9a51f46e7cd615f7c4edf0ecc3e12d6a142e195acd81644d0423e475159f8ba0"
+      },
+      {
         "bytes": 6597,
         "path": "scripts/check-fact-dag.py",
         "sha256": "224a2672fd9a41730ca47e860a3a6a0b0c605113a924f6066f4a3287422fde81"
@@ -1245,14 +1256,19 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 20075,
+        "bytes": 20267,
         "path": "scripts/check.sh",
-        "sha256": "e70a694300563b0f91b83c690840b8b3d1aba1734490a26cf25b20118cc060f4"
+        "sha256": "c6ad1962baf17fbc6e896829b244bd3e1f691e71cdb81e5ad25c6b95e656cb06"
       },
       {
         "bytes": 6846,
         "path": "scripts/close-fact.py",
         "sha256": "1946ed9f4d89dffed5cc57ed0f88cf5c5ed7f3b49c6ecb497c3e2862775c4d8a"
+      },
+      {
+        "bytes": 9777,
+        "path": "scripts/create-autogenesis-proposer-catalog.py",
+        "sha256": "1f38d8b72e7a38051886411ef2d90c2a7a363e62ba73718aca7abc2150860fbc"
       },
       {
         "bytes": 9204,
@@ -1265,14 +1281,29 @@
         "sha256": "db6757cc801ed3996d0ba3c40ba55123e2855e8944054c2a391b46ff5678b81b"
       },
       {
-        "bytes": 21376,
+        "bytes": 21957,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "80aca6efab62946f2c7f380dfb38129e3ee1a42b0ceccb60e3701307852e59cf"
+        "sha256": "fa7522eface4f86ced24f4e0cf0dc10c55cd13d0d298375484d413d12e72a6e2"
       },
       {
         "bytes": 17112,
         "path": "scripts/gen-proof-gap-matrix.py",
         "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
+      },
+      {
+        "bytes": 10990,
+        "path": "scripts/provision-fleet-host.sh",
+        "sha256": "f9ceaa822e1d7c090f79608b238276c8921581f151a6b814648e95f6e5b87f00"
+      },
+      {
+        "bytes": 2631,
+        "path": "scripts/run-autogenesis-python-proposer.sh",
+        "sha256": "1f1b1f07b1f86489e8e7b665e0e8f8cf03fd651dc318cd2d8cb5177bd4cd277a"
+      },
+      {
+        "bytes": 1688,
+        "path": "scripts/tests/fixtures/autogenesis-proposer-probe.py",
+        "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
       }
     ]
   },

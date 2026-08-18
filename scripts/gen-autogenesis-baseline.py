@@ -33,7 +33,12 @@ OUT_MD = Path("docs/plan/generated/autogenesis-baseline.md")
 STATIC_SOURCES = (
     Path("scripts/gen-autogenesis-baseline.py"),
     Path("scripts/create-autogenesis-snapshot.py"),
+    Path("scripts/create-autogenesis-proposer-catalog.py"),
     Path("scripts/check-autogenesis-knowledge-controls.sh"),
+    Path("scripts/check-autogenesis-proposer-isolation.sh"),
+    Path("scripts/run-autogenesis-python-proposer.sh"),
+    Path("scripts/tests/fixtures/autogenesis-proposer-probe.py"),
+    Path("scripts/provision-fleet-host.sh"),
     Path("scripts/check-fact-dag.py"),
     Path("scripts/check-fact-depends-derived.py"),
     Path("scripts/fact-frontier.py"),
@@ -319,6 +324,12 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
                 f"and {unsettled} unsettled nodes"
             ),
             "next": "qualify a primary and fallback with proof-derived dependency and pre-B counterfactual",
+        },
+        {
+            "id": "A1-proof-leakage-boundary",
+            "state": "fixture",
+            "evidence": "proof-body-free catalog plus Bubblewrap repository/network isolation control",
+            "next": "make a real proof-search adapter consume only the sandbox catalog",
         },
         {
             "id": "A1-machine-selection",

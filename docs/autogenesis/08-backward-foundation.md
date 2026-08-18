@@ -73,7 +73,16 @@ proof bodies. The full environment belongs only in the separate checker
 process. `scripts/check-autogenesis-knowledge-controls.sh` establishes the
 current positive boundary (fresh exact-type proof using B) and rejects direct
 and helper-mediated reuse of retained A as well as a fresh B that aliases
-retained B; process isolation remains the next foundation task.
+retained B. A separate process boundary is still required for provenance.
+
+That first process boundary is now executable for Python proposers. A verified
+catalog contains canonical theorem types and visible names but no declaration
+values or evidence. `run-autogenesis-python-proposer.sh` then gives Bubblewrap
+only that catalog, the proposer program, an empty output directory, `/usr`, and
+minimal `/proc`/`dev`/`tmp` mounts; it unshares all namespaces and clears the
+environment. The aggregate control confirms the repository and network are
+unreachable from inside. This is a transport/isolation fixture, not yet an
+automatic proof-search implementation.
 
 ## Assumptions tested now
 
