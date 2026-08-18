@@ -233,11 +233,70 @@ def describe(fact: dict, facts: dict[str, dict], show_unlocks: bool,
     return line
 
 
+def print_chains(facts: dict) -> int:
+    """Settled `B -> A` pairs where A's dependency on B can be RE-DERIVED.
+
+    The Autogenesis programme's first demonstration is: prove B, observe that B
+    unlocks A, prove A. Selecting such a chain (its task S0.2) needs pairs whose
+    dependency is not merely asserted in a JSON field but readable from the proof
+    term — otherwise "B unlocks A" is a claim about the ledger rather than about
+    the mathematics.
+
+    Only the `kernel-lean` route qualifies, and that is a measurement, not a
+    preference. `scripts/check-fact-depends-derived.py` reads a fact's real
+    dependencies out of `Kernel::theorem_dependencies`; for `smt-term-level`,
+    `cas-certificate`, `smt-clausal` and `search-certificate` there is no proof
+    term to read, so a `depends_on` there is a human assertion.
+
+    That also explains a number that looks alarming and is not. Measured
+    2026-08-18: 114 facts, **63 isolated** — but only 5 of the 63 are
+    `kernel-lean`. The isolation sits almost entirely in routes where a fact
+    genuinely stands alone (one Rado number does not rest on another), so it is a
+    property of the domain rather than a gap in the ledger.
+    """
+    kernel = {i for i, d in facts.items() if d.get("proof_route") == "kernel-lean"}
+    edges = [
+        (dep, fact["id"])
+        for fact in facts.values()
+        if fact["id"] in kernel
+        for dep in fact["depends_on"]
+        if dep in kernel
+    ]
+    if not edges:
+        print("  no derivable B -> A pair: the kernel-lean subgraph has no internal edge")
+        return 1
+
+    depth: dict[str, int] = {}
+
+    def rank(node: str, seen: tuple = ()) -> int:
+        if node in depth:
+            return depth[node]
+        if node in seen:          # a cycle is a ledger bug, not a chain
+            return 0
+        below = [rank(d, seen + (node,))
+                 for d in facts[node]["depends_on"] if d in kernel]
+        depth[node] = 1 + max(below, default=0)
+        return depth[node]
+
+    consequents = sorted({a for _, a in edges}, key=lambda a: -rank(a))
+    print(f"  kernel-lean facts: {len(kernel)}   derivable B -> A edges: {len(edges)}   "
+          f"distinct A: {len(consequents)}")
+    print("  (only kernel-lean: elsewhere a `depends_on` is asserted, not derivable)")
+    for a in consequents:
+        bs = [b for b in facts[a]["depends_on"] if b in kernel]
+        print(f"    depth {rank(a)}  {a}")
+        for b in bs:
+            print(f"              <- {b}")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--band", choices=["research", "backlog", "blocked", "novel"])
     ap.add_argument("--unlocks", action="store_true",
                     help="show which open facts each entry would unblock")
+    ap.add_argument("--chains", action="store_true",
+                    help="enumerate settled B -> A pairs whose dependency is DERIVABLE")
     args = ap.parse_args()
 
     if not FACTS.is_dir():
@@ -245,6 +304,9 @@ def main() -> int:
         return 2
     facts = load()
     held = gate_holds(facts)
+
+    if args.chains:
+        return print_chains(facts)
 
     # Reverse dependency edges: proving X frees everything that names X.
     unlocks: dict[str, list[str]] = defaultdict(list)
