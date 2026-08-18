@@ -49,6 +49,7 @@ use super::{
 
 use axeyum_lean_kernel::{build_arith_prelude, build_creal_prelude, build_int_prelude};
 
+pub(crate) mod control;
 pub(crate) mod signature;
 
 pub(crate) use signature::{RingEquality, RingSignature};

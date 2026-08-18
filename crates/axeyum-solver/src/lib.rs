@@ -341,15 +341,17 @@ pub mod proofs {
         };
         pub use crate::lex_reconstruct::reconstruct_lex_clash_to_lean_module;
         pub use crate::reconstruct::{
+            CONTROL_AXIOM_LEAF, CONTROL_AXIOM_NAME, CONTROL_DISCHARGE_NAME, ControlCarrier,
             EQUALITY_SLOT_BINDERS, EQUALITY_SLOT_LAWS, EqSetoidWitnesses, EqSpecialization,
             EqualitySlot, IntInstantiation, IntRefutation, LeanModuleContent, LraReconstructCtx,
             OrderedRingRefutation, ProofFragment, RING_LAW_BINDERS, RING_SYMBOL_BINDERS,
             ReconstructCtx, ReconstructError, RingEquality, RingInterfaceBinder, RingSignature,
             RingSignatureReport, RingTelescope, SETOID_RING_BINDERS, SIGNATURE_LAWS,
             SIGNATURE_SYMBOLS, STRUCTURAL_ATTESTATION_MARKER, SetoidAdoption, SetoidEq,
-            carrier_axioms_of, declared_assumption_clauses, generalize_over_ordered_ring,
-            instantiate_at_int_model, minted_axioms_of, prove_const_shift_lowering_to_lean_module,
-            prove_unsat_to_lean, prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module,
+            build_control_carrier, carrier_axioms_of, control_carrier_over,
+            declared_assumption_clauses, generalize_over_ordered_ring, instantiate_at_int_model,
+            minted_axioms_of, prove_const_shift_lowering_to_lean_module, prove_unsat_to_lean,
+            prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module,
             reconstruct_bitblast_step, reconstruct_bv_alternation_counterexample_to_lean_module,
             reconstruct_bv_closed_universal_counterexample_to_lean_module,
             reconstruct_bv_conjunctive_universal_instance_to_lean_module,
@@ -1247,15 +1249,17 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use reconstruct::{
+            CONTROL_AXIOM_LEAF, CONTROL_AXIOM_NAME, CONTROL_DISCHARGE_NAME, ControlCarrier,
             EQUALITY_SLOT_BINDERS, EQUALITY_SLOT_LAWS, EqSetoidWitnesses, EqSpecialization,
             EqualitySlot, IntInstantiation, IntRefutation, LeanModuleContent, LraReconstructCtx,
             OrderedRingRefutation, ProofFragment, RING_LAW_BINDERS, RING_SYMBOL_BINDERS,
             ReconstructCtx, ReconstructError, RingEquality, RingInterfaceBinder, RingSignature,
             RingSignatureReport, RingTelescope, SETOID_RING_BINDERS, SIGNATURE_LAWS,
             SIGNATURE_SYMBOLS, STRUCTURAL_ATTESTATION_MARKER, SetoidAdoption, SetoidEq,
-            carrier_axioms_of, declared_assumption_clauses, generalize_over_ordered_ring,
-            instantiate_at_int_model, minted_axioms_of, prove_const_shift_lowering_to_lean_module,
-            prove_unsat_to_lean, prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module,
+            build_control_carrier, carrier_axioms_of, control_carrier_over,
+            declared_assumption_clauses, generalize_over_ordered_ring, instantiate_at_int_model,
+            minted_axioms_of, prove_const_shift_lowering_to_lean_module, prove_unsat_to_lean,
+            prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module,
             reconstruct_bitblast_step, reconstruct_bv_alternation_counterexample_to_lean_module,
             reconstruct_bv_closed_universal_counterexample_to_lean_module,
             reconstruct_bv_conjunctive_universal_instance_to_lean_module,

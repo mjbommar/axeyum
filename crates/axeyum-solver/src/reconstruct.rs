@@ -56,6 +56,10 @@ mod quant_bv_instance_set_lean;
 mod quantifier;
 mod resolution;
 
+pub use arithmetic::control::{
+    CONTROL_AXIOM_LEAF, CONTROL_AXIOM_NAME, CONTROL_DISCHARGE_NAME, ControlCarrier,
+    build_control_carrier, control_carrier_over,
+};
 pub use arithmetic::ordered_ring::{
     EQUALITY_SLOT_BINDERS, EQUALITY_SLOT_LAWS, EqSetoidWitnesses, EqSpecialization, EqualitySlot,
     IntInstantiation, IntRefutation, OrderedRingRefutation, RING_LAW_BINDERS, RING_SYMBOL_BINDERS,
