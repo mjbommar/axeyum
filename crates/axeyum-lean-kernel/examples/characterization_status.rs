@@ -100,22 +100,21 @@ fn main() -> ExitCode {
         let mut probe = Kernel::new();
         let outcome = build_characterization_with(&mut probe, defect);
         let target = defect.refused_declaration().unwrap_or("<unnamed>");
-        match outcome {
-            Ok(_) => failures.push(format!(
+        if outcome.is_ok() {
+            failures.push(format!(
                 "negative control {defect:?} was ACCEPTED; {target} does not depend on it"
-            )),
-            Err(_) => {
-                let still_there = probe
-                    .environment()
-                    .iter()
-                    .any(|(name, _)| probe.display_name(*name).to_string() == target);
-                if still_there {
-                    failures.push(format!(
-                        "negative control {defect:?} failed, but {target} was still admitted"
-                    ));
-                } else {
-                    refused += 1;
-                }
+            ));
+        } else {
+            let still_there = probe
+                .environment()
+                .iter()
+                .any(|(name, _)| probe.display_name(*name).to_string() == target);
+            if still_there {
+                failures.push(format!(
+                    "negative control {defect:?} failed, but {target} was still admitted"
+                ));
+            } else {
+                refused += 1;
             }
         }
     }
