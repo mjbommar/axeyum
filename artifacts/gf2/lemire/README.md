@@ -4,6 +4,11 @@ These are finite, checked witnesses for the conjecture in Lemire and Kaser,
 *Strongly universal string hashing is fast*.  They do not prove the universal
 claim.
 
+The [`range-1-400`](range-1-400/README.md) directory contains the separately
+sharded, dual-checked result for every degree through 400. The standalone file
+below remains a small stable gate control with the polynomial named in the
+paper's discussion.
+
 `degree-400.json` certifies
 
 ```text

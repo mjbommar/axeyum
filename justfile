@@ -315,7 +315,7 @@ foundational-resources:
 # Portable finite-field evidence: both the packed checker and the separately
 # implemented dense-coefficient checker must accept every committed witness.
 gf2-artifacts:
-    cargo run --quiet -p axeyum-cas --bin axeyum-gf2-check -- artifacts/gf2/lemire/degree-400.json
+    ./scripts/check-gf2-lemire-range.sh
 
 rules-as-code:
     python3 scripts/gen-rules-as-code-dashboard.py

@@ -1,0 +1,245 @@
+{
+  "format": "axeyum-gf2-half-degree-irreducible",
+  "version": 1,
+  "statement": "monic irreducible f over GF(2), deg(f)=n, deg(f-x^n)<=floor(n/2)",
+  "id": "lemire-degree-29",
+  "producer": "axeyum-gf2-search@6e1372073/binary=fcd47dd883b3/host=s1",
+  "degree": 29,
+  "tail_degree_bound": 14,
+  "polynomial_words_le": [
+    "0000000020000005"
+  ],
+  "frobenius": [
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000004"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000010"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000100"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000010000"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000008"
+      ],
+      "remainder_words_le": [
+        "0000000000000028"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000440"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000101000"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000800"
+      ],
+      "remainder_words_le": [
+        "0000000001002800"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000080000"
+      ],
+      "remainder_words_le": [
+        "0000000004680000"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000080a200"
+      ],
+      "remainder_words_le": [
+        "0000000002822a00"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000220020"
+      ],
+      "remainder_words_le": [
+        "0000000004ee00a0"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000082a2a0"
+      ],
+      "remainder_words_le": [
+        "0000000002886c20"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000220200"
+      ],
+      "remainder_words_le": [
+        "0000000014fa0e00"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000882aa21"
+      ],
+      "remainder_words_le": [
+        "000000000adc02a5"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000002228a80"
+      ],
+      "remainder_words_le": [
+        "000000000aace491"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000002222282"
+      ],
+      "remainder_words_le": [
+        "000000001ebae98b"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000aa22a23"
+      ],
+      "remainder_words_le": [
+        "00000000146bc2ea"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000880a22b"
+      ],
+      "remainder_words_le": [
+        "000000001a867ec3"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000a2200a1"
+      ],
+      "remainder_words_le": [
+        "0000000017fe5220"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000008aaaaa1"
+      ],
+      "remainder_words_le": [
+        "000000001b040425"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000a280081"
+      ],
+      "remainder_words_le": [
+        "0000000002980694"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000220a00"
+      ],
+      "remainder_words_le": [
+        "0000000000be6310"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000022aa0"
+      ],
+      "remainder_words_le": [
+        "00000000140f8120"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "00000000088002ab"
+      ],
+      "remainder_words_le": [
+        "000000000a810c07"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000002220008"
+      ],
+      "remainder_words_le": [
+        "000000000afa003d"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000222aa20"
+      ],
+      "remainder_words_le": [
+        "000000000aa807f1"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000002222200"
+      ],
+      "remainder_words_le": [
+        "000000000abfff01"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000002222aaa"
+      ],
+      "remainder_words_le": [
+        "000000001fff8003"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000aaaaaab"
+      ],
+      "remainder_words_le": [
+        "0000000000000002"
+      ]
+    }
+  ],
+  "bezout": [
+    {
+      "prime_divisor": 29,
+      "polynomial_coefficient_words_le": [
+        "0000000000000001"
+      ],
+      "frobenius_coefficient_words_le": [
+        "000000000ffffffe"
+      ]
+    }
+  ]
+}

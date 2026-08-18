@@ -1,0 +1,91 @@
+{
+  "format": "axeyum-gf2-half-degree-irreducible",
+  "version": 1,
+  "statement": "monic irreducible f over GF(2), deg(f)=n, deg(f-x^n)<=floor(n/2)",
+  "id": "lemire-degree-9",
+  "producer": "axeyum-gf2-search@6e1372073/binary=fcd47dd883b3/host=s1",
+  "degree": 9,
+  "tail_degree_bound": 4,
+  "polynomial_words_le": [
+    "0000000000000203"
+  ],
+  "frobenius": [
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000004"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000010"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000100"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000080"
+      ],
+      "remainder_words_le": [
+        "0000000000000180"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "00000000000000a0"
+      ],
+      "remainder_words_le": [
+        "00000000000001e0"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "00000000000000aa"
+      ],
+      "remainder_words_le": [
+        "00000000000001fe"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "00000000000000aa"
+      ],
+      "remainder_words_le": [
+        "00000000000000aa"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000022"
+      ],
+      "remainder_words_le": [
+        "0000000000000022"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000002"
+      ],
+      "remainder_words_le": [
+        "0000000000000002"
+      ]
+    }
+  ],
+  "bezout": [
+    {
+      "prime_divisor": 3,
+      "polynomial_coefficient_words_le": [
+        "000000000000006d"
+      ],
+      "frobenius_coefficient_words_le": [
+        "00000000000000db"
+      ]
+    }
+  ]
+}

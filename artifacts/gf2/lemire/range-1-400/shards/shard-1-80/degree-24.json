@@ -1,0 +1,218 @@
+{
+  "format": "axeyum-gf2-half-degree-irreducible",
+  "version": 1,
+  "statement": "monic irreducible f over GF(2), deg(f)=n, deg(f-x^n)<=floor(n/2)",
+  "id": "lemire-degree-24",
+  "producer": "axeyum-gf2-search@6e1372073/binary=fcd47dd883b3/host=s1",
+  "degree": 24,
+  "tail_degree_bound": 12,
+  "polynomial_words_le": [
+    "0000000001000087"
+  ],
+  "frobenius": [
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000004"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000010"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000100"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000010000"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000100"
+      ],
+      "remainder_words_le": [
+        "0000000000008700"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000040"
+      ],
+      "remainder_words_le": [
+        "00000000001521c0"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000011104"
+      ],
+      "remainder_words_le": [
+        "00000000008ea51c"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000405465"
+      ],
+      "remainder_words_le": [
+        "0000000000fa9eeb"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000055446a"
+      ],
+      "remainder_words_le": [
+        "00000000005cbc53"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000011504d"
+      ],
+      "remainder_words_le": [
+        "00000000008e8666"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000405461"
+      ],
+      "remainder_words_le": [
+        "0000000000ff89b3"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000055556b"
+      ],
+      "remainder_words_le": [
+        "0000000000415a94"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000100119"
+      ],
+      "remainder_words_le": [
+        "000000000034cadf"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000051052"
+      ],
+      "remainder_words_le": [
+        "0000000000d709eb"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000511529"
+      ],
+      "remainder_words_le": [
+        "00000000007cab1a"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "000000000015504e"
+      ],
+      "remainder_words_le": [
+        "00000000008797ae"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000401560"
+      ],
+      "remainder_words_le": [
+        "0000000000df9e74"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000515568"
+      ],
+      "remainder_words_le": [
+        "0000000000480b08"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000104008"
+      ],
+      "remainder_words_le": [
+        "000000000014c478"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000011050"
+      ],
+      "remainder_words_le": [
+        "00000000009f4cf0"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000415531"
+      ],
+      "remainder_words_le": [
+        "00000000003c6617"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000055016"
+      ],
+      "remainder_words_le": [
+        "0000000000a6ba77"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000441466"
+      ],
+      "remainder_words_le": [
+        "0000000000924b27"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000410431"
+      ],
+      "remainder_words_le": [
+        "0000000000000002"
+      ]
+    }
+  ],
+  "bezout": [
+    {
+      "prime_divisor": 2,
+      "polynomial_coefficient_words_le": [
+        "0000000000262f0d"
+      ],
+      "frobenius_coefficient_words_le": [
+        "00000000009a7fe7"
+      ]
+    },
+    {
+      "prime_divisor": 3,
+      "polynomial_coefficient_words_le": [
+        "000000000072de3b"
+      ],
+      "frobenius_coefficient_words_le": [
+        "0000000000904a20"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1173 @@
+{
+  "format": "axeyum-gf2-half-degree-irreducible",
+  "version": 1,
+  "statement": "monic irreducible f over GF(2), deg(f)=n, deg(f-x^n)<=floor(n/2)",
+  "id": "lemire-degree-117",
+  "producer": "axeyum-gf2-search@6e1372073/host=s4",
+  "degree": 117,
+  "tail_degree_bound": 58,
+  "polynomial_words_le": [
+    "0000000000000027",
+    "0020000000000000"
+  ],
+  "frobenius": [
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000004"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000010"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000100"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000010000"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000100000000"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000000",
+        "0000000000000001"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000800"
+      ],
+      "remainder_words_le": [
+        "0000000000013800"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000105400000"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0011100000000000",
+        "0000000000000001"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000800"
+      ],
+      "remainder_words_le": [
+        "0000000000013800",
+        "0000010101000000"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0800000000000000",
+        "0000000008000800"
+      ],
+      "remainder_words_le": [
+        "3800000105400000",
+        "0000000138013801"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000082a0000082a",
+        "000000000000082a"
+      ],
+      "remainder_words_le": [
+        "00102d9600013d96",
+        "0000000000013d97"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000082a8a08a800"
+      ],
+      "remainder_words_le": [
+        "00013d85f27f1914",
+        "0000010004514114"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8088088008088000",
+        "0000000008000000"
+      ],
+      "remainder_words_le": [
+        "c7bd3ed4386a8110",
+        "000000003d514002"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8888088000002280",
+        "000000000000002a"
+      ],
+      "remainder_words_le": [
+        "aff93fc44005bc80",
+        "0015455105545494"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "888880888208822b",
+        "0008888088880800"
+      ],
+      "remainder_words_le": [
+        "baab92ba8a7b8bb1",
+        "001ffed3afec6802"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "aaa280a200002221",
+        "000aaaaaa2882a22"
+      ],
+      "remainder_words_le": [
+        "4179826b4041efc6",
+        "000444447db9d7fc"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8a2a0a88aaaa8080",
+        "00008080808080aa"
+      ],
+      "remainder_words_le": [
+        "e39774af5450c394",
+        "001286d2d3978241"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2a08aa0020800aa9",
+        "00082200a2882288"
+      ],
+      "remainder_words_le": [
+        "863e0704a384216f",
+        "0019ef0229acf8e8"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0a2282aa02a2020b",
+        "000a0aa2a8002022"
+      ],
+      "remainder_words_le": [
+        "36b898065d2f5b04",
+        "0003646c5811e4bf"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "00080aa0822aa828",
+        "000028a080a2808a"
+      ],
+      "remainder_words_le": [
+        "10686526dac55dc8",
+        "00118a33d67d92e2"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a0aa8a0822a02001",
+        "00080a0220282a88"
+      ],
+      "remainder_words_le": [
+        "2740a72da835b067",
+        "0019620af1cc80bb"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0a828200022a282b",
+        "000a08a0200222a8"
+      ],
+      "remainder_words_le": [
+        "219dcb110e93c9a4",
+        "00023f64a45fbc08"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "808aaa2a80020020",
+        "0000202aa8a08220"
+      ],
+      "remainder_words_le": [
+        "92b45280d00f40f0",
+        "0005a4d11f36cbf2"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a828a2822aa82208",
+        "00008a208288080a"
+      ],
+      "remainder_words_le": [
+        "0ccf3d9e905cfa38",
+        "0016b7e3cdbd7960"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8a2a88aa08a0000b",
+        "0008a228aaa02a82"
+      ],
+      "remainder_words_le": [
+        "b284bf477a240411",
+        "001f7b9b0434c488"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8028828082020223",
+        "000aa8aa2a0a2800"
+      ],
+      "remainder_words_le": [
+        "908fd983ce5e4b88",
+        "00040e03d226c806"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2020a2820000a208",
+        "00008002a0002a88"
+      ],
+      "remainder_words_le": [
+        "b4a32c9a10526f78",
+        "0013c00c3144c4b9"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "08808280822a0a21",
+        "00082a8000028028"
+      ],
+      "remainder_words_le": [
+        "2a93cc97dfc26787",
+        "000dc185040dc49d"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "80028a80820a8820",
+        "00028a800a008800"
+      ],
+      "remainder_words_le": [
+        "d109b597db71fcf5",
+        "0018a4842642f906"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a08022aa0800a283",
+        "000a022082008020"
+      ],
+      "remainder_words_le": [
+        "22c1ad166d4768f8",
+        "00174ab28b02c5e2"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "280022808aa02029",
+        "0008a88222282202"
+      ],
+      "remainder_words_le": [
+        "cc55ad87f524b0bf",
+        "000a1bcbef8daf5f"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "aa028a22a88aaa80",
+        "0002200a2a822aa2"
+      ],
+      "remainder_words_le": [
+        "434df6a80fe040d5",
+        "001af062c19ac12d"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0a0a22800822888b",
+        "000a22a800a02280"
+      ],
+      "remainder_words_le": [
+        "7727e9812cbcfbc0",
+        "0017a8094270f9c1"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "20a802aa0a8008a1",
+        "0008aa2200020880"
+      ],
+      "remainder_words_le": [
+        "f2081d4730c47f47",
+        "001b16bb540e6b85"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8002a0a22a008aa3",
+        "000a2808a22a2888"
+      ],
+      "remainder_words_le": [
+        "8559273b8347f11c",
+        "0017d96f2ac2dabe"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2280228a222aa209",
+        "0008aa8a08a2a822"
+      ],
+      "remainder_words_le": [
+        "fd81ace7fe802e4f",
+        "001f15b62b2d59ef"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2822888a0aa2aaa1",
+        "000aa8088a28a022"
+      ],
+      "remainder_words_le": [
+        "89e8eaf7656c1112",
+        "0011192bb79f30be"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "aa0aa828022aa20b",
+        "0008080a08222a28"
+      ],
+      "remainder_words_le": [
+        "037149884a802e55",
+        "00186d3768efc6db"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "02a2aa80a28a280b",
+        "000a00a28828a8a2"
+      ],
+      "remainder_words_le": [
+        "497c459738a7c840",
+        "0013023dad8f0f6e"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8a02a802a8a2a08b",
+        "00082800202a8a22"
+      ],
+      "remainder_words_le": [
+        "f3181c4d1f7962d1",
+        "001ccd54f595b3a9"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8a088a282a220aa3",
+        "000a8282888882a8"
+      ],
+      "remainder_words_le": [
+        "f67fe69c86ab3008",
+        "0000dc9cabfbc81b"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2aaa2a82000a2aa8",
+        "0000028a820a8222"
+      ],
+      "remainder_words_le": [
+        "c007c18b04738018",
+        "001449b09b718bfb"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "28a80a022aaa2a89",
+        "000880820a28020a"
+      ],
+      "remainder_words_le": [
+        "ce49634ec01385df",
+        "000b93da23d90f36"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2a8a0802a828a280",
+        "00022a082a8a2020"
+      ],
+      "remainder_words_le": [
+        "d4f7395d1dde6cd5",
+        "001f877c90f7f4b1"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "02a8aaa882280a83",
+        "000aaa00a8aa8208"
+      ],
+      "remainder_words_le": [
+        "591f511fdf8934f8",
+        "001043034b44de69"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2880828aa0a20883",
+        "0008008028002882"
+      ],
+      "remainder_words_le": [
+        "9ac69ca0723f7ea9",
+        "001912d0c904ca9e"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "08008282220aa201",
+        "000a080822880282"
+      ],
+      "remainder_words_le": [
+        "2d17d89fba356a66",
+        "00136928fde819cf"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8aa2000a0a82a82b",
+        "000828a2082202aa"
+      ],
+      "remainder_words_le": [
+        "a46a0466719c49a5",
+        "000cce3a6dee1951"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8aa2a00a08880a22",
+        "00028282a02a20a2"
+      ],
+      "remainder_words_le": [
+        "f43820273af836bf",
+        "000dc99d6582e328"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8a0022a0282202aa",
+        "00028a820a0a88a0"
+      ],
+      "remainder_words_le": [
+        "f340ec25d9ba1d43",
+        "000ce08f7364ab67"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "28a0822228a0aaaa",
+        "000282a00202a8a8"
+      ],
+      "remainder_words_le": [
+        "9e328fefce271013",
+        "0018c9601a084a4c"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2002008220828201",
+        "000a028208a0000a"
+      ],
+      "remainder_words_le": [
+        "b01a17dff2ddcf22",
+        "000258cb6f355527"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a82888888820aa28",
+        "0000208a028228a2"
+      ],
+      "remainder_words_le": [
+        "08cefbfbeca317dc",
+        "0004f3b25cde9e6d"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "828aa20aa0a28802",
+        "000082a82a28208a"
+      ],
+      "remainder_words_le": [
+        "88b16b647629e91e",
+        "00138809c699a7a0"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a20a0a20aa20020b",
+        "00082a0200020a80"
+      ],
+      "remainder_words_le": [
+        "3a6376b746a14e05",
+        "001dd34f140a7187"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "800220a80a00a821",
+        "000a8a882882a808"
+      ],
+      "remainder_words_le": [
+        "905eb25866425cd6",
+        "0000f0b8decc1c3e"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a282800a802aa208",
+        "000002a8022a028a"
+      ],
+      "remainder_words_le": [
+        "29c9916194d17e2c",
+        "0000490c0e924da1"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a20820828a200822",
+        "0000008208028002"
+      ],
+      "remainder_words_le": [
+        "6e2ca2dde7b538fe",
+        "0001438e795c9458"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "088a8208808a00a2",
+        "000008802a02a0aa"
+      ],
+      "remainder_words_le": [
+        "7ef08a3a97b6427a",
+        "00152fd5d25d2746"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "208a8820a880a0a3",
+        "00088822aa888a88"
+      ],
+      "remainder_words_le": [
+        "b3f1f9e25b93624d",
+        "001ee9b844eee1f8"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "82a2a2a00aaa0223",
+        "000aa2a20a2a0080"
+      ],
+      "remainder_words_le": [
+        "c87c786474125ad8",
+        "00046c2e26d74797"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a288a880aa08aa82",
+        "000080a28022a020"
+      ],
+      "remainder_words_le": [
+        "29be4a92066a548e",
+        "0013826d91f970e7"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0aaa08a802a0a82b",
+        "00082a0020a28a08"
+      ],
+      "remainder_words_le": [
+        "60033a1c48661de5",
+        "001cd350e778b63d"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a8aa0228a02a88ab",
+        "000a8288288802a0"
+      ],
+      "remainder_words_le": [
+        "5e565fdb64d5fa20",
+        "0005dcb8cffc5826"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "aaaa808a0020a08a",
+        "00008a8a822a0282"
+      ],
+      "remainder_words_le": [
+        "1415c3e751b376f6",
+        "0006f5f1dac30c9d"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "22802802820a8808",
+        "0000a2a88aa80a8a"
+      ],
+      "remainder_words_le": [
+        "ac849d58da70ec2c",
+        "0007395bb05c30e7"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "008a802802a0aa22",
+        "0000a82a088a2a28"
+      ],
+      "remainder_words_le": [
+        "43a190d80d2616fe",
+        "00061d876ba28298"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2a202200220a0080",
+        "0000a00a8a00a8a2"
+      ],
+      "remainder_words_le": [
+        "92b5aa10ae6246d4",
+        "00122565b7161e6b"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a808a00aa0a22a01",
+        "0008202088a08a28"
+      ],
+      "remainder_words_le": [
+        "1d7b7565673fc737",
+        "0018a1e3eb36f2ce"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2828a2a82282a001",
+        "000a02200aa02aa2"
+      ],
+      "remainder_words_le": [
+        "c9da3d09edcc6532",
+        "00075fa47474953a"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "80a88208882a2282",
+        "0000a88aaa2080a8"
+      ],
+      "remainder_words_le": [
+        "c21a9f7aa983b8ca",
+        "00171ba417a2960a"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "aa202208a0022289",
+        "0008a80a2a208008"
+      ],
+      "remainder_words_le": [
+        "56a5ef2a250aecdb",
+        "000a5837d3a6946a"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2a20a20880a2208a",
+        "0002208a0028aa88"
+      ],
+      "remainder_words_le": [
+        "96e62f6fc37aa3b3",
+        "001eb6e7519b00f9"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0a0a280002aa0a03",
+        "000aa228a2a0a888"
+      ],
+      "remainder_words_le": [
+        "2776cd441c12336c",
+        "00157fdb3d235eec"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8820288aa2a28029",
+        "000888aaaa8a282a"
+      ],
+      "remainder_words_le": [
+        "bdb5cbe53c3891af",
+        "001fbb1454a2cd94"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "822022828a088221",
+        "000aaa2a28088088"
+      ],
+      "remainder_words_le": [
+        "cfb4b89cb62a8e92",
+        "00115682896ec6ba"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "08a2a280a22a228b",
+        "00080888a2002202"
+      ],
+      "remainder_words_le": [
+        "6a2d39d36bc6fdd5",
+        "000c6fbf6b44ef1f"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "288082a2a80aa8a0",
+        "000280a2aa2aa8a2"
+      ],
+      "remainder_words_le": [
+        "dfd6892c0c311e71",
+        "0019936916c11e2e"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a280080aa022a281",
+        "000a0a0828a20808"
+      ],
+      "remainder_words_le": [
+        "3dd13c6065ed28a6",
+        "000226298f6e3d7f"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a8a2a02a88aaa82a",
+        "00002020a0220a02"
+      ],
+      "remainder_words_le": [
+        "5b2831d5aa401982",
+        "0015b5f661ff6258"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0aaaa8a0208a0083",
+        "00088a288aa8a0a0"
+      ],
+      "remainder_words_le": [
+        "24445f64f3b753ed",
+        "000ff78ae54e2670"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8882a020a0a80022",
+        "0002aaa8aa0222a0"
+      ],
+      "remainder_words_le": [
+        "fedc21e2675d50ff",
+        "0008105e071fad62"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a80aaa2288a022a8",
+        "00020008008aa000"
+      ],
+      "remainder_words_le": [
+        "4d7503edbe64ed0d",
+        "001a506816e03412"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a2a0002880082089",
+        "000a208800a20008"
+      ],
+      "remainder_words_le": [
+        "7c3411dbd56df2ce",
+        "0003e7a9172b557e"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a822288888aaa0aa",
+        "00002aa0aa220808"
+      ],
+      "remainder_words_le": [
+        "0dbadefbfb052642",
+        "0015846613ae686b"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2a22a0a200a2280b",
+        "00088a0080a0a008"
+      ],
+      "remainder_words_le": [
+        "c7fc773f133fc955",
+        "001bb357c6233478"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a020282880aa028b",
+        "000a2a282888aa80"
+      ],
+      "remainder_words_le": [
+        "65e0d89ec6574dc0",
+        "0006c68ddfbb00c2"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "aa2a2800028020a0",
+        "0000a280a2028a8a"
+      ],
+      "remainder_words_le": [
+        "4387c9154dd5a760",
+        "000669977f1ca5b4"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a80a82208a288080",
+        "0000a0a20a08a8aa"
+      ],
+      "remainder_words_le": [
+        "49349be3b7de8780",
+        "0012373a276f4f11"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a8a2a882a808088b",
+        "00082028a82a2020"
+      ],
+      "remainder_words_le": [
+        "0a2d1a8c192c6ad1",
+        "001de0de1cd7b0f3"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8288aa2802a82809",
+        "000a8aa0028aa00a"
+      ],
+      "remainder_words_le": [
+        "ddef17884c19881e",
+        "0000e5315da52135"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8a20882008288a8a",
+        "000002a08828088a"
+      ],
+      "remainder_words_le": [
+        "e2a2bda07d8ae5a2",
+        "00110d27bccc6aa4"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "828280a2222082a9",
+        "000808028820aa2a"
+      ],
+      "remainder_words_le": [
+        "c88cd76efee29c7b",
+        "001d7c58f9a75785"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0a20a888aa008a89",
+        "000a88aa808a02aa"
+      ],
+      "remainder_words_le": [
+        "27a21eaa5742f1da",
+        "0004ee55c3e34c43"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2aa0288280802820",
+        "000082a2a0888a80"
+      ],
+      "remainder_words_le": [
+        "9070dbd9c6848da4",
+        "00069d3d73fea1c1"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2aaaa2200a800a08",
+        "0000a20a882a88a8"
+      ],
+      "remainder_words_le": [
+        "d0156af125d03328",
+        "00173a64ecc1ff1c"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "82800aaaa80a8281",
+        "0008a82a20a082a2"
+      ],
+      "remainder_words_le": [
+        "d99031005c60d9e7",
+        "000e5c83e3378c3c"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2828aa02802a8288",
+        "0002a08a82002aa0"
+      ],
+      "remainder_words_le": [
+        "cc9e025dd4c488ad",
+        "001833e5cb048165"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "2800820008a08a89",
+        "000a00282aa08a82"
+      ],
+      "remainder_words_le": [
+        "89039e116f32a0ce",
+        "000644898176f49a"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "08a8a2a8820a2202",
+        "0000a08082020a00"
+      ],
+      "remainder_words_le": [
+        "3a1a3d4f8b72fe1a",
+        "001673968f1b7700"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "a80a28a8a8000023",
+        "0008a0a82a08a202"
+      ],
+      "remainder_words_le": [
+        "1936db4a0d5405cd",
+        "000b7719927e3e0d"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "20aaa02aa0028808",
+        "000228a8a80a0a08"
+      ],
+      "remainder_words_le": [
+        "f6507491604de969",
+        "000acb5a08326778"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "002820a0a8aa02aa",
+        "00022282288a2002"
+      ],
+      "remainder_words_le": [
+        "11dce7271a574c57",
+        "001eaccbdfe2a14f"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "aaa022200882a803",
+        "000aa22282822a8a"
+      ],
+      "remainder_words_le": [
+        "0020bbf43b88497c",
+        "00007bed89de80f5"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0a8aa20002a88800",
+        "000000aa2aa28a02"
+      ],
+      "remainder_words_le": [
+        "61a46e40480bad50",
+        "00001213c479a35f"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "80aa0a20288aa8a0",
+        "0000000820082a80"
+      ],
+      "remainder_words_le": [
+        "865772a08eb15e60",
+        "0001452cf5699593"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "88a20a088a082a00",
+        "00000880882282a8"
+      ],
+      "remainder_words_le": [
+        "ef7b322be6698200",
+        "00153a87a9b99c4a"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0a2a0a0a808222ab",
+        "0008882a2200aa22"
+      ],
+      "remainder_words_le": [
+        "27836324d3ceb831",
+        "001fa8d7ab1216ea"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "28082008a2a2202b",
+        "000aaa220288aa22"
+      ],
+      "remainder_words_le": [
+        "8839b17b7c6ae0b0",
+        "001552ab48ab16bb"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "02222808a22a2a0b",
+        "0008888822222882"
+      ],
+      "remainder_words_le": [
+        "5ffbcd6b7f93d251",
+        "000aaffdefaade8b"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "aa22228aa2022888",
+        "00022222aaaa8aa2"
+      ],
+      "remainder_words_le": [
+        "07fffde47f4fdbb9",
+        "001ffffd5055f57d"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "00888aa888aa880b",
+        "000aaaaaaaaa8888"
+      ],
+      "remainder_words_le": [
+        "07fff01fff41fc10",
+        "001555555555fea8"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "88888aaaa2220009",
+        "0008888888888888"
+      ],
+      "remainder_words_le": [
+        "fffff0007ffe001f",
+        "001fffffffaaabff"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "aa2222222aaaaaa1",
+        "000aaaaaaaaaaaaa"
+      ],
+      "remainder_words_le": [
+        "07ffffff80000012",
+        "0015555555000000"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "8800000000000009",
+        "0008888888888888"
+      ],
+      "remainder_words_le": [
+        "f80000000000001b",
+        "001fffffffffffff"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "aaaaaaaaaaaaaaa1",
+        "000aaaaaaaaaaaaa"
+      ],
+      "remainder_words_le": [
+        "0000000000000002"
+      ]
+    }
+  ],
+  "bezout": [
+    {
+      "prime_divisor": 3,
+      "polynomial_coefficient_words_le": [
+        "de5039fa3d5d2412",
+        "00084a2c0074542a"
+      ],
+      "frobenius_coefficient_words_le": [
+        "63f0c067f6980df9",
+        "001f6b1520a6a0e4"
+      ]
+    },
+    {
+      "prime_divisor": 13,
+      "polynomial_coefficient_words_le": [
+        "3df74ea2c28f36fb"
+      ],
+      "frobenius_coefficient_words_le": [
+        "03089e9a0e25afc0",
+        "0007be95f87b71ad"
+      ]
+    }
+  ]
+}

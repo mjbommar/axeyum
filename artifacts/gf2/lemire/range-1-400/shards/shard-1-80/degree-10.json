@@ -1,0 +1,108 @@
+{
+  "format": "axeyum-gf2-half-degree-irreducible",
+  "version": 1,
+  "statement": "monic irreducible f over GF(2), deg(f)=n, deg(f-x^n)<=floor(n/2)",
+  "id": "lemire-degree-10",
+  "producer": "axeyum-gf2-search@6e1372073/binary=fcd47dd883b3/host=s1",
+  "degree": 10,
+  "tail_degree_bound": 5,
+  "polynomial_words_le": [
+    "0000000000000409"
+  ],
+  "frobenius": [
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000004"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000010"
+      ]
+    },
+    {
+      "quotient_words_le": [],
+      "remainder_words_le": [
+        "0000000000000100"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000040"
+      ],
+      "remainder_words_le": [
+        "0000000000000240"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000106"
+      ],
+      "remainder_words_le": [
+        "0000000000000136"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000041"
+      ],
+      "remainder_words_le": [
+        "000000000000035d"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000146"
+      ],
+      "remainder_words_le": [
+        "0000000000000227"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000103"
+      ],
+      "remainder_words_le": [
+        "000000000000010e"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000040"
+      ],
+      "remainder_words_le": [
+        "0000000000000214"
+      ]
+    },
+    {
+      "quotient_words_le": [
+        "0000000000000102"
+      ],
+      "remainder_words_le": [
+        "0000000000000002"
+      ]
+    }
+  ],
+  "bezout": [
+    {
+      "prime_divisor": 2,
+      "polynomial_coefficient_words_le": [
+        "0000000000000015"
+      ],
+      "frobenius_coefficient_words_le": [
+        "000000000000005b"
+      ]
+    },
+    {
+      "prime_divisor": 5,
+      "polynomial_coefficient_words_le": [
+        "000000000000000d"
+      ],
+      "frobenius_coefficient_words_le": [
+        "0000000000000322"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "format": "axeyum-gf2-half-degree-irreducible",
+  "version": 1,
+  "statement": "monic irreducible f over GF(2), deg(f)=n, deg(f-x^n)<=floor(n/2)",
+  "id": "lemire-degree-1",
+  "producer": "axeyum-gf2-search@6e1372073/binary=fcd47dd883b3/host=s1",
+  "degree": 1,
+  "tail_degree_bound": 0,
+  "polynomial_words_le": [
+    "0000000000000002"
+  ],
+  "frobenius": [],
+  "bezout": []
+}

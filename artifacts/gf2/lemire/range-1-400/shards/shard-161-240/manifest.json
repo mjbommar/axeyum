@@ -1,0 +1,657 @@
+{
+  "format": "axeyum-gf2-lemire-search-shard",
+  "version": 1,
+  "producer": "axeyum-gf2-search@6e1372073/host=s5",
+  "start_degree": 161,
+  "end_degree": 240,
+  "max_tail_terms": 4,
+  "max_candidates_per_degree": 2000000,
+  "arithmetic_limits": {
+    "max_input_degree": 4096,
+    "max_intermediate_degree": 8192,
+    "max_frobenius_steps": 4096,
+    "max_word_ops": 50000000
+  },
+  "rows": [
+    {
+      "degree": 161,
+      "status": "found",
+      "candidates_tested": 18,
+      "tail_terms": 2,
+      "artifact": "degree-161.json",
+      "artifact_sha256": "6068a77b252a220523cd1b4e4c746d70c6a310ef592e9e0914be44d05d377c82"
+    },
+    {
+      "degree": 162,
+      "status": "found",
+      "candidates_tested": 27,
+      "tail_terms": 2,
+      "artifact": "degree-162.json",
+      "artifact_sha256": "b96e7a439e123b3519ecfabdc5f5b6e007cb847cb48927380b935c17b88a4069"
+    },
+    {
+      "degree": 163,
+      "status": "found",
+      "candidates_tested": 87,
+      "tail_terms": 4,
+      "artifact": "degree-163.json",
+      "artifact_sha256": "f05b9d037aba5c7b724f4ce1107a38f7caf0c94c74f1432611865f13d180e289"
+    },
+    {
+      "degree": 164,
+      "status": "found",
+      "candidates_tested": 129,
+      "tail_terms": 4,
+      "artifact": "degree-164.json",
+      "artifact_sha256": "89289a9a236d4bfd9bc41c830b414a31f90acf839091c5e3d28796af948a147f"
+    },
+    {
+      "degree": 165,
+      "status": "found",
+      "candidates_tested": 105,
+      "tail_terms": 4,
+      "artifact": "degree-165.json",
+      "artifact_sha256": "2eb671d09bd6cfb3b9d494ade4ad4d37af0fe18c67e195fbb3b20a4f51b3d35a"
+    },
+    {
+      "degree": 166,
+      "status": "found",
+      "candidates_tested": 37,
+      "tail_terms": 2,
+      "artifact": "degree-166.json",
+      "artifact_sha256": "151210a369b7fc7e3fb9abc181ceb18570417efb084ed8a729405f63818adb37"
+    },
+    {
+      "degree": 167,
+      "status": "found",
+      "candidates_tested": 6,
+      "tail_terms": 2,
+      "artifact": "degree-167.json",
+      "artifact_sha256": "9862a497f965223f5e0851c7f22db834b221dea70760802ec6e8b95d7cfcfc9f"
+    },
+    {
+      "degree": 168,
+      "status": "found",
+      "candidates_tested": 147,
+      "tail_terms": 4,
+      "artifact": "degree-168.json",
+      "artifact_sha256": "e3a4041fdd147916eb614b868082e30f0d024ea21d213bbf03abdd5b5182261d"
+    },
+    {
+      "degree": 169,
+      "status": "found",
+      "candidates_tested": 34,
+      "tail_terms": 2,
+      "artifact": "degree-169.json",
+      "artifact_sha256": "5d0e25f63cd3d6e2019bcbf2bce687fa05d92fe9caada32dece7868991f798ee"
+    },
+    {
+      "degree": 170,
+      "status": "found",
+      "candidates_tested": 11,
+      "tail_terms": 2,
+      "artifact": "degree-170.json",
+      "artifact_sha256": "4b020e9bd4807e8c15913976b5f1ebec3cbf85a09c844f4344f43a657278faf8"
+    },
+    {
+      "degree": 171,
+      "status": "found",
+      "candidates_tested": 207,
+      "tail_terms": 4,
+      "artifact": "degree-171.json",
+      "artifact_sha256": "498b1ebb3d629b059ae3a11485df3b7d264edb2d6ec4ccf05d0b24d12eed5809"
+    },
+    {
+      "degree": 172,
+      "status": "found",
+      "candidates_tested": 1,
+      "tail_terms": 2,
+      "artifact": "degree-172.json",
+      "artifact_sha256": "3b71c98cc1330c99e4c2e29d3694a5fabd702ba609323ad913c23639d57fe881"
+    },
+    {
+      "degree": 173,
+      "status": "found",
+      "candidates_tested": 94,
+      "tail_terms": 4,
+      "artifact": "degree-173.json",
+      "artifact_sha256": "a5248a57c8c006aed1fa08b9bf2291913731ac1380ae7df2d2bb86bd5a9d624c"
+    },
+    {
+      "degree": 174,
+      "status": "found",
+      "candidates_tested": 13,
+      "tail_terms": 2,
+      "artifact": "degree-174.json",
+      "artifact_sha256": "b83317ea1f20bcf58d6329e0d989752e6bc8cf5643972e1af9dde05b29883c5a"
+    },
+    {
+      "degree": 175,
+      "status": "found",
+      "candidates_tested": 6,
+      "tail_terms": 2,
+      "artifact": "degree-175.json",
+      "artifact_sha256": "818de37abbc16d486fa0ab76cd4dafa259665b1a40ae98fad1b8feacfed6e1c4"
+    },
+    {
+      "degree": 176,
+      "status": "found",
+      "candidates_tested": 129,
+      "tail_terms": 4,
+      "artifact": "degree-176.json",
+      "artifact_sha256": "1bd388065bc486c3fc1862dc8d6b887c5e0d50a19c5c3a0f9010696d677889e6"
+    },
+    {
+      "degree": 177,
+      "status": "found",
+      "candidates_tested": 8,
+      "tail_terms": 2,
+      "artifact": "degree-177.json",
+      "artifact_sha256": "7aa099c37b739b3cc7951df9f8898afed8403bf0d188d22eab1d2a61a1095e46"
+    },
+    {
+      "degree": 178,
+      "status": "found",
+      "candidates_tested": 31,
+      "tail_terms": 2,
+      "artifact": "degree-178.json",
+      "artifact_sha256": "908e8fc95d3d4ed244be6880d84923dccd4f14957f195e60ae1177f369cd3839"
+    },
+    {
+      "degree": 179,
+      "status": "found",
+      "candidates_tested": 91,
+      "tail_terms": 4,
+      "artifact": "degree-179.json",
+      "artifact_sha256": "b594eb3f4cbb8c1e372bd3678cfbc21770cc58818cc0de5f53b60905e99666e6"
+    },
+    {
+      "degree": 180,
+      "status": "found",
+      "candidates_tested": 3,
+      "tail_terms": 2,
+      "artifact": "degree-180.json",
+      "artifact_sha256": "2b0857f4be6761343a36a5add8d4842cc9493f230172cb05e76c4eb47605ced9"
+    },
+    {
+      "degree": 181,
+      "status": "found",
+      "candidates_tested": 177,
+      "tail_terms": 4,
+      "artifact": "degree-181.json",
+      "artifact_sha256": "1f66d792358fe04d5d04c377f188eda81a6e6901766568e1020242f802a0aa9b"
+    },
+    {
+      "degree": 182,
+      "status": "found",
+      "candidates_tested": 81,
+      "tail_terms": 2,
+      "artifact": "degree-182.json",
+      "artifact_sha256": "0180c44edd96c144899aa0d6fb166da102ac83be2dfe00e48a9bada521664040"
+    },
+    {
+      "degree": 183,
+      "status": "found",
+      "candidates_tested": 56,
+      "tail_terms": 2,
+      "artifact": "degree-183.json",
+      "artifact_sha256": "0db3e994ea8c3e3463fbd3b8ad7f088e0a607a0794575c9d3f9392668fbbfc01"
+    },
+    {
+      "degree": 184,
+      "status": "found",
+      "candidates_tested": 171,
+      "tail_terms": 4,
+      "artifact": "degree-184.json",
+      "artifact_sha256": "274c49fea0c7e24c74c67b77e107b3d1313d5778a191f3304e74365e3b5286c4"
+    },
+    {
+      "degree": 185,
+      "status": "found",
+      "candidates_tested": 24,
+      "tail_terms": 2,
+      "artifact": "degree-185.json",
+      "artifact_sha256": "61d2f929ef34ad6016650757dd8fdd160628828babf2db16501960317b31fbd8"
+    },
+    {
+      "degree": 186,
+      "status": "found",
+      "candidates_tested": 11,
+      "tail_terms": 2,
+      "artifact": "degree-186.json",
+      "artifact_sha256": "5abd1a7522d27a1d6f347b487fbd8ddc73fb86a0a18033666bb0cbb7240e7b62"
+    },
+    {
+      "degree": 187,
+      "status": "found",
+      "candidates_tested": 111,
+      "tail_terms": 4,
+      "artifact": "degree-187.json",
+      "artifact_sha256": "8681447fdebf359f05ee6e94ff34cfae5f711fdfa7956acae2ecd3b8a84aafeb"
+    },
+    {
+      "degree": 188,
+      "status": "found",
+      "candidates_tested": 152,
+      "tail_terms": 4,
+      "artifact": "degree-188.json",
+      "artifact_sha256": "1eea85bd7a8c49bbb551f1ce17c963107b92dea5ef72145b1447d217bc243d9f"
+    },
+    {
+      "degree": 189,
+      "status": "found",
+      "candidates_tested": 141,
+      "tail_terms": 4,
+      "artifact": "degree-189.json",
+      "artifact_sha256": "b95929f251241e76c73f169791ae5de6f29275eef3507eac7b785bdd95a442a4"
+    },
+    {
+      "degree": 190,
+      "status": "found",
+      "candidates_tested": 140,
+      "tail_terms": 4,
+      "artifact": "degree-190.json",
+      "artifact_sha256": "97475301ff07d970c1cda11b8d85fddf6888d316da06fda0e84e219a7c66cfa6"
+    },
+    {
+      "degree": 191,
+      "status": "found",
+      "candidates_tested": 9,
+      "tail_terms": 2,
+      "artifact": "degree-191.json",
+      "artifact_sha256": "f6de92e2bcaef0afc55600ab3ff9d4a175e8a2ffd25d3ec1bbaafa2e68eaea15"
+    },
+    {
+      "degree": 192,
+      "status": "found",
+      "candidates_tested": 101,
+      "tail_terms": 4,
+      "artifact": "degree-192.json",
+      "artifact_sha256": "60a9e68889f3ae34ade6e635334a9c8ffc83aee790be4fcfe883b187252b49a4"
+    },
+    {
+      "degree": 193,
+      "status": "found",
+      "candidates_tested": 15,
+      "tail_terms": 2,
+      "artifact": "degree-193.json",
+      "artifact_sha256": "11fec94647e2c8f1fe164bbe5cf2f12e247ede1ea4968cbe7fbde0bbc0208551"
+    },
+    {
+      "degree": 194,
+      "status": "found",
+      "candidates_tested": 87,
+      "tail_terms": 2,
+      "artifact": "degree-194.json",
+      "artifact_sha256": "4fc191f787e3914ad97b151801c1abb7b0c2c98d4f24a41bc7f36b14fb01ac74"
+    },
+    {
+      "degree": 195,
+      "status": "found",
+      "candidates_tested": 132,
+      "tail_terms": 4,
+      "artifact": "degree-195.json",
+      "artifact_sha256": "6c9f5e40003594fb50d676789e95d24276322af8a45b6025351ceecc2e32b14f"
+    },
+    {
+      "degree": 196,
+      "status": "found",
+      "candidates_tested": 3,
+      "tail_terms": 2,
+      "artifact": "degree-196.json",
+      "artifact_sha256": "c9778b3797a90c1a15dae31d35eaa15d5332c661be61dee970b193f31771703f"
+    },
+    {
+      "degree": 197,
+      "status": "found",
+      "candidates_tested": 117,
+      "tail_terms": 4,
+      "artifact": "degree-197.json",
+      "artifact_sha256": "a7ba379ee5f01d19f4852a87f4cc7c9048904c26914a6589e7ef2567dfb223ff"
+    },
+    {
+      "degree": 198,
+      "status": "found",
+      "candidates_tested": 9,
+      "tail_terms": 2,
+      "artifact": "degree-198.json",
+      "artifact_sha256": "416bf49d5f3aca81736039e7c53f5bb6424f1e7401f3bc09e66799b34ae7b500"
+    },
+    {
+      "degree": 199,
+      "status": "found",
+      "candidates_tested": 34,
+      "tail_terms": 2,
+      "artifact": "degree-199.json",
+      "artifact_sha256": "477b54d9bfeede52b8e19307d53fc491b0bba125a7d07022d7840ea639606e9a"
+    },
+    {
+      "degree": 200,
+      "status": "found",
+      "candidates_tested": 179,
+      "tail_terms": 4,
+      "artifact": "degree-200.json",
+      "artifact_sha256": "4f9e78983295674348d5c4a7a6b7e53217a65da745f3966ecb9fb7e73f52804c"
+    },
+    {
+      "degree": 201,
+      "status": "found",
+      "candidates_tested": 14,
+      "tail_terms": 2,
+      "artifact": "degree-201.json",
+      "artifact_sha256": "e6d4e9c9b4c07492b923c45b84f5aa875554559edf89fcf159eaccefddd9aeb5"
+    },
+    {
+      "degree": 202,
+      "status": "found",
+      "candidates_tested": 55,
+      "tail_terms": 2,
+      "artifact": "degree-202.json",
+      "artifact_sha256": "57326dc11597dadbc1d041525d2616b2cc9c070bca657bbd1c11ff558b4ac641"
+    },
+    {
+      "degree": 203,
+      "status": "found",
+      "candidates_tested": 144,
+      "tail_terms": 4,
+      "artifact": "degree-203.json",
+      "artifact_sha256": "3a675f9d8565f9d053ac76a4212dddc1be4663a468447a73f5025898dbbc99fd"
+    },
+    {
+      "degree": 204,
+      "status": "found",
+      "candidates_tested": 27,
+      "tail_terms": 2,
+      "artifact": "degree-204.json",
+      "artifact_sha256": "2b20a4ff5e194548c3cc6d945884e63ac5cd3c332ed1242dfd3842e7235980e8"
+    },
+    {
+      "degree": 205,
+      "status": "found",
+      "candidates_tested": 121,
+      "tail_terms": 4,
+      "artifact": "degree-205.json",
+      "artifact_sha256": "1fcce0a6f68f16949d048891a824498118996dc65cae02b195c14e3d187e52b8"
+    },
+    {
+      "degree": 206,
+      "status": "found",
+      "candidates_tested": 164,
+      "tail_terms": 4,
+      "artifact": "degree-206.json",
+      "artifact_sha256": "eb9a891e0ac61019c5c5cf23fe21bb0a61785f7b4114e057237bb652c14184fd"
+    },
+    {
+      "degree": 207,
+      "status": "found",
+      "candidates_tested": 43,
+      "tail_terms": 2,
+      "artifact": "degree-207.json",
+      "artifact_sha256": "eb185de6f3a6e428eddeab33a788265ad6de172cb25d6cf66a131b6ae9b2d357"
+    },
+    {
+      "degree": 208,
+      "status": "found",
+      "candidates_tested": 185,
+      "tail_terms": 4,
+      "artifact": "degree-208.json",
+      "artifact_sha256": "585dc38819a5219e5588fe4760b402ae482663f396306cb41b7cf957ba921912"
+    },
+    {
+      "degree": 209,
+      "status": "found",
+      "candidates_tested": 6,
+      "tail_terms": 2,
+      "artifact": "degree-209.json",
+      "artifact_sha256": "4fa8b2cef4f42495eeae677a7a131fa1848b3f523145de060d7dd4146c4e9298"
+    },
+    {
+      "degree": 210,
+      "status": "found",
+      "candidates_tested": 7,
+      "tail_terms": 2,
+      "artifact": "degree-210.json",
+      "artifact_sha256": "313facc41c0b3cbc4b67ff67d2d4ea14124d456f531e8d90c9746cb23b660920"
+    },
+    {
+      "degree": 211,
+      "status": "found",
+      "candidates_tested": 259,
+      "tail_terms": 4,
+      "artifact": "degree-211.json",
+      "artifact_sha256": "fb9a8d5040358450617610c76c6b86c5ea50f4831ccf6f3bac8215b4d0ef911c"
+    },
+    {
+      "degree": 212,
+      "status": "found",
+      "candidates_tested": 105,
+      "tail_terms": 2,
+      "artifact": "degree-212.json",
+      "artifact_sha256": "8dd70939876396cc449b7cdf760b22dd4c94d1eb6aecbf3332192a08efae6fa4"
+    },
+    {
+      "degree": 213,
+      "status": "found",
+      "candidates_tested": 166,
+      "tail_terms": 4,
+      "artifact": "degree-213.json",
+      "artifact_sha256": "32ca329ed049d9674795bb0488c21b3e382fb7a64b8d1dffefcde1c04c4fbcf2"
+    },
+    {
+      "degree": 214,
+      "status": "found",
+      "candidates_tested": 73,
+      "tail_terms": 2,
+      "artifact": "degree-214.json",
+      "artifact_sha256": "f0f347b5da98ff52203b4df555971adc076898b2316754125f424798428eea95"
+    },
+    {
+      "degree": 215,
+      "status": "found",
+      "candidates_tested": 23,
+      "tail_terms": 2,
+      "artifact": "degree-215.json",
+      "artifact_sha256": "6f67b177dce2c7dcefe176b3a3b68bc382b7d1aa7aa1c1c7b8dd68828da4e422"
+    },
+    {
+      "degree": 216,
+      "status": "found",
+      "candidates_tested": 213,
+      "tail_terms": 4,
+      "artifact": "degree-216.json",
+      "artifact_sha256": "3a7b36da7f7e4d1dea319aaba70c96ef2d0d1dbd7251dfe4f0cb9b4e3c3087f6"
+    },
+    {
+      "degree": 217,
+      "status": "found",
+      "candidates_tested": 45,
+      "tail_terms": 2,
+      "artifact": "degree-217.json",
+      "artifact_sha256": "db10216f52f8820494fbcec8b72d4cd81613ce1b0b2b5ab6e21b016ef733ba0d"
+    },
+    {
+      "degree": 218,
+      "status": "found",
+      "candidates_tested": 11,
+      "tail_terms": 2,
+      "artifact": "degree-218.json",
+      "artifact_sha256": "1446062cef94fe020a5839b7e5fd7881a835fe7010f81992dabb7cbff912d8a8"
+    },
+    {
+      "degree": 219,
+      "status": "found",
+      "candidates_tested": 172,
+      "tail_terms": 4,
+      "artifact": "degree-219.json",
+      "artifact_sha256": "333106889b9c17bb61424d0c00035bb897b4dda860f47d4eba1188403d343d8a"
+    },
+    {
+      "degree": 220,
+      "status": "found",
+      "candidates_tested": 7,
+      "tail_terms": 2,
+      "artifact": "degree-220.json",
+      "artifact_sha256": "d0af97d7f4571a9ca32865fdbdd16d6d2d85929c69747eef6c705662f287277e"
+    },
+    {
+      "degree": 221,
+      "status": "found",
+      "candidates_tested": 126,
+      "tail_terms": 4,
+      "artifact": "degree-221.json",
+      "artifact_sha256": "fb4b950fda937c02648f9ad8f9122c531a6c50697619fb4afbcba0108b07e44b"
+    },
+    {
+      "degree": 222,
+      "status": "found",
+      "candidates_tested": 182,
+      "tail_terms": 4,
+      "artifact": "degree-222.json",
+      "artifact_sha256": "a5bc062895b852f373e55538fb0da6e005c941cc15ec8ec240534ac510be1802"
+    },
+    {
+      "degree": 223,
+      "status": "found",
+      "candidates_tested": 33,
+      "tail_terms": 2,
+      "artifact": "degree-223.json",
+      "artifact_sha256": "9881fc7dac5e58ed97b4edd66bd722fbfea339995593dbac05d62efe81bc9433"
+    },
+    {
+      "degree": 224,
+      "status": "found",
+      "candidates_tested": 284,
+      "tail_terms": 4,
+      "artifact": "degree-224.json",
+      "artifact_sha256": "16a0dd4b11c8e270a7d774f691049f7d8ca77bc2908179191c81d173757b580c"
+    },
+    {
+      "degree": 225,
+      "status": "found",
+      "candidates_tested": 32,
+      "tail_terms": 2,
+      "artifact": "degree-225.json",
+      "artifact_sha256": "b641cefebe5d153a1c132ab23a837e02e30c9b3131ebcc819c70102a6a8bb738"
+    },
+    {
+      "degree": 226,
+      "status": "found",
+      "candidates_tested": 141,
+      "tail_terms": 4,
+      "artifact": "degree-226.json",
+      "artifact_sha256": "b19b006bbb26e971c63bb852ebae58577a84561e7fd3482c23c7d32ac6cfea03"
+    },
+    {
+      "degree": 227,
+      "status": "found",
+      "candidates_tested": 132,
+      "tail_terms": 4,
+      "artifact": "degree-227.json",
+      "artifact_sha256": "ed8d5d400ff185512f951bb93639bba2d25ba2082ee301e8ac831c901b1fc9c3"
+    },
+    {
+      "degree": 228,
+      "status": "found",
+      "candidates_tested": 113,
+      "tail_terms": 2,
+      "artifact": "degree-228.json",
+      "artifact_sha256": "bfa4935a9a83ca6f203614d355c9cdb5a1de47b295eb061d92979c5eb11b1e7a"
+    },
+    {
+      "degree": 229,
+      "status": "found",
+      "candidates_tested": 133,
+      "tail_terms": 4,
+      "artifact": "degree-229.json",
+      "artifact_sha256": "936d18a9b772d186a86ef91400b23eaabefe0777c92841403074fd03f061578b"
+    },
+    {
+      "degree": 230,
+      "status": "found",
+      "candidates_tested": 126,
+      "tail_terms": 4,
+      "artifact": "degree-230.json",
+      "artifact_sha256": "50da9522ed165fd68db3b0390618289a0a03502be10ff1ebcff8f5de0c4e5b8f"
+    },
+    {
+      "degree": 231,
+      "status": "found",
+      "candidates_tested": 26,
+      "tail_terms": 2,
+      "artifact": "degree-231.json",
+      "artifact_sha256": "5670b84bf9b8f915867b34a16cdf74e2cbce70c6d9c305e853ea8127e240db4e"
+    },
+    {
+      "degree": 232,
+      "status": "found",
+      "candidates_tested": 137,
+      "tail_terms": 4,
+      "artifact": "degree-232.json",
+      "artifact_sha256": "a2cced6495df7667d948d612e684c70bc01cb6dd5c9f009b3ee4240d6ea7b422"
+    },
+    {
+      "degree": 233,
+      "status": "found",
+      "candidates_tested": 74,
+      "tail_terms": 2,
+      "artifact": "degree-233.json",
+      "artifact_sha256": "0a473978398065db57ea9f824e321569888a902471f454c2052b34653649b43c"
+    },
+    {
+      "degree": 234,
+      "status": "found",
+      "candidates_tested": 31,
+      "tail_terms": 2,
+      "artifact": "degree-234.json",
+      "artifact_sha256": "e9b3b1eb08856f49f5430bbce1121efc3b2d2e385522712370018af3ca2770bd"
+    },
+    {
+      "degree": 235,
+      "status": "found",
+      "candidates_tested": 160,
+      "tail_terms": 4,
+      "artifact": "degree-235.json",
+      "artifact_sha256": "8ba11ad5b67d6265b1bc6bfc3db3fb34bce1348c624aeb44790e597c9e649b42"
+    },
+    {
+      "degree": 236,
+      "status": "found",
+      "candidates_tested": 5,
+      "tail_terms": 2,
+      "artifact": "degree-236.json",
+      "artifact_sha256": "c7c61a60a18c5f43c9ce96626eec36957d3156975794971f90ff468a0d60644f"
+    },
+    {
+      "degree": 237,
+      "status": "found",
+      "candidates_tested": 220,
+      "tail_terms": 4,
+      "artifact": "degree-237.json",
+      "artifact_sha256": "0b82500520f6ca18aa45622ae285fd5a947e4b660f2d80610f8bdd5db7dc04b3"
+    },
+    {
+      "degree": 238,
+      "status": "found",
+      "candidates_tested": 73,
+      "tail_terms": 2,
+      "artifact": "degree-238.json",
+      "artifact_sha256": "79a7014ce7a3c040158813237a1e4a2951c59bc6f5b7f1e1786af8221dde0c4f"
+    },
+    {
+      "degree": 239,
+      "status": "found",
+      "candidates_tested": 36,
+      "tail_terms": 2,
+      "artifact": "degree-239.json",
+      "artifact_sha256": "566f6d579984c33d885033dd0d791bdc7be4c7d5353f976b8a1c167c0c2a6aa4"
+    },
+    {
+      "degree": 240,
+      "status": "found",
+      "candidates_tested": 284,
+      "tail_terms": 4,
+      "artifact": "degree-240.json",
+      "artifact_sha256": "c18ebaf14789bc9d65d078b273493a8593a5b9353ad1f09ad8635eb46be5b28f"
+    }
+  ]
+}
