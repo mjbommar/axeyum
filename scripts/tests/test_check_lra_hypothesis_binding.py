@@ -1219,6 +1219,10 @@ class AVacuousBindingIsNotAPass(unittest.TestCase):
                     "--min-structural", "0",
                     "--min-structural-nodes", "0",
                     "--min-structural-mutations", "0",
+                    "--min-anchored", "0",
+                    "--min-anchored-nodes", "0",
+                    "--min-anchored-mutations", "0",
+                    "--min-structural-anchored", "0",
                     *extra,
                 ]
             )
@@ -1261,10 +1265,33 @@ class AVacuousBindingIsNotAPass(unittest.TestCase):
             1,
         )
 
-    def test_the_same_structural_module_passes_when_pinned_structural(self) -> None:
+    def test_the_same_structural_module_passes_when_pinned_structural_anchored(
+        self,
+    ) -> None:
+        """`STRUCTURAL_QUERY` asserts the disequality outright, so this module
+        earns BOTH verdicts and `structural-anchored` is its pin. `structural`
+        alone is now REFUSED for it — see
+        `TheFourVerdictsCannotAbsorbEachOther`."""
         self.assertEqual(
             self._run_driver(
-                STRUCTURAL_MODULE, STRUCTURAL_QUERY, "--expect", "structural"
+                STRUCTURAL_MODULE, STRUCTURAL_QUERY, "--expect", "structural-anchored"
+            ),
+            0,
+        )
+
+    def test_a_structural_module_passes_as_structural_on_a_congruence_conclusion(
+        self,
+    ) -> None:
+        """The twin, and the case `structural` alone still exists for: both
+        rendered terms are subterms of this query, but no assertion forces them
+        unequal, so nothing anchors. Without this the test above would pass
+        against a driver that refused every `structural` pin."""
+        self.assertEqual(
+            self._run_driver(
+                STRUCTURAL_MODULE,
+                "(assert (bvult (select (store a i v) j) (select a j)))",
+                "--expect",
+                "structural",
             ),
             0,
         )
@@ -1697,16 +1724,46 @@ class TheAnchoredManifestIsRealAndOnlyGrows(unittest.TestCase):
         self.assertEqual(missing, [])
 
     def test_the_manifest_meets_its_own_floor(self) -> None:
-        self.assertGreaterEqual(len(HB.anchored_instances()), HB.MIN_ANCHORED)
+        """`MIN_ANCHORED` floors how many modules ANCHOR, which since the four
+        verdicts became a partition is this manifest PLUS the dual one -- those
+        rows anchor too, they simply also bind structurally. Comparing the floor
+        against this file alone would read the split as a collapse."""
+        self.assertGreaterEqual(
+            len(HB.anchored_instances()) + len(HB.structural_anchored_instances()),
+            HB.MIN_ANCHORED,
+        )
+
+    def test_the_dual_manifest_meets_its_own_floor(self) -> None:
+        self.assertGreaterEqual(
+            len(HB.structural_anchored_instances()), HB.MIN_STRUCTURAL_ANCHORED
+        )
+
+    def test_every_pinned_dual_instance_exists(self) -> None:
+        pinned = HB.structural_anchored_instances()
+        if not (ROOT / "corpus").is_dir():
+            pinned = [p for p in pinned if not p.startswith("corpus/")]
+        self.assertEqual([p for p in pinned if not (ROOT / p).is_file()], [])
 
     def test_no_instance_is_pinned_in_two_classes(self) -> None:
-        anchored = set(HB.anchored_instances())
-        for other in (
-            HB.manifest_instances(),
-            HB.structural_instances(),
-            HB.attestation_instances(),
-        ):
-            self.assertEqual(anchored & set(other), set())
+        """The four verdicts are a PARTITION of the instances that render a
+        module. An instance in two manifests would be checked twice and would
+        pass on whichever half it happened to satisfy -- and the dual verdict is
+        deliberately NOT expressed that way, as membership of both the
+        `structural` and `anchored` files, for exactly that reason: it is its own
+        manifest with its own two-sided pin."""
+        classes = {
+            "bound": set(HB.manifest_instances()),
+            "structural": set(HB.structural_instances()),
+            "structural-anchored": set(HB.structural_anchored_instances()),
+            "anchored": set(HB.anchored_instances()),
+            "attested": set(HB.attestation_instances()),
+        }
+        names = sorted(classes)
+        for i, left in enumerate(names):
+            for right in names[i + 1 :]:
+                self.assertEqual(
+                    classes[left] & classes[right], set(), f"{left} vs {right}"
+                )
 
 
 class TheFourVerdictsCannotAbsorbEachOther(unittest.TestCase):
@@ -1740,6 +1797,7 @@ class TheFourVerdictsCannotAbsorbEachOther(unittest.TestCase):
                     "--min-anchored", "0",
                     "--min-anchored-nodes", "0",
                     "--min-anchored-mutations", "0",
+                    "--min-structural-anchored", "0",
                     *extra,
                 ]
             )
@@ -1795,15 +1853,50 @@ class TheFourVerdictsCannotAbsorbEachOther(unittest.TestCase):
         )
 
     def test_a_structural_module_ALSO_anchors_when_the_query_forces_it(self) -> None:
-        """The two verdicts are not nested but they do overlap, and it is worth
-        knowing where. `STRUCTURAL_QUERY` asserts the disequality outright, so
-        this module is both structurally bound AND anchored. Measured over the
-        corpus, 63 of the 95 pinned `structural` rows are in that position."""
+        """The two verdicts are not nested but they do overlap, and the overlap
+        is now its own verdict. `STRUCTURAL_QUERY` asserts the disequality
+        outright, so this module is both structurally bound AND anchored.
+        Measured over the corpus, 66 instances are in that position -- the
+        largest of the four classes."""
+        self.assertEqual(
+            self._run_driver(
+                STRUCTURAL_MODULE, STRUCTURAL_QUERY, "--expect", "structural-anchored"
+            ),
+            0,
+        )
+
+    def test_a_dual_module_pinned_as_structural_ONLY_fails(self) -> None:
+        """The anti-absorption guard in the direction that did not exist before:
+        a row that also anchors must not go on being recorded as merely
+        structural. Without it the dual class can only be entered by hand, and a
+        stronger statement that becomes true stays unrecorded forever -- which is
+        precisely the state 66 instances were in until this was measured."""
+        self.assertEqual(
+            self._run_driver(
+                STRUCTURAL_MODULE, STRUCTURAL_QUERY, "--expect", "structural"
+            ),
+            1,
+        )
+
+    def test_a_dual_module_pinned_as_anchored_ONLY_fails(self) -> None:
+        """The same guard from the other side. `anchored` alone claims the
+        structural binder cannot grip the module, and for the 7 bare-pair rows
+        left in that class it genuinely cannot -- that admission is the whole
+        content of the class, so it must be checked and not asserted."""
         self.assertEqual(
             self._run_driver(
                 STRUCTURAL_MODULE, STRUCTURAL_QUERY, "--expect", "anchored"
             ),
-            0,
+            1,
+        )
+
+    def test_a_bare_pair_module_is_STILL_anchored_only(self) -> None:
+        """The twin for both guards above: they must not degrade into a driver
+        that refuses `structural` and `anchored` outright. `ANCHOR_MODULE` is a
+        bare pair, which `bind_structural` refuses by design, so `anchored`
+        alone is its correct pin and must pass."""
+        self.assertEqual(
+            self._run_driver(ANCHOR_MODULE, ANCHOR_QUERY, "--expect", "anchored"), 0
         )
 
     def test_a_structural_module_does_NOT_anchor_on_a_congruence_conclusion(

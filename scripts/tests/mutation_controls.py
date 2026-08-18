@@ -393,6 +393,25 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "            anchored_anyway, _why, _nodes = bind_anchored(source, path)\n            if anchored_anyway:",
                 "            anchored_anyway, _why, _nodes = bind_anchored(source, path)\n            if False:",
             ),
+            (
+                # The anti-absorption guard in the direction that only appeared
+                # once the four verdicts became a PARTITION: a row pinned
+                # `structural` that also anchors must be refused, or the stronger
+                # of two true statements stays unrecorded forever. 66 instances
+                # sat in exactly that state until it was measured.
+                "a structural-ONLY pin is refused when the query also anchors",
+                "            if not wants_anchored and a_ok:",
+                "            if False and a_ok:",
+            ),
+            (
+                # And the same from the other side. `anchored` alone claims the
+                # structural binder cannot grip the module -- for the 7 bare-pair
+                # rows left in that class that admission IS the class, so it has
+                # to be checked rather than asserted in a comment.
+                "an anchored-ONLY pin is refused when the module binds structurally",
+                "            if not wants_structural and s_ok:",
+                "            if False and s_ok:",
+            ),
         ],
     ),
 }

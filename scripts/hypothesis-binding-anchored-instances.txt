@@ -48,17 +48,31 @@
 # does not entail, and a query that entails none or several. It does not show
 # that `lhs = rhs` follows from the array axioms -- that is still an assumed
 # hypothesis, re-derived in Rust and not here.
+## ANCHORED AND STRUCTURAL ARE NOT NESTED, AND THEY OVERLAP -- so an instance may
+# now earn both. Measured 2026-08-18: of the 10 rows this list held, the 3
+# `TermIdentity` ones ALSO bind structurally (`(ite true x y)` is a four-node
+# term of the file) and moved to
+# `hypothesis-binding-structural-anchored-instances.txt`, along with 63 of the 95
+# rows then pinned `structural`. Nothing about those modules changed; the gate
+# simply stopped recording the weaker of two statements that were both true.
 #
-# ANCHORED AND STRUCTURAL ARE NOT NESTED, AND THEY OVERLAP. Measured 2026-08-18:
-# 63 of the 95 rows in `hypothesis-binding-structural-instances.txt` ALSO anchor
-# -- their query asserts the disequality outright rather than leaving it a
-# congruence conclusion. They are left pinned `structural` because that is the
-# stronger statement about them (every term node matched, not just the pair), and
-# because moving them would move the structural node floor without adding a
-# check. The 32 that do not anchor are the congruence-conclusion case the
-# structural verdict was created for. A later lane wanting BOTH verdicts on one
-# instance would need the manifests to stop being mutually exclusive; today they
-# are, and `TheAnchoredManifestIsRealAndOnlyGrows` pins that.
+# WHAT IS LEFT HERE IS THE PURE CASE, and it is the weak one, stated plainly: 7
+# `ArrayAxiom` rows whose module is a BARE PAIR. `bind_structural` refuses them
+# and is right to -- an injective map onto two of the query's symbols exists for
+# any query with two symbols -- so uniqueness is the ONLY thing pinning the
+# correspondence. Those 7 modules are byte-identical to one another, so each
+# anchors against any of the others' queries. Anchoring rules out a module
+# assuming a disequality the query does not entail, and a query that entails none
+# or several. It does not identify which symbols a bare `atom._0` means, and for
+# these 7 nothing else does either.
+#
+# The pin is two-sided, which is what keeps that admission from decaying into a
+# habit: a row here must anchor AND must NOT bind structurally. If the emitter
+# starts rendering these terms with their structure -- as it already did for 89
+# `ArrayAxiom` rows on this same day -- this gate FAILS rather than going on
+# reporting the weaker verdict, and the row moves to the dual manifest.
+#
+# Measured 2026-08-18: 7 instances, 14 anchored term nodes.
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext13.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext15.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext16.btor.smt2
@@ -66,6 +80,3 @@ corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__arra
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext26.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext7.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__extarraywrite1.btor.smt2
-corpus/public-curated/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__ite_arith.smt2
-corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__ite.smt2
-corpus/regression/cvc5/qf_lra/cvc5__cli__regress0__ite_arith.smt2

@@ -96,18 +96,36 @@ pinned in `scripts/tests/test_check_lra_hypothesis_binding.py`.
 
 Advertised scope is the part people believe, so it is a measurement here, not an
 estimate. Swept 2026-08-18 over all **1404** committed `.smt2` files. **270** of
-them render a Lean module at all, and those 270 split exactly four ways:
+them render a Lean module at all, and those 270 split into five pinned classes:
 
-    135  BOUND       every rendered hypothesis bound back to an `(assert …)` line
-     95  STRUCTURAL  every rendered TERM is a subterm of the query, injectively
-     10  ANCHORED    the query FORCES the disequality the module assumes, uniquely
-      9  ATTESTED    the module transcribes NOTHING; verified to be content-free
-     20  DECLINED    none of the four — not pinned, not checked, listed by name
+    135  BOUND               every rendered hypothesis bound back to an
+                             `(assert …)` line
+     32  STRUCTURAL          every rendered TERM is a subterm of the query,
+                             injectively — and the query does NOT force the
+                             disequality (the congruence-conclusion case)
+     66  STRUCTURAL-ANCHORED both of the above at once
+      7  ANCHORED            the query FORCES the disequality the module assumes,
+                             uniquely — and the module is a BARE PAIR the
+                             structural binder cannot grip
+      9  ATTESTED            the module transcribes NOTHING; verified content-free
+     20  DECLINED            none of the above — not pinned, not checked, listed
+                             by name
 
 `scripts/lra-hypothesis-binding-instances.txt` pins the 135;
-`scripts/hypothesis-binding-structural-instances.txt` pins the 95;
-`scripts/hypothesis-binding-anchored-instances.txt` pins the 10;
+`scripts/hypothesis-binding-structural-instances.txt` pins the 32;
+`scripts/hypothesis-binding-structural-anchored-instances.txt` pins the 66;
+`scripts/hypothesis-binding-anchored-instances.txt` pins the 7;
 `scripts/hypothesis-binding-attestations.txt` pins the 9 and names the 20.
+
+The five are a PARTITION and each pin is TWO-SIDED: an instance must pass its own
+class's checks and FAIL its neighbours'. The negative half is the half that does
+the work. Without it a class can only be entered deliberately and never left, so
+a stronger statement that becomes true stays unrecorded and a class that stops
+describing its members stays green — which is how six `QfAbv`/`QfUf` instances
+sat pinned "content-free" while they were structural all along, and how 66
+instances went on being recorded as merely `structural` when their queries
+asserted the disequality outright. Both were found by measurement, not by a
+check; both are now checks.
 
 ANCHORED is the newest and the weakest of the three checked verdicts, and it
 exists because the structural binder correctly refuses a module whose two equated
@@ -135,6 +153,11 @@ rather than a formality, and it bites on the same thirteen: THREE are refused an
 stay attested. `solver__array__ext27.btor.smt2` forces four leaf disequalities
 and a bare module does not say which; the two `unsat__replace_all__not-first-only`
 files force none at all.
+
+Anchoring is NOT confined to those thirteen, and assuming it was is what made the
+class look small. Run over the whole pinned corpus it holds of 73 modules: the 7
+bare pairs, plus 66 that ALSO bind structurally because their query asserts the
+disequality outright rather than deriving it. Those 66 are now their own class.
 
 What anchoring does NOT show is stated in
 `scripts/hypothesis-binding-anchored-instances.txt` and repeated here because it
@@ -181,7 +204,7 @@ Farkas) and `dio.hyp._N` (Int Diophantine).
   come from the query; the refutation is free to use fewer assertions than the
   query has, because a refutation of a subset refutes the whole. Sound, but
   weaker than it sounds — so the shortfall is now *measured* rather than left to
-  the reader: `represented_assertions=286` of `spine_assertions=531`. Barely half
+  the reader: `represented_assertions=296` of `spine_assertions=541`. Barely half
   the rows these refutations are handed are rendered at all. The number is
   recomputed from the accepted renaming, never from the search's own bookkeeping,
   and `--min-represented` floors it so a wholesale drop cannot pass quietly.
@@ -898,9 +921,9 @@ STRUCTURAL_MANIFEST = ROOT / "scripts/hypothesis-binding-structural-instances.tx
 # the one that matters: the instance count alone cannot see a renderer that
 # degraded to bare constants, because those would still be "structural" and
 # would bind vacuously.
-MIN_STRUCTURAL = 90
-MIN_STRUCTURAL_NODES = 2900
-MIN_STRUCTURAL_MUTATIONS = 340
+MIN_STRUCTURAL = 94
+MIN_STRUCTURAL_NODES = 2950
+MIN_STRUCTURAL_MUTATIONS = 350
 
 # `let` and the quantifiers need a binder environment; everything else is a
 # plain head-and-arguments tree.
@@ -1169,13 +1192,17 @@ def bind_structural(source: str, path: pathlib.Path) -> tuple[bool, str, int]:
 # whose sides the arena constant-folded (the rewrite residue, as for `ext10`).
 
 ANCHORED_MANIFEST = ROOT / "scripts/hypothesis-binding-anchored-instances.txt"
-# Measured 2026-08-18: 10 instances, 29 rendered term nodes, 26 corruptions
-# caught. The node floor is what sees a renderer degrading the `TermIdentity`
-# route back to bare constants: those would still anchor (a bare pair is the
-# weakest thing that can), and would anchor on uniqueness alone.
-MIN_ANCHORED = 8
-MIN_ANCHORED_NODES = 26
-MIN_ANCHORED_MUTATIONS = 20
+# Measured 2026-08-18: 73 instances, 1098 rendered term nodes, 269 corruptions
+# caught -- counting the 66 that ALSO bind structurally, because they genuinely
+# do anchor and a floor that excluded them would under-report what is checked.
+# It was 10/29/26 earlier the same day, before the two manifests were allowed to
+# overlap; the jump is a change in what is RECORDED, not in what holds.
+# The node floor is what sees a renderer degrading a structured side back to a
+# bare constant: those would still anchor (a bare pair is the weakest thing that
+# can), and would anchor on uniqueness alone.
+MIN_ANCHORED = 70
+MIN_ANCHORED_NODES = 1050
+MIN_ANCHORED_MUTATIONS = 250
 
 # The Boolean values a one-bit vector stands for in the BTOR-derived encoding,
 # and the `Bool` literals. Deliberately narrow: `#b1` is a Boolean only because
@@ -1194,6 +1221,52 @@ _OR_HEADS = frozenset({"or", "bvor"})
 
 def anchored_instances() -> list[str]:
     return _manifest(ANCHORED_MANIFEST)
+
+
+# ---------------------------------------------------------------------------
+# Both at once: the query contains the module's terms AND forces its disequality
+# ---------------------------------------------------------------------------
+#
+# `structural` and `anchored` answer different questions, and for most of the
+# corpus the answer to both is yes. Measured 2026-08-18: 63 of the 95 rows then
+# pinned `structural` ALSO anchor, and 3 of the 10 rows then pinned `anchored`
+# also bind structurally. Recording only one verdict for those 66 threw away a
+# strictly stronger statement that was already true of them.
+#
+# So the four verdicts are now a PARTITION, and each is falsifiable in BOTH
+# directions:
+#
+#     structural           binds structurally, and does NOT anchor
+#     structural-anchored  does BOTH
+#     anchored             anchors, and does NOT bind structurally
+#     attested             does NEITHER
+#
+# The negative half of each is the anti-absorption guard, and it is the half
+# that does the work. Without it a class can only be entered deliberately and
+# never left, so a renderer that degraded a dual instance to a bare pair would
+# leave it green in the class it was pinned to while the words describing that
+# class quietly stopped being true. That is exactly the failure the `attested`
+# guard was added for, one class over: six `QfAbv`/`QfUf` instances sat pinned
+# content-free while they were structural all along.
+#
+# It cuts the other way too. A row pinned `structural` that STARTS anchoring
+# fails the run and must be moved here — the gate refuses to keep recording the
+# weaker of two true statements once the stronger one holds.
+#
+# The counters do not partition: an instance here is counted in `structural`
+# AND in `anchored`, because it genuinely is both, and the floors on those two
+# numbers therefore keep meaning what they meant. `structural_anchored` is
+# reported separately so the overlap itself is a measured number.
+STRUCTURAL_ANCHORED_MANIFEST = ROOT / "scripts/hypothesis-binding-structural-anchored-instances.txt"
+# Measured 2026-08-18: 66 instances, 2168 structurally matched term nodes and
+# 1084 anchored ones. The dual class is the LARGEST of the four, which is the
+# finding: for two thirds of the array/EUF corpus the query both contains the
+# module's terms and forces the disequality it assumes.
+MIN_STRUCTURAL_ANCHORED = 60
+
+
+def structural_anchored_instances() -> list[str]:
+    return _manifest(STRUCTURAL_ANCHORED_MANIFEST)
 
 
 def _bit_value(term) -> bool | None:
@@ -2139,17 +2212,21 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--no-self-check", action="store_true")
     parser.add_argument(
         "--expect",
-        choices=("bound", "structural", "anchored", "attested"),
+        choices=("bound", "structural", "structural-anchored", "anchored", "attested"),
         default="bound",
         help="the verdict every --instance must reach. `bound` (the default) "
         "requires the module's hypotheses to bind to the query's assertions; "
         "`structural` requires every rendered term to be a subterm of the query "
-        "under one injective correspondence; `anchored` requires the query's own "
-        "assertions to FORCE the disequality the module assumes, and to force "
-        "exactly one the module could stand for; `attested` requires it to be a "
+        "under one injective correspondence AND that the query does NOT force the "
+        "disequality; `structural-anchored` requires both to hold; `anchored` "
+        "requires the query's own assertions to FORCE the disequality the module "
+        "assumes, to force exactly one the module could stand for, AND that the "
+        "structural binder cannot grip it; `attested` requires it to be a "
         "content-free opaque skeleton AND to fail both the structural and the "
-        "anchored check. Which verdict is required comes from the MANIFEST when no "
-        "--instance is given, so an instance cannot quietly move between the four.",
+        "anchored check. The four are a PARTITION and each is required to fail the "
+        "checks of its neighbours, so an instance cannot quietly move between them "
+        "in either direction. Which verdict is required comes from the MANIFEST "
+        "when no --instance is given.",
     )
     parser.add_argument("--min-instances", type=int, default=MIN_INSTANCES)
     parser.add_argument("--min-hypotheses", type=int, default=MIN_HYPOTHESES)
@@ -2163,6 +2240,9 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument(
         "--min-structural-mutations", type=int, default=MIN_STRUCTURAL_MUTATIONS
+    )
+    parser.add_argument(
+        "--min-structural-anchored", type=int, default=MIN_STRUCTURAL_ANCHORED
     )
     parser.add_argument("--min-anchored", type=int, default=MIN_ANCHORED)
     parser.add_argument("--min-anchored-nodes", type=int, default=MIN_ANCHORED_NODES)
@@ -2178,6 +2258,10 @@ def main(argv: list[str]) -> int:
     else:
         targets = [(pathlib.Path(p), "bound") for p in manifest_instances()]
         targets += [(pathlib.Path(p), "structural") for p in structural_instances()]
+        targets += [
+            (pathlib.Path(p), "structural-anchored")
+            for p in structural_anchored_instances()
+        ]
         targets += [(pathlib.Path(p), "anchored") for p in anchored_instances()]
         targets += [(pathlib.Path(p), "attested") for p in attestation_instances()]
     instances = [path for path, want in targets if want == "bound"]
@@ -2196,6 +2280,7 @@ def main(argv: list[str]) -> int:
     structural_caught = 0
     structural_accepted = 0
     anchored = 0
+    structural_anchored = 0
     anchored_nodes = 0
     anchored_caught = 0
     anchored_accepted = 0
@@ -2215,61 +2300,93 @@ def main(argv: list[str]) -> int:
         else:
             source, indices, fragment = render_module(binary, path)
 
-        if want == "structural":
-            ok, why, nodes = bind_structural(source, path)
-            if not ok:
-                failures.append(f"{instance}: pinned as structurally bound, but {why}")
-                continue
-            structural += 1
-            structural_nodes += nodes
-            if not args.no_self_check:
-                # Corrupt this module's own statement, four ways, and require
-                # each corruption to stop being a subterm of THIS query. A
-                # matcher that accepts everything reports a beautiful clean pass;
-                # this is the number that says it does not.
-                for kind in STRUCTURAL_MUTATIONS:
-                    mutant = mutate_structural_module(source, kind)
-                    if mutant is None:
-                        continue
-                    mutated, _why, _nodes = bind_structural(mutant, path)
-                    if mutated:
-                        # Not automatically a defect: a swapped `bvadd` can name
-                        # a different genuine subterm of the same file. Counted,
-                        # not failed — the floor is on the CAUGHT side.
-                        structural_accepted += 1
-                    else:
-                        structural_caught += 1
-            if args.verbose:
-                print(f"  {instance} [{fragment}] structural, {nodes} term nodes bound")
-            continue
+        if want in ("structural", "structural-anchored", "anchored"):
+            wants_structural = want in ("structural", "structural-anchored")
+            wants_anchored = want in ("structural-anchored", "anchored")
+            s_ok, s_why, s_nodes = bind_structural(source, path)
+            a_ok, a_why, a_nodes = bind_anchored(source, path)
 
-        if want == "anchored":
-            ok, why, nodes = bind_anchored(source, path)
-            if not ok:
+            # The POSITIVE half of the pin: what this class claims holds.
+            if wants_structural and not s_ok:
+                failures.append(f"{instance}: pinned as structurally bound, but {s_why}")
+                continue
+            if wants_anchored and not a_ok:
                 failures.append(
-                    f"{instance}: pinned as anchored to an asserted disequality, but {why}"
+                    f"{instance}: pinned as anchored to an asserted disequality, but {a_why}"
                 )
                 continue
-            anchored += 1
-            anchored_nodes += nodes
+            # The NEGATIVE half, and the half that keeps the four verdicts a
+            # partition rather than four places an instance may sit. A row that
+            # starts satisfying its neighbour's check must MOVE: the gate refuses
+            # to go on recording the weaker of two true statements, and it refuses
+            # to let a class quietly absorb instances it no longer describes.
+            if not wants_anchored and a_ok:
+                failures.append(
+                    f"{instance}: pinned as structurally bound ONLY, but this query also "
+                    "FORCES exactly one disequality its rendered sides can stand for. "
+                    "A strictly stronger statement holds than the one recorded; pin it "
+                    "as `structural-anchored`"
+                )
+                continue
+            if not wants_structural and s_ok:
+                failures.append(
+                    f"{instance}: pinned as anchored ONLY, but its rendered terms ARE "
+                    f"{s_nodes} nodes of this query under an injective renaming. A "
+                    "strictly stronger statement holds than the one recorded; pin it as "
+                    "`structural-anchored`"
+                )
+                continue
+
+            if wants_structural:
+                structural += 1
+                structural_nodes += s_nodes
+            if wants_anchored:
+                anchored += 1
+                anchored_nodes += a_nodes
+            if want == "structural-anchored":
+                structural_anchored += 1
             if not args.no_self_check:
-                # Corrupt this module's own statement and require the corruption
-                # to stop being the disequality THIS query forces. For a module
-                # whose sides are bare constants only `retarget-leaf` and
-                # `collapse-two-constants` apply -- there is no application to
-                # damage -- and both are caught by the match against the query's
-                # forced pairs, not by anything internal to the module.
+                # Corrupt this module's own statement, four ways, and require
+                # each corruption to stop being a subterm of THIS query (and, for
+                # an anchored pin, to stop being the disequality THIS query
+                # forces). A matcher that accepts everything reports a beautiful
+                # clean pass; these are the numbers that say it does not.
+                #
+                # The two tallies are kept independent even for a dual instance:
+                # a corruption the structural binder catches and the anchor does
+                # not is one caught and one accepted, not one of either. Merging
+                # them would let a dead anchor hide behind a live structural
+                # matcher, which is the exact shape of the masking defect found in
+                # `mutation_controls.py` on 2026-08-18.
                 for kind in STRUCTURAL_MUTATIONS:
                     mutant = mutate_structural_module(source, kind)
                     if mutant is None:
                         continue
-                    mutated, _why, _nodes = bind_anchored(mutant, path)
-                    if mutated:
-                        anchored_accepted += 1
-                    else:
-                        anchored_caught += 1
+                    if wants_structural:
+                        mutated, _why, _nodes = bind_structural(mutant, path)
+                        if mutated:
+                            # Not automatically a defect: a swapped `bvadd` can
+                            # name a different genuine subterm of the same file.
+                            # Counted, not failed — the floor is on the CAUGHT side.
+                            structural_accepted += 1
+                        else:
+                            structural_caught += 1
+                    if wants_anchored:
+                        # For a module whose sides are bare constants only
+                        # `retarget-leaf` and `collapse-two-constants` apply --
+                        # there is no application to damage -- and both are caught
+                        # by the match against the query's forced pairs, not by
+                        # anything internal to the module.
+                        mutated, _why, _nodes = bind_anchored(mutant, path)
+                        if mutated:
+                            anchored_accepted += 1
+                        else:
+                            anchored_caught += 1
             if args.verbose:
-                print(f"  {instance} [{fragment}] anchored, {nodes} term nodes")
+                print(
+                    f"  {instance} [{fragment}] {want}, {s_nodes} structural / "
+                    f"{a_nodes} anchored term nodes"
+                )
             continue
 
         if want == "attested":
@@ -2417,7 +2534,8 @@ def main(argv: list[str]) -> int:
         f"structural_nodes={structural_nodes}|structural_caught={structural_caught}|"
         f"structural_accepted={structural_accepted}|anchored={anchored}|"
         f"anchored_nodes={anchored_nodes}|anchored_caught={anchored_caught}|"
-        f"anchored_accepted={anchored_accepted}|attested={attested}|"
+        f"anchored_accepted={anchored_accepted}|"
+        f"structural_anchored={structural_anchored}|attested={attested}|"
         f"attested_vacuous={attested_vacuous}|spine_assertions={spine_assertions}|"
         f"represented_assertions={represented}|failures={len(failures)}"
     )
@@ -2434,7 +2552,7 @@ def main(argv: list[str]) -> int:
             "of the corpus whose Lean evidence transcribes NOTHING from the query, and "
             "a checker that stopped confirming that would stop reporting it"
         )
-    if any(want == "structural" for _p, want in targets):
+    if any(want in ("structural", "structural-anchored") for _p, want in targets):
         if structural < args.min_structural:
             failures.append(
                 f"only {structural} modules were structurally bound to their query "
@@ -2457,7 +2575,18 @@ def main(argv: list[str]) -> int:
                 "renderer that degraded to bare constants: those still bind, and bind "
                 "vacuously"
             )
-    if any(want == "anchored" for _p, want in targets):
+    if (
+        any(want == "structural-anchored" for _p, want in targets)
+        and structural_anchored < args.min_structural_anchored
+    ):
+        failures.append(
+            f"only {structural_anchored} modules earned BOTH verdicts (floor "
+            f"{args.min_structural_anchored}). This is the overlap between "
+            "containing the module's terms and forcing its disequality, and a drop "
+            "means instances stopped satisfying the stronger of the two statements "
+            "that used to hold of them"
+        )
+    if any(want in ("anchored", "structural-anchored") for _p, want in targets):
         if anchored < args.min_anchored:
             failures.append(
                 f"only {anchored} modules were anchored to a disequality their query "

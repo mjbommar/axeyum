@@ -24,98 +24,54 @@
 # misfiled as content-free by a check that read vocabulary rather than shape.
 #
 # Measured 2026-08-18: 95 instances, 2982 matched term nodes.
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw30.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw31.btor.smt2
+#
+# 2026-08-18, LATER THE SAME DAY: this list is 32, not 95. The other 63 moved to
+# `hypothesis-binding-structural-anchored-instances.txt`, which is not a demotion
+# -- they earned a SECOND verdict. Their query asserts the disequality outright,
+# so anchoring holds of them as well, and recording only the structural half was
+# recording the weaker of two true statements.
+#
+# WHAT IS LEFT HERE IS THE CASE THIS VERDICT WAS CREATED FOR, and now it is the
+# only case in it: 32 instances whose hypothesis is a CONGRUENCE CONCLUSION, so
+# no assertion of the file says `¬(lhs = rhs)` and nothing anchors. 26
+# `ArrayAxiom`, 5 `QfAbv`, 1 `QfUf`. That the class is no longer a mixture is
+# what makes its own floor mean something: a drop here is a renderer that stopped
+# transcribing, not an instance that drifted between two verdicts.
+#
+# The pin is now two-sided. A row here must bind structurally AND must NOT
+# anchor; if a query starts forcing the disequality its module assumes, this
+# gate fails rather than going on recording the weaker statement.
+#
+# Measured 2026-08-18: 32 instances, 844 matched term nodes.
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw32.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw33.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw34.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst1.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst2.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst3.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst4.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__3vl1.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond11.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond12.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond13.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond14.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond18.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond3.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond5.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond6.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond7.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond8.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond9.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconst.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconstaig.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext11.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext18.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext19.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext2.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext21.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext22.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext24.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext25.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext28.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext5.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext9.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__extarraywrite2.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read1.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read10.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read11.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read17.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read19.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read2.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read20.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read21.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read22.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read4.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read5.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read6.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read7.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read8.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read9.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__verbose2.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write1.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write10.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write13.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write14.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write16.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write17.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write2.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write22.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write23.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write24.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write3.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write4.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write6.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write7.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write8.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write9.btor.smt2
-corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__arrays__bug637.delta.smt2
 corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__arrays__issue9041.smt2
-corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__bvproof2.smt2
 corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__issue9519.smt2
 corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__proj-issue321.smt2
 corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress0__arith__integers__ackermann4.smt2
-corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtarraycond1.smt2
-corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtarraycond3.smt2
-corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtaxiommccarthy.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom1uf.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom2uf.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom3uf.smt2
 corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom4uf.smt2
-corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arr1.smt2
-corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.04.smt2
-corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__simple-uf.smt2
-corpus/qfbv-curated/crafted__bb.smt2
-corpus/qfbv-curated/crafted__bbb.smt2
-corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__arrays__bug637.delta.smt2
 corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__arrays__issue9041.smt2
-corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__bv__bvproof2.smt2
 corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__bv__issue10057.smt2
 corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__bv__issue9519.smt2
 corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__bv__proj-issue321.smt2
 corpus/regression/cvc5/qf_bv/cvc5__cli__regress0__bv__bvproof3.smt2
-corpus/regression/cvc5/qf_bv/cvc5__cli__regress0__bv__holes__extract-whole.smt2
-corpus/regression/qf_abv/unsat_read_over_write.smt2
 docs/rules-as-code/examples/category-equivalence-v0/smt2/implementation-equivalence-qf-uf-conflict.smt2
