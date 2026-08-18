@@ -499,6 +499,43 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
 
   `git commit -m 'single quotes'` also works, but only until the message needs an
   apostrophe.
+- **THE STAGED-SET ASSERTION CANNOT CATCH A WRONG PATHSPEC — check it BOTH
+  ways, or use `scripts/lane-commit.sh`.** Eleventh and twelfth incidents,
+  2026-08-18, by the same agent within an hour, in opposite directions, both
+  passing the assertion above.
+
+  *Too narrow.* A pathspec derived from `git status --porcelain
+  --untracked-files=no` after a `git mv`: the renamed-TO files are untracked in a
+  freshly `read-tree`'d private index, so they were omitted. The commit landed
+  four ADR **deletions with none of the additions** — 705 lines removed, 243
+  added — and four decisions were absent from history while every reference in
+  the tree pointed at them.
+
+  *Too wide.* The remedy was `--untracked-files=all`, which in a shared checkout
+  enumerates **other lanes' untracked files**. The next commit swept a sibling
+  lane's new example and another's pinned output file.
+
+  Both passed `test -z "$(git diff --cached --name-only HEAD | grep -vxF …)"`,
+  because that compares the staged set against the pathspec and **both times the
+  pathspec itself was wrong**. It catches HEAD moving under you mid-commit, which
+  is a real hazard and a different one. Note also that with rename detection on,
+  `--name-only` prints only a rename's DESTINATION, so a pathspec that correctly
+  names both sides is reported as half-unstaged — use `--no-renames`.
+
+  `scripts/lane-commit.sh -m <msgfile> -- <path>…` takes the paths explicitly and
+  refuses unless: nothing staged that you did not name, nothing named that failed
+  to stage, and no path in `HEAD` gone from disk with its deletion unstaged in a
+  directory you are committing into (the half-rename). It then resyncs the shared
+  index for exactly those paths, using `git hash-object` against `git rev-parse
+  HEAD:<path>` rather than `git diff HEAD`, and `git reset HEAD -- <path>` for
+  anything another lane moved under you. Controls:
+  `scripts/tests/test-lane-commit.sh`, one case per incident above; each guard
+  mutation-verified to kill exactly one.
+
+  The guard that catches the *wide* case is unreachable when every named path is
+  an explicit file — `git add -A -- <file>` cannot stage anything else. It fires
+  on a pathspec naming a **directory**, which is what actually happened. A suite
+  without that case would let the guard be deleted while staying green.
 - **Lane identity lives in the environment, not in git config.**
   `export AXEYUM_AGENT=<lane>`; the `hooks/commit-msg` hook stamps an
   `Agent:` trailer and refuses an unidentified commit. Do **not** use

@@ -135,6 +135,7 @@ step gate-controls ./scripts/tests/test-gate-scope-controls.sh
 # fail before the fact exists). Seconds each, no workspace build.
 step local-ci-record-controls ./scripts/tests/test-local-ci-record.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
+step lane-commit-controls ./scripts/tests/test-lane-commit.sh
 # `frontier_*` runs in its own serialized step below: those ratchets are
 # wall-clock-budget based, so contention from the rest of the suite shrinks the
 # measured frontier and reports a false REGRESSION (measured 2026-07-30).

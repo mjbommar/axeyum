@@ -174,6 +174,7 @@ gate-controls:
     # `checker_command` must be proved able to FAIL before the fact exists).
     scripts/tests/test-local-ci-record.sh
     scripts/tests/test-new-fact-controls.sh
+    scripts/tests/test-lane-commit.sh
 
 # `frontier_*` is skipped here and run by `frontier` instead. Those ratchets
 # measure "the largest N decided within a fixed WALL-CLOCK budget", so running
