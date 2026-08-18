@@ -58,9 +58,16 @@ fn two_x_eq_one_reconstructs_to_false() {
     // The delta is exactly the header text; no proof bytes changed, and the
     // constants stay out of every axiom footprint (asserted separately in
     // `farkas_over_the_integers::codegen_constants_are_declared_but_never_in_the_footprint`).
+    // Moved 2026-08-18 by +777 bytes: the header now carries
+    // `set_option maxRecDepth 65536` and the paragraph explaining it. Scope-aware
+    // `let` sharing binds repeated subterms, a `let` chain is nested syntax, and
+    // the constructed-carrier module reached 2,897 levels in one declaration --
+    // past Lean 4.30.0's default of 512. Again exactly the header text; no proof
+    // bytes changed, and real Lean accepted this module on the same run
+    // (`[lean ok] diophantine`, footprint = the four query axioms).
     assert_eq!(
         (source.len(), source_fnv),
-        (1_143_357, 0x5f74_8fa1_f17e_52df)
+        (1_144_134, 0x0aaa_f5ec_077c_e817)
     );
     assert_eq!(
         scan_proof_fragment(&arena, &[e1, e2]),
