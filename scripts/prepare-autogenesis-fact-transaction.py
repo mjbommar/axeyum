@@ -270,6 +270,22 @@ def build_authoritative_transaction(
         f"axeyum-autogenesis execution {identity['execution_id']}"
     )
     after_fact["provenance"] = provenance
+    previous_notes = before_fact.get("notes")
+    closure_note = (
+        "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact "
+        f"fact for registered operation `{operation['id']}`; execution receipt "
+        f"`{execution_sha}` produced a source-bound certified refutation, and "
+        "the typed transaction derived this status, route, footprint, evidence "
+        "row, checker, and provenance without caller-authored admission metadata."
+    )
+    if isinstance(previous_notes, str) and previous_notes:
+        after_fact["notes"] = (
+            closure_note
+            + "\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\n"
+            + previous_notes
+        )
+    else:
+        after_fact["notes"] = closure_note
 
     before_sha = digest(before_fact)
     after_sha = digest(after_fact)

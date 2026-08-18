@@ -666,7 +666,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "b4d49810cf7c875fd06922b2bf06f8368641819d178ef4abf4c9407b32cefa0f",
+    "digest": "bef49d9ada2e06a22ad2378746973d6c62a12ec1c9ebf37bdefd88b1b2d051b4",
     "inputs": [
       {
         "bytes": 2892,
@@ -1374,9 +1374,9 @@
         "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
       },
       {
-        "bytes": 20116,
+        "bytes": 20876,
         "path": "scripts/prepare-autogenesis-fact-transaction.py",
-        "sha256": "1e632a3fa362c57d69f3d9831295d57461165a68b98a5be0a4ac81297497b683"
+        "sha256": "576a4020544ad5abbdc4417ae9363b416608db4f110760d930fc745f803c7bc3"
       },
       {
         "bytes": 10990,

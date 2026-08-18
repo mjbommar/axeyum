@@ -184,6 +184,8 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
         checker = MODULE.load_module("fact_checker_for_transaction_test", MODULE.FACT_OPERATION_SCRIPT)
         checked = checker.check_fact(after, lambda _operation: observation)
         self.assertEqual(checked["operation_id"], operation["id"])
+        self.assertTrue(after["notes"].startswith("CLOSED BY AXEYUM AUTOGENESIS"))
+        self.assertIn("PRE-CLOSURE RECORD", after["notes"])
 
     def test_execution_identity_and_assurance_mutations_reject(self):
         before, execution, operation, registry, _observation = self.inputs()
