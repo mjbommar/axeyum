@@ -664,6 +664,13 @@
       "owner": "nursery manifest and readiness checker",
       "source": "scripts/check-autogenesis-nursery.py",
       "state": "foundation-only"
+    },
+    {
+      "gap": "240 statement-only candidates span twelve Nat/Int families; dependency components, mutations, frozen splits, route hypotheses, and Axeyum outcomes remain absent",
+      "id": "nursery-statement-source",
+      "owner": "proof-isolated Mathlib source and candidate selector",
+      "source": "scripts/create-autogenesis-mathlib-candidates.py",
+      "state": "source-candidates"
     }
   ],
   "proof_gap": {
@@ -681,12 +688,27 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "9c283f45facd3f9e83b2170303fc044b3c3cb4a577c9dd189f5220b00ecfba0c",
+    "digest": "e77555f85d1125ed3f3b084f9614214cf9c88507c12ca4a1985189348afbe47b",
     "inputs": [
       {
         "bytes": 1939,
         "path": "artifacts/autogenesis/autogenesis-1-result.json",
         "sha256": "d206d33a1cdf8392dc7fb3c4720ba8c55abd2d3334b35bb5ba5cbd3a6bcef8ca"
+      },
+      {
+        "bytes": 163886,
+        "path": "artifacts/autogenesis/mathlib-nat-int-candidates-v1.json",
+        "sha256": "adbb3aff520664495089312a35ac2be1fd017a4ce39e4eff6443ea067d5c0704"
+      },
+      {
+        "bytes": 2550,
+        "path": "artifacts/autogenesis/mathlib-nursery-source-policy-v1.json",
+        "sha256": "1e76666fb58e987c04ebb957d8152bc1b47cd7463b6c9f6340b5630ef67e3a6c"
+      },
+      {
+        "bytes": 2799,
+        "path": "artifacts/autogenesis/mathlib-statement-source-v1.json",
+        "sha256": "8d7df257783ab2cdcfad18719de68d6f40681e1bacb06e938c7f0827d07eebdc"
       },
       {
         "bytes": 1942,
@@ -1279,9 +1301,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 74108,
+        "bytes": 74696,
         "path": "justfile",
-        "sha256": "03831125cca9ef72572df1065b4ed279be8b15b6da2eebb44c7a6fe40e71c2aa"
+        "sha256": "cbf24cafc9a241b77277bc26001c80587643115645f297d44b10690f01c7d475"
       },
       {
         "bytes": 11929,
@@ -1329,6 +1351,11 @@
         "sha256": "b95ff058b0fd33cfa5ef2743587c4b2db25a2cef5ff72529e0ff474951926d65"
       },
       {
+        "bytes": 6126,
+        "path": "scripts/check-autogenesis-mathlib-source.py",
+        "sha256": "6bfda36b437386c77a8e2ebe6f5466c91396b21fb169406f806f980388bfd8a0"
+      },
+      {
         "bytes": 16108,
         "path": "scripts/check-autogenesis-nursery.py",
         "sha256": "2d2e888f040b0c6f4d2aad4ccc7486d8f7a547c78eb4805533b5e56ec76997e1"
@@ -1349,9 +1376,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 22719,
+        "bytes": 23132,
         "path": "scripts/check.sh",
-        "sha256": "819e6866152c8cfcdcf1839163847e68da18d6a722fd5308b8c2a0a20007e05a"
+        "sha256": "de6897dcd61546ce12f33dc8402641c382c03d1610d1e85c04b06abdfbac1565"
       },
       {
         "bytes": 6846,
@@ -1372,6 +1399,11 @@
         "bytes": 20459,
         "path": "scripts/create-autogenesis-chain-catalog.py",
         "sha256": "f593645e0464401022074d3e3e86fa52a1ee953f5afba36ac1bdf74ed1ca3c6b"
+      },
+      {
+        "bytes": 13559,
+        "path": "scripts/create-autogenesis-mathlib-candidates.py",
+        "sha256": "e69fbb0be70dc4c6ae0446083fd921fe3e8eb1e7d30d2139489035bf954466a4"
       },
       {
         "bytes": 9953,
@@ -1409,14 +1441,19 @@
         "sha256": "fb367504828dc9aa0d09ecf349b645eb33b83402b69c53df65e43e937271526c"
       },
       {
-        "bytes": 27568,
+        "bytes": 28461,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "310a930ccb24351fc49ed519a23d242aa21dbb7ef6b64e2d8c529875b674479b"
+        "sha256": "89d5b69215886587497e2a3dafeebb156d0e531e77f0911e9f306a24340cc5c6"
       },
       {
         "bytes": 17112,
         "path": "scripts/gen-proof-gap-matrix.py",
         "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
+      },
+      {
+        "bytes": 1652,
+        "path": "scripts/lean/autogenesis_mathlib_statement_inventory.lean",
+        "sha256": "78cc93de6ab3c1fed5378c757f0ebfcbee47e66ecd72c25022755a4707e2b376"
       },
       {
         "bytes": 23897,

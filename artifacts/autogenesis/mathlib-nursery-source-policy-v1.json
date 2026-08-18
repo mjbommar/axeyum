@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-candidate-policy",
+  "source_manifest_sha256": "8fdafd50b9598b4aeb7573e960f061040cbd1234609db1655b27128c7b4a4ddb",
+  "candidate_count": 240,
+  "quota_per_family": 20,
+  "maximum_type_repr_bytes": 40000,
+  "ranking": [
+    "fewest-distinct-type-constants",
+    "shortest-structural-type",
+    "lexicographic-declaration-name"
+  ],
+  "families": [
+    {
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "domain": "Int",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "module": "Mathlib.Data.Int.GCD",
+      "domain": "Int",
+      "theme": "integer-gcd"
+    },
+    {
+      "module": "Mathlib.Data.Int.ModEq",
+      "domain": "Int",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "domain": "Nat",
+      "theme": "natural-bitwise"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "domain": "Nat",
+      "theme": "natural-binomial"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "domain": "Nat",
+      "theme": "natural-factorial"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "domain": "Nat",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "domain": "Nat",
+      "theme": "natural-gcd"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Log",
+      "domain": "Nat",
+      "theme": "natural-logarithm"
+    },
+    {
+      "module": "Mathlib.Data.Nat.ModEq",
+      "domain": "Nat",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "domain": "Nat",
+      "theme": "natural-primes"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "domain": "Nat",
+      "theme": "natural-square-root"
+    }
+  ],
+  "exclusions": {
+    "name_segment_prefixes": [
+      "_",
+      "eq_",
+      "inst",
+      "match_"
+    ],
+    "name_substrings": [
+      "._@.",
+      "._proof_",
+      "._simp_",
+      "._unary",
+      "_hyg"
+    ],
+    "type_substrings": [
+      "✝",
+      "_hyg"
+    ]
+  },
+  "authority": {
+    "selection": "statement shape and module diversity only; no Axeyum attempt outcome is consulted",
+    "dependencies": "not yet assigned; proof-derived Mathlib components must be extracted by an evaluation-only lane before partition freeze",
+    "routes": "not yet assigned; a source theorem name or Mathlib proof grants no Axeyum dispatch authority",
+    "answers": "candidate builders may read only the statement-only NDJSON artifact"
+  }
+}

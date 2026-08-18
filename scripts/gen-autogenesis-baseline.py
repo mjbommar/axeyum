@@ -70,6 +70,12 @@ STATIC_SOURCES = (
     Path("artifacts/autogenesis/autogenesis-1-result.json"),
     Path("artifacts/autogenesis/nursery-v1.json"),
     Path("scripts/check-autogenesis-nursery.py"),
+    Path("scripts/check-autogenesis-mathlib-source.py"),
+    Path("scripts/create-autogenesis-mathlib-candidates.py"),
+    Path("scripts/lean/autogenesis_mathlib_statement_inventory.lean"),
+    Path("artifacts/autogenesis/mathlib-statement-source-v1.json"),
+    Path("artifacts/autogenesis/mathlib-nursery-source-policy-v1.json"),
+    Path("artifacts/autogenesis/mathlib-nat-int-candidates-v1.json"),
     Path("scripts/close-fact.py"),
     Path("scripts/gen-proof-gap-matrix.py"),
     Path("artifacts/ontology/fact.schema.json"),
@@ -179,6 +185,14 @@ SEAMS = (
         "source": "scripts/check-autogenesis-nursery.py",
         "marker": "route_hypotheses_grant_no_dispatch_or_admission_authority",
         "gap": "Autogenesis-1 is frozen as a longitudinal regression, but the leakage-safe train, development, and held-out population has zero evaluation facts",
+    },
+    {
+        "id": "nursery-statement-source",
+        "state": "source-candidates",
+        "owner": "proof-isolated Mathlib source and candidate selector",
+        "source": "scripts/create-autogenesis-mathlib-candidates.py",
+        "marker": "statement-shape-only-no-axeyum-outcomes-no-proof-values",
+        "gap": "240 statement-only candidates span twelve Nat/Int families; dependency components, mutations, frozen splits, route hypotheses, and Axeyum outcomes remain absent",
     },
 )
 

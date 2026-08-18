@@ -69,6 +69,10 @@ step autogenesis-chain-catalog-tests python3 -m unittest scripts.tests.test_crea
 step autogenesis-chain-catalog python3 scripts/create-autogenesis-chain-catalog.py --check
 step autogenesis-nursery-tests python3 -m unittest scripts.tests.test_check_autogenesis_nursery
 step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
+step autogenesis-mathlib-source-tests python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source
+step autogenesis-mathlib-source python3 scripts/check-autogenesis-mathlib-source.py
+step autogenesis-mathlib-candidate-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_candidates
+step autogenesis-mathlib-candidates python3 scripts/create-autogenesis-mathlib-candidates.py --check
 step capability-assurance-tests python3 -m unittest scripts.tests.test_check_capability_assurance
 # The mathematics strand's PRIMARY metric — "does a verdict come with an artifact
 # a third party can check without trusting us?" — existed only as 101 prose

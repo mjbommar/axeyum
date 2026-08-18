@@ -21,3 +21,13 @@ python3 scripts/check-autogenesis-nursery.py
 Use `--require-ready` only for a Phase 3 evaluation run. It intentionally fails
 while the manifest is `foundation-only`; ordinary repository gates require an
 accurate report, not a premature green population.
+
+`mathlib-statement-source-v1.json` binds the external statement-only Mathlib
+v4.30.0 inventory. Bulk NDJSON stays on `/nas3`; Git retains the extractor,
+source identity, selection policy, and small derived candidate view. Neither an
+imported theorem nor its source name counts as Axeyum proof construction.
+
+```sh
+python3 scripts/check-autogenesis-mathlib-source.py
+python3 scripts/create-autogenesis-mathlib-candidates.py --check
+```

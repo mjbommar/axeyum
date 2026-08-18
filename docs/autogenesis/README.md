@@ -108,6 +108,7 @@ compounding, not automation theatre.
 | [Authoritative B result](09-authoritative-b-admission-result.md) | Did a real B admission durably unlock A, and what remains uncredited? |
 | [Autogenesis-1 result](10-autogenesis-1-result.md) | Did two clean authoritative B-then-A runs satisfy the fixed-budget, assurance, and reproducibility gates? |
 | [Nursery foundation result](11-nursery-foundation-result.md) | Can the next evaluation population be split without dependency, family, proof-shape, mutation, or longitudinal leakage? |
+| [Mathlib statement-source result](12-mathlib-statement-source-result.md) | How can Mathlib supply versioned statement families without vendoring bulk exports or leaking proof answers? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-external-statement-source",
+  "manifest_sha256": "8fdafd50b9598b4aeb7573e960f061040cbd1234609db1655b27128c7b4a4ddb",
+  "source": {
+    "repository": "https://github.com/leanprover-community/mathlib4",
+    "commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "tag": "v4.30.0",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "license": "Apache-2.0",
+    "observed_clone": "s5:/home/mjbommar/lean-import-scale/mathlib4"
+  },
+  "extractor": {
+    "path": "scripts/lean/autogenesis_mathlib_statement_inventory.lean",
+    "sha256": "78cc93de6ab3c1fed5378c757f0ebfcbee47e66ecd72c25022755a4707e2b376",
+    "command": "cd <mathlib-checkout> && lake env lean <axeyum-checkout>/scripts/lean/autogenesis_mathlib_statement_inventory.lean",
+    "scope": "theorem declarations whose names begin Nat. or Int.",
+    "emits": [
+      "declaration name",
+      "defining module",
+      "level parameters",
+      "pretty-printed type",
+      "structural type representation"
+    ],
+    "forbidden": [
+      "theorem value",
+      "proof term",
+      "tactic trace"
+    ]
+  },
+  "external_artifact": {
+    "storage_root": "/nas3/data/axeyum/autogenesis/sources",
+    "file": "mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+    "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+    "bytes": 38978919,
+    "records": 9729,
+    "mode": "0444",
+    "content": "statement-only-ndjson"
+  },
+  "antecedent_inventory": {
+    "path": "/nas3/data/axeyum/lean-import-scale/mathlib-names.tsv",
+    "sha256": "869988fda76493b8dd7ffd067a5974bd144790eafc821cae6d325f4adaac5e80",
+    "bytes": 32734919,
+    "records": 680925
+  },
+  "upstream_observation": {
+    "date": "2026-08-18",
+    "latest_stable": "v4.33.0",
+    "latest_prerelease": "v4.34.0-rc1",
+    "lean_releases": "https://github.com/leanprover/lean4/releases",
+    "mathlib_releases": "https://github.com/leanprover-community/mathlib4/releases",
+    "lean4export_tags": "https://github.com/leanprover/lean4export/tags"
+  },
+  "integration_policy": {
+    "git": "commit this manifest, extractor, and reviewed small derived candidate manifests only",
+    "external": "retain bulk statement inventories and full lean4export streams outside Git",
+    "versioning": "never mix source, Lean, Mathlib, or extractor revisions under one artifact identity",
+    "proof_isolation": "candidate selection may read this statement-only artifact and must not read the Mathlib checkout, olean files, full export, or theorem values",
+    "refresh": "keep v4.30.0 as the importer-compatible baseline; compare selected statement identities against a separately pinned current-stable export before freezing a future evaluation population"
+  }
+}

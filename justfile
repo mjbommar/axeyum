@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
+check: fmt fmt-all facts facts-replay clippy gate-controls autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
 
 fmt:
     cargo fmt --all --check
@@ -66,6 +66,16 @@ autogenesis-operations:
 autogenesis-nursery:
     python3 -m unittest scripts.tests.test_check_autogenesis_nursery
     python3 scripts/check-autogenesis-nursery.py
+
+# The bulk source is external and optional on CI. The first checker reports
+# verified/unavailable without conflating them; the committed 240-row view is
+# always structurally checked and is re-derived when the content-addressed
+# source is mounted.
+autogenesis-mathlib-source:
+    python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source
+    python3 scripts/check-autogenesis-mathlib-source.py
+    python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_candidates
+    python3 scripts/create-autogenesis-mathlib-candidates.py --check
 
 # Explicit external experiment: launch one complete B -> A authoritative chain
 # from a clean checkout and retain its independently checkable receipts.
