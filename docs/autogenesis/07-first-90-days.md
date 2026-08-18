@@ -38,8 +38,9 @@ smallest reusable blocker and retry; do not broaden the programme silently.
 - **S0.2** Select candidate B -> A chains from Nat/Int whose statements and
   dependencies are independently reviewed.
 - **S0.3** Require at least one negative statement-strength mutation per fact.
-- **S0.4** Measure B and A independently through current routes; A must depend on
-  B semantically, not merely through authored metadata.
+- **S0.4** Measure B through its intended route, then measure the identical A
+  target before and after B through one fixed policy and budget; A must depend
+  on B in checked evidence, not merely through authored metadata.
 - **S0.5** Choose one primary chain and one fallback before implementing the
   orchestrator.
 - **S0.6** Write the ADR for episode identity, evidence bundle, and transaction
@@ -141,7 +142,8 @@ the first two-step closure.
 - **S5.3** Derive that A is newly ready and schedule it without human override.
 - **S5.4** Make B available through the admitted library/plan context.
 - **S5.5** Solve, check, admit, and record A.
-- **S5.6** Replay A against the pre-B snapshot and retain the expected failure.
+- **S5.6** Replay the identical A target against the pre-B snapshot under the
+  same policy and budget, and retain the expected no-credit result.
 - **S5.7** Repeat the entire sequence from a clean checkout.
 - **S5.8** Audit intervention logs, trusted-base delta, and byte determinism.
 

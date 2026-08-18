@@ -179,6 +179,12 @@ def build_snapshot(
                 "denied_theorems": withheld_theorems,
                 "target_candidate": premise_candidate,
             },
+            "pre_a": {
+                "visible_fact_ids": visible_facts,
+                "visible_retained_theorems": visible_theorems,
+                "denied_theorems": withheld_theorems,
+                "target_candidate": consequent_candidate,
+            },
             "post_b": {
                 "visible_fact_ids": visible_facts,
                 "visible_retained_theorems": visible_theorems,

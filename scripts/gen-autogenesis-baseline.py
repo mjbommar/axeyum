@@ -34,6 +34,9 @@ STATIC_SOURCES = (
     Path("scripts/gen-autogenesis-baseline.py"),
     Path("scripts/create-autogenesis-snapshot.py"),
     Path("scripts/create-autogenesis-proposer-catalog.py"),
+    Path("scripts/autogenesis-apply-proposer.py"),
+    Path("scripts/verify-autogenesis-apply-proposals.py"),
+    Path("scripts/check-autogenesis-apply-search.sh"),
     Path("scripts/check-autogenesis-knowledge-controls.sh"),
     Path("scripts/check-autogenesis-proposer-isolation.sh"),
     Path("scripts/run-autogenesis-python-proposer.sh"),
@@ -49,6 +52,7 @@ STATIC_SOURCES = (
     Path("scripts/check.sh"),
     Path("scripts/check-aggregate-scope.expected"),
     Path("crates/axeyum-lean-kernel/examples/theorem_knowledge_audit.rs"),
+    Path("crates/axeyum-lean-kernel/examples/autogenesis_apply_plan_check.rs"),
 )
 
 SETTLED = {"axiom", "proved", "computed", "refuted"}
@@ -329,7 +333,13 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
             "id": "A1-proof-leakage-boundary",
             "state": "fixture",
             "evidence": "proof-body-free catalog plus Bubblewrap repository/network isolation control",
-            "next": "make a real proof-search adapter consume only the sandbox catalog",
+            "next": "extend catalog-only proof search from one-step application to producing B",
+        },
+        {
+            "id": "A1-operational-unlock-control",
+            "state": "fixture",
+            "evidence": "same A target and budget: pre-A no proof; post-B proof depends on fresh B",
+            "next": "replace the authored B fixture with route-produced, independently accepted evidence",
         },
         {
             "id": "A1-machine-selection",

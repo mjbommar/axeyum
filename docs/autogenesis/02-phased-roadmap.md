@@ -125,8 +125,9 @@ held-out nursery for sustained evaluation afterward.
   repeated identical attempts by episode digest.
 - **AG2.7 — Two-step chain.** Establish B automatically, use B in the admitted
   library or plan context, then establish previously unreachable A.
-- **AG2.8 — Counterfactual.** Replay A against the pre-B snapshot and require it
-  to fail or exceed the registered budget for the expected reason.
+- **AG2.8 — Counterfactual.** Replay the identical A target against the pre-B
+  snapshot under the same policy and budget, and require a no-credit result for
+  the registered reason.
 - **AG2.9 — Human-intervention accounting.** Record every edit, route override,
   and proof repair; the credited chain permits none after launch.
 

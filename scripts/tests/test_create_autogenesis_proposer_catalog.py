@@ -27,6 +27,11 @@ class CatalogTests(unittest.TestCase):
                     "denied_theorems": ["Nat.A", "Nat.B"],
                     "target_candidate": "Autogenesis.E.premise",
                 },
+                "pre_a": {
+                    "visible_retained_theorems": ["Nat.C"],
+                    "denied_theorems": ["Nat.A", "Nat.B"],
+                    "target_candidate": "Autogenesis.E.consequent",
+                },
                 "post_b": {
                     "visible_retained_theorems": ["Nat.C"],
                     "denied_theorems": ["Nat.A", "Nat.B"],
@@ -44,13 +49,18 @@ class CatalogTests(unittest.TestCase):
             "F:B": {"id": "F:B", "formal": {"statement": "theorem Nat.B : BType"}},
             "F:A": {"id": "F:A", "formal": {"statement": "theorem Nat.A : AType"}},
         }
-        inventory = {"Nat.A": "AType", "Nat.B": "BType", "Nat.C": "CType"}
+        inventory = {
+            "Nat.A": {"arity": 1, "canonical_type": "AType"},
+            "Nat.B": {"arity": 1, "canonical_type": "BType"},
+            "Nat.C": {"arity": 0, "canonical_type": "CType"},
+        }
         return dict(snapshot=snapshot, phase=phase, facts=facts, inventory=inventory)
 
     def test_pre_b_contains_types_but_no_proof_fields(self):
         catalog = MODULE.build_catalog(**self.inputs("pre_b"))
         self.assertFalse(catalog["proof_bodies_included"])
         self.assertEqual([entry["name"] for entry in catalog["entries"]], ["Nat.C"])
+        self.assertEqual(catalog["entries"][0]["arity"], 0)
         MODULE.verify_catalog(catalog, catalog)
 
     def test_post_b_exposes_only_episode_local_premise(self):
@@ -59,6 +69,12 @@ class CatalogTests(unittest.TestCase):
         self.assertIn("Autogenesis.E.premise", names)
         self.assertNotIn("Nat.B", names)
         self.assertEqual(catalog["target"]["name"], "Autogenesis.E.consequent")
+
+    def test_pre_a_has_same_target_as_post_b_without_episode_premise(self):
+        pre = MODULE.build_catalog(**self.inputs("pre_a"))
+        post = MODULE.build_catalog(**self.inputs("post_b"))
+        self.assertEqual(pre["target"], post["target"])
+        self.assertNotIn("Autogenesis.E.premise", {entry["name"] for entry in pre["entries"]})
 
     def test_mutation_of_type_or_digest_rejects(self):
         catalog = MODULE.build_catalog(**self.inputs("post_b"))

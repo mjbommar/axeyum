@@ -32,7 +32,7 @@ operationally reachable.
 |---|---|---|---|
 | Inputs were fixed | Clean execution capture binds commit and generated baseline digest | Partial | Retain the first clean `--capture` record |
 | B and A were selected without intervention | Content-addressed frontier snapshot plus deterministic selection rationale | Missing | Stable machine-readable frontier output |
-| A was unavailable before B | Pre-B attempt under the identical route policy and budget receives no credit for the registered reason | Missing | Counterfactual snapshot and proof-leakage controls |
+| A was unavailable before B | The identical A target under the identical route policy and budget receives no credit before B | Fixture | Replace the authored B fixture with route-produced B |
 | B was established | Independently replayed evidence produces a proposed fact delta | Missing | Typed dispatch/evidence adapter |
 | B became durable knowledge | Atomic application after fresh-process replay and fact validation | Missing | Episode-wide transaction boundary |
 | A became newly ready | Readiness changes only after the accepted B event | Missing | Accepted-transition event and snapshot recomputation |
@@ -81,8 +81,30 @@ values or evidence. `run-autogenesis-python-proposer.sh` then gives Bubblewrap
 only that catalog, the proposer program, an empty output directory, `/usr`, and
 minimal `/proc`/`dev`/`tmp` mounts; it unshares all namespaces and clears the
 environment. The aggregate control confirms the repository and network are
-unreachable from inside. This is a transport/isolation fixture, not yet an
-automatic proof-search implementation.
+unreachable from inside.
+
+This boundary now carries a deliberately small automatic search fixture. The
+sandboxed `autogenesis-apply-proposer.py` sees only the verified catalog and
+deterministically proposes same-arity theorem applications. A separate kernel
+process reparses its digest-bound TSV, attempts real declarations, and requires
+the registered outcome:
+
+```sh
+scripts/check-autogenesis-apply-search.sh
+```
+
+For the current `Nat.zero_add` B -> `Nat.mul_one` A curriculum, the same A
+target, policy, and budget of 20 produce no proof in the `pre_a` phase and a
+proof on the first attempt in `post_b`. The accepted proof's transitive closure
+contains the fresh episode-local B and excludes both retained answers. A
+negative control reruns the pre-A search while requiring `proved` and must fail.
+
+This establishes an operational-unlock and catalog-only search substrate, not
+Autogenesis-1. The checker still constructs B using an authored induction
+fixture. No autonomous-B, typed route handoff, or durable admission credit is
+claimed. A clean, exact-commit evidence bundle can be retained outside Git with
+`--retain NEW-DIRECTORY`; the repository keeps only the generator, gates, and
+content identities rather than vendoring execution artifacts.
 
 ## Assumptions tested now
 
@@ -110,12 +132,15 @@ contain both answers.
 
 ### C. A proof-term edge means B operationally unlocked A
 
-**Unproven.** It proves that one checked proof of A references B. It does not
-prove necessity, search reachability, or absence of an equivalent theorem.
-Chain qualification therefore requires all three:
+**Supported for the bounded apply-search fixture, not yet for an autonomous B.**
+The same-target counterfactual now proves reachability changed within the fixed
+catalog-only policy and budget. It does not prove mathematical necessity,
+absence of equivalent theorems under broader search, or autonomous production
+of B. Full chain qualification therefore requires all three:
 
 1. derived dependency in the newly produced A proof;
-2. no-credit pre-B run under the same budget; and
+2. no-credit run of the identical A target before B under the same policy and
+   budget; and
 3. a B-removal or equivalent-premise control that fails for the expected
    reason.
 
@@ -158,7 +183,8 @@ useful primitive, not the Autogenesis transaction boundary.
 3. Build a knowledge snapshot that masks retained declarations, ledger rows,
    and evidence. Keep the complete environment for checking, but audit the
    candidate theorem's transitive declaration closure against the deny policy.
-4. Measure A before B, B itself, and A after B under fixed budgets.
+4. Measure the identical A target before and after B under one fixed policy and
+   budget, and measure B itself through its intended route.
 5. Preregister one primary and one fallback only after those measurements are
    reproducible.
 

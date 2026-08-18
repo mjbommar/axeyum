@@ -43,7 +43,7 @@ def file_digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def theorem_type_inventory(root: pathlib.Path) -> dict[str, str]:
+def theorem_type_inventory(root: pathlib.Path) -> dict[str, dict[str, Any]]:
     process = subprocess.run(
         [
             "cargo",
@@ -60,15 +60,19 @@ def theorem_type_inventory(root: pathlib.Path) -> dict[str, str]:
         timeout=1800,
         check=True,
     )
-    inventory: dict[str, str] = {}
+    inventory: dict[str, dict[str, Any]] = {}
     for line in process.stdout.splitlines():
         parts = line.split("\t", 2)
         if len(parts) != 3:
             raise CatalogError(f"malformed theorem inventory row: {line!r}")
-        name, _arity, canonical_type = parts
+        name, raw_arity, canonical_type = parts
         if name in inventory:
             raise CatalogError(f"duplicate theorem inventory name {name!r}")
-        inventory[name] = canonical_type
+        try:
+            arity = int(raw_arity)
+        except ValueError as error:
+            raise CatalogError(f"invalid theorem arity in row: {line!r}") from error
+        inventory[name] = {"arity": arity, "canonical_type": canonical_type}
     if len(inventory) < 100:
         raise CatalogError(
             f"theorem type inventory returned only {len(inventory)} rows; refusing a vacuous catalog"
@@ -127,9 +131,9 @@ def build_catalog(
     snapshot: dict[str, Any],
     phase: str,
     facts: dict[str, dict[str, Any]],
-    inventory: dict[str, str],
+    inventory: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
-    if phase not in {"pre_b", "post_b"}:
+    if phase not in {"pre_b", "pre_a", "post_b"}:
         raise CatalogError(f"unsupported phase {phase!r}")
     try:
         phase_policy = snapshot["phases"][phase]
@@ -149,11 +153,18 @@ def build_catalog(
         raise CatalogError(f"theorem type inventory is missing policy names: {missing}")
 
     entries = [
-        {"name": name, "canonical_type": inventory[name], "origin": "retained-visible"}
+        {
+            "name": name,
+            "arity": inventory[name]["arity"],
+            "canonical_type": inventory[name]["canonical_type"],
+            "origin": "retained-visible",
+        }
         for name in sorted(visible)
     ]
     if phase == "pre_b":
         target = premise
+    elif phase == "pre_a":
+        target = consequent
     else:
         accepted = phase_policy.get("accepted_episode_facts")
         if not isinstance(accepted, list) or len(accepted) != 1:
@@ -162,7 +173,8 @@ def build_catalog(
         entries.append(
             {
                 "name": episode_premise["declaration"],
-                "canonical_type": inventory[premise["retained_theorem"]],
+                "arity": inventory[premise["retained_theorem"]]["arity"],
+                "canonical_type": inventory[premise["retained_theorem"]]["canonical_type"],
                 "origin": "accepted-episode",
                 "source_fact_id": episode_premise["source_fact_id"],
             }
@@ -170,7 +182,8 @@ def build_catalog(
         target = consequent
 
     target_fact = facts[target["fact_id"]]
-    target_type = inventory[target["retained_theorem"]]
+    target_inventory = inventory[target["retained_theorem"]]
+    target_type = target_inventory["canonical_type"]
     if statement_type(target_fact) != target_type:
         raise CatalogError(
             f"{target['fact_id']}: ledger formal statement disagrees with kernel type inventory"
@@ -186,6 +199,7 @@ def build_catalog(
         "denied_theorems": sorted(denied),
         "target": {
             "name": phase_policy["target_candidate"],
+            "arity": target_inventory["arity"],
             "canonical_type": target_type,
             "source_fact_id": target["fact_id"],
         },
@@ -225,7 +239,7 @@ def derive(snapshot_path: pathlib.Path, phase: str) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--snapshot", required=True, type=pathlib.Path)
-    parser.add_argument("--phase", required=True, choices=("pre_b", "post_b"))
+    parser.add_argument("--phase", required=True, choices=("pre_b", "pre_a", "post_b"))
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--output", type=pathlib.Path)
     action.add_argument("--verify", type=pathlib.Path)

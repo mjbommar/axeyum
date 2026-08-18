@@ -43,12 +43,14 @@ class SnapshotTests(unittest.TestCase):
             "baseline_sha256": "baseline",
         }
 
-    def test_retained_answers_are_denied_in_both_phases(self):
+    def test_retained_answers_are_denied_in_every_phase(self):
         snapshot = MODULE.build_snapshot(**self.inputs())
         denied = ["Nat.mul_one", "Nat.zero_add"]
         self.assertEqual(snapshot["phases"]["pre_b"]["denied_theorems"], denied)
+        self.assertEqual(snapshot["phases"]["pre_a"]["denied_theorems"], denied)
         self.assertEqual(snapshot["phases"]["post_b"]["denied_theorems"], denied)
         self.assertNotIn("F:B", snapshot["phases"]["pre_b"]["visible_fact_ids"])
+        self.assertNotIn("F:B", snapshot["phases"]["pre_a"]["visible_fact_ids"])
         self.assertNotIn("F:B", snapshot["phases"]["post_b"]["visible_fact_ids"])
 
     def test_post_b_requires_episode_local_premise(self):

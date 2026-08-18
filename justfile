@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls autogenesis-knowledge-controls autogenesis-proposer-isolation aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
+check: fmt fmt-all facts facts-replay clippy gate-controls autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-apply-search aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
 
 fmt:
     cargo fmt --all --check
@@ -130,6 +130,9 @@ autogenesis-knowledge-controls:
 
 autogenesis-proposer-isolation:
     scripts/check-autogenesis-proposer-isolation.sh
+
+autogenesis-apply-search:
+    scripts/check-autogenesis-apply-search.sh
 
 # `frontier_*` is skipped here and run by `frontier` instead. Those ratchets
 # measure "the largest N decided within a fixed WALL-CLOCK budget", so running
@@ -389,6 +392,8 @@ generated-trackers:
     python3 -m unittest scripts.tests.test_gen_autogenesis_baseline
     python3 -m unittest scripts.tests.test_create_autogenesis_snapshot
     python3 -m unittest scripts.tests.test_create_autogenesis_proposer_catalog
+    python3 -m unittest scripts.tests.test_autogenesis_apply_proposer
+    python3 -m unittest scripts.tests.test_verify_autogenesis_apply_proposals
     python3 scripts/gen-autogenesis-baseline.py --check
     python3 -m unittest scripts.tests.test_gen_plan
     python3 scripts/gen-plan.py --check
