@@ -37,6 +37,9 @@ STATIC_SOURCES = (
     Path("scripts/autogenesis-apply-proposer.py"),
     Path("scripts/verify-autogenesis-apply-proposals.py"),
     Path("scripts/check-autogenesis-apply-search.sh"),
+    Path("scripts/autogenesis-induction-proposer.py"),
+    Path("scripts/verify-autogenesis-induction-proposals.py"),
+    Path("scripts/check-autogenesis-induction-search.sh"),
     Path("scripts/check-autogenesis-knowledge-controls.sh"),
     Path("scripts/check-autogenesis-proposer-isolation.sh"),
     Path("scripts/run-autogenesis-python-proposer.sh"),
@@ -53,6 +56,8 @@ STATIC_SOURCES = (
     Path("scripts/check-aggregate-scope.expected"),
     Path("crates/axeyum-lean-kernel/examples/theorem_knowledge_audit.rs"),
     Path("crates/axeyum-lean-kernel/examples/autogenesis_apply_plan_check.rs"),
+    Path("crates/axeyum-lean-kernel/examples/autogenesis_induction_plan_check.rs"),
+    Path("crates/axeyum-lean-kernel/examples/autogenesis_support/mod.rs"),
 )
 
 SETTLED = {"axiom", "proved", "computed", "refuted"}
@@ -333,13 +338,13 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
             "id": "A1-proof-leakage-boundary",
             "state": "fixture",
             "evidence": "proof-body-free catalog plus Bubblewrap repository/network isolation control",
-            "next": "extend catalog-only proof search from one-step application to producing B",
+            "next": "broaden the structural grammar and bind plans into typed evidence",
         },
         {
             "id": "A1-operational-unlock-control",
             "state": "fixture",
-            "evidence": "same A target and budget: pre-A no proof; post-B proof depends on fresh B",
-            "next": "replace the authored B fixture with route-produced, independently accepted evidence",
+            "evidence": "catalog search produces B; same A target fails before B and then depends on fresh B",
+            "next": "make B a replayed durable transition whose event schedules A",
         },
         {
             "id": "A1-machine-selection",

@@ -117,9 +117,10 @@ projects that snapshot to names and canonical types only, and the Python
 proposer runner supplies the verified catalog through an OS sandbox with no
 checkout, retained proof bodies, inherited environment, or network.
 [`check-autogenesis-apply-search.sh`](../../scripts/check-autogenesis-apply-search.sh)
-then exercises the first catalog-only search: the identical A target receives
-no proof before B and a fresh, B-dependent proof afterward under the same
-budget. B is still authored by a checker fixture, so this is an operational
+then composes two catalog-only searches: a target-independent structural-plan
+grammar produces fresh B, and the identical A target receives no proof before B
+but a fresh, B-dependent proof afterward under the same budget. The chain is
+not yet a typed, durable ledger transaction, so this remains an operational
 unlock control rather than Autogenesis-1 credit.
 
 ## Phase summary

@@ -101,6 +101,7 @@ step clippy ./scripts/check-clippy-complete.sh
 step gate-controls ./scripts/tests/test-gate-scope-controls.sh
 step autogenesis-knowledge-controls ./scripts/check-autogenesis-knowledge-controls.sh
 step autogenesis-proposer-isolation ./scripts/check-autogenesis-proposer-isolation.sh
+step autogenesis-induction-search ./scripts/check-autogenesis-induction-search.sh
 step autogenesis-apply-search ./scripts/check-autogenesis-apply-search.sh
 # `frontier_*` runs in its own serialized step below: those ratchets are
 # wall-clock-budget based, so contention from the rest of the suite shrinks the
@@ -222,6 +223,8 @@ step autogenesis-snapshot-tests python3 -m unittest scripts.tests.test_create_au
 step autogenesis-catalog-tests python3 -m unittest scripts.tests.test_create_autogenesis_proposer_catalog
 step autogenesis-apply-proposer-tests python3 -m unittest scripts.tests.test_autogenesis_apply_proposer
 step autogenesis-apply-verifier-tests python3 -m unittest scripts.tests.test_verify_autogenesis_apply_proposals
+step autogenesis-induction-proposer-tests python3 -m unittest scripts.tests.test_autogenesis_induction_proposer
+step autogenesis-induction-verifier-tests python3 -m unittest scripts.tests.test_verify_autogenesis_induction_proposals
 step autogenesis-baseline python3 scripts/gen-autogenesis-baseline.py --check
 step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
 step gen-plan       python3 scripts/gen-plan.py --check

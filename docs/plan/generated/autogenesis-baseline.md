@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:f63b042ba142e03e381614c74b18a59112687c9631f3ba20bbda12a564bc1944`
+Source identity: `sha256:1c117b1958a4b610a9ae2329d4c8a30f12538af8c01ebb75bbf16c96530b461e`
 
 ## Ledger and chain substrate
 
@@ -25,8 +25,8 @@ the remaining facts stay explicit rather than being guessed.
 |---|---|---|---|
 | `A1-fixed-input-identity` | ready | baseline source digest plus clean execution capture | capture the preregistered experiment at an exact clean commit |
 | `A1-real-derived-chain` | replay-candidate | kernel ledger graph has 52 edges at depth 6 and 0 unsettled nodes | qualify a primary and fallback with proof-derived dependency and pre-B counterfactual |
-| `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | extend catalog-only proof search from one-step application to producing B |
-| `A1-operational-unlock-control` | fixture | same A target and budget: pre-A no proof; post-B proof depends on fresh B | replace the authored B fixture with route-produced, independently accepted evidence |
+| `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | broaden the structural grammar and bind plans into typed evidence |
+| `A1-operational-unlock-control` | fixture | catalog search produces B; same A target fails before B and then depends on fresh B | make B a replayed durable transition whose event schedules A |
 | `A1-machine-selection` | missing | selection remains a human choice from text output | content-address a machine-readable frontier snapshot and rationale |
 | `A1-typed-dispatch-evidence` | missing | route dispatch, evidence assembly, and checker selection remain caller-authored | exercise one typed adapter and registered checker operation |
 | `A1-atomic-admission` | partial | single fact rollback exists; an episode-wide transaction does not | stage and replay a proposed fact delta before atomic application |

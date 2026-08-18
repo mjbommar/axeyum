@@ -7,11 +7,15 @@
 //! not success when the caller expected one, and finding a proof is not success
 //! for the registered pre-A negative control.
 
+#[path = "autogenesis_support/mod.rs"]
+mod autogenesis_support;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use autogenesis_support::{parse_induction_plans, search_induction};
 use axeyum_lean_kernel::{Kernel, NameId, NatDev, NatOps, NatPrelude, build_nat_prelude};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -62,6 +66,10 @@ struct Args {
     phase: Phase,
     candidate: String,
     premise_candidate: Option<String>,
+    premise_plans: Option<PathBuf>,
+    premise_budget: Option<usize>,
+    premise_bundle_sha256: Option<String>,
+    premise_catalog_sha256: Option<String>,
     budget: usize,
     expected: Expected,
     bundle_sha256: String,
@@ -79,6 +87,10 @@ fn parse_args() -> Result<Args, String> {
     let mut phase = None;
     let mut candidate = None;
     let mut premise_candidate = None;
+    let mut premise_plans = None;
+    let mut premise_budget = None;
+    let mut premise_bundle_sha256 = None;
+    let mut premise_catalog_sha256 = None;
     let mut budget = None;
     let mut expected = None;
     let mut bundle_sha256 = None;
@@ -90,6 +102,22 @@ fn parse_args() -> Result<Args, String> {
             "--phase" => phase = Some(Phase::parse(&take_value(&mut arguments, &flag)?)?),
             "--candidate" => candidate = Some(take_value(&mut arguments, &flag)?),
             "--premise-candidate" => premise_candidate = Some(take_value(&mut arguments, &flag)?),
+            "--premise-plans" => {
+                premise_plans = Some(PathBuf::from(take_value(&mut arguments, &flag)?));
+            }
+            "--premise-budget" => {
+                let raw = take_value(&mut arguments, &flag)?;
+                premise_budget = Some(
+                    raw.parse::<usize>()
+                        .map_err(|_| format!("invalid premise budget {raw:?}"))?,
+                );
+            }
+            "--premise-bundle-sha256" => {
+                premise_bundle_sha256 = Some(take_value(&mut arguments, &flag)?);
+            }
+            "--premise-catalog-sha256" => {
+                premise_catalog_sha256 = Some(take_value(&mut arguments, &flag)?);
+            }
             "--budget" => {
                 let raw = take_value(&mut arguments, &flag)?;
                 budget = Some(
@@ -108,6 +136,10 @@ fn parse_args() -> Result<Args, String> {
         phase: phase.ok_or("--phase is required")?,
         candidate: candidate.ok_or("--candidate is required")?,
         premise_candidate,
+        premise_plans,
+        premise_budget,
+        premise_bundle_sha256,
+        premise_catalog_sha256,
         budget: budget.ok_or("--budget is required")?,
         expected: expected.ok_or("--expect is required")?,
         bundle_sha256: bundle_sha256.ok_or("--bundle-sha256 is required")?,
@@ -116,11 +148,21 @@ fn parse_args() -> Result<Args, String> {
     if parsed.budget == 0 {
         return Err("--budget must be positive".to_owned());
     }
-    if parsed.phase == Phase::PostB && parsed.premise_candidate.is_none() {
-        return Err("post_b requires --premise-candidate".to_owned());
+    let premise_fields = [
+        parsed.premise_candidate.is_some(),
+        parsed.premise_plans.is_some(),
+        parsed.premise_budget.is_some(),
+        parsed.premise_bundle_sha256.is_some(),
+        parsed.premise_catalog_sha256.is_some(),
+    ];
+    if parsed.phase == Phase::PostB && premise_fields.iter().any(|present| !present) {
+        return Err("post_b requires the complete premise plan identity and budget".to_owned());
     }
-    if parsed.phase != Phase::PostB && parsed.premise_candidate.is_some() {
-        return Err("pre phases must not receive --premise-candidate".to_owned());
+    if parsed.phase != Phase::PostB && premise_fields.iter().any(|present| *present) {
+        return Err("pre phases must not receive premise plan arguments".to_owned());
+    }
+    if parsed.premise_budget == Some(0) {
+        return Err("--premise-budget must be positive".to_owned());
     }
     Ok(parsed)
 }
@@ -208,40 +250,6 @@ fn names(kernel: &Kernel) -> BTreeMap<String, NameId> {
         .collect()
 }
 
-fn add_fresh_zero_add(
-    kernel: &mut Kernel,
-    prelude: &NatPrelude,
-    name: NameId,
-) -> Result<(), String> {
-    let mut development = NatDev::new(kernel, *prelude);
-    development
-        .theorem(name, 1, &|d, variables| {
-            let value = variables[0];
-            let motive = |d: &mut NatDev<'_>, item| {
-                let zero = d.zero();
-                let sum = d.add(zero, item);
-                d.eq(sum, item)
-            };
-            let statement = motive(d, value);
-            let proof = d.induct(
-                &motive,
-                &|d| {
-                    let zero = d.zero();
-                    d.refl(zero)
-                },
-                &|d, item, hypothesis| {
-                    let zero = d.zero();
-                    let sum = d.add(zero, item);
-                    d.congr(sum, item, hypothesis, &|d, expression| d.succ(expression))
-                },
-                value,
-            );
-            (statement, proof)
-        })
-        .map(|_| ())
-        .map_err(|error| development.explain(&error))
-}
-
 fn try_plan(
     kernel: &mut Kernel,
     prelude: &NatPrelude,
@@ -276,6 +284,8 @@ struct SearchBase {
     kernel: Kernel,
     prelude: NatPrelude,
     premise: Option<NameId>,
+    premise_attempted: usize,
+    premise_plan_rank: Option<usize>,
     target: NameId,
     denied: BTreeSet<String>,
 }
@@ -287,51 +297,88 @@ fn build_base(args: &Args) -> Result<SearchBase, String> {
         Phase::PreB => prelude.zero_add,
         Phase::PreA | Phase::PostB => prelude.mul_one,
     };
-    let premise = if let Some(rendered) = &args.premise_candidate {
-        let name = intern_dotted(&mut kernel, rendered)?;
-        add_fresh_zero_add(&mut kernel, &prelude, name)?;
-        Some(name)
-    } else {
-        None
-    };
+    let (kernel, premise, premise_attempted, premise_plan_rank) =
+        if let Some(rendered) = &args.premise_candidate {
+            let plans = parse_induction_plans(
+                args.premise_plans
+                    .as_deref()
+                    .ok_or("post_b premise plan path disappeared")?,
+                args.premise_bundle_sha256
+                    .as_deref()
+                    .ok_or("post_b premise bundle identity disappeared")?,
+                args.premise_catalog_sha256
+                    .as_deref()
+                    .ok_or("post_b premise catalog identity disappeared")?,
+                "pre_b",
+            )?;
+            let search = search_induction(
+                kernel,
+                &prelude,
+                prelude.zero_add,
+                rendered,
+                &plans,
+                args.premise_budget
+                    .ok_or("post_b premise budget disappeared")?,
+            )?;
+            let candidate = search
+                .candidate
+                .ok_or("premise induction search completed without a creditable proof")?;
+            (
+                search.kernel,
+                Some(candidate),
+                search.attempted,
+                search.accepted_rank,
+            )
+        } else {
+            (kernel, None, 0, None)
+        };
     Ok(SearchBase {
         kernel,
         prelude,
         premise,
+        premise_attempted,
+        premise_plan_rank,
         target,
         denied: BTreeSet::from(["Nat.mul_one".to_owned(), "Nat.zero_add".to_owned()]),
     })
 }
 
-fn candidate_is_creditable(kernel: &mut Kernel, candidate: NameId, base: &SearchBase) -> bool {
+fn candidate_is_creditable(
+    kernel: &mut Kernel,
+    candidate: NameId,
+    base: &SearchBase,
+) -> Result<bool, String> {
     let closure: BTreeSet<String> = kernel
         .declaration_dependency_closure(candidate)
         .into_iter()
         .map(|name| kernel.display_name(name).to_string())
         .collect();
     if !base.denied.is_disjoint(&closure) || !kernel.axiom_footprint(candidate).is_empty() {
-        return false;
+        return Ok(false);
     }
     if let Some(premise) = base.premise
         && !closure.contains(&kernel.display_name(premise).to_string())
     {
-        return false;
+        return Ok(false);
     }
     let candidate_type = kernel
         .environment()
         .get(candidate)
-        .expect("candidate exists")
+        .ok_or("candidate disappeared after admission")?
         .ty();
     let target_type = kernel
         .environment()
         .get(base.target)
-        .expect("target exists")
+        .ok_or("target disappeared during admission")?
         .ty();
-    kernel.def_eq(candidate_type, target_type)
-        && kernel.render_lean(candidate_type) == kernel.render_lean(target_type)
+    Ok(kernel.def_eq(candidate_type, target_type)
+        && kernel.render_lean(candidate_type) == kernel.render_lean(target_type))
 }
 
-fn search(args: &Args, plans: &[Plan]) -> Result<(usize, Option<String>), String> {
+fn search(
+    args: &Args,
+    plans: &[Plan],
+) -> Result<(usize, Option<usize>, usize, Option<String>), String> {
     let base = build_base(args)?;
     let limited = plans.iter().take(args.budget);
     let mut attempted = 0;
@@ -353,7 +400,7 @@ fn search(args: &Args, plans: &[Plan]) -> Result<(usize, Option<String>), String
             &format!("{}.trial{}", args.candidate, plan.rank),
         )?;
         if try_plan(&mut trial, &base.prelude, args.phase, trial_name, theorem).is_err()
-            || !candidate_is_creditable(&mut trial, trial_name, &base)
+            || !candidate_is_creditable(&mut trial, trial_name, &base)?
         {
             continue;
         }
@@ -365,26 +412,37 @@ fn search(args: &Args, plans: &[Plan]) -> Result<(usize, Option<String>), String
             .ok_or_else(|| format!("accepted theorem {:?} disappeared", plan.theorem))?;
         let candidate = intern_dotted(&mut accepted, &args.candidate)?;
         try_plan(&mut accepted, &base.prelude, args.phase, candidate, theorem)?;
-        if !candidate_is_creditable(&mut accepted, candidate, &base) {
+        if !candidate_is_creditable(&mut accepted, candidate, &base)? {
             return Err("trial passed but exact candidate failed the same audit".to_owned());
         }
-        return Ok((attempted, Some(plan.theorem.clone())));
+        return Ok((
+            base.premise_attempted,
+            base.premise_plan_rank,
+            attempted,
+            Some(plan.theorem.clone()),
+        ));
     }
-    Ok((attempted, None))
+    Ok((
+        base.premise_attempted,
+        base.premise_plan_rank,
+        attempted,
+        None,
+    ))
 }
 
 fn run() -> Result<bool, String> {
     let args = parse_args()?;
     let plans = parse_plans(&args)?;
-    let (attempted, theorem) = search(&args, &plans)?;
+    let (premise_attempted, premise_plan_rank, attempted, theorem) = search(&args, &plans)?;
     let outcome = if theorem.is_some() {
         "proved"
     } else {
         "no-proof"
     };
     println!(
-        "AUTOGENESIS_APPLY_RESULT|phase={}|attempted={attempted}|budget={}|outcome={outcome}|theorem={}",
+        "AUTOGENESIS_APPLY_RESULT|phase={}|premise_attempted={premise_attempted}|premise_plan_rank={}|attempted={attempted}|budget={}|outcome={outcome}|theorem={}",
         args.phase.rendered(),
+        premise_plan_rank.map_or_else(|| "-".to_owned(), |rank| rank.to_string()),
         args.budget,
         theorem.as_deref().unwrap_or("-")
     );

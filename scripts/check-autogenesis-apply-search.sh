@@ -37,11 +37,27 @@ else
   trap 'rm -r "$scratch"' EXIT
 fi
 budget=20
+premise_budget=2
 
 python3 scripts/create-autogenesis-snapshot.py \
   --premise F:nat-zero-add \
   --consequent F:nat-mul-one \
   --output "$scratch/snapshot.json" >/dev/null
+
+python3 scripts/create-autogenesis-proposer-catalog.py \
+  --snapshot "$scratch/snapshot.json" \
+  --phase pre_b \
+  --output "$scratch/pre_b-catalog.json" >/dev/null
+mkdir "$scratch/pre_b-induction-output"
+scripts/run-autogenesis-python-proposer.sh \
+  --snapshot "$scratch/snapshot.json" \
+  --catalog "$scratch/pre_b-catalog.json" \
+  --output-dir "$scratch/pre_b-induction-output" \
+  --program scripts/autogenesis-induction-proposer.py >/dev/null
+python3 scripts/verify-autogenesis-induction-proposals.py \
+  --catalog "$scratch/pre_b-catalog.json" \
+  --bundle "$scratch/pre_b-induction-output/induction-plans.json" \
+  --tsv "$scratch/pre_b-induction-output/induction-plans.tsv" >/dev/null
 
 for phase in pre_a post_b; do
   mkdir "$scratch/$phase-output"
@@ -79,6 +95,31 @@ premise = next(entry["name"] for entry in catalog["entries"] if entry["origin"] 
 print(bundle["bundle_sha256"], catalog["catalog_sha256"], catalog["target"]["name"], premise)
 PY
 )
+read -r premise_bundle premise_catalog premise_target < <(
+  python3 - "$scratch" <<'PY'
+import json, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+catalog = json.load(open(root / "pre_b-catalog.json"))
+bundle = json.load(open(root / "pre_b-induction-output/induction-plans.json"))
+print(bundle["bundle_sha256"], catalog["catalog_sha256"], catalog["target"]["name"])
+PY
+)
+[ "$premise_target" = "$premise_candidate" ] || {
+  echo "post-B catalog premise identity disagrees with the pre-B target" >&2
+  exit 1
+}
+
+premise_result=$(cargo run -q -p axeyum-lean-kernel \
+  --example autogenesis_induction_plan_check -- \
+  --plans "$scratch/pre_b-induction-output/induction-plans.tsv" \
+  --candidate "$premise_candidate" \
+  --budget "$premise_budget" \
+  --expect proved \
+  --bundle-sha256 "$premise_bundle" \
+  --catalog-sha256 "$premise_catalog")
+grep -qxF \
+  "AUTOGENESIS_INDUCTION_RESULT|phase=pre_b|attempted=2|budget=$premise_budget|outcome=proved|plan_rank=2" \
+  <<<"$premise_result"
 
 pre_result=$(cargo run -q -p axeyum-lean-kernel \
   --example autogenesis_apply_plan_check -- \
@@ -90,7 +131,7 @@ pre_result=$(cargo run -q -p axeyum-lean-kernel \
   --bundle-sha256 "$pre_bundle" \
   --catalog-sha256 "$pre_catalog")
 grep -qxF \
-  "AUTOGENESIS_APPLY_RESULT|phase=pre_a|attempted=20|budget=$budget|outcome=no-proof|theorem=-" \
+  "AUTOGENESIS_APPLY_RESULT|phase=pre_a|premise_attempted=0|premise_plan_rank=-|attempted=20|budget=$budget|outcome=no-proof|theorem=-" \
   <<<"$pre_result"
 
 post_result=$(cargo run -q -p axeyum-lean-kernel \
@@ -99,12 +140,16 @@ post_result=$(cargo run -q -p axeyum-lean-kernel \
   --phase post_b \
   --candidate "$post_candidate" \
   --premise-candidate "$premise_candidate" \
+  --premise-plans "$scratch/pre_b-induction-output/induction-plans.tsv" \
+  --premise-budget "$premise_budget" \
+  --premise-bundle-sha256 "$premise_bundle" \
+  --premise-catalog-sha256 "$premise_catalog" \
   --budget "$budget" \
   --expect proved \
   --bundle-sha256 "$post_bundle" \
   --catalog-sha256 "$post_catalog")
 grep -qxF \
-  "AUTOGENESIS_APPLY_RESULT|phase=post_b|attempted=1|budget=$budget|outcome=proved|theorem=$premise_candidate" \
+  "AUTOGENESIS_APPLY_RESULT|phase=post_b|premise_attempted=2|premise_plan_rank=2|attempted=1|budget=$budget|outcome=proved|theorem=$premise_candidate" \
   <<<"$post_result"
 
 if cargo run -q -p axeyum-lean-kernel \
@@ -124,7 +169,7 @@ grep -qF 'AUTOGENESIS_APPLY_ERROR|observed outcome differs from --expect' \
   "$scratch/wrong-expect.stderr"
 
 if [ -n "$retain" ]; then
-  python3 - "$scratch" "$budget" "$pre_result" "$post_result" <<'PY'
+  python3 - "$scratch" "$budget" "$premise_budget" "$premise_result" "$pre_result" "$post_result" <<'PY'
 import hashlib
 import json
 import pathlib
@@ -132,14 +177,17 @@ import sys
 
 root = pathlib.Path(sys.argv[1])
 budget = int(sys.argv[2])
+premise_budget = int(sys.argv[3])
 baseline = json.load(open(root / "baseline-execution.json"))
 snapshot = json.load(open(root / "snapshot.json"))
 pre_catalog = json.load(open(root / "pre_a-catalog.json"))
 post_catalog = json.load(open(root / "post_b-catalog.json"))
 pre_bundle = json.load(open(root / "pre_a-output/apply-plans.json"))
 post_bundle = json.load(open(root / "post_b-output/apply-plans.json"))
+premise_catalog = json.load(open(root / "pre_b-catalog.json"))
+premise_bundle = json.load(open(root / "pre_b-induction-output/induction-plans.json"))
 report = {
-    "schema_version": 1,
+    "schema_version": 2,
     "kind": "axeyum-autogenesis-apply-experiment",
     "git_commit": baseline["git_commit"],
     "baseline_source_sha256": baseline["baseline_source_sha256"],
@@ -148,15 +196,22 @@ report = {
     "target_fact_id": snapshot["chain"]["consequent"]["fact_id"],
     "premise_fact_id": snapshot["chain"]["premise"]["fact_id"],
     "budget": budget,
+    "premise": {
+        "budget": premise_budget,
+        "catalog_sha256": premise_catalog["catalog_sha256"],
+        "bundle_sha256": premise_bundle["bundle_sha256"],
+        "accepted_plan_rank": 2,
+        "result": sys.argv[4],
+    },
     "pre_a": {
         "catalog_sha256": pre_catalog["catalog_sha256"],
         "bundle_sha256": pre_bundle["bundle_sha256"],
-        "result": sys.argv[3],
+        "result": sys.argv[5],
     },
     "post_b": {
         "catalog_sha256": post_catalog["catalog_sha256"],
         "bundle_sha256": post_bundle["bundle_sha256"],
-        "result": sys.argv[4],
+        "result": sys.argv[6],
     },
     "same_target": pre_catalog["target"] == post_catalog["target"],
     "controls": {
@@ -173,4 +228,4 @@ PY
   trap - EXIT
 fi
 
-echo "AUTOGENESIS_APPLY_SEARCH|target=A|budget=$budget|pre_a=no-proof|post_b=proved|dependency=episode-premise"
+echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved|target=A|budget=$budget|pre_a=no-proof|post_b=proved|dependency=episode-premise"

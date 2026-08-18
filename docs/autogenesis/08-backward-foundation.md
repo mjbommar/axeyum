@@ -32,11 +32,11 @@ operationally reachable.
 |---|---|---|---|
 | Inputs were fixed | Clean execution capture binds commit and generated baseline digest | Partial | Retain the first clean `--capture` record |
 | B and A were selected without intervention | Content-addressed frontier snapshot plus deterministic selection rationale | Missing | Stable machine-readable frontier output |
-| A was unavailable before B | The identical A target under the identical route policy and budget receives no credit before B | Fixture | Replace the authored B fixture with route-produced B |
-| B was established | Independently replayed evidence produces a proposed fact delta | Missing | Typed dispatch/evidence adapter |
+| A was unavailable before B | The identical A target under the identical route policy and budget receives no credit before B | Fixture | Bind the result into a replayed episode transaction |
+| B was established | Catalog-only structural search produces a fresh, axiom-free B that excludes retained answers | Fixture | Typed dispatch/evidence adapter and proposed fact delta |
 | B became durable knowledge | Atomic application after fresh-process replay and fact validation | Missing | Episode-wide transaction boundary |
 | A became newly ready | Readiness changes only after the accepted B event | Missing | Accepted-transition event and snapshot recomputation |
-| A was established using B | Fresh proof is accepted and its dependency on B is derived from the proof term | Candidate substrate | Chain qualification and new-proof dependency check |
+| A was established using B | Fresh proof is accepted and its dependency on B is derived from the proof term | Fixture | Transactional admission and readiness event |
 | Corruption cannot receive credit | Independent mutations of statement, evidence, checker, dependency, footprint, and status all reject | Missing | Typed episode and evidence identities |
 | The sequence reproduces | Clean checkout repeats the same accepted transitions from retained inputs | Missing | Replay command and portable artifact bundle |
 | Human proof work was zero after launch | Append-only intervention log contains no proof-affecting action | Missing | Episode event model and audit vocabulary |
@@ -83,28 +83,42 @@ minimal `/proc`/`dev`/`tmp` mounts; it unshares all namespaces and clears the
 environment. The aggregate control confirms the repository and network are
 unreachable from inside.
 
-This boundary now carries a deliberately small automatic search fixture. The
-sandboxed `autogenesis-apply-proposer.py` sees only the verified catalog and
-deterministically proposes same-arity theorem applications. A separate kernel
-process reparses its digest-bound TSV, attempts real declarations, and requires
-the registered outcome:
+This boundary now carries two deliberately small automatic search fixtures.
+The sandboxed `autogenesis-induction-proposer.py` enumerates the same structural
+Nat plans for every target binder: induction with a definitionally reflexive
+base, followed by either the hypothesis itself or its congruence under the
+successor constructor. It neither parses the target expression nor contains a
+`zero_add` case. The fresh kernel rejects plan 1 and accepts plan 2 for B; the
+same interpreter also proves `add_zero` with plan 2 and `zero_mul` with plan 1,
+which guards against disguising the retained B proof as an interpreter.
+
+The sandboxed `autogenesis-apply-proposer.py` then sees only the post-B catalog
+and deterministically proposes same-arity theorem applications. Separate
+kernel processes reparse both digest-bound TSVs, attempt real declarations,
+and require the registered outcomes:
 
 ```sh
+scripts/check-autogenesis-induction-search.sh
 scripts/check-autogenesis-apply-search.sh
 ```
 
-For the current `Nat.zero_add` B -> `Nat.mul_one` A curriculum, the same A
-target, policy, and budget of 20 produce no proof in the `pre_a` phase and a
-proof on the first attempt in `post_b`. The accepted proof's transitive closure
-contains the fresh episode-local B and excludes both retained answers. A
-negative control reruns the pre-A search while requiring `proved` and must fail.
+For the current `Nat.zero_add` B -> `Nat.mul_one` A curriculum, B is produced
+from the catalog-only structural search in two attempts. The same A target,
+policy, and budget of 20 then produce no proof in the `pre_a` phase and a proof
+on the first attempt in `post_b`. The accepted closures are axiom-free, exclude
+both retained answers, and A contains the fresh episode-local B. Negative
+controls prove that plan 1 cannot receive B credit and that the pre-A result
+cannot satisfy an expected `proved` outcome.
 
 This establishes an operational-unlock and catalog-only search substrate, not
-Autogenesis-1. The checker still constructs B using an authored induction
-fixture. No autonomous-B, typed route handoff, or durable admission credit is
-claimed. A clean, exact-commit evidence bundle can be retained outside Git with
-`--retain NEW-DIRECTORY`; the repository keeps only the generator, gates, and
-content identities rather than vendoring execution artifacts.
+Autogenesis-1. The chain remains preregistered by a human; route dispatch and
+evidence assembly are not typed; B is not applied as a durable ledger
+transition; no accepted-transition event makes A ready; and the sequence has
+not yet been reproduced from its retained bundle. No transaction or programme
+credit is claimed. A clean, exact-commit evidence bundle can be retained
+outside Git with `--retain NEW-DIRECTORY`; the repository keeps only the
+generator, gates, and content identities rather than vendoring execution
+artifacts.
 
 ## Assumptions tested now
 
@@ -132,11 +146,12 @@ contain both answers.
 
 ### C. A proof-term edge means B operationally unlocked A
 
-**Supported for the bounded apply-search fixture, not yet for an autonomous B.**
+**Supported for the bounded two-search fixture, not yet for a ledger episode.**
 The same-target counterfactual now proves reachability changed within the fixed
-catalog-only policy and budget. It does not prove mathematical necessity,
-absence of equivalent theorems under broader search, or autonomous production
-of B. Full chain qualification therefore requires all three:
+catalog-only policies and budgets, with B itself produced by structural-plan
+search. It does not prove mathematical necessity, absence of equivalent
+theorems under broader search, or an accepted knowledge transition. Full chain
+qualification therefore requires all three:
 
 1. derived dependency in the newly produced A proof;
 2. no-credit run of the identical A target before B under the same policy and
