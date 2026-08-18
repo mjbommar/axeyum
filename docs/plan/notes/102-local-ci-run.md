@@ -107,13 +107,45 @@ From the run's own per-test timings (7507 timed tests):
 - five differential-fuzz binaries holding **one test each** account for 2 537 s,
   **40 % of the wall**
 
-`cargo test` vs `cargo nextest` at this scope is a wash. Modelling `cargo test`
-as *binaries sequential, tests within a binary parallel over 16 threads* gives
-**6569 s against nextest's measured 6385 s** — 3 %. The 25 % nextest penalty
-measured on the `--lib` subset does not survive at `--all-features`, because
-there the cost is a long tail of single-test binaries that neither scheduler can
-compress. Switching runners saves nothing; shortening those five fuzzes' budgets
-is the only lever, and so is not adding cores.
+### `cargo test` vs `cargo nextest`: measured, and the model was wrong
+
+I first modelled `cargo test` from the sweep's per-test timings as *binaries
+sequential, tests within a binary parallel over 16 threads*, got 6569 s against
+nextest's 6385 s, and concluded it was a wash. **That model is invalid and the
+conclusion was wrong**, because its inputs were per-test times measured *under
+nextest*, which is exactly the quantity in dispute.
+
+Measured instead, same tree, same warm target dir, same host, on the heaviest
+binary in the workspace (`axeyum-lean-kernel --lib --all-features`, 372 tests):
+
+| runner | test time |
+|---|---|
+| `cargo test` | **114.42 s** |
+| `cargo nextest run --profile local` | **398.995 s** |
+
+**nextest is 3.5x slower here** — far worse than the 25 % penalty measured on the
+`--lib` subset. The likely mechanism is nextest's process-per-test isolation
+destroying in-process reuse that `cargo test` gets for free within one binary:
+this crate's suite is built around a prelude cache, and
+`prelude_cache::creal_reuse_matches_fresh_build` alone took 215 s under nextest.
+This binary contributed 3751 s of the sweep's 15 754 test-seconds.
+
+That does **not** generalise to the whole sweep — the five single-test
+differential-fuzz binaries (2 537 s, 40 % of the wall) cannot be affected by the
+runner, and the floor of 630.7 s stands either way. But it does mean local-ci's
+choice of nextest is plausibly costing a large fraction of an hour per run, and
+**nobody should put this gate on a timer before someone measures
+`cargo test --workspace --all-features` end to end.** I did not; it is another
+~2 h and it belongs to whoever owns the schedule.
+
+Adding cores remains the wrong lever regardless: 2.47x achieved parallelism on
+16, with the floor set by one 630 s test.
+
+Incidentally, `scripts/cargo-serialized.sh`'s flock is heavily contended — the
+nextest half of this comparison waited **~19 minutes** for the lock before it
+started, which is why two 10-minute foreground attempts at it timed out looking
+like slowness. `local-ci.sh` does not take that lock, so the gate and the lanes
+compete rather than queue.
 
 ## Should it run on a schedule
 
