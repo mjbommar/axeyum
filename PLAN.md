@@ -507,6 +507,15 @@ Adding `Quot.sound` instead would read `real: axiom=0 quotient=5` and put
 `[Quot.sound]` in every real footprint permanently; Dedekind costs two trusted
 items, not fewer.
 
+**One correction worth propagating beyond this lane:** the widely-repeated claim
+that Coq's standard library *axiomatizes* ℝ with ~17 axioms has been false since
+Coq 8.11 (Jan 2020) — `Raxioms.v` declares zero, all 17 are `Lemma`s. I wrote it
+into the ADR from memory and an independent survey caught it. What is actually
+there is `ConstructiveCauchyReals`: Cauchy sequences with a fixed explicit
+modulus, no quotient, axiom-free, computing — i.e. this ADR's route, arrived at
+independently. Corrected in place with a dated note. If you cite Coq's reals
+anywhere, pin the version.
+
 **Next:** R1 is **unblocked**. The ADR's first draft said ℚ had no order — true
 of `int_prelude/rat.rs`, false of `rat_prelude.rs`, which `agent-rationals`
 landed in the worktree mid-draft with `le`/`lt`/`inv`/`sub`/`div` and all 22
