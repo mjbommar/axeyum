@@ -419,8 +419,22 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
 
   Do **not** `git read-tree HEAD` the shared index to fix this: another lane may
   have legitimately staged work there, and you would drop their staging. Resync
-  only your own paths, and only after confirming `git diff HEAD -- <path>` is
-  empty for each.
+  only your own paths, and only after confirming the worktree content matches
+  `HEAD` for each.
+
+  **`git diff HEAD -- <path>` is the WRONG test for a file you newly added**, and
+  it fails in the direction that loses work. A new file has no entry in the
+  shared index, so `git diff HEAD` reports it as a *deletion* — the check says
+  "differs", you decline to restage, and the staged deletion of your own new
+  file is exactly what stays behind for the next lane to commit. Two lanes hit
+  this on 2026-08-18, one of them nearly leaving a staged −525-line deletion of
+  two files it had just added. Compare the objects instead, which is defined for
+  a path the index has never seen:
+
+      for f in <paths>; do
+        [ "$(git hash-object "$f")" = "$(git rev-parse "HEAD:$f")" ] \
+          || echo "DIFFERS: $f"
+      done
 - **`read-tree` AND `commit` MUST BE THE SAME SHELL INVOCATION — a refresh in an
   earlier command is already stale.** Eighth and ninth incidents, 2026-08-17,
   both by agents that had read the rule above and believed they were following
