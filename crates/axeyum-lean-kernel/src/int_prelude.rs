@@ -79,7 +79,7 @@ mod decide;
 mod defs;
 mod euclid;
 mod nat_abs;
-mod ops;
+pub(crate) mod ops;
 mod order;
 mod rat;
 mod sign;
