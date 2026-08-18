@@ -33,6 +33,7 @@ OUT_MD = Path("docs/plan/generated/autogenesis-baseline.md")
 STATIC_SOURCES = (
     Path("scripts/gen-autogenesis-baseline.py"),
     Path("scripts/create-autogenesis-snapshot.py"),
+    Path("scripts/create-autogenesis-chain-catalog.py"),
     Path("scripts/create-autogenesis-proposer-catalog.py"),
     Path("scripts/autogenesis-apply-proposer.py"),
     Path("scripts/verify-autogenesis-apply-proposals.py"),
@@ -45,6 +46,7 @@ STATIC_SOURCES = (
     Path("scripts/create-autogenesis-accepted-event.py"),
     Path("scripts/stage-autogenesis-premise.sh"),
     Path("scripts/replay-autogenesis-apply-experiment.sh"),
+    Path("scripts/replay-autogenesis-authoritative-admission.sh"),
     Path("scripts/prepare-autogenesis-fact-transaction.py"),
     Path("scripts/apply-autogenesis-fact-transaction.py"),
     Path("scripts/create-autogenesis-readiness-delta.py"),

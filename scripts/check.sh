@@ -65,6 +65,8 @@ step fact-depends-tests python3 -m unittest scripts.tests.test_check_fact_depend
 # (`Kernel::theorem_dependencies`) instead of being transcribed -- 18 real edges
 # were missing when this first ran, including two facts proved the same day.
 step fact-depends python3 scripts/check-fact-depends-derived.py --quiet
+step autogenesis-chain-catalog-tests python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
+step autogenesis-chain-catalog python3 scripts/create-autogenesis-chain-catalog.py --check
 step capability-assurance-tests python3 -m unittest scripts.tests.test_check_capability_assurance
 # The mathematics strand's PRIMARY metric — "does a verdict come with an artifact
 # a third party can check without trusting us?" — existed only as 101 prose

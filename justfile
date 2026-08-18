@@ -48,6 +48,14 @@ next-unlocks:
 next-json:
     python3 scripts/fact-frontier.py --json
 
+# Proof-derived B -> A replay candidates. This intersects ledger edges with the
+# kernel dependency inventory; a kernel-route label alone is not derivation.
+next-chains:
+    python3 scripts/fact-frontier.py --chains
+
+next-chains-json:
+    python3 scripts/create-autogenesis-chain-catalog.py --json
+
 autogenesis-operations:
     python3 scripts/validate-autogenesis-operations.py
     python3 -m unittest scripts.tests.test_validate_autogenesis_operations
@@ -64,6 +72,8 @@ facts:
     # dependency is a failure rather than an indistinguishable silence.
     python3 -m unittest scripts.tests.test_check_fact_depends_derived
     python3 scripts/check-fact-depends-derived.py --quiet
+    python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
+    python3 scripts/create-autogenesis-chain-catalog.py --check
     # The mathematics strand's primary metric, derived rather than read: how many
     # capabilities carry an artifact an EXTERNAL checker accepts. Agreement with
     # an oracle is not an external check and is tiered separately.
@@ -404,6 +414,7 @@ generated-trackers:
     python3 scripts/validate-autogenesis-operations.py
     python3 -m unittest scripts.tests.test_validate_autogenesis_operations
     python3 -m unittest scripts.tests.test_fact_frontier
+    python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
     python3 -m unittest scripts.tests.test_execute_autogenesis_operation
     python3 -m unittest scripts.tests.test_check_autogenesis_fact_operation
     python3 -m unittest scripts.tests.test_gen_autogenesis_baseline

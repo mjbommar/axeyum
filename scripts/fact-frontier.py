@@ -59,6 +59,7 @@ ROOT = Path(__file__).resolve().parent.parent
 FACTS = ROOT / "artifacts" / "facts"
 OPERATIONS = ROOT / "artifacts" / "autogenesis" / "operations.json"
 OPERATION_VALIDATOR = ROOT / "scripts" / "validate-autogenesis-operations.py"
+CHAIN_CATALOG = ROOT / "scripts" / "create-autogenesis-chain-catalog.py"
 
 # A status asserting we settled it. `axiom` counts: a dependency taken as an
 # axiom is available to build on, whatever one thinks of taking it.
@@ -449,45 +450,45 @@ def print_chains(facts: dict) -> int:
     `cas-certificate`, `smt-clausal` and `search-certificate` there is no proof
     term to read, so a `depends_on` there is a human assertion.
 
-    That also explains a number that looks alarming and is not. Measured
-    2026-08-18: 114 facts, **63 isolated** — but only 5 of the 63 are
-    `kernel-lean`. The isolation sits almost entirely in routes where a fact
-    genuinely stands alone (one Rado number does not rest on another), so it is a
-    property of the domain rather than a gap in the ledger.
+    Merely filtering authored `depends_on` rows by route is insufficient: the
+    dependency checker permits extra mathematical dependencies that the chosen
+    proof did not use. This view therefore intersects the ledger edge with the
+    kernel's direct theorem-dependency inventory. The content-addressed catalog
+    is the scheduler-facing form; this remains its compact human view.
     """
-    kernel = {i for i, d in facts.items() if d.get("proof_route") == "kernel-lean"}
-    edges = [
-        (dep, fact["id"])
-        for fact in facts.values()
-        if fact["id"] in kernel
-        for dep in fact["depends_on"]
-        if dep in kernel
-    ]
-    if not edges:
-        print("  no derivable B -> A pair: the kernel-lean subgraph has no internal edge")
-        return 1
-
-    depth: dict[str, int] = {}
-
-    def rank(node: str, seen: tuple = ()) -> int:
-        if node in depth:
-            return depth[node]
-        if node in seen:          # a cycle is a ledger bug, not a chain
-            return 0
-        below = [rank(d, seen + (node,))
-                 for d in facts[node]["depends_on"] if d in kernel]
-        depth[node] = 1 + max(below, default=0)
-        return depth[node]
-
-    consequents = sorted({a for _, a in edges}, key=lambda a: -rank(a))
-    print(f"  kernel-lean facts: {len(kernel)}   derivable B -> A edges: {len(edges)}   "
-          f"distinct A: {len(consequents)}")
+    spec = importlib.util.spec_from_file_location(
+        "autogenesis_chain_catalog_for_frontier", CHAIN_CATALOG
+    )
+    if spec is None or spec.loader is None:
+        raise FrontierError(f"cannot load {CHAIN_CATALOG}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    dependencies = module.dependency_module()
+    try:
+        catalog = module.build_catalog(facts, dependencies.inventory(), dependencies.theorem_of)
+    except module.ChainCatalogError as error:
+        raise FrontierError(f"proof-derived chain catalog failed: {error}") from error
+    coverage = catalog["coverage"]
+    print(
+        f"  named kernel-lean facts: {coverage['named_kernel_facts']}   "
+        f"proof-derived B -> A edges: {coverage['proof_derived_edges']}   "
+        f"distinct A: {coverage['distinct_consequents']}"
+    )
     print("  (only kernel-lean: elsewhere a `depends_on` is asserted, not derivable)")
-    for a in consequents:
-        bs = [b for b in facts[a]["depends_on"] if b in kernel]
-        print(f"    depth {rank(a)}  {a}")
-        for b in bs:
-            print(f"              <- {b}")
+    current_a = None
+    for candidate in sorted(
+        catalog["candidates"],
+        key=lambda row: (
+            -row["rank"]["consequent_depth"],
+            row["consequent"]["fact_id"],
+            row["premise"]["fact_id"],
+        ),
+    ):
+        consequent = candidate["consequent"]["fact_id"]
+        if consequent != current_a:
+            print(f"    depth {candidate['rank']['consequent_depth']}  {consequent}")
+            current_a = consequent
+        print(f"              <- {candidate['premise']['fact_id']}")
     return 0
 
 
@@ -503,8 +504,8 @@ def main() -> int:
                          help="write the machine frontier to a new file")
     machine.add_argument("--verify", type=Path,
                          help="verify a saved machine frontier against the ledger")
-    ap.add_argument("--chains", action="store_true",
-                    help="enumerate settled B -> A pairs whose dependency is DERIVABLE")
+    machine.add_argument("--chains", action="store_true",
+                         help="enumerate settled B -> A pairs whose dependency is DERIVABLE")
     args = ap.parse_args()
 
     if not FACTS.is_dir():
@@ -515,7 +516,7 @@ def main() -> int:
     except (OSError, json.JSONDecodeError, KeyError, FrontierError) as error:
         print(f"FACT_FRONTIER_ERROR|{error}", file=sys.stderr)
         return 1
-    if (args.json or args.output or args.verify) and (args.band or args.unlocks):
+    if (args.json or args.output or args.verify or args.chains) and (args.band or args.unlocks):
         ap.error("machine frontier modes cannot be combined with --band or --unlocks")
     if args.json or args.output or args.verify:
         try:
@@ -538,7 +539,11 @@ def main() -> int:
     held = gate_holds(facts)
 
     if args.chains:
-        return print_chains(facts)
+        try:
+            return print_chains(facts)
+        except FrontierError as error:
+            print(f"FACT_FRONTIER_ERROR|{error}", file=sys.stderr)
+            return 1
 
     # Reverse dependency edges: proving X frees everything that names X.
     unlocks: dict[str, list[str]] = defaultdict(list)
