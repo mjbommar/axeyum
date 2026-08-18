@@ -57,9 +57,11 @@ mod quantifier;
 mod resolution;
 
 pub use arithmetic::ordered_ring::{
-    IntInstantiation, IntRefutation, OrderedRingRefutation, RING_LAW_BINDERS, RING_SYMBOL_BINDERS,
-    RingTelescope, generalize_over_ordered_ring, instantiate_at_int_model,
+    EQUALITY_SLOT_BINDERS, EqSetoidWitnesses, EqSpecialization, IntInstantiation, IntRefutation,
+    OrderedRingRefutation, RING_LAW_BINDERS, RING_SYMBOL_BINDERS, RingTelescope,
+    SETOID_RING_BINDERS, SetoidEq, generalize_over_ordered_ring, instantiate_at_int_model,
     reconstruct_int_farkas_to_lean_module, refutation_over_int_axioms, render_ordered_ring_module,
+    residual_eq_constants, specialize_setoid_to_eq,
 };
 pub use arithmetic::{LraReconstructCtx, reconstruct_lra_proof, reconstruct_sos_proof};
 pub use bitblast::{

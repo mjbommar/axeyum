@@ -150,6 +150,22 @@ pub struct LraReconstructCtx {
     hyps: Vec<NameId>,
     /// Monotone counter for fresh, collision-free declaration names.
     next_id: u64,
+    /// The **equality slot** (ADR-0468 phase R3), once declared.
+    ///
+    /// `None` — the default — means ring equality is the kernel's own `Eq` at
+    /// `Real`, and every rewrite in a reconstructed proof is an `Eq.rec`
+    /// transport. `Some` means equality is a declared *parameter* with its own
+    /// reflexivity/symmetry/transitivity and five congruences, so the finished
+    /// proof term mentions `Eq` nowhere and can be λ-abstracted over a carrier
+    /// whose equality is a defined relation — which is what the constructed ℝ
+    /// (`CReal.Equiv`) is.
+    ///
+    /// The nine equality declarations and the nine restated laws are ordinary
+    /// axioms in this context's kernel, exactly like the variable and hypothesis
+    /// axioms: they exist to be abstracted back out, and
+    /// [`generalize_over_ordered_ring`](ordered_ring::generalize_over_ordered_ring)
+    /// refuses to return a refutation that still rests on one.
+    setoid: Option<ordered_ring::setoid::SetoidEq>,
 }
 
 impl core::fmt::Debug for LraReconstructCtx {
@@ -186,7 +202,53 @@ impl LraReconstructCtx {
             vars: BTreeMap::new(),
             hyps: Vec::new(),
             next_id: 0,
+            setoid: None,
         }
+    }
+
+    /// Declare the **equality slot** into this context and route every
+    /// subsequent equality step through it (ADR-0468 phase R3).
+    ///
+    /// Call before reconstructing. Afterwards, a proof built by
+    /// [`reconstruct_lra_proof`] or [`reconstruct_sos_proof`] contains no `Eq`,
+    /// no `Eq.refl` and no `Eq.rec` at the carrier: symmetry, transitivity and
+    /// the `add`/`mul`/`neg`/`le`/`lt` congruences are applications of declared
+    /// constants, and the nine laws stated with `Eq` are replaced by their
+    /// restatements through the parameter. Generalizing such a proof with
+    /// [`RingTelescope::SetoidInterface`](ordered_ring::RingTelescope::SetoidInterface)
+    /// binds 39 rather than 30.
+    ///
+    /// Idempotent: a second call is a no-op, so the eighteen axioms are declared
+    /// at most once per context.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] if the trusted gate declines one of
+    /// the eighteen declarations, or if a `Real` law this module expects to be
+    /// stated with `Eq` no longer is.
+    pub fn enable_setoid_equality(&mut self) -> Result<(), ReconstructError> {
+        if self.setoid.is_some() {
+            return Ok(());
+        }
+        let arith = self.arith;
+        let declared = ordered_ring::setoid::declare_setoid_equality(&mut self.kernel, &arith)?;
+        self.setoid = Some(declared);
+        Ok(())
+    }
+
+    /// Whether this context routes equality through the declared slot.
+    #[must_use]
+    pub fn setoid_equality_enabled(&self) -> bool {
+        self.setoid.is_some()
+    }
+
+    /// `name arg₀ … argₙ` for a declared constant with no universe parameters.
+    fn apply_const(&mut self, name: NameId, args: &[ExprId]) -> ExprId {
+        let mut out = self.kernel.const_(name, vec![]);
+        for &arg in args {
+            out = self.kernel.app(out, arg);
+        }
+        out
     }
 
     /// A shared reference to the underlying kernel (e.g. to `infer`/`def_eq` an
@@ -380,6 +442,9 @@ impl LraReconstructCtx {
 
     /// `Eq R x y` (the carrier-level equality proposition).
     fn mk_eq_r(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.eq, &[x, y]);
+        }
         let one_lvl = {
             let z = self.kernel.level_zero();
             self.kernel.level_succ(z)
@@ -393,6 +458,9 @@ impl LraReconstructCtx {
 
     /// `Eq.refl R a : Eq R a a`.
     fn eq_refl_r(&mut self, a: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.eq_refl, &[a]);
+        }
         let one_lvl = {
             let z = self.kernel.level_zero();
             self.kernel.level_succ(z)
@@ -432,6 +500,9 @@ impl LraReconstructCtx {
     ///
     /// `Eq.rec R a (fun x _ => Eq R x a) (Eq.refl R a) b h`.
     fn eq_symm_r(&mut self, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.eq_symm, &[a, b, h]);
+        }
         let motive = {
             let x1 = self.kernel.bvar(1);
             let eq_x_a = self.mk_eq_r(x1, a);
@@ -450,6 +521,9 @@ impl LraReconstructCtx {
     ///
     /// `Eq.rec R b (fun x _ => Eq R a x) h1 c h2`.
     fn eq_trans_r(&mut self, a: ExprId, b: ExprId, c: ExprId, h1: ExprId, h2: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.eq_trans, &[a, b, c, h1, h2]);
+        }
         let motive = {
             let x1 = self.kernel.bvar(1);
             let eq_a_x = self.mk_eq_r(a, x1);
@@ -466,6 +540,12 @@ impl LraReconstructCtx {
     /// Congruence on the *left* argument of `add`: given `h : Eq R a a'`, build
     /// `Eq R (add a b) (add a' b)`.
     fn congr_add_left(&mut self, a: ExprId, ap: ExprId, b: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            // One-sided congruence is the two-sided law with reflexivity on the
+            // argument that does not move.
+            let rb = self.apply_const(s.eq_refl, &[b]);
+            return self.apply_const(s.add_congr, &[a, ap, b, b, h, rb]);
+        }
         // motive := fun (x : R) (_ : Eq R a x) => Eq R (add a b) (add x b).
         let motive = {
             let a_b = self.mk_add(a, b);
@@ -489,6 +569,10 @@ impl LraReconstructCtx {
     /// Congruence on the *right* argument of `add`: given `h : Eq R b b'`, build
     /// `Eq R (add a b) (add a b')`.
     fn congr_add_right(&mut self, a: ExprId, b: ExprId, bp: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            let ra = self.apply_const(s.eq_refl, &[a]);
+            return self.apply_const(s.add_congr, &[a, a, b, bp, ra, h]);
+        }
         // motive := fun (x : R) (_ : Eq R b x) => Eq R (add a b) (add a x).
         let motive = {
             let a_b = self.mk_add(a, b);
@@ -511,6 +595,9 @@ impl LraReconstructCtx {
 
     /// `add_assoc a b c : Eq R (add (add a b) c) (add a (add b c))`.
     fn add_assoc_eq(&mut self, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.add_assoc, &[a, b, c]);
+        }
         let ax = self.kernel.const_(self.arith.add_assoc, vec![]);
         let e = self.kernel.app(ax, a);
         let e = self.kernel.app(e, b);
@@ -519,6 +606,9 @@ impl LraReconstructCtx {
 
     /// `add_comm a b : Eq R (add a b) (add b a)`.
     fn add_comm_eq(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.add_comm, &[a, b]);
+        }
         let ax = self.kernel.const_(self.arith.add_comm, vec![]);
         let e = self.kernel.app(ax, a);
         self.kernel.app(e, b)
@@ -526,12 +616,18 @@ impl LraReconstructCtx {
 
     /// `add_zero a : Eq R (add a zero) a`.
     fn add_zero_eq(&mut self, a: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.add_zero, &[a]);
+        }
         let ax = self.kernel.const_(self.arith.add_zero, vec![]);
         self.kernel.app(ax, a)
     }
 
     /// `add_neg a : Eq R (add a (neg a)) zero`.
     fn add_neg_eq(&mut self, a: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.add_neg, &[a]);
+        }
         let ax = self.kernel.const_(self.arith.add_neg, vec![]);
         self.kernel.app(ax, a)
     }
@@ -552,6 +648,9 @@ impl LraReconstructCtx {
 
     /// `mul_comm a b : Eq R (mul a b) (mul b a)`.
     fn mul_comm_eq(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.mul_comm, &[a, b]);
+        }
         let ax = self.kernel.const_(self.arith.mul_comm, vec![]);
         let e = self.kernel.app(ax, a);
         self.kernel.app(e, b)
@@ -559,12 +658,18 @@ impl LraReconstructCtx {
 
     /// `mul_zero a : Eq R (mul a zero) zero`.
     fn mul_zero_eq(&mut self, a: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.mul_zero, &[a]);
+        }
         let ax = self.kernel.const_(self.arith.mul_zero, vec![]);
         self.kernel.app(ax, a)
     }
 
     /// `left_distrib a b c : Eq R (mul a (add b c)) (add (mul a b) (mul a c))`.
     fn left_distrib_eq(&mut self, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.left_distrib, &[a, b, c]);
+        }
         let ax = self.kernel.const_(self.arith.left_distrib, vec![]);
         let e = self.kernel.app(ax, a);
         let e = self.kernel.app(e, b);
@@ -574,6 +679,10 @@ impl LraReconstructCtx {
     /// Congruence on the *left* argument of `mul`: given `h : Eq R a a'`, build
     /// `Eq R (mul a b) (mul a' b)`.
     fn congr_mul_left(&mut self, a: ExprId, ap: ExprId, b: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            let rb = self.apply_const(s.eq_refl, &[b]);
+            return self.apply_const(s.mul_congr, &[a, ap, b, b, h, rb]);
+        }
         // motive := fun (x : R) (_ : Eq R a x) => Eq R (mul a b) (mul x b).
         let motive = {
             let a_b = self.mk_mul(a, b);
@@ -597,6 +706,10 @@ impl LraReconstructCtx {
     /// Congruence on the *right* argument of `mul`: given `h : Eq R b b'`, build
     /// `Eq R (mul a b) (mul a b')`.
     fn congr_mul_right(&mut self, a: ExprId, b: ExprId, bp: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            let ra = self.apply_const(s.eq_refl, &[a]);
+            return self.apply_const(s.mul_congr, &[a, a, b, bp, ra, h]);
+        }
         // motive := fun (x : R) (_ : Eq R b x) => Eq R (mul a b) (mul a x).
         let motive = {
             let a_b = self.mk_mul(a, b);
@@ -751,6 +864,9 @@ impl LraReconstructCtx {
 
     /// Congruence under `neg`: given `h : Eq R a a'`, build `Eq R (neg a) (neg a')`.
     fn congr_neg(&mut self, a: ExprId, ap: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.neg_congr, &[a, ap, h]);
+        }
         // motive := fun (x : R) (_ : Eq R a x) => Eq R (neg a) (neg x).
         let motive = {
             let neg_a = self.mk_neg(a);
@@ -1783,6 +1899,9 @@ impl LraReconstructCtx {
 
     /// `mul_one a : Eq R (mul a one) a`.
     fn mul_one_eq(&mut self, a: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.mul_one, &[a]);
+        }
         let ax = self.kernel.const_(self.arith.mul_one, vec![]);
         self.kernel.app(ax, a)
     }
@@ -1923,6 +2042,10 @@ impl LraReconstructCtx {
         h_le: ExprId,
         h_eq: ExprId,
     ) -> ExprId {
+        if let Some(s) = self.setoid {
+            let rl = self.apply_const(s.eq_refl, &[l]);
+            return self.apply_const(s.le_congr, &[l, l, r, rp, rl, h_eq, h_le]);
+        }
         // motive := fun (x : R) (_ : Eq R r x) => le l x.
         let motive = {
             let x1 = self.kernel.bvar(1);
@@ -1947,6 +2070,10 @@ impl LraReconstructCtx {
         h_le: ExprId,
         h_eq: ExprId,
     ) -> ExprId {
+        if let Some(s) = self.setoid {
+            let rr = self.apply_const(s.eq_refl, &[r]);
+            return self.apply_const(s.le_congr, &[l, lp, r, r, h_eq, rr, h_le]);
+        }
         // motive := fun (x : R) (_ : Eq R l x) => le x r.
         let motive = {
             let x1 = self.kernel.bvar(1);
@@ -2035,6 +2162,10 @@ impl LraReconstructCtx {
         h_lt: ExprId,
         h_eq: ExprId,
     ) -> ExprId {
+        if let Some(s) = self.setoid {
+            let rr = self.apply_const(s.eq_refl, &[r]);
+            return self.apply_const(s.lt_congr, &[l, lp, r, r, h_eq, rr, h_lt]);
+        }
         let motive = {
             let x1 = self.kernel.bvar(1);
             let lt_x_r = self.mk_lt(x1, r);
@@ -2127,6 +2258,10 @@ impl LraReconstructCtx {
         h_lt: ExprId,
         h_eq: ExprId,
     ) -> ExprId {
+        if let Some(s) = self.setoid {
+            let rl = self.apply_const(s.eq_refl, &[l]);
+            return self.apply_const(s.lt_congr, &[l, l, r, rp, rl, h_eq, h_lt]);
+        }
         let motive = {
             let x1 = self.kernel.bvar(1);
             let lt_l_x = self.mk_lt(l, x1);

@@ -341,9 +341,10 @@ pub mod proofs {
         };
         pub use crate::lex_reconstruct::reconstruct_lex_clash_to_lean_module;
         pub use crate::reconstruct::{
-            IntInstantiation, IntRefutation, LeanModuleContent, LraReconstructCtx,
-            OrderedRingRefutation, ProofFragment, RING_LAW_BINDERS, RING_SYMBOL_BINDERS,
-            ReconstructCtx, ReconstructError, RingTelescope, STRUCTURAL_ATTESTATION_MARKER,
+            EQUALITY_SLOT_BINDERS, EqSetoidWitnesses, EqSpecialization, IntInstantiation,
+            IntRefutation, LeanModuleContent, LraReconstructCtx, OrderedRingRefutation,
+            ProofFragment, RING_LAW_BINDERS, RING_SYMBOL_BINDERS, ReconstructCtx, ReconstructError,
+            RingTelescope, SETOID_RING_BINDERS, STRUCTURAL_ATTESTATION_MARKER, SetoidEq,
             declared_assumption_clauses, generalize_over_ordered_ring, instantiate_at_int_model,
             prove_const_shift_lowering_to_lean_module, prove_unsat_to_lean,
             prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module,
@@ -359,7 +360,8 @@ pub mod proofs {
             reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof, reconstruct_quant_unsat_proof,
             reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
             reconstruct_skolem_unsat_proof, reconstruct_sos_proof, refutation_over_int_axioms,
-            render_ordered_ring_module, scan_proof_fragment,
+            render_ordered_ring_module, residual_eq_constants, scan_proof_fragment,
+            specialize_setoid_to_eq,
         };
         pub use crate::regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
     }
@@ -1243,9 +1245,10 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use reconstruct::{
-            IntInstantiation, IntRefutation, LeanModuleContent, LraReconstructCtx,
-            OrderedRingRefutation, ProofFragment, RING_LAW_BINDERS, RING_SYMBOL_BINDERS,
-            ReconstructCtx, ReconstructError, RingTelescope, STRUCTURAL_ATTESTATION_MARKER,
+            EQUALITY_SLOT_BINDERS, EqSetoidWitnesses, EqSpecialization, IntInstantiation,
+            IntRefutation, LeanModuleContent, LraReconstructCtx, OrderedRingRefutation,
+            ProofFragment, RING_LAW_BINDERS, RING_SYMBOL_BINDERS, ReconstructCtx, ReconstructError,
+            RingTelescope, SETOID_RING_BINDERS, STRUCTURAL_ATTESTATION_MARKER, SetoidEq,
             declared_assumption_clauses, generalize_over_ordered_ring, instantiate_at_int_model,
             prove_const_shift_lowering_to_lean_module, prove_unsat_to_lean,
             prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module,
@@ -1261,7 +1264,8 @@ macro_rules! full_exports {
             reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof, reconstruct_quant_unsat_proof,
             reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
             reconstruct_skolem_unsat_proof, reconstruct_sos_proof, refutation_over_int_axioms,
-            render_ordered_ring_module, scan_proof_fragment,
+            render_ordered_ring_module, residual_eq_constants, scan_proof_fragment,
+            specialize_setoid_to_eq,
         };
         #[doc(hidden)]
         pub use records::{RecordError, RecordSort};

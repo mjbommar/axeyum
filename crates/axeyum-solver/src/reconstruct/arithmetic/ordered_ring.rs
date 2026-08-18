@@ -55,6 +55,10 @@ use axeyum_ir::{TermArena, TermId};
 
 use super::{LraReconstructCtx, ReconstructError, reconstruct_lra_proof};
 
+pub(crate) mod setoid;
+
+pub use setoid::{EQUALITY_SLOT_BINDERS, EqSetoidWitnesses, SetoidEq};
+
 /// The binder name each of the 30 `Real` declarations takes in the generalized
 /// statement, in **declaration order** — which is also dependency order, so
 /// each binder's type mentions only binders to its left.
@@ -94,9 +98,65 @@ const RING_BINDER_NAMES: [&str; 30] = [
     "sq_nonneg",
 ];
 
+/// The binder names of the **setoid** telescope (ADR-0468 phase R3), in
+/// declaration order: the same eight carrier/operation symbols, then the nine
+/// equality-slot binders, then the same 22 laws — nine of which are now stated
+/// through the bound `eq` rather than through the kernel's `Eq`.
+///
+/// 30 → 39. The symbols keep their positions and the 22 laws keep their relative
+/// order, which is what lets
+/// [`specialize_setoid_to_eq`] hand the 22 law binders straight through.
+const SETOID_RING_BINDER_NAMES: [&str; 39] = [
+    "R",
+    "add",
+    "mul",
+    "neg",
+    "zero",
+    "one",
+    "le",
+    "lt",
+    // --- the equality slot ---
+    "eq",
+    "eq_refl",
+    "eq_symm",
+    "eq_trans",
+    "add_congr",
+    "mul_congr",
+    "neg_congr",
+    "le_congr",
+    "lt_congr",
+    // --- the 22 laws ---
+    "le_refl",
+    "le_trans",
+    "lt_irrefl",
+    "lt_trans",
+    "lt_of_lt_of_le",
+    "lt_of_le_of_lt",
+    "le_of_lt",
+    "add_le_add",
+    "add_comm",
+    "add_assoc",
+    "add_zero",
+    "add_neg",
+    "mul_le_mul_of_nonneg_left",
+    "zero_lt_one",
+    "add_lt_add_of_le_of_lt",
+    "mul_comm",
+    "mul_assoc",
+    "mul_one",
+    "mul_zero",
+    "left_distrib",
+    "mul_nonneg",
+    "sq_nonneg",
+];
+
 /// How many of the 30 ring binders are the carrier and its operations (the
 /// rest are laws).
 pub const RING_SYMBOL_BINDERS: usize = 8;
+
+/// The binder count of the setoid telescope: the 30 of the `Eq`-shaped interface
+/// plus the [`EQUALITY_SLOT_BINDERS`] that make equality a parameter.
+pub const SETOID_RING_BINDERS: usize = RING_BINDER_NAMES.len() + EQUALITY_SLOT_BINDERS;
 
 /// The number of ordered-commutative-ring laws the generalized statement takes
 /// as hypotheses.
@@ -120,6 +180,21 @@ pub enum RingTelescope {
     /// instantiation reproduces the original footprint **exactly**, which is
     /// the crispest available demonstration that nothing was lost.
     Used,
+    /// Bind all 39 of the **setoid** interface (ADR-0468 phase R3): the eight
+    /// symbols, an equality *parameter* with its three equivalence laws and five
+    /// congruences, and the 22 laws — the nine `Eq`-stated ones restated through
+    /// the parameter.
+    ///
+    /// Requires a proof built with
+    /// [`LraReconstructCtx::enable_setoid_equality`]; a proof that used the
+    /// kernel's `Eq` still rests on the `Real` package's `Eq`-shaped laws, which
+    /// this telescope does not bind, and is refused rather than silently
+    /// generalized over the wrong thing.
+    ///
+    /// This is the form the constructed ℝ can be instantiated at: `CReal`'s
+    /// equality is the defined relation `CReal.Equiv`, not `Eq CReal`, and that
+    /// is precisely what keeps its trusted surface at zero.
+    SetoidInterface,
 }
 
 /// A refutation parameterised over the ordered-ring interface, together with
@@ -269,7 +344,26 @@ pub fn generalize_over_ordered_ring(
     //     are kept unconditionally, because the interface is the point.
     let used: std::collections::BTreeSet<NameId> =
         ctx.kernel.axiom_footprint(original).into_iter().collect();
-    let all_ring = ring_telescope(&ctx.arith);
+    let (all_ring, binder_table): (Vec<NameId>, &'static [&'static str]) = match scope {
+        RingTelescope::SetoidInterface => {
+            let Some(slot) = ctx.setoid else {
+                return Err(ReconstructError::KernelRejected {
+                    rule: "ordered_ring".to_owned(),
+                    detail: "the setoid telescope was requested but this context has no equality \
+                             slot; call `enable_setoid_equality` BEFORE reconstructing, so the \
+                             proof term is built against the parameter rather than against `Eq`"
+                        .to_owned(),
+                });
+            };
+            (
+                setoid_ring_telescope(&ctx.arith, &slot).to_vec(),
+                &SETOID_RING_BINDER_NAMES[..],
+            )
+        }
+        RingTelescope::FullInterface | RingTelescope::Used => {
+            (ring_telescope(&ctx.arith).to_vec(), &RING_BINDER_NAMES[..])
+        }
+    };
     let ring_used: Vec<String> = all_ring
         .iter()
         .filter(|n| used.contains(n))
@@ -280,9 +374,9 @@ pub fn generalize_over_ordered_ring(
     let ring: Vec<(NameId, &'static str)> = all_ring
         .iter()
         .copied()
-        .zip(RING_BINDER_NAMES)
+        .zip(binder_table.iter().copied())
         .filter(|(name, _)| match scope {
-            RingTelescope::FullInterface => true,
+            RingTelescope::FullInterface | RingTelescope::SetoidInterface => true,
             RingTelescope::Used => used.contains(name),
         })
         .collect();
@@ -770,6 +864,60 @@ pub struct IntInstantiation {
     pub var_binders_hint: usize,
 }
 
+/// The 39 declarations of the **setoid** interface, in dependency order: the
+/// eight symbols, the equality slot, then the 22 laws with the nine `Eq`-stated
+/// ones replaced by their restatements through `eq`.
+///
+/// Positionally aligned with [`SETOID_RING_BINDER_NAMES`], and — outside the
+/// equality slot — with [`ring_telescope`], which is what makes the round trip
+/// through `Eq` a straight positional hand-off.
+fn setoid_ring_telescope(
+    arith: &axeyum_lean_kernel::ArithPrelude,
+    slot: &SetoidEq,
+) -> [NameId; 39] {
+    [
+        arith.r,
+        arith.add,
+        arith.mul,
+        arith.neg,
+        arith.zero,
+        arith.one,
+        arith.le,
+        arith.lt,
+        slot.eq,
+        slot.eq_refl,
+        slot.eq_symm,
+        slot.eq_trans,
+        slot.add_congr,
+        slot.mul_congr,
+        slot.neg_congr,
+        slot.le_congr,
+        slot.lt_congr,
+        arith.le_refl,
+        arith.le_trans,
+        arith.lt_irrefl,
+        arith.lt_trans,
+        arith.lt_of_lt_of_le,
+        arith.lt_of_le_of_lt,
+        arith.le_of_lt,
+        arith.add_le_add,
+        slot.add_comm,
+        slot.add_assoc,
+        slot.add_zero,
+        slot.add_neg,
+        arith.mul_le_mul_of_nonneg_left,
+        arith.zero_lt_one,
+        arith.add_lt_add_of_le_of_lt,
+        slot.mul_comm,
+        slot.mul_assoc,
+        slot.mul_one,
+        slot.mul_zero,
+        slot.left_distrib,
+        arith.mul_nonneg,
+        arith.sq_nonneg,
+    ]
+}
+
 fn ring_telescope(arith: &axeyum_lean_kernel::ArithPrelude) -> [NameId; 30] {
     [
         arith.r,
@@ -889,6 +1037,382 @@ fn abstract_consts_aux(
     };
     memo.insert((e, offset), rebuilt);
     rebuilt
+}
+
+// ---------------------------------------------------------------------------
+// The round trip: instantiating the equality slot back at `Eq`.
+// ---------------------------------------------------------------------------
+
+/// A setoid-generalized refutation with its equality slot instantiated at the
+/// kernel's `Eq`, and the comparison against the `Eq`-shaped generalization of
+/// the same query.
+///
+/// Every field is **measured** after the kernel admitted the specialization; the
+/// verdict is an equality of interned expressions, not a rendering heuristic.
+#[derive(Debug, Clone)]
+pub struct EqSpecialization {
+    /// The specialization term: a λ over the 30 `Eq`-shaped binders whose body
+    /// applies the 39-binder theorem, filling the equality slot with `Eq` and its
+    /// five congruences at the *bound* carrier.
+    pub term: ExprId,
+    /// Its type, as the kernel inferred it.
+    pub statement: ExprId,
+    /// The [`RingTelescope::FullInterface`] statement it is compared against.
+    pub reference: ExprId,
+    /// Whether the specialization reproduced today's statement — both the
+    /// **conclusion** ([`Self::statement`] is the same interned expression as
+    /// [`Self::reference`]) and every **hypothesis type**
+    /// ([`Self::binder_type_mismatches`] is empty).
+    ///
+    /// Both halves are needed and neither implies the other. The conclusion
+    /// alone is weak: this function re-opens the reference's own binders, so
+    /// their types are identical by construction and only the ∀-variables /
+    /// constraints tail is really being compared. The binder types are where the
+    /// nine rewritten laws actually get checked — and they are consumed by the
+    /// application, so they leave no trace in the conclusion.
+    ///
+    /// Expressions are hash-consed, so both halves are structural identity, not
+    /// a definitional-equality check that would happily accept a reshaped
+    /// statement (a `fun a b => Eq R a b` in place of `Eq R`, say).
+    pub reproduces_reference: bool,
+    /// The telescope positions whose type the specialization did **not**
+    /// reproduce, rendered as `position: expected | got`.
+    ///
+    /// Compared over the 30 non-slot positions only: the eight symbols and the
+    /// 22 laws, nine of which were restated through `eq` and must come back
+    /// verbatim when `eq` is instantiated at `Eq R`. The nine equality-slot
+    /// positions have no counterpart in the `Eq`-shaped telescope by
+    /// construction, and are the whole point of the widening.
+    pub binder_type_mismatches: Vec<String>,
+    /// How many of the 30 non-slot binder types were reproduced exactly.
+    pub binder_types_reproduced: usize,
+    /// [`Self::statement`], rendered. Populated so a failure prints the two
+    /// statements rather than only a `false`.
+    pub statement_rendered: String,
+    /// [`Self::reference`], rendered.
+    pub reference_rendered: String,
+    /// The admitted specialization theorem.
+    pub theorem: NameId,
+    /// `Kernel::axiom_footprint` of [`Self::theorem`], rendered. **Empty**: the
+    /// 39-binder theorem assumes nothing and the five `Eq` witnesses are proved
+    /// from `Eq.rec`, so instantiating one at the other cannot introduce an
+    /// assumption. A non-empty footprint here is a finding.
+    pub footprint: Vec<String>,
+    /// The kernel-`Eq` constants the **setoid** proof term still mentions,
+    /// rendered. **Empty**, and the reason this field exists is that nothing else
+    /// in this module can catch it being non-empty.
+    ///
+    /// `Eq`, `Eq.refl` and `Eq.rec` are an inductive and its recursor, not
+    /// axioms, so a proof step that kept using `Eq.rec` leaves the generalized
+    /// theorem's [`Kernel::axiom_footprint`] **empty** and its telescope 39 long
+    /// — every other number in this module still reads as a success — while the
+    /// theorem has quietly become uninstantiable at a carrier whose equality is a
+    /// defined relation, which is the entire purpose of the exercise. So the slot
+    /// being *declared* is not evidence the proof went through it; this is.
+    pub setoid_residual_eq: Vec<String>,
+}
+
+/// Instantiate a setoid-generalized refutation's **equality slot** at the
+/// kernel's `Eq`, and check that what comes back is today's `Eq`-shaped
+/// statement.
+///
+/// This is the test ADR-0468 phase R3 names. Widening the interface from 30
+/// binders to 39 is only sound as a *generalization* if the 39-binder statement
+/// specializes back to the 30-binder one — otherwise the rewrite quietly changed
+/// what the theorem proves, and every downstream instantiation (including at the
+/// constructed ℝ) would be proving something else.
+///
+/// The specialization is not an application at `Real`: the carrier stays
+/// **bound**. The 30 `Eq`-shaped binders are re-introduced from `reference`'s own
+/// statement, and inside them the 39-binder theorem is applied to
+///
+/// ```text
+/// R … lt                       the eight symbols, unchanged
+/// Eq R                         the equality parameter
+/// Eq.refl R, symm R, trans R   its three equivalence laws
+/// congr₂ R add, congr₂ R mul, congr₁ R neg, relCongr R le, relCongr R lt
+/// le_refl … sq_nonneg          the 22 laws, unchanged
+/// ```
+///
+/// `Eq R` is supplied as a *partial application*, never as `fun a b => Eq R a b`.
+/// That is the detail that makes the result an identity rather than a
+/// definitional equality: `eq x y` instantiates to the very node `Eq R x y` that
+/// the `Eq`-shaped statement already contains, with no β-redex to reduce and
+/// nothing for a normalizer to have to agree about.
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if `setoid` is not a
+/// [`RingTelescope::SetoidInterface`] refutation, if `reference` is not a
+/// [`RingTelescope::FullInterface`] one, if the reference statement does not open
+/// into 30 binders, or if the kernel refuses the specialization — which is where
+/// a mismatched equality-slot type would surface.
+// One linear pipeline -- declare the witnesses, re-open the reference's binders,
+// assemble the 39 arguments, close, infer, compare -- where the ORDER is the
+// argument and no step is meaningful without its predecessor.
+#[allow(clippy::too_many_lines)]
+pub fn specialize_setoid_to_eq(
+    ctx: &mut LraReconstructCtx,
+    setoid: &OrderedRingRefutation,
+    reference: &OrderedRingRefutation,
+) -> Result<EqSpecialization, ReconstructError> {
+    if setoid.scope != RingTelescope::SetoidInterface {
+        return Err(ReconstructError::KernelRejected {
+            rule: "specialize_at_eq".to_owned(),
+            detail: format!(
+                "the specialization source must be a setoid generalization, not {:?}",
+                setoid.scope
+            ),
+        });
+    }
+    if reference.scope != RingTelescope::FullInterface {
+        return Err(ReconstructError::KernelRejected {
+            rule: "specialize_at_eq".to_owned(),
+            detail: format!(
+                "the comparison reference must be a full-interface generalization, not {:?}",
+                reference.scope
+            ),
+        });
+    }
+
+    // The five generic `Eq`-is-a-setoid lemmas, proved from `Eq.rec`. Minted
+    // under a fresh namespace so repeated calls in one context cannot collide.
+    let witness_ns = ctx.fresh_name("eq_setoid");
+    let logic = ctx.arith.logic;
+    let witnesses = setoid::declare_eq_setoid_witnesses(&mut ctx.kernel, &logic, witness_ns)?;
+
+    // Re-open the reference statement's 30 binders as free variables, keeping
+    // their names and types. Read off the statement rather than rebuilt, so the
+    // λ-telescope this function closes is the reference's own telescope and the
+    // comparison cannot pass by accident of a reconstruction that agrees.
+    let mut ty = reference.statement;
+    let mut fvar_ids: Vec<u64> = Vec::with_capacity(reference.ring_binders);
+    let mut fvar_exprs: Vec<ExprId> = Vec::with_capacity(reference.ring_binders);
+    let mut binder_tys: Vec<ExprId> = Vec::with_capacity(reference.ring_binders);
+    let mut binder_names: Vec<NameId> = Vec::with_capacity(reference.ring_binders);
+    for position in 0..reference.ring_binders {
+        let ExprNode::Pi(name, domain, body, _) = *ctx.kernel.expr_node(ty) else {
+            return Err(ReconstructError::KernelRejected {
+                rule: "specialize_at_eq".to_owned(),
+                detail: format!(
+                    "the reference statement runs out of binders at position {position} of {}",
+                    reference.ring_binders
+                ),
+            });
+        };
+        let id = ctx.fresh_fvar_id();
+        let fvar = ctx.kernel.fvar(id);
+        fvar_ids.push(id);
+        fvar_exprs.push(fvar);
+        binder_tys.push(domain);
+        binder_names.push(name);
+        ty = ctx.kernel.instantiate(body, &[fvar]);
+    }
+
+    // The 39 arguments: eight symbols, the equality slot, 22 laws.
+    let carrier = fvar_exprs[0];
+    let one_lvl = {
+        let z = ctx.kernel.level_zero();
+        ctx.kernel.level_succ(z)
+    };
+    let mut arguments: Vec<ExprId> = fvar_exprs[..RING_SYMBOL_BINDERS].to_vec();
+    let eq_at_carrier = {
+        let c = ctx.kernel.const_(logic.eq, vec![one_lvl]);
+        ctx.kernel.app(c, carrier)
+    };
+    let refl_at_carrier = {
+        let c = ctx.kernel.const_(logic.eq_refl, vec![one_lvl]);
+        ctx.kernel.app(c, carrier)
+    };
+    let at_carrier = |ctx: &mut LraReconstructCtx, name: NameId| {
+        let c = ctx.kernel.const_(name, vec![]);
+        ctx.kernel.app(c, carrier)
+    };
+    let at_carrier_and = |ctx: &mut LraReconstructCtx, name: NameId, op: ExprId| {
+        let c = ctx.kernel.const_(name, vec![]);
+        let e = ctx.kernel.app(c, carrier);
+        ctx.kernel.app(e, op)
+    };
+    // Positions in the eight-symbol prefix: add=1, mul=2, neg=3, le=6, lt=7.
+    let (add, mul, neg, le, lt) = (
+        fvar_exprs[1],
+        fvar_exprs[2],
+        fvar_exprs[3],
+        fvar_exprs[6],
+        fvar_exprs[7],
+    );
+    arguments.push(eq_at_carrier);
+    arguments.push(refl_at_carrier);
+    let symm = at_carrier(ctx, witnesses.symm);
+    arguments.push(symm);
+    let trans = at_carrier(ctx, witnesses.trans);
+    arguments.push(trans);
+    let add_congr = at_carrier_and(ctx, witnesses.congr2, add);
+    arguments.push(add_congr);
+    let mul_congr = at_carrier_and(ctx, witnesses.congr2, mul);
+    arguments.push(mul_congr);
+    let neg_congr = at_carrier_and(ctx, witnesses.congr1, neg);
+    arguments.push(neg_congr);
+    let le_congr = at_carrier_and(ctx, witnesses.rel_congr, le);
+    arguments.push(le_congr);
+    let lt_congr = at_carrier_and(ctx, witnesses.rel_congr, lt);
+    arguments.push(lt_congr);
+    arguments.extend_from_slice(&fvar_exprs[RING_SYMBOL_BINDERS..]);
+
+    if arguments.len() != setoid.ring_binders {
+        return Err(ReconstructError::KernelRejected {
+            rule: "specialize_at_eq".to_owned(),
+            detail: format!(
+                "assembled {} arguments for a telescope of {}",
+                arguments.len(),
+                setoid.ring_binders
+            ),
+        });
+    }
+
+    let mut body = ctx.kernel.const_(setoid.theorem, vec![]);
+    for argument in &arguments {
+        body = ctx.kernel.app(body, *argument);
+    }
+
+    // Close the λ-telescope. `abstract_fvars` owns the index arithmetic,
+    // including the shifts inside the equality witnesses' own binders.
+    let mut term = ctx.kernel.abstract_fvars(body, &fvar_ids);
+    for position in (0..fvar_ids.len()).rev() {
+        let domain = ctx
+            .kernel
+            .abstract_fvars(binder_tys[position], &fvar_ids[..position]);
+        term = ctx
+            .kernel
+            .lam(binder_names[position], domain, term, BinderInfo::Default);
+    }
+
+    // Walk the setoid telescope one argument at a time, recording each binder's
+    // DOMAIN as the specialization sees it. The 30 non-slot domains must be the
+    // reference's own, node for node: that is where the nine restated laws are
+    // actually checked, and the application consumes them, so nothing about them
+    // survives into the inferred conclusion.
+    let mut walked = setoid.statement;
+    let mut supplied_domains: Vec<ExprId> = Vec::with_capacity(arguments.len());
+    for argument in &arguments {
+        let ExprNode::Pi(_, domain, body, _) = *ctx.kernel.expr_node(walked) else {
+            return Err(ReconstructError::KernelRejected {
+                rule: "specialize_at_eq".to_owned(),
+                detail: format!(
+                    "the setoid statement runs out of binders after {} of {}",
+                    supplied_domains.len(),
+                    arguments.len()
+                ),
+            });
+        };
+        supplied_domains.push(domain);
+        walked = ctx.kernel.instantiate(body, &[*argument]);
+    }
+    let slot_end = RING_SYMBOL_BINDERS + EQUALITY_SLOT_BINDERS;
+    let compared: Vec<(usize, ExprId, ExprId)> = supplied_domains
+        .iter()
+        .enumerate()
+        .filter(|(position, _)| *position < RING_SYMBOL_BINDERS || *position >= slot_end)
+        .zip(binder_tys.iter())
+        .map(|((position, &got), &expected)| (position, expected, got))
+        .collect();
+    let mut binder_type_mismatches = Vec::new();
+    for &(position, expected, got) in &compared {
+        if expected != got {
+            let expected = ctx.kernel.render_lean(expected);
+            let got = ctx.kernel.render_lean(got);
+            binder_type_mismatches.push(format!(
+                "{}: {expected} | {got}",
+                SETOID_RING_BINDER_NAMES
+                    .get(position)
+                    .copied()
+                    .unwrap_or("?")
+            ));
+        }
+    }
+    let binder_types_reproduced = compared.len() - binder_type_mismatches.len();
+
+    let statement = ctx
+        .kernel
+        .infer(term)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "specialize_at_eq".to_owned(),
+            detail: format!("the specialization at `Eq` does not infer: {e:?}"),
+        })?;
+    let theorem = ctx.fresh_name("setoid_specialized_at_eq");
+    ctx.kernel
+        .add_declaration(Declaration::Theorem {
+            name: theorem,
+            uparams: vec![],
+            ty: statement,
+            value: term,
+        })
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "specialize_at_eq".to_owned(),
+            detail: format!("the specialization at `Eq` did not admit: {e:?}"),
+        })?;
+
+    Ok(EqSpecialization {
+        term,
+        statement,
+        reference: reference.statement,
+        reproduces_reference: statement == reference.statement
+            && binder_type_mismatches.is_empty()
+            // A vacuous comparison would otherwise report success: if the two
+            // telescopes stopped lining up, `zip` would silently compare a
+            // prefix.
+            && binder_types_reproduced == reference.ring_binders,
+        binder_type_mismatches,
+        binder_types_reproduced,
+        statement_rendered: ctx.kernel.render_lean(statement),
+        reference_rendered: ctx.kernel.render_lean(reference.statement),
+        theorem,
+        footprint: footprint(&ctx.kernel, theorem),
+        setoid_residual_eq: residual_eq_constants(ctx, setoid.term),
+    })
+}
+
+/// Which of the kernel's own equality constants a term still mentions, rendered
+/// and deduplicated.
+///
+/// Scans for `Eq`, `Eq.refl` and `Eq.rec` — the inductive, its constructor and
+/// its recursor. A proof built through the equality slot mentions none of them at
+/// the carrier; one that skipped a helper mentions at least `Eq.rec`.
+#[must_use]
+pub fn residual_eq_constants(ctx: &LraReconstructCtx, expr: ExprId) -> Vec<String> {
+    let logic = ctx.arith.logic;
+    let targets = [logic.eq, logic.eq_refl, logic.eq_rec];
+    let mut found: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let mut seen: std::collections::BTreeSet<ExprId> = std::collections::BTreeSet::new();
+    let mut stack = vec![expr];
+    while let Some(node) = stack.pop() {
+        if !seen.insert(node) {
+            continue;
+        }
+        match *ctx.kernel.expr_node(node) {
+            ExprNode::Const(name, _) => {
+                if targets.contains(&name) {
+                    found.insert(ctx.kernel.display_name(name).to_string());
+                }
+            }
+            ExprNode::App(a, b) => {
+                stack.push(a);
+                stack.push(b);
+            }
+            ExprNode::Proj(_, _, inner) => stack.push(inner),
+            ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                stack.push(ty);
+                stack.push(body);
+            }
+            ExprNode::Let(_, ty, value, body) => {
+                stack.push(ty);
+                stack.push(value);
+                stack.push(body);
+            }
+            ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Sort(_) | ExprNode::Lit(_) => {}
+        }
+    }
+    found.into_iter().collect()
 }
 
 #[cfg(test)]

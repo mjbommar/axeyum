@@ -251,3 +251,186 @@ fn the_ring_telescope_is_every_real_declaration() {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// ADR-0468 phase R3: the equality slot.
+// ---------------------------------------------------------------------------
+
+/// Reconstruct `fixture` twice in one context — once with the kernel's `Eq`,
+/// once with the equality slot — generalize each, and specialize the setoid form
+/// back at `Eq`.
+///
+/// One context deliberately: the two statements are then interned in the same
+/// kernel, so comparing them is an [`ExprId`] equality (structural identity, no
+/// rendering and no definitional-equality check that could accept a reshaped
+/// statement).
+fn round_trip(
+    fixture: (TermArena, Vec<TermId>),
+) -> (
+    LraReconstructCtx,
+    super::OrderedRingRefutation,
+    super::OrderedRingRefutation,
+    super::EqSpecialization,
+) {
+    let (arena, assertions) = fixture;
+    let mut ctx = LraReconstructCtx::new();
+    let eq_proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs");
+    let full = generalize_over_ordered_ring(&mut ctx, eq_proof, RingTelescope::FullInterface)
+        .expect("the Eq-shaped refutation generalizes");
+    ctx.enable_setoid_equality()
+        .expect("the equality slot declares");
+    let setoid_proof =
+        reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs again");
+    let setoid =
+        generalize_over_ordered_ring(&mut ctx, setoid_proof, RingTelescope::SetoidInterface)
+            .expect("the setoid refutation generalizes");
+    let specialized =
+        super::specialize_setoid_to_eq(&mut ctx, &setoid, &full).expect("specializes at Eq");
+    (ctx, full, setoid, specialized)
+}
+
+/// **The R3 result.** The 39-binder setoid statement, instantiated at `Eq`,
+/// is the very expression the 30-binder statement already is — not merely
+/// definitionally equal to it.
+///
+/// This is what makes widening the interface a *generalization* rather than a
+/// silent change of claim: if the rewrite through `eq` had reshaped a law, the
+/// specialization would still typecheck (the kernel normalizes) and would still
+/// be axiom-free, and only this identity would notice.
+#[test]
+fn the_setoid_telescope_specializes_back_to_todays_statement() {
+    for fixture in [baby_farkas(), general_farkas()] {
+        let (ctx, full, setoid, specialized) = round_trip(fixture);
+        assert_eq!(
+            full.ring_binders,
+            RING_BINDER_NAMES.len(),
+            "the Eq-shaped telescope is no longer 30"
+        );
+        assert_eq!(
+            setoid.ring_binders,
+            super::SETOID_RING_BINDERS,
+            "the setoid telescope is not 39"
+        );
+        assert_eq!(
+            setoid.ring_binders,
+            full.ring_binders + super::EQUALITY_SLOT_BINDERS,
+            "the equality slot did not widen the interface, so reproducing the statement \
+             would be the trivial claim that 30 binders reproduce 30 binders"
+        );
+        assert!(
+            specialized.reproduces_reference,
+            "instantiating the setoid telescope at Eq did not reproduce today's statement\n\
+             at Eq : {}\ntoday : {}",
+            specialized.statement_rendered, specialized.reference_rendered
+        );
+        assert!(
+            specialized.binder_type_mismatches.is_empty(),
+            "a binder type did not come back verbatim: {:?}",
+            specialized.binder_type_mismatches
+        );
+        assert_eq!(
+            specialized.binder_types_reproduced, full.ring_binders,
+            "the two telescopes did not line up over all {} non-slot positions, so the \
+             comparison above only covered a prefix",
+            full.ring_binders
+        );
+        assert!(
+            specialized.footprint.is_empty(),
+            "the specialization rests on {:?}",
+            specialized.footprint
+        );
+        drop(ctx);
+    }
+}
+
+/// The setoid-generalized statement assumes nothing — the same measurement the
+/// `Eq`-shaped form already passes, re-run over 39 binders instead of 30.
+#[test]
+fn the_setoid_generalization_is_axiom_free() {
+    let (_ctx, _full, setoid, _specialized) = round_trip(general_farkas());
+    assert!(
+        setoid.footprint.is_empty(),
+        "the setoid generalization rests on {:?}",
+        setoid.footprint
+    );
+    assert!(
+        !setoid.original_footprint.is_empty(),
+        "the negative control is empty, so the measurement above is vacuous"
+    );
+}
+
+/// The setoid proof mentions **no** kernel `Eq` constant, and the `Eq`-shaped
+/// proof of the same query mentions several.
+///
+/// The second half is the control that makes the first half a measurement.
+/// `Eq`, `Eq.refl` and `Eq.rec` are an inductive, a constructor and a recursor,
+/// not axioms, so a proof that kept using them still generalizes to an
+/// axiom-free 39-binder theorem — every other number in this module still reads
+/// as success — while being uninstantiable at a carrier whose equality is a
+/// defined relation, which is the whole point of the slot.
+#[test]
+fn the_setoid_proof_mentions_no_kernel_equality_and_the_eq_proof_does() {
+    let (arena, assertions) = general_farkas();
+    let mut ctx = LraReconstructCtx::new();
+    let eq_proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs");
+    let with_eq = super::residual_eq_constants(&ctx, eq_proof);
+    ctx.enable_setoid_equality()
+        .expect("the equality slot declares");
+    let setoid_proof =
+        reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs again");
+    let with_slot = super::residual_eq_constants(&ctx, setoid_proof);
+
+    assert!(
+        !with_eq.is_empty(),
+        "the Eq-shaped proof mentions no equality constant, so the scanner cannot \
+         distinguish the two modes and the assertion below proves nothing"
+    );
+    assert!(
+        with_slot.is_empty(),
+        "the setoid proof still mentions {with_slot:?}"
+    );
+}
+
+/// The setoid telescope requires the slot to have been declared **before**
+/// reconstruction. Asking for it over an `Eq`-shaped proof is refused rather
+/// than generalized over the wrong thing.
+#[test]
+fn the_setoid_telescope_refuses_an_eq_shaped_proof() {
+    let (arena, assertions) = baby_farkas();
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs");
+    let refused = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::SetoidInterface);
+    assert!(
+        refused.is_err(),
+        "a proof built against `Eq` was generalized over the setoid telescope"
+    );
+
+    // And once the slot exists, the OLD proof is still refused — it rests on the
+    // Eq-shaped `Real` laws, which the setoid telescope does not bind.
+    ctx.enable_setoid_equality()
+        .expect("the equality slot declares");
+    let still_refused =
+        generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::SetoidInterface);
+    assert!(
+        still_refused.is_err(),
+        "declaring the slot made an Eq-shaped proof look setoid-shaped"
+    );
+}
+
+/// The setoid telescope is exactly the `Eq`-shaped one with nine positions
+/// added, and the 22 laws keep their relative order — which is what lets the
+/// specialization hand the law binders through positionally rather than by name.
+#[test]
+fn the_setoid_binder_table_extends_the_eq_shaped_one() {
+    assert_eq!(super::SETOID_RING_BINDER_NAMES.len(), 39);
+    assert_eq!(
+        &super::SETOID_RING_BINDER_NAMES[..RING_SYMBOL_BINDERS],
+        &RING_BINDER_NAMES[..RING_SYMBOL_BINDERS],
+        "the eight carrier/operation binders moved"
+    );
+    assert_eq!(
+        &super::SETOID_RING_BINDER_NAMES[RING_SYMBOL_BINDERS + super::EQUALITY_SLOT_BINDERS..],
+        &RING_BINDER_NAMES[RING_SYMBOL_BINDERS..],
+        "the 22 law binders are not in the same order in both telescopes"
+    );
+}
