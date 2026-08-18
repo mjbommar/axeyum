@@ -47,7 +47,9 @@
 
 use std::collections::HashMap;
 
-use axeyum_lean_kernel::{BinderInfo, Declaration, ExprId, ExprNode, Kernel, NameId};
+use axeyum_lean_kernel::{
+    BinderInfo, Declaration, ExprId, ExprNode, Kernel, NameId, build_int_model_of_arith,
+};
 
 use super::{LraReconstructCtx, ReconstructError};
 
@@ -166,6 +168,21 @@ pub struct OrderedRingRefutation {
     pub original: NameId,
     /// `Kernel::axiom_footprint` of [`Self::original`], rendered.
     pub original_footprint: Vec<String>,
+    /// The abstracted ring declarations, **in application order** — the
+    /// arguments [`Self::theorem`] expects *before* its variable and hypothesis
+    /// binders, and only those.
+    ///
+    /// Deliberately not the whole abstraction telescope: that also carries one
+    /// entry per variable and per asserted constraint, which no model of the
+    /// ring laws interprets. Getting this wrong is caught rather than papered
+    /// over — [`instantiate_at_int_model`] refused with "the refutation
+    /// abstracts `axeyum.reconstruct.lra.x.0`, which the integer model does not
+    /// interpret".
+    ///
+    /// Exposed so a consumer can instantiate at a model other than `Real`. That
+    /// is the whole point of generalizing: [`instantiate_at_int_model`] supplies
+    /// `ℤ` instead, and nothing about the construction is `Real`-specific.
+    pub ring_names: Vec<NameId>,
 }
 
 impl OrderedRingRefutation {
@@ -415,6 +432,7 @@ pub fn generalize_over_ordered_ring(
 
     Ok(OrderedRingRefutation {
         scope,
+        ring_names: ring.iter().map(|&(name, _)| name).collect(),
         theorem,
         term,
         statement,
@@ -454,6 +472,134 @@ pub fn render_ordered_ring_module(
 }
 
 /// The 30 `Real` declarations in declaration (= dependency) order.
+/// The same refutation, as a theorem about the **integers**.
+///
+/// [`generalize_over_ordered_ring`] abstracts a `Real` Farkas refutation over
+/// the 22 laws of an ordered commutative ring, leaving an axiom-free theorem
+/// that holds in *any* model of those laws. `Real` is then one instantiation of
+/// it. So is `ℤ`: `build_int_model_of_arith` exhibits the integers as a model of
+/// all 22, every witness with an **empty** axiom footprint.
+///
+/// This applies the generalized theorem to that model and stops there — the ring
+/// interface is supplied, the variable and hypothesis binders are left bound. So
+/// the result is not `False`; it is
+///
+/// ```text
+/// ∀ (x₀ … x_{n-1} : Int), <the constraints, over Int> → False
+/// ```
+///
+/// which is the refutation restated over `ℤ`. Nothing is relaxed and no
+/// embedding is involved: a Farkas combination uses only ring operations and
+/// order, never division, which is exactly why the abstraction was possible.
+///
+/// # Why this is worth having
+///
+/// A conjunctive integer system whose rational relaxation is already infeasible
+/// —  `x > 5 ∧ x < 3`, or `x - y ≤ 1 ∧ y - x ≤ -3` — has an ordinary Farkas
+/// refutation, but measured 2026-08-17 every such query routed to `ArithDpll`
+/// and rendered a structural attestation: an `axiom P` / `axiom ¬P` shim
+/// containing none of the reasoning. The proof existed; only a `Real`-shaped
+/// destination for it did.
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if the model cannot be built, if a name
+/// the refutation abstracted has no interpretation in it, or if the kernel
+/// refuses the application — which is where a mismatch between the abstracted
+/// telescope and the model's coverage would surface, rather than being papered
+/// over.
+pub fn instantiate_at_int_model(
+    ctx: &mut LraReconstructCtx,
+    refutation: &OrderedRingRefutation,
+) -> Result<IntInstantiation, ReconstructError> {
+    let model = build_int_model_of_arith(&mut ctx.kernel).map_err(|e| {
+        ReconstructError::KernelRejected {
+            rule: "instantiate_at_int".to_owned(),
+            detail: format!("the integer model of the ordered ring did not build: {e:?}"),
+        }
+    })?;
+
+    // `Real` name -> what `ℤ` supplies for it: the interpreted symbol for the
+    // eight carrier/operation constants, the checked witness for each law.
+    let mut interpretation: HashMap<NameId, NameId> = HashMap::new();
+    for &(real, int) in &model.symbols {
+        interpretation.insert(real, int);
+    }
+    for law in &model.laws {
+        interpretation.insert(law.real, law.witness);
+    }
+
+    let mut applied = ctx.kernel.const_(refutation.theorem, vec![]);
+    for &name in &refutation.ring_names {
+        let Some(&replacement) = interpretation.get(&name) else {
+            // Not a failure to route around: the telescope abstracted something
+            // the model does not interpret, so `ℤ` has not been shown to satisfy
+            // it and the instantiation would be unjustified.
+            return Err(ReconstructError::KernelRejected {
+                rule: "instantiate_at_int".to_owned(),
+                detail: format!(
+                    "the refutation abstracts `{}`, which the integer model does not interpret",
+                    ctx.kernel.display_name(name)
+                ),
+            });
+        };
+        let argument = ctx.kernel.const_(replacement, vec![]);
+        applied = ctx.kernel.app(applied, argument);
+    }
+
+    // The kernel computes the statement; we do not state it. A wrong argument
+    // order or a mis-mapped law fails here.
+    let statement = ctx
+        .kernel
+        .infer(applied)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "instantiate_at_int".to_owned(),
+            detail: format!("the integer instantiation does not infer: {e:?}"),
+        })?;
+    let theorem = ctx.fresh_name("instantiated_at_int");
+    ctx.kernel
+        .add_declaration(Declaration::Theorem {
+            name: theorem,
+            uparams: vec![],
+            ty: statement,
+            value: applied,
+        })
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "instantiate_at_int".to_owned(),
+            detail: format!("the integer instantiation did not admit: {e:?}"),
+        })?;
+
+    let axiom_footprint = footprint(&ctx.kernel, theorem);
+    Ok(IntInstantiation {
+        theorem,
+        statement,
+        axiom_footprint,
+        laws_modelled: model.laws.len(),
+        symbols_interpreted: model.symbols.len(),
+    })
+}
+
+/// A generalized refutation, instantiated at the integers.
+#[derive(Debug, Clone)]
+pub struct IntInstantiation {
+    /// The admitted theorem: the refutation's constraints over `Int` imply
+    /// `False`.
+    pub theorem: NameId,
+    /// Its type, as the kernel inferred it.
+    pub statement: ExprId,
+    /// `Kernel::axiom_footprint` of [`Self::theorem`], rendered.
+    ///
+    /// **Expected to be empty.** The generalized theorem is axiom-free, and
+    /// every law witness the integer model supplies has an empty footprint too,
+    /// so the composite rests on nothing. A non-empty footprint here is a
+    /// finding, not a formality: it means `ℤ` is carrying an assumption.
+    pub axiom_footprint: Vec<String>,
+    /// How many laws the model discharged (22 for the ordered-ring interface).
+    pub laws_modelled: usize,
+    /// How many carrier/operation symbols it interpreted (8).
+    pub symbols_interpreted: usize,
+}
+
 fn ring_telescope(arith: &axeyum_lean_kernel::ArithPrelude) -> [NameId; 30] {
     [
         arith.r,

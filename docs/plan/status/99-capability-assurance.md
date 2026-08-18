@@ -48,8 +48,22 @@ one shape, so propositional was the seventh case of an accepted pattern.
 a bool; `propositional_interpolant_certified` returns them. drat-trim accepts
 both, including on a PHP(3,2) partition needing real resolution.
 
-**Next.** Band 1 holds only `QF_IDL`, which needs a theory reconstruction for
-`ArithDpll` — research, not plumbing. The cheap half of the ranking is done. Then items A (generate the table) and C (explicit
+**Next.** Band 1 holds only `QF_IDL`. Chasing it turned up something larger: a
+conjunctive integer system whose *rational* relaxation is already infeasible
+(`x > 5 ∧ x < 3`, `x - y ≤ 1 ∧ y - x ≤ -3`) has an ordinary Farkas refutation,
+yet every such query routes to `ArithDpll` and renders a structural attestation
+— an `axiom P` / `axiom ¬P` shim carrying none of the reasoning. The proof
+existed; only a `Real`-shaped destination for it did.
+
+`instantiate_at_int_model` supplies the destination. `generalize_over_ordered_ring`
+already abstracts a Farkas refutation over the 22 ordered-ring laws (axiom-free),
+and `build_int_model_of_arith` already exhibits ℤ as a model of all 22 with empty
+witness footprints; nothing had ever instantiated at it. Measured, `x+y+z ≤ 1 ∧
+1 ≤ x,y,z` becomes a kernel-checked theorem over `Int` with **an empty axiom
+footprint**.
+
+Not yet wired into dispatch, and deliberately no capability row until it is —
+the same gate-first discipline QF_RDL followed. That wiring is the next slice. Then items A (generate the table) and C (explicit
 "decided, not certified" status), which are the real fix: this checker is a
 heuristic over prose and says so.
 
@@ -65,3 +79,4 @@ heuristic over prose and says so.
 | 2026-08-17 | `pending` | `SAT` closed: `propositional_interpolant_certified` returns the two DRAT refutations `verify_interpolant` already built and threw away; drat-trim accepts both, on PHP(3,2) as well as the trivial case. 12 → **13 of 23 logics**, floor 38, band 1 down to `QF_IDL` alone. One control was written, found vacuous (both proofs are the single step `0`), and replaced with one that discriminates. |
 | 2026-08-17 | `pending` | Item A's minimum landed: `check-capability-routes.py` requires every function the table names to exist (42 routes, 0 missing — a ratchet, not a repair). The naive version's two false positives (`(vocabulary)` is prose, `(nia_square)` is a `mod`) are pinned as controls. |
 | 2026-08-17 | `pending` | Item C: `Capability.checked_by` states who checks each artifact (+ a **Checked by** column in the matrix), replacing the prose regex. Reading all 15 unclassified rows showed the bucket was a regex gap, not a real category — 14 were self-checks phrased "re-checked"/"VERIFY-BEFORE-RETURN". Heuristic kept only as an asymmetric cross-check (claiming external with no checker named fails). Headline unmoved at 38 / 13 of 23; unclassified 15 → 0. |
+| 2026-08-17 | `pending` | `instantiate_at_int_model`: a Farkas refutation, generalized over the ordered ring, instantiated at ℤ — `∀ (x0 x1 x2 : Int), … → False`, kernel-checked, **axiom footprint empty**. The machinery for both halves existed; nothing had joined them. Not yet dispatched, so no capability row. Controls: the statement is asserted to mention `Int`, conclude `False`, and keep 3 variables + 4 hypotheses, since an empty footprint on a vacuous statement proves nothing. |

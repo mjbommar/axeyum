@@ -57,8 +57,8 @@ mod quantifier;
 mod resolution;
 
 pub use arithmetic::ordered_ring::{
-    OrderedRingRefutation, RING_LAW_BINDERS, RING_SYMBOL_BINDERS, RingTelescope,
-    generalize_over_ordered_ring, render_ordered_ring_module,
+    IntInstantiation, OrderedRingRefutation, RING_LAW_BINDERS, RING_SYMBOL_BINDERS, RingTelescope,
+    generalize_over_ordered_ring, instantiate_at_int_model, render_ordered_ring_module,
 };
 pub use arithmetic::{LraReconstructCtx, reconstruct_lra_proof, reconstruct_sos_proof};
 pub use bitblast::{
