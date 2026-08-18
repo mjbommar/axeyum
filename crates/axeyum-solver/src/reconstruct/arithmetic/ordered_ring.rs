@@ -985,8 +985,16 @@ pub struct RingInterfaceBinder {
 /// # Errors
 ///
 /// [`ReconstructError::KernelRejected`] if one of the 30 declarations is not in
-/// `kernel`'s environment. Call [`RingSignature::validate_in`] first if you also
-/// want the shapes checked.
+/// `kernel`'s environment.
+///
+/// That guard is **narrow, and deliberately not claimed to be more**: a
+/// [`NameId`] is an index, so a signature carried into a *different, populated*
+/// kernel does not go missing — it resolves to whatever declarations sit at
+/// those indices. Measured while writing the test for this: the `Real` signature
+/// read against a kernel carrying the `Int` development produced 30 well-formed
+/// binders sourced from `Nat.le`, `Nat.beq_refl`, `Nat.pow_succ`, … and no
+/// error. Call [`RingSignature::validate_in`] first if you need to know that the
+/// names mean what they say.
 pub fn ring_interface_telescope(
     kernel: &mut Kernel,
     signature: &RingSignature,
@@ -1001,8 +1009,8 @@ pub fn ring_interface_telescope(
             .ok_or_else(|| ReconstructError::KernelRejected {
                 rule: "ring_interface_telescope".to_owned(),
                 detail: format!(
-                    "interface entry `{}` is not in the environment",
-                    kernel.display_name(name)
+                    "interface entry #{position} (`{}`) is not in this environment",
+                    RING_BINDER_NAMES[position]
                 ),
             })?;
         let source = kernel.display_name(name).to_string();

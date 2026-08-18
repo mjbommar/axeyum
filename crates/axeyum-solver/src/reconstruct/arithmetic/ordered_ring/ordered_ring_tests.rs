@@ -597,21 +597,29 @@ fn the_interface_is_the_same_statements_over_real_and_over_int() {
 
 /// The presence guard: a signature naming a declaration that is not in the
 /// environment is refused, rather than producing a telescope with a hole in it.
+///
+/// The empty kernel is not an arbitrary choice of "foreign environment". A
+/// [`NameId`](axeyum_lean_kernel::NameId) is an **index**, so a signature
+/// carried into a *populated* other kernel resolves silently to whatever
+/// declarations happen to sit at those indices — measured while writing this
+/// test, the `Real` signature read against a kernel carrying the `Int`
+/// development produced 30 well-formed binders sourced from `Nat.le`,
+/// `Nat.beq_refl`, `Nat.pow_succ`, … and no error at all. Presence cannot see
+/// that; [`RingSignature::validate_in`] is the guard that can, and this guard
+/// only claims the narrower thing.
 #[test]
 fn the_interface_telescope_refuses_a_signature_the_environment_does_not_carry() {
-    use axeyum_lean_kernel::{Kernel, build_arith_prelude, build_int_prelude};
+    use axeyum_lean_kernel::{Kernel, build_arith_prelude};
 
     let mut real_kernel = Kernel::new();
     let arith = build_arith_prelude(&mut real_kernel).expect("the Real package builds");
-    let mut foreign = Kernel::new();
-    let _ = build_int_prelude(&mut foreign).expect("the Int development builds");
+    let mut empty = Kernel::new();
 
-    // `RingSignature::from(arith)` names `Real.*`; `foreign` has no such names.
-    let err = super::ring_interface_telescope(&mut foreign, &RingSignature::from(arith))
-        .expect_err("a signature from another environment must be refused");
+    let err = super::ring_interface_telescope(&mut empty, &RingSignature::from(arith))
+        .expect_err("a signature the environment does not carry must be refused");
     let rendered = format!("{err:?}");
     assert!(
-        rendered.contains("is not in the environment"),
+        rendered.contains("is not in this environment"),
         "the refusal must name the missing entry: {rendered}"
     );
 }
