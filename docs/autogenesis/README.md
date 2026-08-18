@@ -145,14 +145,22 @@ The reviewed [`operations.json`](../../artifacts/autogenesis/operations.json)
 names both the fixture-only Nat producer/checker and the first authoritative
 QF_NIA certificate operation. The latter is source-bound, narrow, and carries
 a non-empty SMT trust footprint rather than impersonating a kernel theorem.
-Selection and typed execution are therefore real. The executor binds a clean
-commit, frontier, registry, fact, source bytes, budget, and independently
-rechecked result; the transaction adapter derives the complete proposed fact
-delta and its replay checker without caller-authored metadata. Authoritative
-ledger writes remain zero until that prepared transaction crosses ADR-0468's
-compare-and-swap boundary. The selected fact unlocks no descendant, so this
-validates admission infrastructure without receiving Autogenesis-1 compounding
-credit.
+Selection, typed execution, admission, and recovery are therefore real. The
+executor binds a clean commit, frontier, registry, fact, source bytes, budget,
+and independently rechecked result; the transaction adapter derives the
+complete fact delta and replay checker without caller-authored metadata. The
+first production compare-and-swap intentionally stopped after durable intent,
+left the fact unchanged, then recovered to a durable event. Its event-triggered
+frontier delta honestly records `newly_ready: []`.
+
+At exact pushed commit `f8651ec98`, a second isolated clean worktree reconstructed
+the historical open row and freshly repeated selection, certified execution,
+transaction preparation, the same intent fault, recovery, settled-fact replay,
+and readiness derivation. The complete external bundle at
+`/nas3/data/axeyum/autogenesis/replays/f8651ec98/` has replay digest
+`7dc1ad8dc336ac0ea295a3a0b912f89f415787c0b78c61c54624a791f1800e4b`.
+This closes clean authoritative **leaf** reproduction. The selected fact unlocks
+no descendant, so it still receives no Autogenesis-1 compounding credit.
 
 ## Phase summary
 

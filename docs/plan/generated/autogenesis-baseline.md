@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:5bc6e2b1764441a3df255882e9f04e753c943bc2455d149a421e6a7ccd4458a2`
+Source identity: `sha256:dfa4ad0c5bc91d798137a6b38470914d38c1e5f4128ec825c9313e8a0777aeaa`
 
 ## Ledger and chain substrate
 
@@ -31,7 +31,7 @@ the remaining facts stay explicit rather than being guessed.
 | `A1-typed-dispatch-evidence` | authoritative | the authoritative registry fixed the driver, input, budget, expected label, and footprint; execution, transaction preparation, admission, and settled-fact replay completed without caller-authored metadata | repeat with a second operation family and a dependent consequent |
 | `A1-atomic-admission` | authoritative | one real selected fact recovered from an intentional post-intent stop through compare-and-swap, fsynced journal, atomic replacement, and durable event | reproduce the accepted acquisition from a second clean checkout |
 | `A1-admission-triggered-retry` | authoritative-leaf | the durable authoritative event binds exact before/after frontiers; the admitted leaf leaves newly_ready empty rather than manufacturing an unlock | repeat against an authoritative B-to-A edge and schedule A only from the event-derived delta |
-| `A1-clean-reproduction` | fixture | retained exact-commit command regenerates B, transaction, event, readiness, pre-A failure, and post-B success | repeat the same replay for an authoritative acquisition |
+| `A1-clean-reproduction` | authoritative-leaf | a second isolated clean checkout reproduced selection, certified execution, intent-fault recovery, authoritative admission, settled-fact replay, and the honest empty leaf readiness delta | extend the same replay boundary through an authoritative B-to-A acquisition |
 
 ## Manual seams
 
@@ -45,7 +45,7 @@ the remaining facts stay explicit rather than being guessed.
 | `ledger-transition` | authoritative | transactional closer | one authoritative compare-and-swap recovered from a durable intent; multi-fact admission remains deferred | `scripts/apply-autogenesis-fact-transaction.py` |
 | `dependency-derivation` | partial | kernel dependency inventory | kernel facts are covered where checker commands name the theorem; other routes are authored | `scripts/check-fact-depends-derived.py` |
 | `accepted-transition-event` | authoritative-leaf | episode/orchestrator | the first durable authoritative event recomputed the frontier and honestly unlocked nothing; a real B-to-A retry remains | `scripts/create-autogenesis-readiness-delta.py` |
-| `clean-replay` | fixture | episode replay | exact-commit fixture replay exists; authoritative acquisition replay remains | `scripts/replay-autogenesis-apply-experiment.sh` |
+| `clean-replay` | authoritative-leaf | episode replay | one authoritative leaf acquisition reproduces from a clean isolated checkout; the B-to-A episode remains | `scripts/replay-autogenesis-authoritative-admission.sh` |
 
 ## Proof-production context
 

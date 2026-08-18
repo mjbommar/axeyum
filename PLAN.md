@@ -161,6 +161,8 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `2abe2652d..a90255a92` | Programme through typed fixture operation replay. |
 | 2026-08-18 | `5c38bf95d` | First authoritative registered evidence route; exact machine frontier selects one matching open fact. |
 | 2026-08-18 | `dbd6f3e00..5ac434ef9` | Typed execution receipt and prepared authoritative transaction replayed; zero live writes. |
+| 2026-08-18 | `313203bd4..f6e59f87b` | First authoritative fact admitted and recovered; durable event recomputed an honest empty readiness delta. |
+| 2026-08-18 | `f8651ec98` | Second isolated clean worktree reproduced selection, certified execution, crash recovery, admission, and leaf readiness; external bundle retained. |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
@@ -188,14 +190,16 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Phase 0 WIP.** Exact pushed commit `5ac434ef9` replays the selected
-`F:no-integer-square-is-minus-one` operation and derives the first complete
-authoritative fact transaction without caller-authored status, route, evidence,
-footprint, checker, artifact, or shell text. Exact-transaction fault controls
-converge after all three durable boundaries. Next: production compare-and-swap,
-durable-event recovery, fact replay, and frontier recomputation. This fact
-unlocks no descendant, so it validates admission infrastructure but does not
-replace the required B -> A compounding chain.
+**Phase 0 WIP.** Exact pushed commit `f6e59f87b` contains the first real
+authoritative admission. It selected and proved
+`F:no-integer-square-is-minus-one`, stopped after durable intent with the fact
+unchanged, recovered through compare-and-swap, replayed the settled operation,
+and derived an event-bound readiness delta with `newly_ready: []`. Exact pushed
+commit `f8651ec98` then reproduced the acquisition from a second isolated clean
+worktree; retained replay `7dc1ad8d...` passed every semantic identity and
+fault-recovery check. Next: qualify and register a proof-derived B -> A chain,
+then extend this same boundary through both admissions. The leaf validates the
+infrastructure but receives no Autogenesis-1 compounding credit.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

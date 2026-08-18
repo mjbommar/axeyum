@@ -150,11 +150,11 @@ SEAMS = (
     },
     {
         "id": "clean-replay",
-        "state": "fixture",
+        "state": "authoritative-leaf",
         "owner": "episode replay",
-        "source": "scripts/replay-autogenesis-apply-experiment.sh",
-        "marker": "Replay a retained Autogenesis apply experiment",
-        "gap": "exact-commit fixture replay exists; authoritative acquisition replay remains",
+        "source": "scripts/replay-autogenesis-authoritative-admission.sh",
+        "marker": "isolated clean worktree",
+        "gap": "one authoritative leaf acquisition reproduces from a clean isolated checkout; the B-to-A episode remains",
     },
 )
 
@@ -395,8 +395,8 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
         {
             "id": "A1-clean-reproduction",
             "state": seam_state.get("clean-replay", "missing"),
-            "evidence": "retained exact-commit command regenerates B, transaction, event, readiness, pre-A failure, and post-B success",
-            "next": "repeat the same replay for an authoritative acquisition",
+            "evidence": "a second isolated clean checkout reproduced selection, certified execution, intent-fault recovery, authoritative admission, settled-fact replay, and the honest empty leaf readiness delta",
+            "next": "extend the same replay boundary through an authoritative B-to-A acquisition",
         },
     ]
 

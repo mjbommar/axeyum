@@ -102,7 +102,9 @@ terms, but no typed orchestration language for operations such as:
 - compose all subproofs into one kernel term.
 
 Without this layer, complex reasoning remains either monolithic solver dispatch
-or handwritten kernel-term construction.
+or handwritten kernel-term construction. One narrow registered QF_NIA operation
+now exercises the typed authoritative path end to end; it is a route instance,
+not yet the general orchestration language described above.
 
 ### Autonomous closure transaction
 
@@ -115,7 +117,7 @@ checker commands, but it does not itself:
 - derive the proof route and footprint;
 - stage the transition as a portable proposal;
 - retry dependents; or
-- prove that a clean environment reproduces the acquisition.
+- prove that a clean environment reproduces a multi-fact acquisition.
 
 ### Capability-learning substrate
 
@@ -128,7 +130,7 @@ do not capture the reasoning state that preceded a result.
 
 | Desired future state | Current state | Missing bridge |
 |---|---|---|
-| One autonomous verified theorem | Selection and closure exist separately | Transactional orchestrator plus episode artifact |
+| One autonomous verified theorem | One authoritative leaf was selected, proved, admitted, recovered, and cleanly reproduced | Generalize beyond one registered operation family |
 | Compounding theorem sequence | Ledger has few useful open dependency chains | Dense nursery, scheduler, retry-on-admission |
 | Heterogeneous proof planning | Route-specific dispatch and reconstruction | Typed proof-plan IR and obligation semantics |
 | Experience-driven improvement | Logs and Git history | Replayable episode corpus and immutable evaluation splits |
@@ -140,7 +142,7 @@ do not capture the reasoning state that preceded a result.
 
 | Existing component | Immediate engineering gap | Why it blocks the loop |
 |---|---|---|
-| `fact-frontier.py` | Durable application of its prepared transaction | The first authoritative operation now binds frontier, result, receipt, evidence row, footprint, and transaction identities without caller-authored metadata; production apply remains unexercised |
+| `fact-frontier.py` | Machine-readable selection of a proof-derived B -> A chain | The first authoritative leaf now binds and reproduces the whole transaction; no registered dependent chain is presently admissible |
 | Fact schema | Candidate/attempt identity is absent by design | Attempts and knowledge need separate schemas |
 | Solver `Evidence` | No route-neutral portable result envelope for closure | The closer cannot derive ledger evidence safely |
 | Reconstruction | No generic obligation-composition interface | Multi-step plans cannot become one kernel proof |

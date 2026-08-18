@@ -49,10 +49,10 @@
       "state": "authoritative-leaf"
     },
     {
-      "evidence": "retained exact-commit command regenerates B, transaction, event, readiness, pre-A failure, and post-B success",
+      "evidence": "a second isolated clean checkout reproduced selection, certified execution, intent-fault recovery, authoritative admission, settled-fact replay, and the honest empty leaf readiness delta",
       "id": "A1-clean-reproduction",
-      "next": "repeat the same replay for an authoritative acquisition",
-      "state": "fixture"
+      "next": "extend the same replay boundary through an authoritative B-to-A acquisition",
+      "state": "authoritative-leaf"
     }
   ],
   "contract": "internal-autogenesis-phase0",
@@ -644,11 +644,11 @@
       "state": "authoritative-leaf"
     },
     {
-      "gap": "exact-commit fixture replay exists; authoritative acquisition replay remains",
+      "gap": "one authoritative leaf acquisition reproduces from a clean isolated checkout; the B-to-A episode remains",
       "id": "clean-replay",
       "owner": "episode replay",
-      "source": "scripts/replay-autogenesis-apply-experiment.sh",
-      "state": "fixture"
+      "source": "scripts/replay-autogenesis-authoritative-admission.sh",
+      "state": "authoritative-leaf"
     }
   ],
   "proof_gap": {
@@ -666,7 +666,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "5bc6e2b1764441a3df255882e9f04e753c943bc2455d149a421e6a7ccd4458a2",
+    "digest": "dfa4ad0c5bc91d798137a6b38470914d38c1e5f4128ec825c9313e8a0777aeaa",
     "inputs": [
       {
         "bytes": 2892,
@@ -1364,9 +1364,9 @@
         "sha256": "4dd8164fc8a1e384cbb9686e1d380444018847ca85ebd5095566db4e3d49d73a"
       },
       {
-        "bytes": 25212,
+        "bytes": 25332,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "80c8a279391009afb79318bd62d01d1600e6902cd4e997f12981bf89df85efcb"
+        "sha256": "b772a970c151153e164d4d976005cf2cf02f65af760f111ae644a3af61a0d4f0"
       },
       {
         "bytes": 17112,
@@ -1387,6 +1387,11 @@
         "bytes": 14020,
         "path": "scripts/replay-autogenesis-apply-experiment.sh",
         "sha256": "afa2800620b4bc0b49826604f6c11e81e5669f6b209f3e6733fa53e8827192bb"
+      },
+      {
+        "bytes": 10184,
+        "path": "scripts/replay-autogenesis-authoritative-admission.sh",
+        "sha256": "27c2b6efd57159b9a03f02da835ce5764b71b6a86bd4509256c18b975d7faf93"
       },
       {
         "bytes": 4157,

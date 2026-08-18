@@ -300,11 +300,26 @@ and event publication converged to the same durable event
 `d49c31dd98eeee25e15aefff15039b15550ff89cee1be12b2878b87cb896838a`
 against temporary copies of that exact authoritative transaction.
 
-No live fact has been changed yet. This is the last pre-write checkpoint: the
-next step is one production compare-and-swap admission, recovery replay from its
-durable intent, post-write fact-operation replay, and frontier recomputation.
-Because the selected fact has no descendants, readiness must honestly report no
-new unlock; the separate B -> A chain remains required for Autogenesis-1.
+That last pre-write checkpoint has now crossed the real boundary. Production
+admission intentionally stopped after durable intent while the fact remained
+byte-identical, then recovered to event
+`234aa5bcd410270f9e65f866c605805ea1a1cd66150d4aea805102803adbe4d8`.
+The admitted fact passes its registered operation checker, and authoritative
+readiness delta
+`8aec041fb71702b16e42a1b611cf61276acf749be575e2599080b913e89b30ce`
+binds the reconstructed complete pre-ledger, unchanged registry, exact
+transaction/event, and post-ledger. It records one authoritative write and an
+honest empty unlock.
+
+Exact pushed commit `f8651ec98` then reproduced the acquisition independently
+in a disposable clean worktree. It reconstructed the historical open row,
+created a new clean baseline commit, freshly selected and executed the same
+registered operation, repeated the intent fault and recovery, and derived a new
+event and readiness delta. The complete external bundle is retained at
+`/nas3/data/axeyum/autogenesis/replays/f8651ec98/`; replay digest
+`7dc1ad8dc336ac0ea295a3a0b912f89f415787c0b78c61c54624a791f1800e4b`
+passes all ten semantic checks. This closes authoritative leaf reproduction,
+not the separate B -> A requirement for Autogenesis-1.
 
 ## Assumptions tested now
 
