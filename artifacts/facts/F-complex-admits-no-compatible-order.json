@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "F:complex-admits-no-compatible-order",
+  "title": "No relation on the constructed complex numbers satisfies seven of the Real package's ordered-ring laws",
+  "statement": "For every pair of relations le, lt on Complex, if le is reflexive, lt is irreflexive, le composes with lt on the left (lt_of_le_of_lt), le is additive (add_le_add), le respects Complex.Equiv on both sides (le_congr), every square is le-nonneg (sq_nonneg), and lt relates zero to one (zero_lt_one), then False. The witness is the imaginary unit: sq_nonneg I gives 0 <= I*I, Complex.I_sq rewrites that to 0 <= -1, add_le_add with le_refl 1 gives 1 <= 0, and lt_of_le_of_lt with 0 < 1 gives 1 < 1. The proof is a direct term with an empty axiom footprint -- no classical reasoning is used, and double-negation elimination does not exist in this kernel's logic prelude.",
+  "formal": {
+    "language": "lean4",
+    "statement": "Complex.no_compatible_order : forall (le lt : Complex -> Complex -> Prop), (forall x, le x x) -> (forall x, Not (lt x x)) -> (forall x y z, le x y -> lt y z -> lt x z) -> (forall x x2 y y2, le x x2 -> le y y2 -> le (Complex.add x y) (Complex.add x2 y2)) -> (forall a b c e, Complex.Equiv a b -> Complex.Equiv c e -> le a c -> le b e) -> (forall x, le Complex.zero (Complex.mul x x)) -> lt Complex.zero Complex.one -> False",
+    "fragment": "Complex",
+    "free_symbols": [
+      "Complex",
+      "Complex.Equiv",
+      "Complex.add",
+      "Complex.mul",
+      "Complex.neg",
+      "Complex.zero",
+      "Complex.one",
+      "Complex.I",
+      "Complex.I_sq"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:complex-ring-constructed-axiom-free"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "complex-no-order-theorem",
+      "kind": "kernel-term",
+      "supports": "Complex.no_compatible_order is a checked theorem -- not an axiom, not an opaque -- with an empty axiom footprint.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^Complex[.]no_compatible_order[[:space:]]+theorem[[:space:]]+-$'",
+      "notes": "The kind column distinguishes theorem from AXIOM/OPAQUE and the third column is the footprint, so an assumed version of this statement fails the row rather than passing it."
+    },
+    {
+      "id": "complex-i-sq-pins-the-witness",
+      "kind": "kernel-term",
+      "supports": "Complex.I_sq is a checked theorem, so the refutation's witness is a real one: without it Complex.I is unconstrained and I = 0 would satisfy every other law in the module.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^Complex[.]I_sq[[:space:]]+theorem[[:space:]]+-$'",
+      "notes": "Complex.ofReal_mul cannot pin I, because I is not in the image of ofReal. This is the only declaration that constrains it."
+    },
+    {
+      "id": "complex-no-order-declared",
+      "kind": "kernel-term",
+      "supports": "Neither Complex.le nor Complex.lt is declared, checked against the environment rather than inferred from the absence of the words in a source file -- the theorem and a declared order cannot both stand.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>&1) && printf '%s\\n' \"$out\" | grep -qE 'order refuted = true, order declared = none'",
+      "notes": "An omission and a refutation look identical from outside, which is the whole reason this row exists in addition to the theorem row. The example probes the environment for Complex.le and Complex.lt by name and exits non-zero if either is present; verified to fail when a Complex.le definition is added.",
+      "verified_negative": "Declaring Complex.le makes the example exit 1 and this command exit non-zero."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:complex-numbers",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:ordered-field",
+      "relation": "uses",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "axeyum-lean-kernel complex module (ADR-0472; agent-complex-foundation lane)",
+    "source": "the standard argument that a formally real field cannot contain a square root of -1, stated over this kernel's setoid equality"
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It does not say ℂ carries no order at all -- the lexicographic order on pairs is a perfectly good total order on Complex, and it satisfies le_refl, le_trans and add_le_add. It says no order is compatible with the RING structure, because sq_nonneg and zero_lt_one cannot both hold. Nor does it rule out CReal-valued statements about ℂ: Complex.normSq lands in CReal's existing nonneg cone (Complex.normSq_nonneg), which is available precisely because it is a statement about the components."
+}

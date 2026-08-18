@@ -54,6 +54,7 @@
 mod arith_model;
 mod arith_prelude;
 mod characterization;
+mod complex;
 mod creal;
 mod creal_model;
 mod env;
@@ -84,6 +85,7 @@ pub use characterization::{
     IntCharacterization, NatCharacterization, Weakening, build_characterization,
     build_characterization_with,
 };
+pub use complex::{ComplexPrelude, build_complex_prelude};
 pub use creal::{CRealPrelude, build_creal_prelude};
 pub use creal_model::{CRealModel, CRealModelLaw, build_creal_model_of_arith};
 pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};

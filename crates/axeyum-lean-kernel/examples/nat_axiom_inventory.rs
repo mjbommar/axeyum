@@ -58,12 +58,49 @@
 //! the constructed ℤ (`build_rat_prelude`), and it is enumerated as its own
 //! group for exactly the reason this file exists: a zero read off the
 //! `integer` row says nothing about the development built on top of it.
+//!
+//! # `real` here is the AXIOMATIZED package, not the constructed reals
+//!
+//! The `real=30` row is `build_arith_prelude` — the `Real` sort and its 22
+//! ordered-ring laws, *assumed*. The **constructed** ℝ (`CReal`, ADR-0468) and
+//! ℂ (`Complex`, ADR-0472) are different developments over different carriers,
+//! and until 2026-08-18 this example did not build either, so grepping its
+//! output for them returned an empty result that was indistinguishable from a
+//! strong negative one — the standing trap this file exists to rule out, one
+//! level further down.
+//!
+//! They are behind `--include-constructed` rather than always on, because
+//! together they cost about a minute of kernel type-checking and 58 facts run
+//! this example in their `checker_command`. Without the flag,
+//! `--require-axiom-free creal` is an **error**, not a silent pass:
+//!
+//! ```sh
+//! nat_axiom_inventory --include-constructed \
+//!   --require-axiom-free creal --require-axiom-free complex
+//! ```
+//!
+//! Measured 2026-08-18: `creal=0`, `complex=0`. The self-contained check with
+//! the discrimination and non-vacuity witnesses is
+//! `creal_setoid_witness` / `complex_ring_witness`; this row exists so the
+//! *inventory* covers them too.
+//!
+//! # Two numbers above are stale, and this example says so rather than quietly
+//!
+//! Re-measured on the same 2026-08-18 run: `integer=0` (not `1`) and
+//! `string=0` (not `1`). `integer` fell when the Int development was proved out
+//! and `string` when ADR-0469 made `append` a definition; the doc lines above
+//! were written before each. Nothing in the repository asserted either number —
+//! all 58 facts that run this example use `--require-axiom-free`, never
+//! `--expect-axioms` — so the drift went unnoticed in exactly the direction
+//! `--expect-axioms` exists to catch. The honest expectations today are
+//! `--expect-axioms real=30` and `--require-axiom-free` for every other group.
 
 use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
-    Declaration, Kernel, build_arith_prelude, build_int_prelude, build_logic_prelude,
-    build_nat_prelude, build_rat_prelude, build_string_prelude,
+    Declaration, Kernel, build_arith_prelude, build_complex_prelude, build_creal_prelude,
+    build_int_prelude, build_logic_prelude, build_nat_prelude, build_rat_prelude,
+    build_string_prelude,
 };
 
 fn hex(bytes: &[u8]) -> String {
@@ -76,6 +113,10 @@ fn hex(bytes: &[u8]) -> String {
     output
 }
 
+/// One inventory row: prelude label, declaration kind, name, and the
+/// canonical type rendered as Lean source.
+type Row = (String, String, String, String);
+
 /// Every declaration admitted **without** a checked proof body.
 ///
 /// `prelude_axiom_inventory` filters on `Declaration::Axiom` alone, but that is
@@ -84,7 +125,7 @@ fn hex(bytes: &[u8]) -> String {
 /// the three axioms Lean's own `#print axioms` reports. An `Axiom`-only count
 /// can therefore read zero while trusted declarations are present, which is the
 /// precise failure this example exists to rule out.
-fn inventory(prelude: &str, kernel: &Kernel) -> Vec<(String, String, String, String)> {
+fn inventory(prelude: &str, kernel: &Kernel) -> Vec<Row> {
     let mut rows: Vec<_> = kernel
         .environment()
         .iter()
@@ -107,18 +148,26 @@ fn inventory(prelude: &str, kernel: &Kernel) -> Vec<(String, String, String, Str
     rows
 }
 
-/// `--require-axiom-free <prelude>` and `--expect-axioms <prelude>=<n>`.
+/// `--require-axiom-free <prelude>`, `--expect-axioms <prelude>=<n>`, and
+/// whether the constructed ℝ/ℂ groups were asked for.
 struct Expectations {
     /// Prelude label -> expected trusted-surface size.
     expected: Vec<(String, usize)>,
+    /// `--include-constructed`: also build `CReal` and `Complex`.
+    ///
+    /// Off by default because the two together cost about a minute of kernel
+    /// type-checking, and 58 facts run this example in a `checker_command`.
+    include_constructed: bool,
 }
 
 fn parse_args() -> Result<Expectations, String> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut expected = Vec::new();
+    let mut include_constructed = false;
     let mut iter = args.iter();
     while let Some(arg) = iter.next() {
         match arg.as_str() {
+            "--include-constructed" => include_constructed = true,
             "--require-axiom-free" => {
                 let label = iter
                     .next()
@@ -140,7 +189,29 @@ fn parse_args() -> Result<Expectations, String> {
             other => return Err(format!("unknown argument {other:?}")),
         }
     }
-    Ok(Expectations { expected })
+    Ok(Expectations {
+        expected,
+        include_constructed,
+    })
+}
+
+/// The **constructed** ℝ and ℂ (ADR-0468, ADR-0472), or nothing.
+///
+/// Separated from `main` because building both costs about a minute of kernel
+/// type-checking, and the reader should see at a glance that the default path
+/// does not pay it.
+fn constructed(include: bool) -> (Option<Vec<Row>>, Option<Vec<Row>>) {
+    if !include {
+        return (None, None);
+    }
+    let mut creal = Kernel::new();
+    let _ = build_creal_prelude(&mut creal).expect("CReal prelude must build");
+    let creal_rows = inventory("creal", &creal);
+
+    let mut complex = Kernel::new();
+    let _ = build_complex_prelude(&mut complex).expect("Complex prelude must build");
+    let complex_rows = inventory("complex", &complex);
+    (Some(creal_rows), Some(complex_rows))
 }
 
 fn main() -> ExitCode {
@@ -187,7 +258,12 @@ fn main() -> ExitCode {
     let _ = build_string_prelude(&mut string, logic, 2).expect("string prelude must build");
     let string_rows = inventory("string", &string);
 
-    let groups = [
+    // The CONSTRUCTED ℝ and ℂ, opt-in. `real` above is the axiomatized package
+    // and says nothing about these; enumerating them under the same labels
+    // would be worse than not enumerating them at all.
+    let (creal_rows, complex_rows) = constructed(expectations.include_constructed);
+
+    let mut groups: Vec<(&str, &Vec<Row>)> = vec![
         ("logic", &logic_rows),
         ("nat", &nat_rows),
         ("real", &real_rows),
@@ -195,6 +271,11 @@ fn main() -> ExitCode {
         ("rat", &rational_rows),
         ("string", &string_rows),
     ];
+    if let (Some(creal_rows), Some(complex_rows)) = (&creal_rows, &complex_rows) {
+        groups.push(("creal", creal_rows));
+        groups.push(("complex", complex_rows));
+    }
+    let groups = groups;
 
     let mut rows: Vec<_> = groups.iter().flat_map(|(_, r)| (*r).clone()).collect();
     rows.sort();
@@ -206,7 +287,7 @@ fn main() -> ExitCode {
         );
     }
 
-    for (label, group) in groups {
+    for (label, group) in &groups {
         let count = |k: &str| group.iter().filter(|(_, kind, _, _)| kind == k).count();
         eprintln!(
             "{label}: axiom={} opaque={} quotient={} total_trusted={}",
@@ -224,8 +305,9 @@ fn main() -> ExitCode {
     for (label, expected) in &expectations.expected {
         let Some((_, group)) = groups.iter().find(|(name, _)| name == label) else {
             eprintln!(
-                "error: {label:?} is not enumerated by this example (known: {}) -- \
-                 refusing to report a check that never ran",
+                "error: {label:?} is not enumerated by this run (known: {}) -- \
+                 refusing to report a check that never ran; `creal` and \
+                 `complex` need --include-constructed",
                 groups
                     .iter()
                     .map(|(name, _)| *name)
