@@ -786,7 +786,7 @@ impl Kernel {
             }
         }
         while let Some(n) = work.pop() {
-            for d in self.decl_deps(n) {
+            for d in self.render_deps(n) {
                 if needed.insert(d) {
                     work.push(d);
                 }
@@ -860,6 +860,35 @@ impl Kernel {
         deps
     }
 
+    /// [`Self::decl_deps`] plus, for an **inductive**, the constants its
+    /// CONSTRUCTORS' types mention.
+    ///
+    /// Used only by the module renderer, and deliberately not by
+    /// [`Self::axiom_footprint`]: a footprint is what a proof *rests on*, and a
+    /// constructor's type is not that. But a rendered `inductive` command writes
+    /// its constructors inline, so a module needs everything those types mention
+    /// **before** the family, and `decl_deps` of an inductive sees only its own
+    /// type — for the constructed reals that is `Sort 1`, which depends on
+    /// nothing at all.
+    ///
+    /// Measured 2026-08-18: without this, a module carrying the constructed ℚ
+    /// emits `inductive Rat` at line 255 with a constructor mentioning
+    /// `Int.natAbs`, which the same module defines at line 365, and real Lean
+    /// rejects it with `Unknown constant Int.natAbs`. Five of the 77
+    /// `lean_crosscheck` families failed exactly this way. The `Real` package
+    /// never exposed it because its only inductives are the propositional
+    /// connectives, whose constructors mention nothing that is not already
+    /// above them.
+    fn render_deps(&self, name: NameId) -> Vec<NameId> {
+        let mut deps = self.decl_deps(name);
+        if let Some(Declaration::Inductive { ctor_names, .. }) = self.environment().get(name) {
+            for &ctor in ctor_names {
+                deps.extend(self.decl_deps(ctor));
+            }
+        }
+        deps
+    }
+
     fn topo_visit(
         &self,
         name: NameId,
@@ -870,7 +899,7 @@ impl Kernel {
         if !visited.insert(name) {
             return;
         }
-        for d in self.decl_deps(name) {
+        for d in self.render_deps(name) {
             if needed.contains(&d) {
                 self.topo_visit(d, needed, visited, order);
             }
@@ -1648,6 +1677,160 @@ mod tests {
         let body = k.bvar(0);
         let lam = k.lam(p, prop, body, crate::BinderInfo::Default);
         assert_eq!(k.render_lean(lam), "fun (p : Prop) => p");
+    }
+
+    /// A rendered `inductive` command must come **after** everything its
+    /// CONSTRUCTORS mention, not merely after what its own type mentions.
+    ///
+    /// The renderer writes constructors inline inside the `inductive` block, so a
+    /// constructor referring to a definition emitted later produces a module real
+    /// Lean rejects with `Unknown constant`. The topological sort used to order
+    /// an inductive by `decl_deps`, which for a `Sort 1`-valued family is
+    /// *nothing*, and no in-tree kernel test noticed: the whole class is
+    /// invisible unless a constructor's type mentions a definition, which the
+    /// propositional connectives never do and the constructed ℚ does
+    /// (`Rat.mk` mentions `Int.natAbs`).
+    ///
+    /// This test is deliberately synthetic and cheap. The end-to-end evidence is
+    /// `tests/lean_crosscheck.rs`, which feeds the modules to a real `lean` — but
+    /// that suite **skips itself** when no `lean` binary is installed, so on most
+    /// hosts it proves nothing and this test is the only thing standing here.
+    #[test]
+    fn an_inductive_is_emitted_after_what_its_constructors_mention() {
+        let mut k = Kernel::new();
+        let anon = k.anon();
+        let prop = k.sort_zero();
+
+        // INTERNED FIRST, on purpose. The topological walk starts from a
+        // `BTreeSet<NameId>`, so with the bug present the emitted order still
+        // happens to be right whenever the dependency was interned earlier —
+        // and the first version of this test proved nothing for exactly that
+        // reason. Interning the inductive before the definition it depends on
+        // reproduces the real case, where `Rat` is interned by the rational
+        // prelude before the `Int.natAbs` that same prelude needs.
+        let later = k.name_str(anon, "Later");
+        let later_mk = k.name_str(later, "mk");
+
+        // `inductive Seed : Prop | intro : Seed`, so there is something for a
+        // definition to be about.
+        let seed = k.name_str(anon, "Seed");
+        let seed_intro = k.name_str(seed, "intro");
+        let seed_ty = k.const_(seed, vec![]);
+        k.add_inductive(seed, &[], 0, prop, &[(seed_intro, seed_ty)])
+            .expect("Seed admits");
+
+        // `def Marker : Prop := Seed` — a DEFINITION, which is what an
+        // inductive's own type can never depend on.
+        let marker = k.name_str(anon, "Marker");
+        let marker_value = k.const_(seed, vec![]);
+        k.add_declaration(crate::Declaration::Definition {
+            name: marker,
+            uparams: vec![],
+            ty: prop,
+            value: marker_value,
+            hint: crate::ReducibilityHint::Regular(0),
+        })
+        .expect("Marker admits");
+
+        // `inductive Later : Prop | mk : Marker -> Later`. Its own type is
+        // `Prop`; only the CONSTRUCTOR mentions `Marker`.
+        let later_ty = k.const_(later, vec![]);
+        let marker_const = k.const_(marker, vec![]);
+        let mk_ty = {
+            let hole = k.name_str(anon, "x");
+            k.pi(hole, marker_const, later_ty, crate::BinderInfo::Default)
+        };
+        k.add_inductive(later, &[], 0, prop, &[(later_mk, mk_ty)])
+            .expect("Later admits");
+
+        // A goal/proof pair reaching `Later` through its constructor.
+        let goal = k.const_(later, vec![]);
+        let proof = {
+            let mk = k.const_(later_mk, vec![]);
+            let seed_proof = k.const_(seed_intro, vec![]);
+            k.app(mk, seed_proof)
+        };
+        let source = k.render_lean_module("probe", goal, proof);
+
+        let marker_at = source
+            .find("def Marker")
+            .expect("the definition must be emitted");
+        let later_at = source
+            .find("inductive Later")
+            .expect("the inductive must be emitted");
+        assert!(
+            marker_at < later_at,
+            "`inductive Later` is emitted at byte {later_at} but its constructor \
+             mentions `Marker`, emitted at byte {marker_at} -- Lean reads a module \
+             top to bottom and rejects the forward reference:\n{source}"
+        );
+    }
+
+    /// A constant that only a rendered constructor mentions must still be
+    /// **emitted**, not merely ordered.
+    ///
+    /// The sibling test above covers the ordering half of the fix; this covers
+    /// the reachability half, and the two are independent. Here the proof never
+    /// touches the constructor, so nothing else in the module pulls its
+    /// dependency in — yet the `inductive` block writes the constructor's type
+    /// out regardless, and a module naming a constant it never declares is one
+    /// Lean rejects.
+    #[test]
+    fn a_constant_only_a_constructor_mentions_is_still_emitted() {
+        let mut k = Kernel::new();
+        let anon = k.anon();
+        let prop = k.sort_zero();
+
+        let seed = k.name_str(anon, "Seed");
+        let seed_intro = k.name_str(seed, "intro");
+        let seed_ty = k.const_(seed, vec![]);
+        k.add_inductive(seed, &[], 0, prop, &[(seed_intro, seed_ty)])
+            .expect("Seed admits");
+
+        let marker = k.name_str(anon, "Marker");
+        let marker_value = k.const_(seed, vec![]);
+        k.add_declaration(crate::Declaration::Definition {
+            name: marker,
+            uparams: vec![],
+            ty: prop,
+            value: marker_value,
+            hint: crate::ReducibilityHint::Regular(0),
+        })
+        .expect("Marker admits");
+
+        let later = k.name_str(anon, "Later");
+        let later_mk = k.name_str(later, "mk");
+        let later_ty = k.const_(later, vec![]);
+        let marker_const = k.const_(marker, vec![]);
+        let mk_ty = {
+            let hole = k.name_str(anon, "x");
+            k.pi(hole, marker_const, later_ty, crate::BinderInfo::Default)
+        };
+        k.add_inductive(later, &[], 0, prop, &[(later_mk, mk_ty)])
+            .expect("Later admits");
+
+        // The proof is an OPAQUE inhabitant, so `Later.mk` -- and therefore
+        // `Marker` -- is reachable only through the inductive block itself.
+        let witness = k.name_str(anon, "witness");
+        let goal = k.const_(later, vec![]);
+        k.add_declaration(crate::Declaration::Axiom {
+            name: witness,
+            uparams: vec![],
+            ty: goal,
+        })
+        .expect("witness admits");
+        let proof = k.const_(witness, vec![]);
+
+        let source = k.render_lean_module("probe", goal, proof);
+        assert!(
+            source.contains("inductive Later"),
+            "the inductive under test was not emitted at all:\n{source}"
+        );
+        assert!(
+            source.contains("def Marker"),
+            "`inductive Later`'s constructor mentions `Marker`, which the module \
+             never declares -- Lean rejects it with `Unknown constant`:\n{source}"
+        );
     }
 
     /// Core projections use Lean's 1-based field-index surface syntax while

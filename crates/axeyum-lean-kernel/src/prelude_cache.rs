@@ -42,6 +42,14 @@
 //! `Real` build interns `Logic` first, which would itself make the kernel
 //! non-pristine).
 //!
+//! `CReal` — the constructed reals — is the slot this mechanism exists for
+//! rather than an afterthought: measured 2026-08-18 on a debug build, one
+//! `build_creal_prelude` costs **44 s** against `Real`'s 5.6 ms and `Logic`'s
+//! 0.2 ms, and every consumer of the constructed carrier builds its own. It is
+//! also the largest template, so the reuse cost is a `Kernel` clone rather than
+//! the near-free clone the small preludes get; both numbers are reported by the
+//! `prelude_build_timing` example.
+//!
 //! `String` preludes deliberately have no template: they require a caller-held
 //! [`LogicPrelude`](crate::LogicPrelude) and therefore never start from a
 //! pristine kernel, and their marginal cost over `Logic` was measured at ~0.5 ms
@@ -109,6 +117,7 @@ static LOGIC: Slot = OnceLock::new();
 static NAT: Slot = OnceLock::new();
 static INT: Slot = OnceLock::new();
 static REAL: Slot = OnceLock::new();
+static CREAL: Slot = OnceLock::new();
 
 fn slot(key: PreludeKey) -> Option<&'static Slot> {
     match key {
@@ -116,6 +125,7 @@ fn slot(key: PreludeKey) -> Option<&'static Slot> {
         PreludeKey::Nat => Some(&NAT),
         PreludeKey::Int => Some(&INT),
         PreludeKey::Real => Some(&REAL),
+        PreludeKey::CReal => Some(&CREAL),
         // Requires a caller-held `LogicPrelude`, so never starts pristine.
         PreludeKey::String(_) => None,
     }
@@ -134,6 +144,7 @@ fn template(key: PreludeKey) -> Option<&'static Kernel> {
             PreludeKey::Real => {
                 crate::arith_prelude::build_arith_prelude_uncached(&mut kernel).is_ok()
             }
+            PreludeKey::CReal => crate::creal::build_creal_prelude_uncached(&mut kernel).is_ok(),
             PreludeKey::String(_) => false,
         };
         built.then_some(kernel)

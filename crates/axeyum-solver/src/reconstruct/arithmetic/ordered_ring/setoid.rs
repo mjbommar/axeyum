@@ -67,7 +67,8 @@
 //! `add_congr` is literally `congr₂ R add` applied to two bound variables.
 
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, ExprNode, Kernel, KernelError, LogicPrelude, NameId,
+    BinderInfo, CRealPrelude, Declaration, ExprId, ExprNode, Kernel, KernelError, LogicPrelude,
+    NameId,
 };
 
 use std::collections::HashMap;
@@ -530,6 +531,29 @@ pub struct EqualitySlot {
     pub le_congr: NameId,
     /// `∀ (a b c d : R), eq a b → eq c d → lt a c → lt b d`.
     pub lt_congr: NameId,
+}
+
+impl From<CRealPrelude> for EqualitySlot {
+    /// The nine slot members `CRealPrelude` **proves**, so the slot can be
+    /// adopted rather than axiomatized.
+    ///
+    /// Every one of these is a `Theorem` in the constructed development with an
+    /// empty axiom footprint. Compare `declare_setoid_equality`, which mints
+    /// eighteen axioms to fill the same slot over the `Real` package because
+    /// there is nothing there to prove them from.
+    fn from(c: CRealPrelude) -> Self {
+        Self {
+            eq: c.equiv,
+            eq_refl: c.equiv_refl,
+            eq_symm: c.equiv_symm,
+            eq_trans: c.equiv_trans,
+            add_congr: c.add_congr,
+            mul_congr: c.mul_congr,
+            neg_congr: c.neg_congr,
+            le_congr: c.le_congr,
+            lt_congr: c.lt_congr,
+        }
+    }
 }
 
 impl EqualitySlot {

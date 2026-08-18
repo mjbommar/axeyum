@@ -60,9 +60,9 @@ pub use arithmetic::ordered_ring::{
     EQUALITY_SLOT_BINDERS, EQUALITY_SLOT_LAWS, EqSetoidWitnesses, EqSpecialization,
     EqualitySlot, IntInstantiation, IntRefutation, OrderedRingRefutation, RING_LAW_BINDERS,
     RING_SYMBOL_BINDERS, RingTelescope, SETOID_RING_BINDERS, SetoidAdoption, SetoidEq,
-    generalize_over_ordered_ring, instantiate_at_int_model, reconstruct_int_farkas_to_lean_module,
-    refutation_over_int_axioms, render_ordered_ring_module, residual_eq_constants,
-    specialize_setoid_to_eq,
+    carrier_axioms_of, generalize_over_ordered_ring, instantiate_at_int_model,
+    reconstruct_int_farkas_to_lean_module, refutation_axiom_footprint, refutation_over_int_axioms,
+    render_ordered_ring_module, residual_eq_constants, specialize_setoid_to_eq,
 };
 pub use arithmetic::signature::{
     RingEquality, RingSignature, RingSignatureReport, SIGNATURE_LAWS, SIGNATURE_SYMBOLS,
@@ -1890,6 +1890,30 @@ fn int_farkas_reconstruction_certifies(arena: &TermArena, assertions: &[TermId])
     reconstruct_int_farkas_to_lean_module(arena, assertions).is_ok()
 }
 
+/// The carrier every shipped LRA/SOS reconstruction runs over: the **constructed
+/// reals**.
+///
+/// One function, so the classifier and the renderer cannot disagree about which
+/// carrier a query was accepted on — the failure mode that would let
+/// `scan_proof_fragment` route a query the renderer then declines.
+///
+/// `CReal` rather than `Real` because the two are interchangeable for this route
+/// and only one of them is free: `build_arith_prelude` admits 30 **axioms** (this
+/// repository's entire remaining trusted surface, `real: axiom=30`), while
+/// `build_creal_prelude` proves all 30 from the constructed ℚ and its equality
+/// slot is adopted rather than assumed, at zero declarations against the `Real`
+/// route's eighteen. What comes back is therefore a refutation whose carrier
+/// footprint is empty; `examples/front_door_carrier.rs` measures exactly that,
+/// through this same front door.
+///
+/// The cost is a `CReal` build, which is 4.7 s — once per process, then 67 ms per
+/// context out of the `PreludeKey::CReal` template (ADR-0464). Without that
+/// template this would not be a shippable default, which is why the template
+/// landed first.
+fn lra_ctx() -> Result<LraReconstructCtx, ReconstructError> {
+    LraReconstructCtx::try_new_over_constructed_reals()
+}
+
 /// Does the **genuine** conjunctive-Farkas LRA reconstructor cover `assertions`?
 ///
 /// Two gates, in cost order:
@@ -1913,7 +1937,9 @@ fn lra_farkas_reconstruction_certifies(arena: &TermArena, assertions: &[TermId])
     ) {
         return false;
     }
-    let mut ctx = LraReconstructCtx::new();
+    let Ok(mut ctx) = lra_ctx() else {
+        return false;
+    };
     match reconstruct_lra_proof(&mut ctx, arena, assertions) {
         Ok(term) => lra_term_infers_false(&mut ctx, term),
         Err(_) => false,
@@ -2560,12 +2586,12 @@ fn reconstruct_proof_fragment_to_lean_module(
             render_ctx_module(&mut ctx, t)
         }
         ProofFragment::Lra => {
-            let mut ctx = LraReconstructCtx::new();
+            let mut ctx = lra_ctx()?;
             let t = reconstruct_lra_proof(&mut ctx, arena, assertions)?;
             gate_and_render_lra_module(&mut ctx, t, "LRA")?
         }
         ProofFragment::DisjunctiveLra => {
-            let mut ctx = LraReconstructCtx::new();
+            let mut ctx = lra_ctx()?;
             let t = reconstruct_disjunctive_lra_proof(&mut ctx, arena, assertions)?;
             gate_and_render_lra_module(&mut ctx, t, "disjunctive-LRA")?
         }
@@ -2698,7 +2724,7 @@ fn reconstruct_sos_to_lean_module_raw(
             detail: "query is not an SOS-reconstructable unsat".to_owned(),
         });
     }
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = lra_ctx()?;
     match reconstruct_sos_proof(&mut ctx, arena, assertions) {
         Ok(t) => gate_and_render_lra_module(&mut ctx, t, "SOS"),
         Err(ReconstructError::UnsupportedTerm { .. }) => {

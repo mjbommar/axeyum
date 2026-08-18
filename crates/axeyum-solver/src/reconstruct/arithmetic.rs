@@ -47,7 +47,7 @@ use super::{
 // base; the only added axioms are the input-constraint hypotheses.
 // ===========================================================================
 
-use axeyum_lean_kernel::build_arith_prelude;
+use axeyum_lean_kernel::{build_arith_prelude, build_creal_prelude};
 
 pub(crate) mod signature;
 
@@ -235,6 +235,69 @@ impl LraReconstructCtx {
                 detail: format!("the real prelude did not build in a fresh kernel: {e:?}"),
             })?;
         Self::with_ring_signature(kernel, RingSignature::from(arith))
+    }
+
+    /// Build a fresh LRA reconstruction context over the **constructed reals**:
+    /// `CReal`, the Bishop setoid over the constructed ℚ, with its equality slot
+    /// already adopted from `CRealPrelude`'s own theorems.
+    ///
+    /// This is [`Self::try_new`]'s axiom-free counterpart, and the difference is
+    /// the whole point of the seam. `Real` is 30 **axioms**; `CReal` is 30
+    /// declarations the kernel checked, so a refutation built here and abstracted
+    /// by
+    /// [`generalize_over_ordered_ring`](ordered_ring::generalize_over_ordered_ring)
+    /// with
+    /// [`RingTelescope::SetoidInterface`](ordered_ring::RingTelescope::SetoidInterface)
+    /// rests on **no carrier axiom at all** — measured, not assumed, by
+    /// `examples/ordered_ring_refutation.rs --constructed-reals`.
+    ///
+    /// The equality slot is filled by [`Self::adopt_setoid_equality`] rather
+    /// than [`Self::enable_setoid_equality`]: the carrier proves reflexivity,
+    /// symmetry, transitivity and the five congruences of `CReal.Equiv`, so the
+    /// slot costs zero declarations where the `Real` route declares eighteen
+    /// axioms for it. The returned
+    /// [`SetoidAdoption`](ordered_ring::setoid::SetoidAdoption) carries that
+    /// measurement; a caller that wants it should use
+    /// [`Self::try_new_over_constructed_reals_reporting`].
+    ///
+    /// # Cost
+    ///
+    /// The construction is expensive — measured 2026-08-18, 4.7 s in a release
+    /// build — but it is built **once per process** and cloned from a template
+    /// (ADR-0464, `PreludeKey::CReal`), so every later context costs 67 ms.
+    /// Without that template this constructor would be unusable on a front door.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] if the constructed development does
+    /// not build, if it does not satisfy [`RingSignature::validate_in`], or if
+    /// one of the four adoption guards rejects the equality slot.
+    pub fn try_new_over_constructed_reals() -> Result<Self, ReconstructError> {
+        Self::try_new_over_constructed_reals_reporting().map(|(ctx, _)| ctx)
+    }
+
+    /// [`Self::try_new_over_constructed_reals`], returning the adoption report.
+    ///
+    /// [`SetoidAdoption::declarations_added`](ordered_ring::setoid::SetoidAdoption::declarations_added)
+    /// is the number that says the equality slot was free; it is `0` here and
+    /// `18` on the `Real` route.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::try_new_over_constructed_reals`].
+    pub fn try_new_over_constructed_reals_reporting()
+    -> Result<(Self, ordered_ring::setoid::SetoidAdoption), ReconstructError> {
+        let mut kernel = Kernel::new();
+        let creal =
+            build_creal_prelude(&mut kernel).map_err(|e| ReconstructError::KernelRejected {
+                rule: "creal_prelude".to_owned(),
+                detail: format!(
+                    "the constructed real development did not build in a fresh kernel: {e:?}"
+                ),
+            })?;
+        let mut ctx = Self::with_ring_signature(kernel, RingSignature::from(creal))?;
+        let report = ctx.adopt_setoid_equality(&ordered_ring::setoid::EqualitySlot::from(creal))?;
+        Ok((ctx, report))
     }
 
     /// Build a reconstruction context over an **arbitrary ordered-ring

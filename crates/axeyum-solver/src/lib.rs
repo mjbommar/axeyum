@@ -346,8 +346,8 @@ pub mod proofs {
             OrderedRingRefutation, ProofFragment, RING_LAW_BINDERS, RING_SYMBOL_BINDERS,
             ReconstructCtx, ReconstructError, RingEquality, RingSignature, RingSignatureReport,
             RingTelescope, SETOID_RING_BINDERS, SIGNATURE_LAWS, SIGNATURE_SYMBOLS,
-            STRUCTURAL_ATTESTATION_MARKER, SetoidAdoption, SetoidEq, declared_assumption_clauses,
-            generalize_over_ordered_ring, instantiate_at_int_model,
+            STRUCTURAL_ATTESTATION_MARKER, SetoidAdoption, SetoidEq, carrier_axioms_of,
+            declared_assumption_clauses, generalize_over_ordered_ring, instantiate_at_int_model,
             prove_const_shift_lowering_to_lean_module, prove_unsat_to_lean,
             prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module,
             reconstruct_bitblast_step, reconstruct_bv_alternation_counterexample_to_lean_module,
@@ -361,9 +361,9 @@ pub mod proofs {
             reconstruct_negated_existential_witness_to_lean_module, reconstruct_qf_bv_proof,
             reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof, reconstruct_quant_unsat_proof,
             reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
-            reconstruct_skolem_unsat_proof, reconstruct_sos_proof, refutation_over_int_axioms,
-            render_ordered_ring_module, residual_eq_constants, scan_proof_fragment,
-            specialize_setoid_to_eq,
+            reconstruct_skolem_unsat_proof, reconstruct_sos_proof, refutation_axiom_footprint,
+            refutation_over_int_axioms, render_ordered_ring_module, residual_eq_constants,
+            scan_proof_fragment, specialize_setoid_to_eq,
         };
         pub use crate::regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
     }
@@ -1252,8 +1252,8 @@ macro_rules! full_exports {
             OrderedRingRefutation, ProofFragment, RING_LAW_BINDERS, RING_SYMBOL_BINDERS,
             ReconstructCtx, ReconstructError, RingEquality, RingSignature, RingSignatureReport,
             RingTelescope, SETOID_RING_BINDERS, SIGNATURE_LAWS, SIGNATURE_SYMBOLS,
-            STRUCTURAL_ATTESTATION_MARKER, SetoidAdoption, SetoidEq, declared_assumption_clauses,
-            generalize_over_ordered_ring, instantiate_at_int_model,
+            STRUCTURAL_ATTESTATION_MARKER, SetoidAdoption, SetoidEq, carrier_axioms_of,
+            declared_assumption_clauses, generalize_over_ordered_ring, instantiate_at_int_model,
             prove_const_shift_lowering_to_lean_module, prove_unsat_to_lean,
             prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module,
             reconstruct_bitblast_step, reconstruct_bv_alternation_counterexample_to_lean_module,
@@ -1267,9 +1267,9 @@ macro_rules! full_exports {
             reconstruct_negated_existential_witness_to_lean_module, reconstruct_qf_bv_proof,
             reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof, reconstruct_quant_unsat_proof,
             reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
-            reconstruct_skolem_unsat_proof, reconstruct_sos_proof, refutation_over_int_axioms,
-            render_ordered_ring_module, residual_eq_constants, scan_proof_fragment,
-            specialize_setoid_to_eq,
+            reconstruct_skolem_unsat_proof, reconstruct_sos_proof, refutation_axiom_footprint,
+            refutation_over_int_axioms, render_ordered_ring_module, residual_eq_constants,
+            scan_proof_fragment, specialize_setoid_to_eq,
         };
         #[doc(hidden)]
         pub use records::{RecordError, RecordSort};

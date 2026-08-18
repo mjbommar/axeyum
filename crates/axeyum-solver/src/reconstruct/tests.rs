@@ -3778,9 +3778,85 @@ fn arithmetic_family_generated_source_is_byte_stable() {
     let zero = arena.real_const(Rational::integer(0));
     let square = arena.real_mul(x, x).unwrap();
     let negative_square = arena.real_lt(square, zero).unwrap();
-    let source = super::reconstruct_sos_to_lean_module(&arena, &[negative_square])
-        .expect("SOS fixture reconstructs and renders");
+    // Explicitly over the `Real` package, like the linear half above. This
+    // fixture pins the PRINTER and the ring normalizer, not the carrier the
+    // shipped route picks: since 2026-08-18 `reconstruct_sos_to_lean_module`
+    // runs over the constructed reals, whose module carries the whole ℕ/ℤ/ℚ/
+    // setoid development and is 2.5 MB. Blessing that as a golden file would
+    // make a 2.5 MB diff the review surface for every printer change.
+    // `front_door_carrier_emits_the_constructed_carrier` is what checks the
+    // shipped route's carrier.
+    let mut ctx = super::LraReconstructCtx::new();
+    let proof = super::reconstruct_sos_proof(&mut ctx, &arena, &[negative_square])
+        .expect("SOS fixture reconstructs");
+    let source =
+        super::gate_and_render_lra_module(&mut ctx, proof, "SOS").expect("SOS fixture renders");
     assert_lean_module_fixture("arithmetic-sum-of-squares", &source);
+}
+
+/// The shipped SOS front door emits the **constructed** carrier, and the
+/// refutation it builds rests on **no carrier axiom**.
+///
+/// Two assertions, deliberately not one. The first is about the artifact a user
+/// receives (`reconstruct_sos_to_lean_module`, the route
+/// `ProofFragment::Sos` dispatches to); the second is about what the kernel says
+/// that artifact assumes. A module can name `CReal` everywhere and still rest on
+/// an assumption, and a footprint can be empty for a proof nobody ships.
+///
+/// The `Real` control is not decoration: an empty `CReal` carrier footprint means
+/// nothing unless the same measurement over the axiomatized package comes back
+/// non-empty, which is what distinguishes "the carrier is free" from "the
+/// measurement is broken".
+#[test]
+fn the_shipped_sos_route_is_carrier_axiom_free() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::arithmetic::ordered_ring::{carrier_axioms_of, refutation_axiom_footprint};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let square = arena.real_mul(x, x).unwrap();
+    let negative_square = arena.real_lt(square, zero).unwrap();
+
+    let source = super::reconstruct_sos_to_lean_module(&arena, &[negative_square])
+        .expect("the shipped SOS route reconstructs");
+    assert!(
+        source.contains("CReal"),
+        "the shipped SOS module does not name the constructed carrier"
+    );
+    assert!(
+        !source.contains("axiom Real : Sort"),
+        "the shipped SOS module still declares the AXIOMATIZED carrier"
+    );
+
+    let mut ctx = super::LraReconstructCtx::try_new_over_constructed_reals()
+        .expect("the constructed carrier builds");
+    let proof = super::reconstruct_sos_proof(&mut ctx, &arena, &[negative_square])
+        .expect("SOS reconstructs over the constructed carrier");
+    let footprint =
+        refutation_axiom_footprint(&mut ctx, proof).expect("the refutation proves False");
+    let carrier = carrier_axioms_of(&footprint);
+    assert!(
+        carrier.is_empty(),
+        "the constructed carrier is still assuming: {carrier:?}"
+    );
+    assert!(
+        !footprint.is_empty(),
+        "an entirely empty footprint would mean the query's own hypothesis \
+         axioms vanished, which is a broken measurement rather than a result"
+    );
+
+    let mut real_ctx = super::LraReconstructCtx::new();
+    let real_proof = super::reconstruct_sos_proof(&mut real_ctx, &arena, &[negative_square])
+        .expect("SOS reconstructs over the Real package");
+    let real_footprint =
+        refutation_axiom_footprint(&mut real_ctx, real_proof).expect("the refutation proves False");
+    assert!(
+        !carrier_axioms_of(&real_footprint).is_empty(),
+        "the `Real` control came back carrier-axiom-free, so this test is \
+         measuring nothing"
+    );
 }
 
 /// The **axiom-free** arithmetic module: the same Farkas refutation, generalized
@@ -5200,18 +5276,27 @@ mod lra_dispatch_tests {
         assert!(!source.contains(STRUCTURAL_ATTESTATION_MARKER));
         assert!(!source.contains("sorryAx"), "module must be sorry-free");
 
-        // The ordered-field prelude the refutation actually rests on.
+        // The ordered-ring development the refutation actually rests on. Since
+        // 2026-08-18 that is the CONSTRUCTED carrier `CReal`, not the
+        // axiomatized `Real` package, so these names moved namespace.
         for needed in [
-            "axiom Real : Sort (1)",
-            "Real.add_le_add",
-            "Real.lt_irrefl",
+            "CReal.add_le_add",
+            "CReal.lt_irrefl",
             "theorem axeyum_refutation : False :=",
         ] {
             assert!(
                 source.contains(needed),
-                "Farkas module must contain `{needed}`:\n{source}"
+                "Farkas module must contain `{needed}`"
             );
         }
+        // And the point of the move: the carrier is not ASSUMED. `Real : Sort`
+        // is the axiomatized package's carrier declaration and must be absent.
+        // Substring matching alone would not see this — every `CReal.foo` name
+        // contains `Real.foo` — so the carrier declaration is what is checked.
+        assert!(
+            !source.contains("axiom Real : Sort"),
+            "the shipped Farkas module still declares the AXIOMATIZED carrier"
+        );
         // One hypothesis axiom per asserted row, and the two real variables. The
         // shim has neither: its only axioms are `prop._0` and its negation.
         let hypotheses = source.matches("axeyum.reconstruct.lra.hyp.").count();
@@ -5238,7 +5323,17 @@ mod lra_dispatch_tests {
             prove_unsat_to_lean_module(&mut arena, &assertions).expect("strict conflict");
         assert_eq!(fragment, ProofFragment::Lra);
         assert!(!source.contains(STRUCTURAL_ATTESTATION_MARKER));
-        assert!(source.contains("Real.lt"), "module mentions strict order");
+        // `CReal.lt`, spelled in full: `contains("Real.lt")` is satisfied by
+        // `CReal.lt` too, so the loose form passed unchanged across the carrier
+        // flip and asserted nothing about which carrier ran.
+        assert!(
+            source.contains("CReal.lt"),
+            "module mentions strict order over the constructed carrier"
+        );
+        assert!(
+            !source.contains("axiom Real : Sort"),
+            "the shipped strict-conflict module still declares the AXIOMATIZED carrier"
+        );
         assert!(source.contains("axeyum.reconstruct.lra.hyp."));
     }
 

@@ -117,6 +117,7 @@ pub(crate) enum PreludeKey {
     Nat,
     Int,
     Real,
+    CReal,
     String(u64),
 }
 
@@ -126,6 +127,9 @@ pub(crate) enum PreludeValue {
     Nat(Box<NatPrelude>),
     Int(Box<IntPrelude>),
     Real(ArithPrelude),
+    /// Boxed: `CRealPrelude` is by far the widest package here, and an unboxed
+    /// variant would set every other variant's footprint to its size.
+    CReal(Box<CRealPrelude>),
     String(StringPrelude),
 }
 

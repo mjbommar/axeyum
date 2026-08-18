@@ -101,7 +101,7 @@ use crate::rat_prelude::ops::{
     radd, rat_eq_rewrite, rat_ty, rchain, rcongr, rle, rlt, rneg, rone, rsymm, rzero,
 };
 use crate::rat_prelude::{RatPrelude, build_rat_prelude};
-use crate::{Kernel, KernelError};
+use crate::{Kernel, KernelError, PreludeKey, PreludeValue};
 
 /// Delta heights for the real definitions: above every `Rat` definition.
 const LEAF_HEIGHT: u16 = 40;
@@ -548,7 +548,32 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
 /// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
 /// the kernel **refused** a proof, not that a script gave up.
 pub fn build_creal_prelude(kernel: &mut Kernel) -> Result<CRealPrelude, KernelError> {
+    if let Some(PreludeValue::CReal(prelude)) =
+        crate::prelude_cache::try_restore(kernel, PreludeKey::CReal)
+    {
+        return Ok(*prelude);
+    }
+    build_creal_prelude_uncached(kernel)
+}
+
+/// [`build_creal_prelude`] without the process-wide template fast path.
+///
+/// This is the route that actually runs the trusted gate, and the one the
+/// template itself is built through (ADR-0464). The construction is the most
+/// expensive in this kernel by four orders of magnitude — measured 2026-08-18 at
+/// **44 s** in a debug build against 3.0 ms for `Real` — which is exactly why it
+/// has a template.
+///
+/// # Errors
+///
+/// As [`build_creal_prelude`].
+pub(crate) fn build_creal_prelude_uncached(
+    kernel: &mut Kernel,
+) -> Result<CRealPrelude, KernelError> {
     let rat = build_rat_prelude(kernel)?;
+    if let Some(PreludeValue::CReal(prelude)) = kernel.cached_prelude(PreludeKey::CReal)? {
+        return Ok(*prelude);
+    }
     let prelude = intern_names(kernel, rat);
     if kernel.environment().get(prelude.creal).is_some() {
         return Ok(prelude);
@@ -575,7 +600,14 @@ pub fn build_creal_prelude(kernel: &mut Kernel) -> Result<CRealPrelude, KernelEr
         product::declare_product(&mut d, prelude)
     })();
     match built {
-        Ok(()) => Ok(prelude),
+        Ok(()) => {
+            kernel.register_prelude(
+                PreludeKey::CReal,
+                PreludeValue::CReal(Box::new(prelude)),
+                checkpoint,
+            );
+            Ok(prelude)
+        }
         Err(error) => {
             kernel.rollback_prelude(checkpoint);
             Err(error)

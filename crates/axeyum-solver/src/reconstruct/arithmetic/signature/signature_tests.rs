@@ -16,8 +16,8 @@ use axeyum_lean_kernel::{CRealPrelude, Kernel, build_arith_prelude, build_creal_
 use super::{RingEquality, RingSignature};
 use crate::reconstruct::arithmetic::ordered_ring::setoid::EqualitySlot;
 use crate::reconstruct::arithmetic::ordered_ring::{
-    EQUALITY_SLOT_BINDERS, RingTelescope, generalize_over_ordered_ring,
-    render_ordered_ring_module, residual_eq_constants,
+    EQUALITY_SLOT_BINDERS, RingTelescope, generalize_over_ordered_ring, render_ordered_ring_module,
+    residual_eq_constants,
 };
 use crate::reconstruct::arithmetic::{LraReconstructCtx, reconstruct_lra_proof};
 

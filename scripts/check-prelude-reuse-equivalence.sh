@@ -33,11 +33,24 @@ if [ "$PROFILE" = "release" ]; then
     CARGO_FLAGS+=(--release)
 fi
 
-# Every example that builds a prelude and prints something a consumer reads.
-# `prelude_build_timing` is deliberately EXCLUDED: it prints elapsed times, which
-# are not reproducible and are exactly what this change alters.
+# Every example that builds a prelude and prints something a consumer reads,
+# as `binary[:args]`. `prelude_build_timing` is deliberately EXCLUDED: it prints
+# elapsed times, which are not reproducible and are exactly what this change
+# alters.
+#
+# `nat_axiom_inventory` appears TWICE, and the second entry is the load-bearing
+# one. Bare, it builds `logic, nat, real, integer, rat, string` and never the
+# CONSTRUCTED carriers, so it is blind to the `PreludeKey::CReal` slot -- an
+# empty result from a tool that was never pointed at the subject is
+# indistinguishable from a strong negative result, and this repository has
+# already read a `creal` zero out of a run that did not build `creal`. The
+# `--include-constructed` entry is what puts `creal` and `complex` under the
+# differential, which matters because a template slot wired to the wrong builder
+# would hand back the AXIOMATIZED `Real` package under the name `CReal` and every
+# "did it build?" check would still pass.
 EXAMPLES=(
     nat_axiom_inventory
+    nat_axiom_inventory:--include-constructed
     nat_theorem_inventory
     int_theorem_inventory
     theorem_axiom_footprint
@@ -63,48 +76,63 @@ trap 'rm -rf "$WORK"' EXIT
 failures=0
 compared=0
 
-for example in "${EXAMPLES[@]}"; do
+for entry in "${EXAMPLES[@]}"; do
+    example="${entry%%:*}"
+    args=()
+    if [ "$entry" != "$example" ]; then
+        # shellcheck disable=SC2206 -- deliberate word splitting of the arg list
+        args=(${entry#*:})
+    fi
+    label="${entry//[^A-Za-z0-9_.-]/_}"
     binary="${BIN_DIR}/${example}"
     if [ ! -x "$binary" ]; then
-        echo "FAIL: ${example}: binary not found at ${binary}" >&2
+        echo "FAIL: ${entry}: binary not found at ${binary}" >&2
         failures=$((failures + 1))
         continue
     fi
 
-    AXEYUM_PRELUDE_CACHE=1 "$binary" >"${WORK}/${example}.on.out" 2>"${WORK}/${example}.on.err"
+    AXEYUM_PRELUDE_CACHE=1 "$binary" "${args[@]+"${args[@]}"}" \
+        >"${WORK}/${label}.on.out" 2>"${WORK}/${label}.on.err"
     on_status=$?
-    AXEYUM_PRELUDE_CACHE=0 "$binary" >"${WORK}/${example}.off.out" 2>"${WORK}/${example}.off.err"
+    AXEYUM_PRELUDE_CACHE=0 "$binary" "${args[@]+"${args[@]}"}" \
+        >"${WORK}/${label}.off.out" 2>"${WORK}/${label}.off.err"
     off_status=$?
 
     if [ "$on_status" -ne "$off_status" ]; then
-        echo "FAIL: ${example}: exit status differs (on=${on_status} off=${off_status})" >&2
+        echo "FAIL: ${entry}: exit status differs (on=${on_status} off=${off_status})" >&2
         failures=$((failures + 1))
         continue
     fi
 
-    if ! diff -q "${WORK}/${example}.on.out" "${WORK}/${example}.off.out" >/dev/null; then
-        echo "FAIL: ${example}: STDOUT differs between reuse on and off" >&2
-        diff "${WORK}/${example}.off.out" "${WORK}/${example}.on.out" | head -20 >&2
+    if ! diff -q "${WORK}/${label}.on.out" "${WORK}/${label}.off.out" >/dev/null; then
+        echo "FAIL: ${entry}: STDOUT differs between reuse on and off" >&2
+        diff "${WORK}/${label}.off.out" "${WORK}/${label}.on.out" | head -20 >&2
         failures=$((failures + 1))
         continue
     fi
 
-    if ! diff -q "${WORK}/${example}.on.err" "${WORK}/${example}.off.err" >/dev/null; then
-        echo "FAIL: ${example}: STDERR differs between reuse on and off" >&2
-        diff "${WORK}/${example}.off.err" "${WORK}/${example}.on.err" | head -20 >&2
+    if ! diff -q "${WORK}/${label}.on.err" "${WORK}/${label}.off.err" >/dev/null; then
+        echo "FAIL: ${entry}: STDERR differs between reuse on and off" >&2
+        diff "${WORK}/${label}.off.err" "${WORK}/${label}.on.err" | head -20 >&2
         failures=$((failures + 1))
         continue
     fi
 
-    bytes=$(wc -c <"${WORK}/${example}.on.out")
-    if [ "$bytes" -eq 0 ] && [ ! -s "${WORK}/${example}.on.err" ]; then
-        echo "FAIL: ${example}: produced no output at all on either stream" >&2
+    bytes=$(wc -c <"${WORK}/${label}.on.out")
+    err_bytes=$(wc -c <"${WORK}/${label}.on.err")
+    if [ "$bytes" -eq 0 ] && [ "$err_bytes" -eq 0 ]; then
+        echo "FAIL: ${entry}: produced no output at all on either stream" >&2
         failures=$((failures + 1))
         continue
     fi
 
     compared=$((compared + 1))
-    echo "ok: ${example} identical (${bytes} stdout bytes)"
+    # BOTH streams, because several of these examples print their per-prelude
+    # summary to STDERR and only the axiom rows to stdout -- `nat_axiom_inventory
+    # --include-constructed` adds no stdout at all (creal and complex have no
+    # axiom rows to print) and reporting stdout alone made the two entries look
+    # like the same run.
+    echo "ok: ${entry} identical (${bytes} stdout + ${err_bytes} stderr bytes)"
 done
 
 # The liveness half: prove the flag was honoured in BOTH directions, using the

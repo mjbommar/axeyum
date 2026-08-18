@@ -1346,6 +1346,64 @@ pub fn specialize_setoid_to_eq(
     })
 }
 
+/// The **axiom footprint of a refutation term**, as the kernel computes it.
+///
+/// Admits `proof` as a `Theorem : False` under a fresh name and returns
+/// [`Kernel::axiom_footprint`](axeyum_lean_kernel::Kernel) of it — this kernel's
+/// `#print axioms`, transitive through every theorem and definition the proof
+/// reaches. Read from the kernel rather than from the rendered module text,
+/// because the module renders inductives as `axiom` too and counting those lines
+/// would over-report by dozens.
+///
+/// The footprint of a *shipped* refutation is never empty: the query's own
+/// variables and constraints are declared axioms (`axeyum.reconstruct.lra.x.*`,
+/// `…hyp.*`) and abstracting them is exactly what
+/// [`generalize_over_ordered_ring`] does. What matters is what is left over —
+/// see [`carrier_axioms_of`].
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if `proof` is not a proof of `False`.
+pub fn refutation_axiom_footprint(
+    ctx: &mut LraReconstructCtx,
+    proof: ExprId,
+) -> Result<Vec<String>, ReconstructError> {
+    let false_ty = {
+        let f = ctx.arith.logic.false_;
+        ctx.kernel.const_(f, vec![])
+    };
+    let name = ctx.fresh_name("front_door_refutation");
+    ctx.kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: false_ty,
+            value: proof,
+        })
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "refutation_axiom_footprint".to_owned(),
+            detail: format!("the refutation is not a proof of False: {e:?}"),
+        })?;
+    Ok(footprint(&ctx.kernel, name))
+}
+
+/// The entries of a footprint that are **not** the query's own axioms.
+///
+/// Everything this route mints for a query is namespaced under
+/// `axeyum.reconstruct.` (the variable axioms, the hypothesis axioms, and the
+/// `Real` route's eighteen equality-slot axioms are all minted there); anything
+/// else in the footprint is an assumption of the *carrier*. Over the `Real`
+/// package that is 15-17 of its 30 axioms; over the constructed reals it is
+/// empty, which is the measurement this predicate exists to make falsifiable.
+#[must_use]
+pub fn carrier_axioms_of(footprint: &[String]) -> Vec<String> {
+    footprint
+        .iter()
+        .filter(|name| !name.starts_with("axeyum.reconstruct."))
+        .cloned()
+        .collect()
+}
+
 /// Which of the kernel's own equality constants a term still mentions, rendered
 /// and deduplicated.
 ///

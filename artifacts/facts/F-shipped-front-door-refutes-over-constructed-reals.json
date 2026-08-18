@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "id": "F:shipped-front-door-refutes-over-constructed-reals",
+  "title": "The shipped LRA/SOS front door reconstructs over the constructed reals, and the refutation it returns rests on zero carrier axioms",
+  "statement": "prove_unsat_to_lean_module -- the public entry point that turns an unsatisfiable query into a self-contained Lean module -- dispatches ProofFragment::Lra, ProofFragment::DisjunctiveLra and ProofFragment::Sos to a reconstruction context whose ordered-ring carrier is CReal, the Bishop setoid of regular rational sequences, with the equality slot ADOPTED from CRealPrelude's own theorems rather than axiomatized. For each of three front-door fixtures the resulting proof of False has an axiom footprint consisting ONLY of the query's own variable and hypothesis axioms: zero carrier axioms, against 12, 17 and 8 for the identical refutation over the axiomatized Real package. This is a statement about what the shipped route runs, not about what it could run: the same claim over a hand-built context is F:farkas-refutation-over-constructed-reals.",
+  "formal": {
+    "language": "lean4",
+    "statement": "For each fixture F, let p = reconstruct_{lra,sos}_proof(LraReconstructCtx::try_new_over_constructed_reals(), F). Then p : False in the kernel, and Kernel::axiom_footprint(p) contains no name outside the axeyum.reconstruct. namespace, while the same construction over LraReconstructCtx::try_new() (the Real package) contains 12, 17 and 8 such names respectively. Separately, prove_unsat_to_lean_module(F) emits a module declaring the constructed carrier and NOT `axiom Real : Sort`.",
+    "fragment": "QF_LRA",
+    "free_symbols": [
+      "CReal",
+      "CReal.Equiv",
+      "CReal.add",
+      "CReal.mul",
+      "CReal.le",
+      "CReal.lt"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:farkas-refutation-over-constructed-reals",
+    "F:real-axioms-modelled-by-constructed-setoid"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "front-door-emits-the-constructed-carrier",
+      "kind": "kernel-term",
+      "supports": "All three fixtures routed through prove_unsat_to_lean_module emit a module naming the constructed carrier and not the axiomatized one.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example front_door_carrier 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE 'carrier CReal [(]constructed[)]$')\" = 3 && test \"$(printf '%s\\n' \"$out\" | grep -cE 'carrier Real [(]AXIOMATIZED[)]$')\" = 0",
+      "notes": "Counts rather than greps: `grep -q` would pass on ONE surviving fixture if the other two regressed or were dropped, and the second test rules out a mixed result rather than inferring it from the first. The example decides the carrier by the module's carrier DECLARATION, because every `CReal.foo` name contains the substring `Real.foo` and a `contains(\"Real.lt\")` test survives the flip unchanged -- one shipped test did exactly that and asserted nothing."
+    },
+    {
+      "id": "zero-carrier-axioms-through-the-front-door",
+      "kind": "kernel-term",
+      "supports": "Kernel::axiom_footprint of the shipped route's proof of False contains no carrier axiom on any fixture.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example front_door_carrier 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE '^[[:space:]]+over CReal : footprint [0-9]+ of which 0 are CARRIER axioms')\" = 3",
+      "notes": "The footprint SIZE is left free (2, 3, 5) because it is the query's own variables and hypotheses and legitimately differs per fixture; what is pinned is that none of it is carrier. Carrier is computed as the footprint minus the `axeyum.reconstruct.` namespace, which is where this route mints every axiom of its own, so the split cannot be gamed by renaming a carrier declaration."
+    },
+    {
+      "id": "the-real-control-is-not-vacuous",
+      "kind": "kernel-term",
+      "supports": "The same three queries over the axiomatized Real package carry 12, 17 and 8 carrier axioms, so the zero above is a reduction rather than a broken measurement.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example front_door_carrier 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE '^[[:space:]]+over Real  : footprint [0-9]+ of which (12|17|8) are CARRIER axioms')\" = 3 && test \"$(printf '%s\\n' \"$out\" | grep -cE '^[[:space:]]+over Real  : footprint [0-9]+ of which 0 are CARRIER axioms')\" = 0",
+      "notes": "Without this row the fact would still pass if the Real route quietly stopped depending on its own axioms, which would mean the comparison had become trivial rather than that CReal had achieved anything. The second test is the explicit negative: no Real fixture may report zero."
+    },
+    {
+      "id": "the-emitted-module-declares-only-the-querys-own-axioms",
+      "kind": "kernel-term",
+      "supports": "The self-contained Lean module the front door returns declares 3, 5 and 2 axioms -- the query's own variables and hypotheses -- against 15, 22 and 10 for the same refutations over the Real package.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example front_door_carrier 2>&1) && printf '%s\\n' \"$out\" | grep -qxF \"the module's axiom lines equal the kernel footprint: true\" && test \"$(printf '%s\\n' \"$out\" | grep -cE 'over CReal : footprint [0-9]+ of which 0 are CARRIER axioms; module [0-9]+ bytes [(][0-9]+x[)], [0-9]+ .axiom. lines')\" = 3",
+      "notes": "The equality of the two counts is computed BY THE EXAMPLE, per fixture, over both carriers, and reported as its own verdict line -- a regex backreference was the first attempt and this host's `grep` does not support one, which would have made the row silently unrunnable. `grep -x` on the whole line including the trailing `true` because an unanchored match also accepts the `false` rendering. This row also refutes a claim recorded on 2026-08-18 in F:farkas-refutation-over-constructed-reals -- that a rendered module over CReal would emit the whole constructed development as axioms and defeat the claim. It does not: `write_lean_module_impl` emits every reachable inductive as a real Lean `inductive`, so the development contributes zero axiom lines and the module declares 3, 5 and 2 (the query's own) against 15, 22 and 10 over Real."
+    },
+    {
+      "id": "real-lean-accepts-the-module",
+      "kind": "kernel-term",
+      "supports": "The modules the flipped routes emit are accepted by the real Lean kernel, so the claim is not confined to this repository's own checker.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q -p axeyum-solver --features full --test lean_crosscheck -- --nocapture 2>&1 | awk -F'[|=]' '/^LEAN_CROSSCHECK/ {for (i = 2; i < NF; i += 2) v[$i] = $(i+1)} END {exit !(NR > 0 && v[\"modules\"] + 0 > 0 && v[\"checked\"] == v[\"modules\"] && v[\"failed\"] + 0 == 0 && v[\"budget_skipped\"] + 0 == 0)}'",
+      "notes": "awk rather than grep: `checked` MUST equal `modules` and `modules` must be nonzero, because the suite SKIPS itself when no `lean` binary is present and a row asserting only `failed=0` would pass on a host that checked nothing -- and this host's `grep` has no backreferences, so the equality cannot be written as a pattern. `END { exit ... }` with `NR > 0` also fails when the LEAN_CROSSCHECK line is absent entirely. Measured 2026-08-18 against lean 4.30.0: 77 of 77, 0 failed. This row is not decoration: the carrier flip initially FAILED it -- 5 of 77 modules rejected with `Unknown constant Int.natAbs`, because the renderer ordered an inductive by its own type while writing its constructors, which mention later definitions, inline. That defect is fixed in the same change and guarded by two kernel unit tests that need no `lean` binary."
+    },
+    {
+      "id": "the-verdict-lines-and-the-exit-status",
+      "kind": "kernel-term",
+      "supports": "The example's four aggregate verdicts, and an exit status that depends on all four.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-solver --features full --example front_door_carrier -- --require-axiom-free >/dev/null 2>&1 && out=$(cargo run -q -p axeyum-solver --features full --example front_door_carrier 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cxE \"(shipped front door emits the CONSTRUCTED carrier|refutations over CReal rest on zero carrier axioms|the Real control is non-vacuous|the module's axiom lines equal the kernel footprint): true\")\" = 4",
+      "notes": "Without `--require-axiom-free` the example exits 0 on a negative result, which is exactly the failure mode this ledger keeps finding; the flag is what makes the status depend on the finding. The four lines are counted, not grepped, so a dropped verdict is a failure rather than a quieter pass, and matched with `grep -x` including the trailing `true` so the `false` rendering of the same sentence cannot satisfy it."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:real-numbers",
+      "relation": "uses",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:linear-programming-duality",
+      "relation": "uses",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "PreludeKey::CReal (ADR-0464) + LraReconstructCtx::try_new_over_constructed_reals; agent-creal-default lane; ADR-0468 phase R4",
+    "source": "hand-built; Farkas' lemma and the SOS route over an ordered commutative ring, instantiated at a constructed carrier"
+  },
+  "notes": "WHAT THIS DOES NOT SAY, and the price. (1) The Real package is NOT retired: LraReconstructCtx::new still builds it, ProofFragment::IntFarkas still routes through it -- harmlessly, since that route abstracts the interface away and instantiates at the integer model -- and nat_axiom_inventory still reports `real: axiom=30`. This fact says the shipped LRA/SOS routes no longer use those axioms, not that nothing does. (2) The rendered Lean module declares only the query's own axioms (3, 5, 2) and real Lean accepts it, so `#print axioms` on the Lean side agrees with Kernel::axiom_footprint here. This CORRECTS a claim recorded the same day on F:farkas-refutation-over-constructed-reals, that a module over CReal would emit the whole development as axioms; the renderer emits reachable inductives as real `inductive` commands. Getting there required fixing a renderer ordering defect the constructed carrier exposed -- an inductive was ordered by its own type while its constructors, written inline, mention definitions emitted later -- which rejected 5 of 77 crosscheck modules. (3) The module grew from 2.4-41 kB to about 2.6 MB (66x-1069x), because it must now carry the whole N/Z/Q/setoid development. That is the measured cost of the axiom-free carrier and it has not been optimized -- render_lean_module_compact and render_lean_module_with_inductives are untried levers. (4) The default was shippable only because PreludeKey::CReal landed first: build_creal_prelude is 4.7 s per call in release and 0.067 s out of the template."
+}

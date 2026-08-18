@@ -54,7 +54,8 @@
 //! nine `Eq`-stated laws become stray constants.
 
 use axeyum_lean_kernel::{
-    ArithPrelude, BinderInfo, Declaration, ExprId, ExprNode, Kernel, LogicPrelude, NameId,
+    ArithPrelude, BinderInfo, CRealPrelude, Declaration, ExprId, ExprNode, Kernel, LogicPrelude,
+    NameId,
 };
 
 use super::ReconstructError;
@@ -206,6 +207,58 @@ impl From<ArithPrelude> for RingSignature {
             left_distrib: a.left_distrib,
             mul_nonneg: a.mul_nonneg,
             sq_nonneg: a.sq_nonneg,
+        }
+    }
+}
+
+impl From<CRealPrelude> for RingSignature {
+    /// The **constructed** reals as a signature: the same 30 field names, read
+    /// off `CRealPrelude`, with equality the *defined* relation `CReal.Equiv`.
+    ///
+    /// This is the instance that costs nothing. `build_arith_prelude` admits its
+    /// 30 declarations as **axioms**; `build_creal_prelude` proves all 22 laws
+    /// from the constructed ℚ, so a refutation abstracted over this signature
+    /// and instantiated back at `CReal` rests on no carrier assumption at all.
+    ///
+    /// `CRealPrelude` has no `logic` field of its own — the propositional
+    /// prelude is three hops down its rational/integer tower, and it is the same
+    /// `LogicPrelude` value either way.
+    fn from(c: CRealPrelude) -> Self {
+        Self {
+            logic: c.rat.int.logic,
+            // NOT `KernelEq`: `Eq CReal` is equality of *representatives*, not
+            // of real numbers, and stating `add_comm` with it would be false.
+            equality: RingEquality::Defined(c.equiv),
+            r: c.creal,
+            add: c.add,
+            mul: c.mul,
+            neg: c.neg,
+            zero: c.zero,
+            one: c.one,
+            le: c.le,
+            lt: c.lt,
+            le_refl: c.le_refl,
+            le_trans: c.le_trans,
+            lt_irrefl: c.lt_irrefl,
+            lt_trans: c.lt_trans,
+            lt_of_lt_of_le: c.lt_of_lt_of_le,
+            lt_of_le_of_lt: c.lt_of_le_of_lt,
+            le_of_lt: c.le_of_lt,
+            add_le_add: c.add_le_add,
+            add_comm: c.add_comm,
+            add_assoc: c.add_assoc,
+            add_zero: c.add_zero,
+            add_neg: c.add_neg,
+            mul_le_mul_of_nonneg_left: c.mul_le_mul_of_nonneg_left,
+            zero_lt_one: c.zero_lt_one,
+            add_lt_add_of_le_of_lt: c.add_lt_add_of_le_of_lt,
+            mul_comm: c.mul_comm,
+            mul_assoc: c.mul_assoc,
+            mul_one: c.mul_one,
+            mul_zero: c.mul_zero,
+            left_distrib: c.left_distrib,
+            mul_nonneg: c.mul_nonneg,
+            sq_nonneg: c.sq_nonneg,
         }
     }
 }

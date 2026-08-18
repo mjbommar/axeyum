@@ -15,8 +15,8 @@
 
 use super::{enabled, stats, try_restore};
 use crate::{
-    Declaration, Kernel, Lean4ExportMetadata, PreludeKey, arith_prelude, int_prelude, nat_prelude,
-    prelude,
+    Declaration, Kernel, Lean4ExportMetadata, PreludeKey, arith_prelude, creal, int_prelude,
+    nat_prelude, prelude,
 };
 
 /// A whole-environment fingerprint: every declaration this kernel has admitted.
@@ -85,6 +85,9 @@ fn assert_reuse_matches_fresh_build(key: PreludeKey, label: &str) {
         PreludeKey::Real => {
             arith_prelude::build_arith_prelude_uncached(&mut fresh).expect("real must build");
         }
+        PreludeKey::CReal => {
+            creal::build_creal_prelude_uncached(&mut fresh).expect("creal must build");
+        }
         PreludeKey::String(_) => unreachable!("string preludes have no template"),
     }
 
@@ -139,6 +142,82 @@ fn int_reuse_matches_fresh_build() {
 #[test]
 fn real_reuse_matches_fresh_build() {
     assert_reuse_matches_fresh_build(PreludeKey::Real, "real");
+}
+
+/// The constructed reals: the most expensive template and the one whose reuse
+/// the shipped LRA/SOS carrier depends on, so its bit-exactness is checked by
+/// the same whole-environment comparison as the rest.
+///
+/// This test builds `CReal` twice through the trusted gate and is therefore the
+/// slowest in the crate (~90 s in a debug build). That is the price of checking
+/// the claim rather than assuming it; the whole point of the template is that
+/// nothing *else* pays it.
+#[test]
+fn creal_reuse_matches_fresh_build() {
+    assert_reuse_matches_fresh_build(PreludeKey::CReal, "creal");
+}
+
+/// The `CReal` slot restores the **constructed** reals and not some *other*
+/// prelude — the failure this test exists for is silent and catastrophic.
+///
+/// A template slot wired to the wrong builder hands back the axiomatized `Real`
+/// package under the name `CReal`. Everything still builds, every test that only
+/// checks "a prelude came back" still passes, and the project's headline claim —
+/// that the constructed carrier assumes nothing — is quietly false. So the
+/// identity of the restored package is asserted three independent ways:
+///
+/// 1. the trusted surface is **empty** (the `Real` package would show 30);
+/// 2. `CReal` and its setoid equality are **present** — a declaration the `Real`
+///    package does not have;
+/// 3. `Real`, the axiomatized carrier, is **absent** — a declaration the
+///    constructed development does not have.
+///
+/// Checks 2 and 3 are not redundant with 1: a mis-wire to any other axiom-free
+/// prelude (`Nat`, `Int`, `Rat`) passes 1 and fails 2.
+#[test]
+fn the_creal_slot_restores_the_constructed_reals_and_nothing_else() {
+    let mut kernel = Kernel::new();
+    let value =
+        try_restore(&mut kernel, PreludeKey::CReal).expect("the CReal template must restore");
+    // The registered package's own variant. A slot serving another prelude's
+    // template fails `cached_prelude(CReal)` and never gets here, so this is the
+    // direct form of the identity claim; the environment checks below are the
+    // independent one.
+    assert!(
+        matches!(value, crate::PreludeValue::CReal(_)),
+        "the CReal slot registered a package of another prelude: {value:?}"
+    );
+
+    let surface = trusted_surface(&kernel);
+    assert!(
+        surface.is_empty(),
+        "the constructed reals must stay axiom-free through reuse; found: {surface:?}"
+    );
+
+    let names: std::collections::BTreeSet<String> = declaration_inventory(&kernel)
+        .into_iter()
+        .map(|(name, _, _)| name)
+        .collect();
+    for required in ["CReal", "CReal.Equiv", "CReal.add", "CReal.le"] {
+        assert!(
+            names.contains(required),
+            "the CReal slot restored a kernel without `{required}`, so it is not \
+             the constructed real development"
+        );
+    }
+    assert!(
+        !names.contains("Real"),
+        "the CReal slot restored a kernel carrying the AXIOMATIZED `Real` \
+         carrier -- the slot is wired to the wrong builder"
+    );
+
+    // Negative control: an empty environment would satisfy the surface
+    // assertion vacuously. The construction is ~200 declarations.
+    assert!(
+        kernel.environment().len() > 100,
+        "the restored CReal kernel is suspiciously small: {}",
+        kernel.environment().len()
+    );
 }
 
 /// The standing invariants. A change in any of these numbers is a failure, not

@@ -22,8 +22,8 @@
 use std::time::Instant;
 
 use axeyum_lean_kernel::{
-    Kernel, build_arith_prelude, build_int_prelude, build_logic_prelude, build_nat_prelude,
-    build_string_prelude,
+    Kernel, build_arith_prelude, build_creal_prelude, build_int_prelude, build_logic_prelude,
+    build_nat_prelude, build_rat_prelude, build_string_prelude,
 };
 
 fn iterations() -> u32 {
@@ -52,6 +52,12 @@ fn main() {
             }),
             ("real", |kernel: &mut Kernel| {
                 build_arith_prelude(kernel).expect("real prelude must build");
+            }),
+            ("rat", |kernel: &mut Kernel| {
+                build_rat_prelude(kernel).expect("rat prelude must build");
+            }),
+            ("creal", |kernel: &mut Kernel| {
+                build_creal_prelude(kernel).expect("creal prelude must build");
             }),
             ("string", |kernel: &mut Kernel| {
                 let logic = build_logic_prelude(kernel).expect("logic prelude must build");
