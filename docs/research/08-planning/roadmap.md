@@ -88,16 +88,18 @@ Last updated: 2026-08-07
 > verifies every named environment gap and the current Axeyum/Lean/mathlib
 > inventories while keeping the L0-L10 implementation program explicitly open.
 > TL0.4 now freezes the actual reconstruction-prelude trust boundary in a
-> [runtime-derived 31-row ledger](../../../docs/plan/generated/lean-axiom-ledger.md):
-> real 30, integer 0, string 1, with canonical type digests and mutation-tested
-> population drift checks. `logic`, `nat` and — since
-> `Int.euclidean_decomposition` became a theorem on 2026-08-15 — `integer` are
-> enumerated too and are **axiom-free**, declared by the measurement rather than
-> inferred from an empty result. The former 64-row helper-call census omitted the directly inserted
-> string `append` axiom; the 65-row figure that replaced it went stale in the
-> opposite direction when ℤ was constructed over the proved ℕ development and
-> `integer` fell 34 to 1 — since ADR-0465 every count here is generated from the
-> measurement and `--check` fails on drift. Classification and discharge remain
+> [runtime-derived 30-row ledger](../../../docs/plan/generated/lean-axiom-ledger.md):
+> real 30, integer 0, string 0, with canonical type digests and mutation-tested
+> population drift checks. `logic`, `nat`, — since
+> `Int.euclidean_decomposition` became a theorem on 2026-08-15 — `integer`, and —
+> since `append` became a checked definition with proved monoid laws on
+> 2026-08-17 — `string` are enumerated too and are **axiom-free**, declared by the
+> measurement rather than inferred from an empty result. The former 64-row
+> helper-call census omitted the directly inserted string `append` axiom; the
+> 65-row figure that replaced it went stale in the opposite direction when ℤ was
+> constructed over the proved ℕ development and `integer` fell 34 to 1 — since
+> ADR-0465 every count here is generated from the measurement and `--check` fails
+> on drift. Classification and discharge remain
 > open under TL3.2; inventory is not truth.
 > The first T6.0.3 four-seam seed is retained, while TL2.15 remains partial: a
 > [fixed-seed 768-case harness](../../../docs/plan/lean-kernel-seam-fuzz-seed-2026-07-21.md)

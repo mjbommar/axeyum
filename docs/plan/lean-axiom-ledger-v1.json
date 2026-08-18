@@ -1,7 +1,7 @@
 {
   "version": 2,
   "title": "Axeyum Lean reconstruction prelude axiom ledger",
-  "population_as_of": "2026-08-16",
+  "population_as_of": "2026-08-17",
   "measurement": {
     "axiom_rows_command": "cargo run --quiet -p axeyum-lean-kernel --example prelude_axiom_inventory",
     "trusted_surface_command": "cargo run --quiet -p axeyum-lean-kernel --example nat_axiom_inventory",
@@ -39,10 +39,10 @@
         "total_trusted": 30
       },
       "string": {
-        "axiom": 1,
+        "axiom": 0,
         "opaque": 0,
         "quotient": 0,
-        "total_trusted": 1
+        "total_trusted": 0
       }
     },
     "axiom_counts": {
@@ -50,8 +50,8 @@
       "logic": 0,
       "nat": 0,
       "real": 30,
-      "string": 1,
-      "total": 31
+      "string": 0,
+      "total": 30
     }
   },
   "trust_policy": {
@@ -478,19 +478,6 @@
       "discharge_status": "retained",
       "discharge_evidence": [],
       "note": "Nontriviality of the profile; excludes the zero ring."
-    },
-    {
-      "prelude": "string",
-      "name": "axeyum.string.2.append",
-      "canonical_type": "((x0 : axeyum.string._2.Str) -> ((x1 : axeyum.string._2.Str) -> axeyum.string._2.Str))",
-      "type_sha256": "5807e40ae2f7047b9c13ec27ba628bd001a37d77633c65598aec24aa94561f25",
-      "source_path": "crates/axeyum-lean-kernel/src/string_prelude.rs",
-      "classification": "primitive-interface",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Binary carrier operation of the string reconstruction profile; intentionally abstract. Note this row is inserted directly as `Declaration::Axiom` rather than through `declare_axiom(...)`, which is why the earlier 64-row call-site census missed it."
     }
   ],
   "retired_entries": [
@@ -1069,6 +1056,24 @@
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
         "docs/plan/archive/35-int-keystone.md",
         "docs/plan/archive/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "string",
+      "name": "axeyum.string.2.append",
+      "canonical_type": "((x0 : axeyum.string._2.Str) -> ((x1 : axeyum.string._2.Str) -> axeyum.string._2.Str))",
+      "type_sha256": "5807e40ae2f7047b9c13ec27ba628bd001a37d77633c65598aec24aa94561f25",
+      "source_path": "crates/axeyum-lean-kernel/src/string_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Binary carrier operation of the string reconstruction profile; intentionally abstract. Note this row is inserted directly as `Declaration::Axiom` rather than through `declare_axiom(...)`, which is why the earlier 64-row call-site census missed it.",
+      "retired_on": "2026-08-17",
+      "retirement_note": "Retired: `append` is no longer assumed. `axeyum.string.<n>.append` is now a checked `Declaration::Definition` by structural recursion over `Str.rec`, and its four free-monoid laws (`nil_append`, `cons_append`, `append_nil`, `append_assoc`) are `Declaration::Theorem`s whose proof terms the kernel re-checks on admission. The string prelude trusted surface is empty. Its `primitive-interface`/`retained` classification is overturned by ADR-0469: the carrier `Str` is a constructed inductive, so the row was a `derivable-theorem`. Checked outside this kernel too -- a real `lean` binary accepts the exported module and its `#print axioms` names no `axeyum.string.*` row.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/string_prelude/monoid.rs",
+        "crates/axeyum-lean-kernel/src/string_prelude/tests.rs",
+        "crates/axeyum-lean-kernel/tests/real_lean_string_monoid_crosscheck.rs",
+        "docs/research/09-decisions/adr-0469-string-append-is-constructed-not-assumed.md"
       ]
     }
   ]

@@ -161,6 +161,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
+| 2026-08-17 | `pending` | `string` prelude reaches **axiom=0**: `append` becomes a checked `Str.rec` recursion with four proved monoid laws (ADR-0469); ledger `total` 31 → 30, row filed as retired; real-Lean cross-check pins that `#print axioms` names no `axeyum.string.*` row. |
 | 2026-08-17 | `7337f708` `caaf2906` | A SKOLEMISED refutation certifies: the elimination is recorded POSITIONALLY (binder counts, anchor by index, a binding as "the k-th witness of assertion i"), so the checker re-runs the eliminator in its own arena and no producer-side id is trusted. `F:barber-no-such-barber` closes on `smt-clausal` with a NON-EMPTY axiom footprint naming skolemisation and universal instantiation. The negative control failed on purpose and moved to `F:no-integer-square-is-minus-one`; the gate now sweeps 18/18. |
 | 2026-08-17 | `ae13cd6e` | A kernel fact's `depends_on` is DERIVED from the proof term, not transcribed: `Kernel::theorem_dependencies` keeps the half of the constant closure `axiom_footprint` discards. 18 edges were missing — two of them on facts proved the same day, by hand. Isolation 65 → 62. Restraints pinned by tests; the vacuity floor had no test until mutation-checking found it killed zero. |
 | 2026-08-17 | `07ffe852` `9853fb6c` `28755674` | The e-matching route certifies, on the third design. It first shipped `certified=1` on evidence whose independent re-check said FAIL (one instance passed by `TermId` coincidence, two did not); reverted, then made portable — instances rebuilt in the checker's arena, ground set rebuilt rather than stored. `tests/certified_implies_revalidatable.rs` is the guard that caught it and now licenses it. |
@@ -309,6 +310,29 @@ recogniser declines any goal whose *other* assertions include a quantifier it
 cannot instantiate, which is why all three multi-goal probes decline; widening
 `hypotheses` to carry a universal it cannot instantiate as an assumption rather
 than dropping the goal would reach them. Neither is a soundness item.
+
+**`string` is axiom-free (`DONE`, agent-strings, 2026-08-17).** The last
+prelude assumption outside `real` is retired: `axeyum.string.<n>.append` was a
+`Declaration::Axiom` and is now a checked structural recursion over `Str.rec`,
+with `nil_append` / `cons_append` / `append_nil` / `append_assoc` admitted as
+`Declaration::Theorem`s the kernel re-checks (ADR-0469). Measured, not read off
+the diff: `nat_axiom_inventory` reports `string: axiom=0 opaque=0 quotient=0`,
+and the derived ledger is `total=30 | real=30 | everything else 0`. Verified
+outside this kernel as well — a real `lean` 4.34.0-rc1 accepts the exported
+module and its `#print axioms` lists only the problem's own opaque words.
+
+The whole trusted surface of this project is now the `real` prelude (30 rows,
+being constructed under ADR-0468 by another lane).
+
+Next for this lane: length (`str.len : Str → Nat`) and the cancellation lemmas,
+which are what the monoid laws were the prerequisite for — a word-level
+refutation that reasons by length rather than by first clash. `word_reconstruct`
+still only needs `append` as a function symbol, so nothing consumes the new laws
+yet; that is the gap to close.
+
+Not done, and deliberately: the `real` rows are a different case (their carrier
+is genuinely opaque), and `nat_axiom_inventory`'s doc header still cites a stale
+`integer=1` — owned by another lane.
 
 **Claim-dashboard gate, finding-8 re-measurement, and PLAN.md returned under its
 ceiling** (`WIP`, ledger-integrity, 2026-08-16). Three defects behind a dashboard

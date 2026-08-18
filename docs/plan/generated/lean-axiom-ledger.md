@@ -8,13 +8,13 @@ This ledger inventories declarations actually admitted as trusted after construc
 
 ## Snapshot
 
-- **31 total assumptions:** real 30, string 1.
-- Axiom-free preludes, enumerated rather than inferred from absence: `integer`, `logic`, `nat`. An axiom-free prelude emits no rows, so the measurement declares its own coverage; a prelude that silently stopped being built fails the gate instead of shrinking the total.
+- **30 total assumptions:** real 30.
+- Axiom-free preludes, enumerated rather than inferred from absence: `integer`, `logic`, `nat`, `string`. An axiom-free prelude emits no rows, so the measurement declares its own coverage; a prelude that silently stopped being built fails the gate instead of shrinking the total.
 - 0 names are shared by the isolated real and integer preludes; ADR-0387's `Int.*` / `Real.*` namespaces make the packages composable.
 - Integer trust policy: [ADR-0465](../../research/09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md) — The integer prelude admits no assumption; a checked dependency closure using it inherits nothing from this ledger.
-- **34 assumptions have been retired** from the trusted surface since this ledger was first frozen; they are kept below rather than deleted, because a reduction in the trusted base is the result, not a smaller table.
-- Classification: derivable-theorem 3, external-assumption 19, primitive-interface 9.
-- Discharge: planned 3, retained 28.
+- **35 assumptions have been retired** from the trusted surface since this ledger was first frozen; they are kept below rather than deleted, because a reduction in the trusted base is the result, not a smaller table.
+- Classification: derivable-theorem 3, external-assumption 19, primitive-interface 8.
+- Discharge: planned 3, retained 27.
 
 ## Trusted surface by prelude
 
@@ -26,7 +26,7 @@ Counts are over the whole trusted surface, not `Declaration::Axiom` alone: `Opaq
 | `logic` | 0 | 0 | 0 | 0 | 0 |
 | `nat` | 0 | 0 | 0 | 0 | 0 |
 | `real` | 30 | 0 | 0 | 30 | 30 |
-| `string` | 1 | 0 | 0 | 1 | 1 |
+| `string` | 0 | 0 | 0 | 0 | 0 |
 
 ## Machine-checked contract
 
@@ -73,13 +73,12 @@ Counts are over the whole trusted surface, not `Declaration::Axiom` alone: `Opaq
 | `real` | `Real.sq_nonneg` | `605acf4574faed32958aa25327f592fe46270080b7764c0a4d02e411ed9f2d64` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
 | `real` | `Real.zero` | `e55fe37737b783cc821bb77a370950bb6a51dcf386ab6ee70d31808409ba412e` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
 | `real` | `Real.zero_lt_one` | `b8b5fca98eaedc898bf7553c4225a08e801c5b862dbad897ab79e74897a23b5c` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `string` | `axeyum.string.2.append` | `5807e40ae2f7047b9c13ec27ba628bd001a37d77633c65598aec24aa94561f25` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/string_prelude.rs) |
 
 ## Retired assumptions
 
 Rows the kernel no longer admits. They are retained because the interesting fact about a trust ledger is which way it moved.
 
-Retired by date: 2026-08-15 (33), 2026-08-16 (1).
+Retired by date: 2026-08-15 (33), 2026-08-16 (1), 2026-08-17 (1).
 
 | Prelude | Name | Retired | Type SHA-256 | Note |
 |---|---|---|---|---|
@@ -117,6 +116,7 @@ Retired by date: 2026-08-15 (33), 2026-08-16 (1).
 | `integer` | `Int.one` | 2026-08-15 | `0b5f608070c6ce3bc711621b8371e71901bdf196dbdf04807b513f75346b7018` | Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints. |
 | `integer` | `Int.zero` | 2026-08-15 | `0b5f608070c6ce3bc711621b8371e71901bdf196dbdf04807b513f75346b7018` | Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints. |
 | `integer` | `Int.zero_lt_one` | 2026-08-15 | `1dca56836e9ca3fa78c875df42107dfb3e82716a9a9ee5470aa2fe3e33365164` | Left the trusted surface when the integer development was proved out: the carrier became an inductive over the proved Nat development, the operations became checked definitions, and the laws became theorems with empty axiom footprints. |
+| `string` | `axeyum.string.2.append` | 2026-08-17 | `5807e40ae2f7047b9c13ec27ba628bd001a37d77633c65598aec24aa94561f25` | Retired: `append` is no longer assumed. `axeyum.string.<n>.append` is now a checked `Declaration::Definition` by structural recursion over `Str.rec`, and its four free-monoid laws (`nil_append`, `cons_append`, `append_nil`, `append_assoc`) are `Declaration::Theorem`s whose proof terms the kernel re-checks on admission. The string prelude trusted surface is empty. Its `primitive-interface`/`retained` classification is overturned by ADR-0469: the carrier `Str` is a constructed inductive, so the row was a `derivable-theorem`. Checked outside this kernel too -- a real `lean` binary accepts the exported module and its `#print axioms` names no `axeyum.string.*` row. |
 
 ## Shared real/integer names
 

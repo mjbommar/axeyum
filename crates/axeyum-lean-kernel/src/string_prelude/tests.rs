@@ -105,21 +105,219 @@ fn is_tester_iota_folds_to_bool() {
 }
 
 #[test]
-fn append_is_opaque_binary_function() {
-    // append typechecks as Str → Str → Str and does not reduce (opaque axiom):
-    // `append nil nil` infers to `Str` and is NOT def_eq to `nil`.
-    let (mut k, sp) = setup(1);
-    let nil = sp.nil(&mut k);
-    let nil2 = sp.nil(&mut k);
-    let ap = sp.append_app(&mut k, nil, nil2);
-    let inferred = k.infer(ap).expect("append nil nil : Str");
-    let str_const = sp.str_const(&mut k);
-    assert!(k.def_eq(inferred, str_const), "append nil nil : Str");
-    let nil3 = sp.nil(&mut k);
+fn append_is_a_checked_definition_not_an_axiom() {
+    // `append` used to be the last `Declaration::Axiom` outside the `real`
+    // prelude. It is now a `Definition` with a `Str.rec` body, so this test dies
+    // the moment anyone re-admits it as an assumption.
+    let (k, sp) = setup(1);
+    match k.environment().get(sp.append) {
+        Some(crate::Declaration::Definition { .. }) => {}
+        other => panic!("append must be a checked Definition, got {other:?}"),
+    }
+}
+
+#[test]
+fn string_prelude_trusted_surface_is_empty() {
+    // The ratchet behind `string: axiom=0` in `nat_axiom_inventory`. It counts
+    // the same three kinds over the same environment (logic + string), so this
+    // fails in-tree the moment any assumption is reintroduced — the example is a
+    // separate binary and a lane can land a prelude change without running it.
+    let (k, _sp) = setup(3);
+    let trusted: Vec<String> = k
+        .environment()
+        .iter()
+        .filter_map(|(_, declaration)| match declaration {
+            crate::Declaration::Axiom { name, .. }
+            | crate::Declaration::Opaque { name, .. }
+            | crate::Declaration::Quotient { name, .. } => Some(k.display_name(*name).to_string()),
+            _ => None,
+        })
+        .collect();
     assert!(
-        !k.def_eq(ap, nil3),
-        "append is opaque — does not compute to nil"
+        trusted.is_empty(),
+        "the string prelude must admit nothing without a checked body; found {trusted:?}"
     );
+}
+
+#[test]
+fn append_iota_computes_on_concrete_strings() {
+    // append [c0,c1] [c1,c0] ↝ [c0,c1,c1,c0] — the whole point of defining it.
+    let (mut k, sp) = setup(2);
+    let a = str_of(&mut k, &sp, &[0, 1]);
+    let b = str_of(&mut k, &sp, &[1, 0]);
+    let ap = sp.append_app(&mut k, a, b);
+    let want = str_of(&mut k, &sp, &[0, 1, 1, 0]);
+    assert!(k.def_eq(ap, want), "append [0,1] [1,0] ↝ [0,1,1,0]");
+
+    // …and it still infers at the declared type.
+    let inferred = k.infer(ap).expect("append a b : Str");
+    let str_const = sp.str_const(&mut k);
+    assert!(k.def_eq(inferred, str_const), "append a b : Str");
+
+    // A wrong answer is still rejected (def_eq is not vacuously true here).
+    let wrong = str_of(&mut k, &sp, &[0, 1, 0, 1]);
+    assert!(
+        !k.def_eq(ap, wrong),
+        "append must not equate distinct words"
+    );
+}
+
+#[test]
+fn append_is_stuck_on_an_opaque_argument() {
+    // The property the word-clash reconstruction relies on: with an opaque `Str`
+    // variable on the left, `append` has no ι-rule to fire, so it behaves exactly
+    // like the uninterpreted binary symbol it used to be. Defining it did not
+    // make an open term collapse to something.
+    let (mut k, sp) = setup(2);
+    let v = opaque_str(&mut k, &sp, "v_stuck");
+    let b = str_of(&mut k, &sp, &[1]);
+    let ap = sp.append_app(&mut k, v, b);
+    assert!(!k.def_eq(ap, v), "append v [c1] is not v");
+    assert!(!k.def_eq(ap, b), "append v [c1] is not [c1]");
+    let inferred = k.infer(ap).expect("append v b : Str");
+    let str_const = sp.str_const(&mut k);
+    assert!(k.def_eq(inferred, str_const));
+}
+
+/// Each proved law, checked by **re-deriving its statement** and demanding the
+/// kernel's stored theorem type match — so deleting a law, weakening it, or
+/// re-admitting it as an `Axiom` all fail here.
+#[test]
+fn monoid_laws_are_declared_theorems_with_the_stated_types() {
+    let (mut k, sp) = setup(2);
+    let str_ty = sp.str_const(&mut k);
+    let char_ty = k.const_(sp.char_ind, vec![]);
+    let anon = k.anon();
+
+    // nil_append : ∀ (b : Str), Eq Str (append nil b) b
+    {
+        let b = k.bvar(0);
+        let nil = sp.nil(&mut k);
+        let lhs = sp.append_app(&mut k, nil, b);
+        let body = mk_eq(&mut k, &sp, str_ty, 1, lhs, b);
+        let want = k.pi(anon, str_ty, body, BinderInfo::Default);
+        assert_theorem_type(&mut k, sp.nil_append, want, "nil_append");
+    }
+
+    // cons_append : ∀ (h : Char) (t b : Str),
+    //                 Eq Str (append (cons h t) b) (cons h (append t b))
+    {
+        let h = k.bvar(2);
+        let t = k.bvar(1);
+        let b = k.bvar(0);
+        let consed = sp.cons(&mut k, h, t);
+        let lhs = sp.append_app(&mut k, consed, b);
+        let tail_append = sp.append_app(&mut k, t, b);
+        let rhs = sp.cons(&mut k, h, tail_append);
+        let body = mk_eq(&mut k, &sp, str_ty, 1, lhs, rhs);
+        let over_b = k.pi(anon, str_ty, body, BinderInfo::Default);
+        let over_t = k.pi(anon, str_ty, over_b, BinderInfo::Default);
+        let want = k.pi(anon, char_ty, over_t, BinderInfo::Default);
+        assert_theorem_type(&mut k, sp.cons_append, want, "cons_append");
+    }
+
+    // append_nil : ∀ (a : Str), Eq Str (append a nil) a
+    {
+        let a = k.bvar(0);
+        let nil = sp.nil(&mut k);
+        let lhs = sp.append_app(&mut k, a, nil);
+        let body = mk_eq(&mut k, &sp, str_ty, 1, lhs, a);
+        let want = k.pi(anon, str_ty, body, BinderInfo::Default);
+        assert_theorem_type(&mut k, sp.append_nil, want, "append_nil");
+    }
+
+    // append_assoc : ∀ (a b c : Str),
+    //                  Eq Str (append (append a b) c) (append a (append b c))
+    {
+        let a = k.bvar(2);
+        let b = k.bvar(1);
+        let c = k.bvar(0);
+        let left = {
+            let inner = sp.append_app(&mut k, a, b);
+            sp.append_app(&mut k, inner, c)
+        };
+        let right = {
+            let inner = sp.append_app(&mut k, b, c);
+            sp.append_app(&mut k, a, inner)
+        };
+        let body = mk_eq(&mut k, &sp, str_ty, 1, left, right);
+        let over_c = k.pi(anon, str_ty, body, BinderInfo::Default);
+        let over_b = k.pi(anon, str_ty, over_c, BinderInfo::Default);
+        let want = k.pi(anon, str_ty, over_b, BinderInfo::Default);
+        assert_theorem_type(&mut k, sp.append_assoc, want, "append_assoc");
+    }
+}
+
+/// `decl` must be a `Declaration::Theorem` (a checked proof body, not an
+/// assumption) whose stored type is definitionally the expected statement.
+fn assert_theorem_type(k: &mut Kernel, name: crate::NameId, want: crate::ExprId, label: &str) {
+    let got = match k.environment().get(name) {
+        Some(crate::Declaration::Theorem { ty, .. }) => *ty,
+        other => panic!("{label} must be a checked Theorem, got {other:?}"),
+    };
+    assert!(
+        k.def_eq(got, want),
+        "{label} type mismatch:\n  stored : {}\n  wanted : {}",
+        k.render_lean(got),
+        k.render_lean(want)
+    );
+}
+
+/// The laws are usable as lemmas: instantiate `append_assoc` at three opaque
+/// `Str` variables and let the kernel infer the resulting proposition. This is
+/// what a length/cancellation reconstruction would do, and it fails if the
+/// theorem is missing or its telescope order changes.
+#[test]
+fn append_assoc_instantiates_at_opaque_words() {
+    let (mut k, sp) = setup(2);
+    let x = opaque_str(&mut k, &sp, "w_x");
+    let y = opaque_str(&mut k, &sp, "w_y");
+    let z = opaque_str(&mut k, &sp, "w_z");
+    let lemma = k.const_(sp.append_assoc, vec![]);
+    let applied = {
+        let e = k.app(lemma, x);
+        let e = k.app(e, y);
+        k.app(e, z)
+    };
+    let inferred = k.infer(applied).expect("append_assoc x y z infers");
+    let str_ty = sp.str_const(&mut k);
+    let want = {
+        let left = {
+            let inner = sp.append_app(&mut k, x, y);
+            sp.append_app(&mut k, inner, z)
+        };
+        let right = {
+            let inner = sp.append_app(&mut k, y, z);
+            sp.append_app(&mut k, x, inner)
+        };
+        mk_eq(&mut k, &sp, str_ty, 1, left, right)
+    };
+    assert!(
+        k.def_eq(inferred, want),
+        "append_assoc x y z : (x ++ y) ++ z = x ++ (y ++ z), got {}",
+        k.render_lean(inferred)
+    );
+}
+
+/// `append_nil` is the half that is *not* definitional: on an opaque word the
+/// kernel cannot reduce `append v nil` to `v`, so the theorem is doing real
+/// work rather than restating `Eq.refl`.
+#[test]
+fn append_nil_is_not_definitional_on_an_opaque_word() {
+    let (mut k, sp) = setup(2);
+    let v = opaque_str(&mut k, &sp, "w_v");
+    let nil = sp.nil(&mut k);
+    let lhs = sp.append_app(&mut k, v, nil);
+    assert!(
+        !k.def_eq(lhs, v),
+        "append v nil is NOT definitionally v — the induction is load-bearing"
+    );
+    let lemma = k.const_(sp.append_nil, vec![]);
+    let applied = k.app(lemma, v);
+    let inferred = k.infer(applied).expect("append_nil v infers");
+    let str_ty = sp.str_const(&mut k);
+    let want = mk_eq(&mut k, &sp, str_ty, 1, lhs, v);
+    assert!(k.def_eq(inferred, want), "append_nil v : append v nil = v");
 }
 
 /// The load-bearing clash computation, end to end at the prelude level: from

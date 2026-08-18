@@ -1104,11 +1104,13 @@ is exact:
 > actually exists**. Again, this is okay **provided that the prelude is trusted**."
 
 **That assumption is invisible in the LoC count.** Lean's kernel is 7,888 lines
-*plus a prelude nobody checks*. Ours is ~15,500 lines *plus 32 assumptions nobody
-has proved* (real 30 + integer 0 + string `append` 1; T6.0.6/TL3.2 — it was 65
-until ℤ was constructed over the proved ℕ development). Same shape,
-and ours is worse: Lean's prelude is at least
-*definitional*, while our arithmetic carrier is an opaque `Declaration::Axiom`.
+*plus a prelude nobody checks*. Ours is ~15,500 lines *plus 30 assumptions nobody
+has proved* (real 30 + integer 0 + string 0; T6.0.6/TL3.2 — it was 65 until ℤ was
+constructed over the proved ℕ development, and 31 until `string.append` became a
+checked definition on 2026-08-17). Same shape, and where the assumptions remain
+ours is worse: Lean's prelude is at least *definitional*, while our **real**
+arithmetic carrier is still an opaque `Declaration::Axiom`. That is now the only
+prelude of which this is true.
 
 So when we state a TCB, "the kernel" is not the boundary — **the kernel plus its
 prelude** is. Any comparison of kernel sizes that omits the prelude flatters
