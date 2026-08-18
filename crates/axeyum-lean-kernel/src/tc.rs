@@ -2461,6 +2461,25 @@ impl Kernel {
             && let ExprNode::Pi(_, expected_domain, expected_body, _) =
                 self.expr_node(expected).clone()
         {
+            // The binder domain must be a TYPE, not merely def-eq to the
+            // expected one. Omitting this was a real divergence from the real
+            // Lean kernel, found by
+            // `axeyum-lean-import/tests/real_lean_wire_differential.rs`: an
+            // ill-typed domain that BETA-REDUCES to the expected domain is
+            // erased by `def_eq_core`'s whnf and was never checked at all.
+            // Minimal case, accepted here and rejected by Lean 4.30.0's
+            // `addDeclCore`:
+            //
+            //     h : (True -> True) -> True
+            //     theorem t : True := h (fun (_ : (fun (x : Sort 1) => True) trivial) => trivial)
+            //
+            // `(fun (x : Sort 1) => True) trivial` is ill typed (`trivial :
+            // True`, the binder wants `Sort 1`) and reduces to `True`.
+            // `infer_lambda` has always checked this; this fast path bypassed
+            // `infer_lambda` entirely, so the check has to be repeated here.
+            // Lean's kernel has no such path: it infers and then `isDefEq`s,
+            // and `inferLambda` calls `ensureSortCore` on the domain.
+            self.infer_sort_of(domain, ctx)?;
             if !self.def_eq_core(domain, expected_domain, ctx) {
                 return Err(KernelError::TypeMismatch {
                     expected: expected_domain,

@@ -78,8 +78,13 @@ cd "$(dirname "$0")/.." || exit 2
 # refused `Nat.Linear.Poly.denote_reverse` — the top declined root in both scale
 # censuses after ζ landed. The positive module reads `#print axioms` back and
 # fails on `sorryAx`, so an admitted goal cannot read as agreement. Sixteen
-# suites now; measured total 126 (53 tests).
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-115}"
+# suites now; measured total 126 (53 tests). SEVENTEEN since 2026-08-17:
+# `real_lean_wire_differential` adds 93 (92 wire mutants plus the undamaged
+# development) and is the first check in the ADVERSARIAL direction -- it asks
+# whether OUR kernel admits anything Lean's refuses, and on its first run it
+# found one (`tc.rs` `check_core` skipped the sort check on a lambda binder
+# domain). Measured total 219 (56 tests).
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-208}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
 # Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s
@@ -138,6 +143,7 @@ axeyum-lean-kernel||real_lean_structure_eta_recursor_crosscheck
 axeyum-lean-kernel||real_lean_structure_eta_crosscheck
 axeyum-lean-kernel||real_lean_compact_share_crosscheck
 axeyum-lean-kernel||real_lean_kernel_replay
+axeyum-lean-import||real_lean_wire_differential
 axeyum-solver|full|int_inequality_lean_reconstruct
 axeyum-solver|full|lean_module_fixtures
 axeyum-solver|full|diophantine_lean_reconstruct
