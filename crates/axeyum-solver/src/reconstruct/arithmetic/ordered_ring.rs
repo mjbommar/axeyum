@@ -57,7 +57,10 @@ use super::{LraReconstructCtx, ReconstructError, RingSignature, reconstruct_lra_
 
 pub(crate) mod setoid;
 
-pub use setoid::{EQUALITY_SLOT_BINDERS, EqSetoidWitnesses, SetoidEq};
+pub use setoid::{
+    EQUALITY_SLOT_BINDERS, EQUALITY_SLOT_LAWS, EqSetoidWitnesses, EqualitySlot, SetoidAdoption,
+    SetoidEq,
+};
 
 /// The binder name each of the 30 `Real` declarations takes in the generalized
 /// statement, in **declaration order** — which is also dependency order, so

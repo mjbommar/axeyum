@@ -39,14 +39,30 @@
 //!     --example ordered_ring_refutation -- --require-empty
 //! cargo run --release -q -p axeyum-solver --features full \
 //!     --example ordered_ring_refutation -- --dump-statement
+//! cargo run --release -q -p axeyum-solver --features full \
+//!     --example ordered_ring_refutation -- --require-empty --constructed-reals
 //! ```
+//!
+//! ## `--constructed-reals`: the same refutations with nothing assumed at all
+//!
+//! The generalized theorem is axiom-free either way — that is what abstraction
+//! buys. The *instantiated* one is not: applying it back at the `Real` package
+//! re-imports all 30 of that package's declarations, which are this repository's
+//! entire remaining trusted surface. `--constructed-reals` applies it at
+//! `CReal` instead (ADR-0468): a Bishop setoid of regular ℚ-sequences that
+//! **proves** all 22 ordered-ring laws and all nine equality-slot obligations,
+//! with an empty axiom footprint for each. The closed `False` then rests on
+//! **zero** carrier axioms — only on the query's own variable and hypothesis
+//! axioms — and the `Real` column in the same output is the control.
 
 use std::process::ExitCode;
 
 use axeyum_ir::{Rational, TermArena, TermId};
+use axeyum_lean_kernel::{CRealPrelude, Kernel, build_creal_prelude};
 use axeyum_solver::{
-    LraReconstructCtx, RingTelescope, generalize_over_ordered_ring, reconstruct_lra_proof,
-    reconstruct_sos_proof, specialize_setoid_to_eq,
+    EqualitySlot, LraReconstructCtx, RingEquality, RingSignature, RingTelescope,
+    generalize_over_ordered_ring, reconstruct_lra_proof, reconstruct_sos_proof,
+    specialize_setoid_to_eq,
 };
 
 /// Which reconstructor a fixture goes through. Both land in the same kernel
@@ -180,11 +196,13 @@ fn run() -> Result<(), String> {
     let mut require_empty = false;
     let mut dump_statement = false;
     let mut footprint_table = false;
+    let mut constructed_reals = false;
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
             "--require-empty" => require_empty = true,
             "--dump-statement" => dump_statement = true,
             "--footprint-table" => footprint_table = true,
+            "--constructed-reals" => constructed_reals = true,
             other => return Err(format!("unknown flag `{other}`")),
         }
     }
@@ -415,5 +433,234 @@ fn run() -> Result<(), String> {
                 .to_owned(),
         );
     }
+
+    if constructed_reals {
+        let carrier_free = over_the_constructed_reals(&fixtures)?;
+        if require_empty && !carrier_free {
+            return Err(
+                "--require-empty was given but a refutation over the CONSTRUCTED reals \
+                 still rests on a carrier axiom, cost a declaration to adopt its equality \
+                 slot, or did not reduce the carrier footprint against the `Real` route"
+                    .to_owned(),
+            );
+        }
+    }
     Ok(())
+}
+
+/// The constructed reals as an ordered-ring signature, plus the equality slot
+/// `CRealPrelude` already proves (ADR-0468 phase R4).
+fn creal_signature() -> Result<(Kernel, RingSignature, EqualitySlot), String> {
+    // Built once and cloned, on the same argument as `prelude_cache` (ADR-0464):
+    // a clone is a bit-exact copy of a state this caller could have reached
+    // itself, and nothing enters an environment except through the trusted gate,
+    // which ran on the template. Measured 2026-08-18, one `build_creal_prelude`
+    // is ~40 s in a debug build and this mode wants six of them.
+    static TEMPLATE: std::sync::OnceLock<Result<(Kernel, CRealPrelude), String>> =
+        std::sync::OnceLock::new();
+    let (template, c) = TEMPLATE
+        .get_or_init(|| {
+            let mut kernel = Kernel::new();
+            let c = build_creal_prelude(&mut kernel)
+                .map_err(|error| format!("the CReal development did not build: {error:?}"))?;
+            Ok((kernel, c))
+        })
+        .as_ref()
+        .map_err(Clone::clone)?;
+    let kernel = template.clone();
+    let c = *c;
+    let sig = RingSignature {
+        // `CRealPrelude` has no `logic` field; the propositional prelude is three
+        // hops down its rational/integer tower.
+        logic: c.rat.int.logic,
+        // NOT the kernel's `Eq`: `Eq CReal` is not the equality of real numbers,
+        // and that is precisely what keeps the construction's trusted surface at
+        // zero.
+        equality: RingEquality::Defined(c.equiv),
+        r: c.creal,
+        add: c.add,
+        mul: c.mul,
+        neg: c.neg,
+        zero: c.zero,
+        one: c.one,
+        le: c.le,
+        lt: c.lt,
+        le_refl: c.le_refl,
+        le_trans: c.le_trans,
+        lt_irrefl: c.lt_irrefl,
+        lt_trans: c.lt_trans,
+        lt_of_lt_of_le: c.lt_of_lt_of_le,
+        lt_of_le_of_lt: c.lt_of_le_of_lt,
+        le_of_lt: c.le_of_lt,
+        add_le_add: c.add_le_add,
+        add_comm: c.add_comm,
+        add_assoc: c.add_assoc,
+        add_zero: c.add_zero,
+        add_neg: c.add_neg,
+        mul_le_mul_of_nonneg_left: c.mul_le_mul_of_nonneg_left,
+        zero_lt_one: c.zero_lt_one,
+        add_lt_add_of_le_of_lt: c.add_lt_add_of_le_of_lt,
+        mul_comm: c.mul_comm,
+        mul_assoc: c.mul_assoc,
+        mul_one: c.mul_one,
+        mul_zero: c.mul_zero,
+        left_distrib: c.left_distrib,
+        mul_nonneg: c.mul_nonneg,
+        sq_nonneg: c.sq_nonneg,
+    };
+    let slot = EqualitySlot {
+        eq: c.equiv,
+        eq_refl: c.equiv_refl,
+        eq_symm: c.equiv_symm,
+        eq_trans: c.equiv_trans,
+        add_congr: c.add_congr,
+        mul_congr: c.mul_congr,
+        neg_congr: c.neg_congr,
+        le_congr: c.le_congr,
+        lt_congr: c.lt_congr,
+    };
+    Ok((kernel, sig, slot))
+}
+
+/// Run every fixture a second time over the **constructed** reals and report the
+/// carrier footprint of the closed `False` each way.
+///
+/// The number that matters is the last column: how many of the refutation's
+/// remaining axioms are *the carrier's*. Over the `Real` package it is 15-17 —
+/// this repository's entire remaining trusted surface. Over `CReal` it is zero,
+/// because `CRealPrelude` proves all 22 ordered-ring laws and all nine
+/// equality-slot obligations outright.
+///
+/// Every figure is read out of the kernel. "Carrier axioms" is the intersection
+/// of the instantiated theorem's measured `axiom_footprint` with the telescope
+/// the generalization actually abstracted, so it cannot drift with a naming
+/// convention.
+fn over_the_constructed_reals(fixtures: &[Fixture]) -> Result<bool, String> {
+    let (kernel, sig, slot) = creal_signature()?;
+    println!();
+    println!("=== the CONSTRUCTED reals (ADR-0468 phase R4): the same fixtures over `CReal`");
+
+    // The equality slot, adopted rather than axiomatized. The control is in the
+    // same line: the `Real` route has to declare eighteen axioms for it.
+    let mut probe = LraReconstructCtx::with_ring_signature(kernel, sig)
+        .map_err(|error| format!("CReal is not an admissible signature: {error:?}"))?;
+    let adoption = probe
+        .adopt_setoid_equality(&slot)
+        .map_err(|error| format!("the equality slot did not adopt: {error:?}"))?;
+    let real_slot_cost = {
+        let mut real = LraReconstructCtx::new();
+        let before = real.kernel().environment().len();
+        real.enable_setoid_equality()
+            .map_err(|error| format!("the Real route did not declare its slot: {error:?}"))?;
+        real.kernel().environment().len() - before
+    };
+    println!(
+        "  equality slot: `{}` adopted from CRealPrelude -- {} declarations added \
+         (the `Real` route declares {} AXIOMS for the same slot)",
+        adoption.relation, adoption.declarations_added, real_slot_cost
+    );
+    let mut all_carrier_free = adoption.declarations_added == 0 && real_slot_cost > 0;
+    drop(probe);
+
+    for &(label, route, build) in fixtures {
+        let (arena, assertions) = build();
+
+        // (a) The `Real` route, as the control.
+        let mut real_ctx = LraReconstructCtx::new();
+        let real_proof = reconstruct(&mut real_ctx, route, &arena, &assertions)
+            .map_err(|error| format!("{label}: Real reconstruction failed: {error:?}"))?;
+        let real_general =
+            generalize_over_ordered_ring(&mut real_ctx, real_proof, RingTelescope::FullInterface)
+                .map_err(|error| format!("{label}: Real generalization failed: {error:?}"))?;
+        let real_carrier = carrier_axioms(&real_ctx, &real_general);
+
+        // (b) The same query over the constructed reals.
+        let (kernel, sig, slot) = creal_signature()?;
+        let mut ctx = LraReconstructCtx::with_ring_signature(kernel, sig)
+            .map_err(|error| format!("{label}: CReal is not an admissible signature: {error:?}"))?;
+        ctx.adopt_setoid_equality(&slot)
+            .map_err(|error| format!("{label}: the equality slot did not adopt: {error:?}"))?;
+        let proof = reconstruct(&mut ctx, route, &arena, &assertions)
+            .map_err(|error| format!("{label}: CReal reconstruction failed: {error:?}"))?;
+        let residual = axeyum_solver::residual_eq_constants(&ctx, proof);
+        let general = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::SetoidInterface)
+            .map_err(|error| format!("{label}: CReal generalization failed: {error:?}"))?;
+        let creal_carrier = carrier_axioms(&ctx, &general);
+
+        println!("  --- {label}");
+        println!(
+            "    over Real  : closed False -- footprint {} of which {} are CARRIER axioms",
+            real_general.instantiated_footprint.len(),
+            real_carrier.len()
+        );
+        println!(
+            "    over CReal : closed False -- footprint {} of which {} are CARRIER axioms{}",
+            general.instantiated_footprint.len(),
+            creal_carrier.len(),
+            if creal_carrier.is_empty() {
+                "  <== NONE"
+            } else {
+                ""
+            }
+        );
+        println!(
+            "    setoid form: {} ring binders -- footprint {}; kernel-`Eq` constants in the \
+             proof term: {}",
+            general.ring_binders,
+            general.footprint.len(),
+            residual.len()
+        );
+        if !creal_carrier.is_empty() {
+            println!("    still carrier-dependent: {}", creal_carrier.join(" "));
+        }
+
+        all_carrier_free &= creal_carrier.is_empty()
+            && general.footprint.is_empty()
+            && residual.is_empty()
+            && general.ring_binders == 39
+            // The negative controls: an empty REAL carrier footprint, or an empty
+            // CReal footprint outright, would make the comparison vacuous.
+            && !real_carrier.is_empty()
+            && !general.instantiated_footprint.is_empty();
+    }
+
+    println!();
+    println!(
+        "closed refutations over the CONSTRUCTED reals rest on zero carrier axioms: \
+         {all_carrier_free}"
+    );
+    Ok(all_carrier_free)
+}
+
+/// The refutation's remaining axioms that belong to the **carrier**: the
+/// measured footprint of the closed `False`, intersected with the telescope the
+/// generalization abstracted. Everything else is the query's own variable and
+/// hypothesis axioms.
+fn carrier_axioms(
+    ctx: &LraReconstructCtx,
+    refutation: &axeyum_solver::OrderedRingRefutation,
+) -> Vec<String> {
+    let telescope: std::collections::BTreeSet<String> = refutation
+        .ring_names
+        .iter()
+        .map(|&n| ctx.kernel().display_name(n).to_string())
+        .collect();
+    refutation
+        .instantiated_footprint
+        .iter()
+        .filter(|name| telescope.contains(*name))
+        .cloned()
+        .collect()
+}
+
+fn reconstruct(
+    ctx: &mut LraReconstructCtx,
+    route: Route,
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<axeyum_lean_kernel::ExprId, axeyum_solver::ReconstructError> {
+    match route {
+        Route::Lra => reconstruct_lra_proof(ctx, arena, assertions),
+        Route::Sos => reconstruct_sos_proof(ctx, arena, assertions),
+    }
 }

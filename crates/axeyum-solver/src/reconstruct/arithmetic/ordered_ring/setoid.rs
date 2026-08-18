@@ -233,6 +233,139 @@ pub struct SetoidEq {
 /// relation, its three equivalence laws, and the five congruences.
 pub const EQUALITY_SLOT_BINDERS: usize = 9;
 
+/// How many of [`EQUALITY_SLOT_BINDERS`] are *laws* — everything but the
+/// relation itself.
+pub const EQUALITY_SLOT_LAWS: usize = EQUALITY_SLOT_BINDERS - 1;
+
+/// `R → R → Prop`: the type of the equality slot's relation.
+fn equality_relation_type(kernel: &mut Kernel, r_ty: ExprId) -> ExprId {
+    let p = prop(kernel);
+    let inner = arrow(kernel, r_ty, p);
+    arrow(kernel, r_ty, inner)
+}
+
+/// The eight slot laws' statements over `arith`, with `eq_c` — a `Const` node of
+/// arity 2 — playing the role of equality, in the order [`SetoidEq`] declares
+/// them: `eq_refl`, `eq_symm`, `eq_trans`, `add_congr`, `mul_congr`,
+/// `neg_congr`, `le_congr`, `lt_congr`.
+///
+/// **One builder for both the declared slot and the adopted one.** These types
+/// are what [`declare_setoid_equality`] axiomatizes and what
+/// [`adopt_setoid_equality`] checks a carrier's own lemmas against, so a change
+/// to the interface cannot move one and leave the other behind — a carrier whose
+/// congruence has a different argument order is refused rather than silently
+/// accepted at a shape the proof term does not apply it at.
+fn equality_slot_law_types(
+    kernel: &mut Kernel,
+    arith: &super::super::RingSignature,
+    eq_c: ExprId,
+    next_fvar: &mut u64,
+) -> [(&'static str, ExprId); EQUALITY_SLOT_LAWS] {
+    let r_ty = kernel.const_(arith.r, vec![]);
+    let mk_eq = |kernel: &mut Kernel, x: ExprId, y: ExprId| apply(kernel, eq_c, &[x, y]);
+    let mk_bin = |kernel: &mut Kernel, op: NameId, x: ExprId, y: ExprId| {
+        let c = kernel.const_(op, vec![]);
+        apply(kernel, c, &[x, y])
+    };
+
+    // eq_refl : ∀ (a : R), eq a a.
+    let eq_refl = {
+        let mut t = Tele::new();
+        let a = t.bind(kernel, next_fvar, "a", r_ty);
+        let body = mk_eq(kernel, a, a);
+        t.close_pi(kernel, body)
+    };
+
+    // eq_symm : ∀ (a b : R), eq a b → eq b a.
+    let eq_symm = {
+        let mut t = Tele::new();
+        let a = t.bind(kernel, next_fvar, "a", r_ty);
+        let b = t.bind(kernel, next_fvar, "b", r_ty);
+        let hyp = mk_eq(kernel, a, b);
+        let concl = mk_eq(kernel, b, a);
+        let body = arrow(kernel, hyp, concl);
+        t.close_pi(kernel, body)
+    };
+
+    // eq_trans : ∀ (a b c : R), eq a b → eq b c → eq a c.
+    let eq_trans = {
+        let mut t = Tele::new();
+        let a = t.bind(kernel, next_fvar, "a", r_ty);
+        let b = t.bind(kernel, next_fvar, "b", r_ty);
+        let c = t.bind(kernel, next_fvar, "c", r_ty);
+        let h1 = mk_eq(kernel, a, b);
+        let h2 = mk_eq(kernel, b, c);
+        let concl = mk_eq(kernel, a, c);
+        let inner = arrow(kernel, h2, concl);
+        let body = arrow(kernel, h1, inner);
+        t.close_pi(kernel, body)
+    };
+
+    // add_congr / mul_congr : ∀ (a b c d), eq a b → eq c d → eq (op a c)(op b d).
+    let binary_congr = |kernel: &mut Kernel, next: &mut u64, op: NameId| {
+        let mut t = Tele::new();
+        let a = t.bind(kernel, next, "a", r_ty);
+        let b = t.bind(kernel, next, "b", r_ty);
+        let c = t.bind(kernel, next, "c", r_ty);
+        let d = t.bind(kernel, next, "d", r_ty);
+        let h1 = mk_eq(kernel, a, b);
+        let h2 = mk_eq(kernel, c, d);
+        let lhs = mk_bin(kernel, op, a, c);
+        let rhs = mk_bin(kernel, op, b, d);
+        let concl = mk_eq(kernel, lhs, rhs);
+        let inner = arrow(kernel, h2, concl);
+        let body = arrow(kernel, h1, inner);
+        t.close_pi(kernel, body)
+    };
+    let add_congr = binary_congr(kernel, next_fvar, arith.add);
+    let mul_congr = binary_congr(kernel, next_fvar, arith.mul);
+
+    // neg_congr : ∀ (a b : R), eq a b → eq (neg a)(neg b).
+    let neg_congr = {
+        let mut t = Tele::new();
+        let a = t.bind(kernel, next_fvar, "a", r_ty);
+        let b = t.bind(kernel, next_fvar, "b", r_ty);
+        let hyp = mk_eq(kernel, a, b);
+        let neg = kernel.const_(arith.neg, vec![]);
+        let na = kernel.app(neg, a);
+        let neg = kernel.const_(arith.neg, vec![]);
+        let nb = kernel.app(neg, b);
+        let concl = mk_eq(kernel, na, nb);
+        let body = arrow(kernel, hyp, concl);
+        t.close_pi(kernel, body)
+    };
+
+    // le_congr / lt_congr : ∀ (a b c d), eq a b → eq c d → rel a c → rel b d.
+    let relation_congr = |kernel: &mut Kernel, next: &mut u64, rel: NameId| {
+        let mut t = Tele::new();
+        let a = t.bind(kernel, next, "a", r_ty);
+        let b = t.bind(kernel, next, "b", r_ty);
+        let c = t.bind(kernel, next, "c", r_ty);
+        let d = t.bind(kernel, next, "d", r_ty);
+        let h1 = mk_eq(kernel, a, b);
+        let h2 = mk_eq(kernel, c, d);
+        let premise = mk_bin(kernel, rel, a, c);
+        let concl = mk_bin(kernel, rel, b, d);
+        let innermost = arrow(kernel, premise, concl);
+        let inner = arrow(kernel, h2, innermost);
+        let body = arrow(kernel, h1, inner);
+        t.close_pi(kernel, body)
+    };
+    let le_congr = relation_congr(kernel, next_fvar, arith.le);
+    let lt_congr = relation_congr(kernel, next_fvar, arith.lt);
+
+    [
+        ("eq_refl", eq_refl),
+        ("eq_symm", eq_symm),
+        ("eq_trans", eq_trans),
+        ("add_congr", add_congr),
+        ("mul_congr", mul_congr),
+        ("neg_congr", neg_congr),
+        ("le_congr", le_congr),
+        ("lt_congr", lt_congr),
+    ]
+}
+
 /// Declare the equality slot into `kernel`, over an already-built `arith`.
 ///
 /// # Errors
@@ -251,114 +384,23 @@ pub fn declare_setoid_equality(
     let r_ty = kernel.const_(arith.r, vec![]);
     let mut next_fvar: u64 = 0;
 
-    // eq : Real → Real → Prop.
+    // eq : R → R → Prop.
     let eq = {
-        let p = prop(kernel);
-        let inner = arrow(kernel, r_ty, p);
-        let ty = arrow(kernel, r_ty, inner);
+        let ty = equality_relation_type(kernel, r_ty);
         declare(kernel, ns, "eq", ty)?
     };
     let eq_c = kernel.const_(eq, vec![]);
-    let mk_eq = |kernel: &mut Kernel, x: ExprId, y: ExprId| {
-        let c = kernel.const_(eq, vec![]);
-        apply(kernel, c, &[x, y])
-    };
-    let mk_bin = |kernel: &mut Kernel, op: NameId, x: ExprId, y: ExprId| {
-        let c = kernel.const_(op, vec![]);
-        apply(kernel, c, &[x, y])
-    };
 
-    // eq_refl : ∀ (a : Real), eq a a.
-    let eq_refl = {
-        let mut t = Tele::new();
-        let a = t.bind(kernel, &mut next_fvar, "a", r_ty);
-        let body = mk_eq(kernel, a, a);
-        let ty = t.close_pi(kernel, body);
-        declare(kernel, ns, "eq_refl", ty)?
-    };
-
-    // eq_symm : ∀ (a b : Real), eq a b → eq b a.
-    let eq_symm = {
-        let mut t = Tele::new();
-        let a = t.bind(kernel, &mut next_fvar, "a", r_ty);
-        let b = t.bind(kernel, &mut next_fvar, "b", r_ty);
-        let hyp = mk_eq(kernel, a, b);
-        let concl = mk_eq(kernel, b, a);
-        let body = arrow(kernel, hyp, concl);
-        let ty = t.close_pi(kernel, body);
-        declare(kernel, ns, "eq_symm", ty)?
-    };
-
-    // eq_trans : ∀ (a b c : Real), eq a b → eq b c → eq a c.
-    let eq_trans = {
-        let mut t = Tele::new();
-        let a = t.bind(kernel, &mut next_fvar, "a", r_ty);
-        let b = t.bind(kernel, &mut next_fvar, "b", r_ty);
-        let c = t.bind(kernel, &mut next_fvar, "c", r_ty);
-        let h1 = mk_eq(kernel, a, b);
-        let h2 = mk_eq(kernel, b, c);
-        let concl = mk_eq(kernel, a, c);
-        let inner = arrow(kernel, h2, concl);
-        let body = arrow(kernel, h1, inner);
-        let ty = t.close_pi(kernel, body);
-        declare(kernel, ns, "eq_trans", ty)?
-    };
-
-    // add_congr / mul_congr : ∀ (a b c d), eq a b → eq c d → eq (op a c)(op b d).
-    let binary_congr = |kernel: &mut Kernel, next: &mut u64, op: NameId, leaf: &'static str| {
-        let mut t = Tele::new();
-        let a = t.bind(kernel, next, "a", r_ty);
-        let b = t.bind(kernel, next, "b", r_ty);
-        let c = t.bind(kernel, next, "c", r_ty);
-        let d = t.bind(kernel, next, "d", r_ty);
-        let h1 = mk_eq(kernel, a, b);
-        let h2 = mk_eq(kernel, c, d);
-        let lhs = mk_bin(kernel, op, a, c);
-        let rhs = mk_bin(kernel, op, b, d);
-        let concl = mk_eq(kernel, lhs, rhs);
-        let inner = arrow(kernel, h2, concl);
-        let body = arrow(kernel, h1, inner);
-        let ty = t.close_pi(kernel, body);
-        declare(kernel, ns, leaf, ty)
-    };
-    let add_congr = binary_congr(kernel, &mut next_fvar, arith.add, "add_congr")?;
-    let mul_congr = binary_congr(kernel, &mut next_fvar, arith.mul, "mul_congr")?;
-
-    // neg_congr : ∀ (a b : Real), eq a b → eq (neg a)(neg b).
-    let neg_congr = {
-        let mut t = Tele::new();
-        let a = t.bind(kernel, &mut next_fvar, "a", r_ty);
-        let b = t.bind(kernel, &mut next_fvar, "b", r_ty);
-        let hyp = mk_eq(kernel, a, b);
-        let neg = kernel.const_(arith.neg, vec![]);
-        let na = kernel.app(neg, a);
-        let neg = kernel.const_(arith.neg, vec![]);
-        let nb = kernel.app(neg, b);
-        let concl = mk_eq(kernel, na, nb);
-        let body = arrow(kernel, hyp, concl);
-        let ty = t.close_pi(kernel, body);
-        declare(kernel, ns, "neg_congr", ty)?
-    };
-
-    // le_congr / lt_congr : ∀ (a b c d), eq a b → eq c d → rel a c → rel b d.
-    let relation_congr = |kernel: &mut Kernel, next: &mut u64, rel: NameId, leaf: &'static str| {
-        let mut t = Tele::new();
-        let a = t.bind(kernel, next, "a", r_ty);
-        let b = t.bind(kernel, next, "b", r_ty);
-        let c = t.bind(kernel, next, "c", r_ty);
-        let d = t.bind(kernel, next, "d", r_ty);
-        let h1 = mk_eq(kernel, a, b);
-        let h2 = mk_eq(kernel, c, d);
-        let premise = mk_bin(kernel, rel, a, c);
-        let concl = mk_bin(kernel, rel, b, d);
-        let innermost = arrow(kernel, premise, concl);
-        let inner = arrow(kernel, h2, innermost);
-        let body = arrow(kernel, h1, inner);
-        let ty = t.close_pi(kernel, body);
-        declare(kernel, ns, leaf, ty)
-    };
-    let le_congr = relation_congr(kernel, &mut next_fvar, arith.le, "le_congr")?;
-    let lt_congr = relation_congr(kernel, &mut next_fvar, arith.lt, "lt_congr")?;
+    // The eight slot laws, at the shared interface types.
+    let mut slot_laws = [eq; EQUALITY_SLOT_LAWS];
+    for (position, (leaf, ty)) in equality_slot_law_types(kernel, arith, eq_c, &mut next_fvar)
+        .into_iter()
+        .enumerate()
+    {
+        slot_laws[position] = declare(kernel, ns, leaf, ty)?;
+    }
+    let [eq_refl, eq_symm, eq_trans, add_congr, mul_congr, neg_congr, le_congr, lt_congr] =
+        slot_laws;
 
     // The nine Eq-laws, restated through `eq`. Types are COMPUTED.
     let restate = |kernel: &mut Kernel,
@@ -432,6 +474,277 @@ fn declare(
         })
         .map_err(|e| rejected("setoid_equality", leaf, &e))?;
     Ok(name)
+}
+
+// ---------------------------------------------------------------------------
+// The equality slot, ADOPTED from a carrier that already proves it.
+// ---------------------------------------------------------------------------
+
+/// The nine equality-slot members a carrier supplies **from its own
+/// development**, as names already declared in the reconstruction kernel.
+///
+/// `declare_setoid_equality` mints these as eighteen axioms because the `Real`
+/// package cannot prove them: its equality *is* the kernel's `Eq`, so the only
+/// way to fill the slot there is to assume it. A constructed carrier is the
+/// opposite case —
+/// [`CRealPrelude`](axeyum_lean_kernel::CRealPrelude) proves every one of them
+/// (`CReal.Equiv`, `Equiv.refl`/`symm`/`trans`, the five congruences), each with
+/// an empty axiom footprint — so filling the slot there should cost **no new
+/// declaration at all**. `adopt_setoid_equality` is that route, and
+/// [`SetoidAdoption::declarations_added`] is the measurement that it really is
+/// free.
+///
+/// Only the nine slot members are named here. The nine `Eq`-shaped ring laws the
+/// slot also needs are **not** taken from the caller: under
+/// [`RingEquality::Defined`](super::super::RingEquality::Defined) the signature's
+/// own `add_comm`, …, `left_distrib` are already stated over the relation —
+/// `RingSignature::validate_in`'s guard 5 is what establishes that — so adoption
+/// reads them off the signature rather than accepting a second opinion about
+/// them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EqualitySlot {
+    /// The relation playing equality. Must be the signature's own
+    /// [`RingEquality::Defined`](super::super::RingEquality::Defined) name.
+    pub eq: NameId,
+    /// `∀ (a : R), eq a a`.
+    pub eq_refl: NameId,
+    /// `∀ (a b : R), eq a b → eq b a`.
+    pub eq_symm: NameId,
+    /// `∀ (a b c : R), eq a b → eq b c → eq a c`.
+    pub eq_trans: NameId,
+    /// `∀ (a b c d : R), eq a b → eq c d → eq (add a c) (add b d)`.
+    pub add_congr: NameId,
+    /// `∀ (a b c d : R), eq a b → eq c d → eq (mul a c) (mul b d)`.
+    pub mul_congr: NameId,
+    /// `∀ (a b : R), eq a b → eq (neg a) (neg b)`.
+    pub neg_congr: NameId,
+    /// `∀ (a b c d : R), eq a b → eq c d → le a c → le b d`.
+    pub le_congr: NameId,
+    /// `∀ (a b c d : R), eq a b → eq c d → lt a c → lt b d`.
+    pub lt_congr: NameId,
+}
+
+impl EqualitySlot {
+    /// The eight laws, in the order `equality_slot_law_types` builds their
+    /// statements — the order [`SetoidEq`] declares them in.
+    #[must_use]
+    pub fn laws(&self) -> [NameId; EQUALITY_SLOT_LAWS] {
+        [
+            self.eq_refl,
+            self.eq_symm,
+            self.eq_trans,
+            self.add_congr,
+            self.mul_congr,
+            self.neg_congr,
+            self.le_congr,
+            self.lt_congr,
+        ]
+    }
+
+    /// All nine members, the relation first.
+    #[must_use]
+    pub fn members(&self) -> [NameId; EQUALITY_SLOT_BINDERS] {
+        let mut out = [self.eq; EQUALITY_SLOT_BINDERS];
+        out[1..].copy_from_slice(&self.laws());
+        out
+    }
+}
+
+/// What `adopt_setoid_equality` measured. Every field is read out of the
+/// kernel, not asserted by the caller.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SetoidAdoption {
+    /// The adopted relation, rendered — `CReal.Equiv` for the constructed reals.
+    pub relation: String,
+    /// The nine slot members whose declared types were checked against the
+    /// interface, rendered in [`EqualitySlot::members`] order.
+    pub members_checked: Vec<String>,
+    /// The nine ring laws taken from the signature rather than from the caller,
+    /// rendered.
+    pub laws_from_signature: Vec<String>,
+    /// How many declarations adoption added to the environment, **measured**
+    /// before and after.
+    ///
+    /// The number this route exists to make zero: the same slot obtained through
+    /// `declare_setoid_equality` adds eighteen axioms, every one of which is a
+    /// new trusted assumption that the generalization then has to abstract back
+    /// out. Adoption adds none, because the carrier already proved them.
+    pub declarations_added: usize,
+}
+
+/// Fill the equality slot from a carrier's **own** lemmas, adding nothing to the
+/// trusted base.
+///
+/// The dual of [`declare_setoid_equality`]: same slot, same nine interface
+/// types, but the members are named by the caller and *checked*, rather than
+/// axiomatized. A context that adopts a slot reconstructs exactly as one that
+/// declared it — the ~25 reconstruction sites read a [`SetoidEq`] and cannot
+/// tell the two apart, which is the point.
+///
+/// Four guards, each with its own negative test:
+///
+/// 1. the signature's equality is a **defined relation**, not the kernel's `Eq`
+///    (there is nothing to adopt in the `Eq` case: `Eq R` is a partial
+///    application, not a name);
+/// 2. `slot.eq` **is** that relation — a slot filled with some other relation
+///    would prove congruences unrelated to the nine ring laws;
+/// 3. all nine members are present in this kernel;
+/// 4. each of the nine has the interface's type, by `def_eq` against a statement
+///    built here from the signature — so a carrier whose congruence takes its
+///    arguments in another order is refused rather than applied at a shape it
+///    does not have.
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] naming the guard that failed and the
+/// members that failed it.
+pub fn adopt_setoid_equality(
+    kernel: &mut Kernel,
+    arith: &super::super::RingSignature,
+    slot: &EqualitySlot,
+) -> Result<(SetoidEq, SetoidAdoption), ReconstructError> {
+    let before = kernel.environment().len();
+
+    // (1) There has to be a relation to adopt.
+    let super::super::RingEquality::Defined(relation) = arith.equality else {
+        return Err(adoption_defect(
+            "this signature's equality is the kernel's `Eq`, which is a partial application \
+             rather than a declared relation, so there is no slot to adopt; a carrier whose \
+             equality is `Eq` needs `declare_setoid_equality` instead"
+                .to_owned(),
+        ));
+    };
+
+    // (2) ...and it has to be the one the signature's nine laws are stated over.
+    if slot.eq != relation {
+        return Err(adoption_defect(format!(
+            "the slot supplies `{}` as equality, but this signature's laws are stated over `{}`, \
+             so the congruences would not be congruences of the ring laws",
+            kernel.display_name(slot.eq),
+            kernel.display_name(relation)
+        )));
+    }
+
+    // (3) Presence, before any type is read.
+    let missing: Vec<String> = slot
+        .members()
+        .into_iter()
+        .filter(|&n| kernel.environment().get(n).is_none())
+        .map(|n| kernel.display_name(n).to_string())
+        .collect();
+    if !missing.is_empty() {
+        return Err(adoption_defect(format!(
+            "{} of {EQUALITY_SLOT_BINDERS} equality-slot member(s) are not in this kernel's \
+             environment: {}",
+            missing.len(),
+            missing.join(", ")
+        )));
+    }
+
+    // (4) Shapes, against the SAME statements `declare_setoid_equality` would
+    //     have axiomatized.
+    guard_slot_shapes(kernel, arith, slot)?;
+
+    let adopted = SetoidEq {
+        eq: slot.eq,
+        eq_refl: slot.eq_refl,
+        eq_symm: slot.eq_symm,
+        eq_trans: slot.eq_trans,
+        add_congr: slot.add_congr,
+        mul_congr: slot.mul_congr,
+        neg_congr: slot.neg_congr,
+        le_congr: slot.le_congr,
+        lt_congr: slot.lt_congr,
+        // Read off the signature: under a defined equality these ARE the
+        // restatements, so there is nothing to rewrite and nothing to declare.
+        add_comm: arith.add_comm,
+        add_assoc: arith.add_assoc,
+        add_zero: arith.add_zero,
+        add_neg: arith.add_neg,
+        mul_comm: arith.mul_comm,
+        mul_assoc: arith.mul_assoc,
+        mul_one: arith.mul_one,
+        mul_zero: arith.mul_zero,
+        left_distrib: arith.left_distrib,
+    };
+    let report = SetoidAdoption {
+        relation: kernel.display_name(slot.eq).to_string(),
+        members_checked: slot
+            .members()
+            .into_iter()
+            .map(|n| kernel.display_name(n).to_string())
+            .collect(),
+        laws_from_signature: [
+            adopted.add_comm,
+            adopted.add_assoc,
+            adopted.add_zero,
+            adopted.add_neg,
+            adopted.mul_comm,
+            adopted.mul_assoc,
+            adopted.mul_one,
+            adopted.mul_zero,
+            adopted.left_distrib,
+        ]
+        .into_iter()
+        .map(|n| kernel.display_name(n).to_string())
+        .collect(),
+        declarations_added: kernel.environment().len() - before,
+    };
+    Ok((adopted, report))
+}
+
+/// Adoption guard 4: each of the nine members has the interface's type over the
+/// signature's carrier, by `def_eq` against a statement built here.
+///
+/// The statements come from [`equality_slot_law_types`] — the same builder
+/// [`declare_setoid_equality`] axiomatizes — so "the carrier proves the slot"
+/// and "the slot is what the proof term applies" cannot mean two different
+/// things.
+fn guard_slot_shapes(
+    kernel: &mut Kernel,
+    arith: &super::super::RingSignature,
+    slot: &EqualitySlot,
+) -> Result<(), ReconstructError> {
+    let r_ty = kernel.const_(arith.r, vec![]);
+    let relation_ty = equality_relation_type(kernel, r_ty);
+    let eq_c = kernel.const_(slot.eq, vec![]);
+    // Far above `declare_setoid_equality`'s counter so a context that did both
+    // cannot alias free variables.
+    let mut next_fvar: u64 = 9_000_000;
+    let mut expected: Vec<(NameId, &'static str, ExprId)> = vec![(slot.eq, "eq", relation_ty)];
+    for ((leaf, ty), name) in equality_slot_law_types(kernel, arith, eq_c, &mut next_fvar)
+        .into_iter()
+        .zip(slot.laws())
+    {
+        expected.push((name, leaf, ty));
+    }
+    let mut wrong: Vec<String> = Vec::new();
+    for (name, leaf, want) in expected {
+        let have = kernel
+            .environment()
+            .get(name)
+            .map(Declaration::ty)
+            .expect("presence is checked before any type is read");
+        if !kernel.def_eq(have, want) {
+            wrong.push(format!("{leaf} (`{}`)", kernel.display_name(name)));
+        }
+    }
+    if !wrong.is_empty() {
+        return Err(adoption_defect(format!(
+            "{} equality-slot member(s) do not have the interface's type over the carrier `{}`: {}",
+            wrong.len(),
+            kernel.display_name(arith.r),
+            wrong.join(", ")
+        )));
+    }
+    Ok(())
+}
+
+fn adoption_defect(detail: String) -> ReconstructError {
+    ReconstructError::KernelRejected {
+        rule: "adopt_setoid_equality".to_owned(),
+        detail,
+    }
 }
 
 /// Replace every occurrence of the partial application `Eq Real` by `eq`.

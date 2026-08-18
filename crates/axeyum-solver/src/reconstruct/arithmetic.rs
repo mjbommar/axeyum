@@ -314,6 +314,48 @@ impl LraReconstructCtx {
         self.setoid.is_some()
     }
 
+    /// Fill the **equality slot** from the carrier's own lemmas, declaring
+    /// nothing (ADR-0468 phase R4).
+    ///
+    /// [`Self::enable_setoid_equality`] is the `Real` route: it *axiomatizes*
+    /// the slot, because the `Real` package's equality is the kernel's `Eq` and
+    /// there is nothing there to prove it from. A constructed carrier is the
+    /// opposite case — `CRealPrelude` proves `CReal.Equiv`'s reflexivity,
+    /// symmetry, transitivity and all five congruences with empty axiom
+    /// footprints — so this takes them instead of assuming them, and
+    /// [`SetoidAdoption::declarations_added`](ordered_ring::setoid::SetoidAdoption::declarations_added)
+    /// is the measurement that the slot cost nothing.
+    ///
+    /// Call before reconstructing, like [`Self::enable_setoid_equality`]; the
+    /// proof term this context then builds is the same shape either way, and
+    /// [`RingTelescope::SetoidInterface`](ordered_ring::RingTelescope::SetoidInterface)
+    /// generalizes it over 39 binders.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] if this context already has an
+    /// equality slot — two slots would mean two relations playing equality in
+    /// one proof term — or if the supplied members fail one of the four
+    /// adoption guards.
+    pub fn adopt_setoid_equality(
+        &mut self,
+        slot: &ordered_ring::setoid::EqualitySlot,
+    ) -> Result<ordered_ring::setoid::SetoidAdoption, ReconstructError> {
+        if self.setoid.is_some() {
+            return Err(ReconstructError::KernelRejected {
+                rule: "adopt_setoid_equality".to_owned(),
+                detail: "this context already has an equality slot, so adopting a second one \
+                         would leave two relations playing equality in one proof term"
+                    .to_owned(),
+            });
+        }
+        let arith = self.arith;
+        let (adopted, report) =
+            ordered_ring::setoid::adopt_setoid_equality(&mut self.kernel, &arith, slot)?;
+        self.setoid = Some(adopted);
+        Ok(report)
+    }
+
     /// `name arg₀ … argₙ` for a declared constant with no universe parameters.
     fn apply_const(&mut self, name: NameId, args: &[ExprId]) -> ExprId {
         let mut out = self.kernel.const_(name, vec![]);

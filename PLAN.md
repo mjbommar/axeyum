@@ -169,6 +169,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | (pending) | ADR-0468 phase R4: `build_creal_model_of_arith` — the `Real` axiom package modelled by the **constructed** reals. 22/22 witnesses axiom-free, 9/22 restated over `CReal.Equiv`, 7/7 discrimination witnesses, exit status depending on all of it (`creal_model_witness`). Four mutation kills; ADR-0456's "`Int` is not ℝ" caveat discharged. |
 | 2026-08-18 | (this change) | Round 4: the fourth admission gate (`restore_nested_inductive_group`) gains adversarial coverage — the auxiliary recursor was never unread by Lean's kernel, only by `Environment.find?`, the elaborator's lookup; the replay script now asks `env.toKernelEnv`, a nested group is on the wire, and 14 `ind.aux-*` families cover it. 0 violations in 274 and 752 mutants, 80 families; residue measured exhaustively and is one non-type-checking field |
 | 2026-08-18 | (pending) | `LraReconstructCtx`'s carrier is a parameter: `RingSignature` + `RingEquality` replace the by-value `ArithPrelude`, `with_ring_signature`/`try_new` replace the panicking constructor, and five mutation-verified guards check a signature against the kernel. `CReal` passes them today with `CReal.Equiv` in the equality slot. Baseline output byte-identical. |
+| 2026-08-18 | (pending) | **ADR-0468 phase R4 reaches reconstruction: `LraReconstructCtx::adopt_setoid_equality` fills the ring interface's equality slot from `CRealPrelude`'s own theorems, and a Farkas/SOS refutation over the CONSTRUCTED reals rests on zero carrier axioms.** Measured on all five `ordered_ring_refutation` fixtures: 30 carrier axioms over `Real` against **0** over `CReal`, and the slot costs **0** declarations against 18 for the `Real` route — both read out of `Environment::len` and `Kernel::axiom_footprint`, with the `Real` column as the in-output control. Four adoption guards plus the ctx's one-slot rule, each killed by exactly one test under mutation. The nine slot-member types come from one builder shared with `declare_setoid_equality`, so an interface change cannot move only one of them. `--require-empty` output is byte-identical to before. |
 | 2026-08-18 | `c9223e4` | binding: the converse number says which side of the check the missing 245 rows are on — `undecomposable_spine=0` measured and gated, `represented` is a maximum matching rather than an overlap. |
 | 2026-08-18 | `b9d2f0a` | binding: the 4 `FiniteArrayExtensionality` rows were never content-free — the emitter collapsed each `(select a i)`; `attested` 9 → 5, `structural` 98 → 102 with 360 new matched term nodes. |
 | 2026-08-18 | `a25b18a` | binding: 66 rows were recording the weaker of two true statements — four verdicts become a partition with two-sided pins; `anchored` 10 → 73, `structural_anchored=66` new. |
@@ -571,6 +572,54 @@ five fixtures: footprint 0, 39 setoid binders, 30 of 30 non-slot binder types,
 caught three broken intra-doc links nothing else did).
 
 Detail moved to [`../notes/61-real-migration.md`](docs/plan/notes/61-real-migration.md).
+
+**ADR-0468 phase R4 reaches the reconstruction route: a Farkas/SOS refutation
+now reconstructs over `CReal`, and the closed `False` rests on ZERO carrier
+axioms (`WIP`, agent-creal-reconstruct, 2026-08-18).** R3 made equality a
+parameter of the ring telescope; R4 modelled the `Real` package by `CReal`. The
+gap between them was the *proof-term* route: the only way to fill the equality
+slot was `enable_setoid_equality`, which **declares eighteen axioms** — nine
+slot members plus the nine `Eq`-stated laws restated through them — because the
+`Real` package cannot prove any of it. `LraReconstructCtx::adopt_setoid_equality`
+is the other half: it takes the nine members from `CRealPrelude`, which proves
+every one of them footprint-free, and reads the nine ring laws off the
+signature, which under `RingEquality::Defined` already states them over
+`CReal.Equiv`.
+
+**Measured, `cargo run -q -p axeyum-solver --features full --example
+ordered_ring_refutation -- --require-empty --constructed-reals`:**
+
+| | equality slot | closed `False` footprint | of which CARRIER axioms |
+|---|---|---|---|
+| over `Real` | **18 axioms declared** | 32–37 | **30** |
+| over `CReal` | **0 declarations added** | 2–7 | **0** |
+
+on all five fixtures (`baby-farkas`, `farkas-sum`, `farkas-three`,
+`strict-cycle`, `sos-square`), with 39 ring binders, an empty generalized
+footprint, and zero kernel-`Eq` constants left in the proof term. The remaining
+2–7 are the query's own variable and hypothesis axioms and nothing else. "Carrier
+axioms" is the intersection of the measured `Kernel::axiom_footprint` with the
+telescope the generalization actually abstracted, so it cannot drift with a
+naming convention, and the non-empty `Real` column in the same output is the
+control that keeps the zero from being vacuous.
+
+**The `Real` package is this repository's entire remaining trusted surface
+(`real: axiom=30`), and this is the first route that produces a kernel-checked
+`False` about the reals without it.** What it does *not* yet do is retire the
+package: `LraReconstructCtx::new` still builds `Real`, and every shipped
+front-door LRA/SOS route goes through it. Making `CReal` the default carrier is
+the next slice, and its cost is `build_creal_prelude` — ~40 s in a debug build,
+against ~1 s for `build_arith_prelude`, which is why both the example and the
+test fixture clone a process-wide template rather than rebuilding it.
+
+**Five guards, five mutation kills, one test each.** The adoption seam refuses a
+signature whose equality is the kernel's `Eq` (nothing to adopt), a slot naming a
+relation the ring laws are not stated over, an undeclared member, a member of the
+wrong *shape* (swapping `le_congr` and `lt_congr` leaves both present, declared
+and true — a name-only check waves it through), and a second slot in a context
+that already has one. Every member's declared type is `def_eq`-compared against a
+statement built by the **same** builder `declare_setoid_equality` axiomatizes, so
+the declared slot and the adopted one cannot drift apart.
 
 **66 instances were recording the weaker of two true statements, 4 more were
 recording nothing at all, and the converse number could not be read** (`WIP`,

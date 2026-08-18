@@ -1,16 +1,24 @@
 //! Tests for the ordered-ring signature and the parameterized constructor.
 //!
-//! Two claims. (1) The `Real` package satisfies the interface this module states
-//! independently of `build_arith_prelude`, and the numbers that fall out of the
-//! check — carrier universe 1, nine `Eq`-shaped laws — are *measured*. (2) Each
-//! of the five guards refuses on its own: every negative test below breaks
-//! exactly one guard, so deleting that guard kills exactly that test.
+//! Three claims. (1) The `Real` package satisfies the interface this module
+//! states independently of `build_arith_prelude`, and the numbers that fall out
+//! of the check — carrier universe 1, nine `Eq`-shaped laws — are *measured*.
+//! (2) Each of the five guards refuses on its own: every negative test below
+//! breaks exactly one guard, so deleting that guard kills exactly that test.
+//! (3) The **constructed** reals are a carrier this route reconstructs over: the
+//! equality slot is adopted from `CRealPrelude` at a measured cost of zero new
+//! declarations, and the resulting Farkas refutation's Lean module mentions no
+//! `Real` declaration at all.
 
 use axeyum_ir::{Rational, TermArena, TermId};
-use axeyum_lean_kernel::{Kernel, build_arith_prelude, build_creal_prelude};
+use axeyum_lean_kernel::{CRealPrelude, Kernel, build_arith_prelude, build_creal_prelude};
 
 use super::{RingEquality, RingSignature};
-use crate::reconstruct::arithmetic::ordered_ring::{RingTelescope, generalize_over_ordered_ring};
+use crate::reconstruct::arithmetic::ordered_ring::setoid::EqualitySlot;
+use crate::reconstruct::arithmetic::ordered_ring::{
+    EQUALITY_SLOT_BINDERS, RingTelescope, generalize_over_ordered_ring,
+    render_ordered_ring_module, residual_eq_constants,
+};
 use crate::reconstruct::arithmetic::{LraReconstructCtx, reconstruct_lra_proof};
 
 /// A kernel with the `Real` package built, and the package as a signature.
@@ -245,7 +253,7 @@ fn try_new_agrees_with_new() {
 /// test is its precondition.
 #[test]
 fn the_constructed_reals_satisfy_the_ring_signature() {
-    let (mut kernel, sig) = creal_signature();
+    let (mut kernel, sig, _slot) = creal_signature();
     let report = sig
         .validate_in(&mut kernel)
         .expect("CReal is an ordered-ring signature with CReal.Equiv as its equality");
@@ -281,7 +289,7 @@ fn the_constructed_reals_satisfy_the_ring_signature() {
 /// really is reading `CReal.Equiv` out of those statements.
 #[test]
 fn the_constructed_reals_are_refused_when_the_signature_claims_kernel_eq() {
-    let (mut kernel, mut sig) = creal_signature();
+    let (mut kernel, mut sig, _slot) = creal_signature();
     sig.equality = RingEquality::KernelEq;
 
     let err = sig
@@ -294,12 +302,25 @@ fn the_constructed_reals_are_refused_when_the_signature_claims_kernel_eq() {
     );
 }
 
-/// The constructed reals as a [`RingSignature`], built entirely out of
+/// The constructed reals as a [`RingSignature`] plus the [`EqualitySlot`] that
+/// `CRealPrelude` already proves, built entirely out of
 /// [`CRealPrelude`](axeyum_lean_kernel::CRealPrelude) — no `Real` package in
 /// this kernel at all.
-fn creal_signature() -> (Kernel, RingSignature) {
-    let mut kernel = Kernel::new();
-    let c = build_creal_prelude(&mut kernel).expect("the CReal development builds");
+fn creal_signature() -> (Kernel, RingSignature, EqualitySlot) {
+    // Built ONCE per process and cloned, for the same reason and on the same
+    // argument as `prelude_cache` (ADR-0464): a clone is a bit-exact copy of a
+    // state this caller could have reached itself, and no declaration enters an
+    // environment by any route other than `Kernel::add_declaration`. Measured
+    // 2026-08-18, one `build_creal_prelude` costs ~45 s in a debug test binary,
+    // and this file wants eight of them.
+    static TEMPLATE: std::sync::OnceLock<(Kernel, CRealPrelude)> = std::sync::OnceLock::new();
+    let (template, c) = TEMPLATE.get_or_init(|| {
+        let mut kernel = Kernel::new();
+        let c = build_creal_prelude(&mut kernel).expect("the CReal development builds");
+        (kernel, c)
+    });
+    let kernel = template.clone();
+    let c = *c;
     let sig = RingSignature {
         // `CRealPrelude` has no `logic` field; the propositional prelude is
         // three hops down its rational/integer tower.
@@ -336,5 +357,248 @@ fn creal_signature() -> (Kernel, RingSignature) {
         mul_nonneg: c.mul_nonneg,
         sq_nonneg: c.sq_nonneg,
     };
-    (kernel, sig)
+    // Every one of the nine is `CRealPrelude`'s own theorem; none is minted
+    // here, which is what `declarations_added == 0` below measures.
+    let slot = EqualitySlot {
+        eq: c.equiv,
+        eq_refl: c.equiv_refl,
+        eq_symm: c.equiv_symm,
+        eq_trans: c.equiv_trans,
+        add_congr: c.add_congr,
+        mul_congr: c.mul_congr,
+        neg_congr: c.neg_congr,
+        le_congr: c.le_congr,
+        lt_congr: c.lt_congr,
+    };
+    (kernel, sig, slot)
+}
+
+// ===========================================================================
+// ADR-0468 phase R4: the equality slot, ADOPTED from the constructed reals.
+// ===========================================================================
+
+/// A `CReal` reconstruction context with the equality slot adopted, plus the
+/// adoption report.
+fn creal_ctx() -> (LraReconstructCtx, crate::reconstruct::SetoidAdoption) {
+    let (kernel, sig, slot) = creal_signature();
+    let mut ctx = LraReconstructCtx::with_ring_signature(kernel, sig)
+        .expect("CReal is an admissible ordered-ring signature");
+    let report = ctx
+        .adopt_setoid_equality(&slot)
+        .expect("CRealPrelude proves every member of the equality slot");
+    (ctx, report)
+}
+
+/// **The measurement this slice exists for.** Filling the equality slot from
+/// `CRealPrelude` adds **zero** declarations to the kernel, against eighteen for
+/// the `Real` route that has to axiomatize it.
+///
+/// Both numbers are read out of `Environment::len` before and after, not
+/// asserted. The `Real` figure is the control: without it, "adoption is free"
+/// would be a claim about a number nothing else produces.
+#[test]
+fn adopting_the_slot_from_the_constructed_reals_declares_nothing() {
+    let (_ctx, report) = creal_ctx();
+
+    assert_eq!(
+        report.declarations_added, 0,
+        "adoption must not add to the trusted base; it took CRealPrelude's own theorems"
+    );
+    assert_eq!(report.relation, "CReal.Equiv");
+    assert_eq!(report.members_checked.len(), EQUALITY_SLOT_BINDERS);
+    assert_eq!(
+        report.members_checked,
+        vec![
+            "CReal.Equiv",
+            "CReal.Equiv.refl",
+            "CReal.Equiv.symm",
+            "CReal.Equiv.trans",
+            "CReal.add_congr",
+            "CReal.mul_congr",
+            "CReal.neg_congr",
+            "CReal.le_congr",
+            "CReal.lt_congr",
+        ]
+    );
+    assert_eq!(
+        report.laws_from_signature,
+        vec![
+            "CReal.add_comm",
+            "CReal.add_assoc",
+            "CReal.add_zero",
+            "CReal.add_neg",
+            "CReal.mul_comm",
+            "CReal.mul_assoc",
+            "CReal.mul_one",
+            "CReal.mul_zero",
+            "CReal.left_distrib",
+        ],
+        "the nine Eq-shaped ring laws come from the signature, not from the caller"
+    );
+
+    // The control: the same slot over `Real`, which cannot prove any of it.
+    let mut real_ctx = LraReconstructCtx::new();
+    let before = real_ctx.kernel().environment().len();
+    real_ctx
+        .enable_setoid_equality()
+        .expect("the Real route declares the slot");
+    let declared = real_ctx.kernel().environment().len() - before;
+    assert_eq!(
+        declared, 18,
+        "the Real route mints nine slot members plus nine restated laws as AXIOMS"
+    );
+}
+
+/// **The payoff.** A Farkas refutation reconstructs over the *constructed*
+/// reals, generalizes over the 39-binder setoid interface, and comes back to a
+/// closed `False` whose axiom footprint contains **no `Real` declaration and no
+/// `CReal` declaration** — only the query's own variable and hypothesis axioms.
+///
+/// Every number below is read out of the kernel:
+///
+/// - the generalized theorem's footprint is empty (`generalize_over_ordered_ring`
+///   refuses to return otherwise, so this is a redundant read, not the check);
+/// - the *instantiated* `False` — the one that mentions the carrier — has a
+///   footprint containing nothing from the `Real` package and nothing from the
+///   `CReal` development, because the construction has no trusted surface to
+///   contribute;
+/// - the proof term mentions no kernel `Eq` constant at the carrier, which is
+///   what made a defined equality admissible in the first place;
+/// - the rendered Lean module contains no `Real`.
+#[test]
+fn a_farkas_refutation_reconstructs_over_the_constructed_reals() {
+    let (arena, assertions) = baby_farkas();
+    let (mut ctx, _) = creal_ctx();
+
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions)
+        .expect("baby-Farkas reconstructs over CReal");
+    assert!(
+        residual_eq_constants(&ctx, proof).is_empty(),
+        "the proof term must mention no kernel `Eq` constant, or a defined equality \
+         could not interpret it"
+    );
+
+    let general = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::SetoidInterface)
+        .expect("it generalizes over the 39-binder setoid interface");
+    assert_eq!(general.ring_binders, 39);
+    assert!(general.footprint.is_empty());
+
+    // The instantiation at CReal is the closed `False`. This is where a `Real`
+    // dependency would show up if one had survived.
+    let carrier_axioms: Vec<&String> = general
+        .instantiated_footprint
+        .iter()
+        .filter(|n| n.starts_with("Real") || n.starts_with("CReal"))
+        .collect();
+    assert!(
+        carrier_axioms.is_empty(),
+        "the closed refutation over CReal must rest on no carrier axiom; got {carrier_axioms:?} \
+         out of {:?}",
+        general.instantiated_footprint
+    );
+    assert!(
+        !general.instantiated_footprint.is_empty(),
+        "it does still rest on the query's own variable/hypothesis axioms -- an empty \
+         footprint here would mean the fixture stopped asserting anything"
+    );
+
+    let module = render_ordered_ring_module(&ctx, &general);
+    assert!(
+        !module.contains("Real"),
+        "the emitted Lean module still names the Real package"
+    );
+}
+
+/// Guard 1: a signature whose equality is the kernel's `Eq` has no relation to
+/// adopt, and says so rather than accepting a slot over the wrong thing.
+#[test]
+fn adopting_a_slot_over_the_kernels_own_eq_is_refused() {
+    let (_kernel, _sig, slot) = creal_signature();
+    let mut real_ctx = LraReconstructCtx::new();
+
+    let err = real_ctx
+        .adopt_setoid_equality(&slot)
+        .expect_err("the Real package's equality is `Eq`, not a declared relation");
+    assert!(
+        format!("{err:?}").contains("there is no slot to adopt"),
+        "got: {err:?}"
+    );
+}
+
+/// Guard 2: a slot whose relation is not the one the signature's nine laws are
+/// stated over is refused — congruences of some other relation prove nothing
+/// about the ring laws.
+#[test]
+fn adopting_a_slot_for_a_different_relation_is_refused() {
+    let (kernel, sig, mut slot) = creal_signature();
+    slot.eq = sig.le;
+    let mut ctx = LraReconstructCtx::with_ring_signature(kernel, sig)
+        .expect("CReal is an admissible signature");
+
+    let err = ctx
+        .adopt_setoid_equality(&slot)
+        .expect_err("`CReal.le` is not the equality CReal's laws are stated over");
+    let rendered = format!("{err:?}");
+    assert!(
+        rendered.contains("this signature's laws are stated over") && rendered.contains("CReal.le"),
+        "got: {rendered}"
+    );
+}
+
+/// Guard 3: a slot member that is not declared in this kernel is refused before
+/// any type is read.
+#[test]
+fn adopting_a_slot_with_an_undeclared_member_is_refused() {
+    let (mut kernel, sig, mut slot) = creal_signature();
+    let anon = kernel.anon();
+    slot.eq_symm = kernel.name_str(anon, "never.declared");
+    let mut ctx = LraReconstructCtx::with_ring_signature(kernel, sig)
+        .expect("CReal is an admissible signature");
+
+    let err = ctx
+        .adopt_setoid_equality(&slot)
+        .expect_err("an absent slot member must not be adopted");
+    assert!(
+        format!("{err:?}").contains("not in this kernel's environment"),
+        "got: {err:?}"
+    );
+}
+
+/// Guard 4: a slot member with the wrong *shape* is refused. Swapping the `le`
+/// and `lt` congruences keeps both members present, declared, and true — and
+/// makes each of them a congruence of the other relation, which is exactly the
+/// error a name-only check waves through.
+#[test]
+fn adopting_a_slot_whose_member_has_the_wrong_shape_is_refused() {
+    let (kernel, sig, mut slot) = creal_signature();
+    core::mem::swap(&mut slot.le_congr, &mut slot.lt_congr);
+    let mut ctx = LraReconstructCtx::with_ring_signature(kernel, sig)
+        .expect("CReal is an admissible signature");
+
+    let err = ctx
+        .adopt_setoid_equality(&slot)
+        .expect_err("`lt_congr` is not a congruence for `le`");
+    let rendered = format!("{err:?}");
+    assert!(
+        rendered.contains("do not have the interface's type")
+            && rendered.contains("le_congr")
+            && rendered.contains("lt_congr"),
+        "got: {rendered}"
+    );
+}
+
+/// Guard 5: a context that already has an equality slot refuses a second one —
+/// two relations playing equality in one proof term is not a configuration.
+#[test]
+fn adopting_a_second_equality_slot_is_refused() {
+    let (_kernel, _sig, slot) = creal_signature();
+    let (mut ctx, _) = creal_ctx();
+
+    let err = ctx
+        .adopt_setoid_equality(&slot)
+        .expect_err("one context, one equality");
+    assert!(
+        format!("{err:?}").contains("already has an equality slot"),
+        "got: {err:?}"
+    );
 }
