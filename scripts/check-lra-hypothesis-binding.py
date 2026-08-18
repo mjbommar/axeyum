@@ -90,16 +90,35 @@ consistent global renaming of the carriers must also pass (it is semantically
 harmless), while collapsing two carriers into one must not. Both directions are
 pinned in `scripts/tests/test_check_lra_hypothesis_binding.py`.
 
+# The denominator, measured
+
+Advertised scope is the part people believe, so it is a measurement here, not an
+estimate. Swept 2026-08-18 over all **1404** committed `.smt2` files. **270** of
+them render a Lean module at all, and those 270 split exactly three ways:
+
+    125  BOUND      every rendered hypothesis bound back to an `(assert …)` line
+    124  ATTESTED   the module transcribes NOTHING; verified to be content-free
+     21  DECLINED   neither — not pinned, not checked, listed by name
+
+`scripts/lra-hypothesis-binding-instances.txt` pins the 125;
+`scripts/hypothesis-binding-attestations.txt` pins the 124 and names the 21.
+The three bound routes are `lra.hyp._N` (Real Farkas), `lra.int_hyp._N` (Int
+Farkas) and `dio.hyp._N` (Int Diophantine).
+
 # What this does NOT cover
 
-Stated precisely, because a checker's advertised scope is the part people
-believe:
-
-- **Only the arithmetic hypothesis routes.** `axeyum.reconstruct.lra.hyp._N`
-  (Real) and `.int_hyp._N` (Int). The QF_BV, EUF, datatype, string and quantifier
-  reconstructions render hypotheses under other namespaces and are untouched — an
-  unrecognized `axeyum.reconstruct.*` axiom fails the run rather than being
-  skipped, so the uncovered routes are visible rather than silently blessed.
+- **The 21 declined instances.** 13 are quantified LIA/BV whose hypothesis is a
+  pi-type `((x0 : Int) -> … Or/Not/Iff …)`; 8 are ground modules whose hypothesis
+  is the OUTPUT of an array or BV abstraction step rather than a transcription of
+  any assertion, so there is no assertion for it to bind to. An unrecognized
+  `axeyum.reconstruct.*` axiom fails the run rather than being skipped, so these
+  stay visible rather than silently blessed.
+- **The 124 attestations transcribe nothing, and that is the finding, not a
+  gap this closes.** Their correspondence to the query lives in the Rust
+  certificate and is checked there. What is checked here is only that each really
+  is the content-free skeleton it claims to be. One of the 124 is *self-refuting*:
+  its `Not (Eq.{1} α atom._0 atom._0)` is an axiom Lean's own `rfl` refutes, so
+  the module's `False` needs none of its other axioms.
 - **Only the linear fragment the Python parser admits.** `+ - *` by a numeral,
   `and`, `not`, `<= < >= > =`, `let`. An assertion outside it contributes no
   atoms, so a hypothesis claiming to come from it is unmatched and the run fails.
@@ -108,7 +127,16 @@ believe:
   names claim — that is item 2 of the trust surface, and a different gate.
 - **It checks a SUBSET relation, not equality.** Every rendered hypothesis must
   come from the query; the refutation is free to use fewer assertions than the
-  query has, because a refutation of a subset refutes the whole.
+  query has, because a refutation of a subset refutes the whole. Sound, but
+  weaker than it sounds — so the shortfall is now *measured* rather than left to
+  the reader: `represented_assertions=286` of `spine_assertions=531`. Barely half
+  the rows these refutations are handed are rendered at all. The number is
+  recomputed from the accepted renaming, never from the search's own bookkeeping,
+  and `--min-represented` floors it so a wholesale drop cannot pass quietly.
+- **Constant-only atoms are compared up to positive scaling.** `0 = 5` and
+  `0 = 1` normalize to the same atom (dividing through by the gcd), because both
+  are the false proposition and the relation is preserved. So this checker cannot
+  distinguish two different variable-free contradictions from one another.
 """
 
 from __future__ import annotations
@@ -143,16 +171,37 @@ DUMPER_BUILD = [
 # a verified transcription no longer does.
 MANIFEST = ROOT / "scripts/lra-hypothesis-binding-instances.txt"
 
+# The instances whose modules carry NO query content at all (see "Opaque-skeleton
+# attestations" below). Pinned separately and reported separately: they are the
+# denominator's honest other half, not coverage.
+ATTESTATION_MANIFEST = ROOT / "scripts/hypothesis-binding-attestations.txt"
+
 # Floors. A scanner that goes blind reports a beautiful clean zero. Measured
-# 2026-08-17: 105 instances, 248 hypotheses, 869 corruptions caught.
-MIN_INSTANCES = 100
-MIN_HYPOTHESES = 240
-MIN_REQUIRED_MUTATIONS = 800
+# 2026-08-18 over the whole committed corpus: 125 bound instances, 288
+# hypotheses, 1210 corruptions caught, 124 attestations of which 1 is
+# self-refuting, and 286 of 531 spine assertions represented.
+MIN_INSTANCES = 120
+MIN_HYPOTHESES = 280
+MIN_REQUIRED_MUTATIONS = 1150
+MIN_ATTESTATIONS = 120
+# The converse direction, measured rather than assumed: how many of the spine's
+# `(assert …)` rows a rendered hypothesis actually stands for. 286 of 531 --
+# barely over half. That is not a soundness hole (a refutation of a subset
+# refutes the whole) but it IS the precise size of what binding does not show.
+MIN_REPRESENTED = 275
+
+
+def _manifest(path: pathlib.Path) -> list[str]:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return [line.strip() for line in lines if line.strip() and not line.startswith("#")]
 
 
 def manifest_instances() -> list[str]:
-    lines = MANIFEST.read_text(encoding="utf-8").splitlines()
-    return [line.strip() for line in lines if line.strip() and not line.startswith("#")]
+    return _manifest(MANIFEST)
+
+
+def attestation_instances() -> list[str]:
+    return _manifest(ATTESTATION_MANIFEST)
 
 # Axioms a rendered module may carry that are NOT query-derived: the ordered-field
 # prelude and Lean's compiler-internal constants. Their *contents* are item 2 of
@@ -207,14 +256,21 @@ PRELUDE_AXIOMS = {
     "Real.mul_inv_cancel",
 }
 
-# The two arithmetic hypothesis routes this checker covers, and their carriers.
+# The hypothesis routes this checker BINDS, and their carriers. Every one of
+# these renders query constraints as arithmetic over module-local carriers, so a
+# renaming back to the query's own symbols is a meaningful thing to demand.
 ROUTES = {
     "axeyum.reconstruct.lra.hyp.": ("Real", "axeyum.reconstruct.lra.x."),
     "axeyum.reconstruct.lra.int_hyp.": ("Int", "axeyum.reconstruct.lra.int_var."),
+    # The integer Diophantine route. Its hypotheses are `Eq.{1} Int` equalities
+    # (and occasionally `Int.le`/`Int.lt` bounds) over `dio.x._N` carriers, with
+    # coefficients rendered as repeated `Int.add` rather than multiplication.
+    "axeyum.reconstruct.dio.hyp.": ("Int", "axeyum.reconstruct.dio.x."),
 }
 CARRIER_PREFIXES = {
     "axeyum.reconstruct.lra.x.": "Real",
     "axeyum.reconstruct.lra.int_var.": "Int",
+    "axeyum.reconstruct.dio.x.": "Int",
 }
 QUERY_NAMESPACE = "axeyum.reconstruct."
 
@@ -248,14 +304,15 @@ def canonical(rel: str, coeffs: dict[str, Fraction], const: Fraction) -> tuple:
     if divisor > 1:
         ints = {v: c // divisor for v, c in ints.items()}
         k //= divisor
-    if rel == "=":
-        # Sign-normalize on the first variable (or the constant) so `E = 0` and
-        # `−E = 0` land on one representative.
-        ordered = sorted(ints.items())
-        lead = ordered[0][1] if ordered else k
-        if lead < 0:
-            ints = {v: -c for v, c in ints.items()}
-            k = -k
+    # `=` is deliberately NOT sign-normalized. The obvious normalization -- flip
+    # the sign so the lexicographically first variable is positive -- reads the
+    # VARIABLE NAMES, and the two sides of this check use different names by
+    # construction, so it is not rename-invariant: `(= value (+ x_squared 1))`
+    # normalizes on `value` while its rendering normalizes on `dio.x._0`, and the
+    # faithful module is rejected. Measured on four Diophantine instances while
+    # this route was being added. `E = 0` and `−E = 0` are reconciled instead by
+    # `atoms_of` putting BOTH orientations of every equality into the pool, which
+    # needs no name ordering at all.
     return (rel, tuple(sorted(ints.items())), k)
 
 
@@ -323,7 +380,10 @@ def linear(term, env: dict[str, tuple]) -> tuple[dict[str, Fraction], Fraction]:
         if number is not None:
             return ({}, number)
         if term in env:
-            return env[term]
+            bound = env[term]
+            if bound is OPAQUE:
+                raise Unsupported(f"`let`-bound name `{term}` is not linear arithmetic")
+            return bound
         return ({term: Fraction(1)}, Fraction(0))
     if not term:
         raise Unsupported("empty application")
@@ -383,6 +443,13 @@ def linear(term, env: dict[str, tuple]) -> tuple[dict[str, Fraction], Fraction]:
     raise Unsupported(f"arithmetic head `{head}`")
 
 
+# A `let`-bound name whose definition is not linear arithmetic. It must NOT
+# degrade to a free variable: `(let ((a (forall …))) …)` would then contribute an
+# invented symbol `a` that a rendered hypothesis could match against. Referencing
+# it raises instead, so the enclosing assertion contributes no atoms.
+OPAQUE = object()
+
+
 def _let(term, env: dict[str, tuple]):
     """`(let ((v e) …) body)` -> `(body, extended_env)`."""
     if len(term) != 3:
@@ -391,7 +458,15 @@ def _let(term, env: dict[str, tuple]):
     for binding in term[1]:
         if not isinstance(binding, list) or len(binding) != 2:
             raise Unsupported("`let` binding shape")
-        extended[binding[0]] = linear(binding[1], env)
+        try:
+            extended[binding[0]] = linear(binding[1], env)
+        except Unsupported:
+            # A Boolean or quantified `let` body. Binding it opaquely keeps
+            # `read_query` from dying on the whole FILE over one non-arithmetic
+            # binding, which it did: `006-cbqi-ite.smt2` raised
+            # `Unsupported: arithmetic head 'forall'` out of `read_query` and the
+            # run ended in a traceback rather than a decline.
+            extended[binding[0]] = OPAQUE
     return (term[2], extended)
 
 
@@ -459,10 +534,14 @@ def atoms_of(term, polarity: bool, env: dict[str, tuple]) -> list[tuple]:
                 coeffs[v] = coeffs.get(v, Fraction(0)) - value
             const = lk - rk
             # `a = b` entails BOTH bounds; the reconstructors use whichever they
-            # need, and the equality atom itself for the equality routes.
+            # need, and the equality atom itself for the equality routes. BOTH
+            # ORIENTATIONS of the equality go in, because `E = 0` and `−E = 0`
+            # are the same fact and the renderer is free to emit either.
+            flipped = {v: -c for v, c in coeffs.items()}
             out.append(canonical("<=", coeffs, const))
-            out.append(canonical("<=", {v: -c for v, c in coeffs.items()}, -const))
+            out.append(canonical("<=", flipped, -const))
             out.append(canonical("=", coeffs, const))
+            out.append(canonical("=", flipped, -const))
         return out
     return []
 
@@ -481,7 +560,16 @@ def read_query(path: pathlib.Path) -> tuple[dict[str, str], list[list[tuple]]]:
         elif head == "declare-const" and len(form) == 3:
             sorts[form[1]] = form[2] if isinstance(form[2], str) else "?"
         elif head == "assert" and len(form) == 2:
-            assertions.append(atoms_of(form[1], True, {}))
+            try:
+                assertions.append(atoms_of(form[1], True, {}))
+            except Unsupported:
+                # Fail-closed by omission, the same policy `atoms_of` states: an
+                # assertion this parser cannot decompose contributes NO atoms, so
+                # any hypothesis claiming to descend from it stays unmatched and
+                # the instance fails. An exception escaping to the driver instead
+                # would end the run in a traceback, which is neither a pass nor an
+                # honest decline.
+                assertions.append([])
     return sorts, assertions
 
 
@@ -558,10 +646,31 @@ def lean_linear(expr, carrier: str) -> tuple[dict[str, Fraction], Fraction]:
     raise Unsupported(f"rendered head `{head}`")
 
 
+# `Eq.{1} Int a b` is a FOUR-token application: the eliminator, the sort, and the
+# two sides. Only this exact universe/sort pair is admitted, because `Eq.{1} α …`
+# over an opaque attestation carrier says nothing about the query's arithmetic and
+# must not be mistaken for an equality between query terms.
+EQ_HEADS = ("Eq.{1}", "Eq")
+
+
 def lean_atom(ty: str, carrier: str) -> tuple:
     """The canonical atom a rendered hypothesis type denotes."""
     expr = lean_expr(ty)
-    if isinstance(expr, str) or len(expr) != 3:
+    if isinstance(expr, str):
+        raise Unsupported("a hypothesis type is not a relation application")
+    if len(expr) == 4 and expr[0] in EQ_HEADS:
+        if expr[1] != carrier:
+            raise Unsupported(
+                f"`{expr[0]}` at sort `{expr[1]}`, not the route's carrier `{carrier}`"
+            )
+        rel, left, right = "=", expr[2], expr[3]
+        lc, lk = lean_linear(left, carrier)
+        rc, rk = lean_linear(right, carrier)
+        coeffs = dict(lc)
+        for v, value in rc.items():
+            coeffs[v] = coeffs.get(v, Fraction(0)) - value
+        return canonical(rel, coeffs, lk - rk)
+    if len(expr) != 3:
         raise Unsupported("a hypothesis type is not a binary relation application")
     head, left, right = expr
     if head == f"{carrier}.le":
@@ -619,6 +728,143 @@ def read_module(source: str) -> tuple[dict[str, str], list[tuple[str, str, str]]
 
 
 # ---------------------------------------------------------------------------
+# Opaque-skeleton attestations
+# ---------------------------------------------------------------------------
+#
+# Not every rendered module transcribes anything. Measured 2026-08-18 over the
+# 1404 committed `.smt2` files: of the 270 that render a Lean module at all, 124
+# render one whose ENTIRE vocabulary is
+#
+#     α  atom._N  prop._N  func._N  Eq.{1}  Not  And
+#
+# and nothing else -- no numeral, no `Int.*`/`Real.*` constructor, no carrier of
+# any bound route. That is the `ArrayAxiom`, `QfAbv`, `Sos` and friends shape:
+#
+#     axiom α : Sort (1)
+#     axiom axeyum.reconstruct.atom._0 : α
+#     axiom axeyum.reconstruct.atom._1 : α
+#     axiom axeyum.reconstruct.hyp._2 : Eq.{1} α atom._0 atom._1
+#     axiom axeyum.reconstruct.hyp._3 : Not (Eq.{1} α atom._0 atom._1)
+#
+# Lean checks that `False` follows. It does, and it would follow just as well if
+# the query said something else entirely: the module's trusted base is a FRESH
+# vocabulary with no declared relationship to any symbol in the `.smt2` file.
+# There is no transcription here to bind, so binding these would be a check that
+# cannot fail -- worse than an honest decline.
+#
+# What IS checkable, and is checked, is that the module really is that shape:
+# a single smuggled `Int.one`, an undeclared opaque name, a truncated type, or
+# any extra axiom takes it out of the class. So the classification cannot quietly
+# absorb a content-bearing module, and the run reports `attested` SEPARATELY from
+# `bound` -- these instances are counted as unverified transcription, in public.
+
+# The opaque declarations an attestation may make, and the exact type each must
+# have. `func._N` is checked structurally instead (a function over `α`).
+ATTESTATION_DECL_TYPES = {
+    "axeyum.reconstruct.atom.": "α",
+    "axeyum.reconstruct.prop.": "Prop",
+}
+ATTESTATION_FUNC_PREFIX = "axeyum.reconstruct.func."
+ATTESTATION_HYP_PREFIXES = ("axeyum.reconstruct.hyp.", "axeyum.reconstruct.em.")
+# The logical vocabulary an attestation hypothesis may use. Deliberately tiny and
+# deliberately CLOSED: adding to it is how this class would silently grow to
+# cover modules that do carry content.
+ATTESTATION_CONNECTIVES = frozenset(
+    {"Eq.{1}", "Eq", "Not", "And", "Or", "Iff", "α", "Prop"}
+)
+ATTESTATION_SORT_AXIOM = ("α", "Sort (1)")
+
+
+def classify_attestation(source: str) -> tuple[bool, str, int]:
+    """`(is_attestation, why not, vacuous hypothesis count)` for a rendered module.
+
+    Shares nothing with the binding path on purpose: this decides that a module
+    says NOTHING about the query, and it must not be able to reach that verdict
+    by reusing the machinery that decides what a module says.
+    """
+    decls: set[str] = set()
+    hypotheses: list[tuple[str, str]] = []
+    for line in source.splitlines():
+        match = AXIOM_LINE.match(line.strip())
+        if not match:
+            continue
+        name, ty = match.group(1), match.group(2).strip()
+        if ty.count("(") != ty.count(")"):
+            # A type that spilled onto the next line. `AXIOM_LINE` reads one line,
+            # so what we hold is a PREFIX -- and a prefix of a content-bearing type
+            # can easily look like a skeleton. Refuse rather than classify.
+            return (False, f"{name}: the rendered type is not balanced on one line", 0)
+        if not name.startswith(QUERY_NAMESPACE):
+            if (name, ty) != ATTESTATION_SORT_AXIOM:
+                return (
+                    False,
+                    f"`{name} : {ty}` is not the opaque sort `α : Sort (1)`, so this "
+                    "module carries a trusted base beyond the skeleton",
+                    0,
+                )
+            continue
+        declared = next(
+            (want for prefix, want in ATTESTATION_DECL_TYPES.items() if name.startswith(prefix)),
+            None,
+        )
+        if declared is not None:
+            if ty != declared:
+                return (False, f"{name} declares `{ty}`, not the opaque `{declared}`", 0)
+            decls.add(name)
+            continue
+        if name.startswith(ATTESTATION_FUNC_PREFIX):
+            if not _is_opaque_function_type(ty):
+                return (False, f"{name} is not a function over the opaque sort: `{ty}`", 0)
+            decls.add(name)
+            continue
+        if name.startswith(ATTESTATION_HYP_PREFIXES):
+            hypotheses.append((name, ty))
+            continue
+        return (False, f"{name} is a query-derived axiom outside the skeleton grammar", 0)
+
+    if not hypotheses:
+        return (False, "the module declares no hypothesis axiom at all", 0)
+    allowed = decls | ATTESTATION_CONNECTIVES
+    for name, ty in hypotheses:
+        for token in ty.replace("(", " ").replace(")", " ").split():
+            if token not in allowed:
+                return (
+                    False,
+                    f"{name} mentions `{token}`, which is neither an opaque constant "
+                    "this module declared nor a logical connective -- so the module "
+                    "does carry content and must be BOUND, not attested",
+                    0,
+                )
+    return (True, "", sum(1 for _n, ty in hypotheses if _is_self_refuting(ty)))
+
+
+def _is_opaque_function_type(ty: str) -> bool:
+    """`((x0 : α) -> ((x1 : α) -> α))` and its arities: α → … → α, nothing else."""
+    tokens = set(ty.replace("(", " ").replace(")", " ").split())
+    if not tokens <= {"α", ":", "->"} | {f"x{i}" for i in range(64)}:
+        return False
+    return "α" in tokens and "->" in tokens
+
+
+def _is_self_refuting(ty: str) -> bool:
+    """`Not (Eq.{1} α t t)` — an axiom Lean's own `rfl` refutes on its own.
+
+    Such a module needs none of its other axioms: `False` follows from this one
+    alone, so even the propositional step it appears to take is not taken.
+    """
+    try:
+        expr = lean_expr(ty)
+    except Unsupported:
+        return False
+    if isinstance(expr, str) or len(expr) != 2 or expr[0] != "Not":
+        return False
+    inner = expr[1]
+    if isinstance(inner, str) or len(inner) != 4 or inner[0] not in EQ_HEADS:
+        return False
+    return inner[2] == inner[3]
+
+
+# ---------------------------------------------------------------------------
 # The binding search
 # ---------------------------------------------------------------------------
 
@@ -671,6 +917,33 @@ def verify_binding(
                 "query entails"
             )
     return problems
+
+
+def represented_assertions(
+    phi: dict[str, str],
+    hypotheses: list[tuple[str, str, tuple]],
+    indices: list[int],
+    assertions: list[list[tuple]],
+) -> tuple[int, int]:
+    """`(assertions in the spine, how many a rendered hypothesis stands for)`.
+
+    The CONVERSE of what `bind` establishes, and the honest measure of its limit.
+    Binding shows every rendered hypothesis comes FROM the query; it says nothing
+    about the query's rows that were never rendered. That direction is not a
+    soundness hole -- a refutation of a subset refutes the whole -- but it does
+    mean "the module is a faithful rendering of the query" is a stronger claim
+    than the binding supports, so the shortfall is counted and printed instead of
+    being left to the reader's imagination.
+
+    Recomputed from `phi` alone. The search's own `origins` are not consulted:
+    an untrusted search must not be the source of the number that describes it.
+    """
+    renamed = {_rename(atom, phi) for _name, _carrier, atom in hypotheses}
+    covered = 0
+    for index in indices:
+        if index < len(assertions) and renamed.intersection(assertions[index]):
+            covered += 1
+    return (len(indices), covered)
 
 
 def sort_compatible(carrier: str | None, declared: str | None) -> bool:
@@ -804,7 +1077,14 @@ def _matchings(
 # Mutations — the proof that this checker can fail
 # ---------------------------------------------------------------------------
 
-MUTATIONS = ("flip-relation", "drop-negation", "swap-arguments", "shift-constant", "drop-term")
+MUTATIONS = (
+    "flip-relation",
+    "drop-negation",
+    "swap-arguments",
+    "shift-constant",
+    "drop-term",
+    "duplicate-term",
+)
 
 
 def mutate(ty: str, carrier: str, kind: str) -> str | None:
@@ -814,6 +1094,13 @@ def mutate(ty: str, carrier: str, kind: str) -> str | None:
             return f"{carrier}.lt " + ty[len(f"{carrier}.le "):]
         if ty.startswith(f"{carrier}.lt "):
             return f"{carrier}.le " + ty[len(f"{carrier}.lt "):]
+        # An equality weakened to a STRICT bound: `a = b` rendered `a < b`. The
+        # non-strict weakening `a <= b` would be a faithful consequence and so a
+        # correct accept, which is exactly why the strict one is the corruption
+        # worth injecting -- `a = b` does not entail it.
+        eq = _eq_sides(ty, carrier)
+        if eq is not None:
+            return f"{carrier}.lt {eq[0]} {eq[1]}"
         return None
     if kind == "drop-negation":
         needle = f"({carrier}.neg "
@@ -832,15 +1119,54 @@ def mutate(ty: str, carrier: str, kind: str) -> str | None:
         return None
     if kind == "swap-arguments":
         expr = lean_expr(ty)
-        if isinstance(expr, str) or len(expr) != 3:
+        if isinstance(expr, str):
+            return None
+        if len(expr) == 4 and expr[0] in EQ_HEADS:
+            return f"{expr[0]} {_render(expr[1])} {_render(expr[3])} {_render(expr[2])}"
+        if len(expr) != 3:
             return None
         return f"{expr[0]} {_render(expr[2])} {_render(expr[1])}"
     if kind == "shift-constant":
         needle = f"{carrier}.zero"
         at = ty.rfind(needle)
+        if at >= 0:
+            return (
+                ty[:at]
+                + f"({carrier}.add {carrier}.one {carrier}.zero)"
+                + ty[at + len(needle) :]
+            )
+        # No `.zero` to grow. The Diophantine route renders bare numerals as
+        # repeated `.one`, so shifting one of THOSE is the same off-by-one bug:
+        # `x = 4` becomes `x = 5`.
+        needle = f"{carrier}.one"
+        at = ty.rfind(needle)
         if at < 0:
             return None
-        return ty[:at] + f"({carrier}.add {carrier}.one {carrier}.zero)" + ty[at + len(needle) :]
+        return (
+            ty[:at]
+            + f"({carrier}.add {carrier}.one {carrier}.one)"
+            + ty[at + len(needle) :]
+        )
+    if kind == "duplicate-term":
+        # `(C.add A B)` -> `(C.add A (C.add A B))`: one summand counted twice.
+        # The Diophantine route renders a coefficient AS repetition, so this is
+        # precisely an off-by-one coefficient there -- `4x` rendered as `5x`.
+        needle = f"({carrier}.add "
+        at = ty.find(needle)
+        if at < 0:
+            return None
+        body = _balanced_body(ty, at, len(needle))
+        if body is None:
+            return None
+        inner, end = body
+        parts = _split_spine(inner)
+        if len(parts) != 2:
+            return None
+        return (
+            ty[:at]
+            + f"({carrier}.add {parts[0]} ({carrier}.add {parts[0]} {parts[1]}))"
+            + ty[end + 1 :]
+        )
     if kind == "drop-term":
         # `(C.add A B)` -> `B`: one summand of the constraint simply vanishes.
         needle = f"({carrier}.add "
@@ -861,6 +1187,32 @@ def mutate(ty: str, carrier: str, kind: str) -> str | None:
                     return ty[:at] + parts[1] + ty[i + 1 :]
         return None
     raise Unsupported(f"mutation `{kind}`")
+
+
+def _eq_sides(ty: str, carrier: str) -> tuple[str, str] | None:
+    """`(lhs, rhs)` of a rendered `Eq.{1} <carrier> lhs rhs`, else `None`."""
+    try:
+        expr = lean_expr(ty)
+    except Unsupported:
+        return None
+    if isinstance(expr, str) or len(expr) != 4 or expr[0] not in EQ_HEADS:
+        return None
+    if expr[1] != carrier:
+        return None
+    return (_render(expr[2]), _render(expr[3]))
+
+
+def _balanced_body(ty: str, at: int, head_len: int) -> tuple[str, int] | None:
+    """`(body, index of the closing paren)` for the application opening at `at`."""
+    depth = 0
+    for i in range(at, len(ty)):
+        if ty[i] == "(":
+            depth += 1
+        elif ty[i] == ")":
+            depth -= 1
+            if depth == 0:
+                return (ty[at + head_len : i], i)
+    return None
 
 
 def _render(expr) -> str:
@@ -983,16 +1335,33 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument("--no-build", action="store_true")
     parser.add_argument("--no-self-check", action="store_true")
+    parser.add_argument(
+        "--expect",
+        choices=("bound", "attested"),
+        default="bound",
+        help="the verdict every --instance must reach. `bound` (the default) "
+        "requires the module's hypotheses to bind to the query's assertions; "
+        "`attested` requires it to be a content-free opaque skeleton. Which "
+        "verdict is required comes from the MANIFEST when no --instance is given, "
+        "so an instance cannot quietly move between the two.",
+    )
     parser.add_argument("--min-instances", type=int, default=MIN_INSTANCES)
     parser.add_argument("--min-hypotheses", type=int, default=MIN_HYPOTHESES)
     parser.add_argument(
         "--min-required-mutations", type=int, default=MIN_REQUIRED_MUTATIONS
     )
+    parser.add_argument("--min-attestations", type=int, default=MIN_ATTESTATIONS)
+    parser.add_argument("--min-represented", type=int, default=MIN_REPRESENTED)
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
 
-    instances = [pathlib.Path(p) for p in (args.instance or manifest_instances())]
-    if args.module is not None and len(instances) != 1:
+    if args.instance:
+        targets = [(pathlib.Path(p), args.expect) for p in args.instance]
+    else:
+        targets = [(pathlib.Path(p), "bound") for p in manifest_instances()]
+        targets += [(pathlib.Path(p), "attested") for p in attestation_instances()]
+    instances = [path for path, want in targets if want == "bound"]
+    if args.module is not None and len(targets) != 1:
         raise SystemExit("--module takes exactly one --instance")
     binary = None if args.module else dumper_binary(build=not args.no_build)
 
@@ -1000,9 +1369,13 @@ def main(argv: list[str]) -> int:
     total_hypotheses = 0
     caught_mutations = 0
     accepted_mutations = 0
+    attested = 0
+    attested_vacuous = 0
+    spine_assertions = 0
+    represented = 0
     escaped: list[str] = []
 
-    for instance in instances:
+    for instance, want in targets:
         path = instance if instance.is_absolute() else ROOT / instance
         sorts, assertions = read_query(path)
         if args.module is not None:
@@ -1013,13 +1386,46 @@ def main(argv: list[str]) -> int:
             indices, fragment = list(range(len(assertions))), "supplied"
         else:
             source, indices, fragment = render_module(binary, path)
+
+        if want == "attested":
+            ok, why, vacuous = classify_attestation(source)
+            if not ok:
+                failures.append(
+                    f"{instance}: pinned as a content-free attestation, but {why}"
+                )
+                continue
+            attested += 1
+            attested_vacuous += vacuous
+            if args.verbose:
+                note = f", {vacuous} self-refuting" if vacuous else ""
+                print(f"  {instance} [{fragment}] attestation, nothing transcribed{note}")
+            continue
+
         phi, hypotheses, allowed, detail = check_instance(source, indices, sorts, assertions)
         if phi is None:
             failures.append(f"{instance}: {detail}")
             continue
+        if not hypotheses:
+            # A module with no hypothesis in any bound route binds VACUOUSLY: the
+            # empty renaming satisfies every requirement. Without this, a renderer
+            # regression that degraded a pinned instance to a content-free
+            # skeleton would leave the ratchet green -- only the run-wide
+            # `--min-hypotheses` floor would notice, and only in bulk.
+            failures.append(
+                f"{instance}: the module carries no hypothesis in any bound route, so "
+                "the binding is vacuous; it is either an attestation (pin it as one) "
+                "or a regression"
+            )
+            continue
         total_hypotheses += len(hypotheses)
+        spine, covered = represented_assertions(phi, hypotheses, indices, assertions)
+        spine_assertions += spine
+        represented += covered
         if args.verbose:
-            print(f"  {instance} [{fragment}] {len(hypotheses)} hypotheses bound")
+            print(
+                f"  {instance} [{fragment}] {len(hypotheses)} hypotheses bound, "
+                f"{covered}/{spine} spine assertions represented"
+            )
             for name, _carrier, atom in hypotheses:
                 renamed = _rename(atom, phi)
                 print(f"    {name} -> {renamed}")
@@ -1078,7 +1484,9 @@ def main(argv: list[str]) -> int:
     print(
         f"LRA_HYP_BINDING|instances={len(instances)}|hypotheses={total_hypotheses}|"
         f"mutants_caught={caught_mutations}|mutants_accepted={accepted_mutations}|"
-        f"unjustified={len(escaped)}|failures={len(failures)}"
+        f"unjustified={len(escaped)}|attested={attested}|"
+        f"attested_vacuous={attested_vacuous}|spine_assertions={spine_assertions}|"
+        f"represented_assertions={represented}|failures={len(failures)}"
     )
 
     failures.extend(escaped)
@@ -1086,10 +1494,25 @@ def main(argv: list[str]) -> int:
         failures.append(
             f"only {len(instances)} instances were checked (floor {args.min_instances})"
         )
+    if any(want == "attested" for _p, want in targets) and attested < args.min_attestations:
+        failures.append(
+            f"only {attested} modules were confirmed content-free attestations (floor "
+            f"{args.min_attestations}). This number is not coverage -- it is the part "
+            "of the corpus whose Lean evidence transcribes NOTHING from the query, and "
+            "a checker that stopped confirming that would stop reporting it"
+        )
     if total_hypotheses < args.min_hypotheses:
         failures.append(
             f"only {total_hypotheses} hypothesis axioms were bound (floor "
             f"{args.min_hypotheses}); a run that binds nothing proves nothing"
+        )
+    if instances and represented < args.min_represented:
+        failures.append(
+            f"only {represented} of {spine_assertions} spine assertions are represented "
+            f"by a rendered hypothesis (floor {args.min_represented}). This is the "
+            "CONVERSE of what binding proves: a drop here means the modules started "
+            "resting on less of the query than they used to, which the subset check "
+            "cannot see"
         )
     if not args.no_self_check and caught_mutations < args.min_required_mutations:
         failures.append(

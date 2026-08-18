@@ -197,9 +197,20 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "        if False:",
             ),
             (
-                "sign is not normalized away on an inequality",
-                '    if rel == "=":',
-                "    if True:",
+                "both orientations of an equality reach the pool",
+                '            out.append(canonical("=", flipped, -const))',
+                "            pass",
+            ),
+            (
+                "an equality is not sign-normalized by variable NAME",
+                "    return (rel, tuple(sorted(ints.items())), k)",
+                '    if rel == "=":\n'
+                "        _ordered = sorted(ints.items())\n"
+                "        _lead = _ordered[0][1] if _ordered else k\n"
+                "        if _lead < 0:\n"
+                "            ints = {v: -c for v, c in ints.items()}\n"
+                "            k = -k\n"
+                "    return (rel, tuple(sorted(ints.items())), k)",
             ),
             (
                 "a disjunction entails neither disjunct",
@@ -215,6 +226,61 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "an unknown rendered leaf is not a fresh variable",
                 "        if expr.startswith(QUERY_NAMESPACE):\n            return ({expr: Fraction(1)}, Fraction(0))",
                 "        if True:\n            return ({expr: Fraction(1)}, Fraction(0))",
+            ),
+            (
+                "an `Eq` at the wrong sort is not an equality between query terms",
+                "        if expr[1] != carrier:\n            raise Unsupported(",
+                "        if False:\n            raise Unsupported(",
+            ),
+            (
+                "a `let`-bound non-arithmetic name is not a fresh variable",
+                "            if bound is OPAQUE:\n                raise Unsupported(",
+                "            if False:\n                raise Unsupported(",
+            ),
+            (
+                "attestation: the hypothesis vocabulary is closed",
+                "            if token not in allowed:",
+                "            if False:",
+            ),
+            (
+                "attestation: no axiom beyond the opaque sort",
+                "            if (name, ty) != ATTESTATION_SORT_AXIOM:",
+                "            if False:",
+            ),
+            (
+                "attestation: a truncated multi-line type is refused",
+                'if ty.count("(") != ty.count(")"):',
+                "if False:",
+            ),
+            (
+                "attestation: an `atom`/`prop` declares the opaque type it claims",
+                "            if ty != declared:",
+                "            if False:",
+            ),
+            (
+                "attestation: a `func` is a function over the opaque sort",
+                "            if not _is_opaque_function_type(ty):",
+                "            if False:",
+            ),
+            (
+                "attestation: a module with no hypothesis is not one",
+                '    if not hypotheses:\n        return (False, "the module declares no hypothesis axiom at all", 0)',
+                "    if False:\n        pass",
+            ),
+            (
+                "attestation: a denied reflexivity is counted as self-refuting",
+                "    return inner[2] == inner[3]",
+                "    return False",
+            ),
+            (
+                "a bound instance with no hypothesis binds vacuously",
+                "        if not hypotheses:\n            # A module with no hypothesis",
+                "        if False:\n            # A module with no hypothesis",
+            ),
+            (
+                "the converse direction counts UNrendered rows as unrepresented",
+                "        if index < len(assertions) and renamed.intersection(assertions[index]):",
+                "        if True:",
             ),
         ],
     ),

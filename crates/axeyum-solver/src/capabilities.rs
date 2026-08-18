@@ -416,13 +416,17 @@ pub const CAPABILITIES: &[Capability] = &[
                   lean_hypothesis_binding_dump example and gated by \
                   scripts/check-lra-hypothesis-binding.py: \
                   the module a reconstruction emits declares the query's constraints as its OWN \
-                  axioms (`axeyum.reconstruct.lra.hyp._N` / `.int_hyp._N`) and proves False from \
-                  them, so Lean accepting the proof says nothing about whether those axioms are the \
-                  `.smt2` file's `(assert ...)` lines. Closes item 3 of the residual trust surface — \
-                  the link that note ranks as WEAKER THAN THE KERNEL — for the two arithmetic \
-                  hypothesis routes. BOUNDARY: linear atoms only; the SOS route's `Real.mul` \
-                  monomials and every non-arithmetic hypothesis namespace are DECLINED, not \
-                  skipped — an unrecognized `axeyum.reconstruct.*` axiom fails the run",
+                  axioms (`axeyum.reconstruct.lra.hyp._N` / `.int_hyp._N` / `.dio.hyp._N`) and \
+                  proves False from them, so Lean accepting the proof says nothing about whether \
+                  those axioms are the `.smt2` file's `(assert ...)` lines. Closes item 3 of the \
+                  residual trust surface — the link that note ranks as WEAKER THAN THE KERNEL — for \
+                  the Real Farkas, Int Farkas and Int Diophantine hypothesis routes. \
+                  DENOMINATOR, MEASURED 2026-08-18 over all 1404 committed .smt2 files: 270 render a \
+                  Lean module and split 125 BOUND / 124 ATTESTED / 21 DECLINED. The 124 attestations \
+                  transcribe NOTHING — their whole vocabulary is `α atom._N prop._N func._N Eq.{1} \
+                  Not And`, so Lean's False would follow just as well from a different query; that \
+                  is verified as a distinct verdict, never counted as coverage. The 21 declined are \
+                  named, not skipped: an unrecognized `axeyum.reconstruct.*` axiom fails the run",
         assurance: Assurance::Checked,
         evidence: "both sides are re-parsed and re-normalized in Python, sharing no code with each \
                    other or with axeyum-smtlib, because the renderer emits `x > 5` as `-x + 5 < 0` \
@@ -433,10 +437,15 @@ pub const CAPABILITIES: &[Capability] = &[
                    module must be a carrier, a bound hypothesis, or a pinned prelude law, so \
                    `axiom smuggled : False` cannot pass unread. The backtracking search is \
                    UNTRUSTED — whatever it returns is re-derived by an independent verify pass that \
-                   shares no control flow with it. Measured 2026-08-17: 105 pinned instances, 248 \
-                   hypotheses, 0 failures; every run corrupts each hypothesis five ways (869 caught, \
-                   329 accepted and re-verified) so the gate cannot pass without its detector \
-                   firing. 12 guards, each driven to failure in scripts/tests/mutation_controls.py",
+                   shares no control flow with it. Measured 2026-08-18: 125 bound instances, 288 \
+                   hypotheses, 124 confirmed-content-free attestations (1 of them SELF-REFUTING: its \
+                   `Not (Eq.{1} α t t)` is refuted by Lean's own rfl, so its False needs no other \
+                   axiom), 0 failures; every run corrupts each hypothesis six ways (1210 caught, 427 \
+                   accepted and re-verified) so the gate cannot pass without its detector firing. \
+                   The CONVERSE is measured rather than assumed: 286 of 531 spine assertions are \
+                   represented by a rendered hypothesis — barely half, which is the precise size of \
+                   what a subset check does not show. 24 guards, each driven to failure in \
+                   scripts/tests/mutation_controls.py",
         checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0384/0465",
     },
