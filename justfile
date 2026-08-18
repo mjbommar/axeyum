@@ -6,7 +6,40 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions
+
+# THE AXIOM-FREEDOM MEASUREMENTS, which nothing ran until 2026-08-18.
+#
+# `real: axiom=30` is this repository's whole remaining trusted surface, and the
+# claim that the shipped front door no longer reaches it rests on three
+# examples. Grepped across `scripts/*.sh`, `justfile` and `.github/workflows/`
+# on 2026-08-18: ZERO invocations. ADR-0480 and ADR-0486 both cite them as
+# evidence; they were lane-run commands that happened to have been run once.
+#
+# Each carries a `--require-*` flag that makes its EXIT STATUS depend on the
+# finding, which is the only reason putting them in a gate means anything:
+#
+#   front_door_carrier --require-axiom-free   the shipped `prove_unsat_to_lean_module`
+#                                             reconstructs over the CONSTRUCTED reals,
+#                                             carrier axioms 0/0/0 against the `Real`
+#                                             control's 12/17/8, and the module's
+#                                             `axiom` lines equal the kernel footprint
+#   ring_interface_pin --require-identical    the 30-binder interface telescope read off
+#                                             the axiomatized package and off the
+#                                             axiom-free integers is the SAME statements
+#   ordered_ring_refutation --require-empty   the generalized theorem's footprint is
+#                                             empty, with the non-generalized one printed
+#                                             beside it as a non-vacuity control
+#   ordered_ring_refutation --constructed-reals   the same fixtures over `CReal`
+#
+# `--release` deliberately: measured 282 + 118 + 69 + 40 = 509 s in release
+# against multiples of that in debug, and these build the whole constructed
+# N/Z/Q/setoid development.
+axiom-freedom:
+    cargo run --release -q -p axeyum-solver --features full --example front_door_carrier -- --require-axiom-free
+    cargo run --release -q -p axeyum-solver --features full --example ring_interface_pin -- --require-identical
+    cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --require-empty
+    cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals
 
 fmt:
     cargo fmt --all --check

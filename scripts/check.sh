@@ -136,6 +136,21 @@ step gate-controls ./scripts/tests/test-gate-scope-controls.sh
 step local-ci-record-controls ./scripts/tests/test-local-ci-record.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
+# The axiom-freedom measurements. `real: axiom=30` is the whole remaining
+# trusted surface and the claim that the shipped route no longer reaches it
+# rested, until 2026-08-18, on three examples that NO gate ran -- zero
+# invocations across scripts/, justfile and .github/workflows/, while two ADRs
+# cited them as evidence. Each `--require-*` flag makes the exit status depend
+# on the finding. `--release` because they build the whole constructed
+# N/Z/Q/setoid development: 509s release against multiples of that in debug.
+step axiom-freedom-front-door cargo run --release -q -p axeyum-solver --features full \
+    --example front_door_carrier -- --require-axiom-free
+step axiom-freedom-interface-pin cargo run --release -q -p axeyum-solver --features full \
+    --example ring_interface_pin -- --require-identical
+step axiom-freedom-generalized cargo run --release -q -p axeyum-solver --features full \
+    --example ordered_ring_refutation -- --require-empty
+step axiom-freedom-constructed cargo run --release -q -p axeyum-solver --features full \
+    --example ordered_ring_refutation -- --constructed-reals
 # `frontier_*` runs in its own serialized step below: those ratchets are
 # wall-clock-budget based, so contention from the rest of the suite shrinks the
 # measured frontier and reports a false REGRESSION (measured 2026-07-30).
