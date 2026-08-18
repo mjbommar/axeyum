@@ -278,6 +278,248 @@ pub(super) fn nat_eq_to_rat(
     d.transport(a, motive, refl_case, b, h)
 }
 
+/// From `h : Eq Int a b`, derive `Eq Nat (f a) (f b)` — the direction
+/// `Int.natAbs` reasoning runs in, where the equation is between integers and
+/// the conclusion is about naturals.
+pub(super) fn int_eq_to_nat(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = d.ieq_motive(a, &|d, x| {
+        let fx = f(d, x);
+        d.eq(fa, fx)
+    });
+    let refl_case = d.refl(fa);
+    d.itransport(a, motive, refl_case, b, h)
+}
+
+/// Case-analyse a **positive** natural: `1 ≤ n` rules the `zero` branch out, so
+/// only the `succ` branch has to be supplied.
+///
+/// `target` is a function of the natural because the `Nat.rec` motive replaces
+/// `n` throughout: `on_succ` receives `j` and must prove `target (succ j)`,
+/// which is where `negOfNat (succ j) ≡ negSucc j` and `1 ≤ succ j` become
+/// available definitionally. This is the combinator every "a positive natural
+/// is a successor" step in the `Int` sign arguments runs through, so the
+/// impossible branch is discharged in exactly one place.
+pub(super) fn pos_cases(
+    d: &mut IntDev<'_>,
+    n: ExprId,
+    positive: ExprId,
+    target: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+    on_succ: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let zero_level = d.kernel().level_zero();
+    let nat_prelude = d.prelude();
+
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hypothesis = positive_ty(d, x);
+        let conclusion = target(d, x);
+        let body = d.arrow(hypothesis, conclusion);
+        d.lam_fv(x_fv, nat, body)
+    };
+    let zero_case = {
+        let zero = d.zero();
+        let hypothesis = positive_ty(d, zero);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let impossible = d.lemma(nat_prelude.not_succ_le_zero, &[zero, h]);
+        let goal = target(d, zero);
+        let body = d.absurd(goal, impossible);
+        d.lam_fv(h_fv, hypothesis, body)
+    };
+    let succ_case = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let ih_ty = {
+            let hypothesis = positive_ty(d, j);
+            let conclusion = target(d, j);
+            d.arrow(hypothesis, conclusion)
+        };
+        let ih_fv = d.fresh_fvar();
+        let successor = d.succ(j);
+        let hypothesis = positive_ty(d, successor);
+        let h_fv = d.fresh_fvar();
+        let body = on_succ(d, j);
+        let with_h = d.lam_fv(h_fv, hypothesis, body);
+        let with_ih = d.lam_fv(ih_fv, ih_ty, with_h);
+        d.lam_fv(j_fv, nat, with_ih)
+    };
+    let rec = d.kernel().const_(nat_prelude.rec, vec![zero_level]);
+    let selected = d.apply(rec, &[motive, zero_case, succ_case, n]);
+    d.apply(selected, &[positive])
+}
+
+// --- products, as multisets of factors --------------------------------------
+
+/// `a0 * (a1 * (… * a_{n-1}))`, right-nested.
+///
+/// # Panics
+///
+/// Panics on an empty factor list — a product with no factors would need a unit
+/// and nothing here ever wants one.
+pub(super) fn iprod(d: &mut IntDev<'_>, atoms: &[ExprId]) -> ExprId {
+    let (&last, front) = atoms.split_last().expect("a product needs a factor");
+    let mut acc = last;
+    for &atom in front.iter().rev() {
+        acc = d.imul(atom, acc);
+    }
+    acc
+}
+
+/// `Eq Int (iprod xs) (xs[i] * iprod rest)`, where `rest` is `xs` with position
+/// `i` removed. Requires `xs.len() >= 2`.
+fn iprod_pull(d: &mut IntDev<'_>, xs: &[ExprId], i: usize) -> ExprId {
+    let int = d.int();
+    if i == 0 {
+        // `iprod xs` IS `xs[0] * iprod xs[1..]` — the same term, not merely
+        // equal to it.
+        let whole = iprod(d, xs);
+        return d.irefl(whole);
+    }
+    let head = xs[0];
+    let tail = &xs[1..];
+    let chosen = xs[i];
+    if tail.len() == 1 {
+        // `head * chosen = chosen * head`, and `iprod [head]` is `head`.
+        return d.lemma(int.mul_comm, &[head, chosen]);
+    }
+    let mut tail_rest: Vec<ExprId> = tail.to_vec();
+    tail_rest.remove(i - 1);
+    let inner = iprod_pull(d, tail, i - 1);
+    let tail_product = iprod(d, tail);
+    let rest_product = iprod(d, &tail_rest);
+    let pulled = d.imul(chosen, rest_product);
+    // head * iprod tail = head * (chosen * iprod rest)
+    let first = d.icongr(tail_product, pulled, inner, &|d, t| d.imul(head, t));
+    let nested = d.imul(head, pulled);
+    // = (head * chosen) * iprod rest
+    let flat_head = d.imul(head, chosen);
+    let flat = d.imul(flat_head, rest_product);
+    let assoc = d.lemma(int.mul_assoc, &[head, chosen, rest_product]);
+    let second = d.isymm(flat, nested, assoc);
+    // = (chosen * head) * iprod rest
+    let commuted_head = d.imul(chosen, head);
+    let commute = d.lemma(int.mul_comm, &[head, chosen]);
+    let third = d.icongr(flat_head, commuted_head, commute, &|d, t| {
+        d.imul(t, rest_product)
+    });
+    let commuted = d.imul(commuted_head, rest_product);
+    // = chosen * (head * iprod rest), and `head * iprod rest` IS `iprod (head :: rest)`.
+    let fourth = d.lemma(int.mul_assoc, &[chosen, head, rest_product]);
+    let regrouped = {
+        let inner_product = d.imul(head, rest_product);
+        d.imul(chosen, inner_product)
+    };
+    let start = d.imul(head, tail_product);
+    let (_, chained) = d.ichain(
+        start,
+        &[
+            (nested, first),
+            (flat, second),
+            (commuted, third),
+            (regrouped, fourth),
+        ],
+    );
+    chained
+}
+
+/// `Eq Int (iprod xs) (iprod ys)` when `ys` is a permutation of `xs`.
+///
+/// Multiplication is associative and commutative, so a product is really a
+/// *multiset* of factors — but the kernel does not know that, and every
+/// cross-multiplication identity in this module is one multiset rewritten as
+/// another. Doing that by hand is where these proofs would otherwise go wrong,
+/// so it is done once here: selection sort, with `mul_assoc`/`mul_comm` as the
+/// only steps.
+///
+/// # Panics
+///
+/// Panics if `ys` is not a permutation of `xs` — that is a bug in the caller,
+/// not a provable-or-not question, and the kernel would reject the term anyway.
+pub(super) fn iprod_perm(d: &mut IntDev<'_>, xs: &[ExprId], ys: &[ExprId]) -> ExprId {
+    assert_eq!(xs.len(), ys.len(), "iprod_perm needs equal lengths");
+    if xs.len() == 1 {
+        assert_eq!(xs[0], ys[0], "iprod_perm was given a non-permutation");
+        let single = xs[0];
+        return d.irefl(single);
+    }
+    let index = xs
+        .iter()
+        .position(|&atom| atom == ys[0])
+        .expect("iprod_perm was given a non-permutation");
+    let mut rest: Vec<ExprId> = xs.to_vec();
+    rest.remove(index);
+    let pulled = iprod_pull(d, xs, index);
+    let inner = iprod_perm(d, &rest, &ys[1..]);
+    let rest_product = iprod(d, &rest);
+    let tail_product = iprod(d, &ys[1..]);
+    let chosen = ys[0];
+    let middle = d.imul(chosen, rest_product);
+    let step = d.icongr(rest_product, tail_product, inner, &|d, t| d.imul(chosen, t));
+    let start = iprod(d, xs);
+    let target = iprod(d, ys);
+    let (_, chained) = d.ichain(start, &[(middle, pulled), (target, step)]);
+    chained
+}
+
+/// From `h : Eq Int (x*y) (u*v)`, prove `iprod ([x,y] ++ rest) = iprod ([u,v] ++ rest)`.
+///
+/// The regroup-rewrite-regroup step every cross-multiplication argument runs:
+/// `x*(y*R) = (x*y)*R = (u*v)*R = u*(v*R)`.
+pub(super) fn iprod_head_rewrite(
+    d: &mut IntDev<'_>,
+    x: ExprId,
+    y: ExprId,
+    rest: &[ExprId],
+    u: ExprId,
+    v: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let int = d.int();
+    let tail = iprod(d, rest);
+    let start = {
+        let inner = d.imul(y, tail);
+        d.imul(x, inner)
+    };
+    let flat_from = {
+        let head = d.imul(x, y);
+        d.imul(head, tail)
+    };
+    let flat_to = {
+        let head = d.imul(u, v);
+        d.imul(head, tail)
+    };
+    let target = {
+        let inner = d.imul(v, tail);
+        d.imul(u, inner)
+    };
+    let assoc_out = {
+        let forward = d.lemma(int.mul_assoc, &[x, y, tail]);
+        d.isymm(flat_from, start, forward)
+    };
+    let from_head = d.imul(x, y);
+    let to_head = d.imul(u, v);
+    let rewritten = d.icongr(from_head, to_head, h, &|d, t| d.imul(t, tail));
+    let assoc_in = d.lemma(int.mul_assoc, &[u, v, tail]);
+    let (_, chained) = d.ichain(
+        start,
+        &[
+            (flat_from, assoc_out),
+            (flat_to, rewritten),
+            (target, assoc_in),
+        ],
+    );
+    chained
+}
+
 // --- declaration plumbing --------------------------------------------------
 
 /// Declare `theorem name : ∀ (x_0 … x_{arity-1} : Rat), stmt := fun … => proof`.

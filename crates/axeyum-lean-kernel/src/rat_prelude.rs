@@ -96,15 +96,31 @@ pub struct RatPrelude {
     // --- supporting ℕ / ℤ lemmas ---------------------------------------------
     /// `Rat.gcd_one_right : ∀ (m : Nat), gcd m 1 = 1`.
     pub gcd_one_right: NameId,
-    /// `Rat.nat_gauss : ∀ (k a b : Nat), 1 ≤ k → gcd k a = 1 → k ∣ a*b → k ∣ b`
+    /// `Rat.nat_gauss : ∀ (k a b : Nat), 1 ≤ k → gcd a k = 1 → k ∣ a*b → k ∣ b`
     /// — Gauss's lemma, the coprime-cancellation step uniqueness rests on.
+    ///
+    /// The coprimality is `gcd a k`, not `gcd k a`, because that is the order
+    /// `Rat.reduced` produces (`gcd (natAbs num) den = 1`) and this prelude has
+    /// no `gcd` commutativity. Bézout is symmetric, so the orientation is free.
     pub nat_gauss: NameId,
     /// `Rat.nat_dvd_antisymm_pos : ∀ (a b : Nat), 1 ≤ a → 1 ≤ b → a ∣ b → b ∣ a → a = b`.
     pub nat_dvd_antisymm_pos: NameId,
     /// `Rat.nat_mul_right_cancel : ∀ (c a b : Nat), 1 ≤ c → a*c = b*c → a = b`.
     pub nat_mul_right_cancel: NameId,
+    /// `Rat.nat_div_cross : ∀ (g x y : Nat), 1 ≤ g → g ∣ x → g ∣ y →
+    /// (x/g)*y = x*(y/g)` — dividing either side of a product by a common
+    /// divisor gives the same answer. What makes `Rat.normalize` value-preserving.
+    pub nat_div_cross: NameId,
+    /// `Rat.nat_abs_mul_of_nat : ∀ (x : Int) (k : Nat),
+    /// natAbs (x * ofNat k) = natAbs x * k`.
+    pub nat_abs_mul_of_nat: NameId,
     /// `Rat.of_nat_inj : ∀ (a b : Nat), Int.ofNat a = Int.ofNat b → a = b`.
     pub of_nat_inj: NameId,
+    /// `Rat.not_zero_le_neg_of_nat : ∀ (k : Nat), 1 ≤ k →
+    /// Int.le Int.zero (Int.negOfNat k) → False` — a negated *positive* natural
+    /// is negative. The sign discriminator every mixed-constructor branch of
+    /// [`Self::int_mul_right_cancel`] closes with.
+    pub not_zero_le_neg_of_nat: NameId,
     /// `Rat.int_mul_right_cancel : ∀ (a b : Int) (c : Nat), 1 ≤ c →
     /// a * ofNat c = b * ofNat c → a = b`.
     pub int_mul_right_cancel: NameId,
@@ -255,7 +271,10 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         nat_gauss: child(kernel, "nat_gauss"),
         nat_dvd_antisymm_pos: child(kernel, "nat_dvd_antisymm_pos"),
         nat_mul_right_cancel: child(kernel, "nat_mul_right_cancel"),
+        nat_div_cross: child(kernel, "nat_div_cross"),
+        nat_abs_mul_of_nat: child(kernel, "nat_abs_mul_of_nat"),
         of_nat_inj: child(kernel, "of_nat_inj"),
+        not_zero_le_neg_of_nat: child(kernel, "not_zero_le_neg_of_nat"),
         int_mul_right_cancel: child(kernel, "int_mul_right_cancel"),
         int_le_of_mul_le_mul_right: child(kernel, "int_le_of_mul_le_mul_right"),
         int_lt_of_mul_lt_mul_right: child(kernel, "int_lt_of_mul_lt_mul_right"),
