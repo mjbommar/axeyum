@@ -25,13 +25,19 @@ fail=0
 extract() {
   { echo "LOG=$WORK/log"; echo "STEP_SLICE=$WORK/step"; echo "STEPS_JSON="; echo "SECONDS=0"
     sed -n '/^count_tests()/,/^}/p' "$SCRIPT"
+    sed -n '/^claims_tests()/,/^}/p' "$SCRIPT"
     sed -n '/^run() {/,/^}/p' "$SCRIPT"
   } > "$WORK/harness.sh"
-  # An empty extraction would make every case below pass vacuously.
-  if ! grep -q 'count_tests()' "$WORK/harness.sh" || ! grep -q '^run() {' "$WORK/harness.sh"; then
-    echo "FAIL: could not extract count_tests/run from $SCRIPT — the harness is testing nothing"
-    exit 1
-  fi
+  # An empty extraction would make every case below pass vacuously. `run` calls
+  # `claims_tests`, and an UNEXTRACTED helper does not error loudly -- bash
+  # returns 127 and the guarded branch is simply skipped, so the control goes
+  # green over a rule it never reached. Name each one.
+  for fn in 'count_tests()' 'claims_tests()' '^run() {'; do
+    if ! grep -q "$fn" "$WORK/harness.sh"; then
+      echo "FAIL: could not extract ${fn} from $SCRIPT — the harness is testing nothing"
+      exit 1
+    fi
+  done
 }
 
 # --- 1. count_tests, against real cargo/nextest output shapes ---------------
@@ -41,13 +47,28 @@ counts() {
 bad=0
 chk() { got=$(count_tests "$2"); if [ "$got" = "$3" ]; then echo "ok   count:$1 -> $got"; else echo "FAIL count:$1 -> $got (want $3)"; bad=1; fi; }
 EOF
+  # EVERY nextest fixture below is a line CAPTURED from the tool, not typed from
+  # its documentation. The previous one was typed, and so was flush-left --
+  # nextest indents its Summary by five spaces. The pattern was anchored at `^`,
+  # never matched, and the first completed run of the gate (a6ee37c6a) recorded
+  # `tests: -1` for the step that ran 7511 tests, leaving the zero-test rule
+  # unable to fire on the workspace sweep. A fixture the real tool would never
+  # emit is not a control; it is a second copy of the bug.
   printf 'test result: ok. 47 passed; 0 failed; 0 ignored\ntest result: ok. 3 passed; 0 failed\n' > "$WORK/libtest"
-  printf 'Summary [   12.345s] 968 tests run: 968 passed, 2 skipped\n' > "$WORK/nextest"
+  printf '     Summary [   0.107s] 31 tests run: 31 passed, 0 skipped\n' > "$WORK/nextest"
+  # ...and the shape nextest prints when the run FAILED, which is not the same
+  # line: it carries a "(85 slow)" parenthetical and a "4 failed" clause. This
+  # exact line is from the run log behind artifacts/local-ci-runs/a6ee37c6a-s4.json.
+  printf '     Summary [6384.534s] 7511 tests run: 7507 passed (85 slow), 4 failed, 32 skipped\n' > "$WORK/nextest-failed"
+  # The vacuous shape, also captured: a nextest run that selected nothing.
+  printf '    Starting 0 tests across 1 binary (31 tests skipped)\n     Summary [   0.000s] 0 tests run: 0 passed, 31 skipped\n' > "$WORK/nextest-zero"
   printf 'running 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored\n' > "$WORK/zero"
   printf 'Checking axeyum-ir v0.1.0\n    Finished dev profile\n' > "$WORK/nocount"
   cat >> "$WORK/harness.sh" <<EOF
 chk libtest-summed $WORK/libtest 50
-chk nextest        $WORK/nextest 968
+chk nextest        $WORK/nextest 31
+chk nextest-failed $WORK/nextest-failed 7511
+chk nextest-zero   $WORK/nextest-zero 0
 chk zero-tests     $WORK/zero 0
 chk no-count       $WORK/nocount -1
 exit \$bad
@@ -64,18 +85,34 @@ fake_zero()    { printf 'running 0 tests\n\ntest result: ok. 0 passed; 0 failed\
 fake_pass()    { printf 'test result: ok. 5 passed; 0 failed\n'; return 0; }
 fake_fail()    { printf 'test result: FAILED. 4 passed; 1 failed\n'; return 101; }
 fake_nocount() { echo "Finished"; return 0; }
-for spec in fake_pass:0 fake_zero:90 fake_fail:101 fake_nocount:0; do
+# A step that CLAIMS to run tests, exits 0, and prints a count this script
+# cannot parse. `pass, tests=-1` there means "green, and we do not know whether
+# it ran anything" -- the exact statement the recorder exists to make
+# impossible, and precisely what the anchored-`^` bug produced for 7511 tests.
+# 89 = unreadable, distinct from 90 = vacuous.
+unparseable_stub() { echo "Summary in some future format"; return 0; }
+# ...while a step that does NOT claim to run tests stays allowed to be silent,
+# or `cargo fmt`/`clippy`/`check` would all become failures.
+quiet_stub() { echo "Finished"; return 0; }
+# The last two carry FLAGS, because `claims_tests` inspects the whole argument
+# vector: a stub invoked as a bare word could never exercise it, and a control
+# that cannot reach the code it names is the failure mode this file exists for.
+specs=("fake_pass:0" "fake_zero:90" "fake_fail:101" "fake_nocount:0" \
+       "unparseable_stub test --workspace:89" "quiet_stub --all --check:0")
+for spec in "${specs[@]}"; do
   cmd=${spec%:*}; want=${spec#*:}
-  run "$cmd" >/dev/null 2>&1; got=$?
+  # Unquoted on purpose -- word splitting is what hands `run` a real argv.
+  # shellcheck disable=SC2086
+  run $cmd >/dev/null 2>&1; got=$?
   if [ "$got" = "$want" ]; then echo "ok   verdict:$cmd -> $got"
   else echo "FAIL verdict:$cmd -> $got (want $want)"; bad=1; fi
 done
 # The recorded counts must be PER STEP, not cumulative — the bug this file
-# exists for. 5, 0, 4, -1 in order.
+# exists for. 5, 0, 4, -1, -1, -1 in order.
 echo "[$STEPS_JSON]" | python3 -c '
 import json, sys
 got = [s["tests"] for s in json.load(sys.stdin)]
-want = [5, 0, 4, -1]
+want = [5, 0, 4, -1, -1, -1]
 print(("ok   " if got == want else "FAIL ") + f"per-step counts {got} (want {want})")
 sys.exit(0 if got == want else 1)
 ' || bad=1

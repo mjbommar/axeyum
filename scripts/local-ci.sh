@@ -216,14 +216,27 @@ STEP_SLICE="$LOG.step"
 STEPS_JSON=""
 
 # Test counts, read out of the step's own output rather than assumed:
-#   libtest  "test result: ok. 47 passed; ..."   (one line per binary)
-#   nextest  "Summary [   12.3s] 968 tests run: 968 passed, ..."
-# Reported as a SUM across binaries. -1 means "this step reports no count",
-# which is correct for fmt/clippy/check and is why the zero-test rule below
-# only applies to steps that claim to run tests.
+#   libtest  "test result: ok. 47 passed; ..."   (one line per binary, col 0)
+#   nextest  "     Summary [6384.534s] 7511 tests run: 7507 passed, 4 failed, ..."
+# Reported as a SUM across binaries. -1 means "this step printed no count I could
+# read", which is correct for fmt/clippy/check and a FAILURE for anything that
+# claims to run tests -- see `run` below.
+#
+# THE NEXTEST PATTERN WAS ANCHORED AT `^` AND NEXTEST INDENTS ITS SUMMARY BY
+# FIVE SPACES, so it never matched, and the first real run of this gate recorded
+# `tests: -1` for a step that ran 7511 tests. That is not cosmetic: -1 is the
+# "no count" value, so the zero-test rule two functions down could not fire on
+# the workspace test sweep -- the one step it exists for. A nextest run that
+# compiled an empty suite and exited 0 would have been recorded `pass`.
+#
+# The control missed it because the control's fixture was TYPED FROM THE DOCS
+# rather than captured from the tool, and so had no leading whitespace. The
+# fixtures in scripts/tests/test-local-ci-record.sh are now verbatim lines from
+# artifacts/local-ci-runs/a6ee37c6a-s4.json's own run log, including the shape
+# nextest prints when the run FAILS, which differs from the passing one.
 count_tests() {
   local slice="$1" n
-  n=$(grep -oE '^Summary \[[^]]*\] +[0-9]+ tests run' "$slice" 2>/dev/null \
+  n=$(grep -oE '^ *Summary \[[^]]*\] +[0-9]+ tests run' "$slice" 2>/dev/null \
       | grep -oE '[0-9]+ tests run' | grep -oE '^[0-9]+' | paste -sd+ - | bc 2>/dev/null)
   if [ -z "$n" ]; then
     n=$(grep -oE '^test result: [a-zA-Z]+\. [0-9]+ passed' "$slice" 2>/dev/null \
@@ -231,6 +244,15 @@ count_tests() {
   fi
   [ -z "$n" ] && n=-1
   echo "$n"
+}
+
+# Does this step claim to run tests? Only such steps are held to the count
+# rules; `cargo fmt`/`clippy`/`check` legitimately report nothing.
+claims_tests() {
+  case " $* " in
+    *" test "*|*nextest*) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 run() {
@@ -248,16 +270,32 @@ run() {
   tests="$(count_tests "$STEP_SLICE")"
   verdict=pass
   [ "$status" != 0 ] && verdict=fail
-  # A step whose command names `test` or `nextest` MUST have run something. An
+  # A step that reports a count of ZERO and exits 0 MUST have run something. An
   # empty suite that exits 0 is the failure mode this repository keeps shipping.
+  # Deliberately NOT restricted to `claims_tests`: fmt/clippy/check print no
+  # count at all, so they read -1 and are unaffected, and narrowing this rule to
+  # a command-name match would only create a way for a renamed or wrapped test
+  # step to slip past it.
   if [ "$verdict" = pass ] && [ "$tests" = 0 ]; then
     verdict=vacuous
     echo "local-ci: VACUOUS STEP — \`$*\` exited 0 having run ZERO tests" | tee -a "$LOG"
+  fi
+  # ...and a step that claims to run tests whose count could NOT BE READ is a
+  # failure too, not a pass. Otherwise the guard above is only as durable as one
+  # grep pattern matching one version of one tool's output format -- and that
+  # pattern was already wrong once, silently, for the sweep that matters most.
+  # `pass, tests=-1` on a test step means "it went green and we do not know
+  # whether it ran anything", which is the exact statement this recorder exists
+  # to make impossible.
+  if [ "$verdict" = pass ] && [ "$tests" = -1 ] && claims_tests "$@"; then
+    verdict=unreadable
+    echo "local-ci: UNREADABLE COUNT — \`$*\` exited 0 and printed no test count this script can parse" | tee -a "$LOG"
   fi
   STEPS_JSON="${STEPS_JSON:+$STEPS_JSON,}$(printf '{"cmd":%s,"status":%s,"tests":%s,"seconds":%s,"verdict":"%s"}' \
     "$(printf '%s' "$*" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')" \
     "$status" "$tests" "$((SECONDS - start))" "$verdict")"
   [ "$verdict" = vacuous ] && return 90
+  [ "$verdict" = unreadable ] && return 89
   return "$status"
 }
 
