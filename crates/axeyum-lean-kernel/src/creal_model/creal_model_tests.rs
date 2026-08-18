@@ -7,9 +7,16 @@
 //!   `Real` law is admitted with a `CReal` theorem as its proof, and rests on
 //!   nothing.
 //! - [`the_pairing_is_by_leaf_name`] — the two 22-element lists really do
-//!   correspond entry by entry. Zipping two hand-ordered arrays is exactly the
-//!   kind of thing that goes wrong silently for the laws whose types happen to
-//!   coincide, so the correspondence is checked by name rather than trusted.
+//!   correspond entry by entry. **This one is belt-and-braces today, and the
+//!   measurement says so**: every mis-pairing that could be constructed is
+//!   already fatal at admission — a swapped entry is a `TypeMismatch`, and a
+//!   consistently *duplicated* entry (the case a type check cannot see, since
+//!   every type still matches) is refused as a repeated declaration name, which
+//!   was verified by mutating both lists and watching all seven tests die on
+//!   `build_creal_model_of_arith` itself rather than on this assertion. It is
+//!   kept because it states the correspondence at the level of *names*, which
+//!   is what would still hold if two law types ever coincided, and because it
+//!   costs one pass over a list already in hand.
 //! - [`exactly_nine_laws_are_restated_over_equiv`] — ADR-0468's Measurement 2,
 //!   read out of the kernel. Thirteen laws are the `Real` package's statements
 //!   verbatim and nine are not, and it is the nine that make the setoid route
@@ -69,11 +76,21 @@ fn every_law_is_witnessed_and_axiom_free() {
 /// The `Real` law and the `CReal` theorem paired with it have the same leaf
 /// name, for all 22.
 ///
-/// `build_creal_model_of_arith` zips two hand-written orderings. A
-/// mis-alignment would be caught by the kernel for most laws — the types would
-/// not match — but not for a pair whose statements are interchangeable under
-/// the interpretation, and a model that proves `le_refl` twice while skipping a
-/// law is exactly the failure the footprint count cannot see.
+/// `build_creal_model_of_arith` zips two hand-written orderings, and this says
+/// the two orderings agree.
+///
+/// Measured rather than assumed: **no mutation reaches this assertion.**
+/// Swapping one entry makes the kernel reject the proof (`TypeMismatch`), and
+/// duplicating an entry consistently in *both* lists — the shape a type check
+/// structurally cannot see, since all 22 types still match — is refused as a
+/// repeated declaration name. Both mutations kill all seven tests at
+/// `build_creal_model_of_arith`, not here.
+///
+/// Kept anyway, for one reason that is not sentiment: it is the only statement
+/// of the correspondence that does not go through the kernel's conversion
+/// checker, so it is the one that would still fire if two of the 22 law types
+/// ever coincided under the interpretation. Read it as documentation with an
+/// exit status, not as the load-bearing guard.
 #[test]
 fn the_pairing_is_by_leaf_name() {
     let mut k = Kernel::new();

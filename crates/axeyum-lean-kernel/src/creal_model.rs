@@ -10,12 +10,19 @@
 //! is not ℝ**, so a theorem obtained by instantiating the interface there is a
 //! theorem about the integers.
 //!
-//! [`build_creal_model_of_arith`] does the same thing at a carrier that *is*
-//! the real numbers: [`CReal`](crate::CRealPrelude), a Bishop setoid of regular
-//! ℚ-sequences over the constructed ℚ, built in
-//! [`creal`](crate::build_creal_prelude) at **zero** trusted declarations. One
-//! thing about the interpretation has to change to make that possible, and it
-//! is the whole content of ADR-0468:
+//! The `ℚ` model in `rat_prelude::model` then carried out the first half of `arith_model`'s
+//! own prescription — "constructing a carrier (`ℚ` suffices for every axiom in
+//! the package)" — and it is a *field*, which is where a Farkas refutation's
+//! multipliers live. It is still not ℝ. The package has no completeness,
+//! Archimedean or density axiom, so ℚ satisfying it says nothing about the
+//! reals; `√2` is the standing counterexample to reading it that way.
+//!
+//! [`build_creal_model_of_arith`] is the third model in that ladder and the
+//! only one at a carrier that *is* the real numbers:
+//! [`CReal`](crate::CRealPrelude), a Bishop setoid of regular ℚ-sequences over
+//! the constructed ℚ, built in [`creal`](crate::build_creal_prelude) at **zero**
+//! trusted declarations. One thing about the interpretation has to change to
+//! make that possible, and it is the whole content of ADR-0468:
 //!
 //! > **Nine of the 22 laws are stated with the kernel's `Eq`, and `Eq CReal` is
 //! > not the equality of real numbers.** `CReal.Equiv` is.
@@ -64,7 +71,10 @@
 //! - What it does **not** establish is that `Eq CReal` is real-number equality.
 //!   It is not, and no witness here says it is. A consumer that wants its
 //!   equality reasoning back must go through the phase R3 telescope's equality
-//!   slot, which is exactly the shape this model satisfies.
+//!   slot, which is exactly the shape this model satisfies. This is the one
+//!   respect in which the ℤ and ℚ models are *stronger*: both interpret ring
+//!   equality by the kernel's own `Eq`, and neither is ℝ. The three models are
+//!   complements, and it is precisely the nine laws that separate them.
 //! - As in `arith_model`, the step from "every axiom translates" to "every
 //!   *derivation* translates" is the standard homomorphism argument over the
 //!   term language and is not itself machine-checked — the kernel cannot state

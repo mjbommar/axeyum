@@ -72,13 +72,14 @@
 //! the constructed ℚ, also at zero trusted declarations — which discharges the
 //! "`ℤ` is not ℝ" caveat above: the carrier there **is** the real numbers.
 //!
-//! This module is kept, and is not redundant. `ℤ` models the package with the
-//! kernel's own `Eq` as ring equality, and the `CReal` model cannot: nine of
-//! the 22 laws are satisfied only after `Eq Real` is read as `CReal.Equiv`, and
-//! `Eq CReal` is not the equality of real numbers. So the two models bracket
-//! the package from opposite sides — one keeps `Eq` and loses ℝ, the other
-//! keeps ℝ and loses `Eq` — and it is the pair, not either alone, that says
-//! which of the 30 declarations the equality slot is load-bearing for.
+//! This module is kept, and is not redundant. There are now **three** checked
+//! models of the package — `ℤ` here, `ℚ` in the `rat_prelude` model module, and `CReal` —
+//! and they do not dominate one another. `ℤ` and `ℚ` interpret ring equality by
+//! the kernel's own `Eq` and are not ℝ; `CReal` is ℝ and cannot, because nine
+//! of the 22 laws are satisfied only after `Eq Real` is read as `CReal.Equiv`.
+//! So they bracket the package from opposite sides — two keep `Eq` and lose ℝ,
+//! one keeps ℝ and loses `Eq` — and it is the set, not any one of them, that
+//! says which of the 30 declarations the equality slot is load-bearing for.
 
 use std::collections::HashMap;
 

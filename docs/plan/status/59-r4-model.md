@@ -45,6 +45,17 @@ one** unit test dies. That last one also exposed a real defect in the example's
 own summary line, which printed `7/7` guards while failing on eight; it now
 reports out of the list length.
 
+**A fifth mutation found a guard that is not load-bearing, and it is recorded
+as such rather than dressed up.** `the_pairing_is_by_leaf_name` was written on
+the theory that zipping two hand-ordered 22-element arrays can drift silently.
+It cannot, here: swapping an entry is a `TypeMismatch` at admission, and
+duplicating one consistently in *both* lists — the shape a type check
+structurally cannot see, since all 22 types still match — is refused as a
+repeated declaration name. Both kill all seven tests at
+`build_creal_model_of_arith`, none at the assertion. The test is kept, with its
+doc corrected to say it is documentation with an exit status; it would still be
+the one to fire if two of the 22 law types ever coincided.
+
 **What this does NOT give, stated because it is the temptation.** `Eq CReal` is
 not real-number equality — `CReal.Equiv` is — and nine of the 22 obligations say
 so in their own statement. Anyone who wants Leibniz equality on reals pays
