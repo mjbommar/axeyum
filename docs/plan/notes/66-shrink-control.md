@@ -84,28 +84,38 @@ upward mid-lane as other lanes landed).
    `real: 30` → `control: 1` in **one** `--accept-population-change` run. Doing
    it in two publishes a trusted surface of 31 in between.
 
-## Gates this lane did NOT run, and why
+## Gates run, on a `lane-snapshot.sh` extraction of the exact commit
 
-Six lanes were queued on `scripts/cargo-serialized.sh`'s flock when this lane
-finished, and the following never reached the front of it. They are recorded as
-**not run**, not as passing:
+Run against `snap-agent-shrink-control-6c08c906f`, not the working tree — five
+lanes' uncommitted edits were resident in the checkout throughout, and one of
+them (`crates/axeyum-lean-kernel/src/lean_pp.rs`, `too_many_arguments` 8/7) reds
+STABLE clippy from a change that is in no commit.
 
-`-p axeyum-lean-kernel --lib` · `front_door_carrier --require-axiom-free` ·
-`ordered_ring_refutation --require-empty` and `--constructed-reals` ·
-`--test farkas_over_the_integers` · `--test front_door_reaches_no_real_axiom` ·
-`RUSTDOCFLAGS="-D warnings" cargo doc` · `gen-lean-axiom-ledger.py --check` ·
-`check-prelude-reuse-equivalence.sh`.
+| gate | result |
+|---|---|
+| `+stable clippy --workspace --all-targets --all-features -- -D warnings` | **0** |
+| `-p axeyum-lean-kernel --lib` | **372 passed, 0 failed** |
+| `front_door_carrier -- --require-axiom-free` | **0** |
+| `ordered_ring_refutation -- --require-empty` | **0** |
+| `ordered_ring_refutation -- --require-empty --constructed-reals` | **0** |
+| `--test farkas_over_the_integers` | **9 passed, 0 failed** |
+| `--test front_door_reaches_no_real_axiom` | **1 passed, 0 failed** |
+| `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` | **queued behind five lanes on the cargo flock; NOT RUN** |
 
-What *did* run on a snapshot of the exact committed tree: `+stable clippy
---workspace --all-targets --all-features -- -D warnings` **exit 0** — the gate
-that has red-ed `main` twice in a day, and the one most likely to be broken by a
-new module — plus `-p axeyum-solver --lib --features full`, `check-links.sh`,
-`validate-facts.py`, `check-fact-derived-numbers.py`, `gen-adr-index.py --check`
-and `gen-plan.py --check`.
+Also green in the working tree: `-p axeyum-solver --lib --features full`,
+`check-links.sh`, `validate-facts.py` (122 facts, 0 errors),
+`check-fact-derived-numbers.py`, `gen-adr-index.py --check`,
+`gen-plan.py --check`.
 
-The argument for the untried ones is that this lane adds a module and an example
-to `axeyum-solver` and changes no kernel code. That is an argument, not a
-measurement, which is why it is written here rather than in the status block.
+**Not run at all:** `cargo doc`, `gen-lean-axiom-ledger.py --check`,
+`check-prelude-reuse-equivalence.sh`. Recorded as not run rather than assumed:
+this lane changes no kernel code and adds no prelude, but that is an argument,
+not a measurement.
+
+`check-parity-docs.py` is red on three items, none of them this lane's —
+`shared_prelude_module.rs` uncatalogued and the 84→85 example-count markers,
+both from the lane that landed it. This lane's example was catalogued by
+`87d6e7254`.
 
 Two failures seen throughout, neither from this lane and both present unmutated:
 
