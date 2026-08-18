@@ -1,5 +1,25 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
+> **STATUS 2026-08-18 (later) — R3 landed, and the distance to `real: 0` is
+> longer than ADR-0468's end-state paragraph reads.** That paragraph says the 30
+> retire by deletion because "once R3 lands, no consumer references the `Real`
+> package, and `build_arith_prelude` can be retired." Measured after R3 landed:
+> **18 files still reference `build_arith_prelude`/`ArithPrelude`**, and the
+> load-bearing one is `LraReconstructCtx`, whose own doc comment says *"the
+> trusted base is `build_arith_prelude`'s axioms"*. Every LRA refutation is still
+> stated over the axiomatized `Real`.
+>
+> R3 is necessary and it is not sufficient. What it removed is the OBSTACLE: the
+> proof term no longer mentions `Eq`, `Eq.refl` or `Eq.rec` (gated by
+> `residual_eq_constants`), so nothing in it is beyond what a *defined* relation
+> can interpret, and the 39-binder form provably specializes back to today's
+> statement. What it did not do is change the carrier.
+>
+> So the real chain to `real: axiom=0` is: **the 15 remaining `CReal` laws → R4
+> instantiation → then deletion.** Eight of those need `mul` and seven need `lt`,
+> and both were costed as new mathematics rather than transcription. Anyone
+> planning against "R3 lands, then delete" should plan against that instead.
+
 > **STATUS 2026-08-18 — ℝ is CONSTRUCTED, and `real: 30` has still not moved.**
 > Both halves of that sentence are load-bearing. `crates/axeyum-lean-kernel/src/creal.rs`
 > is a Bishop setoid of regular ℚ-sequences over the constructed ℚ: **31
