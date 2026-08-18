@@ -823,10 +823,12 @@ purpose**: it holds for ℚ and does not lift, and nothing here assumes it.
 them.** `CReal.ofRat` (the carrier is inhabited), `Equiv.not_zero_one` (`Equiv`
 is not the total relation) and now `not_le_one_zero` (`le` is not either — all
 three order laws hold, footprint-free, of the order relating every pair; at
-index 3 the claim `1 ≤ 1/2` unfolds through `Int.le` to `Nat.le 2 1`). Both new
-negative controls were verified BOTH ways: the `add_zero` script with
-`CReal.one` for `CReal.zero` is refused and flipping the constant back makes the
-test fail, and `Not (le zero one)` is refused. `le_of_equiv` and
+index 3 the claim `1 ≤ 1/2` unfolds through `Int.le` to `Nat.le 2 1`). Two new
+negative controls, each measured in both directions: the `add_zero` script with
+`CReal.one` for `CReal.zero` is REFUSED, and flipping that one constant back
+makes the control test fail because the kernel then accepts; and
+`Not (le zero one)` is REFUSED by the identical script that proves
+`Not (le one zero)` in the prelude. `le_of_equiv` and
 `equiv_of_le_le` pin the order to the setoid: a `le` weakened to `≤ 100/(n+1)`
 satisfies all three laws and closes neither.
 
