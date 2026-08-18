@@ -1531,9 +1531,30 @@ fn export_probe_renders_a_real_lean_module() {
     assert!(module.contains("theorem shell_closed_form"));
     assert!(module.contains("inductive AxNat"));
     assert!(!module.contains("sorry"));
-    assert!(
-        !module.contains("axiom "),
-        "the module must declare no axioms"
+    // The module must declare no LOGICAL axiom. `!contains("axiom ")` was a proxy
+    // for that, and it stopped being one on 2026-08-17 when the header began
+    // declaring Lean's compiler-internal `lcErased`/`lcAny`/`lcVoid` — which
+    // `Init.Prelude` declares as `unsafe axiom` and `prelude` mode omits, and
+    // without which Lean 4.34 rejects any Prop-valued inductive carrying data.
+    // They are never mentioned by a proof term and never enter a `#print axioms`
+    // footprint, so the property is intact; only the proxy broke. Assert the
+    // property instead: every `axiom` line is one of those three.
+    let declared_axioms: Vec<&str> = module
+        .lines()
+        .filter(|line| line.starts_with("axiom ") || line.starts_with("unsafe axiom "))
+        .collect();
+    let codegen_only = ["lcErased", "lcAny", "lcVoid"];
+    for line in &declared_axioms {
+        assert!(
+            codegen_only.iter().any(|name| line.contains(name)),
+            "the module declares a logical axiom: {line}"
+        );
+    }
+    assert_eq!(
+        declared_axioms.len(),
+        codegen_only.len(),
+        "expected exactly the {} compiler-internal declarations, got {declared_axioms:?}",
+        codegen_only.len()
     );
 
     // Opt-in: drop the module somewhere a real Lean can be pointed at it.
