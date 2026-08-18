@@ -54,6 +54,7 @@
 mod arith_model;
 mod arith_prelude;
 mod characterization;
+mod creal;
 mod env;
 mod expr;
 mod inductive;
@@ -82,6 +83,7 @@ pub use characterization::{
     IntCharacterization, NatCharacterization, Weakening, build_characterization,
     build_characterization_with,
 };
+pub use creal::{CRealPrelude, build_creal_prelude};
 pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use inductive::InductiveFamilySpec;

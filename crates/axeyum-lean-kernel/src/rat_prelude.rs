@@ -55,9 +55,10 @@ use crate::{Kernel, KernelError};
 mod archimedean;
 mod core;
 mod defs;
+pub(crate) mod group;
 mod laws;
 mod model;
-mod ops;
+pub(crate) mod ops;
 mod scaling;
 mod statements;
 
@@ -302,6 +303,53 @@ pub struct RatPrelude {
     /// transitivity of `CReal.Equiv` only reaches `|x_n − z_n| ≤ 2/n + 6/j` for
     /// every `j`, and this is what turns that into `≤ 2/n`.
     pub le_of_le_add_nat_div_succ: NameId,
+
+    // --- the ordered-group toolkit (ADR-0468 phase R1) ------------------------
+    /// `Rat.zero_add : ∀ a, Rat.add Rat.zero a = a`.
+    pub zero_add: NameId,
+    /// `Rat.neg_add_cancel : ∀ a, Rat.add (Rat.neg a) a = Rat.zero`.
+    pub neg_add_cancel: NameId,
+    /// `Rat.neg_eq_of_add_eq_zero : ∀ a b, Rat.add a b = Rat.zero → Rat.neg a = b`
+    /// — **uniqueness of the additive inverse**, which makes `neg_neg` and
+    /// `neg_add` one line each instead of a rearrangement each.
+    pub neg_eq_of_add_eq_zero: NameId,
+    /// `Rat.neg_neg : ∀ a, Rat.neg (Rat.neg a) = a`.
+    pub neg_neg: NameId,
+    /// `Rat.neg_zero : Rat.neg Rat.zero = Rat.zero`.
+    pub neg_zero: NameId,
+    /// `Rat.neg_add : ∀ a b, Rat.neg (Rat.add a b) = Rat.add (Rat.neg a) (Rat.neg b)`.
+    pub neg_add: NameId,
+    /// `Rat.neg_le_neg : ∀ a b, Rat.le a b → Rat.le (Rat.neg b) (Rat.neg a)`.
+    pub neg_le_neg: NameId,
+    /// `Rat.sub_self : ∀ a, Rat.sub a a = Rat.zero`.
+    pub sub_self: NameId,
+    /// `Rat.neg_sub : ∀ a b, Rat.neg (Rat.sub a b) = Rat.sub b a` — what makes
+    /// `CReal.Equiv` symmetric.
+    pub neg_sub: NameId,
+    /// `Rat.sub_add_sub : ∀ a b c, Rat.add (Rat.sub a b) (Rat.sub b c) = Rat.sub a c`
+    /// — the telescoping identity Bishop's four-term estimate is assembled from.
+    pub sub_add_sub: NameId,
+    /// `Rat.bounds_add : ∀ u p v q, Rat.le (neg p) u → Rat.le u p →
+    /// Rat.le (neg q) v → Rat.le v q →
+    /// And (Rat.le (neg (p+q)) (u+v)) (Rat.le (u+v) (p+q))`.
+    ///
+    /// The triangle inequality in ADR-0468's encoding, where `|a| ≤ b` is the
+    /// **pair** `−b ≤ a ∧ a ≤ b` and `Rat.abs` never exists.
+    pub bounds_add: NameId,
+    /// `Rat.natDivSucc_add : ∀ (a b j : Nat),
+    /// Rat.add (natDivSucc a j) (natDivSucc b j) = natDivSucc (a+b) j`.
+    pub nat_div_succ_add: NameId,
+    /// `Rat.zero_le_natDivSucc : ∀ (k j : Nat), Rat.le Rat.zero (natDivSucc k j)`.
+    pub zero_le_nat_div_succ: NameId,
+    /// `Rat.neg_nonpos_of_nonneg : ∀ a, Rat.le Rat.zero a → Rat.le (Rat.neg a) Rat.zero`.
+    pub neg_nonpos_of_nonneg: NameId,
+    /// `Rat.bounds_neg : ∀ r q, Rat.le (neg q) r → Rat.le r q →
+    /// And (Rat.le (neg q) (neg r)) (Rat.le (neg r) q)` — negating a two-sided
+    /// bound keeps it.
+    pub bounds_neg: NameId,
+    /// `Rat.add_nonneg : ∀ a b, Rat.le Rat.zero a → Rat.le Rat.zero b →
+    /// Rat.le Rat.zero (Rat.add a b)`.
+    pub add_nonneg: NameId,
 }
 
 impl RatPrelude {
@@ -415,6 +463,22 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         int_one_le_of_pos: child(kernel, "int_one_le_of_pos"),
         nat_div_succ_lt_of_pos: child(kernel, "natDivSucc_lt_of_pos"),
         le_of_le_add_nat_div_succ: child(kernel, "le_of_le_add_natDivSucc"),
+        zero_add: child(kernel, "zero_add"),
+        neg_add_cancel: child(kernel, "neg_add_cancel"),
+        neg_eq_of_add_eq_zero: child(kernel, "neg_eq_of_add_eq_zero"),
+        neg_neg: child(kernel, "neg_neg"),
+        neg_zero: child(kernel, "neg_zero"),
+        neg_add: child(kernel, "neg_add"),
+        neg_le_neg: child(kernel, "neg_le_neg"),
+        sub_self: child(kernel, "sub_self"),
+        neg_sub: child(kernel, "neg_sub"),
+        sub_add_sub: child(kernel, "sub_add_sub"),
+        bounds_add: child(kernel, "bounds_add"),
+        nat_div_succ_add: child(kernel, "natDivSucc_add"),
+        zero_le_nat_div_succ: child(kernel, "zero_le_natDivSucc"),
+        neg_nonpos_of_nonneg: child(kernel, "neg_nonpos_of_nonneg"),
+        bounds_neg: child(kernel, "bounds_neg"),
+        add_nonneg: child(kernel, "add_nonneg"),
     }
 }
 
@@ -450,6 +514,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         laws::declare_ring_laws(&mut d, prelude)?;
         scaling::declare_scaling_laws(&mut d, prelude)?;
         archimedean::declare_archimedean(&mut d, prelude)?;
+        group::declare_group_laws(&mut d, prelude)?;
         Ok(())
     })();
     match built {

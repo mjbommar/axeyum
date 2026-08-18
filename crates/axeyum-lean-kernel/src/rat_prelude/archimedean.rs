@@ -71,7 +71,7 @@ const NAT_DIV_SUCC_HEIGHT: u16 = 33;
 ///
 /// `rat_theorem`/`int_theorem`/`NatOps::theorem` each fix one carrier; the
 /// Archimedean statements mix `Rat` and `Nat` binders, so they need this.
-fn mixed_theorem(
+pub(super) fn mixed_theorem(
     d: &mut IntDev<'_>,
     name: NameId,
     binders: &[ExprId],

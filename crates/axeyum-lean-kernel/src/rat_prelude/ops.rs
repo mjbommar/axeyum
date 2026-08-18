@@ -20,44 +20,44 @@ use crate::nat_prelude::NatOps;
 // --- carrier and field builders -------------------------------------------
 
 /// The expression `Rat`.
-pub(super) fn rat_ty(d: &mut IntDev<'_>) -> ExprId {
+pub(crate) fn rat_ty(d: &mut IntDev<'_>) -> ExprId {
     let name = d.int().rat;
     d.kernel().const_(name, vec![])
 }
 
 /// `Rat.num q`.
-pub(super) fn num(d: &mut IntDev<'_>, q: ExprId) -> ExprId {
+pub(crate) fn num(d: &mut IntDev<'_>, q: ExprId) -> ExprId {
     let f = d.int().rat_num;
     d.const_app(f, &[q])
 }
 
 /// `Rat.den q`.
-pub(super) fn den(d: &mut IntDev<'_>, q: ExprId) -> ExprId {
+pub(crate) fn den(d: &mut IntDev<'_>, q: ExprId) -> ExprId {
     let f = d.int().rat_den;
     d.const_app(f, &[q])
 }
 
 /// `Int.ofNat (Rat.den q)` — the denominator, seen as an integer, which is the
 /// only shape the cross-multiplication statements ever use it in.
-pub(super) fn den_z(d: &mut IntDev<'_>, q: ExprId) -> ExprId {
+pub(crate) fn den_z(d: &mut IntDev<'_>, q: ExprId) -> ExprId {
     let raw = den(d, q);
     d.of_nat(raw)
 }
 
 /// `Rat.den_pos q : 1 ≤ Rat.den q`.
-pub(super) fn den_pos(d: &mut IntDev<'_>, q: ExprId) -> ExprId {
+pub(crate) fn den_pos(d: &mut IntDev<'_>, q: ExprId) -> ExprId {
     let f = d.int().rat_den_pos;
     d.const_app(f, &[q])
 }
 
 /// `Rat.reduced q : gcd (natAbs (Rat.num q)) (Rat.den q) = 1`.
-pub(super) fn reduced(d: &mut IntDev<'_>, q: ExprId) -> ExprId {
+pub(crate) fn reduced(d: &mut IntDev<'_>, q: ExprId) -> ExprId {
     let f = d.int().rat_reduced;
     d.const_app(f, &[q])
 }
 
 /// `Rat.mk n den positive reduced`.
-pub(super) fn mk(
+pub(crate) fn mk(
     d: &mut IntDev<'_>,
     n: ExprId,
     denominator: ExprId,
@@ -69,7 +69,7 @@ pub(super) fn mk(
 }
 
 /// `Rat.normalize n den positive`.
-pub(super) fn normalize(
+pub(crate) fn normalize(
     d: &mut IntDev<'_>,
     n: ExprId,
     denominator: ExprId,
@@ -80,13 +80,13 @@ pub(super) fn normalize(
 }
 
 /// The type `1 ≤ den` — `Rat`'s positivity field.
-pub(super) fn positive_ty(d: &mut IntDev<'_>, denominator: ExprId) -> ExprId {
+pub(crate) fn positive_ty(d: &mut IntDev<'_>, denominator: ExprId) -> ExprId {
     let unit = d.num(1);
     NatOps::le(d, unit, denominator)
 }
 
 /// The type `gcd (natAbs n) den = 1` — `Rat`'s reducedness field.
-pub(super) fn reduced_ty(d: &mut IntDev<'_>, n: ExprId, denominator: ExprId) -> ExprId {
+pub(crate) fn reduced_ty(d: &mut IntDev<'_>, n: ExprId, denominator: ExprId) -> ExprId {
     let nat_abs = d.int().nat_abs;
     let magnitude = d.const_app(nat_abs, &[n]);
     let common = NatOps::gcd(d, magnitude, denominator);
@@ -96,7 +96,7 @@ pub(super) fn reduced_ty(d: &mut IntDev<'_>, n: ExprId, denominator: ExprId) -> 
 
 /// `1 ≤ succ k`, the positivity every `succ`-shaped denominator carries for
 /// free.
-pub(super) fn one_le_succ(d: &mut IntDev<'_>, k: ExprId) -> ExprId {
+pub(crate) fn one_le_succ(d: &mut IntDev<'_>, k: ExprId) -> ExprId {
     let p = d.int().nat;
     let zero = d.zero();
     let base = d.lemma(p.zero_le, &[k]);
@@ -106,47 +106,47 @@ pub(super) fn one_le_succ(d: &mut IntDev<'_>, k: ExprId) -> ExprId {
 // --- operations ------------------------------------------------------------
 
 /// `Rat.add a b`.
-pub(super) fn radd(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+pub(crate) fn radd(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
     let f = d.int().rat_add;
     d.const_app(f, &[a, b])
 }
 
 /// `Rat.mul a b`.
-pub(super) fn rmul(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+pub(crate) fn rmul(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
     let f = d.int().rat_mul;
     d.const_app(f, &[a, b])
 }
 
 /// `Rat.neg a`.
-pub(super) fn rneg(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
+pub(crate) fn rneg(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
     let f = d.int().rat_neg;
     d.const_app(f, &[a])
 }
 
 /// `Rat.zero`.
-pub(super) fn rzero(d: &mut IntDev<'_>, p: RatPrelude) -> ExprId {
+pub(crate) fn rzero(d: &mut IntDev<'_>, p: RatPrelude) -> ExprId {
     d.kernel().const_(p.zero, vec![])
 }
 
 /// `Rat.one`.
-pub(super) fn rone(d: &mut IntDev<'_>, p: RatPrelude) -> ExprId {
+pub(crate) fn rone(d: &mut IntDev<'_>, p: RatPrelude) -> ExprId {
     d.kernel().const_(p.one, vec![])
 }
 
 /// `Rat.le a b`.
-pub(super) fn rle(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, b: ExprId) -> ExprId {
+pub(crate) fn rle(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, b: ExprId) -> ExprId {
     d.const_app(p.le, &[a, b])
 }
 
 /// `Rat.lt a b`.
-pub(super) fn rlt(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, b: ExprId) -> ExprId {
+pub(crate) fn rlt(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, b: ExprId) -> ExprId {
     d.const_app(p.lt, &[a, b])
 }
 
 // --- Eq at Rat -------------------------------------------------------------
 
 /// `Eq.{1} Rat a b` — the carrier is `Sort 1`, like `Int`.
-pub(super) fn req(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+pub(crate) fn req(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
     let one = d.level_one();
     let name = d.int().logic.eq;
     let eq = d.kernel().const_(name, vec![one]);
@@ -155,7 +155,7 @@ pub(super) fn req(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
 }
 
 /// `Eq.refl.{1} Rat a`.
-pub(super) fn rrefl(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
+pub(crate) fn rrefl(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
     let one = d.level_one();
     let name = d.int().logic.eq_refl;
     let refl = d.kernel().const_(name, vec![one]);
@@ -164,7 +164,7 @@ pub(super) fn rrefl(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
 }
 
 /// `Eq.rec.{0,1} Rat p motive refl_case q h`.
-pub(super) fn rtransport(
+pub(crate) fn rtransport(
     d: &mut IntDev<'_>,
     p: ExprId,
     motive: ExprId,
@@ -181,7 +181,7 @@ pub(super) fn rtransport(
 }
 
 /// `fun (x : Rat) (_ : Eq Rat a x) => body(x)`.
-pub(super) fn req_motive(
+pub(crate) fn req_motive(
     d: &mut IntDev<'_>,
     a: ExprId,
     body: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
@@ -197,14 +197,14 @@ pub(super) fn req_motive(
 }
 
 /// `h : Eq Rat a b ⊢ Eq Rat b a`.
-pub(super) fn rsymm(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+pub(crate) fn rsymm(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
     let motive = req_motive(d, a, &|d, x| req(d, x, a));
     let refl_case = rrefl(d, a);
     rtransport(d, a, motive, refl_case, b, h)
 }
 
 /// `h1 : Eq Rat a b`, `h2 : Eq Rat b c ⊢ Eq Rat a c`.
-pub(super) fn rtrans(
+pub(crate) fn rtrans(
     d: &mut IntDev<'_>,
     a: ExprId,
     b: ExprId,
@@ -217,7 +217,7 @@ pub(super) fn rtrans(
 }
 
 /// Chain `Eq Rat start …` through `(next, step)` pairs.
-pub(super) fn rchain(
+pub(crate) fn rchain(
     d: &mut IntDev<'_>,
     start: ExprId,
     steps: &[(ExprId, ExprId)],
@@ -232,7 +232,7 @@ pub(super) fn rchain(
 }
 
 /// Congruence at `Rat`: `h : Eq Rat a b ⊢ Eq Rat (f a) (f b)`.
-pub(super) fn rcongr(
+pub(crate) fn rcongr(
     d: &mut IntDev<'_>,
     a: ExprId,
     b: ExprId,
@@ -249,7 +249,7 @@ pub(super) fn rcongr(
 }
 
 /// From `h : Eq Rat p q` and a proof of `motive p`, derive `motive q`.
-pub(super) fn rat_eq_rewrite(
+pub(crate) fn rat_eq_rewrite(
     d: &mut IntDev<'_>,
     p: ExprId,
     q: ExprId,
@@ -264,7 +264,7 @@ pub(super) fn rat_eq_rewrite(
 /// From `h : Eq Int a b`, derive `Eq Nat (f a) (f b)` — the direction
 /// `Int.natAbs` reasoning runs in, where the equation is between integers and
 /// the conclusion is about naturals.
-pub(super) fn int_eq_to_nat(
+pub(crate) fn int_eq_to_nat(
     d: &mut IntDev<'_>,
     a: ExprId,
     b: ExprId,
@@ -289,7 +289,7 @@ pub(super) fn int_eq_to_nat(
 /// available definitionally. This is the combinator every "a positive natural
 /// is a successor" step in the `Int` sign arguments runs through, so the
 /// impossible branch is discharged in exactly one place.
-pub(super) fn pos_cases(
+pub(crate) fn pos_cases(
     d: &mut IntDev<'_>,
     n: ExprId,
     positive: ExprId,
@@ -348,7 +348,7 @@ pub(super) fn pos_cases(
 ///
 /// Panics on an empty factor list — a product with no factors would need a unit
 /// and nothing here ever wants one.
-pub(super) fn iprod(d: &mut IntDev<'_>, atoms: &[ExprId]) -> ExprId {
+pub(crate) fn iprod(d: &mut IntDev<'_>, atoms: &[ExprId]) -> ExprId {
     let (&last, front) = atoms.split_last().expect("a product needs a factor");
     let mut acc = last;
     for &atom in front.iter().rev() {
@@ -427,7 +427,7 @@ fn iprod_pull(d: &mut IntDev<'_>, xs: &[ExprId], i: usize) -> ExprId {
 ///
 /// Panics if `ys` is not a permutation of `xs` — that is a bug in the caller,
 /// not a provable-or-not question, and the kernel would reject the term anyway.
-pub(super) fn iprod_perm(d: &mut IntDev<'_>, xs: &[ExprId], ys: &[ExprId]) -> ExprId {
+pub(crate) fn iprod_perm(d: &mut IntDev<'_>, xs: &[ExprId], ys: &[ExprId]) -> ExprId {
     assert_eq!(xs.len(), ys.len(), "iprod_perm needs equal lengths");
     if xs.len() == 1 {
         assert_eq!(xs[0], ys[0], "iprod_perm was given a non-permutation");
@@ -457,7 +457,7 @@ pub(super) fn iprod_perm(d: &mut IntDev<'_>, xs: &[ExprId], ys: &[ExprId]) -> Ex
 ///
 /// The regroup-rewrite-regroup step every cross-multiplication argument runs:
 /// `x*(y*R) = (x*y)*R = (u*v)*R = u*(v*R)`.
-pub(super) fn iprod_head_rewrite(
+pub(crate) fn iprod_head_rewrite(
     d: &mut IntDev<'_>,
     x: ExprId,
     y: ExprId,
@@ -507,7 +507,7 @@ pub(super) fn iprod_head_rewrite(
 ///
 /// The order arguments all scale a cross-product by a third denominator and
 /// then need the factors in a different order; this is that step.
-pub(super) fn iregroup3(d: &mut IntDev<'_>, from: [ExprId; 3], to: [ExprId; 3]) -> ExprId {
+pub(crate) fn iregroup3(d: &mut IntDev<'_>, from: [ExprId; 3], to: [ExprId; 3]) -> ExprId {
     let int = d.int();
     let start = {
         let head = d.imul(from[0], from[1]);
@@ -533,7 +533,7 @@ pub(super) fn iregroup3(d: &mut IntDev<'_>, from: [ExprId; 3], to: [ExprId; 3]) 
 }
 
 /// `Eq Int ((iprod xs) * (iprod ys)) (iprod (xs ++ ys))`.
-pub(super) fn iprod_append(d: &mut IntDev<'_>, xs: &[ExprId], ys: &[ExprId]) -> ExprId {
+pub(crate) fn iprod_append(d: &mut IntDev<'_>, xs: &[ExprId], ys: &[ExprId]) -> ExprId {
     let int = d.int();
     if xs.len() == 1 {
         // `x * iprod ys` IS `iprod ([x] ++ ys)`.
@@ -561,7 +561,7 @@ pub(super) fn iprod_append(d: &mut IntDev<'_>, xs: &[ExprId], ys: &[ExprId]) -> 
 }
 
 /// From `h : iprod from = iprod to`, prove `iprod (from ++ rest) = iprod (to ++ rest)`.
-pub(super) fn iprod_prefix_rewrite(
+pub(crate) fn iprod_prefix_rewrite(
     d: &mut IntDev<'_>,
     from: &[ExprId],
     to: &[ExprId],
@@ -600,7 +600,7 @@ pub(super) fn iprod_prefix_rewrite(
 /// reorder again — and doing that inline is where these proofs go wrong. Here
 /// the reordering is checked (`iprod_perm` panics on a non-permutation) and the
 /// proof is assembled once.
-pub(super) struct Flat {
+pub(crate) struct Flat {
     atoms: Vec<ExprId>,
     start: ExprId,
     proof: ExprId,
@@ -615,7 +615,7 @@ impl Flat {
     /// product can be split into its factors for free — but only when it is
     /// nested to the right, which is why every scaling factor below is written
     /// `x * (y * z)`.
-    pub(super) fn begin_product(
+    pub(crate) fn begin_product(
         d: &mut IntDev<'_>,
         left: ExprId,
         ls: &[ExprId],
@@ -634,7 +634,7 @@ impl Flat {
 
     /// Multiply through by `factor`, which must be definitionally
     /// `iprod factor_atoms`.
-    pub(super) fn scale(&mut self, d: &mut IntDev<'_>, factor: ExprId, factor_atoms: &[ExprId]) {
+    pub(crate) fn scale(&mut self, d: &mut IntDev<'_>, factor: ExprId, factor_atoms: &[ExprId]) {
         let current = iprod(d, &self.atoms);
         let scaled_start = d.imul(self.start, factor);
         let scaled_current = d.imul(current, factor);
@@ -654,7 +654,7 @@ impl Flat {
     }
 
     /// Reorder the factors.
-    pub(super) fn perm(&mut self, d: &mut IntDev<'_>, to: &[ExprId]) {
+    pub(crate) fn perm(&mut self, d: &mut IntDev<'_>, to: &[ExprId]) {
         let current = iprod(d, &self.atoms);
         let next = iprod(d, to);
         let step = iprod_perm(d, &self.atoms, to);
@@ -663,7 +663,7 @@ impl Flat {
     }
 
     /// Replace the first `n` factors, given `h : iprod (first n) = iprod to`.
-    pub(super) fn rewrite_prefix(
+    pub(crate) fn rewrite_prefix(
         &mut self,
         d: &mut IntDev<'_>,
         n: usize,
@@ -682,7 +682,7 @@ impl Flat {
 
     /// The expression this started from, the normal form it reached, and the
     /// proof that they are equal.
-    pub(super) fn finish(self, d: &mut IntDev<'_>) -> (ExprId, ExprId, ExprId) {
+    pub(crate) fn finish(self, d: &mut IntDev<'_>) -> (ExprId, ExprId, ExprId) {
         let current = iprod(d, &self.atoms);
         (self.start, current, self.proof)
     }
@@ -696,7 +696,7 @@ impl Flat {
 ///
 /// Returns the trusted gate's rejection — an `Err` means the kernel **refused**
 /// the proof.
-pub(super) fn rat_theorem(
+pub(crate) fn rat_theorem(
     d: &mut IntDev<'_>,
     name: NameId,
     arity: usize,
@@ -727,7 +727,7 @@ pub(super) fn rat_theorem(
 /// private: the four nested predicates are rebuilt from
 /// [`NatOps::bezout_equation`], which is public, so the shape cannot drift from
 /// the introduction form even though the code is not shared.
-pub(super) fn bezout_elim(
+pub(crate) fn bezout_elim(
     d: &mut IntDev<'_>,
     m: ExprId,
     n: ExprId,
