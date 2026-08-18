@@ -239,6 +239,16 @@ exercised Nat fixture producer/checker without caller-authored shell, but its
 scope is explicitly counterfactual; the next seam is the first authoritative
 operation backed by a route that can actually produce matching evidence.
 
+At exact commit `a90255a92`, registry digest
+`f9575000fcd8f46af063d4c9c3c54be3b11fb5b56d9f8bff7f3537f942faa7e1`
+is bound into typed evidence `28f8e47b374543b847b62d4408bc2d9088ebf68f6cfe4c73ded61325fb6b0156`
+and transaction `2b080b2feaecb51ed8af97524300fe8851dfacd27f9454f2afc2085396c984c1`.
+The retained episode replayed as
+`576d67eba17af52904160a9676095a9e4564fa4053fb3cfc37b7aadd85b17e28`;
+the registry-aware authoritative frontier
+`565b1a02212a138428c35460e586a97867c48886c4362491c40f0cd35d454706`
+still selected nothing. Authoritative writes remain zero.
+
 ## Assumptions tested now
 
 ### A. The ledger has a usable chain substrate

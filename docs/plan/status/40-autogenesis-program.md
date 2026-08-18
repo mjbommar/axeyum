@@ -2,9 +2,10 @@
 
 <!-- plan-section: lane-status -->
 
-**Phase 0 WIP.** Authoritative frontier `df57a47b` retained at `7cb64a542`:
-10 ready, 0 admissible, no selection. Next: typed operation registry.
+**Phase 0 WIP.** Registry `f9575000` replayed at `a90255a92`; its sole operation
+is fixture-only, so 10 ready facts remain 0 admissible. Next: first authoritative
+operation with matching evidence.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-18 | `2abe2652d..7cb64a542` | Programme through fail-closed machine frontier. |
+| 2026-08-18 | `2abe2652d..a90255a92` | Programme through typed fixture operation replay. |
