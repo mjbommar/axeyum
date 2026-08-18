@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:20de84453db75da93f41295f6feab3a8e834bc213663381e461a4923ffaaca76`
+Source identity: `sha256:9c283f45facd3f9e83b2170303fc044b3c3cb4a577c9dd189f5220b00ecfba0c`
 
 ## Ledger and chain substrate
 
@@ -48,6 +48,7 @@ the remaining facts stay explicit rather than being guessed.
 | `dependency-derivation` | partial | kernel dependency inventory | kernel facts are covered where checker commands name the theorem; other routes are authored | `scripts/check-fact-depends-derived.py` |
 | `accepted-transition-event` | autogenesis-1-bootstrap | episode/orchestrator | B's durable event triggered the credited A retry; retry policy beyond this exact operation remains absent | `scripts/create-autogenesis-readiness-delta.py` |
 | `clean-replay` | autogenesis-1-passed | episode replay | the bootstrap chain reproduces byte-identically; held-out longitudinal replay and generalization remain | `scripts/run-autogenesis-authoritative-chain.py` |
+| `evaluation-population` | foundation-only | nursery manifest and readiness checker | Autogenesis-1 is frozen as a longitudinal regression, but the leakage-safe train, development, and held-out population has zero evaluation facts | `scripts/check-autogenesis-nursery.py` |
 
 ## Proof-production context
 

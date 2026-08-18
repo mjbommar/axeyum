@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nursery",
+  "state": "foundation-only",
+  "policy": {
+    "admission_dependency_authority": "proof-derived-kernel-dependency",
+    "evaluation_fact_count": {
+      "maximum": 300,
+      "minimum": 100
+    },
+    "minimum_declared_dependency_depth": 2,
+    "minimum_held_out_components": 1,
+    "minimum_provenance_classes": 2,
+    "minimum_route_hypothesis_families": 2,
+    "minimum_statement_mutations": 1,
+    "family_leakage": "no-family-may-cross-evaluation-partitions",
+    "proof_shape_leakage": "no-proof-shape-may-cross-evaluation-partitions",
+    "required_evaluation_partitions": [
+      "train",
+      "development",
+      "held-out"
+    ],
+    "split_component_authority": "declared-dependency-weak-component",
+    "split_freeze": "before-target-outcomes",
+    "split_leakage": "no-declared-component-may-cross-evaluation-partitions"
+  },
+  "entries": [
+    {
+      "fact_id": "F:nat-zero-add",
+      "partition": "longitudinal",
+      "provenance_class": "project-constructed",
+      "family": "nat-bootstrap",
+      "proof_shape": "kernel-induction",
+      "route_hypotheses": [
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:nat-mul-one",
+      "partition": "longitudinal",
+      "provenance_class": "project-constructed",
+      "family": "nat-bootstrap",
+      "proof_shape": "kernel-theorem-application",
+      "route_hypotheses": [
+        "kernel-library-application"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    }
+  ],
+  "longitudinal_result": "artifacts/autogenesis/autogenesis-1-result.json",
+  "notes": "The two entries freeze Autogenesis-1 as a regression and are excluded from train, development, and held-out yield. Evaluation authoring has not started; readiness must remain false until the policy floors are met."
+}

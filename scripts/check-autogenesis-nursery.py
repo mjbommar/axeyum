@@ -1,0 +1,370 @@
+#!/usr/bin/env python3
+"""Validate the Autogenesis nursery and report leakage-safe evaluation readiness."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+from collections import Counter, defaultdict, deque
+from pathlib import Path
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[1]
+NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
+FACTS = ROOT / "artifacts/facts"
+RESULT = ROOT / "artifacts/autogenesis/autogenesis-1-result.json"
+
+PARTITIONS = {"longitudinal", "train", "development", "held-out"}
+EVALUATION_PARTITIONS = {"train", "development", "held-out"}
+PROVENANCE_CLASSES = {
+    "project-constructed",
+    "external-transcribed",
+    "generated-mutation",
+    "imported-library",
+}
+ANSWER_ACCESS = {"withheld-during-episode", "unavailable"}
+
+
+class NurseryError(RuntimeError):
+    """The nursery contract or its derived report is invalid."""
+
+
+def canonical_json(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def digest(value: Any) -> str:
+    return hashlib.sha256(canonical_json(value).encode()).hexdigest()
+
+
+def load_object(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text())
+    if not isinstance(value, dict):
+        raise NurseryError(f"{path.relative_to(ROOT)} is not a JSON object")
+    return value
+
+
+def load_facts(root: Path = FACTS) -> dict[str, dict[str, Any]]:
+    facts: dict[str, dict[str, Any]] = {}
+    for path in sorted(root.glob("*.json")):
+        fact = load_object(path)
+        fact_id = fact.get("id")
+        if not isinstance(fact_id, str) or fact_id in facts:
+            raise NurseryError(f"malformed or duplicate fact id in {path}")
+        facts[fact_id] = fact
+    return facts
+
+
+def require_string(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise NurseryError(f"{label} must be a non-empty string")
+    return value
+
+
+def validate_policy(policy: Any) -> dict[str, Any]:
+    if not isinstance(policy, dict):
+        raise NurseryError("policy must be an object")
+    expected_literals = {
+        "admission_dependency_authority": "proof-derived-kernel-dependency",
+        "family_leakage": "no-family-may-cross-evaluation-partitions",
+        "proof_shape_leakage": "no-proof-shape-may-cross-evaluation-partitions",
+        "split_component_authority": "declared-dependency-weak-component",
+        "split_freeze": "before-target-outcomes",
+        "split_leakage": "no-declared-component-may-cross-evaluation-partitions",
+    }
+    for key, expected in expected_literals.items():
+        if policy.get(key) != expected:
+            raise NurseryError(f"policy.{key} must be {expected!r}")
+    count = policy.get("evaluation_fact_count")
+    if not isinstance(count, dict) or count.get("minimum") != 100 or count.get("maximum") != 300:
+        raise NurseryError("evaluation_fact_count must retain the 100..300 programme range")
+    required = policy.get("required_evaluation_partitions")
+    if required != ["train", "development", "held-out"]:
+        raise NurseryError("required evaluation partitions changed or are unordered")
+    for key in (
+        "minimum_declared_dependency_depth",
+        "minimum_held_out_components",
+        "minimum_provenance_classes",
+        "minimum_route_hypothesis_families",
+        "minimum_statement_mutations",
+    ):
+        if not isinstance(policy.get(key), int) or policy[key] < 1:
+            raise NurseryError(f"policy.{key} must be a positive integer")
+    return policy
+
+
+def validate_entries(
+    raw: Any, facts: dict[str, dict[str, Any]]
+) -> list[dict[str, Any]]:
+    if not isinstance(raw, list) or not raw:
+        raise NurseryError("entries must be a non-empty list")
+    entries: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for index, entry in enumerate(raw):
+        if not isinstance(entry, dict):
+            raise NurseryError(f"entries[{index}] is not an object")
+        fact_id = require_string(entry.get("fact_id"), f"entries[{index}].fact_id")
+        if fact_id in seen:
+            raise NurseryError(f"duplicate nursery fact {fact_id}")
+        seen.add(fact_id)
+        if fact_id not in facts:
+            raise NurseryError(f"nursery fact {fact_id} is absent from the fact ledger")
+        if entry.get("partition") not in PARTITIONS:
+            raise NurseryError(f"{fact_id}: invalid partition")
+        if entry.get("provenance_class") not in PROVENANCE_CLASSES:
+            raise NurseryError(f"{fact_id}: invalid provenance class")
+        require_string(entry.get("family"), f"{fact_id}.family")
+        require_string(entry.get("proof_shape"), f"{fact_id}.proof_shape")
+        routes = entry.get("route_hypotheses")
+        if (
+            not isinstance(routes, list)
+            or not routes
+            or routes != sorted(set(routes))
+            or not all(isinstance(route, str) and route for route in routes)
+        ):
+            raise NurseryError(f"{fact_id}: route hypotheses must be sorted and unique")
+        mutation_of = entry.get("mutation_of")
+        if mutation_of is not None and (
+            not isinstance(mutation_of, str) or mutation_of == fact_id
+        ):
+            raise NurseryError(f"{fact_id}: invalid mutation_of")
+        if entry.get("answer_access") not in ANSWER_ACCESS:
+            raise NurseryError(f"{fact_id}: invalid answer_access")
+        entries.append(entry)
+    for entry in entries:
+        mutation_of = entry.get("mutation_of")
+        if mutation_of is not None and mutation_of not in seen:
+            raise NurseryError(f"{entry['fact_id']}: mutation target is outside the nursery")
+    by_id = {entry["fact_id"]: entry for entry in entries}
+    for entry in entries:
+        mutation_of = entry.get("mutation_of")
+        is_generated = entry["provenance_class"] == "generated-mutation"
+        if is_generated != (mutation_of is not None):
+            raise NurseryError(
+                f"{entry['fact_id']}: generated-mutation provenance and mutation_of must agree"
+            )
+        if mutation_of is not None:
+            target = by_id[mutation_of]
+            if (
+                entry["partition"] != target["partition"]
+                or entry["family"] != target["family"]
+            ):
+                raise NurseryError(
+                    f"{entry['fact_id']}: mutation must stay with its target partition and family"
+                )
+    return entries
+
+
+def components(
+    entries: list[dict[str, Any]], facts: dict[str, dict[str, Any]]
+) -> tuple[dict[str, str], dict[str, list[str]]]:
+    selected = {entry["fact_id"] for entry in entries}
+    adjacency: dict[str, set[str]] = {fact_id: set() for fact_id in selected}
+    for fact_id in selected:
+        dependencies = facts[fact_id].get("depends_on") or []
+        if not isinstance(dependencies, list):
+            raise NurseryError(f"{fact_id}: depends_on is not a list")
+        for dependency in dependencies:
+            if dependency in selected:
+                adjacency[fact_id].add(dependency)
+                adjacency[dependency].add(fact_id)
+    by_fact: dict[str, str] = {}
+    members: dict[str, list[str]] = {}
+    for start in sorted(selected):
+        if start in by_fact:
+            continue
+        found: list[str] = []
+        queue = deque([start])
+        while queue:
+            current = queue.popleft()
+            if current in found:
+                continue
+            found.append(current)
+            queue.extend(sorted(adjacency[current]))
+        found.sort()
+        component_id = digest(found)
+        members[component_id] = found
+        for fact_id in found:
+            by_fact[fact_id] = component_id
+    return by_fact, members
+
+
+def maximum_declared_depth(
+    fact_ids: set[str], facts: dict[str, dict[str, Any]]
+) -> int:
+    memo: dict[str, int] = {}
+
+    def visit(fact_id: str, active: tuple[str, ...] = ()) -> int:
+        if fact_id in memo:
+            return memo[fact_id]
+        if fact_id in active:
+            raise NurseryError("nursery declared dependency graph contains a cycle")
+        parents = [
+            dependency
+            for dependency in facts[fact_id].get("depends_on") or []
+            if dependency in fact_ids
+        ]
+        value = 1 + max(
+            (visit(parent, active + (fact_id,)) for parent in parents), default=0
+        )
+        memo[fact_id] = value
+        return value
+
+    return max((visit(fact_id) for fact_id in sorted(fact_ids)), default=0)
+
+
+def build_report(
+    nursery: dict[str, Any], facts: dict[str, dict[str, Any]], result: dict[str, Any]
+) -> dict[str, Any]:
+    if nursery.get("schema_version") != 1 or nursery.get("kind") != "axeyum-autogenesis-nursery":
+        raise NurseryError("nursery schema identity is invalid")
+    if nursery.get("state") not in {"foundation-only", "frozen-evaluation"}:
+        raise NurseryError("nursery state is invalid")
+    if nursery.get("longitudinal_result") != "artifacts/autogenesis/autogenesis-1-result.json":
+        raise NurseryError("longitudinal result path changed")
+    if result.get("verdict") != "autogenesis-1-passed":
+        raise NurseryError("longitudinal result is not a passed Autogenesis-1 result")
+    policy = validate_policy(nursery.get("policy"))
+    entries = validate_entries(nursery.get("entries"), facts)
+    by_fact, component_members = components(entries, facts)
+    by_partition = Counter(entry["partition"] for entry in entries)
+    evaluation = [entry for entry in entries if entry["partition"] in EVALUATION_PARTITIONS]
+    evaluation_ids = {entry["fact_id"] for entry in evaluation}
+    component_partitions: dict[str, set[str]] = defaultdict(set)
+    family_partitions: dict[str, set[str]] = defaultdict(set)
+    shape_partitions: dict[str, set[str]] = defaultdict(set)
+    for entry in evaluation:
+        component_partitions[by_fact[entry["fact_id"]]].add(entry["partition"])
+        family_partitions[entry["family"]].add(entry["partition"])
+        shape_partitions[entry["proof_shape"]].add(entry["partition"])
+    leaks = sorted(
+        component_id
+        for component_id, partitions in component_partitions.items()
+        if len(partitions) > 1
+    )
+    if leaks:
+        raise NurseryError("declared dependency component crosses evaluation partitions")
+    family_leaks = sorted(
+        family for family, partitions in family_partitions.items() if len(partitions) > 1
+    )
+    if family_leaks:
+        raise NurseryError("theorem family crosses evaluation partitions")
+    shape_leaks = sorted(
+        shape for shape, partitions in shape_partitions.items() if len(partitions) > 1
+    )
+    if shape_leaks:
+        raise NurseryError("proof shape crosses evaluation partitions")
+    longitudinal_ids = sorted(
+        entry["fact_id"] for entry in entries if entry["partition"] == "longitudinal"
+    )
+    if longitudinal_ids != ["F:nat-mul-one", "F:nat-zero-add"]:
+        raise NurseryError("longitudinal partition must be exactly the Autogenesis-1 chain")
+    longitudinal_components = {by_fact[fact_id] for fact_id in longitudinal_ids}
+    evaluation_longitudinal_overlap = sorted(
+        entry["fact_id"]
+        for entry in evaluation
+        if by_fact[entry["fact_id"]] in longitudinal_components
+    )
+    if evaluation_longitudinal_overlap:
+        raise NurseryError("evaluation population shares a component with Autogenesis-1")
+
+    provenance_classes = sorted({entry["provenance_class"] for entry in evaluation})
+    route_hypotheses = sorted(
+        {route for entry in evaluation for route in entry["route_hypotheses"]}
+    )
+    mutations = sum(entry.get("mutation_of") is not None for entry in evaluation)
+    held_out_components = {
+        by_fact[entry["fact_id"]]
+        for entry in evaluation
+        if entry["partition"] == "held-out"
+    }
+    depth = maximum_declared_depth(evaluation_ids, facts)
+    blockers: list[str] = []
+    minimum = policy["evaluation_fact_count"]["minimum"]
+    maximum = policy["evaluation_fact_count"]["maximum"]
+    if not minimum <= len(evaluation) <= maximum:
+        blockers.append(f"evaluation-fact-count:{len(evaluation)}-outside-{minimum}..{maximum}")
+    for partition in policy["required_evaluation_partitions"]:
+        if by_partition[partition] == 0:
+            blockers.append(f"empty-partition:{partition}")
+    if len(provenance_classes) < policy["minimum_provenance_classes"]:
+        blockers.append(f"provenance-classes:{len(provenance_classes)}")
+    if len(route_hypotheses) < policy["minimum_route_hypothesis_families"]:
+        blockers.append(f"route-hypothesis-families:{len(route_hypotheses)}")
+    if mutations < policy["minimum_statement_mutations"]:
+        blockers.append(f"statement-mutations:{mutations}")
+    if len(held_out_components) < policy["minimum_held_out_components"]:
+        blockers.append(f"held-out-components:{len(held_out_components)}")
+    if depth < policy["minimum_declared_dependency_depth"]:
+        blockers.append(f"declared-dependency-depth:{depth}")
+    report: dict[str, Any] = {
+        "schema_version": 1,
+        "kind": "axeyum-autogenesis-nursery-readiness",
+        "nursery_sha256": digest(nursery),
+        "fact_ledger_sha256": digest(
+            [{"fact_id": fact_id, "fact_sha256": digest(facts[fact_id])} for fact_id in sorted(facts)]
+        ),
+        "longitudinal": {
+            "fact_ids": longitudinal_ids,
+            "result_sha256": digest(result),
+            "excluded_from_evaluation": True,
+        },
+        "population": {
+            "all_entries": len(entries),
+            "evaluation_entries": len(evaluation),
+            "partitions": {key: by_partition[key] for key in sorted(PARTITIONS)},
+            "declared_components": len(component_members),
+            "held_out_components": len(held_out_components),
+            "maximum_declared_dependency_depth": depth,
+            "provenance_classes": provenance_classes,
+            "route_hypothesis_families": route_hypotheses,
+            "statement_mutations": mutations,
+        },
+        "controls": {
+            "component_split_leaks": leaks,
+            "family_split_leaks": family_leaks,
+            "proof_shape_split_leaks": shape_leaks,
+            "evaluation_longitudinal_component_overlap": evaluation_longitudinal_overlap,
+            "answer_access_values": sorted({entry["answer_access"] for entry in entries}),
+            "admission_edges_require_proof_derivation": True,
+            "route_hypotheses_grant_no_dispatch_or_admission_authority": True,
+        },
+        "ready": not blockers,
+        "blockers": blockers,
+    }
+    if nursery["state"] == "foundation-only" and report["ready"]:
+        raise NurseryError("foundation-only nursery unexpectedly satisfies readiness floors")
+    if nursery["state"] == "frozen-evaluation" and not report["ready"]:
+        raise NurseryError("frozen-evaluation nursery does not satisfy readiness floors")
+    report["report_sha256"] = digest(report)
+    return report
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--require-ready", action="store_true")
+    args = parser.parse_args()
+    try:
+        report = build_report(load_object(NURSERY), load_facts(), load_object(RESULT))
+        if args.require_ready and not report["ready"]:
+            raise NurseryError("nursery is not evaluation-ready: " + ", ".join(report["blockers"]))
+        if args.json:
+            print(json.dumps(report, indent=2, sort_keys=True))
+        else:
+            print(
+                "AUTOGENESIS_NURSERY_OK|"
+                f"{report['report_sha256']}|ready={str(report['ready']).lower()}|"
+                f"evaluation={report['population']['evaluation_entries']}|"
+                f"blockers={len(report['blockers'])}"
+            )
+    except (OSError, json.JSONDecodeError, NurseryError) as error:
+        print(f"autogenesis-nursery: {error}", file=__import__("sys").stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

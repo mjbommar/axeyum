@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
+check: fmt fmt-all facts facts-replay clippy gate-controls autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
 
 fmt:
     cargo fmt --all --check
@@ -59,6 +59,13 @@ next-chains-json:
 autogenesis-operations:
     python3 scripts/validate-autogenesis-operations.py
     python3 -m unittest scripts.tests.test_validate_autogenesis_operations
+
+# Validate the leakage-safe population contract. This reports ready=false until
+# the 100--300-fact evaluation nursery is actually frozen; experiments add
+# --require-ready, while the repository gate preserves honest partial state.
+autogenesis-nursery:
+    python3 -m unittest scripts.tests.test_check_autogenesis_nursery
+    python3 scripts/check-autogenesis-nursery.py
 
 # Explicit external experiment: launch one complete B -> A authoritative chain
 # from a clean checkout and retain its independently checkable receipts.

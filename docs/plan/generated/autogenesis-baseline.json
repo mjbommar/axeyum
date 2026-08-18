@@ -657,6 +657,13 @@
       "owner": "episode replay",
       "source": "scripts/run-autogenesis-authoritative-chain.py",
       "state": "autogenesis-1-passed"
+    },
+    {
+      "gap": "Autogenesis-1 is frozen as a longitudinal regression, but the leakage-safe train, development, and held-out population has zero evaluation facts",
+      "id": "evaluation-population",
+      "owner": "nursery manifest and readiness checker",
+      "source": "scripts/check-autogenesis-nursery.py",
+      "state": "foundation-only"
     }
   ],
   "proof_gap": {
@@ -674,12 +681,17 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "20de84453db75da93f41295f6feab3a8e834bc213663381e461a4923ffaaca76",
+    "digest": "9c283f45facd3f9e83b2170303fc044b3c3cb4a577c9dd189f5220b00ecfba0c",
     "inputs": [
       {
         "bytes": 1939,
         "path": "artifacts/autogenesis/autogenesis-1-result.json",
         "sha256": "d206d33a1cdf8392dc7fb3c4720ba8c55abd2d3334b35bb5ba5cbd3a6bcef8ca"
+      },
+      {
+        "bytes": 1942,
+        "path": "artifacts/autogenesis/nursery-v1.json",
+        "sha256": "ed158ff63645f73ac2cdcd96fe84b95ec8346a0a3f45f3b4f0d2b6705b56eb7e"
       },
       {
         "bytes": 6739,
@@ -1267,9 +1279,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 73716,
+        "bytes": 74108,
         "path": "justfile",
-        "sha256": "cd1537bcacb5ae5fc1167b51996bca6e2f17add46e3985c57568d2d37fb1dac8"
+        "sha256": "03831125cca9ef72572df1065b4ed279be8b15b6da2eebb44c7a6fe40e71c2aa"
       },
       {
         "bytes": 11929,
@@ -1317,6 +1329,11 @@
         "sha256": "b95ff058b0fd33cfa5ef2743587c4b2db25a2cef5ff72529e0ff474951926d65"
       },
       {
+        "bytes": 16108,
+        "path": "scripts/check-autogenesis-nursery.py",
+        "sha256": "2d2e888f040b0c6f4d2aad4ccc7486d8f7a547c78eb4805533b5e56ec76997e1"
+      },
+      {
         "bytes": 3090,
         "path": "scripts/check-autogenesis-proposer-isolation.sh",
         "sha256": "c1a7caf9d14339f702b26196e21b835308a2e6818a5407b27adde9e570f2ec4f"
@@ -1332,9 +1349,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 22553,
+        "bytes": 22719,
         "path": "scripts/check.sh",
-        "sha256": "b876e2a76318a080661047b472a977af8f6d329597fee345ab594dcb776c04d8"
+        "sha256": "819e6866152c8cfcdcf1839163847e68da18d6a722fd5308b8c2a0a20007e05a"
       },
       {
         "bytes": 6846,
@@ -1392,9 +1409,9 @@
         "sha256": "fb367504828dc9aa0d09ecf349b645eb33b83402b69c53df65e43e937271526c"
       },
       {
-        "bytes": 27020,
+        "bytes": 27568,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "e88df9bf500e8dcea9d141723835b640782511b2ec7ccceccf7dd490fdfbc703"
+        "sha256": "310a930ccb24351fc49ed519a23d242aa21dbb7ef6b64e2d8c529875b674479b"
       },
       {
         "bytes": 17112,

@@ -107,6 +107,7 @@ compounding, not automation theatre.
 | [Backward foundation](08-backward-foundation.md) | What must be true immediately before Autogenesis-1, and which assumptions already fail? |
 | [Authoritative B result](09-authoritative-b-admission-result.md) | Did a real B admission durably unlock A, and what remains uncredited? |
 | [Autogenesis-1 result](10-autogenesis-1-result.md) | Did two clean authoritative B-then-A runs satisfy the fixed-budget, assurance, and reproducibility gates? |
+| [Nursery foundation result](11-nursery-foundation-result.md) | Can the next evaluation population be split without dependency, family, proof-shape, mutation, or longitudinal leakage? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -198,6 +199,16 @@ all 56 retained artifact bytes matched. The small committed
 [result index](../../artifacts/autogenesis/autogenesis-1-result.json) binds the
 external receipts; the detailed audit is in the
 [Autogenesis-1 result](10-autogenesis-1-result.md).
+
+The first post-result increment is a deliberately red nursery baseline. ADR-0478
+reserves the successful chain as a longitudinal regression, separates authored
+split dependencies from proof-derived admission authority, and prohibits
+dependency components, theorem families, proof shapes, or mutations from
+crossing evaluation partitions. The executable
+[`nursery-v1.json`](../../artifacts/autogenesis/nursery-v1.json) currently has
+zero evaluation facts and nine named readiness blockers. That finding is the
+point: the existing ledger cannot be relabelled into a credible held-out Phase 3
+population. See the [nursery foundation result](11-nursery-foundation-result.md).
 
 ## Phase summary
 

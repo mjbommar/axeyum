@@ -68,6 +68,8 @@ STATIC_SOURCES = (
     Path("scripts/check-autogenesis-fact-operation.py"),
     Path("artifacts/autogenesis/operations.json"),
     Path("artifacts/autogenesis/autogenesis-1-result.json"),
+    Path("artifacts/autogenesis/nursery-v1.json"),
+    Path("scripts/check-autogenesis-nursery.py"),
     Path("scripts/close-fact.py"),
     Path("scripts/gen-proof-gap-matrix.py"),
     Path("artifacts/ontology/fact.schema.json"),
@@ -169,6 +171,14 @@ SEAMS = (
         "source": "scripts/run-autogenesis-authoritative-chain.py",
         "marker": "Run the credited Autogenesis B -> A acquisition",
         "gap": "the bootstrap chain reproduces byte-identically; held-out longitudinal replay and generalization remain",
+    },
+    {
+        "id": "evaluation-population",
+        "state": "foundation-only",
+        "owner": "nursery manifest and readiness checker",
+        "source": "scripts/check-autogenesis-nursery.py",
+        "marker": "route_hypotheses_grant_no_dispatch_or_admission_authority",
+        "gap": "Autogenesis-1 is frozen as a longitudinal regression, but the leakage-safe train, development, and held-out population has zero evaluation facts",
     },
 )
 
