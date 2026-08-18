@@ -47,6 +47,39 @@ print("  settled by route: " + ", ".join(f"{k} {v}" for k, v in route.most_commo
 PY
 python3 scripts/check-fact-dag.py --quiet 2>/dev/null | tail -1 | sed 's/^/  /'
 
+section "TRUSTED BASE — the headline metric, and it was not in this view"
+# CLAUDE.md: "The metric is the trusted base, not the output volume. Assumptions
+# remaining per prelude, and results the system established with nobody writing
+# the proof. A referee checks both in one command." This view showed the second
+# and not the first, so the one command did not exist.
+#
+# Read from the COMMITTED ledger, which derives every number from two kernel
+# measurements rather than authoring them (the previous revision hard-coded the
+# counts and kept publishing a trusted base 33 rows too large after the Int
+# development was proved down). The authority is
+# `python3 scripts/gen-lean-axiom-ledger.py --check`, which rebuilds the
+# isolated preludes; this is its pinned output.
+if [ -f docs/plan/generated/lean-axiom-ledger.md ]; then
+  # FIRST table only. The ledger has two whose header starts `| Prelude `, and
+  # a `sed` range prints both -- the second is 77 rows of per-axiom SHA-256,
+  # which buries the six-line summary this section exists to show.
+  awk '/^\| Prelude \| Axiom \|/{p=1} p{print} p&&/^$/{exit}' \
+    docs/plan/generated/lean-axiom-ledger.md | sed 's/^/  /'
+  grep -E '^- \*\*[0-9]+ total assumptions|^- \*\*[0-9]+ assumptions have been retired' \
+    docs/plan/generated/lean-axiom-ledger.md | sed 's/^/  /'
+  echo "  authority: python3 scripts/gen-lean-axiom-ledger.py --check   (rebuilds the preludes)"
+  # The ledger covers the preludes the reconstruction ADMITS. The CONSTRUCTED
+  # developments are a different question and a different tool: measured
+  # 2026-08-18, `nat_axiom_inventory` builds logic/nat/real/integer/rat/string
+  # and NOT creal/complex, so grepping it for the constructed reals returns an
+  # empty answer to a question it was never asked -- which is how one brief
+  # concluded ℝ-as-constructed was axiom-free from evidence that did not exist.
+  echo "  constructed carriers are NOT in the table above; they need the flag:"
+  echo "    cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed"
+else
+  echo "  (docs/plan/generated/lean-axiom-ledger.md absent — run scripts/gen-lean-axiom-ledger.py)"
+fi
+
 section "NEXT — what to work on (just next, or --unlocks for the full queue)"
 python3 scripts/fact-frontier.py 2>/dev/null | sed 's/^/  /'
 
