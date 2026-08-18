@@ -154,14 +154,14 @@ class RemoteCollisionTests(unittest.TestCase):
 
     def test_same_number_different_content_is_a_collision(self) -> None:
         collisions = MODULE.find_remote_collisions(
-            ["adr-0468-real-is-constructed.md"],
-            ["adr-0468-autogenesis-transaction.md"],
+            ["adr-0483-real-is-constructed.md"],
+            ["adr-0483-autogenesis-transaction.md"],
         )
         self.assertEqual(len(collisions), 1)
         number, local_only, remote_only = collisions[0]
         self.assertEqual(number, "0468")
-        self.assertEqual(local_only, ["adr-0468-real-is-constructed.md"])
-        self.assertEqual(remote_only, ["adr-0468-autogenesis-transaction.md"])
+        self.assertEqual(local_only, ["adr-0483-real-is-constructed.md"])
+        self.assertEqual(remote_only, ["adr-0483-autogenesis-transaction.md"])
 
     def test_identical_filename_on_both_sides_is_not_a_collision(self) -> None:
         # Shared history: the same lane's ADR, already present on both trees.

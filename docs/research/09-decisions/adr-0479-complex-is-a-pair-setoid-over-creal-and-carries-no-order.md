@@ -6,7 +6,7 @@ Index-summary: ℂ as a pair of constructed reals under a componentwise defined 
 
 ## Context
 
-[ADR-0468](adr-0468-real-is-constructed-as-a-setoid-over-the-rationals.md) built
+[ADR-0483](adr-0483-real-is-constructed-as-a-setoid-over-the-rationals.md) built
 ℝ as a Bishop setoid of regular ℚ-sequences at zero trusted declarations, and
 explicitly **scoped ℂ out**, with a finding: nothing in the solver needed it, and
 the only shipped complex arithmetic is exact ℚ(i) in
@@ -58,7 +58,7 @@ component formula and every law can be *stated* about `Complex` while being
 
 ### 2. Five congruence obligations, and no order to congruence over
 
-Every operation owes an `Equiv`-congruence, exactly as ADR-0468 counted for ℝ:
+Every operation owes an `Equiv`-congruence, exactly as ADR-0483 counted for ℝ:
 `add_congr`, `neg_congr`, `mul_congr`, `conj_congr`. `Complex.Equiv`'s own
 `refl`/`symm`/`trans` come componentwise from `CReal`'s and cost nothing.
 
@@ -151,7 +151,7 @@ It **declares nothing** — every function returns a proof term, in the style of
 the trusted surface is unchanged by construction. `add` and `mul` are the same
 commutative monoid, so the reassociation machinery is written once against an
 `Op` tag; it is `rsum_perm`/`iprod_perm` transcribed one level up and over a
-*defined* equality, which is the transcription ADR-0468 predicted would be
+*defined* equality, which is the transcription ADR-0483 predicted would be
 needed. Like them, it **panics** on a non-identity rather than handing the kernel
 a term it will reject a thousand nodes deep.
 
@@ -160,7 +160,7 @@ a term it will reject a thousand nodes deep.
 - **`CReal[X]/(X²+1)` as a quotient of a polynomial ring** — the textbook
   algebraic construction, and closed here for ADR-0456's reason: the quotient
   needs `Quot.sound`. A pair is the same object with the quotient never taken.
-- **ℚ(i) first, per ADR-0468's deferral.** Still the right thing for
+- **ℚ(i) first, per ADR-0483's deferral.** Still the right thing for
   `geometry_certify`, and untouched by this ADR — but it is a *different* object
   (a ring over ℚ, not over ℝ) and it does not supply ℂ. The deferral's reasoning
   was about which consumer was waiting, and consumer demand is not the metric

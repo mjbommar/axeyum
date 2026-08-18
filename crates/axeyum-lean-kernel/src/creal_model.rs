@@ -1,5 +1,5 @@
 //! A **machine-checked model of the `Real` axiom package in the constructed
-//! `CReal`** — ADR-0468 phase R4, and the step that supersedes
+//! `CReal`** — ADR-0483 phase R4, and the step that supersedes
 //! [`build_int_model_of_arith`](crate::build_int_model_of_arith).
 //!
 //! ## What changed, and why it needed a new module
@@ -22,7 +22,7 @@
 //! [`CReal`](crate::CRealPrelude), a Bishop setoid of regular ℚ-sequences over
 //! the constructed ℚ, built in [`creal`](crate::build_creal_prelude) at **zero**
 //! trusted declarations. One thing about the interpretation has to change to
-//! make that possible, and it is the whole content of ADR-0468:
+//! make that possible, and it is the whole content of ADR-0483:
 //!
 //! > **Nine of the 22 laws are stated with the kernel's `Eq`, and `Eq CReal` is
 //! > not the equality of real numbers.** `CReal.Equiv` is.
@@ -30,7 +30,7 @@
 //! So the interpretation is not a constant renaming. It is a constant renaming
 //! **plus** the rewrite that replaces the partial application `Eq Real` — the
 //! `Eq` of the carrier, and only that one — with `CReal.Equiv`. That is the
-//! same rewrite ADR-0468 phase R3 applies to the consumer telescope's nine
+//! same rewrite ADR-0483 phase R3 applies to the consumer telescope's nine
 //! `Eq`-laws (`ordered_ring::setoid::rewrite_eq_at_real` in `axeyum-solver`);
 //! here it is applied to the axioms themselves, so what the kernel checks is
 //! that `CReal` **satisfies the interface phase R3 abstracts over**.
@@ -66,7 +66,7 @@
 //!   ℝ, and `CReal.ofRat` embeds ℚ into it.
 //! - Thirteen laws are modelled **verbatim** and nine only after `Eq Real` is
 //!   read as `CReal.Equiv`. [`CRealModelLaw::restated_over_equiv`] records
-//!   which, per law, so ADR-0468's Measurement 2 (9 vs 21) is read out of the
+//!   which, per law, so ADR-0483's Measurement 2 (9 vs 21) is read out of the
 //!   kernel rather than quoted.
 //! - What it does **not** establish is that `Eq CReal` is real-number equality.
 //!   It is not, and no witness here says it is. A consumer that wants its
@@ -124,7 +124,7 @@ pub struct CRealModelLaw {
     /// something the conversion checker can reconcile.
     pub identical: bool,
     /// Whether the `Eq Real ↦ CReal.Equiv` rewrite **fired** on this law — i.e.
-    /// whether this is one of the nine that ADR-0468 says the setoid route can
+    /// whether this is one of the nine that ADR-0483 says the setoid route can
     /// only satisfy in restated form.
     ///
     /// Read out of the axiom, not asserted: `restated_over_equiv` is true for
@@ -158,7 +158,7 @@ impl CRealModel {
         self.laws.iter().map(|law| law.witness).collect()
     }
 
-    /// How many of the 22 laws needed restating over `CReal.Equiv`. ADR-0468
+    /// How many of the 22 laws needed restating over `CReal.Equiv`. ADR-0483
     /// Measurement 2 says nine; this counts them in the kernel.
     #[must_use]
     pub fn restated_count(&self) -> usize {

@@ -15,14 +15,14 @@ real:  axiom=30 opaque=0 quotient=0 total_trusted=30
 ```
 
 One nonzero row, and it is 30 of 30 rows of `docs/plan/lean-axiom-ledger-v1.json`.
-[ADR-0468](adr-0468-real-is-constructed-as-a-setoid-over-the-rationals.md) built
+[ADR-0483](adr-0483-real-is-constructed-as-a-setoid-over-the-rationals.md) built
 `CReal` at zero trusted declarations and `a6ee37c6a` moved the shipped LRA/SOS
 front door onto it, so the axioms are unnecessary for the route that ships. The
 obvious next step is to delete them.
 
 Two things had to be established before that step could be taken or refused.
 
-**What still reaches the axioms.** The `RingSignature` seam (ADR-0468 phase R3)
+**What still reaches the axioms.** The `RingSignature` seam (ADR-0483 phase R3)
 already made the carrier a parameter, and the `Real` package is one instance of
 it. Re-measured on 2026-08-18, 30 `.rs` files name the package (a prior survey
 said 38, counting docs). Only three call sites in non-test `src` build it:

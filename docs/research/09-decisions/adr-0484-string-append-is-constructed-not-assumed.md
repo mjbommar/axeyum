@@ -1,4 +1,4 @@
-# ADR-0469: `str.++` is a checked recursion over `Str.rec`, not a primitive interface
+# ADR-0484: `str.++` is a checked recursion over `Str.rec`, not a primitive interface
 
 Status: accepted
 Index-summary: The last non-`real` prelude assumption is gone: `append` becomes a `Declaration::Definition` over the `Str` recursor with four proved monoid laws, so `string` joins `logic`/`nat`/`integer` at a **zero** trusted surface and the ledger's `primitive-interface`/`retained` classification of that row is overturned
@@ -40,7 +40,7 @@ Three things made the classification wrong rather than merely conservative:
    failure mode ADR-0465 exists to keep measurable.
 
 The remaining `real` rows are a genuinely different case: their carrier is an
-opaque constant (ADR-0468 is the live work to construct it), so they are
+opaque constant (ADR-0483 is the live work to construct it), so they are
 primitive in a way `append` never was.
 
 ## Decision

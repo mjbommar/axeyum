@@ -82,7 +82,7 @@
   "provenance": {
     "date": "2026-08-18",
     "established_by": "axeyum-lean-kernel complex module (ADR-0479; agent-complex-foundation lane)",
-    "source": "hand-built as a pair carrier over the CReal setoid of ADR-0468"
+    "source": "hand-built as a pair carrier over the CReal setoid of ADR-0483"
   },
   "notes": "WHAT THIS DOES NOT SAY. It does not claim a FIELD: there is no inverse, no division, no square root, no completeness and no algebraic closure, and none of those is one of the nine. It does not claim an order -- see F:complex-admits-no-compatible-order, which refutes one. It does not retire any Real axiom: the Real package is an ORDERED ring and Complex is not a model of it, only of its equality-only fragment. And Eq Complex is not on offer as equality of complex numbers; Complex.Equiv is."
 }

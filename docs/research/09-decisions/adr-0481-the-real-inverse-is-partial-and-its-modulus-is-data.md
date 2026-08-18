@@ -6,7 +6,7 @@ Index-summary: ℚ becomes a **field** (`Rat.mul_inv_cancel`, axiom-free — `Ra
 
 ## Context
 
-[ADR-0468](adr-0468-real-is-constructed-as-a-setoid-over-the-rationals.md) built
+[ADR-0483](adr-0483-real-is-constructed-as-a-setoid-over-the-rationals.md) built
 ℝ as a Bishop setoid of regular ℚ-sequences at **zero** trusted declarations and
 closed all 22 ordered-commutative-**ring** laws over it;
 [ADR-0479](adr-0479-complex-is-a-pair-setoid-over-creal-and-carries-no-order.md)
@@ -126,7 +126,7 @@ the modulus explicit, and that signature is the one the construction will use.
   value in `gen-lean-axiom-ledger.py --check`.
 - `Rat.div` finally has a law behind it, since it is defined through `Rat.inv`.
 - The 22 ordered-ring laws are untouched: no field law is one of them, so no
-  count moves and the `Real` package's 30 axioms are unaffected (ADR-0468 retires
+  count moves and the `Real` package's 30 axioms are unaffected (ADR-0483 retires
   those by deletion in phase R4, not by exhibiting a model).
 - **`CReal.inv` itself is not built by this ADR.** Its design is fixed here and
   the ℚ-side lemmas it needs are proved; the remaining work is index arithmetic,

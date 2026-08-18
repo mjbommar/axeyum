@@ -23,7 +23,7 @@
 //!
 //! **That conclusion was overturned, and the correction is why this module has
 //! a successor.** The missing option was that ring equality need not be `Eq`:
-//! ADR-0468 constructs ℝ as a Bishop setoid whose equality is a *defined*
+//! ADR-0483 constructs ℝ as a Bishop setoid whose equality is a *defined*
 //! relation, so no quotient is needed and `Quot.sound` never comes up. See
 //! "Superseded by the constructed reals" below.
 //!
@@ -66,7 +66,7 @@
 //!
 //! ## Superseded by the constructed reals
 //!
-//! [`build_creal_model_of_arith`](crate::build_creal_model_of_arith) (ADR-0468
+//! [`build_creal_model_of_arith`](crate::build_creal_model_of_arith) (ADR-0483
 //! phase R4) now models the same 22 laws in
 //! [`CReal`](crate::CRealPrelude) — a Bishop setoid of regular ℚ-sequences over
 //! the constructed ℚ, also at zero trusted declarations — which discharges the

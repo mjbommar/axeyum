@@ -1,4 +1,4 @@
-# ADR-0468: ℝ is constructed as a Bishop setoid over ℚ, not as a quotient or a cut
+# ADR-0483: ℝ is constructed as a Bishop setoid over ℚ, not as a quotient or a cut
 
 Status: accepted
 Date: 2026-08-17

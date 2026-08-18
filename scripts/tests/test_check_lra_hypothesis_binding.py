@@ -2041,6 +2041,7 @@ class TheAnchoredManifestIsRealAndOnlyGrows(unittest.TestCase):
             "structural-anchored": set(HB.structural_anchored_instances()),
             "anchored": set(HB.anchored_instances()),
             "attested": set(HB.attestation_instances()),
+            "declined": set(HB.declined_instances()),
         }
         names = sorted(classes)
         for i, left in enumerate(names):
@@ -2200,6 +2201,170 @@ class TheFourVerdictsCannotAbsorbEachOther(unittest.TestCase):
             ),
             1,
         )
+
+
+# The shape that shipped: `cvc5__cli__regress0__bv__holes__extract-concat.smt2`
+# rendered eleven reflexive `Iff`s under one negation. `Iff p p` is provable, so
+# the conjunction is provable, so this ONE axiom refutes itself and the module's
+# `False` needs nothing from the query. Trimmed to three conjuncts.
+REFL_IFF_MODULE = """
+axiom α : Sort (1)
+axiom axeyum.reconstruct.prop._0 : Prop
+axiom axeyum.reconstruct.prop._1 : Prop
+axiom axeyum.reconstruct.prop._2 : Prop
+axiom axeyum.reconstruct.hyp._3 : Not (And (Iff axeyum.reconstruct.prop._0 \
+axeyum.reconstruct.prop._0) (And (Iff axeyum.reconstruct.prop._1 \
+axeyum.reconstruct.prop._1) (Iff axeyum.reconstruct.prop._2 \
+axeyum.reconstruct.prop._2)))
+theorem axeyum_refutation : False := trivial
+"""
+
+# The SAME module with one conjunct relating two DIFFERENT props. That
+# conjunction is not provable by reflexivity, so the axiom is a real assumption
+# about the query and this must NOT be reported.
+HONEST_IFF_MODULE = REFL_IFF_MODULE.replace(
+    "(Iff axeyum.reconstruct.prop._1 axeyum.reconstruct.prop._1)",
+    "(Iff axeyum.reconstruct.prop._1 axeyum.reconstruct.prop._2)",
+)
+
+
+class AModuleThatRefutesItselfCorroboratesNothing(unittest.TestCase):
+    """`Not X` with `X` provable by reflexivity alone.
+
+    Lean accepts such a module, `#print axioms` is clean, and the identical
+    module would be accepted for a query that said something else — the
+    derivation never reads the file. Two have existed in this corpus. The first
+    (`Not (Eq.{1} α t t)`) was found in 2026-08-18's attestation sweep and its
+    route made to decline; the second was found only by widening the predicate
+    from that one shape to the property, and it was sitting in the DECLINED list
+    where no check ran at all.
+
+    Both halves are driven: the discriminating test is not that reflexive
+    conjunctions are caught, it is that a conjunction with ONE honest conjunct is
+    not.
+    """
+
+    def test_the_narrow_rfl_shape_is_still_recognized(self) -> None:
+        self.assertTrue(HB._is_self_refuting("Not (Eq.{1} α a a)"))
+
+    def test_a_negated_conjunction_of_reflexive_iffs_is_recognized(self) -> None:
+        self.assertTrue(HB._is_self_refuting("Not (And (Iff p p) (And (Iff q q) (Iff r r)))"))
+
+    def test_ONE_honest_conjunct_makes_it_a_real_assumption(self) -> None:
+        self.assertFalse(HB._is_self_refuting("Not (And (Iff p p) (And (Iff q r) (Iff s s)))"))
+
+    def test_a_disequality_between_DIFFERENT_terms_is_a_real_assumption(self) -> None:
+        self.assertFalse(HB._is_self_refuting("Not (Eq.{1} α a b)"))
+
+    def test_an_Or_is_refused_even_though_one_disjunct_is_reflexive(self) -> None:
+        """The grammar is CLOSED on purpose. `Or (Iff p p) X` really is provable,
+        but admitting `Or` here would start this predicate reasoning rather than
+        recognizing, and a wrong yes takes down a sound route."""
+        self.assertFalse(HB._is_self_refuting("Not (Or (Iff p p) (Iff q q))"))
+
+    def test_an_unnegated_reflexive_conjunction_is_not_self_refuting(self) -> None:
+        """`And (Iff p p) (Iff q q)` is provable, which makes it useless, not
+        contradictory. Only its NEGATION hands the module a free `False`."""
+        self.assertFalse(HB._is_self_refuting("And (Iff p p) (Iff q q)"))
+
+    def test_the_scan_reads_EVERY_axiom_not_only_the_hypotheses(self) -> None:
+        """`classify_attestation` could only ever see the class it was already
+        looking at. The corpus's second self-refuting module was in the declined
+        list; nothing ran on it."""
+        found = HB.self_refuting_axioms(REFL_IFF_MODULE)
+        self.assertEqual(found, ["axeyum.reconstruct.hyp._3"])
+
+    def test_the_honest_twin_is_reported_clean(self) -> None:
+        self.assertEqual(HB.self_refuting_axioms(HONEST_IFF_MODULE), [])
+
+    def test_a_module_with_no_axiom_at_all_is_reported_clean(self) -> None:
+        self.assertEqual(HB.self_refuting_axioms("theorem t : False := trivial"), [])
+
+
+class TheDeclinedClassIsPinnedAndTwoSided(unittest.TestCase):
+    """The residue nothing used to run on.
+
+    Until 2026-08-18 the declined instances were a comment inside the attestation
+    manifest, explicitly "NOT checked". A class nothing runs on can only be
+    entered: an instance that becomes bindable stays declined forever. The pin
+    can therefore only fail by an instance getting BETTER, which is the direction
+    this repository has twice found by measurement rather than by a check.
+    """
+
+    def _run_driver(self, module: str, query: str, *extra: str) -> int:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as scratch:
+            qpath = pathlib.Path(scratch) / "q.smt2"
+            mpath = pathlib.Path(scratch) / "m.lean"
+            qpath.write_text(query, encoding="utf-8")
+            mpath.write_text(module, encoding="utf-8")
+            return HB.main(
+                [
+                    "--instance", str(qpath),
+                    "--module", str(mpath),
+                    "--no-build",
+                    "--no-self-check",
+                    "--min-instances", "0",
+                    "--min-hypotheses", "0",
+                    "--min-required-mutations", "0",
+                    "--min-attestations", "0",
+                    "--min-represented", "0",
+                    "--min-structural", "0",
+                    "--min-structural-nodes", "0",
+                    "--min-structural-mutations", "0",
+                    "--min-anchored", "0",
+                    "--min-anchored-nodes", "0",
+                    "--min-anchored-mutations", "0",
+                    "--min-structural-anchored", "0",
+                    "--min-declined", "0",
+                    *extra,
+                ]
+            )
+
+    def test_every_pinned_instance_exists(self) -> None:
+        pinned = HB.declined_instances()
+        if not (ROOT / "corpus").is_dir():
+            pinned = [p for p in pinned if not p.startswith("corpus/")]
+        self.assertEqual([p for p in pinned if not (ROOT / p).is_file()], [])
+
+    def test_the_manifest_meets_its_own_floor(self) -> None:
+        self.assertGreaterEqual(len(HB.declined_instances()), HB.MIN_DECLINED)
+
+    def test_a_declined_pin_is_refused_when_the_module_binds_structurally(self) -> None:
+        """The whole point: an instance that got better must not stay filed as
+        beyond reach."""
+        self.assertEqual(
+            self._run_driver(
+                STRUCTURAL_MODULE,
+                "(assert (bvult (select (store a i v) j) (select a j)))",
+                "--expect",
+                "declined",
+            ),
+            1,
+        )
+
+    def test_a_declined_pin_is_refused_when_the_module_is_an_attestation(self) -> None:
+        self.assertEqual(
+            self._run_driver(
+                ANCHOR_MODULE,
+                "(assert (bvult p q))",
+                "--expect",
+                "declined",
+            ),
+            1,
+        )
+
+    def test_a_self_refuting_module_fails_whatever_class_it_is_pinned_to(self) -> None:
+        """The check runs BEFORE the verdict, so `declined` cannot shelter it."""
+        for want in ("declined", "attested", "structural", "bound"):
+            with self.subTest(want=want):
+                self.assertEqual(
+                    self._run_driver(
+                        REFL_IFF_MODULE, "(assert (bvult p q))", "--expect", want
+                    ),
+                    1,
+                )
 
 
 if __name__ == "__main__":

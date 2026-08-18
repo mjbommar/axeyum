@@ -1,6 +1,6 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
-> **STATUS 2026-08-18 (latest) — ADR-0468 phase R2 is COMPLETE: all 22
+> **STATUS 2026-08-18 (latest) — ADR-0483 phase R2 is COMPLETE: all 22
 > ordered-commutative-ring laws hold over the constructed ℝ, at trusted surface
 > 0. The costing that made `mul` the keystone blocker was wrong in the direction
 > that mattered.** That costing — repeated in this document and in two agent
@@ -56,7 +56,7 @@
 > declarations. `real: axiom=30` is still 30.** Both halves, again, and this time
 > the gap between them is the whole finding.
 >
-> ADR-0468 phases R2 and R4 are complete. All **22 ordered-commutative-ring laws**
+> ADR-0483 phases R2 and R4 are complete. All **22 ordered-commutative-ring laws**
 > hold over the constructed ℝ (58 declarations, trusted surface 0), and
 > `build_creal_model_of_arith` admits `Real.CRealModel.<law>` for each, with the
 > obligation **computed from the axiom as it stands in the environment** rather
@@ -94,7 +94,7 @@
 > plan it as one.
 
 > **STATUS 2026-08-18 (later) — R3 landed, and the distance to `real: 0` is
-> longer than ADR-0468's end-state paragraph reads.** That paragraph says the 30
+> longer than ADR-0483's end-state paragraph reads.** That paragraph says the 30
 > retire by deletion because "once R3 lands, no consumer references the `Real`
 > package, and `build_arith_prelude` can be retired." Measured after R3 landed:
 > **18 files still reference `build_arith_prelude`/`ArithPrelude`**, and the
@@ -122,7 +122,7 @@
 > (`le_refl`, `le_trans`, `add_le_add`).
 >
 > The 30 axioms do **not** retire by exhibiting this model. They retire by
-> *deletion*, when no consumer references the `Real` package — ADR-0468 phase R3,
+> *deletion*, when no consumer references the `Real` package — ADR-0483 phase R3,
 > which binds equality as a telescope parameter (`RING_BINDER_NAMES` 30 → 39) so
 > a generalized refutation can be instantiated at a carrier whose equality is
 > `CReal.Equiv` rather than `Eq`. Until that lands, "ℝ is constructed" and
@@ -186,7 +186,7 @@
 
 
 > **STATUS 2026-08-17 — the ℝ half has a route, and it is free.**
-> [ADR-0468](../research/09-decisions/adr-0468-real-is-constructed-as-a-setoid-over-the-rationals.md)
+> [ADR-0483](../research/09-decisions/adr-0483-real-is-constructed-as-a-setoid-over-the-rationals.md)
 > decides **a Bishop setoid of regular ℚ-sequences**: a one-constructor carrier
 > with no quotient, and equality carried by a *defined* `CReal.Equiv` rather
 > than by `Eq`. ADR-0456's two rejections below are both correct — a Cauchy

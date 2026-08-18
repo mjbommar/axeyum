@@ -75,7 +75,7 @@
   ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "adopt_setoid_equality + RingSignature seam (agent-real-migration, agent-creal-reconstruct lanes); ADR-0468 phase R4",
+    "established_by": "adopt_setoid_equality + RingSignature seam (agent-real-migration, agent-creal-reconstruct lanes); ADR-0483 phase R4",
     "source": "hand-built; Farkas' lemma over an ordered commutative ring, instantiated at a constructed carrier"
   },
   "notes": "WHAT THIS DOES NOT SAY. It does not retire the 30 Real axioms and `nat_axiom_inventory` still reports `real: axiom=30`. `LraReconstructCtx::new` still builds the Real package and every shipped front-door LRA/SOS route still goes through it; this fact says the reconstruction NEED not, not that it does not. Making CReal the default carrier is a separate migration whose cost is the ~40 s `build_creal_prelude` (there is no `PreludeKey::CReal` in the prelude cache). Nor is a Lean MODULE on offer for the instantiated theorem: `render_lean_module` emits non-listed inductives as axioms, so a module for the closed False over CReal would emit the entire nat/int/rat/CReal development as axioms and defeat the claim. The load-bearing evidence here is the kernel's own `axiom_footprint`, not a rendered module."

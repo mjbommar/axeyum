@@ -4,7 +4,7 @@
 //!
 //! This is ADR-0479
 //! (`docs/research/09-decisions/adr-0479-complex-is-a-pair-setoid-over-creal-and-carries-no-order.md`),
-//! and it continues ADR-0468 one layer up. `CReal` is a Bishop setoid of regular ℚ-sequences whose
+//! and it continues ADR-0483 one layer up. `CReal` is a Bishop setoid of regular ℚ-sequences whose
 //! equality is `CReal.Equiv`, a `Prop`-valued *definition* rather than `Eq`;
 //! `Complex` inherits exactly that discipline:
 //!
@@ -1297,7 +1297,7 @@ fn declare_norm(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError
     // normSq_nonneg : CReal.le CReal.zero (normSq z)
     //
     // `sq_nonneg` twice, `add_le_add` once, and one `le_congr` to read
-    // `0 + 0` as `0` -- ADR-0468's order laws, used verbatim.
+    // `0 + 0` as `0` -- ADR-0483's order laws, used verbatim.
     {
         let z_fv = d.fresh_fvar();
         let z = d.kernel().fvar(z_fv);

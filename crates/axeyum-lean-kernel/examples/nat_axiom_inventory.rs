@@ -63,7 +63,7 @@
 //! # `real` here is the AXIOMATIZED package, not the constructed reals
 //!
 //! The `real=30` row is `build_arith_prelude` — the `Real` sort and its 22
-//! ordered-ring laws, *assumed*. The **constructed** ℝ (`CReal`, ADR-0468) and
+//! ordered-ring laws, *assumed*. The **constructed** ℝ (`CReal`, ADR-0483) and
 //! ℂ (`Complex`, ADR-0479) are different developments over different carriers,
 //! and until 2026-08-18 this example did not build either, so grepping its
 //! output for them returned an empty result that was indistinguishable from a
@@ -91,7 +91,7 @@
 //!
 //! Re-measured on the same 2026-08-18 run: `integer=0` (not `1`) and
 //! `string=0` (not `1`). `integer` fell when the Int development was proved out
-//! and `string` when ADR-0469 made `append` a definition; the doc lines above
+//! and `string` when ADR-0484 made `append` a definition; the doc lines above
 //! were written before each. The honest expectations today are
 //! `--expect-axioms real=30` and `--require-axiom-free` for every other group.
 //!
@@ -225,7 +225,7 @@ fn parse_args() -> Result<Expectations, String> {
     })
 }
 
-/// The **constructed** ℝ and ℂ (ADR-0468, ADR-0479), or nothing.
+/// The **constructed** ℝ and ℂ (ADR-0483, ADR-0479), or nothing.
 ///
 /// Separated from `main` because building both costs about two minutes of debug
 /// kernel type-checking (ten seconds on `--release`), and the reader should see

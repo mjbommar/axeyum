@@ -1,4 +1,4 @@
-# ADR-0470: The pinned Lean toolchain is the one that runs, and every run names it
+# ADR-0485: The pinned Lean toolchain is the one that runs, and every run names it
 
 Status: accepted
 Index-summary: One resolution policy for the external `lean` binary, shared by `scripts/check-lean-gate.sh` and `lean_probe.rs`: `lean-toolchain`'s pin is what runs, a non-pinned toolchain is a named refusal rather than a silent substitution, and every suite prints the binary and version that produced its verdicts

@@ -1,5 +1,5 @@
 //! **ℝ, constructed, at trusted cost zero** — the finding, with the exit status
-//! depending on it (ADR-0468 phase R1).
+//! depending on it (ADR-0483 phase R1).
 //!
 //! `creal_shape_probe` answered the *expressibility*
 //! question before `ℚ` had an order, by admitting the carrier parametrically in
@@ -56,10 +56,10 @@
 //!    total multiplicative inverse, so "the inverse is partial" is a proved
 //!    obstruction rather than a scoping note (ADR-0481).
 //!
-//! # How far the ordered-field structure gets (ADR-0468 phase R2, partial)
+//! # How far the ordered-field structure gets (ADR-0483 phase R2, partial)
 //!
 //! `zero`, `one`, `neg` and `add` are built, with `neg` and `add` each carrying
-//! its `Equiv`-congruence — two of the five congruence obligations ADR-0468
+//! its `Equiv`-congruence — two of the five congruence obligations ADR-0483
 //! counts as the setoid's real tax. `add` is where Bishop's index shift
 //! `(x+y)_n := x_{2n+1} + y_{2n+1}` earns its keep: adding two regular
 //! sequences doubles the error, and sampling twice as deep halves each modulus
@@ -80,12 +80,12 @@
 //! `Rat.natDivSucc` in its *index* is not needed and was not built. The other
 //! three are the order laws below, which restate verbatim.
 //!
-//! # The product (ADR-0468 phase R2, continued)
+//! # The product (ADR-0483 phase R2, continued)
 //!
 //! `CReal.mul` samples at `(c+1)·n + c` with `c := bound x + bound y + 1`, and
 //! `CReal.bound x := |num (x_0)| + 1`. The usual story is that this bound is the
 //! expensive part, because Bishop — and Mathlib's `CauSeq` after him — reads it
-//! off an *existential* modulus and has to extract it. With ADR-0468's **fixed**
+//! off an *existential* modulus and has to extract it. With ADR-0483's **fixed**
 //! modulus there is nothing to extract: regularity at index `0` gives
 //! `|x_m| ≤ |x_0| + 2` for every `m` outright, and the one genuinely missing
 //! piece was an ℕ-valued magnitude, which is `Rat.bounds_num` — two `Int` facts
@@ -125,7 +125,7 @@
 //! gives `x·(z − y) ≥ 0` by `mul_nonneg`, and `left_distrib` plus `mul_congr`
 //! say `x·z` is `Equiv`-equal to `x·y + x·(z − y)`.
 //!
-//! # The order (ADR-0468 phase R2, continued)
+//! # The order (ADR-0483 phase R2, continued)
 //!
 //! `CReal.le` is Bishop's order, `∀ n, x_n − y_n ≤ 2/(n+1)` — the one-sided
 //! reading of `Equiv`, which is why `le_trans` is `Equiv.trans` with the lower
@@ -172,19 +172,19 @@
 //! logic prelude and is not needed.
 //!
 //! `le_congr` and `lt_congr` are not among the 22: they are two of the nine
-//! equality-slot binders the setoid ring telescope takes (ADR-0468 phase R3).
+//! equality-slot binders the setoid ring telescope takes (ADR-0483 phase R3).
 //!
 //! # What this does NOT claim
 //!
 //! `Eq CReal` is not the equality of real numbers — `CReal.Equiv` is, and every
 //! statement about reals will say so. Nine of the 22 are therefore **not** the
 //! `Real` package's statements: they mention `Eq` there and `CReal.Equiv` here.
-//! That is the substitution ADR-0468 phase R4 has to make good, by
+//! That is the substitution ADR-0483 phase R4 has to make good, by
 //! instantiating the generalized telescope's equality slot — this example does
 //! not claim it has been made.
 //! Completeness, division, `inv` and `√` are each a separate ADR; none of them
 //! is one of the 22. And the `Real` package's 30 axioms are **unchanged** by
-//! this: ADR-0468 retires them by *deletion* in phase R4, once consumers are
+//! this: ADR-0483 retires them by *deletion* in phase R4, once consumers are
 //! generalized, not by exhibiting a model.
 
 #![allow(clippy::too_many_lines)]
@@ -505,7 +505,7 @@ fn main() {
     if failed {
         eprintln!(
             "FAIL: the constructed reals are NOT free, or not inhabited, or not \
-             discriminating — see above. ADR-0468's cost claim does not hold as stated."
+             discriminating — see above. ADR-0483's cost claim does not hold as stated."
         );
         std::process::exit(1);
     }
@@ -519,7 +519,7 @@ fn main() {
          there and are stated over CReal.Equiv here, because Eq CReal is not \
          the equality of real numbers. CReal.mul_congr — the fifth congruence \
          obligation, not one of the 22 — is proved too, so the ordered-ring \
-         interface ADR-0468 phase R4 instantiates is complete. CReal.Apart — \
+         interface ADR-0483 phase R4 instantiates is complete. CReal.Apart — \
          Bishop's apartness, lt both ways — is defined with its four laws, and \
          CReal.no_total_inverse REFUTES every total multiplicative inverse, so \
          the field structure is missing as a proved obstruction and not as a \

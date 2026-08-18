@@ -1,4 +1,4 @@
-//! Tests for the `CReal` model of the `Real` axiom package (ADR-0468 phase R4).
+//! Tests for the `CReal` model of the `Real` axiom package (ADR-0483 phase R4).
 //!
 //! The first test is the claim; the rest are the ones that stop the claim being
 //! vacuous, and each of them fails for a *different* reason:
@@ -17,7 +17,7 @@
 //!   kept because it states the correspondence at the level of *names*, which
 //!   is what would still hold if two law types ever coincided, and because it
 //!   costs one pass over a list already in hand.
-//! - [`exactly_nine_laws_are_restated_over_equiv`] — ADR-0468's Measurement 2,
+//! - [`exactly_nine_laws_are_restated_over_equiv`] — ADR-0483's Measurement 2,
 //!   read out of the kernel. Thirteen laws are the `Real` package's statements
 //!   verbatim and nine are not, and it is the nine that make the setoid route
 //!   cost anything at all.
@@ -117,7 +117,7 @@ fn the_pairing_is_by_leaf_name() {
 /// modelled in `CReal.Equiv`-restated form; the other thirteen are the `Real`
 /// package's statements verbatim.
 ///
-/// This is ADR-0468's Measurement 2 and it is the entire price of the setoid
+/// This is ADR-0483's Measurement 2 and it is the entire price of the setoid
 /// route. It is pinned here because both directions are interesting: a tenth
 /// restated law means the `Real` package grew an `Eq`-statement the order
 /// fragment did not have, and an eighth means one was dropped.
@@ -145,7 +145,7 @@ fn exactly_nine_laws_are_restated_over_equiv() {
             "mul_one",
             "mul_zero",
         ],
-        "the nine Eq-laws of ADR-0468 Measurement 2"
+        "the nine Eq-laws of ADR-0483 Measurement 2"
     );
     assert_eq!(model.restated_count(), 9);
     assert_eq!(model.laws.len() - model.restated_count(), 13);
@@ -261,7 +261,7 @@ fn the_equality_slot_is_not_eq() {
     let sound = k.name_str(quot, "sound");
     assert!(
         !k.environment().contains(sound),
-        "Quot.sound is now declared; ADR-0468's zero-cost accounting must be redone"
+        "Quot.sound is now declared; ADR-0483's zero-cost accounting must be redone"
     );
 }
 

@@ -2,8 +2,8 @@
 //! the proved `ℚ`, with equality carried by a *defined* relation rather than by
 //! `Eq`, and costing **zero** trusted declarations.
 //!
-//! This is ADR-0468
-//! (`docs/research/09-decisions/adr-0468-real-is-constructed-as-a-setoid-over-the-rationals.md`)
+//! This is ADR-0483
+//! (`docs/research/09-decisions/adr-0483-real-is-constructed-as-a-setoid-over-the-rationals.md`)
 //! phase R1, and it is what `examples/creal_shape_probe.rs` measured the shape
 //! of before `ℚ` had an order. The probe admitted
 //! `CReal.Of (reg : (Nat → Rat) → Prop)` — the carrier *parametric* in its
@@ -123,7 +123,7 @@ pub struct CRealPrelude {
 
     /// `CReal.Within : Rat → Rat → Prop` — `Within r q := −q ≤ r ∧ r ≤ q`.
     ///
-    /// ADR-0468's encoding of `|r| ≤ q`, chosen so that `Rat.abs` never has to
+    /// ADR-0483's encoding of `|r| ≤ q`, chosen so that `Rat.abs` never has to
     /// exist. Every bound in this module is stated through it.
     pub within: NameId,
     /// `CReal.Regular : (Nat → Rat) → Prop` — Bishop regularity with the
@@ -174,7 +174,7 @@ pub struct CRealPrelude {
     /// witness index is `3`, and `−1/2 ≤ −1` reduces to `Nat.le 1 0`.
     pub not_zero_one: NameId,
 
-    // --- the additive structure (ADR-0468 phase R2, partial) -----------------
+    // --- the additive structure (ADR-0483 phase R2, partial) -----------------
     /// `CReal.zero : CReal` — `ofRat Rat.zero`.
     pub zero: NameId,
     /// `CReal.one : CReal` — `ofRat Rat.one`.
@@ -192,7 +192,7 @@ pub struct CRealPrelude {
     /// `add` does.
     pub neg: NameId,
     /// `CReal.neg_congr : ∀ x y, Equiv x y → Equiv (neg x) (neg y)` — the first
-    /// of the setoid's congruence obligations, which ADR-0468 counts as the
+    /// of the setoid's congruence obligations, which ADR-0483 counts as the
     /// construction's real tax.
     pub neg_congr: NameId,
     /// `CReal.add : CReal → CReal → CReal`, with **Bishop's index shift**:
@@ -278,7 +278,7 @@ pub struct CRealPrelude {
     /// bounds, and then the *same* inequality `add_zero` needs.
     pub add_assoc: NameId,
 
-    // --- the strict order (ADR-0468 phase R2, continued) ---------------------
+    // --- the strict order (ADR-0483 phase R2, continued) ---------------------
     /// `CReal.le_add_of_nonneg : ∀ x q, Rat.le Rat.zero q →
     /// CReal.le x (CReal.add x (CReal.ofRat q))`.
     ///
@@ -324,18 +324,18 @@ pub struct CRealPrelude {
     /// `CReal.le_congr : ∀ a b c e, Equiv a b → Equiv c e → le a c → le b e`.
     ///
     /// Not one of the 22 — one of the nine equality-slot binders the setoid
-    /// ring telescope takes (ADR-0468 phase R3).
+    /// ring telescope takes (ADR-0483 phase R3).
     pub le_congr: NameId,
     /// `CReal.lt_congr : ∀ a b c e, Equiv a b → Equiv c e → lt a c → lt b e`.
     ///
     /// The other relation congruence of the equality slot.
     pub lt_congr: NameId,
 
-    // --- the product (ADR-0468 phase R2, continued) --------------------------
+    // --- the product (ADR-0483 phase R2, continued) --------------------------
     /// `CReal.bound : CReal → Nat` — `Int.natAbs (Rat.num (seq x 0)) + 1`.
     ///
     /// The **canonical magnitude**, and the one thing `CReal.mul` needs that
-    /// `CReal.add` did not. It is a projection, not a search: with ADR-0468's
+    /// `CReal.add` did not. It is a projection, not a search: with ADR-0483's
     /// *fixed* modulus, regularity at index `0` bounds every sample by
     /// `|x_0| + 2` outright, so nothing has to be extracted from an
     /// existential — which is exactly what a `CauSeq` development has to do.
@@ -370,7 +370,7 @@ pub struct CRealPrelude {
     pub equiv_of_bounded: NameId,
     /// `CReal.mul_congr : ∀ x x' y y', Equiv x x' → Equiv y y' →
     /// Equiv (mul x y) (mul x' y')` — the **fifth congruence obligation**, not
-    /// one of the 22, and a prerequisite for ADR-0468 phase R4.
+    /// one of the 22, and a prerequisite for ADR-0483 phase R4.
     pub mul_congr: NameId,
     /// `CReal.ofRat_mul : ∀ q r, Equiv (mul (ofRat q) (ofRat r)) (ofRat (q·r))`
     /// — `CReal.mul` restricted to the embedded `ℚ` **is** `Rat.mul`.
@@ -503,7 +503,7 @@ impl CRealPrelude {
     /// `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib` — mention `Eq` in
     /// the axiomatized package and are stated here over
     /// [`CReal.Equiv`](Self::equiv) instead, because `Eq CReal` is **not** the
-    /// equality of real numbers. That is ADR-0468's Measurement 2, and it is
+    /// equality of real numbers. That is ADR-0483's Measurement 2, and it is
     /// the whole reason a setoid was the reachable construction: the laws that
     /// do not mention `Eq` need no restatement at all.
     ///
@@ -2470,7 +2470,7 @@ fn declare_additive_laws(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 /// **These three restate verbatim**, which the additive laws did not: none of
 /// `le_refl`, `le_trans`, `add_le_add` mentions `Eq`, so there is no equality
 /// to replace by `Equiv` and the `Real` package's statement is the statement
-/// proved here. That is ADR-0468's Measurement 2, cashed.
+/// proved here. That is ADR-0483's Measurement 2, cashed.
 ///
 /// The order is *not* decidable and `le_total` is deliberately absent: it holds
 /// for `ℚ`, and `∀ x y, le x y ∨ le y x` over the reals is not constructively
@@ -3693,7 +3693,7 @@ fn declare_lt_irrefl(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
 }
 
 /// `le_congr` and `lt_congr` — the two relation congruences the setoid
-/// telescope's equality slot binds (ADR-0468 phase R3), for the two relations
+/// telescope's equality slot binds (ADR-0483 phase R3), for the two relations
 /// that are not operations.
 ///
 /// Neither is an estimate: `le_congr` is `le_of_equiv` on each side and two

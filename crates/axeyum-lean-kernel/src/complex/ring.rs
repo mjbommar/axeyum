@@ -36,7 +36,7 @@
 //! written once against an [`Op`] tag. It is the shape of
 //! [`rsum_perm`](crate::rat_prelude) and `iprod_perm`, one level up and over a
 //! *defined* equality rather than `Eq`, which is exactly the transcription
-//! ADR-0468 predicted would be needed.
+//! ADR-0483 predicted would be needed.
 //!
 //! Like `rsum_perm`, the permutation and the final normal-form comparison
 //! **panic** on a mismatch rather than building a term the kernel will reject a

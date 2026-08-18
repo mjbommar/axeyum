@@ -1,5 +1,5 @@
 //! **`CReal.mul`**, and the five of the 22 ordered-ring laws that follow from
-//! it directly (ADR-0468 phase R2, continued).
+//! it directly (ADR-0483 phase R2, continued).
 //!
 //! ## The one thing a product needs that a sum does not
 //!
@@ -21,7 +21,7 @@
 //!
 //! The usual story — Bishop's, and Mathlib's `CauSeq` after him — is that the
 //! bound comes out of the Cauchy *existential* modulus, so it has to be
-//! extracted before it can be used. With ADR-0468's fixed modulus there is
+//! extracted before it can be used. With ADR-0483's fixed modulus there is
 //! nothing to extract. Regularity at `n = 0` says `|x_m − x_0| ≤ 1/(m+1) + 1`
 //! for **every** `m` outright, and `1/(m+1) ≤ 1` is
 //! [`Rat.natDivSucc_le_one`](crate::RatPrelude::nat_div_succ_le_one), so
@@ -1199,7 +1199,7 @@ fn declare_equiv_of_bounded(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
 /// `mul_congr : ∀ x x' y y', Equiv x x' → Equiv y y' →
 /// Equiv (mul x y) (mul x' y')`.
 ///
-/// The **fifth congruence obligation**, and the one ADR-0468 calls the setoid's
+/// The **fifth congruence obligation**, and the one ADR-0483 calls the setoid's
 /// real tax. It is not one of the 22, and it is a prerequisite for phase R4.
 ///
 /// It is the first law whose two sides sample at indices derived from
