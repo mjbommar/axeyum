@@ -768,6 +768,63 @@ fn declare_representation(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kerne
         (stmt, proof)
     })?;
 
+    // natDivSucc_scale : (c+1)/((c+1)·m + c + 1) = 1/(m+1).
+    //
+    // `natDivSucc_halve` at an ARBITRARY factor, and it is the same proof: one
+    // `normalize_congr` over the ℕ identity `(c+1)·(m+1) = 1·((c+1)·m + c + 1)`.
+    // `halve` is the `c = 1` instance definitionally — `Nat.add x (succ y)`
+    // reduces to `succ (Nat.add x y)`, so `(1+1)·m + 1` IS `succ (2·m)`.
+    //
+    // Why it is worth generalising: it keeps `Rat.natDivSucc` **antitone in its
+    // index** off the critical path a second time. `CReal.add_zero` and
+    // `CReal.add_assoc` dodged that lemma because Bishop's shift is the fixed
+    // `2n+1`, so both sides could be read at the common denominator `2n+2`.
+    // `CReal.mul` has no fixed shift — its sampling index is `K·(n+1) − 1` with
+    // `K` derived from the two factors' canonical bounds — but it still has a
+    // common denominator per instance, and this is what supplies it.
+    super::archimedean::mixed_theorem(d, p.nat_div_succ_scale, &[nat_ty, nat_ty], &|d, v| {
+        let (c, m) = (v[0], v[1]);
+        let one_nat = d.num(1);
+        let factor = d.succ(c);
+        let product = NatOps::mul(d, factor, m);
+        let shifted = NatOps::add(d, product, c);
+        let left = d.const_app(p.nat_div_succ, &[factor, shifted]);
+        let right = d.const_app(p.nat_div_succ, &[one_nat, m]);
+        let stmt = req(d, left, right);
+
+        let big = d.succ(shifted);
+        let small = d.succ(m);
+        let big_positive = one_le_succ(d, shifted);
+        let small_positive = one_le_succ(d, m);
+        let factor_z = d.of_nat(factor);
+        let one_z = d.of_nat(one_nat);
+
+        // `(c+1)·(m+1) = (c+1)·m + (c+1)`, and `(c+1)·m + succ c` IS
+        // `succ ((c+1)·m + c)` = `big`.
+        let scaled = NatOps::mul(d, factor, small);
+        let expanded = d.lemma(nat.mul_succ, &[factor, m]);
+        let stepped = NatOps::add(d, product, factor);
+        // `1 · big = big`.
+        let unit_scaled = NatOps::mul(d, one_nat, big);
+        let unit_collapse = d.lemma(nat.one_mul, &[big]);
+        let back = NatOps::symm(d, unit_scaled, big, unit_collapse);
+        let (_, identity) = NatOps::chain(d, scaled, &[(stepped, expanded), (unit_scaled, back)]);
+        let cross = d.nat_eq_to_int(scaled, unit_scaled, identity, &|d, t| d.of_nat(t));
+        let proof = d.lemma(
+            p.normalize_congr,
+            &[
+                factor_z,
+                big,
+                big_positive,
+                one_z,
+                small,
+                small_positive,
+                cross,
+            ],
+        );
+        (stmt, proof)
+    })?;
+
     // zero_le_natDivSucc : 0 ≤ k/(j+1).
     //
     // `normalize_cross` says `num r · S = ofNat k · ofNat (den r)`, whose right
@@ -815,6 +872,44 @@ fn declare_representation(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kerne
         let proof = d.const_app(p.nonneg_of_int_nonneg, &[value, cancelled]);
         (stmt, proof)
     })?;
+
+    // natDivSucc_le_add_left : a/(j+1) ≤ (a+e)/(j+1).
+    //
+    // Monotone in the NUMERATOR, stated additively so that ℕ-subtraction never
+    // appears — the same reason `weaken` takes the wider bound as an argument
+    // rather than deriving it. Pair it with `natDivSucc_scale` and a comparison
+    // of two `natDivSucc`s at different indices becomes a comparison of two
+    // numerators at one index.
+    super::archimedean::mixed_theorem(
+        d,
+        p.nat_div_succ_le_add_left,
+        &[nat_ty, nat_ty, nat_ty],
+        &|d, v| {
+            let (a, e, j) = (v[0], v[1], v[2]);
+            let base = d.const_app(p.nat_div_succ, &[a, j]);
+            let extra = d.const_app(p.nat_div_succ, &[e, j]);
+            let total = NatOps::add(d, a, e);
+            let fused = d.const_app(p.nat_div_succ, &[total, j]);
+            let stmt = rle(d, p, base, fused);
+
+            let zero = rzero(d, p);
+            let reflexive = d.lemma(p.le_refl, &[base]);
+            let nonneg = d.lemma(p.zero_le_nat_div_succ, &[e, j]);
+            let padded = d.lemma(p.add_le_add, &[base, base, zero, extra, reflexive, nonneg]);
+            let with_zero = radd(d, base, zero);
+            let sum = radd(d, base, extra);
+            let collapse = d.lemma(p.add_zero, &[base]);
+            let trimmed =
+                super::ops::rat_eq_rewrite(d, with_zero, base, collapse, padded, &|d, t| {
+                    rle(d, p, t, sum)
+                });
+            let fuse = d.lemma(p.nat_div_succ_add, &[a, e, j]);
+            let proof = super::ops::rat_eq_rewrite(d, sum, fused, fuse, trimmed, &|d, t| {
+                rle(d, p, base, t)
+            });
+            (stmt, proof)
+        },
+    )?;
 
     Ok(())
 }

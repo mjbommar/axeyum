@@ -165,6 +165,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `3076b6ae0` | the one Lean module `rfl` refuted on its own: root-caused to a degenerate `(t, t)` witness, the route now declines, and a self-refuting attestation FAILS the run instead of being counted |
 | 2026-08-18 | `8e4894de4` | `ArrayAxiom` renders the query's own terms; a third `structural` verdict binds 95 modules to their query's subterms, 359 of 372 corruptions caught, and the attested class drops 124 → 28 with an anti-absorption guard |
 | 2026-08-18 | `pending` | binding coverage: +20 bound (105 → 125), 124 modules proved content-free, and the converse direction measured at 286/531 |
+| 2026-08-18 | `PENDING2` | `Rat.natDivSucc_scale` and `Rat.natDivSucc_le_add_left`: the two ℚ lemmas that take **`natDivSucc` antitone in its index** off `CReal.mul`'s path. `scale` generalises `natDivSucc_halve` to an arbitrary factor (`halve` is its `c = 1` instance definitionally, and the kernel is asked to confirm the subsumption, not a doc comment); `le_add_left` is monotonicity in the numerator, stated additively so ℕ-subtraction never appears. Together `1/(K(n+1)) ≤ 1/(n+1)` becomes `1 ≤ K` at one denominator, for **any** K — which is what the fixed-shift trick behind `add_zero`/`add_assoc` was thought not to generalise to. |
 | 2026-08-18 | `PENDING` | ℝ gets the **strict order**: `CReal.lt x y := ∃ (q : Rat), 0 < q ∧ le (add x (ofRat q)) y` — the gap carried as a rational rather than recomputed as an index, which is what makes `lt_trans` work where the naive `∃ n, y_n − x_n > 2/(n+1)` cannot. Seven of the 22 land **verbatim** (`lt_irrefl`, `lt_trans`, `lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`, `zero_lt_one`, `add_lt_add_of_le_of_lt`), plus `le_add_of_nonneg` and the `le_congr`/`lt_congr` the R4 equality slot asks for. `lt_irrefl` is the Archimedean property's second consumer; `zero_lt_one` + `lt_irrefl` are the strict order's discrimination witnesses and the example's exit status depends on both (verified by deleting each). **14 of 22**, 42 declarations, trusted surface still 0. |
 | 2026-08-18 | `dc72f0bed` | ℝ gets **Bishop's order**: `CReal.le` plus `le_refl`, `le_trans`, `add_le_add` — three of the 22 **verbatim**, none of them mentioning `Eq`. `le_trans` is `Equiv.trans` with the lower half deleted, sharing the extracted `telescope_four`/`six_term_bound` with it. `not_le_one_zero` is the order's discrimination witness (refuted at index 3 by pure reduction) and `le_of_equiv`/`equiv_of_le_le` pin `le` to the setoid. **7 of 22**, 31 declarations, trusted surface still 0. |
 | 2026-08-18 | `9e32ab17d` | The **additive group closes**: `add_zero` and `add_assoc` in `Equiv` form — the first two laws that are not pointwise. Neither needs `natDivSucc` antitone in its index, which the previous costing had put in front of them; both reduce to `1/(2n+2) + 1/(n+1) ≤ 2/(n+1)`, i.e. `3 ≤ 4` at the common denominator. **4 of 22**. |
@@ -664,6 +665,104 @@ is proof size: `nra-sos-strict-unsat-d01` renders a 2.4 MB module (Lean: 5.0 s,
 the envelope this repository already has (`schedule-deadline` is 5 MB) but it is
 the thing that will stop the route scaling.
 
+**Ten of the thirteen bare-leaf attestations now carry a checked anchor; three
+are declined with a named reason** (`WIP`, array-anchor, 2026-08-18).
+
+Lane `agent-attestation` left 13 `ArrayAxiom`/`TermIdentity` instances whose
+whole rendered module is
+
+    axiom axeyum.reconstruct.hyp._2 : Eq.{1} α atom._0 atom._1
+    axiom axeyum.reconstruct.hyp._3 : Not (Eq.{1} α atom._0 atom._1)
+
+— one assumed schema conclusion and one assumed disequality, over two bare
+constants. `bind_structural` refuses them and is **right to**: an injective map
+onto two of the query's symbols exists for any query with two symbols, so a
+structural match there would be a check with no true instance. That refusal is
+the guard, not the gap.
+
+**The gap is the second axiom.** The module *assumes* `¬(lhs = rhs)` and nothing
+in Lean checks that the query says so. Anchoring checks exactly that, and asks a
+different question from the structural one — not "is this term in the file" but
+**"do the file's own assertions FORCE this equality to be false, and is it the
+only one they force that this module could stand for?"**
+
+`forced_disequalities` reads the `.smt2` text and propagates a required truth
+value down each `(assert …)`: through `not`/`and`/`or`/`=>`, through `distinct`,
+and through the one-bit-vector encoding a BTOR-derived file writes Booleans in
+(`(= #b1 t)`, `bvand`/`bvor`/`bvnot`, `(ite c #b1 #b0)`). It stops wherever the
+value is not forced — an `or` under a true polarity, an `xor`, an n-ary `=` under
+a false polarity, an `ite` without the Boolean branch pair — because each of
+those entails a disjunction, not a fact.
+
+**Uniqueness is what makes it an anchor rather than a formality, and it bites on
+the very set it was built for: 3 of the 13 are refused.**
+`solver__array__ext27.btor.smt2` forces four leaf disequalities (`i0≠i1`,
+`v5≠v6`, `i0≠i2`, `i1≠i2`) and a bare module does not say which it means; the two
+`unsat__replace_all__not-first-only` rows force none at all, their one assertion
+being a forced-**true** equality whose sides the arena constant-folded — the same
+rewrite residue as `ext10` and `redand-eliminate`. Those three stay attested.
+
+**The `TermIdentity` route was also rendering opaquely, and did not need to be.**
+`term_identity_term_expr` keyed one constant per whole `TermId`, exactly the
+pre-2026-08-18 `ArrayAxiom` mistake. It now uses the same budgeted
+`query_term_expr`, so `(assert (not (= x (ite true x y))))` renders as
+`Not (Eq α atom._0 (func._3 atom._1 atom._0 atom._2))` — a transcription of a
+whole assert line. For those three the correspondence is pinned by structure and
+not only by uniqueness, and a swapped `ite` argument names a term the file does
+not contain.
+
+**What anchoring does NOT show, stated because it is the honest half.** For the
+seven bare-pair `ArrayAxiom` rows the correspondence is pinned *only* by
+uniqueness: those seven modules are byte-identical to each other, so each anchors
+against any of the others' queries. It rules out a module assuming a disequality
+the query does not entail, and a query that entails none or several. It does not
+say which symbol a bare `atom._0` means. Pinned as a driven test
+(`test_the_bare_module_does_NOT_anchor_against_the_identity_query`) rather than
+left in prose.
+
+**Gate line**, `python3 scripts/check-lra-hypothesis-binding.py`, before → after:
+
+    …|structural=95|…|attested=19|…|failures=0
+    …|structural=95|…|anchored=10|anchored_nodes=29|anchored_caught=26|anchored_accepted=0|attested=9|…|failures=0
+
+26 of 26 corruptions of an anchored module are caught, and 0 accepted — the
+strongest ratio of the three checked classes, because the anchor is matched
+against what the query *forces* rather than against every subterm it contains.
+The anti-absorption guard now runs in both directions: an instance pinned
+`attested` fails if the structural binder **or** the anchor can relate it to its
+query.
+
+**Two dead controls found and repaired.** `mutation_controls.py`'s
+`injectivity of the renaming`, `sort-soundness of the renaming` and
+`an unknown rendered leaf is not a fresh variable` had all gone to
+`MUTATION DID NOT APPLY` when the degree-2 monomial work moved the guard text
+under them — a mutation harness reporting three guards it never tested. And
+adding the anchored anti-absorption guard *masked* the structural one: with
+`bound_anyway` deleted the structural fixture was caught by the anchor instead,
+so the older guard SURVIVED. Both are now driven by a case only they can catch.
+All 43 guards kill at least one test.
+
+**Also corrected**: `ArrayAxiomRefutationCertificate::assertion` was documented
+as "the original top-level disequality assertion". On the read-congruence path
+it is not a disequality at all — it is the whole bit-blasted assertion, and
+`¬(lhs = rhs)` is something that assertion *entails*. That distinction is the
+entire reason the checker propagates polarity instead of pattern-matching a
+`not (= …)`.
+
+**Measured aside for whoever takes the next slice.** 63 of the 95 rows pinned
+`structural` also anchor — their query asserts the disequality outright rather
+than leaving it a congruence conclusion. They are left `structural` because that
+is the stronger statement about them, and because the manifests are currently
+mutually exclusive.
+
+**Next.** (1) The two rewrite-output instances (`redand-eliminate`, `ext10`) and
+the two `replace_all` rows need a rewrite-step certificate; anchoring reaches
+none of them and the reasons are now written down per instance. (2) `ext27` needs
+the module to carry *which* pair — which needs the emitter to render the source
+assertion, not just the pair, and an explicit assumed entailment step beside it.
+(3) The 4 `FiniteArrayExtensionality` rows render `Not (And (Eq α a b) (Eq α c
+d))`, which has no bare `Not (Eq …)` for either checked verdict to take hold of.
+
 **Yes, for 95 of the 124 — it was how the emitter was written, and both the
 emitter and a checker that can fail have landed** (`WIP`, attestation,
 2026-08-18).
@@ -1130,20 +1229,42 @@ about ℚ's encoding.
 
 **Next, and it is now a single strand: `mul`, worth all 8 remaining laws**
 (`mul_comm`, `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib`, `mul_nonneg`,
-`sq_nonneg`, `mul_le_mul_of_nonneg_left`). The costing is unchanged and it is
-the one place a Mathlib port will NOT transfer: `mul` needs a canonical bound on
-a representative, and `CauSeq` gets its bound from an *existential* modulus that
-a fixed modulus does not supply. What the fixed modulus DOES supply cheaply is
-the estimate — regularity at `n = 0` gives `|x_m| ≤ |x_0| + 2` for every `m`
-directly, no extraction. The cost is turning that **rational** bound into the
-**natural number** `K` that Bishop's sampling index `(xy)_n := x_{2Kn} y_{2Kn}`
-needs, which is a ceiling function `ℚ → ℕ` with `q ≤ ofNat (ceil q)` — new ℚ-level
-work resting on `Int` division facts, and the first thing to price before
-writing any `mul` proof. The ℚ-level prerequisites scoped earlier (`bounds_mul`,
-`neg_mul`, `mul_le_mul_of_nonneg_right`, provable from the 22 laws plus a
-`le_or_lt` case split) are still unstarted and still cheap by comparison.
-Budget `mul` as a session of its own; nothing else on this lane is blocked
-behind it.
+`sq_nonneg`, `mul_le_mul_of_nonneg_left`). Two of its three blockers were
+removed this session, and the third was re-costed downward — the whole thing is
+now a bounded job rather than an open question.
+
+*What the fixed modulus actually costs, measured rather than assumed.* The
+canonical bound is **cheap**, not expensive: regularity at `n = 0` gives
+`|x_m − x_0| ≤ 1/(m+1) + 1 ≤ 2` outright, so `|x_m| ≤ |x_0| + 2` for every `m`
+with no modulus to extract. That is the opposite of the received costing, which
+said `CauSeq`'s existential modulus supplies something a fixed one does not.
+What a fixed modulus genuinely does not supply is the **ℕ-valued** `K` that
+Bishop's sampling index needs, and the cheapest bridge is not a ceiling function
+at all: `q ≤ ofNat (Int.natAbs (Rat.num q))` whenever `1 ≤ den q`, which is two
+`Int` facts and no division. Price that before writing any `mul` proof.
+
+*The antitonicity blocker is gone.* Every `mul` law compares `1/(K(n+1))` with
+`1/(n+1)`, and the trick that saved `add_zero`/`add_assoc` — read both at a
+common denominator — was believed not to generalise because `mul` has no fixed
+shift. It does generalise, and both halves are now built and axiom-free:
+`Rat.natDivSucc_scale : natDivSucc (c+1) ((c+1)·m + c) = natDivSucc 1 m`
+(`natDivSucc_halve` is its `c = 1` instance **definitionally**, and the kernel
+is asked to confirm that in `nat_div_succ_scale_subsumes_halve_…` rather than a
+doc comment asserting it), and
+`Rat.natDivSucc_le_add_left : natDivSucc a j ≤ natDivSucc (a+e) j` — monotone in
+the *numerator*, stated additively so ℕ-subtraction never appears. Together they
+turn `1/(K(n+1)) ≤ 1/(n+1)` into `1 ≤ K` at one denominator. **`Rat.natDivSucc`
+antitone in its index — the ~250-line lemma dodged twice — is not needed for
+`mul` either**, and on current evidence should stay unbuilt.
+
+*What is left.* The ℚ-level `bounds_mul`, `neg_mul` and
+`mul_le_mul_of_nonneg_right` (all from the 22 laws plus a `le_or_lt` case
+split), the bound function `CReal.bound x := natAbs (num (seq x 0)) + 2` with
+`Within (seq x m) (natDivSucc (bound x) 0)`, then `CReal.mul` with
+`(xy)_n := x_{j(n)}·y_{j(n)}` at `j(n) = K·(n+1) − 1`, its congruence, and the
+eight laws. `mul` also needs its own **discrimination witness** for the same
+reason `lt` did — `mul_zero`, `mul_one` and `sq_nonneg` all hold of a `mul` that
+returns `zero` on everything.
 
 **`real: axiom=30` is unchanged, deliberately.** ADR-0468 retires those by
 *deletion* in phase R3 — once `generalize_over_ordered_ring` grows an equality

@@ -330,3 +330,74 @@ fn nat_div_succ_reduction_check_can_fail() {
          so the reduction check above proves nothing"
     );
 }
+
+/// The two `natDivSucc` lemmas `CReal.mul` will need, stated verbatim — and the
+/// proof that the first genuinely **subsumes** `natDivSucc_halve` rather than
+/// merely resembling it.
+///
+/// `natDivSucc_halve` is the `c = 1` instance *definitionally*: `Nat.add x
+/// (succ y)` reduces to `succ (Nat.add x y)`, so `(1+1)·m + 1` is `succ (2·m)`
+/// and `natDivSucc_scale 1` type-checks at `natDivSucc_halve`'s statement. The
+/// kernel is asked to confirm that, because "the general lemma covers the
+/// special case" is exactly the kind of claim that is usually asserted in a doc
+/// comment and never checked.
+#[test]
+fn nat_div_succ_scale_subsumes_halve_and_is_monotone_in_the_numerator() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let render = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        render(&mut kernel, p.nat_div_succ_scale),
+        "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Rat \
+         (Rat.natDivSucc (AxNat.succ x0) (AxNat.add (AxNat.mul (AxNat.succ x0) x1) x0)) \
+         (Rat.natDivSucc (AxNat.succ AxNat.zero) x1)))"
+    );
+    assert_eq!(
+        render(&mut kernel, p.nat_div_succ_le_add_left),
+        "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> \
+         Rat.le (Rat.natDivSucc x0 x2) (Rat.natDivSucc (AxNat.add x0 x1) x2))))"
+    );
+
+    // `natDivSucc_scale 1 m : natDivSucc 2 (2·m + 1) = natDivSucc 1 m`, which is
+    // `natDivSucc_halve`'s statement. Admitting it proves the subsumption.
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let doubled = NatOps::mul(&mut d, two_nat, m);
+    let shifted = d.succ(doubled);
+    let left = d.const_app(p.nat_div_succ, &[two_nat, shifted]);
+    let right = d.const_app(p.nat_div_succ, &[one_nat, m]);
+    let stmt = crate::rat_prelude::ops::req(&mut d, left, right);
+    let instance = d.lemma(p.nat_div_succ_scale, &[one_nat, m]);
+    let nat = d.nat_ty();
+    let ty = d.pi_fv(m_fv, nat, stmt);
+    let value = d.lam_fv(m_fv, nat, instance);
+    let name = d.kernel().name_str(anon, "Check.halve_from_scale");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "natDivSucc_scale at c = 1 must BE natDivSucc_halve — it did not \
+         type-check, so the generalisation does not subsume the special case: \
+         {admitted:?}"
+    );
+}

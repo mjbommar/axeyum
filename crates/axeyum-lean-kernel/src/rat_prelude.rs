@@ -349,6 +349,25 @@ pub struct RatPrelude {
     /// `Rat.natDivSucc_halve : ∀ (m : Nat), natDivSucc 2 (2·m + 1) = natDivSucc 1 m`
     /// — the identity that pays for Bishop's index shift in `CReal.add`.
     pub nat_div_succ_halve: NameId,
+    /// `Rat.natDivSucc_scale : ∀ (c m : Nat),
+    /// natDivSucc (c+1) ((c+1)·m + c) = natDivSucc 1 m` —
+    /// [`Self::nat_div_succ_halve`] at an **arbitrary** factor, and `halve` is
+    /// its `c = 1` instance definitionally.
+    ///
+    /// This is what keeps `Rat.natDivSucc` **antitone in its index** off the
+    /// critical path a second time. `CReal.add_zero` and `CReal.add_assoc`
+    /// avoided it because Bishop's shift is the *fixed* `2n+1`, so both sides
+    /// could be read at the common denominator `2n+2`. `CReal.mul` cannot: its
+    /// sampling index is `K·(n+1) − 1` with `K` depending on the two factors'
+    /// canonical bounds, so there is no fixed common denominator — but there
+    /// is still a common denominator *per instance*, and this supplies it.
+    /// With [`Self::nat_div_succ_le_add_left`] the whole comparison
+    /// `1/(K(n+1)) ≤ 1/(n+1)` becomes `1 ≤ K` at one denominator.
+    pub nat_div_succ_scale: NameId,
+    /// `Rat.natDivSucc_le_add_left : ∀ (a e j : Nat),
+    /// Rat.le (natDivSucc a j) (natDivSucc (a+e) j)` — monotone in the
+    /// **numerator**, stated additively so that ℕ-subtraction never appears.
+    pub nat_div_succ_le_add_left: NameId,
     /// `Rat.zero_le_natDivSucc : ∀ (k j : Nat), Rat.le Rat.zero (natDivSucc k j)`.
     pub zero_le_nat_div_succ: NameId,
     /// `Rat.neg_nonpos_of_nonneg : ∀ a, Rat.le Rat.zero a → Rat.le (Rat.neg a) Rat.zero`.
@@ -488,6 +507,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         bounds_add: child(kernel, "bounds_add"),
         nat_div_succ_add: child(kernel, "natDivSucc_add"),
         nat_div_succ_halve: child(kernel, "natDivSucc_halve"),
+        nat_div_succ_scale: child(kernel, "natDivSucc_scale"),
+        nat_div_succ_le_add_left: child(kernel, "natDivSucc_le_add_left"),
         zero_le_nat_div_succ: child(kernel, "zero_le_natDivSucc"),
         neg_nonpos_of_nonneg: child(kernel, "neg_nonpos_of_nonneg"),
         bounds_neg: child(kernel, "bounds_neg"),

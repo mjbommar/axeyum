@@ -99,20 +99,42 @@ about ℚ's encoding.
 
 **Next, and it is now a single strand: `mul`, worth all 8 remaining laws**
 (`mul_comm`, `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib`, `mul_nonneg`,
-`sq_nonneg`, `mul_le_mul_of_nonneg_left`). The costing is unchanged and it is
-the one place a Mathlib port will NOT transfer: `mul` needs a canonical bound on
-a representative, and `CauSeq` gets its bound from an *existential* modulus that
-a fixed modulus does not supply. What the fixed modulus DOES supply cheaply is
-the estimate — regularity at `n = 0` gives `|x_m| ≤ |x_0| + 2` for every `m`
-directly, no extraction. The cost is turning that **rational** bound into the
-**natural number** `K` that Bishop's sampling index `(xy)_n := x_{2Kn} y_{2Kn}`
-needs, which is a ceiling function `ℚ → ℕ` with `q ≤ ofNat (ceil q)` — new ℚ-level
-work resting on `Int` division facts, and the first thing to price before
-writing any `mul` proof. The ℚ-level prerequisites scoped earlier (`bounds_mul`,
-`neg_mul`, `mul_le_mul_of_nonneg_right`, provable from the 22 laws plus a
-`le_or_lt` case split) are still unstarted and still cheap by comparison.
-Budget `mul` as a session of its own; nothing else on this lane is blocked
-behind it.
+`sq_nonneg`, `mul_le_mul_of_nonneg_left`). Two of its three blockers were
+removed this session, and the third was re-costed downward — the whole thing is
+now a bounded job rather than an open question.
+
+*What the fixed modulus actually costs, measured rather than assumed.* The
+canonical bound is **cheap**, not expensive: regularity at `n = 0` gives
+`|x_m − x_0| ≤ 1/(m+1) + 1 ≤ 2` outright, so `|x_m| ≤ |x_0| + 2` for every `m`
+with no modulus to extract. That is the opposite of the received costing, which
+said `CauSeq`'s existential modulus supplies something a fixed one does not.
+What a fixed modulus genuinely does not supply is the **ℕ-valued** `K` that
+Bishop's sampling index needs, and the cheapest bridge is not a ceiling function
+at all: `q ≤ ofNat (Int.natAbs (Rat.num q))` whenever `1 ≤ den q`, which is two
+`Int` facts and no division. Price that before writing any `mul` proof.
+
+*The antitonicity blocker is gone.* Every `mul` law compares `1/(K(n+1))` with
+`1/(n+1)`, and the trick that saved `add_zero`/`add_assoc` — read both at a
+common denominator — was believed not to generalise because `mul` has no fixed
+shift. It does generalise, and both halves are now built and axiom-free:
+`Rat.natDivSucc_scale : natDivSucc (c+1) ((c+1)·m + c) = natDivSucc 1 m`
+(`natDivSucc_halve` is its `c = 1` instance **definitionally**, and the kernel
+is asked to confirm that in `nat_div_succ_scale_subsumes_halve_…` rather than a
+doc comment asserting it), and
+`Rat.natDivSucc_le_add_left : natDivSucc a j ≤ natDivSucc (a+e) j` — monotone in
+the *numerator*, stated additively so ℕ-subtraction never appears. Together they
+turn `1/(K(n+1)) ≤ 1/(n+1)` into `1 ≤ K` at one denominator. **`Rat.natDivSucc`
+antitone in its index — the ~250-line lemma dodged twice — is not needed for
+`mul` either**, and on current evidence should stay unbuilt.
+
+*What is left.* The ℚ-level `bounds_mul`, `neg_mul` and
+`mul_le_mul_of_nonneg_right` (all from the 22 laws plus a `le_or_lt` case
+split), the bound function `CReal.bound x := natAbs (num (seq x 0)) + 2` with
+`Within (seq x m) (natDivSucc (bound x) 0)`, then `CReal.mul` with
+`(xy)_n := x_{j(n)}·y_{j(n)}` at `j(n) = K·(n+1) − 1`, its congruence, and the
+eight laws. `mul` also needs its own **discrimination witness** for the same
+reason `lt` did — `mul_zero`, `mul_one` and `sq_nonneg` all hold of a `mul` that
+returns `zero` on everything.
 
 **`real: axiom=30` is unchanged, deliberately.** ADR-0468 retires those by
 *deletion* in phase R3 — once `generalize_over_ordered_ring` grows an equality
@@ -123,6 +145,7 @@ say so.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-18 | `PENDING2` | `Rat.natDivSucc_scale` and `Rat.natDivSucc_le_add_left`: the two ℚ lemmas that take **`natDivSucc` antitone in its index** off `CReal.mul`'s path. `scale` generalises `natDivSucc_halve` to an arbitrary factor (`halve` is its `c = 1` instance definitionally, and the kernel is asked to confirm the subsumption, not a doc comment); `le_add_left` is monotonicity in the numerator, stated additively so ℕ-subtraction never appears. Together `1/(K(n+1)) ≤ 1/(n+1)` becomes `1 ≤ K` at one denominator, for **any** K — which is what the fixed-shift trick behind `add_zero`/`add_assoc` was thought not to generalise to. |
 | 2026-08-18 | `PENDING` | ℝ gets the **strict order**: `CReal.lt x y := ∃ (q : Rat), 0 < q ∧ le (add x (ofRat q)) y` — the gap carried as a rational rather than recomputed as an index, which is what makes `lt_trans` work where the naive `∃ n, y_n − x_n > 2/(n+1)` cannot. Seven of the 22 land **verbatim** (`lt_irrefl`, `lt_trans`, `lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`, `zero_lt_one`, `add_lt_add_of_le_of_lt`), plus `le_add_of_nonneg` and the `le_congr`/`lt_congr` the R4 equality slot asks for. `lt_irrefl` is the Archimedean property's second consumer; `zero_lt_one` + `lt_irrefl` are the strict order's discrimination witnesses and the example's exit status depends on both (verified by deleting each). **14 of 22**, 42 declarations, trusted surface still 0. |
 | 2026-08-18 | `dc72f0bed` | ℝ gets **Bishop's order**: `CReal.le` plus `le_refl`, `le_trans`, `add_le_add` — three of the 22 **verbatim**, none of them mentioning `Eq`. `le_trans` is `Equiv.trans` with the lower half deleted, sharing the extracted `telescope_four`/`six_term_bound` with it. `not_le_one_zero` is the order's discrimination witness (refuted at index 3 by pure reduction) and `le_of_equiv`/`equiv_of_le_le` pin `le` to the setoid. **7 of 22**, 31 declarations, trusted surface still 0. |
 | 2026-08-18 | `9e32ab17d` | The **additive group closes**: `add_zero` and `add_assoc` in `Equiv` form — the first two laws that are not pointwise. Neither needs `natDivSucc` antitone in its index, which the previous costing had put in front of them; both reduce to `1/(2n+2) + 1/(n+1) ≤ 2/(n+1)`, i.e. `3 ≤ 4` at the common denominator. **4 of 22**. |

@@ -2836,11 +2836,7 @@ fn declare_le_add_of_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     let drift = rsub(d, rat, near, deep);
     let offset = rsub(d, rat, zero, q);
     let decomposed = radd(d, drift, offset);
-    let (_, to_decomposed) = rchain(
-        d,
-        goal_quantity,
-        &[(staged, restore), (decomposed, split)],
-    );
+    let (_, to_decomposed) = rchain(d, goal_quantity, &[(staged, restore), (decomposed, split)]);
 
     // `x_n − x_s ≤ 1/(n+1) + 1/(2n+2) ≤ 2/(n+1)`.
     let regularity = d.lemma(p.regular, &[x, n, s]);
@@ -3155,10 +3151,7 @@ fn declare_lt_mixed(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelErr
             let w = d.kernel().fvar(w_fv);
             let (strict, holds) = gap_halves(d, p, y, z, q, w);
             let stationary = d.lemma(p.le_refl, &[embedded]);
-            let moved = d.lemma(
-                p.add_le_add,
-                &[x, y, embedded, embedded, h1, stationary],
-            );
+            let moved = d.lemma(p.add_le_add, &[x, y, embedded, embedded, h1, stationary]);
             let chained = d.lemma(p.le_trans, &[from, to, z, moved, holds]);
             let reached = cle(d, p, from, z);
             let pair = and_intro(d, p, positive, reached, strict, chained);
@@ -3395,22 +3388,15 @@ fn declare_lt_irrefl(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
             let two_nat = d.num(2);
             let four_n = div_succ(d, p, 4, n);
             let merge = d.lemma(rat.nat_div_succ_add, &[two_nat, two_nat, n]);
-            let fused = rat_eq_rewrite(d, doubled, four_n, merge, bare, &|d, t| {
-                rle(d, rat, q, t)
-            });
+            let fused = rat_eq_rewrite(d, doubled, four_n, merge, bare, &|d, t| rle(d, rat, q, t));
             let padded = radd(d, zero, four_n);
             let unpad = d.lemma(rat.zero_add, &[four_n]);
             let repad = rsymm(d, padded, four_n, unpad);
-            let shaped = rat_eq_rewrite(d, four_n, padded, repad, fused, &|d, t| {
-                rle(d, rat, q, t)
-            });
+            let shaped = rat_eq_rewrite(d, four_n, padded, repad, fused, &|d, t| rle(d, rat, q, t));
             d.lam_fv(n_fv, nat, shaped)
         };
         let four_nat = d.num(4);
-        let vanishes = d.lemma(
-            rat.le_of_le_add_nat_div_succ,
-            &[q, zero, four_nat, over_n],
-        );
+        let vanishes = d.lemma(rat.le_of_le_add_nat_div_succ, &[q, zero, four_nat, over_n]);
         let degenerate = d.lemma(rat.lt_of_lt_of_le, &[zero, q, zero, strict, vanishes]);
         let refutation = d.lemma(rat.lt_irrefl, &[zero]);
         let body = d.apply(refutation, &[degenerate]);

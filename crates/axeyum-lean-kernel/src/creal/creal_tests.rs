@@ -93,7 +93,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.lt_of_le_of_lt", p.lt_of_le_of_lt, "theorem"),
         ("CReal.le_of_lt", p.le_of_lt, "theorem"),
         ("CReal.zero_lt_one", p.zero_lt_one, "theorem"),
-        ("CReal.add_lt_add_of_le_of_lt", p.add_lt_add_of_le_of_lt, "theorem"),
+        (
+            "CReal.add_lt_add_of_le_of_lt",
+            p.add_lt_add_of_le_of_lt,
+            "theorem",
+        ),
         ("CReal.le_congr", p.le_congr, "theorem"),
         ("CReal.lt_congr", p.lt_congr, "theorem"),
     ];
@@ -366,10 +370,16 @@ fn the_zero_lt_one_route_cannot_prove_one_lt_zero() {
         let quantity = rsub(&mut d, rat, sum, zero_rat);
         let bound = super::div_succ(&mut d, p, 2, n);
         let unpad = d.lemma(rat.zero_add, &[one_rat]);
-        let step = rcongr(&mut d, sum, one_rat, unpad, &|d, t| rsub(d, rat, t, zero_rat));
+        let step = rcongr(&mut d, sum, one_rat, unpad, &|d, t| {
+            rsub(d, rat, t, zero_rat)
+        });
         let degenerate = rsub(&mut d, rat, one_rat, zero_rat);
         let collapse = d.lemma(rat.sub_self, &[one_rat]);
-        let (_, to_zero) = rchain(&mut d, quantity, &[(degenerate, step), (zero_rat, collapse)]);
+        let (_, to_zero) = rchain(
+            &mut d,
+            quantity,
+            &[(degenerate, step), (zero_rat, collapse)],
+        );
         let back = rsymm(&mut d, quantity, zero_rat, to_zero);
         let two = d.num(2);
         let nonneg = d.lemma(rat.zero_le_nat_div_succ, &[two, n]);
@@ -595,4 +605,3 @@ fn the_order_discrimination_route_can_fail() {
          the order discrimination witness proves nothing"
     );
 }
-
