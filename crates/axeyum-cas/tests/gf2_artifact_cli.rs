@@ -89,3 +89,55 @@ fn standalone_producer_writes_once_and_composes_with_checker() {
     assert!(!overwrite.status.success());
     fs::remove_file(path).unwrap();
 }
+
+#[test]
+fn sparse_shard_producer_composes_with_population_and_artifact_checker() {
+    let directory =
+        std::env::temp_dir().join(format!("axeyum-gf2-search-shard-{}", std::process::id()));
+    let produced = Command::new(env!("CARGO_BIN_EXE_axeyum-gf2-search"))
+        .args([
+            directory.as_os_str(),
+            "integration-search".as_ref(),
+            "1".as_ref(),
+            "12".as_ref(),
+            "4".as_ref(),
+            "10000".as_ref(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        produced.status.success(),
+        "{}",
+        String::from_utf8_lossy(&produced.stderr)
+    );
+
+    let checked = Command::new(env!("CARGO_BIN_EXE_axeyum-gf2-check-shard"))
+        .arg(&directory)
+        .arg("--require-all-found")
+        .output()
+        .unwrap();
+    assert!(
+        checked.status.success(),
+        "{}",
+        String::from_utf8_lossy(&checked.stderr)
+    );
+    assert!(
+        String::from_utf8(checked.stdout)
+            .unwrap()
+            .contains("rows=12|found=12|exhausted=0|candidate_limit=0")
+    );
+
+    let manifest = directory.join("manifest.json");
+    let bytes = fs::read_to_string(&manifest).unwrap();
+    fs::write(
+        &manifest,
+        bytes.replacen("\"degree\": 1", "\"degree\": 2", 1),
+    )
+    .unwrap();
+    let rejected = Command::new(env!("CARGO_BIN_EXE_axeyum-gf2-check-shard"))
+        .arg(&directory)
+        .output()
+        .unwrap();
+    assert!(!rejected.status.success());
+    fs::remove_dir_all(directory).unwrap();
+}

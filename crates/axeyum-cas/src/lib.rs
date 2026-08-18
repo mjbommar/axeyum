@@ -68,6 +68,8 @@ pub mod geometry_json;
 pub mod gf2;
 pub mod gf2_artifact;
 pub mod gf2_independent;
+pub mod gf2_search;
+pub mod gf2_shard;
 pub mod gfp;
 mod gosper;
 pub mod groebner;

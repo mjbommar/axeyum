@@ -476,36 +476,47 @@ pub fn certify_irreducible(
     let mut context = Gf2Context::new(limits);
     let mut current = Gf2Poly::x();
     let mut reductions = Vec::with_capacity(degree);
-    let mut residues = Vec::with_capacity(degree);
-    for _ in 0..degree {
+    let mut obligations: Vec<(usize, usize, Option<RabinBezout>)> = distinct_prime_factors(degree)
+        .into_iter()
+        .map(|prime| (prime, degree / prime, None))
+        .collect();
+    for step in 1..=degree {
         let square = context.square(&current)?;
         let (quotient, remainder) = context.div_rem(&square, polynomial)?;
         current = remainder.clone();
-        residues.push(remainder.clone());
         reductions.push(FrobeniusReduction {
             quotient,
             remainder,
         });
+        for (prime_divisor, target_step, witness) in &mut obligations {
+            if *target_step != step {
+                continue;
+            }
+            let target = context.add(&current, &Gf2Poly::x())?;
+            let (gcd, polynomial_coefficient, frobenius_coefficient) =
+                context.extended_gcd(polynomial, &target)?;
+            if gcd != Gf2Poly::one() {
+                return Ok(None);
+            }
+            *witness = Some(RabinBezout {
+                prime_divisor: *prime_divisor,
+                polynomial_coefficient,
+                frobenius_coefficient,
+            });
+        }
     }
     if current != Gf2Poly::x() {
         return Ok(None);
     }
 
-    let mut bezout = Vec::new();
-    for prime_divisor in distinct_prime_factors(degree) {
-        let residue = &residues[degree / prime_divisor - 1];
-        let target = context.add(residue, &Gf2Poly::x())?;
-        let (gcd, polynomial_coefficient, frobenius_coefficient) =
-            context.extended_gcd(polynomial, &target)?;
-        if gcd != Gf2Poly::one() {
-            return Ok(None);
-        }
-        bezout.push(RabinBezout {
-            prime_divisor,
-            polynomial_coefficient,
-            frobenius_coefficient,
-        });
-    }
+    let bezout = obligations
+        .into_iter()
+        .map(|(_, _, witness)| {
+            witness.ok_or(Gf2Error::InvalidCertificate(
+                "producer omitted a Rabin obligation",
+            ))
+        })
+        .collect::<Result<Vec<_>, Gf2Error>>()?;
 
     Ok(Some(IrreducibilityCertificate {
         polynomial: polynomial.clone(),
