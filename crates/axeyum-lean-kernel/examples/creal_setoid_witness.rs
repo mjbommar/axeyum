@@ -30,7 +30,12 @@
 //!    an equivalence relation; and
 //! 5. `CReal.not_le_one_zero` is present, so `CReal.le` is not the total
 //!    relation either. `le_refl`, `le_trans` and `add_le_add` all hold, with
-//!    empty footprints, of the order that relates every pair.
+//!    empty footprints, of the order that relates every pair; and
+//! 6. `CReal.zero_lt_one` **and** `CReal.lt_irrefl` are both present, so
+//!    `CReal.lt` is neither empty nor total. Six of the seven strict-order laws
+//!    only *consume* a `lt`, so all six hold — footprint-free — of the relation
+//!    that relates nothing at all; `zero_lt_one` is the only one that exhibits
+//!    an inhabitant and `lt_irrefl` the only one that refuses a pair.
 //!
 //! # How far the ordered-field structure gets (ADR-0468 phase R2, partial)
 //!
@@ -41,9 +46,11 @@
 //! sequences doubles the error, and sampling twice as deep halves each modulus
 //! back, exactly, with no slack.
 //!
-//! Of the 22 ordered-ring laws, **7 hold** here: four in `Equiv` form — the whole
-//! — the whole additive group: `add_comm`, `add_neg`, `add_zero`,
-//! `add_assoc` — and three verbatim: `le_refl`, `le_trans`, `add_le_add`. The
+//! Of the 22 ordered-ring laws, **14 hold** here: four in `Equiv` form — the
+//! whole additive group: `add_comm`, `add_neg`, `add_zero`,
+//! `add_assoc` — and ten verbatim: `le_refl`, `le_trans`, `add_le_add`,
+//! `lt_irrefl`, `lt_trans`, `lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`,
+//! `zero_lt_one` and `add_lt_add_of_le_of_lt`. The
 //! first two are *pointwise*: their two sides sample at the same index, so
 //! `Equiv.of_pointwise` reduces each to one `Rat` law. The other two are not,
 //! and are the reason `Equiv` had to be an equivalence relation first —
@@ -73,12 +80,43 @@
 //! `∀ x y, le x y ∨ le y x` over the reals is not constructively provable —
 //! and nothing here assumes it.
 //!
+//! # The strict order, and why it quantifies over a rational gap
+//!
+//! `CReal.lt x y := ∃ (q : Rat), 0 < q ∧ le (add x (ofRat q)) y`. Two other
+//! shapes were tried and are closed:
+//!
+//! - `lt := Not (le y x)` makes `le_of_lt` **non-constructive**, and there is no
+//!   `le_total` over ℝ to recover it from — `Rat.le_total` holds for ℚ and does
+//!   not lift, exactly as above.
+//! - `∃ (n : Nat), y_n − x_n > 2/(n+1)` — the shape a Bishop transcription
+//!   suggests — does not give `lt_trans`. Composing two such witnesses needs a
+//!   *new* index, and the two regularity round trips that reach it consume
+//!   precisely the margin the two hypotheses supply: chaining at an arbitrary
+//!   third index leaves `z_k − x_k > −2/(k+1) − 1/(m+1) − 1/(n+1)`, which is
+//!   negative. Closing that needs a quantitative gap lemma the fixed modulus
+//!   does not supply.
+//!
+//! Quantifying over the **gap itself** removes the recomputation: `lt_trans`
+//! carries `q₁` through untouched and uses the second hypothesis only via
+//! `le_of_lt`. The one analytic step left is `le_add_of_nonneg`
+//! (`0 ≤ q → x ≤ x + q`), which is analytic only because of the index shift —
+//! and it closes on `1/(2n+2) + 1/(n+1) ≤ 2/(n+1)`, the same inequality
+//! `add_zero` and `add_assoc` reduce to. `lt_irrefl` is where the Archimedean
+//! property is consumed a second time: a witness for `x < x` forces
+//! `q ≤ 4/(n+1)` at every `n`, hence `q ≤ 0`, contradicting `0 < q`. **No
+//! proof by contradiction is involved** — `¬¬P → P` does not exist in this
+//! logic prelude and is not needed.
+//!
+//! `le_congr` and `lt_congr` are not among the 22: they are two of the nine
+//! equality-slot binders the setoid ring telescope takes (ADR-0468 phase R3).
+//!
 //! # What this does NOT claim
 //!
 //! `Eq CReal` is not the equality of real numbers — `CReal.Equiv` is, and every
-//! statement about reals will say so. `mul`, `le` and `lt` are **not** built:
-//! `mul` needs a canonical bound on a representative derived from regularity,
-//! which is the one place a naive port from Mathlib will not transfer.
+//! statement about reals will say so. `mul` is **not** built, and the eight
+//! remaining laws are exactly the eight that mention it: `mul` needs a
+//! canonical bound on a representative derived from regularity, which is the
+//! one place a naive port from Mathlib will not transfer.
 //! Completeness, division and `√` are each a separate ADR. And the `Real`
 //! package's 30 axioms are **unchanged** by this: ADR-0468 retires them by
 //! *deletion* in phase R3, once consumers are generalized, not by exhibiting a
@@ -124,6 +162,17 @@ fn main() {
         ("CReal.le_of_equiv", p.le_of_equiv),
         ("CReal.equiv_of_le_le", p.equiv_of_le_le),
         ("CReal.not_le_one_zero", p.not_le_one_zero),
+        ("CReal.le_add_of_nonneg", p.le_add_of_nonneg),
+        ("CReal.lt", p.lt),
+        ("CReal.lt_irrefl", p.lt_irrefl),
+        ("CReal.lt_trans", p.lt_trans),
+        ("CReal.lt_of_lt_of_le", p.lt_of_lt_of_le),
+        ("CReal.lt_of_le_of_lt", p.lt_of_le_of_lt),
+        ("CReal.le_of_lt", p.le_of_lt),
+        ("CReal.zero_lt_one", p.zero_lt_one),
+        ("CReal.add_lt_add_of_le_of_lt", p.add_lt_add_of_le_of_lt),
+        ("CReal.le_congr", p.le_congr),
+        ("CReal.lt_congr", p.lt_congr),
     ];
 
     let mut failed = false;
@@ -181,6 +230,15 @@ fn main() {
         kernel.environment().get(p.not_le_one_zero),
         Some(Declaration::Theorem { .. })
     );
+    // (6): `lt` is neither empty nor total, and it takes both to say so.
+    let strictly_inhabited = matches!(
+        kernel.environment().get(p.zero_lt_one),
+        Some(Declaration::Theorem { .. })
+    );
+    let strictly_irreflexive = matches!(
+        kernel.environment().get(p.lt_irrefl),
+        Some(Declaration::Theorem { .. })
+    );
     if !inhabited {
         eprintln!(
             "FAIL: CReal.ofRat is not a checked definition, so CReal.Regular has no \
@@ -205,6 +263,22 @@ fn main() {
         );
         failed = true;
     }
+    if !strictly_inhabited {
+        eprintln!(
+            "FAIL: CReal.zero_lt_one is not a checked theorem, so nothing exhibits a \
+             single pair in CReal.lt. The other six strict-order laws all CONSUME a \
+             lt, so all six hold — with empty footprints — of the EMPTY relation."
+        );
+        failed = true;
+    }
+    if !strictly_irreflexive {
+        eprintln!(
+            "FAIL: CReal.lt_irrefl is not a checked theorem, so nothing refuses a pair \
+             in CReal.lt. With zero_lt_one alone the strict order could be the TOTAL \
+             relation, which satisfies every other law proved about it."
+        );
+        failed = true;
+    }
 
     let trusted: Vec<String> = kernel
         .environment()
@@ -223,7 +297,8 @@ fn main() {
     eprintln!(
         "ℝ as a Bishop setoid over the constructed ℚ: {} declarations admitted, \
          trusted surface = {} ({}); carrier inhabited = {inhabited}, \
-         Equiv discriminates = {discriminating}, le discriminates = {ordered}",
+         Equiv discriminates = {discriminating}, le discriminates = {ordered}, \
+         lt inhabited = {strictly_inhabited}, lt irreflexive = {strictly_irreflexive}",
         admitted.len(),
         trusted.len(),
         if trusted.is_empty() {
@@ -241,10 +316,13 @@ fn main() {
     }
     eprintln!(
         "reflexivity, symmetry and transitivity of CReal.Equiv all hold at ZERO \
-         trusted declarations; transitivity is the only consumer of \
-         Rat.le_of_le_add_natDivSucc (the Archimedean property of ℚ). 7 of the \
-         22 ordered-ring laws hold: the additive group in Equiv form \
-         (add_comm, add_neg, add_zero, add_assoc) and three order laws \
-         verbatim (le_refl, le_trans, add_le_add)"
+         trusted declarations; Equiv.trans and CReal.lt_irrefl are the two \
+         consumers of Rat.le_of_le_add_natDivSucc (the Archimedean property of \
+         ℚ). 14 of the 22 ordered-ring laws hold: the additive group in Equiv \
+         form (add_comm, add_neg, add_zero, add_assoc) and ten order laws \
+         verbatim (le_refl, le_trans, add_le_add, lt_irrefl, lt_trans, \
+         lt_of_lt_of_le, lt_of_le_of_lt, le_of_lt, zero_lt_one, \
+         add_lt_add_of_le_of_lt). The 8 that remain are exactly the 8 that \
+         mention mul"
     );
 }

@@ -53,7 +53,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 31] = [
+    let expected: [(&str, crate::NameId, &str); 42] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -85,6 +85,17 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.le_of_equiv", p.le_of_equiv, "theorem"),
         ("CReal.equiv_of_le_le", p.equiv_of_le_le, "theorem"),
         ("CReal.not_le_one_zero", p.not_le_one_zero, "theorem"),
+        ("CReal.le_add_of_nonneg", p.le_add_of_nonneg, "theorem"),
+        ("CReal.lt", p.lt, "def"),
+        ("CReal.lt_irrefl", p.lt_irrefl, "theorem"),
+        ("CReal.lt_trans", p.lt_trans, "theorem"),
+        ("CReal.lt_of_lt_of_le", p.lt_of_lt_of_le, "theorem"),
+        ("CReal.lt_of_le_of_lt", p.lt_of_le_of_lt, "theorem"),
+        ("CReal.le_of_lt", p.le_of_lt, "theorem"),
+        ("CReal.zero_lt_one", p.zero_lt_one, "theorem"),
+        ("CReal.add_lt_add_of_le_of_lt", p.add_lt_add_of_le_of_lt, "theorem"),
+        ("CReal.le_congr", p.le_congr, "theorem"),
+        ("CReal.lt_congr", p.lt_congr, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -214,6 +225,178 @@ fn the_setoid_laws_have_the_statements_adr_0468_specifies() {
         "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
          ((x4 : CReal.Equiv x0 x1) -> ((x5 : CReal.Equiv x2 x3) -> \
          CReal.Equiv (CReal.add x0 x2) (CReal.add x1 x3)))))))"
+    );
+    // The seven strict-order laws, also VERBATIM: like the three `le` laws,
+    // none of them mentions `Eq`, so the `Real` package's statement is the
+    // statement proved here — no `Equiv` restatement, nothing weakened.
+    assert_eq!(
+        rendered(&mut kernel, p.lt_irrefl),
+        "((x0 : CReal) -> Not (CReal.lt x0 x0))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.lt_trans),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.lt x0 x1) -> \
+         ((x4 : CReal.lt x1 x2) -> CReal.lt x0 x2)))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.lt_of_lt_of_le),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.lt x0 x1) -> \
+         ((x4 : CReal.le x1 x2) -> CReal.lt x0 x2)))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.lt_of_le_of_lt),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.le x0 x1) -> \
+         ((x4 : CReal.lt x1 x2) -> CReal.lt x0 x2)))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.le_of_lt),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.lt x0 x1) -> CReal.le x0 x1)))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.zero_lt_one),
+        "CReal.lt CReal.zero CReal.one"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.add_lt_add_of_le_of_lt),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
+         ((x4 : CReal.le x0 x1) -> ((x5 : CReal.lt x2 x3) -> \
+         CReal.lt (CReal.add x0 x2) (CReal.add x1 x3)))))))"
+    );
+    // The two relation congruences of the setoid telescope's equality slot.
+    assert_eq!(
+        rendered(&mut kernel, p.le_congr),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
+         ((x4 : CReal.Equiv x0 x1) -> ((x5 : CReal.Equiv x2 x3) -> \
+         ((x6 : CReal.le x0 x2) -> CReal.le x1 x3)))))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.lt_congr),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
+         ((x4 : CReal.Equiv x0 x1) -> ((x5 : CReal.Equiv x2 x3) -> \
+         ((x6 : CReal.lt x0 x2) -> CReal.lt x1 x3)))))))"
+    );
+}
+
+/// **`CReal.lt` is the strict order ADR-0468 asks for, not a negation.**
+///
+/// The definition is asserted verbatim because the two rejected shapes differ
+/// from it only in the body: `Not (le y x)` would render as a `Not`, and
+/// `∃ n : Nat, …` would quantify over `Nat`. This quantifies over a **rational
+/// gap**, which is what makes `le_of_lt` constructive and `lt_trans` carry its
+/// witness through untouched.
+#[test]
+fn lt_quantifies_over_a_positive_rational_gap() {
+    let (kernel, p) = built();
+    let value = match kernel.environment().get(p.lt).expect("CReal.lt declared") {
+        Declaration::Definition { value, .. } => *value,
+        other => panic!("{other:?} is not a definition"),
+    };
+    let rendered = kernel
+        .render_lean(value)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert_eq!(
+        rendered,
+        "fun (x0 : CReal) => fun (x1 : CReal) => Exists.{1} Rat \
+         (fun (x2 : Rat) => And (Rat.lt Rat.zero x2) \
+         (CReal.le (CReal.add x0 (CReal.ofRat x2)) x1))"
+    );
+}
+
+/// **`CReal.lt` is neither empty nor total**, and both halves are needed.
+///
+/// Six of the seven strict-order laws *consume* a `lt`, so all six hold —
+/// footprint-free — of the empty relation. `zero_lt_one` is the only one that
+/// produces an inhabitant, and `lt_irrefl` is the only one that refuses a pair.
+/// Together they are the discrimination witness the axiom footprint cannot see.
+#[test]
+fn the_strict_order_discriminates() {
+    let (kernel, p) = built();
+    for (label, name) in [
+        ("CReal.zero_lt_one", p.zero_lt_one),
+        ("CReal.lt_irrefl", p.lt_irrefl),
+    ] {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{label} must be declared"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "{label} must be a checked Theorem — an axiom would witness nothing"
+        );
+        assert!(
+            kernel.axiom_footprint(name).is_empty(),
+            "{label} must be axiom-free"
+        );
+    }
+}
+
+/// The negative control for `zero_lt_one`: the **same script**, with the two
+/// constants swapped.
+///
+/// `lt one zero` is false, and the script that proves `lt zero one` reaches it
+/// through `Rat.zero_add` on the sampled sum `0 + 1`. Pointed at `one + 1` that
+/// rewrite does not apply, and the kernel must **refuse** — which is what says
+/// the strict order is reading which sequence is being sampled rather than
+/// merely assembling a bound.
+#[test]
+fn the_zero_lt_one_route_cannot_prove_one_lt_zero() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::{radd, rat_eq_rewrite, rchain, rcongr, rone, rsymm, rzero};
+
+    let (mut kernel, p) = built();
+    let rat = p.rat;
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, rat.int);
+    let nat = d.nat_ty();
+
+    let zero_rat = rzero(&mut d, rat);
+    let one_rat = rone(&mut d, rat);
+    // The two changed tokens: the claim is `lt one zero`, not `lt zero one`.
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let one_real = d.kernel().const_(p.one, vec![]);
+
+    let bounded = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sum = radd(&mut d, one_rat, one_rat);
+        let quantity = rsub(&mut d, rat, sum, zero_rat);
+        let bound = super::div_succ(&mut d, p, 2, n);
+        let unpad = d.lemma(rat.zero_add, &[one_rat]);
+        let step = rcongr(&mut d, sum, one_rat, unpad, &|d, t| rsub(d, rat, t, zero_rat));
+        let degenerate = rsub(&mut d, rat, one_rat, zero_rat);
+        let collapse = d.lemma(rat.sub_self, &[one_rat]);
+        let (_, to_zero) = rchain(&mut d, quantity, &[(degenerate, step), (zero_rat, collapse)]);
+        let back = rsymm(&mut d, quantity, zero_rat, to_zero);
+        let two = d.num(2);
+        let nonneg = d.lemma(rat.zero_le_nat_div_succ, &[two, n]);
+        let at_index = rat_eq_rewrite(&mut d, zero_rat, quantity, back, nonneg, &|d, t| {
+            crate::rat_prelude::ops::rle(d, rat, t, bound)
+        });
+        d.lam_fv(n_fv, nat, at_index)
+    };
+    let positive = crate::rat_prelude::ops::rlt(&mut d, rat, zero_rat, one_rat);
+    let embedded = super::embed(&mut d, p, one_rat);
+    let shifted = super::cadd(&mut d, p, one_real, embedded);
+    let reached = super::cle(&mut d, p, shifted, zero_real);
+    let strict = d.lemma(rat.zero_lt_one, &[]);
+    let pair = super::and_intro(&mut d, p, positive, reached, strict, bounded);
+    let value = super::gap_intro(&mut d, p, one_real, zero_real, one_rat, pair);
+    let ty = super::clt(&mut d, p, one_real, zero_real);
+    let name = d.kernel().name_str(anon, "Check.one_lt_zero");
+    let refused = d.kernel().add_declaration(crate::Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted `CReal.lt CReal.one CReal.zero`, which contradicts \
+         CReal.lt_irrefl through lt_trans — the strict order proves nothing"
     );
 }
 
@@ -412,3 +595,4 @@ fn the_order_discrimination_route_can_fail() {
          the order discrimination witness proves nothing"
     );
 }
+

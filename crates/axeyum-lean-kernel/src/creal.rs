@@ -54,7 +54,30 @@
 //! [`Rat.le_of_le_add_natDivSucc`](crate::RatPrelude::le_of_le_add_natDivSucc)
 //! — the **Archimedean property of ℚ**, a statement about rationals that this
 //! module only consumes. That is the price of the fixed modulus, and it is paid
-//! once.
+//! twice: here, and in [`lt_irrefl`](CRealPrelude::lt_irrefl).
+//!
+//! ## The strict order quantifies over the gap, not over an index
+//!
+//! [`CReal.lt`](CRealPrelude::lt) is `∃ (q : Rat), 0 < q ∧ x + q ≤ y`. The two
+//! shapes a textbook suggests are both closed here:
+//!
+//! - `lt x y := Not (le y x)` makes [`le_of_lt`](CRealPrelude::le_of_lt)
+//!   non-constructive, and there is no `le_total` over ℝ to recover it from —
+//!   `Rat.le_total` holds for ℚ and does not lift.
+//! - `∃ (n : Nat), y_n − x_n > 2/(n+1)`, Bishop's own, does not give
+//!   [`lt_trans`](CRealPrelude::lt_trans) as written: composing two witnesses
+//!   needs a *new* index, and the two regularity round trips that reach it
+//!   consume precisely the margin the hypotheses supply. Chaining at a third
+//!   index `k` leaves `z_k − x_k > −2/(k+1) − 1/(m+1) − 1/(n+1)`, which is
+//!   negative for every choice, so closing it needs a quantitative gap lemma —
+//!   the same thing the fixed modulus does not supply for `mul`.
+//!
+//! Carrying the *rational gap* removes the recomputation entirely: `lt_trans`
+//! hands `q₁` through untouched and reads the second hypothesis only through
+//! `le_of_lt`. The one analytic step left is
+//! [`le_add_of_nonneg`](CRealPrelude::le_add_of_nonneg), and it is analytic
+//! only because of the index shift — it closes on [`shifted_bound_le`], the
+//! same inequality `add_zero` and `add_assoc` reduce to.
 
 // Proof scripts are long, straight-line term constructions with short
 // mathematical names, exactly as in `rat_prelude`.
@@ -74,7 +97,9 @@ use crate::int_prelude::ops::IntDev;
 use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::group::{rsub, rsum, rsum_append, rsum_perm};
-use crate::rat_prelude::ops::{radd, rat_eq_rewrite, rat_ty, rchain, rcongr, rneg, rsymm, rzero};
+use crate::rat_prelude::ops::{
+    radd, rat_eq_rewrite, rat_ty, rchain, rcongr, rle, rlt, rneg, rone, rsymm, rzero,
+};
 use crate::rat_prelude::{RatPrelude, build_rat_prelude};
 use crate::{Kernel, KernelError};
 
@@ -193,7 +218,7 @@ pub struct CRealPrelude {
     /// first that is **not** pointwise: `add x zero` samples `x` at `2n+1`
     /// where `x` samples it at `n`, so the two sides are not equal at any
     /// index and `Equiv.of_pointwise` does not apply. Regularity closes the
-    /// gap, and the slack is paid by [`shifted_bound_le`].
+    /// gap, and the slack is paid by `shifted_bound_le`.
     pub add_zero: NameId,
     /// `CReal.le : CReal → CReal → Prop` —
     /// `le x y := ∀ n, seq x n − seq y n ≤ 2/(n+1)`.
@@ -215,7 +240,7 @@ pub struct CRealPrelude {
     /// `CReal.le_trans : ∀ x y z, le x y → le y z → le x z` — one of the 22,
     /// verbatim, and the **upper half of `Equiv.trans`**: the same four-term
     /// estimate at an arbitrary index `j`, the same
-    /// [`telescope_four`]/[`six_term_bound`], the same Archimedean lemma —
+    /// `telescope_four`/`six_term_bound`, the same Archimedean lemma —
     /// with `Rat.add_le_add` in place of `Rat.bounds_add` and no negated
     /// branch at all.
     pub le_trans: NameId,
@@ -252,6 +277,59 @@ pub struct CRealPrelude {
     /// the whole difference is `(x_M − x_N) + (z_N − z_M)` — two regularity
     /// bounds, and then the *same* inequality `add_zero` needs.
     pub add_assoc: NameId,
+
+    // --- the strict order (ADR-0468 phase R2, continued) ---------------------
+    /// `CReal.le_add_of_nonneg : ∀ x q, Rat.le Rat.zero q →
+    /// CReal.le x (CReal.add x (CReal.ofRat q))`.
+    ///
+    /// The one analytic step the strict order needs, and it is analytic only
+    /// because of Bishop's index shift: even at `q = 0` the two sides sample
+    /// `x` at different indices. Same slack, same `shifted_bound_le`.
+    pub le_add_of_nonneg: NameId,
+    /// `CReal.lt : CReal → CReal → Prop` —
+    /// `lt x y := ∃ (q : Rat), Rat.lt Rat.zero q ∧ le (add x (ofRat q)) y`.
+    ///
+    /// **The gap is a rational and it is carried, not recomputed.** Two shapes
+    /// were tried and closed: `lt := Not (le y x)` makes
+    /// [`le_of_lt`](Self::le_of_lt) non-constructive with no `le_total` over ℝ
+    /// to recover it from (`Rat.le_total` holds for ℚ and does not lift), and
+    /// `∃ n, y_n − x_n > 2/(n+1)` does not give
+    /// [`lt_trans`](Self::lt_trans) — composing two such witnesses needs a new
+    /// index, and the two regularity round trips reaching it consume exactly
+    /// the margin the hypotheses supply. Quantifying over the *gap* instead
+    /// makes transitivity carry `q₁` through untouched.
+    pub lt: NameId,
+    /// `CReal.lt_irrefl : ∀ x, Not (lt x x)` — one of the 22, verbatim, and the
+    /// **discrimination** witness for `lt` together with
+    /// [`zero_lt_one`](Self::zero_lt_one).
+    pub lt_irrefl: NameId,
+    /// `CReal.lt_trans : ∀ x y z, lt x y → lt y z → lt x z` — one of the 22,
+    /// verbatim.
+    pub lt_trans: NameId,
+    /// `CReal.lt_of_lt_of_le : ∀ x y z, lt x y → le y z → lt x z` — one of the
+    /// 22, verbatim.
+    pub lt_of_lt_of_le: NameId,
+    /// `CReal.lt_of_le_of_lt : ∀ x y z, le x y → lt y z → lt x z` — one of the
+    /// 22, verbatim.
+    pub lt_of_le_of_lt: NameId,
+    /// `CReal.le_of_lt : ∀ x y, lt x y → le x y` — one of the 22, verbatim.
+    pub le_of_lt: NameId,
+    /// `CReal.zero_lt_one : lt zero one` — one of the 22, verbatim, and the
+    /// **non-vacuity** witness for `lt`: the other six strict-order laws all
+    /// consume a `lt` and so hold, footprint-free, of the empty relation.
+    pub zero_lt_one: NameId,
+    /// `CReal.add_lt_add_of_le_of_lt : ∀ x y c e, le x y → lt c e →
+    /// lt (add x c) (add y e)` — one of the 22, verbatim.
+    pub add_lt_add_of_le_of_lt: NameId,
+    /// `CReal.le_congr : ∀ a b c e, Equiv a b → Equiv c e → le a c → le b e`.
+    ///
+    /// Not one of the 22 — one of the nine equality-slot binders the setoid
+    /// ring telescope takes (ADR-0468 phase R3).
+    pub le_congr: NameId,
+    /// `CReal.lt_congr : ∀ a b c e, Equiv a b → Equiv c e → lt a c → lt b e`.
+    ///
+    /// The other relation congruence of the equality slot.
+    pub lt_congr: NameId,
 }
 
 fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
@@ -291,6 +369,17 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         le_of_equiv: kernel.name_str(creal, "le_of_equiv"),
         equiv_of_le_le: kernel.name_str(creal, "equiv_of_le_le"),
         not_le_one_zero: kernel.name_str(creal, "not_le_one_zero"),
+        le_add_of_nonneg: kernel.name_str(creal, "le_add_of_nonneg"),
+        lt: kernel.name_str(creal, "lt"),
+        lt_irrefl: kernel.name_str(creal, "lt_irrefl"),
+        lt_trans: kernel.name_str(creal, "lt_trans"),
+        lt_of_lt_of_le: kernel.name_str(creal, "lt_of_lt_of_le"),
+        lt_of_le_of_lt: kernel.name_str(creal, "lt_of_le_of_lt"),
+        le_of_lt: kernel.name_str(creal, "le_of_lt"),
+        zero_lt_one: kernel.name_str(creal, "zero_lt_one"),
+        add_lt_add_of_le_of_lt: kernel.name_str(creal, "add_lt_add_of_le_of_lt"),
+        le_congr: kernel.name_str(creal, "le_congr"),
+        lt_congr: kernel.name_str(creal, "lt_congr"),
     }
 }
 
@@ -327,7 +416,8 @@ pub fn build_creal_prelude(kernel: &mut Kernel) -> Result<CRealPrelude, KernelEr
         declare_negation(&mut d, prelude)?;
         declare_addition(&mut d, prelude)?;
         declare_additive_laws(&mut d, prelude)?;
-        declare_order(&mut d, prelude)
+        declare_order(&mut d, prelude)?;
+        declare_strict_order(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -2512,6 +2602,962 @@ fn declare_order(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError>
             name: p.not_le_one_zero,
             uparams: vec![],
             ty: stmt,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+// --- the strict order -------------------------------------------------------
+
+/// `CReal.le x y`.
+fn cle(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.le, &[x, y])
+}
+
+/// `CReal.add x y`.
+fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.add, &[x, y])
+}
+
+/// `CReal.ofRat q`.
+fn embed(d: &mut IntDev<'_>, p: CRealPrelude, q: ExprId) -> ExprId {
+    d.const_app(p.of_rat, &[q])
+}
+
+/// `CReal.lt x y`.
+fn clt(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.lt, &[x, y])
+}
+
+/// `λ (q : Rat), And (Rat.lt 0 q) (CReal.le (CReal.add x (CReal.ofRat q)) y)` —
+/// the body `CReal.lt` existentially quantifies.
+fn gap_predicate(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let rat = p.rat;
+    let carrier = rat_ty(d);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let zero = rzero(d, rat);
+    let positive = rlt(d, rat, zero, q);
+    let embedded = embed(d, p, q);
+    let shifted = cadd(d, p, x, embedded);
+    let bounded = cle(d, p, shifted, y);
+    let body = d.and(positive, bounded);
+    d.lam_fv(q_fv, carrier, body)
+}
+
+/// `Exists.intro` at [`gap_predicate`]: the rational `q` and a proof of
+/// `0 < q ∧ x + q ≤ y` make `CReal.lt x y`.
+fn gap_intro(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    q: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let carrier = rat_ty(d);
+    let one = d.level_one();
+    let predicate = gap_predicate(d, p, x, y);
+    let name = p.rat.int.logic.exists_intro;
+    let intro = d.kernel().const_(name, vec![one]);
+    d.apply(intro, &[carrier, predicate, q, proof])
+}
+
+/// `Exists.rec` at [`gap_predicate`]: consume a `CReal.lt x y` into `target`,
+/// given `minor : ∀ (q : Rat), (0 < q ∧ x + q ≤ y) → target`.
+///
+/// `Exists` is a `Prop` with one non-subsingleton constructor, so the motive
+/// must land in `Prop` — which every use here does, the strict-order laws being
+/// `Prop`s and `lt_irrefl`'s target being `False`.
+fn gap_elim(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    target: ExprId,
+    witness: ExprId,
+    minor: ExprId,
+) -> ExprId {
+    let carrier = rat_ty(d);
+    let one = d.level_one();
+    let predicate = gap_predicate(d, p, x, y);
+    let exists_name = p.rat.int.logic.exists_;
+    let exists = d.kernel().const_(exists_name, vec![one]);
+    let exists_ty = d.apply(exists, &[carrier, predicate]);
+    let motive = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, exists_ty, target)
+    };
+    let rec_name = p.rat.int.logic.exists_rec;
+    let rec = d.kernel().const_(rec_name, vec![one]);
+    d.apply(rec, &[carrier, predicate, motive, minor, witness])
+}
+
+/// The two halves of a `0 < q ∧ x + q ≤ y` hypothesis, at the shape
+/// [`gap_predicate`] gives it.
+fn gap_halves(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    q: ExprId,
+    proof: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let zero = rzero(d, rat);
+    let positive = rlt(d, rat, zero, q);
+    let embedded = embed(d, p, q);
+    let shifted = cadd(d, p, x, embedded);
+    let bounded = cle(d, p, shifted, y);
+    let left = d.and_left(positive, bounded, proof);
+    let right = d.and_right(positive, bounded, proof);
+    (left, right)
+}
+
+/// `1/(n+1) + 1/(2n+2) ≤ 2/(n+1)` — [`shifted_bound_le`] with its two summands
+/// the other way round, which is the orientation `CReal.regular x n (2n+1)`
+/// hands over.
+fn shifted_bound_le_comm(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let rat = p.rat;
+    let s = shift(d, n);
+    let one_n = div_succ(d, p, 1, n);
+    let one_s = div_succ(d, p, 1, s);
+    let two_n = div_succ(d, p, 2, n);
+    let core = shifted_bound_le(d, p, n);
+    let swap = d.lemma(rat.add_comm, &[one_s, one_n]);
+    let from = radd(d, one_s, one_n);
+    let to = radd(d, one_n, one_s);
+    rat_eq_rewrite(d, from, to, swap, core, &|d, t| rle(d, rat, t, two_n))
+}
+
+/// `Eq Rat (Rat.sub a Rat.zero) a`.
+///
+/// `Rat.sub a b` is *defined* as `a + (−b)`, so this is `neg_zero` under a
+/// congruence and then `add_zero`; there is no `Rat.sub_zero` because nothing
+/// before the strict order needed one.
+fn sub_zero_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+    let rat = p.rat;
+    let zero = rzero(d, rat);
+    let start = rsub(d, rat, a, zero);
+    let negated = rneg(d, zero);
+    let collapse = d.lemma(rat.neg_zero, &[]);
+    let inner = rcongr(d, negated, zero, collapse, &|d, t| radd(d, a, t));
+    let padded = radd(d, a, zero);
+    let trim = d.lemma(rat.add_zero, &[a]);
+    let (_, proof) = rchain(d, start, &[(padded, inner), (a, trim)]);
+    proof
+}
+
+/// `Eq Rat (Rat.sub (Rat.add a q) a) q` — the cancellation `lt_irrefl` needs to
+/// read a bound on `(x_s + q) − x_s` as a bound on `q` itself.
+fn add_sub_cancel_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, q: ExprId) -> ExprId {
+    let rat = p.rat;
+    let zero = rzero(d, rat);
+    let sum = radd(d, a, q);
+    let start = rsub(d, rat, sum, a);
+    let padded = radd(d, a, zero);
+    let mid = rsub(d, rat, sum, padded);
+    let trim = d.lemma(rat.add_zero, &[a]);
+    let forward = rcongr(d, padded, a, trim, &|d, t| rsub(d, rat, sum, t));
+    let restore = rsymm(d, mid, start, forward);
+    let split = d.lemma(rat.sub_add_add, &[a, q, a, zero]);
+    let self_sub = rsub(d, rat, a, a);
+    let shifted = rsub(d, rat, q, zero);
+    let decomposed = radd(d, self_sub, shifted);
+    let vanish = d.lemma(rat.sub_self, &[a]);
+    let head = rcongr(d, self_sub, zero, vanish, &|d, t| radd(d, t, shifted));
+    let headless = radd(d, zero, shifted);
+    let tail = sub_zero_eq(d, p, q);
+    let tailless = radd(d, zero, q);
+    let cleaned = rcongr(d, shifted, q, tail, &|d, t| radd(d, zero, t));
+    let unpad = d.lemma(rat.zero_add, &[q]);
+    let (_, proof) = rchain(
+        d,
+        start,
+        &[
+            (mid, restore),
+            (decomposed, split),
+            (headless, head),
+            (tailless, cleaned),
+            (q, unpad),
+        ],
+    );
+    proof
+}
+
+/// `CReal.le_add_of_nonneg`, `CReal.lt`, the seven strict-order laws and the two
+/// relation congruences the setoid telescope's equality slot asks for.
+fn declare_strict_order(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_le_add_of_nonneg(d, p)?;
+    declare_lt(d, p)?;
+    declare_lt_laws(d, p)?;
+    declare_relation_congruences(d, p)
+}
+
+/// `le_add_of_nonneg : ∀ x q, 0 ≤ q → le x (add x (ofRat q))`.
+///
+/// The one analytic step behind `le_of_lt` and `lt_trans`, and it is analytic
+/// because of the index shift: `add x (ofRat q)` samples `x` at `2n+1` where
+/// `x` samples it at `n`, so even at `q = 0` the two sides are not equal at any
+/// index. Regularity closes the gap and the slack is [`shifted_bound_le`]
+/// again — the same inequality `add_zero` and `add_assoc` reduce to.
+fn declare_le_add_of_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let zero = rzero(d, rat);
+    let hypothesis = rle(d, rat, zero, q);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let s = shift(d, n);
+    let near = sample(d, p, x, n);
+    let deep = sample(d, p, x, s);
+    let displaced = radd(d, deep, q);
+    let goal_quantity = rsub(d, rat, near, displaced);
+    let two_n = div_succ(d, p, 2, n);
+
+    // `x_n − (x_s + q) = (x_n + 0) − (x_s + q) = (x_n − x_s) + (0 − q)`.
+    let padded = radd(d, near, zero);
+    let staged = rsub(d, rat, padded, displaced);
+    let trim = d.lemma(rat.add_zero, &[near]);
+    let forward = rcongr(d, padded, near, trim, &|d, t| rsub(d, rat, t, displaced));
+    let restore = rsymm(d, staged, goal_quantity, forward);
+    let split = d.lemma(rat.sub_add_add, &[near, zero, deep, q]);
+    let drift = rsub(d, rat, near, deep);
+    let offset = rsub(d, rat, zero, q);
+    let decomposed = radd(d, drift, offset);
+    let (_, to_decomposed) = rchain(
+        d,
+        goal_quantity,
+        &[(staged, restore), (decomposed, split)],
+    );
+
+    // `x_n − x_s ≤ 1/(n+1) + 1/(2n+2) ≤ 2/(n+1)`.
+    let regularity = d.lemma(p.regular, &[x, n, s]);
+    let drift_bound = modulus(d, p, n, s);
+    let (_, drift_upper) = halves(d, p, drift, drift_bound, regularity);
+    let shrink = shifted_bound_le_comm(d, p, n);
+    let drift_bounded = d.lemma(
+        rat.le_trans,
+        &[drift, drift_bound, two_n, drift_upper, shrink],
+    );
+
+    // `0 − q = −q ≤ 0`.
+    let negated = rneg(d, q);
+    let nonpos = d.lemma(rat.neg_nonpos_of_nonneg, &[q, h]);
+    let unfolded = d.lemma(rat.zero_add, &[negated]);
+    let back = rsymm(d, offset, negated, unfolded);
+    let offset_nonpos = rat_eq_rewrite(d, negated, offset, back, nonpos, &|d, t| {
+        rle(d, rat, t, zero)
+    });
+
+    let combined = d.lemma(
+        rat.add_le_add,
+        &[drift, two_n, offset, zero, drift_bounded, offset_nonpos],
+    );
+    let loose_bound = radd(d, two_n, zero);
+    let tighten = d.lemma(rat.add_zero, &[two_n]);
+    let at_bound = rat_eq_rewrite(d, loose_bound, two_n, tighten, combined, &|d, t| {
+        rle(d, rat, decomposed, t)
+    });
+    let rewind = rsymm(d, goal_quantity, decomposed, to_decomposed);
+    let at_index = rat_eq_rewrite(d, decomposed, goal_quantity, rewind, at_bound, &|d, t| {
+        rle(d, rat, t, two_n)
+    });
+
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, at_index);
+        let with_h = d.lam_fv(h_fv, hypothesis, over_n);
+        let with_q = d.lam_fv(q_fv, rat_carrier, with_h);
+        d.lam_fv(x_fv, carrier, with_q)
+    };
+    let ty = {
+        let embedded = embed(d, p, q);
+        let shifted = cadd(d, p, x, embedded);
+        let conclusion = cle(d, p, x, shifted);
+        let inner = d.arrow(hypothesis, conclusion);
+        let with_q = d.pi_fv(q_fv, rat_carrier, inner);
+        d.pi_fv(x_fv, carrier, with_q)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.le_add_of_nonneg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.lt x y := ∃ (q : Rat), 0 < q ∧ le (add x (ofRat q)) y`.
+fn declare_lt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let prop = d.kernel().sort_zero();
+    let one = d.level_one();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let predicate = gap_predicate(d, p, x, y);
+    let exists_name = p.rat.int.logic.exists_;
+    let exists = d.kernel().const_(exists_name, vec![one]);
+    let body = d.apply(exists, &[rat_carrier, predicate]);
+    let value = {
+        let with_y = d.lam_fv(y_fv, carrier, body);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let inner = d.arrow(carrier, prop);
+        d.arrow(carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.lt,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 8),
+    })
+}
+
+/// The seven ordered-ring laws that mention `lt`.
+fn declare_lt_laws(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_le_of_lt(d, p)?;
+    declare_lt_trans(d, p)?;
+    declare_lt_mixed(d, p)?;
+    declare_add_lt_add(d, p)?;
+    declare_zero_lt_one(d, p)?;
+    declare_lt_irrefl(d, p)
+}
+
+/// `le_of_lt : ∀ x y, lt x y → le x y` — the direction a `lt := Not (le y x)`
+/// definition could not have supplied constructively, and the reason this one
+/// is an `Exists` of a rational gap rather than a negation.
+fn declare_le_of_lt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let zero = rzero(d, rat);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let hypothesis = clt(d, p, x, y);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let target = cle(d, p, x, y);
+
+    let minor = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let positive = rlt(d, rat, zero, q);
+        let embedded = embed(d, p, q);
+        let shifted = cadd(d, p, x, embedded);
+        let bounded = cle(d, p, shifted, y);
+        let witness_ty = d.and(positive, bounded);
+        let w_fv = d.fresh_fvar();
+        let w = d.kernel().fvar(w_fv);
+        let (strict, holds) = gap_halves(d, p, x, y, q, w);
+        let nonneg = d.lemma(rat.le_of_lt, &[zero, q, strict]);
+        let step = d.lemma(p.le_add_of_nonneg, &[x, q, nonneg]);
+        let body = d.lemma(p.le_trans, &[x, shifted, y, step, holds]);
+        let with_w = d.lam_fv(w_fv, witness_ty, body);
+        d.lam_fv(q_fv, rat_carrier, with_w)
+    };
+    let body = gap_elim(d, p, x, y, target, h, minor);
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, body);
+        let with_y = d.lam_fv(y_fv, carrier, with_h);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let inner = d.arrow(hypothesis, target);
+        let with_y = d.pi_fv(y_fv, carrier, inner);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.le_of_lt,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `lt_trans : ∀ x y z, lt x y → lt y z → lt x z`.
+///
+/// **This is the law the naive definition fails**, and the reason it succeeds
+/// here is that the gap is carried explicitly: `x + q₁ ≤ y` survives verbatim
+/// as the witness for `x < z`, and the second hypothesis is only ever used
+/// through `le_of_lt`. A definition reading `∃ n, y_n − x_n > 2/(n+1)` instead
+/// has to *recompute* an index for the composite, and the two regularity round
+/// trips it takes to move from `n` to that index consume exactly the margin the
+/// two hypotheses supply.
+fn declare_lt_trans(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let zero = rzero(d, rat);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let first_ty = clt(d, p, x, y);
+    let second_ty = clt(d, p, y, z);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let target = clt(d, p, x, z);
+
+    // `lt y z → le y z`, once, outside the first elimination.
+    let weakened = d.lemma(p.le_of_lt, &[y, z, h2]);
+
+    let minor = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let positive = rlt(d, rat, zero, q);
+        let embedded = embed(d, p, q);
+        let shifted = cadd(d, p, x, embedded);
+        let bounded = cle(d, p, shifted, y);
+        let witness_ty = d.and(positive, bounded);
+        let w_fv = d.fresh_fvar();
+        let w = d.kernel().fvar(w_fv);
+        let (strict, holds) = gap_halves(d, p, x, y, q, w);
+        let chained = d.lemma(p.le_trans, &[shifted, y, z, holds, weakened]);
+        let reached = cle(d, p, shifted, z);
+        let pair = and_intro(d, p, positive, reached, strict, chained);
+        let body = gap_intro(d, p, x, z, q, pair);
+        let with_w = d.lam_fv(w_fv, witness_ty, body);
+        d.lam_fv(q_fv, rat_carrier, with_w)
+    };
+    let body = gap_elim(d, p, x, y, target, h1, minor);
+    let value = {
+        let with2 = d.lam_fv(h2_fv, second_ty, body);
+        let with1 = d.lam_fv(h1_fv, first_ty, with2);
+        let with_z = d.lam_fv(z_fv, carrier, with1);
+        let with_y = d.lam_fv(y_fv, carrier, with_z);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let after2 = d.arrow(second_ty, target);
+        let after1 = d.arrow(first_ty, after2);
+        let with_z = d.pi_fv(z_fv, carrier, after1);
+        let with_y = d.pi_fv(y_fv, carrier, with_z);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.lt_trans,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `lt_of_lt_of_le` and `lt_of_le_of_lt` — the two mixed transitivities.
+///
+/// The first keeps the gap and extends the right end by `le_trans`; the second
+/// has to move the gap across the left end, which is `add_le_add` against
+/// `le_refl` at the embedded rational. Neither needs a new estimate.
+fn declare_lt_mixed(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let zero = rzero(d, rat);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let target = clt(d, p, x, z);
+
+    // lt_of_lt_of_le : lt x y → le y z → lt x z.
+    {
+        let first_ty = clt(d, p, x, y);
+        let second_ty = cle(d, p, y, z);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+        let minor = {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let positive = rlt(d, rat, zero, q);
+            let embedded = embed(d, p, q);
+            let shifted = cadd(d, p, x, embedded);
+            let bounded = cle(d, p, shifted, y);
+            let witness_ty = d.and(positive, bounded);
+            let w_fv = d.fresh_fvar();
+            let w = d.kernel().fvar(w_fv);
+            let (strict, holds) = gap_halves(d, p, x, y, q, w);
+            let chained = d.lemma(p.le_trans, &[shifted, y, z, holds, h2]);
+            let reached = cle(d, p, shifted, z);
+            let pair = and_intro(d, p, positive, reached, strict, chained);
+            let body = gap_intro(d, p, x, z, q, pair);
+            let with_w = d.lam_fv(w_fv, witness_ty, body);
+            d.lam_fv(q_fv, rat_carrier, with_w)
+        };
+        let body = gap_elim(d, p, x, y, target, h1, minor);
+        let value = {
+            let with2 = d.lam_fv(h2_fv, second_ty, body);
+            let with1 = d.lam_fv(h1_fv, first_ty, with2);
+            let with_z = d.lam_fv(z_fv, carrier, with1);
+            let with_y = d.lam_fv(y_fv, carrier, with_z);
+            d.lam_fv(x_fv, carrier, with_y)
+        };
+        let ty = {
+            let after2 = d.arrow(second_ty, target);
+            let after1 = d.arrow(first_ty, after2);
+            let with_z = d.pi_fv(z_fv, carrier, after1);
+            let with_y = d.pi_fv(y_fv, carrier, with_z);
+            d.pi_fv(x_fv, carrier, with_y)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.lt_of_lt_of_le,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // lt_of_le_of_lt : le x y → lt y z → lt x z.
+    {
+        let first_ty = cle(d, p, x, y);
+        let second_ty = clt(d, p, y, z);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+        let minor = {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let positive = rlt(d, rat, zero, q);
+            let embedded = embed(d, p, q);
+            let from = cadd(d, p, x, embedded);
+            let to = cadd(d, p, y, embedded);
+            let bounded = cle(d, p, to, z);
+            let witness_ty = d.and(positive, bounded);
+            let w_fv = d.fresh_fvar();
+            let w = d.kernel().fvar(w_fv);
+            let (strict, holds) = gap_halves(d, p, y, z, q, w);
+            let stationary = d.lemma(p.le_refl, &[embedded]);
+            let moved = d.lemma(
+                p.add_le_add,
+                &[x, y, embedded, embedded, h1, stationary],
+            );
+            let chained = d.lemma(p.le_trans, &[from, to, z, moved, holds]);
+            let reached = cle(d, p, from, z);
+            let pair = and_intro(d, p, positive, reached, strict, chained);
+            let body = gap_intro(d, p, x, z, q, pair);
+            let with_w = d.lam_fv(w_fv, witness_ty, body);
+            d.lam_fv(q_fv, rat_carrier, with_w)
+        };
+        let body = gap_elim(d, p, y, z, target, h2, minor);
+        let value = {
+            let with2 = d.lam_fv(h2_fv, second_ty, body);
+            let with1 = d.lam_fv(h1_fv, first_ty, with2);
+            let with_z = d.lam_fv(z_fv, carrier, with1);
+            let with_y = d.lam_fv(y_fv, carrier, with_z);
+            d.lam_fv(x_fv, carrier, with_y)
+        };
+        let ty = {
+            let after2 = d.arrow(second_ty, target);
+            let after1 = d.arrow(first_ty, after2);
+            let with_z = d.pi_fv(z_fv, carrier, after1);
+            let with_y = d.pi_fv(y_fv, carrier, with_z);
+            d.pi_fv(x_fv, carrier, with_y)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.lt_of_le_of_lt,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// `add_lt_add_of_le_of_lt : ∀ x y c e, le x y → lt c e → lt (add x c) (add y e)`.
+///
+/// The gap moves out of the right summand and up to the top of the sum, which
+/// is one `add_assoc` — read through `le_of_equiv`, because `add_assoc` holds
+/// in `Equiv` form and the order is what has to consume it.
+fn declare_add_lt_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let zero = rzero(d, rat);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let first_ty = cle(d, p, x, y);
+    let second_ty = clt(d, p, c, e);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let left = cadd(d, p, x, c);
+    let right = cadd(d, p, y, e);
+    let target = clt(d, p, left, right);
+
+    let minor = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let positive = rlt(d, rat, zero, q);
+        let embedded = embed(d, p, q);
+        let inner = cadd(d, p, c, embedded);
+        let bounded = cle(d, p, inner, e);
+        let witness_ty = d.and(positive, bounded);
+        let w_fv = d.fresh_fvar();
+        let w = d.kernel().fvar(w_fv);
+        let (strict, holds) = gap_halves(d, p, c, e, q, w);
+        let summed = d.lemma(p.add_le_add, &[x, y, inner, e, h1, holds]);
+        let nested = cadd(d, p, x, inner);
+        let flat = cadd(d, p, left, embedded);
+        let regroup = d.lemma(p.add_assoc, &[x, c, embedded]);
+        let reassociate = d.lemma(p.le_of_equiv, &[flat, nested, regroup]);
+        let chained = d.lemma(p.le_trans, &[flat, nested, right, reassociate, summed]);
+        let reached = cle(d, p, flat, right);
+        let pair = and_intro(d, p, positive, reached, strict, chained);
+        let body = gap_intro(d, p, left, right, q, pair);
+        let with_w = d.lam_fv(w_fv, witness_ty, body);
+        d.lam_fv(q_fv, rat_carrier, with_w)
+    };
+    let body = gap_elim(d, p, c, e, target, h2, minor);
+    let value = {
+        let with2 = d.lam_fv(h2_fv, second_ty, body);
+        let with1 = d.lam_fv(h1_fv, first_ty, with2);
+        let with_e = d.lam_fv(e_fv, carrier, with1);
+        let with_c = d.lam_fv(c_fv, carrier, with_e);
+        let with_y = d.lam_fv(y_fv, carrier, with_c);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let after2 = d.arrow(second_ty, target);
+        let after1 = d.arrow(first_ty, after2);
+        let with_e = d.pi_fv(e_fv, carrier, after1);
+        let with_c = d.pi_fv(c_fv, carrier, with_e);
+        let with_y = d.pi_fv(y_fv, carrier, with_c);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.add_lt_add_of_le_of_lt,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `zero_lt_one : lt zero one` — and the **non-vacuity witness for `lt`**.
+///
+/// The other six strict-order laws all *consume* a `lt`, so every one of them
+/// holds of the empty relation with an empty footprint. This is the only one
+/// that produces one, and it produces it by exhibiting the gap `q = 1`: at
+/// every index the claim reduces to `(0 + 1) − 1 ≤ 2/(n+1)`, i.e. `0 ≤ 2/(n+1)`.
+fn declare_zero_lt_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let zero_rat = rzero(d, rat);
+    let one_rat = rone(d, rat);
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let one_real = d.kernel().const_(p.one, vec![]);
+
+    let bounded = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sum = radd(d, zero_rat, one_rat);
+        let quantity = rsub(d, rat, sum, one_rat);
+        let bound = div_succ(d, p, 2, n);
+        let unpad = d.lemma(rat.zero_add, &[one_rat]);
+        let step = rcongr(d, sum, one_rat, unpad, &|d, t| rsub(d, rat, t, one_rat));
+        let degenerate = rsub(d, rat, one_rat, one_rat);
+        let collapse = d.lemma(rat.sub_self, &[one_rat]);
+        let (_, to_zero) = rchain(d, quantity, &[(degenerate, step), (zero_rat, collapse)]);
+        let back = rsymm(d, quantity, zero_rat, to_zero);
+        let two = d.num(2);
+        let nonneg = d.lemma(rat.zero_le_nat_div_succ, &[two, n]);
+        let at_index = rat_eq_rewrite(d, zero_rat, quantity, back, nonneg, &|d, t| {
+            rle(d, rat, t, bound)
+        });
+        d.lam_fv(n_fv, nat, at_index)
+    };
+    let positive = rlt(d, rat, zero_rat, one_rat);
+    let embedded = embed(d, p, one_rat);
+    let shifted = cadd(d, p, zero_real, embedded);
+    let reached = cle(d, p, shifted, one_real);
+    let strict = d.lemma(rat.zero_lt_one, &[]);
+    let pair = and_intro(d, p, positive, reached, strict, bounded);
+    let value = gap_intro(d, p, zero_real, one_real, one_rat, pair);
+    let ty = clt(d, p, zero_real, one_real);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.zero_lt_one,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `lt_irrefl : ∀ x, Not (lt x x)` — and the **discrimination witness for
+/// `lt`**: with `zero_lt_one` it says the strict order is neither empty nor
+/// total.
+///
+/// The gap `q` is real, so a witness for `x < x` says `x_{2n+1} + q ≤ x_n +
+/// 2/(n+1)` at every index. Regularity bounds `x_n − x_{2n+1}` by `2/(n+1)`
+/// ([`shifted_bound_le`] again), so `q ≤ 4/(n+1)` for **every** `n` and the
+/// Archimedean property of `ℚ` forces `q ≤ 0`, contradicting `0 < q`. There is
+/// no double negation anywhere in that: the contradiction is
+/// `Rat.lt_irrefl` applied to `Rat.lt_of_lt_of_le`.
+fn declare_lt_irrefl(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let nat = d.nat_ty();
+    let zero = rzero(d, rat);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hypothesis = clt(d, p, x, x);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let false_ty = d.false_ty();
+
+    let minor = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let positive = rlt(d, rat, zero, q);
+        let embedded = embed(d, p, q);
+        let shifted = cadd(d, p, x, embedded);
+        let bounded = cle(d, p, shifted, x);
+        let witness_ty = d.and(positive, bounded);
+        let w_fv = d.fresh_fvar();
+        let w = d.kernel().fvar(w_fv);
+        let (strict, holds) = gap_halves(d, p, x, x, q, w);
+
+        let over_n = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let s = shift(d, n);
+            let deep = sample(d, p, x, s);
+            let near = sample(d, p, x, n);
+            let displaced = radd(d, deep, q);
+            let forward = rsub(d, rat, displaced, near);
+            let backward = rsub(d, rat, near, deep);
+            let two_n = div_succ(d, p, 2, n);
+            let at_index = d.apply(holds, &[n]);
+
+            let regularity = d.lemma(p.regular, &[x, n, s]);
+            let drift_bound = modulus(d, p, n, s);
+            let (_, drift_upper) = halves(d, p, backward, drift_bound, regularity);
+            let shrink = shifted_bound_le_comm(d, p, n);
+            let drift_bounded = d.lemma(
+                rat.le_trans,
+                &[backward, drift_bound, two_n, drift_upper, shrink],
+            );
+            let combined = d.lemma(
+                rat.add_le_add,
+                &[forward, two_n, backward, two_n, at_index, drift_bounded],
+            );
+            let summed = radd(d, forward, backward);
+            let doubled = radd(d, two_n, two_n);
+
+            // `((x_s + q) − x_n) + (x_n − x_s) = (x_s + q) − x_s = q`.
+            let telescoped = rsub(d, rat, displaced, deep);
+            let fuse = d.lemma(rat.sub_add_sub, &[displaced, near, deep]);
+            let at_quantity = rat_eq_rewrite(d, summed, telescoped, fuse, combined, &|d, t| {
+                rle(d, rat, t, doubled)
+            });
+            let cancel = add_sub_cancel_eq(d, p, deep, q);
+            let bare = rat_eq_rewrite(d, telescoped, q, cancel, at_quantity, &|d, t| {
+                rle(d, rat, t, doubled)
+            });
+
+            // `2/(n+1) + 2/(n+1) = 4/(n+1) = 0 + 4/(n+1)`.
+            let two_nat = d.num(2);
+            let four_n = div_succ(d, p, 4, n);
+            let merge = d.lemma(rat.nat_div_succ_add, &[two_nat, two_nat, n]);
+            let fused = rat_eq_rewrite(d, doubled, four_n, merge, bare, &|d, t| {
+                rle(d, rat, q, t)
+            });
+            let padded = radd(d, zero, four_n);
+            let unpad = d.lemma(rat.zero_add, &[four_n]);
+            let repad = rsymm(d, padded, four_n, unpad);
+            let shaped = rat_eq_rewrite(d, four_n, padded, repad, fused, &|d, t| {
+                rle(d, rat, q, t)
+            });
+            d.lam_fv(n_fv, nat, shaped)
+        };
+        let four_nat = d.num(4);
+        let vanishes = d.lemma(
+            rat.le_of_le_add_nat_div_succ,
+            &[q, zero, four_nat, over_n],
+        );
+        let degenerate = d.lemma(rat.lt_of_lt_of_le, &[zero, q, zero, strict, vanishes]);
+        let refutation = d.lemma(rat.lt_irrefl, &[zero]);
+        let body = d.apply(refutation, &[degenerate]);
+        let with_w = d.lam_fv(w_fv, witness_ty, body);
+        d.lam_fv(q_fv, rat_carrier, with_w)
+    };
+    let body = gap_elim(d, p, x, x, false_ty, h, minor);
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, body);
+        d.lam_fv(x_fv, carrier, with_h)
+    };
+    let ty = {
+        let inner = d.not(hypothesis);
+        d.pi_fv(x_fv, carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.lt_irrefl,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `le_congr` and `lt_congr` — the two relation congruences the setoid
+/// telescope's equality slot binds (ADR-0468 phase R3), for the two relations
+/// that are not operations.
+///
+/// Neither is an estimate: `le_congr` is `le_of_equiv` on each side and two
+/// `le_trans`, and `lt_congr` moves the *same* rational gap across an
+/// `add_congr`. They are here because phase R4 asks for them by name, and
+/// because a setoid whose order is not `Equiv`-invariant is not an ordered
+/// setoid at all.
+fn declare_relation_congruences(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let zero = rzero(d, rat);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let left_ty = equiv(d, p, a, b);
+    let right_ty = equiv(d, p, c, e);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hce_fv = d.fresh_fvar();
+    let hce = d.kernel().fvar(hce_fv);
+
+    // le_congr : Equiv a b → Equiv c e → le a c → le b e.
+    {
+        let source = cle(d, p, a, c);
+        let conclusion = cle(d, p, b, e);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let reversed = d.lemma(p.equiv_symm, &[a, b, hab]);
+        let head = d.lemma(p.le_of_equiv, &[b, a, reversed]);
+        let tail = d.lemma(p.le_of_equiv, &[c, e, hce]);
+        let first = d.lemma(p.le_trans, &[b, a, c, head, h]);
+        let body = d.lemma(p.le_trans, &[b, c, e, first, tail]);
+        let value = {
+            let with_h = d.lam_fv(h_fv, source, body);
+            let with_ce = d.lam_fv(hce_fv, right_ty, with_h);
+            let with_ab = d.lam_fv(hab_fv, left_ty, with_ce);
+            let with_e = d.lam_fv(e_fv, carrier, with_ab);
+            let with_c = d.lam_fv(c_fv, carrier, with_e);
+            let with_b = d.lam_fv(b_fv, carrier, with_c);
+            d.lam_fv(a_fv, carrier, with_b)
+        };
+        let ty = {
+            let after_source = d.arrow(source, conclusion);
+            let after_ce = d.arrow(right_ty, after_source);
+            let after_ab = d.arrow(left_ty, after_ce);
+            let with_e = d.pi_fv(e_fv, carrier, after_ab);
+            let with_c = d.pi_fv(c_fv, carrier, with_e);
+            let with_b = d.pi_fv(b_fv, carrier, with_c);
+            d.pi_fv(a_fv, carrier, with_b)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.le_congr,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // lt_congr : Equiv a b → Equiv c e → lt a c → lt b e.
+    {
+        let source = clt(d, p, a, c);
+        let conclusion = clt(d, p, b, e);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let reversed = d.lemma(p.equiv_symm, &[a, b, hab]);
+        let tail = d.lemma(p.le_of_equiv, &[c, e, hce]);
+        let minor = {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let positive = rlt(d, rat, zero, q);
+            let embedded = embed(d, p, q);
+            let from = cadd(d, p, b, embedded);
+            let to = cadd(d, p, a, embedded);
+            let bounded = cle(d, p, to, c);
+            let witness_ty = d.and(positive, bounded);
+            let w_fv = d.fresh_fvar();
+            let w = d.kernel().fvar(w_fv);
+            let (strict, holds) = gap_halves(d, p, a, c, q, w);
+            let stationary = d.lemma(p.equiv_refl, &[embedded]);
+            let moved = d.lemma(
+                p.add_congr,
+                &[b, a, embedded, embedded, reversed, stationary],
+            );
+            let cast = d.lemma(p.le_of_equiv, &[from, to, moved]);
+            let first = d.lemma(p.le_trans, &[from, to, c, cast, holds]);
+            let chained = d.lemma(p.le_trans, &[from, c, e, first, tail]);
+            let reached = cle(d, p, from, e);
+            let pair = and_intro(d, p, positive, reached, strict, chained);
+            let body = gap_intro(d, p, b, e, q, pair);
+            let with_w = d.lam_fv(w_fv, witness_ty, body);
+            d.lam_fv(q_fv, rat_carrier, with_w)
+        };
+        let body = gap_elim(d, p, a, c, conclusion, h, minor);
+        let value = {
+            let with_h = d.lam_fv(h_fv, source, body);
+            let with_ce = d.lam_fv(hce_fv, right_ty, with_h);
+            let with_ab = d.lam_fv(hab_fv, left_ty, with_ce);
+            let with_e = d.lam_fv(e_fv, carrier, with_ab);
+            let with_c = d.lam_fv(c_fv, carrier, with_e);
+            let with_b = d.lam_fv(b_fv, carrier, with_c);
+            d.lam_fv(a_fv, carrier, with_b)
+        };
+        let ty = {
+            let after_source = d.arrow(source, conclusion);
+            let after_ce = d.arrow(right_ty, after_source);
+            let after_ab = d.arrow(left_ty, after_ce);
+            let with_e = d.pi_fv(e_fv, carrier, after_ab);
+            let with_c = d.pi_fv(c_fv, carrier, with_e);
+            let with_b = d.pi_fv(b_fv, carrier, with_c);
+            d.pi_fv(a_fv, carrier, with_b)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.lt_congr,
+            uparams: vec![],
+            ty,
             value,
         })?;
     }

@@ -1,5 +1,34 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
+> **STATUS 2026-08-18 (latest) — the strict order landed, and it is 14 of 22,
+> not 7. The eight that remain are exactly the eight that mention `mul`.**
+> `CReal.lt x y := ∃ (q : Rat), 0 < q ∧ le (add x (ofRat q)) y` — the gap is a
+> **rational, carried**, not an index recomputed. That is what unblocks the
+> seven: `lt_trans` hands `q₁` through untouched and reads its second hypothesis
+> only through `le_of_lt`, so the margin the naive `∃ n, y_n − x_n > 2/(n+1)`
+> spends on two regularity round trips is never spent at all. Both dead ends
+> this document named are confirmed dead and neither had to be walked: `Not (le
+> y x)` still makes `le_of_lt` non-constructive, and the index form still fails
+> `lt_trans`. The costing "budget `lt` as new mathematics" was right about the
+> *definition* and wrong about the *proofs*: once the gap is carried, six of the
+> seven laws are `le_trans` and `add_le_add` rearrangements, and only
+> `lt_irrefl` needs an estimate — it is the Archimedean property's second
+> consumer, forcing `q ≤ 4/(n+1)` at every `n`.
+>
+> **42 declarations, trusted surface still 0**, every footprint empty:
+> `cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness`. Two new
+> vacuity guards, because six of the seven strict-order laws only *consume* a
+> `lt` and so hold, footprint-free, of the EMPTY relation: `zero_lt_one`
+> exhibits an inhabitant, `lt_irrefl` refuses a pair, and the example's exit
+> status depends on both — verified by deleting each and watching the exit flip
+> to 1 with every other row still green. `le_congr` and `lt_congr` are also
+> built: two of the nine equality-slot binders R4 asks for by name.
+>
+> What is left for R4 is `mul` and its eight laws, and that costing is
+> unchanged: the blocker is a canonical bound on a representative, which
+> Mathlib takes from `CauSeq`'s *existential* modulus and a fixed modulus does
+> not supply.
+
 > **STATUS 2026-08-18 (later) — R3 landed, and the distance to `real: 0` is
 > longer than ADR-0468's end-state paragraph reads.** That paragraph says the 30
 > retire by deletion because "once R3 lands, no consumer references the `Real`

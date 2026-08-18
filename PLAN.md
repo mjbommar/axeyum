@@ -164,6 +164,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `3076b6ae0` | the one Lean module `rfl` refuted on its own: root-caused to a degenerate `(t, t)` witness, the route now declines, and a self-refuting attestation FAILS the run instead of being counted |
 | 2026-08-18 | `8e4894de4` | `ArrayAxiom` renders the query's own terms; a third `structural` verdict binds 95 modules to their query's subterms, 359 of 372 corruptions caught, and the attested class drops 124 → 28 with an anti-absorption guard |
 | 2026-08-18 | `pending` | binding coverage: +20 bound (105 → 125), 124 modules proved content-free, and the converse direction measured at 286/531 |
+| 2026-08-18 | `PENDING` | ℝ gets the **strict order**: `CReal.lt x y := ∃ (q : Rat), 0 < q ∧ le (add x (ofRat q)) y` — the gap carried as a rational rather than recomputed as an index, which is what makes `lt_trans` work where the naive `∃ n, y_n − x_n > 2/(n+1)` cannot. Seven of the 22 land **verbatim** (`lt_irrefl`, `lt_trans`, `lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`, `zero_lt_one`, `add_lt_add_of_le_of_lt`), plus `le_add_of_nonneg` and the `le_congr`/`lt_congr` the R4 equality slot asks for. `lt_irrefl` is the Archimedean property's second consumer; `zero_lt_one` + `lt_irrefl` are the strict order's discrimination witnesses and the example's exit status depends on both (verified by deleting each). **14 of 22**, 42 declarations, trusted surface still 0. |
 | 2026-08-18 | `dc72f0bed` | ℝ gets **Bishop's order**: `CReal.le` plus `le_refl`, `le_trans`, `add_le_add` — three of the 22 **verbatim**, none of them mentioning `Eq`. `le_trans` is `Equiv.trans` with the lower half deleted, sharing the extracted `telescope_four`/`six_term_bound` with it. `not_le_one_zero` is the order's discrimination witness (refuted at index 3 by pure reduction) and `le_of_equiv`/`equiv_of_le_le` pin `le` to the setoid. **7 of 22**, 31 declarations, trusted surface still 0. |
 | 2026-08-18 | `9e32ab17d` | The **additive group closes**: `add_zero` and `add_assoc` in `Equiv` form — the first two laws that are not pointwise. Neither needs `natDivSucc` antitone in its index, which the previous costing had put in front of them; both reduce to `1/(2n+2) + 1/(n+1) ≤ 2/(n+1)`, i.e. `3 ≤ 4` at the common denominator. **4 of 22**. |
 | 2026-08-18 | `fd2759c8b` | ℝ additive structure: `zero`/`one`/`neg`/`add` with Bishop's index shift `(x+y)_n := x_{2n+1} + y_{2n+1}`, the `neg`/`add` congruences, and **2 of the 22** ordered-ring laws in `Equiv` form (`add_comm`, `add_neg`, both pointwise via `Equiv.of_pointwise`). `add_assoc` and `add_zero` are not pointwise; `add_zero` also needs `Rat.natDivSucc` antitone in its index. |
@@ -958,22 +959,25 @@ the same gate-first discipline QF_RDL followed. That wiring is the next slice. T
 "decided, not certified" status), which are the real fix: this checker is a
 heuristic over prose and says so.
 
-**ℝ is built, it is free, and 7 of the 22 ordered-ring laws hold over it
-(`WIP`, agent-creal-laws, 2026-08-18).** ADR-0468 phase R1 is complete and R2 is
-most of the way: `CReal` — a Bishop setoid of regular ℚ-sequences — with `Equiv`
-**reflexive, symmetric and transitive**, `zero`/`one`/`neg`/`add` with the
-`neg`/`add` congruences, and now the **whole additive group plus Bishop's
-order**. Thirty-one declarations, every axiom footprint empty, whole trusted
-surface **0**:
+**ℝ is built, it is free, and 14 of the 22 ordered-ring laws hold over it —
+the 8 that remain are exactly the 8 that mention `mul`
+(`WIP`, agent-creal-mul-lt, 2026-08-18).** ADR-0468 phase R1 is complete and R2
+is most of the way: `CReal` — a Bishop setoid of regular ℚ-sequences — with
+`Equiv` **reflexive, symmetric and transitive**, `zero`/`one`/`neg`/`add` with
+the `neg`/`add` congruences, and now the **whole additive group, Bishop's order
+and the strict order over it**. Forty-two declarations, every axiom footprint
+empty, whole trusted surface **0**:
 `cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness`. No
 `Quot.sound`, no `funext`, no `propext`; the kernel did not change.
 
-**7 of the 22, and they split into two kinds.** Four hold in `Equiv` form —
+**14 of the 22, and they split into two kinds.** Four hold in `Equiv` form —
 `add_comm`, `add_neg` (pointwise, one `Rat` law each through
 `Equiv.of_pointwise`) and `add_zero`, `add_assoc` (**not** pointwise: their two
-sides are equal at no index, and only `Equiv` can relate them). Three restate
-**verbatim** — `le_refl`, `le_trans`, `add_le_add` — because none of them
-mentions `Eq`, which is ADR-0468's Measurement 2 cashed.
+sides are equal at no index, and only `Equiv` can relate them). Ten restate
+**verbatim** — `le_refl`, `le_trans`, `add_le_add`, `lt_irrefl`, `lt_trans`,
+`lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`, `zero_lt_one`,
+`add_lt_add_of_le_of_lt` — because none of them mentions `Eq`, which is
+ADR-0468's Measurement 2 cashed.
 
 **`add_zero` and `add_assoc` did not need the missing ℚ lemma.** The previous
 costing put both behind `Rat.natDivSucc` antitone in its index (~250 lines).
@@ -995,18 +999,50 @@ the existing proof, which still checks), `Rat.add_le_add` in place of
 `Rat.bounds_add`, and the same Archimedean lemma. **`le_total` is absent on
 purpose**: it holds for ℚ and does not lift, and nothing here assumes it.
 
-**Three guards, each measured, and the example's exit status depends on all of
+**`CReal.lt` quantifies over the GAP, not over an index, and that is the whole
+reason the other 7 came in as rearrangements.** `lt x y := ∃ (q : Rat), 0 < q ∧
+le (add x (ofRat q)) y`. Both shapes the previous costing named are confirmed
+dead and neither had to be walked: `lt := Not (le y x)` makes `le_of_lt`
+non-constructive with no `le_total` over ℝ to recover it from, and
+`∃ n, y_n − x_n > 2/(n+1)` fails `lt_trans` because composing two witnesses
+needs a NEW index and the two regularity round trips reaching it consume the
+margin exactly — chained at a third index the estimate is
+`z_k − x_k > −2/(k+1) − 1/(m+1) − 1/(n+1)`, negative for every choice. Carrying
+the rational gap removes the recomputation: `lt_trans` hands `q₁` through
+untouched and reads its second hypothesis only through `le_of_lt`. So the
+costing was right about the *definition* and wrong about the *proofs* —
+`lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`, `lt_trans` and
+`add_lt_add_of_le_of_lt` are `le_trans`/`add_le_add`/`add_assoc`
+rearrangements, and only `lt_irrefl` is an estimate. It is the Archimedean
+property's **second** consumer: a witness for `x < x` forces `q ≤ 4/(n+1)` at
+every `n`, hence `q ≤ 0`, contradicting `0 < q` — with no double negation, the
+contradiction being `Rat.lt_irrefl` on `Rat.lt_of_lt_of_le`. The one analytic
+step is `le_add_of_nonneg` (`0 ≤ q → x ≤ x + q`), analytic only because of the
+index shift, and it closes on `shifted_bound_le`, the same inequality
+`add_zero` and `add_assoc` reduce to.
+
+**Five guards, each measured, and the example's exit status depends on all of
 them.** `CReal.ofRat` (the carrier is inhabited), `Equiv.not_zero_one` (`Equiv`
-is not the total relation) and now `not_le_one_zero` (`le` is not either — all
-three order laws hold, footprint-free, of the order relating every pair; at
-index 3 the claim `1 ≤ 1/2` unfolds through `Int.le` to `Nat.le 2 1`). Two new
-negative controls, each measured in both directions: the `add_zero` script with
-`CReal.one` for `CReal.zero` is REFUSED, and flipping that one constant back
-makes the control test fail because the kernel then accepts; and
-`Not (le zero one)` is REFUSED by the identical script that proves
-`Not (le one zero)` in the prelude. `le_of_equiv` and
-`equiv_of_le_le` pin the order to the setoid: a `le` weakened to `≤ 100/(n+1)`
-satisfies all three laws and closes neither.
+is not the total relation), `not_le_one_zero` (`le` is not either — all three
+`le` laws hold, footprint-free, of the order relating every pair; at index 3 the
+claim `1 ≤ 1/2` unfolds through `Int.le` to `Nat.le 2 1`), and now
+`zero_lt_one` **and** `lt_irrefl` together: six of the seven strict-order laws
+only CONSUME a `lt`, so all six hold — footprint-free — of the EMPTY relation,
+and `zero_lt_one` is the only one that exhibits an inhabitant while `lt_irrefl`
+is the only one that refuses a pair. Verified by mutation, not asserted:
+dropping `declare_zero_lt_one` and then `declare_lt_irrefl` each flips the
+example to exit 1 with the matching message and every other row still green and
+footprint-empty. Three negative controls, each measured in both directions: the
+`add_zero` script with `CReal.one` for `CReal.zero` is REFUSED; `Not (le zero
+one)` is REFUSED by the identical script that proves `Not (le one zero)`; and
+the `zero_lt_one` script with its two constants swapped is REFUSED as
+`lt one zero`. `le_of_equiv` and `equiv_of_le_le` pin the order to the setoid: a
+`le` weakened to `≤ 100/(n+1)` satisfies all three laws and closes neither.
+
+**`le_congr` and `lt_congr` are built too — not among the 22, but two of the
+nine equality-slot binders R4 asks for by name.** Neither is an estimate:
+`le_congr` is `le_of_equiv` on each side plus two `le_trans`, and `lt_congr`
+moves the same rational gap across an `add_congr`.
 
 **The shape that keeps working, from the Archimedean proof and confirmed by
 everything since.** No `sub_le_iff` — the gap is written `(−b) + a`. No proof by
@@ -1018,24 +1054,22 @@ alone, never a numerator, which is why `weaken` and `shifted_bound_le` are
 theorems of ordered groups plus one `natDivSucc` identity rather than facts
 about ℚ's encoding.
 
-**Next, in cost order — and the two cheap strands are gone, so what is left is
-genuinely analytic.** The remaining 15 split cleanly: **8 need
-`mul`** (`mul_comm`, `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib`,
-`mul_nonneg`, `sq_nonneg`, `mul_le_mul_of_nonneg_left` — the last of these needs
-`le` as well, which now exists) and **7 need `lt`** (`lt_irrefl`, `lt_trans`,
-`lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`, `zero_lt_one`,
-`add_lt_add_of_le_of_lt`). (a) `mul`, therefore, is worth 8: the blocker is a
-canonical bound on a representative derived from
-regularity, and this is the one place a Mathlib port will NOT transfer, because
-`CauSeq` gets its bound from an *existential* modulus that a fixed modulus does
-not supply. Expect to invent. (b) `lt`, the other 7, is harder than
-"restate verbatim" suggests — a constructive `<` needs a witness index, so
-`Exists` (which the logic prelude has, `exists_elim`), and the naive
-`lt x y := ∃ n, y_n − x_n > 2/(n+1)` does NOT give `lt_trans` without a
-quantitative gap lemma: the margin is exactly consumed by two regularity round
-trips. `lt := Not (le y x)` is a dead end — `le_of_lt` is then not constructive
-and `le_total` is unavailable. Budget `lt` as new mathematics, not as
-transcription.
+**Next, and it is now a single strand: `mul`, worth all 8 remaining laws**
+(`mul_comm`, `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib`, `mul_nonneg`,
+`sq_nonneg`, `mul_le_mul_of_nonneg_left`). The costing is unchanged and it is
+the one place a Mathlib port will NOT transfer: `mul` needs a canonical bound on
+a representative, and `CauSeq` gets its bound from an *existential* modulus that
+a fixed modulus does not supply. What the fixed modulus DOES supply cheaply is
+the estimate — regularity at `n = 0` gives `|x_m| ≤ |x_0| + 2` for every `m`
+directly, no extraction. The cost is turning that **rational** bound into the
+**natural number** `K` that Bishop's sampling index `(xy)_n := x_{2Kn} y_{2Kn}`
+needs, which is a ceiling function `ℚ → ℕ` with `q ≤ ofNat (ceil q)` — new ℚ-level
+work resting on `Int` division facts, and the first thing to price before
+writing any `mul` proof. The ℚ-level prerequisites scoped earlier (`bounds_mul`,
+`neg_mul`, `mul_le_mul_of_nonneg_right`, provable from the 22 laws plus a
+`le_or_lt` case split) are still unstarted and still cheap by comparison.
+Budget `mul` as a session of its own; nothing else on this lane is blocked
+behind it.
 
 **`real: axiom=30` is unchanged, deliberately.** ADR-0468 retires those by
 *deletion* in phase R3 — once `generalize_over_ordered_ring` grows an equality
