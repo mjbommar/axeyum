@@ -438,7 +438,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    329 accepted and re-verified) so the gate cannot pass without its detector \
                    firing. 12 guards, each driven to failure in scripts/tests/mutation_controls.py",
         checked_by: CheckedBy::SelfChecker,
-        reference: "docs/prover-track/research/13-residual-trust-surface.md",
+        reference: "ADR-0384/0465",
     },
     Capability {
         area: "QF_LRA",
