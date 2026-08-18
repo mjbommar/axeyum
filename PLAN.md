@@ -162,6 +162,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `a2a36590b` | `F:int-categoricity` recorded, and `F:int-characterization`'s "not proved that they determine it" caveat removed because it stopped being true. Every checker anchored on the declaration name AND the empty-footprint column, each run with its subject mangled: 0 on the finding, 1 on the mangle. |
 | 2026-08-18 | (pending) | ADR-0468 phase R3: the ordered-ring telescope gains an equality slot (30 → 39 binders) and `specialize_setoid_to_eq` proves it specializes back to today's statement — conclusion **and** all 30 non-slot binder types, node for node. Three mutation kills recorded; `residual_eq_constants` guards the one failure the footprint cannot see. |
 | 2026-08-18 | (pending) | `Sos` reconstruction accepts a **nonzero affine row** in the `LDLᵀ` linear forms (`rational_affine_squares`, `int_affine_lin_to_rexpr`), so `Σ xᵢ² + 1 < 0` and `(x−1)² + (y−2)² + 1 < 0` reconstruct instead of emitting `axiom P; axiom Not P`. The transcription checker's two normalizers learned degree-2 monomials to match, with square/cross discrimination driven to failure six ways. Binding gate `instances=125 → 135`, `attested=28 → 19`, `failures=0`. |
+| 2026-08-18 | (this change) | Round 3: corpus widened 51 -> 66 mutation families over a development that now carries a Type-valued structure, a `Nat` literal, an indexed family, a parameterized family and a mutual group; a fourth defect found and fixed — a **recursor's** `levelParams` was decorative, because a recursor is generated and compared rather than admitted, and the comparison's positional alpha-rename leaves an unbound parameter untouched |
 | 2026-08-18 | `2633d7186` | Kernel-vs-Lean differential widened to 51 mutation families; recursor/constructor regeneration compared against Lean's own, closing the 37% of the stream `addDeclCore` never reads; two defects fixed — universe closure on `check_declaration` **and** the inductive gate, and the recursor `k` flag validated on import |
 | 2026-08-18 | (pending) | ADR-0468 phase R4: `build_creal_model_of_arith` — the `Real` axiom package modelled by the **constructed** reals. 22/22 witnesses axiom-free, 9/22 restated over `CReal.Equiv`, 7/7 discrimination witnesses, exit status depending on all of it (`creal_model_witness`). Four mutation kills; ADR-0456's "`Int` is not ℝ" caveat discharged. |
 | 2026-08-18 | `c9223e4` | binding: the converse number says which side of the check the missing 245 rows are on — `undecomposable_spine=0` measured and gated, `represented` is a maximum matching rather than an overlap. |
@@ -672,8 +673,66 @@ is proof size: `nra-sos-strict-unsat-d01` renders a 2.4 MB module (Lean: 5.0 s,
 the envelope this repository already has (`schedule-deadline` is 5 MB) but it is
 the thing that will stop the route scaling.
 
-**Eight more kernel-vs-Lean violations found and fixed; the differential's 37%
-blind spot is closed (`DONE`, agent-kernel-adversary, 2026-08-18).** Every
+**Round 3: a fourth kernel-vs-Lean defect found and fixed, and the corpus
+widened from 51 families to 66 over a development that finally carries the
+constructs the kernel works hardest on (`DONE`, agent-kernel-adversary-2,
+2026-08-18).** Rounds 1 and 2 damaged a `Prop`-only development, so 51 families
+were rewiring the same handful of record shapes. Round 3 put a Type-valued
+STRUCTURE (with a theorem provable only by structure eta), a `Nat` LITERAL (with
+a theorem provable only by literal/constructor conversion), an INDEXED family, a
+PARAMETERIZED recursive family, a MUTUAL group, an `axiom`, an `opaque` and the
+`abbrev`/`opaque` reducibility hints on the wire, and added 15 families for
+fields nothing had ever damaged: `levelParams` and `all` on families,
+constructors and recursors; universe-parameter PERMUTATION at the binding site
+and at the `Const` reference; a short universe-argument list; ι-rule right-hand
+sides exchanged between rules of one recursor, and the rules permuted.
+
+- **2 violations in 126 mutants across 66 families**, one defect reached two
+  ways (`True.rec`, `Acc.rec`): **a recursor's `levelParams` was decorative.**
+  `ind.rec-uparams` renames the motive universe parameter at the binding site,
+  leaving the type and every ι-rule mentioning the old name, now free. Lean's
+  kernel generated `Sort uparam.0` where the stream said `Sort u`; we admitted
+  it. Round 2's universe-closure check in `Kernel::check_declaration` could not
+  have caught it — a recursor is *generated* here and then compared, never
+  admitted from the stream, so the kernel is never handed the exported binding
+  list — and the comparison alpha-renames the exported parameters onto the
+  generated ones **positionally**, so a parameter the exported list does not
+  bind is not in the map, passes through untouched, and `def_eq` (which treats
+  an unbound `Param` exactly like a bound one) accepts it. Fixed in
+  `validate_generated_recursor` / `validate_rec_rules`; regression
+  `crates/axeyum-lean-import/tests/recursor_universe_params_must_be_bound.rs`.
+- **The new guard masked an older one, and that was caught by killing it.**
+  Running the closure check before `recursor_universe_substitution` made a
+  TRUNCATED `levelParams` report "unbound universe parameter" instead of
+  "universe-parameter arity differs", silently taking over the case
+  `official_nested_inductive_groups::recursor_metadata_mutations_reject_exactly`
+  pins. Reordered. Final controls: removing the type check kills exactly one
+  test, removing the ι-rule check kills exactly one *different* test, and no
+  other test in the crate moves either way.
+- **The instrument's reach is the binding constraint, and it is now measured.**
+  With the fix reverted, a 66-mutant sweep (one per family) passes clean and a
+  126-mutant sweep finds the defect twice — so a clean round is evidence in
+  proportion to its budget. Default budget raised 144 -> 396 (134 -> 299 checked,
+  290 s); cost is 0.98 s/mutant, all of it the `lean --run` subprocess, so the
+  full 4,747-mutant corpus is ~80 minutes (`AXEYUM_WIRE_MUTANTS=99999`).
+  `MIN_MUTANTS` (a ratchet on the GENERATOR, independent of budget) raised
+  24 -> 3,600, since a floor of 24 against 4,747 would not notice 99% of the
+  corpus disappearing.
+- **Two axes named as unreachable rather than faked.** A NESTED group cannot be
+  compared through this instrument: `addDeclCore` regenerates the group's own
+  recursor but not the auxiliary one the frontend publishes (measured — the
+  undamaged stream failed on `axeyum_wire_rose.rec_1`), so every field of an
+  auxiliary recursor is a byte Lean never reads. Admitting it would have meant a
+  false failure or an exemption that restores the 37% blind spot, so the group
+  is off the wire and `restore_nested_inductive_group` — the fourth admission
+  gate — has **no adversarial coverage**. And `quot` records cannot
+  discriminate at all: `addDeclCore` ignores a quotient package's carried types
+  and adds its own, so it accepts every damaged quotient record.
+
+<details><summary>Round 2 (agent-kernel-adversary, 2026-08-18)</summary>
+
+**Eight kernel-vs-Lean violations found and fixed; the differential's 37%
+blind spot is closed.** Every
 axiom-freedom claim in this repository is a claim about what a 5,254-line Rust
 kernel accepts, so the only corroboration that is not circular is an independent
 implementation refusing what we admit.
@@ -736,13 +795,18 @@ fatal. Measured against the pinned toolchain (`leanprover/lean4:v4.30.0`;
   functions, ceiling 5,500); `scripts/check-kernel-trusted-core.py` green with 5
   guards, 0 failures.
 
-**Next:** the `Or.rec` residue is the only unexplained-shaped thing left and is
-now explained, but it points at a real difference — Lean's kernel infers types
-in an unchecked mode inside proof irrelevance and ours does not. Worth deciding
-deliberately rather than by omission. Beyond that: the development the mutator
-damages is the logic prelude plus five declarations; running the same corpus
-over the `nat`/`int` preludes would put `natVal` literals and deeper recursor
-families on the wire, and `quot` records are still generated by nothing.
+</details>
+
+**Next (round 4).** Three named places, in order of expected yield. (1) The
+`nat`/`int`/`rat`/`string` preludes as the development: round 3 put ONE `Nat`
+literal on the wire and the literal arithmetic table (`nat_binop_table`, sixteen
+name-and-shape lookups keyed by the environment's own declarations) is still
+never exercised adversarially. (2) The `Or.rec` residue — Lean's kernel infers
+types in an unchecked mode inside proof irrelevance and ours does not; that is a
+real difference and should be decided deliberately rather than by omission.
+(3) The nested gate, which needs a *different* instrument than this one: a
+kernel-vs-kernel comparison that replays Lean's own frontend expansion, since
+`addDeclCore` alone provably cannot see the auxiliary recursor.
 
 **ADR-0468 phase R4 has landed: the `Real` axiom package is modelled by the
 CONSTRUCTED reals, and ADR-0456's "`Int` is not ℝ" caveat is discharged

@@ -1127,15 +1127,22 @@ impl Kernel {
 
     /// The first universe parameter `e` mentions that is not in `bound`, if any.
     ///
-    /// `pub(crate)` because the inductive gate does its own type checking and
-    /// never routes through [`Kernel::check_declaration`] — it has to run this
-    /// check itself or inductives are the one declaration kind whose universe
-    /// parameters stay decorative.
+    /// Not `pub(crate)`, for two reasons that are the same reason. The inductive
+    /// gate does its own type checking and never routes through
+    /// [`Kernel::check_declaration`], so it has to run this check itself or
+    /// inductives are the one declaration kind whose universe parameters stay
+    /// decorative. And a *recursor* record on an import stream is checked by
+    /// comparison against the recursor this kernel generated, never admitted —
+    /// so the kernel never sees the exported binding list at all, and the
+    /// importer needs this walk to check it. Both callers are checking a
+    /// binding list against the parameters a term actually mentions, which is
+    /// the one question nothing else in the kernel asks.
     ///
     /// Expressions are interned DAGs, so the walk memoizes on `ExprId`; without
     /// that a shared subterm is revisited once per reference and a large
     /// prelude declaration is exponential.
-    pub(crate) fn undeclared_universe_param(&self, e: ExprId, bound: &[NameId]) -> Option<NameId> {
+    #[must_use]
+    pub fn undeclared_universe_param(&self, e: ExprId, bound: &[NameId]) -> Option<NameId> {
         let mut seen = std::collections::HashSet::new();
         let mut stack = vec![e];
         while let Some(current) = stack.pop() {

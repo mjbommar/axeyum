@@ -126,9 +126,51 @@
 //!   constructor, so it is not descriptive. Regression:
 //!   `recursor_k_flag_is_validated.rs`.
 //!
-//! The single remaining "stricter than Lean" mutant is understood, which is the
-//! whole difference from the 32 it replaced: `expr.const-name` rewrites `Or.inl`
-//! to `Or.inr` inside `Or.rec`'s type. Both are proofs of the same `Prop`, so
+//! # Round 3: two more violations, and where the corpus was still blind
+//!
+//! Run 2026-08-18 against Lean 4.30.0. Round 2's 51 families all damaged the
+//! same handful of record shapes, because the development was the logic prelude
+//! plus five definitions — every inductive on it was `Prop`-valued or a nullary
+//! enum. Round 3 widened the development (a Type-valued STRUCTURE and a theorem
+//! provable only by structure eta; a `Lit::Nat` and a theorem provable only by
+//! literal/constructor conversion; an INDEXED family; a PARAMETERIZED recursive
+//! family; a MUTUAL group; an `axiom`, an `opaque`, and the `abbrev`/`opaque`
+//! reducibility hints) and added fifteen families for wire fields nothing had
+//! ever damaged: `levelParams` and `all` on families, constructors and
+//! recursors; universe-parameter PERMUTATION at both the binding site and the
+//! `Const` reference; a short universe-argument list; ι-rule right-hand sides
+//! exchanged between rules of one recursor, and the rules permuted.
+//!
+//! **2 violations in 126 mutants across 66 families**, one defect reached two
+//! ways (`True.rec` and `Acc.rec`), and it is the same shape as round 2's:
+//!
+//! * **A recursor's `levelParams` was decorative (2).** `ind.rec-uparams`
+//!   renames the motive universe parameter at the binding site, leaving the
+//!   recursor's type and every ι-rule mentioning the old name, now free. Lean's
+//!   kernel generated `Sort uparam.0` where the stream said `Sort u`; we
+//!   admitted it. `Kernel::check_declaration`'s universe-closure check — added
+//!   in round 2 for exactly this — never sees a recursor record, because a
+//!   recursor is *generated* by this kernel and then compared, never admitted
+//!   from the stream. And the comparison alpha-renames the exported parameters
+//!   onto the generated ones POSITIONALLY, so a parameter the exported list
+//!   does not bind is not in the map and passes through untouched; when it
+//!   spells the name the generated recursor uses, `def_eq` succeeds. Fixed in
+//!   `axeyum-lean-import`'s `validate_generated_recursor` /`validate_rec_rules`
+//!   (the importer is the only place that can check it, since the kernel is
+//!   never handed the exported binding list). Regression:
+//!   `recursor_universe_params_must_be_bound.rs`.
+//!
+//! Round 3 also found the instrument's next blind spot and did not paper over
+//! it: see the NESTED-group note in [`development`]. `addDeclCore` regenerates
+//! a nested group's own recursor but not the auxiliary one the frontend
+//! publishes, so a nested group's auxiliary recursor is a byte Lean never
+//! reads. Rather than exempt it — which is how the 32-mutant hole above was
+//! created — the group is off the wire and the gap is stated.
+//!
+//! The one "stricter than Lean" mutant round 2 recorded is understood, which is
+//! the whole difference from the 32 it replaced (round 3's wider sample did not
+//! draw it): `expr.const-name` rewrites `Or.inl` to `Or.inr` inside `Or.rec`'s
+//! type. Both are proofs of the same `Prop`, so
 //! Lean's `isDefEq` closes the gap by definitional proof irrelevance — its
 //! inference is unchecked, so it types the ill-typed side anyway — while our
 //! `def_eq` cannot infer a type for it and declines. That is incompleteness in
@@ -141,7 +183,8 @@ use std::process::Command;
 
 use axeyum_lean_import::{ImportLimits, import_ndjson};
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, Kernel, Lean4ExportMetadata, ReducibilityHint, build_logic_prelude,
+    BinderInfo, Declaration, InductiveFamilySpec, Kernel, Lean4ExportMetadata, Lit, NatLit,
+    ReducibilityHint, build_logic_prelude,
 };
 use serde_json::Value;
 
@@ -160,13 +203,16 @@ const MIN_REGENERATION_MISMATCHES: usize = 4;
 /// Mutants our own admission gates must decline. A kernel that admitted every
 /// mutant would also produce zero violations if Lean happened to agree.
 const MIN_OURS_DECLINED: usize = 8;
-/// Distinct mutants required. A generator that goes blind emits none and every
-/// count above reads as a clean result.
-const MIN_MUTANTS: usize = 24;
+/// Distinct mutants the generator must produce. A generator that goes blind
+/// emits none and every count above reads as a clean result — but a floor of 24
+/// against 4,747 generated (measured 2026-08-18) would not notice 99% of the
+/// corpus disappearing either. This is a ratchet on the GENERATOR, independent
+/// of the sampling budget, so it can be tight.
+const MIN_MUTANTS: usize = 3_600;
 /// Distinct mutation families required. The corpus is stratified by family, so
 /// a family that stops generating quietly removes a whole class of damage from
 /// the sweep without changing the mutant count much.
-const MIN_FAMILIES: usize = 32;
+const MIN_FAMILIES: usize = 60;
 
 /// The toolchain `lean-toolchain` pins, as elan names its directory.
 ///
@@ -234,6 +280,7 @@ fn replay_script() -> PathBuf {
 /// * `axeyum_wire_max` / `axeyum_wire_imax` put `max` and `imax` universe
 ///   records on it. The logic prelude alone emits exactly one `succ` and three
 ///   `param` levels, so every universe family but one was dead.
+#[allow(clippy::too_many_lines)]
 fn development() -> String {
     let mut kernel = Kernel::new();
     let logic = build_logic_prelude(&mut kernel).expect("logic prelude must build");
@@ -331,6 +378,245 @@ fn development() -> String {
                 hint: ReducibilityHint::Regular(1),
             })
             .expect("the identity on a universe-polymorphic Sort must check");
+    }
+
+    // ---------------------------------------------------------------------
+    // Round 3 widening. Everything above is `Prop`-valued logic plus `Bool`
+    // and `Nat`, so the 51 families were damaging the same handful of record
+    // shapes over and over. These put the constructs the kernel does its
+    // *hardest* work on onto the wire, each because a specific trusted routine
+    // is unreachable without it:
+    //
+    //   `axeyum_wire_box`     a Type-valued STRUCTURE, plus a theorem provable
+    //                         only by `Kernel::try_eta_structure`,
+    //   a `Lit::Nat`          plus a theorem provable only by literal <->
+    //                         constructor conversion (`nat_offset`,
+    //                         `nat_literal_to_constructor`),
+    //   `axeyum_wire_vec`     an INDEXED family: ι-rules whose major premise
+    //                         carries indices,
+    //   `axeyum_wire_list`    a PARAMETERIZED recursive family,
+    //   tree / forest         a MUTUAL group: two motives, globally ordered
+    //                         minors, one recursor per family,
+    //   `axeyum_wire_rose`    a NESTED group, i.e. the fourth admission gate
+    //                         (`restore_nested_inductive_group`), which had no
+    //                         adversarial coverage at all,
+    //   an `axiom`, an `opaque`, an `abbrev`-hinted and an `opaque`-hinted
+    //                         definition, so the `decl.*` families stop firing
+    //                         on two of the four declaration kinds they claim.
+    let one = kernel.level_succ(zero);
+    let type_ = kernel.sort(one);
+    let naturals = kernel.const_(logic.nat, vec![]);
+    let booleans = kernel.const_(logic.bool_, vec![]);
+    let naught = kernel.const_(logic.nat_zero, vec![]);
+    let successor = kernel.const_(logic.nat_succ, vec![]);
+    let eq_one = kernel.const_(logic.eq, vec![one]);
+    let refl_one = kernel.const_(logic.eq_refl, vec![one]);
+
+    // `structure axeyum_wire_box where fst : Nat; snd : Bool`
+    let box_name = kernel.name_str(anonymous, "axeyum_wire_box");
+    let box_mk = kernel.name_str(box_name, "mk");
+    let box_const = kernel.const_(box_name, vec![]);
+    {
+        let inner = kernel.pi(anonymous, booleans, box_const, BinderInfo::Default);
+        let mk_ty = kernel.pi(anonymous, naturals, inner, BinderInfo::Default);
+        kernel
+            .add_inductive(box_name, &[], 0, type_, &[(box_mk, mk_ty)])
+            .expect("a two-field non-recursive structure must be admissible");
+    }
+
+    // `theorem axeyum_wire_eta : ∀ b, Eq b (axeyum_wire_box.mk b.0 b.1)`.
+    // `Eq.refl _ b` infers `Eq b b`, so admitting this REQUIRES structure eta
+    // in `def_eq`; nothing else on this wire reaches that routine.
+    {
+        let binder = kernel.name_str(anonymous, "b");
+        let subject = kernel.bvar(0);
+        let first = kernel.proj(box_name, 0, subject);
+        let second = kernel.proj(box_name, 1, subject);
+        let make = kernel.const_(box_mk, vec![]);
+        let rebuilt = kernel.app(make, first);
+        let rebuilt = kernel.app(rebuilt, second);
+        let statement = kernel.app(eq_one, box_const);
+        let statement = kernel.app(statement, subject);
+        let statement = kernel.app(statement, rebuilt);
+        let ty = kernel.pi(binder, box_const, statement, BinderInfo::Default);
+        let proof = kernel.app(refl_one, box_const);
+        let proof = kernel.app(proof, subject);
+        let value = kernel.lam(binder, box_const, proof, BinderInfo::Default);
+        let name = kernel.name_str(anonymous, "axeyum_wire_eta");
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams: Vec::new(),
+                ty,
+                value,
+            })
+            .expect("structure eta must admit the reflexivity proof");
+    }
+
+    // `theorem axeyum_wire_lit : Eq (3 : Nat) (Nat.succ (Nat.succ (Nat.succ Nat.zero)))`
+    // — the compact literal and the unary spelling are the same value only if a
+    // kernel converts between them.
+    {
+        let literal = kernel.lit(Lit::Nat(
+            NatLit::from_decimal("3").expect("a decimal literal"),
+        ));
+        let unary = kernel.app(successor, naught);
+        let unary = kernel.app(successor, unary);
+        let unary = kernel.app(successor, unary);
+        let statement = kernel.app(eq_one, naturals);
+        let statement = kernel.app(statement, literal);
+        let statement = kernel.app(statement, unary);
+        let proof = kernel.app(refl_one, naturals);
+        let proof = kernel.app(proof, literal);
+        let name = kernel.name_str(anonymous, "axeyum_wire_lit");
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams: Vec::new(),
+                ty: statement,
+                value: proof,
+            })
+            .expect("literal/constructor conversion must admit reflexivity");
+    }
+
+    // `inductive axeyum_wire_vec : Nat → Type` — one index, one recursive
+    // constructor whose result index is `Nat.succ n`.
+    {
+        let vec_name = kernel.name_str(anonymous, "axeyum_wire_vec");
+        let vnil = kernel.name_str(vec_name, "vnil");
+        let vcons = kernel.name_str(vec_name, "vcons");
+        let vec_ty = kernel.pi(anonymous, naturals, type_, BinderInfo::Default);
+        let vec_const = kernel.const_(vec_name, vec![]);
+        let vnil_ty = kernel.app(vec_const, naught);
+        let here = kernel.bvar(0);
+        let head = kernel.app(vec_const, here);
+        let outer = kernel.bvar(1);
+        let stepped = kernel.app(successor, outer);
+        let tail = kernel.app(vec_const, stepped);
+        let inner = kernel.pi(anonymous, head, tail, BinderInfo::Default);
+        let vcons_ty = kernel.pi(anonymous, naturals, inner, BinderInfo::Default);
+        kernel
+            .add_inductive(
+                vec_name,
+                &[],
+                0,
+                vec_ty,
+                &[(vnil, vnil_ty), (vcons, vcons_ty)],
+            )
+            .expect("an indexed family must be admissible");
+    }
+
+    // `inductive axeyum_wire_list (α : Type) : Type` — one parameter, one
+    // recursive constructor. Also the container the nested group below nests in.
+    let list_name = kernel.name_str(anonymous, "axeyum_wire_list");
+    let list_const = kernel.const_(list_name, vec![]);
+    {
+        let list_nil = kernel.name_str(list_name, "nil");
+        let list_cons = kernel.name_str(list_name, "cons");
+        let alpha = kernel.name_str(anonymous, "a");
+        let list_ty = kernel.pi(alpha, type_, type_, BinderInfo::Default);
+        let here = kernel.bvar(0);
+        let applied = kernel.app(list_const, here);
+        let nil_ty = kernel.pi(alpha, type_, applied, BinderInfo::Default);
+        let one_up = kernel.bvar(1);
+        let two_up = kernel.bvar(2);
+        let spine = kernel.app(list_const, one_up);
+        let result = kernel.app(list_const, two_up);
+        let rest = kernel.pi(anonymous, spine, result, BinderInfo::Default);
+        let field = kernel.pi(anonymous, here, rest, BinderInfo::Default);
+        let cons_ty = kernel.pi(alpha, type_, field, BinderInfo::Default);
+        kernel
+            .add_inductive(
+                list_name,
+                &[],
+                1,
+                list_ty,
+                &[(list_nil, nil_ty), (list_cons, cons_ty)],
+            )
+            .expect("a parameterized recursive family must be admissible");
+    }
+
+    // A MUTUAL group: `tree.node : forest → tree`, `forest.fcons : tree → forest → forest`.
+    {
+        let tree = kernel.name_str(anonymous, "axeyum_wire_tree");
+        let forest = kernel.name_str(anonymous, "axeyum_wire_forest");
+        let tree_node = kernel.name_str(tree, "node");
+        let forest_nil = kernel.name_str(forest, "nil");
+        let forest_cons = kernel.name_str(forest, "cons");
+        let branch = kernel.const_(tree, vec![]);
+        let grove = kernel.const_(forest, vec![]);
+        let node_ty = kernel.pi(anonymous, grove, branch, BinderInfo::Default);
+        let cons_rest = kernel.pi(anonymous, grove, grove, BinderInfo::Default);
+        let cons_ty = kernel.pi(anonymous, branch, cons_rest, BinderInfo::Default);
+        kernel
+            .add_mutual_inductive(
+                &[],
+                0,
+                &[
+                    InductiveFamilySpec::new(tree, type_, vec![(tree_node, node_ty)]),
+                    InductiveFamilySpec::new(
+                        forest,
+                        type_,
+                        vec![(forest_nil, grove), (forest_cons, cons_ty)],
+                    ),
+                ],
+            )
+            .expect("a mutual group must be admissible");
+    }
+
+    // A NESTED group is deliberately NOT on this wire, and the reason is a
+    // measurement rather than an omission. `inductive axeyum_wire_rose | node :
+    // axeyum_wire_list axeyum_wire_rose -> axeyum_wire_rose` was added here on
+    // 2026-08-18 and the UNDAMAGED stream failed: `addDeclCore` accepted the
+    // record and regenerated `axeyum_wire_rose.rec` with its two motives, but
+    // published no `axeyum_wire_rose.rec_1` — the auxiliary recursor of the
+    // nested expansion, which an official `lean4export` stream does carry (see
+    // `docs/plan/fixtures/lean4export-v4.30-construct-matrix-nested.ndjson`,
+    // where Lean's own environment holds both `Rose.rec_1` and `Rose.rec`).
+    // Lean's kernel nests internally; only the frontend publishes the auxiliary
+    // constant. So every field of an auxiliary recursor is a byte Lean never
+    // reads, and admitting the group would have meant either a false failure on
+    // the base or an exemption that quietly restores the blind spot the
+    // regeneration channel exists to close. `restore_nested_inductive_group`,
+    // the fourth admission gate, therefore has no adversarial coverage here;
+    // it is covered non-adversarially by `official_nested_inductive_groups.rs`.
+
+    // The remaining two declaration kinds and the remaining two reducibility
+    // hints. `decl.type` / `decl.value` / `decl.hints` claim to cover all four
+    // kinds; without these they fire only on `thm` and `def`.
+    {
+        let name = kernel.name_str(anonymous, "axeyum_wire_axiom");
+        kernel
+            .add_declaration(Declaration::Axiom {
+                name,
+                uparams: Vec::new(),
+                ty: naturals,
+            })
+            .expect("an axiom over a checked type must be admissible");
+        let name = kernel.name_str(anonymous, "axeyum_wire_opaque");
+        kernel
+            .add_declaration(Declaration::Opaque {
+                name,
+                uparams: Vec::new(),
+                ty: naturals,
+                value: naught,
+            })
+            .expect("an opaque over a checked value must be admissible");
+        for (label, hint) in [
+            ("axeyum_wire_abbrev", ReducibilityHint::Abbrev),
+            ("axeyum_wire_hint_opaque", ReducibilityHint::Opaque),
+        ] {
+            let name = kernel.name_str(anonymous, label);
+            kernel
+                .add_declaration(Declaration::Definition {
+                    name,
+                    uparams: Vec::new(),
+                    ty: naturals,
+                    value: naught,
+                    hint,
+                })
+                .expect("a hinted definition must be admissible");
+        }
     }
 
     kernel
@@ -701,6 +987,49 @@ fn expression_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: 
         let mut m = record.clone();
         m["const"]["us"] = Value::from(widened);
         emit(wire, out, "expr.const-arity", "extra", &[(index, m)]);
+        // One universe argument too FEW. `const-arity` only ever added one, and
+        // a checker that reads the declared list positionally can fail in the
+        // other direction as easily.
+        if universes.len() > 1 {
+            let mut narrowed = universes.clone();
+            narrowed.pop();
+            let mut m = record.clone();
+            m["const"]["us"] = Value::from(narrowed);
+            emit(
+                wire,
+                out,
+                "expr.const-arity-short",
+                "missing",
+                &[(index, m)],
+            );
+        }
+        // The universe arguments PERMUTED. Arity, every index and the whole
+        // table are untouched, so nothing structural distinguishes it: only a
+        // checker that substitutes the declared parameters positionally *and*
+        // then re-checks the result can tell. This is the exact shape of the
+        // defect round 2 found in `levelParams`, on the other side of the
+        // substitution.
+        if universes.len() > 1 && universes[0] != universes[1] {
+            let mut swapped = universes.clone();
+            swapped.swap(0, 1);
+            let mut m = record.clone();
+            m["const"]["us"] = Value::from(swapped);
+            emit(wire, out, "expr.const-universe-swap", "01", &[(index, m)]);
+        }
+    }
+    // A compact `Nat` literal. Nothing else on the wire carries one, and the
+    // routines that convert between `Lit::Nat` and `Nat.succ`/`Nat.zero`
+    // (`nat_offset`, `nat_literal_to_constructor`) are reachable no other way.
+    if let Some(literal) = record.get("natVal").and_then(Value::as_str) {
+        let value: u64 = literal.parse().unwrap_or(0);
+        for (next, detail) in [(value + 1, "+1"), (0, "zero")] {
+            if next == value {
+                continue;
+            }
+            let mut m = record.clone();
+            m["natVal"] = Value::from(next.to_string());
+            emit(wire, out, "expr.lit-nat", detail, &[(index, m)]);
+        }
     }
     if let Some(proj) = record.get("proj").cloned() {
         let mut m = record.clone();
@@ -738,6 +1067,14 @@ fn expression_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: 
                 emit(wire, out, family, "+1", &[(index, m)]);
             }
         }
+        // `nondep` is Lean 4.30 frontend metadata that neither kernel types,
+        // and our importer reads it and discards it. Like `expr.binder-info`
+        // this family earns its place by being EXPECTED to agree: a suite in
+        // which every family disagrees is comparing the wrong axis.
+        let nondep = binding["nondep"].as_bool().unwrap_or(false);
+        let mut m = record.clone();
+        m["letE"]["nondep"] = Value::from(!nondep);
+        emit(wire, out, "expr.let-nondep", "flip", &[(index, m)]);
         // The ascribed type and the bound value trade places: a `let` is the
         // one former where a kernel checks one subterm *against* another, and
         // the swap is well formed whenever both are expressions.
@@ -790,6 +1127,52 @@ fn declaration_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record:
         let mut m = record.clone();
         m[kind]["levelParams"][0] = Value::from(next);
         emit(wire, out, "decl.universe-param", kind, &[(index, m)]);
+    }
+    // The universe parameters PERMUTED at the binding site. Every name stays
+    // bound, so the "must be bound" fix round 2 landed does not see it; what
+    // changes is which parameter each POSITION of a `Const` reference feeds.
+    if let Some(uparams) = record[kind].get("levelParams").and_then(Value::as_array)
+        && uparams.len() > 1
+        && uparams[0] != uparams[1]
+    {
+        let mut swapped = uparams.clone();
+        swapped.swap(0, 1);
+        let mut m = record.clone();
+        m[kind]["levelParams"] = Value::from(swapped);
+        emit(wire, out, "decl.universe-param-swap", kind, &[(index, m)]);
+    }
+    // `all` is the mutual-definition group this declaration belongs to. The
+    // importer validates that the names resolve; whether it validates that they
+    // describe THIS declaration is the question.
+    if let Some(all) = record[kind].get("all").and_then(Value::as_array)
+        && let Some(first) = all.first().and_then(Value::as_u64)
+        && let Some(next) = retarget(first, 1, wire.names_before[index])
+    {
+        let mut m = record.clone();
+        m[kind]["all"][0] = Value::from(next);
+        emit(wire, out, "decl.all", kind, &[(index, m)]);
+    }
+    // The reducibility hint drives lazy-delta unfolding order. `opaque` claims
+    // the definition never unfolds and `abbrev` that it unfolds first; a kernel
+    // that believes a wrong hint can stop unfolding a definition it must
+    // unfold, or unfold one it must not.
+    if let Some(hints) = record[kind].get("hints").cloned() {
+        for (detail, replacement) in [
+            ("opaque", Value::from("opaque")),
+            ("abbrev", Value::from("abbrev")),
+        ] {
+            if hints == replacement {
+                continue;
+            }
+            let mut m = record.clone();
+            m[kind]["hints"] = replacement;
+            emit(wire, out, "decl.hints", detail, &[(index, m)]);
+        }
+        if let Some(height) = hints.get("regular").and_then(Value::as_u64) {
+            let mut m = record.clone();
+            m[kind]["hints"]["regular"] = Value::from(height + 7);
+            emit(wire, out, "decl.hints", "height", &[(index, m)]);
+        }
     }
 }
 
@@ -847,6 +1230,38 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
                     &[(index, m)],
                 );
             }
+        }
+        if let Some(first) = family["levelParams"]
+            .as_array()
+            .and_then(|list| list.first())
+            .and_then(Value::as_u64)
+            && let Some(next) = retarget(first, 1, names)
+        {
+            let mut m = record.clone();
+            m["inductive"]["types"][position]["levelParams"][0] = Value::from(next);
+            emit(
+                wire,
+                out,
+                "ind.family-uparams",
+                &format!("{position}+1"),
+                &[(index, m)],
+            );
+        }
+        if let Some(first) = family["all"]
+            .as_array()
+            .and_then(|list| list.first())
+            .and_then(Value::as_u64)
+            && let Some(next) = retarget(first, 1, names)
+        {
+            let mut m = record.clone();
+            m["inductive"]["types"][position]["all"][0] = Value::from(next);
+            emit(
+                wire,
+                out,
+                "ind.family-all",
+                &format!("{position}+1"),
+                &[(index, m)],
+            );
         }
         let is_recursive = family["isRec"].as_bool().unwrap_or(false);
         let mut m = record.clone();
@@ -908,6 +1323,22 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
                 wire,
                 out,
                 family_name,
+                &format!("{position}+1"),
+                &[(index, m)],
+            );
+        }
+        if let Some(first) = constructor["levelParams"]
+            .as_array()
+            .and_then(|list| list.first())
+            .and_then(Value::as_u64)
+            && let Some(next) = retarget(first, 1, names)
+        {
+            let mut m = record.clone();
+            m["inductive"]["ctors"][position]["levelParams"][0] = Value::from(next);
+            emit(
+                wire,
+                out,
+                "ind.ctor-uparams",
                 &format!("{position}+1"),
                 &[(index, m)],
             );
@@ -976,6 +1407,93 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
             &format!("{position}flip"),
             &[(index, m)],
         );
+        // A recursor's `levelParams` carry the motive universe as well as the
+        // family's, so this is where a positional universe substitution has the
+        // most to get wrong.
+        let rec_uparams = recursor["levelParams"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        if let Some(first) = rec_uparams.first().and_then(Value::as_u64)
+            && let Some(next) = retarget(first, 1, names)
+        {
+            let mut m = record.clone();
+            m["inductive"]["recs"][position]["levelParams"][0] = Value::from(next);
+            emit(
+                wire,
+                out,
+                "ind.rec-uparams",
+                &format!("{position}+1"),
+                &[(index, m)],
+            );
+        }
+        if rec_uparams.len() > 1 && rec_uparams[0] != rec_uparams[1] {
+            let mut swapped = rec_uparams.clone();
+            swapped.swap(0, 1);
+            let mut m = record.clone();
+            m["inductive"]["recs"][position]["levelParams"] = Value::from(swapped);
+            emit(
+                wire,
+                out,
+                "ind.rec-uparams-swap",
+                &format!("{position}01"),
+                &[(index, m)],
+            );
+        }
+        if let Some(first) = recursor["all"]
+            .as_array()
+            .and_then(|list| list.first())
+            .and_then(Value::as_u64)
+            && let Some(next) = retarget(first, 1, names)
+        {
+            let mut m = record.clone();
+            m["inductive"]["recs"][position]["all"][0] = Value::from(next);
+            emit(
+                wire,
+                out,
+                "ind.rec-all",
+                &format!("{position}+1"),
+                &[(index, m)],
+            );
+        }
+        // The ι-rules of ONE recursor exchange right-hand sides while keeping
+        // their constructor names. Every index stays in range and both rules
+        // stay well formed; what changes is that `Nat.rec` on `Nat.zero` now
+        // computes the successor branch. `ind.rule-rhs` retargets to an
+        // arbitrary expression, which is far cruder — this is the mistake a
+        // generator could actually make.
+        let rules = recursor["rules"].as_array().cloned().unwrap_or_default();
+        if rules.len() > 1
+            && let (Some(left), Some(right)) = (rules[0]["rhs"].as_u64(), rules[1]["rhs"].as_u64())
+            && left != right
+        {
+            let mut m = record.clone();
+            m["inductive"]["recs"][position]["rules"][0]["rhs"] = Value::from(right);
+            m["inductive"]["recs"][position]["rules"][1]["rhs"] = Value::from(left);
+            emit(
+                wire,
+                out,
+                "ind.rule-rhs-swap",
+                &format!("{position}01"),
+                &[(index, m)],
+            );
+        }
+        // The rules PERMUTED as whole objects: the export lists them in
+        // constructor order and a recursor that dispatches by position rather
+        // than by name cannot tell.
+        if rules.len() > 1 {
+            let mut permuted = rules.clone();
+            permuted.swap(0, 1);
+            let mut m = record.clone();
+            m["inductive"]["recs"][position]["rules"] = Value::from(permuted);
+            emit(
+                wire,
+                out,
+                "ind.rule-order",
+                &format!("{position}01"),
+                &[(index, m)],
+            );
+        }
         if let Some(current) = recursor["name"].as_u64()
             && let Some(next) = retarget(current, 1, names)
         {
@@ -1136,11 +1654,28 @@ fn violation(id: &str, ours_admitted: bool, theirs: Theirs) -> Option<String> {
     })
 }
 
+/// Distinct mutants to check, spread across every family.
+///
+/// Measured on the development host 2026-08-18, and the cost is linear in the
+/// mutant count because essentially all of it is the `lean --run` subprocess:
+/// 51 mutants in 62 s, 126 in 126 s, 444 in 433 s — **0.98 s per mutant**. The
+/// full corpus this development generates is 4,747 mutants, so an exhaustive
+/// sweep is about **80 minutes**: a thing to run deliberately
+/// (`AXEYUM_WIRE_MUTANTS=99999`), not a thing to put in an aggregate gate. The
+/// default is the largest sweep that keeps `scripts/check-lean-gate.sh` inside
+/// ten minutes; it was 144 through round 2, which checked 134.
+///
+/// The stratified sample IS the binding constraint on what a round finds, and
+/// round 3 measured that directly: with the `ind.rec-uparams` fix reverted, a
+/// 66-mutant sweep (one per family) passed clean while a 126-mutant sweep found
+/// the defect twice. So a clean sweep is evidence in proportion to its budget,
+/// and this suite is a DISCOVERY instrument — the ratchet that keeps a found
+/// defect fixed is the dedicated regression test each one gets.
 fn budget() -> usize {
     std::env::var("AXEYUM_WIRE_MUTANTS")
         .ok()
         .and_then(|value| value.parse().ok())
-        .unwrap_or(144)
+        .unwrap_or(396)
 }
 
 // The differential is one measurement: build the mutants, run BOTH kernels over
@@ -1351,8 +1886,11 @@ fn the_mutator_is_derived_from_the_stream_and_changes_bytes() {
     // adding one without also putting its construct on the wire fails here.
     let present: std::collections::BTreeSet<&str> = all.iter().map(|m| m.family.as_str()).collect();
     let expected = [
+        "decl.all",
+        "decl.hints",
         "decl.type",
         "decl.universe-param",
+        "decl.universe-param-swap",
         "decl.value",
         "expr.app-arg",
         "expr.app-fn",
@@ -1366,12 +1904,16 @@ fn the_mutator_is_derived_from_the_stream_and_changes_bytes() {
         "expr.bvar-up",
         "expr.bvar-zero",
         "expr.const-arity",
+        "expr.const-arity-short",
         "expr.const-name",
         "expr.const-universe",
+        "expr.const-universe-swap",
         "expr.let-body",
+        "expr.let-nondep",
         "expr.let-type",
         "expr.let-type-value-swap",
         "expr.let-value",
+        "expr.lit-nat",
         "expr.proj-index",
         "expr.proj-struct",
         "expr.proj-type",
@@ -1381,12 +1923,16 @@ fn the_mutator_is_derived_from_the_stream_and_changes_bytes() {
         "ind.ctor-num-fields",
         "ind.ctor-num-params",
         "ind.ctor-type",
+        "ind.ctor-uparams",
+        "ind.family-all",
         "ind.family-ctors",
         "ind.family-is-rec",
         "ind.family-num-indices",
         "ind.family-num-nested",
         "ind.family-num-params",
         "ind.family-type",
+        "ind.family-uparams",
+        "ind.rec-all",
         "ind.rec-k",
         "ind.rec-name",
         "ind.rec-num-indices",
@@ -1394,9 +1940,13 @@ fn the_mutator_is_derived_from_the_stream_and_changes_bytes() {
         "ind.rec-num-motives",
         "ind.rec-num-params",
         "ind.rec-type",
+        "ind.rec-uparams",
+        "ind.rec-uparams-swap",
         "ind.rule-ctor",
         "ind.rule-nfields",
+        "ind.rule-order",
         "ind.rule-rhs",
+        "ind.rule-rhs-swap",
         "level.max-kind",
         "level.max-operand",
         "level.max-swap",

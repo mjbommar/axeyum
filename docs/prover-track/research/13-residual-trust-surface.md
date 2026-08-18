@@ -145,7 +145,7 @@ Four things, in descending order of how well we can defend them.
    adversarial direction by a differential against an independent kernel — which
    is the strongest available evidence and is still not a proof.
 
-   **Updated 2026-08-18: three defects, not one.** The first run of one mutation
+   **Updated 2026-08-18: four defects, not one.** The first run of one mutation
    family found one — a lambda binder domain checked only for `def_eq`, so an
    ill-typed domain that beta-reduced to the expected one was erased before
    anything checked it. Widening to **51 families / 134 checked mutants** found
@@ -158,13 +158,49 @@ Four things, in descending order of how well we can defend them.
    - the recursor `k` flag was never validated on import, and `k` licenses
      ι-reducing a recursor application whose major premise is not a constructor.
 
-   Three defects in the first two rounds of looking is not a reassuring density,
-   and the honest reading is the opposite of the earlier one: the rate does not
-   yet look like it is levelling off. The first universe fix also **left one
-   violation behind**, because the inductive gate type-checks its own group and
-   never routes through `check_declaration` — a check placed in a *caller* of an
-   admission gate is outside the trusted core, which is exactly what the derived
-   boundary in §1 is for.
+   The first universe fix also **left one violation behind**, because the
+   inductive gate type-checks its own group and never routes through
+   `check_declaration` — a check placed in a *caller* of an admission gate is
+   outside the trusted core, which is exactly what the derived boundary in §1 is
+   for.
+
+   **Round 3, same day: a fourth, and it is the third instance of one pattern.**
+   The corpus was widened to **66 families over a development that now carries a
+   Type-valued structure, a `Nat` literal, an indexed family, a parameterized
+   family and a mutual group** — constructs the earlier rounds' `Prop`-only
+   development never put on the wire — and **2 violations in 126 mutants**
+   followed, one defect reached through `True.rec` and `Acc.rec`:
+
+   - a **recursor's** `levelParams` was decorative. Renaming the motive universe
+     parameter at the binding site, leaving the type and every ι-rule mentioning
+     the old name (now free), was admitted here; Lean's kernel generated
+     `Sort uparam.0` where the stream said `Sort u`. Round 2's universe-closure
+     check could not have caught it: a recursor is *generated* by this kernel
+     and then compared, never admitted from the stream, so the kernel is never
+     handed the exported binding list — and the comparison alpha-renames the
+     exported parameters onto the generated ones **positionally**, so a
+     parameter the exported list does not bind is not in the map, passes through
+     untouched, and `def_eq` accepts it.
+
+   Four defects in three rounds. Three of the four are the same shape —
+   *bookkeeping copied across a boundary and never compared* — and each was
+   found only by looking somewhere the previous round had not. The instrument's
+   own reach is the binding constraint, measured directly: with the round-3 fix
+   reverted, a 66-mutant sweep passed clean and a 126-mutant sweep found the
+   defect twice. So a clean round is evidence in proportion to its budget, and
+   "the rate is levelling off" remains unsupported.
+
+   Round 3 also names the next hole rather than closing it. A **nested**
+   inductive group cannot be compared through this instrument at all:
+   `addDeclCore` regenerates the group's own recursor but not the auxiliary one
+   the Lean frontend publishes, so every field of an auxiliary recursor is a
+   byte Lean never reads. Admitting the group would have meant either a false
+   failure on the undamaged stream or an exemption that silently restores the
+   blind spot the regeneration channel exists to close, so the group is off the
+   wire and `restore_nested_inductive_group` — the fourth admission gate — has
+   **no adversarial coverage**. Likewise `quot` records: Lean's `addDeclCore`
+   ignores the carried types for a quotient package and adds its own, so it
+   accepts every damaged quotient record and the axis cannot discriminate.
 
    What would change this estimate is rounds that find nothing, not rounds that
    are not run.

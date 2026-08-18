@@ -1351,8 +1351,38 @@ impl<'kernel> ImportState<'kernel> {
         else {
             return Err(malformed(line, "generated name is not a recursor"));
         };
+        // Universe closure on the WIRE's own terms, BEFORE the alpha-rename.
+        //
+        // `recursor_universe_substitution` maps the exported `levelParams`
+        // positionally onto the ones this kernel generated. A parameter the
+        // exported type mentions but the exported list does NOT bind is not in
+        // that map, so the substitution leaves it exactly as it is — and if it
+        // happens to spell the same name the generated recursor uses, `def_eq`
+        // succeeds and the record is accepted with a binding list that binds
+        // something else entirely. `def_eq` cannot see this: it treats an
+        // unbound `Param` exactly like a bound one, which is the same reason
+        // `Kernel::check_declaration` had to make universe closure its own
+        // check rather than lean on inference.
+        //
+        // Found by the kernel-vs-kernel wire differential on 2026-08-18
+        // (`ind.rec-uparams`): renaming `True.rec`'s or `Acc.rec`'s motive
+        // universe parameter at the binding site was admitted here and
+        // contradicted by the recursor Lean's own kernel generated for the same
+        // family (`Sort u` against `Sort uparam.0`). The recursor record is the
+        // one place this had to be checked here rather than in the kernel: a
+        // recursor is *generated* and then compared, never admitted from the
+        // stream, so the kernel is never handed the exported binding list.
+        // Order matters, and the reason is a masking incident this change caused
+        // and then had to undo: `recursor_universe_substitution` rejects an
+        // exported list of the WRONG LENGTH, and
+        // `official_nested_inductive_groups::recursor_metadata_mutations_reject_exactly`
+        // pins that message for a truncated list. Running the closure check
+        // first made a truncated list report "unbound universe parameter"
+        // instead — a new guard silently taking over an old guard's cases,
+        // which is how a guard stops guarding without anything going red.
         let universe_substitution =
             self.recursor_universe_substitution(&exported_uparams, &uparams, line)?;
+        self.require_universe_closed(exported_type, &exported_uparams, "type", line)?;
         let renamed_exported_type = self
             .kernel
             .substitute_expr_levels(exported_type, &universe_substitution);
@@ -1388,6 +1418,7 @@ impl<'kernel> ImportState<'kernel> {
         self.validate_rec_rules(
             required(rec, "rules", line)?,
             &rec_rules,
+            &exported_uparams,
             &universe_substitution,
             line,
         )
@@ -1470,10 +1501,35 @@ impl<'kernel> ImportState<'kernel> {
             .collect())
     }
 
+    /// Reject an exported recursor term that mentions a universe parameter the
+    /// recursor's own `levelParams` does not bind.
+    ///
+    /// Two call sites, and they are separate guards on purpose: the type and an
+    /// ι-rule right-hand side are separate expressions, and a stream can leave
+    /// one closed while the other is not. Each is driven to failure
+    /// individually in `tests/recursor_universe_params_must_be_bound.rs`.
+    fn require_universe_closed(
+        &mut self,
+        expression: ExprId,
+        uparams: &[NameId],
+        what: &str,
+        line: usize,
+    ) -> Result<(), ImportError> {
+        let Some(stray) = self.kernel.undeclared_universe_param(expression, uparams) else {
+            return Ok(());
+        };
+        let stray = self.kernel.display_name(stray).to_string();
+        Err(malformed(
+            line,
+            format!("exported recursor {what} mentions unbound universe parameter {stray}"),
+        ))
+    }
+
     fn validate_rec_rules(
         &mut self,
         raw: &Value,
         generated: &[RecRule],
+        exported_uparams: &[NameId],
         universe_substitution: &[(NameId, LevelId)],
         line: usize,
     ) -> Result<(), ImportError> {
@@ -1506,6 +1562,11 @@ impl<'kernel> ImportState<'kernel> {
                 .map_err(|_| malformed(line, "recursor field count exceeds kernel width"))?;
             let rhs =
                 self.expression(required(rule, "rhs", line)?, line, "inductive.rec.rule.rhs")?;
+            // Same closure check as the recursor type, for the same reason: an
+            // ι-rule right-hand side is an exported term compared under the
+            // positional alpha-rename, so a parameter outside the exported
+            // binding list passes through the map untouched.
+            self.require_universe_closed(rhs, exported_uparams, "rule", line)?;
             let renamed_rhs = self
                 .kernel
                 .substitute_expr_levels(rhs, universe_substitution);
