@@ -100,17 +100,50 @@ STABLE clippy from a change that is in no commit.
 | `ordered_ring_refutation -- --require-empty --constructed-reals` | **0** |
 | `--test farkas_over_the_integers` | **9 passed, 0 failed** |
 | `--test front_door_reaches_no_real_axiom` | **1 passed, 0 failed** |
-| `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` | **queued behind five lanes on the cargo flock; NOT RUN** |
+| `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` | **101, then 0** — see below |
 
 Also green in the working tree: `-p axeyum-solver --lib --features full`,
 `check-links.sh`, `validate-facts.py` (122 facts, 0 errors),
 `check-fact-derived-numbers.py`, `gen-adr-index.py --check`,
 `gen-plan.py --check`.
 
-**Not run at all:** `cargo doc`, `gen-lean-axiom-ledger.py --check`,
+**Not run at all:** `gen-lean-axiom-ledger.py --check` and
 `check-prelude-reuse-equivalence.sh`. Recorded as not run rather than assumed:
 this lane changes no kernel code and adds no prelude, but that is an argument,
 not a measurement.
+
+## The gate I wrote could not fail, while I was checking work about exactly that
+
+The battery reported `DOC=0` **on a build that failed**. The step was
+
+```sh
+cargo-serialized.sh doc --workspace --all-features --no-deps 2>&1 | tail -3
+echo "DOC=$?"
+```
+
+`$?` after a pipeline is the **last** command's status — `tail`'s — so the step
+printed `DOC=0` with `error: could not document axeyum-solver` on the line
+directly above it, and `tail -3` had already discarded the diagnostic saying
+why. Seven steps in that script had the same shape; the only honest ones were
+the three written `run …; echo $?` with no pipe. Unpiped, the same command exits
+**101**.
+
+Three `rustdoc::private_intra_doc_links` errors were hiding behind it, all public
+docs linking to private items:
+
+| item | link | commit that introduced it |
+|---|---|---|
+| `RingInterfaceBinder` | `abstract_consts` | this lane, `570b5c738` |
+| `RingInterfaceBinder::binder` | `RING_BINDER_NAMES` | this lane, `570b5c738` |
+| `ReconstructError::SelfRefutingModule` | `reject_self_refuting_module` | `7646b2c04`, another lane |
+
+`570b5c738` was first, so this lane red-ed the branch's doc gate and then
+reported it green. Fixed in `fe1eb9eac` and `cb4b2332a`; the unpiped command now
+exits **0** with zero errors, verified on a snapshot of `cb4b2332a`.
+
+**The rule:** never pipe a gate into `tail`, `head` or `grep` and then read `$?`.
+Capture to a file and check the exit status of the command itself — or use
+`set -o pipefail`, which this script did not.
 
 `check-parity-docs.py` is red on three items, none of them this lane's —
 `shared_prelude_module.rs` uncatalogued and the 84→85 example-count markers,
