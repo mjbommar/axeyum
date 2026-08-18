@@ -248,3 +248,44 @@ fn the_refutations_binder_shapes_are_what_was_measured() {
         );
     }
 }
+
+/// The motivating query, closed: `x > 5 ∧ x < 3`.
+///
+/// This is the exact `(set-logic QF_LIA)` instance that routes to `ArithDpll`
+/// and renders a structural attestation — an `axiom P` / `axiom ¬P` shim with
+/// none of the reasoning in it. Its real analogue reconstructs by Farkas, and
+/// instantiating that at ℤ produces an axiom-free integer refutation of the same
+/// constraints. So the reasoning for this query is available today; what is
+/// missing is only the dispatch that reaches for it.
+#[test]
+fn the_query_that_renders_an_attestation_has_an_axiom_free_integer_refutation() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").expect("real variable");
+    let five = arena.real_const(axeyum_ir::Rational::integer(5));
+    let three = arena.real_const(axeyum_ir::Rational::integer(3));
+    let a1 = arena.real_lt(five, x).expect("5 < x");
+    let a2 = arena.real_lt(x, three).expect("x < 3");
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2]).expect("Farkas refutation");
+    let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
+        .expect("generalizes over the ordered ring");
+    let at_int = instantiate_at_int_model(&mut ctx, &generalized).expect("instantiates at Z");
+
+    let rendered = ctx.kernel().render_lean(at_int.statement);
+    println!("  x>5 & x<3 over Z: {rendered}");
+    assert!(
+        at_int.axiom_footprint.is_empty(),
+        "the integer refutation of x>5 & x<3 rests on {:?}",
+        at_int.axiom_footprint
+    );
+    assert!(
+        rendered.contains("Int") && rendered.contains("False"),
+        "not an integer refutation: {rendered}"
+    );
+    assert_eq!(
+        (generalized.var_binders, generalized.hyp_binders),
+        (1, 2),
+        "one variable and two constraints, matching the query"
+    );
+}
