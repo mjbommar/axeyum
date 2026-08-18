@@ -547,3 +547,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0468](adr-0468-autogenesis-transaction-and-episode-boundary.md) | Content-addressed Autogenesis proposals, compare-and-swap fact admission, and roll-forward recovery events | accepted |
 | [0469](adr-0469-source-bound-negative-discriminant-evidence.md) | Exact source-bound negative-discriminant certificates for one-variable integer quadratic equalities | accepted |
 | [0470](adr-0470-autogenesis-registered-operation-execution-receipt.md) | Typed authoritative execution binds clean commit, frontier, registry, fact, source bytes, budget, and normalized checked result | accepted |
+| [0471](adr-0471-authoritative-readiness-from-durable-event-and-reconstructed-prestate.md) | Reconstruct pre-admission ledger state from the execution commit, bind exact before and after frontiers to the durable event, and permit an honest empty unlock set | accepted |

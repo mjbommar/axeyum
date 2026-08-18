@@ -20,8 +20,17 @@ SPEC.loader.exec_module(execution)
 class OperationExecutionTests(unittest.TestCase):
     def setUp(self) -> None:
         frontier_module = execution.load_module("frontier_for_test", execution.FRONTIER_SCRIPT)
-        self.frontier = frontier_module.build_machine_frontier(frontier_module.load())
-        self.fact, self.operation, self.registry = execution.selected_inputs(self.frontier)
+        self.facts = frontier_module.load()
+        target = copy.deepcopy(self.facts["F:no-integer-square-is-minus-one"])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        self.facts[target["id"]] = target
+        self.frontier = frontier_module.build_machine_frontier(self.facts)
+        self.fact, self.operation, self.registry = execution.selected_inputs(
+            self.frontier, self.facts
+        )
         self.observation = {
             "verdict": "unsat",
             "evidence_label": "unsat-int-quadratic-negative-discriminant",
@@ -102,7 +111,7 @@ class OperationExecutionTests(unittest.TestCase):
             {key: value for key, value in changed.items() if key != "frontier_sha256"}
         )
         with self.assertRaisesRegex(execution.ExecutionError, "invalid"):
-            execution.selected_inputs(changed)
+            execution.selected_inputs(changed, self.facts)
 
 
 if __name__ == "__main__":

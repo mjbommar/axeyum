@@ -142,8 +142,14 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
         executor = MODULE.load_module("executor_for_transaction_test", MODULE.EXECUTOR_SCRIPT)
         frontier_module = executor.load_module("frontier_for_transaction_test", executor.FRONTIER_SCRIPT)
         facts = frontier_module.load()
+        target = copy.deepcopy(facts["F:no-integer-square-is-minus-one"])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[target["id"]] = target
         frontier = frontier_module.build_machine_frontier(facts)
-        before, operation, registry = executor.selected_inputs(frontier)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
         observation = {
             "verdict": "unsat",
             "evidence_label": "unsat-int-quadratic-negative-discriminant",

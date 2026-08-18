@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:bef49d9ada2e06a22ad2378746973d6c62a12ec1c9ebf37bdefd88b1b2d051b4`
+Source identity: `sha256:5bc6e2b1764441a3df255882e9f04e753c943bc2455d149a421e6a7ccd4458a2`
 
 ## Ledger and chain substrate
 
@@ -27,24 +27,24 @@ the remaining facts stay explicit rather than being guessed.
 | `A1-real-derived-chain` | replay-candidate | kernel ledger graph has 52 edges at depth 6 and 0 unsettled nodes | qualify a primary and fallback with proof-derived dependency and pre-B counterfactual |
 | `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | broaden the structural grammar and bind plans into typed evidence |
 | `A1-operational-unlock-control` | fixture | catalog search produces B; a durable fixture event makes the same A target ready and fresh A depends on B | repeat the causal unlock on an authoritative open fact |
-| `A1-machine-selection` | partial | content-addressed authoritative frontier selects exactly one matching fact; typed execution binds the frontier, registry, fact, source bytes, and clean commit | consume the normalized execution receipt in a typed transaction adapter |
-| `A1-typed-dispatch-evidence` | partial | the authoritative registry fixes the driver, input artifact, budget, expected label, and footprint; the executor and transaction adapter derive the receipt and evidence row without caller-authored metadata | apply and recover the first authoritative transaction, then replay its settled-fact checker |
-| `A1-atomic-admission` | fixture | fixture admission has compare-and-swap, fsynced intent, durable event, and fault recovery; a real selected fact now has a typed prepared delta | exercise the same applicant and recovery path on that authoritative fact |
-| `A1-admission-triggered-retry` | fixture | durable fixture admission event derives B-to-A readiness and gates the post-B catalog | generalize the readiness input from counterfactual snapshot to authoritative frontier state |
+| `A1-machine-selection` | partial | content-addressed authoritative frontier selected exactly one matching fact, which typed execution and admission consumed; the post-state refuses all remaining unregistered candidates | register and qualify an actual B-to-A chain operation rather than another isolated leaf |
+| `A1-typed-dispatch-evidence` | authoritative | the authoritative registry fixed the driver, input, budget, expected label, and footprint; execution, transaction preparation, admission, and settled-fact replay completed without caller-authored metadata | repeat with a second operation family and a dependent consequent |
+| `A1-atomic-admission` | authoritative | one real selected fact recovered from an intentional post-intent stop through compare-and-swap, fsynced journal, atomic replacement, and durable event | reproduce the accepted acquisition from a second clean checkout |
+| `A1-admission-triggered-retry` | authoritative-leaf | the durable authoritative event binds exact before/after frontiers; the admitted leaf leaves newly_ready empty rather than manufacturing an unlock | repeat against an authoritative B-to-A edge and schedule A only from the event-derived delta |
 | `A1-clean-reproduction` | fixture | retained exact-commit command regenerates B, transaction, event, readiness, pre-A failure, and post-B success | repeat the same replay for an authoritative acquisition |
 
 ## Manual seams
 
 | Seam | State | Owner | Gap | Source |
 |---|---|---|---|---|
-| `goal-selection` | partial | fact frontier | machine frontier selects one exact fact and the typed executor consumes that identity; no transaction adapter consumes the execution receipt | `scripts/fact-frontier.py` |
-| `route-dispatch` | partial | operation registry | one authoritative producer/checker contract exists; typed execution and transaction preparation remain route-specific | `artifacts/autogenesis/operations.json` |
-| `operation-execution` | partial | typed operation executor | one authoritative SMT driver emits a normalized replayable receipt; no second driver or transaction adapter exists | `scripts/execute-autogenesis-operation.py` |
+| `goal-selection` | partial | fact frontier | the first exact selection was executed and admitted; the current frontier has no remaining admissible operation and no registered B-to-A chain | `scripts/fact-frontier.py` |
+| `route-dispatch` | partial | operation registry | one authoritative producer/checker contract has completed end to end; no second driver or chain operation is registered | `artifacts/autogenesis/operations.json` |
+| `operation-execution` | authoritative | typed operation executor | one authoritative SMT driver emitted and replayed a normalized receipt; no second driver exists | `scripts/execute-autogenesis-operation.py` |
 | `evidence-assembly` | partial | transactional closer | the first authoritative adapter derives its evidence row and route metadata; other routes through the manual closer remain caller-authored | `scripts/close-fact.py` |
 | `checker-selection` | partial | evidence registry | fixture and first authoritative checkers are typed; the manual closer still accepts caller-authored shell text | `artifacts/autogenesis/operations.json` |
-| `ledger-transition` | fixture | transactional closer | the first authoritative execution derives a complete prepared transaction; production apply and recovery have not yet been exercised | `scripts/apply-autogenesis-fact-transaction.py` |
+| `ledger-transition` | authoritative | transactional closer | one authoritative compare-and-swap recovered from a durable intent; multi-fact admission remains deferred | `scripts/apply-autogenesis-fact-transaction.py` |
 | `dependency-derivation` | partial | kernel dependency inventory | kernel facts are covered where checker commands name the theorem; other routes are authored | `scripts/check-fact-depends-derived.py` |
-| `accepted-transition-event` | fixture | episode/orchestrator | durable fixture event triggers a counterfactual readiness delta; authoritative frontier consumption remains | `scripts/create-autogenesis-readiness-delta.py` |
+| `accepted-transition-event` | authoritative-leaf | episode/orchestrator | the first durable authoritative event recomputed the frontier and honestly unlocked nothing; a real B-to-A retry remains | `scripts/create-autogenesis-readiness-delta.py` |
 | `clean-replay` | fixture | episode replay | exact-commit fixture replay exists; authoritative acquisition replay remains | `scripts/replay-autogenesis-apply-experiment.sh` |
 
 ## Proof-production context

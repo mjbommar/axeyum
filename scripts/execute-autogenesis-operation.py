@@ -82,10 +82,12 @@ def clean_commit() -> str:
 
 def selected_inputs(
     frontier: dict[str, Any],
+    facts: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     frontier_module = load_module("autogenesis_frontier_for_execution", FRONTIER_SCRIPT)
     registry_module = load_module("autogenesis_registry_for_execution", REGISTRY_SCRIPT)
-    facts = frontier_module.load()
+    if facts is None:
+        facts = frontier_module.load()
     try:
         frontier_module.verify_machine_frontier(frontier, facts)
         registry = registry_module.load_registry(

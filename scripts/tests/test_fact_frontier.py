@@ -89,6 +89,12 @@ class MachineFrontierTests(unittest.TestCase):
 
     def test_only_exact_authoritative_operation_can_license_selection(self) -> None:
         facts = frontier.load()
+        target = copy.deepcopy(facts["F:no-integer-square-is-minus-one"])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[target["id"]] = target
         registry = frontier.load_operation_registry()
         operation = copy.deepcopy(registry["operations"][1])
         registry["operations"] = [operation]
