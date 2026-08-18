@@ -278,6 +278,11 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "        if False:\n            # A module with no hypothesis",
             ),
             (
+                "a self-refuting attestation FAILS rather than being counted",
+                "            attested_vacuous += vacuous\n            if vacuous:",
+                "            attested_vacuous += vacuous\n            if False:",
+            ),
+            (
                 "the converse direction counts UNrendered rows as unrepresented",
                 "        if index < len(assertions) and renamed.intersection(assertions[index]):",
                 "        if True:",

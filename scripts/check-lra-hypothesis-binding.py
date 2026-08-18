@@ -97,11 +97,14 @@ estimate. Swept 2026-08-18 over all **1404** committed `.smt2` files. **270** of
 them render a Lean module at all, and those 270 split exactly three ways:
 
     125  BOUND      every rendered hypothesis bound back to an `(assert …)` line
-    124  ATTESTED   the module transcribes NOTHING; verified to be content-free
+    123  ATTESTED   the module transcribes NOTHING; verified to be content-free
      21  DECLINED   neither — not pinned, not checked, listed by name
 
 `scripts/lra-hypothesis-binding-instances.txt` pins the 125;
-`scripts/hypothesis-binding-attestations.txt` pins the 124 and names the 21.
+`scripts/hypothesis-binding-attestations.txt` pins the 123 and names the 21.
+The 124th attestation was `neg-no-self-negating-proposition.smt2`, whose module
+was *self-refuting*; the route now declines rather than rendering it (see
+`attested_vacuous` below), so it renders no theory module at all.
 The three bound routes are `lra.hyp._N` (Real Farkas), `lra.int_hyp._N` (Int
 Farkas) and `dio.hyp._N` (Int Diophantine).
 
@@ -113,12 +116,14 @@ Farkas) and `dio.hyp._N` (Int Diophantine).
   any assertion, so there is no assertion for it to bind to. An unrecognized
   `axeyum.reconstruct.*` axiom fails the run rather than being skipped, so these
   stay visible rather than silently blessed.
-- **The 124 attestations transcribe nothing, and that is the finding, not a
+- **The 123 attestations transcribe nothing, and that is the finding, not a
   gap this closes.** Their correspondence to the query lives in the Rust
   certificate and is checked there. What is checked here is only that each really
-  is the content-free skeleton it claims to be. One of the 124 is *self-refuting*:
-  its `Not (Eq.{1} α atom._0 atom._0)` is an axiom Lean's own `rfl` refutes, so
-  the module's `False` needs none of its other axioms.
+  is the content-free skeleton it claims to be. A *self-refuting* module — one
+  carrying `Not (Eq.{1} α t t)`, which Lean's own `rfl` refutes, so its `False`
+  needs none of its other axioms and nothing at all from the query — is no longer
+  counted but FAILS the run (`attested_vacuous=`). Exactly one existed; its route
+  now declines instead.
 - **Only the linear fragment the Python parser admits.** `+ - *` by a numeral,
   `and`, `not`, `<= < >= > =`, `let`. An assertion outside it contributes no
   atoms, so a hypothesis claiming to come from it is unmatched and the run fails.
@@ -178,8 +183,9 @@ ATTESTATION_MANIFEST = ROOT / "scripts/hypothesis-binding-attestations.txt"
 
 # Floors. A scanner that goes blind reports a beautiful clean zero. Measured
 # 2026-08-18 over the whole committed corpus: 125 bound instances, 288
-# hypotheses, 1210 corruptions caught, 124 attestations of which 1 is
-# self-refuting, and 286 of 531 spine assertions represented.
+# hypotheses, 1210 corruptions caught, 123 attestations of which 0 are
+# self-refuting (one was, and its route now declines), and 286 of 531 spine
+# assertions represented.
 MIN_INSTANCES = 120
 MIN_HYPOTHESES = 280
 MIN_REQUIRED_MUTATIONS = 1150
@@ -1394,11 +1400,25 @@ def main(argv: list[str]) -> int:
                     f"{instance}: pinned as a content-free attestation, but {why}"
                 )
                 continue
-            attested += 1
             attested_vacuous += vacuous
+            if vacuous:
+                # A module whose `False` follows from ONE axiom by `rfl` alone is
+                # not even the propositional step it appears to take: it needs no
+                # other axiom, and would need none if the `.smt2` file said
+                # something else. Counting it was the previous behaviour and it
+                # is not enough -- a number nobody's exit status depends on is a
+                # number a regression can raise.
+                failures.append(
+                    f"{instance}: {vacuous} of its hypothesis axioms is SELF-REFUTING "
+                    "(`Not (Eq α t t)`, which Lean's own `rfl` refutes), so the "
+                    "module's `False` needs none of its other axioms and nothing at "
+                    "all from the query. The route must decline instead of rendering "
+                    "this"
+                )
+                continue
+            attested += 1
             if args.verbose:
-                note = f", {vacuous} self-refuting" if vacuous else ""
-                print(f"  {instance} [{fragment}] attestation, nothing transcribed{note}")
+                print(f"  {instance} [{fragment}] attestation, nothing transcribed")
             continue
 
         phi, hypotheses, allowed, detail = check_instance(source, indices, sorts, assertions)

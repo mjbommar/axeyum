@@ -19,12 +19,19 @@
 # one smuggled `Int.one`, one undeclared opaque name, one truncated type, or one
 # extra axiom takes a module out of the class and fails the run.
 #
-# Measured 2026-08-18: 124 attestations, of which exactly ONE is SELF-REFUTING --
-# `artifacts/facts/smt2/neg-no-self-negating-proposition.smt2` carries
-# `Not (Eq.{1} α atom._0 atom._0)`, an axiom Lean's own `rfl` refutes, so its
-# `False` needs none of the module's other axioms and not even the propositional
-# step is taken. The run reports that count as `attested_vacuous=`.
-artifacts/facts/smt2/neg-no-self-negating-proposition.smt2
+# Measured 2026-08-18: 123 attestations, and NONE of them self-refuting. The
+# 124th was `artifacts/facts/smt2/neg-no-self-negating-proposition.smt2`, whose
+# module carried `Not (Eq.{1} α atom._0 atom._0)` -- an axiom Lean's own `rfl`
+# refutes, so its `False` needed none of the module's other axioms and not even
+# the propositional step was taken. Root cause and fix are in
+# `crates/axeyum-solver/src/array_axiom.rs`: the read-congruence witness search
+# reported the Boolean conflict `p ≡ ¬p` as the pair `(p, p)`, and
+# `array_axiom_refutation` now refuses a degenerate certificate outright, so the
+# query routes to `TermLevelEnum` (an honest structural attestation the theory
+# entry declines) instead of to a Lean module that says nothing. It is off this
+# list because it no longer renders a theory module at all -- a decline, not a
+# regression. `attested_vacuous=` is still reported, and is now a run FAILURE
+# rather than a number.
 corpus/public-curated/bvred/cvc5__redand-eliminate.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw30.btor.smt2
 corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw31.btor.smt2

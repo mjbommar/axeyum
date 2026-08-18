@@ -787,10 +787,15 @@ class AnAttestationIsConfirmedContentFree(unittest.TestCase):
         self.assertFalse(ok)
 
 
-class ASelfRefutingAttestationIsCounted(unittest.TestCase):
-    """One of the 124 carries `Not (Eq.{1} α t t)` — an axiom Lean's own `rfl`
-    refutes, so the module's `False` follows from that one axiom alone and not
-    even the propositional step is taken. Reported as `attested_vacuous=`."""
+class ASelfRefutingAttestationIsRejected(unittest.TestCase):
+    """A module carrying `Not (Eq.{1} α t t)` — an axiom Lean's own `rfl`
+    refutes — has a `False` that follows from that one axiom alone: not even the
+    propositional step it appears to take is taken, and it would follow just as
+    well if the `.smt2` file said something else. One of the corpus's 124
+    attestations was such a module (`neg-no-self-negating-proposition.smt2`,
+    measured 2026-08-18); it was COUNTED as `attested_vacuous=` and the run still
+    exited 0. Counting is not enough — a number nobody's exit status depends on
+    is a number a regression can raise — so it is now a failure."""
 
     def test_a_denied_reflexivity_is_self_refuting(self) -> None:
         self.assertTrue(
@@ -812,13 +817,17 @@ class ASelfRefutingAttestationIsCounted(unittest.TestCase):
         self.assertEqual(vacuous, 0)
 
     def test_denying_reflexivity_in_the_fixture_is_counted(self) -> None:
-        damaged = ATTESTATION.replace(
-            "axeyum.reconstruct.func._2 axeyum.reconstruct.atom._1",
-            "axeyum.reconstruct.func._2 axeyum.reconstruct.atom._0",
-        )
-        ok, why, vacuous = HB.classify_attestation(damaged)
+        ok, why, vacuous = HB.classify_attestation(_self_refuting(ATTESTATION))
         self.assertTrue(ok, why)
         self.assertEqual(vacuous, 1)
+
+
+def _self_refuting(attestation: str) -> str:
+    """The fixture with its denied equality collapsed onto one atom."""
+    return attestation.replace(
+        "axeyum.reconstruct.func._2 axeyum.reconstruct.atom._1",
+        "axeyum.reconstruct.func._2 axeyum.reconstruct.atom._0",
+    )
 
 
 class TheConverseDirectionIsMeasured(unittest.TestCase):
@@ -903,6 +912,16 @@ class AVacuousBindingIsNotAPass(unittest.TestCase):
     def test_a_content_bearing_module_pinned_as_attested_fails(self) -> None:
         self.assertEqual(
             self._run_driver(DIO_MODULE, DIO_QUERY, "--expect", "attested"), 1
+        )
+
+    def test_a_self_refuting_attestation_fails_the_run(self) -> None:
+        """The twin above passes on the intact attestation, so this is the
+        `rfl`-refutable axiom failing and not the driver failing everything."""
+        self.assertEqual(
+            self._run_driver(
+                _self_refuting(ATTESTATION), DIO_QUERY, "--expect", "attested"
+            ),
+            1,
         )
 
 

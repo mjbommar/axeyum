@@ -42,6 +42,35 @@ pub struct ArrayAxiomRefutationCertificate {
     pub kind: ArrayAxiomKind,
 }
 
+impl ArrayAxiomRefutationCertificate {
+    /// Is this certificate **degenerate** — are its two sides the same term?
+    ///
+    /// A degenerate certificate justifies nothing. The Lean module the
+    /// [`crate::reconstruct`] route renders from it keys its opaque constants on
+    /// the [`TermId`], so `lhs == rhs` becomes
+    ///
+    /// ```text
+    /// axiom hyp._1 : Eq.{1} α atom._0 atom._0
+    /// axiom hyp._2 : Not (Eq.{1} α atom._0 atom._0)
+    /// ```
+    ///
+    /// whose `False` is Lean's own `rfl` refuting `hyp._2` — it needs neither
+    /// `hyp._1` nor the array axioms nor anything at all from the query. So such
+    /// a module is evidence of nothing, and so is the certificate: it must never
+    /// reach the emitter or [`crate::Evidence`].
+    ///
+    /// This is the only property this predicate decides. It is **not** a full
+    /// re-derivation: it does not check that the query entails `¬(lhs = rhs)`,
+    /// nor that `lhs = rhs` is an instance of `kind`. Re-derivation is
+    /// `crate::evidence`'s `check_array_axiom_evidence`, which re-runs the
+    /// search; degeneracy is what re-running cannot catch, because the search
+    /// would produce the same degenerate answer again.
+    #[must_use]
+    pub fn is_degenerate(&self) -> bool {
+        self.lhs == self.rhs
+    }
+}
+
 /// Returns a certificate when any top-level conjunct is the negation of one of
 /// the checked array-axiom schemas.
 ///
@@ -51,6 +80,18 @@ pub struct ArrayAxiomRefutationCertificate {
 /// entailed by the original assertion.
 #[must_use]
 pub fn array_axiom_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<ArrayAxiomRefutationCertificate> {
+    let cert = array_axiom_refutation_candidate(arena, assertions)?;
+    // The single boundary a degenerate certificate must not cross. Every
+    // consumer -- the Lean emitter, `Evidence::UnsatArrayAxiom`, the fragment
+    // dispatcher -- goes through this function, so filtering here is filtering
+    // everywhere. See `ArrayAxiomRefutationCertificate::is_degenerate`.
+    (!cert.is_degenerate()).then_some(cert)
+}
+
+fn array_axiom_refutation_candidate(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Option<ArrayAxiomRefutationCertificate> {
@@ -4207,5 +4248,65 @@ mod tests {
 
         assert_eq!(out.len(), leaves.len(), "every conjunct is collected");
         assert_eq!(out, leaves, "flattening preserves left-to-right order");
+    }
+
+    /// `(assert (not (not (= p (not p)))))` — the self-negating proposition, and
+    /// the shape that shipped the corpus's one self-refuting Lean module.
+    fn self_negating_proposition() -> (TermArena, Vec<TermId>, TermId, TermId) {
+        let mut arena = TermArena::new();
+        let p_sym = arena.declare("p", Sort::Bool).expect("declare p");
+        let p = arena.var(p_sym);
+        let not_p = arena.not(p).expect("not p");
+        let eq = arena.eq(p, not_p).expect("p = not p");
+        let inner = arena.not(eq).expect("not (p = not p)");
+        let assertion = arena.not(inner).expect("not (not (p = not p))");
+        (arena, vec![assertion], p, not_p)
+    }
+
+    #[test]
+    fn the_route_declines_rather_than_certifying_a_self_negating_proposition() {
+        // `p ≡ ¬p` is a contradiction, and it is a *Boolean* one: nothing here
+        // is an array axiom and nothing here is a disequality the query
+        // asserts. The witness search nevertheless reaches
+        // `conflicting_bool_negation_equalities`, which reports the class
+        // member `p` against itself — and the pair `(p, p)` renders as
+        //
+        //     axiom hyp._1 : Eq.{1} α atom._0 atom._0
+        //     axiom hyp._2 : Not (Eq.{1} α atom._0 atom._0)
+        //
+        // whose `False` is Lean's own `rfl` refuting `hyp._2`. That module
+        // needs no other axiom, no array axiom, and nothing whatever from the
+        // query: it is evidence of nothing. This was the corpus's one
+        // self-refuting Lean module (`artifacts/facts/smt2/
+        // neg-no-self-negating-proposition.smt2`, measured 2026-08-18).
+        //
+        // So the route declines. The query is still unsat and other routes
+        // still refute it; what it no longer gets is a certificate that says
+        // nothing.
+        let (arena, assertions, _p, _not_p) = self_negating_proposition();
+        assert_eq!(
+            array_axiom_refutation(&arena, &assertions),
+            None,
+            "a degenerate witness must not become a certificate"
+        );
+    }
+
+    #[test]
+    fn a_degenerate_certificate_is_recognized_as_carrying_nothing() {
+        // The predicate the public entry filters on, driven on its own.
+        let (arena, assertions, p, not_p) = self_negating_proposition();
+        let degenerate = ArrayAxiomRefutationCertificate {
+            assertion: assertions[0],
+            lhs: p,
+            rhs: p,
+            kind: ArrayAxiomKind::ReadCongruence,
+        };
+        assert!(degenerate.is_degenerate());
+        let honest = ArrayAxiomRefutationCertificate {
+            lhs: not_p,
+            ..degenerate
+        };
+        assert!(!honest.is_degenerate());
+        let _ = &arena;
     }
 }
