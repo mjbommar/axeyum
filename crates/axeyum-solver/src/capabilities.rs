@@ -435,12 +435,19 @@ pub const CAPABILITIES: &[Capability] = &[
                   those axioms are the `.smt2` file's `(assert ...)` lines. Closes item 3 of the \
                   residual trust surface — the link that note ranks as WEAKER THAN THE KERNEL — for \
                   the Real Farkas, Int Farkas and Int Diophantine hypothesis routes. \
-                  DENOMINATOR, MEASURED 2026-08-18 over all 1404 committed .smt2 files: 270 render a \
-                  Lean module and split 125 BOUND / 124 ATTESTED / 21 DECLINED. The 124 attestations \
-                  transcribe NOTHING — their whole vocabulary is `α atom._N prop._N func._N Eq.{1} \
-                  Not And`, so Lean's False would follow just as well from a different query; that \
-                  is verified as a distinct verdict, never counted as coverage. The 21 declined are \
-                  named, not skipped: an unrecognized `axeyum.reconstruct.*` axiom fails the run",
+                  DENOMINATOR, MEASURED 2026-08-18 over all 1404 committed .smt2 files: 268 render a \
+                  Lean module and EVERY ONE of them is pinned to a class — 135 BOUND / 38 STRUCTURAL \
+                  / 66 STRUCTURAL-ANCHORED / 7 ANCHORED / 5 ATTESTED / 17 DECLINED. This row said \
+                  `125 BOUND / 124 ATTESTED / 21 DECLINED` for a day after it stopped being true, \
+                  and that stale text was read as current by a later lane: the 124 attestations \
+                  became 5 once `ArrayAxiom` stopped collapsing each rendered term into one opaque \
+                  constant. The 5 that remain transcribe NOTHING — their whole vocabulary is \
+                  `α atom._N prop._N func._N Eq.{1} Not And`, so Lean's False would follow just as \
+                  well from a different query; that is verified as a distinct verdict, never counted \
+                  as coverage. The 17 DECLINED are the residue no verdict grips, and since \
+                  2026-08-18 they are CHECKED to be exactly that rather than listed: each must \
+                  render a module and FAIL all four verdicts, so the class can only break by an \
+                  instance getting better",
         assurance: Assurance::Checked,
         evidence: "both sides are re-parsed and re-normalized in Python, sharing no code with each \
                    other or with axeyum-smtlib, because the renderer emits `x > 5` as `-x + 5 < 0` \
@@ -451,15 +458,21 @@ pub const CAPABILITIES: &[Capability] = &[
                    module must be a carrier, a bound hypothesis, or a pinned prelude law, so \
                    `axiom smuggled : False` cannot pass unread. The backtracking search is \
                    UNTRUSTED — whatever it returns is re-derived by an independent verify pass that \
-                   shares no control flow with it. Measured 2026-08-18: 125 bound instances, 288 \
-                   hypotheses, 124 confirmed-content-free attestations (1 of them SELF-REFUTING: its \
-                   `Not (Eq.{1} α t t)` is refuted by Lean's own rfl, so its False needs no other \
-                   axiom), 0 failures; every run corrupts each hypothesis six ways (1210 caught, 427 \
-                   accepted and re-verified) so the gate cannot pass without its detector firing. \
-                   The CONVERSE is measured rather than assumed: 286 of 531 spine assertions are \
+                   shares no control flow with it. Measured 2026-08-18: 135 bound instances, 298 \
+                   hypotheses, 102 structural over 3372 matched term nodes, 73 anchored, 5 \
+                   attestations, 17 declined, 0 failures; every run corrupts each hypothesis five \
+                   ways (1259 caught, 427 accepted and re-verified) so the gate cannot pass without \
+                   its detector firing. A ceiling of ZERO on SELF-REFUTING modules — `Not X` with X \
+                   provable by reflexivity alone, whose False needs no other axiom and nothing from \
+                   the query — checked on every rendered module rather than on the attestations \
+                   alone, which is how the second one was found after the first had been fixed. \
+                   The CONVERSE is measured rather than assumed: 296 of 541 spine assertions are \
                    represented by a rendered hypothesis — barely half, which is the precise size of \
-                   what a subset check does not show. 24 guards, each driven to failure in \
-                   scripts/tests/mutation_controls.py",
+                   what a subset check does not show. 29 guards, each driven to failure in \
+                   scripts/tests/mutation_controls.py. NOT REPRODUCIBLE ON HEAD 570b5c738: the \
+                   sweep reports 133 failures there because `a6ee37c6a` migrated the shipped LRA \
+                   route to the constructed reals and 107 instances now render \
+                   `axeyum.reconstruct.lra.x._N : CReal` where the carrier table expects `Real`",
         checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0384/0465",
     },

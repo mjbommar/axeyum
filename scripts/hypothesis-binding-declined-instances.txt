@@ -37,7 +37,7 @@
 #       by path, it is 16 under `quantified/` and 4 that are not — the two
 #       counts were of different things and neither said which.)
 #
-#    3  GROUND, and the hypothesis is the OUTPUT OF A SOLVER STEP rather than a
+#    1  GROUND, and the hypothesis is the OUTPUT OF A SOLVER STEP rather than a
 #       transcription of any `(assert …)` line, so there is no assertion for it
 #       to bind to:
 #         * `constarr2.smt2` renders one axiom, `Eq.{1} Int Int.zero Int.one`.
@@ -49,22 +49,16 @@
 #           evidence corroborates as little as an attestation's does, and it is
 #           counted here rather than there because the attestation class means a
 #           specific opaque-skeleton SHAPE, which this is not.
-#         * the two `bug593.smt2` rows (QF_UF and QF_UFBV, the same query under
-#           two logics) render a `FiniteDomainPigeonhole` refutation whose three
-#           hypotheses are `¬(f a = f b)` over Bool-typed arguments. The query's
-#           arguments are `(g x)`, `(g y)`, `(g z)` — APPLICATIONS — and the
-#           emitter collapses each into one opaque `fd_arg_N : Bool`. This is the
-#           same emitter defect `ArrayAxiom` had on 2026-08-18, when 89 modules
-#           stopped collapsing whole terms into one constant and became
-#           `structural`. Nothing about the certificate prevents it here; the
-#           argument's structure is simply not rendered. That is the next
-#           concrete move out of this file.
+#         * the two `bug593.smt2` rows LEFT this file the moment it became a
+#           check. They bind structurally, and the pin said so on its first run —
+#           which is the whole point of a two-sided class. Read the note in
+#           `hypothesis-binding-structural-instances.txt` before believing the
+#           verdict: their correspondence is SHALLOW, and measuring that is what
+#           the move bought.
 #
 #    1  `extract-concat` — REMOVED, see the header. Its route declines.
 #
 corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress0__arrays__constarr2.smt2
-corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__bug593.smt2
-corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean/cli__regress1__bug593.smt2
 corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__regsmtparselet.smt2
 corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__ari-syqi.smt2
 corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__issue2031-bv-var-elim.smt2

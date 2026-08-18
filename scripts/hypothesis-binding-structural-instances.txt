@@ -89,3 +89,42 @@ corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__bv__issue9519.smt2
 corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__bv__proj-issue321.smt2
 corpus/regression/cvc5/qf_bv/cvc5__cli__regress0__bv__bvproof3.smt2
 docs/rules-as-code/examples/category-equivalence-v0/smt2/implementation-equivalence-qf-uf-conflict.smt2
+
+# 2026-08-18, `FiniteDomainPigeonhole`: the two `bug593` rows, and READ THIS
+# BEFORE BELIEVING THE VERDICT FOR THEM.
+#
+# They arrived here from the DECLINED list on the first run after that list
+# became a check — which is what a two-sided pin is for. Their match is real: 24
+# term nodes, all four corruptions of each caught, none accepted. It is also
+# SHALLOW, and the measurement is worth more than the row.
+#
+# The query is `¬(f (g x) = f (g y)) ∧ ¬(f (g x) = f (g z)) ∧ ¬(f (g y) = f (g z))`.
+# The module renders `¬(fd_fun_0 fd_arg_1 = fd_fun_0 fd_arg_4)` and its two
+# siblings: the emitter collapses each argument `(g x)` into ONE opaque
+# `fd_arg_N : Bool`, so every rendered side is a 2-node application. The only
+# 2-node applications in this file are `(g x)`, `(g y)`, `(g z)` — so the
+# injective correspondence the binder finds is
+#
+#     fd_fun_0 -> g        fd_arg_1 -> x    fd_arg_4 -> y    fd_arg_9 -> z
+#
+# NOT the intended `fd_fun_0 -> f`, `fd_arg_1 -> (g x)`, which no injective
+# renaming can express because a rendered LEAF may only stand for a query LEAF.
+# Under the accepted renaming the module reads `¬(g x = g y)`, and this file does
+# not say that.
+#
+# That is not a defect in the pin and it is not unsoundness: `structural` claims
+# only that every rendered term is a subterm of the query under one injective
+# renaming, and that claim is TRUE here. The docstring is explicit that what the
+# module ASSERTS about those terms is the anchor's question. But it is the first
+# measured case of the class being earned by a renaming that is not the intended
+# one, so the honest reading of `structural` is "the module names terms this file
+# contains", not "the module says what this file says". The two coincide for the
+# `ArrayAxiom` rows, where the module's equality relates the same two subterms the
+# query's `(assert …)` does; they do not coincide here.
+#
+# The move out is the same one that took 89 `ArrayAxiom` rows from content-free
+# to structural on 2026-08-18: render the argument's structure instead of
+# collapsing it. `reconstruct_finite_domain_pigeonhole_to_lean_module` would then
+# emit `fd_fun_g (atom_x)` and the intended correspondence would be the only one.
+corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__bug593.smt2
+corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean/cli__regress1__bug593.smt2

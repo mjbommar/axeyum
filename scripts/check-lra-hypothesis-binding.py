@@ -95,29 +95,42 @@ pinned in `scripts/tests/test_check_lra_hypothesis_binding.py`.
 # The denominator, measured
 
 Advertised scope is the part people believe, so it is a measurement here, not an
-estimate. Swept 2026-08-18 over all **1404** committed `.smt2` files. **270** of
-them render a Lean module at all, and those 270 split into five pinned classes:
+estimate. Swept 2026-08-18 over all **1404** committed `.smt2` files. **268** of
+them render a Lean module at all, and every one of the 268 is now pinned to a
+class — there is no longer a residue nothing runs on:
 
     135  BOUND               every rendered hypothesis bound back to an
                              `(assert …)` line
-     32  STRUCTURAL          every rendered TERM is a subterm of the query,
+     38  STRUCTURAL          every rendered TERM is a subterm of the query,
                              injectively — and the query does NOT force the
                              disequality (the congruence-conclusion case)
      66  STRUCTURAL-ANCHORED both of the above at once
       7  ANCHORED            the query FORCES the disequality the module assumes,
                              uniquely — and the module is a BARE PAIR the
                              structural binder cannot grip
-      9  ATTESTED            the module transcribes NOTHING; verified content-free
-     20  DECLINED            none of the above — not pinned, not checked, listed
-                             by name
+      5  ATTESTED            the module transcribes NOTHING; verified content-free
+     17  DECLINED            none of the above — and REQUIRED to fail all four,
+                             so the only way this class can break is by an
+                             instance getting BETTER
 
 `scripts/lra-hypothesis-binding-instances.txt` pins the 135;
-`scripts/hypothesis-binding-structural-instances.txt` pins the 32;
+`scripts/hypothesis-binding-structural-instances.txt` pins the 38;
 `scripts/hypothesis-binding-structural-anchored-instances.txt` pins the 66;
 `scripts/hypothesis-binding-anchored-instances.txt` pins the 7;
-`scripts/hypothesis-binding-attestations.txt` pins the 9 and names the 20.
+`scripts/hypothesis-binding-attestations.txt` pins the 5;
+`scripts/hypothesis-binding-declined-instances.txt` pins the 17.
 
-The five are a PARTITION and each pin is TWO-SIDED: an instance must pass its own
+DECLINED is new on 2026-08-18 and it is the class that had been a comment: "listed
+so a later sweep does not re-discover them as news. They are NOT checked." Both
+costs of that were real. A class nothing runs on can only be ENTERED — and its
+first run as a check evicted two of its own members, the `bug593` rows, which had
+been binding structurally the whole time. And a module that DEGRADES inside such a
+class is never looked at: `cvc5__cli__regress0__bv__holes__extract-concat.smt2`
+sat there rendering eleven reflexive `Iff`s under one negation, a `False` that
+followed from one axiom with the file never consulted, and no run ever touched it.
+Its route declines now, which is why 270 became 268.
+
+The six are a PARTITION and each pin is TWO-SIDED: an instance must pass its own
 class's checks and FAIL its neighbours'. The negative half is the half that does
 the work. Without it a class can only be entered deliberately and never left, so
 a stronger statement that becomes true stays unrecorded and a class that stops
@@ -175,20 +188,34 @@ Farkas) and `dio.hyp._N` (Int Diophantine).
 
 # What this does NOT cover
 
-- **The 20 declined instances.** 13 are quantified LIA/BV whose hypothesis is a
-  pi-type `((x0 : Int) -> … Or/Not/Iff …)`; 7 are ground modules whose hypothesis
-  is the OUTPUT of an array or BV abstraction step rather than a transcription of
-  any assertion, so there is no assertion for it to bind to. An unrecognized
-  `axeyum.reconstruct.*` axiom fails the run rather than being skipped, so these
-  stay visible rather than silently blessed.
-- **The 9 attestations transcribe nothing, and that is the finding, not a
+- **The 17 declined instances say what a module is, not what it means.** 16 are
+  quantified LIA/BV whose hypothesis is a pi-type
+  `((x0 : Int) -> … Or/Not/Iff …)` or an `Exists`, a shape no linear-atom parser
+  models; 1 is ground and its hypothesis is the OUTPUT of a solver step
+  (`Eq.{1} Int Int.zero Int.one`, what the Diophantine step derived from two
+  const-arrays) rather than a transcription of any assertion. They are now
+  CHECKED to be exactly that — each must fail all four verdicts by name — but no
+  claim is made that their modules transcribe anything.
+- **The 5 attestations transcribe nothing, and that is the finding, not a
   gap this closes.** Their correspondence to the query lives in the Rust
   certificate and is checked there. What is checked here is only that each really
-  is the content-free skeleton it claims to be. A *self-refuting* module — one
-  carrying `Not (Eq.{1} α t t)`, which Lean's own `rfl` refutes, so its `False`
-  needs none of its other axioms and nothing at all from the query — is no longer
-  counted but FAILS the run (`attested_vacuous=`). Exactly one existed; its route
-  now declines instead.
+  is the content-free skeleton it claims to be.
+- **`vacuous_modules` is a ceiling of ZERO, and it runs on every class.** A
+  module carrying `Not X` with `X` provable by reflexivity alone — `Not (Eq α t
+  t)`, or `Not (And (Iff p p) …)` — derives `False` from that one axiom with the
+  query never consulted, and the identical module would be accepted for a
+  different file. Two have existed in this corpus. The first was found in the
+  attestation sweep; the second was found only by widening the predicate from
+  that one shape to the property, and it was in the DECLINED list. The check that
+  used to live inside `classify_attestation` is GONE, not kept alongside: it
+  could only ever see the class it was already looking at.
+- **`structural` means the module NAMES terms the file contains, not that it SAYS
+  what the file says.** Measured on the two `bug593` rows: their injective
+  renaming maps the module's function constant onto the query's INNER `g`, not
+  its outer `f`, because the emitter collapsed `(g x)` into a leaf and a rendered
+  leaf may only stand for a query leaf. The verdict's stated claim holds and all
+  four corruptions of each are still caught; the intended correspondence is not
+  the one the binder found. See the note in the structural manifest.
 - **Only the degree-≤2 fragment the Python parser admits.** `+ - * /` (division
   by a constant), `and`, `not`, `<= < >= > =`, `let`. Degree 2 is new on
   2026-08-18, for the `Sos` route, whose hypotheses are genuinely quadratic
@@ -283,9 +310,17 @@ DECLINED_MANIFEST = ROOT / "scripts/hypothesis-binding-declined-instances.txt"
 # Floors. A scanner that goes blind reports a beautiful clean zero. Measured
 # 2026-08-18 over the whole committed corpus, after the `Sos` route began
 # reconstructing: 135 bound instances, 298 hypotheses, 1259 corruptions caught,
-# 95 structural instances over 2982 matched term nodes, 19 attestations of which
-# 0 are self-refuting (one was, and its route now declines), and 296 of 541
-# spine assertions represented.
+# 102 structural instances over 3372 matched term nodes, 5 attestations, 17
+# declined, 0 self-refuting modules, and 296 of 541 spine assertions represented.
+#
+# THAT RUN IS FROM BEFORE `a6ee37c6a`. On HEAD 570b5c738 the same sweep reports
+# 133 FAILURES and it is not this checker's doing: 107 instances now render
+# `axeyum.reconstruct.lra.x._N : CReal` where the carrier table expects `Real`,
+# 10 render `Int` under the same prefix, and 19 structural modules changed shape.
+# The shipped LRA route was migrated to the constructed reals without the
+# transcription checker's carrier vocabulary following it. Migrating it is the
+# reals lane's call, not a loosening this lane may make; the numbers above are
+# the last measurement taken with the carrier the table describes.
 MIN_INSTANCES = 130
 MIN_HYPOTHESES = 290
 MIN_REQUIRED_MUTATIONS = 1200
@@ -303,8 +338,11 @@ MIN_ATTESTATIONS = 5
 # The declined class is the honest residue: modules no verdict grips. Its floor,
 # like the attestation floor, is a floor on HONESTY -- it moves DOWN when a route
 # improves and an instance earns a verdict, and lowering it is a reviewable act.
-# Measured 2026-08-18: 19, after `extract-concat` stopped rendering.
-MIN_DECLINED = 19
+# Measured 2026-08-18: 17. It was 19 for one run, and then the two `bug593` rows
+# left for the structural manifest -- the pin's first act was to evict two of its
+# own members, which is what a class that can only be broken by an instance
+# getting better looks like when it works.
+MIN_DECLINED = 17
 # A module whose `False` follows from one of its own axioms by reflexivity alone
 # corroborates NOTHING: it needs no other axiom and nothing from the query, so
 # the identical module would be accepted for a different file. Two have existed

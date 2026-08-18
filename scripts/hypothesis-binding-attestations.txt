@@ -88,33 +88,10 @@ corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_a
 # degree-2 ring normalizer -- which has had `Mono::Const` all along -- proves
 # the identity. Nine attestations and one declined row became ten bound ones.
 #
-# DECLINED, and deliberately not pinned anywhere: 20 instances that render a
-# module which is neither bindable nor a content-free skeleton. Listed so a
-# later sweep does not re-discover them as news. They are NOT checked.
-#
-#   13  quantified LIA/BV: the hypothesis is a pi-type
-#       `((x0 : Int) -> … Or/Not/Iff …)`, a shape no linear-atom parser models.
-#    7  ground: the hypothesis is the OUTPUT of a solver step (an array or BV
-#       abstraction) rather than a transcription of any `(assert …)` line, so
-#       there is no assertion for it to bind to.
-#
-#   corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress0__arrays__constarr2.smt2
-#   corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__bug593.smt2
-#   corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean/cli__regress1__bug593.smt2
-#   corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__regsmtparselet.smt2
-#   corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__ari-syqi.smt2
-#   corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__issue2031-bv-var-elim.smt2
-#   corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-simp.smt2
-#   corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__NUM878.smt2
-#   corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__ari118-bv-2occ-x.smt2
-#   corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__nested9_true-unreach-call.i_575.smt2
-#   corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__psyco-107-bv.smt2
-#   corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__ARI176e1.smt2
-#   corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__clock-10.smt2
-#   corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__clock-3.smt2
-#   corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__006-cbqi-ite.smt2
-#   corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__cbqi-sdlx-fixpoint-3-dd.smt2
-#   corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue4433-nqe.smt2
-#   corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue5279-nqe.smt2
-#   corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__repair-const-nterm.smt2
-#   corpus/regression/cvc5/qf_bv/cvc5__cli__regress0__bv__holes__extract-concat.smt2
+# DECLINED instances USED to be listed here, and the words were "deliberately not
+# pinned anywhere ... They are NOT checked." That list is now a manifest of its
+# own -- `scripts/hypothesis-binding-declined-instances.txt` -- and it is checked
+# two-sided: each must render a module and FAIL all four verdicts. Its first run
+# as a check evicted two of its own members (the `bug593` rows bind structurally)
+# and the class that had been hiding a self-refuting module lost it, because the
+# emitter now declines to render one.
