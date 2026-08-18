@@ -141,10 +141,33 @@ kernel. The suite prints this count rather than asserting on it.
 
 Four things, in descending order of how well we can defend them.
 
-1. **The 5,148 lines are correct.** Bounded, gated, and now corroborated in the
+1. **The ~5,254 lines are correct.** Bounded, gated, and corroborated in the
    adversarial direction by a differential against an independent kernel — which
-   is the strongest available evidence and is still not a proof. One defect
-   found on the first run is a fair estimate of how much is left to find.
+   is the strongest available evidence and is still not a proof.
+
+   **Updated 2026-08-18: three defects, not one.** The first run of one mutation
+   family found one — a lambda binder domain checked only for `def_eq`, so an
+   ill-typed domain that beta-reduced to the expected one was erased before
+   anything checked it. Widening to **51 families / 134 checked mutants** found
+   two more, and both were categorical rather than incidental:
+
+   - a declaration's `levelParams` list was **decorative** — nothing compared the
+     universe parameters occurring in a term against the ones the declaration
+     declares, because inference treats an unbound `Param` exactly like a bound
+     one, and `Const(c, us)` substitutes *positionally* for the declared list;
+   - the recursor `k` flag was never validated on import, and `k` licenses
+     ι-reducing a recursor application whose major premise is not a constructor.
+
+   Three defects in the first two rounds of looking is not a reassuring density,
+   and the honest reading is the opposite of the earlier one: the rate does not
+   yet look like it is levelling off. The first universe fix also **left one
+   violation behind**, because the inductive gate type-checks its own group and
+   never routes through `check_declaration` — a check placed in a *caller* of an
+   admission gate is outside the trusted core, which is exactly what the derived
+   boundary in §1 is for.
+
+   What would change this estimate is rounds that find nothing, not rounds that
+   are not run.
 
 2. **The preludes state what they claim to state.** ~16k lines of
    `nat_prelude/`, `int_prelude/`, `rat_prelude/`, `string_prelude/` are content,
