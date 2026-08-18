@@ -58,6 +58,27 @@ else
   echo "  (docs/plan/generated/proof-gap-matrix.md absent — run scripts/gen-proof-gap-matrix.py)"
 fi
 
+section "TRANSCRIPTION — does a rendered module say anything about its query?"
+# Read from the COMMITTED manifests, not by re-running: the gate takes ~35s and
+# this view must stay instant. `scripts/check-lra-hypothesis-binding.py` is the
+# authority; these files are its pinned output.
+#
+# Lean accepting a module proves `False` follows from the axioms the module
+# DECLARES. It says nothing about whether those axioms are the `.smt2` file's
+# `(assert ...)` lines. That is the link the residual-trust audit ranks as
+# WEAKER THAN THE KERNEL, and these verdicts are what measure it.
+for spec in "structural-instances:structural:equated terms are subterms of the query" \
+            "structural-anchored-instances:structural-anchored:both of the two below" \
+            "anchored-instances:anchored:the query FORCES the assumed disequality" \
+            "attestations:attested:transcribes NOTHING — the honest other half"; do
+  stem="${spec%%:*}"; rest="${spec#*:}"; label="${rest%%:*}"; gloss="${rest#*:}"
+  file="scripts/hypothesis-binding-$stem.txt"
+  n=$(grep -cvE '^[[:space:]]*#|^[[:space:]]*$' "$file" 2>/dev/null || echo '?')
+  printf '  %-20s %6s  %s\n' "$label" "$n" "$gloss"
+done
+printf '  %-20s %6s  %s\n' "bound" "(gate)" "every hypothesis binds back to an (assert ...) line"
+echo "  authority: python3 scripts/check-lra-hypothesis-binding.py  (~35s)"
+
 section "CERTIFICATE GAP — logics we decide but no external checker reads"
 python3 scripts/check-capability-assurance.py --rank --quiet 2>/dev/null \
   | grep -v '^CAPABILITY_ASSURANCE|' | sed 's/^/  /'
