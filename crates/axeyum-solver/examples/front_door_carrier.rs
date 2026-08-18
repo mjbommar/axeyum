@@ -124,9 +124,11 @@ fn render_bytes(ctx: &mut LraReconstructCtx, proof: axeyum_lean_kernel::ExprId) 
         let f = ctx.arith().logic.false_;
         ctx.kernel_mut().const_(f, vec![])
     };
+    // The COMPACT writer, because that is what the front door runs: measuring
+    // the other one would report a module no caller receives.
     let source = ctx
         .kernel()
-        .render_lean_module("axeyum_refutation", false_, proof);
+        .render_lean_module_compact("axeyum_refutation", false_, proof);
     // `axiom` LINES in the emitted module — what `#print axioms` reports on the
     // Lean side. This writer emits every reachable inductive as a real Lean
     // `inductive`, not as an opaque `axiom`, so the constructed development

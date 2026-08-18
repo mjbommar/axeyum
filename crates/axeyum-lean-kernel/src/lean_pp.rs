@@ -41,10 +41,115 @@ use crate::{Declaration, ExprId, ExprNode, Kernel, LevelId, LevelNode, Lit, Name
 const COMPACT_SHARE_MIN_TREE_NODES: u64 = 8;
 const COMPACT_CHUNK_TREE_NODES: u64 = 512;
 
+/// The identity of a **binder scope**: a hash chain folded over the chain of
+/// binder occurrences enclosing a position in the rendered term.
+///
+/// A hash-consed proof DAG is printed as a *tree*, and that is where a
+/// self-contained module's size goes: measured 2026-08-18 on the constructed
+/// reals, `CReal.mul_assoc` is 1,296 kernel nodes and 324,609 printed ones.
+/// Sharing repeated nodes fixes that, but only **closed** nodes could be
+/// shared, and a proof body is mostly open — every subterm under a `fun` has
+/// loose de Bruijn variables. Hoisting those is not merely awkward, it is
+/// wrong in general: two occurrences of one node under two different binders
+/// denote two different terms.
+///
+/// A scope id is exactly the condition that makes it right. Two occurrences
+/// carrying the same id sit under the same chain of binder *occurrences*, so
+/// their loose variables denote the same binders and one `let` may serve both;
+/// occurrences under different binders get different ids and are never
+/// conflated. The chain is folded from the binder nodes themselves, so it is
+/// deterministic — module text is a public API promise.
+type ScopeId = u64;
+
+/// The scope at a declaration's own top level. No binder is open there, so
+/// every node keyed at `ROOT_SCOPE` is closed and one binding serves all of
+/// its occurrences.
+const ROOT_SCOPE: ScopeId = 0;
+
+/// Extend a scope by one binder occurrence.
+fn scope_child(scope: ScopeId, binder: ExprId) -> ScopeId {
+    let mixed = scope
+        .rotate_left(17)
+        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        .wrapping_add(u64::from(binder.0).wrapping_add(1));
+    let mixed = mixed ^ (mixed >> 29);
+    // `0` is reserved for the root, so a child scope must never collide with
+    // it: a child that hashed to `ROOT_SCOPE` would let an open node be keyed
+    // as if it were closed.
+    if mixed == ROOT_SCOPE { 1 } else { mixed }
+}
+
+/// A share key: the node, plus the scope its loose variables are read in.
+/// Closed nodes are normalized to [`ROOT_SCOPE`].
+type ShareKey = (ExprId, ScopeId);
+
 #[derive(Debug, Default)]
 struct LeanSharePlan {
-    names: BTreeMap<ExprId, String>,
+    names: BTreeMap<ShareKey, String>,
+    /// Keys hoisted to **top-level `def`s**. Always closed, so always keyed at
+    /// [`ROOT_SCOPE`].
     order: Vec<ExprId>,
+    /// Keys hoisted to a `let` at the top of the body a binder opens, indexed
+    /// by that body's scope and held in dependency order.
+    blocks: BTreeMap<ScopeId, Vec<ShareKey>>,
+}
+
+/// The share map plus *where* rendering currently is: which scope, and which
+/// key (if any) is being expanded rather than referenced by name.
+#[derive(Clone, Copy)]
+struct ShareView<'a> {
+    names: &'a BTreeMap<ShareKey, String>,
+    blocks: &'a BTreeMap<ScopeId, Vec<ShareKey>>,
+    scope: ScopeId,
+    expand: Option<ShareKey>,
+}
+
+impl<'a> ShareView<'a> {
+    fn new(plan: &'a LeanSharePlan) -> Self {
+        Self {
+            names: &plan.names,
+            blocks: &plan.blocks,
+            scope: ROOT_SCOPE,
+            expand: None,
+        }
+    }
+
+    /// The name standing for `expression` here, if one does.
+    ///
+    /// A node is looked up at the current scope first and at [`ROOT_SCOPE`]
+    /// second. The second lookup is what shares closed nodes across scopes;
+    /// it cannot capture an open one, because the planner keys a node at
+    /// `ROOT_SCOPE` only when it has no loose variables.
+    fn lookup(&self, expression: ExprId) -> Option<&'a str> {
+        for key in [(expression, self.scope), (expression, ROOT_SCOPE)] {
+            if self.expand == Some(key) {
+                return None;
+            }
+            if let Some(name) = self.names.get(&key) {
+                return Some(name.as_str());
+            }
+        }
+        None
+    }
+
+    /// Move into a binder body's scope (a fresh position, so nothing is being
+    /// expanded there).
+    fn at(self, scope: ScopeId) -> Self {
+        Self {
+            scope,
+            expand: None,
+            ..self
+        }
+    }
+
+    /// Render `key`'s definition rather than a reference to it.
+    fn expanding(self, key: ShareKey) -> Self {
+        Self {
+            scope: key.1,
+            expand: Some(key),
+            ..self
+        }
+    }
 }
 
 trait LeanModuleOutput: std::fmt::Write {
@@ -418,27 +523,23 @@ impl Kernel {
         } else {
             LeanSharePlan::default()
         };
+        let view = ShareView::new(&shares);
         for &expression in &shares.order {
-            let name = &shares.names[&expression];
+            let key = (expression, ROOT_SCOPE);
+            let name = &shares.names[&key];
             let _ = write!(out, "\ndef {name} :=\n  ");
-            self.write_lean_with_shares(
-                out,
-                expression,
-                &at_consts,
-                &shares.names,
-                Some(expression),
-            );
+            self.write_lean_with_shares(out, expression, &at_consts, view.expanding(key));
             let _ = out.write_char('\n');
         }
         let _ = write!(out, "\ntheorem {theorem_name} : ");
         if compact {
-            self.write_lean_with_shares(out, goal, &at_consts, &shares.names, None);
+            self.write_lean_with_shares(out, goal, &at_consts, view);
         } else {
             self.write_lean_without_shares(out, goal, &at_consts);
         }
         let _ = out.write_str(" :=\n  ");
         if compact {
-            self.write_lean_with_shares(out, proof, &at_consts, &shares.names, None);
+            self.write_lean_with_shares(out, proof, &at_consts, view);
         } else {
             self.write_lean_without_shares(out, proof, &at_consts);
         }
@@ -1275,10 +1376,239 @@ impl Kernel {
                     break candidate;
                 }
             };
-            names.insert(expression, name);
+            names.insert((expression, ROOT_SCOPE), name);
             order.push(expression);
         }
-        LeanSharePlan { names, order }
+        LeanSharePlan {
+            names,
+            order,
+            blocks: BTreeMap::new(),
+        }
+    }
+
+    /// The scope a binder node's body is read in.
+    ///
+    /// A **closed** binder normalizes to [`ROOT_SCOPE`] first, so every
+    /// occurrence of it opens the same body scope and its interior stays
+    /// shareable across all of them. Planner and writer both call this, which
+    /// is what keeps their scope ids in step: a reference that resolved in one
+    /// and not the other would silently lose sharing, and a `let` emitted in a
+    /// scope no reference reaches would be dead text.
+    fn body_scope(&self, binder: ExprId, scope: ScopeId) -> ScopeId {
+        let outer = if self.num_loose_bvars(binder) == 0 {
+            ROOT_SCOPE
+        } else {
+            scope
+        };
+        scope_child(outer, binder)
+    }
+
+    /// A key's children, each carried into the scope it is read in.
+    fn share_children(&self, key: ShareKey) -> Vec<ShareKey> {
+        let (expression, scope) = key;
+        let normalize = |child: ExprId, at: ScopeId| -> ShareKey {
+            if self.num_loose_bvars(child) == 0 {
+                (child, ROOT_SCOPE)
+            } else {
+                (child, at)
+            }
+        };
+        match self.expr_node(expression) {
+            ExprNode::App(function, argument) => {
+                vec![normalize(*function, scope), normalize(*argument, scope)]
+            }
+            ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => vec![
+                normalize(*ty, scope),
+                normalize(*body, self.body_scope(expression, scope)),
+            ],
+            ExprNode::Let(_, ty, value, body) => vec![
+                normalize(*ty, scope),
+                normalize(*value, scope),
+                normalize(*body, self.body_scope(expression, scope)),
+            ],
+            ExprNode::Proj(_, _, structure) => vec![normalize(*structure, scope)],
+            ExprNode::BVar(_)
+            | ExprNode::FVar(_)
+            | ExprNode::Sort(_)
+            | ExprNode::Const(_, _)
+            | ExprNode::Lit(_) => Vec::new(),
+        }
+    }
+
+    /// A **scope-correct** share plan for one expression: which repeated nodes
+    /// become a `let`, and in which binder body each `let` is emitted.
+    ///
+    /// [`Self::compact_share_plan`] hoists to top-level `def`s, so it can only
+    /// ever select **closed** nodes — and a proof body is almost entirely open
+    /// ones. Measured 2026-08-18 on the shipped constructed-reals front door,
+    /// that restriction is why compact rendering saved 0.6% of a 2.6 MB module.
+    /// This selects open nodes too, keyed by [`ScopeId`], and homes each `let`
+    /// at the top of the innermost body whose binders it reads.
+    fn scoped_share_plan(
+        &self,
+        root: ExprId,
+        expression_name: &str,
+        at_consts: &BTreeSet<NameId>,
+    ) -> LeanSharePlan {
+        let (postorder, lam_scopes) = self.scoped_key_postorder(root);
+        let selected = self.scoped_share_candidates(root, &postorder, &lam_scopes, at_consts);
+
+        let mut reserved = self
+            .environment()
+            .iter()
+            .map(|(&name, _)| self.render_name(name))
+            .collect::<BTreeSet<_>>();
+        for key in &postorder {
+            let binder = match self.expr_node(key.0) {
+                ExprNode::Lam(name, ..) | ExprNode::Pi(name, ..) | ExprNode::Let(name, ..) => {
+                    self.render_name(*name)
+                }
+                _ => continue,
+            };
+            if !binder.is_empty() {
+                reserved.insert(binder);
+            }
+        }
+        reserved.insert(expression_name.to_owned());
+
+        let mut names = BTreeMap::new();
+        let mut blocks: BTreeMap<ScopeId, Vec<ShareKey>> = BTreeMap::new();
+        let mut suffix = 0_u64;
+        // Post-order, so a `let` is always emitted after everything it names.
+        for key in postorder {
+            if !selected.contains(&key) {
+                continue;
+            }
+            // SHORT on purpose. A share pays for itself only when the name is
+            // cheaper than the term it replaces, and these are references, not
+            // documentation: measured 2026-08-18 on the constructed-reals front
+            // door, `axeyum_proof_share_NNNNN` at ~21 bytes a reference ate most
+            // of the saving, and shortening the prefix alone took the shipped
+            // module from 1,877,436 bytes to 1,303,499. The top-level `def`
+            // names keep the long spelling: there are few of them and they are
+            // what a reader greps for.
+            let name = loop {
+                let candidate = format!("_s{suffix}");
+                suffix += 1;
+                if reserved.insert(candidate.clone()) {
+                    break candidate;
+                }
+            };
+            names.insert(key, name);
+            blocks.entry(key.1).or_default().push(key);
+        }
+        LeanSharePlan {
+            names,
+            order: Vec::new(),
+            blocks,
+        }
+    }
+
+    /// The key DAG reachable from `root`, in post-order, plus the scopes a
+    /// `let` may be opened in.
+    ///
+    /// A `Pi` or a `Let` body is deliberately not one of them: `let` is a term
+    /// form, and this writer will not put one inside a type arrow, so a key
+    /// homed there would be referenced by a name nothing ever binds.
+    fn scoped_key_postorder(&self, root: ExprId) -> (Vec<ShareKey>, HashSet<ScopeId>) {
+        let mut postorder: Vec<ShareKey> = Vec::new();
+        let mut visited: HashSet<ShareKey> = HashSet::new();
+        let mut lam_scopes: HashSet<ScopeId> = HashSet::new();
+        let mut stack: Vec<(ShareKey, bool)> = vec![((root, ROOT_SCOPE), false)];
+        while let Some((key, expanded)) = stack.pop() {
+            if expanded {
+                postorder.push(key);
+                continue;
+            }
+            if !visited.insert(key) {
+                continue;
+            }
+            if matches!(self.expr_node(key.0), ExprNode::Lam(..)) {
+                lam_scopes.insert(self.body_scope(key.0, key.1));
+            }
+            stack.push((key, true));
+            for child in self.share_children(key).into_iter().rev() {
+                stack.push((child, false));
+            }
+        }
+        drop(visited);
+        (postorder, lam_scopes)
+    }
+
+    /// Which keys become a binding: repeated ones, plus deterministic cut
+    /// points so a long single-use chain stays bounded.
+    fn scoped_share_candidates(
+        &self,
+        root: ExprId,
+        postorder: &[ShareKey],
+        lam_scopes: &HashSet<ScopeId>,
+        at_consts: &BTreeSet<NameId>,
+    ) -> HashSet<ShareKey> {
+        let mut occurrences: HashMap<ShareKey, u64> = HashMap::with_capacity(postorder.len());
+        occurrences.insert((root, ROOT_SCOPE), 1);
+        for key in postorder.iter().rev() {
+            let count = occurrences.get(key).copied().unwrap_or_default();
+            if count == 0 {
+                continue;
+            }
+            for child in self.share_children(*key) {
+                let current = occurrences.get(&child).copied().unwrap_or_default();
+                occurrences.insert(child, current.saturating_add(count));
+            }
+        }
+
+        let mut tree_sizes: HashMap<ShareKey, u64> = HashMap::with_capacity(postorder.len());
+        for key in postorder {
+            let mut size = 1_u64;
+            for child in self.share_children(*key) {
+                size = size.saturating_add(tree_sizes.get(&child).copied().unwrap_or(1));
+            }
+            tree_sizes.insert(*key, size);
+        }
+
+        let shareable = |key: ShareKey| -> bool {
+            (key.1 == ROOT_SCOPE || lam_scopes.contains(&key.1))
+                && !self.has_fvars(key.0)
+                && matches!(
+                    self.expr_node(key.0),
+                    ExprNode::App(_, _)
+                        | ExprNode::Proj(..)
+                        | ExprNode::Lam(..)
+                        | ExprNode::Pi(..)
+                        | ExprNode::Let(..)
+                )
+                && !self.hoisting_exposes_implicit_binders(key.0, at_consts)
+        };
+
+        let mut selected: HashSet<ShareKey> = postorder
+            .iter()
+            .copied()
+            .filter(|&key| {
+                occurrences.get(&key).copied().unwrap_or_default() >= 2
+                    && tree_sizes.get(&key).copied().unwrap_or_default()
+                        >= COMPACT_SHARE_MIN_TREE_NODES
+                    && shareable(key)
+            })
+            .collect();
+        drop(occurrences);
+        drop(tree_sizes);
+
+        // Deterministic cut points, so a long single-use chain stays bounded
+        // even when nothing in it repeats (see [`Self::compact_share_plan`]).
+        let mut chunk_sizes: HashMap<ShareKey, u64> = HashMap::with_capacity(postorder.len());
+        for key in postorder {
+            let mut size = 1_u64;
+            for child in self.share_children(*key) {
+                size = size.saturating_add(chunk_sizes.get(&child).copied().unwrap_or(1));
+            }
+            if selected.contains(key) || (shareable(*key) && size >= COMPACT_CHUNK_TREE_NODES) {
+                selected.insert(*key);
+                size = 1;
+            }
+            chunk_sizes.insert(*key, size);
+        }
+        drop(chunk_sizes);
+        selected
     }
 
     fn write_lean_without_shares<O: LeanModuleOutput>(
@@ -1287,7 +1617,8 @@ impl Kernel {
         expression: ExprId,
         at_consts: &BTreeSet<NameId>,
     ) {
-        self.write_lean_with_shares(out, expression, at_consts, &BTreeMap::new(), None);
+        let empty = LeanSharePlan::default();
+        self.write_lean_with_shares(out, expression, at_consts, ShareView::new(&empty));
     }
 
     fn write_lean_with_shares<O: LeanModuleOutput>(
@@ -1295,18 +1626,10 @@ impl Kernel {
         out: &mut O,
         expression: ExprId,
         at_consts: &BTreeSet<NameId>,
-        shares: &BTreeMap<ExprId, String>,
-        expand_root: Option<ExprId>,
+        view: ShareView<'_>,
     ) {
         let mut binders = Vec::new();
-        self.write_expr_with_shares(
-            out,
-            expression,
-            &mut binders,
-            at_consts,
-            shares,
-            expand_root,
-        );
+        self.write_expr_with_shares(out, expression, &mut binders, at_consts, view);
     }
 
     fn write_lean_with_local_shares<O: LeanModuleOutput>(
@@ -1315,18 +1638,39 @@ impl Kernel {
         expression: ExprId,
         at_consts: &BTreeSet<NameId>,
     ) {
-        let shares = self.compact_share_plan(&[expression], "axeyum_local_expression", at_consts);
-        if shares.order.is_empty() {
+        let plan = self.scoped_share_plan(expression, "axeyum_local_expression", at_consts);
+        if plan.names.is_empty() {
             self.write_lean_without_shares(out, expression, at_consts);
             return;
         }
-        for &shared in &shares.order {
-            let name = &shares.names[&shared];
-            let _ = write!(out, "let {name} :=\n  ");
-            self.write_lean_with_shares(out, shared, at_consts, &shares.names, Some(shared));
-            let _ = out.write_str(";\n");
+        let view = ShareView::new(&plan);
+        let mut binders = Vec::new();
+        self.write_scope_lets(out, ROOT_SCOPE, &mut binders, at_consts, view);
+        self.write_expr_with_shares(out, expression, &mut binders, at_consts, view);
+    }
+
+    /// Emit the `let` bindings the plan homes at `scope`, in dependency order.
+    ///
+    /// Called at the top of the body a binder opens (and once at `ROOT_SCOPE`
+    /// for the whole expression), which is exactly where every loose variable
+    /// a homed key reads is already bound.
+    fn write_scope_lets<O: LeanModuleOutput>(
+        &self,
+        out: &mut O,
+        scope: ScopeId,
+        binders: &mut Vec<String>,
+        at_consts: &BTreeSet<NameId>,
+        view: ShareView<'_>,
+    ) {
+        let Some(keys) = view.blocks.get(&scope) else {
+            return;
+        };
+        for &key in keys {
+            let name = &view.names[&key];
+            let _ = write!(out, "let {name} := ");
+            self.write_expr_with_shares(out, key.0, binders, at_consts, view.expanding(key));
+            let _ = out.write_str("; ");
         }
-        self.write_lean_with_shares(out, expression, at_consts, &shares.names, None);
     }
 
     fn write_expr_with_shares_atom<O: LeanModuleOutput>(
@@ -1335,12 +1679,9 @@ impl Kernel {
         expression: ExprId,
         binders: &mut Vec<String>,
         at_consts: &BTreeSet<NameId>,
-        shares: &BTreeMap<ExprId, String>,
-        expand_root: Option<ExprId>,
+        view: ShareView<'_>,
     ) {
-        if expand_root != Some(expression)
-            && let Some(name) = shares.get(&expression)
-        {
+        if let Some(name) = view.lookup(expression) {
             let _ = out.write_str(name);
             return;
         }
@@ -1351,25 +1692,11 @@ impl Kernel {
             | ExprNode::Sort(_)
             | ExprNode::Proj(..)
             | ExprNode::Lit(_) => {
-                self.write_expr_with_shares(
-                    out,
-                    expression,
-                    binders,
-                    at_consts,
-                    shares,
-                    expand_root,
-                );
+                self.write_expr_with_shares(out, expression, binders, at_consts, view);
             }
             ExprNode::App(_, _) | ExprNode::Lam(..) | ExprNode::Pi(..) | ExprNode::Let(..) => {
                 let _ = out.write_char('(');
-                self.write_expr_with_shares(
-                    out,
-                    expression,
-                    binders,
-                    at_consts,
-                    shares,
-                    expand_root,
-                );
+                self.write_expr_with_shares(out, expression, binders, at_consts, view);
                 let _ = out.write_char(')');
             }
         }
@@ -1382,11 +1709,10 @@ impl Kernel {
         field_index: u32,
         binders: &mut Vec<String>,
         at_consts: &BTreeSet<NameId>,
-        share_state: (&BTreeMap<ExprId, String>, Option<ExprId>),
+        view: ShareView<'_>,
     ) {
-        let (shares, expand_root) = share_state;
         let _ = out.write_char('(');
-        self.write_expr_with_shares(out, structure, binders, at_consts, shares, expand_root);
+        self.write_expr_with_shares(out, structure, binders, at_consts, view);
         let _ = write!(out, ").{}", u64::from(field_index) + 1);
     }
 
@@ -1407,25 +1733,15 @@ impl Kernel {
         expression: ExprId,
         binders: &mut Vec<String>,
         at_consts: &BTreeSet<NameId>,
-        shares: &BTreeMap<ExprId, String>,
-        expand_root: Option<ExprId>,
+        view: ShareView<'_>,
     ) {
         // One flat left-associated spine: see [`Self::app_spine`]. A shared
         // node inside the spine ends it (it prints as its name).
-        let (head, arguments) = self.app_spine(expression, |node| {
-            expand_root != Some(node) && shares.contains_key(&node)
-        });
-        self.write_expr_with_shares_atom(out, head, binders, at_consts, shares, expand_root);
+        let (head, arguments) = self.app_spine(expression, |node| view.lookup(node).is_some());
+        self.write_expr_with_shares_atom(out, head, binders, at_consts, view);
         for argument in arguments {
             let _ = out.write_char(' ');
-            self.write_expr_with_shares_atom(
-                out,
-                argument,
-                binders,
-                at_consts,
-                shares,
-                expand_root,
-            );
+            self.write_expr_with_shares_atom(out, argument, binders, at_consts, view);
         }
     }
 
@@ -1435,12 +1751,9 @@ impl Kernel {
         expression: ExprId,
         binders: &mut Vec<String>,
         at_consts: &BTreeSet<NameId>,
-        shares: &BTreeMap<ExprId, String>,
-        expand_root: Option<ExprId>,
+        view: ShareView<'_>,
     ) {
-        if expand_root != Some(expression)
-            && let Some(name) = shares.get(&expression)
-        {
+        if let Some(name) = view.lookup(expression) {
             let _ = out.write_str(name);
             return;
         }
@@ -1481,47 +1794,44 @@ impl Kernel {
                     *field_index,
                     binders,
                     at_consts,
-                    (shares, expand_root),
+                    view,
                 );
             }
             ExprNode::App(_, _) => {
-                self.write_application_with_shares(
-                    out,
-                    expression,
-                    binders,
-                    at_consts,
-                    shares,
-                    expand_root,
-                );
+                self.write_application_with_shares(out, expression, binders, at_consts, view);
             }
             ExprNode::Lam(name, ty, body, _) => {
                 let binder = self.binder_name(*name, binders.len());
                 let _ = write!(out, "fun ({binder} : ");
-                self.write_expr_with_shares(out, *ty, binders, at_consts, shares, expand_root);
+                self.write_expr_with_shares(out, *ty, binders, at_consts, view);
                 let _ = out.write_str(") => ");
                 binders.push(binder.clone());
-                self.write_expr_with_shares(out, *body, binders, at_consts, shares, expand_root);
+                let inner = view.at(self.body_scope(expression, view.scope));
+                self.write_scope_lets(out, inner.scope, binders, at_consts, inner);
+                self.write_expr_with_shares(out, *body, binders, at_consts, inner);
                 binders.pop();
             }
             ExprNode::Pi(name, ty, body, _) => {
                 let binder = self.binder_name(*name, binders.len());
                 let _ = write!(out, "(({binder} : ");
-                self.write_expr_with_shares(out, *ty, binders, at_consts, shares, expand_root);
+                self.write_expr_with_shares(out, *ty, binders, at_consts, view);
                 let _ = out.write_str(") -> ");
                 binders.push(binder.clone());
-                self.write_expr_with_shares(out, *body, binders, at_consts, shares, expand_root);
+                let inner = view.at(self.body_scope(expression, view.scope));
+                self.write_expr_with_shares(out, *body, binders, at_consts, inner);
                 binders.pop();
                 let _ = out.write_char(')');
             }
             ExprNode::Let(name, ty, value, body) => {
                 let binder = self.binder_name(*name, binders.len());
                 let _ = write!(out, "let {binder} : ");
-                self.write_expr_with_shares(out, *ty, binders, at_consts, shares, expand_root);
+                self.write_expr_with_shares(out, *ty, binders, at_consts, view);
                 let _ = out.write_str(" := ");
-                self.write_expr_with_shares(out, *value, binders, at_consts, shares, expand_root);
+                self.write_expr_with_shares(out, *value, binders, at_consts, view);
                 let _ = out.write_str("; ");
                 binders.push(binder.clone());
-                self.write_expr_with_shares(out, *body, binders, at_consts, shares, expand_root);
+                let inner = view.at(self.body_scope(expression, view.scope));
+                self.write_expr_with_shares(out, *body, binders, at_consts, inner);
                 binders.pop();
             }
             ExprNode::Lit(literal) => Self::write_literal(out, literal),
@@ -1661,7 +1971,8 @@ impl Kernel {
 mod tests {
     use std::collections::BTreeSet;
 
-    use crate::Kernel;
+    use super::{ROOT_SCOPE, ScopeId};
+    use crate::{ExprId, Kernel};
 
     /// `fun (p : Prop) => p` renders to readable Lean with the de Bruijn variable
     /// resolved to its binder name, and the round-trip parses structurally.
@@ -2130,7 +2441,7 @@ mod tests {
 
         let module = k.render_lean_module_compact("large_axiom", goal, proof);
         assert!(
-            module.contains("axiom h : let axeyum_proof_share_"),
+            module.contains("axiom h : let _s"),
             "large declaration types must retain DAG chunks in their own scope"
         );
         assert!(module.contains("theorem large_axiom"));
@@ -2170,6 +2481,119 @@ mod tests {
 
         let plan = k.compact_share_plan(&[lambda], "open_term", &BTreeSet::new());
         assert!(plan.names.is_empty(), "open terms must not be hoisted");
+    }
+
+    /// A `F (F … #0)` chain repeated inside one lambda, plus the pieces every
+    /// scoped-sharing test needs.
+    #[cfg(test)]
+    fn open_chain_fixture(chain: usize) -> (Kernel, ExprId, ExprId, ExprId) {
+        use crate::{BinderInfo, Declaration, build_logic_prelude};
+
+        let mut k = Kernel::new();
+        let logic = build_logic_prelude(&mut k).expect("logic prelude must build");
+        let anon = k.anon();
+        let prop = k.sort_zero();
+        let function_ty = k.pi(anon, prop, prop, BinderInfo::Default);
+        let function_name = k.name_str(anon, "F");
+        k.add_declaration(Declaration::Axiom {
+            name: function_name,
+            uparams: Vec::new(),
+            ty: function_ty,
+        })
+        .unwrap();
+        let function = k.const_(function_name, Vec::new());
+        let mut open = k.bvar(0);
+        for _ in 0..chain {
+            open = k.app(function, open);
+        }
+        let and = k.const_(logic.and, Vec::new());
+        let repeated = {
+            let expression = k.app(and, open);
+            k.app(expression, open)
+        };
+        (k, repeated, prop, and)
+    }
+
+    /// The saving this whole scheme exists for: a repeated **open** term is
+    /// shared, and its binding sits inside the binder that binds its loose
+    /// variable rather than being hoisted out of it.
+    #[test]
+    fn scoped_plan_shares_open_terms_inside_the_binder_that_binds_them() {
+        use crate::BinderInfo;
+
+        let (mut k, repeated, prop, _and) = open_chain_fixture(8);
+        let anon = k.anon();
+        let lambda = k.lam(anon, prop, repeated, BinderInfo::Default);
+
+        let plan = k.scoped_share_plan(lambda, "scoped", &BTreeSet::new());
+        assert!(
+            !plan.names.is_empty(),
+            "a repeated open term must be shared: that is the entire point"
+        );
+        for &(expression, scope) in plan.names.keys() {
+            assert!(
+                scope != ROOT_SCOPE || k.num_loose_bvars(expression) == 0,
+                "an OPEN term keyed at the root scope would be bound outside \
+                 the binder that binds it"
+            );
+        }
+        // The top-level `def` planner must still refuse it -- a `def` has no
+        // enclosing binder to read the loose variable in.
+        assert!(
+            k.compact_share_plan(&[lambda], "scoped", &BTreeSet::new())
+                .names
+                .is_empty()
+        );
+    }
+
+    /// The soundness guard. One hash-consed open node under **two different
+    /// binders** is two different terms, so it must be bound twice, once in
+    /// each scope. Keying shares by node alone would bind it once, outside
+    /// both, and silently change what the module says.
+    #[test]
+    fn one_open_node_under_two_binders_is_bound_once_per_binder() {
+        use crate::BinderInfo;
+
+        let (mut k, repeated, prop, and) = open_chain_fixture(8);
+        let anon = k.anon();
+        let x = k.name_str(anon, "x");
+        let y = k.name_str(anon, "y");
+        // Two distinct lambda NODES over one shared body node.
+        let first = k.lam(x, prop, repeated, BinderInfo::Default);
+        let second = k.lam(y, prop, repeated, BinderInfo::Default);
+        assert_ne!(first, second);
+        let root = {
+            let expression = k.app(and, first);
+            k.app(expression, second)
+        };
+
+        let plan = k.scoped_share_plan(root, "two_binders", &BTreeSet::new());
+        let scopes: BTreeSet<ScopeId> = plan.names.keys().map(|key| key.1).collect();
+        assert_eq!(
+            scopes.len(),
+            2,
+            "the shared body must be bound separately under each binder, got {:?}",
+            plan.names
+        );
+        assert!(!scopes.contains(&ROOT_SCOPE));
+    }
+
+    /// `let` is a term form and this writer will not put one inside a type
+    /// arrow, so a key homed at a `Pi` body's scope would be referenced by a
+    /// name nothing ever binds. The plan must not select it.
+    #[test]
+    fn a_repeated_term_under_a_pi_binder_is_not_shared() {
+        use crate::BinderInfo;
+
+        let (mut k, repeated, prop, _and) = open_chain_fixture(8);
+        let anon = k.anon();
+        let pi = k.pi(anon, prop, repeated, BinderInfo::Default);
+
+        let plan = k.scoped_share_plan(pi, "pi_body", &BTreeSet::new());
+        assert!(
+            plan.names.is_empty(),
+            "nothing may be homed in a Pi body: no `let` is ever emitted there"
+        );
     }
 
     #[test]

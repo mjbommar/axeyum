@@ -48,7 +48,61 @@ axiom axeyum.reconstruct.lra.x._0 : Real
 axiom axeyum.reconstruct.lra.hyp._1 : Real.le (Real.add axeyum.reconstruct.lra.x._0 Real.zero) Real.zero
 axiom axeyum.reconstruct.lra.hyp._2 : Real.le (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)) Real.zero
 
+def axeyum_proof_share_0 :=
+  Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)
+
+def axeyum_proof_share_1 :=
+  Real.add axeyum.reconstruct.lra.x._0 axeyum_proof_share_0
+
+def axeyum_proof_share_2 :=
+  Eq.{1} Real axeyum_proof_share_1
+
+def axeyum_proof_share_3 :=
+  Real.add (Real.add axeyum.reconstruct.lra.x._0 Real.zero) axeyum_proof_share_0
+
+def axeyum_proof_share_4 :=
+  Eq.{1} Real axeyum_proof_share_3
+
+def axeyum_proof_share_5 :=
+  Real.add Real.zero axeyum_proof_share_0
+
+def axeyum_proof_share_6 :=
+  Real.add axeyum.reconstruct.lra.x._0 axeyum_proof_share_5
+
+def axeyum_proof_share_7 :=
+  Eq.{1} Real axeyum_proof_share_6
+
+def axeyum_proof_share_8 :=
+  Eq.{1} Real axeyum_proof_share_5
+
+def axeyum_proof_share_9 :=
+  Real.add axeyum_proof_share_0
+
+def axeyum_proof_share_10 :=
+  axeyum_proof_share_9 Real.zero
+
+def axeyum_proof_share_11 :=
+  Real.add Real.zero (Real.add Real.one Real.zero)
+
+def axeyum_proof_share_12 :=
+  Eq.{1} Real axeyum_proof_share_11
+
+def axeyum_proof_share_13 :=
+  Real.add (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0))
+
+def axeyum_proof_share_14 :=
+  axeyum_proof_share_13 (Real.add Real.one Real.zero)
+
+def axeyum_proof_share_15 :=
+  Eq.{1} Real axeyum_proof_share_14
+
+def axeyum_proof_share_16 :=
+  @Eq.refl.{1} Real axeyum_proof_share_14
+
+def axeyum_proof_share_17 :=
+  Real.add (Real.add Real.one Real.zero) Real.zero
+
 theorem axeyum_refutation : False :=
-  Real.lt_irrefl Real.zero (Real.lt_of_lt_of_le Real.zero (Real.add Real.one Real.zero) Real.zero (@Eq.rec.{0, 1} Real Real.one (fun (x0 : Real) => fun (x1 : Eq.{1} Real Real.one x0) => Real.lt Real.zero x0) Real.zero_lt_one (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real (Real.add Real.one Real.zero) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add Real.one Real.zero) x0) => Eq.{1} Real x0 (Real.add Real.one Real.zero)) (@Eq.refl.{1} Real (Real.add Real.one Real.zero)) Real.one (Real.add_zero Real.one))) (@Eq.rec.{0, 1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) x0) => Real.le x0 Real.zero) (@Eq.rec.{0, 1} Real (Real.add (Real.add axeyum.reconstruct.lra.x._0 Real.zero) (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add (Real.add axeyum.reconstruct.lra.x._0 Real.zero) (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) x0) => Real.le x0 Real.zero) (@Eq.rec.{0, 1} Real (Real.add Real.zero Real.zero) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add Real.zero Real.zero) x0) => Real.le (Real.add (Real.add axeyum.reconstruct.lra.x._0 Real.zero) (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) x0) (Real.add_le_add (Real.add axeyum.reconstruct.lra.x._0 Real.zero) Real.zero (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)) Real.zero axeyum.reconstruct.lra.hyp._1 axeyum.reconstruct.lra.hyp._2) Real.zero (Real.add_zero Real.zero)) (Real.add axeyum.reconstruct.lra.x._0 (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) (@Eq.rec.{0, 1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add Real.zero (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)))) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add Real.zero (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)))) x0) => Eq.{1} Real (Real.add (Real.add axeyum.reconstruct.lra.x._0 Real.zero) (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) x0) (Real.add_assoc axeyum.reconstruct.lra.x._0 Real.zero (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) (Real.add axeyum.reconstruct.lra.x._0 (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) (@Eq.rec.{0, 1} Real (Real.add Real.zero (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add Real.zero (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) x0) => Eq.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add Real.zero (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)))) (Real.add axeyum.reconstruct.lra.x._0 x0)) (@Eq.refl.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add Real.zero (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))))) (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)) (@Eq.rec.{0, 1} Real (Real.add (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)) Real.zero) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)) Real.zero) x0) => Eq.{1} Real (Real.add Real.zero (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) x0) (Real.add_comm Real.zero (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)) (Real.add_zero (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))))))) (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) x0) => Eq.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) x0) (@Eq.refl.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)))) (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real (Real.add Real.zero (Real.add Real.one Real.zero)) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add Real.zero (Real.add Real.one Real.zero)) x0) => Eq.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) x0) (@Eq.rec.{0, 1} Real (Real.add (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) (Real.add Real.one Real.zero)) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) (Real.add Real.one Real.zero)) x0) => Eq.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) x0) (@Eq.rec.{0, 1} Real (Real.add (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) (Real.add Real.one Real.zero)) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) (Real.add Real.one Real.zero)) x0) => Eq.{1} Real x0 (Real.add (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) (Real.add Real.one Real.zero))) (@Eq.refl.{1} Real (Real.add (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) (Real.add Real.one Real.zero))) (Real.add axeyum.reconstruct.lra.x._0 (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) (Real.add_assoc axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) (Real.add Real.zero (Real.add Real.one Real.zero)) (@Eq.rec.{0, 1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) x0) => Eq.{1} Real (Real.add (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) (Real.add Real.one Real.zero)) (Real.add x0 (Real.add Real.one Real.zero))) (@Eq.refl.{1} Real (Real.add (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) (Real.add Real.one Real.zero))) Real.zero (Real.add_neg axeyum.reconstruct.lra.x._0))) (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real (Real.add (Real.add Real.one Real.zero) Real.zero) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add (Real.add Real.one Real.zero) Real.zero) x0) => Eq.{1} Real (Real.add Real.zero (Real.add Real.one Real.zero)) x0) (Real.add_comm Real.zero (Real.add Real.one Real.zero)) (Real.add Real.one Real.zero) (Real.add_zero (Real.add Real.one Real.zero)))))))
+  Real.lt_irrefl Real.zero (Real.lt_of_lt_of_le Real.zero (Real.add Real.one Real.zero) Real.zero (@Eq.rec.{0, 1} Real Real.one (fun (x0 : Real) => fun (x1 : Eq.{1} Real Real.one x0) => Real.lt Real.zero x0) Real.zero_lt_one (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real (Real.add Real.one Real.zero) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add Real.one Real.zero) x0) => Eq.{1} Real x0 (Real.add Real.one Real.zero)) (@Eq.refl.{1} Real (Real.add Real.one Real.zero)) Real.one (Real.add_zero Real.one))) (@Eq.rec.{0, 1} Real axeyum_proof_share_1 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_2 x0) => Real.le x0 Real.zero) (@Eq.rec.{0, 1} Real axeyum_proof_share_3 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_4 x0) => Real.le x0 Real.zero) (@Eq.rec.{0, 1} Real (Real.add Real.zero Real.zero) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add Real.zero Real.zero) x0) => Real.le axeyum_proof_share_3 x0) (Real.add_le_add (Real.add axeyum.reconstruct.lra.x._0 Real.zero) Real.zero axeyum_proof_share_0 Real.zero axeyum.reconstruct.lra.hyp._1 axeyum.reconstruct.lra.hyp._2) Real.zero (Real.add_zero Real.zero)) axeyum_proof_share_1 (@Eq.rec.{0, 1} Real axeyum_proof_share_6 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_7 x0) => axeyum_proof_share_4 x0) (Real.add_assoc axeyum.reconstruct.lra.x._0 Real.zero axeyum_proof_share_0) axeyum_proof_share_1 (@Eq.rec.{0, 1} Real axeyum_proof_share_5 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_8 x0) => axeyum_proof_share_7 (Real.add axeyum.reconstruct.lra.x._0 x0)) (@Eq.refl.{1} Real axeyum_proof_share_6) axeyum_proof_share_0 (@Eq.rec.{0, 1} Real axeyum_proof_share_10 (fun (x0 : Real) => fun (x1 : Eq.{1} Real axeyum_proof_share_10 x0) => axeyum_proof_share_8 x0) (Real.add_comm Real.zero axeyum_proof_share_0) axeyum_proof_share_0 (Real.add_zero axeyum_proof_share_0))))) (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real axeyum_proof_share_1 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_2 x0) => axeyum_proof_share_2 x0) (@Eq.refl.{1} Real axeyum_proof_share_1) (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real axeyum_proof_share_11 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_12 x0) => axeyum_proof_share_2 x0) (@Eq.rec.{0, 1} Real axeyum_proof_share_14 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_15 x0) => axeyum_proof_share_2 x0) (@Eq.rec.{0, 1} Real axeyum_proof_share_14 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_15 x0) => Eq.{1} Real x0 axeyum_proof_share_14) axeyum_proof_share_16 axeyum_proof_share_1 (Real.add_assoc axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) axeyum_proof_share_11 (@Eq.rec.{0, 1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) x0) => axeyum_proof_share_15 (Real.add x0 (Real.add Real.one Real.zero))) axeyum_proof_share_16 Real.zero (Real.add_neg axeyum.reconstruct.lra.x._0))) (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real axeyum_proof_share_17 (fun (x0 : Real) => fun (x1 : Eq.{1} Real axeyum_proof_share_17 x0) => axeyum_proof_share_12 x0) (Real.add_comm Real.zero (Real.add Real.one Real.zero)) (Real.add Real.one Real.zero) (Real.add_zero (Real.add Real.one Real.zero)))))))
 
 #print axioms axeyum_refutation

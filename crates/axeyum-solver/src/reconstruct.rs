@@ -2048,7 +2048,7 @@ fn render_ctx_module(ctx: &mut ReconstructCtx, proof: ExprId) -> String {
         ctx.kernel_mut().const_(n, vec![])
     };
     ctx.kernel()
-        .render_lean_module(LEAN_MODULE_THEOREM, false_, proof)
+        .render_lean_module_compact(LEAN_MODULE_THEOREM, false_, proof)
 }
 
 /// Gate a [`LraReconstructCtx`]-built `proof : False` through the kernel
@@ -2072,7 +2072,7 @@ fn gate_and_render_lra_module(
     };
     Ok(ctx
         .kernel()
-        .render_lean_module(LEAN_MODULE_THEOREM, false_, proof))
+        .render_lean_module_compact(LEAN_MODULE_THEOREM, false_, proof))
 }
 
 /// Dispatch a `QF_DT` (datatype-fragment) refutation to a self-contained Lean

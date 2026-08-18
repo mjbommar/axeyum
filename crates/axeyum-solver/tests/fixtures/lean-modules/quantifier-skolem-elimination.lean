@@ -39,7 +39,10 @@ axiom axeyum.reconstruct.atom._4 : α
 axiom axeyum.reconstruct.hyp._5 : ((x0 : α) -> Eq.{1} α (axeyum.reconstruct.func._0 x0) axeyum.reconstruct.atom._4)
 axiom axeyum.reconstruct.hyp._7 : Not (Eq.{1} α axeyum.reconstruct.atom._1 axeyum.reconstruct.atom._4)
 
+def axeyum_proof_share_0 :=
+  fun (x0 : α) => Eq.{1} α (axeyum.reconstruct.func._0 x0) axeyum.reconstruct.atom._1
+
 theorem axeyum_refutation : False :=
-  @Exists.rec.{1} α (fun (x0 : α) => Eq.{1} α (axeyum.reconstruct.func._0 x0) axeyum.reconstruct.atom._1) (fun (x0 : Exists.{1} α (fun (x0 : α) => Eq.{1} α (axeyum.reconstruct.func._0 x0) axeyum.reconstruct.atom._1)) => False) (fun (x0 : α) => fun (x1 : (fun (x1 : α) => Eq.{1} α (axeyum.reconstruct.func._0 x1) axeyum.reconstruct.atom._1) x0) => axeyum.reconstruct.hyp._7 (@Eq.rec.{0, 1} α (axeyum.reconstruct.func._0 x0) (fun (x2 : α) => fun (x3 : Eq.{1} α (axeyum.reconstruct.func._0 x0) x2) => Eq.{1} α axeyum.reconstruct.atom._1 x2) (@Eq.rec.{0, 1} α (axeyum.reconstruct.func._0 x0) (fun (x2 : α) => fun (x3 : Eq.{1} α (axeyum.reconstruct.func._0 x0) x2) => Eq.{1} α x2 (axeyum.reconstruct.func._0 x0)) (@Eq.refl.{1} α (axeyum.reconstruct.func._0 x0)) axeyum.reconstruct.atom._1 x1) axeyum.reconstruct.atom._4 (axeyum.reconstruct.hyp._5 x0))) axeyum.reconstruct.hyp._2
+  @Exists.rec.{1} α axeyum_proof_share_0 (fun (x0 : Exists.{1} α axeyum_proof_share_0) => False) (fun (x0 : α) => fun (x1 : axeyum_proof_share_0 x0) => axeyum.reconstruct.hyp._7 (@Eq.rec.{0, 1} α (axeyum.reconstruct.func._0 x0) (fun (x2 : α) => fun (x3 : Eq.{1} α (axeyum.reconstruct.func._0 x0) x2) => Eq.{1} α axeyum.reconstruct.atom._1 x2) (@Eq.rec.{0, 1} α (axeyum.reconstruct.func._0 x0) (fun (x2 : α) => fun (x3 : Eq.{1} α (axeyum.reconstruct.func._0 x0) x2) => Eq.{1} α x2 (axeyum.reconstruct.func._0 x0)) (@Eq.refl.{1} α (axeyum.reconstruct.func._0 x0)) axeyum.reconstruct.atom._1 x1) axeyum.reconstruct.atom._4 (axeyum.reconstruct.hyp._5 x0))) axeyum.reconstruct.hyp._2
 
 #print axioms axeyum_refutation
