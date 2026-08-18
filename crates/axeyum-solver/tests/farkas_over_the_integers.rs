@@ -31,7 +31,8 @@
 use axeyum_ir::{TermArena, TermId};
 use axeyum_solver::{
     LeanModuleContent, LraReconstructCtx, RingTelescope, generalize_over_ordered_ring,
-    instantiate_at_int_model, reconstruct_lra_proof, refutation_over_int_axioms,
+    instantiate_at_int_model, reconstruct_int_farkas_to_lean_module, reconstruct_lra_proof,
+    refutation_over_int_axioms,
 };
 
 /// `x < y ∧ y < x` — refuted by transitivity and irreflexivity alone.
@@ -398,4 +399,68 @@ fn lean_binary() -> Option<std::path::PathBuf> {
     }
     let root = std::path::PathBuf::from(std::env::var("HOME").ok()?).join(".elan/bin/lean");
     root.is_file().then_some(root)
+}
+
+/// End to end from a genuinely INTEGER query — the shape that attests today.
+#[test]
+fn an_integer_query_reconstructs_through_the_whole_pipeline() {
+    // `x > 5 ∧ x < 3` over Int, built as Int terms (not the Real analogue).
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").expect("int variable");
+    let five = arena.int_const(5);
+    let three = arena.int_const(3);
+    let a1 = arena.int_lt(five, x).expect("5 < x");
+    let a2 = arena.int_lt(x, three).expect("x < 3");
+
+    let module = reconstruct_int_farkas_to_lean_module(&arena, &[a1, a2])
+        .expect("an integer query whose rational relaxation is infeasible reconstructs");
+    let content = LeanModuleContent::of_module_source(&module);
+    println!("  int query module: {content:?}, {} bytes", module.len());
+    assert_eq!(
+        content,
+        LeanModuleContent::TheoryReconstruction,
+        "the integer query still renders an attestation"
+    );
+    assert!(module.contains("Int"), "the module never mentions Int");
+
+    if let Some(lean) = lean_binary() {
+        let dir = std::env::temp_dir().join(format!("axeyum-int-e2e-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("scratch dir");
+        let path = dir.join("m.lean");
+        std::fs::write(&path, &module).expect("write");
+        let out = std::process::Command::new(&lean)
+            .arg(&path)
+            .output()
+            .expect("lean runs");
+        let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(out.status.success(), "official Lean rejected it:\n{stderr}");
+        println!("  official Lean accepted the INTEGER-query module");
+    }
+}
+
+/// The decline this route must make: an integer-only infeasibility.
+///
+/// `3x ≥ 1 ∧ 3x ≤ 2` is LP-FEASIBLE (`x ∈ [⅓, ⅔]`) and infeasible only over ℤ,
+/// so no Farkas combination refutes its relaxation. That case belongs to the
+/// integer-inequality reconstructor (ADR-0042), and this route must decline
+/// rather than fabricate — a route that "succeeded" here would be claiming a
+/// refutation the relaxation does not contain.
+#[test]
+fn an_integer_only_infeasibility_is_declined() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").expect("int variable");
+    let three = arena.int_const(3);
+    let one = arena.int_const(1);
+    let two = arena.int_const(2);
+    let three_x = arena.int_mul(three, x).expect("3*x");
+    let a1 = arena.int_le(one, three_x).expect("1 <= 3x");
+    let a2 = arena.int_le(three_x, two).expect("3x <= 2");
+
+    let outcome = reconstruct_int_farkas_to_lean_module(&arena, &[a1, a2]);
+    assert!(
+        outcome.is_err(),
+        "the Farkas route claimed a refutation of an LP-FEASIBLE system; its rational relaxation \
+         has a solution (x in [1/3, 2/3]), so there is no Farkas combination to find"
+    );
 }

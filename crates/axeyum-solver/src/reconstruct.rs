@@ -59,7 +59,7 @@ mod resolution;
 pub use arithmetic::ordered_ring::{
     IntInstantiation, IntRefutation, OrderedRingRefutation, RING_LAW_BINDERS, RING_SYMBOL_BINDERS,
     RingTelescope, generalize_over_ordered_ring, instantiate_at_int_model,
-    refutation_over_int_axioms, render_ordered_ring_module,
+    reconstruct_int_farkas_to_lean_module, refutation_over_int_axioms, render_ordered_ring_module,
 };
 pub use arithmetic::{LraReconstructCtx, reconstruct_lra_proof, reconstruct_sos_proof};
 pub use bitblast::{
@@ -1011,6 +1011,21 @@ pub enum ProofFragment {
     /// lazy-SMT DPLL(T) refutation checker over exact integer/real theory
     /// lemmas.
     ArithDpll,
+    /// A conjunctive INTEGER linear system whose rational relaxation is already
+    /// infeasible, refuted by Farkas and carried into `ℤ`.
+    ///
+    /// The refutation is found on the real relaxation, then abstracted over the
+    /// 22 ordered-commutative-ring laws — which is possible because a Farkas
+    /// combination uses ring operations and order and never division — and
+    /// instantiated at the integers, which model all 22 with empty axiom
+    /// footprints. So the CLAIM is never relaxed: the combination is carried out
+    /// in `ℤ` itself and the module is a theorem about integers, not about their
+    /// real embedding.
+    ///
+    /// Distinct from [`Self::IntInequality`], which owns the opposite case: a
+    /// system that is LP-FEASIBLE and infeasible only over `ℤ` (`3x ≥ 1 ∧
+    /// 3x ≤ 2`) has no Farkas combination at all, and this route declines it.
+    IntFarkas,
     /// Bounded nonlinear/integer arithmetic certified by the proven-box
     /// bounded-int-blast certificate: a finite integer box, exact covering width,
     /// regenerated DIMACS, and DRAT refutation.
@@ -1218,7 +1233,8 @@ impl ProofFragment {
             | ProofFragment::BoundedIntBlast
             | ProofFragment::NraEvenPower => StructuralAttestation,
             // --- Theory reconstructions: the term is built from the query. ---
-            ProofFragment::QfBv
+            ProofFragment::IntFarkas
+            | ProofFragment::QfBv
             | ProofFragment::ReflexiveDisequality
             | ProofFragment::TermIdentity
             | ProofFragment::QfUf
@@ -1831,6 +1847,19 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         // reconstruction is allowed — but the emitted module is a structural
         // attestation, not arithmetic (see [`LeanModuleContent`]).
         ProofFragment::LraDpll
+    } else if int_farkas_reconstruction_certifies(arena, assertions) {
+        // A conjunctive INTEGER system whose rational relaxation is infeasible.
+        //
+        // This arm MUST precede the lazy-SMT arm below, for exactly the reason
+        // the `Lra` arm precedes `LraDpll`: `arith_dpll_refutation_certifies`
+        // also accepts these queries, and `ProofFragment::ArithDpll`'s module is
+        // a structural attestation containing no arithmetic. Measured
+        // 2026-08-17, `x > 5 ∧ x < 3` and `x - y ≤ 1 ∧ y - x ≤ -3` both routed
+        // there and rendered a shim, while an axiom-free integer refutation of
+        // each was available. Like that arm, the predicate trial-builds the
+        // module, so a shape this route cannot cover keeps falling through
+        // rather than turning a working route into an error.
+        ProofFragment::IntFarkas
     } else if arith_dpll_refutation_certifies(arena, assertions) {
         // General Boolean-structured linear arithmetic. The arithmetic lazy-SMT
         // certificate is re-derived and self-checked before reconstruction.
@@ -1842,6 +1871,17 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
     } else {
         ProofFragment::Lra
     }
+}
+
+/// Does the integer Farkas route actually produce a module for `assertions`?
+///
+/// Trial-builds it, exactly as [`lra_farkas_reconstruction_certifies`] does and
+/// for the same reason: the scan must not route a query to a reconstructor that
+/// will then decline, because the fragment it returns also declares whether the
+/// module contains reasoning. Answering "yes" and failing later would turn a
+/// query that at least attests today into an error.
+fn int_farkas_reconstruction_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
+    reconstruct_int_farkas_to_lean_module(arena, assertions).is_ok()
 }
 
 /// Does the **genuine** conjunctive-Farkas LRA reconstructor cover `assertions`?
@@ -2523,6 +2563,7 @@ fn reconstruct_proof_fragment_to_lean_module(
             let t = reconstruct_disjunctive_lra_proof(&mut ctx, arena, assertions)?;
             gate_and_render_lra_module(&mut ctx, t, "disjunctive-LRA")?
         }
+        ProofFragment::IntFarkas => reconstruct_int_farkas_to_lean_module(arena, assertions)?,
         ProofFragment::Sos => reconstruct_sos_to_lean_module(arena, assertions)?,
         ProofFragment::Diophantine => {
             // The integer Diophantine reconstructor builds its own integer-prelude

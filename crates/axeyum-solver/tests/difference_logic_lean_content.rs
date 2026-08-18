@@ -23,9 +23,12 @@
 //! lean qf_rdl.lean [hyp sign flipped]    exit=1
 //! ```
 //!
-//! `QF_IDL` declines because integer difference logic routes through
-//! `ArithDpll`, which has no theory reconstruction. That is the real gap, and
-//! naming it is more useful than the shared tier the two logics had.
+//! `QF_IDL` declined, because integer difference logic routed through
+//! `ArithDpll`, which has no theory reconstruction. **That gap closed the same
+//! day**: `ProofFragment::IntFarkas` refutes a conjunctive integer system on its
+//! rational relaxation, abstracts the Farkas proof over the ordered-ring laws,
+//! and instantiates at `ℤ`. `qf_idl` now renders a 192 KB theory
+//! reconstruction, and this test measures that rather than the old decline.
 //!
 //! # What this test does and does not claim
 //!
@@ -36,9 +39,9 @@
 //! representative is not a `QF_RDL` module. Closing that is the top item of the
 //! ranking, precisely because it is plumbing rather than a proof format.
 //!
-//! The `QF_IDL` row is reported, never asserted: a test that fails when someone
-//! gives `ArithDpll` a reconstruction would punish exactly the work this
-//! measurement is meant to prompt.
+//! The `QF_IDL` row was reported rather than asserted, precisely so that giving
+//! it a reconstruction would not be punished as a failure. That is what
+//! happened, and the row simply changed value.
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{LeanModuleContent, prove_unsat_to_lean_theory_module, scan_proof_fragment};
@@ -156,28 +159,59 @@ fn qf_rdl_reconstructs_through_the_same_fragment_as_qf_lra() {
 ///
 /// The assertion above — "a rendered module is never an attestation" — is
 /// worthless if `LeanModuleContent::of_module_source` never classifies anything
-/// as one. `QF_IDL` supplies a real negative: the *theory* route declines it,
-/// while the plain `prove_unsat_to_lean_module` route renders the attestation
-/// shim. If this ever reports `TheoryReconstruction`, the guard above has
-/// stopped discriminating and its passing means nothing.
+/// as one.
+///
+/// This originally used `QF_IDL`, whose plain route rendered the shim. On
+/// 2026-08-17 `ProofFragment::IntFarkas` gave integer difference logic a real
+/// reconstruction and the control fired, saying exactly that and asking to be
+/// repointed. So it no longer names one query: it tries several shapes and
+/// requires that SOME route still attests. If every candidate gains a
+/// reconstruction, this fails loudly and asks for a new one — which is the right
+/// failure, because at that point the guard above would be vacuous.
 #[test]
 fn the_attestation_class_is_reachable_so_the_guard_is_not_vacuous() {
-    let (_, text) = QUERIES
-        .iter()
-        .find(|(name, _)| *name == "qf_idl")
-        .expect("the corpus contains a QF_IDL query");
-    let mut parsed = parse_script(text).expect("query parses");
-    let assertions = parsed.assertions.clone();
-    let (fragment, source) =
-        axeyum_solver::prove_unsat_to_lean_module(&mut parsed.arena, &assertions)
-            .expect("the plain route renders something for a refutable QF_IDL query");
-    let content = LeanModuleContent::of_module_source(&source);
-    println!("  control: qf_idl via plain route fragment={fragment:?} content={content:?}");
+    // Boolean-structured arithmetic: the lazy-SMT routes emit the `axiom P` /
+    // `axiom Not P` shim rather than a term built from the query.
+    const CANDIDATES: &[(&str, &str)] = &[
+        (
+            "bool_structured_int",
+            "(set-logic QF_LIA)\n\
+             (declare-fun x () Int)\n\
+             (assert (>= x 0))\n\
+             (assert (or (< x 0) (< x 0)))\n\
+             (check-sat)",
+        ),
+        (
+            "bool_structured_real",
+            "(set-logic QF_LRA)\n\
+             (declare-fun x () Real)\n\
+             (assert (>= x 0.0))\n\
+             (assert (or (< x 0.0) (< x 0.0)))\n\
+             (check-sat)",
+        ),
+    ];
+
+    let mut attesting = Vec::new();
+    for (name, text) in CANDIDATES {
+        let mut parsed = parse_script(text).expect("query parses");
+        let assertions = parsed.assertions.clone();
+        let Ok((fragment, source)) =
+            axeyum_solver::prove_unsat_to_lean_module(&mut parsed.arena, &assertions)
+        else {
+            println!("  control candidate {name}: no module");
+            continue;
+        };
+        let content = LeanModuleContent::of_module_source(&source);
+        println!("  control candidate {name}: fragment={fragment:?} content={content:?}");
+        if content.is_structural_attestation() {
+            attesting.push(*name);
+        }
+    }
     assert!(
-        content.is_structural_attestation(),
-        "the QF_IDL control rendered {content:?}, not an attestation. Either integer difference \
-         logic gained a real reconstruction — good news, and this control must be repointed at \
-         a fragment that still attests — or `of_module_source` no longer detects the marker, \
-         which would make the guard above pass on anything"
+        !attesting.is_empty(),
+        "no candidate rendered a structural attestation, so `of_module_source` may no longer \
+         detect the marker — in which case the guard above passes on anything. Either point this \
+         at a route that still attests, or, if genuinely nothing attests any more, delete the \
+         guard because it has become unconditional"
     );
 }

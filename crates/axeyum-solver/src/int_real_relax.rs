@@ -46,26 +46,53 @@ use crate::backend::{CheckResult, SolverConfig, SolverError};
 /// # Errors
 ///
 /// Returns [`SolverError`] from the underlying NRA engine.
-pub fn refute_int_via_real_relaxation(
+/// The faithful real reinterpretation of an integer query: a scratch arena and
+/// the relaxed assertions, or `None` when some assertion has no clean real
+/// analogue (the caller must then abandon the whole relaxation rather than
+/// relax part of it).
+///
+/// Shared by the two consumers so there is one translation, not two that can
+/// drift: [`refute_int_via_real_relaxation`], which only wants a verdict, and
+/// the integer Farkas reconstruction, which needs the relaxed terms themselves.
+///
+/// The relaxation declares fresh `!relax.*` real symbols on a **clone** of the
+/// arena, so nothing leaks back into the caller's arena or any model. The map is
+/// deterministic and injective — the same integer symbol always becomes the same
+/// real symbol — which is what makes a contradiction on one integer value
+/// survive the translation.
+///
+/// # Errors
+///
+/// Propagates arena/declaration failures.
+pub(crate) fn relax_int_assertions_to_real(
     arena: &TermArena,
     assertions: &[TermId],
-    config: &SolverConfig,
-) -> Result<bool, SolverError> {
+) -> Result<Option<(TermArena, Vec<TermId>)>, SolverError> {
     let mut scratch = arena.clone();
     let mut relax = Relax::default();
     let mut relaxed = Vec::with_capacity(assertions.len());
     for &a in assertions {
         match relax.translate(&mut scratch, a)? {
             Some(t) => relaxed.push(t),
-            // An assertion has no clean real analogue: abort the whole relaxation.
-            None => return Ok(false),
+            None => return Ok(None),
         }
     }
-    // The relaxation must mention at least one relaxed integer construct to be
-    // worth the NRA call; a purely-real query is already on its native path.
+    // Nothing integral was relaxed: a purely-real query is already on its native
+    // path, and treating it as an integer one would be a category error.
     if relax.int_to_real.is_empty() {
-        return Ok(false);
+        return Ok(None);
     }
+    Ok(Some((scratch, relaxed)))
+}
+
+pub fn refute_int_via_real_relaxation(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<bool, SolverError> {
+    let Some((mut scratch, relaxed)) = relax_int_assertions_to_real(arena, assertions)? else {
+        return Ok(false);
+    };
     Ok(matches!(
         crate::nra::check_with_nra(&mut scratch, &relaxed, config)?,
         CheckResult::Unsat

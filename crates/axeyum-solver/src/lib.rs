@@ -354,12 +354,12 @@ pub mod proofs {
             reconstruct_bv_positive_universal_instance_set_to_lean_module,
             reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
             reconstruct_cnf_intro_rule, reconstruct_const_shift_lowering, reconstruct_eq_step,
-            reconstruct_lra_proof, reconstruct_negated_existential_witness_to_lean_module,
-            reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof,
-            reconstruct_quant_unsat_proof, reconstruct_resolution_proof,
-            reconstruct_resolution_proof_compact, reconstruct_skolem_unsat_proof,
-            reconstruct_sos_proof, refutation_over_int_axioms, render_ordered_ring_module,
-            scan_proof_fragment,
+            reconstruct_int_farkas_to_lean_module, reconstruct_lra_proof,
+            reconstruct_negated_existential_witness_to_lean_module, reconstruct_qf_bv_proof,
+            reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof, reconstruct_quant_unsat_proof,
+            reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
+            reconstruct_skolem_unsat_proof, reconstruct_sos_proof, refutation_over_int_axioms,
+            render_ordered_ring_module, scan_proof_fragment,
         };
         pub use crate::regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
     }
@@ -1256,12 +1256,12 @@ macro_rules! full_exports {
             reconstruct_bv_positive_universal_instance_set_to_lean_module,
             reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
             reconstruct_cnf_intro_rule, reconstruct_const_shift_lowering, reconstruct_eq_step,
-            reconstruct_lra_proof, reconstruct_negated_existential_witness_to_lean_module,
-            reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof,
-            reconstruct_quant_unsat_proof, reconstruct_resolution_proof,
-            reconstruct_resolution_proof_compact, reconstruct_skolem_unsat_proof,
-            reconstruct_sos_proof, refutation_over_int_axioms, render_ordered_ring_module,
-            scan_proof_fragment,
+            reconstruct_int_farkas_to_lean_module, reconstruct_lra_proof,
+            reconstruct_negated_existential_witness_to_lean_module, reconstruct_qf_bv_proof,
+            reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof, reconstruct_quant_unsat_proof,
+            reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
+            reconstruct_skolem_unsat_proof, reconstruct_sos_proof, refutation_over_int_axioms,
+            render_ordered_ring_module, scan_proof_fragment,
         };
         #[doc(hidden)]
         pub use records::{RecordError, RecordSort};

@@ -51,7 +51,9 @@ use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, ExprNode, Kernel, NameId, build_int_model_of_arith,
 };
 
-use super::{LraReconstructCtx, ReconstructError};
+use axeyum_ir::{TermArena, TermId};
+
+use super::{LraReconstructCtx, ReconstructError, reconstruct_lra_proof};
 
 /// The binder name each of the 30 `Real` declarations takes in the generalized
 /// statement, in **declaration order** — which is also dependency order, so
@@ -673,6 +675,63 @@ pub fn refutation_over_int_axioms(
         variables,
         hypotheses,
     })
+}
+
+/// Reconstruct an INTEGER linear refutation to a self-contained Lean module.
+///
+/// The whole pipeline, for a conjunctive integer system whose rational
+/// relaxation is already infeasible:
+///
+/// 1. relax `Int` to `Real` faithfully (fresh symbols, injective map),
+/// 2. refute the relaxation by Farkas — [`reconstruct_lra_proof`],
+/// 3. abstract that proof over the 22 ordered-ring laws — axiom-free,
+/// 4. instantiate at `ℤ`, which models all 22 with empty footprints,
+/// 5. discharge the binders against the query's own integer variables and
+///    constraints, giving `False`,
+/// 6. render.
+///
+/// No step relaxes the CLAIM. The relaxation is used only to find the Farkas
+/// combination; the combination is then carried out in `ℤ` itself, because it
+/// uses ring operations and order and never division. What comes back is a
+/// theorem about the integers, not about their real embedding.
+///
+/// # Errors
+///
+/// Declines ([`ReconstructError`]) when the query has no clean real analogue,
+/// when the relaxation is not Farkas-refutable (an integer-only infeasibility
+/// such as `3x ≥ 1 ∧ 3x ≤ 2` — that is
+/// [`crate::int_reconstruct::reconstruct_int_inequality_to_lean_module`]'s job,
+/// not this one), or when any kernel step refuses.
+pub fn reconstruct_int_farkas_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let relaxed =
+        crate::int_real_relax::relax_int_assertions_to_real(arena, assertions).map_err(|e| {
+            ReconstructError::KernelRejected {
+                rule: "int_farkas".to_owned(),
+                detail: format!("the real relaxation failed: {e}"),
+            }
+        })?;
+    let Some((scratch, relaxed_assertions)) = relaxed else {
+        return Err(ReconstructError::UnsupportedRule {
+            rule: "int_farkas: the query has no faithful real relaxation".to_owned(),
+        });
+    };
+
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &scratch, &relaxed_assertions)?;
+    let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)?;
+    let at_int = instantiate_at_int_model(&mut ctx, &generalized)?;
+    let closed = refutation_over_int_axioms(&mut ctx, &at_int)?;
+
+    let false_ = {
+        let logic_false = ctx.arith.logic.false_;
+        ctx.kernel.const_(logic_false, vec![])
+    };
+    Ok(ctx
+        .kernel
+        .render_lean_module("axeyum_refutation", false_, closed.proof))
 }
 
 /// A closed integer refutation: `False`, from declared integer axioms.
