@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
+check: fmt fmt-all facts facts-replay clippy gate-controls autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources gf2-artifacts rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
 
 fmt:
     cargo fmt --all --check
@@ -311,6 +311,11 @@ glaurung-qfbv-regular:
 
 foundational-resources:
     ./scripts/check-foundational-resources.sh
+
+# Portable finite-field evidence: both the packed checker and the separately
+# implemented dense-coefficient checker must accept every committed witness.
+gf2-artifacts:
+    cargo run --quiet -p axeyum-cas --bin axeyum-gf2-check -- artifacts/gf2/lemire/degree-400.json
 
 rules-as-code:
     python3 scripts/gen-rules-as-code-dashboard.py

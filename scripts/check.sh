@@ -196,6 +196,7 @@ step lean-construct-matrix-product-freeze python3 scripts/freeze-lean-official-c
 step lean-axiom-ledger-tests python3 -m unittest scripts.tests.test_lean_axiom_ledger
 step lean-axiom-ledger python3 scripts/gen-lean-axiom-ledger.py --check
 step foundational-resources ./scripts/check-foundational-resources.sh
+step gf2-artifacts cargo run --quiet -p axeyum-cas --bin axeyum-gf2-check -- artifacts/gf2/lemire/degree-400.json
 # The claim ledger's structural gates ran ONLY from `just claims` (and the
 # certificate pass, which needs the gitignored drat-trim clone, deliberately
 # stays out of both). These two need nothing external and take seconds, so the
