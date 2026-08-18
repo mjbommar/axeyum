@@ -58,6 +58,67 @@ impl fmt::Display for Assurance {
     }
 }
 
+/// **Who** checks the artifact — the axis `Assurance` does not carry.
+///
+/// `Assurance::Checked` says a certificate exists; it does not say whether
+/// anyone outside this repository can read it. That distinction is the
+/// mathematics strand's primary metric ("what can a third party check without
+/// trusting us?"), and until 2026-08-17 it existed only inside the prose
+/// `evidence` field, where it was recovered by regex.
+///
+/// Regex was the wrong mechanism, and measurably so. Reading all 15 rows the
+/// classifier could not place: fourteen were self-checks written as "re-checked",
+/// "re-verified", or "VERIFY-BEFORE-RETURN" — phrasings the pattern missed —
+/// and widening it to catch those left six more, phrased "check_auto-unsat
+/// checks", "kernel infer", "certified by the underlying decision procedure".
+/// Every round of tuning revealed another wording. This field states the answer
+/// instead of inferring it.
+///
+/// The classifier is kept as a CROSS-CHECK, not as the source: a row claiming
+/// [`ExternalChecker`](Self::ExternalChecker) whose evidence names no external
+/// checker fails the gate. The asymmetry is deliberate and matches this table's
+/// standing rule — downgrade rather than overstate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CheckedBy {
+    /// An INDEPENDENT implementation outside this repository reads the artifact:
+    /// Carcara on Alethe, official Lean on a reconstructed module, drat-trim on
+    /// a DRAT proof. This is the only tier that answers the strand's question.
+    ExternalChecker,
+    /// A second implementation *inside* this repository re-derives the result —
+    /// `check_drat`, `FarkasCertificate::verify`, model replay through the
+    /// ground evaluator, a verify-before-return re-decision by another route.
+    /// Real assurance, and not the same thing as the tier above.
+    SelfChecker,
+    /// Agreement with an external oracle (z3, cvc5) and nothing more. This tests
+    /// the VERDICT, not our artifact, so it can never be evidence that a third
+    /// party can check our work — it is tiered separately so it cannot inflate
+    /// the headline.
+    DifferentialOracle,
+    /// The result rests on an argument (soundness of the construction, a
+    /// decline-on-doubt boundary) rather than on any artifact a checker reads.
+    /// "Decided, not certified", stated rather than left to be discovered.
+    Argument,
+}
+
+impl CheckedBy {
+    /// A short stable label used in reports and the rendered matrix.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            CheckedBy::ExternalChecker => "external-artifact-checker",
+            CheckedBy::SelfChecker => "self-checker",
+            CheckedBy::DifferentialOracle => "differential-only",
+            CheckedBy::Argument => "argument-only",
+        }
+    }
+}
+
+impl fmt::Display for CheckedBy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.label())
+    }
+}
+
 /// One capability the stack exposes: a theory/operation slice, its assurance,
 /// the evidence backing a result, and the deciding ADR.
 #[derive(Debug, Clone, Copy)]
@@ -70,6 +131,8 @@ pub struct Capability {
     pub assurance: Assurance,
     /// What backs a result (the checkable artifact or validation basis).
     pub evidence: &'static str,
+    /// WHO checks that artifact — stated, not inferred from `evidence` prose.
+    pub checked_by: CheckedBy,
     /// The architecture-decision record that introduced/governs it.
     pub reference: &'static str,
 }
@@ -84,6 +147,7 @@ pub const CAPABILITIES: &[Capability] = &[
         feature: "bit-vectors → AIG → SAT (full scalar operator set)",
         assurance: Assurance::Validated,
         evidence: "model replay vs ground evaluator; differential vs Z3",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0006/0007",
     },
     Capability {
@@ -92,6 +156,7 @@ pub const CAPABILITIES: &[Capability] = &[
         assurance: Assurance::Checked,
         evidence: "DRAT proof checked by check_drat (RUP+RAT); UnsatProof::recheck re-validates \
                    from text alone",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0011/0012",
     },
     Capability {
@@ -108,6 +173,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    check_drat and re-attached as Evidence::Unsat(Some(_)), re-checkable from text via \
                    Evidence::check / UnsatProof::recheck. Declines (keeps the trusted behavior, no false \
                    cert) on the interleaved case or any non-validating proof",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0035",
     },
     Capability {
@@ -117,6 +183,7 @@ pub const CAPABILITIES: &[Capability] = &[
         assurance: Assurance::Checked,
         evidence: "faithfulness miter (exhaustive, DRAT) closes the term→CNF gap modulo an \
                    independent reference bit-blaster; EndToEndUnsatOutcome::recheck re-validates both",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0011/0012",
     },
     Capability {
@@ -133,6 +200,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    (60 cases incl. the 6 new extended-comparison drivers, proven NOT skipped) — an emitter \
                    bug surfaces as a Carcara rejection, never an unsound accept. Declines (no proof) on \
                    shifts / div-rem (no Carcara bitblast rule) → the in-house miter cert covers those",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0011/0012",
     },
     Capability {
@@ -149,6 +217,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    kernel infer + def_eq gate, axiom audit shows NO sorryAx; a WRONG slice is KernelRejected \
                    (tamper test has teeth). Constant-only: variable shifts (no literal k) out of fragment; \
                    division stays trusted/out-of-scope (term blowup past width ~2, not a missing rule)",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0011/0012",
     },
     Capability {
@@ -159,6 +228,7 @@ pub const CAPABILITIES: &[Capability] = &[
         evidence: "re-verified before return — A ∧ ¬I and I ∧ B each decided Unsat by the \
                    independent QF_BV decider (check_auto) + shared-symbol vocabulary; lift declines \
                    to None on any non-shared-term / interior-gate var (partial, never unverified)",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -175,6 +245,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    declines to the Validated qf_bv_interpolant path. BOUNDARY: single-predicate only — \
                    the common compound (and/or/not-tree of extract-predicates) interpolant is outside \
                    the emitter's fragment and stays Validated",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -184,6 +255,7 @@ pub const CAPABILITIES: &[Capability] = &[
         assurance: Assurance::Validated,
         evidence: "WideUint vs u128/i128; model replay (an Int-crossing bv2nat \
                    beyond i128 is reported, not wrapped)",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0006",
     },
     Capability {
@@ -204,6 +276,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    tamper-rejection test) — both shrinking the trusted surface to just the \
                    read-over-write rewrite INSTANCE (asserted as a premise; the array axiom is not yet \
                    certified)",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0010/0075",
     },
     Capability {
@@ -223,6 +296,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    vs the eager check_with_array_elimination (300 LCG cases, 0 disagreements, every lazy \
                    sat replayed); caps (rounds/sites/256 diff-skolems/deadline) → Unknown. The eager path \
                    stays the always-correct fallback",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0010",
     },
     Capability {
@@ -272,6 +346,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    and replayed nested-key equality conflicts. ADR-0078's low-load 1 s aggregate baseline \
                    remains QF_ABV 187/193 and QF_AUFBV 49/53 pending a comparable remeasure; online \
                    probes use cloned arenas so fallback inputs remain pristine",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0071/0072/0073/0074/0077/0078/0079/0080/0081/0082/0084/0085/0086/0087/0088/0089/0090/0091/0092/0093/0094",
     },
     Capability {
@@ -288,6 +363,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    learning with non-chronological backjump (congruence-explain reasons threaded on \
                    the trail); verdict-invariant, 0 differential disagreements, 800 learned theory-lemma \
                    clauses re-validated congruence-UNSAT and shorter than the full core",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0013/0032",
     },
     Capability {
@@ -300,6 +376,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    unsat via check_qf_uf, shared vocabulary); partial generator (single \
                    disequality conflict, monochrome congruence) — declines outside scope, never \
                    an unverified interpolant",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -317,6 +394,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    certificate ONLY when both refutations emit and self-check, else declines to the \
                    Validated qf_uf_interpolant path. BOUNDARY: conjunctive-only — the degenerate \
                    ⊤/⊥ interpolant and non-congruence shapes stay Validated",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -328,6 +406,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    2-leaf BOOLEAN-STRUCTURED (disjunctive) refutations: a clause (L₁ ∨ L₂) whose leaves \
                    are each Farkas-unsat, closed by a kernel Or.rec case-split over the per-leaf Farkas \
                    (no new prelude axiom; audit shows no sorryAx). Strict/multi-clause disjunctions decline",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0015",
     },
     Capability {
@@ -341,6 +420,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    (sat+unsat) + 27.7k push/pop checkpoints, 0 disagreements, every sat model replayed, \
                    conflict cores re-verified unsat (same discipline as the online EUF path). \
                    Propagation under-approximated (deferred); non-LRA atoms decline gracefully",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0015",
     },
     Capability {
@@ -352,6 +432,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    three independent checks (A ∧ ¬I unsat, I ∧ B unsat, shared vocabulary), declining \
                    on any non-Unsat/doubt; no per-query certificate is emitted (so Validated, not \
                    Checked), but the interpolant is independently re-checkable by re-running the checks",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -367,6 +448,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    ONLY when both refutations emit and self-check, else declines to the Validated \
                    lra_interpolant path. BOUNDARY: conjunctive-only — disjunctive/Boolean-I \
                    (lra_interpolant_cnf) and non-LRA stay Validated",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -380,6 +462,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    check_auto-Unsat + shared vocabulary (the vocab check rejects any non-shared \
                    synthetic atom); the abstraction/purification/lifting are untrusted; declines on \
                    sat/non-pure-real/unverified",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -392,6 +475,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    vocabulary containment; declines (None) on any failure. No per-query certificate \
                    is returned (Validated); the DRAT-checked verify is the strongest interpolation \
                    basis and is re-runnable by the consumer",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -420,6 +504,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    in-tree before being handed out, so exporting does not move assurance onto the \
                    consumer. Same skip-when-absent shape as the Carcara crosschecks the other \
                    certified interpolants use",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0011/0012",
     },
     Capability {
@@ -428,6 +513,7 @@ pub const CAPABILITIES: &[Capability] = &[
         assurance: Assurance::Validated,
         evidence: "model replay; bounded bit-blast / simplex; bounded UNSAT exportable as a \
                    re-checkable DRAT certificate (at the chosen width)",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0014/0020/0021",
     },
     Capability {
@@ -445,6 +531,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    a reconstructor bug surfaces as KernelRejected, never an unsound accept. Carcara does \
                    NOT implement integer lia_generic (warns + holey), so the Lean kernel is the external \
                    checker here. Feasible-decline tests confirm no fabrication",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0042/0043",
     },
     Capability {
@@ -457,6 +544,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    validation — 400 random conjunctions (sat+unsat) + 3.7k push/pop steps, 0 disagreements, \
                    every sat model replayed with INTEGER values; strict-tightening (0<x<1 ⇒ UNSAT) handled. \
                    Propagation deferred; non-LIA atoms decline gracefully",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0014/0015",
     },
     Capability {
@@ -475,6 +563,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    ENTAILED (¬clause ∧ level-0 facts integer-UNSAT) and shorter than the full core. \
                    LP-feasible probe inconclusive ⇒ skip; overflow/equality/out-of-fragment skip. uflia \
                    combination (reuses LiaTheory) unchanged",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0014/0015",
     },
     Capability {
@@ -495,6 +584,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    check_with_lra-UNSAT) and shorter than the full core. Unknown/overflow/equality skip. \
                    The QF_LIA/EUF and combined QF_UFLRA/QF_UFLIA mirrors are now landed; retained \
                    fallback loops remain conservative.",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0014/0015",
     },
     Capability {
@@ -506,6 +596,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    check_with_lia_simplex + shared vocabulary; the relaxation/Farkas/denominator-\
                    clearing are untrusted. Declines on a cuts-needed unsat (rational relaxation sat), \
                    overflow, or non-conjunctive-QF_LIA. No per-query certificate emitted",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -525,6 +616,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    cut, or a multivariate rational-relaxation refutation the integer reconstructor \
                    declines) stays Validated; equality interpolants (no single-comparison dual) and \
                    disjunctive/Boolean-I (lia_interpolant_cnf) stay Validated too",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -542,6 +634,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    declines), real-analogue-less constructs (div/mod/abs/coercions/BV), overflow, or any \
                    re-check failure — never an unverified interpolant. Soundness fuzz: 27 Some / 373 None, \
                    0 unsound",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -572,6 +665,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    the solver route decided 105, because it never ran this procedure. No per-query \
                    certificate for the Boolean-structured case (see the conjunctive row) ⇒ Validated, \
                    not Checked",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0375",
     },
     Capability {
@@ -595,6 +689,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    unsat while the export DECLINES (its refutation depends on integer tightening). \
                    recheck at the text front door stays `na` exactly as for QF_LRA: verifying the algebra \
                    does not re-derive the binding from the cited atoms to the query text",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0375",
     },
     Capability {
@@ -617,6 +712,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    refutation rather than accepting whatever it is given. Until 2026-08-17 the \
                    family slice contained no QF_RDL module and this logic counted as having no \
                    external checker",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0458",
     },
     Capability {
@@ -652,6 +748,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    disagreements, 0 LOGICAL decision-regressions, sat replay, +16 value-add decisions \
                    where eager returns Unknown; the online probe runs on an arena CLONE with a bounded \
                    sub-budget so the eager fallback is never starved)",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0013/0015",
     },
     Capability {
@@ -678,6 +775,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    timeout) → graceful Unknown; non-UFLIA → Unknown. Combined theory propagation and \
                    1-UIP learning are landed; focused gates require the combined loop to fire and \
                    revalidate learned theory clauses against the offline arithmetic/EUF combination.",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0013/0014",
     },
     Capability {
@@ -691,6 +789,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    model is projected back to a full-Value-keyed function interpretation and \
                    replayed against the original assertions (decline to sound Unknown on any \
                    replay/projection doubt); never a wrong sat/unsat",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0013/0015 (P1.6)",
     },
     Capability {
@@ -702,6 +801,7 @@ pub const CAPABILITIES: &[Capability] = &[
         evidence: "re-verified before return — A ∧ ¬I and I ∧ B each Unsat via check_with_uf_arithmetic \
                    + shared symbol/function vocabulary; declines on a congruence-needed (disjunctive) \
                    refutation or any re-check failure (never an unverified interpolant)",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -720,6 +820,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    else declines to the Validated uflra_interpolant path. BOUNDARY: conjunctive, \
                    congruence-free only; the Lean reconstruction path does not yet cover opaque-application \
                    LRA, so the external check is Carcara",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -731,6 +832,7 @@ pub const CAPABILITIES: &[Capability] = &[
         evidence: "re-verified before return — A ∧ ¬I and I ∧ B each Unsat via check_with_uf_arithmetic \
                    + shared symbol/function vocabulary; declines on a congruence-needed or cuts-needed \
                    (rational-relaxation-sat) refutation, or any re-check failure",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -750,6 +852,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    (Diophantine / IntInequality) with no sorryAx, else declines to the Validated \
                    uflia_interpolant path. BOUNDARY: conjunctive, congruence-free, covered integer shapes \
                    only; Carcara has no integer lia_generic rule, so the external checker is the Lean kernel",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0047",
     },
     Capability {
@@ -765,6 +868,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    UNSAT exhaustive-or-decline; differentially VALIDATED DISAGREE=0 vs Z3 \
                    over the NRA fuzz (which found+fixed real wrong-unsats); degree-2 SOS \
                    UNSAT carries a kernel-checked Lean proof, general CAD UNSAT no proof yet",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0024/0038/0039/0040/0044/0045/0046",
     },
     Capability {
@@ -780,6 +884,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    differentially VALIDATED DISAGREE=0 vs Z3 over the NIA fuzz; proof \
                    export is fail-closed (Inconclusive) when overflow guards restrict the \
                    blast",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0024 + the no-overflow multiplier guard / fail-closed proof export",
     },
     Capability {
@@ -787,6 +892,7 @@ pub const CAPABILITIES: &[Capability] = &[
         feature: "float add/sub/mul/div/fma/sqrt — F16/F32/F64/F128 + small formats",
         assurance: Assurance::Validated,
         evidence: "circuit differential vs native f32/f64 and rustc_apfloat; model replay",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0023/0026/0028",
     },
     Capability {
@@ -794,6 +900,7 @@ pub const CAPABILITIES: &[Capability] = &[
         feature: "float rem/roundToIntegral/to_fp/conversions/classification",
         assurance: Assurance::Validated,
         evidence: "differential vs trusted fold / native; unvalidated formats refused",
+        checked_by: CheckedBy::DifferentialOracle,
         reference: "ADR-0023/0026",
     },
     Capability {
@@ -802,6 +909,7 @@ pub const CAPABILITIES: &[Capability] = &[
         assurance: Assurance::Validated,
         evidence: "model replay; first-class sort; folded-away UNSAT exportable as a \
                    re-checkable DRAT certificate",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0022",
     },
     Capability {
@@ -821,6 +929,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    field-unification axioms (distinctness/injectivity/acyclicity) stay \
                    trusted; the axiom-free Lean/kernel route is the row below (Carcara stays \
                    premise-based)",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0022",
     },
     Capability {
@@ -842,6 +951,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    constructor DISTINCTNESS is the axiom-free Lean row below; injectivity Lean \
                    route is deferred (needs noConfusion beyond ι); the Carcara premise-based route \
                    is unchanged",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0022",
     },
     Capability {
@@ -864,6 +974,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    C(x)=C(y) is DECLINED (no wrong False — that is injectivity's job). Honest \
                    boundary: distinctness this slice; constructor INJECTIVITY is the axiom-free \
                    Lean row below; the Carcara premise-based distinctness route is unchanged",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0022",
     },
     Capability {
@@ -890,6 +1001,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    False). Honest boundary: injectivity is one of the four axiom-free Lean \
                    field-axiom routes (is-tester + distinctness + injectivity + acyclicity, the \
                    row below); the Carcara premise-based injectivity route is unchanged",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0022",
     },
     Capability {
@@ -916,6 +1028,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    boundary: acyclicity COMPLETES the QF_DT field-axiom Lean chain (is-tester + \
                    distinctness + injectivity + acyclicity all axiom-free Lean); single-level \
                    cycles this slice (multi-step cycles x=C(..y..), y=C(..x..) deferred)",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0022",
     },
     Capability {
@@ -936,6 +1049,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    reasoning that distinct C!=D forces #b1=#b0 is certified); injectivity and \
                    acyclicity stay trusted/deferred; nullary constructors are out of scope; the \
                    Lean/kernel reconstruction route is deferred (Carcara-only)",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0022",
     },
     Capability {
@@ -958,6 +1072,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    distinct-constructor equalities are declined (distinctness's job); acyclicity stays \
                    trusted/deferred (needs induction); nullary constructors are out of scope; the \
                    Lean/kernel reconstruction route is deferred (Carcara-only)",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0022",
     },
     Capability {
@@ -976,6 +1091,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    transfers; MBP/the sub-solve only CHOOSE a useful t — a bad choice adds a redundant-but-\
                    true instance, never an unsound one; SAT/no-progress is unknown-safe). E-matching is \
                    modulo the ground congruence (keystone EGraph::ematch)",
+        checked_by: CheckedBy::Argument,
         reference: "ADR-0016/0032",
     },
     Capability {
@@ -1002,6 +1118,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    combination that cannot replay against the caller's original assertion sequence. \
                    Explicit-table repair, free-scalar completion, serialization, alternation, and \
                    Lean reconstruction remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0357/0358/0359",
     },
     Capability {
@@ -1018,6 +1135,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    division is decision-identical to baseline. ADR-0117 adds source-bound checked \
                    detached units and ADR-0118 composes them across generated premises; direct \
                    online-SAT justifications remain open",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0110",
     },
     Capability {
@@ -1036,6 +1154,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    improves 8.250 to 3.226 ms and checked end-to-end time 11.301 to 9.886 ms. \
                    Non-equality theory literals, proof serialization, and direct online SAT \
                    insertion remain open",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0117",
     },
     Capability {
@@ -1052,6 +1171,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    target preserves UNSAT while reducing reachable query DAG nodes 54 to 17 and \
                    tree nodes 117 to 33. Direct online SAT insertion, non-equality antecedents, and \
                    serialized proof forms remain open",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0118",
     },
     Capability {
@@ -1070,6 +1190,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    from 7 to 2 and improves optimized median end-to-end time from 0.560 to 0.351 ms \
                    (1.60x), with public quantified-BV/LIA decisions unchanged. Non-equality \
                    antecedents, online proof serialization, and SAT-trail-driven matching remain open",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0119",
     },
     Capability {
@@ -1089,6 +1210,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    full matching, and improves median 5.478 to 4.329 ms (1.27x). Equality/work caps \
                    decline safely. High-frequency assignment callbacks, non-equality antecedents, and \
                    online proof serialization remain open",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0120",
     },
     Capability {
@@ -1105,6 +1227,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    improves median optimized matching 17.477 to 0.974 ms (17.9x); the 54-row \
                    quantified-BV division is decision-identical. Bytecode, inverted parent paths, \
                    relevance/generation filters, and direct on-merge delta propagation remain open",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0111",
     },
     Capability {
@@ -1121,6 +1244,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    2.555 to 0.311 ms (8.2x). Public quantified-BV/LIA decisions and replay are \
                    unchanged. ADR-0113 adds selective on-merge inverted paths; exact path-shape and \
                    relevance/generation filters remain open",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0112",
     },
     Capability {
@@ -1141,6 +1265,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    quantified-BV/LIA decisions and replay are unchanged. ADR-0114 adds exact \
                    declaration/argument path tries; class-label and relevance/generation filters \
                    remain open",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0113",
     },
     Capability {
@@ -1160,6 +1285,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    Public quantified-BV/LIA decisions and replay are unchanged. ADR-0115 adds \
                    exact class-label and nullary ground-argument filters; relevance and generation \
                    filters remain open",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0114",
     },
     Capability {
@@ -1178,6 +1304,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    quantified-BV/LIA decisions, replay, and evidence APIs are unchanged. Relevance \
                    and generation-cost scheduling remain open; ADR-0116 adds exact top-application \
                    delta queues",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0115",
     },
     Capability {
@@ -1195,6 +1322,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    optimized medians improve from 0.370 to 0.122 ms (3.03x). Public quantified-BV/\
                    LIA decisions, replay, and evidence APIs are unchanged. Generation-cost \
                    scheduling remains separate",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0116",
     },
     Capability {
@@ -1216,6 +1344,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    has eleven dominant candidates with empty trust ledgers and DISAGREE=0. Open \
                    formulas, general QE, function counterexamples, and broader Lean reconstruction \
                    remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0100/0102/0139",
     },
     Capability {
@@ -1235,6 +1364,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    partitions, affine uses, free symbols, and all three large mixed-binder ITE rows \
                    remain outside this equality-partition route; ADR-0107 separately decides the \
                    two SAT rows",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0101/0106",
     },
     Capability {
@@ -1255,6 +1385,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    affine-growth class constructively through guarded exact ite semantics, two \
                    consecutive instances, and positive-slope monotonicity, adding no new axiom. \
                    Broad arithmetic CEGQI remains",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0095/0097/0104/0105",
     },
     Capability {
@@ -1273,6 +1404,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    reasoning, and integer normalization. With ADR-0104's separate residue route, the \
                    current audit is Lean-checked 8/8 UNSAT with twelve dominant candidates. General \
                    polarity-aware nested QE/QSAT remains open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0099/0103",
     },
     Capability {
@@ -1292,6 +1424,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    zero errors, disagreement, or replay failures. Its evidence is independently checked, \
                    has no trust holes, and is a dominant candidate. Piecewise/general Skolem functions \
                    remain open",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0096/0098/0121",
     },
     Capability {
@@ -1307,6 +1440,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    quantified-BV slice to 31 SAT / 9 UNSAT / 3 unknown / 11 unsupported with 40/40 \
                    decisions evidence-certified and checked, no trust holes on the target, and zero \
                    disagreement, error, or replay failure. General free-BV models and QE/QSAT remain open",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0122",
     },
     Capability {
@@ -1330,6 +1464,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    11 unsupported with 41/41 checked/certified decisions and zero disagreement, \
                    error, or replay failure. Negative quantifier contexts, relevant free BV values, \
                    functions, and general QSAT remain outside the route",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0107/0123",
     },
     Capability {
@@ -1349,6 +1484,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    candidates, zero disagreement/error/replay failure, and an empty target trust \
                    ledger. Nonlinear low-bit products, nested alternation, functions, arrays, \
                    arithmetic, broad BV model construction, and Lean SAT reconstruction remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0130",
     },
     Capability {
@@ -1369,6 +1505,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    disagreement/error/replay failure, and an empty target trust ledger. Arbitrary \
                    binder arithmetic, implication shapes, alternation, functions/arrays, broad BV \
                    model construction, and Lean SAT reconstruction remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0131",
     },
     Capability {
@@ -1391,6 +1528,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    an empty target trust ledger. General nonlinear reasoning, arbitrary zero \
                    expressions/comparisons, alternation, functions/arrays, broad BV model \
                    construction, and Lean SAT reconstruction remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0132",
     },
     Capability {
@@ -1410,6 +1548,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    disagreement/error/replay failure, and an empty target trust ledger. Negative \
                    quantifiers, existentials, functions/arrays, free BVs, mixed arithmetic, general \
                    QSAT, and Lean SAT reconstruction remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0133",
     },
     Capability {
@@ -1429,6 +1568,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    an empty target trust ledger. General QSAT, negative quantifier contexts, \
                    existentials, functions/arrays, free BVs in quantified assertions, mixed \
                    arithmetic, wasm proof export, and broader Lean reconstruction remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0134",
     },
     Capability {
@@ -1447,6 +1587,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    raising public Lean coverage to 9/18. Negative contexts, existentials, functions/arrays, free BVs in \
                    quantified assertions, mixed arithmetic, general QSAT, and Lean SAT \
                    reconstruction remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0135/0137",
     },
     Capability {
@@ -1467,6 +1608,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    16 controls whose 160 outer binders exceed ADR-0124's original cap. The QF_BV \
                    term-to-CNF reduction keeps its established explicit trust boundary; general QSAT, \
                    open formulas, functions, arrays, arithmetic, and Lean reconstruction remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0124/0125",
     },
     Capability {
@@ -1489,6 +1631,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    computational Bool definitions and local AIG lets, all reduced by the kernel. \
                    The three-row release gate completes in 12.43 seconds under 4 GiB, raising the \
                    exact public audit to 48/54 dominant and Lean UNSAT 12/18",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0126/0138",
     },
     Capability {
@@ -1509,6 +1652,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    4 GiB and closes public quantified-BV Lean UNSAT at 18/18. Non-conjunctive \
                    contexts, multiple selected universals, nested quantifiers, functions, arrays, \
                    arithmetic, and general QSAT remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0127",
     },
     Capability {
@@ -1530,6 +1674,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    AIG body. The exact public audit is 50/54 dominant and Lean UNSAT 14/18. \
                    Nonvacuous/open bodies, reversed or broader alternation, functions, arrays, \
                    arithmetic binders, and general QSAT remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0128/0140",
     },
     Capability {
@@ -1549,6 +1694,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    suite covers 1,720 cases and controls. Different premises, non-conjunctive polarity, \
                    unequal prefixes, nested quantifiers, functions, arrays, arithmetic, general QSAT, \
                    and Lean reconstruction remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0129",
     },
     Capability {
@@ -1572,6 +1718,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    from 17.74 to 10.75 seconds without changing verdict or trust. Open-context sharing, \
                    general projection, alternation, functions, and multiple independent universal \
                    conjuncts remain open",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0108/0109",
     },
     Capability {
@@ -1584,6 +1731,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    re-checked (M ⊨ F', variable absent, and F' ⇒ ∃x.F by per-literal check_with_lra \
                    UNSAT against the exact Fourier–Motzkin projection); declines (None) on any doubt \
                    (disjunctive-disequality case, overflow, non-LRA). No per-query certificate emitted",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0048 (P2.6)",
     },
     Capability {
@@ -1600,6 +1748,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    divisibility boundary (|c|>1, no IR modulo the deciders interpret), disjunctive \
                    disequality, overflow, or non-LIA — a soundness fuzz over 400 LCG cases projected 29 / \
                    declined 285 with ZERO unsound. No per-query certificate emitted",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0048 (P2.6)",
     },
     Capability {
@@ -1615,6 +1764,7 @@ pub const CAPABILITIES: &[Capability] = &[
         assurance: Assurance::Experimental,
         evidence: "model replay through BV path; canonical-padding equality; length bound explicit; \
                    certified non-arena UNSAT routes follow ADR-0061",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0025/0029/0052/0053/0061",
     },
     Capability {
@@ -1626,6 +1776,7 @@ pub const CAPABILITIES: &[Capability] = &[
         evidence: "each optimum/Pareto point certified by the underlying decision procedure \
                    per step (a confirmed-unsat domination query); deterministic point/push caps; \
                    out-of-fragment objectives degrade to Unknown instead of hard solver errors",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0027",
     },
     Capability {
@@ -1634,6 +1785,7 @@ pub const CAPABILITIES: &[Capability] = &[
                   reachable-state enumeration (symbolic execution / reachability)",
         assurance: Assurance::Validated,
         evidence: "model replay; SAT final-conflict core (a sound inconsistent subset)",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0009",
     },
     Capability {
@@ -1679,6 +1831,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    warm improves from 30.933 to 11.257 ms, though direct ITE folding remains faster at \
                    0.405 ms; warm path refuses \
                    remaining deferred array/UF theories, including nested/extended array components",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0010/0030/0086/0087/0088/0089/0090/0091/0092/0093/0094",
     },
     Capability {
@@ -1697,6 +1850,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    reduce or scalar applications abstract, and route through the full dispatcher when \
                    unreduced; optimum certified by the underlying \
                    procedure; three-valued PathStatus keeps unknown from wrongly pruning a live path",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0009/0027",
     },
     Capability {
@@ -1707,6 +1861,7 @@ pub const CAPABILITIES: &[Capability] = &[
         assurance: Assurance::Validated,
         evidence: "Reachable = replay-checked counterexample trace (incl. select/store); \
                    UnreachableWithinBound is bounded only (interpolation = future work); unknown-safe",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0009/0010",
     },
     Capability {
@@ -1720,6 +1875,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    counterexample; non-inductive properties return Inconclusive, never a \
                    wrong Safe; focused BMC gates cover an inductive array property and a \
                    reachable symbolic-memory counterexample",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0009/0010",
     },
     Capability {
@@ -1729,6 +1885,7 @@ pub const CAPABILITIES: &[Capability] = &[
         assurance: Assurance::Checked,
         evidence: "base-case + inductive-step UNSAT each exported as a drat-trim-checkable \
                    DIMACS+DRAT pair (clausal layer, modulo trusted term→CNF reduction)",
+        checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0011/0012",
     },
     Capability {
@@ -1741,6 +1898,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    invariant passes 3 independent check_auto-unsat checks (initiation, consecution, \
                    safety); Reachable only when BMC-confirmed; prove_safety_pdr_certified bundles the \
                    3 DRAT-recheckable proofs; all caps → Unknown",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0048",
     },
     Capability {
@@ -1753,6 +1911,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    passes 3 check_auto-unsat checks (initiation, consecution, safety); Reachable only \
                    when BMC-confirmed; qf_bv_interpolant None / too-coarse over-approximation deepen k; \
                    all caps → Unknown",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0048",
     },
     Capability {
@@ -1778,6 +1937,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    conjoins EVERY body atom, audited for the nonlinear extension.) SCCs over caps \
                    (16 members / 32 state width), sort-incompatible members, GENUINE nonlinear recursion \
                    (≥2 same-SCC atoms after folding), or >8-atom bodies → Unknown",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0048",
     },
     Capability {
@@ -1790,6 +1950,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    invariant passes 3 check_auto-unsat checks (init/consecution/safety); Reachable only \
                    when an inline LRA k-unrolling is check_auto-Sat; closes Safe incl. MULTI-VARIABLE \
                    systems (twin counters x=y); all caps → Unknown",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0048",
     },
     Capability {
@@ -1806,6 +1967,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    bad); integer-specific safety (e.g. odd target unreachable by +2 steps) decided by the \
                    integer decider in the loop; soundness-negative test that an actually-reachable system \
                    can never return a wrong Safe; all caps / mbp_lia decline → Unknown",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0048",
     },
     Capability {
@@ -1825,6 +1987,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    check_auto-Sat (trace replayed); lia_interpolant is verify-before-return and its \
                    declines (cuts-needed / non-conjunctive / overflow) become a sound Unknown, never an \
                    error; soundness-negative test that an actually-unsafe system never returns Safe",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0047/0048",
     },
     Capability {
@@ -1838,6 +2001,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    step suffices (init already an inductive over-approximation); a disjunctive frontier \
                    deepens then declines to Unknown (conjunctive Farkas only — disjunctive interpolation \
                    is future work). Never a wrong Safe/Reachable",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0048",
     },
     Capability {
@@ -1852,6 +2016,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    sufficiency (axioms ∧ H ∧ ¬conjecture check_auto Unsat), and shared vocabulary; \
                    Unknown rejects, over-eager None on budget exhaustion / out-of-grammar (never \
                    a wrong abduct)",
+        checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0049",
     },
     Capability {
@@ -1867,6 +2032,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    construction; guarded by a 400-query LCG differential (check_auto_explained.0 == \
                    check_auto EXACTLY, 0 mismatches) + a determinism check (byte-identical trace across \
                    runs). No decider verdict logic touched",
+        checked_by: CheckedBy::DifferentialOracle,
         reference: "ADR-0050",
     },
 ];
@@ -1890,16 +2056,25 @@ pub fn capability_matrix_markdown() -> String {
                   **sound, incomplete** (`unknown`-safe), **experimental** (lower assurance or \
                   bounded/horizon surface).\n\n",
     );
-    out.push_str("| Area | Capability | Assurance | Evidence | Ref |\n");
-    out.push_str("|---|---|---|---|---|\n");
+    out.push_str(
+        "Checked by: **external-artifact-checker** (an implementation OUTSIDE this repository \
+                  reads the artifact — Carcara, official Lean, drat-trim), **self-checker** (a \
+                  second implementation inside it re-derives the result), **differential-only** \
+                  (agreement with an oracle, which tests the verdict and not our artifact), \
+                  **argument-only** (decided, not certified — the result rests on a soundness \
+                  argument rather than on anything a checker reads).\n\n",
+    );
+    out.push_str("| Area | Capability | Assurance | Checked by | Evidence | Ref |\n");
+    out.push_str("|---|---|---|---|---|---|\n");
     for c in CAPABILITIES {
         // `write!` to a String is infallible; the result is intentionally ignored.
         let _ = writeln!(
             out,
-            "| {} | {} | {} | {} | {} |",
+            "| {} | {} | {} | {} | {} | {} |",
             c.area,
             c.feature,
             c.assurance.label(),
+            c.checked_by.label(),
             c.evidence,
             c.reference,
         );

@@ -276,6 +276,35 @@ leaving the number to look cleaner than it is.
 
 **C. Make "decided, not certified" an explicit status**, so the gap is visible
 in the artifact instead of discoverable only by reading a prose evidence field.
+*Done 2026-08-17.* `Capability` carries a `checked_by: CheckedBy` field —
+`ExternalChecker` / `SelfChecker` / `DifferentialOracle` / `Argument` — and the
+rendered matrix gained a **Checked by** column, so the answer is read rather than
+recovered.
+
+`Assurance` never carried this axis: `Checked` says a certificate exists, not
+whether anyone outside this repository can read it. That distinction *is* the
+strand's primary metric, and it lived only in prose.
+
+**The heuristic had to go, and the evidence for that is what building it
+produced.** Reading all 15 rows the classifier could not place: fourteen were
+self-checks written as "re-checked", "re-verified", or "VERIFY-BEFORE-RETURN" —
+phrasings the pattern missed — and widening it to catch those left six more,
+phrased "check_auto-unsat checks", "kernel infer", "certified by the underlying
+decision procedure". Every round of tuning revealed another wording. The bucket
+was never a set of genuinely-unclassifiable capabilities; it was a set of
+sentences a regex had not seen yet.
+
+The classifier survives as a **cross-check, never the source**, and only in one
+direction: a row declaring `ExternalChecker` whose evidence names no external
+checker fails the gate. The asymmetry matches the table's standing rule —
+*downgrade rather than overstate*. Policing the other direction would flag the
+two real rows that mention Lean in order to say what the Lean path does **not**
+cover. Both guards were mutation-tested against the committed table.
+
+The headline did not move, which is the point: `external=38` and **13 of 23
+logics** before and after. What changed is that `unclassified` went 15 → 0, so
+the report no longer holds a bucket of rows whose assurance nobody had stated.
+`self` went 48 → 62 to match.
 
 ## The measurement to repeat
 

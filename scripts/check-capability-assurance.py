@@ -97,6 +97,9 @@ def entries(text: str) -> list[dict[str, str]]:
         am = re.search(r"assurance:\s*Assurance::(\w+)", body)
         if am:
             rec["assurance"] = am.group(1)
+        cm = re.search(r"checked_by:\s*CheckedBy::(\w+)", body)
+        if cm:
+            rec["checked_by"] = cm.group(1)
         if "area" in rec:
             out.append(rec)
     return out
@@ -137,7 +140,38 @@ def logics(area: str) -> set[str]:
     return out
 
 
+DECLARED = {
+    "ExternalChecker": "external-artifact-checker",
+    "SelfChecker": "self-checker",
+    "DifferentialOracle": "differential-only",
+    "Argument": "argument-only",
+}
+
+
 def tier(rec: dict[str, str]) -> str:
+    """WHO checks this capability's artifact — read from the table, not guessed.
+
+    Until 2026-08-17 this was `inferred_tier` below, a regex over the prose
+    `evidence` field, and the table now states the answer instead (strand item C).
+    The inference is kept as a cross-check, never as the source: see
+    `overstated`.
+    """
+    declared = rec.get("checked_by")
+    if declared:
+        return DECLARED.get(declared, "unclassified")
+    return inferred_tier(rec)
+
+
+def inferred_tier(rec: dict[str, str]) -> str:
+    """The old prose heuristic, retained ONLY to contradict the declared field.
+
+    Kept because it is the one independent opinion available about a row: if a
+    capability declares an external checker and its own evidence never names
+    one, something is wrong with the row. It is not trusted in the other
+    direction — measured, it silently misplaced 15 rows, and every round of
+    widening it revealed another phrasing ("re-checked", "VERIFY-BEFORE-RETURN",
+    "check_auto-unsat checks", "kernel infer").
+    """
     ev = rec.get("evidence", "")
     if EXTERNAL.search(ev):
         return "external-artifact-checker"
@@ -146,6 +180,25 @@ def tier(rec: dict[str, str]) -> str:
     if DIFFERENTIAL.search(ev):
         return "differential-only"
     return "unclassified"
+
+
+def overstated(recs: list[dict[str, str]]) -> list[str]:
+    """Rows claiming an EXTERNAL checker whose evidence names none.
+
+    Asymmetric on purpose, matching this table's standing rule — *downgrade
+    rather than overstate*. A row declaring `SelfChecker` while its prose happens
+    to mention Lean is not an error (it may be explaining what Lean does NOT
+    cover, which two real rows do). A row declaring `ExternalChecker` with no
+    external checker named anywhere in its evidence is a claim with nothing
+    behind it, and this is the strand's headline number.
+    """
+    return [
+        f"{r['area']}: declares CheckedBy::ExternalChecker, but its evidence names no external "
+        "checker (Carcara / Lean / drat-trim). This row is counted in the strand's primary "
+        "metric, so the claim needs an artifact and a checker in the evidence field"
+        for r in recs
+        if r.get("checked_by") == "ExternalChecker" and not EXTERNAL.search(r.get("evidence", ""))
+    ]
 
 
 def rank(recs: list[dict[str, str]]) -> dict[str, tuple[int, set[str]]]:
@@ -244,7 +297,14 @@ def main(argv: list[str]) -> int:
           f"unclassified={tiers['unclassified']}|"
           f"logics_external={len(covered)}|logics_total={len(areas)}")
 
-    failures = []
+    undeclared = [r["area"] for r in recs if "checked_by" not in r]
+    failures = list(overstated(recs))
+    if undeclared:
+        failures.append(
+            f"{len(undeclared)} capability rows do not declare `checked_by` "
+            f"({', '.join(sorted(set(undeclared))[:6])}...). Every row must state who checks "
+            "its artifact; falling back to the prose heuristic is what strand item C removed"
+        )
     if len(recs) < MIN_ENTRIES:
         failures.append(
             f"parsed only {len(recs)} capability entries (floor {MIN_ENTRIES}); the "

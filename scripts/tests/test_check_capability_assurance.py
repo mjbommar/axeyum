@@ -95,6 +95,65 @@ class CompoundAreaNamesCountAsTheLogicsTheyName(unittest.TestCase):
         self.assertEqual(CA.logics("datatypes"), {"datatypes"})
 
 
+class TheTableStatesWhoChecksItRatherThanBeingGuessed(unittest.TestCase):
+    """Strand item C. The prose heuristic silently misplaced 15 rows, and each
+    round of widening it revealed another phrasing — "re-checked",
+    "VERIFY-BEFORE-RETURN", "check_auto-unsat checks", "kernel infer". The table
+    declares the answer now; the heuristic survives only to contradict it."""
+
+    def test_the_declared_field_beats_the_prose(self) -> None:
+        """Evidence naming Lean, declared as a self-check, stays a self-check —
+        two real rows explain what the Lean path does NOT cover."""
+        rec = {
+            "area": "QF_X",
+            "feature": "f",
+            "evidence": "the Lean reconstruction path does not yet cover this",
+            "checked_by": "SelfChecker",
+        }
+        self.assertEqual(CA.tier(rec), "self-checker")
+        self.assertEqual(CA.inferred_tier(rec), "external-artifact-checker")
+
+    def test_a_row_with_no_declaration_falls_back_to_the_heuristic(self) -> None:
+        rec = {"area": "QF_X", "feature": "f", "evidence": "accepted by Carcara"}
+        self.assertEqual(CA.tier(rec), "external-artifact-checker")
+
+    def test_argument_only_is_a_tier_of_its_own(self) -> None:
+        """"Decided, not certified" is stated, not left to be discovered."""
+        rec = {"area": "QF_X", "feature": "f", "evidence": "sound by construction",
+               "checked_by": "Argument"}
+        self.assertEqual(CA.tier(rec), "argument-only")
+
+    def test_claiming_an_external_checker_with_none_named_is_an_error(self) -> None:
+        recs = [{"area": "QF_X", "feature": "f", "evidence": "we re-check it ourselves",
+                 "checked_by": "ExternalChecker"}]
+        errs = CA.overstated(recs)
+        self.assertTrue(errs)
+        self.assertIn("names no external checker", errs[0])
+
+    def test_the_guard_is_asymmetric_and_does_not_police_downgrades(self) -> None:
+        """A row may mention Lean while declaring a lesser tier — downgrade
+        rather than overstate. Policing that direction would flag the two rows
+        that explain what Lean does not cover."""
+        recs = [{"area": "QF_X", "feature": "f",
+                 "evidence": "Carcara accepts the sibling; this route does not reach it",
+                 "checked_by": "SelfChecker"}]
+        self.assertEqual(CA.overstated(recs), [])
+
+    def test_the_committed_table_declares_every_row(self) -> None:
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        missing = [r["area"] for r in recs if "checked_by" not in r]
+        self.assertEqual(missing, [], "these rows still rely on the prose heuristic")
+
+    def test_the_committed_table_overstates_nothing(self) -> None:
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        self.assertEqual(CA.overstated(recs), [])
+
+    def test_nothing_is_unclassified_any_more(self) -> None:
+        """The bucket that hid 15 rows is empty, and must stay empty."""
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        self.assertEqual([r["area"] for r in recs if CA.tier(r) == "unclassified"], [])
+
+
 class LogicCoverageIsTheNumberTheStrandQuotes(unittest.TestCase):
     """The strand states its metric as "N of 23 logics", but only the ENTRY
     count was ever emitted, so the quoted figure came from ad-hoc snippets that
