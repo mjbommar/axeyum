@@ -107,6 +107,30 @@ pub struct RatPrelude {
     /// reals, and stating it positively is what lets `CReal`'s inverse consume
     /// it without a sign decision it cannot make.
     pub mul_inv_cancel: NameId,
+    /// `Rat.sub_mul : ∀ a b w, Rat.sub (Rat.mul a w) (Rat.mul b w) =
+    /// Rat.mul (Rat.sub a b) w` — the right-hand distributive law over a
+    /// difference, which is [`Self::mul_sub_mul`] with its first summand
+    /// collapsed.
+    pub sub_mul: NameId,
+    /// `Rat.mul_inv_sub_one : ∀ a b, Rat.lt Rat.zero b →
+    /// Rat.sub (Rat.mul a (Rat.inv b)) Rat.one = Rat.mul (Rat.sub a b) (Rat.inv b)`.
+    ///
+    /// The shape `x · x⁻¹ ≈ 1` is estimated in one level up: the residue of a
+    /// quotient from `1` is the numerator's error, scaled by the reciprocal.
+    pub mul_inv_sub_one: NameId,
+    /// `Rat.inv_sub_inv : ∀ a b, 0 < a → 0 < b →
+    /// Rat.sub (Rat.inv a) (Rat.inv b) =
+    /// Rat.mul (Rat.sub b a) (Rat.mul (Rat.inv a) (Rat.inv b))`.
+    ///
+    /// The identity the *regularity* of a reciprocal sequence rests on: two
+    /// reciprocals differ by their arguments' difference, scaled by both
+    /// reciprocals.
+    pub inv_sub_inv: NameId,
+    /// `Rat.inv_le_of_pos_le : ∀ c a, Rat.lt Rat.zero c → Rat.le c a →
+    /// Rat.le (Rat.inv a) (Rat.inv c)` — the inverse is **antitone on the
+    /// positives**, which is what turns a lower bound on a sample into an upper
+    /// bound on its reciprocal.
+    pub inv_le_of_pos_le: NameId,
     /// `Rat.inv_pos : ∀ q, Rat.lt Rat.zero q → Rat.lt Rat.zero (Rat.inv q)`.
     ///
     /// Derived from [`Self::mul_inv_cancel`] and the 22 laws alone — no
@@ -543,6 +567,10 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         inv: child(kernel, "inv"),
         mul_inv_cancel: child(kernel, "mul_inv_cancel"),
         inv_pos: child(kernel, "inv_pos"),
+        sub_mul: child(kernel, "sub_mul"),
+        mul_inv_sub_one: child(kernel, "mul_inv_sub_one"),
+        inv_sub_inv: child(kernel, "inv_sub_inv"),
+        inv_le_of_pos_le: child(kernel, "inv_le_of_pos_le"),
         sub: child(kernel, "sub"),
         div: child(kernel, "div"),
         gcd_one_right: child(kernel, "gcd_one_right"),

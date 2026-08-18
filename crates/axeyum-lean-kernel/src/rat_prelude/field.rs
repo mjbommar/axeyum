@@ -67,9 +67,10 @@
 
 use super::RatPrelude;
 use super::defs::inv_body;
+use super::group::rsub;
 use super::ops::{
-    den, den_pos, normalize, num, one_le_succ, rat_eq_rewrite, rat_theorem, rat_ty, req, rle, rlt,
-    rmul, rone, rzero,
+    den, den_pos, normalize, num, one_le_succ, radd, rat_eq_rewrite, rat_theorem, rat_ty, rchain,
+    rcongr, req, rle, rlt, rmul, rone, rsymm, rzero,
 };
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -83,7 +84,331 @@ use crate::nat_prelude::NatOps;
 /// Returns the trusted gate's rejection.
 pub(super) fn declare_field_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     declare_mul_inv_cancel(d, p)?;
-    declare_inv_pos(d, p)
+    declare_inv_pos(d, p)?;
+    declare_sub_mul(d, p)?;
+    declare_inverse_identities(d, p)?;
+    declare_inv_antitone(d, p)
+}
+
+/// `1 · a = a`, as a proof term. There is no `Rat.one_mul` — the 22 name
+/// `mul_one` only — and every rearrangement below needs the other side.
+fn one_mul(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId) -> ExprId {
+    let one = rone(d, p);
+    let start = rmul(d, one, a);
+    let flipped = rmul(d, a, one);
+    let commute = d.lemma(p.mul_comm, &[one, a]);
+    let collapse = d.lemma(p.mul_one, &[a]);
+    let (_, proof) = rchain(d, start, &[(flipped, commute), (a, collapse)]);
+    proof
+}
+
+/// `Rat.sub_mul : ∀ a b w, (a·w) − (b·w) = (a − b)·w`.
+///
+/// The right-hand distributive law over a difference, and it is
+/// [`mul_sub_mul`](super::RatPrelude::mul_sub_mul) with its first summand
+/// collapsed: `a·(w − w)` is `a·0` is `0`. Everything else in this module is a
+/// rearrangement on top of it.
+fn declare_sub_mul(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.sub_mul, 3, &|d, v| {
+        let (a, b, w) = (v[0], v[1], v[2]);
+        let zero = rzero(d, p);
+        let left = rmul(d, a, w);
+        let right = rmul(d, b, w);
+        let start = rsub(d, p, left, right);
+        let difference = rsub(d, p, a, b);
+        let result = rmul(d, difference, w);
+        let stmt = req(d, start, result);
+
+        let residue = rsub(d, p, w, w);
+        let head = rmul(d, a, residue);
+        let split = d.lemma(p.mul_sub_mul, &[a, w, b, w]);
+        let decomposed = radd(d, head, result);
+        let vanishes = d.lemma(p.sub_self, &[w]);
+        let annihilated = rmul(d, a, zero);
+        let collapse_head = rcongr(d, residue, zero, vanishes, &|d, t| {
+            let scaled = rmul(d, a, t);
+            radd(d, scaled, result)
+        });
+        let with_zero_head = radd(d, annihilated, result);
+        let kill = d.lemma(p.mul_zero, &[a]);
+        let headless = radd(d, zero, result);
+        let strip_head = rcongr(d, annihilated, zero, kill, &|d, t| radd(d, t, result));
+        let unpad = d.lemma(p.zero_add, &[result]);
+        let (_, proof) = rchain(
+            d,
+            start,
+            &[
+                (decomposed, split),
+                (with_zero_head, collapse_head),
+                (headless, strip_head),
+                (result, unpad),
+            ],
+        );
+        (stmt, proof)
+    })
+}
+
+/// The two identities the real inverse's estimates are written in.
+fn declare_inverse_identities(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    // mul_inv_sub_one : ∀ a b, 0 < b → a·b⁻¹ − 1 = (a − b)·b⁻¹.
+    rat_theorem(d, p.mul_inv_sub_one, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let zero = rzero(d, p);
+        let one = rone(d, p);
+        let hypothesis = rlt(d, p, zero, b);
+        let reciprocal = d.const_app(p.inv, &[b]);
+        let scaled = rmul(d, a, reciprocal);
+        let start = rsub(d, p, scaled, one);
+        let difference = rsub(d, p, a, b);
+        let result = rmul(d, difference, reciprocal);
+        let claim = req(d, start, result);
+        let stmt = d.arrow(hypothesis, claim);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let unit = rmul(d, b, reciprocal);
+        let cancel = d.lemma(p.mul_inv_cancel, &[b, h]);
+        let reopen = {
+            let back = rsymm(d, unit, one, cancel);
+            rcongr(d, one, unit, back, &|d, t| rsub(d, p, scaled, t))
+        };
+        let paired = rsub(d, p, scaled, unit);
+        let distribute = d.lemma(p.sub_mul, &[a, b, reciprocal]);
+        let (_, chained) = rchain(d, start, &[(paired, reopen), (result, distribute)]);
+        let proof = d.lam_fv(h_fv, hypothesis, chained);
+        (stmt, proof)
+    })?;
+
+    // inv_sub_inv : ∀ a b, 0 < a → 0 < b → a⁻¹ − b⁻¹ = (b − a)·(a⁻¹·b⁻¹).
+    rat_theorem(d, p.inv_sub_inv, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let zero = rzero(d, p);
+        let one = rone(d, p);
+        let left_hypothesis = rlt(d, p, zero, a);
+        let right_hypothesis = rlt(d, p, zero, b);
+        let u = d.const_app(p.inv, &[a]);
+        let w = d.const_app(p.inv, &[b]);
+        let joint = rmul(d, u, w);
+        let start = rsub(d, p, u, w);
+        let difference = rsub(d, p, b, a);
+        let result = rmul(d, difference, joint);
+        let claim = req(d, start, result);
+        let stmt = {
+            let inner = d.arrow(right_hypothesis, claim);
+            d.arrow(left_hypothesis, inner)
+        };
+
+        let la_fv = d.fresh_fvar();
+        let la = d.kernel().fvar(la_fv);
+        let lb_fv = d.fresh_fvar();
+        let lb = d.kernel().fvar(lb_fv);
+
+        // `b·(a⁻¹·b⁻¹) = a⁻¹`: regroup, cancel `b·b⁻¹`, strip the unit.
+        let scaled_b = rmul(d, b, joint);
+        let head_b = rmul(d, b, u);
+        let regrouped_b = rmul(d, head_b, w);
+        let regroup_b = {
+            let forward = d.lemma(p.mul_assoc, &[b, u, w]);
+            rsymm(d, regrouped_b, scaled_b, forward)
+        };
+        let flipped_b = rmul(d, u, b);
+        let commuted_b = rmul(d, flipped_b, w);
+        let commute_b = {
+            let swap = d.lemma(p.mul_comm, &[b, u]);
+            let head = rmul(d, b, u);
+            let flipped = rmul(d, u, b);
+            rcongr(d, head, flipped, swap, &|d, t| rmul(d, t, w))
+        };
+        let tail_b = rmul(d, b, w);
+        let reassociated_b = rmul(d, u, tail_b);
+        let reassociate_b = d.lemma(p.mul_assoc, &[u, b, w]);
+        let unit_b = rmul(d, u, one);
+        let cancel_b = {
+            let inner = rmul(d, b, w);
+            let law = d.lemma(p.mul_inv_cancel, &[b, lb]);
+            rcongr(d, inner, one, law, &|d, t| rmul(d, u, t))
+        };
+        let strip_b = d.lemma(p.mul_one, &[u]);
+        let (_, to_u) = rchain(
+            d,
+            scaled_b,
+            &[
+                (regrouped_b, regroup_b),
+                (commuted_b, commute_b),
+                (reassociated_b, reassociate_b),
+                (unit_b, cancel_b),
+                (u, strip_b),
+            ],
+        );
+
+        // `a·(a⁻¹·b⁻¹) = b⁻¹`: regroup, cancel `a·a⁻¹`, strip the unit.
+        let scaled_a = rmul(d, a, joint);
+        let head_a = rmul(d, a, u);
+        let regrouped_a = rmul(d, head_a, w);
+        let regroup_a = {
+            let forward = d.lemma(p.mul_assoc, &[a, u, w]);
+            rsymm(d, regrouped_a, scaled_a, forward)
+        };
+        let unit_a = rmul(d, one, w);
+        let cancel_a = {
+            let head = rmul(d, a, u);
+            let law = d.lemma(p.mul_inv_cancel, &[a, la]);
+            rcongr(d, head, one, law, &|d, t| rmul(d, t, w))
+        };
+        let strip_a = one_mul(d, p, w);
+        let (_, to_w) = rchain(
+            d,
+            scaled_a,
+            &[(regrouped_a, regroup_a), (unit_a, cancel_a), (w, strip_a)],
+        );
+
+        // `a⁻¹ − b⁻¹ = b·joint − a·joint = (b − a)·joint`.
+        let restored_left = {
+            let back = rsymm(d, scaled_b, u, to_u);
+            rcongr(d, u, scaled_b, back, &|d, t| rsub(d, p, t, w))
+        };
+        let half = rsub(d, p, scaled_b, w);
+        let restored_right = {
+            let back = rsymm(d, scaled_a, w, to_w);
+            rcongr(d, w, scaled_a, back, &|d, t| rsub(d, p, scaled_b, t))
+        };
+        let paired = rsub(d, p, scaled_b, scaled_a);
+        let distribute = d.lemma(p.sub_mul, &[b, a, joint]);
+        let (_, chained) = rchain(
+            d,
+            start,
+            &[
+                (half, restored_left),
+                (paired, restored_right),
+                (result, distribute),
+            ],
+        );
+        let proof = {
+            let with_b = d.lam_fv(lb_fv, right_hypothesis, chained);
+            d.lam_fv(la_fv, left_hypothesis, with_b)
+        };
+        (stmt, proof)
+    })
+}
+
+/// `Rat.inv_le_of_pos_le : ∀ c a, 0 < c → c ≤ a → a⁻¹ ≤ c⁻¹`.
+///
+/// The inverse is **antitone on the positives**, which is the bound the real
+/// inverse's regularity estimate needs: a sample bounded below by `1/(k+1)` has
+/// a reciprocal bounded above by `k+1`. Derived from
+/// [`mul_inv_cancel`](super::RatPrelude::mul_inv_cancel),
+/// [`inv_pos`](super::RatPrelude::inv_pos) and the 22 laws alone — scale
+/// `c ≤ a` by the nonnegative `a⁻¹·c⁻¹` and both sides collapse.
+fn declare_inv_antitone(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.inv_le_of_pos_le, 2, &|d, v| {
+        let (c, a) = (v[0], v[1]);
+        let zero = rzero(d, p);
+        let one = rone(d, p);
+        let positive = rlt(d, p, zero, c);
+        let ordered = rle(d, p, c, a);
+        let u = d.const_app(p.inv, &[a]);
+        let w = d.const_app(p.inv, &[c]);
+        let claim = rle(d, p, u, w);
+        let stmt = {
+            let inner = d.arrow(ordered, claim);
+            d.arrow(positive, inner)
+        };
+
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+        let ho_fv = d.fresh_fvar();
+        let ho = d.kernel().fvar(ho_fv);
+
+        let a_positive = d.lemma(p.lt_of_lt_of_le, &[zero, c, a, hp, ho]);
+        let u_positive = d.lemma(p.inv_pos, &[a, a_positive]);
+        let w_positive = d.lemma(p.inv_pos, &[c, hp]);
+        let u_nonneg = d.lemma(p.le_of_lt, &[zero, u, u_positive]);
+        let w_nonneg = d.lemma(p.le_of_lt, &[zero, w, w_positive]);
+        let joint = rmul(d, u, w);
+        let joint_nonneg = d.lemma(p.mul_nonneg, &[u, w, u_nonneg, w_nonneg]);
+        let scaled = d.lemma(
+            p.mul_le_mul_of_nonneg_left,
+            &[joint, c, a, joint_nonneg, ho],
+        );
+
+        // `(a⁻¹·c⁻¹)·c = a⁻¹`.
+        let left = rmul(d, joint, c);
+        let tail_left = rmul(d, w, c);
+        let reassociated_left = rmul(d, u, tail_left);
+        let reassociate_left = d.lemma(p.mul_assoc, &[u, w, c]);
+        let tail_left_flipped = rmul(d, c, w);
+        let commuted_left = rmul(d, u, tail_left_flipped);
+        let commute_left = {
+            let inner = rmul(d, w, c);
+            let flipped = rmul(d, c, w);
+            let swap = d.lemma(p.mul_comm, &[w, c]);
+            rcongr(d, inner, flipped, swap, &|d, t| rmul(d, u, t))
+        };
+        let unit_left = rmul(d, u, one);
+        let cancel_left = {
+            let inner = rmul(d, c, w);
+            let law = d.lemma(p.mul_inv_cancel, &[c, hp]);
+            rcongr(d, inner, one, law, &|d, t| rmul(d, u, t))
+        };
+        let strip_left = d.lemma(p.mul_one, &[u]);
+        let (_, to_u) = rchain(
+            d,
+            left,
+            &[
+                (reassociated_left, reassociate_left),
+                (commuted_left, commute_left),
+                (unit_left, cancel_left),
+                (u, strip_left),
+            ],
+        );
+
+        // `(a⁻¹·c⁻¹)·a = c⁻¹`.
+        let right = rmul(d, joint, a);
+        let head_right = rmul(d, w, u);
+        let swapped = rmul(d, head_right, a);
+        let swap_head = {
+            let flipped = rmul(d, w, u);
+            let law = d.lemma(p.mul_comm, &[u, w]);
+            rcongr(d, joint, flipped, law, &|d, t| rmul(d, t, a))
+        };
+        let tail_right = rmul(d, u, a);
+        let reassociated_right = rmul(d, w, tail_right);
+        let reassociate_right = d.lemma(p.mul_assoc, &[w, u, a]);
+        let tail_right_flipped = rmul(d, a, u);
+        let commuted_right = rmul(d, w, tail_right_flipped);
+        let commute_right = {
+            let inner = rmul(d, u, a);
+            let flipped = rmul(d, a, u);
+            let law = d.lemma(p.mul_comm, &[u, a]);
+            rcongr(d, inner, flipped, law, &|d, t| rmul(d, w, t))
+        };
+        let unit_right = rmul(d, w, one);
+        let cancel_right = {
+            let inner = rmul(d, a, u);
+            let law = d.lemma(p.mul_inv_cancel, &[a, a_positive]);
+            rcongr(d, inner, one, law, &|d, t| rmul(d, w, t))
+        };
+        let strip_right = d.lemma(p.mul_one, &[w]);
+        let (_, to_w) = rchain(
+            d,
+            right,
+            &[
+                (swapped, swap_head),
+                (reassociated_right, reassociate_right),
+                (commuted_right, commute_right),
+                (unit_right, cancel_right),
+                (w, strip_right),
+            ],
+        );
+
+        let at_left = rat_eq_rewrite(d, left, u, to_u, scaled, &|d, t| rle(d, p, t, right));
+        let at_right = rat_eq_rewrite(d, right, w, to_w, at_left, &|d, t| rle(d, p, u, t));
+        let proof = {
+            let with_order = d.lam_fv(ho_fv, ordered, at_right);
+            d.lam_fv(hp_fv, positive, with_order)
+        };
+        (stmt, proof)
+    })
 }
 
 /// `Rat.mul_inv_cancel : ∀ q, 0 < q → q · q⁻¹ = 1`.

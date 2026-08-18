@@ -61,6 +61,10 @@ fn every_named_declaration_exists() {
         ("bounds_num", p.bounds_num),
         ("mul_inv_cancel", p.mul_inv_cancel),
         ("inv_pos", p.inv_pos),
+        ("sub_mul", p.sub_mul),
+        ("mul_inv_sub_one", p.mul_inv_sub_one),
+        ("inv_sub_inv", p.inv_sub_inv),
+        ("inv_le_of_pos_le", p.inv_le_of_pos_le),
     ];
     for (label, name) in expected {
         assert!(
