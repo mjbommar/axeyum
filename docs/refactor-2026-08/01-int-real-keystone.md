@@ -1,5 +1,38 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
+> **STATUS 2026-08-17 — the trusted surface is now `real` ALONE.** Measured by
+> `cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory`, with
+> `scripts/gen-lean-axiom-ledger.py --check` green:
+>
+> ```text
+> logic:   axiom=0  opaque=0  quotient=0
+> nat:     axiom=0  opaque=0  quotient=0
+> integer: axiom=0  opaque=0  quotient=0
+> string:  axiom=0  opaque=0  quotient=0   <- was 1
+> real:    axiom=30 opaque=0  quotient=0   <- the whole remaining hole
+> ```
+>
+> `string` closed the same day: `append` was an axiom for scope, not necessity —
+> `Str` is a recursive inductive whose recursor supports exactly the structural
+> definition `Nat.add` uses, so it became a definition with a proved monoid. So
+> **every trusted declaration this project has is now in this file's subject**,
+> which is what makes the ℝ route above the last foundational item rather than
+> one of several.
+>
+> Two things this does NOT mean, recorded because the number invites them.
+> Zero axioms is not zero trust: the kernel that admits these declarations is
+> `5,148` function-body lines (derived, gated, `scripts/check-kernel-trusted-core.py`),
+> and an adversarial differential against official Lean found a real soundness
+> defect in it the first time it ran — a lambda binder domain checked only for
+> `def_eq` rather than for being a type, so an ill-typed domain that
+> beta-reduced away was never checked (`8428331c8`). And the definitions must
+> still say what they claim: `Nat`/`Int` are now pinned by characterization
+> theorems (Peano categoricity for ℕ; discreteness, generation and no-junk for
+> ℤ), but the SMT-LIB → rendered-statement transcription is still unchecked and
+> is the weakest link in the chain
+> ([13-residual-trust-surface.md](../prover-track/research/13-residual-trust-surface.md)).
+
+
 > **STATUS 2026-08-17 — the ℝ half has a route, and it is free.**
 > [ADR-0468](../research/09-decisions/adr-0468-real-is-constructed-as-a-setoid-over-the-rationals.md)
 > decides **a Bishop setoid of regular ℚ-sequences**: a one-constructor carrier
