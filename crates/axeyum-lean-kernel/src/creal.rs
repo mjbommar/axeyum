@@ -148,6 +148,47 @@ pub struct CRealPrelude {
     /// `CReal`s it separates, and it separates them *by computation* — the
     /// witness index is `3`, and `−1/2 ≤ −1` reduces to `Nat.le 1 0`.
     pub not_zero_one: NameId,
+
+    // --- the additive structure (ADR-0468 phase R2, partial) -----------------
+    /// `CReal.zero : CReal` — `ofRat Rat.zero`.
+    pub zero: NameId,
+    /// `CReal.one : CReal` — `ofRat Rat.one`.
+    pub one: NameId,
+    /// `CReal.Equiv.of_pointwise : ∀ x y, (∀ n, Eq Rat (seq x n) (seq y n)) → Equiv x y`.
+    ///
+    /// The bridge from `Eq` to `Equiv`, and the reason the *pointwise* laws
+    /// below are cheap: an operation whose two sides agree at every index is
+    /// `Equiv`-equal without any analytic argument at all. It is one-way, and
+    /// deliberately: the converse is false, which is the whole reason `CReal`
+    /// is a setoid.
+    pub equiv_of_pointwise: NameId,
+    /// `CReal.neg : CReal → CReal` — pointwise negation. **No index shift**:
+    /// negation does not degrade the modulus, which is why it lands before
+    /// `add` does.
+    pub neg: NameId,
+    /// `CReal.neg_congr : ∀ x y, Equiv x y → Equiv (neg x) (neg y)` — the first
+    /// of the setoid's congruence obligations, which ADR-0468 counts as the
+    /// construction's real tax.
+    pub neg_congr: NameId,
+    /// `CReal.add : CReal → CReal → CReal`, with **Bishop's index shift**:
+    /// `(x + y)_n := x_{2n+1} + y_{2n+1}`.
+    ///
+    /// The shift is not decoration. Adding two regular sequences doubles the
+    /// error, so the naive pointwise sum is *not* regular; sampling at `2n+1`
+    /// halves each modulus first, and
+    /// [`Rat.natDivSucc_halve`](crate::RatPrelude::nat_div_succ_halve) is the
+    /// identity that cashes the trade.
+    pub add: NameId,
+    /// `CReal.add_congr : ∀ x x' y y', Equiv x x' → Equiv y y' →
+    /// Equiv (add x y) (add x' y')` — the second congruence obligation.
+    pub add_congr: NameId,
+    /// `CReal.add_comm : ∀ x y, Equiv (add x y) (add y x)` — one of the 22, in
+    /// `Equiv` form. Both sides sample at the same index, so it is *pointwise*
+    /// and costs one `Rat.add_comm`.
+    pub add_comm: NameId,
+    /// `CReal.add_neg : ∀ x, Equiv (add x (neg x)) zero` — one of the 22, in
+    /// `Equiv` form, and pointwise for the same reason.
+    pub add_neg: NameId,
 }
 
 fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
@@ -169,6 +210,15 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         equiv_trans: kernel.name_str(equiv, "trans"),
         of_rat: kernel.name_str(creal, "ofRat"),
         not_zero_one: kernel.name_str(equiv, "not_zero_one"),
+        zero: kernel.name_str(creal, "zero"),
+        one: kernel.name_str(creal, "one"),
+        equiv_of_pointwise: kernel.name_str(equiv, "of_pointwise"),
+        neg: kernel.name_str(creal, "neg"),
+        neg_congr: kernel.name_str(creal, "neg_congr"),
+        add: kernel.name_str(creal, "add"),
+        add_congr: kernel.name_str(creal, "add_congr"),
+        add_comm: kernel.name_str(creal, "add_comm"),
+        add_neg: kernel.name_str(creal, "add_neg"),
     }
 }
 
@@ -199,7 +249,12 @@ pub fn build_creal_prelude(kernel: &mut Kernel) -> Result<CRealPrelude, KernelEr
         declare_symmetry(&mut d, prelude)?;
         declare_transitivity(&mut d, prelude)?;
         declare_of_rat(&mut d, prelude)?;
-        declare_discrimination(&mut d, prelude)
+        declare_discrimination(&mut d, prelude)?;
+        declare_constants(&mut d, prelude)?;
+        declare_pointwise(&mut d, prelude)?;
+        declare_negation(&mut d, prelude)?;
+        declare_addition(&mut d, prelude)?;
+        declare_additive_laws(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -930,3 +985,584 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 
 #[cfg(test)]
 mod creal_tests;
+
+// --- the additive structure -------------------------------------------------
+
+/// `CReal.zero` and `CReal.one`, as constant sequences.
+fn declare_constants(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let result = creal_ty(d, p);
+    let constant = |d: &mut IntDev<'_>, name: NameId, source: NameId| -> Result<(), KernelError> {
+        let value_rat = d.kernel().const_(source, vec![]);
+        let value = d.const_app(p.of_rat, &[value_rat]);
+        d.kernel().add_declaration(Declaration::Definition {
+            name,
+            uparams: vec![],
+            ty: result,
+            value,
+            hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 4),
+        })
+    };
+    constant(d, p.zero, rat.zero)?;
+    constant(d, p.one, rat.one)
+}
+
+/// `Equiv.of_pointwise`: two reals whose representatives agree at every index
+/// are `Equiv`-equal.
+///
+/// The converse is **false** — `CReal.Equiv` relates sequences that are merely
+/// asymptotically close — which is exactly why the carrier is a setoid and not
+/// a quotient. This direction is what makes the pointwise laws free.
+fn declare_pointwise(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rle = crate::rat_prelude::ops::rle;
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let hypothesis = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let left = sample(d, p, x, n);
+        let right = sample(d, p, y, n);
+        let claim = crate::rat_prelude::ops::req(d, left, right);
+        d.pi_fv(n_fv, nat, claim)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let a = sample(d, p, x, n);
+    let b = sample(d, p, y, n);
+    let difference = rsub(d, rat, a, b);
+    let bound = div_succ(d, p, 2, n);
+    let zero = rzero(d, rat);
+    let negated = rneg(d, bound);
+
+    let pointwise = d.apply(h, &[n]);
+    let degenerate = rsub(d, rat, b, b);
+    let step = rcongr(d, a, b, pointwise, &|d, t| rsub(d, rat, t, b));
+    let collapse = d.lemma(rat.sub_self, &[b]);
+    let (_, to_zero) = rchain(d, difference, &[(degenerate, step), (zero, collapse)]);
+    let back = rsymm(d, difference, zero, to_zero);
+    let two = d.num(2);
+    let nonneg = d.lemma(rat.zero_le_nat_div_succ, &[two, n]);
+    let nonpos = d.lemma(rat.neg_nonpos_of_nonneg, &[bound, nonneg]);
+    let lower = rat_eq_rewrite(d, zero, difference, back, nonpos, &|d, t| {
+        rle(d, rat, negated, t)
+    });
+    let upper = rat_eq_rewrite(d, zero, difference, back, nonneg, &|d, t| {
+        rle(d, rat, t, bound)
+    });
+    let lower_ty = rle(d, rat, negated, difference);
+    let upper_ty = rle(d, rat, difference, bound);
+    let pair = and_intro(d, p, lower_ty, upper_ty, lower, upper);
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, pair);
+        let with_h = d.lam_fv(h_fv, hypothesis, over_n);
+        let with_y = d.lam_fv(y_fv, carrier, with_h);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let conclusion = equiv(d, p, x, y);
+        let inner = d.arrow(hypothesis, conclusion);
+        let with_y = d.pi_fv(y_fv, carrier, inner);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.equiv_of_pointwise,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.neg`, and its `Equiv`-congruence.
+///
+/// Negation is the one operation that needs **no index shift**: it does not
+/// degrade the modulus, because `(−x_m) − (−x_n)` is `x_n − x_m` and the
+/// regularity bound is symmetric in its two indices. `CReal.add` will not be so
+/// lucky — Bishop's `(x+y)_n := x_{2n+1} + y_{2n+1}` exists precisely because
+/// adding two regular sequences doubles the error.
+fn declare_negation(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let sequences = seq_ty(d);
+    let rle = crate::rat_prelude::ops::rle;
+
+    // neg x := mk (fun n => Rat.neg (seq x n)) _
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let representative = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let point = sample(d, p, x, n);
+            let body = rneg(d, point);
+            d.lam_fv(n_fv, nat, body)
+        };
+        let regularity = {
+            let m_fv = d.fresh_fvar();
+            let m = d.kernel().fvar(m_fv);
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let xm = sample(d, p, x, m);
+            let xn = sample(d, p, x, n);
+            let negated_m = rneg(d, xm);
+            let negated_n = rneg(d, xn);
+            let goal_quantity = rsub(d, rat, negated_m, negated_n);
+            let goal_bound = modulus(d, p, m, n);
+
+            // `regular x n m` bounds `x_n − x_m` by `1/(n+1) + 1/(m+1)`.
+            let source = d.lemma(p.regular, &[x, n, m]);
+            let source_quantity = rsub(d, rat, xn, xm);
+            let source_bound = modulus(d, p, n, m);
+            let swap_quantity = {
+                let forward = d.lemma(rat.sub_neg_sub, &[xm, xn]);
+                rsymm(d, goal_quantity, source_quantity, forward)
+            };
+            let left_atom = div_succ(d, p, 1, n);
+            let right_atom = div_succ(d, p, 1, m);
+            let swap_bound = d.lemma(rat.add_comm, &[left_atom, right_atom]);
+            let at_quantity = rat_eq_rewrite(
+                d,
+                source_quantity,
+                goal_quantity,
+                swap_quantity,
+                source,
+                &|d, t| within(d, p, t, source_bound),
+            );
+            let moved = rat_eq_rewrite(
+                d,
+                source_bound,
+                goal_bound,
+                swap_bound,
+                at_quantity,
+                &|d, t| within(d, p, goal_quantity, t),
+            );
+            let over_n = d.lam_fv(n_fv, nat, moved);
+            d.lam_fv(m_fv, nat, over_n)
+        };
+        let constructor = d.kernel().const_(p.mk, vec![]);
+        let body = d.apply(constructor, &[representative, regularity]);
+        let value = d.lam_fv(x_fv, carrier, body);
+        let ty = d.arrow(carrier, carrier);
+        let _ = sequences;
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.neg,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 5),
+        })?;
+    }
+
+    // neg_congr : Equiv x y → Equiv (neg x) (neg y).
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hypothesis = equiv(d, p, x, y);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+
+        let a = sample(d, p, x, n);
+        let b = sample(d, p, y, n);
+        let forward = rsub(d, rat, a, b);
+        let bound = div_succ(d, p, 2, n);
+        let instance = d.apply(h, &[n]);
+        let (lower, upper) = halves(d, p, forward, bound, instance);
+        let flipped = d.lemma(rat.bounds_neg, &[forward, bound, lower, upper]);
+        let negated_forward = rneg(d, forward);
+        let negated_a = rneg(d, a);
+        let negated_b = rneg(d, b);
+        let target = rsub(d, rat, negated_a, negated_b);
+        // `−(a − b) = b − a = (−a) − (−b)`.
+        let swapped = rsub(d, rat, b, a);
+        let first = d.lemma(rat.neg_sub, &[a, b]);
+        let second = {
+            let forward_eq = d.lemma(rat.sub_neg_sub, &[a, b]);
+            rsymm(d, target, swapped, forward_eq)
+        };
+        let (_, chained) = rchain(d, negated_forward, &[(swapped, first), (target, second)]);
+        let body = rat_eq_rewrite(d, negated_forward, target, chained, flipped, &|d, t| {
+            within(d, p, t, bound)
+        });
+        let _ = rle;
+        let value = {
+            let over_n = d.lam_fv(n_fv, nat, body);
+            let with_h = d.lam_fv(h_fv, hypothesis, over_n);
+            let with_y = d.lam_fv(y_fv, carrier, with_h);
+            d.lam_fv(x_fv, carrier, with_y)
+        };
+        let ty = {
+            let left = d.const_app(p.neg, &[x]);
+            let right = d.const_app(p.neg, &[y]);
+            let conclusion = equiv(d, p, left, right);
+            let inner = d.arrow(hypothesis, conclusion);
+            let with_y = d.pi_fv(y_fv, carrier, inner);
+            d.pi_fv(x_fv, carrier, with_y)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.neg_congr,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// `2·n + 1`, Bishop's shifted sampling index.
+fn shift(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+    let two = d.num(2);
+    let doubled = NatOps::mul(d, two, n);
+    d.succ(doubled)
+}
+
+/// `CReal.add`, and its `Equiv`-congruence.
+///
+/// Regularity is the whole content. `f m − f n` splits into the two component
+/// errors by `Rat.sub_add_add`, each is bounded by `regular`, and the four
+/// resulting summands sort into `(A+A) + (B+B) = 2/(2m+2) + 2/(2n+2)`, which
+/// `Rat.natDivSucc_halve` turns into exactly `1/(m+1) + 1/(n+1)`.
+fn declare_addition(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    // add x y := mk (fun n => x_{2n+1} + y_{2n+1}) _
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let representative = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let index = shift(d, n);
+            let left = sample(d, p, x, index);
+            let right = sample(d, p, y, index);
+            let body = radd(d, left, right);
+            d.lam_fv(n_fv, nat, body)
+        };
+        let regularity = {
+            let m_fv = d.fresh_fvar();
+            let m = d.kernel().fvar(m_fv);
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let sm = shift(d, m);
+            let sn = shift(d, n);
+            let a = sample(d, p, x, sm);
+            let b = sample(d, p, y, sm);
+            let c = sample(d, p, x, sn);
+            let e = sample(d, p, y, sn);
+
+            let wx = d.lemma(p.regular, &[x, sm, sn]);
+            let wy = d.lemma(p.regular, &[y, sm, sn]);
+            let dx = rsub(d, rat, a, c);
+            let dy = rsub(d, rat, b, e);
+            let component = modulus(d, p, sm, sn);
+            let (lx, rx) = halves(d, p, dx, component, wx);
+            let (ly, ry) = halves(d, p, dy, component, wy);
+            let combined = d.lemma(
+                rat.bounds_add,
+                &[dx, component, dy, component, lx, rx, ly, ry],
+            );
+            let summed_quantity = radd(d, dx, dy);
+            let summed_bound = radd(d, component, component);
+
+            // The quantity: (a+b) − (c+e) = (a−c) + (b−e).
+            let left_sum = radd(d, a, b);
+            let right_sum = radd(d, c, e);
+            let goal_quantity = rsub(d, rat, left_sum, right_sum);
+            let split = d.lemma(rat.sub_add_add, &[a, b, c, e]);
+            let back = rsymm(d, goal_quantity, summed_quantity, split);
+            let at_quantity = rat_eq_rewrite(
+                d,
+                summed_quantity,
+                goal_quantity,
+                back,
+                combined,
+                &|d, t| within(d, p, t, summed_bound),
+            );
+
+            // The bound: (A+B) + (A+B) = (A+A) + (B+B) = 2/(2m+2) + 2/(2n+2)
+            //                          = 1/(m+1) + 1/(n+1).
+            let a_atom = div_succ(d, p, 1, sm);
+            let b_atom = div_succ(d, p, 1, sn);
+            let flat_atoms = [a_atom, b_atom, a_atom, b_atom];
+            let sorted_atoms = [a_atom, a_atom, b_atom, b_atom];
+            let flatten = rsum_append(d, rat, &flat_atoms[..2], &flat_atoms[2..]);
+            let flat = rsum(d, rat, &flat_atoms);
+            let permute = rsum_perm(d, rat, &flat_atoms, &sorted_atoms);
+            let sorted = rsum(d, rat, &sorted_atoms);
+            let paired = {
+                let forward = rsum_append(d, rat, &sorted_atoms[..2], &sorted_atoms[2..]);
+                let doubled_a = radd(d, a_atom, a_atom);
+                let doubled_b = radd(d, b_atom, b_atom);
+                let target = radd(d, doubled_a, doubled_b);
+                rsymm(d, target, sorted, forward)
+            };
+            let doubled_a = radd(d, a_atom, a_atom);
+            let doubled_b = radd(d, b_atom, b_atom);
+            let pair_target = radd(d, doubled_a, doubled_b);
+            let one_nat = d.num(1);
+            let two_a = div_succ(d, p, 2, sm);
+            let two_b = div_succ(d, p, 2, sn);
+            let fuse_a = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, sm]);
+            let fuse_b = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, sn]);
+            let after_a = rcongr(d, doubled_a, two_a, fuse_a, &|d, t| radd(d, t, doubled_b));
+            let staged_a = radd(d, two_a, doubled_b);
+            let after_b = rcongr(d, doubled_b, two_b, fuse_b, &|d, t| radd(d, two_a, t));
+            let staged_b = radd(d, two_a, two_b);
+            let halve_m = d.lemma(rat.nat_div_succ_halve, &[m]);
+            let halve_n = d.lemma(rat.nat_div_succ_halve, &[n]);
+            let one_m = div_succ(d, p, 1, m);
+            let one_n = div_succ(d, p, 1, n);
+            let after_halve_m = rcongr(d, two_a, one_m, halve_m, &|d, t| radd(d, t, two_b));
+            let staged_halve = radd(d, one_m, two_b);
+            let after_halve_n = rcongr(d, two_b, one_n, halve_n, &|d, t| radd(d, one_m, t));
+            let goal_bound = modulus(d, p, m, n);
+            let (_, bound_chain) = rchain(
+                d,
+                summed_bound,
+                &[
+                    (flat, flatten),
+                    (sorted, permute),
+                    (pair_target, paired),
+                    (staged_a, after_a),
+                    (staged_b, after_b),
+                    (staged_halve, after_halve_m),
+                    (goal_bound, after_halve_n),
+                ],
+            );
+            let moved = rat_eq_rewrite(
+                d,
+                summed_bound,
+                goal_bound,
+                bound_chain,
+                at_quantity,
+                &|d, t| within(d, p, goal_quantity, t),
+            );
+            let over_n = d.lam_fv(n_fv, nat, moved);
+            d.lam_fv(m_fv, nat, over_n)
+        };
+        let constructor = d.kernel().const_(p.mk, vec![]);
+        let body = d.apply(constructor, &[representative, regularity]);
+        let value = {
+            let with_y = d.lam_fv(y_fv, carrier, body);
+            d.lam_fv(x_fv, carrier, with_y)
+        };
+        let ty = {
+            let inner = d.arrow(carrier, carrier);
+            d.arrow(carrier, inner)
+        };
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.add,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 6),
+        })?;
+    }
+
+    // add_congr : Equiv x x' → Equiv y y' → Equiv (add x y) (add x' y').
+    //
+    // The two component bounds are `2/(2n+2)` each, and `2/(2n+2) = 1/(n+1)`,
+    // so their sum is `2/(n+1)` exactly — no slack, and no weakening lemma.
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let x2_fv = d.fresh_fvar();
+        let x2 = d.kernel().fvar(x2_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let y2_fv = d.fresh_fvar();
+        let y2 = d.kernel().fvar(y2_fv);
+        let first_ty = equiv(d, p, x, x2);
+        let second_ty = equiv(d, p, y, y2);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+
+        let index = shift(d, n);
+        let a = sample(d, p, x, index);
+        let b = sample(d, p, y, index);
+        let c = sample(d, p, x2, index);
+        let e = sample(d, p, y2, index);
+        let dx = rsub(d, rat, a, c);
+        let dy = rsub(d, rat, b, e);
+        let component = div_succ(d, p, 2, index);
+        let wx = d.apply(h1, &[index]);
+        let wy = d.apply(h2, &[index]);
+        let (lx, rx) = halves(d, p, dx, component, wx);
+        let (ly, ry) = halves(d, p, dy, component, wy);
+        let combined = d.lemma(
+            rat.bounds_add,
+            &[dx, component, dy, component, lx, rx, ly, ry],
+        );
+        let summed_quantity = radd(d, dx, dy);
+        let summed_bound = radd(d, component, component);
+
+        let left_sum = radd(d, a, b);
+        let right_sum = radd(d, c, e);
+        let goal_quantity = rsub(d, rat, left_sum, right_sum);
+        let split = d.lemma(rat.sub_add_add, &[a, b, c, e]);
+        let back = rsymm(d, goal_quantity, summed_quantity, split);
+        let at_quantity = rat_eq_rewrite(
+            d,
+            summed_quantity,
+            goal_quantity,
+            back,
+            combined,
+            &|d, t| within(d, p, t, summed_bound),
+        );
+
+        // `2/(2n+2) + 2/(2n+2) = 1/(n+1) + 1/(n+1) = 2/(n+1)`.
+        let halved = div_succ(d, p, 1, n);
+        let halve = d.lemma(rat.nat_div_succ_halve, &[n]);
+        let after_left = rcongr(d, component, halved, halve, &|d, t| radd(d, t, component));
+        let staged = radd(d, halved, component);
+        let after_right = rcongr(d, component, halved, halve, &|d, t| radd(d, halved, t));
+        let doubled = radd(d, halved, halved);
+        let one_nat = d.num(1);
+        let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, n]);
+        let goal_bound = div_succ(d, p, 2, n);
+        let (_, bound_chain) = rchain(
+            d,
+            summed_bound,
+            &[
+                (staged, after_left),
+                (doubled, after_right),
+                (goal_bound, fuse),
+            ],
+        );
+        let body = rat_eq_rewrite(
+            d,
+            summed_bound,
+            goal_bound,
+            bound_chain,
+            at_quantity,
+            &|d, t| within(d, p, goal_quantity, t),
+        );
+        let value = {
+            let over_n = d.lam_fv(n_fv, nat, body);
+            let with2 = d.lam_fv(h2_fv, second_ty, over_n);
+            let with1 = d.lam_fv(h1_fv, first_ty, with2);
+            let with_y2 = d.lam_fv(y2_fv, carrier, with1);
+            let with_y = d.lam_fv(y_fv, carrier, with_y2);
+            let with_x2 = d.lam_fv(x2_fv, carrier, with_y);
+            d.lam_fv(x_fv, carrier, with_x2)
+        };
+        let ty = {
+            let left = d.const_app(p.add, &[x, y]);
+            let right = d.const_app(p.add, &[x2, y2]);
+            let conclusion = equiv(d, p, left, right);
+            let after2 = d.arrow(second_ty, conclusion);
+            let after1 = d.arrow(first_ty, after2);
+            let with_y2 = d.pi_fv(y2_fv, carrier, after1);
+            let with_y = d.pi_fv(y_fv, carrier, with_y2);
+            let with_x2 = d.pi_fv(x2_fv, carrier, with_y);
+            d.pi_fv(x_fv, carrier, with_x2)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.add_congr,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// The two additive laws that are **pointwise**: both sides of each sample at
+/// the same shifted index, so `Equiv.of_pointwise` reduces them to one `Rat`
+/// law apiece.
+///
+/// `add_assoc` and `add_zero` are *not* pointwise — `(x+y)+z` samples `x` at
+/// `2(2n+1)+1` and `x+(y+z)` samples it at `2n+1`, and `add x zero` samples `x`
+/// at `2n+1` where `x` itself samples at `n`. Both need the analytic argument,
+/// and `add_zero` additionally needs monotonicity of `natDivSucc` in its index,
+/// which does not exist yet.
+fn declare_additive_laws(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    // add_comm : Equiv (add x y) (add y x).
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let left = d.const_app(p.add, &[x, y]);
+        let right = d.const_app(p.add, &[y, x]);
+        let pointwise = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let index = shift(d, n);
+            let a = sample(d, p, x, index);
+            let b = sample(d, p, y, index);
+            let body = d.lemma(rat.add_comm, &[a, b]);
+            d.lam_fv(n_fv, nat, body)
+        };
+        let body = d.lemma(p.equiv_of_pointwise, &[left, right, pointwise]);
+        let value = {
+            let with_y = d.lam_fv(y_fv, carrier, body);
+            d.lam_fv(x_fv, carrier, with_y)
+        };
+        let ty = {
+            let conclusion = equiv(d, p, left, right);
+            let with_y = d.pi_fv(y_fv, carrier, conclusion);
+            d.pi_fv(x_fv, carrier, with_y)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.add_comm,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // add_neg : Equiv (add x (neg x)) zero.
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let negated = d.const_app(p.neg, &[x]);
+        let left = d.const_app(p.add, &[x, negated]);
+        let right = d.kernel().const_(p.zero, vec![]);
+        let pointwise = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let index = shift(d, n);
+            let a = sample(d, p, x, index);
+            let body = d.lemma(rat.add_neg, &[a]);
+            d.lam_fv(n_fv, nat, body)
+        };
+        let body = d.lemma(p.equiv_of_pointwise, &[left, right, pointwise]);
+        let value = d.lam_fv(x_fv, carrier, body);
+        let ty = {
+            let conclusion = equiv(d, p, left, right);
+            d.pi_fv(x_fv, carrier, conclusion)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.add_neg,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}

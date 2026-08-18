@@ -161,6 +161,8 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `00f998ccb` | ℤ categoricity: the existence half of the universal property (`iter` + three preservation equations, making `Int` the initial ℤ-structure) and `categorical` — every generated aperiodic ℤ-structure is in structure-preserving bijection with `Int`, universe-polymorphic. `iso` is the constructed two-sided-inverse form, honest about hypothesising the back-map. 32 theorems, all footprints empty; 22 injected weakenings each refused at their own declaration, now bracketed by `reached_declaration` on the near side too. |
 | 2026-08-18 | `a2a36590b` | `F:int-categoricity` recorded, and `F:int-characterization`'s "not proved that they determine it" caveat removed because it stopped being true. Every checker anchored on the declaration name AND the empty-footprint column, each run with its subject mangled: 0 on the finding, 1 on the mangle. |
 | 2026-08-18 | `pending` | binding coverage: +20 bound (105 → 125), 124 modules proved content-free, and the converse direction measured at 286/531 |
+| 2026-08-18 | `pending` | ℝ constructed: `CReal` as a Bishop setoid over ℚ with `Equiv` refl/symm/**trans**, `zero`/`one`/`neg`/`add` and two congruences — 22 declarations, trusted surface **0**, with inhabitation and discrimination witnesses the example's exit status depends on. 2 of the 22 ordered-ring laws hold in `Equiv` form. |
+| 2026-08-18 | `f527e7ddb` | The **Archimedean property of ℚ** proved axiom-free (`Rat.le_of_le_add_natDivSucc`), plus a 16-lemma ordered-group toolkit derived from the 22 ring laws alone and the `Rat.add` mirror of `iprod_perm`. Decidability replaces contradiction; the witness index is computed, not searched. |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
@@ -776,6 +778,57 @@ Not yet wired into dispatch, and deliberately no capability row until it is —
 the same gate-first discipline QF_RDL followed. That wiring is the next slice. Then items A (generate the table) and C (explicit
 "decided, not certified" status), which are the real fix: this checker is a
 heuristic over prose and says so.
+
+**ℝ is built, and it is free (`WIP`, agent-creal, 2026-08-18).** ADR-0468 phase
+R1 is complete and part of R2 is landed: `CReal` — a Bishop setoid of regular
+ℚ-sequences — with `Equiv` **reflexive, symmetric and transitive**, plus `zero`,
+`one`, `neg`, `add`, and the congruences for `neg` and `add`. Twenty-two
+declarations, every axiom footprint empty, whole trusted surface **0**:
+`cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness`. No
+`Quot.sound`, no `funext`, no `propext`; the kernel did not change.
+
+**Two witnesses stop that zero being vacuous, and the example's exit status
+turns on them.** `CReal.ofRat` exhibits a solution of `CReal.Regular`, so the
+carrier is not the empty type — all three setoid laws would otherwise hold,
+footprint-free, of nothing. `CReal.Equiv.not_zero_one` proves `Equiv` is not the
+**total** relation, which is also an equivalence relation; it closes by pure
+reduction (at index 3 the lower half is `−1/2 ≤ −1`, which unfolds through
+`Int.le` to `Nat.le 1 0`). Measured by mutation: deleting both leaves all other
+rows green with empty footprints and the example still exits 1.
+
+**The Archimedean property of ℚ** — `(∀ j, a ≤ b + 6/(j+1)) → a ≤ b`, which
+`Equiv.trans` cannot be proved without — came in at about a third of its
+estimate, and the three reasons generalise. No `sub_le_iff` (the gap is
+`(−b) + a`, produced by translating `b < a` with the proved
+`add_lt_add_of_le_of_lt`). No proof by contradiction, because `¬¬P → P` does not
+exist here and is not needed: `Int.le` is decidable, so `Rat.le_or_lt` is
+*proved* and the argument is a case split — **this is the shape any future ℚ/ℝ
+argument wanting "suppose not" should take.** And no `Exists`, because the index
+is computed (`k·den c`), not searched for.
+
+**Of the 22 ordered-ring laws, 2 hold in `Equiv` form**: `add_comm` and
+`add_neg`. Both are *pointwise* — their two sides sample at the same index — so
+`Equiv.of_pointwise` reduces each to one `Rat` law. That bridge (`Eq` pointwise
+⟹ `Equiv`, one-way, deliberately) is what makes the pointwise laws nearly free,
+and it is worth reaching for first on any remaining law.
+
+**Next, in cost order.** (a) `Rat.natDivSucc` **antitone in its index**
+(`j ≤ j' → k/(j'+1) ≤ k/(j+1)`) plus `Rat.bounds_weaken`; that unlocks
+`add_zero`, which is not pointwise because `add x zero` samples `x` at `2n+1`
+where `x` samples at `n`. (b) `add_assoc`, genuinely analytic: `(x+y)+z` samples
+`x` at `2(2n+1)+1` and `x+(y+z)` samples it at `2n+1`. (c) `le`/`lt` and the 13
+order laws — ADR-0468's Measurement 2 says these are the fragment Farkas
+actually uses and that none of them mentions `Eq`, so they restate verbatim.
+(d) `mul`, which is the one place a naive port from Mathlib will not transfer:
+it needs a canonical bound on a representative derived from regularity, where
+Mathlib gets one from `CauSeq`'s existential modulus.
+
+**`real: axiom=30` is unchanged, deliberately.** ADR-0468 retires those by
+*deletion* in phase R3 — once `generalize_over_ordered_ring` grows an equality
+slot and no consumer references the `Real` package — not by exhibiting a model.
+Nor is `Eq CReal` the equality of real numbers: `CReal.Equiv` is, `0.999…` and
+`1` are distinct `CReal`s and `Equiv`-equal, and every downstream statement will
+say so.
 
 **R3 done; the census is an artifact now, and `17` was not one** (`WIP`,
 math-r3, 2026-08-17). The 2026-08-13 misconception audit's `census.tsv` was

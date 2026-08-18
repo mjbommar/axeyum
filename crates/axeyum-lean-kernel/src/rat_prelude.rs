@@ -326,6 +326,13 @@ pub struct RatPrelude {
     /// `Rat.neg_sub : ∀ a b, Rat.neg (Rat.sub a b) = Rat.sub b a` — what makes
     /// `CReal.Equiv` symmetric.
     pub neg_sub: NameId,
+    /// `Rat.sub_neg_sub : ∀ a b, Rat.sub (Rat.neg a) (Rat.neg b) = Rat.sub b a`
+    /// — what makes `CReal.neg` regular.
+    pub sub_neg_sub: NameId,
+    /// `Rat.sub_add_add : ∀ a b c e,
+    /// Rat.sub (Rat.add a b) (Rat.add c e) = Rat.add (Rat.sub a c) (Rat.sub b e)`
+    /// — the error of a sum is the sum of the errors.
+    pub sub_add_add: NameId,
     /// `Rat.sub_add_sub : ∀ a b c, Rat.add (Rat.sub a b) (Rat.sub b c) = Rat.sub a c`
     /// — the telescoping identity Bishop's four-term estimate is assembled from.
     pub sub_add_sub: NameId,
@@ -339,6 +346,9 @@ pub struct RatPrelude {
     /// `Rat.natDivSucc_add : ∀ (a b j : Nat),
     /// Rat.add (natDivSucc a j) (natDivSucc b j) = natDivSucc (a+b) j`.
     pub nat_div_succ_add: NameId,
+    /// `Rat.natDivSucc_halve : ∀ (m : Nat), natDivSucc 2 (2·m + 1) = natDivSucc 1 m`
+    /// — the identity that pays for Bishop's index shift in `CReal.add`.
+    pub nat_div_succ_halve: NameId,
     /// `Rat.zero_le_natDivSucc : ∀ (k j : Nat), Rat.le Rat.zero (natDivSucc k j)`.
     pub zero_le_nat_div_succ: NameId,
     /// `Rat.neg_nonpos_of_nonneg : ∀ a, Rat.le Rat.zero a → Rat.le (Rat.neg a) Rat.zero`.
@@ -472,9 +482,12 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         neg_le_neg: child(kernel, "neg_le_neg"),
         sub_self: child(kernel, "sub_self"),
         neg_sub: child(kernel, "neg_sub"),
+        sub_add_add: child(kernel, "sub_add_add"),
+        sub_neg_sub: child(kernel, "sub_neg_sub"),
         sub_add_sub: child(kernel, "sub_add_sub"),
         bounds_add: child(kernel, "bounds_add"),
         nat_div_succ_add: child(kernel, "natDivSucc_add"),
+        nat_div_succ_halve: child(kernel, "natDivSucc_halve"),
         zero_le_nat_div_succ: child(kernel, "zero_le_natDivSucc"),
         neg_nonpos_of_nonneg: child(kernel, "neg_nonpos_of_nonneg"),
         bounds_neg: child(kernel, "bounds_neg"),

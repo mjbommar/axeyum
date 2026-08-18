@@ -29,14 +29,33 @@
 //!    total relation. An equivalence relation that relates everything is still
 //!    an equivalence relation.
 //!
+//! # How far the ordered-field structure gets (ADR-0468 phase R2, partial)
+//!
+//! `zero`, `one`, `neg` and `add` are built, with `neg` and `add` each carrying
+//! its `Equiv`-congruence — two of the five congruence obligations ADR-0468
+//! counts as the setoid's real tax. `add` is where Bishop's index shift
+//! `(x+y)_n := x_{2n+1} + y_{2n+1}` earns its keep: adding two regular
+//! sequences doubles the error, and sampling twice as deep halves each modulus
+//! back, exactly, with no slack.
+//!
+//! Of the 22 ordered-ring laws, **2 hold in `Equiv` form** here — `add_comm`
+//! and `add_neg` — and both are *pointwise*: their two sides sample at the same
+//! index, so `Equiv.of_pointwise` reduces each to one `Rat` law. `add_assoc`
+//! and `add_zero` are not pointwise (`(x+y)+z` samples `x` at `2(2n+1)+1` while
+//! `x+(y+z)` samples it at `2n+1`), so each needs the analytic argument;
+//! `add_zero` additionally needs monotonicity of `Rat.natDivSucc` in its index,
+//! which does not exist yet.
+//!
 //! # What this does NOT claim
 //!
 //! `Eq CReal` is not the equality of real numbers — `CReal.Equiv` is, and every
-//! statement about reals will say so. The ordered-field structure over `Equiv`
-//! (ADR-0468 phase R2) is not built here; nor is completeness, division, or
-//! `√`, each of which is a separate ADR. And the `Real` package's 30 axioms are
-//! **unchanged** by this: ADR-0468 retires them by *deletion* in phase R3, once
-//! consumers are generalized, not by exhibiting a model.
+//! statement about reals will say so. `mul`, `le` and `lt` are **not** built:
+//! `mul` needs a canonical bound on a representative derived from regularity,
+//! which is the one place a naive port from Mathlib will not transfer.
+//! Completeness, division and `√` are each a separate ADR. And the `Real`
+//! package's 30 axioms are **unchanged** by this: ADR-0468 retires them by
+//! *deletion* in phase R3, once consumers are generalized, not by exhibiting a
+//! model.
 
 #![allow(clippy::too_many_lines)]
 
@@ -60,6 +79,15 @@ fn main() {
         ("CReal.Equiv.trans", p.equiv_trans),
         ("CReal.ofRat", p.of_rat),
         ("CReal.Equiv.not_zero_one", p.not_zero_one),
+        ("CReal.zero", p.zero),
+        ("CReal.one", p.one),
+        ("CReal.Equiv.of_pointwise", p.equiv_of_pointwise),
+        ("CReal.neg", p.neg),
+        ("CReal.neg_congr", p.neg_congr),
+        ("CReal.add", p.add),
+        ("CReal.add_congr", p.add_congr),
+        ("CReal.add_comm", p.add_comm),
+        ("CReal.add_neg", p.add_neg),
     ];
 
     let mut failed = false;

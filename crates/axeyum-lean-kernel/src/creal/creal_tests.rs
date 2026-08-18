@@ -53,7 +53,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 13] = [
+    let expected: [(&str, crate::NameId, &str); 22] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -67,6 +67,15 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("Equiv.trans", p.equiv_trans, "theorem"),
         ("CReal.ofRat", p.of_rat, "def"),
         ("Equiv.not_zero_one", p.not_zero_one, "theorem"),
+        ("CReal.zero", p.zero, "def"),
+        ("CReal.one", p.one, "def"),
+        ("Equiv.of_pointwise", p.equiv_of_pointwise, "theorem"),
+        ("CReal.neg", p.neg, "def"),
+        ("CReal.neg_congr", p.neg_congr, "theorem"),
+        ("CReal.add", p.add, "def"),
+        ("CReal.add_congr", p.add_congr, "theorem"),
+        ("CReal.add_comm", p.add_comm, "theorem"),
+        ("CReal.add_neg", p.add_neg, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -133,6 +142,24 @@ fn the_setoid_laws_have_the_statements_adr_0468_specifies() {
     assert_eq!(
         rendered(&mut kernel, p.not_zero_one),
         "Not (CReal.Equiv (CReal.ofRat Rat.zero) (CReal.ofRat Rat.one))"
+    );
+    // The two of the 22 that hold in `Equiv` form. Asserting these verbatim is
+    // what stops "N laws hold" drifting into "N laws are named".
+    assert_eq!(
+        rendered(&mut kernel, p.add_comm),
+        "((x0 : CReal) -> ((x1 : CReal) -> \
+         CReal.Equiv (CReal.add x0 x1) (CReal.add x1 x0)))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.add_neg),
+        "((x0 : CReal) -> \
+         CReal.Equiv (CReal.add x0 (CReal.neg x0)) CReal.zero)"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.add_congr),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
+         ((x4 : CReal.Equiv x0 x1) -> ((x5 : CReal.Equiv x2 x3) -> \
+         CReal.Equiv (CReal.add x0 x2) (CReal.add x1 x3)))))))"
     );
 }
 

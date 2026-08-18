@@ -362,6 +362,75 @@ fn declare_subtraction(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelEr
         (stmt, proof)
     })?;
 
+    // sub_neg_sub : sub (neg a) (neg b) = sub b a.
+    //   (-a) + -(-b) = (-a) + b = b + (-a)
+    rat_theorem(d, p.sub_neg_sub, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let negated_a = rneg(d, a);
+        let negated_b = rneg(d, b);
+        let start = rsub(d, p, negated_a, negated_b);
+        let target = rsub(d, p, b, a);
+        let stmt = req(d, start, target);
+        let twice = rneg(d, negated_b);
+        let restored = radd(d, negated_a, b);
+        let unfold = {
+            let cancel = d.lemma(p.neg_neg, &[b]);
+            rcongr(d, twice, b, cancel, &|d, t| radd(d, negated_a, t))
+        };
+        let commuted = radd(d, b, negated_a);
+        let commute = d.lemma(p.add_comm, &[negated_a, b]);
+        let (_, proof) = rchain(d, start, &[(restored, unfold), (commuted, commute)]);
+        (stmt, proof)
+    })?;
+
+    // sub_add_add : (a + b) - (c + e) = (a - c) + (b - e).
+    //
+    // What makes `CReal.add` regular: the error of a sum is the sum of the
+    // errors, once the four summands are sorted.
+    rat_theorem(d, p.sub_add_add, 4, &|d, v| {
+        let (a, b, c, e) = (v[0], v[1], v[2], v[3]);
+        let left = radd(d, a, b);
+        let right = radd(d, c, e);
+        let start = rsub(d, p, left, right);
+        let first = rsub(d, p, a, c);
+        let second = rsub(d, p, b, e);
+        let target = radd(d, first, second);
+        let stmt = req(d, start, target);
+
+        let negated_c = rneg(d, c);
+        let negated_e = rneg(d, e);
+        let negated_right = rneg(d, right);
+        let opposites = radd(d, negated_c, negated_e);
+        let split = {
+            let forward = d.lemma(p.neg_add, &[c, e]);
+            rcongr(d, negated_right, opposites, forward, &|d, t| {
+                radd(d, left, t)
+            })
+        };
+        let opened = radd(d, left, opposites);
+        let flat_atoms = [a, b, negated_c, negated_e];
+        let sorted_atoms = [a, negated_c, b, negated_e];
+        let flatten = rsum_append(d, p, &flat_atoms[..2], &flat_atoms[2..]);
+        let flat = rsum(d, p, &flat_atoms);
+        let permute = rsum_perm(d, p, &flat_atoms, &sorted_atoms);
+        let sorted = rsum(d, p, &sorted_atoms);
+        let close = {
+            let forward = rsum_append(d, p, &sorted_atoms[..2], &sorted_atoms[2..]);
+            rsymm(d, target, sorted, forward)
+        };
+        let (_, proof) = rchain(
+            d,
+            start,
+            &[
+                (opened, split),
+                (flat, flatten),
+                (sorted, permute),
+                (target, close),
+            ],
+        );
+        (stmt, proof)
+    })?;
+
     // sub_add_sub : (a - b) + (b - c) = a - c.
     //   (a + -b) + (b + -c) = a + (-b + (b + -c)) = a + ((-b + b) + -c)
     //                       = a + (0 + -c) = a + -c
@@ -650,6 +719,54 @@ fn declare_representation(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kerne
             (stmt, proof)
         },
     )?;
+
+    // natDivSucc_halve : 2/(2m+2) = 1/(m+1).
+    //
+    // Bishop's `(x+y)_n := x_{2n+1} + y_{2n+1}` is what pays for the doubling
+    // of the error when two regular sequences are added, and this is the
+    // identity that cashes it: the doubled bound at the shifted index IS the
+    // undoubled bound at the original one. `2·(m+1) = 1·(2m+2)` in ℕ.
+    super::archimedean::mixed_theorem(d, p.nat_div_succ_halve, &[nat_ty], &|d, v| {
+        let m = v[0];
+        let two_nat = d.num(2);
+        let one_nat = d.num(1);
+        let doubled = NatOps::mul(d, two_nat, m);
+        let shifted = d.succ(doubled);
+        let left = d.const_app(p.nat_div_succ, &[two_nat, shifted]);
+        let right = d.const_app(p.nat_div_succ, &[one_nat, m]);
+        let stmt = req(d, left, right);
+
+        let big = d.succ(shifted);
+        let small = d.succ(m);
+        let big_positive = one_le_succ(d, shifted);
+        let small_positive = one_le_succ(d, m);
+        let two_z = d.of_nat(two_nat);
+        let one_z = d.of_nat(one_nat);
+
+        // `2 · (m+1) = (2·m) + 2`, which IS `succ (succ (2·m))` = `2m+2`.
+        let scaled = NatOps::mul(d, two_nat, small);
+        let expanded = d.lemma(nat.mul_succ, &[two_nat, m]);
+        let stepped = NatOps::add(d, doubled, two_nat);
+        // `1 · (2m+2) = 2m+2`.
+        let unit_scaled = NatOps::mul(d, one_nat, big);
+        let unit_collapse = d.lemma(nat.one_mul, &[big]);
+        let back = NatOps::symm(d, unit_scaled, big, unit_collapse);
+        let (_, identity) = NatOps::chain(d, scaled, &[(stepped, expanded), (unit_scaled, back)]);
+        let cross = d.nat_eq_to_int(scaled, unit_scaled, identity, &|d, t| d.of_nat(t));
+        let proof = d.lemma(
+            p.normalize_congr,
+            &[
+                two_z,
+                big,
+                big_positive,
+                one_z,
+                small,
+                small_positive,
+                cross,
+            ],
+        );
+        (stmt, proof)
+    })?;
 
     // zero_le_natDivSucc : 0 ≤ k/(j+1).
     //
