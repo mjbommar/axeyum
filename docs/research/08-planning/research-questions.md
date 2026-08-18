@@ -1596,6 +1596,15 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     instead of written down. The Nat prefix-deficit
     boundary for credited Rado rigidity is re-accepted unchanged.
 
+- [x] What identity, episode, and transaction boundary may turn checked
+  Autogenesis evidence into durable knowledge without pretending Git, the fact
+  file, and an external artifact store share one atomic commit?
+  - [ADR-0468](../09-decisions/adr-0468-autogenesis-transaction-and-episode-boundary.md)
+    selects a content-addressed prepared proposal, registered checker replay,
+    compare-and-swap fact replacement, same-filesystem intent journal, monotone
+    roll-forward admission event, and separately reported archival/Git
+    publication. The decision is proposed pending fault-injected implementation.
+
 ## Source Pointers
 
 - Axeyum research index: ../README.md
