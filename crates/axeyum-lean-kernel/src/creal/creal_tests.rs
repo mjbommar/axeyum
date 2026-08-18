@@ -5,7 +5,7 @@ use crate::{Declaration, Kernel};
 
 /// A built `CReal` kernel, as a **clone of one template**.
 ///
-/// The full development is now 69 declarations over the constructed ℚ and takes
+/// The full development is now 71 declarations over the constructed ℚ and takes
 /// tens of seconds to type-check; seventeen tests each building it from scratch
 /// dominated this crate's test time. The argument for cloning is
 /// [`prelude_cache`](crate::prelude_cache)'s, verbatim: prelude construction is
@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 69] = [
+    let expected: [(&str, crate::NameId, &str); 71] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -151,6 +151,8 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.PosBound", p.pos_bound, "def"),
         ("CReal.pos_of_pos_bound", p.pos_of_pos_bound, "theorem"),
         ("CReal.pos_bound_of_lt", p.pos_bound_of_lt, "theorem"),
+        ("CReal.ofRat_pos", p.of_rat_pos, "theorem"),
+        ("CReal.mul_pos", p.mul_pos, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -1100,6 +1102,43 @@ fn positivity_and_a_witnessed_modulus_are_the_same_proposition() {
         ("pos_of_pos_bound", p.pos_of_pos_bound),
         ("pos_bound_of_lt", p.pos_bound_of_lt),
     ] {
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "CReal.{label} rests on {footprint:?}");
+    }
+}
+
+/// **Positivity is closed under multiplication over the constructed reals**, and
+/// the statement is asserted verbatim because `mul_nonneg` — which IS one of the
+/// 22 — holds of the zero product and this does not.
+#[test]
+fn positivity_is_closed_under_multiplication() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.mul_pos),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.lt CReal.zero x0) -> \
+         ((x3 : CReal.lt CReal.zero x1) -> CReal.lt CReal.zero (CReal.mul x0 x1)))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.of_rat_pos),
+        "((x0 : Rat) -> ((x1 : Rat.lt Rat.zero x0) -> \
+         CReal.lt CReal.zero (CReal.ofRat x0)))"
+    );
+    for (label, name) in [("mul_pos", p.mul_pos), ("ofRat_pos", p.of_rat_pos)] {
         let footprint: Vec<String> = kernel
             .axiom_footprint(name)
             .into_iter()

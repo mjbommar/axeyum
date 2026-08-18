@@ -33,8 +33,8 @@
       "kind": "kernel-term",
       "supports": "CReal.no_total_inverse is a checked Theorem -- not an axiom, not an opaque -- with an empty footprint, and the witness example's EXIT STATUS depends on its presence.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE 'no total inverse exists = true')\" = 1 && test \"$(printf '%s\\n' \"$out\" | grep -cE '69 declarations admitted, trusted surface = 0 \\(empty\\)')\" = 1",
-      "notes": "Two anchors on one run: the guard flag, and the declaration count with the trusted surface on the same line. Deleting declare_no_total_inverse flips the example to exit 1 with a matching FAIL line and kills exactly two tests (measured); the count anchor stops the row surviving a build that quietly dropped declarations."
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE 'no total inverse exists = true')\" = 1 && test \"$(printf '%s\\n' \"$out\" | grep -cE '71 declarations admitted, trusted surface = 0 \\(empty\\)')\" = 1",
+      "notes": "Two anchors on one run: the guard flag, and the declaration count (71 at the time of writing; a slice that adds declarations bumps it deliberately) with the trusted surface on the same line. Deleting declare_no_total_inverse flips the example to exit 1 with a matching FAIL line and kills exactly two tests (measured); the count anchor stops the row surviving a build that quietly dropped declarations."
     },
     {
       "id": "real-inverse-modulus-cannot-be-extracted",

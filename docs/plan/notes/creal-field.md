@@ -102,6 +102,25 @@ Two ℚ lemmas are still needed and are not built: `L⁻¹ = B` (from `L·B = 1`
 `natDivSucc_mul`/`natDivSucc_scale`, plus `natDivSucc 1 0 = Rat.one`), and
 `0 ≤ x⁻¹` at the samples, which is `inv_pos` + `le_of_lt`.
 
+## `CReal.mul_pos`, and why it is not one of the 22
+
+Positivity is closed under multiplication over the constructed reals. The 22
+give `mul_nonneg` (`0 ≤ x → 0 ≤ y → 0 ≤ x·y`) and **the strict version does not
+follow from it by any rearrangement** — `0 ≤ x·y` holds of the zero product too.
+
+Over ℚ it is a *field* lemma: were `a·b ≤ 0`, scaling by the nonnegative `a⁻¹`
+would give `b = a⁻¹·(a·b) ≤ a⁻¹·0 = 0`, contradicting `0 < b`. So `Rat.mul_pos`
+goes through `Rat.inv_pos`, which is why it lands in the field module and not in
+`laws`. Over ℝ it needs no estimate at all: `CReal.lt` carries rational gaps
+`q₁ ≤ x` and `q₂ ≤ y`, two applications of `mul_le_mul_of_nonneg_left` give
+`q₁·q₂ ≤ x·y`, `CReal.ofRat_mul` says the embedded product is the rational
+product, and `Rat.mul_pos` makes it positive.
+
+It is also the first place the `Exists` in `CReal.lt` is opened twice in one
+proof — and it works precisely because the *target* is a `Prop`. The
+elimination an inverse would need lands in `Type`, and that asymmetry is the
+same one `pos_bound_of_lt` records.
+
 ## What is NOT ordered-field structure here, and why
 
 - **No inverse for `x < 0`.** `Rat.mul_inv_cancel`'s hypothesis is `0 < q`; the
@@ -116,6 +135,10 @@ Two ℚ lemmas are still needed and are not built: `L⁻¹ = B` (from `L·B = 1`
   `x_N + 4r` on the proved `Rat.le_or_lt`, and both branches close. Cost: two
   full estimates of `le_add_of_nonneg`'s size plus the index computation,
   ~400 lines.
+- **No `apart_mul`** (`x # 0 → y # 0 → x·y # 0`, the constructive field's
+  nonzero-product axiom). `CReal.mul_pos` is one of its four sign cases; the
+  other three need `lt x zero ↔ lt zero (neg x)` and `(−x)·(−y) ≈ x·y` over
+  `Equiv`, neither of which exists yet. ~300 lines.
 - **No `abs`, `max`, `min`.** These need no completeness and are reachable, and
   the obstacle a reader expects — that `max` needs a decision and `Rat.le_or_lt`
   is `Prop`-valued, so it cannot be case-analysed into `Type` — is avoidable:
@@ -154,8 +177,8 @@ Two ℚ lemmas are still needed and are not built: `L⁻¹ = B` (from `L·B = 1`
 
 ## Numbers
 
-- `-p axeyum-lean-kernel --lib`: **352 → 362** tests, all passing.
-- `CReal` declarations: **58 → 69**; `Rat` gains 7.
+- `-p axeyum-lean-kernel --lib`: **352 → 363** tests, all passing.
+- `CReal` declarations: **58 → 71**; `Rat` gains 9.
 - `nat_axiom_inventory --include-constructed`: `rat` and `creal` both
   `axiom=0 opaque=0 quotient=0 total_trusted=0`, unchanged.
 - `gen-lean-axiom-ledger.py --check`: `total=30 … creal=0 rat=0 real=30`,

@@ -107,6 +107,13 @@ pub struct RatPrelude {
     /// reals, and stating it positively is what lets `CReal`'s inverse consume
     /// it without a sign decision it cannot make.
     pub mul_inv_cancel: NameId,
+    /// `Rat.mul_pos : ∀ a b, Rat.lt Rat.zero a → Rat.lt Rat.zero b →
+    /// Rat.lt Rat.zero (Rat.mul a b)`.
+    ///
+    /// **A field lemma, not a ring one.** The 22 give `mul_nonneg` and the
+    /// strict version does not follow from it by any rearrangement — `0 ≤ a·b`
+    /// holds of the zero product too. This one goes through [`Self::inv_pos`].
+    pub mul_pos: NameId,
     /// `Rat.natDivSucc_pos : ∀ (k j : Nat), Nat.le 1 k →
     /// Rat.lt Rat.zero (Rat.natDivSucc k j)` — the **strict** companion of
     /// [`Self::zero_le_nat_div_succ`].
@@ -571,6 +578,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         inv: child(kernel, "inv"),
         mul_inv_cancel: child(kernel, "mul_inv_cancel"),
         inv_pos: child(kernel, "inv_pos"),
+        mul_pos: child(kernel, "mul_pos"),
         nat_div_succ_pos: child(kernel, "natDivSucc_pos"),
         sub_mul: child(kernel, "sub_mul"),
         mul_inv_sub_one: child(kernel, "mul_inv_sub_one"),

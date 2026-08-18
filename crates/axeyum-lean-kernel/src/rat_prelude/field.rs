@@ -88,7 +88,109 @@ pub(super) fn declare_field_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_sub_mul(d, p)?;
     declare_inverse_identities(d, p)?;
     declare_inv_antitone(d, p)?;
+    declare_mul_pos(d, p)?;
     declare_nat_div_succ_pos(d, p)
+}
+
+/// `Rat.mul_pos : ∀ a b, 0 < a → 0 < b → 0 < a·b`.
+///
+/// Not one of the 22: they give `mul_nonneg` (`0 ≤ a → 0 ≤ b → 0 ≤ a·b`) and
+/// stop there, and the strict version does **not** follow from it by any
+/// rearrangement — `0 ≤ a·b` holds of the zero product too. It follows from the
+/// *inverse*: were `a·b ≤ 0`, scaling by the nonnegative `a⁻¹` would give
+/// `b = a⁻¹·(a·b) ≤ a⁻¹·0 = 0`, contradicting `0 < b`. The case split is
+/// [`Rat.le_or_lt`](super::RatPrelude::le_or_lt), which is proved.
+///
+/// So this is a lemma a *field* has and a ring does not, which is why it lands
+/// here rather than in `laws`.
+fn declare_mul_pos(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.mul_pos, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let zero = rzero(d, p);
+        let one = rone(d, p);
+        let left_hypothesis = rlt(d, p, zero, a);
+        let right_hypothesis = rlt(d, p, zero, b);
+        let product = rmul(d, a, b);
+        let claim = rlt(d, p, zero, product);
+        let stmt = {
+            let inner = d.arrow(right_hypothesis, claim);
+            d.arrow(left_hypothesis, inner)
+        };
+
+        let la_fv = d.fresh_fvar();
+        let la = d.kernel().fvar(la_fv);
+        let lb_fv = d.fresh_fvar();
+        let lb = d.kernel().fvar(lb_fv);
+
+        let nonpositive = rle(d, p, product, zero);
+        let positive = rlt(d, p, zero, product);
+        let decision = d.lemma(p.le_or_lt, &[product, zero]);
+        let body = d.or_elim(
+            nonpositive,
+            positive,
+            claim,
+            decision,
+            &|d, bounded| {
+                let reciprocal = d.const_app(p.inv, &[a]);
+                let reciprocal_positive = d.lemma(p.inv_pos, &[a, la]);
+                let reciprocal_nonneg =
+                    d.lemma(p.le_of_lt, &[zero, reciprocal, reciprocal_positive]);
+                let scaled = d.lemma(
+                    p.mul_le_mul_of_nonneg_left,
+                    &[reciprocal, product, zero, reciprocal_nonneg, bounded],
+                );
+
+                // `a⁻¹·(a·b) = b`.
+                let left = rmul(d, reciprocal, product);
+                let head = rmul(d, reciprocal, a);
+                let regrouped = rmul(d, head, b);
+                let regroup = {
+                    let forward = d.lemma(p.mul_assoc, &[reciprocal, a, b]);
+                    rsymm(d, regrouped, left, forward)
+                };
+                let flipped = rmul(d, a, reciprocal);
+                let commuted = rmul(d, flipped, b);
+                let commute = {
+                    let swap = d.lemma(p.mul_comm, &[reciprocal, a]);
+                    rcongr(d, head, flipped, swap, &|d, t| rmul(d, t, b))
+                };
+                let unit = rmul(d, one, b);
+                let cancel = {
+                    let law = d.lemma(p.mul_inv_cancel, &[a, la]);
+                    rcongr(d, flipped, one, law, &|d, t| rmul(d, t, b))
+                };
+                let strip = one_mul(d, p, b);
+                let (_, to_b) = rchain(
+                    d,
+                    left,
+                    &[
+                        (regrouped, regroup),
+                        (commuted, commute),
+                        (unit, cancel),
+                        (b, strip),
+                    ],
+                );
+
+                // `a⁻¹·0 = 0`.
+                let right = rmul(d, reciprocal, zero);
+                let annihilate = d.lemma(p.mul_zero, &[reciprocal]);
+
+                let at_left = rat_eq_rewrite(d, left, b, to_b, scaled, &|d, t| rle(d, p, t, right));
+                let at_right =
+                    rat_eq_rewrite(d, right, zero, annihilate, at_left, &|d, t| rle(d, p, b, t));
+                let degenerate = d.lemma(p.lt_of_lt_of_le, &[zero, b, zero, lb, at_right]);
+                let refuted = d.lemma(p.lt_irrefl, &[zero]);
+                let contradiction = d.apply(refuted, &[degenerate]);
+                d.absurd(claim, contradiction)
+            },
+            &|_d, strict| strict,
+        );
+        let proof = {
+            let with_b = d.lam_fv(lb_fv, right_hypothesis, body);
+            d.lam_fv(la_fv, left_hypothesis, with_b)
+        };
+        (stmt, proof)
+    })
 }
 
 /// `Rat.natDivSucc_pos : ∀ (k j : Nat), 1 ≤ k → 0 < k/(j+1)`.

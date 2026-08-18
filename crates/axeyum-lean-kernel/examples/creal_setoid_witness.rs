@@ -271,6 +271,8 @@ fn main() {
         ("CReal.PosBound", p.pos_bound),
         ("CReal.pos_of_pos_bound", p.pos_of_pos_bound),
         ("CReal.pos_bound_of_lt", p.pos_bound_of_lt),
+        ("CReal.ofRat_pos", p.of_rat_pos),
+        ("CReal.mul_pos", p.mul_pos),
     ];
 
     // (8): the headline count itself, read out of the kernel. Every one of the

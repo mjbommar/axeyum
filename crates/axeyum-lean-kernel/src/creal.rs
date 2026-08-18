@@ -480,6 +480,16 @@ pub struct CRealPrelude {
     /// extracted into a `CReal`. That pair is the precise statement of why the
     /// inverse takes its modulus as an argument.
     pub pos_bound_of_lt: NameId,
+    /// `CReal.ofRat_pos : ∀ g, Rat.lt Rat.zero g → lt zero (ofRat g)`.
+    pub of_rat_pos: NameId,
+    /// `CReal.mul_pos : ∀ x y, lt zero x → lt zero y → lt zero (mul x y)`.
+    ///
+    /// **Not one of the 22.** They give `mul_nonneg`, of which the zero product
+    /// is a model; strictness is what a field needs, and over ℚ it goes through
+    /// [`Rat.inv_pos`](crate::RatPrelude::inv_pos). Here it comes from the
+    /// rational gaps `CReal.lt` already carries, so both `Exists`es are
+    /// eliminated into a `Prop` target — the elimination that *is* permitted.
+    pub mul_pos: NameId,
 }
 
 impl CRealPrelude {
@@ -603,6 +613,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pos_bound: kernel.name_str(creal, "PosBound"),
         pos_of_pos_bound: kernel.name_str(creal, "pos_of_pos_bound"),
         pos_bound_of_lt: kernel.name_str(creal, "pos_bound_of_lt"),
+        of_rat_pos: kernel.name_str(creal, "ofRat_pos"),
+        mul_pos: kernel.name_str(creal, "mul_pos"),
     }
 }
 

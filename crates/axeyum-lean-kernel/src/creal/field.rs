@@ -117,7 +117,20 @@ pub(super) fn declare_field(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     declare_of_rat_le(d, p)?;
     declare_pos_bound(d, p)?;
     declare_pos_of_pos_bound(d, p)?;
-    declare_pos_bound_of_lt(d, p)
+    declare_pos_bound_of_lt(d, p)?;
+    declare_of_rat_pos(d, p)?;
+    declare_mul_pos(d, p)
+}
+
+/// `Equiv (add zero y) y`, as a proof term — the forward direction of
+/// [`zero_add_back`].
+fn zero_add_forward(d: &mut IntDev<'_>, p: CRealPrelude, y: ExprId) -> ExprId {
+    let zero = czero(d, p);
+    let padded = cadd(d, p, zero, y);
+    let flipped = cadd(d, p, y, zero);
+    let commute = d.lemma(p.add_comm, &[zero, y]);
+    let collapse = d.lemma(p.add_zero, &[y]);
+    d.lemma(p.equiv_trans, &[padded, flipped, y, commute, collapse])
 }
 
 /// `Equiv y (add zero y)`, as a proof term — there is no `CReal.zero_add`, the
@@ -709,6 +722,212 @@ fn declare_no_total_inverse(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.no_total_inverse,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `of_rat_pos : ∀ g, Rat.lt Rat.zero g → CReal.lt CReal.zero (CReal.ofRat g)`.
+///
+/// The embedding takes positives to positives, and the witness is the rational
+/// itself: `CReal.lt` quantifies over exactly the gap `g` already is.
+fn declare_of_rat_pos(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let rat_carrier = rat_ty(d);
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let rat_zero = rzero(d, rat);
+    let hypothesis = crate::rat_prelude::ops::rlt(d, rat, rat_zero, g);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let zero = czero(d, p);
+    let embedded = embed(d, p, g);
+    let padded = cadd(d, p, zero, embedded);
+    let collapse = zero_add_forward(d, p, embedded);
+    let bounded = d.lemma(p.le_of_equiv, &[padded, embedded, collapse]);
+    let reached = cle(d, p, padded, embedded);
+    let pair = and_intro(d, p, hypothesis, reached, h, bounded);
+    let witness = gap_intro(d, p, zero, embedded, g, pair);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, witness);
+        d.lam_fv(g_fv, rat_carrier, with_h)
+    };
+    let ty = {
+        let conclusion = clt(d, p, zero, embedded);
+        let inner = d.arrow(hypothesis, conclusion);
+        d.pi_fv(g_fv, rat_carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_rat_pos,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `mul_pos : ∀ x y, lt zero x → lt zero y → lt zero (mul x y)`.
+///
+/// **Positivity is closed under multiplication over the constructed reals**, and
+/// it is not one of the 22 — they give `mul_nonneg`, of which the zero product
+/// is a model. Strictness is what a *field* needs, and it comes from the
+/// rational gaps the strict order already carries: `q₁ ≤ x` and `q₂ ≤ y` give
+/// `q₁·q₂ ≤ x·y` by two applications of `mul_le_mul_of_nonneg_left`,
+/// `CReal.ofRat_mul` says the embedded product is the rational product, and
+/// `Rat.mul_pos` — itself a field lemma, proved through `Rat.inv_pos` — makes
+/// it positive.
+///
+/// No modulus is extracted: both `Exists`es are eliminated into a `Prop`
+/// target, which is exactly the elimination `Exists.rec` permits. The one an
+/// inverse would need lands in `Type` and is not available.
+fn declare_mul_pos(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let zero = czero(d, p);
+    let left_hypothesis = clt(d, p, zero, x);
+    let right_hypothesis = clt(d, p, zero, y);
+    let product = cmul(d, p, x, y);
+    let target = clt(d, p, zero, product);
+
+    let hx_fv = d.fresh_fvar();
+    let hx = d.kernel().fvar(hx_fv);
+    let hy_fv = d.fresh_fvar();
+    let hy = d.kernel().fvar(hy_fv);
+
+    // `le (ofRat q) w` from a gap witness for `lt zero w`.
+    let unpad = |d: &mut IntDev<'_>, w: ExprId, q: ExprId, bounded: ExprId| -> ExprId {
+        let embedded = embed(d, p, q);
+        let padded = cadd(d, p, zero, embedded);
+        let collapse = zero_add_forward(d, p, embedded);
+        let reflexive = d.lemma(p.equiv_refl, &[w]);
+        d.lemma(
+            p.le_congr,
+            &[padded, embedded, w, w, collapse, reflexive, bounded],
+        )
+    };
+
+    let outer = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let rat_zero = rzero(d, rat);
+        let positive = crate::rat_prelude::ops::rlt(d, rat, rat_zero, q);
+        let embedded = embed(d, p, q);
+        let padded = cadd(d, p, zero, embedded);
+        let reached = cle(d, p, padded, x);
+        let pair_ty = d.and(positive, reached);
+        let pair_fv = d.fresh_fvar();
+        let pair = d.kernel().fvar(pair_fv);
+        let (q_positive, q_bounded) = gap_halves(d, p, zero, x, q, pair);
+        let q_le_x = unpad(d, x, q, q_bounded);
+
+        let inner = {
+            let r_fv = d.fresh_fvar();
+            let r = d.kernel().fvar(r_fv);
+            let r_positive_ty = crate::rat_prelude::ops::rlt(d, rat, rat_zero, r);
+            let r_embedded = embed(d, p, r);
+            let r_padded = cadd(d, p, zero, r_embedded);
+            let r_reached = cle(d, p, r_padded, y);
+            let r_pair_ty = d.and(r_positive_ty, r_reached);
+            let r_pair_fv = d.fresh_fvar();
+            let r_pair = d.kernel().fvar(r_pair_fv);
+            let (r_positive, r_bounded) = gap_halves(d, p, zero, y, r, r_pair);
+            let r_le_y = unpad(d, y, r, r_bounded);
+
+            // `0 ≤ ofRat q`, `0 ≤ ofRat r`, hence `0 ≤ y`.
+            let rat_q_nonneg = d.lemma(rat.le_of_lt, &[rat_zero, q, q_positive]);
+            let rat_r_nonneg = d.lemma(rat.le_of_lt, &[rat_zero, r, r_positive]);
+            let q_nonneg = d.lemma(p.of_rat_le, &[rat_zero, q, rat_q_nonneg]);
+            let r_nonneg = d.lemma(p.of_rat_le, &[rat_zero, r, rat_r_nonneg]);
+            let y_nonneg = d.lemma(p.le_trans, &[zero, r_embedded, y, r_nonneg, r_le_y]);
+
+            // `q·r ≤ q·y ≤ x·y`.
+            let embedded_product = cmul(d, p, embedded, r_embedded);
+            let mixed = cmul(d, p, embedded, y);
+            let first = d.lemma(
+                p.mul_le_mul_of_nonneg_left,
+                &[embedded, r_embedded, y, q_nonneg, r_le_y],
+            );
+            let swapped_left = cmul(d, p, y, embedded);
+            let swapped_right = cmul(d, p, y, x);
+            let second = d.lemma(
+                p.mul_le_mul_of_nonneg_left,
+                &[y, embedded, x, y_nonneg, q_le_x],
+            );
+            let swap_left = d.lemma(p.mul_comm, &[y, embedded]);
+            let swap_right = d.lemma(p.mul_comm, &[y, x]);
+            let second_oriented = d.lemma(
+                p.le_congr,
+                &[
+                    swapped_left,
+                    mixed,
+                    swapped_right,
+                    product,
+                    swap_left,
+                    swap_right,
+                    second,
+                ],
+            );
+            let chained = d.lemma(
+                p.le_trans,
+                &[embedded_product, mixed, product, first, second_oriented],
+            );
+
+            // The embedded product IS the rational product, and it is positive.
+            let rational_product = crate::rat_prelude::ops::rmul(d, q, r);
+            let lifted = embed(d, p, rational_product);
+            let homomorphism = d.lemma(p.of_rat_mul, &[q, r]);
+            let reflexive = d.lemma(p.equiv_refl, &[product]);
+            let at_rational = d.lemma(
+                p.le_congr,
+                &[
+                    embedded_product,
+                    lifted,
+                    product,
+                    product,
+                    homomorphism,
+                    reflexive,
+                    chained,
+                ],
+            );
+            let rational_positive = d.lemma(rat.mul_pos, &[q, r, q_positive, r_positive]);
+            let lifted_positive = d.lemma(p.of_rat_pos, &[rational_product, rational_positive]);
+            let strict = d.lemma(
+                p.lt_of_lt_of_le,
+                &[zero, lifted, product, lifted_positive, at_rational],
+            );
+            let with_pair = d.lam_fv(r_pair_fv, r_pair_ty, strict);
+            d.lam_fv(r_fv, rat_carrier, with_pair)
+        };
+
+        let eliminated = gap_elim(d, p, zero, y, target, hy, inner);
+        let with_pair = d.lam_fv(pair_fv, pair_ty, eliminated);
+        d.lam_fv(q_fv, rat_carrier, with_pair)
+    };
+
+    let body = gap_elim(d, p, zero, x, target, hx, outer);
+    let value = {
+        let with_hy = d.lam_fv(hy_fv, right_hypothesis, body);
+        let with_hx = d.lam_fv(hx_fv, left_hypothesis, with_hy);
+        let with_y = d.lam_fv(y_fv, carrier, with_hx);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let inner = d.arrow(right_hypothesis, target);
+        let with_hx = d.arrow(left_hypothesis, inner);
+        let with_y = d.pi_fv(y_fv, carrier, with_hx);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mul_pos,
         uparams: vec![],
         ty,
         value,
