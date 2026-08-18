@@ -47,7 +47,9 @@ For each instance: obtain the rendered module from
    `axiom smuggled : False` would sail past a checker that only inspects the
    axioms it recognizes.
 
-Both sides are normalized to `Σ cᵢ·vᵢ + k ⋈ 0` over exact rationals, denominators
+Both sides are normalized to `Σ c·m + k ⋈ 0` (`m` a monomial of degree ≤ 2, so a
+rendered square binds only a query square and a rendered cross term only a query
+cross term) over exact rationals, denominators
 cleared and divided through by the gcd, because the renderer emits `x > 5` as
 `-x + 5 < 0` and no string comparison can see through that. Normalization is
 where a transcription bug would hide, so the two normalizers share no code:
@@ -96,14 +98,14 @@ Advertised scope is the part people believe, so it is a measurement here, not an
 estimate. Swept 2026-08-18 over all **1404** committed `.smt2` files. **270** of
 them render a Lean module at all, and those 270 split exactly three ways:
 
-    125  BOUND       every rendered hypothesis bound back to an `(assert …)` line
+    135  BOUND       every rendered hypothesis bound back to an `(assert …)` line
      95  STRUCTURAL  every rendered TERM is a subterm of the query, injectively
-     28  ATTESTED    the module transcribes NOTHING; verified to be content-free
-     21  DECLINED    none of the three — not pinned, not checked, listed by name
+     19  ATTESTED    the module transcribes NOTHING; verified to be content-free
+     20  DECLINED    none of the three — not pinned, not checked, listed by name
 
-`scripts/lra-hypothesis-binding-instances.txt` pins the 125;
+`scripts/lra-hypothesis-binding-instances.txt` pins the 135;
 `scripts/hypothesis-binding-structural-instances.txt` pins the 95;
-`scripts/hypothesis-binding-attestations.txt` pins the 28 and names the 21.
+`scripts/hypothesis-binding-attestations.txt` pins the 19 and names the 20.
 A 270th instance, `neg-no-self-negating-proposition.smt2`, renders no theory
 module at all any more: its was *self-refuting* and its route now declines.
 The three bound routes are `lra.hyp._N` (Real Farkas), `lra.int_hyp._N` (Int
@@ -111,13 +113,13 @@ Farkas) and `dio.hyp._N` (Int Diophantine).
 
 # What this does NOT cover
 
-- **The 21 declined instances.** 13 are quantified LIA/BV whose hypothesis is a
-  pi-type `((x0 : Int) -> … Or/Not/Iff …)`; 8 are ground modules whose hypothesis
+- **The 20 declined instances.** 13 are quantified LIA/BV whose hypothesis is a
+  pi-type `((x0 : Int) -> … Or/Not/Iff …)`; 7 are ground modules whose hypothesis
   is the OUTPUT of an array or BV abstraction step rather than a transcription of
   any assertion, so there is no assertion for it to bind to. An unrecognized
   `axeyum.reconstruct.*` axiom fails the run rather than being skipped, so these
   stay visible rather than silently blessed.
-- **The 28 attestations transcribe nothing, and that is the finding, not a
+- **The 19 attestations transcribe nothing, and that is the finding, not a
   gap this closes.** Their correspondence to the query lives in the Rust
   certificate and is checked there. What is checked here is only that each really
   is the content-free skeleton it claims to be. A *self-refuting* module — one
@@ -125,9 +127,14 @@ Farkas) and `dio.hyp._N` (Int Diophantine).
   needs none of its other axioms and nothing at all from the query — is no longer
   counted but FAILS the run (`attested_vacuous=`). Exactly one existed; its route
   now declines instead.
-- **Only the linear fragment the Python parser admits.** `+ - *` by a numeral,
-  `and`, `not`, `<= < >= > =`, `let`. An assertion outside it contributes no
-  atoms, so a hypothesis claiming to come from it is unmatched and the run fails.
+- **Only the degree-≤2 fragment the Python parser admits.** `+ - * /` (division
+  by a constant), `and`, `not`, `<= < >= > =`, `let`. Degree 2 is new on
+  2026-08-18, for the `Sos` route, whose hypotheses are genuinely quadratic
+  (`Real.mul x x`) and whose `.smt2` rows are too (`(< (+ (* x1 x1) 1.0) 0.0)`);
+  a product that would exceed it raises, so its assertion contributes no atoms
+  and a hypothesis claiming to come from it is unmatched and the run fails. That
+  is the same fail-closed policy the old "nonlinear product" rejection had, one
+  degree up — nothing became matchable by default.
 - **It does not check the proof.** That is the kernel's job, and Lean's.
 - **It does not check the prelude axioms** (`Real.add_comm`, …) say what their
   names claim — that is item 2 of the trust surface, and a different gate.
@@ -183,19 +190,26 @@ MANIFEST = ROOT / "scripts/lra-hypothesis-binding-instances.txt"
 ATTESTATION_MANIFEST = ROOT / "scripts/hypothesis-binding-attestations.txt"
 
 # Floors. A scanner that goes blind reports a beautiful clean zero. Measured
-# 2026-08-18 over the whole committed corpus: 125 bound instances, 288
-# hypotheses, 1210 corruptions caught, 95 structural instances over 2982 matched
-# term nodes, 28 attestations of which 0 are self-refuting (one was, and its
-# route now declines), and 286 of 531 spine assertions represented.
-MIN_INSTANCES = 120
-MIN_HYPOTHESES = 280
-MIN_REQUIRED_MUTATIONS = 1150
-MIN_ATTESTATIONS = 25
+# 2026-08-18 over the whole committed corpus, after the `Sos` route began
+# reconstructing: 135 bound instances, 298 hypotheses, 1259 corruptions caught,
+# 95 structural instances over 2982 matched term nodes, 19 attestations of which
+# 0 are self-refuting (one was, and its route now declines), and 296 of 541
+# spine assertions represented.
+MIN_INSTANCES = 130
+MIN_HYPOTHESES = 290
+MIN_REQUIRED_MUTATIONS = 1200
+# A floor on the attestation class is a floor on HONESTY, not on coverage, so it
+# moves DOWN when a route stops attesting and starts reconstructing -- which is
+# what happened on 2026-08-18, when the 9 `Sos` rows left this class for the
+# bound manifest and took it from 28 to 19. Lowering it is a reviewable act for
+# the same reason raising it would be: it is the count of Lean evidence this
+# repository publishes as transcribing nothing.
+MIN_ATTESTATIONS = 16
 # The converse direction, measured rather than assumed: how many of the spine's
-# `(assert …)` rows a rendered hypothesis actually stands for. 286 of 531 --
+# `(assert …)` rows a rendered hypothesis actually stands for. 296 of 541 --
 # barely over half. That is not a soundness hole (a refutation of a subset
 # refutes the whole) but it IS the precise size of what binding does not show.
-MIN_REPRESENTED = 275
+MIN_REPRESENTED = 285
 
 
 def _manifest(path: pathlib.Path) -> list[str]:
@@ -249,6 +263,7 @@ PRELUDE_AXIOMS = {
     "Real.mul_assoc",
     "Real.mul_one",
     "Real.one_mul",
+    "Real.mul_zero",
     "Real.left_distrib",
     "Real.right_distrib",
     "Real.mul_le_mul_of_nonneg_left",
@@ -290,14 +305,29 @@ class Unsupported(Exception):
 # Canonical atoms
 # ---------------------------------------------------------------------------
 #
-# An atom is `Σ cᵢ·vᵢ + k ⋈ 0` with `⋈ ∈ {<=, <, =}`, coefficients cleared to
+# An atom is `Σ c_m·m + k ⋈ 0` with `⋈ ∈ {<=, <, =}`, coefficients cleared to
 # integers and divided by their gcd. Scaling by a POSITIVE rational preserves
 # `≤ 0` and `< 0`, which is why the normal form is canonical for them; `= 0` is
 # additionally sign-normalized, since `E = 0` and `−E = 0` are the same fact.
+#
+# `m` is a MONOMIAL: a sorted tuple of variable names, of total degree at most
+# `MAX_DEGREE`. Degree 1 (`("x",)`) is the linear case this check started as;
+# degree 2 (`("x", "x")`, `("x", "y")`) is what the SOS route renders, and the
+# `.smt2` files it reconstructs contain (`(< (+ (* x1 x1) 1.0) 0.0)`). Nothing
+# above degree 2 is admitted: a term that would produce one raises `Unsupported`
+# and its assertion contributes no atoms, which is the same fail-closed policy
+# every other unmodelled shape gets.
+#
+# The monomial is the unit φ renames, factor by factor, so a rendered `x·x` can
+# only bind a query SQUARE and never a cross term `x·y` — see `_bind_monomial`.
+
+# Total degree the two normalizers model. Raising it is a real extension, not a
+# tuning knob: `_bind_monomial` enumerates the factor permutations of a monomial.
+MAX_DEGREE = 2
 
 
-def canonical(rel: str, coeffs: dict[str, Fraction], const: Fraction) -> tuple:
-    """`(rel, ((var, int_coeff), …) sorted, int_const)` — the comparable form."""
+def canonical(rel: str, coeffs: dict[tuple, Fraction], const: Fraction) -> tuple:
+    """`(rel, ((monomial, int_coeff), …) sorted, int_const)` — the comparable form."""
     items = {v: c for v, c in coeffs.items() if c != 0}
     values = list(items.values()) + [const]
     denom = 1
@@ -324,9 +354,20 @@ def canonical(rel: str, coeffs: dict[str, Fraction], const: Fraction) -> tuple:
 
 
 def signature(atom: tuple) -> tuple:
-    """The rename-invariant part: relation, constant, and the coefficient bag."""
+    """The rename-invariant part: relation, constant, and the coefficient bag.
+
+    Each monomial contributes its DEGREE and its number of DISTINCT factors
+    alongside the coefficient. Both survive any injective renaming — φ maps
+    variables to variables — so this stays a sound prune, and it keeps a rendered
+    square `x·x` from even being offered a cross term `x·y` of the same
+    coefficient.
+    """
     rel, terms, const = atom
-    return (rel, const, tuple(sorted(c for _, c in terms)))
+    return (
+        rel,
+        const,
+        tuple(sorted((len(m), len(set(m)), c) for m, c in terms)),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -380,8 +421,41 @@ def as_number(token: str) -> Fraction | None:
     return None
 
 
-def linear(term, env: dict[str, tuple]) -> tuple[dict[str, Fraction], Fraction]:
-    """`(coeffs, const)` for an arithmetic term, or raise [`Unsupported`]."""
+def _smt_poly_mul(left: tuple, right: tuple) -> tuple:
+    """The product of two `(coeffs, const)` polynomials, capped at `MAX_DEGREE`.
+
+    Deliberately NOT shared with `_lean_poly_mul`, which does the same arithmetic
+    on the rendered side. The whole point of this file is that the two
+    normalizers agree only because both are right; a single shared multiply would
+    make a bug in it invisible to the comparison, and the product is where a
+    degree-2 transcription bug would live.
+    """
+    (lc, lk), (rc, rk) = left, right
+    coeffs: dict[tuple, Fraction] = {}
+
+    def add(mono: tuple, value: Fraction) -> None:
+        if len(mono) > MAX_DEGREE:
+            raise Unsupported(f"product of total degree {len(mono)} > {MAX_DEGREE}")
+        coeffs[mono] = coeffs.get(mono, Fraction(0)) + value
+
+    for mono, value in lc.items():
+        add(mono, value * rk)
+    for mono, value in rc.items():
+        add(mono, value * lk)
+    for lmono, lvalue in lc.items():
+        for rmono, rvalue in rc.items():
+            add(tuple(sorted(lmono + rmono)), lvalue * rvalue)
+    return (coeffs, lk * rk)
+
+
+def linear(term, env: dict[str, tuple]) -> tuple[dict[tuple, Fraction], Fraction]:
+    """`(coeffs, const)` for an arithmetic term, or raise [`Unsupported`].
+
+    `coeffs` is keyed by MONOMIAL (a sorted tuple of variable names) of total
+    degree at most `MAX_DEGREE`, so this reads the degree-2 fragment the SOS route
+    reconstructs as well as the linear one. The name is kept: it is still a
+    normalizer to `Σ c·m + k`, and every caller treats the result the same way.
+    """
     if isinstance(term, str):
         number = as_number(term)
         if number is not None:
@@ -389,15 +463,15 @@ def linear(term, env: dict[str, tuple]) -> tuple[dict[str, Fraction], Fraction]:
         if term in env:
             bound = env[term]
             if bound is OPAQUE:
-                raise Unsupported(f"`let`-bound name `{term}` is not linear arithmetic")
+                raise Unsupported(f"`let`-bound name `{term}` is not arithmetic")
             return bound
-        return ({term: Fraction(1)}, Fraction(0))
+        return ({(term,): Fraction(1)}, Fraction(0))
     if not term:
         raise Unsupported("empty application")
     head = term[0]
     args = term[1:]
     if head == "+":
-        coeffs: dict[str, Fraction] = {}
+        coeffs: dict[tuple, Fraction] = {}
         const = Fraction(0)
         for arg in args:
             c, k = linear(arg, env)
@@ -418,21 +492,14 @@ def linear(term, env: dict[str, tuple]) -> tuple[dict[str, Fraction], Fraction]:
             const -= k
         return (coeffs, const)
     if head == "*":
-        # At most ONE factor may be non-constant; the rest multiply into a scalar.
-        scalar = Fraction(1)
-        linear_factor: tuple[dict[str, Fraction], Fraction] | None = None
+        # A genuine polynomial product, capped at `MAX_DEGREE`. A degree-3 factor
+        # raises, so its assertion contributes no atoms and any hypothesis
+        # claiming to descend from it stays unmatched — the same fail-closed
+        # policy the old "nonlinear product" rejection had, one degree up.
+        product: tuple = ({}, Fraction(1))
         for arg in args:
-            c, k = linear(arg, env)
-            if not c:
-                scalar *= k
-                continue
-            if linear_factor is not None:
-                raise Unsupported("nonlinear product")
-            linear_factor = (c, k)
-        if linear_factor is None:
-            return ({}, scalar)
-        c, k = linear_factor
-        return ({v: value * scalar for v, value in c.items()}, k * scalar)
+            product = _smt_poly_mul(product, linear(arg, env))
+        return product
     if head == "/":
         if len(args) != 2:
             raise Unsupported("`/` with other than two arguments")
@@ -450,7 +517,7 @@ def linear(term, env: dict[str, tuple]) -> tuple[dict[str, Fraction], Fraction]:
     raise Unsupported(f"arithmetic head `{head}`")
 
 
-# A `let`-bound name whose definition is not linear arithmetic. It must NOT
+# A `let`-bound name whose definition is not degree-≤2 arithmetic. It must NOT
 # degrade to a free variable: `(let ((a (forall …))) …)` would then contribute an
 # invented symbol `a` that a rendered hypothesis could match against. Referencing
 # it raises instead, so the enclosing assertion contributes no atoms.
@@ -619,15 +686,39 @@ def lean_expr(text: str):
     return result
 
 
-def lean_linear(expr, carrier: str) -> tuple[dict[str, Fraction], Fraction]:
-    """`(coeffs, const)` for a rendered carrier expression."""
+def _lean_poly_mul(left: tuple, right: tuple) -> tuple:
+    """`_smt_poly_mul`'s counterpart on the rendered side, written separately.
+
+    See that function: the two sides of this check must not share the arithmetic
+    they are being compared through. This one is reached from `Real.mul` /
+    `Int.mul` spines, that one from `(* …)` s-expressions.
+    """
+    (lc, lk), (rc, rk) = left, right
+    coeffs: dict[tuple, Fraction] = {}
+    for mono, value in lc.items():
+        coeffs[mono] = coeffs.get(mono, Fraction(0)) + value * rk
+    for mono, value in rc.items():
+        coeffs[mono] = coeffs.get(mono, Fraction(0)) + value * lk
+    for lmono, lvalue in lc.items():
+        for rmono, rvalue in rc.items():
+            product = tuple(sorted(lmono + rmono))
+            if len(product) > MAX_DEGREE:
+                raise Unsupported(
+                    f"rendered product of total degree {len(product)} > {MAX_DEGREE}"
+                )
+            coeffs[product] = coeffs.get(product, Fraction(0)) + lvalue * rvalue
+    return (coeffs, lk * rk)
+
+
+def lean_linear(expr, carrier: str) -> tuple[dict[tuple, Fraction], Fraction]:
+    """`(coeffs, const)` for a rendered carrier expression, keyed by monomial."""
     if isinstance(expr, str):
         if expr == f"{carrier}.zero":
             return ({}, Fraction(0))
         if expr == f"{carrier}.one":
             return ({}, Fraction(1))
         if expr.startswith(QUERY_NAMESPACE):
-            return ({expr: Fraction(1)}, Fraction(0))
+            return ({(expr,): Fraction(1)}, Fraction(0))
         raise Unsupported(f"rendered leaf `{expr}`")
     head, args = expr[0], expr[1:]
     if not isinstance(head, str):
@@ -636,20 +727,16 @@ def lean_linear(expr, carrier: str) -> tuple[dict[str, Fraction], Fraction]:
         lc, lk = lean_linear(args[0], carrier)
         rc, rk = lean_linear(args[1], carrier)
         coeffs = dict(lc)
-        for v, value in rc.items():
-            coeffs[v] = coeffs.get(v, Fraction(0)) + value
+        for mono, value in rc.items():
+            coeffs[mono] = coeffs.get(mono, Fraction(0)) + value
         return (coeffs, lk + rk)
     if head == f"{carrier}.neg" and len(args) == 1:
         c, k = lean_linear(args[0], carrier)
-        return ({v: -value for v, value in c.items()}, -k)
+        return ({mono: -value for mono, value in c.items()}, -k)
     if head == f"{carrier}.mul" and len(args) == 2:
-        lc, lk = lean_linear(args[0], carrier)
-        rc, rk = lean_linear(args[1], carrier)
-        if lc and rc:
-            raise Unsupported("rendered nonlinear product")
-        if lc:
-            return ({v: value * rk for v, value in lc.items()}, lk * rk)
-        return ({v: value * lk for v, value in rc.items()}, lk * rk)
+        return _lean_poly_mul(
+            lean_linear(args[0], carrier), lean_linear(args[1], carrier)
+        )
     raise Unsupported(f"rendered head `{head}`")
 
 
@@ -674,8 +761,8 @@ def lean_atom(ty: str, carrier: str) -> tuple:
         lc, lk = lean_linear(left, carrier)
         rc, rk = lean_linear(right, carrier)
         coeffs = dict(lc)
-        for v, value in rc.items():
-            coeffs[v] = coeffs.get(v, Fraction(0)) - value
+        for mono, value in rc.items():
+            coeffs[mono] = coeffs.get(mono, Fraction(0)) - value
         return canonical(rel, coeffs, lk - rk)
     if len(expr) != 3:
         raise Unsupported("a hypothesis type is not a binary relation application")
@@ -689,8 +776,8 @@ def lean_atom(ty: str, carrier: str) -> tuple:
     lc, lk = lean_linear(left, carrier)
     rc, rk = lean_linear(right, carrier)
     coeffs = dict(lc)
-    for v, value in rc.items():
-        coeffs[v] = coeffs.get(v, Fraction(0)) - value
+    for mono, value in rc.items():
+        coeffs[mono] = coeffs.get(mono, Fraction(0)) - value
     return canonical(rel, coeffs, lk - rk)
 
 
@@ -1170,7 +1257,7 @@ def verify_binding(
         seen[target] = carrier_name
     for name, _carrier, atom in hypotheses:
         _rel, terms, _const = atom
-        unbound = [v for v, _ in terms if v not in phi]
+        unbound = sorted({f for mono, _ in terms for f in mono if f not in phi})
         if unbound:
             problems.append(f"{name} mentions {unbound}, which φ does not bind")
             continue
@@ -1301,9 +1388,67 @@ def bind(
     )
 
 
+def _bind_monomial(
+    mono: tuple,
+    cand: tuple,
+    phi: dict[str, str],
+    used: frozenset[str],
+    carriers: dict[str, str],
+    sorts: dict[str, str],
+):
+    """Yield every extension of `phi` sending the monomial `mono` onto `cand`.
+
+    Factor by factor, over every pairing of the candidate's factors — φ is not
+    order-preserving, so `(a, b)` may have to land on `(y, x)`.
+
+    The two properties that make the degree-2 case a real check rather than a
+    looser one both fall out of doing it this way, and are asserted by the
+    control tests:
+
+    - a rendered SQUARE can only bind a query square. `(a, a)` onto `(x, y)`
+      binds `a -> x` and then finds `a` already bound to something other than
+      `y`; both pairings fail.
+    - a rendered CROSS term can only bind a query cross term. `(a, b)` onto
+      `(x, x)` binds `a -> x`, and `b -> x` is refused by injectivity — which is
+      the same rule that stops two carriers collapsing onto one symbol anywhere
+      else, not a special case bolted on here.
+    """
+    if len(mono) != len(cand):
+        return
+    if len(mono) == 1:
+        pairings = [(0,)]
+    elif len(mono) == 2:
+        pairings = [(0, 1), (1, 0)]
+    else:
+        # `MAX_DEGREE` is 2. A higher degree would need a permutation generator,
+        # and silently matching nothing here would read as "no binding exists"
+        # rather than "this checker does not model that", so refuse loudly.
+        raise Unsupported(f"monomial of degree {len(mono)} > {MAX_DEGREE}")
+    for pairing in pairings:
+        next_phi, next_used, ok = phi, used, True
+        for position, index in enumerate(pairing):
+            factor, target = mono[position], cand[index]
+            bound = next_phi.get(factor)
+            if bound is not None:
+                if bound != target:
+                    ok = False
+                    break
+                continue
+            if target in next_used:
+                ok = False
+                break
+            if not sort_compatible(carriers.get(factor), sorts.get(target)):
+                ok = False
+                break
+            next_phi = {**next_phi, factor: target}
+            next_used = next_used | {target}
+        if ok:
+            yield next_phi, next_used
+
+
 def _matchings(
-    terms: tuple[tuple[str, int], ...],
-    cand_terms: tuple[tuple[str, int], ...],
+    terms: tuple[tuple[tuple, int], ...],
+    cand_terms: tuple[tuple[tuple, int], ...],
     phi: dict[str, str],
     used: frozenset[str],
     carriers: dict[str, str],
@@ -1315,25 +1460,21 @@ def _matchings(
     if not terms:
         yield phi, used
         return
-    var, coeff = terms[0]
-    for i, (cand_var, cand_coeff) in enumerate(cand_terms):
+    mono, coeff = terms[0]
+    for i, (cand_mono, cand_coeff) in enumerate(cand_terms):
         if cand_coeff != coeff:
             continue
-        bound = phi.get(var)
-        if bound is not None:
-            if bound != cand_var:
-                continue
-            next_phi, next_used = phi, used
-        else:
-            if cand_var in used:
-                continue
-            if not sort_compatible(carriers.get(var), sorts.get(cand_var)):
-                continue
-            next_phi = {**phi, var: cand_var}
-            next_used = used | {cand_var}
-        yield from _matchings(
-            terms[1:], cand_terms[:i] + cand_terms[i + 1 :], next_phi, next_used, carriers, sorts
-        )
+        for next_phi, next_used in _bind_monomial(
+            mono, cand_mono, phi, used, carriers, sorts
+        ):
+            yield from _matchings(
+                terms[1:],
+                cand_terms[:i] + cand_terms[i + 1 :],
+                next_phi,
+                next_used,
+                carriers,
+                sorts,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -1974,8 +2115,17 @@ def main(argv: list[str]) -> int:
 
 
 def _rename(atom: tuple, phi: dict[str, str]) -> tuple:
+    """φ applied factor-by-factor inside every monomial, then re-canonicalized.
+
+    Re-sorting BOTH the factors within a monomial and the monomials within the
+    atom matters: φ need not be order-preserving, so `(a, b) -> (y, x)` has to
+    come back as the `(x, y)` the query side produced.
+    """
     rel, terms, const = atom
-    return (rel, tuple(sorted((phi.get(v, v), c) for v, c in terms)), const)
+    renamed = tuple(
+        sorted((tuple(sorted(phi.get(f, f) for f in mono)), c) for mono, c in terms)
+    )
+    return (rel, renamed, const)
 
 
 if __name__ == "__main__":

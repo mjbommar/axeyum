@@ -6692,12 +6692,55 @@ impl SosCertificate {
     /// (the reconstructor re-asserts this over the kernel before trusting it).
     ///
     /// Returns `None` (decline) on a malformed dimension, a **nonzero affine row**
-    /// `L[n][k] ≠ 0` (outside the homogeneous slice the denominator-clearing
-    /// reconstructor handles), a negative `D[k]` (never produced by a PSD factor,
-    /// but rejected defensively), or a square whose form is identically zero.
+    /// `L[n][k] ≠ 0` (see [`SosCertificate::rational_affine_squares`], which
+    /// accepts it), a negative `D[k]` (never produced by a PSD factor, but
+    /// rejected defensively), or a square whose form is identically zero.
     #[must_use]
     #[allow(clippy::type_complexity)]
     pub(crate) fn rational_squares(&self) -> Option<Vec<(Rational, Vec<(usize, Rational)>)>> {
+        self.rational_squares_impl(false)
+    }
+
+    /// The **affine-general** rational sum-of-squares decomposition
+    /// `p = Σₖ dₖ·ℓₖ²` with `ℓₖ = Σⱼ L[j][k]·xⱼ + L[n][k]` — i.e. the same
+    /// decomposition [`SosCertificate::rational_squares`] returns, but WITHOUT
+    /// requiring the affine row `L[n][k]` to be zero.
+    ///
+    /// This is the whole content of the homogeneous restriction: the Gram matrix
+    /// is `(n+1)×(n+1)` over the homogenized vector `v = [x₀ … x_{n−1}; 1]`, so
+    /// `p(x) = vᵀ M v` and `M = L D Lᵀ` gives
+    /// `p = Σₖ dₖ·(Σᵢ L[i][k]·vᵢ)²` where the LAST coordinate `vₙ` is the
+    /// constant `1`. Nothing about that identity needs `L[n][k] = 0`; the
+    /// homogeneous slice existed only because the reconstructor's linear-form
+    /// builder had no way to emit a constant.
+    ///
+    /// So the affine entry is returned under the **out-of-range index `n_vars`**,
+    /// which the reconstructor maps to the ring's `one` rather than to a variable
+    /// (`int_affine_lin_to_rexpr`). Every other index `j < n_vars` is a variable,
+    /// exactly as in [`SosCertificate::poly_terms`]. Coefficients are ascending by
+    /// index with zeros dropped, so the affine entry — when nonzero — is last.
+    ///
+    /// `rational_squares` is the `L[n][k] = 0` special case of this, and returns
+    /// the identical vector on every certificate it accepts.
+    ///
+    /// Returns `None` (decline) on a malformed dimension, a negative `D[k]` (never
+    /// produced by a PSD factor, but rejected defensively), or a square whose form
+    /// is identically zero.
+    #[must_use]
+    #[allow(clippy::type_complexity)]
+    pub(crate) fn rational_affine_squares(
+        &self,
+    ) -> Option<Vec<(Rational, Vec<(usize, Rational)>)>> {
+        self.rational_squares_impl(true)
+    }
+
+    /// Shared body of [`SosCertificate::rational_squares`] (`allow_affine = false`)
+    /// and [`SosCertificate::rational_affine_squares`] (`allow_affine = true`).
+    #[allow(clippy::type_complexity)]
+    fn rational_squares_impl(
+        &self,
+        allow_affine: bool,
+    ) -> Option<Vec<(Rational, Vec<(usize, Rational)>)>> {
         let dim = self.n_vars + 1;
         if self.d.len() != dim || self.l.len() != dim {
             return None;
@@ -6715,12 +6758,16 @@ impl SosCertificate {
             if dk.numerator() < 0 {
                 return None; // negative weight — never PSD, reject defensively
             }
-            // The affine entry of column k must be zero (homogeneous slice).
-            if !self.l[n][k].is_zero() {
+            // The affine entry of column k must be zero (homogeneous slice) unless
+            // the caller asked for the affine-general decomposition.
+            if !allow_affine && !self.l[n][k].is_zero() {
                 return None;
             }
             let mut coeffs: Vec<(usize, Rational)> = Vec::new();
-            for j in 0..n {
+            // `n` itself is the homogenizing coordinate (the constant `1`); it is
+            // included only in the affine-general mode, and only when nonzero.
+            let last = if allow_affine { n + 1 } else { n };
+            for j in 0..last {
                 let c = self.l[j][k];
                 if c == zero {
                     continue;

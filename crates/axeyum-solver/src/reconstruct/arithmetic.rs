@@ -3267,26 +3267,44 @@ fn checked_lcm(a: i128, b: i128) -> Option<i128> {
     (a / g).checked_mul(b)
 }
 
-/// Build the [`RExpr`] for an INTEGER-coefficient linear form `ℓ⁺ = Σⱼ cⱼ·xⱼ` from
-/// signed coefficients `cⱼ` (any nonzero integer, not just ±1): a left-nested `add`
-/// over `|cⱼ|` repeated copies of `xⱼ` (or `neg xⱼ` when `cⱼ < 0`). E.g.
-/// `2x₀ − x₁` ⇒ `add (add x₀ x₀) (neg x₁)`. `None` (decline) on an empty list or any
+/// Build the [`RExpr`] for an INTEGER-coefficient **affine** form
+/// `ℓ⁺ = Σⱼ cⱼ·xⱼ + c₀` from signed coefficients over the certificate's
+/// homogenized index space: index `j < n_vars` is the variable `xⱼ`, and the
+/// out-of-range index `j == n_vars` is the homogenizing coordinate — the ring's
+/// `one` — exactly as [`SosCertificate::rational_affine_squares`] emits it.
+///
+/// This is the ONLY thing the homogeneous (`zero affine row`) restriction ever
+/// was: `p(x) = vᵀ M v` over `v = [x; 1]`, so the `LDLᵀ` linear forms are affine
+/// in general, and the reconstructor previously had no way to emit their constant
+/// term. `RExpr::One` is a first-class generator of the degree-2 ring normalizer
+/// (`Mono::Const`), so nothing downstream needs to change.
+///
+/// Coefficients are expanded into `|cⱼ|` repeated unit copies and folded into a
+/// left-nested `add`, so `2x₀ − x₁ + 1` ⇒ `add (add (add x₀ x₀) (neg x₁)) one`.
+/// `None` (decline) on an empty list, an index above `n_vars`, or any
 /// `|cⱼ| > SOS_RATIONAL_MAX`.
-fn int_lin_to_rexpr(coeffs: &[(usize, i128)]) -> Option<RExpr> {
+fn int_affine_lin_to_rexpr(coeffs: &[(usize, i128)], n_vars: usize) -> Option<RExpr> {
     let mut atoms: Vec<RExpr> = Vec::new();
     for &(idx, c) in coeffs {
         if c == 0 {
             continue;
         }
+        if idx > n_vars {
+            return None; // outside the homogenized index space — decline
+        }
         if c.unsigned_abs() > SOS_RATIONAL_MAX as u128 {
             return None; // coefficient too large to expand into unit copies
         }
-        let count = c.unsigned_abs();
-        for _ in 0..count {
+        let base = if idx == n_vars {
+            RExpr::One
+        } else {
+            RExpr::Var(idx)
+        };
+        for _ in 0..c.unsigned_abs() {
             let atom = if c < 0 {
-                RExpr::Neg(Box::new(RExpr::Var(idx)))
+                RExpr::Neg(Box::new(base.clone()))
             } else {
-                RExpr::Var(idx)
+                base.clone()
             };
             atoms.push(atom);
         }
@@ -3425,7 +3443,7 @@ fn reconstruct_sos_rational_weight(
     if !cert.strict_lt() {
         return Ok(None);
     }
-    let Some(rat_squares) = cert.rational_squares() else {
+    let Some(rat_squares) = cert.rational_affine_squares() else {
         return Ok(None);
     };
     let n_vars = cert.n_vars();
@@ -3447,7 +3465,7 @@ fn reconstruct_sos_rational_weight(
     let mut ell_rexprs: Vec<RExpr> = Vec::new();
     let mut sq_rexprs: Vec<RExpr> = Vec::new();
     for (weight, int_coeffs) in &cleared {
-        let Some(ell) = int_lin_to_rexpr(int_coeffs) else {
+        let Some(ell) = int_affine_lin_to_rexpr(int_coeffs, n_vars) else {
             return Ok(None);
         };
         for _ in 0..*weight {
@@ -3642,7 +3660,7 @@ fn reconstruct_sos_rational_weight_gt(
     if cert.strict_lt() {
         return Ok(None);
     }
-    let Some(rat_squares) = cert.rational_squares() else {
+    let Some(rat_squares) = cert.rational_affine_squares() else {
         return Ok(None);
     };
     let n_vars = cert.n_vars();
@@ -3664,7 +3682,7 @@ fn reconstruct_sos_rational_weight_gt(
     let mut ell_rexprs: Vec<RExpr> = Vec::new();
     let mut sq_rexprs: Vec<RExpr> = Vec::new();
     for (weight, int_coeffs) in &cleared {
-        let Some(ell) = int_lin_to_rexpr(int_coeffs) else {
+        let Some(ell) = int_affine_lin_to_rexpr(int_coeffs, n_vars) else {
             return Ok(None);
         };
         for _ in 0..*weight {

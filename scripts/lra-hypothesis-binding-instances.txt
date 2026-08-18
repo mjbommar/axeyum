@@ -6,15 +6,23 @@
 # the 1404 committed `.smt2` files. 270 of them render a Lean module at all, and
 # those 270 split exactly three ways:
 #
-#     125  bound      -- this file
-#     124  attested   -- scripts/hypothesis-binding-attestations.txt; the module
+#     135  bound      -- this file
+#      95  structural -- scripts/hypothesis-binding-structural-instances.txt
+#      19  attested   -- scripts/hypothesis-binding-attestations.txt; the module
 #                        transcribes NOTHING from the query (see that file)
-#      21  declined   -- listed at the bottom of the attestation manifest
+#      20  declined   -- listed at the bottom of the attestation manifest
 #
 # The three routes bound here:
-#     axeyum.reconstruct.lra.hyp._N      (Real, Farkas)
+#     axeyum.reconstruct.lra.hyp._N      (Real, Farkas AND SOS)
 #     axeyum.reconstruct.lra.int_hyp._N  (Int, Farkas)
 #     axeyum.reconstruct.dio.hyp._N      (Int, Diophantine; added 2026-08-18)
+#
+# The 10 `QF_NRA/graduated/nra-*` rows joined on 2026-08-18, when the SOS route
+# stopped emitting `axiom prop._0; axiom Not prop._0` for every degree-2
+# certificate with a nonzero affine row and started reconstructing them. Their
+# hypotheses are DEGREE-2 (`Real.mul x x`), which is why the checker's two
+# normalizers now read monomials rather than variables: nine of the ten were
+# attested and one was declined, and none of them was checkable before.
 #
 # A RATCHET. Adding a line is routine; removing one means a query that used to
 # have a verified transcription no longer does, and is a reviewable act. An
@@ -137,6 +145,16 @@ artifacts/instances/infeasibility/roster-icu-night.smt2
 artifacts/instances/infeasibility/schedule-deadline.smt2
 corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__bug365.smt2
 corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__dump-unsat-core-full.smt2
+corpus/public-curated/synthetic/QF_NRA/graduated/nra-neg-square-d01.smt2
+corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-strict-unsat-d01.smt2
+corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k01.smt2
+corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k02.smt2
+corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k03.smt2
+corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k04.smt2
+corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k05.smt2
+corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k06.smt2
+corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k07.smt2
+corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k08.smt2
 corpus/regression/cvc5/qf_lia/cvc5__cli__regress0__bug365.smt2
 corpus/regression/cvc5/qf_lia/cvc5__cli__regress0__dump-unsat-core-full.smt2
 corpus/regression/qf_lia/unsat_parity.smt2

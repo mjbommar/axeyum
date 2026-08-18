@@ -120,7 +120,7 @@ class NormalizationIsSemanticNotSyntactic(unittest.TestCase):
             "Real.zero))))))) Real.zero",
             "Real",
         )
-        self.assertEqual(smt, [("<=", (("s_a", -1),), 6)])
+        self.assertEqual(smt, [("<=", ((("s_a",), -1),), 6)])
         self.assertEqual(HB.signature(smt[0]), HB.signature(rendered))
 
     def test_a_leaf_outside_the_query_namespace_is_not_silently_a_variable(self) -> None:
@@ -130,16 +130,16 @@ class NormalizationIsSemanticNotSyntactic(unittest.TestCase):
             HB.lean_atom("Real.le (Real.add v Real.zero) Real.zero", "Real")
 
     def test_scaling_by_a_positive_rational_is_the_same_atom(self) -> None:
-        half = HB.canonical("<=", {"x": Fraction(1, 2)}, Fraction(-3, 2))
-        whole = HB.canonical("<=", {"x": Fraction(2)}, Fraction(-6))
+        half = HB.canonical("<=", {("x",): Fraction(1, 2)}, Fraction(-3, 2))
+        whole = HB.canonical("<=", {("x",): Fraction(2)}, Fraction(-6))
         self.assertEqual(half, whole)
 
     def test_scaling_by_a_negative_rational_is_NOT_the_same_atom(self) -> None:
         """`x ≤ 0` and `−x ≤ 0` are different facts, and a normalizer that
         divided by a signed gcd would fuse them."""
         self.assertNotEqual(
-            HB.canonical("<=", {"x": Fraction(1)}, Fraction(0)),
-            HB.canonical("<=", {"x": Fraction(-1)}, Fraction(0)),
+            HB.canonical("<=", {("x",): Fraction(1)}, Fraction(0)),
+            HB.canonical("<=", {("x",): Fraction(-1)}, Fraction(0)),
         )
 
 
@@ -342,10 +342,10 @@ class TheReCheckIsIndependentOfTheSearch(unittest.TestCase):
     hand it a bad binding while the search is correct — and a guard exercised
     only by a bug is a guard nobody notices going blind."""
 
-    HYPS = [("h", "Real", ("<=", (("v0", 1), ("v1", -1)), 5))]
+    HYPS = [("h", "Real", ("<=", ((("v0",), 1), (("v1",), -1)), 5))]
     CARRIERS = {"v0": "Real", "v1": "Real"}
     SORTS = {"s_a": "Real", "s_b": "Real", "n": "Int"}
-    ALLOWED = {("<=", (("s_a", 1), ("s_b", -1)), 5)}
+    ALLOWED = {("<=", ((("s_a",), 1), (("s_b",), -1)), 5)}
 
     def test_a_correct_binding_has_no_violations(self) -> None:
         self.assertEqual(
@@ -415,25 +415,72 @@ class AtomExtractionOnlyEmitsWhatIsEntailed(unittest.TestCase):
         # ¬(x ≤ y) is y < x, i.e. `y − x < 0`.
         self.assertEqual(
             HB.atoms_of(["not", ["<=", "x", "y"]], True, {}),
-            [("<", (("x", -1), ("y", 1)), 0)],
+            [("<", ((("x",), -1), (("y",), 1)), 0)],
         )
 
     def test_an_equality_contributes_both_bounds(self) -> None:
         atoms = HB.atoms_of(["=", "x", "2"], True, {})
-        self.assertIn(("<=", (("x", 1),), -2), atoms)
-        self.assertIn(("<=", (("x", -1),), 2), atoms)
+        self.assertIn(("<=", ((("x",), 1),), -2), atoms)
+        self.assertIn(("<=", ((("x",), -1),), 2), atoms)
 
     def test_a_disequality_contributes_nothing(self) -> None:
         """`¬(x = 2)` is a DISJUNCTION of two strict bounds, and emitting either
         one alone would be an atom the query does not entail."""
         self.assertEqual(HB.atoms_of(["not", ["=", "x", "2"]], True, {}), [])
 
-    def test_a_nonlinear_product_contributes_nothing(self) -> None:
-        self.assertEqual(HB.atoms_of(["<=", ["*", "x", "y"], "0"], True, {}), [])
+    def test_a_degree_two_product_now_contributes_its_monomial(self) -> None:
+        """`x·y ≤ 0` was outside this parser until the `Sos` route needed it.
+
+        It is here as a POSITIVE control: the degree-2 extension is only worth
+        anything if the atom it produces is the right one, and a checker that
+        silently produced `("x",)` or dropped the term would still "pass" the
+        fail-closed test below.
+        """
+        self.assertEqual(
+            HB.atoms_of(["<=", ["*", "x", "y"], "0"], True, {}),
+            [("<=", ((("x", "y"), 1),), 0)],
+        )
+
+    def test_a_square_and_a_cross_term_are_different_atoms(self) -> None:
+        """`x² ≤ 0` and `x·y ≤ 0` must not normalize to the same thing.
+
+        They have the same relation, constant and coefficient, so only the
+        monomial keeps them apart — and if it did not, a module rendering
+        `Real.mul x x` could bind a query row about two different variables.
+        """
+        square = HB.atoms_of(["<=", ["*", "x", "x"], "0"], True, {})
+        cross = HB.atoms_of(["<=", ["*", "x", "y"], "0"], True, {})
+        self.assertEqual(square, [("<=", ((("x", "x"), 1),), 0)])
+        self.assertNotEqual(square, cross)
+        self.assertNotEqual(HB.signature(square[0]), HB.signature(cross[0]))
+
+    def test_a_degree_three_product_contributes_nothing(self) -> None:
+        """The fail-closed boundary moved up one degree; it did not disappear.
+
+        `MAX_DEGREE` is 2, so a cubic assertion still yields NO atoms and any
+        hypothesis claiming to descend from it stays unmatched.
+        """
+        self.assertEqual(
+            HB.atoms_of(["<=", ["*", "x", ["*", "y", "z"]], "0"], True, {}), []
+        )
+
+    def test_a_degree_two_expansion_matches_the_expanded_polynomial(self) -> None:
+        """`(x−1)·(x−1) ≤ 0` is `x² − 2x + 1 ≤ 0`.
+
+        This is the shape the shifted SOS row `(x−1)² + (y−2)² + 1 < 0` rests on:
+        if this side of the check did not multiply out, the faithful module for
+        it could never bind.
+        """
+        self.assertEqual(
+            HB.atoms_of(
+                ["<=", ["*", ["-", "x", "1"], ["-", "x", "1"]], "0"], True, {}
+            ),
+            [("<=", ((("x",), -2), (("x", "x"), 1)), 1)],
+        )
 
     def test_a_let_binding_is_expanded(self) -> None:
         atoms = HB.atoms_of(["let", [["u", ["+", "x", "1"]]], [">=", "u", "0"]], True, {})
-        self.assertEqual(atoms, [("<=", (("x", -1),), -1)])
+        self.assertEqual(atoms, [("<=", ((("x",), -1),), -1)])
 
 
 class ARenderedShapeThisCheckerCannotReadIsAFailureNotASkip(unittest.TestCase):
@@ -441,9 +488,14 @@ class ARenderedShapeThisCheckerCannotReadIsAFailureNotASkip(unittest.TestCase):
         with self.assertRaises(HB.Unsupported):
             HB.lean_atom("Real.le (Real.sqrt v) Real.zero", "Real")
 
-    def test_a_nonlinear_rendered_product_raises(self) -> None:
+    def test_a_degree_three_rendered_product_raises(self) -> None:
+        """A rendered product above `MAX_DEGREE` is a shape this checker does not
+        model, and an unmodelled hypothesis must FAIL its instance rather than be
+        skipped. Degree 2 is read (the `Sos` route renders it); degree 3 is not."""
         with self.assertRaises(HB.Unsupported):
-            HB.lean_atom("Real.le (Real.mul v0 v1) Real.zero", "Real")
+            HB.lean_atom(
+                f"Real.le (Real.mul {X0} (Real.mul {X1} {X0})) Real.zero", "Real"
+            )
 
     def test_an_unreadable_hypothesis_fails_the_instance(self) -> None:
         damaged = MODULE.replace(
@@ -597,6 +649,126 @@ class TheDiophantineRouteBinds(unittest.TestCase):
         self.assertNotIn("SEARCH DEFECT", detail)
 
 
+class TheDegreeTwoBindingDiscriminates(unittest.TestCase):
+    """The `Sos` route's hypotheses are quadratic, and a looser check would bind
+    them to the wrong row.
+
+    Reaching this class was the point of the degree-2 extension: nine `Sos`
+    instances used to render `axiom prop._0; axiom Not prop._0` and were pinned
+    as transcribing NOTHING. They now render `Real.lt (Real.add Real.one
+    (Real.mul x x)) Real.zero` and are pinned as bound — which is only worth
+    more than the attestation if the binding can FAIL, so each way it must fail
+    is driven here.
+    """
+
+    QUERY = """
+    (set-logic QF_NRA)
+    (declare-fun x1 () Real)
+    (declare-fun x2 () Real)
+    (assert (< (+ (* x1 x1) (* x2 x2) 1.0) 0.0))
+    (check-sat)
+    """
+
+    CROSS_QUERY = """
+    (set-logic QF_NRA)
+    (declare-fun x1 () Real)
+    (declare-fun x2 () Real)
+    (assert (< (+ (* x1 x2) (* x2 x2) 1.0) 0.0))
+    (check-sat)
+    """
+
+    # A query whose cross term forces φ to be ORDER-REVERSING. The linear `aa`
+    # pins `x._1 -> aa`, so the rendered monomial `(x._0, x._1)` has to land on
+    # the query's `(aa, zz)` with `x._0 -> zz`. Renaming factor by factor in
+    # place then yields `("zz", "aa")` — which is not the sorted atom the query
+    # side produced, so a `_rename` that skipped the re-sort would reject this
+    # FAITHFUL module. Names chosen so the two orders actually differ: with
+    # `x._0 -> aa` they would coincide and the control would be vacuous.
+    REVERSING_QUERY = """
+    (set-logic QF_NRA)
+    (declare-fun aa () Real)
+    (declare-fun zz () Real)
+    (assert (< (+ (* zz aa) aa) 0.0))
+    (check-sat)
+    """
+
+    def _module(self, lhs: str) -> str:
+        return f"""
+axiom Real : Sort (1)
+axiom Real.add : ((x0 : Real) -> ((x1 : Real) -> Real))
+axiom Real.mul : ((x0 : Real) -> ((x1 : Real) -> Real))
+axiom Real.lt : ((x0 : Real) -> ((x1 : Real) -> Prop))
+axiom {X0} : Real
+axiom {X1} : Real
+axiom axeyum.reconstruct.lra.hyp._2 : Real.lt {lhs} Real.zero
+theorem axeyum_refutation : False := trivial
+"""
+
+    SUM_OF_SQUARES = (
+        f"(Real.add Real.one (Real.add (Real.mul {X0} {X0}) (Real.mul {X1} {X1})))"
+    )
+
+    def test_the_faithful_quadratic_module_binds(self) -> None:
+        phi, hypotheses, _allowed, detail = run(
+            self._module(self.SUM_OF_SQUARES), self.QUERY
+        )
+        self.assertIsNotNone(phi, detail)
+        self.assertEqual(len(hypotheses), 1)
+        self.assertEqual({phi[X0], phi[X1]}, {"x1", "x2"})
+
+    def test_a_rendered_square_does_not_bind_a_cross_term(self) -> None:
+        """`x₁² + x₂² + 1 < 0` rendered against a query saying `x₁x₂ + x₂² + 1 < 0`.
+
+        Same relation, same constant, same coefficients — the ONLY difference is
+        which monomials they are, so this is exactly the discrimination the
+        variable-keyed normalizer could not make.
+        """
+        phi, _h, _a, detail = run(self._module(self.SUM_OF_SQUARES), self.CROSS_QUERY)
+        self.assertIsNone(phi, detail)
+
+    def test_a_rendered_cross_term_does_not_bind_a_square(self) -> None:
+        """The converse. `x₁x₂` onto `x₁²` would need both carriers to map to the
+        same query symbol, which injectivity refuses — the same rule that stops
+        two carriers collapsing anywhere else, not a special case."""
+        lhs = (
+            f"(Real.add Real.one (Real.add (Real.mul {X0} {X1}) (Real.mul {X1} {X1})))"
+        )
+        phi, _h, _a, detail = run(self._module(lhs), self.QUERY)
+        self.assertIsNone(phi, detail)
+
+    def test_dropping_the_constant_is_caught(self) -> None:
+        """`x₁² + x₂² < 0` is a different (and unentailed) row of this query."""
+        lhs = f"(Real.add (Real.mul {X0} {X0}) (Real.mul {X1} {X1}))"
+        phi, _h, _a, detail = run(self._module(lhs), self.QUERY)
+        self.assertIsNone(phi, detail)
+
+    def test_a_renamed_monomial_is_re_sorted_before_it_is_compared(self) -> None:
+        """φ need not preserve the order of a monomial's factors.
+
+        `verify_binding` re-derives the atom from φ alone, so if it renamed the
+        factors in place and compared without re-sorting, this FAITHFUL module
+        would be rejected — the direction of failure that gets a checker deleted
+        rather than the one that gets it trusted.
+        """
+        lhs = f"(Real.add (Real.mul {X0} {X1}) {X1})"
+        phi, _h, _a, detail = run(self._module(lhs), self.REVERSING_QUERY)
+        self.assertIsNotNone(phi, detail)
+        self.assertEqual(phi[X0], "zz")
+        self.assertEqual(phi[X1], "aa")
+
+    def test_a_consistent_renaming_of_the_carriers_still_binds(self) -> None:
+        """The positive control. A checker that rejects every quadratic module
+        discriminates exactly as poorly as one that accepts every one."""
+        renamed = (
+            self._module(self.SUM_OF_SQUARES)
+            .replace(X0, "TMP")
+            .replace(X1, X0)
+            .replace("TMP", X1)
+        )
+        phi, _h, _a, detail = run(renamed, self.QUERY)
+        self.assertIsNotNone(phi, detail)
+
+
 class EqualityNormalizationIsRenameInvariant(unittest.TestCase):
     """The regression that made four faithful Diophantine modules fail.
 
@@ -610,16 +782,16 @@ class EqualityNormalizationIsRenameInvariant(unittest.TestCase):
     def test_the_two_orientations_are_distinct_atoms(self) -> None:
         """If they were fused, the fusing would have to read a variable name."""
         self.assertNotEqual(
-            HB.canonical("=", {"a": Fraction(1), "b": Fraction(-1)}, Fraction(0)),
-            HB.canonical("=", {"a": Fraction(-1), "b": Fraction(1)}, Fraction(0)),
+            HB.canonical("=", {("a",): Fraction(1), ("b",): Fraction(-1)}, Fraction(0)),
+            HB.canonical("=", {("a",): Fraction(-1), ("b",): Fraction(1)}, Fraction(0)),
         )
 
     def test_an_equality_assertion_contributes_both_orientations(self) -> None:
         atoms = HB.atoms_of(["=", "value", ["+", "x_squared", "1"]], True, {})
         equalities = [a for a in atoms if a[0] == "="]
         self.assertEqual(len(equalities), 2)
-        self.assertIn(("=", (("value", 1), ("x_squared", -1)), -1), equalities)
-        self.assertIn(("=", (("value", -1), ("x_squared", 1)), 1), equalities)
+        self.assertIn(("=", ((("value",), 1), (("x_squared",), -1)), -1), equalities)
+        self.assertIn(("=", ((("value",), -1), (("x_squared",), 1)), 1), equalities)
 
     def test_the_orientation_the_renderer_chose_binds_either_way(self) -> None:
         """Names picked so that a sign normalization keyed on the first variable
@@ -654,7 +826,7 @@ class TheNewMutationsActuallyFire(unittest.TestCase):
         self.assertIsNotNone(damaged)
         self.assertEqual(
             HB.lean_atom(damaged, "Int"),
-            HB.canonical("=", {D0: Fraction(2), D1: Fraction(1)}, Fraction(-1)),
+            HB.canonical("=", {(D0,): Fraction(2), (D1,): Fraction(1)}, Fraction(-1)),
         )
 
     def test_shift_constant_falls_back_to_a_bare_one(self) -> None:
@@ -666,7 +838,7 @@ class TheNewMutationsActuallyFire(unittest.TestCase):
         self.assertIsNotNone(damaged)
         self.assertEqual(
             HB.lean_atom(damaged, "Int"),
-            HB.canonical("=", {D0: Fraction(1), D1: Fraction(1)}, Fraction(-2)),
+            HB.canonical("=", {(D0,): Fraction(1), (D1,): Fraction(1)}, Fraction(-2)),
         )
 
     def test_flip_relation_weakens_an_equality_to_a_strict_bound(self) -> None:
@@ -685,7 +857,7 @@ class TheNewMutationsActuallyFire(unittest.TestCase):
         # so rather than manufacture a catch.
         self.assertEqual(
             HB.lean_atom(damaged, "Int"),
-            HB.canonical("=", {D0: Fraction(-1), D1: Fraction(-1)}, Fraction(1)),
+            HB.canonical("=", {(D0,): Fraction(-1), (D1,): Fraction(-1)}, Fraction(1)),
         )
 
 
@@ -1142,7 +1314,7 @@ class ANonArithmeticLetBindingIsNotAFreeVariable(unittest.TestCase):
         atoms = HB.atoms_of(
             ["let", [["a", ["+", "x", "1"]]], [">=", "a", "0"]], True, {}
         )
-        self.assertEqual(atoms, [("<=", (("x", -1),), -1)])
+        self.assertEqual(atoms, [("<=", ((("x",), -1),), -1)])
 
 
 class TheAttestationManifestIsRealAndOnlyGrows(unittest.TestCase):

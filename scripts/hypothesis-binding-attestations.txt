@@ -23,24 +23,22 @@
 # transcribe: a module whose rendered terms are subterms of the `.smt2` file
 # fails here and belongs in `hypothesis-binding-structural-instances.txt`.
 #
-# 2026-08-18: this list was 124 and is now 28. 95 of the 124 moved to the
-# structural manifest -- 89 `ArrayAxiom` because the emitter stopped collapsing
-# each whole term into one opaque constant, and 6 `QfAbv`/`QfUf` that were
-# structural all along and were misfiled by a check that read VOCABULARY rather
-# than SHAPE. The 124th was self-refuting and its route now declines.
+# 2026-08-18: this list was 124, then 28, and is now 19. 95 of the 124 moved to
+# the structural manifest -- 89 `ArrayAxiom` because the emitter stopped
+# collapsing each whole term into one opaque constant, and 6 `QfAbv`/`QfUf` that
+# were structural all along and were misfiled by a check that read VOCABULARY
+# rather than SHAPE. The 124th was self-refuting and its route now declines. The
+# 9 `Sos` rows left after that moved to the BOUND manifest later the same day:
+# the route now reconstructs them (see below), so they transcribe the query and
+# are checked against it.
 #
 # WHAT IS LEFT, and why each really does transcribe nothing. Measured, not
-# assumed: every one of the 28 was run through the structural binder and refused.
+# assumed: every one of the 19 was run through the structural binder and refused.
 #
 #   13  BOTH SIDES ARE BARE CONSTANTS (10 `ArrayAxiom`, 3 `TermIdentity`). The
 #       module says two of this file's terms are equal and not equal, without
 #       saying WHICH two: an injective map onto two query symbols exists for any
 #       query with two symbols, so a match here would show nothing.
-#    9  `Sos`: `axiom prop._0 : Prop` beside `Not prop._0`. No carrier, no
-#       arithmetic, no monomial -- the whole SOS argument is in Rust. (The claim
-#       that this route renders `Real.mul` monomials on 10 QF_NRA instances was
-#       measured false on 2026-08-18; exactly one file in the corpus does, and it
-#       is in the declined list below.)
 #    4  `FiniteArrayExtensionality`: `Not (And (Eq α a b) (Eq α c d))` over four
 #       bare constants -- the same nothing, with a conjunction around it.
 #    2  THE RENDERED TERM IS THE OUTPUT OF A REWRITE, not of the source text.
@@ -70,24 +68,28 @@ corpus/public-curated/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__i
 corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2
 corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2
 corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__ite.smt2
-corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-strict-unsat-d01.smt2
-corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k01.smt2
-corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k02.smt2
-corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k03.smt2
-corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k04.smt2
-corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k05.smt2
-corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k06.smt2
-corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k07.smt2
-corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k08.smt2
 corpus/regression/cvc5/qf_lra/cvc5__cli__regress0__ite_arith.smt2
 
-# DECLINED, and deliberately not pinned anywhere: 21 instances that render a
+# THE `Sos` ROUTE, 2026-08-18. The nine rows that used to sit here were the
+# degree-2 SOS certificates whose `LDLᵀ` linear forms have a NONZERO AFFINE ROW
+# --- `Σ xᵢ² + 1 < 0`, `(x−1)² + (y−2)² + 1 < 0`. The reconstructor's
+# rational-weight fold already handled everything else, and declined these for
+# one reason: `SosCertificate::rational_squares` refused any square whose
+# constant term was nonzero, because the linear-form builder could only emit
+# variables. The Gram matrix is over the homogenized `v = [x; 1]`, so those
+# forms are affine in general and the restriction was never mathematical.
+# `rational_affine_squares` returns the affine entry under the index `n_vars`,
+# `int_affine_lin_to_rexpr` maps that index to the ring's `one`, and the
+# degree-2 ring normalizer -- which has had `Mono::Const` all along -- proves
+# the identity. Nine attestations and one declined row became ten bound ones.
+#
+# DECLINED, and deliberately not pinned anywhere: 20 instances that render a
 # module which is neither bindable nor a content-free skeleton. Listed so a
 # later sweep does not re-discover them as news. They are NOT checked.
 #
 #   13  quantified LIA/BV: the hypothesis is a pi-type
 #       `((x0 : Int) -> … Or/Not/Iff …)`, a shape no linear-atom parser models.
-#    8  ground: the hypothesis is the OUTPUT of a solver step (an array or BV
+#    7  ground: the hypothesis is the OUTPUT of a solver step (an array or BV
 #       abstraction) rather than a transcription of any `(assert …)` line, so
 #       there is no assertion for it to bind to.
 #
@@ -110,5 +112,4 @@ corpus/regression/cvc5/qf_lra/cvc5__cli__regress0__ite_arith.smt2
 #   corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue4433-nqe.smt2
 #   corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue5279-nqe.smt2
 #   corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__repair-const-nterm.smt2
-#   corpus/public-curated/synthetic/QF_NRA/graduated/nra-neg-square-d01.smt2
 #   corpus/regression/cvc5/qf_bv/cvc5__cli__regress0__bv__holes__extract-concat.smt2
