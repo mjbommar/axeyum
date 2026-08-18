@@ -490,6 +490,57 @@ pub struct CRealPrelude {
     /// rational gaps `CReal.lt` already carries, so both `Exists`es are
     /// eliminated into a `Prop` target — the elimination that *is* permitted.
     pub mul_pos: NameId,
+
+    // --- the multiplicative inverse (ADR-0481 phase F3) ----------------------
+    /// `CReal.invShift : Nat → Nat` — `(4k+4)·(k+1) + (4k+3)`, the `C` of the
+    /// sampling index `(C+1)·n + C`.
+    ///
+    /// Written as `(A+1)·b + A` so that `C + 1` **is** `(4k+4)·(k+2)`
+    /// definitionally and
+    /// [`Rat.nat_index_compose`](crate::RatPrelude::nat_index_compose) applies
+    /// to it verbatim, with no ℕ-subtraction anywhere.
+    pub inv_shift: NameId,
+    /// `CReal.inv : (x : CReal) → (k : Nat) → PosBound x k → CReal` —
+    /// `(x⁻¹)_n := (x_{j(n)})⁻¹` at `j(n) = (invShift k + 1)·n + invShift k`.
+    ///
+    /// **The modulus is data; the proof is only a proof.** A function may take
+    /// a `Prop` argument and return a `Type`, and this one does: `k` fixes the
+    /// representative outright, and `h` is consumed only inside `CReal.mk`'s
+    /// `Prop`-valued regularity field. An `Apart`-indexed inverse would have to
+    /// *branch* on a disjunction to choose which reciprocal to compute, which
+    /// is the elimination `Or.rec` does not permit — see
+    /// [`Self::no_total_inverse`] for the half of the trade that is a theorem,
+    /// and [`Self::pos_bound_of_lt`] for why the `k` cannot be recovered from
+    /// `0 < x`.
+    pub inv: NameId,
+    /// `CReal.mul_inv_cancel : ∀ x k (h : PosBound x k),
+    /// Equiv (mul x (inv x k h)) one` — **the field law, on the positive
+    /// branch**.
+    ///
+    /// The two sides sample `x` at indices with no relation to each other —
+    /// `CReal.mulShift` is built from opaque `Int.natAbs` projections and
+    /// `CReal.invShift` from `k` — so it closes through
+    /// [`Self::equiv_of_bounded`], where the constant is free, rather than by
+    /// an exact estimate.
+    pub mul_inv_cancel: NameId,
+    /// `CReal.inv_congr : ∀ x y k₁ k₂ h₁ h₂, Equiv x y →
+    /// Equiv (inv x k₁ h₁) (inv y k₂ h₂)` — the **sixth congruence
+    /// obligation**, and the one that makes `inv` a function on `ℝ` rather than
+    /// on representatives.
+    ///
+    /// Larger than the usual congruence, because the modulus is data: two
+    /// callers with different `k` for the same `x` build different sequences,
+    /// and the statement quantifies over both independently. It is nonetheless
+    /// not an estimate — an inverse in a commutative monoid is unique, so
+    /// `mul_inv_cancel` at both ends closes it.
+    pub inv_congr: NameId,
+    /// `CReal.inv_index_irrelevant : ∀ x k₁ k₂ h₁ h₂,
+    /// Equiv (inv x k₁ h₁) (inv x k₂ h₂)`.
+    ///
+    /// **`x⁻¹` denotes one element of `ℝ`.** `k = 0` samples at `7n+7` and
+    /// `k = 1` at `32n+31`; nothing in [`Self::inv`]'s type says the results
+    /// agree, and this does. [`Self::inv_congr`] at `y := x`.
+    pub inv_index_irrelevant: NameId,
 }
 
 impl CRealPrelude {
@@ -615,6 +666,11 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pos_bound_of_lt: kernel.name_str(creal, "pos_bound_of_lt"),
         of_rat_pos: kernel.name_str(creal, "ofRat_pos"),
         mul_pos: kernel.name_str(creal, "mul_pos"),
+        inv_shift: kernel.name_str(creal, "invShift"),
+        inv: kernel.name_str(creal, "inv"),
+        mul_inv_cancel: kernel.name_str(creal, "mul_inv_cancel"),
+        inv_congr: kernel.name_str(creal, "inv_congr"),
+        inv_index_irrelevant: kernel.name_str(creal, "inv_index_irrelevant"),
     }
 }
 
@@ -679,7 +735,8 @@ pub(crate) fn build_creal_prelude_uncached(
         declare_order(&mut d, prelude)?;
         declare_strict_order(&mut d, prelude)?;
         product::declare_product(&mut d, prelude)?;
-        field::declare_field(&mut d, prelude)
+        field::declare_field(&mut d, prelude)?;
+        inverse::declare_inverse(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -1593,6 +1650,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 }
 
 mod field;
+mod inverse;
 mod product;
 
 #[cfg(test)]

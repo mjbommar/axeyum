@@ -273,6 +273,11 @@ fn main() {
         ("CReal.pos_bound_of_lt", p.pos_bound_of_lt),
         ("CReal.ofRat_pos", p.of_rat_pos),
         ("CReal.mul_pos", p.mul_pos),
+        ("CReal.invShift", p.inv_shift),
+        ("CReal.inv", p.inv),
+        ("CReal.mul_inv_cancel", p.mul_inv_cancel),
+        ("CReal.inv_congr", p.inv_congr),
+        ("CReal.inv_index_irrelevant", p.inv_index_irrelevant),
     ];
 
     // (8): the headline count itself, read out of the kernel. Every one of the
@@ -528,6 +533,13 @@ fn main() {
          (∃ k, 1/(k+1) ≤ x) are the SAME proposition, so the separating \
          modulus always exists — and Exists is a Prop, so it can never be \
          extracted into a CReal, which is why an inverse must take k as an \
-         explicit Nat (ADR-0481)"
+         explicit Nat (ADR-0481). CReal.inv IS BUILT: the modulus is an \
+         explicit Nat argument and the PosBound proof is consumed only inside \
+         CReal.mk's Prop-valued regularity field, so nothing is ever eliminated \
+         out of a Prop into Type. CReal.mul_inv_cancel proves x * inv x ~ 1 on \
+         the positive branch, and CReal.inv_congr / CReal.inv_index_irrelevant \
+         make it a function on the REALS rather than on representatives -- \
+         including for two DIFFERENT moduli of the same x, which build \
+         different sequences"
     );
 }

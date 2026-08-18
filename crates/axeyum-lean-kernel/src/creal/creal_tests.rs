@@ -5,7 +5,7 @@ use crate::{Declaration, Kernel};
 
 /// A built `CReal` kernel, as a **clone of one template**.
 ///
-/// The full development is now 71 declarations over the constructed ℚ and takes
+/// The full development is now 76 declarations over the constructed ℚ and takes
 /// tens of seconds to type-check; seventeen tests each building it from scratch
 /// dominated this crate's test time. The argument for cloning is
 /// [`prelude_cache`](crate::prelude_cache)'s, verbatim: prelude construction is
@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 71] = [
+    let expected: [(&str, crate::NameId, &str); 76] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -153,6 +153,15 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.pos_bound_of_lt", p.pos_bound_of_lt, "theorem"),
         ("CReal.ofRat_pos", p.of_rat_pos, "theorem"),
         ("CReal.mul_pos", p.mul_pos, "theorem"),
+        ("CReal.invShift", p.inv_shift, "def"),
+        ("CReal.inv", p.inv, "def"),
+        ("CReal.mul_inv_cancel", p.mul_inv_cancel, "theorem"),
+        ("CReal.inv_congr", p.inv_congr, "theorem"),
+        (
+            "CReal.inv_index_irrelevant",
+            p.inv_index_irrelevant,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -1146,4 +1155,229 @@ fn positivity_is_closed_under_multiplication() {
             .collect();
         assert!(footprint.is_empty(), "CReal.{label} rests on {footprint:?}");
     }
+}
+
+/// **The multiplicative inverse exists, and the modulus is the argument that
+/// makes it exist.** Statements asserted verbatim, because a theorem named
+/// `mul_inv_cancel` saying something weaker would pass a footprint check.
+///
+/// Read `CReal.inv`'s type as the whole ADR-0481 argument in one line: the
+/// `Nat` is explicit and the `PosBound` is a hypothesis over it, so nothing is
+/// ever eliminated out of a `Prop` into `Type` — which is precisely what
+/// `Apart x zero` (an `Or`) would demand.
+#[test]
+fn the_inverse_is_partial_and_its_modulus_is_an_explicit_nat() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.inv),
+        "((x0 : CReal) -> ((x1 : AxNat) -> ((x2 : CReal.PosBound x0 x1) -> CReal)))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.inv_shift),
+        "((x0 : AxNat) -> AxNat)"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.mul_inv_cancel),
+        "((x0 : CReal) -> ((x1 : AxNat) -> ((x2 : CReal.PosBound x0 x1) -> \
+         CReal.Equiv (CReal.mul x0 (CReal.inv x0 x1 x2)) CReal.one)))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.inv_congr),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : AxNat) -> ((x3 : AxNat) -> \
+         ((x4 : CReal.PosBound x0 x2) -> ((x5 : CReal.PosBound x1 x3) -> \
+         ((x6 : CReal.Equiv x0 x1) -> \
+         CReal.Equiv (CReal.inv x0 x2 x4) (CReal.inv x1 x3 x5))))))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.inv_index_irrelevant),
+        "((x0 : CReal) -> ((x1 : AxNat) -> ((x2 : AxNat) -> \
+         ((x3 : CReal.PosBound x0 x1) -> ((x4 : CReal.PosBound x0 x2) -> \
+         CReal.Equiv (CReal.inv x0 x1 x3) (CReal.inv x0 x2 x4))))))"
+    );
+    for (label, name) in [
+        ("invShift", p.inv_shift),
+        ("inv", p.inv),
+        ("mul_inv_cancel", p.mul_inv_cancel),
+        ("inv_congr", p.inv_congr),
+        ("inv_index_irrelevant", p.inv_index_irrelevant),
+    ] {
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "CReal.{label} rests on {footprint:?}");
+    }
+}
+
+/// **The inverse's domain is inhabited, and the inverse is not the constant
+/// zero.** Without this the whole slice is vacuous: every statement about
+/// `CReal.inv` is guarded by `PosBound x k`, so if that predicate had no
+/// inhabitants `mul_inv_cancel`, `inv_congr` and `inv_index_irrelevant` would
+/// all hold, footprint-free, of an operation that never runs.
+///
+/// Both halves go through the kernel. `PosBound CReal.one 0` is admitted — the
+/// modulus `1/(0+1)` is `Rat.one`, so `CReal.le_refl` closes it — and then
+/// `∀ h, ¬ Equiv (inv one 0 h) zero` is admitted from `mul_inv_cancel` alone:
+/// if `1⁻¹ ≈ 0` then `1 · 1⁻¹ ≈ 1 · 0 ≈ 0` and also `≈ 1`, and
+/// `Equiv.not_zero_one` refutes that **by computation**.
+#[test]
+fn the_inverses_domain_is_inhabited_and_the_inverse_is_not_the_zero_function() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let zero = d.kernel().const_(p.zero, vec![]);
+    let zero_nat = d.num(0);
+    let bound_ty = d.const_app(p.pos_bound, &[one, zero_nat]);
+    let bound_proof = d.lemma(p.le_refl, &[one]);
+    let name = d.kernel().name_str(anon, "Check.pos_bound_one");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: bound_ty,
+        value: bound_proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "CReal.PosBound one 0 is not inhabited, so every theorem about \
+         CReal.inv is vacuous: {admitted:?}"
+    );
+
+    // `∀ (h : PosBound one 0), ¬ Equiv (inv one 0 h) zero`.
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let reciprocal = d.const_app(p.inv, &[one, zero_nat, h]);
+    let claim = d.const_app(p.equiv, &[reciprocal, zero]);
+    let he_fv = d.fresh_fvar();
+    let he = d.kernel().fvar(he_fv);
+
+    let cancel = d.lemma(p.mul_inv_cancel, &[one, zero_nat, h]);
+    let product = d.const_app(p.mul, &[one, reciprocal]);
+    let degenerate = d.const_app(p.mul, &[one, zero]);
+    let reflexive = d.lemma(p.equiv_refl, &[one]);
+    let stepped = d.lemma(p.mul_congr, &[one, one, reciprocal, zero, reflexive, he]);
+    let vanish = d.lemma(p.mul_zero, &[one]);
+    let collapsed = d.lemma(p.equiv_trans, &[product, degenerate, zero, stepped, vanish]);
+    let flipped = d.lemma(p.equiv_symm, &[product, zero, collapsed]);
+    let absurd = d.lemma(p.equiv_trans, &[zero, product, one, flipped, cancel]);
+    let refuted = d.lemma(p.not_zero_one, &[]);
+    let contradiction = d.apply(refuted, &[absurd]);
+
+    let value = {
+        let with_he = d.lam_fv(he_fv, claim, contradiction);
+        d.lam_fv(h_fv, bound_ty, with_he)
+    };
+    let ty = {
+        let negated = d.not(claim);
+        d.pi_fv(h_fv, bound_ty, negated)
+    };
+    let name = d.kernel().name_str(anon, "Check.inv_one_is_not_zero");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "the kernel refused `1⁻¹ is not zero`, which follows from \
+         mul_inv_cancel and Equiv.not_zero_one alone: {admitted:?}"
+    );
+}
+
+/// The negative controls for the inverse: **the same proof terms, pointed at
+/// statements one token away, are REFUSED.**
+///
+/// `∀ x k h, x · x⁻¹ ≈ 0` is false wherever `PosBound` is inhabited — it would
+/// give `0 ≈ 1` through `Check.inv_one_is_not_zero`'s argument — and
+/// `∀ x k h, x⁻¹ ≈ x` is false at `x = 1 + 1`. If either mutation were
+/// accepted, the verbatim statement tests above would be pinning a shape rather
+/// than a fact.
+#[test]
+fn the_inverse_route_cannot_prove_the_one_token_mutations() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+    let nat = d.nat_ty();
+    let zero = d.kernel().const_(p.zero, vec![]);
+
+    // `x · x⁻¹ ≈ 0`, not `≈ 1`.
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let bound_ty = d.const_app(p.pos_bound, &[x, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let reciprocal = d.const_app(p.inv, &[x, k, h]);
+    let product = d.const_app(p.mul, &[x, reciprocal]);
+    let claim = d.const_app(p.equiv, &[product, zero]);
+    let ty = {
+        let inner = d.pi_fv(h_fv, bound_ty, claim);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        d.pi_fv(x_fv, carrier, with_k)
+    };
+    let value = {
+        let instance = d.lemma(p.mul_inv_cancel, &[x, k, h]);
+        let with_h = d.lam_fv(h_fv, bound_ty, instance);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(x_fv, carrier, with_k)
+    };
+    let name = d.kernel().name_str(anon, "Check.inv_annihilates");
+    let refused = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted `x · x⁻¹ ≈ 0`, which with an inhabited PosBound \
+         gives 0 ≈ 1 and refutes Equiv.not_zero_one"
+    );
+
+    // `x⁻¹ ≈ x`, from the modulus-irrelevance term.
+    let claim = d.const_app(p.equiv, &[reciprocal, x]);
+    let ty = {
+        let inner = d.pi_fv(h_fv, bound_ty, claim);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        d.pi_fv(x_fv, carrier, with_k)
+    };
+    let value = {
+        let instance = d.lemma(p.inv_index_irrelevant, &[x, k, k, h, h]);
+        let with_h = d.lam_fv(h_fv, bound_ty, instance);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(x_fv, carrier, with_k)
+    };
+    let name = d.kernel().name_str(anon, "Check.inv_is_the_identity");
+    let refused = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted `x⁻¹ ≈ x`, which is FALSE at x = 1 + 1"
+    );
 }
