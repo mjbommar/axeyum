@@ -54,6 +54,8 @@ fn every_named_declaration_exists() {
         ("neg_mul_le_of_bounds", p.neg_mul_le_of_bounds),
         ("natDivSucc_mul", p.nat_div_succ_mul),
         ("natDivSucc_le_one", p.nat_div_succ_le_one),
+        ("natDivSucc_le_scaled", p.nat_div_succ_le_scaled),
+        ("nat_index_compose", p.nat_index_compose),
         ("int_le_natAbs", p.int_le_nat_abs),
         ("int_neg_natAbs_le", p.int_neg_nat_abs_le),
         ("bounds_num", p.bounds_num),
@@ -462,6 +464,26 @@ fn the_product_toolkit_has_the_statements_creal_mul_needs() {
         "((x0 : AxNat) -> Rat.le (Rat.natDivSucc (AxNat.succ AxNat.zero) x0) \
          (Rat.natDivSucc (AxNat.succ AxNat.zero) AxNat.zero))"
     );
+    // The two that make nested sampling indices reducible. `nat_index_compose`
+    // must say the COMPOSED index is a product index in `n` — a statement that
+    // merely related the two shifts would be true and useless.
+    assert_eq!(
+        rendered(&mut kernel, p.nat_index_compose),
+        "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> \
+         Eq.{1} AxNat \
+         (AxNat.add (AxNat.mul (AxNat.succ x0) \
+         (AxNat.add (AxNat.mul (AxNat.succ x1) x2) x1)) x0) \
+         (AxNat.add (AxNat.mul (AxNat.succ \
+         (AxNat.add (AxNat.mul (AxNat.succ x0) x1) x0)) x2) \
+         (AxNat.add (AxNat.mul (AxNat.succ x0) x1) x0)))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.nat_div_succ_le_scaled),
+        "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> \
+         Rat.le (Rat.natDivSucc x0 \
+         (AxNat.add (AxNat.mul (AxNat.succ x1) x2) x1)) \
+         (Rat.natDivSucc x0 x2))))"
+    );
     assert_eq!(
         rendered(&mut kernel, p.bounds_num),
         "((x0 : Rat) -> \
@@ -484,6 +506,8 @@ fn the_product_toolkit_is_axiom_free() {
         p.neg_mul_le_of_bounds,
         p.nat_div_succ_mul,
         p.nat_div_succ_le_one,
+        p.nat_div_succ_le_scaled,
+        p.nat_index_compose,
         p.int_le_nat_abs,
         p.int_neg_nat_abs_le,
         p.bounds_num,
