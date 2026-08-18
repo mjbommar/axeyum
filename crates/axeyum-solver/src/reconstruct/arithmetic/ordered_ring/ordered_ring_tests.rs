@@ -435,3 +435,75 @@ fn the_setoid_binder_table_extends_the_eq_shaped_one() {
         "the 22 law binders are not in the same order in both telescopes"
     );
 }
+
+/// `carrier_axioms_of` answers a weaker question than its name suggests, and
+/// this pins the difference.
+///
+/// The `axeyum.reconstruct.` namespace is NOT reserved for a query's own free
+/// variables. The `Real` route mints eighteen equality-slot axioms there,
+/// Ackermann mints `axeyum.reconstruct.func._*`, and the `.dio` / `.word` /
+/// `.lex` / `.regex` routes all mint under it. Excluding the whole namespace by
+/// prefix therefore lets a route reach "zero carrier axioms" by minting what it
+/// needs under its own name — and the headline claim of this repository is
+/// exactly a zero-carrier-axiom count.
+///
+/// So the honest claim is that BOTH classifiers return empty, and these two
+/// assertions are what make the second one able to fail.
+#[test]
+fn a_minted_axiom_is_not_hidden_by_the_reconstruct_namespace() {
+    let footprint: Vec<String> = [
+        // the query's own — legitimately excluded from both
+        "axeyum.reconstruct.lra.x.0",
+        "axeyum.reconstruct.lra.hyp.1",
+        // minted BY a route, under the same namespace: an assumption either way
+        "axeyum.reconstruct.func._0",
+        "axeyum.reconstruct.lra.setoid.eq_trans",
+        // the carrier's own
+        "Real.add_comm",
+    ]
+    .iter()
+    .map(|s| (*s).to_string())
+    .collect();
+
+    assert_eq!(
+        super::carrier_axioms_of(&footprint),
+        vec!["Real.add_comm".to_string()],
+        "carrier classification is `outside the reconstruct namespace`"
+    );
+    assert_eq!(
+        super::minted_axioms_of(&footprint),
+        vec![
+            "axeyum.reconstruct.func._0".to_string(),
+            "axeyum.reconstruct.lra.setoid.eq_trans".to_string(),
+        ],
+        "an axiom minted under the reconstruct namespace is still an assumption; \
+         only `x.<n>` and `hyp.<n>` are the query's own"
+    );
+}
+
+/// The narrow shape `is_query_local` accepts, stated as cases rather than left
+/// to the regex-free parser above.
+#[test]
+fn only_indexed_variable_and_hypothesis_names_count_as_query_local() {
+    let mixed: Vec<String> = [
+        "axeyum.reconstruct.lra.x.0",    // yes
+        "axeyum.reconstruct.dio.hyp.12", // yes, another route
+        "axeyum.reconstruct.lra.x",      // no index
+        "axeyum.reconstruct.lra.hyp.n",  // index is not a number
+        "axeyum.reconstruct.lra.slot.0", // indexed, but not x/hyp
+        "axeyum.reconstruct.func._0",    // minted
+    ]
+    .iter()
+    .map(|s| (*s).to_string())
+    .collect();
+    assert_eq!(
+        super::minted_axioms_of(&mixed),
+        vec![
+            "axeyum.reconstruct.lra.x".to_string(),
+            "axeyum.reconstruct.lra.hyp.n".to_string(),
+            "axeyum.reconstruct.lra.slot.0".to_string(),
+            "axeyum.reconstruct.func._0".to_string(),
+        ],
+        "anything under the namespace that is not an INDEXED x/hyp is minted"
+    );
+}

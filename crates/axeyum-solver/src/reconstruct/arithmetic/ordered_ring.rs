@@ -1387,14 +1387,58 @@ pub fn refutation_axiom_footprint(
     Ok(footprint(&ctx.kernel, name))
 }
 
-/// The entries of a footprint that are **not** the query's own axioms.
+/// Is this footprint entry one of the query's OWN free variables or hypotheses?
 ///
-/// Everything this route mints for a query is namespaced under
-/// `axeyum.reconstruct.` (the variable axioms, the hypothesis axioms, and the
-/// `Real` route's eighteen equality-slot axioms are all minted there); anything
-/// else in the footprint is an assumption of the *carrier*. Over the `Real`
-/// package that is 15-17 of its 30 axioms; over the constructed reals it is
+/// Exactly `axeyum.reconstruct.<route>.x.<n>` and
+/// `axeyum.reconstruct.<route>.hyp.<n>`. Deliberately narrow: see
+/// [`minted_axioms_of`] for why "under the reconstruct namespace" is not the
+/// same question.
+fn is_query_local(name: &str) -> bool {
+    let Some(rest) = name.strip_prefix("axeyum.reconstruct.") else {
+        return false;
+    };
+    let Some((_route, tail)) = rest.rsplit_once('.').and_then(|(head, index)| {
+        index.parse::<u64>().ok()?;
+        head.rsplit_once('.')
+    }) else {
+        return false;
+    };
+    tail == "x" || tail == "hyp"
+}
+
+/// Axioms this route MINTED for the query that are not the query's own
+/// variables or hypotheses.
+///
+/// This exists because "outside the `axeyum.reconstruct.` namespace" is a
+/// weaker question than it looks, and [`carrier_axioms_of`] alone was answering
+/// the weaker one. That namespace is not reserved for query variables: the
+/// `Real` route mints its **eighteen equality-slot axioms** there, the
+/// Ackermann route mints `axeyum.reconstruct.func._*`, and `.dio`, `.word`,
+/// `.lex` and `.regex` all mint under it too. An assumption minted there is
+/// still an assumption; excluding it by prefix would let a route buy a
+/// zero-carrier-axiom result by minting what it needs under its own name.
+///
+/// So the honest claim about a refutation is that **both** this and
+/// [`carrier_axioms_of`] are empty. Over the constructed reals both are, because
+/// `adopt_setoid_equality` takes the nine slot members from `CRealPrelude`'s own
+/// theorems and declares nothing.
+#[must_use]
+pub fn minted_axioms_of(footprint: &[String]) -> Vec<String> {
+    footprint
+        .iter()
+        .filter(|name| name.starts_with("axeyum.reconstruct.") && !is_query_local(name))
+        .cloned()
+        .collect()
+}
+
+/// The entries of a footprint that are assumptions of the **carrier**.
+///
+/// Everything outside the `axeyum.reconstruct.` namespace. Over the `Real`
+/// package that is 8-17 of its 30 axioms; over the constructed reals it is
 /// empty, which is the measurement this predicate exists to make falsifiable.
+///
+/// Pair it with [`minted_axioms_of`]: this one alone cannot see an assumption a
+/// route declared under its own namespace.
 #[must_use]
 pub fn carrier_axioms_of(footprint: &[String]) -> Vec<String> {
     footprint
