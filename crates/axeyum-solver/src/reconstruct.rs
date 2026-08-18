@@ -2707,6 +2707,25 @@ fn reject_self_refuting_module(
     fragment: ProofFragment,
     source: String,
 ) -> Result<String, ReconstructError> {
+    // `ReflexiveDisequality` is the one fragment whose ENTIRE semantics is "the
+    // query asserts `Not (t = t)`", so its hypothesis axiom is self-refuting by
+    // construction and that is the refutation, not a degeneracy. The property
+    // this guard decides -- "some axiom's type is `Not X` with `X` provable by
+    // reflexivity" -- cannot separate an axiom the emitter FABRICATED from one
+    // the query actually asserted; for every other fragment the former is the
+    // only way to get here, and for this one the latter is the only way.
+    // `scan_proof_fragment` classifies this fragment precisely when the query
+    // has that shape, so the exemption is decided by the query, not by us.
+    //
+    // Narrow on purpose: an exemption is how a guard stops guarding, and
+    // `61906c585`'s neighbour incident is the reminder. This one is a single
+    // enum variant whose meaning is the exempted property, and
+    // `the_reflexive_disequality_exemption_is_not_a_blanket_pass` holds a module
+    // of another fragment carrying the same shape and requires it to be
+    // rejected.
+    if fragment == ProofFragment::ReflexiveDisequality {
+        return Ok(source);
+    }
     match self_refuting_axiom(&source) {
         Some(axiom) => Err(ReconstructError::SelfRefutingModule {
             fragment: format!("{fragment:?}"),
@@ -2814,7 +2833,9 @@ fn refl_provable(node: &LeanNode) -> bool {
 
 #[cfg(test)]
 mod self_refuting_module_tests {
-    use super::{LeanNode, refl_provable, self_refuting_axiom};
+    use super::{
+        LeanNode, ProofFragment, refl_provable, reject_self_refuting_module, self_refuting_axiom,
+    };
 
     /// The shape that shipped. `cvc5__cli__regress0__bv__holes__extract-concat.smt2`
     /// rendered eleven of these `Iff`s under one negation; three is enough to
@@ -2833,6 +2854,38 @@ axiom axeyum.reconstruct.prop._0 : Prop
 axiom axeyum.reconstruct.hyp._3 : Not (And (Iff p0 p0) (And (Iff p1 p2) (Iff p2 p2)))
 theorem axeyum_refutation : False := trivial
 ";
+
+    /// The exemption is for ONE fragment, not for the shape.
+    ///
+    /// `ReflexiveDisequality` is exempt because its entire semantics is "the
+    /// query asserts `Not (t = t)`" — the self-refuting axiom IS the query's own
+    /// assertion, and `scan_proof_fragment` classifies the fragment precisely
+    /// when the query has that shape, so the query decides the exemption rather
+    /// than the emitter. Hand the SAME module to any other fragment and it must
+    /// still be rejected; without this, the exemption is indistinguishable from
+    /// deleting the guard, which is how a guard stops guarding.
+    #[test]
+    fn the_reflexive_disequality_exemption_is_not_a_blanket_pass() {
+        assert!(
+            reject_self_refuting_module(ProofFragment::ReflexiveDisequality, VACUOUS.to_owned())
+                .is_ok(),
+            "the fragment whose meaning IS a reflexive disequality must pass"
+        );
+        for fragment in [
+            ProofFragment::Lra,
+            ProofFragment::Sos,
+            ProofFragment::IntFarkas,
+        ] {
+            assert!(
+                reject_self_refuting_module(fragment, VACUOUS.to_owned()).is_err(),
+                "{fragment:?} must still reject a self-refuting module"
+            );
+        }
+        assert!(
+            reject_self_refuting_module(ProofFragment::Lra, HONEST.to_owned()).is_ok(),
+            "an honest module must still pass, or the loop above proves nothing"
+        );
+    }
 
     #[test]
     fn a_negated_conjunction_of_reflexive_iffs_is_self_refuting() {
