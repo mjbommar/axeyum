@@ -19,7 +19,7 @@
 
 use super::RatPrelude;
 use super::ops::{
-    den, den_pos, den_z, iregroup3, normalize, num, radd, rat_theorem, req, rmul, rzero,
+    den, den_pos, den_z, iregroup3, normalize, num, radd, rat_theorem, req, rle, rlt, rmul, rzero,
 };
 use super::statements;
 use crate::KernelError;
@@ -122,7 +122,7 @@ fn declare_bridges(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError>
             let denominator = den_z(d, q);
             let rational = {
                 let target = rzero(d, p);
-                super::ops::rle(d, p, target, q)
+                rle(d, p, target, q)
             };
             let integral = d.ile(zero, numerator);
             let stmt = if forward {
@@ -397,7 +397,66 @@ pub(super) fn declare_order_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
         &statements::lt_of_le_of_lt,
         false,
         true,
-    )
+    )?;
+
+    // `le_total` and `lt_of_not_le` are NOT among the 22 — the `Real` package
+    // assumes neither, so they are properties ℚ has that the axiomatization
+    // does not name. Both are the corresponding `Int` fact read through the
+    // cross-multiplication definition, which is why they cost nothing.
+    rat_theorem(d, p.le_total, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let forward = rle(d, p, a, b);
+        let backward = rle(d, p, b, a);
+        let stmt = d.or(forward, backward);
+        let left = cross(d, a, b);
+        let right = cross(d, b, a);
+        let proof = d.lemma(int.le_total, &[left, right]);
+        (stmt, proof)
+    })?;
+
+    // `¬(a ≤ b) → b < a`. By `Int.le_total`: the `a ≤ b` branch contradicts the
+    // hypothesis outright, and in the other branch the two cross-products
+    // cannot be EQUAL — equality would give `a ≤ b` back through `le_refl`.
+    rat_theorem(d, p.lt_of_not_le, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let ordered = rle(d, p, a, b);
+        let hypothesis = d.not(ordered);
+        let conclusion = rlt(d, p, b, a);
+        let stmt = d.arrow(hypothesis, conclusion);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let left = cross(d, a, b);
+        let right = cross(d, b, a);
+        let forward = d.ile(left, right);
+        let backward = d.ile(right, left);
+        let total = d.lemma(int.le_total, &[left, right]);
+        let body = d.or_elim(
+            forward,
+            backward,
+            conclusion,
+            total,
+            &|d, ordered_proof| {
+                let impossible = d.apply(h, &[ordered_proof]);
+                d.absurd(conclusion, impossible)
+            },
+            &|d, reversed| {
+                let distinct = {
+                    let equal = d.ieq(right, left);
+                    let e_fv = d.fresh_fvar();
+                    let e = d.kernel().fvar(e_fv);
+                    let reflexive = d.lemma(int.le_refl, &[left]);
+                    let flipped = d.isymm(right, left, e);
+                    let recovered =
+                        d.int_eq_rewrite(left, right, flipped, reflexive, &|d, x| d.ile(left, x));
+                    let impossible = d.apply(h, &[recovered]);
+                    d.lam_fv(e_fv, equal, impossible)
+                };
+                d.lemma(int.lt_of_le_of_ne, &[right, left, reversed, distinct])
+            },
+        );
+        let proof = d.lam_fv(h_fv, hypothesis, body);
+        (stmt, proof)
+    })
 }
 
 /// The ring laws.
@@ -780,8 +839,8 @@ fn declare_sign_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelErro
         let (a, b) = (v[0], v[1]);
         let stmt = statements::mul_nonneg(d, p, v);
         let zero_rat = d.kernel().const_(p.zero, vec![]);
-        let first_ty = super::ops::rle(d, p, zero_rat, a);
-        let second_ty = super::ops::rle(d, p, zero_rat, b);
+        let first_ty = rle(d, p, zero_rat, a);
+        let second_ty = rle(d, p, zero_rat, b);
         let h1_fv = d.fresh_fvar();
         let h1 = d.kernel().fvar(h1_fv);
         let h2_fv = d.fresh_fvar();

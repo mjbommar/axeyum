@@ -42,6 +42,10 @@ fn every_named_declaration_exists() {
         ("mk_congr", p.mk_congr),
         ("eta", p.eta),
         ("ext", p.ext),
+        ("le_total", p.le_total),
+        ("lt_of_not_le", p.lt_of_not_le),
+        ("normalize_add_normalize", p.normalize_add_normalize),
+        ("normalize_mul_normalize", p.normalize_mul_normalize),
     ];
     for (label, name) in expected {
         assert!(

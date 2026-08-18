@@ -245,6 +245,21 @@ pub struct RatPrelude {
     pub mul_nonneg: NameId,
     /// `Rat.sq_nonneg : ∀ a, le 0 (a*a)`.
     pub sq_nonneg: NameId,
+
+    // --- beyond the ring interface -------------------------------------------
+    /// `Rat.le_total : ∀ a b, Or (le a b) (le b a)`.
+    ///
+    /// **Not** one of the 22: the `Real` package does not assume totality
+    /// (ADR-0456 counted it as absent), so this is a property `ℚ` has and the
+    /// axiomatized `Real` does not. It is one line — `Rat.le` unfolds to
+    /// `Int.le` on cross-products, and `Int.le_total` is already proved.
+    pub le_total: NameId,
+    /// `Rat.lt_of_not_le : ∀ a b, Not (le a b) → lt b a`.
+    ///
+    /// The entry point for any argument by contradiction on the order, and in
+    /// particular the first step of an Archimedean argument: `¬(a ≤ b)` gives
+    /// `b < a`, and only then is there a positive quantity to bound.
+    pub lt_of_not_le: NameId,
 }
 
 impl RatPrelude {
@@ -349,6 +364,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         left_distrib: child(kernel, "left_distrib"),
         mul_nonneg: child(kernel, "mul_nonneg"),
         sq_nonneg: child(kernel, "sq_nonneg"),
+        le_total: child(kernel, "le_total"),
+        lt_of_not_le: child(kernel, "lt_of_not_le"),
     }
 }
 
