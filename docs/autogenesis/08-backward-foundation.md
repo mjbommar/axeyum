@@ -33,7 +33,7 @@ operationally reachable.
 | Inputs were fixed | Clean execution capture binds commit and generated baseline digest | Partial | Retain the first clean `--capture` record |
 | B and A were selected without intervention | Content-addressed frontier snapshot plus deterministic selection rationale | Missing | Stable machine-readable frontier output |
 | A was unavailable before B | The identical A target under the identical route policy and budget receives no credit before B | Fixture | Bind the result into a replayed episode transaction |
-| B was established | Catalog-only structural search produces a fresh, axiom-free B that excludes retained answers | Fixture | Typed dispatch/evidence adapter and proposed fact delta |
+| B was established | Catalog-only structural search produces typed, content-addressed, kernel-checked evidence for fresh B | Fixture | Proposed fact delta and fresh-process replay |
 | B became durable knowledge | Atomic application after fresh-process replay and fact validation | Missing | Episode-wide transaction boundary |
 | A became newly ready | Readiness changes only after the accepted B event | Missing | Accepted-transition event and snapshot recomputation |
 | A was established using B | Fresh proof is accepted and its dependency on B is derived from the proof term | Fixture | Transactional admission and readiness event |
@@ -110,12 +110,20 @@ both retained answers, and A contains the fresh episode-local B. Negative
 controls prove that plan 1 cannot receive B credit and that the pre-A result
 cannot satisfy an expected `proved` outcome.
 
+The B checker also emits a versioned TSV rather than asking orchestration code
+to parse its console prose. `create-autogenesis-premise-evidence.py` verifies
+the snapshot, catalog, proposal JSON, plan projection, candidate type, accepted
+rank, budget, footprint, and retained-answer closure, then derives one
+content-addressed internal evidence object. Independent mutation tests reject
+changes to each load-bearing identity and assurance field. This is an
+exercised internal handoff, intentionally not yet a public evidence schema.
+
 This establishes an operational-unlock and catalog-only search substrate, not
-Autogenesis-1. The chain remains preregistered by a human; route dispatch and
-evidence assembly are not typed; B is not applied as a durable ledger
+Autogenesis-1. The chain remains preregistered by a human; route dispatch is
+still shell orchestration; typed B evidence is not applied as a durable ledger
 transition; no accepted-transition event makes A ready; and the sequence has
-not yet been reproduced from its retained bundle. No transaction or programme
-credit is claimed. A clean, exact-commit evidence bundle can be retained
+not yet been replayed from a staged delta. No transaction or programme credit
+is claimed. A clean, exact-commit evidence bundle can be retained
 outside Git with `--retain NEW-DIRECTORY`; the repository keeps only the
 generator, gates, and content identities rather than vendoring execution
 artifacts.

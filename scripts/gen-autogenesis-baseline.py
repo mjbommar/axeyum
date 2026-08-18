@@ -40,6 +40,7 @@ STATIC_SOURCES = (
     Path("scripts/autogenesis-induction-proposer.py"),
     Path("scripts/verify-autogenesis-induction-proposals.py"),
     Path("scripts/check-autogenesis-induction-search.sh"),
+    Path("scripts/create-autogenesis-premise-evidence.py"),
     Path("scripts/check-autogenesis-knowledge-controls.sh"),
     Path("scripts/check-autogenesis-proposer-isolation.sh"),
     Path("scripts/run-autogenesis-python-proposer.sh"),
@@ -354,9 +355,9 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
         },
         {
             "id": "A1-typed-dispatch-evidence",
-            "state": "missing",
-            "evidence": "route dispatch, evidence assembly, and checker selection remain caller-authored",
-            "next": "exercise one typed adapter and registered checker operation",
+            "state": "partial",
+            "evidence": "B has a typed kernel handoff; dispatch and ledger evidence rows remain caller-authored",
+            "next": "derive and replay a proposed fact delta from the typed B evidence",
         },
         {
             "id": "A1-atomic-admission",

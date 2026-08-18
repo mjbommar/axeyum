@@ -116,10 +116,25 @@ premise_result=$(cargo run -q -p axeyum-lean-kernel \
   --budget "$premise_budget" \
   --expect proved \
   --bundle-sha256 "$premise_bundle" \
-  --catalog-sha256 "$premise_catalog")
+  --catalog-sha256 "$premise_catalog" \
+  --evidence-output "$scratch/premise-kernel-evidence.tsv")
 grep -qxF \
   "AUTOGENESIS_INDUCTION_RESULT|phase=pre_b|attempted=2|budget=$premise_budget|outcome=proved|plan_rank=2" \
   <<<"$premise_result"
+python3 scripts/create-autogenesis-premise-evidence.py \
+  --snapshot "$scratch/snapshot.json" \
+  --catalog "$scratch/pre_b-catalog.json" \
+  --bundle "$scratch/pre_b-induction-output/induction-plans.json" \
+  --plans "$scratch/pre_b-induction-output/induction-plans.tsv" \
+  --kernel-evidence "$scratch/premise-kernel-evidence.tsv" \
+  --output "$scratch/premise-evidence.json" >/dev/null
+python3 scripts/create-autogenesis-premise-evidence.py \
+  --snapshot "$scratch/snapshot.json" \
+  --catalog "$scratch/pre_b-catalog.json" \
+  --bundle "$scratch/pre_b-induction-output/induction-plans.json" \
+  --plans "$scratch/pre_b-induction-output/induction-plans.tsv" \
+  --kernel-evidence "$scratch/premise-kernel-evidence.tsv" \
+  --verify "$scratch/premise-evidence.json" >/dev/null
 
 pre_result=$(cargo run -q -p axeyum-lean-kernel \
   --example autogenesis_apply_plan_check -- \
@@ -186,8 +201,9 @@ pre_bundle = json.load(open(root / "pre_a-output/apply-plans.json"))
 post_bundle = json.load(open(root / "post_b-output/apply-plans.json"))
 premise_catalog = json.load(open(root / "pre_b-catalog.json"))
 premise_bundle = json.load(open(root / "pre_b-induction-output/induction-plans.json"))
+premise_evidence = json.load(open(root / "premise-evidence.json"))
 report = {
-    "schema_version": 2,
+    "schema_version": 3,
     "kind": "axeyum-autogenesis-apply-experiment",
     "git_commit": baseline["git_commit"],
     "baseline_source_sha256": baseline["baseline_source_sha256"],
@@ -201,6 +217,7 @@ report = {
         "catalog_sha256": premise_catalog["catalog_sha256"],
         "bundle_sha256": premise_bundle["bundle_sha256"],
         "accepted_plan_rank": 2,
+        "evidence_sha256": premise_evidence["evidence_sha256"],
         "result": sys.argv[4],
     },
     "pre_a": {
@@ -228,4 +245,4 @@ PY
   trap - EXIT
 fi
 
-echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved|target=A|budget=$budget|pre_a=no-proof|post_b=proved|dependency=episode-premise"
+echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved+typed-evidence|target=A|budget=$budget|pre_a=no-proof|post_b=proved|dependency=episode-premise"

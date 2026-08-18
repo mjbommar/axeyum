@@ -45,10 +45,25 @@ result=$(cargo run -q -p axeyum-lean-kernel \
   --budget "$budget" \
   --expect proved \
   --bundle-sha256 "$bundle" \
-  --catalog-sha256 "$catalog")
+  --catalog-sha256 "$catalog" \
+  --evidence-output "$scratch/kernel-evidence.tsv")
 grep -qxF \
   "AUTOGENESIS_INDUCTION_RESULT|phase=pre_b|attempted=2|budget=$budget|outcome=proved|plan_rank=2" \
   <<<"$result"
+python3 scripts/create-autogenesis-premise-evidence.py \
+  --snapshot "$scratch/snapshot.json" \
+  --catalog "$scratch/catalog.json" \
+  --bundle "$scratch/output/induction-plans.json" \
+  --plans "$scratch/output/induction-plans.tsv" \
+  --kernel-evidence "$scratch/kernel-evidence.tsv" \
+  --output "$scratch/premise-evidence.json" >/dev/null
+python3 scripts/create-autogenesis-premise-evidence.py \
+  --snapshot "$scratch/snapshot.json" \
+  --catalog "$scratch/catalog.json" \
+  --bundle "$scratch/output/induction-plans.json" \
+  --plans "$scratch/output/induction-plans.tsv" \
+  --kernel-evidence "$scratch/kernel-evidence.tsv" \
+  --verify "$scratch/premise-evidence.json" >/dev/null
 
 first_result=$(cargo run -q -p axeyum-lean-kernel \
   --example autogenesis_induction_plan_check -- \
@@ -77,4 +92,4 @@ fi
 grep -qF 'AUTOGENESIS_INDUCTION_ERROR|observed outcome differs from --expect' \
   "$scratch/wrong-expect.stderr"
 
-echo "AUTOGENESIS_INDUCTION_SEARCH|target=B|budget=$budget|plan_rank=2|outcome=proved|axioms=0|retained_answers=0"
+echo "AUTOGENESIS_INDUCTION_SEARCH|target=B|budget=$budget|plan_rank=2|outcome=proved|typed_evidence=verified|axioms=0|retained_answers=0"

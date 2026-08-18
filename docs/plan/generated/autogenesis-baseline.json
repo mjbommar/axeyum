@@ -31,10 +31,10 @@
       "state": "missing"
     },
     {
-      "evidence": "route dispatch, evidence assembly, and checker selection remain caller-authored",
+      "evidence": "B has a typed kernel handoff; dispatch and ledger evidence rows remain caller-authored",
       "id": "A1-typed-dispatch-evidence",
-      "next": "exercise one typed adapter and registered checker operation",
-      "state": "missing"
+      "next": "derive and replay a proposed fact delta from the typed B evidence",
+      "state": "partial"
     },
     {
       "evidence": "single fact rollback exists; an episode-wide transaction does not",
@@ -659,7 +659,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "1c117b1958a4b610a9ae2329d4c8a30f12538af8c01ebb75bbf16c96530b461e",
+    "digest": "33d2bcd9d534950bf0414830f6f9f00a6645d430764121ccdae3e7c7cbead82c",
     "inputs": [
       {
         "bytes": 3519,
@@ -1222,9 +1222,9 @@
         "sha256": "42e1db47be627a78bf0c4b95541f19a741b0c2f02960bc3224a9ee55daf89e93"
       },
       {
-        "bytes": 4337,
+        "bytes": 7383,
         "path": "crates/axeyum-lean-kernel/examples/autogenesis_induction_plan_check.rs",
-        "sha256": "2313cad8f255da3eab610ac056b82211e40d39fd082e874c7d62ff490bcc8130"
+        "sha256": "cd9e1308a44a0db59164a243e06dbaf69525d43e6bd2e6a6cf60d4d06a16e17d"
       },
       {
         "bytes": 11324,
@@ -1247,9 +1247,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 71255,
+        "bytes": 71334,
         "path": "justfile",
-        "sha256": "aab647e673fc4b32893ee968c95b25faa7f3048a58eab5b553308a2c667a5a45"
+        "sha256": "d08f0d6502b36ebecf2359ed2d687a81be61d6c8cbd14cef7e17c8c5b7ef93bd"
       },
       {
         "bytes": 2896,
@@ -1267,14 +1267,14 @@
         "sha256": "4ca7f8a489610cede17b3ab4cecc4dc4813fcab2230c42cc0d3e3fb76ca32081"
       },
       {
-        "bytes": 8820,
+        "bytes": 9809,
         "path": "scripts/check-autogenesis-apply-search.sh",
-        "sha256": "8873caee89ec9c47c88522d9eefb5cae94c18d6d6017154b1e4b264b3b42b00c"
+        "sha256": "980ea8f5be34427caabc4af83d87273c8e0c80a5ff39f835a3ab3185a822c4e4"
       },
       {
-        "bytes": 2910,
+        "bytes": 3677,
         "path": "scripts/check-autogenesis-induction-search.sh",
-        "sha256": "218a30242d7aaeadda3111fa2b7d6f89ef75a245778faabb2c27ed049d162077"
+        "sha256": "f90e17048b77fff226e8c9a1b3c2267c8ba3f9aa9a7396fa3a31fa3a42cfd4a3"
       },
       {
         "bytes": 1498,
@@ -1297,14 +1297,19 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 20871,
+        "bytes": 20986,
         "path": "scripts/check.sh",
-        "sha256": "6358f6a858428067521160137aa05f12d9aa19ca9171d9ab6fbd451163772bce"
+        "sha256": "02af2509f9259d87a40c85fc38f02839ed348f83127e00dc3ecb369faf1a7318"
       },
       {
         "bytes": 6846,
         "path": "scripts/close-fact.py",
         "sha256": "1946ed9f4d89dffed5cc57ed0f88cf5c5ed7f3b49c6ecb497c3e2862775c4d8a"
+      },
+      {
+        "bytes": 8648,
+        "path": "scripts/create-autogenesis-premise-evidence.py",
+        "sha256": "d57b810821cf6cdc03dfb595bc22527cca5a8990f8bc0fbde7278840b040dd9c"
       },
       {
         "bytes": 10401,
@@ -1322,9 +1327,9 @@
         "sha256": "db6757cc801ed3996d0ba3c40ba55123e2855e8944054c2a391b46ff5678b81b"
       },
       {
-        "bytes": 22837,
+        "bytes": 22910,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "64d63b59113363f235fa65f0002cc23e540158facb71749c1b74942a0d37e6c0"
+        "sha256": "7dbb0bb82c93c01b80c0c17240637119dd0760f0ca8a145da5cfd4d848d401f9"
       },
       {
         "bytes": 17112,

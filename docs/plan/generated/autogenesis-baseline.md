@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:1c117b1958a4b610a9ae2329d4c8a30f12538af8c01ebb75bbf16c96530b461e`
+Source identity: `sha256:33d2bcd9d534950bf0414830f6f9f00a6645d430764121ccdae3e7c7cbead82c`
 
 ## Ledger and chain substrate
 
@@ -28,7 +28,7 @@ the remaining facts stay explicit rather than being guessed.
 | `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | broaden the structural grammar and bind plans into typed evidence |
 | `A1-operational-unlock-control` | fixture | catalog search produces B; same A target fails before B and then depends on fresh B | make B a replayed durable transition whose event schedules A |
 | `A1-machine-selection` | missing | selection remains a human choice from text output | content-address a machine-readable frontier snapshot and rationale |
-| `A1-typed-dispatch-evidence` | missing | route dispatch, evidence assembly, and checker selection remain caller-authored | exercise one typed adapter and registered checker operation |
+| `A1-typed-dispatch-evidence` | partial | B has a typed kernel handoff; dispatch and ledger evidence rows remain caller-authored | derive and replay a proposed fact delta from the typed B evidence |
 | `A1-atomic-admission` | partial | single fact rollback exists; an episode-wide transaction does not | stage and replay a proposed fact delta before atomic application |
 | `A1-admission-triggered-retry` | missing | no accepted-transition event recomputes readiness | make accepted ledger state, never solver success, trigger retry |
 | `A1-clean-reproduction` | missing | no content-addressed episode or clean replay command exists | replay B then A from committed inputs and retained artifacts only |
