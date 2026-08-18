@@ -73,6 +73,7 @@ STATIC_SOURCES = (
     Path("scripts/check-autogenesis-mathlib-source.py"),
     Path("scripts/create-autogenesis-mathlib-candidates.py"),
     Path("scripts/create-autogenesis-mathlib-dependency-components.py"),
+    Path("scripts/create-autogenesis-mathlib-nursery-review.py"),
     Path("scripts/lean/autogenesis_mathlib_statement_inventory.lean"),
     Path("scripts/lean/autogenesis_mathlib_dependency_inventory.lean"),
     Path("artifacts/autogenesis/mathlib-statement-source-v1.json"),
@@ -80,6 +81,8 @@ STATIC_SOURCES = (
     Path("artifacts/autogenesis/mathlib-nat-int-candidates-v1.json"),
     Path("artifacts/autogenesis/mathlib-dependency-source-v1.json"),
     Path("artifacts/autogenesis/mathlib-nat-int-dependency-components-v1.json"),
+    Path("artifacts/autogenesis/mathlib-nursery-review-policy-v1.json"),
+    Path("artifacts/autogenesis/mathlib-nat-int-reviewed-nursery-v1.json"),
     Path("scripts/close-fact.py"),
     Path("scripts/gen-proof-gap-matrix.py"),
     Path("artifacts/ontology/fact.schema.json"),
@@ -192,11 +195,11 @@ SEAMS = (
     },
     {
         "id": "nursery-statement-source",
-        "state": "componented-source-candidates",
-        "owner": "proof-isolated Mathlib source and dependency projection",
-        "source": "scripts/create-autogenesis-mathlib-dependency-components.py",
-        "marker": "dependency-metadata-not-frozen-split",
-        "gap": "240 statement-only candidates are grouped into proof-derived direct-dependency components; mutations, reviewed fact rows, frozen splits, route hypotheses, and Axeyum outcomes remain absent",
+        "state": "reviewed-source-groups",
+        "owner": "proof-isolated Mathlib review and mutation grouping",
+        "source": "scripts/create-autogenesis-mathlib-nursery-review.py",
+        "marker": "reviewed-groups-not-frozen-split",
+        "gap": "202 candidates and 12 outcome-blind mutations form 120 leakage groups; proof-shape labels, reviewed fact rows, frozen splits, route hypotheses, and Axeyum outcomes remain absent",
     },
 )
 

@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
+check: fmt fmt-all facts facts-replay clippy gate-controls autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
 
 fmt:
     cargo fmt --all --check
@@ -83,6 +83,12 @@ autogenesis-mathlib-source:
 autogenesis-mathlib-dependencies:
     python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_dependency_components
     python3 scripts/create-autogenesis-mathlib-dependency-components.py --check
+
+# Statement-only review removes aliases and internal surfaces, reserves simple
+# calibrations, and binds one answer-free mutation to every source family.
+autogenesis-mathlib-review:
+    python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_nursery_review
+    python3 scripts/create-autogenesis-mathlib-nursery-review.py --check
 
 # Explicit external experiment: launch one complete B -> A authoritative chain
 # from a clean checkout and retain its independently checkable receipts.

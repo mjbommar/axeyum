@@ -83,3 +83,6 @@ The 108 isolated candidates are not assumed independent in a stronger sense.
 They merely have no direct edge to another selected candidate under this exact
 extractor and source revision. Family, proof-shape, mutation, and longitudinal
 controls therefore remain mandatory.
+
+The next outcome-blind review increment is recorded in the
+[review result](14-mathlib-outcome-blind-review-result.md).

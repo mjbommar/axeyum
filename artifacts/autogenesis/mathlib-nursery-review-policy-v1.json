@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nursery-review-policy",
+  "policy_sha256": "b0102796a112bd7940b1c2953182103e83e059c9b9a44b0bd876f7307f436910",
+  "candidate_set_sha256": "3b4cd0e02466c26560dbbb0552db8aba442de4d6df52e13b1486ad61b75b0dc3",
+  "dependency_components_sha256": "79e40b9ee1a6a57a2d511fd63dbb998d12fc325994fff069018162c54e8a5d4c",
+  "authority": {
+    "allowed": [
+      "candidate name, module, theme, and statement",
+      "candidate-only direct dependency components",
+      "human-authored statement mutations"
+    ],
+    "forbidden": [
+      "Mathlib proof values or tactic traces",
+      "Axeyum outcomes, routes, proof plans, or budgets",
+      "partition assignment"
+    ]
+  },
+  "dispositions": {
+    "excluded-alias": {
+      "reason": "duplicate or binder-presentation alias of another selected statement",
+      "names": [
+        "Int.ModEq.rfl",
+        "Nat.Dvd.dvd.nat_lcm_left",
+        "Nat.Dvd.dvd.nat_lcm_right",
+        "Nat.ModEq.rfl",
+        "Nat.fast_fib_eq"
+      ]
+    },
+    "excluded-internal-surface": {
+      "reason": "implementation-internal helper or elaborator-specific surface, not a general nursery target",
+      "names": [
+        "Nat.bitwise_bit",
+        "Nat.gcdA_zero_left",
+        "Nat.gcdA_zero_right",
+        "Nat.gcdB_zero_left",
+        "Nat.gcdB_zero_right",
+        "Nat.sqrt.iter_sq_le",
+        "Nat.xgcdAux_fst",
+        "Nat.xgcdAux_val",
+        "Nat.xgcd_val",
+        "Nat.xgcd_zero_left"
+      ]
+    },
+    "calibration-only": {
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "names": [
+        "Int.fib_neg_one",
+        "Int.fib_neg_two",
+        "Int.fib_one",
+        "Int.fib_two",
+        "Int.fib_zero",
+        "Int.gcd_def",
+        "Int.lcm_def",
+        "Nat.ascFactorial_eq_ascFactorialBinary",
+        "Nat.bitwise_zero",
+        "Nat.choose_eq_fast_choose",
+        "Nat.descFactorial_eq_descFactorialBinary",
+        "Nat.factorial_eq_factorialBinarySplitting",
+        "Nat.factorial_one",
+        "Nat.factorial_two",
+        "Nat.factorial_zero",
+        "Nat.fib_eq_fastFib",
+        "Nat.fib_one",
+        "Nat.fib_two",
+        "Nat.fib_zero",
+        "Nat.log2_two",
+        "Nat.sqrt_one",
+        "Nat.sqrt_two",
+        "Nat.sqrt_zero"
+      ]
+    }
+  },
+  "mutations": [
+    {
+      "source": "Int.fib_eq_zero",
+      "class": "boundary-widening-biconditional",
+      "statement": "∀ {n : ℤ}, Int.fib n = 0 ↔ n = 0 ∨ n = 1"
+    },
+    {
+      "source": "Int.ne_zero_of_gcd",
+      "class": "conclusion-strengthening",
+      "statement": "∀ {x y : ℤ}, x.gcd y ≠ 0 → x ≠ 0 ∧ y ≠ 0"
+    },
+    {
+      "source": "Int.ModEq.symm",
+      "class": "premise-removal",
+      "statement": "∀ {n a b : ℤ}, b ≡ a [ZMOD n]"
+    },
+    {
+      "source": "Nat.lor_comm",
+      "class": "operator-substitution",
+      "statement": "∀ (n m : ℕ), n ||| m = n &&& m"
+    },
+    {
+      "source": "Nat.choose_self",
+      "class": "boundary-value-substitution",
+      "statement": "∀ (n : ℕ), n.choose n = 0"
+    },
+    {
+      "source": "Nat.factorial_ne_zero",
+      "class": "polarity-reversal",
+      "statement": "∀ (n : ℕ), n.factorial = 0"
+    },
+    {
+      "source": "Nat.fib_eq_zero",
+      "class": "boundary-widening-biconditional",
+      "statement": "∀ {n : ℕ}, Nat.fib n = 0 ↔ n = 0 ∨ n = 1"
+    },
+    {
+      "source": "Nat.not_coprime_zero_zero",
+      "class": "polarity-reversal",
+      "statement": "Nat.Coprime 0 0"
+    },
+    {
+      "source": "Nat.log_le_self",
+      "class": "relation-strengthening",
+      "statement": "∀ (b x : ℕ), Nat.log b x < x"
+    },
+    {
+      "source": "Nat.ModEq.symm",
+      "class": "premise-removal",
+      "statement": "∀ {n a b : ℕ}, b ≡ a [MOD n]"
+    },
+    {
+      "source": "Nat.Prime.pred_pos",
+      "class": "bound-strengthening",
+      "statement": "∀ {p : ℕ}, Nat.Prime p → 1 < p.pred"
+    },
+    {
+      "source": "Nat.sqrt_le_self",
+      "class": "relation-strengthening",
+      "statement": "∀ (n : ℕ), n.sqrt < n"
+    }
+  ],
+  "grouping": {
+    "dependency": "retain the original 240-candidate component even when review removes a bridge",
+    "mutation": "place every mutation in its source candidate's dependency component",
+    "split": "a future partition must assign a whole review group"
+  },
+  "default_disposition": "evaluation-eligible",
+  "state": "review-authority-no-splits-no-outcomes"
+}

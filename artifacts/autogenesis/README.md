@@ -39,3 +39,12 @@ names and direct theorem dependencies. The committed component projection
 contains only candidate identities, candidate-to-candidate edges, and whole
 weak components. It is split input, not proposer input, and it still assigns no
 train, development, or held-out membership.
+
+`mathlib-nursery-review-policy-v1.json` is the outcome-blind human review
+authority. Its derived artifact removes aliases and internal helper surfaces,
+reserves base cases for calibration, and binds one statement-strength mutation
+to each of the twelve families. The resulting 120 groups still have no split:
+
+```sh
+python3 scripts/create-autogenesis-mathlib-nursery-review.py --check
+```

@@ -666,11 +666,11 @@
       "state": "foundation-only"
     },
     {
-      "gap": "240 statement-only candidates are grouped into proof-derived direct-dependency components; mutations, reviewed fact rows, frozen splits, route hypotheses, and Axeyum outcomes remain absent",
+      "gap": "202 candidates and 12 outcome-blind mutations form 120 leakage groups; proof-shape labels, reviewed fact rows, frozen splits, route hypotheses, and Axeyum outcomes remain absent",
       "id": "nursery-statement-source",
-      "owner": "proof-isolated Mathlib source and dependency projection",
-      "source": "scripts/create-autogenesis-mathlib-dependency-components.py",
-      "state": "componented-source-candidates"
+      "owner": "proof-isolated Mathlib review and mutation grouping",
+      "source": "scripts/create-autogenesis-mathlib-nursery-review.py",
+      "state": "reviewed-source-groups"
     }
   ],
   "proof_gap": {
@@ -688,7 +688,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "618ad80b532ae45b52171840c9e7da52ca22a37eff95ecd446b4f97ae792eb72",
+    "digest": "db29688590d7ac0ec3ec9882582cf733592f5d72986053dadaa3d6bffc6f05be",
     "inputs": [
       {
         "bytes": 1939,
@@ -709,6 +709,16 @@
         "bytes": 87872,
         "path": "artifacts/autogenesis/mathlib-nat-int-dependency-components-v1.json",
         "sha256": "edf1b10be0f0bd4b7851587bd00e847a06cd094acf3d78b7026d6b0f905ade28"
+      },
+      {
+        "bytes": 159243,
+        "path": "artifacts/autogenesis/mathlib-nat-int-reviewed-nursery-v1.json",
+        "sha256": "c03b129cc2c576a8d5661ac026ad6a8adc7ae548f8bfa903c4d8b851f6c577b0"
+      },
+      {
+        "bytes": 4518,
+        "path": "artifacts/autogenesis/mathlib-nursery-review-policy-v1.json",
+        "sha256": "b1970e4d4f5598a4ea119fa2e89947e541fce965cf1c4a937ec1b1d4689064b4"
       },
       {
         "bytes": 2550,
@@ -1311,9 +1321,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 75144,
+        "bytes": 75512,
         "path": "justfile",
-        "sha256": "69508fb8006e3a46da40e60f88ca3258aef44a26f8d6322c5d512cf21be2f41b"
+        "sha256": "9d95840cc0cb31dc70c96f08b0cf45de6dcb4d4f58262c628d1be5436531f02a"
       },
       {
         "bytes": 11929,
@@ -1386,9 +1396,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 23376,
+        "bytes": 23596,
         "path": "scripts/check.sh",
-        "sha256": "be4053c4c01bd82db1a96ff66c425a5e21cda2aa7b3711ea3c878dddbf49746f"
+        "sha256": "f97ae54702dec89cf991dcc8f576fc7fcb3bfb540894837322ae8168e9f100cb"
       },
       {
         "bytes": 6846,
@@ -1419,6 +1429,11 @@
         "bytes": 18808,
         "path": "scripts/create-autogenesis-mathlib-dependency-components.py",
         "sha256": "723fab940d133d952a8b309ab73c4b7048e5fe8da152133e74127b0e5540b021"
+      },
+      {
+        "bytes": 11913,
+        "path": "scripts/create-autogenesis-mathlib-nursery-review.py",
+        "sha256": "2a90e877297d1c48ef90e7c52d8a0f2a9e367b6426007aa66a2b4dabe65210cb"
       },
       {
         "bytes": 9953,
@@ -1456,9 +1471,9 @@
         "sha256": "fb367504828dc9aa0d09ecf349b645eb33b83402b69c53df65e43e937271526c"
       },
       {
-        "bytes": 28791,
+        "bytes": 28973,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "b2e8e8176e15a1fa52039f7f1ed9da4bbe88d66604e3775cd47524d7921fcc32"
+        "sha256": "ac2f75c47c7ec40f7c037445ae7febd799ca7b9025cf2f86788ddf207fc5fbe1"
       },
       {
         "bytes": 17112,

@@ -1,0 +1,3742 @@
+{
+  "authority": "statement-and-dependency-metadata-only-no-proofs-no-axeyum-outcomes",
+  "candidate_set_sha256": "3b4cd0e02466c26560dbbb0552db8aba442de4d6df52e13b1486ad61b75b0dc3",
+  "coverage": {
+    "disposition_counts": {
+      "calibration-only": 23,
+      "evaluation-eligible": 202,
+      "excluded-alias": 5,
+      "excluded-internal-surface": 10
+    },
+    "evaluation_eligible_candidates": 202,
+    "families": 12,
+    "future_evaluation_statements": 214,
+    "mutations": 12,
+    "review_groups": 120,
+    "source_candidates": 240
+  },
+  "dependency_components_sha256": "79e40b9ee1a6a57a2d511fd63dbb998d12fc325994fff069018162c54e8a5d4c",
+  "kind": "axeyum-autogenesis-mathlib-reviewed-nursery-candidates",
+  "limitations": [
+    "pretty-printed Mathlib statements are not yet Axeyum fact-ledger formal statements",
+    "mutation truth values and all Axeyum outcomes remain unmeasured",
+    "proof-shape risk labels and train/development/held-out partitions are not assigned",
+    "review groups preserve direct dependency and mutation leakage only; family and proof-shape controls still apply"
+  ],
+  "mutations": [
+    {
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "domain": "Int",
+      "mutation_class": "premise-removal",
+      "mutation_id": "M:aca37b68d3cdf06f0127def9",
+      "source_candidate_id": "984a6e6752f637b830a90cc8a450550d3b11132f8cdf2b24a9afcefecd131360",
+      "source_name": "Int.ModEq.symm",
+      "statement": "\u2200 {n a b : \u2124}, b \u2261 a [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bc8c8765b9355652",
+      "domain": "Int",
+      "mutation_class": "boundary-widening-biconditional",
+      "mutation_id": "M:aabb80b1f89f0c5847364692",
+      "source_candidate_id": "8193c7cb68729d02f7d739b77b78990c65e9fef54686f0e489544890f71601f9",
+      "source_name": "Int.fib_eq_zero",
+      "statement": "\u2200 {n : \u2124}, Int.fib n = 0 \u2194 n = 0 \u2228 n = 1",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f1ef809f7abb9158",
+      "domain": "Int",
+      "mutation_class": "conclusion-strengthening",
+      "mutation_id": "M:48fe130e2b8eadb6f626b66f",
+      "source_candidate_id": "f71f00dff9741bcd53b008bbf07545e005fa0cedf60d0f14e6f15305450b846c",
+      "source_name": "Int.ne_zero_of_gcd",
+      "statement": "\u2200 {x y : \u2124}, x.gcd y \u2260 0 \u2192 x \u2260 0 \u2227 y \u2260 0",
+      "theme": "integer-gcd"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "domain": "Nat",
+      "mutation_class": "premise-removal",
+      "mutation_id": "M:c86940b52af8159ca9b381d6",
+      "source_candidate_id": "0a3d4d18c5d91748fe411abec25ebad3d69cd17a993c0eb86c55c2a0845b621d",
+      "source_name": "Nat.ModEq.symm",
+      "statement": "\u2200 {n a b : \u2115}, b \u2261 a [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f5e0081ba0d3ce13",
+      "domain": "Nat",
+      "mutation_class": "bound-strengthening",
+      "mutation_id": "M:5179f333b8333ecff8adc223",
+      "source_candidate_id": "4e67ac4c8eb11ed694a1550bc7eedb858aa1549632b9c1975fca17cef2e8d3b5",
+      "source_name": "Nat.Prime.pred_pos",
+      "statement": "\u2200 {p : \u2115}, Nat.Prime p \u2192 1 < p.pred",
+      "theme": "natural-primes"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-6f230047ce83981a",
+      "domain": "Nat",
+      "mutation_class": "boundary-value-substitution",
+      "mutation_id": "M:edb05acf07d9ef3f9f8232fc",
+      "source_candidate_id": "25bb9fb8deec28ac8bedc77b5c1d6728f98426efdb968d0585ae4aaf6a0387cd",
+      "source_name": "Nat.choose_self",
+      "statement": "\u2200 (n : \u2115), n.choose n = 0",
+      "theme": "natural-binomial"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "domain": "Nat",
+      "mutation_class": "polarity-reversal",
+      "mutation_id": "M:7afa5ec620720a1501bf349d",
+      "source_candidate_id": "5fc0b0a1c0b5d98d8f9749f50bcde36729eedb836bb759b870250cd8da7deda0",
+      "source_name": "Nat.factorial_ne_zero",
+      "statement": "\u2200 (n : \u2115), n.factorial = 0",
+      "theme": "natural-factorial"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4ae13ae945c61591",
+      "domain": "Nat",
+      "mutation_class": "boundary-widening-biconditional",
+      "mutation_id": "M:1432b2277cf2cc26c1d11cd6",
+      "source_candidate_id": "61879073cf08ae48481990cf5b91c10e59efc064c4672b116149df5ccc2bb4c1",
+      "source_name": "Nat.fib_eq_zero",
+      "statement": "\u2200 {n : \u2115}, Nat.fib n = 0 \u2194 n = 0 \u2228 n = 1",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "domain": "Nat",
+      "mutation_class": "relation-strengthening",
+      "mutation_id": "M:e8583599cfae2d40cefae3f0",
+      "source_candidate_id": "da3871722c5cf4e39dca1c65bef8fdda4b35e2942dc02850300642e57907009d",
+      "source_name": "Nat.log_le_self",
+      "statement": "\u2200 (b x : \u2115), Nat.log b x < x",
+      "theme": "natural-logarithm"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "domain": "Nat",
+      "mutation_class": "operator-substitution",
+      "mutation_id": "M:a6dd1759bce60d820292e107",
+      "source_candidate_id": "2666d7ef4b460ad10de1dd3972c668e8e03215cc86d5f80641e337fff67f082a",
+      "source_name": "Nat.lor_comm",
+      "statement": "\u2200 (n m : \u2115), n ||| m = n &&& m",
+      "theme": "natural-bitwise"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-429ffadfbb38d5ea",
+      "domain": "Nat",
+      "mutation_class": "polarity-reversal",
+      "mutation_id": "M:c20db9b4c60b816ce738bdf2",
+      "source_candidate_id": "6c4e8dd8ac6ec23fed0818ef4603f5d57d730d318b2d67453ee37c0fe7493979",
+      "source_name": "Nat.not_coprime_zero_zero",
+      "statement": "Nat.Coprime 0 0",
+      "theme": "natural-gcd"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "domain": "Nat",
+      "mutation_class": "relation-strengthening",
+      "mutation_id": "M:2086302b3a338591b3179871",
+      "source_candidate_id": "1ed5eb85a339c6b344521b4379eeaf8f1e55bf17f858457e851c37ec2f0928bd",
+      "source_name": "Nat.sqrt_le_self",
+      "statement": "\u2200 (n : \u2115), n.sqrt < n",
+      "theme": "natural-square-root"
+    }
+  ],
+  "review_groups": [
+    {
+      "candidate_names": [
+        "Nat.choose_le_add",
+        "Nat.choose_le_choose",
+        "Nat.choose_le_succ",
+        "Nat.choose_mono"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-03318a97f5d9c067",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.clog_zero_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-04b5992203855fc2",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.testBit_ldiff"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-06206e0a59d7c3da",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.modEq_one"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-08ee032d9058b06c",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.le_three_of_sqrt_eq_one",
+        "Nat.sqrt_eq_zero",
+        "Nat.sqrt_lt",
+        "Nat.sqrt_lt_self",
+        "Nat.sqrt_succ_le_succ_sqrt"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.coprime_add_self_right",
+        "Nat.coprime_self_add_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-0948bc81df7acdcc",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.Coprime.symmetric"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-0a92c5444156fa80",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.clog_antitone_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-0e70ff905b4e67d7",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.dvd_of_lcm_left_dvd"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-0f4a2909bae26f91",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.coprime_one_right_iff"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-0f5b970407bcc279",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.fib_add",
+        "Int.fib_two_mul",
+        "Int.fib_two_mul_add_two"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-11abc97c89380ee4",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.testBit_lor"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-11da32849191a5ae",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.le_fib_add_one",
+        "Nat.le_fib_self"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-14a4bdea3716db7b",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.coprime_of_lt_minFac"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-14fb60aba4988f41",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.clog_one_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-1f0eac984fc2e8b7",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.choose_eq_zero_of_lt",
+        "Nat.choose_succ_self"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-21034a8981d599dd",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.ModEq.of_mul_left",
+        "Int.ModEq.of_mul_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-221b47afb20afd1a",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.dvd_of_lcm_right_dvd"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-22ed23121a880dda",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.ascFactorial_zero"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-2552fe053a3976ed",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.lt_of_testBit"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-28d465b4d0fa4c90",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.fib_dvd"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-292800e4421fa31a",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.gcd_div_gcd_div_gcd"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-29d8a4807856ddb4",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.modulus_modEq_zero"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-2bd246da70511653",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.factorial_lt_of_lt"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-2f841ec7bfb62e80",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.multichoose_one",
+        "Nat.multichoose_one_right",
+        "Nat.multichoose_zero_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-3149d7f9cd050cac",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.clog_zero_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-32d9b36c9de57a64",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.ModEq.dvd_iff",
+        "Int.ModEq.symm",
+        "Int.ModEq.trans",
+        "Int.modEq_comm",
+        "Int.modEq_sub"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "mutation_ids": [
+        "M:aca37b68d3cdf06f0127def9"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Int.fib_of_odd"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-349664929d4b20cf",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.Prime.odd_of_ne_two"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-35005e802231af21",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.sqrt_eq'"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-3625c080cb3916be",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.div_dvd_div_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-36db9e2cb36c31b5",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.Coprime.of_dvd",
+        "Nat.Coprime.of_dvd_left",
+        "Nat.Coprime.of_dvd_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-39256e2968b0e1d2",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.dvd_lcm_of_dvd_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-3b9de7b385a5a0cb",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.dvd_lcm_of_dvd_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-3c41a84178f748e7",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.zero_of_testBit_eq_false"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-3c547df4c5be18f3",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.Prime.dvd_mul_of_dvd_ne",
+        "Nat.coprime_primes"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-3e9e176afeb222f8",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.not_coprime_zero_zero"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-429ffadfbb38d5ea",
+      "mutation_ids": [
+        "M:c20db9b4c60b816ce738bdf2"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Nat.factorial_dvd_factorial",
+        "Nat.factorial_le",
+        "Nat.factorial_ne_zero",
+        "Nat.factorial_pos",
+        "Nat.self_le_factorial"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "mutation_ids": [
+        "M:7afa5ec620720a1501bf349d"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Nat.fib_eq_zero"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-4ae13ae945c61591",
+      "mutation_ids": [
+        "M:1432b2277cf2cc26c1d11cd6"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Int.gcd_div"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-4c725f39100b926a",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.one_ascFactorial"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-4f7f93a429b7752d",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.lt_xor_cases"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-50d3735f1a086e77",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.choose_symm_add",
+        "Nat.choose_symm_of_eq_add"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-52448fed5f91002d",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.succ_pred_prime"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-5d1003a0d2494aec",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.fastFib_eq"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-61d815b2edf793ed",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.clog_mono_right",
+        "Nat.clog_monotone"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-67733b1101973f6f",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.testBit_eq_inth"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-68252a7d4d8c1329",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.Coprime.odd_of_left",
+        "Nat.Coprime.odd_of_right",
+        "Nat.coprime_two_left",
+        "Nat.coprime_two_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.land_assoc",
+        "Nat.land_bit",
+        "Nat.ldiff_bit",
+        "Nat.lor_assoc",
+        "Nat.lor_bit"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.descFactorial_self"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-6d39b59d22fd3649",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.mod_modEq"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-6e1b2f332b43a55c",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.choose_self"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-6f230047ce83981a",
+      "mutation_ids": [
+        "M:edb05acf07d9ef3f9f8232fc"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Nat.add_modEq_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-6fc2be2d83334e77",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.modEq_neg"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-7131d99a953dc330",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.bitwise_bit'",
+        "Nat.bitwise_comm",
+        "Nat.bitwise_swap",
+        "Nat.land_comm",
+        "Nat.lor_comm"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "mutation_ids": [
+        "M:a6dd1759bce60d820292e107"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Nat.le_sqrt",
+        "Nat.le_sqrt_of_eq_mul",
+        "Nat.lt_succ_sqrt",
+        "Nat.sqrt_le",
+        "Nat.sqrt_le_self",
+        "Nat.sqrt_le_sqrt",
+        "Nat.sqrt_pos"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "mutation_ids": [
+        "M:2086302b3a338591b3179871"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Nat.log_zero_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-754b540be332facb",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.choose_one_right",
+        "Nat.choose_zero_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-772791fcb89127a3",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.modulus_modEq_zero"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-77595c4fe0b2aedf",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.gcd_greatest"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-77912b67b18f2e18",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.choose_ne_zero"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-784b337733caaefb",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.clog_pos"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-7a0f0e674194da44",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.Prime.dvd_iff_not_coprime",
+        "Nat.coprime_of_lt_prime",
+        "Nat.coprime_or_dvd_of_prime"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-7c36b21bbb3a5dae",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.log_mono_right",
+        "Nat.log_monotone"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-7d1d4a6a6f597955",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.modEq_one"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-7ea970a1a23d9dcd",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.Prime.five_le_of_ne_two_of_ne_three"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-7f2909c7d58a9007",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.Prime.dvd_of_dvd_pow"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-7f777cc1a0316e33",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.factorial_dvd_descFactorial"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-841c7d52cf03e6e4",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.gcd_greatest"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-84ffc18b86745c93",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.dvd_of_forall_prime_mul_dvd"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-85cf153fd2a3d00a",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.ModEq.of_dvd"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-8a9b388391142d26",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.descFactorial_of_lt"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-8d01187efd126f0b",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.choose_zero_succ"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-9556aecf1bb98439",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.descFactorial_zero"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-96996505b088b81a",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.log_antitone_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-9da63bd4e59d00f6",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.exists_mul_self",
+        "Nat.sqrt_eq"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-a39a4e278c870ecd",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.coprime_self_add_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-a5e2f0f0fb66e795",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.testBit_land"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-a88e55a985ea72d4",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.neg_modEq_neg"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-af1fb231b4a4420a",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.fib_add_one",
+        "Int.fib_add_two",
+        "Int.fib_eq_fib_add_two_sub_fib_add_one",
+        "Int.fib_natCast",
+        "Nat.fib_add_two",
+        "Nat.fib_coprime_fib_succ",
+        "Nat.fib_le_fib_succ",
+        "Nat.fib_mono",
+        "Nat.gcd_fib_add_self"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.even_xor"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-b413bfcde9767d29",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.factorial_dvd_ascFactorial"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-b92098ec339263f0",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.gcd_eq_one_of_gcd_mul_right_eq_one_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-bc196822165c7f58",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.fib_eq_zero"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-bc8c8765b9355652",
+      "mutation_ids": [
+        "M:aabb80b1f89f0c5847364692"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Nat.choose_succ_succ"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-be1c3ada4fef6ea6",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.ModEq.neg"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-be80f6203158797b",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.dvd_of_dvd_mul_left_of_gcd_one",
+        "Int.dvd_of_dvd_mul_right_of_gcd_one",
+        "Int.gcd_eq_gcd_ab"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-bef809d855cc57c1",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.log2_eq_log_two",
+        "Nat.log_le_clog",
+        "Nat.log_le_self",
+        "Nat.log_lt_self",
+        "Nat.log_zero_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "mutation_ids": [
+        "M:e8583599cfae2d40cefae3f0"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Nat.exists_mul_mod_eq_gcd"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-bfc4303ba1ab035e",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.mod_lcm"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-c0029d24c3bb7a7f",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.ModEq.add_left",
+        "Nat.ModEq.add_left_cancel'",
+        "Nat.ModEq.add_right",
+        "Nat.ModEq.add_right_cancel'",
+        "Nat.ModEq.refl"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.ModEq.add_left",
+        "Int.ModEq.add_left_cancel'",
+        "Int.ModEq.refl"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.Prime.not_dvd_mul"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-c3c6c5f60ad0b6b5",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.coprime_one_left_iff"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-c42a5cca06e73e07",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.coprime_iff_isRelPrime"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-c4d6980fa7b38432",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.clog_one_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-c851a7fdd6dacbde",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.fib_of_nonneg"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-cd344903f04530b2",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.mod_modEq"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-ce4e3e890bcf8f1c",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.fib_pos"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-d22c0fd2eb74e7fd",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.add_modEq_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-d2b3ae01ee9a9ed0",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.log_of_lt"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-d48a520ede3cd1e8",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.ModEq.of_mul_left",
+        "Nat.ModEq.of_mul_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-d4e21b6b7acdcecb",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.zero_ascFactorial"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-d666bed9b70442ab",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.coprime_add_self_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-dad675b054e7a82a",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.Prime.even_iff"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-e4a351263398fa5d",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.fib_add_two_strictMono",
+        "Nat.fib_lt_fib",
+        "Nat.fib_strictMonoOn"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-e7e80bd79f8762e6",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.coprime_of_dvd'"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-eb36cbc0baee7f2c",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.not_prime_of_dvd_of_ne"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-ec11d4735cad89fd",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.add_modEq_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-ef8adf35bc935542",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.ModEq.comm",
+        "Nat.ModEq.dvd_iff",
+        "Nat.ModEq.gcd_eq",
+        "Nat.ModEq.of_dvd",
+        "Nat.ModEq.symm",
+        "Nat.ModEq.trans"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "mutation_ids": [
+        "M:c86940b52af8159ca9b381d6"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Int.ne_zero_of_gcd"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-f1ef809f7abb9158",
+      "mutation_ids": [
+        "M:48fe130e2b8eadb6f626b66f"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Nat.descFactorial_one"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-f495858cd421b817",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.Prime.pred_pos"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-f5e0081ba0d3ce13",
+      "mutation_ids": [
+        "M:5179f333b8333ecff8adc223"
+      ]
+    },
+    {
+      "candidate_names": [
+        "Int.fib_two_mul_add_one_pos"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-f72b51f6b6106a61",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.descFactorial_le"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-f752f40b1b7067eb",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.log_one_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-f9d5f5029ac8431f",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.gcd_eq_one_of_gcd_mul_right_eq_one_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-fbe0b99ece942a46",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Nat.log_one_right"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-fc2d188b8c710774",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.add_modEq_left"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-fcf7017e9257db89",
+      "mutation_ids": []
+    },
+    {
+      "candidate_names": [
+        "Int.fib_gcd",
+        "Int.fib_neg",
+        "Int.gcd_fib",
+        "Nat.fib_dvd",
+        "Nat.fib_gcd"
+      ],
+      "dependency_component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "mutation_ids": []
+    }
+  ],
+  "review_policy_sha256": "b0102796a112bd7940b1c2953182103e83e059c9b9a44b0bd876f7307f436910",
+  "review_sha256": "cc673c2cdf73f5bca5b863aeefa5b59b10ee4fad85329d830e07429764325d88",
+  "reviewed_candidates": [
+    {
+      "candidate_id": "6e17c69a5219a9aca3d66c83d339fe64edbfa4276280c5e01fa8e8201ffc38c9",
+      "dependency_component_id": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.add_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2124} (c : \u2124), a \u2261 b [ZMOD n] \u2192 c + a \u2261 c + b [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "062ad5febaa60f88fb0c1ad660f5c979e4b3606838a94476338cdcae7f05f1c3",
+      "dependency_component_id": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.add_left_cancel'",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2124} (c : \u2124), c + a \u2261 c + b [ZMOD n] \u2192 a \u2261 b [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "b7ffeff8240104793a71d9f4c5ace492e6b9cb79a550305b711f7ecf7849c7d6",
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.dvd_iff",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2124}, a \u2261 b [ZMOD n] \u2192 (n \u2223 a \u2194 n \u2223 b)",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "f649f6c5278473dd0a67ac1c26bba50da5d98cef10ee23432b599a724199fcab",
+      "dependency_component_id": "mathlib-v4.30.0-be80f6203158797b",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.neg",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2124}, a \u2261 b [ZMOD n] \u2192 -a \u2261 -b [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "b9c41fce3281da41448e50d2831139c472d7f88e8e3b5da3cb02bf85a14e1793",
+      "dependency_component_id": "mathlib-v4.30.0-8a9b388391142d26",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.of_dvd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n a b : \u2124}, m \u2223 n \u2192 a \u2261 b [ZMOD n] \u2192 a \u2261 b [ZMOD m]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "c4ccd51e988f3c1d03c1fcdb36d3a5394160d500b11614da99c38c50dc222233",
+      "dependency_component_id": "mathlib-v4.30.0-221b47afb20afd1a",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.of_mul_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2124} (m : \u2124), a \u2261 b [ZMOD m * n] \u2192 a \u2261 b [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "c92b7bf0289803be4f2c1b4287a89a59ec9721b7acd31980881ec3eb1b9d8d1a",
+      "dependency_component_id": "mathlib-v4.30.0-221b47afb20afd1a",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.of_mul_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2124} (m : \u2124), a \u2261 b [ZMOD n * m] \u2192 a \u2261 b [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "30e15520fdbbc7b52282d4e43c2062e0216ed017c4f16cdce5c9b6b84236989d",
+      "dependency_component_id": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.refl",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2124} (a : \u2124), a \u2261 a [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "39917cf95c0c06b88ae36a1d1eeeb73a0f8a27d788a71b350c56324631ccf98d",
+      "dependency_component_id": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "disposition": "excluded-alias",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.rfl",
+      "reason": "duplicate or binder-presentation alias of another selected statement",
+      "statement": "\u2200 {n a : \u2124}, a \u2261 a [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "984a6e6752f637b830a90cc8a450550d3b11132f8cdf2b24a9afcefecd131360",
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.symm",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2124}, a \u2261 b [ZMOD n] \u2192 b \u2261 a [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "6d7863e0d948a224aed30407b4da470b93b744b0dfad14589de71a9b5425901a",
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.trans",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b c : \u2124}, a \u2261 b [ZMOD n] \u2192 b \u2261 c [ZMOD n] \u2192 a \u2261 c [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "ee732b5b39df2bdbd4fbc276d7a6e3e9724015252a6c1afd13421a1bc185632f",
+      "dependency_component_id": "mathlib-v4.30.0-fcf7017e9257db89",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.add_modEq_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a : \u2124}, n + a \u2261 a [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "e58108ee4ccde04b29cb45de86596522ffe2feec955f99243e2b15673568523c",
+      "dependency_component_id": "mathlib-v4.30.0-ef8adf35bc935542",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.add_modEq_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a : \u2124}, a + n \u2261 a [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "649e349bc18a5424434e8e8e1322d35fc8417299a72540d70e94c80ca4912d1a",
+      "dependency_component_id": "mathlib-v4.30.0-bef809d855cc57c1",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.dvd_of_dvd_mul_left_of_gcd_one",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b c : \u2124}, a \u2223 b * c \u2192 a.gcd c = 1 \u2192 a \u2223 b",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "77817ff09968beddb825941c70b2989f54afa65509964c3e3a1ff12eee9db795",
+      "dependency_component_id": "mathlib-v4.30.0-bef809d855cc57c1",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.dvd_of_dvd_mul_right_of_gcd_one",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b c : \u2124}, a \u2223 b * c \u2192 a.gcd b = 1 \u2192 a \u2223 c",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "181b6a2cde087fc33e472825f255f915f0080b28ae440c583e0aa02c0a2e69a4",
+      "dependency_component_id": "mathlib-v4.30.0-11abc97c89380ee4",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_add",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (m n : \u2124), Int.fib (m + n) = Int.fib (m - 1) * Int.fib n + Int.fib m * Int.fib (n + 1)",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "33f1b748eeb0ffed033873eb490eaa1c9c31956a8b6d38e5d160d1d0bff3ca95",
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_add_one",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2124), Int.fib (n + 1) = Int.fib (n + 2) - Int.fib n",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "739358dd0577c0112e426774eac649b33bb4b5c0bfcbebd5e4c3b3e4d552356b",
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_add_two",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2124), Int.fib (n + 2) = Int.fib n + Int.fib (n + 1)",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "ffb3c5c17dc7c959683db74e36a55945012451c4e8372053de50d8d7721e1de9",
+      "dependency_component_id": "mathlib-v4.30.0-292800e4421fa31a",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_dvd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (m n : \u2124), m \u2223 n \u2192 Int.fib m \u2223 Int.fib n",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "0dab3f6d41c76602ca2d34391f6c82ea3ab36d18f5f18faf29c6933e252fc30c",
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_eq_fib_add_two_sub_fib_add_one",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2124), Int.fib n = Int.fib (n + 2) - Int.fib (n + 1)",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "8193c7cb68729d02f7d739b77b78990c65e9fef54686f0e489544890f71601f9",
+      "dependency_component_id": "mathlib-v4.30.0-bc8c8765b9355652",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_eq_zero",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2124}, Int.fib n = 0 \u2194 n = 0",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "3a8bfdece32a55f4a31f7d2068d5cf3c280e9984839109a5f5f3176581ab0fe2",
+      "dependency_component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_gcd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (m n : \u2124), Int.fib \u2191(m.gcd n) = \u2191((Int.fib m).gcd (Int.fib n))",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "d5886be47e8fce0ae39517f183c799339f5ef214c606b980905fc80bae576971",
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_natCast",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), Int.fib \u2191n = \u2191(Nat.fib n)",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "b4021d37220e00caf34f69e036adf61eb1990782a35e5ba4dcd2df7293d55dda",
+      "dependency_component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_neg",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2124), Int.fib (-n) = if Even n then -Int.fib n else Int.fib n",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "2d8ff3a2ada0706a10edeaae5f283d2c39621dfcbb9a2fc3a64ec29a3c8a7d18",
+      "dependency_component_id": "mathlib-v4.30.0-52954723caf82727",
+      "disposition": "calibration-only",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_neg_one",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Int.fib (-1) = 1",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "d728ce1fbeaee4d8e479bfdf09db3fb61043d2eef39fa2a628f907f333b07b22",
+      "dependency_component_id": "mathlib-v4.30.0-4424f7e97ad88904",
+      "disposition": "calibration-only",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_neg_two",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Int.fib (-2) = -1",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "438018c529fdedaf379e38d8a43b18801baf9f3b7b3abaa1773bbb59f9a679f9",
+      "dependency_component_id": "mathlib-v4.30.0-cd344903f04530b2",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_of_nonneg",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2124}, 0 \u2264 n \u2192 Int.fib n = \u2191(Nat.fib n.toNat)",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "6656049505ef0ffef5fbaa10ceb49cd9239ea4801e8165ea8329c0c257dac024",
+      "dependency_component_id": "mathlib-v4.30.0-349664929d4b20cf",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_of_odd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2124}, Odd n \u2192 Int.fib n = \u2191(Nat.fib n.natAbs)",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "d4a7f58d27f0f8804cda3eeca6de51484bcc4a992a897cd0fdcf0bd859224a15",
+      "dependency_component_id": "mathlib-v4.30.0-75c3a0b56b4be1fb",
+      "disposition": "calibration-only",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_one",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Int.fib 1 = 1",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "fee2725fee929a80dfe7e54ccf19e5245cc33f38e4e89f06dbf43d6090623d70",
+      "dependency_component_id": "mathlib-v4.30.0-b286729026bf7947",
+      "disposition": "calibration-only",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_two",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Int.fib 2 = 1",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "0e70f3dd0b5a8b488cf1610d88ca381bf67b2aae393edc06b5c035a33333ad5e",
+      "dependency_component_id": "mathlib-v4.30.0-11abc97c89380ee4",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_two_mul",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2124), Int.fib (2 * n) = Int.fib n * (2 * Int.fib (n + 1) - Int.fib n)",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "8977f65f2a7ff54256764119ca007853010bb1b5e4c537f08d4939f7ffbad838",
+      "dependency_component_id": "mathlib-v4.30.0-f72b51f6b6106a61",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_two_mul_add_one_pos",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2124}, 0 < Int.fib (2 * n + 1)",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "0ba4a94838c54e185fba05017c9bb220ee402f6933768bdb4cdf7f912c53ef1f",
+      "dependency_component_id": "mathlib-v4.30.0-11abc97c89380ee4",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_two_mul_add_two",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2124), Int.fib (2 * n + 2) = Int.fib (n + 1) * (2 * Int.fib n + Int.fib (n + 1))",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "4b36e1e13f8964cdbaf287d9ce34333a5cf1abafb4b8f0f32b9635405c1f8f48",
+      "dependency_component_id": "mathlib-v4.30.0-c9a1209c46a7058b",
+      "disposition": "calibration-only",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_zero",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Int.fib 0 = 0",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "744a8bc1bd21d17b686caa1d873be28fa6f3be2349cf0c9cf0bcd07b685f7dd9",
+      "dependency_component_id": "mathlib-v4.30.0-b7c5d64ddc678ce9",
+      "disposition": "calibration-only",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_def",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "\u2200 (i j : \u2124), i.gcd j = i.natAbs.gcd j.natAbs",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "5e01872fb1e56814f3dd9da950233727b8fca6a52d162cbf60b0efc30184e424",
+      "dependency_component_id": "mathlib-v4.30.0-4c725f39100b926a",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_div",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b c : \u2124}, c \u2223 a \u2192 c \u2223 b \u2192 (a / c).gcd (b / c) = a.gcd b / c.natAbs",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "2db608dcf22dbb88c3171454b691618f9167f37b4641516c0221ef8a3b11da96",
+      "dependency_component_id": "mathlib-v4.30.0-29d8a4807856ddb4",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_div_gcd_div_gcd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {i j : \u2124}, 0 < i.gcd j \u2192 (i / \u2191(i.gcd j)).gcd (j / \u2191(i.gcd j)) = 1",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "63005aef3632a806a1f609ee15a8fe0f3799231388149ed4ded2b91f902c3b25",
+      "dependency_component_id": "mathlib-v4.30.0-bef809d855cc57c1",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_eq_gcd_ab",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (x y : \u2124), \u2191(x.gcd y) = x * x.gcdA y + y * x.gcdB y",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "8533eb82a5787422d65cf777e6eb936a1e196378558b3c42b75df364fb8f606c",
+      "dependency_component_id": "mathlib-v4.30.0-fbe0b99ece942a46",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_eq_one_of_gcd_mul_right_eq_one_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a : \u2124} {m n : \u2115}, a.gcd (\u2191m * \u2191n) = 1 \u2192 a.gcd \u2191m = 1",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "a9b1922275735b46eb960c6a7bd92d9e16c57e134a912149f553bf6dc56aa34d",
+      "dependency_component_id": "mathlib-v4.30.0-bc196822165c7f58",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_eq_one_of_gcd_mul_right_eq_one_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a : \u2124} {m n : \u2115}, a.gcd (\u2191m * \u2191n) = 1 \u2192 a.gcd \u2191n = 1",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "73bdafc25249002c7fb1f63f78672a8a25081bc2c495e0209fdd37c8c6de6388",
+      "dependency_component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.gcd_fib",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (m n : \u2124), (Int.fib m).gcd (Int.fib n) = Nat.fib (m.gcd n)",
+      "theme": "integer-fibonacci"
+    },
+    {
+      "candidate_id": "5b31c5fe59c9091e7a818c107619aeaab51ee0b8ae1ce2d00ebe93a680c96313",
+      "dependency_component_id": "mathlib-v4.30.0-84ffc18b86745c93",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_greatest",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b d : \u2124}, 0 \u2264 d \u2192 d \u2223 a \u2192 d \u2223 b \u2192 (\u2200 (e : \u2124), e \u2223 a \u2192 e \u2223 b \u2192 e \u2223 d) \u2192 d = \u2191(a.gcd b)",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "4b968e4c87be7b59b3fdd49d7057484670c42c90b8735cd5cf0d44786b05559e",
+      "dependency_component_id": "mathlib-v4.30.0-6e3f7972f13e24f1",
+      "disposition": "calibration-only",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.lcm_def",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "\u2200 (i j : \u2124), i.lcm j = i.natAbs.lcm j.natAbs",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "1e4bcc078b464b6dc27bfcc755004c7ec9cdd444669327272c39a9cfc755b406",
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.modEq_comm",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2124}, a \u2261 b [ZMOD n] \u2194 b \u2261 a [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "d6ff57b6c657a45df706fdb8ace19edd0efc361f90bf12738752577bac79ee76",
+      "dependency_component_id": "mathlib-v4.30.0-7131d99a953dc330",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.modEq_neg",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2124}, a \u2261 b [ZMOD -n] \u2194 a \u2261 b [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "01d9de39e98bdc65d6f1e9d3aa22574f08ce15fada3fe648e5db7553339a635b",
+      "dependency_component_id": "mathlib-v4.30.0-7ea970a1a23d9dcd",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.modEq_one",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b : \u2124}, a \u2261 b [ZMOD 1]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "3148f130c5632f3f308651f8c0f237aaf4b88dd9649d812525e670cf79d4c9d8",
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.modEq_sub",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (a b : \u2124), a \u2261 b [ZMOD a - b]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "6bec7847113b4e07e07c3e0cdf56cad7edde8206708ee3d93c204ab0c7caadda",
+      "dependency_component_id": "mathlib-v4.30.0-6e1b2f332b43a55c",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.mod_modEq",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (a n : \u2124), a % n \u2261 a [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "5b57a898479edef10ab364272fd51d3c9173f29339f0c24766fcaeccafc7f262",
+      "dependency_component_id": "mathlib-v4.30.0-77595c4fe0b2aedf",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.modulus_modEq_zero",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2124}, n \u2261 0 [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "f71f00dff9741bcd53b008bbf07545e005fa0cedf60d0f14e6f15305450b846c",
+      "dependency_component_id": "mathlib-v4.30.0-f1ef809f7abb9158",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.ne_zero_of_gcd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {x y : \u2124}, x.gcd y \u2260 0 \u2192 x \u2260 0 \u2228 y \u2260 0",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "30d98479baccb9f1e9e01eb5b63eba1acac1690fa75d24d7bfcd243e4f26686f",
+      "dependency_component_id": "mathlib-v4.30.0-af1fb231b4a4420a",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.neg_modEq_neg",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2124}, -a \u2261 -b [ZMOD n] \u2194 a \u2261 b [ZMOD n]",
+      "theme": "integer-modular-equivalence"
+    },
+    {
+      "candidate_id": "ed80ab44a18e719e492d64b8b7e3f47dd652d0343da4f09dc02a51ea6e634298",
+      "dependency_component_id": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Coprime.odd_of_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, Nat.Coprime 2 n \u2192 Odd n",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "8dc1deccb9d5fd7e99c73fea44daa5b8259bfb86794a9f10d4de45d31fe60d2c",
+      "dependency_component_id": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Coprime.odd_of_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, n.Coprime 2 \u2192 Odd n",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "18fcd09f980e8a0885770a1ceb99cdce603312683cca8b05913699b6f98edaaf",
+      "dependency_component_id": "mathlib-v4.30.0-39256e2968b0e1d2",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Coprime.of_dvd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a\u2081 a\u2082 b\u2081 b\u2082 : \u2115}, a\u2081 \u2223 a\u2082 \u2192 b\u2081 \u2223 b\u2082 \u2192 a\u2082.Coprime b\u2082 \u2192 a\u2081.Coprime b\u2081",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "b0e2aa94a53d6b3f5ed4250aac7f082c5796e6ecf493d88e09798c0d1f48929a",
+      "dependency_component_id": "mathlib-v4.30.0-39256e2968b0e1d2",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Coprime.of_dvd_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a\u2081 a\u2082 b : \u2115}, a\u2081 \u2223 a\u2082 \u2192 a\u2082.Coprime b \u2192 a\u2081.Coprime b",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "a640bd561c230c3963de1a87c7aa9800396e54be112c22b3da2aa102de98cb67",
+      "dependency_component_id": "mathlib-v4.30.0-39256e2968b0e1d2",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Coprime.of_dvd_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b\u2081 b\u2082 : \u2115}, b\u2081 \u2223 b\u2082 \u2192 a.Coprime b\u2082 \u2192 a.Coprime b\u2081",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "9b5cfa1236b69c7543180dafa99e395abdaad15cb22de79e771b1be1bf0e5e48",
+      "dependency_component_id": "mathlib-v4.30.0-0a92c5444156fa80",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Coprime.symmetric",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "Symmetric Nat.Coprime",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "6fdf1c214686be42167a62be2d68b6deb2a0263bb830263c4a587ed48e650952",
+      "dependency_component_id": "mathlib-v4.30.0-3b9de7b385a5a0cb",
+      "disposition": "excluded-alias",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Dvd.dvd.nat_lcm_left",
+      "reason": "duplicate or binder-presentation alias of another selected statement",
+      "statement": "\u2200 {a b : \u2115}, a \u2223 b \u2192 \u2200 (c : \u2115), a \u2223 c.lcm b",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "f57eb0b19dbd97d56b253128c85856e632e87eb0eff35ab23e506750e342b30d",
+      "dependency_component_id": "mathlib-v4.30.0-3c41a84178f748e7",
+      "disposition": "excluded-alias",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Dvd.dvd.nat_lcm_right",
+      "reason": "duplicate or binder-presentation alias of another selected statement",
+      "statement": "\u2200 {a b : \u2115}, a \u2223 b \u2192 \u2200 (c : \u2115), a \u2223 b.lcm c",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "e83f07008b70f4475e4d856773367b3641a3e79395668d2d2ccaab17e3e3afaf",
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.add_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2115} (c : \u2115), a \u2261 b [MOD n] \u2192 c + a \u2261 c + b [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "e5287cf694fef43541ad3ee05e735a4fffa09bb73b5ed7fcc15b25fe8b3912b7",
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.add_left_cancel'",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2115} (c : \u2115), c + a \u2261 c + b [MOD n] \u2192 a \u2261 b [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "8e2ca0cc8f8d660ff1d16b273b8cf4eed5bcf79c16a57f1034bf05d615e3adc2",
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.add_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2115} (c : \u2115), a \u2261 b [MOD n] \u2192 a + c \u2261 b + c [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "e871facf4c055e5d259baa4683d8090ae9f66298227160d140ef5d35b166d091",
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.add_right_cancel'",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2115} (c : \u2115), a + c \u2261 b + c [MOD n] \u2192 a \u2261 b [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "24b71e7aff48c3e5606850df7fc3dc6f335c2e69e65c59236ced860dfa1f2879",
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.comm",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2115}, a \u2261 b [MOD n] \u2194 b \u2261 a [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "8f130450413936f02a349991edbad9f1dfe9a9bdb6a12ee681f52448a19e3503",
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.dvd_iff",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m a b d : \u2115}, a \u2261 b [MOD m] \u2192 d \u2223 m \u2192 (d \u2223 a \u2194 d \u2223 b)",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "5167ff4f082130b5f407c5c354dd8d881de0c0fb2af94d5169c4e1f7cda4e5c5",
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.gcd_eq",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m a b : \u2115}, a \u2261 b [MOD m] \u2192 a.gcd m = b.gcd m",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "d75cc374332e28a249443dca069254e237537e080a5346e0b6278079bcbb2db5",
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.of_dvd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n a b : \u2115}, m \u2223 n \u2192 a \u2261 b [MOD n] \u2192 a \u2261 b [MOD m]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "88d20bca2eb876f49675c618b197d1889cc54bc49fe510ae5831c103fbd4e45e",
+      "dependency_component_id": "mathlib-v4.30.0-d4e21b6b7acdcecb",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.of_mul_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2115} (m : \u2115), a \u2261 b [MOD m * n] \u2192 a \u2261 b [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "43078e1cd27dc88b79223363b6318ac823dc9572060348f64d291ba9c81a7126",
+      "dependency_component_id": "mathlib-v4.30.0-d4e21b6b7acdcecb",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.of_mul_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2115} (m : \u2115), a \u2261 b [MOD n * m] \u2192 a \u2261 b [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "d870c8f577c49d725fa77c63379998199e5884b0df40a6cea97f766e64710f3a",
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.refl",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115} (a : \u2115), a \u2261 a [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "323448c03e6778ca5e759409a472a35847339d596923d9c51f91ace3649c8f4f",
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "disposition": "excluded-alias",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.rfl",
+      "reason": "duplicate or binder-presentation alias of another selected statement",
+      "statement": "\u2200 {n a : \u2115}, a \u2261 a [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "0a3d4d18c5d91748fe411abec25ebad3d69cd17a993c0eb86c55c2a0845b621d",
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.symm",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2115}, a \u2261 b [MOD n] \u2192 b \u2261 a [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "ef9d1c4679752990ea62e021b05febcf315c78dc7e43518591a0ffa8048eefe4",
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.trans",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b c : \u2115}, a \u2261 b [MOD n] \u2192 b \u2261 c [MOD n] \u2192 a \u2261 c [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "77854741e6ec7a1ca838962885772db5d9bd485fbc3e8671ff015e182bb0698f",
+      "dependency_component_id": "mathlib-v4.30.0-7c36b21bbb3a5dae",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.dvd_iff_not_coprime",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {p n : \u2115}, Nat.Prime p \u2192 (p \u2223 n \u2194 \u00acp.Coprime n)",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "6c253439629922cd287e053e303275c8a5c49f7a3513fe3f1edfe1cfdbe6fa67",
+      "dependency_component_id": "mathlib-v4.30.0-3e9e176afeb222f8",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.dvd_mul_of_dvd_ne",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {p1 p2 n : \u2115}, p1 \u2260 p2 \u2192 Nat.Prime p1 \u2192 Nat.Prime p2 \u2192 p1 \u2223 n \u2192 p2 \u2223 n \u2192 p1 * p2 \u2223 n",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "e76f834adbd6510de3f827186cc70114fd9c450226169910a00de93e48988b9f",
+      "dependency_component_id": "mathlib-v4.30.0-7f777cc1a0316e33",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.dvd_of_dvd_pow",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {p m n : \u2115}, Nat.Prime p \u2192 p \u2223 m ^ n \u2192 p \u2223 m",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "d068ec8206aa89e04b99f53ff1d096e17f297257e63005f2ea5c2f22142d7d2e",
+      "dependency_component_id": "mathlib-v4.30.0-e4a351263398fa5d",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.even_iff",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {p : \u2115}, Nat.Prime p \u2192 (Even p \u2194 p = 2)",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "c069e7864cdf25e1a773eace966ee31123577a3416f407d25a0aa9fe7c60eaa4",
+      "dependency_component_id": "mathlib-v4.30.0-7f2909c7d58a9007",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.five_le_of_ne_two_of_ne_three",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {p : \u2115}, Nat.Prime p \u2192 p \u2260 2 \u2192 p \u2260 3 \u2192 5 \u2264 p",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "cb3a915e18b905c53e5828e7c144a696d94b80c8b994bfab7e0d6aa032cacc6c",
+      "dependency_component_id": "mathlib-v4.30.0-c3c6c5f60ad0b6b5",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.not_dvd_mul",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {p m n : \u2115}, Nat.Prime p \u2192 \u00acp \u2223 m \u2192 \u00acp \u2223 n \u2192 \u00acp \u2223 m * n",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "91e1195f75b045a13a21bcbd6d83b371f7777b13b4a0b46f2b6976ecd597cc8d",
+      "dependency_component_id": "mathlib-v4.30.0-35005e802231af21",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.odd_of_ne_two",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {p : \u2115}, Nat.Prime p \u2192 p \u2260 2 \u2192 Odd p",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "4e67ac4c8eb11ed694a1550bc7eedb858aa1549632b9c1975fca17cef2e8d3b5",
+      "dependency_component_id": "mathlib-v4.30.0-f5e0081ba0d3ce13",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.pred_pos",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {p : \u2115}, Nat.Prime p \u2192 0 < p.pred",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "e3b1fba9165406f4177667a54396ad76e1fe8b6ecf32f2b4eafae6c156443a75",
+      "dependency_component_id": "mathlib-v4.30.0-6fc2be2d83334e77",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.add_modEq_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a : \u2115}, n + a \u2261 a [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "e2f11f214d4aeebca0e80a01786a464646d668fdbf3a22057d42f8d7b740b379",
+      "dependency_component_id": "mathlib-v4.30.0-d2b3ae01ee9a9ed0",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.add_modEq_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a : \u2115}, a + n \u2261 a [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "977b84c1c776208294f11c74cfddf862c3e3ab3ec2f15551ae5bbfdf6a72ca24",
+      "dependency_component_id": "mathlib-v4.30.0-8d01187efd126f0b",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.ascFactorial_eq_ascFactorialBinary",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.ascFactorial = Nat.ascFactorialBinary",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "fd183202d1f2e73c2b941aa17bbfb0d45454e9f644963031e1bac7e5b5e627cd",
+      "dependency_component_id": "mathlib-v4.30.0-2552fe053a3976ed",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.ascFactorial_zero",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.ascFactorial 0 = 1",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "696e51cc0291a01c72b9fcb01ade97301d116d251be1b21a5e6d4b7d2b204b95",
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "disposition": "excluded-internal-surface",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.bitwise_bit",
+      "reason": "implementation-internal helper or elaborator-specific surface, not a general nursery target",
+      "statement": "\u2200 {f : Bool \u2192 Bool \u2192 Bool},\n  autoParam (f false false = false) Nat.bitwise_bit._auto_1 \u2192\n    \u2200 (a : Bool) (m : \u2115) (b : Bool) (n : \u2115),\n      Nat.bitwise f (Nat.bit a m) (Nat.bit b n) = Nat.bit (f a b) (Nat.bitwise f m n)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "4c4b28a8a424f46d7b4538554e56e793cc70640fd3754826fc989967c3d3c594",
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.bitwise_bit'",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {f : Bool \u2192 Bool \u2192 Bool} (a : Bool) (m : \u2115) (b : Bool) (n : \u2115),\n  (m = 0 \u2192 a = true) \u2192\n    (n = 0 \u2192 b = true) \u2192 Nat.bitwise f (Nat.bit a m) (Nat.bit b n) = Nat.bit (f a b) (Nat.bitwise f m n)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "1a273baec70a651fff399923677f2950bc0013d86d778673792256cf4970adb3",
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.bitwise_comm",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {f : Bool \u2192 Bool \u2192 Bool}, (\u2200 (b b' : Bool), f b b' = f b' b) \u2192 \u2200 (n m : \u2115), Nat.bitwise f n m = Nat.bitwise f m n",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "7175e90ee55335b1598cf1f3386d0e191c47ca47e0b4a5a4cefbc5f153a1a2c2",
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.bitwise_swap",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {f : Bool \u2192 Bool \u2192 Bool}, Nat.bitwise (Function.swap f) = Function.swap (Nat.bitwise f)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "a1dba087370b3642d4f5b01ae7120b5a6e3c374085166c0acf46978c710801be",
+      "dependency_component_id": "mathlib-v4.30.0-d88af54e8f3084c6",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.bitwise_zero",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "\u2200 {f : Bool \u2192 Bool \u2192 Bool}, Nat.bitwise f 0 0 = 0",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "c0c6c9ad49b41ed35d78437499caafb3ff4b07c30dc5970d81ebff8da29228e9",
+      "dependency_component_id": "mathlib-v4.30.0-abcd38826ef974a2",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_eq_fast_choose",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.choose = Nat.fast_choose",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "92ebab29176a487ec2354ff9cdc8c07413772828500715521be92071da921eda",
+      "dependency_component_id": "mathlib-v4.30.0-21034a8981d599dd",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_eq_zero_of_lt",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n k : \u2115}, n < k \u2192 n.choose k = 0",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "9c463139d470b96cbdb89931d243316eaaa11dcc8238f3787e44583b56d4e5ae",
+      "dependency_component_id": "mathlib-v4.30.0-03318a97f5d9c067",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_le_add",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (a b c : \u2115), a.choose c \u2264 (a + b).choose c",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "907b5042ba8144b0577187dfd364fff852d356c472eae4be36e8af2f1080f19d",
+      "dependency_component_id": "mathlib-v4.30.0-03318a97f5d9c067",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_le_choose",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b : \u2115} (c : \u2115), a \u2264 b \u2192 a.choose c \u2264 b.choose c",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "62ae968bbd58d7cb2c33295dfc24eeda1d561b24812acac44a168e8f48f7c659",
+      "dependency_component_id": "mathlib-v4.30.0-03318a97f5d9c067",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_le_succ",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (a c : \u2115), a.choose c \u2264 a.succ.choose c",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "a1af9c18b5d3838c60223d7ad9095d6c25263bf4bddc21707e97c841c6c23e32",
+      "dependency_component_id": "mathlib-v4.30.0-03318a97f5d9c067",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_mono",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (b : \u2115), Monotone fun a => a.choose b",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "49c3d3cba0e0248d0225dda4b6ce26544151b83f6238ae6c616d50205ff306d9",
+      "dependency_component_id": "mathlib-v4.30.0-784b337733caaefb",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_ne_zero",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n k : \u2115}, k \u2264 n \u2192 n.choose k \u2260 0",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "7eda8e3925028dd3d1e8175a7a9d8f39d77bc4cd8f39558ad96cf586e53dc89f",
+      "dependency_component_id": "mathlib-v4.30.0-772791fcb89127a3",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_one_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.choose 1 = n",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "25bb9fb8deec28ac8bedc77b5c1d6728f98426efdb968d0585ae4aaf6a0387cd",
+      "dependency_component_id": "mathlib-v4.30.0-6f230047ce83981a",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_self",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.choose n = 1",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "e396f6c29e5b0ad50e25f2903013bf9c4305459ecd84a54a91fcc666c75b421d",
+      "dependency_component_id": "mathlib-v4.30.0-21034a8981d599dd",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_succ_self",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.choose n.succ = 0",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "671856b6da3f9540aedcc05356366b451593b80f771980c3766ef01dc8584ec0",
+      "dependency_component_id": "mathlib-v4.30.0-be1c3ada4fef6ea6",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_succ_succ",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n k : \u2115), n.succ.choose k.succ = n.choose k + n.choose k.succ",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "e4b68161fa92d11b5aa63902d4f4eabc5437254aaea2a94bea1cd096b16e9338",
+      "dependency_component_id": "mathlib-v4.30.0-52448fed5f91002d",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_symm_add",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b : \u2115}, (a + b).choose a = (a + b).choose b",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "9b5f9a204da0d4580398e2cc9dfcdc083a11d5a66fdca9c185513dcaeaafb826",
+      "dependency_component_id": "mathlib-v4.30.0-52448fed5f91002d",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_symm_of_eq_add",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n a b : \u2115}, n = a + b \u2192 n.choose a = n.choose b",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "1ed2802ae23837389c3c069622b2524455616ddd6ca680ede254e73019d17428",
+      "dependency_component_id": "mathlib-v4.30.0-772791fcb89127a3",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_zero_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.choose 0 = 1",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "62c6520b93397f0445c4be2c2780d27e621e418c10a8963e1b0a6c6426114b69",
+      "dependency_component_id": "mathlib-v4.30.0-9556aecf1bb98439",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_zero_succ",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (k : \u2115), Nat.choose 0 k.succ = 0",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "44a877711f61cc690f01daf1aebafe80a03133b6914ac9c52b6c2efbfc727090",
+      "dependency_component_id": "mathlib-v4.30.0-0e70ff905b4e67d7",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_antitone_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, AntitoneOn (fun b => Nat.clog b n) (Set.Ioi 1)",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "8d87a410f1642465fdc3b640fab6b5880ca31c24b845c8920fdb7b5cc549d96f",
+      "dependency_component_id": "mathlib-v4.30.0-67733b1101973f6f",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_mono_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (b : \u2115) {n m : \u2115}, n \u2264 m \u2192 Nat.clog b n \u2264 Nat.clog b m",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "48fe50c6cf120c8ba529d5280631e031d68f4b5cf636b9c23b552603d8d0d3f8",
+      "dependency_component_id": "mathlib-v4.30.0-67733b1101973f6f",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_monotone",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (b : \u2115), Monotone (Nat.clog b)",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "b496af12585d6cf0fbc9944a39bba60e148804cf33a03f3b1cd0aa2817f7e9c6",
+      "dependency_component_id": "mathlib-v4.30.0-1f0eac984fc2e8b7",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_one_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), Nat.clog 1 n = 0",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "1ce3d52fc3968b3efaefe8ab12b2c5964affb6eae900753ff655f1b07b85bf45",
+      "dependency_component_id": "mathlib-v4.30.0-c851a7fdd6dacbde",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_one_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (b : \u2115), Nat.clog b 1 = 0",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "00852cb879b1a68d4fe508636ff271d02fd794ea3ec418df1e3ef44fcc5d9369",
+      "dependency_component_id": "mathlib-v4.30.0-7a0f0e674194da44",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_pos",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {b n : \u2115}, 1 < b \u2192 1 < n \u2192 0 < Nat.clog b n",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "1c61a5bffbea7779c7de5701277680a2490685e1ad5ab0e0df06e687750fb2a6",
+      "dependency_component_id": "mathlib-v4.30.0-32d9b36c9de57a64",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_zero_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), Nat.clog 0 n = 0",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "d42d47b166056985990b441fd6f05876a1b116ccde91b0f1733b2af74560811f",
+      "dependency_component_id": "mathlib-v4.30.0-04b5992203855fc2",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_zero_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (b : \u2115), Nat.clog b 0 = 0",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "5e93448cb7efe3271a259cd7b9a7eec5bb5fed5716284328ca07d9bd742c68d4",
+      "dependency_component_id": "mathlib-v4.30.0-dad675b054e7a82a",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_add_self_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, (m + n).Coprime n \u2194 m.Coprime n",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "c3ed0f45fae21146ff20710f0c9e04409f72447ebecabbecb6bf424f9b4d0cc8",
+      "dependency_component_id": "mathlib-v4.30.0-0948bc81df7acdcc",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_add_self_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, m.Coprime (n + m) \u2194 m.Coprime n",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "0c08eb2599c2d4dbb38da5ca80678233be477d26a52b9066f8a545a0214873eb",
+      "dependency_component_id": "mathlib-v4.30.0-c4d6980fa7b38432",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_iff_isRelPrime",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, m.Coprime n \u2194 IsRelPrime m n",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "6f65267337688ae678875e9ded4fbbf520f77b1764da141c2cfa8b3165fa66fa",
+      "dependency_component_id": "mathlib-v4.30.0-eb36cbc0baee7f2c",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_of_dvd'",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, (\u2200 (k : \u2115), Nat.Prime k \u2192 k \u2223 m \u2192 k \u2223 n \u2192 k \u2223 1) \u2192 m.Coprime n",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "0f79bdbaaf06310fb0493bc42f5fefb9a8c7f7a3780c6c2ee2d80c6012509632",
+      "dependency_component_id": "mathlib-v4.30.0-14fb60aba4988f41",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_of_lt_minFac",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n m : \u2115}, m \u2260 0 \u2192 m < n.minFac \u2192 n.Coprime m",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "1978a91904145501909899abe0e3b993a86dedd7f9958f0a948292f108f56494",
+      "dependency_component_id": "mathlib-v4.30.0-7c36b21bbb3a5dae",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_of_lt_prime",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n p : \u2115}, n \u2260 0 \u2192 n < p \u2192 Nat.Prime p \u2192 p.Coprime n",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "45945e80046c24a97c910cc10b6d046edb3796c75d11affb1ac663fdd93d7243",
+      "dependency_component_id": "mathlib-v4.30.0-c42a5cca06e73e07",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_one_left_iff",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), Nat.Coprime 1 n \u2194 True",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "42fed4ceef6a5c3510b0b2a9521e00e1949dfe120bfeb6773afcbe903f4c5a46",
+      "dependency_component_id": "mathlib-v4.30.0-0f5b970407bcc279",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_one_right_iff",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.Coprime 1 \u2194 True",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "65f47114f39f7f41ff762df3d8b6a89c99798c921789499cd14493180a2d8f81",
+      "dependency_component_id": "mathlib-v4.30.0-7c36b21bbb3a5dae",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_or_dvd_of_prime",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {p : \u2115}, Nat.Prime p \u2192 \u2200 (i : \u2115), p.Coprime i \u2228 p \u2223 i",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "5769049f396ea56000ae983729e30fd83682d007541087ea32eaa48ffd055b26",
+      "dependency_component_id": "mathlib-v4.30.0-3e9e176afeb222f8",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_primes",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {p q : \u2115}, Nat.Prime p \u2192 Nat.Prime q \u2192 (p.Coprime q \u2194 p \u2260 q)",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "51351fa1d8fe3b4bfd460ca35ef5dc061ad62a915de04bdcd510bf98effb9966",
+      "dependency_component_id": "mathlib-v4.30.0-a5e2f0f0fb66e795",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_self_add_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, (m + n).Coprime m \u2194 n.Coprime m",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "966e5434f9d2a9262c18538e93bbfedb842912a961ef4104f8db369e90037f84",
+      "dependency_component_id": "mathlib-v4.30.0-0948bc81df7acdcc",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_self_add_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, m.Coprime (m + n) \u2194 m.Coprime n",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "1b47e7c4fd27bc3faf442a89853227af1176f8314587022bd83fe310474ee71e",
+      "dependency_component_id": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_two_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, Nat.Coprime 2 n \u2194 Odd n",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "7c5a185087d336ec6c8a4080c6bba0986e046bc60f1e380864968f155b2b9145",
+      "dependency_component_id": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_two_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, n.Coprime 2 \u2194 Odd n",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "055f766354a4257763ef69ab7903f551a3ed0336669c83e10ee1b6f301b9933f",
+      "dependency_component_id": "mathlib-v4.30.0-8d01187efd126f0b",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_eq_descFactorialBinary",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.descFactorial = Nat.descFactorialBinary",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "2b8cc09ada1346c233d60a5d1707f0042b7c5022fd8aa557653f4a618147f2d6",
+      "dependency_component_id": "mathlib-v4.30.0-f752f40b1b7067eb",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_le",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115) {k m : \u2115}, k \u2264 m \u2192 k.descFactorial n \u2264 m.descFactorial n",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "fbcf5d260f4402509e6b9ea03dfa20ceb7c8a1a4e7fe470bff71d94bdf257684",
+      "dependency_component_id": "mathlib-v4.30.0-8d01187efd126f0b",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_of_lt",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n k : \u2115}, n < k \u2192 n.descFactorial k = 0",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "d4856d4a7bed7e0d06c10d21ac5fd101c6d35ec9b7962c00aba90ed9d7d9d508",
+      "dependency_component_id": "mathlib-v4.30.0-f495858cd421b817",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_one",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.descFactorial 1 = n",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "899fc0e0036a387ca7255c1ee78f579acdd02f90219a8100fd1d4f4296e81989",
+      "dependency_component_id": "mathlib-v4.30.0-6d39b59d22fd3649",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_self",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.descFactorial n = n.factorial",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "966b01df3047db2bf2d2cd2324c5ebdf857b932a6217a25173bb037af3624a5d",
+      "dependency_component_id": "mathlib-v4.30.0-96996505b088b81a",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_zero",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.descFactorial 0 = 1",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "b56f6f7c628422a9652d0fed77f43a77f4733f4430df7a2440670d5a3ee9c61e",
+      "dependency_component_id": "mathlib-v4.30.0-36db9e2cb36c31b5",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.div_dvd_div_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n m k : \u2115}, m \u2223 k \u2192 n \u2223 m \u2192 k / m \u2223 k / n",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "141a64bb16ac27edee0324076d95632bea908c1dc16f03b68370d82a874201c5",
+      "dependency_component_id": "mathlib-v4.30.0-3c41a84178f748e7",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.dvd_lcm_of_dvd_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b : \u2115}, a \u2223 b \u2192 \u2200 (c : \u2115), a \u2223 b.lcm c",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "61a50fc330bdecd49fee7fa92c427be77bd90ed9bede4a2394f571d69550e465",
+      "dependency_component_id": "mathlib-v4.30.0-3b9de7b385a5a0cb",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.dvd_lcm_of_dvd_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b : \u2115}, a \u2223 b \u2192 \u2200 (c : \u2115), a \u2223 c.lcm b",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "5898723bd9ee8d316376089469554f7b8b71b9f841533183c498fa15258ba089",
+      "dependency_component_id": "mathlib-v4.30.0-85cf153fd2a3d00a",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.dvd_of_forall_prime_mul_dvd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b : \u2115}, (\u2200 (p : \u2115), Nat.Prime p \u2192 p \u2223 a \u2192 p * a \u2223 b) \u2192 a \u2223 b",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "d6b2407c34a5776fbc04aa6e736b2ede2f8f686c5ed16650be76f2a4663faa56",
+      "dependency_component_id": "mathlib-v4.30.0-0f4a2909bae26f91",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.dvd_of_lcm_left_dvd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b c : \u2115}, a.lcm b \u2223 c \u2192 b \u2223 c",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "61bd1a60e1fddb3ef054b667a755660e25b4ccf554e7d9b0e66f37008f75513a",
+      "dependency_component_id": "mathlib-v4.30.0-22ed23121a880dda",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.dvd_of_lcm_right_dvd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b c : \u2115}, a.lcm b \u2223 c \u2192 a \u2223 c",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "78a3943287674c96eb0655f361aef7e99fbce3ec6bf30830ba1b1b8d3eb3d3a5",
+      "dependency_component_id": "mathlib-v4.30.0-b413bfcde9767d29",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.even_xor",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, Even (m ^^^ n) \u2194 (Even m \u2194 Even n)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "8bf9ec7ea929b5a79eb9abbf3efa9d36341c7b2cd2b023e6e88146a0acfd182c",
+      "dependency_component_id": "mathlib-v4.30.0-bfc4303ba1ab035e",
+      "disposition": "evaluation-eligible",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.exists_mul_mod_eq_gcd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {k n : \u2115}, n.gcd k < k \u2192 \u2203 m < k, n * m % k = n.gcd k",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "e73ca9fa6f1c175ae389ce46cddbc12cadee177fc6652c4fad3143982c3aa54c",
+      "dependency_component_id": "mathlib-v4.30.0-a39a4e278c870ecd",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.exists_mul_self",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (x : \u2115), (\u2203 n, n * n = x) \u2194 x.sqrt * x.sqrt = x",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "44a4e6413e9d1fe72ba708b73d6c09b96f4dec3e33dd5ff3bc0a4138fa502c01",
+      "dependency_component_id": "mathlib-v4.30.0-b92098ec339263f0",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.factorial_dvd_ascFactorial",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n k : \u2115), k.factorial \u2223 n.ascFactorial k",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "bbf6124feec49e894832be36a58ccd518b88f7feb6865b54af8644ab287a9f7f",
+      "dependency_component_id": "mathlib-v4.30.0-841c7d52cf03e6e4",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.factorial_dvd_descFactorial",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n k : \u2115), k.factorial \u2223 n.descFactorial k",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "e9d148457e2b47199916e6643ee479e69716b546c8d11855374337362653bdf5",
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_dvd_factorial",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, m \u2264 n \u2192 m.factorial \u2223 n.factorial",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "587d3fd15273f9d46b321e48a556c152cee3b0f6c84ca42d0ffc5bd616d81b75",
+      "dependency_component_id": "mathlib-v4.30.0-4f7f93a429b7752d",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_eq_factorialBinarySplitting",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.factorial = Nat.factorialBinarySplitting",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "d0f4a9124cb1d5bbf5f3a04ce495cd21daec3c3572a38fed4326dd6b75274de1",
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_le",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, m \u2264 n \u2192 m.factorial \u2264 n.factorial",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "d6c2125dd9291fcd4cd02c213da24c16b50bcbae72a9972f08a8079f35788028",
+      "dependency_component_id": "mathlib-v4.30.0-2f841ec7bfb62e80",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_lt_of_lt",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, 0 < n \u2192 n < m \u2192 n.factorial < m.factorial",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "5fc0b0a1c0b5d98d8f9749f50bcde36729eedb836bb759b870250cd8da7deda0",
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_ne_zero",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.factorial \u2260 0",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "92e2a95a5c589b9d185f4f4c7657f54e0a18d74e5144275c9ac932e27a7eeee8",
+      "dependency_component_id": "mathlib-v4.30.0-9cf64f2611469e4e",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_one",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.factorial 1 = 1",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "f1dd24056996ebd5bb5afc6dd05787d45a5f5b8e741d8439641efe5e2741477d",
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_pos",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), 0 < n.factorial",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "b292bf82004cf05b16ac78f08351a7c045fe069f2a88a90ebc691fc6b8e74f98",
+      "dependency_component_id": "mathlib-v4.30.0-e12a86f60a56889a",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_two",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.factorial 2 = 2",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "193c5e67d7056d5591728c17c77e53c747a6f590c4934195a4ff70f244e94c8f",
+      "dependency_component_id": "mathlib-v4.30.0-aef7730a9d5356bf",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_zero",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.factorial 0 = 1",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "cde11774d34ae861fa354cadc429a3d6a73a39ac4664e4de6dfee840be6bcd78",
+      "dependency_component_id": "mathlib-v4.30.0-61d815b2edf793ed",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fastFib_eq",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.fastFib = Nat.fib n",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "0bd4469f3ef48a5afe8711de4a03000d11790eae20bddf65ed7d744986e16a47",
+      "dependency_component_id": "mathlib-v4.30.0-61d815b2edf793ed",
+      "disposition": "excluded-alias",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fast_fib_eq",
+      "reason": "duplicate or binder-presentation alias of another selected statement",
+      "statement": "\u2200 (n : \u2115), n.fastFib = Nat.fib n",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "b86e0c82f43166a7fdd18a5af326103067c99ac89bb3fe0f989c9d4786460d1c",
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_add_two",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, Nat.fib (n + 2) = Nat.fib n + Nat.fib (n + 1)",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "c1e86d4dcbefc7046d1b38928034359aedd358a61bbbda01354918943cef603e",
+      "dependency_component_id": "mathlib-v4.30.0-e7e80bd79f8762e6",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_add_two_strictMono",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "StrictMono fun n => Nat.fib (n + 2)",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "162fc738bc7bd5f230d26b637e7217a03b67d96663493c6dc75bbc5d5d876933",
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_coprime_fib_succ",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), (Nat.fib n).Coprime (Nat.fib (n + 1))",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "f80f3de1a7a32485f14b13ff9a1f3b70bcffecc54088063ec44be4479d386582",
+      "dependency_component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_dvd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (m n : \u2115), m \u2223 n \u2192 Nat.fib m \u2223 Nat.fib n",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "a6283a5fb2bfe700ade91444f33805abf64e63a283e65c5371c7de8fa311fdc2",
+      "dependency_component_id": "mathlib-v4.30.0-61d815b2edf793ed",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_eq_fastFib",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.fib = Nat.fastFib",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "61879073cf08ae48481990cf5b91c10e59efc064c4672b116149df5ccc2bb4c1",
+      "dependency_component_id": "mathlib-v4.30.0-4ae13ae945c61591",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_eq_zero",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, Nat.fib n = 0 \u2194 n = 0",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "d1d984076d06443ae897f4a52fb500281df328db088206ce7d99cc17b4234e99",
+      "dependency_component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_gcd",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (m n : \u2115), Nat.fib (m.gcd n) = (Nat.fib m).gcd (Nat.fib n)",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "d1ef4a3d10c2a485bc6b694b32774153785fe50dd3be7172d531f0672cee283a",
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_le_fib_succ",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, Nat.fib n \u2264 Nat.fib (n + 1)",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "3582b881abd3a04dcb9d132d9e7af82c8adf080e90c6d0872bbceb84917b26fe",
+      "dependency_component_id": "mathlib-v4.30.0-e7e80bd79f8762e6",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_lt_fib",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m : \u2115}, 2 \u2264 m \u2192 \u2200 {n : \u2115}, Nat.fib m < Nat.fib n \u2194 m < n",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "cc6afe0955d34c964ffabbd0601a085b4f891570ac9847182806875d00869457",
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_mono",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "Monotone Nat.fib",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "fd5c5318289cb4681c8249ded2f84eebd9644de0482fa7de34d26dc4097ca56e",
+      "dependency_component_id": "mathlib-v4.30.0-0d4cc5a4856d45d5",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_one",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.fib 1 = 1",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "9e67bd8eb2cb8320d0c52b722551b32cab32271fb53daef1443fbe0d9b1c3917",
+      "dependency_component_id": "mathlib-v4.30.0-d22c0fd2eb74e7fd",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_pos",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, 0 < Nat.fib n \u2194 0 < n",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "905810a915423881a4111e7bc9fa87e94cd9b4d06e4eb6daacb7df051ccbb85c",
+      "dependency_component_id": "mathlib-v4.30.0-e7e80bd79f8762e6",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_strictMonoOn",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "StrictMonoOn Nat.fib (Set.Ici 2)",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "f28e2801365d319a2d281f4e111d02f59d22f35347249c59c770f754f692b8fa",
+      "dependency_component_id": "mathlib-v4.30.0-d633538b9f565fee",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_two",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.fib 2 = 1",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "8f67070f35fb7c482bfd7a2bc0540d5e8c99aa4c112d38757028a1c4dcd56f31",
+      "dependency_component_id": "mathlib-v4.30.0-45a43e8c324537a3",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_zero",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.fib 0 = 0",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "5003b05116ab649c6cc5841d1c78f60f0d122b930c95e74fc66832ade7f582cc",
+      "dependency_component_id": "mathlib-v4.30.0-bdd949b7af2ea68c",
+      "disposition": "excluded-internal-surface",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.gcdA_zero_left",
+      "reason": "implementation-internal helper or elaborator-specific surface, not a general nursery target",
+      "statement": "\u2200 {s : \u2115}, Nat.gcdA 0 s = 0",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "88cc46fbd70b1d702528142195506d7ece031d2fbe91cccda071bde7699c8de4",
+      "dependency_component_id": "mathlib-v4.30.0-7d1474d30dc3b4ac",
+      "disposition": "excluded-internal-surface",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.gcdA_zero_right",
+      "reason": "implementation-internal helper or elaborator-specific surface, not a general nursery target",
+      "statement": "\u2200 {s : \u2115}, s \u2260 0 \u2192 s.gcdA 0 = 1",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "123278abee1f9eab049d48427fd001ab230b2fba126febb5fa8d6f60bfd15070",
+      "dependency_component_id": "mathlib-v4.30.0-3839f014e21c0695",
+      "disposition": "excluded-internal-surface",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.gcdB_zero_left",
+      "reason": "implementation-internal helper or elaborator-specific surface, not a general nursery target",
+      "statement": "\u2200 {s : \u2115}, Nat.gcdB 0 s = 1",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "798d200fcb5ccf492493ef1c2fa6b1abe3992ef1f1b77d6450e42d5ad76a4239",
+      "dependency_component_id": "mathlib-v4.30.0-132a7a4ef7338bfc",
+      "disposition": "excluded-internal-surface",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.gcdB_zero_right",
+      "reason": "implementation-internal helper or elaborator-specific surface, not a general nursery target",
+      "statement": "\u2200 {s : \u2115}, s \u2260 0 \u2192 s.gcdB 0 = 0",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "5a92d5e3a2e1adbd9f94ff325825fa9c3dee0ae5ad082f98754e40f9fc761c70",
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.gcd_fib_add_self",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (m n : \u2115), (Nat.fib m).gcd (Nat.fib (n + m)) = (Nat.fib m).gcd (Nat.fib n)",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "0a04214a6f71adea8f9ac7bc8b702e7fd69a136d4776ad60cb7fd3b196be515c",
+      "dependency_component_id": "mathlib-v4.30.0-77912b67b18f2e18",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.gcd_greatest",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b d : \u2115}, d \u2223 a \u2192 d \u2223 b \u2192 (\u2200 (e : \u2115), e \u2223 a \u2192 e \u2223 b \u2192 e \u2223 d) \u2192 d = a.gcd b",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "ad4775b85d11a0201c73fa163b65f2646604b968e1c5cab65dcc25e01811d18a",
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.land_assoc",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n m k : \u2115), n &&& m &&& k = n &&& (m &&& k)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "b9ab74753cfeef315fb5f80ca218d562bc40ff4b44c17541dc7708d6ef9b9652",
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.land_bit",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (a : Bool) (m : \u2115) (b : Bool) (n : \u2115), Nat.bit a m &&& Nat.bit b n = Nat.bit (a && b) (m &&& n)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "7e6ad72e56603f327dfc6f07b994a6013f6963b140a813f58a2e701a7ae125db",
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.land_comm",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n m : \u2115), n &&& m = m &&& n",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "6be49bb8659e3582a60200171a15756cca5daee2407ac421e2ad9d3e92f1636f",
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.ldiff_bit",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (a : Bool) (m : \u2115) (b : Bool) (n : \u2115), (Nat.bit a m).ldiff (Nat.bit b n) = Nat.bit (a && !b) (m.ldiff n)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "5284f0bf7e9f1669ee58f888e197f6061e752c7ec83132b106b456d05e09a51e",
+      "dependency_component_id": "mathlib-v4.30.0-14a4bdea3716db7b",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.le_fib_add_one",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n \u2264 Nat.fib n + 1",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "0cbccb4d6afcca7bc7652c3cdd92524462319b4915cfb20f01029d815e2b6960",
+      "dependency_component_id": "mathlib-v4.30.0-14a4bdea3716db7b",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.le_fib_self",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, 5 \u2264 n \u2192 n \u2264 Nat.fib n",
+      "theme": "natural-fibonacci"
+    },
+    {
+      "candidate_id": "e6996680e4257ef612d92e577fdb8fb137db1f8e0f98460a408cea756288cf9b",
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.le_sqrt",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, m \u2264 n.sqrt \u2194 m * m \u2264 n",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "503c5afe5afb7b42a1f9277db9f54fdf8769f1825dea5cb054b65146c7d093e2",
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.le_sqrt_of_eq_mul",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b c : \u2115}, a = b * c \u2192 b \u2264 a.sqrt \u2228 c \u2264 a.sqrt",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "0c48a8688c73c0ccc548fe0a20dbe6b8626b5ddac21ceba363195ddd3872b61b",
+      "dependency_component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.le_three_of_sqrt_eq_one",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, n.sqrt = 1 \u2192 n \u2264 3",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "28085932cb516a29b52017b38ac8c17d6407c10e9af73e2b4ac222fb150b20d7",
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log2_eq_log_two",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, n.log2 = Nat.log 2 n",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "28edb6fccb38160c1cbe626e22e91cc5ad123951daec8e92005fddd6f2bec423",
+      "dependency_component_id": "mathlib-v4.30.0-2a0d26edbcf44a53",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.log2_two",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.log2 2 = 1",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "20d1326c4ea1e1db1795c76ba60b4f49ea7d913e9dc20a1532d6159f001be89f",
+      "dependency_component_id": "mathlib-v4.30.0-9da63bd4e59d00f6",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_antitone_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, AntitoneOn (fun b => Nat.log b n) (Set.Ioi 1)",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "ac8ab2d4cdaa3c594beb63f9fa47338a93e62ab695e5aad04d819ac0453955c3",
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_le_clog",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (b n : \u2115), Nat.log b n \u2264 Nat.clog b n",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "da3871722c5cf4e39dca1c65bef8fdda4b35e2942dc02850300642e57907009d",
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_le_self",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (b x : \u2115), Nat.log b x \u2264 x",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "529f89fa444b3e0ad9ca4f2d6e4e9e51dafbcea95543a5f1246777ebd45aca6c",
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_lt_self",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (b : \u2115) {x : \u2115}, x \u2260 0 \u2192 Nat.log b x < x",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "b8939fee1a8fee139dd44bbed713b1321a43d631a79d67e643c57e2a4cfe081f",
+      "dependency_component_id": "mathlib-v4.30.0-7d1d4a6a6f597955",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_mono_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {b n m : \u2115}, n \u2264 m \u2192 Nat.log b n \u2264 Nat.log b m",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "52fad774e583689a2fcda29294b7f9df32bb2c56e22f741c5f3573488ce09821",
+      "dependency_component_id": "mathlib-v4.30.0-7d1d4a6a6f597955",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_monotone",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {b : \u2115}, Monotone (Nat.log b)",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "89eaf42e746bbdc300f01c878838bf9222288d46e1c3767149b172d6a4c6d348",
+      "dependency_component_id": "mathlib-v4.30.0-d48a520ede3cd1e8",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_of_lt",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {b n : \u2115}, n < b \u2192 Nat.log b n = 0",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "73efc1193c01022ba05281ca71382aa07b926dc94b7662963dcfe6a2c53a0963",
+      "dependency_component_id": "mathlib-v4.30.0-f9d5f5029ac8431f",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_one_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), Nat.log 1 n = 0",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "282332ef1b6fcaefabcf6b031f7af2c064daf3160df3e055b3c065537c486e97",
+      "dependency_component_id": "mathlib-v4.30.0-fc2d188b8c710774",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_one_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (b : \u2115), Nat.log b 1 = 0",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "9ec8541e633661c04d551fbfc1e6e4c5d7b00209961f21f48cc40cecfb4b2c35",
+      "dependency_component_id": "mathlib-v4.30.0-754b540be332facb",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_zero_left",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), Nat.log 0 n = 0",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "8ea186db3196eeb36b2eda00477afcd3b468e399a2720f797c7ea50d05315b74",
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_zero_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (b : \u2115), Nat.log b 0 = 0",
+      "theme": "natural-logarithm"
+    },
+    {
+      "candidate_id": "82c4d0fdb0c05055b66dc5684631c43b2c28a67d89ed48cf31fbb80ee8cf2514",
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.lor_assoc",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n m k : \u2115), n ||| m ||| k = n ||| (m ||| k)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "a2f98c7ce4f1e5611fe1732e45a0b8a9a51d8d3a840eff68b9cd03440114557b",
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.lor_bit",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (a : Bool) (m : \u2115) (b : Bool) (n : \u2115), Nat.bit a m ||| Nat.bit b n = Nat.bit (a || b) (m ||| n)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "2666d7ef4b460ad10de1dd3972c668e8e03215cc86d5f80641e337fff67f082a",
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.lor_comm",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n m : \u2115), n ||| m = m ||| n",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "72f64ab8ced9f2980d6fa9c6a4883d756e92e4ab2ec9d7cd21457b76aafc843d",
+      "dependency_component_id": "mathlib-v4.30.0-28d465b4d0fa4c90",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.lt_of_testBit",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n m : \u2115} (i : \u2115), n.testBit i = false \u2192 m.testBit i = true \u2192 (\u2200 (j : \u2115), i < j \u2192 n.testBit j = m.testBit j) \u2192 n < m",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "39389df2c9454c260a2cc0fb23a201a815899b3e4610c1ded5281baa50241604",
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.lt_succ_sqrt",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n < n.sqrt.succ * n.sqrt.succ",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "c43a1e8576d81050cb97c3a46ebd6873d4ad6efb9cdfe21d86938902e88b20f7",
+      "dependency_component_id": "mathlib-v4.30.0-50d3735f1a086e77",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.lt_xor_cases",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b c : \u2115}, a < b ^^^ c \u2192 a ^^^ c < b \u2228 a ^^^ b < c",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "516d46e813338e693c7df06e95f462751b0776b883eca197c47e01cebda3bd0c",
+      "dependency_component_id": "mathlib-v4.30.0-08ee032d9058b06c",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.modEq_one",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {a b : \u2115}, a \u2261 b [MOD 1]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "ee6bdd417900d6aeafa06c864d6661285e6d088f4fe837d84ac7b7a093b34d1f",
+      "dependency_component_id": "mathlib-v4.30.0-c0029d24c3bb7a7f",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.mod_lcm",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n a b : \u2115}, a \u2261 b [MOD n] \u2192 a \u2261 b [MOD m] \u2192 a \u2261 b [MOD n.lcm m]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "436e4c108acfe57f642816e8ef0210c8cac16f8c5a09352fa7ade4a0f38bf08f",
+      "dependency_component_id": "mathlib-v4.30.0-ce4e3e890bcf8f1c",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.mod_modEq",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (a n : \u2115), a % n \u2261 a [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "fd9af096e593f53c7611e80cbcc66f917f9bf371c1b1b625663eb0805fb832e9",
+      "dependency_component_id": "mathlib-v4.30.0-2bd246da70511653",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.modulus_modEq_zero",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, n \u2261 0 [MOD n]",
+      "theme": "natural-modular-equivalence"
+    },
+    {
+      "candidate_id": "b210386adc615c2419ee1483634d38daec5d44a5200d175be356e34800d30b36",
+      "dependency_component_id": "mathlib-v4.30.0-3149d7f9cd050cac",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.multichoose_one",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (k : \u2115), Nat.multichoose 1 k = 1",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "7755072d622a8a122d427cc3dc3b8efc2ef70bcf7ea00a1c3f14fddb2b90039e",
+      "dependency_component_id": "mathlib-v4.30.0-3149d7f9cd050cac",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.multichoose_one_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.multichoose 1 = n",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "6ef827c819dea62366707e76432ef4f2b1c3c51e74bc3935c8b0ace8fb1ac72c",
+      "dependency_component_id": "mathlib-v4.30.0-3149d7f9cd050cac",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.multichoose_zero_right",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.multichoose 0 = 1",
+      "theme": "natural-binomial"
+    },
+    {
+      "candidate_id": "6c4e8dd8ac6ec23fed0818ef4603f5d57d730d318b2d67453ee37c0fe7493979",
+      "dependency_component_id": "mathlib-v4.30.0-429ffadfbb38d5ea",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.not_coprime_zero_zero",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u00acNat.Coprime 0 0",
+      "theme": "natural-gcd"
+    },
+    {
+      "candidate_id": "4ff592c092c654fe2f21296a5dd75e0fe9dff85ee835c9af90083067a2ce7711",
+      "dependency_component_id": "mathlib-v4.30.0-ec11d4735cad89fd",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.not_prime_of_dvd_of_ne",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, m \u2223 n \u2192 m \u2260 1 \u2192 m \u2260 n \u2192 \u00acNat.Prime n",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "8bacb017969f5ab8322dac6470ed9255a35593056452220cff0bfc7fa7c73c77",
+      "dependency_component_id": "mathlib-v4.30.0-4f7f93a429b7752d",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.one_ascFactorial",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (k : \u2115), Nat.ascFactorial 1 k = k.factorial",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "cfdffc69a3470b40dec543e5031dcc0555c6997ef76bcaa2d41da99a6c29a980",
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.self_le_factorial",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n \u2264 n.factorial",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "13393d616366248bbfcf95ea97df2cd709f3550ed3a519fe7ffc909109fbf7b4",
+      "dependency_component_id": "mathlib-v4.30.0-223932c3fc921072",
+      "disposition": "excluded-internal-surface",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt.iter_sq_le",
+      "reason": "implementation-internal helper or elaborator-specific surface, not a general nursery target",
+      "statement": "\u2200 (n guess : \u2115), Nat.sqrt.iter n guess * Nat.sqrt.iter n guess \u2264 n",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "79ae8eaea0b633bc93bed92a04b8beb47426dfeeaac1f898c06eabeb3840feeb",
+      "dependency_component_id": "mathlib-v4.30.0-a39a4e278c870ecd",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_eq",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), (n * n).sqrt = n",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "c036815bf26647445e2a40c4ef070feec6b742e39e53f12affae970e0a3b1d9f",
+      "dependency_component_id": "mathlib-v4.30.0-3625c080cb3916be",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_eq'",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), (n ^ 2).sqrt = n",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "53666a3bcc7293f79d85ed9e6604631b95b2098d40cde8d4476043ab0f01b14c",
+      "dependency_component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_eq_zero",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, n.sqrt = 0 \u2194 n = 0",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "7918582bd530b37197b44665eb7aeba473bdac414707320730331ed16274da52",
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_le",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.sqrt * n.sqrt \u2264 n",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "1ed5eb85a339c6b344521b4379eeaf8f1e55bf17f858457e851c37ec2f0928bd",
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_le_self",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.sqrt \u2264 n",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "6e2bfc47e0d07907202c12fdf1f6cbb5e4dfa6a8713270ab7af2c2bf158ac675",
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_le_sqrt",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, m \u2264 n \u2192 m.sqrt \u2264 n.sqrt",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "4909537fde919f3984f4d107fa32d2bd6a57a75321cc183ca2cefc671cfb651d",
+      "dependency_component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_lt",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {m n : \u2115}, m.sqrt < n \u2194 m < n * n",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "ff7a155a2dead2b3adea6b1a989d48528ee514379b4e32e181f8f49d4ecbddc3",
+      "dependency_component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_lt_self",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, 1 < n \u2192 n.sqrt < n",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "689a74bbe3c42a110100542e6f59eb78cb5d7a2e5e433f3bcd067216b0b3cfca",
+      "dependency_component_id": "mathlib-v4.30.0-33a77d5f86129f5f",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_one",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.sqrt 1 = 1",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "f75e5114b17c377f335a0e37329e6ec24b52af0d168b52d8efbc67d8b933c3b0",
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_pos",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, 0 < n.sqrt \u2194 0 < n",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "6b041183d1f0e04073db03703e39b3b40c3c37e10c1e5b94e539bb54d6cac097",
+      "dependency_component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_succ_le_succ_sqrt",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n : \u2115), n.succ.sqrt \u2264 n.sqrt.succ",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "1649750411303ab7904c9c815fa30b53c22a688786fc8b2481c14fdd3421db32",
+      "dependency_component_id": "mathlib-v4.30.0-2a0d26edbcf44a53",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_two",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.sqrt 2 = 1",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "4e82ae912a206dd301f13dba80d46727e41d50150b9a7009182b8952510430fb",
+      "dependency_component_id": "mathlib-v4.30.0-4a570e16b8fd238e",
+      "disposition": "calibration-only",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_zero",
+      "reason": "closed base case or implementation-equivalence calibration; withheld from evaluation yield",
+      "statement": "Nat.sqrt 0 = 0",
+      "theme": "natural-square-root"
+    },
+    {
+      "candidate_id": "4feb123fa2b8eac63b17159a0ea8b9b07ae2de176781fa489f6f62cbff2d973e",
+      "dependency_component_id": "mathlib-v4.30.0-5d1003a0d2494aec",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.succ_pred_prime",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {p : \u2115}, Nat.Prime p \u2192 p.pred.succ = p",
+      "theme": "natural-primes"
+    },
+    {
+      "candidate_id": "ffa0739247e90fc8c54b534b8ae553118d743abbd45dfa4c5dcd87d21420ffe8",
+      "dependency_component_id": "mathlib-v4.30.0-68252a7d4d8c1329",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.testBit_eq_inth",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (n i : \u2115), n.testBit i = n.bits.getI i",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "dfef7ca4455f9c12046d19d789b791c06eee60ed5e788d9d1e8b5ce2c0ed88f3",
+      "dependency_component_id": "mathlib-v4.30.0-a88e55a985ea72d4",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.testBit_land",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (m n k : \u2115), (m &&& n).testBit k = (m.testBit k && n.testBit k)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "16f94162b3b2e04d79ed77848c1474408c53a111211eb1e7f22b6506a92bca22",
+      "dependency_component_id": "mathlib-v4.30.0-06206e0a59d7c3da",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.testBit_ldiff",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (m n k : \u2115), (m.ldiff n).testBit k = (m.testBit k && !n.testBit k)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "7644e067bf3f50a6dfa794a875f3a0e3829981117e592cea99f87bcf3e339f0e",
+      "dependency_component_id": "mathlib-v4.30.0-11da32849191a5ae",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.testBit_lor",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (m n k : \u2115), (m ||| n).testBit k = (m.testBit k || n.testBit k)",
+      "theme": "natural-bitwise"
+    },
+    {
+      "candidate_id": "276e8c3b5c505c945a01a09b73a479980269fd46c97f57a15246d7f8254131b2",
+      "dependency_component_id": "mathlib-v4.30.0-ebe2daeab5608147",
+      "disposition": "excluded-internal-surface",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.xgcdAux_fst",
+      "reason": "implementation-internal helper or elaborator-specific surface, not a general nursery target",
+      "statement": "\u2200 (x y : \u2115) (s t s' t' : \u2124), (x.xgcdAux s t y s' t').1 = x.gcd y",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "4910b90c323ab459ef5b8463cd5559a4e4a883116712d83ab403e5aa120383f2",
+      "dependency_component_id": "mathlib-v4.30.0-ebe2daeab5608147",
+      "disposition": "excluded-internal-surface",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.xgcdAux_val",
+      "reason": "implementation-internal helper or elaborator-specific surface, not a general nursery target",
+      "statement": "\u2200 (x y : \u2115), x.xgcdAux 1 0 y 0 1 = (x.gcd y, x.xgcd y)",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "c1d708954c8fef8ec7605664f421a44c275fd6966787552636d27b931e2c14be",
+      "dependency_component_id": "mathlib-v4.30.0-125d95291d60c67f",
+      "disposition": "excluded-internal-surface",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.xgcd_val",
+      "reason": "implementation-internal helper or elaborator-specific surface, not a general nursery target",
+      "statement": "\u2200 (x y : \u2115), x.xgcd y = (x.gcdA y, x.gcdB y)",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "6caf85d087ebb23d61ef38df7ce0cd3115422b972166dbbcf156d6ab46ffbc98",
+      "dependency_component_id": "mathlib-v4.30.0-01799845fe88d7b8",
+      "disposition": "excluded-internal-surface",
+      "domain": "Int",
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.xgcd_zero_left",
+      "reason": "implementation-internal helper or elaborator-specific surface, not a general nursery target",
+      "statement": "\u2200 {s t : \u2124} {r' : \u2115} {s' t' : \u2124}, Nat.xgcdAux 0 s t r' s' t' = (r', s', t')",
+      "theme": "integer-gcd"
+    },
+    {
+      "candidate_id": "af4fcdca34030261f41321d9911288c92cf8fcb6c140907a91d0dfdf53215071",
+      "dependency_component_id": "mathlib-v4.30.0-d666bed9b70442ab",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.zero_ascFactorial",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 (k : \u2115), Nat.ascFactorial 0 k.succ = 0",
+      "theme": "natural-factorial"
+    },
+    {
+      "candidate_id": "e244c9a1a30e936d1fb8468eb6642f29bfffca1b6ce0235b810b042052e76d14",
+      "dependency_component_id": "mathlib-v4.30.0-3c547df4c5be18f3",
+      "disposition": "evaluation-eligible",
+      "domain": "Nat",
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.zero_of_testBit_eq_false",
+      "reason": "retained by statement-only review; no proof or Axeyum outcome consulted",
+      "statement": "\u2200 {n : \u2115}, (\u2200 (i : \u2115), n.testBit i = false) \u2192 n = 0",
+      "theme": "natural-bitwise"
+    }
+  ],
+  "schema_version": 1,
+  "state": "reviewed-groups-not-frozen-split"
+}

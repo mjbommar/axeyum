@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:618ad80b532ae45b52171840c9e7da52ca22a37eff95ecd446b4f97ae792eb72`
+Source identity: `sha256:db29688590d7ac0ec3ec9882582cf733592f5d72986053dadaa3d6bffc6f05be`
 
 ## Ledger and chain substrate
 
@@ -49,7 +49,7 @@ the remaining facts stay explicit rather than being guessed.
 | `accepted-transition-event` | autogenesis-1-bootstrap | episode/orchestrator | B's durable event triggered the credited A retry; retry policy beyond this exact operation remains absent | `scripts/create-autogenesis-readiness-delta.py` |
 | `clean-replay` | autogenesis-1-passed | episode replay | the bootstrap chain reproduces byte-identically; held-out longitudinal replay and generalization remain | `scripts/run-autogenesis-authoritative-chain.py` |
 | `evaluation-population` | foundation-only | nursery manifest and readiness checker | Autogenesis-1 is frozen as a longitudinal regression, but the leakage-safe train, development, and held-out population has zero evaluation facts | `scripts/check-autogenesis-nursery.py` |
-| `nursery-statement-source` | componented-source-candidates | proof-isolated Mathlib source and dependency projection | 240 statement-only candidates are grouped into proof-derived direct-dependency components; mutations, reviewed fact rows, frozen splits, route hypotheses, and Axeyum outcomes remain absent | `scripts/create-autogenesis-mathlib-dependency-components.py` |
+| `nursery-statement-source` | reviewed-source-groups | proof-isolated Mathlib review and mutation grouping | 202 candidates and 12 outcome-blind mutations form 120 leakage groups; proof-shape labels, reviewed fact rows, frozen splits, route hypotheses, and Axeyum outcomes remain absent | `scripts/create-autogenesis-mathlib-nursery-review.py` |
 
 ## Proof-production context
 
