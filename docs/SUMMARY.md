@@ -4,6 +4,18 @@
 
 [Project State](PROJECT-STATE.md)
 
+# Autogenesis
+
+- [Verified self-extension programme](autogenesis/README.md)
+  - [Current state and gaps](autogenesis/00-current-state-and-gaps.md)
+  - [Target architecture](autogenesis/01-target-architecture.md)
+  - [Phased roadmap](autogenesis/02-phased-roadmap.md)
+  - [Workstreams and sequencing](autogenesis/03-workstreams-and-sequencing.md)
+  - [Metrics and evaluation](autogenesis/04-metrics-and-evaluation.md)
+  - [Trust, safety, and governance](autogenesis/05-trust-safety-and-governance.md)
+  - [Research horizon](autogenesis/06-research-horizon.md)
+  - [First 90 days](autogenesis/07-first-90-days.md)
+
 [Sibling Project Notes](sibling-projects.md)
 - [Foundational Resource Expansion](foundational-resources/README.md)
   - [Source Research Ledger](foundational-resources/SOURCES.md)
