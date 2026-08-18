@@ -2,10 +2,10 @@
 
 <!-- plan-section: lane-status -->
 
-**Phase 0 is active** (`WIP`, autogenesis-program, 2026-08-18). Baseline finds
-connected but settled kernel graph. Next: a proof-leakage-safe pre-B snapshot;
-no orchestrator before counterfactual passes.
+**Phase 0 WIP** (autogenesis-program). Baseline and leakage-safe B -> A snapshot
+exist. Next: fresh candidate admission and negative controls.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-18 | `2abe2652d` | Authored the nine-phase Autogenesis programme and bounded Autogenesis-1 plan. |
+| 2026-08-18 | `2abe2652d` | Authored programme; bounded Autogenesis-1. |
+| 2026-08-18 | `2c9418f16` | Added snapshots and transitive audits. |
