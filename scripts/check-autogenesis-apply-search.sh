@@ -63,14 +63,10 @@ scripts/stage-autogenesis-premise.sh \
   --snapshot "$scratch/snapshot.json" \
   --output-dir "$scratch" \
   --budget "$premise_budget" >/dev/null
-python3 scripts/prepare-autogenesis-fact-transaction.py \
-  --fact scripts/tests/fixtures/F-nat-zero-add-open.json \
-  --bundle "$scratch" \
-  --output "$scratch/fact-transaction-proposal.json" >/dev/null
-python3 scripts/prepare-autogenesis-fact-transaction.py \
-  --fact scripts/tests/fixtures/F-nat-zero-add-open.json \
-  --bundle "$scratch" \
-  --verify "$scratch/fact-transaction-proposal.json" >/dev/null
+scripts/stage-autogenesis-fixture-admission.sh \
+  --snapshot "$scratch/snapshot.json" \
+  --bundle-root "$scratch" \
+  --fault-after fact >/dev/null
 if python3 scripts/prepare-autogenesis-fact-transaction.py \
   --fact artifacts/facts/F-nat-zero-add.json \
   --bundle "$scratch" \
@@ -93,37 +89,18 @@ if python3 scripts/prepare-autogenesis-fact-transaction.py \
 fi
 grep -qF 'typed evidence names a different fact' \
   "$scratch/invalid-wrong-fact-transaction.stderr"
-mkdir "$scratch/fixture-facts" "$scratch/fixture-journal"
-install -m 0644 scripts/tests/fixtures/F-nat-zero-add-open.json \
-  "$scratch/fixture-facts/F-nat-zero-add.json"
-admission_args=(
-  --transaction "$scratch/fact-transaction-proposal.json"
-  --bundle "$scratch"
-  --before-fact scripts/tests/fixtures/F-nat-zero-add-open.json
-  --journal-dir "$scratch/fixture-journal"
-  --fixture-fact-root "$scratch/fixture-facts"
-)
-set +e
-python3 scripts/apply-autogenesis-fact-transaction.py \
-  "${admission_args[@]}" --fault-after fact \
-  >"$scratch/admission-fault.stdout" 2>"$scratch/admission-fault.stderr"
-admission_fault_status=$?
-set -e
-[ "$admission_fault_status" -eq 75 ] || {
-  echo "after-fact admission fault returned $admission_fault_status, expected 75" >&2
-  exit 1
-}
-grep -qF 'AUTOGENESIS_FACT_ADMISSION_FAULT|after-fact' \
-  "$scratch/admission-fault.stderr"
-admission_result=$(python3 scripts/apply-autogenesis-fact-transaction.py \
-  "${admission_args[@]}")
-grep -qE '^AUTOGENESIS_FACT_ADMISSION\|.*\|state=committed\|artifact_archived=false\|git_published=false$' \
-  <<<"$admission_result"
+fact_transaction_sha=$(python3 -c \
+  'import json,sys; print(json.load(open(sys.argv[1]))["transaction_sha256"])' \
+  "$scratch/fact-transaction-proposal.json")
+durable_admission_event="$scratch/fixture-journal/$fact_transaction_sha/admission-event.json"
 
 transition_chain=(
   --premise-evidence "$scratch/premise-evidence.json"
   --premise-transition "$scratch/premise-transition.json"
   --accepted-transition-event "$scratch/premise-accepted-event.json"
+  --fact-transaction "$scratch/fact-transaction-proposal.json"
+  --durable-admission-event "$durable_admission_event"
+  --readiness-delta "$scratch/readiness-delta.json"
 )
 if python3 scripts/create-autogenesis-proposer-catalog.py \
   --snapshot "$scratch/snapshot.json" \
@@ -134,7 +111,7 @@ if python3 scripts/create-autogenesis-proposer-catalog.py \
   echo "post-B catalog unexpectedly opened without an accepted event" >&2
   exit 1
 fi
-grep -qF 'post_b requires premise evidence, transition, and accepted event' \
+grep -qF 'post_b requires evidence, transition, accepted event, transaction, durable event, and readiness delta' \
   "$scratch/unauthorized-post_b.stderr"
 mkdir "$scratch/post_b-output"
 python3 scripts/create-autogenesis-proposer-catalog.py \
@@ -262,8 +239,9 @@ premise_event = json.load(open(root / "premise-accepted-event.json"))
 fact_transaction = json.load(open(root / "fact-transaction-proposal.json"))
 transaction_dir = root / "fixture-journal" / fact_transaction["transaction_sha256"]
 durable_event = json.load(open(transaction_dir / "admission-event.json"))
+readiness_delta = json.load(open(root / "readiness-delta.json"))
 report = {
-    "schema_version": 7,
+    "schema_version": 8,
     "kind": "axeyum-autogenesis-apply-experiment",
     "git_commit": baseline["git_commit"],
     "baseline_source_sha256": baseline["baseline_source_sha256"],
@@ -284,6 +262,7 @@ report = {
         "fact_transaction_source_authoritative": fact_transaction["precondition"]["source_is_authoritative"],
         "durable_admission_event_sha256": durable_event["event_sha256"],
         "durable_admission_source": "fixture",
+        "readiness_delta_sha256": readiness_delta["readiness_delta_sha256"],
         "result": sys.argv[4],
     },
     "pre_a": {
@@ -312,4 +291,4 @@ PY
   trap - EXIT
 fi
 
-echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved+accepted-event|transaction=committed-fixture+fault-recovered|target=A|budget=$budget|pre_a=no-proof|post_b=proved|readiness=event-driven|dependency=episode-premise|authoritative_writes=0|fixture_writes=1"
+echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved+accepted-event|transaction=committed-fixture+fault-recovered|target=A|budget=$budget|pre_a=no-proof|post_b=proved|readiness=durable-event-driven|dependency=episode-premise|authoritative_writes=0|fixture_writes=1"

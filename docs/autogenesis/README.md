@@ -134,6 +134,9 @@ admission event is fixture-scoped.
 ADR-0468's applicant now commits that proposal only in a temporary fact root,
 with compare-and-swap and roll-forward recovery tested at all three durable
 boundaries. Production write authority rejects this fixture path.
+The durable fixture event now derives a content-addressed readiness delta, and
+that delta is mandatory input to the post-B catalog. It authorizes exactly A
+from the ledger's B-to-A edge; project-wide machine selection remains open.
 
 ## Phase summary
 

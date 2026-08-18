@@ -47,6 +47,8 @@ STATIC_SOURCES = (
     Path("scripts/replay-autogenesis-apply-experiment.sh"),
     Path("scripts/prepare-autogenesis-fact-transaction.py"),
     Path("scripts/apply-autogenesis-fact-transaction.py"),
+    Path("scripts/create-autogenesis-readiness-delta.py"),
+    Path("scripts/stage-autogenesis-fixture-admission.sh"),
     Path("scripts/tests/fixtures/F-nat-zero-add-open.json"),
     Path("scripts/check-autogenesis-knowledge-controls.sh"),
     Path("scripts/check-autogenesis-proposer-isolation.sh"),
@@ -112,11 +114,11 @@ SEAMS = (
     },
     {
         "id": "ledger-transition",
-        "state": "partial",
+        "state": "fixture",
         "owner": "transactional closer",
-        "source": "scripts/close-fact.py",
-        "marker": "restore; never leave the ledger invalid",
-        "gap": "single-file rollback exists; no staged multi-artifact transaction exists",
+        "source": "scripts/apply-autogenesis-fact-transaction.py",
+        "marker": "fact compare-and-swap precondition failed",
+        "gap": "compare-and-swap plus roll-forward recovery is fixture-only; no open authoritative fact has matching evidence",
     },
     {
         "id": "dependency-derivation",
@@ -128,19 +130,19 @@ SEAMS = (
     },
     {
         "id": "accepted-transition-event",
-        "state": "missing",
+        "state": "fixture",
         "owner": "episode/orchestrator",
-        "source": "docs/autogenesis/07-first-90-days.md",
-        "marker": "an accepted transition, not a mere solver result",
-        "gap": "no durable event triggers frontier recomputation",
+        "source": "scripts/create-autogenesis-readiness-delta.py",
+        "marker": "durable admission event",
+        "gap": "durable fixture event triggers a counterfactual readiness delta; authoritative frontier consumption remains",
     },
     {
         "id": "clean-replay",
-        "state": "missing",
+        "state": "fixture",
         "owner": "episode replay",
-        "source": "docs/autogenesis/07-first-90-days.md",
-        "marker": "Repeat the entire sequence from a clean checkout",
-        "gap": "there is no content-addressed episode to replay",
+        "source": "scripts/replay-autogenesis-apply-experiment.sh",
+        "marker": "Replay a retained Autogenesis apply experiment",
+        "gap": "exact-commit fixture replay exists; authoritative acquisition replay remains",
     },
 )
 
@@ -329,9 +331,9 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
     return [
         {
             "id": "A1-fixed-input-identity",
-            "state": "ready",
-            "evidence": "baseline source digest plus clean execution capture",
-            "next": "capture the preregistered experiment at an exact clean commit",
+            "state": "fixture",
+            "evidence": "baseline source digest plus retained exact-clean-commit captures",
+            "next": "bind the first authoritative acquisition to the same identity contract",
         },
         {
             "id": "A1-real-derived-chain",
@@ -351,8 +353,8 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
         {
             "id": "A1-operational-unlock-control",
             "state": "fixture",
-            "evidence": "catalog search produces B; same A target fails before B and then depends on fresh B",
-            "next": "make B a replayed durable transition whose event schedules A",
+            "evidence": "catalog search produces B; a durable fixture event makes the same A target ready and fresh A depends on B",
+            "next": "repeat the causal unlock on an authoritative open fact",
         },
         {
             "id": "A1-machine-selection",
@@ -363,26 +365,26 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
         {
             "id": "A1-typed-dispatch-evidence",
             "state": "partial",
-            "evidence": "B has a typed kernel handoff; dispatch and ledger evidence rows remain caller-authored",
-            "next": "derive and replay a proposed fact delta from the typed B evidence",
+            "evidence": "typed B evidence derives its route, footprint, evidence row, and transaction; shell still orchestrates dispatch",
+            "next": "replace shell route dispatch with one typed operation registry",
         },
         {
             "id": "A1-atomic-admission",
-            "state": "partial",
-            "evidence": "single fact rollback exists; an episode-wide transaction does not",
-            "next": "stage and replay a proposed fact delta before atomic application",
+            "state": seam_state.get("ledger-transition", "missing"),
+            "evidence": "fixture fact admission has compare-and-swap, fsynced intent, durable event, and fault recovery",
+            "next": "admit one genuinely open authoritative fact with matching typed evidence",
         },
         {
             "id": "A1-admission-triggered-retry",
-            "state": "missing",
-            "evidence": "no accepted-transition event recomputes readiness",
-            "next": "make accepted ledger state, never solver success, trigger retry",
+            "state": seam_state.get("accepted-transition-event", "missing"),
+            "evidence": "durable fixture admission event derives B-to-A readiness and gates the post-B catalog",
+            "next": "generalize the readiness input from counterfactual snapshot to authoritative frontier state",
         },
         {
             "id": "A1-clean-reproduction",
-            "state": "missing",
-            "evidence": "no content-addressed episode or clean replay command exists",
-            "next": "replay B then A from committed inputs and retained artifacts only",
+            "state": seam_state.get("clean-replay", "missing"),
+            "evidence": "retained exact-commit command regenerates B, transaction, event, readiness, pre-A failure, and post-B success",
+            "next": "repeat the same replay for an authoritative acquisition",
         },
     ]
 

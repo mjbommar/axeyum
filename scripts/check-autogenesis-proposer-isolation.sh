@@ -14,10 +14,19 @@ python3 scripts/create-autogenesis-snapshot.py \
 scripts/stage-autogenesis-premise.sh \
   --snapshot "$scratch/snapshot.json" \
   --output-dir "$scratch" >/dev/null
+scripts/stage-autogenesis-fixture-admission.sh \
+  --snapshot "$scratch/snapshot.json" \
+  --bundle-root "$scratch" >/dev/null
+fact_transaction_sha=$(python3 -c \
+  'import json,sys; print(json.load(open(sys.argv[1]))["transaction_sha256"])' \
+  "$scratch/fact-transaction-proposal.json")
 transition_chain=(
   --premise-evidence "$scratch/premise-evidence.json"
   --premise-transition "$scratch/premise-transition.json"
   --accepted-transition-event "$scratch/premise-accepted-event.json"
+  --fact-transaction "$scratch/fact-transaction-proposal.json"
+  --durable-admission-event "$scratch/fixture-journal/$fact_transaction_sha/admission-event.json"
+  --readiness-delta "$scratch/readiness-delta.json"
 )
 python3 scripts/create-autogenesis-proposer-catalog.py \
   --snapshot "$scratch/snapshot.json" \

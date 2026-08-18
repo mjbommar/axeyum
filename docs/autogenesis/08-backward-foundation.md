@@ -35,7 +35,7 @@ operationally reachable.
 | A was unavailable before B | The identical A target under the identical route policy and budget receives no credit before B | Fixture | Bind the result into a replayed episode transaction |
 | B was established | Catalog-only structural search produces typed, content-addressed, kernel-checked evidence for fresh B | Fixture | Admit the result through the durable transaction path |
 | B became durable knowledge | Atomic application after fresh-process replay and fact validation | Missing | Episode-wide transaction boundary |
-| A became newly ready | Readiness changes only after the accepted B event | Fixture | Replace phase projection with frontier recomputation from durable state |
+| A became newly ready | Readiness changes only after the accepted B event | Fixture | Repeat against authoritative frontier state rather than a counterfactual fixture |
 | A was established using B | Fresh proof is accepted and its dependency on B is derived from the proof term | Fixture | Transactional admission and readiness event |
 | Corruption cannot receive credit | Independent mutations of statement, evidence, checker, dependency, footprint, and status all reject | Missing | Typed episode and evidence identities |
 | The sequence reproduces | Clean checkout repeats the same accepted transitions from retained inputs | Fixture | Repeat from a second clean checkout and compare identities |
@@ -196,10 +196,9 @@ rejects the fixture proposal because its source is explicitly non-authoritative.
 
 This is a real crash-recovery implementation but still not an authoritative
 admission: the positive write is one temporary fixture file, and the run reports
-`authoritative_writes=0|fixture_writes=1`. The next step is to make readiness
-consume the durable event rather than the earlier bootstrap event. A production
-write remains blocked on matching typed evidence for one of the seven genuinely
-open facts; the programme will not relabel a settled fact to manufacture it.
+`authoritative_writes=0|fixture_writes=1`. A production write remains blocked on
+matching typed evidence for one of the seven genuinely open facts; the programme
+will not relabel a settled fact to manufacture it.
 
 The recoverable applicant was retained and independently replayed at exact
 commit `0ee7143ea`, experiment digest
@@ -207,6 +206,18 @@ commit `0ee7143ea`, experiment digest
 durable fixture event
 `e5d29bc51f330c3dec8e25f93b6609a1871676686d3503bae5b1b125f05a6620`.
 ADR-0468 is therefore accepted for the exercised single-fact boundary.
+
+`create-autogenesis-readiness-delta.py` now consumes that durable event. It
+re-derives the actual ledger dependency `F:nat-zero-add -> F:nat-mul-one`, shows
+B missing before and established after, and emits exactly A as newly ready. The
+post-B catalog requires this complete durable-event/readiness chain; neither the
+snapshot nor the earlier bootstrap event can schedule A alone. Mutation controls
+reject a different admitted fact, a missing B-to-A ledger edge, and extra
+newly-ready facts even when the attacker rehashes the artifact.
+
+This is event-driven frontier logic over the counterfactual fixture, not yet the
+project-wide machine-readable frontier contract. Selection is still human, and
+authoritative fact admission remains zero.
 
 ## Assumptions tested now
 

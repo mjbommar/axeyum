@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 usage() {
-  echo "usage: $0 --snapshot PATH --catalog PATH --output-dir DIR --program PATH [--premise-evidence PATH --premise-transition PATH --accepted-transition-event PATH]" >&2
+  echo "usage: $0 --snapshot PATH --catalog PATH --output-dir DIR --program PATH [post-B transition/readiness inputs]" >&2
   exit 2
 }
 
@@ -16,6 +16,9 @@ program=
 premise_evidence=
 premise_transition=
 accepted_transition_event=
+fact_transaction=
+durable_admission_event=
+readiness_delta=
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --snapshot) snapshot="${2:-}"; shift 2 ;;
@@ -25,6 +28,9 @@ while [ "$#" -gt 0 ]; do
     --premise-evidence) premise_evidence="${2:-}"; shift 2 ;;
     --premise-transition) premise_transition="${2:-}"; shift 2 ;;
     --accepted-transition-event) accepted_transition_event="${2:-}"; shift 2 ;;
+    --fact-transaction) fact_transaction="${2:-}"; shift 2 ;;
+    --durable-admission-event) durable_admission_event="${2:-}"; shift 2 ;;
+    --readiness-delta) readiness_delta="${2:-}"; shift 2 ;;
     *) usage ;;
   esac
 done
@@ -59,16 +65,21 @@ program="$runtime/program.py"
 phase=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["phase"])' "$catalog")
 catalog_verify=(--snapshot "$snapshot" --phase "$phase" --verify "$catalog")
 if [ "$phase" = post_b ]; then
-  [ -n "$premise_evidence" ] && [ -n "$premise_transition" ] && [ -n "$accepted_transition_event" ] || {
-    echo "AUTOGENESIS_PROPOSER_ERROR|post_b requires the accepted-transition chain" >&2
+  [ -n "$premise_evidence" ] && [ -n "$premise_transition" ] \
+    && [ -n "$accepted_transition_event" ] && [ -n "$fact_transaction" ] \
+    && [ -n "$durable_admission_event" ] && [ -n "$readiness_delta" ] || {
+    echo "AUTOGENESIS_PROPOSER_ERROR|post_b requires the transition and durable-readiness chains" >&2
     exit 1
   }
   catalog_verify+=(
     --premise-evidence "$premise_evidence"
     --premise-transition "$premise_transition"
     --accepted-transition-event "$accepted_transition_event"
+    --fact-transaction "$fact_transaction"
+    --durable-admission-event "$durable_admission_event"
+    --readiness-delta "$readiness_delta"
   )
-elif [ -n "$premise_evidence$premise_transition$accepted_transition_event" ]; then
+elif [ -n "$premise_evidence$premise_transition$accepted_transition_event$fact_transaction$durable_admission_event$readiness_delta" ]; then
   echo "AUTOGENESIS_PROPOSER_ERROR|accepted-transition inputs are valid only for post_b" >&2
   exit 1
 fi

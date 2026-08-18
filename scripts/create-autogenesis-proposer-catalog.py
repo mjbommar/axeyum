@@ -17,6 +17,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 BASELINE = ROOT / "docs/plan/generated/autogenesis-baseline.json"
 SNAPSHOT_SCRIPT = ROOT / "scripts/create-autogenesis-snapshot.py"
 EVENT_SCRIPT = ROOT / "scripts/create-autogenesis-accepted-event.py"
+READINESS_SCRIPT = ROOT / "scripts/create-autogenesis-readiness-delta.py"
 
 
 class CatalogError(RuntimeError):
@@ -38,6 +39,17 @@ def load_event_module():
     )
     if spec is None or spec.loader is None:
         raise CatalogError(f"cannot load {EVENT_SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_readiness_module():
+    spec = importlib.util.spec_from_file_location(
+        "create_autogenesis_readiness_for_catalog", READINESS_SCRIPT
+    )
+    if spec is None or spec.loader is None:
+        raise CatalogError(f"cannot load {READINESS_SCRIPT}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -145,6 +157,7 @@ def build_catalog(
     facts: dict[str, dict[str, Any]],
     inventory: dict[str, dict[str, Any]],
     accepted_event: dict[str, Any] | None = None,
+    readiness_delta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if phase not in {"pre_b", "pre_a", "post_b"}:
         raise CatalogError(f"unsupported phase {phase!r}")
@@ -174,8 +187,8 @@ def build_catalog(
         }
         for name in sorted(visible)
     ]
-    if phase != "post_b" and accepted_event is not None:
-        raise CatalogError("accepted-transition events are valid only for post_b")
+    if phase != "post_b" and (accepted_event is not None or readiness_delta is not None):
+        raise CatalogError("transition/readiness inputs are valid only for post_b")
     if phase == "pre_b":
         target = premise
     elif phase == "pre_a":
@@ -183,7 +196,10 @@ def build_catalog(
     else:
         if accepted_event is None:
             raise CatalogError("post_b requires a verified accepted-transition event")
+        if readiness_delta is None:
+            raise CatalogError("post_b requires a durable-event readiness delta")
         verify_event_projection(snapshot, accepted_event)
+        verify_readiness_projection(snapshot, readiness_delta)
         accepted = phase_policy.get("accepted_episode_facts")
         if not isinstance(accepted, list) or len(accepted) != 1:
             raise CatalogError("post_b must expose exactly one accepted episode fact")
@@ -225,6 +241,7 @@ def build_catalog(
     }
     if accepted_event is not None:
         catalog["accepted_transition_event_sha256"] = accepted_event["event_sha256"]
+        catalog["readiness_delta_sha256"] = readiness_delta["readiness_delta_sha256"]
     catalog["catalog_sha256"] = digest(catalog)
     return catalog
 
@@ -285,6 +302,56 @@ def verify_event_chain(
     verify_event_projection(snapshot, accepted_event)
 
 
+def verify_readiness_projection(
+    snapshot: dict[str, Any], readiness_delta: dict[str, Any]
+) -> None:
+    if (
+        readiness_delta.get("schema_version") != 1
+        or readiness_delta.get("kind") != "axeyum-autogenesis-readiness-delta"
+    ):
+        raise CatalogError("post_b input is not a readiness delta")
+    claimed = readiness_delta.get("readiness_delta_sha256")
+    unsigned = dict(readiness_delta)
+    unsigned.pop("readiness_delta_sha256", None)
+    if not isinstance(claimed, str) or digest(unsigned) != claimed:
+        raise CatalogError("readiness delta digest is invalid")
+    identity = readiness_delta.get("identity")
+    target = readiness_delta.get("target")
+    target_id = snapshot["chain"]["consequent"]["fact_id"]
+    if (
+        not isinstance(identity, dict)
+        or identity.get("episode_id") != snapshot.get("episode_id")
+        or identity.get("snapshot_sha256") != snapshot.get("snapshot_sha256")
+        or not isinstance(target, dict)
+        or target.get("fact_id") != target_id
+        or target.get("after") != {"eligible": True, "missing_dependencies": []}
+        or readiness_delta.get("newly_ready") != [target_id]
+    ):
+        raise CatalogError("readiness delta does not authorize snapshot target A")
+
+
+def verify_readiness_chain(
+    *,
+    snapshot: dict[str, Any],
+    transaction: dict[str, Any],
+    durable_event: dict[str, Any],
+    readiness_delta: dict[str, Any],
+    facts: dict[str, dict[str, Any]],
+) -> None:
+    module = load_readiness_module()
+    try:
+        expected = module.build_delta(
+            snapshot=snapshot,
+            transaction=transaction,
+            admission_event=durable_event,
+            facts=facts,
+        )
+        module.verify_delta(readiness_delta, expected)
+    except module.ReadinessError as error:
+        raise CatalogError(f"durable readiness chain failed: {error}") from error
+    verify_readiness_projection(snapshot, readiness_delta)
+
+
 def verify_catalog(catalog: dict[str, Any], expected: dict[str, Any]) -> None:
     claimed = catalog.get("catalog_sha256")
     unsigned = dict(catalog)
@@ -312,16 +379,26 @@ def derive(
     premise_evidence_path: pathlib.Path | None = None,
     premise_transition_path: pathlib.Path | None = None,
     accepted_event_path: pathlib.Path | None = None,
+    fact_transaction_path: pathlib.Path | None = None,
+    durable_admission_event_path: pathlib.Path | None = None,
+    readiness_delta_path: pathlib.Path | None = None,
 ) -> dict[str, Any]:
     snapshot = json.loads(snapshot_path.read_text())
     _module, facts = verify_snapshot_current(snapshot, ROOT)
     inventory = theorem_type_inventory(ROOT)
     accepted_event = None
-    paths = (premise_evidence_path, premise_transition_path, accepted_event_path)
+    paths = (
+        premise_evidence_path,
+        premise_transition_path,
+        accepted_event_path,
+        fact_transaction_path,
+        durable_admission_event_path,
+        readiness_delta_path,
+    )
     if phase == "post_b":
         if any(path is None for path in paths):
             raise CatalogError(
-                "post_b requires premise evidence, transition, and accepted event"
+                "post_b requires evidence, transition, accepted event, transaction, durable event, and readiness delta"
             )
         evidence = json.loads(premise_evidence_path.read_text())
         transition = json.loads(premise_transition_path.read_text())
@@ -332,6 +409,16 @@ def derive(
             transition=transition,
             accepted_event=accepted_event,
         )
+        transaction = json.loads(fact_transaction_path.read_text())
+        durable_event = json.loads(durable_admission_event_path.read_text())
+        readiness_delta = json.loads(readiness_delta_path.read_text())
+        verify_readiness_chain(
+            snapshot=snapshot,
+            transaction=transaction,
+            durable_event=durable_event,
+            readiness_delta=readiness_delta,
+            facts=facts,
+        )
     elif any(path is not None for path in paths):
         raise CatalogError("accepted-transition inputs are valid only for post_b")
     return build_catalog(
@@ -340,6 +427,7 @@ def derive(
         facts=facts,
         inventory=inventory,
         accepted_event=accepted_event,
+        readiness_delta=readiness_delta if phase == "post_b" else None,
     )
 
 
@@ -350,6 +438,9 @@ def main() -> int:
     parser.add_argument("--premise-evidence", type=pathlib.Path)
     parser.add_argument("--premise-transition", type=pathlib.Path)
     parser.add_argument("--accepted-transition-event", type=pathlib.Path)
+    parser.add_argument("--fact-transaction", type=pathlib.Path)
+    parser.add_argument("--durable-admission-event", type=pathlib.Path)
+    parser.add_argument("--readiness-delta", type=pathlib.Path)
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--output", type=pathlib.Path)
     action.add_argument("--verify", type=pathlib.Path)
@@ -361,6 +452,9 @@ def main() -> int:
             premise_evidence_path=args.premise_evidence,
             premise_transition_path=args.premise_transition,
             accepted_event_path=args.accepted_transition_event,
+            fact_transaction_path=args.fact_transaction,
+            durable_admission_event_path=args.durable_admission_event,
+            readiness_delta_path=args.readiness_delta,
         )
         if args.verify is not None:
             verify_catalog(json.loads(args.verify.read_text()), expected)

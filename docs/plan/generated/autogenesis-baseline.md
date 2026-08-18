@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:aa7262969160ca61b5d0ec1bac522c985b717ace98999002e159c5265a453c75`
+Source identity: `sha256:394edca3af68ec759b587e3b7cff6ad925c2a4cbb65164566db8b3e6c56f02af`
 
 ## Ledger and chain substrate
 
@@ -23,15 +23,15 @@ the remaining facts stay explicit rather than being guessed.
 
 | Requirement | State | Current evidence | Next falsifiable step |
 |---|---|---|---|
-| `A1-fixed-input-identity` | ready | baseline source digest plus clean execution capture | capture the preregistered experiment at an exact clean commit |
+| `A1-fixed-input-identity` | fixture | baseline source digest plus retained exact-clean-commit captures | bind the first authoritative acquisition to the same identity contract |
 | `A1-real-derived-chain` | replay-candidate | kernel ledger graph has 52 edges at depth 6 and 0 unsettled nodes | qualify a primary and fallback with proof-derived dependency and pre-B counterfactual |
 | `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | broaden the structural grammar and bind plans into typed evidence |
-| `A1-operational-unlock-control` | fixture | catalog search produces B; same A target fails before B and then depends on fresh B | make B a replayed durable transition whose event schedules A |
+| `A1-operational-unlock-control` | fixture | catalog search produces B; a durable fixture event makes the same A target ready and fresh A depends on B | repeat the causal unlock on an authoritative open fact |
 | `A1-machine-selection` | missing | selection remains a human choice from text output | content-address a machine-readable frontier snapshot and rationale |
-| `A1-typed-dispatch-evidence` | partial | B has a typed kernel handoff; dispatch and ledger evidence rows remain caller-authored | derive and replay a proposed fact delta from the typed B evidence |
-| `A1-atomic-admission` | partial | single fact rollback exists; an episode-wide transaction does not | stage and replay a proposed fact delta before atomic application |
-| `A1-admission-triggered-retry` | missing | no accepted-transition event recomputes readiness | make accepted ledger state, never solver success, trigger retry |
-| `A1-clean-reproduction` | missing | no content-addressed episode or clean replay command exists | replay B then A from committed inputs and retained artifacts only |
+| `A1-typed-dispatch-evidence` | partial | typed B evidence derives its route, footprint, evidence row, and transaction; shell still orchestrates dispatch | replace shell route dispatch with one typed operation registry |
+| `A1-atomic-admission` | fixture | fixture fact admission has compare-and-swap, fsynced intent, durable event, and fault recovery | admit one genuinely open authoritative fact with matching typed evidence |
+| `A1-admission-triggered-retry` | fixture | durable fixture admission event derives B-to-A readiness and gates the post-B catalog | generalize the readiness input from counterfactual snapshot to authoritative frontier state |
+| `A1-clean-reproduction` | fixture | retained exact-commit command regenerates B, transaction, event, readiness, pre-A failure, and post-B success | repeat the same replay for an authoritative acquisition |
 
 ## Manual seams
 
@@ -41,10 +41,10 @@ the remaining facts stay explicit rather than being guessed.
 | `route-dispatch` | manual | route adapters | no typed fact-to-route dispatch contract exists | `scripts/close-fact.py` |
 | `evidence-assembly` | manual | transactional closer | the caller authors the evidence rows and route metadata | `scripts/close-fact.py` |
 | `checker-selection` | manual | evidence registry | caller-authored shell text chooses the checker | `scripts/close-fact.py` |
-| `ledger-transition` | partial | transactional closer | single-file rollback exists; no staged multi-artifact transaction exists | `scripts/close-fact.py` |
+| `ledger-transition` | fixture | transactional closer | compare-and-swap plus roll-forward recovery is fixture-only; no open authoritative fact has matching evidence | `scripts/apply-autogenesis-fact-transaction.py` |
 | `dependency-derivation` | partial | kernel dependency inventory | kernel facts are covered where checker commands name the theorem; other routes are authored | `scripts/check-fact-depends-derived.py` |
-| `accepted-transition-event` | missing | episode/orchestrator | no durable event triggers frontier recomputation | `docs/autogenesis/07-first-90-days.md` |
-| `clean-replay` | missing | episode replay | there is no content-addressed episode to replay | `docs/autogenesis/07-first-90-days.md` |
+| `accepted-transition-event` | fixture | episode/orchestrator | durable fixture event triggers a counterfactual readiness delta; authoritative frontier consumption remains | `scripts/create-autogenesis-readiness-delta.py` |
+| `clean-replay` | fixture | episode replay | exact-commit fixture replay exists; authoritative acquisition replay remains | `scripts/replay-autogenesis-apply-experiment.sh` |
 
 ## Proof-production context
 

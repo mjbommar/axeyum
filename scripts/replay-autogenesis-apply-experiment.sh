@@ -18,6 +18,7 @@ required=(
   pre_b-induction-output/induction-plans.tsv premise-kernel-evidence.tsv
   premise-evidence.json premise-transition.json premise-accepted-event.json
   fact-transaction-proposal.json
+  readiness-delta.json
   pre_a-catalog.json pre_a-output/apply-plans.json pre_a-output/apply-plans.tsv
   post_b-catalog.json post_b-output/apply-plans.json post_b-output/apply-plans.tsv
 )
@@ -72,13 +73,14 @@ evidence = load("premise-evidence.json")
 transition = load("premise-transition.json")
 event = load("premise-accepted-event.json")
 transaction = load("fact-transaction-proposal.json")
+readiness = load("readiness-delta.json")
 durable_event = load(f"fixture-journal/{transaction['transaction_sha256']}/admission-event.json")
 pre_catalog = load("pre_a-catalog.json")
 pre_bundle = load("pre_a-output/apply-plans.json")
 post_catalog = load("post_b-catalog.json")
 post_bundle = load("post_b-output/apply-plans.json")
 
-if report.get("schema_version") != 7 or report.get("kind") != "axeyum-autogenesis-apply-experiment":
+if report.get("schema_version") != 8 or report.get("kind") != "axeyum-autogenesis-apply-experiment":
     raise SystemExit("AUTOGENESIS_REPLAY_ERROR|unsupported experiment schema")
 unsigned = dict(report)
 claimed = unsigned.pop("experiment_sha256", None)
@@ -95,6 +97,7 @@ checks = {
     "accepted event": (report["premise"].get("accepted_event_sha256"), event.get("event_sha256")),
     "fact transaction": (report["premise"].get("fact_transaction_sha256"), transaction.get("transaction_sha256")),
     "durable admission event": (report["premise"].get("durable_admission_event_sha256"), durable_event.get("event_sha256")),
+    "readiness delta": (report["premise"].get("readiness_delta_sha256"), readiness.get("readiness_delta_sha256")),
     "pre-A catalog": (report["pre_a"].get("catalog_sha256"), pre_catalog.get("catalog_sha256")),
     "pre-A bundle": (report["pre_a"].get("bundle_sha256"), pre_bundle.get("bundle_sha256")),
     "post-B catalog": (report["post_b"].get("catalog_sha256"), post_catalog.get("catalog_sha256")),
@@ -143,6 +146,9 @@ transition_chain=(
   --premise-evidence "$experiment_dir/premise-evidence.json"
   --premise-transition "$experiment_dir/premise-transition.json"
   --accepted-transition-event "$experiment_dir/premise-accepted-event.json"
+  --fact-transaction "$experiment_dir/fact-transaction-proposal.json"
+  --durable-admission-event "$experiment_dir/fixture-journal/$retained_transaction_sha/admission-event.json"
+  --readiness-delta "$experiment_dir/readiness-delta.json"
 )
 python3 scripts/create-autogenesis-proposer-catalog.py \
   --snapshot "$experiment_dir/snapshot.json" --phase pre_b \
@@ -216,40 +222,23 @@ cmp -s "$scratch/premise-accepted-event.json" "$experiment_dir/premise-accepted-
   echo "AUTOGENESIS_REPLAY_ERROR|fresh accepted event differs" >&2
   exit 1
 }
-python3 scripts/prepare-autogenesis-fact-transaction.py \
-  --fact scripts/tests/fixtures/F-nat-zero-add-open.json \
-  --bundle "$experiment_dir" \
-  --output "$scratch/fact-transaction-proposal.json" >/dev/null
+scripts/stage-autogenesis-fixture-admission.sh \
+  --snapshot "$experiment_dir/snapshot.json" \
+  --bundle-root "$scratch" \
+  --evidence-bundle "$experiment_dir" \
+  --fault-after fact >/dev/null
 cmp -s "$scratch/fact-transaction-proposal.json" "$experiment_dir/fact-transaction-proposal.json" || {
   echo "AUTOGENESIS_REPLAY_ERROR|fresh fact transaction proposal differs" >&2
   exit 1
 }
-mkdir "$scratch/fixture-facts" "$scratch/fixture-journal"
-install -m 0644 scripts/tests/fixtures/F-nat-zero-add-open.json \
-  "$scratch/fixture-facts/F-nat-zero-add.json"
-replay_admission_args=(
-  --transaction "$scratch/fact-transaction-proposal.json"
-  --bundle "$experiment_dir"
-  --before-fact scripts/tests/fixtures/F-nat-zero-add-open.json
-  --journal-dir "$scratch/fixture-journal"
-  --fixture-fact-root "$scratch/fixture-facts"
-)
-set +e
-python3 scripts/apply-autogenesis-fact-transaction.py \
-  "${replay_admission_args[@]}" --fault-after fact \
-  >"$scratch/admission-fault.stdout" 2>"$scratch/admission-fault.stderr"
-replay_fault_status=$?
-set -e
-[ "$replay_fault_status" -eq 75 ] || {
-  echo "AUTOGENESIS_REPLAY_ERROR|after-fact fault did not stop at recovery boundary" >&2
-  exit 1
-}
-python3 scripts/apply-autogenesis-fact-transaction.py \
-  "${replay_admission_args[@]}" >/dev/null
 cmp -s \
   "$scratch/fixture-journal/$retained_transaction_sha/admission-event.json" \
   "$experiment_dir/fixture-journal/$retained_transaction_sha/admission-event.json" || {
   echo "AUTOGENESIS_REPLAY_ERROR|fresh durable admission event differs" >&2
+  exit 1
+}
+cmp -s "$scratch/readiness-delta.json" "$experiment_dir/readiness-delta.json" || {
+  echo "AUTOGENESIS_REPLAY_ERROR|fresh readiness delta differs" >&2
   exit 1
 }
 
@@ -289,4 +278,4 @@ PY
   echo "AUTOGENESIS_REPLAY_ERROR|replay mutated the checkout" >&2
   exit 1
 }
-echo "AUTOGENESIS_APPLY_REPLAY|commit=$head_commit|experiment=$(basename "$experiment_dir")|premise=proved|event=reproduced|transaction=committed-fixture+fault-recovered|pre_a=no-proof|post_b=proved|authoritative_writes=0|fixture_writes=1"
+echo "AUTOGENESIS_APPLY_REPLAY|commit=$head_commit|experiment=$(basename "$experiment_dir")|premise=proved|event=reproduced|transaction=committed-fixture+fault-recovered|readiness=durable-event-driven|pre_a=no-proof|post_b=proved|authoritative_writes=0|fixture_writes=1"

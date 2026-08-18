@@ -74,12 +74,24 @@ class CatalogTests(unittest.TestCase):
             "authoritative_ledger_writes": [],
         }
         event["event_sha256"] = MODULE.digest(event)
+        readiness = {
+            "schema_version": 1,
+            "kind": "axeyum-autogenesis-readiness-delta",
+            "identity": {"episode_id": "episode", "snapshot_sha256": "snapshot"},
+            "target": {
+                "fact_id": "F:A",
+                "after": {"eligible": True, "missing_dependencies": []},
+            },
+            "newly_ready": ["F:A"],
+        }
+        readiness["readiness_delta_sha256"] = MODULE.digest(readiness)
         return dict(
             snapshot=snapshot,
             phase=phase,
             facts=facts,
             inventory=inventory,
             accepted_event=event if phase == "post_b" else None,
+            readiness_delta=readiness if phase == "post_b" else None,
         )
 
     def test_pre_b_contains_types_but_no_proof_fields(self):
@@ -104,6 +116,12 @@ class CatalogTests(unittest.TestCase):
         inputs = self.inputs("post_b")
         inputs["accepted_event"] = None
         with self.assertRaisesRegex(MODULE.CatalogError, "requires"):
+            MODULE.build_catalog(**inputs)
+
+    def test_post_b_without_readiness_rejects(self):
+        inputs = self.inputs("post_b")
+        inputs["readiness_delta"] = None
+        with self.assertRaisesRegex(MODULE.CatalogError, "readiness"):
             MODULE.build_catalog(**inputs)
 
     def test_rehashed_event_for_wrong_fact_rejects(self):
