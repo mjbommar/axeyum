@@ -106,6 +106,7 @@ compounding, not automation theatre.
 | [First 90 days](07-first-90-days.md) | What is the first bounded execution programme? |
 | [Backward foundation](08-backward-foundation.md) | What must be true immediately before Autogenesis-1, and which assumptions already fail? |
 | [Authoritative B result](09-authoritative-b-admission-result.md) | Did a real B admission durably unlock A, and what remains uncredited? |
+| [Autogenesis-1 result](10-autogenesis-1-result.md) | Did two clean authoritative B-then-A runs satisfy the fixed-budget, assurance, and reproducibility gates? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -185,7 +186,18 @@ untouched. A's exact episode-local apply operation is now implemented: it
 verifies B's execution-to-readiness trigger chain, reconstructs
 an episode-local B candidate, and applies only that candidate. It also creates a
 deterministic detached post-B state commit without touching the branch or index.
-This is implementation evidence; the clean two-write replay remains uncredited.
+
+**Autogenesis-1 passed at exact source commit `cf998788b`.** Two isolated runs
+used the same fixed budgets (`B=2`, pre-B `A=1`, post-B `A=1`). Before B, A
+exhausted that budget without a proof. The authoritative frontier then selected,
+proved, crash-recovered, and recorded B; B's durable event made exactly A newly
+ready; and the frontier selected, proved through the episode-local B,
+crash-recovered, and recorded A. Both kernel footprints and retained-answer
+dependency lists were empty. The two runs had identical semantic identities and
+all 56 retained artifact bytes matched. The small committed
+[result index](../../artifacts/autogenesis/autogenesis-1-result.json) binds the
+external receipts; the detailed audit is in the
+[Autogenesis-1 result](10-autogenesis-1-result.md).
 
 ## Phase summary
 

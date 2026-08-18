@@ -1,58 +1,59 @@
 {
+  "autogenesis1_passed": true,
   "autogenesis1_requirements": [
     {
-      "evidence": "baseline source digest plus retained exact-clean-commit captures",
+      "evidence": "the retained result binds one exact source, deterministic pre-B and pre-A state commits, registry, facts, statements, operations, and budgets",
       "id": "A1-fixed-input-identity",
-      "next": "bind the first authoritative acquisition to the same identity contract",
-      "state": "fixture"
+      "next": "preserve this identity contract while generalizing beyond the bootstrap chain",
+      "state": "passed"
     },
     {
-      "evidence": "the exact proof-derived catalog qualifies Nat.zero_add -> Nat.mul_one against a replayed same-target B/no-A/then-A experiment while granting no authoritative-write power",
+      "evidence": "the proof-derived Nat.zero_add -> Nat.mul_one edge is now exercised by two authoritative writes and an episode-local kernel dependency",
       "id": "A1-real-derived-chain",
-      "next": "measure a fallback and register authoritative kernel operations for both primary facts",
-      "state": "qualified-primary-fixture"
+      "next": "measure a fallback and build the held-out nursery without weakening primary-chain credit",
+      "state": "passed"
     },
     {
       "evidence": "proof-body-free catalog plus Bubblewrap repository/network isolation control",
       "id": "A1-proof-leakage-boundary",
-      "next": "broaden the structural grammar and bind plans into typed evidence",
-      "state": "fixture"
+      "next": "broaden the structural grammar while retaining the no-proof-body boundary",
+      "state": "passed"
     },
     {
-      "evidence": "clean authoritative B admission now makes the same A target newly ready; the earlier fixture retains the pre-B no-proof and post-B proof control",
+      "evidence": "the same A target and budget fail before B, then B's durable event makes A ready and A proves only through the episode-local B",
       "id": "A1-operational-unlock-control",
-      "next": "execute A from the authoritative B event and preserve the causal boundary across the second write",
-      "state": "fixture"
+      "next": "apply the same causal control to held-out multi-step chains",
+      "state": "passed"
     },
     {
-      "evidence": "content-addressed authoritative frontier selected B alone; after its admission A became ready but remained refused without an exact operation",
+      "evidence": "the content-addressed frontier selected B, then selected A only after B admission, and ended with no registered candidate",
       "id": "A1-machine-selection",
-      "next": "replay B then A from one clean reconstructed chain pre-state",
-      "state": "partial"
+      "next": "replace bootstrap exact operations only after a typed generic contract is exercised",
+      "state": "passed"
     },
     {
       "evidence": "the registry fixes SMT, exact Nat.zero_add, and event-bound Nat.mul_one routes; A reconstructs and applies only an episode-local B candidate",
       "id": "A1-typed-dispatch-evidence",
-      "next": "retain and replay the complete two-write receipt chain",
-      "state": "authoritative-multi-route"
+      "next": "lift the exercised receipts into the Phase 3 proof-plan contract",
+      "state": "passed"
     },
     {
-      "evidence": "both the first leaf and the qualified chain's B recovered from intentional post-intent stops through compare-and-swap, fsynced journal, atomic replacement, and durable event",
+      "evidence": "both B and A stopped after durable intent, left their facts unchanged, and recovered through compare-and-swap to durable events",
       "id": "A1-atomic-admission",
-      "next": "extend the same boundary through A",
-      "state": "authoritative"
+      "next": "retain this boundary for every future multi-step admission",
+      "state": "passed"
     },
     {
       "evidence": "the durable authoritative B event binds exact before/after frontiers and derives newly_ready=[F:nat-mul-one] with one authoritative write and zero fixture writes",
       "id": "A1-admission-triggered-retry",
-      "next": "dispatch A only from this event-derived eligibility",
-      "state": "authoritative-leaf"
+      "next": "generalize event-driven retry without granting status-only dispatch authority",
+      "state": "passed"
     },
     {
-      "evidence": "isolated clean checkouts reproduced both the leaf and B acquisition; the latter retained a complete synthetic-prestate bundle and event-derived A readiness",
+      "evidence": "two isolated runs from one exact source produced identical B and A receipts, events, state bundle, 56 artifact bytes, and semantic identity",
       "id": "A1-clean-reproduction",
-      "next": "extend the same replay boundary through A's proof and admission",
-      "state": "authoritative-leaf"
+      "next": "keep this result as the longitudinal Phase 3 regression baseline",
+      "state": "passed"
     }
   ],
   "contract": "internal-autogenesis-phase0",
@@ -588,32 +589,32 @@
   },
   "manual_seams": [
     {
-      "gap": "B admission makes A newly ready and A has an exact event-bound operation; the two-write sequence has not yet replayed cleanly",
+      "gap": "the frontier completed the credited B-to-A sequence; selection beyond exact preregistered operations remains ungeneralized",
       "id": "goal-selection",
       "owner": "fact frontier",
       "source": "scripts/fact-frontier.py",
-      "state": "partial"
+      "state": "autogenesis-1-bootstrap"
     },
     {
-      "gap": "the Nat.zero_add to Nat.mul_one primary replays with pre-B no-credit and post-B success; no fallback is measured and fixture qualification grants no write authority",
+      "gap": "the Nat.zero_add to Nat.mul_one primary passed authoritatively; no fallback or held-out nursery chain is measured",
       "id": "chain-qualification",
       "owner": "proof-derived chain catalog",
       "source": "scripts/create-autogenesis-chain-catalog.py",
-      "state": "qualified-primary-fixture"
+      "state": "autogenesis-1-bootstrap"
     },
     {
-      "gap": "authoritative SMT, exact Nat.zero_add, and event-bound Nat.mul_one drivers exist; the two-write chain remains unreplayed",
+      "gap": "the exact Nat.zero_add and event-bound Nat.mul_one drivers passed; a generic typed apply operation remains absent",
       "id": "route-dispatch",
       "owner": "operation registry",
       "source": "artifacts/autogenesis/operations.json",
-      "state": "partial"
+      "state": "autogenesis-1-bootstrap"
     },
     {
-      "gap": "SMT, Nat.zero_add, and event-bound Nat.mul_one drivers emit normalized receipts; clean two-write replay remains missing",
+      "gap": "the two Nat drivers reproduced normalized receipts; heterogeneous proof-plan execution remains absent",
       "id": "operation-execution",
       "owner": "typed operation executor",
       "source": "scripts/execute-autogenesis-operation.py",
-      "state": "authoritative-multi-route"
+      "state": "autogenesis-1-bootstrap"
     },
     {
       "gap": "the first authoritative adapter derives its evidence row and route metadata; other routes through the manual closer remain caller-authored",
@@ -630,11 +631,11 @@
       "state": "partial"
     },
     {
-      "gap": "one authoritative compare-and-swap recovered from a durable intent; multi-fact admission remains deferred",
+      "gap": "two sequential authoritative compare-and-swaps recovered from durable intents; a generic multi-step orchestrator remains deferred",
       "id": "ledger-transition",
       "owner": "transactional closer",
       "source": "scripts/apply-autogenesis-fact-transaction.py",
-      "state": "authoritative"
+      "state": "authoritative-two-write"
     },
     {
       "gap": "kernel facts are covered where checker commands name the theorem; other routes are authored",
@@ -644,18 +645,18 @@
       "state": "partial"
     },
     {
-      "gap": "the first durable authoritative event recomputed the frontier and honestly unlocked nothing; a real B-to-A retry remains",
+      "gap": "B's durable event triggered the credited A retry; retry policy beyond this exact operation remains absent",
       "id": "accepted-transition-event",
       "owner": "episode/orchestrator",
       "source": "scripts/create-autogenesis-readiness-delta.py",
-      "state": "authoritative-leaf"
+      "state": "autogenesis-1-bootstrap"
     },
     {
-      "gap": "one authoritative leaf acquisition reproduces from a clean isolated checkout; the B-to-A episode remains",
+      "gap": "the bootstrap chain reproduces byte-identically; held-out longitudinal replay and generalization remain",
       "id": "clean-replay",
       "owner": "episode replay",
-      "source": "scripts/replay-autogenesis-authoritative-admission.sh",
-      "state": "authoritative-leaf"
+      "source": "scripts/run-autogenesis-authoritative-chain.py",
+      "state": "autogenesis-1-passed"
     }
   ],
   "proof_gap": {
@@ -673,8 +674,13 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "eac71f1560bbfc38ba35b290871c0c55e977fb43c7af56ffb62413def9732427",
+    "digest": "79a4f910214f51ec25b67f8b374e45d65f8420ddc2c106e83b03a1eaa2f6955d",
     "inputs": [
+      {
+        "bytes": 1939,
+        "path": "artifacts/autogenesis/autogenesis-1-result.json",
+        "sha256": "d206d33a1cdf8392dc7fb3c4720ba8c55abd2d3334b35bb5ba5cbd3a6bcef8ca"
+      },
       {
         "bytes": 6657,
         "path": "artifacts/autogenesis/operations.json",
@@ -1261,9 +1267,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 73472,
+        "bytes": 73632,
         "path": "justfile",
-        "sha256": "c1348c84b30960aaaca78125c721b36bc279a20818ae5e9e956e4446ef358f54"
+        "sha256": "6fe67abc6222ce5ffd9fe6333cd956618fc79f924edfa33d9fdf0537c832e95a"
       },
       {
         "bytes": 11929,
@@ -1284,6 +1290,11 @@
         "bytes": 5999,
         "path": "scripts/check-aggregate-scope.expected",
         "sha256": "4ca7f8a489610cede17b3ab4cecc4dc4813fcab2230c42cc0d3e3fb76ca32081"
+      },
+      {
+        "bytes": 5187,
+        "path": "scripts/check-autogenesis-1-result.py",
+        "sha256": "97d0f77196b3dfcef79537b069887f1740b85b207ac3594abd218ebe5c3d252b"
       },
       {
         "bytes": 12778,
@@ -1321,9 +1332,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 22387,
+        "bytes": 22553,
         "path": "scripts/check.sh",
-        "sha256": "16940b0e3215cd1061e41e808c3076f07d9c0bd9efa91df1edadfa635eca01fb"
+        "sha256": "b876e2a76318a080661047b472a977af8f6d329597fee345ab594dcb776c04d8"
       },
       {
         "bytes": 6846,
@@ -1381,9 +1392,9 @@
         "sha256": "fb367504828dc9aa0d09ecf349b645eb33b83402b69c53df65e43e937271526c"
       },
       {
-        "bytes": 25954,
+        "bytes": 27020,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "f5f165adb56a8839ac3347f0390cf32eda98dc35e5d126b43ab39bc88ed471f5"
+        "sha256": "e88df9bf500e8dcea9d141723835b640782511b2ec7ccceccf7dd490fdfbc703"
       },
       {
         "bytes": 17112,

@@ -465,7 +465,7 @@ declaration to `Nat.mul_one`; retained `Nat.zero_add` and `Nat.mul_one` remain
 denied. Because B's legitimate ledger write makes the checkout dirty, the
 executor also constructs a deterministic detached Git state commit whose sole
 change is the verified B row. This removes the hidden human-commit requirement.
-A clean two-write replay remains the decisive test.
+The clean two-write replay below was the decisive test and has now passed.
 
 ### Foundation 1 — make one closure portable
 
@@ -487,6 +487,18 @@ A clean two-write replay remains the decisive test.
 Run B then A from a clean checkout, repeat it, compare deterministic fields,
 audit intervention and trusted-base deltas, and retain both the successful run
 and the expected pre-B failure.
+
+**Passed at source commit `cf998788b`.** `run-autogenesis-authoritative-chain.py`
+performed the complete sequence twice in separate isolated worktrees. Both runs
+produced run digest
+`d6e7b20dfeadd6750cd6080d36425db58565749f2f381b741f17b0534b536102`;
+the fail-closed comparer produced reproduction digest
+`60c6dec66eff79f5dc4192c18f038ed06356a64435129ba0a01b179f612342aa`.
+The pre-B A control and authoritative A operation both used budget 1. The
+retained result reports zero proof-affecting interventions, zero trusted-base
+files changed, empty B and A axiom footprints, two separate authoritative
+writes, and byte identity across 56 retained artifacts. See the
+[result audit](10-autogenesis-1-result.md).
 
 ## Friction and reliability backlog
 

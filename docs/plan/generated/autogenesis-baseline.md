@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:eac71f1560bbfc38ba35b290871c0c55e977fb43c7af56ffb62413def9732427`
+Source identity: `sha256:79a4f910214f51ec25b67f8b374e45d65f8420ddc2c106e83b03a1eaa2f6955d`
 
 ## Ledger and chain substrate
 
@@ -13,8 +13,9 @@ Source identity: `sha256:eac71f1560bbfc38ba35b290871c0c55e977fb43c7af56ffb62413d
 | All facts | 110 | 60 | 63 | 6 |
 | `kernel-lean` | 40 | 52 | 6 | 6 |
 
-The kernel row is a candidate substrate, not proof that an edge is an
-operational unlock. Autogenesis-1 still requires the pre-B counterfactual.
+The kernel row is a candidate substrate, not by itself proof that an edge is an
+operational unlock. The committed Autogenesis-1 result supplies the credited
+pre-B counterfactual and repeated authoritative two-write acquisition.
 The dependency gate can map **35** of
 **40** kernel facts to named theorems;
 the remaining facts stay explicit rather than being guessed.
@@ -23,30 +24,30 @@ the remaining facts stay explicit rather than being guessed.
 
 | Requirement | State | Current evidence | Next falsifiable step |
 |---|---|---|---|
-| `A1-fixed-input-identity` | fixture | baseline source digest plus retained exact-clean-commit captures | bind the first authoritative acquisition to the same identity contract |
-| `A1-real-derived-chain` | qualified-primary-fixture | the exact proof-derived catalog qualifies Nat.zero_add -> Nat.mul_one against a replayed same-target B/no-A/then-A experiment while granting no authoritative-write power | measure a fallback and register authoritative kernel operations for both primary facts |
-| `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | broaden the structural grammar and bind plans into typed evidence |
-| `A1-operational-unlock-control` | fixture | clean authoritative B admission now makes the same A target newly ready; the earlier fixture retains the pre-B no-proof and post-B proof control | execute A from the authoritative B event and preserve the causal boundary across the second write |
-| `A1-machine-selection` | partial | content-addressed authoritative frontier selected B alone; after its admission A became ready but remained refused without an exact operation | replay B then A from one clean reconstructed chain pre-state |
-| `A1-typed-dispatch-evidence` | authoritative-multi-route | the registry fixes SMT, exact Nat.zero_add, and event-bound Nat.mul_one routes; A reconstructs and applies only an episode-local B candidate | retain and replay the complete two-write receipt chain |
-| `A1-atomic-admission` | authoritative | both the first leaf and the qualified chain's B recovered from intentional post-intent stops through compare-and-swap, fsynced journal, atomic replacement, and durable event | extend the same boundary through A |
-| `A1-admission-triggered-retry` | authoritative-leaf | the durable authoritative B event binds exact before/after frontiers and derives newly_ready=[F:nat-mul-one] with one authoritative write and zero fixture writes | dispatch A only from this event-derived eligibility |
-| `A1-clean-reproduction` | authoritative-leaf | isolated clean checkouts reproduced both the leaf and B acquisition; the latter retained a complete synthetic-prestate bundle and event-derived A readiness | extend the same replay boundary through A's proof and admission |
+| `A1-fixed-input-identity` | passed | the retained result binds one exact source, deterministic pre-B and pre-A state commits, registry, facts, statements, operations, and budgets | preserve this identity contract while generalizing beyond the bootstrap chain |
+| `A1-real-derived-chain` | passed | the proof-derived Nat.zero_add -> Nat.mul_one edge is now exercised by two authoritative writes and an episode-local kernel dependency | measure a fallback and build the held-out nursery without weakening primary-chain credit |
+| `A1-proof-leakage-boundary` | passed | proof-body-free catalog plus Bubblewrap repository/network isolation control | broaden the structural grammar while retaining the no-proof-body boundary |
+| `A1-operational-unlock-control` | passed | the same A target and budget fail before B, then B's durable event makes A ready and A proves only through the episode-local B | apply the same causal control to held-out multi-step chains |
+| `A1-machine-selection` | passed | the content-addressed frontier selected B, then selected A only after B admission, and ended with no registered candidate | replace bootstrap exact operations only after a typed generic contract is exercised |
+| `A1-typed-dispatch-evidence` | passed | the registry fixes SMT, exact Nat.zero_add, and event-bound Nat.mul_one routes; A reconstructs and applies only an episode-local B candidate | lift the exercised receipts into the Phase 3 proof-plan contract |
+| `A1-atomic-admission` | passed | both B and A stopped after durable intent, left their facts unchanged, and recovered through compare-and-swap to durable events | retain this boundary for every future multi-step admission |
+| `A1-admission-triggered-retry` | passed | the durable authoritative B event binds exact before/after frontiers and derives newly_ready=[F:nat-mul-one] with one authoritative write and zero fixture writes | generalize event-driven retry without granting status-only dispatch authority |
+| `A1-clean-reproduction` | passed | two isolated runs from one exact source produced identical B and A receipts, events, state bundle, 56 artifact bytes, and semantic identity | keep this result as the longitudinal Phase 3 regression baseline |
 
 ## Manual seams
 
 | Seam | State | Owner | Gap | Source |
 |---|---|---|---|---|
-| `goal-selection` | partial | fact frontier | B admission makes A newly ready and A has an exact event-bound operation; the two-write sequence has not yet replayed cleanly | `scripts/fact-frontier.py` |
-| `chain-qualification` | qualified-primary-fixture | proof-derived chain catalog | the Nat.zero_add to Nat.mul_one primary replays with pre-B no-credit and post-B success; no fallback is measured and fixture qualification grants no write authority | `scripts/create-autogenesis-chain-catalog.py` |
-| `route-dispatch` | partial | operation registry | authoritative SMT, exact Nat.zero_add, and event-bound Nat.mul_one drivers exist; the two-write chain remains unreplayed | `artifacts/autogenesis/operations.json` |
-| `operation-execution` | authoritative-multi-route | typed operation executor | SMT, Nat.zero_add, and event-bound Nat.mul_one drivers emit normalized receipts; clean two-write replay remains missing | `scripts/execute-autogenesis-operation.py` |
+| `goal-selection` | autogenesis-1-bootstrap | fact frontier | the frontier completed the credited B-to-A sequence; selection beyond exact preregistered operations remains ungeneralized | `scripts/fact-frontier.py` |
+| `chain-qualification` | autogenesis-1-bootstrap | proof-derived chain catalog | the Nat.zero_add to Nat.mul_one primary passed authoritatively; no fallback or held-out nursery chain is measured | `scripts/create-autogenesis-chain-catalog.py` |
+| `route-dispatch` | autogenesis-1-bootstrap | operation registry | the exact Nat.zero_add and event-bound Nat.mul_one drivers passed; a generic typed apply operation remains absent | `artifacts/autogenesis/operations.json` |
+| `operation-execution` | autogenesis-1-bootstrap | typed operation executor | the two Nat drivers reproduced normalized receipts; heterogeneous proof-plan execution remains absent | `scripts/execute-autogenesis-operation.py` |
 | `evidence-assembly` | partial | transactional closer | the first authoritative adapter derives its evidence row and route metadata; other routes through the manual closer remain caller-authored | `scripts/close-fact.py` |
 | `checker-selection` | partial | evidence registry | fixture and first authoritative checkers are typed; the manual closer still accepts caller-authored shell text | `artifacts/autogenesis/operations.json` |
-| `ledger-transition` | authoritative | transactional closer | one authoritative compare-and-swap recovered from a durable intent; multi-fact admission remains deferred | `scripts/apply-autogenesis-fact-transaction.py` |
+| `ledger-transition` | authoritative-two-write | transactional closer | two sequential authoritative compare-and-swaps recovered from durable intents; a generic multi-step orchestrator remains deferred | `scripts/apply-autogenesis-fact-transaction.py` |
 | `dependency-derivation` | partial | kernel dependency inventory | kernel facts are covered where checker commands name the theorem; other routes are authored | `scripts/check-fact-depends-derived.py` |
-| `accepted-transition-event` | authoritative-leaf | episode/orchestrator | the first durable authoritative event recomputed the frontier and honestly unlocked nothing; a real B-to-A retry remains | `scripts/create-autogenesis-readiness-delta.py` |
-| `clean-replay` | authoritative-leaf | episode replay | one authoritative leaf acquisition reproduces from a clean isolated checkout; the B-to-A episode remains | `scripts/replay-autogenesis-authoritative-admission.sh` |
+| `accepted-transition-event` | autogenesis-1-bootstrap | episode/orchestrator | B's durable event triggered the credited A retry; retry policy beyond this exact operation remains absent | `scripts/create-autogenesis-readiness-delta.py` |
+| `clean-replay` | autogenesis-1-passed | episode replay | the bootstrap chain reproduces byte-identically; held-out longitudinal replay and generalization remain | `scripts/run-autogenesis-authoritative-chain.py` |
 
 ## Proof-production context
 

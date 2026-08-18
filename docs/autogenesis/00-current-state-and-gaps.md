@@ -130,8 +130,8 @@ do not capture the reasoning state that preceded a result.
 
 | Desired future state | Current state | Missing bridge |
 |---|---|---|
-| One autonomous verified theorem | One authoritative leaf was selected, proved, admitted, recovered, and cleanly reproduced | Generalize beyond one registered operation family |
-| Compounding theorem sequence | Ledger has few useful open dependency chains | Dense nursery, scheduler, retry-on-admission |
+| One autonomous verified theorem | Autogenesis-1 selected, proved, admitted, recovered, and byte-identically reproduced two linked facts | Generalize beyond exact registered bootstrap operations |
+| Compounding theorem sequence | One exact Nat chain passed; the ledger still has few useful open dependency chains | Dense held-out nursery and generic scheduler/retry policy |
 | Heterogeneous proof planning | Route-specific dispatch and reconstruction | Typed proof-plan IR and obligation semantics |
 | Experience-driven improvement | Logs and Git history | Replayable episode corpus and immutable evaluation splits |
 | Useful conjecture generation | Mostly authored fact set | Typed candidate lifecycle, falsification, utility and novelty filters |
@@ -142,7 +142,7 @@ do not capture the reasoning state that preceded a result.
 
 | Existing component | Immediate engineering gap | Why it blocks the loop |
 |---|---|---|
-| `fact-frontier.py` | Clean two-write orchestration and replay | B admission makes A newly ready and A now has an exact event-bound operation; no retained run has executed both authoritative writes |
+| `fact-frontier.py` | General multi-step orchestration beyond the bootstrap chain | Autogenesis-1 retained two byte-identical B-then-A authoritative runs; dispatch remains exact to this preregistered chain |
 | Fact schema | Candidate/attempt identity is absent by design | Attempts and knowledge need separate schemas |
 | Solver `Evidence` | No route-neutral portable result envelope for closure | The closer cannot derive ledger evidence safely |
 | Reconstruction | No generic obligation-composition interface | Multi-step plans cannot become one kernel proof |

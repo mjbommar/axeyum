@@ -49,6 +49,7 @@ STATIC_SOURCES = (
     Path("scripts/replay-autogenesis-authoritative-admission.sh"),
     Path("scripts/run-autogenesis-authoritative-chain.py"),
     Path("scripts/compare-autogenesis-authoritative-chains.py"),
+    Path("scripts/check-autogenesis-1-result.py"),
     Path("scripts/prepare-autogenesis-fact-transaction.py"),
     Path("scripts/apply-autogenesis-fact-transaction.py"),
     Path("scripts/create-autogenesis-readiness-delta.py"),
@@ -66,6 +67,7 @@ STATIC_SOURCES = (
     Path("scripts/execute-autogenesis-operation.py"),
     Path("scripts/check-autogenesis-fact-operation.py"),
     Path("artifacts/autogenesis/operations.json"),
+    Path("artifacts/autogenesis/autogenesis-1-result.json"),
     Path("scripts/close-fact.py"),
     Path("scripts/gen-proof-gap-matrix.py"),
     Path("artifacts/ontology/fact.schema.json"),
@@ -90,35 +92,35 @@ THEOREM_RE = re.compile(
 SEAMS = (
     {
         "id": "goal-selection",
-        "state": "partial",
+        "state": "autogenesis-1-bootstrap",
         "owner": "fact frontier",
         "source": "scripts/fact-frontier.py",
         "marker": "content-addressed authoritative queue",
-        "gap": "B admission makes A newly ready and A has an exact event-bound operation; the two-write sequence has not yet replayed cleanly",
+        "gap": "the frontier completed the credited B-to-A sequence; selection beyond exact preregistered operations remains ungeneralized",
     },
     {
         "id": "chain-qualification",
-        "state": "qualified-primary-fixture",
+        "state": "autogenesis-1-bootstrap",
         "owner": "proof-derived chain catalog",
         "source": "scripts/create-autogenesis-chain-catalog.py",
         "marker": "authoritative_write_authority",
-        "gap": "the Nat.zero_add to Nat.mul_one primary replays with pre-B no-credit and post-B success; no fallback is measured and fixture qualification grants no write authority",
+        "gap": "the Nat.zero_add to Nat.mul_one primary passed authoritatively; no fallback or held-out nursery chain is measured",
     },
     {
         "id": "route-dispatch",
-        "state": "partial",
+        "state": "autogenesis-1-bootstrap",
         "owner": "operation registry",
         "source": "artifacts/autogenesis/operations.json",
         "marker": "smt-int-quadratic-negative-discriminant-v1",
-        "gap": "authoritative SMT, exact Nat.zero_add, and event-bound Nat.mul_one drivers exist; the two-write chain remains unreplayed",
+        "gap": "the exact Nat.zero_add and event-bound Nat.mul_one drivers passed; a generic typed apply operation remains absent",
     },
     {
         "id": "operation-execution",
-        "state": "authoritative-multi-route",
+        "state": "autogenesis-1-bootstrap",
         "owner": "typed operation executor",
         "source": "scripts/execute-autogenesis-operation.py",
         "marker": "Callers supply none of",
-        "gap": "SMT, Nat.zero_add, and event-bound Nat.mul_one drivers emit normalized receipts; clean two-write replay remains missing",
+        "gap": "the two Nat drivers reproduced normalized receipts; heterogeneous proof-plan execution remains absent",
     },
     {
         "id": "evidence-assembly",
@@ -138,11 +140,11 @@ SEAMS = (
     },
     {
         "id": "ledger-transition",
-        "state": "authoritative",
+        "state": "authoritative-two-write",
         "owner": "transactional closer",
         "source": "scripts/apply-autogenesis-fact-transaction.py",
         "marker": "fact compare-and-swap precondition failed",
-        "gap": "one authoritative compare-and-swap recovered from a durable intent; multi-fact admission remains deferred",
+        "gap": "two sequential authoritative compare-and-swaps recovered from durable intents; a generic multi-step orchestrator remains deferred",
     },
     {
         "id": "dependency-derivation",
@@ -154,19 +156,19 @@ SEAMS = (
     },
     {
         "id": "accepted-transition-event",
-        "state": "authoritative-leaf",
+        "state": "autogenesis-1-bootstrap",
         "owner": "episode/orchestrator",
         "source": "scripts/create-autogenesis-readiness-delta.py",
         "marker": "durable admission event",
-        "gap": "the first durable authoritative event recomputed the frontier and honestly unlocked nothing; a real B-to-A retry remains",
+        "gap": "B's durable event triggered the credited A retry; retry policy beyond this exact operation remains absent",
     },
     {
         "id": "clean-replay",
-        "state": "authoritative-leaf",
+        "state": "autogenesis-1-passed",
         "owner": "episode replay",
-        "source": "scripts/replay-autogenesis-authoritative-admission.sh",
-        "marker": "isolated clean worktree",
-        "gap": "one authoritative leaf acquisition reproduces from a clean isolated checkout; the B-to-A episode remains",
+        "source": "scripts/run-autogenesis-authoritative-chain.py",
+        "marker": "Run the credited Autogenesis B -> A acquisition",
+        "gap": "the bootstrap chain reproduces byte-identically; held-out longitudinal replay and generalization remain",
     },
 )
 
@@ -345,69 +347,91 @@ def static_sources(root: Path, paths: Iterable[Path] = STATIC_SOURCES) -> list[d
     return rows
 
 
-def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> list[dict[str, str]]:
+def has_autogenesis1_result(root: Path) -> bool:
+    path = root / "artifacts/autogenesis/autogenesis-1-result.json"
+    if not path.is_file():
+        return False
+    value = json.loads(path.read_text(encoding="utf-8"))
+    unsigned = dict(value)
+    claimed = unsigned.pop("result_sha256", None)
+    checks = value.get("reproduction", {}).get("checks", {})
+    return bool(
+        claimed == sha256_bytes(canonical_json(unsigned).encode())
+        and value.get("verdict") == "autogenesis-1-passed"
+        and checks
+        and all(checks.values())
+    )
+
+
+def requirement_rows(
+    kernel: dict[str, Any], seams: list[dict[str, str]], *, autogenesis1_passed: bool
+) -> list[dict[str, str]]:
     seam_state = {row["id"]: row["state"] for row in seams}
     has_chain = kernel["edges"] > 0 and kernel["max_depth"] >= 2
     unsettled = kernel.get("unsettled", 0)
     chain_state = "missing"
     if has_chain:
         chain_state = "candidate" if unsettled else "replay-candidate"
-    return [
+    rows = [
         {
             "id": "A1-fixed-input-identity",
             "state": "fixture",
-            "evidence": "baseline source digest plus retained exact-clean-commit captures",
-            "next": "bind the first authoritative acquisition to the same identity contract",
+            "evidence": "the retained result binds one exact source, deterministic pre-B and pre-A state commits, registry, facts, statements, operations, and budgets",
+            "next": "preserve this identity contract while generalizing beyond the bootstrap chain",
         },
         {
             "id": "A1-real-derived-chain",
             "state": seam_state.get("chain-qualification", chain_state),
-            "evidence": "the exact proof-derived catalog qualifies Nat.zero_add -> Nat.mul_one against a replayed same-target B/no-A/then-A experiment while granting no authoritative-write power",
-            "next": "measure a fallback and register authoritative kernel operations for both primary facts",
+            "evidence": "the proof-derived Nat.zero_add -> Nat.mul_one edge is now exercised by two authoritative writes and an episode-local kernel dependency",
+            "next": "measure a fallback and build the held-out nursery without weakening primary-chain credit",
         },
         {
             "id": "A1-proof-leakage-boundary",
             "state": "fixture",
             "evidence": "proof-body-free catalog plus Bubblewrap repository/network isolation control",
-            "next": "broaden the structural grammar and bind plans into typed evidence",
+            "next": "broaden the structural grammar while retaining the no-proof-body boundary",
         },
         {
             "id": "A1-operational-unlock-control",
             "state": "fixture",
-            "evidence": "clean authoritative B admission now makes the same A target newly ready; the earlier fixture retains the pre-B no-proof and post-B proof control",
-            "next": "execute A from the authoritative B event and preserve the causal boundary across the second write",
+            "evidence": "the same A target and budget fail before B, then B's durable event makes A ready and A proves only through the episode-local B",
+            "next": "apply the same causal control to held-out multi-step chains",
         },
         {
             "id": "A1-machine-selection",
             "state": seam_state.get("goal-selection", "missing"),
-            "evidence": "content-addressed authoritative frontier selected B alone; after its admission A became ready but remained refused without an exact operation",
-            "next": "replay B then A from one clean reconstructed chain pre-state",
+            "evidence": "the content-addressed frontier selected B, then selected A only after B admission, and ended with no registered candidate",
+            "next": "replace bootstrap exact operations only after a typed generic contract is exercised",
         },
         {
             "id": "A1-typed-dispatch-evidence",
             "state": seam_state.get("operation-execution", "missing"),
             "evidence": "the registry fixes SMT, exact Nat.zero_add, and event-bound Nat.mul_one routes; A reconstructs and applies only an episode-local B candidate",
-            "next": "retain and replay the complete two-write receipt chain",
+            "next": "lift the exercised receipts into the Phase 3 proof-plan contract",
         },
         {
             "id": "A1-atomic-admission",
             "state": seam_state.get("ledger-transition", "missing"),
-            "evidence": "both the first leaf and the qualified chain's B recovered from intentional post-intent stops through compare-and-swap, fsynced journal, atomic replacement, and durable event",
-            "next": "extend the same boundary through A",
+            "evidence": "both B and A stopped after durable intent, left their facts unchanged, and recovered through compare-and-swap to durable events",
+            "next": "retain this boundary for every future multi-step admission",
         },
         {
             "id": "A1-admission-triggered-retry",
             "state": seam_state.get("accepted-transition-event", "missing"),
             "evidence": "the durable authoritative B event binds exact before/after frontiers and derives newly_ready=[F:nat-mul-one] with one authoritative write and zero fixture writes",
-            "next": "dispatch A only from this event-derived eligibility",
+            "next": "generalize event-driven retry without granting status-only dispatch authority",
         },
         {
             "id": "A1-clean-reproduction",
             "state": seam_state.get("clean-replay", "missing"),
-            "evidence": "isolated clean checkouts reproduced both the leaf and B acquisition; the latter retained a complete synthetic-prestate bundle and event-derived A readiness",
-            "next": "extend the same replay boundary through A's proof and admission",
+            "evidence": "two isolated runs from one exact source produced identical B and A receipts, events, state bundle, 56 artifact bytes, and semantic identity",
+            "next": "keep this result as the longitudinal Phase 3 regression baseline",
         },
     ]
+    if autogenesis1_passed:
+        for row in rows:
+            row["state"] = "passed"
+    return rows
 
 
 def build_report(
@@ -462,7 +486,12 @@ def build_report(
         },
         "proof_gap": proof_gap,
         "manual_seams": seam_rows,
-        "autogenesis1_requirements": requirement_rows(kernel_graph, seam_rows),
+        "autogenesis1_passed": has_autogenesis1_result(root),
+        "autogenesis1_requirements": requirement_rows(
+            kernel_graph,
+            seam_rows,
+            autogenesis1_passed=has_autogenesis1_result(root),
+        ),
     }
 
 
@@ -486,8 +515,9 @@ def markdown(report: dict[str, Any]) -> str:
         f"| All facts | {graph['nodes']} | {graph['edges']} | {graph['isolated']} | {graph['max_depth']} |",
         f"| `kernel-lean` | {kernel['nodes']} | {kernel['edges']} | {kernel['isolated']} | {kernel['max_depth']} |",
         "",
-        "The kernel row is a candidate substrate, not proof that an edge is an",
-        "operational unlock. Autogenesis-1 still requires the pre-B counterfactual.",
+        "The kernel row is a candidate substrate, not by itself proof that an edge is an",
+        "operational unlock. The committed Autogenesis-1 result supplies the credited",
+        "pre-B counterfactual and repeated authoritative two-write acquisition.",
         f"The dependency gate can map **{ledger['kernel_dependency_coverage']['named']}** of",
         f"**{ledger['kernel_dependency_coverage']['facts']}** kernel facts to named theorems;",
         "the remaining facts stay explicit rather than being guessed.",
