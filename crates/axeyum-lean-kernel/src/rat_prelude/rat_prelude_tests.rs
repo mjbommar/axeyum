@@ -50,3 +50,20 @@ fn every_named_declaration_exists() {
         );
     }
 }
+
+/// The build itself, with the kernel's rejection **rendered** rather than
+/// printed as opaque `ExprId`s. A `Debug` of `KernelError` says nothing about
+/// what was refused; this says which two types failed to match.
+#[test]
+fn rat_prelude_builds() {
+    let mut kernel = Kernel::new();
+    match build_rat_prelude(&mut kernel) {
+        Ok(_) => {}
+        Err(error) => {
+            let nat = crate::build_nat_prelude(&mut kernel).expect("Nat prelude must build");
+            let mut dev = crate::NatDev::new(&mut kernel, nat);
+            let explained = crate::NatOps::explain(&mut dev, &error);
+            panic!("the kernel refused a rational proof: {explained}");
+        }
+    }
+}
