@@ -69,7 +69,36 @@ private def hints (value : Json) : IO ReducibilityHints := do
   | .str "abbrev" => pure .abbrev
   | _ => pure (.regular (UInt32.ofNat (← jFieldNat value "regular")))
 
+/-
+`Environment.addDeclCore` — Lean's own kernel entry point — CHANGED ARITY
+between the toolchain `lean-toolchain` pins (v4.30.0) and v4.34.0-rc1: a
+`maxRecDepth : USize` was inserted after `maxHeartbeats`. A single spelling
+therefore fails to *elaborate* on one of the two, which is what happened on the
+development host on 2026-08-17: under 4.34 this script died with
+
+    Application type mismatch: the argument `declaration` ... expected USize
+
+before reading a byte of the stream, so `real_lean_kernel_replay` failed for a
+reason unrelated to what it checks.
+
+`first | exact … | exact …` resolves the arity AT ELABORATION TIME against
+whichever Lean is running, and — this is the point — it fails loudly if neither
+spelling type-checks, rather than silently degrading. Both zeros mean "no
+limit"; Lean's own `Lean/Replay.lean` calls `addDeclCore 0 0 d none`.
+
+This shim is deliberately the ONLY version-conditional construct in the file. If
+a future toolchain changes anything else here, it must break visibly.
+-/
+private def addDeclKernelChecked (env : Environment) (declaration : Declaration) :
+    Except Kernel.Exception Environment := by
+  first
+    | exact env.addDeclCore 0 0 declaration none true  -- Lean >= 4.34
+    | exact env.addDeclCore 0 declaration none true    -- Lean 4.30 (pinned)
+
 def main (args : List String) : IO UInt32 := do
+  -- A result that does not name its checker is not evidence: every run says
+  -- which Lean kernel produced the verdict below, on stdout, unconditionally.
+  IO.println s!"lean4export replay: checker Lean {Lean.versionString} (githash {Lean.githash})"
   let [path] := args
     | IO.eprintln "usage: lean --run replay-lean4export.lean <stream.ndjson>"
       return 2
@@ -215,7 +244,7 @@ def main (args : List String) : IO UInt32 := do
       else
         throw (IO.userError s!"line {lineNumber}: unknown declaration record")
     if let some declaration := declaration then
-      match env.addDeclCore 0 declaration none true with
+      match addDeclKernelChecked env declaration with
       | .ok next =>
         env := next
         declarations := declarations + 1

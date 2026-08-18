@@ -14,9 +14,9 @@
 #
 # So this gate does three things a bare `cargo test` cannot:
 #
-#   1. DISCOVERS the toolchain (`AXEYUM_LEAN_BIN`, then `PATH`, then
-#      `$ELAN_HOME`/`~/.elan/toolchains/*/bin/lean`, then elan's shim) — the same
-#      order as `crates/axeyum-lean-kernel/tests/support/lean_probe.rs`.
+#   1. RESOLVES the PINNED toolchain — the one `lean-toolchain` names — by the
+#      same policy as `crates/axeyum-lean-kernel/tests/support/lean_probe.rs`,
+#      and then CROSS-CHECKS that every suite reported using that same binary.
 #   2. Sets `AXEYUM_REQUIRE_LEAN=1`, so a suite that cannot find the binary FAILS
 #      instead of printing a skip note and passing.
 #   3. COUNTS. Each suite prints `AXEYUM-LEAN-CHECKED <tag> checked=<n>`; this
@@ -30,14 +30,52 @@
 # 0 (CLAUDE.md documents four suites this already happened to).
 #
 # Usage:
-#   scripts/check-lean-gate.sh              # discover, require, count, enforce
+#   scripts/check-lean-gate.sh              # resolve, require, count, enforce
+#   scripts/check-lean-gate.sh --print-toolchain  # resolve and stop (see below)
 #   AXEYUM_LEAN_BIN=/path/to/lean  …        # explicit override (authoritative)
 #   AXEYUM_ALLOW_NO_LEAN=1         …        # no toolchain -> loud SKIP, exit 0
+#   AXEYUM_LEAN_ALLOW_UNPINNED=1   …        # state a deliberate non-pinned run
+#
+# Negative controls for this gate: scripts/tests/test-lean-toolchain-policy.sh
 #
 # NO TOOLCHAIN IS A FAILURE BY DEFAULT. That is deliberate: the whole incident
 # above is what "absent Lean quietly passes" looks like. A machine that genuinely
 # has no Lean sets `AXEYUM_ALLOW_NO_LEAN=1` and gets a banner saying, in words,
 # that zero Lean checks ran.
+#
+# ---------------------------------------------------------------------------
+# WHICH Lean, and why that is a soundness question rather than a setup detail
+# ---------------------------------------------------------------------------
+#
+# The fix above left a second, quieter defect: it said WHETHER a Lean ran, never
+# WHICH. Measured on the development host on 2026-08-17 with two toolchains
+# installed (v4.30.0 and v4.34.0-rc1), the shell gate and the Rust probe carried
+# two hand-written copies of the search order and DISAGREED — this script tried
+# `command -v lean` first and found elan's default (4.30.0), while the probe
+# sorted elan's toolchain directories newest-name-first and took 4.34.0-rc1.
+# Under 4.34, 21 of 77 `lean_crosscheck` families were rejected while all 77
+# passed under 4.30, and `scripts/lean/replay-lean4export.lean` did not even
+# elaborate. So the gate's verdict depended on which toolchain happened to be
+# installed and on which entry point ran, and nothing in its output named the
+# checker that produced it.
+#
+# The policy is now ONE policy, implemented in `lean_probe.rs` and mirrored here
+# line for line: **the pin runs**. `lean-toolchain` at the repository root is the
+# pin; resolution is AXEYUM_LEAN_BIN (authoritative in both directions), then the
+# pinned toolchain's own elan directory, then PATH / other elan toolchains / the
+# elan shim ONLY IF `--version` matches the pin. There is no "newest wins" step:
+# a host with only a non-pinned Lean resolves nothing and says so.
+#
+# It is the pin and not the newest because several suites are frozen-source
+# reproductions that assert an exact toolchain — `real_lean_strict_positivity_
+# crosscheck` asserts commit d024af099ca4bf2c86f649261ebf59565dc8c622, and
+# `real_lean_wire_differential` is a differential against the reference
+# implementation, which means nothing against "whatever was installed". Moving to
+# a newer Lean is an explicit act: edit `lean-toolchain`, and every entry point
+# follows in one commit.
+#
+# `AXEYUM_LEAN_ALLOW_UNPINNED=1` states a deliberate deviation; it relaxes the
+# assertion, never the search, and the mismatch is still printed on every line.
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 2
@@ -153,52 +191,140 @@ EOF
 )
 
 # ---------------------------------------------------------------------------
-# Discovery. Mirrors `lean_probe::lean_bin`, including the rule that an explicit
-# `AXEYUM_LEAN_BIN` is authoritative in BOTH directions: if it is set and does
-# not resolve we do NOT search on, or `AXEYUM_LEAN_BIN=/nonexistent` (the
-# negative control for this gate) would quietly find the elan toolchain instead.
+# Resolution. Mirrors `lean_probe::lean_bin` step for step. The two must agree,
+# and the cross-check further down PROVES they did on this run rather than
+# trusting that this comment stayed true.
 # ---------------------------------------------------------------------------
-discover_lean() {
-  if [ -n "${AXEYUM_LEAN_BIN:-}" ]; then
-    [ -x "$AXEYUM_LEAN_BIN" ] && printf '%s\n' "$AXEYUM_LEAN_BIN"
-    return
-  fi
-  local candidate
-  if candidate=$(command -v lean 2>/dev/null); then
-    printf '%s\n' "$candidate"
-    return
-  fi
-  local root="${ELAN_HOME:-${HOME:-}/.elan}"
-  [ -d "$root/toolchains" ] || { [ -x "$root/bin/lean" ] && printf '%s\n' "$root/bin/lean"; return; }
-  # Deterministic order: sort toolchain directory names, newest name first.
-  local toolchain
-  while IFS= read -r toolchain; do
-    [ -x "$toolchain/bin/lean" ] && { printf '%s\n' "$toolchain/bin/lean"; return; }
-  done < <(find "$root/toolchains" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort -r)
-  [ -x "$root/bin/lean" ] && printf '%s\n' "$root/bin/lean"
+pinned_toolchain=$(tr -d '[:space:]' <lean-toolchain 2>/dev/null)
+if [ -z "$pinned_toolchain" ]; then
+  echo "check-lean-gate: FAILED -- no readable \`lean-toolchain\` at the repository root, so" \
+       "there is no pin to resolve and any Lean found would be an unstated environment fact." >&2
+  exit 1
+fi
+# `leanprover/lean4:v4.30.0` -> `4.30.0`, and elan's directory spelling.
+pinned_version="${pinned_toolchain##*:v}"
+pinned_directory=$(printf '%s' "$pinned_toolchain" | sed 's|/|--|g; s|:|---|g')
+
+# Matched with the trailing comma `lean --version` prints, so `4.30.0` cannot
+# match `4.30.0-rc1` and `4.3` cannot match `4.30.0`.
+version_matches_pin() { case "$1" in *"version $pinned_version,"*) return 0 ;; *) return 1 ;; esac; }
+
+# Sorted and de-duplicated, byte-wise, so this emits the SAME order as
+# `lean_probe::elan_roots` (which sorts a `Vec<PathBuf>`). Two roots can name one
+# binary here -- `~/.elan/toolchains` is a symlink to `~/.elan/elan-home/toolchains`
+# on hosts provisioned by `scripts/install-pinned-lean.sh` -- and an order that
+# differed between the two implementations made them print two different PATHS
+# for the same Lean, which the cross-check below would have read as a mismatch.
+elan_roots() {
+  {
+    [ -n "${ELAN_HOME:-}" ] && printf '%s\n' "$ELAN_HOME"
+    [ -n "${HOME:-}" ] && printf '%s\n%s\n' "$HOME/.elan/elan-home" "$HOME/.elan"
+  } | LC_ALL=C sort -u
 }
 
-lean=$(discover_lean)
+# Candidates in POLICY order, one per line. The pinned toolchain's own directory
+# first; everything after it must still pass the version check.
+lean_candidates() {
+  local root
+  while IFS= read -r root; do
+    [ -x "$root/toolchains/$pinned_directory/bin/lean" ] &&
+      printf '%s|elan-pinned-toolchain\n' "$root/toolchains/$pinned_directory/bin/lean"
+  done < <(elan_roots)
+  local candidate
+  candidate=$(command -v lean 2>/dev/null) && printf '%s|PATH\n' "$candidate"
+  local toolchain
+  while IFS= read -r root; do
+    [ -d "$root/toolchains" ] || continue
+    while IFS= read -r toolchain; do
+      [ "$(basename "$toolchain")" = "$pinned_directory" ] && continue
+      [ -x "$toolchain/bin/lean" ] && printf '%s|elan-other-toolchain\n' "$toolchain/bin/lean"
+    done < <(find "$root/toolchains" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort)
+    [ -x "$root/bin/lean" ] && printf '%s|elan-shim\n' "$root/bin/lean"
+  done < <(elan_roots)
+}
+
+# An explicit `AXEYUM_LEAN_BIN` is authoritative in BOTH directions: if it is set
+# and does not resolve we do NOT search on, or `AXEYUM_LEAN_BIN=/nonexistent`
+# (the negative control for this gate) would quietly find an elan toolchain and
+# prove nothing.
+lean=""
+lean_source=""
+lean_version=""
+if [ -n "${AXEYUM_LEAN_BIN:-}" ]; then
+  if [ -x "$AXEYUM_LEAN_BIN" ]; then
+    lean="$AXEYUM_LEAN_BIN"
+    lean_source="AXEYUM_LEAN_BIN"
+    lean_version=$("$lean" --version 2>&1 | head -1)
+  fi
+else
+  while IFS='|' read -r candidate source; do
+    [ -n "$candidate" ] || continue
+    candidate_version=$("$candidate" --version 2>/dev/null | head -1)
+    [ -n "$candidate_version" ] || continue
+    if version_matches_pin "$candidate_version"; then
+      lean="$candidate"
+      lean_source="$source"
+      lean_version="$candidate_version"
+      break
+    fi
+  done < <(lean_candidates)
+fi
+
 if [ -z "$lean" ]; then
-  echo "check-lean-gate: searched AXEYUM_LEAN_BIN='${AXEYUM_LEAN_BIN:-<unset>}', PATH," \
-       "and ${ELAN_HOME:-${HOME:-}/.elan}/toolchains/*/bin/lean -- no Lean binary." >&2
+  echo "check-lean-gate: no Lean matching the pin. policy=pinned; lean-toolchain=$pinned_toolchain;" \
+       "AXEYUM_LEAN_BIN='${AXEYUM_LEAN_BIN:-<unset>}'; candidates considered:" >&2
+  while IFS='|' read -r candidate source; do
+    [ -n "$candidate" ] || continue
+    echo "check-lean-gate:   $candidate ($source) [$("$candidate" --version 2>&1 | head -1)]" >&2
+  done < <(lean_candidates)
   if [ "${AXEYUM_ALLOW_NO_LEAN:-}" = "1" ]; then
     echo "check-lean-gate: SKIPPED -- 0 real-Lean checks ran. This is NOT a pass;" \
          "AXEYUM_ALLOW_NO_LEAN=1 was set, so nothing external read our exported modules." >&2
     exit 0
   fi
-  echo "check-lean-gate: FAILED. Install a toolchain (\`elan toolchain install leanprover/lean4:v4.30.0\`)," \
-       "point AXEYUM_LEAN_BIN at a \`lean\`, or set AXEYUM_ALLOW_NO_LEAN=1 to accept a run in which" \
-       "ZERO Lean checks happen." >&2
+  echo "check-lean-gate: FAILED. Install the PINNED toolchain" \
+       "(\`elan toolchain install $pinned_toolchain\`), point AXEYUM_LEAN_BIN at a \`lean\`, or set" \
+       "AXEYUM_ALLOW_NO_LEAN=1 to accept a run in which ZERO Lean checks happen. A newer Lean that" \
+       "is already installed is deliberately NOT used: see the policy note at the top of this file." >&2
   exit 1
 fi
 
-version=$("$lean" --version 2>&1 | head -1)
-echo "check-lean-gate: using $lean"
-echo "check-lean-gate: $version"
+echo "check-lean-gate: pin $pinned_toolchain (from lean-toolchain)"
+echo "check-lean-gate: using $lean (via $lean_source)"
+echo "check-lean-gate: $lean_version"
+
+if version_matches_pin "$lean_version"; then
+  echo "check-lean-gate: toolchain matches the pin"
+elif [ "${AXEYUM_LEAN_ALLOW_UNPINNED:-}" = "1" ]; then
+  echo "check-lean-gate: WARNING -- the resolved Lean is NOT the pinned $pinned_version." \
+       "AXEYUM_LEAN_ALLOW_UNPINNED=1 was set, so this run is accepted; every claim it produces is" \
+       "about $lean_version, not about the pin." >&2
+else
+  echo "check-lean-gate: FAILED -- TOOLCHAIN MISMATCH. \`lean-toolchain\` pins $pinned_toolchain" \
+       "but the resolved Lean is: $lean_version ($lean, via $lean_source). Suites here include" \
+       "frozen-source reproductions that assert an exact toolchain, so a different Lean changes" \
+       "WHAT is checked, not just whether it passes. Set AXEYUM_LEAN_ALLOW_UNPINNED=1 to state the" \
+       "deviation deliberately." >&2
+  exit 1
+fi
+
+lean_real=$(readlink -f "$lean" 2>/dev/null || printf '%s' "$lean")
+
+# `--print-toolchain` resolves and stops. `scripts/tests/test-lean-toolchain-policy.sh`
+# uses it to compare THIS implementation's answer against the Rust probe's, which
+# is the only way to know the two agree on a given host -- a comment claiming they
+# mirror each other is what was true, and false, before 2026-08-17.
+if [ "${1:-}" = "--print-toolchain" ]; then
+  printf 'bin=%s\nreal=%s\nsource=%s\nversion=%s\npin=%s\n' \
+    "$lean" "$lean_real" "$lean_source" "$lean_version" "$pinned_toolchain"
+  exit 0
+fi
 
 export AXEYUM_LEAN_BIN="$lean"
 export AXEYUM_REQUIRE_LEAN=1
+# Pass the deviation flag through explicitly, so a suite's own pin assertion
+# agrees with the decision this gate already printed.
+[ "${AXEYUM_LEAN_ALLOW_UNPINNED:-}" = "1" ] && export AXEYUM_LEAN_ALLOW_UNPINNED=1
 
 scratch=$(mktemp -d) || exit 2
 trap 'rm -rf "$scratch"' EXIT
@@ -229,6 +355,35 @@ while IFS='|' read -r package features target; do
   checked=$(sed -n 's/.*AXEYUM-LEAN-CHECKED [^ ]* checked=\([0-9]*\).*/\1/p' "$log" |
     awk '{s+=$1} END {print s+0}')
   skipped=$(grep -c 'AXEYUM-LEAN-SKIPPED' "$log" 2>/dev/null || true)
+  # WHICH Lean did this suite actually use? Exporting AXEYUM_LEAN_BIN is an
+  # instruction, not evidence: a suite is free to resolve its own binary (and
+  # `real_lean_wire_differential` deliberately does). Read the banner each suite
+  # prints and require it to name the binary this gate resolved -- otherwise the
+  # count above is a sum over runs against different checkers, which is exactly
+  # the defect this policy exists to close.
+  used_bins=$(sed -n 's/.*AXEYUM-LEAN-TOOLCHAIN [^ ]* bin=\(.*\) version=.*/\1/p' "$log" |
+    LC_ALL=C sort -u)
+  if [ -z "$used_bins" ]; then
+    echo "check-lean-gate: $target reported $checked real-Lean check(s) but printed no" \
+         "AXEYUM-LEAN-TOOLCHAIN banner, so which Lean produced them is unknown. A result that" \
+         "does not name its checker is not evidence." >&2
+    failed_suites+=("$target(unnamed-toolchain)")
+    fail=1
+  else
+    while IFS= read -r used; do
+      [ -n "$used" ] || continue
+      # Compare resolved paths: one binary can be reached by two names through
+      # elan's symlinks, and that is agreement, not a mismatch.
+      used_real=$(readlink -f "$used" 2>/dev/null || printf '%s' "$used")
+      if [ "$used_real" != "$lean_real" ]; then
+        echo "check-lean-gate: TOOLCHAIN MISMATCH in $target -- this gate resolved $lean_real but" \
+             "the suite ran $used_real (reported as $used). Two entry points checked different" \
+             "things in one run; the totals below would have summed over both." >&2
+        failed_suites+=("$target(toolchain-mismatch)")
+        fail=1
+      fi
+    done <<<"$used_bins"
+  fi
   if grep -q 'LEAN_CONTENT_SUMMARY|' "$log"; then
     content_summary=$(grep -o 'LEAN_CONTENT_SUMMARY|.*' "$log" | tail -1)
   fi
@@ -305,6 +460,7 @@ if [ "$fail" -ne 0 ]; then
   [ ${#failed_suites[@]} -gt 0 ] && printf 'check-lean-gate: FAILED: %s\n' "${failed_suites[*]}" >&2
   exit 1
 fi
-echo "check-lean-gate: OK -- $total_checked modules/controls were READ by a real Lean kernel" \
-     "($structural_families of $((theory_families + structural_families)) crosscheck families are" \
-     "attestations, so this is not a count of propositions proved)"
+echo "check-lean-gate: OK -- $total_checked modules/controls were READ by $lean_version" \
+     "($lean, via $lean_source; every suite confirmed the same binary)." \
+     "$structural_families of $((theory_families + structural_families)) crosscheck families are" \
+     "attestations, so this is not a count of propositions proved"

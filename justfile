@@ -177,14 +177,25 @@ gate-liveness:
     ./scripts/check-gate-liveness.sh
 
 # The real-Lean gate: every suite that hands a generated module to an EXTERNAL
-# `lean` binary, with the toolchain DISCOVERED (`AXEYUM_LEAN_BIN`, `PATH`, then
-# `~/.elan/toolchains/*/bin/lean`) and `AXEYUM_REQUIRE_LEAN=1` set, so a missing
-# binary fails instead of printing a skip note and passing. It prints the number
-# of Lean invocations that actually happened and enforces a floor -- an exit
-# status cannot tell "checked 40 modules" from "checked none", and that is
-# precisely how a real Lean rejection of our exported modules stayed invisible
-# until 2026-08-14. On a machine with no Lean at all: AXEYUM_ALLOW_NO_LEAN=1.
+# `lean` binary, with the toolchain RESOLVED FROM THE PIN in `lean-toolchain`
+# (`AXEYUM_LEAN_BIN`, then the pinned toolchain's elan directory, then PATH or
+# any other elan toolchain ONLY IF its `--version` matches the pin) and
+# `AXEYUM_REQUIRE_LEAN=1` set, so a missing binary fails instead of printing a
+# skip note and passing. It prints the number of Lean invocations that actually
+# happened and enforces a floor -- an exit status cannot tell "checked 40
+# modules" from "checked none", and that is precisely how a real Lean rejection
+# of our exported modules stayed invisible until 2026-08-14. On a machine with
+# no Lean at all: AXEYUM_ALLOW_NO_LEAN=1.
+#
+# The policy controls run FIRST and are cheap (~30s): they point both entry
+# points at a non-pinned toolchain and require the refusal, and they check that
+# the shell gate and the Rust probe resolve the SAME binary. Until 2026-08-17
+# they did not -- the gate took PATH's lean (4.30.0) and the probe took the
+# newest installed name (4.34.0-rc1), under which 21 of 77 `lean_crosscheck`
+# families were rejected. A gate whose answer depends on an unstated fact about
+# the machine is this repository's signature defect.
 lean-gate:
+    ./scripts/tests/test-lean-toolchain-policy.sh
     ./scripts/check-lean-gate.sh
 
 # Same as `test`, but under a hard 64 GiB memory cap (scripts/mem-run.sh) so a

@@ -136,6 +136,7 @@ step gate-liveness ./scripts/check-gate-liveness.sh
 # it REJECTED them (a5975725f). This discovers the toolchain, sets
 # AXEYUM_REQUIRE_LEAN=1 so a missing binary FAILS, and prints how many Lean
 # invocations actually happened. AXEYUM_ALLOW_NO_LEAN=1 for a machine with none.
+step lean-toolchain-policy ./scripts/tests/test-lean-toolchain-policy.sh
 step lean-gate ./scripts/check-lean-gate.sh
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
