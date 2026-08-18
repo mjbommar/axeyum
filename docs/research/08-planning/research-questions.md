@@ -1603,7 +1603,7 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     selects a content-addressed prepared proposal, registered checker replay,
     compare-and-swap fact replacement, same-filesystem intent journal, monotone
     roll-forward admission event, and separately reported archival/Git
-    publication. The decision is proposed pending fault-injected implementation.
+    publication. Fault-injected exact-commit replay accepts the decision.
 
 ## Source Pointers
 

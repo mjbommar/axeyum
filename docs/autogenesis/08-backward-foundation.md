@@ -201,6 +201,13 @@ consume the durable event rather than the earlier bootstrap event. A production
 write remains blocked on matching typed evidence for one of the seven genuinely
 open facts; the programme will not relabel a settled fact to manufacture it.
 
+The recoverable applicant was retained and independently replayed at exact
+commit `0ee7143ea`, experiment digest
+`8706f8a98dce0563354ba2407ff9624c03701da01670f36d71fbb5af860c0ba7`,
+durable fixture event
+`e5d29bc51f330c3dec8e25f93b6609a1871676686d3503bae5b1b125f05a6620`.
+ADR-0468 is therefore accepted for the exercised single-fact boundary.
+
 ## Assumptions tested now
 
 ### A. The ledger has a usable chain substrate

@@ -1,6 +1,6 @@
 # ADR-0468: Autogenesis transaction and episode boundary
 
-Status: proposed
+Status: accepted
 Date: 2026-08-18
 Index-summary: Content-addressed Autogenesis proposals, compare-and-swap fact admission, and roll-forward recovery events
 
@@ -92,6 +92,12 @@ The boundary has these rules:
   evidence. Therefore the positive write/recovery tests must use an explicit
   temporary fact root until a real route closes one; no production fact is
   changed to manufacture the first success.
+- Exact commit `0ee7143ea` retained and independently replayed experiment
+  `8706f8a98dce0563354ba2407ff9624c03701da01670f36d71fbb5af860c0ba7`.
+  Fault injection after intent, after fact replacement, and after event
+  publication converges to durable fixture event
+  `e5d29bc51f330c3dec8e25f93b6609a1871676686d3503bae5b1b125f05a6620`;
+  production authority accepts zero writes.
 
 ## Alternatives
 
