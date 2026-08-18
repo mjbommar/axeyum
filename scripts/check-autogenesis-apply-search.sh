@@ -135,6 +135,14 @@ python3 scripts/create-autogenesis-premise-evidence.py \
   --plans "$scratch/pre_b-induction-output/induction-plans.tsv" \
   --kernel-evidence "$scratch/premise-kernel-evidence.tsv" \
   --verify "$scratch/premise-evidence.json" >/dev/null
+python3 scripts/create-autogenesis-premise-transition.py \
+  --snapshot "$scratch/snapshot.json" \
+  --premise-evidence "$scratch/premise-evidence.json" \
+  --output "$scratch/premise-transition.json" >/dev/null
+python3 scripts/create-autogenesis-premise-transition.py \
+  --snapshot "$scratch/snapshot.json" \
+  --premise-evidence "$scratch/premise-evidence.json" \
+  --verify "$scratch/premise-transition.json" >/dev/null
 
 pre_result=$(cargo run -q -p axeyum-lean-kernel \
   --example autogenesis_apply_plan_check -- \
@@ -202,8 +210,9 @@ post_bundle = json.load(open(root / "post_b-output/apply-plans.json"))
 premise_catalog = json.load(open(root / "pre_b-catalog.json"))
 premise_bundle = json.load(open(root / "pre_b-induction-output/induction-plans.json"))
 premise_evidence = json.load(open(root / "premise-evidence.json"))
+premise_transition = json.load(open(root / "premise-transition.json"))
 report = {
-    "schema_version": 3,
+    "schema_version": 4,
     "kind": "axeyum-autogenesis-apply-experiment",
     "git_commit": baseline["git_commit"],
     "baseline_source_sha256": baseline["baseline_source_sha256"],
@@ -218,6 +227,7 @@ report = {
         "bundle_sha256": premise_bundle["bundle_sha256"],
         "accepted_plan_rank": 2,
         "evidence_sha256": premise_evidence["evidence_sha256"],
+        "transition_sha256": premise_transition["transition_sha256"],
         "result": sys.argv[4],
     },
     "pre_a": {
@@ -245,4 +255,4 @@ PY
   trap - EXIT
 fi
 
-echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved+typed-evidence|target=A|budget=$budget|pre_a=no-proof|post_b=proved|dependency=episode-premise"
+echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved+typed-evidence+staged-transition|target=A|budget=$budget|pre_a=no-proof|post_b=proved|dependency=episode-premise|ledger_writes=0"

@@ -400,6 +400,7 @@ generated-trackers:
     python3 -m unittest scripts.tests.test_autogenesis_induction_proposer
     python3 -m unittest scripts.tests.test_verify_autogenesis_induction_proposals
     python3 -m unittest scripts.tests.test_create_autogenesis_premise_evidence
+    python3 -m unittest scripts.tests.test_create_autogenesis_premise_transition
     python3 scripts/gen-autogenesis-baseline.py --check
     python3 -m unittest scripts.tests.test_gen_plan
     python3 scripts/gen-plan.py --check

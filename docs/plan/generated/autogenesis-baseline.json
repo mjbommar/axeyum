@@ -659,7 +659,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "33d2bcd9d534950bf0414830f6f9f00a6645d430764121ccdae3e7c7cbead82c",
+    "digest": "4adf1d76b35f5ed2c1535579c0682d832b4f87d10f2daae79f3f9310818b0e34",
     "inputs": [
       {
         "bytes": 3519,
@@ -1247,9 +1247,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 71334,
+        "bytes": 71415,
         "path": "justfile",
-        "sha256": "d08f0d6502b36ebecf2359ed2d687a81be61d6c8cbd14cef7e17c8c5b7ef93bd"
+        "sha256": "bc1836ec79ef16079fab2fd9132ab498960c453c868420e2f53d16d4ba3f1725"
       },
       {
         "bytes": 2896,
@@ -1267,9 +1267,9 @@
         "sha256": "4ca7f8a489610cede17b3ab4cecc4dc4813fcab2230c42cc0d3e3fb76ca32081"
       },
       {
-        "bytes": 9809,
+        "bytes": 10408,
         "path": "scripts/check-autogenesis-apply-search.sh",
-        "sha256": "980ea8f5be34427caabc4af83d87273c8e0c80a5ff39f835a3ab3185a822c4e4"
+        "sha256": "ba95cb603ab2bf26567bd84523372123866a7e40fde1bc2a50a9d2adaead8b03"
       },
       {
         "bytes": 3677,
@@ -1297,9 +1297,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 20986,
+        "bytes": 21105,
         "path": "scripts/check.sh",
-        "sha256": "02af2509f9259d87a40c85fc38f02839ed348f83127e00dc3ecb369faf1a7318"
+        "sha256": "7b5747834be6f24023265006414c10184529b5360441a2cd65700fa181223c68"
       },
       {
         "bytes": 6846,
@@ -1310,6 +1310,11 @@
         "bytes": 8648,
         "path": "scripts/create-autogenesis-premise-evidence.py",
         "sha256": "d57b810821cf6cdc03dfb595bc22527cca5a8990f8bc0fbde7278840b040dd9c"
+      },
+      {
+        "bytes": 8723,
+        "path": "scripts/create-autogenesis-premise-transition.py",
+        "sha256": "06b6758f7422c1750d2752ef4a92eee74523ff6ab062b123cd5a7bb546cc4a71"
       },
       {
         "bytes": 10401,
@@ -1327,9 +1332,9 @@
         "sha256": "db6757cc801ed3996d0ba3c40ba55123e2855e8944054c2a391b46ff5678b81b"
       },
       {
-        "bytes": 22910,
+        "bytes": 22972,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "7dbb0bb82c93c01b80c0c17240637119dd0760f0ca8a145da5cfd4d848d401f9"
+        "sha256": "7b5f39133ba23949620de068eb08e34d9d8153b000aa9236e386c17e82f25291"
       },
       {
         "bytes": 17112,

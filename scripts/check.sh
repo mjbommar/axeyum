@@ -226,6 +226,7 @@ step autogenesis-apply-verifier-tests python3 -m unittest scripts.tests.test_ver
 step autogenesis-induction-proposer-tests python3 -m unittest scripts.tests.test_autogenesis_induction_proposer
 step autogenesis-induction-verifier-tests python3 -m unittest scripts.tests.test_verify_autogenesis_induction_proposals
 step autogenesis-premise-evidence-tests python3 -m unittest scripts.tests.test_create_autogenesis_premise_evidence
+step autogenesis-premise-transition-tests python3 -m unittest scripts.tests.test_create_autogenesis_premise_transition
 step autogenesis-baseline python3 scripts/gen-autogenesis-baseline.py --check
 step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
 step gen-plan       python3 scripts/gen-plan.py --check

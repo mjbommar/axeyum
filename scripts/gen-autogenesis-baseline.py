@@ -41,6 +41,7 @@ STATIC_SOURCES = (
     Path("scripts/verify-autogenesis-induction-proposals.py"),
     Path("scripts/check-autogenesis-induction-search.sh"),
     Path("scripts/create-autogenesis-premise-evidence.py"),
+    Path("scripts/create-autogenesis-premise-transition.py"),
     Path("scripts/check-autogenesis-knowledge-controls.sh"),
     Path("scripts/check-autogenesis-proposer-isolation.sh"),
     Path("scripts/run-autogenesis-python-proposer.sh"),

@@ -120,8 +120,10 @@ checkout, retained proof bodies, inherited environment, or network.
 then composes two catalog-only searches: a target-independent structural-plan
 grammar produces fresh B, and the identical A target receives no proof before B
 but a fresh, B-dependent proof afterward under the same budget. The chain is
-now bound to an internal typed B evidence handoff, but not yet to a durable
-ledger transaction, so this remains an operational unlock control rather than
+now bound to an internal typed B evidence handoff and a replay-derived,
+zero-ledger-write episode transition. The post-B readiness path does not yet
+consume an accepted-transition event and no durable ledger transaction has
+occurred, so this remains an operational unlock control rather than
 Autogenesis-1 credit.
 
 ## Phase summary
