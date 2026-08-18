@@ -421,6 +421,32 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   have legitimately staged work there, and you would drop their staging. Resync
   only your own paths, and only after confirming `git diff HEAD -- <path>` is
   empty for each.
+- **`read-tree` AND `commit` MUST BE THE SAME SHELL INVOCATION — a refresh in an
+  earlier command is already stale.** Eighth and ninth incidents, 2026-08-17,
+  both by agents that had read the rule above and believed they were following
+  it. `agent-reals-design` deleted 1,623 lines of `rat_prelude`; an hour later
+  `agent-characterization` deleted 1,514 lines of the same file the same way.
+  Each repaired it, but only after the fact.
+
+  The mechanism is that "refresh first" reads as setup rather than as part of
+  the commit. Between one Bash call running `git read-tree HEAD` and a later one
+  running `git commit`, **another lane commits and HEAD moves**; the private
+  index still holds the old blobs, so committing writes them back and reverts
+  the other lane. Nothing in the diff you were looking at hints at it.
+
+      # WRONG -- two invocations, HEAD can move between them
+      git read-tree HEAD
+      … think, edit, run a test …
+      git add -- a.rs && git commit -m "…"
+
+      # RIGHT -- one invocation, nothing between
+      git read-tree HEAD && git add -- a.rs && git commit -m "…"
+
+  Two checks catch it, and the obvious one does not. `git diff --cached --stat`
+  compares against the index's own stale base and looks clean; **`git diff
+  --cached --stat HEAD` is the one that fires.** And after committing, read the
+  FILE COUNT in `git show --stat`, not whether your own hunks look right: the
+  only symptom in the second incident was 15 files where 11 were staged.
 - **`git commit -m "…"` SILENTLY DELETES anything in backticks.** Double quotes
   mean the shell runs each backtick span as a command and substitutes its output,
   which for prose is almost always empty. This repository's commit messages are
