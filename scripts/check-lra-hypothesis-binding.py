@@ -264,6 +264,22 @@ MANIFEST = ROOT / "scripts/lra-hypothesis-binding-instances.txt"
 # denominator's honest other half, not coverage.
 ATTESTATION_MANIFEST = ROOT / "scripts/hypothesis-binding-attestations.txt"
 
+# The instances that render a module NO verdict grips. Until 2026-08-18 these
+# were a prose list inside the attestation manifest -- "listed so a later sweep
+# does not re-discover them as news", and not checked. A class nothing runs on
+# is a class that can only be entered: an instance that becomes bindable stays
+# declined forever, and an instance whose module degrades is never looked at.
+# The second cost was the real one. `cvc5__cli__regress0__bv__holes__
+# extract-concat.smt2` sat here rendering a SELF-REFUTING module -- eleven
+# reflexive `Iff`s under one negation, so Lean's `False` followed from that one
+# axiom with the query never consulted -- and no run touched it.
+#
+# Pinned now, and pinned TWO-SIDED like its four neighbours: each instance must
+# render a module and must FAIL the bound, structural, anchored and attestation
+# checks. The only way this class can fail is by an instance getting BETTER,
+# which is the direction that must not pass quietly.
+DECLINED_MANIFEST = ROOT / "scripts/hypothesis-binding-declined-instances.txt"
+
 # Floors. A scanner that goes blind reports a beautiful clean zero. Measured
 # 2026-08-18 over the whole committed corpus, after the `Sos` route began
 # reconstructing: 135 bound instances, 298 hypotheses, 1259 corruptions caught,
@@ -284,6 +300,17 @@ MIN_REQUIRED_MUTATIONS = 1200
 # collapsing each `(select a i)` into one opaque constant and its 4 rows became
 # structural.
 MIN_ATTESTATIONS = 5
+# The declined class is the honest residue: modules no verdict grips. Its floor,
+# like the attestation floor, is a floor on HONESTY -- it moves DOWN when a route
+# improves and an instance earns a verdict, and lowering it is a reviewable act.
+# Measured 2026-08-18: 19, after `extract-concat` stopped rendering.
+MIN_DECLINED = 19
+# A module whose `False` follows from one of its own axioms by reflexivity alone
+# corroborates NOTHING: it needs no other axiom and nothing from the query, so
+# the identical module would be accepted for a different file. Two have existed
+# in this corpus; both routes now decline. This is a CEILING, not a floor, and
+# it is zero because "one known one" is how the first was allowed to ship.
+MAX_VACUOUS_MODULES = 0
 # The converse direction, measured rather than assumed: how many of the spine's
 # `(assert …)` rows a rendered hypothesis actually stands for. 296 of 541 --
 # barely over half. That is not a soundness hole (a refutation of a subset
@@ -311,6 +338,10 @@ def manifest_instances() -> list[str]:
 
 def attestation_instances() -> list[str]:
     return _manifest(ATTESTATION_MANIFEST)
+
+
+def declined_instances() -> list[str]:
+    return _manifest(DECLINED_MANIFEST)
 
 # Axioms a rendered module may carry that are NOT query-derived: the ordered-field
 # prelude and Lean's compiler-internal constants. Their *contents* are item 2 of
@@ -1698,10 +1729,35 @@ def _is_opaque_function_type(ty: str) -> bool:
 
 
 def _is_self_refuting(ty: str) -> bool:
-    """`Not (Eq.{1} α t t)` — an axiom Lean's own `rfl` refutes on its own.
+    """`Not X` where `X` is provable by REFLEXIVITY ALONE.
 
     Such a module needs none of its other axioms: `False` follows from this one
-    alone, so even the propositional step it appears to take is not taken.
+    alone, so even the propositional step it appears to take is not taken — and
+    it would follow just as well if the `.smt2` file said something else, because
+    nothing in the derivation reads the file.
+
+    Originally this recognized only `Not (Eq.{1} α t t)`, the shape `3076b6ae0`
+    found and made its route decline. That was the shape of the ONE instance
+    anybody had looked at, not the shape of the property. Widening it to the
+    `And`-tree — every leaf an `Iff p p` or an `Eq.{u} τ t t` with syntactically
+    identical sides — found a second module, in a different route, that the
+    narrow form could not see:
+
+        axiom axeyum.reconstruct.hyp._41 :
+          Not (And (Iff prop._24 prop._24) (And (Iff prop._23 prop._23) …))
+
+    eleven reflexive `Iff`s under one negation, rendered for
+    `cvc5__cli__regress0__bv__holes__extract-concat.smt2` by the `QfBv` route
+    because the bit-blaster hashed the two sides of the query's equality to the
+    same propositional atoms. The route now declines it
+    (`reject_self_refuting_module` in `crates/axeyum-solver/src/reconstruct.rs`),
+    and this is the independent second opinion on that: a different language, a
+    different parser, run over EVERY rendered module rather than over the
+    attestations alone.
+
+    Deliberately syntactic and deliberately closed. `Or`, `->` and a `Not` under
+    the conjunction are all `False`: a maybe is a no, because this decides that a
+    module is worthless and the cost of a wrong yes is a sound route declining.
     """
     try:
         expr = lean_expr(ty)
@@ -1709,10 +1765,44 @@ def _is_self_refuting(ty: str) -> bool:
         return False
     if isinstance(expr, str) or len(expr) != 2 or expr[0] != "Not":
         return False
-    inner = expr[1]
-    if isinstance(inner, str) or len(inner) != 4 or inner[0] not in EQ_HEADS:
+    return _is_refl_provable(expr[1])
+
+
+def _is_refl_provable(expr) -> bool:
+    """An `And`-tree whose every leaf is `Iff p p` or `Eq.{u} τ t t`."""
+    if isinstance(expr, str):
         return False
-    return inner[2] == inner[3]
+    head = expr[0]
+    if head == "And" and len(expr) == 3:
+        return _is_refl_provable(expr[1]) and _is_refl_provable(expr[2])
+    if head == "Iff" and len(expr) == 3:
+        return expr[1] == expr[2]
+    if head in EQ_HEADS and len(expr) == 4:
+        return expr[2] == expr[3]
+    return False
+
+
+def self_refuting_axioms(source: str) -> list[str]:
+    """Every axiom in a rendered module whose `False` is free.
+
+    Runs over ALL axioms of ALL rendered modules, not only the hypotheses of the
+    attestations — `classify_attestation` could only ever see the class it was
+    already looking at, and the second self-refuting module in this corpus was in
+    the DECLINED list, where nothing ran at all. An axiom line whose type spilled
+    past one line is skipped rather than judged on a prefix; measured 2026-08-18,
+    none of the 4,652 axioms across the committed modules is in that state.
+    """
+    out: list[str] = []
+    for line in source.splitlines():
+        match = AXIOM_LINE.match(line.strip())
+        if not match:
+            continue
+        name, ty = match.group(1), match.group(2).strip()
+        if ty.count("(") != ty.count(")"):
+            continue
+        if _is_self_refuting(ty):
+            out.append(name)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -2371,7 +2461,14 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--no-self-check", action="store_true")
     parser.add_argument(
         "--expect",
-        choices=("bound", "structural", "structural-anchored", "anchored", "attested"),
+        choices=(
+            "bound",
+            "structural",
+            "structural-anchored",
+            "anchored",
+            "attested",
+            "declined",
+        ),
         default="bound",
         help="the verdict every --instance must reach. `bound` (the default) "
         "requires the module's hypotheses to bind to the query's assertions; "
@@ -2382,7 +2479,9 @@ def main(argv: list[str]) -> int:
         "assumes, to force exactly one the module could stand for, AND that the "
         "structural binder cannot grip it; `attested` requires it to be a "
         "content-free opaque skeleton AND to fail both the structural and the "
-        "anchored check. The four are a PARTITION and each is required to fail the "
+        "anchored check; `declined` requires it to render a module and to fail ALL "
+        "FOUR of those, so the only way a declined pin can fail is by the instance "
+        "getting better. The five are a PARTITION and each is required to fail the "
         "checks of its neighbours, so an instance cannot quietly move between them "
         "in either direction. Which verdict is required comes from the MANIFEST "
         "when no --instance is given.",
@@ -2393,6 +2492,10 @@ def main(argv: list[str]) -> int:
         "--min-required-mutations", type=int, default=MIN_REQUIRED_MUTATIONS
     )
     parser.add_argument("--min-attestations", type=int, default=MIN_ATTESTATIONS)
+    parser.add_argument("--min-declined", type=int, default=MIN_DECLINED)
+    parser.add_argument(
+        "--max-vacuous-modules", type=int, default=MAX_VACUOUS_MODULES
+    )
     parser.add_argument("--min-structural", type=int, default=MIN_STRUCTURAL)
     parser.add_argument(
         "--min-structural-nodes", type=int, default=MIN_STRUCTURAL_NODES
@@ -2426,6 +2529,7 @@ def main(argv: list[str]) -> int:
         ]
         targets += [(pathlib.Path(p), "anchored") for p in anchored_instances()]
         targets += [(pathlib.Path(p), "attested") for p in attestation_instances()]
+        targets += [(pathlib.Path(p), "declined") for p in declined_instances()]
     instances = [path for path, want in targets if want == "bound"]
     if args.module is not None and len(targets) != 1:
         raise SystemExit("--module takes exactly one --instance")
@@ -2436,7 +2540,8 @@ def main(argv: list[str]) -> int:
     caught_mutations = 0
     accepted_mutations = 0
     attested = 0
-    attested_vacuous = 0
+    declined = 0
+    vacuous_modules = 0
     structural = 0
     structural_nodes = 0
     structural_caught = 0
@@ -2462,6 +2567,74 @@ def main(argv: list[str]) -> int:
             indices, fragment = list(range(len(assertions))), "supplied"
         else:
             source, indices, fragment = render_module(binary, path)
+
+        # Runs on EVERY class, including `declined`, and before any verdict. A
+        # module whose `False` follows from one of its own axioms by reflexivity
+        # alone corroborates nothing: it needs no other axiom, and the identical
+        # module would be accepted for a query that said something else. The
+        # narrow form of this check lived inside `classify_attestation`, so it
+        # could only ever see the class it was already looking at -- and the
+        # corpus's second such module was in the DECLINED list, where nothing ran
+        # at all. Two have existed; the emitter now refuses both
+        # (`reject_self_refuting_module`), and this is the independent second
+        # opinion on that refusal.
+        vacuous_here = self_refuting_axioms(source)
+        if vacuous_here:
+            vacuous_modules += len(vacuous_here)
+            failures.append(
+                f"{instance}: `{vacuous_here[0]}` is SELF-REFUTING -- `Not X` with `X` "
+                "provable by reflexivity alone -- so the module's `False` needs none of "
+                "its other axioms and nothing at all from the query. The route must "
+                "decline instead of rendering this"
+            )
+            continue
+
+        if want == "declined":
+            # The honest residue, pinned so it stays honest. Every check its four
+            # neighbours make must FAIL here, which means this class can only be
+            # broken by an instance getting BETTER -- a route that starts
+            # transcribing, or an emitter that stops collapsing a term. That is
+            # the direction a prose list could never see: the 20 rows here were
+            # "listed so a later sweep does not re-discover them as news", and
+            # nothing would have told anyone when one of them stopped belonging.
+            s_ok, _why, s_nodes = bind_structural(source, path)
+            if s_ok:
+                failures.append(
+                    f"{instance}: pinned as DECLINED -- no verdict grips it -- but its "
+                    f"rendered terms ARE {s_nodes} nodes of this query under an "
+                    "injective renaming. Pin it as `structural`"
+                )
+                continue
+            a_ok, _why, _nodes = bind_anchored(source, path)
+            if a_ok:
+                failures.append(
+                    f"{instance}: pinned as DECLINED, but this query FORCES exactly one "
+                    "disequality its rendered sides can stand for. Pin it as `anchored`"
+                )
+                continue
+            att_ok, _why, _vacuous = classify_attestation(source)
+            if att_ok:
+                failures.append(
+                    f"{instance}: pinned as DECLINED, but the module IS a content-free "
+                    "opaque skeleton. Pin it as `attested` -- that class is the measured "
+                    "count of Lean evidence this repository publishes as transcribing "
+                    "nothing, and it must not lose members to a list nobody checks"
+                )
+                continue
+            phi, hyps, _allowed, _detail = check_instance(
+                source, indices, sorts, assertions
+            )
+            if phi is not None and hyps:
+                failures.append(
+                    f"{instance}: pinned as DECLINED, but all {len(hyps)} of its "
+                    "hypotheses bind to this query's assertions. Pin it in "
+                    "`lra-hypothesis-binding-instances.txt`"
+                )
+                continue
+            declined += 1
+            if args.verbose:
+                print(f"  {instance} [{fragment}] declined, no verdict grips it")
+            continue
 
         if want in ("structural", "structural-anchored", "anchored"):
             wants_structural = want in ("structural", "structural-anchored")
@@ -2583,28 +2756,19 @@ def main(argv: list[str]) -> int:
                     "`anchored`"
                 )
                 continue
-            ok, why, vacuous = classify_attestation(source)
+            ok, why, _vacuous = classify_attestation(source)
             if not ok:
                 failures.append(
                     f"{instance}: pinned as a content-free attestation, but {why}"
                 )
                 continue
-            attested_vacuous += vacuous
-            if vacuous:
-                # A module whose `False` follows from ONE axiom by `rfl` alone is
-                # not even the propositional step it appears to take: it needs no
-                # other axiom, and would need none if the `.smt2` file said
-                # something else. Counting it was the previous behaviour and it
-                # is not enough -- a number nobody's exit status depends on is a
-                # number a regression can raise.
-                failures.append(
-                    f"{instance}: {vacuous} of its hypothesis axioms is SELF-REFUTING "
-                    "(`Not (Eq α t t)`, which Lean's own `rfl` refutes), so the "
-                    "module's `False` needs none of its other axioms and nothing at "
-                    "all from the query. The route must decline instead of rendering "
-                    "this"
-                )
-                continue
+            # There WAS a self-refutation check here, over this class's
+            # hypotheses only. It is gone because `vacuous_modules` above
+            # subsumes it and runs on EVERY rendered module -- and the moment
+            # that landed, this copy stopped being reachable: the mutation
+            # control that used to kill a test by deleting it reported
+            # SURVIVED. Two checks of one property where only one can ever fire
+            # is how a guard becomes decoration.
             attested += 1
             if args.verbose:
                 print(f"  {instance} [{fragment}] attestation, nothing transcribed")
@@ -2702,7 +2866,8 @@ def main(argv: list[str]) -> int:
         f"anchored_nodes={anchored_nodes}|anchored_caught={anchored_caught}|"
         f"anchored_accepted={anchored_accepted}|"
         f"structural_anchored={structural_anchored}|attested={attested}|"
-        f"attested_vacuous={attested_vacuous}|spine_assertions={spine_assertions}|"
+        f"declined={declined}|vacuous_modules={vacuous_modules}|"
+        f"spine_assertions={spine_assertions}|"
         f"represented_assertions={represented}|"
         f"undecomposable_spine={undecomposable_spine}|failures={len(failures)}"
     )
@@ -2718,6 +2883,24 @@ def main(argv: list[str]) -> int:
             f"{args.min_attestations}). This number is not coverage -- it is the part "
             "of the corpus whose Lean evidence transcribes NOTHING from the query, and "
             "a checker that stopped confirming that would stop reporting it"
+        )
+    if any(want == "declined" for _p, want in targets) and declined < args.min_declined:
+        failures.append(
+            f"only {declined} modules were confirmed DECLINED (floor "
+            f"{args.min_declined}). Like the attestation floor this is a floor on "
+            "HONESTY: it is the count of rendered modules no verdict grips, and it "
+            "moves DOWN only when a route improves and an instance earns a verdict. "
+            "A drop with no verdict gained means an instance stopped rendering"
+        )
+    if vacuous_modules > args.max_vacuous_modules:
+        failures.append(
+            f"{vacuous_modules} rendered axioms are SELF-REFUTING (ceiling "
+            f"{args.max_vacuous_modules}). Such a module's `False` follows from that "
+            "one axiom by reflexivity alone, so it needs nothing from the query and "
+            "the identical module would be accepted for a different file. Two have "
+            "existed in this corpus and both routes now decline; a third must fail "
+            "the run rather than be counted, because counting was how the first one "
+            "shipped"
         )
     if any(want in ("structural", "structural-anchored") for _p, want in targets):
         if structural < args.min_structural:

@@ -399,19 +399,18 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "    if False:\n        pass",
             ),
             (
-                "attestation: a denied reflexivity is counted as self-refuting",
-                "    return inner[2] == inner[3]",
-                "    return False",
+                # Was `_is_self_refuting`'s own `inner[2] == inner[3]`; the
+                # predicate moved into `_is_refl_provable` when it was widened
+                # past the one shape anybody had looked at, and the guard is the
+                # same one: `Not (Eq τ t t)` is `rfl`, `Not (Eq τ a b)` is not.
+                "self-refutation: a reflexive EQUALITY is recognized",
+                '    if head in EQ_HEADS and len(expr) == 4:\n        return expr[2] == expr[3]',
+                "    if head in EQ_HEADS and len(expr) == 4:\n        return False",
             ),
             (
                 "a bound instance with no hypothesis binds vacuously",
                 "        if not hypotheses:\n            # A module with no hypothesis",
                 "        if False:\n            # A module with no hypothesis",
-            ),
-            (
-                "a self-refuting attestation FAILS rather than being counted",
-                "            attested_vacuous += vacuous\n            if vacuous:",
-                "            attested_vacuous += vacuous\n            if False:",
             ),
             (
                 "structural: the renaming is injective",
@@ -575,6 +574,43 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "an anchored-ONLY pin is refused when the module binds structurally",
                 "            if not wants_structural and s_ok:",
                 "            if False and s_ok:",
+            ),
+            (
+                # The predicate that found the corpus's SECOND self-refuting
+                # module. Stop walking the `And`-tree and only the one shape
+                # anybody had already looked at is recognized -- which is exactly
+                # the state this was in before 2026-08-18.
+                "self-refutation: the whole And-tree is walked",
+                "    if head == \"And\" and len(expr) == 3:\n"
+                "        return _is_refl_provable(expr[1]) and _is_refl_provable(expr[2])",
+                "    if head == \"And\" and len(expr) == 3:\n        return False",
+            ),
+            (
+                # ...and the discriminating half: a conjunct relating two
+                # DIFFERENT props is a real assumption. Weaken the comparison and
+                # the predicate condemns honest modules.
+                "self-refutation: the two sides must be IDENTICAL",
+                '    if head == "Iff" and len(expr) == 3:\n        return expr[1] == expr[2]',
+                '    if head == "Iff" and len(expr) == 3:\n        return True',
+            ),
+            (
+                # The check runs on EVERY class, before any verdict.
+                # `classify_attestation` could only see the class it was already
+                # looking at, and the second self-refuting module was in the
+                # DECLINED list where nothing ran at all.
+                "self-refutation is checked on every rendered module",
+                "        vacuous_here = self_refuting_axioms(source)\n        if vacuous_here:",
+                "        vacuous_here = self_refuting_axioms(source)\n        if False:",
+            ),
+            (
+                "declined: an instance that binds structurally must move",
+                "            s_ok, _why, s_nodes = bind_structural(source, path)\n            if s_ok:",
+                "            s_ok, _why, s_nodes = bind_structural(source, path)\n            if False:",
+            ),
+            (
+                "declined: an instance that is an attestation must move",
+                "            att_ok, _why, _vacuous = classify_attestation(source)\n            if att_ok:",
+                "            att_ok, _why, _vacuous = classify_attestation(source)\n            if False:",
             ),
         ],
     ),

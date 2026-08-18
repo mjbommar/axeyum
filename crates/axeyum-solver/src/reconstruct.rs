@@ -213,6 +213,15 @@ pub enum ReconstructError {
         /// The routed fragment that has no theory reconstructor.
         fragment: String,
     },
+    /// The rendered module carries an axiom its own prelude refutes, so its
+    /// `False` follows without consulting the query at all. See
+    /// [`reject_self_refuting_module`].
+    SelfRefutingModule {
+        /// The routed fragment.
+        fragment: String,
+        /// The name of the self-refuting axiom.
+        axiom: String,
+    },
 }
 
 impl core::fmt::Display for ReconstructError {
@@ -251,6 +260,14 @@ impl core::fmt::Display for ReconstructError {
                     f,
                     "fragment `{fragment}` declares Lean module content `{declared}` \
                      but rendered `{rendered}`"
+                )
+            }
+            ReconstructError::SelfRefutingModule { fragment, axiom } => {
+                write!(
+                    f,
+                    "fragment `{fragment}` rendered a SELF-REFUTING module: `{axiom}` is \
+                     `Not X` with `X` provable by reflexivity alone, so the module's \
+                     `False` follows from that axiom and needs nothing from the query"
                 )
             }
             ReconstructError::NoTheoryContent { fragment } => {
@@ -2641,6 +2658,7 @@ fn gate_module_content(
     fragment: ProofFragment,
     source: String,
 ) -> Result<String, ReconstructError> {
+    let source = reject_self_refuting_module(fragment, source)?;
     let rendered = LeanModuleContent::of_module_source(&source);
     match fragment.lean_module_content() {
         Some(declared) if declared == rendered => Ok(source),
@@ -2654,6 +2672,236 @@ fn gate_module_content(
             declared: "none (fragment emits no module)".to_owned(),
             rendered: rendered.as_str().to_owned(),
         }),
+    }
+}
+
+/// Refuse a rendered module whose `False` its own prelude already supplies.
+///
+/// A reconstruction earns its keep by deriving `False` **from the query**. A
+/// module carrying
+///
+/// ```text
+/// axiom axeyum.reconstruct.hyp._41 : Not (And (Iff prop._24 prop._24) …)
+/// ```
+///
+/// does not: every conjunct is `Iff.refl`, so the conjunction is provable and
+/// that one axiom refutes itself. Lean accepts the module, `#print axioms`
+/// is clean, and the same module would be accepted for a query that said
+/// something else entirely — the other axioms are decoration and the query is
+/// not consulted at all. `3076b6ae0` found the first such module (an
+/// `Eq.{1} α t t` against its own negation, refuted by `rfl`) and made its
+/// route decline; this is the same judgement at the one boundary every route's
+/// module passes through, so a route that degenerates in future declines the
+/// first time it is exercised instead of shipping the artifact.
+///
+/// Deliberately narrow, and deliberately fail-OPEN on anything it cannot read:
+/// this rejects our own output, so an unparsable type must not take a sound
+/// module down with it. It decides exactly one property — "is some axiom's type
+/// `Not X` with `X` provable by reflexivity alone" — and nothing about whether a
+/// module that passes says anything useful. That is the transcription question,
+/// and it is `scripts/check-lra-hypothesis-binding.py`'s.
+///
+/// Measured 2026-08-18 over the 269 committed queries that render a module:
+/// 4,652 axioms, **one** self-refuting, and it is the module this rejects.
+fn reject_self_refuting_module(
+    fragment: ProofFragment,
+    source: String,
+) -> Result<String, ReconstructError> {
+    match self_refuting_axiom(&source) {
+        Some(axiom) => Err(ReconstructError::SelfRefutingModule {
+            fragment: format!("{fragment:?}"),
+            axiom,
+        }),
+        None => Ok(source),
+    }
+}
+
+/// The name of the first `axiom … : Not X` in `source` whose `X` is provable by
+/// reflexivity alone, if there is one.
+fn self_refuting_axiom(source: &str) -> Option<String> {
+    for line in source.lines() {
+        let Some(rest) = line.strip_prefix("axiom ") else {
+            continue;
+        };
+        let (name, ty) = rest.split_once(" : ")?;
+        // A type that spilled onto the next line is a PREFIX, and a prefix
+        // parses to something this predicate was not asked about. Skip it:
+        // rejecting on a partial read would take down modules for a rendering
+        // detail. (Measured: no committed module has one.)
+        if ty.matches('(').count() != ty.matches(')').count() {
+            continue;
+        }
+        let Some(expr) = parse_lean_application(ty) else {
+            continue;
+        };
+        if let LeanNode::App(parts) = &expr
+            && parts.len() == 2
+            && matches!(&parts[0], LeanNode::Leaf(head) if head == "Not")
+            && refl_provable(&parts[1])
+        {
+            return Some(name.trim().to_owned());
+        }
+    }
+    None
+}
+
+/// A rendered Lean type, as a prefix application tree.
+#[derive(Debug, PartialEq, Eq)]
+enum LeanNode {
+    /// An identifier (`Not`, `Eq.{1}`, `axeyum.reconstruct.prop._24`, `->`, …).
+    Leaf(String),
+    /// A juxtaposition `f a b …`, always with at least two elements.
+    App(Vec<LeanNode>),
+}
+
+/// Parse the fully-parenthesized prefix form the module renderer emits.
+///
+/// Returns [`None`] on unbalanced parentheses or an empty application — this is
+/// a recognizer for one shape, not a Lean parser, and everything it does not
+/// recognize is simply not the shape.
+fn parse_lean_application(ty: &str) -> Option<LeanNode> {
+    let spaced = ty.replace('(', " ( ").replace(')', " ) ");
+    let mut tokens = spaced.split_whitespace();
+    let mut stack: Vec<Vec<LeanNode>> = vec![Vec::new()];
+    for token in &mut tokens {
+        match token {
+            "(" => stack.push(Vec::new()),
+            ")" => {
+                let done = stack.pop()?;
+                let node = collapse(done)?;
+                stack.last_mut()?.push(node);
+            }
+            other => stack.last_mut()?.push(LeanNode::Leaf(other.to_owned())),
+        }
+    }
+    if stack.len() != 1 {
+        return None;
+    }
+    collapse(stack.pop()?)
+}
+
+/// One parenthesized group becomes a leaf if it holds one node, an application
+/// otherwise.
+fn collapse(mut parts: Vec<LeanNode>) -> Option<LeanNode> {
+    match parts.len() {
+        0 => None,
+        1 => parts.pop(),
+        _ => Some(LeanNode::App(parts)),
+    }
+}
+
+/// Is this proposition provable by reflexivity alone?
+///
+/// An `And`-tree whose every leaf is `Iff p p` or `Eq.{u} τ t t` with the two
+/// sides **syntactically identical**. Nothing else: a `->`, an `Or`, a `Not`, or
+/// two sides that merely look similar are all `false`, because this decides
+/// whether the module's `False` is free and a maybe is a no.
+fn refl_provable(node: &LeanNode) -> bool {
+    let LeanNode::App(parts) = node else {
+        return false;
+    };
+    let Some((LeanNode::Leaf(head), args)) = parts.split_first() else {
+        return false;
+    };
+    match (head.as_str(), args.len()) {
+        ("And", 2) => refl_provable(&args[0]) && refl_provable(&args[1]),
+        ("Iff", 2) => args[0] == args[1],
+        // `Eq.{u} τ lhs rhs`: the universe is part of the head token.
+        (_, 3) if head == "Eq" || head.starts_with("Eq.{") => args[1] == args[2],
+        _ => false,
+    }
+}
+
+#[cfg(test)]
+mod self_refuting_module_tests {
+    use super::{LeanNode, refl_provable, self_refuting_axiom};
+
+    /// The shape that shipped. `cvc5__cli__regress0__bv__holes__extract-concat.smt2`
+    /// rendered eleven of these `Iff`s under one negation; three is enough to
+    /// read.
+    const VACUOUS: &str = "\
+axiom axeyum.reconstruct.prop._0 : Prop
+axiom axeyum.reconstruct.hyp._3 : Not (And (Iff p0 p0) (And (Iff p1 p1) (Iff p2 p2)))
+theorem axeyum_refutation : False := trivial
+";
+
+    /// The SAME module with ONE conjunct relating two DIFFERENT props. It is a
+    /// real assumption about the query and must pass. Without this twin the
+    /// predicate above is indistinguishable from one that rejects everything.
+    const HONEST: &str = "\
+axiom axeyum.reconstruct.prop._0 : Prop
+axiom axeyum.reconstruct.hyp._3 : Not (And (Iff p0 p0) (And (Iff p1 p2) (Iff p2 p2)))
+theorem axeyum_refutation : False := trivial
+";
+
+    #[test]
+    fn a_negated_conjunction_of_reflexive_iffs_is_self_refuting() {
+        assert_eq!(
+            self_refuting_axiom(VACUOUS).as_deref(),
+            Some("axeyum.reconstruct.hyp._3")
+        );
+    }
+
+    #[test]
+    fn one_honest_conjunct_makes_it_a_real_assumption() {
+        assert_eq!(self_refuting_axiom(HONEST), None);
+    }
+
+    #[test]
+    fn the_narrow_rfl_shape_is_still_recognized() {
+        let source = "axiom axeyum.reconstruct.hyp._2 : Not (Eq.{1} α a a)\n";
+        assert_eq!(
+            self_refuting_axiom(source).as_deref(),
+            Some("axeyum.reconstruct.hyp._2")
+        );
+    }
+
+    #[test]
+    fn a_disequality_between_different_terms_is_a_real_assumption() {
+        let source = "axiom axeyum.reconstruct.hyp._2 : Not (Eq.{1} α a b)\n";
+        assert_eq!(self_refuting_axiom(source), None);
+    }
+
+    /// The grammar is CLOSED. `Or (Iff p p) X` really is provable, but admitting
+    /// `Or` would start this predicate reasoning rather than recognizing, and a
+    /// wrong yes takes down a sound route.
+    #[test]
+    fn an_or_is_refused_even_though_one_disjunct_is_reflexive() {
+        let source = "axiom axeyum.reconstruct.hyp._2 : Not (Or (Iff p p) (Iff q q))\n";
+        assert_eq!(self_refuting_axiom(source), None);
+    }
+
+    /// Provable is not contradictory. Only the NEGATION hands the module a free
+    /// `False`.
+    #[test]
+    fn an_unnegated_reflexive_conjunction_is_not_self_refuting() {
+        let source = "axiom axeyum.reconstruct.hyp._2 : And (Iff p p) (Iff q q)\n";
+        assert_eq!(self_refuting_axiom(source), None);
+    }
+
+    /// A pi-type is not a shape this predicate models, and every quantified
+    /// route renders one. It must read as "no", not as a parse failure that
+    /// takes a module down.
+    #[test]
+    fn a_pi_type_hypothesis_is_left_alone() {
+        let source = "axiom axeyum.reconstruct.hyp._0 : ((x0 : Int) -> Not (Eq.{1} Int x0 x0))\n";
+        assert_eq!(self_refuting_axiom(source), None);
+    }
+
+    #[test]
+    fn the_parser_reads_a_nested_prefix_application() {
+        assert!(refl_provable(
+            &super::parse_lean_application("And (Iff p p) (Iff q q)").unwrap()
+        ));
+        assert!(!refl_provable(&LeanNode::Leaf("p".to_owned())));
+    }
+
+    /// Unbalanced parentheses are a rendering detail, not a verdict: a partial
+    /// read must never reject.
+    #[test]
+    fn an_unbalanced_type_is_skipped_rather_than_judged() {
+        let source = "axiom axeyum.reconstruct.hyp._2 : Not (And (Iff p p)\n";
+        assert_eq!(self_refuting_axiom(source), None);
     }
 }
 

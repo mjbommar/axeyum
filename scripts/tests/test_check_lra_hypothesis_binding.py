@@ -2228,6 +2228,40 @@ HONEST_IFF_MODULE = REFL_IFF_MODULE.replace(
 )
 
 
+# A module whose two equated sides are the SAME structured term. It binds
+# structurally -- both sides really are `select(store(a,i,v), j)`, a subterm of
+# the query -- and it is self-refuting, because `Not (Eq α t t)` is `rfl`. Only
+# the run-wide check sees it: `classify_attestation`'s copy was never consulted
+# for an instance pinned `structural`.
+SELF_REFUTING_STRUCTURAL_MODULE = """
+axiom α : Sort (1)
+axiom axeyum.reconstruct.atom._0 : α
+axiom axeyum.reconstruct.atom._1 : α
+axiom axeyum.reconstruct.atom._2 : α
+axiom axeyum.reconstruct.atom._3 : α
+axiom axeyum.reconstruct.func._4 : ((x0 : α) -> ((x1 : α) -> ((x2 : α) -> α)))
+axiom axeyum.reconstruct.func._5 : ((x0 : α) -> ((x1 : α) -> α))
+axiom axeyum.reconstruct.hyp._6 : Not (Eq.{1} α (axeyum.reconstruct.func._5 \
+(axeyum.reconstruct.func._4 axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._1 \
+axeyum.reconstruct.atom._2) axeyum.reconstruct.atom._3) (axeyum.reconstruct.func._5 \
+(axeyum.reconstruct.func._4 axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._1 \
+axeyum.reconstruct.atom._2) axeyum.reconstruct.atom._3))
+theorem axeyum_refutation : False := trivial
+"""
+
+# `STRUCTURAL_MODULE` with one leaf renamed to a token the skeleton grammar does
+# not admit. It still binds structurally (`Int.one` stands for `j`) but it is no
+# longer a content-free attestation -- which is what makes it the fixture that
+# isolates the DECLINED class's structural guard from its attestation guard.
+STRUCTURAL_NOT_ATTESTED_MODULE = "\n".join(
+    line
+    for line in STRUCTURAL_MODULE.replace(
+        "axeyum.reconstruct.atom._3", "Int.one"
+    ).splitlines()
+    if line.strip() != "axiom Int.one : α"
+)
+
+
 class AModuleThatRefutesItselfCorroboratesNothing(unittest.TestCase):
     """`Not X` with `X` provable by reflexivity alone.
 
@@ -2349,6 +2383,49 @@ class TheDeclinedClassIsPinnedAndTwoSided(unittest.TestCase):
             self._run_driver(
                 ANCHOR_MODULE,
                 "(assert (bvult p q))",
+                "--expect",
+                "declined",
+            ),
+            1,
+        )
+
+    def test_a_self_refuting_module_that_BINDS_still_fails(self) -> None:
+        """The case only the run-wide check catches. This module's rendered terms
+        ARE the query's, injectively -- so `structural` passes on it -- and its
+        `False` is still free. The old check lived inside `classify_attestation`
+        and was never consulted for an instance pinned to another class."""
+        self.assertEqual(
+            self._run_driver(
+                SELF_REFUTING_STRUCTURAL_MODULE,
+                "(assert (bvult (select (store a i v) j) (select a j)))",
+                "--expect",
+                "structural",
+            ),
+            1,
+        )
+
+    def test_the_same_module_with_DIFFERENT_sides_passes_as_structural(self) -> None:
+        """The twin. Without it the test above is satisfied by a checker that
+        refuses every structural module."""
+        self.assertEqual(
+            self._run_driver(
+                STRUCTURAL_MODULE,
+                "(assert (bvult (select (store a i v) j) (select a j)))",
+                "--expect",
+                "structural",
+            ),
+            0,
+        )
+
+    def test_a_declined_pin_is_refused_when_a_NON_attestation_binds(self) -> None:
+        """Isolates the DECLINED class's structural guard. `STRUCTURAL_MODULE`
+        itself is also a content-free skeleton, so the attestation guard would
+        catch it either way and the structural guard could be deleted with every
+        test still green -- which is what the mutation control reported."""
+        self.assertEqual(
+            self._run_driver(
+                STRUCTURAL_NOT_ATTESTED_MODULE,
+                "(assert (bvult (select (store a i v) j) (select a j)))",
                 "--expect",
                 "declined",
             ),
