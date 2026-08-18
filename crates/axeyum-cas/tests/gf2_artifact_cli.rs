@@ -53,3 +53,39 @@ fn standalone_checker_accepts_canonical_bytes_and_rejects_mutation() {
 
     fs::remove_file(path).unwrap();
 }
+
+#[test]
+fn standalone_producer_writes_once_and_composes_with_checker() {
+    let path = std::env::temp_dir().join(format!(
+        "axeyum-gf2-artifact-producer-{}.json",
+        std::process::id()
+    ));
+    let produced = Command::new(env!("CARGO_BIN_EXE_axeyum-gf2-certify"))
+        .args([
+            path.as_os_str(),
+            "producer-degree-4".as_ref(),
+            "integration-test".as_ref(),
+            "0,1,4".as_ref(),
+        ])
+        .output()
+        .unwrap();
+    assert!(produced.status.success());
+
+    let checked = Command::new(env!("CARGO_BIN_EXE_axeyum-gf2-check"))
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(checked.status.success());
+
+    let overwrite = Command::new(env!("CARGO_BIN_EXE_axeyum-gf2-certify"))
+        .args([
+            path.as_os_str(),
+            "producer-degree-4".as_ref(),
+            "integration-test".as_ref(),
+            "0,1,4".as_ref(),
+        ])
+        .output()
+        .unwrap();
+    assert!(!overwrite.status.success());
+    fs::remove_file(path).unwrap();
+}
