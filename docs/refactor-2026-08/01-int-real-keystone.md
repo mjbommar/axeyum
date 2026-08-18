@@ -52,6 +52,47 @@
 > R4 do the 30 retire *by deletion*. The remaining ℝ work (completeness, `inv`,
 > `√`) is separate ADRs and none of it is one of the 22.
 
+> **STATUS 2026-08-18 (latest) — ℝ MODELS the axiom package, at zero trusted
+> declarations. `real: axiom=30` is still 30.** Both halves, again, and this time
+> the gap between them is the whole finding.
+>
+> ADR-0468 phases R2 and R4 are complete. All **22 ordered-commutative-ring laws**
+> hold over the constructed ℝ (58 declarations, trusted surface 0), and
+> `build_creal_model_of_arith` admits `Real.CRealModel.<law>` for each, with the
+> obligation **computed from the axiom as it stands in the environment** rather
+> than written by hand. Measured: `22/22 footprint-empty, 22/22 syntactically the
+> CReal law, 9/22 restated over CReal.Equiv, 7/7 discrimination witnesses`.
+>
+> **ADR-0456's caveat is discharged.** The carrier modelling the `Real` package is
+> no longer `Int` — "Int is not ℝ" was the honest limit of the earlier relative
+> consistency result, and it no longer applies. The ladder is ℤ, ℚ, ℝ and they do
+> not dominate each other: ℤ and ℚ keep the kernel's `Eq` as ring equality and are
+> not ℝ; `CReal` is ℝ and cannot.
+>
+> **And the 30 axioms remain, because everything is written against them.** The
+> deletion survey, in counts rather than impressions: **57 files** name the
+> symbols and 7 more die transitively; **13 Rust files are rewrite-required
+> consumers**; `LraReconstructCtx` + `ordered_ring` + `setoid` touch **all 30
+> `ArithPrelude` fields across 158 accesses**, with `arith` held by value and
+> `new()` panicking if the package is absent; `arith.logic` is the only route to
+> `LogicPrelude`, so deletion also re-plumbs `build_logic_prelude`. Three
+> committed Lean goldens carry 413/24/0 `Real.*` occurrences. A fact
+> (`F-schedule-critical-chain-infeasible`) pins a 26-entry footprint of which 17
+> are `Real.*`, with `--expect-axioms 26`. And the axiom ledger is **30 of 30
+> real**, so deleting the package zeroes this repository's entire recorded
+> trusted surface — invalidating 30 SHA-256 type bindings, 4 gate scripts, 2
+> Python suites and ~45 documentation sites that assert `real: axiom=30`.
+>
+> R3's setoid interface is a *deeper* dependency, not an escape:
+> `enable_setoid_equality` computes its nine axiom types by reading the nine
+> `Eq`-shaped `Real` laws out of the environment and rewriting `Eq Real`, and
+> hard-errors if the rewrite does not fire.
+>
+> So the achievement is precise and worth stating precisely: **the axioms are now
+> known to be satisfiable by a constructed object, which is not the same as being
+> unnecessary.** Retiring them is a migration, not a deletion, and nobody should
+> plan it as one.
+
 > **STATUS 2026-08-18 (later) — R3 landed, and the distance to `real: 0` is
 > longer than ADR-0468's end-state paragraph reads.** That paragraph says the 30
 > retire by deletion because "once R3 lands, no consumer references the `Real`
