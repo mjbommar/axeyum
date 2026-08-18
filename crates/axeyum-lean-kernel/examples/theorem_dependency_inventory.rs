@@ -44,13 +44,35 @@
 
 use std::process::ExitCode;
 
-use axeyum_lean_kernel::{Declaration, Kernel, build_nat_prelude};
+use axeyum_lean_kernel::{
+    Declaration, Kernel, build_characterization, build_int_prelude, build_logic_prelude,
+    build_nat_prelude, build_rat_prelude, build_string_prelude,
+};
 
 fn main() -> ExitCode {
     let filter: Option<String> = std::env::args().nth(1);
 
     let mut kernel = Kernel::new();
+    // EVERY constructed prelude, not just `Nat`. Measured 2026-08-18, this
+    // example built `Nat` alone and reported 139 theorems — so
+    // `check-fact-depends-derived.py`, which reads this graph to decide whether
+    // the ledger's `depends_on` agrees with the proof terms, was reporting
+    // `missing_edges=0` while never looking at `Int`, `Rat`, `Str`, `Nat.Peano`
+    // or `Int.Characterization`. Eight kernel-route facts sat outside its
+    // coverage, including every one added that day. A zero from a tool that was
+    // never pointed at the subject is indistinguishable from a strong negative,
+    // which is exactly the trap CLAUDE.md records.
+    //
+    // `creal` is deliberately excluded while it is under construction; add it
+    // when it settles.
     let _ = build_nat_prelude(&mut kernel).expect("Nat prelude must build");
+    let _ = build_int_prelude(&mut kernel).expect("Int prelude must build");
+    let _ = build_rat_prelude(&mut kernel).expect("Rat prelude must build");
+    // The string prelude needs the logic package and an alphabet size; the Nat
+    // build above already installed logic, so reuse it rather than rebuilding.
+    let logic = build_logic_prelude(&mut kernel).expect("logic prelude must build");
+    let _ = build_string_prelude(&mut kernel, logic, 2).expect("String prelude must build");
+    let _ = build_characterization(&mut kernel).expect("characterization must build");
 
     // Collect first, then sort by rendered name: environment iteration order is
     // an interning artifact and this output is meant to be diffable.

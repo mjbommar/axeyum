@@ -17,7 +17,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-div-mod-exists",
-    "F:nat-div-mod-unique"
+    "F:nat-div-mod-unique",
+    "F:nat-zero-add"
   ],
   "axiom_footprint": [],
   "evidence": [
