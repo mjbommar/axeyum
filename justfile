@@ -168,6 +168,12 @@ aggregate-scope:
 # build -- it runs against a throwaway one-crate workspace.
 gate-controls:
     scripts/tests/test-gate-scope-controls.sh
+    # Controls for the two gates that check other gates: the local-ci run
+    # recorder (a step exiting 0 with zero tests must record `vacuous` -- that
+    # guard was unreachable when written) and the fact scaffolder (a
+    # `checker_command` must be proved able to FAIL before the fact exists).
+    scripts/tests/test-local-ci-record.sh
+    scripts/tests/test-new-fact-controls.sh
 
 # `frontier_*` is skipped here and run by `frontier` instead. Those ratchets
 # measure "the largest N decided within a fixed WALL-CLOCK budget", so running

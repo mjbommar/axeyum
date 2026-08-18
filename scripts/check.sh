@@ -128,6 +128,13 @@ step facts-replay ./scripts/check-fact-evidence-replay.sh
 # `scripts/tests/test-gate-scope-controls.sh`.
 step clippy ./scripts/check-clippy-complete.sh
 step gate-controls ./scripts/tests/test-gate-scope-controls.sh
+# Controls for two gates that check OTHER gates, which is where an agreeable
+# checker does the most damage: the local-ci run recorder (a step that exits 0
+# having run zero tests must record `vacuous`, and that guard was unreachable
+# when written) and the fact scaffolder (a `checker_command` must be proved to
+# fail before the fact exists). Seconds each, no workspace build.
+step local-ci-record-controls ./scripts/tests/test-local-ci-record.sh
+step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 # `frontier_*` runs in its own serialized step below: those ratchets are
 # wall-clock-budget based, so contention from the rest of the suite shrinks the
 # measured frontier and reports a false REGRESSION (measured 2026-07-30).
