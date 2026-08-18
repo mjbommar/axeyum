@@ -674,7 +674,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "79a4f910214f51ec25b67f8b374e45d65f8420ddc2c106e83b03a1eaa2f6955d",
+    "digest": "20de84453db75da93f41295f6feab3a8e834bc213663381e461a4923ffaaca76",
     "inputs": [
       {
         "bytes": 1939,
@@ -682,9 +682,9 @@
         "sha256": "d206d33a1cdf8392dc7fb3c4720ba8c55abd2d3334b35bb5ba5cbd3a6bcef8ca"
       },
       {
-        "bytes": 6657,
+        "bytes": 6739,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "5bbd95b97054c861731aca975f72368c48d4031686faa142731c1aed4a11cd4f"
+        "sha256": "c64f93d5c4443ccd1162bb6b898a8f1c78cd4ccce523a05b27c1dae6bf7ef602"
       },
       {
         "bytes": 3519,
@@ -1267,9 +1267,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 73632,
+        "bytes": 73716,
         "path": "justfile",
-        "sha256": "6fe67abc6222ce5ffd9fe6333cd956618fc79f924edfa33d9fdf0537c832e95a"
+        "sha256": "cd1537bcacb5ae5fc1167b51996bca6e2f17add46e3985c57568d2d37fb1dac8"
       },
       {
         "bytes": 11929,

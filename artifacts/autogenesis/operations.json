@@ -74,6 +74,7 @@
       "id": "authoritative-kernel-nat-zero-add-induction-v1",
       "scope": "authoritative",
       "reviewed_gate_mentions": [
+        "check-autogenesis-1-result.py",
         "check-autogenesis-apply-search.sh",
         "check-autogenesis-induction-search.sh",
         "check-autogenesis-proposer-isolation.sh",
@@ -119,6 +120,7 @@
       "id": "authoritative-kernel-nat-mul-one-episode-apply-v1",
       "scope": "authoritative",
       "reviewed_gate_mentions": [
+        "check-autogenesis-1-result.py",
         "check-autogenesis-apply-search.sh",
         "check-autogenesis-induction-search.sh",
         "check-autogenesis-proposer-isolation.sh",
