@@ -496,6 +496,35 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   this tree. Treat dirty files you don't own as off-limits.
 - Format single files with `rustfmt --edition 2024 <file>` — never
   `cargo fmt`/`cargo fmt -p` (workspace-wide; clobbers other lanes' WIP).
+- **Heavy cargo goes through `scripts/cargo-serialized.sh <cargo args…>`.** Two
+  dev boxes (s1, s4) have been taken down by concurrent lane builds, and on
+  2026-08-17 a kernel OOM killed a live agent session — one test reached 125 GB,
+  because `recv_timeout` on a detached thread bounds *time*, not memory. Every
+  lane was told in prose to serialize; prose does not hold a lock. The wrapper
+  takes an `flock` on a host-local file (one cargo at a time on this host) and
+  runs the job in a `systemd-run --user --scope` carrying **both** `MemoryMax`
+  and `MemorySwapMax`, so the ceiling kills the JOB instead of leaving the host's
+  OOM killer to pick — and it has picked the agent.
+
+  **`MemoryMax` alone does not bite, and I nearly documented that it does.**
+  Measured here: `MemoryMax=64M` *is* applied (`memory.max` reads `67108864`
+  inside the scope's cgroup) and a 400 MB allocation still succeeds, because
+  `memory.swap.max` is `max` and the cgroup just swaps — on a box with 7 G of
+  swap already 6 G full, so the runaway thrashes and takes the host down anyway.
+  Adding `MemorySwapMax=0` turns the same allocation into status **137**, a
+  SIGKILL from the cgroup's own OOM killer, host untouched. A ceiling without a
+  swap ceiling is decoration.
+
+  So the wrapper carries its own probe: `scripts/cargo-serialized.sh --self-check`
+  over-allocates through the same lock and the same scope construction and fails
+  if it survives. It discriminates — `AXEYUM_CARGO_SWAP=1G` flips it to
+  `NOT-ENFORCED|status=0|out=SURVIVED`, exit 1. **Run it per host**: swap and
+  cgroup delegation differ, so a wrapper that caps s4 says nothing about s5.
+  Exit **75** means the lock timed out, deliberately distinct from a test
+  failure; the job's own status passes through otherwise (verified 0, 101, 75).
+  `AXEYUM_CARGO_MEM` / `AXEYUM_CARGO_SWAP` / `AXEYUM_CARGO_WAIT` /
+  `AXEYUM_CARGO_CPUS` tune it. Snapshot builds should set `AXEYUM_CARGO_LOCK` to
+  a per-tree path so a long cold build does not starve the shared worktree.
 - One writer per worktree/area at a time; long-running background gates are
   run FOREGROUND by the agent that owns them (waiting on completion
   notifications has stalled agents repeatedly).
