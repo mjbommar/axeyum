@@ -80,8 +80,9 @@ use crate::{
 /// running in parallel.
 static ARITH_PRELUDE_BUILDS: AtomicUsize = AtomicUsize::new(0);
 
-/// Read [`ARITH_PRELUDE_BUILDS`] — how many times a consumer has asked for the
-/// axiomatized `Real` package in this process.
+/// How many times a consumer has asked for the axiomatized `Real` package in
+/// this process — see the counter's own documentation on
+/// `ARITH_PRELUDE_BUILDS` (private) for what is and is not counted.
 ///
 /// Zero after running a reconstruction route means that route reached no
 /// carrier axiom at all, which is a strictly stronger statement than its proof

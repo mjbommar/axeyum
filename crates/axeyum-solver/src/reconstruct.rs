@@ -57,10 +57,10 @@ mod quantifier;
 mod resolution;
 
 pub use arithmetic::ordered_ring::{
-    EQUALITY_SLOT_BINDERS, EQUALITY_SLOT_LAWS, EqSetoidWitnesses, EqSpecialization,
-    EqualitySlot, IntInstantiation, IntRefutation, OrderedRingRefutation, RING_LAW_BINDERS,
-    RING_SYMBOL_BINDERS, RingTelescope, SETOID_RING_BINDERS, SetoidAdoption, SetoidEq,
-    carrier_axioms_of, generalize_over_ordered_ring, instantiate_at_int_model,
+    EQUALITY_SLOT_BINDERS, EQUALITY_SLOT_LAWS, EqSetoidWitnesses, EqSpecialization, EqualitySlot,
+    IntInstantiation, IntRefutation, OrderedRingRefutation, RING_LAW_BINDERS, RING_SYMBOL_BINDERS,
+    RingTelescope, SETOID_RING_BINDERS, SetoidAdoption, SetoidEq, carrier_axioms_of,
+    generalize_over_ordered_ring, instantiate_at_int_model, minted_axioms_of,
     reconstruct_int_farkas_to_lean_module, refutation_axiom_footprint, refutation_over_int_axioms,
     render_ordered_ring_module, residual_eq_constants, specialize_setoid_to_eq,
 };

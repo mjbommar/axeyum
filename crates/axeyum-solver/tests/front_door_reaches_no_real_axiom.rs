@@ -66,12 +66,12 @@ fn disjunctive_case_split(arena: &mut TermArena) -> Vec<TermId> {
     let y = arena.real_var("y").unwrap();
     let zero = arena.real_const(Rational::integer(0));
     let one = arena.real_const(Rational::integer(1));
-    let x_le_0 = arena.real_le(x, zero).unwrap();
-    let y_le_0 = arena.real_le(y, zero).unwrap();
-    let x_ge_1 = arena.real_ge(x, one).unwrap();
-    let y_ge_1 = arena.real_ge(y, one).unwrap();
-    let clause = arena.or(x_ge_1, y_ge_1).unwrap();
-    vec![x_le_0, y_le_0, clause]
+    let upper_x = arena.real_le(x, zero).unwrap();
+    let upper_y = arena.real_le(y, zero).unwrap();
+    let lower_x = arena.real_ge(x, one).unwrap();
+    let lower_y = arena.real_ge(y, one).unwrap();
+    let clause = arena.or(lower_x, lower_y).unwrap();
+    vec![upper_x, upper_y, clause]
 }
 
 /// `5 < x ∧ x < 3` over `Int` — the integer Farkas arm, and the one that used
@@ -86,6 +86,13 @@ fn integer_farkas(arena: &mut TermArena) -> Vec<TermId> {
     ]
 }
 
+/// A label, the arm it must route to, and the query.
+type Fixture = (
+    &'static str,
+    ProofFragment,
+    fn(&mut TermArena) -> Vec<TermId>,
+);
+
 #[test]
 fn the_shipped_front_door_never_builds_the_real_axiom_package() {
     assert_eq!(
@@ -95,11 +102,6 @@ fn the_shipped_front_door_never_builds_the_real_axiom_package() {
          not be about the front door"
     );
 
-    type Fixture = (
-        &'static str,
-        ProofFragment,
-        fn(&mut TermArena) -> Vec<TermId>,
-    );
     let fixtures: &[Fixture] = &[
         (
             "lra          x<0 and 0<=x",
