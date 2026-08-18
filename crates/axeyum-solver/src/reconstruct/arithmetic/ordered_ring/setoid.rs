@@ -399,8 +399,16 @@ pub fn declare_setoid_equality(
     {
         slot_laws[position] = declare(kernel, ns, leaf, ty)?;
     }
-    let [eq_refl, eq_symm, eq_trans, add_congr, mul_congr, neg_congr, le_congr, lt_congr] =
-        slot_laws;
+    let [
+        eq_refl,
+        eq_symm,
+        eq_trans,
+        add_congr,
+        mul_congr,
+        neg_congr,
+        le_congr,
+        lt_congr,
+    ] = slot_laws;
 
     // The nine Eq-laws, restated through `eq`. Types are COMPUTED.
     let restate = |kernel: &mut Kernel,
@@ -645,6 +653,21 @@ pub fn adopt_setoid_equality(
     //     have axiomatized.
     guard_slot_shapes(kernel, arith, slot)?;
 
+    Ok(adopted_slot_and_report(kernel, arith, slot, before))
+}
+
+/// The two values [`adopt_setoid_equality`] returns once its four guards have
+/// passed: the slot itself, and the report saying what it was made of.
+///
+/// Split out only because the caller crossed `clippy::too_many_lines` (105/100)
+/// under STABLE clippy. Nightly does not flag it, which is why local-ci pins
+/// clippy to stable — this is the lint that found it, on that gate's first run.
+fn adopted_slot_and_report(
+    kernel: &Kernel,
+    arith: &super::super::RingSignature,
+    slot: &EqualitySlot,
+    before: usize,
+) -> (SetoidEq, SetoidAdoption) {
     let adopted = SetoidEq {
         eq: slot.eq,
         eq_refl: slot.eq_refl,
@@ -690,7 +713,7 @@ pub fn adopt_setoid_equality(
         .collect(),
         declarations_added: kernel.environment().len() - before,
     };
-    Ok((adopted, report))
+    (adopted, report)
 }
 
 /// Adoption guard 4: each of the nine members has the interface's type over the
