@@ -163,6 +163,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `bd7b55bff` | Extracted 9,729 proof-isolated Mathlib Nat/Int statements externally and selected 240 outcome-blind source candidates across twelve families without vendoring bulk exports. |
 | 2026-08-18 | `30e7e6ec3` | Projected 95 direct Mathlib candidate dependencies into 146 whole leakage components without exposing proof terms or freezing evaluation splits. |
 | 2026-08-18 | `f4dc0d4f1` | Registered and cleanly exercised the exact axiom-free authoritative B operation, whose durable event made A newly ready. |
+| 2026-08-18 | `81321fc65` | Added bounded bit-packed `GF(2)[x]`, untrusted Rabin certificate production, independent identity checking, exhaustive degree-10 oracle agreement, certificate mutations, the exact Lemire theorem contract, and accepted ADR-0480. |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
@@ -327,6 +328,30 @@ recogniser declines any goal whose *other* assertions include a quantifier it
 cannot instantiate, which is why all three multi-goal probes decline; widening
 `hypotheses` to carry a universal it cannot instantiate as an assumption rather
 than dropping the goal would reach them. Neither is a soundness item.
+
+**The Lemire half-degree conjecture is an active CAS/evidence lane** (`WIP`,
+gf2-lemire, 2026-08-18).  The exact target is the paper's non-strict bound
+`deg(f-x^n) <= floor(n/2)`; the strict social-post wording fails at degree 2.
+The existing general-prime-field code has no limits or evidence consumer and
+takes about 6.45 seconds in release for the known degree-400 witness.
+
+ADR-0480 is accepted and `81321fc65` lands the CAS-local, bit-packed
+`GF(2)[x]` value layer with explicit resource limits and portable
+Frobenius/Bezout irreducibility certificates before any finite-field IR or SMT
+surface.  Exhaustive monic inputs through degree 10 agree with both the old
+general-field test and independent trial division; the warmed release
+producer-plus-checker regression for degree 400 is below 10 ms.  The reciprocal
+lemma reduces the universal conjecture to a prime polynomial in the identity
+class modulo `x^ceil(n/2)`.  The current mathematical blocker is a positivity
+theorem at that exact fixed-field half-degree boundary; Gao's Hayes-class
+formula is the first target for specialization.
+
+**Next.** Define the canonical artifact and second checker; then run bounded,
+thermally conservative search/check shards on s1, s4, s5, s6, and s7.  Fleet
+completion alone earns no credit.  In parallel, derive an exact identity-class
+recurrence or sharpened positive count, then reconstruct the reciprocal and
+central lemmas through the kernel and fact ledger before claiming a universal
+proof.
 
 **Claim-dashboard gate, finding-8 re-measurement, and PLAN.md returned under its
 ceiling** (`WIP`, ledger-integrity, 2026-08-16). Three defects behind a dashboard
