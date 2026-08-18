@@ -659,7 +659,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "8422113b30841222055730f26a39ba2414fae78e3515c864bf882e1a566217e4",
+    "digest": "98ba9ed82159986de87a6af00c3b6941b97ef064fd9327499e00981938580462",
     "inputs": [
       {
         "bytes": 3519,
@@ -1247,9 +1247,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 71492,
+        "bytes": 71572,
         "path": "justfile",
-        "sha256": "81584598195d842fef28eff58e5a944e240debe05cd359307fcc33e626eb1400"
+        "sha256": "eca944c864bd300ce56ae751d402eddc206e49f9b15527628a333774364225f7"
       },
       {
         "bytes": 2896,
@@ -1267,9 +1267,9 @@
         "sha256": "4ca7f8a489610cede17b3ab4cecc4dc4813fcab2230c42cc0d3e3fb76ca32081"
       },
       {
-        "bytes": 9752,
+        "bytes": 11446,
         "path": "scripts/check-autogenesis-apply-search.sh",
-        "sha256": "53846054fc08354a639c2e810f2ff5c4fe94d53b2d1bda21d69adff32c71008d"
+        "sha256": "fdf29d556239e800e8779442e37846d2384be0684513bbbc0334dfde21ebb173"
       },
       {
         "bytes": 3677,
@@ -1297,9 +1297,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 21216,
+        "bytes": 21332,
         "path": "scripts/check.sh",
-        "sha256": "f4e161e51cbe40d188a48a1ad75f33d5334ea6df7a2c4a8cb4c48f8cd32aac76"
+        "sha256": "101b255b4ab542a9bf69f028c351e3df9cf428d8f1116fc371f03f7b5b814f67"
       },
       {
         "bytes": 6846,
@@ -1337,9 +1337,9 @@
         "sha256": "db6757cc801ed3996d0ba3c40ba55123e2855e8944054c2a391b46ff5678b81b"
       },
       {
-        "bytes": 23140,
+        "bytes": 23262,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "71dde6130cfdfea91bbae05a26d3985bda4f316c77ff48c6ef9901da59c674d9"
+        "sha256": "80e86707325aad23e0ef2788ab00b25182092479b1c04aa151c8a0764707a0d2"
       },
       {
         "bytes": 17112,
@@ -1347,14 +1347,19 @@
         "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
       },
       {
+        "bytes": 11669,
+        "path": "scripts/prepare-autogenesis-fact-transaction.py",
+        "sha256": "d225d4227dea5db0687d4dcd143278b329ad0ecec7b78b83bffe27153dce30b6"
+      },
+      {
         "bytes": 10990,
         "path": "scripts/provision-fleet-host.sh",
         "sha256": "f9ceaa822e1d7c090f79608b238276c8921581f151a6b814648e95f6e5b87f00"
       },
       {
-        "bytes": 11062,
+        "bytes": 12051,
         "path": "scripts/replay-autogenesis-apply-experiment.sh",
-        "sha256": "7f1f8a31d93191646606c036e9323c274da7720942cc47ace3df411bfc4f3961"
+        "sha256": "784baa687012a28668d24289d111518110e5a87ea77e65528abf75acf510949e"
       },
       {
         "bytes": 3627,
@@ -1365,6 +1370,11 @@
         "bytes": 4699,
         "path": "scripts/stage-autogenesis-premise.sh",
         "sha256": "fcfc52779c96981c43857c81b0fa8a9579f9649c380dbb8c5881123cf38656cd"
+      },
+      {
+        "bytes": 862,
+        "path": "scripts/tests/fixtures/F-nat-zero-add-open.json",
+        "sha256": "c09c1b97f49c0993b3545e0ffbb5c063108b19b80aa27707588ef02b87053687"
       },
       {
         "bytes": 1688,

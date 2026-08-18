@@ -17,6 +17,7 @@ required=(
   pre_b-catalog.json pre_b-induction-output/induction-plans.json
   pre_b-induction-output/induction-plans.tsv premise-kernel-evidence.tsv
   premise-evidence.json premise-transition.json premise-accepted-event.json
+  fact-transaction-proposal.json
   pre_a-catalog.json pre_a-output/apply-plans.json pre_a-output/apply-plans.tsv
   post_b-catalog.json post_b-output/apply-plans.json post_b-output/apply-plans.tsv
 )
@@ -56,12 +57,13 @@ premise_bundle = load("pre_b-induction-output/induction-plans.json")
 evidence = load("premise-evidence.json")
 transition = load("premise-transition.json")
 event = load("premise-accepted-event.json")
+transaction = load("fact-transaction-proposal.json")
 pre_catalog = load("pre_a-catalog.json")
 pre_bundle = load("pre_a-output/apply-plans.json")
 post_catalog = load("post_b-catalog.json")
 post_bundle = load("post_b-output/apply-plans.json")
 
-if report.get("schema_version") != 5 or report.get("kind") != "axeyum-autogenesis-apply-experiment":
+if report.get("schema_version") != 6 or report.get("kind") != "axeyum-autogenesis-apply-experiment":
     raise SystemExit("AUTOGENESIS_REPLAY_ERROR|unsupported experiment schema")
 unsigned = dict(report)
 claimed = unsigned.pop("experiment_sha256", None)
@@ -76,6 +78,7 @@ checks = {
     "premise evidence": (report["premise"].get("evidence_sha256"), evidence.get("evidence_sha256")),
     "premise transition": (report["premise"].get("transition_sha256"), transition.get("transition_sha256")),
     "accepted event": (report["premise"].get("accepted_event_sha256"), event.get("event_sha256")),
+    "fact transaction": (report["premise"].get("fact_transaction_sha256"), transaction.get("transaction_sha256")),
     "pre-A catalog": (report["pre_a"].get("catalog_sha256"), pre_catalog.get("catalog_sha256")),
     "pre-A bundle": (report["pre_a"].get("bundle_sha256"), pre_bundle.get("bundle_sha256")),
     "post-B catalog": (report["post_b"].get("catalog_sha256"), post_catalog.get("catalog_sha256")),
@@ -88,6 +91,10 @@ if report.get("same_target") is not True or pre_catalog.get("target") != post_ca
     raise SystemExit("AUTOGENESIS_REPLAY_ERROR|pre/post target identity changed")
 if event.get("authoritative_ledger_writes") != [] or transition.get("authoritative_ledger", {}).get("writes") != []:
     raise SystemExit("AUTOGENESIS_REPLAY_ERROR|bootstrap artifacts contain ledger writes")
+if transaction.get("state") != "prepared" or transaction.get("admission_event") is not None:
+    raise SystemExit("AUTOGENESIS_REPLAY_ERROR|transaction proposal overclaims admission")
+if report["premise"].get("fact_transaction_source_authoritative") is not False:
+    raise SystemExit("AUTOGENESIS_REPLAY_ERROR|fixture transaction misreports its source")
 PY
 
 python3 scripts/gen-autogenesis-baseline.py --check
@@ -189,6 +196,14 @@ cmp -s "$scratch/premise-accepted-event.json" "$experiment_dir/premise-accepted-
   echo "AUTOGENESIS_REPLAY_ERROR|fresh accepted event differs" >&2
   exit 1
 }
+python3 scripts/prepare-autogenesis-fact-transaction.py \
+  --fact scripts/tests/fixtures/F-nat-zero-add-open.json \
+  --bundle "$experiment_dir" \
+  --output "$scratch/fact-transaction-proposal.json" >/dev/null
+cmp -s "$scratch/fact-transaction-proposal.json" "$experiment_dir/fact-transaction-proposal.json" || {
+  echo "AUTOGENESIS_REPLAY_ERROR|fresh fact transaction proposal differs" >&2
+  exit 1
+}
 
 read -r pre_bundle pre_catalog pre_candidate post_bundle post_catalog post_candidate < <(
   python3 - "$experiment_dir" <<'PY'
@@ -226,4 +241,4 @@ PY
   echo "AUTOGENESIS_REPLAY_ERROR|replay mutated the checkout" >&2
   exit 1
 }
-echo "AUTOGENESIS_APPLY_REPLAY|commit=$head_commit|experiment=$(basename "$experiment_dir")|premise=proved|event=reproduced|pre_a=no-proof|post_b=proved|ledger_writes=0"
+echo "AUTOGENESIS_APPLY_REPLAY|commit=$head_commit|experiment=$(basename "$experiment_dir")|premise=proved|event=reproduced|transaction=prepared-fixture|pre_a=no-proof|post_b=proved|ledger_writes=0"

@@ -162,6 +162,23 @@ kernel checks, compares the exact outcomes, and fails if the checkout changes.
 The first retained replay passed at exact commit `42dad8ffa` with experiment
 digest `ebfaa7eb6c6f5acc0cd805cfc943d974a3837a2cc74f84a364da84db06d22468`.
 
+The first durable-admission precursor is also executable.
+`prepare-autogenesis-fact-transaction.py` accepts no status, route, footprint,
+evidence row, or shell checker from its caller. It replays the registered kernel
+evidence operation, requires an exactly matching open fact and theorem type,
+derives the complete after-fact, validates it against the ledger's semantic
+rules, and emits a content-addressed `prepared` proposal. A proposal structurally
+cannot contain an admission event or claim `committed` state.
+
+The positive transaction control uses a non-ledger fixture containing the exact
+`Nat.zero_add` proposition with status reset to `open`; it does not rewrite the
+already-settled authoritative row. Two negative controls reject the real settled
+row and reject applying B's evidence to the genuinely open
+`F:no-integer-square-is-minus-one`. This proves the transaction machinery can
+stage a valid open-to-proved delta without pretending that any currently open
+fact has evidence it does not have. Atomic application, crash recovery, and the
+durable admission event remain missing.
+
 ## Assumptions tested now
 
 ### A. The ledger has a usable chain substrate
@@ -222,6 +239,11 @@ permanent staleness or quietly records the parent commit.
 It does not atomically bind selection, evidence, checker identity, dependency
 derivation, fact delta, readiness recomputation, and replay. Its rollback is a
 useful primitive, not the Autogenesis transaction boundary.
+
+It also cannot serve as the proposal layer unchanged: its dry run never emits
+the after-fact, and its trust boundary is caller-authored shell text. The typed
+prepared transaction deliberately precedes and eventually replaces that
+interface rather than wrapping it.
 
 ## Revised critical path
 

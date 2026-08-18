@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:8422113b30841222055730f26a39ba2414fae78e3515c864bf882e1a566217e4`
+Source identity: `sha256:98ba9ed82159986de87a6af00c3b6941b97ef064fd9327499e00981938580462`
 
 ## Ledger and chain substrate
 

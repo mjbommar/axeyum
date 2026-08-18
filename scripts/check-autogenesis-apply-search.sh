@@ -63,6 +63,36 @@ scripts/stage-autogenesis-premise.sh \
   --snapshot "$scratch/snapshot.json" \
   --output-dir "$scratch" \
   --budget "$premise_budget" >/dev/null
+python3 scripts/prepare-autogenesis-fact-transaction.py \
+  --fact scripts/tests/fixtures/F-nat-zero-add-open.json \
+  --bundle "$scratch" \
+  --output "$scratch/fact-transaction-proposal.json" >/dev/null
+python3 scripts/prepare-autogenesis-fact-transaction.py \
+  --fact scripts/tests/fixtures/F-nat-zero-add-open.json \
+  --bundle "$scratch" \
+  --verify "$scratch/fact-transaction-proposal.json" >/dev/null
+if python3 scripts/prepare-autogenesis-fact-transaction.py \
+  --fact artifacts/facts/F-nat-zero-add.json \
+  --bundle "$scratch" \
+  --output "$scratch/invalid-settled-transaction.json" \
+  >"$scratch/invalid-settled-transaction.stdout" \
+  2>"$scratch/invalid-settled-transaction.stderr"; then
+  echo "transaction proposal unexpectedly accepted a settled fact" >&2
+  exit 1
+fi
+grep -qF 'fact precondition is not open' \
+  "$scratch/invalid-settled-transaction.stderr"
+if python3 scripts/prepare-autogenesis-fact-transaction.py \
+  --fact artifacts/facts/F-no-integer-square-is-minus-one.json \
+  --bundle "$scratch" \
+  --output "$scratch/invalid-wrong-fact-transaction.json" \
+  >"$scratch/invalid-wrong-fact-transaction.stdout" \
+  2>"$scratch/invalid-wrong-fact-transaction.stderr"; then
+  echo "transaction proposal unexpectedly applied B evidence to another open fact" >&2
+  exit 1
+fi
+grep -qF 'typed evidence names a different fact' \
+  "$scratch/invalid-wrong-fact-transaction.stderr"
 
 transition_chain=(
   --premise-evidence "$scratch/premise-evidence.json"
@@ -203,8 +233,9 @@ premise_bundle = json.load(open(root / "pre_b-induction-output/induction-plans.j
 premise_evidence = json.load(open(root / "premise-evidence.json"))
 premise_transition = json.load(open(root / "premise-transition.json"))
 premise_event = json.load(open(root / "premise-accepted-event.json"))
+fact_transaction = json.load(open(root / "fact-transaction-proposal.json"))
 report = {
-    "schema_version": 5,
+    "schema_version": 6,
     "kind": "axeyum-autogenesis-apply-experiment",
     "git_commit": baseline["git_commit"],
     "baseline_source_sha256": baseline["baseline_source_sha256"],
@@ -221,6 +252,8 @@ report = {
         "evidence_sha256": premise_evidence["evidence_sha256"],
         "transition_sha256": premise_transition["transition_sha256"],
         "accepted_event_sha256": premise_event["event_sha256"],
+        "fact_transaction_sha256": fact_transaction["transaction_sha256"],
+        "fact_transaction_source_authoritative": fact_transaction["precondition"]["source_is_authoritative"],
         "result": sys.argv[4],
     },
     "pre_a": {
@@ -248,4 +281,4 @@ PY
   trap - EXIT
 fi
 
-echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved+accepted-event|target=A|budget=$budget|pre_a=no-proof|post_b=proved|readiness=event-driven|dependency=episode-premise|ledger_writes=0"
+echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved+accepted-event|transaction=prepared-fixture|target=A|budget=$budget|pre_a=no-proof|post_b=proved|readiness=event-driven|dependency=episode-premise|ledger_writes=0"

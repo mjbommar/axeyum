@@ -127,6 +127,9 @@ unlock A. This remains a counterfactual phase projection rather than frontier
 recomputation from a durable ledger transition, so it is an operational unlock
 control rather than Autogenesis-1 credit. The exact-commit retained bundle at
 `42dad8ffa` also reproduces through the separate read-only replay command.
+The next boundary now has a typed, read-only fact-transaction proposal: its
+positive test is explicitly counterfactual, while mismatched evidence for a
+real open fact rejects. No durable ledger write or admission event is claimed.
 
 ## Phase summary
 
