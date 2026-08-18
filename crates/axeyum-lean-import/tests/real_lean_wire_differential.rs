@@ -454,6 +454,11 @@ fn budget() -> usize {
         .unwrap_or(96)
 }
 
+// The differential is one measurement: build the mutants, run BOTH kernels over
+// the identical bytes, and classify every disagreement in one place. Splitting
+// it would put the two verdicts and the classification in separate scopes,
+// which is precisely where a differential stops being a differential.
+#[allow(clippy::too_many_lines)]
 #[test]
 fn our_kernel_admits_nothing_the_real_lean_kernel_refuses() {
     let base = development();
