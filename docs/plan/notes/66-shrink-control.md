@@ -83,3 +83,47 @@ upward mid-lane as other lanes landed).
 4. Promote the control to a prelude the ledger measures and swap the population
    `real: 30` → `control: 1` in **one** `--accept-population-change` run. Doing
    it in two publishes a trusted surface of 31 in between.
+
+## Gates this lane did NOT run, and why
+
+Six lanes were queued on `scripts/cargo-serialized.sh`'s flock when this lane
+finished, and the following never reached the front of it. They are recorded as
+**not run**, not as passing:
+
+`-p axeyum-lean-kernel --lib` · `front_door_carrier --require-axiom-free` ·
+`ordered_ring_refutation --require-empty` and `--constructed-reals` ·
+`--test farkas_over_the_integers` · `--test front_door_reaches_no_real_axiom` ·
+`RUSTDOCFLAGS="-D warnings" cargo doc` · `gen-lean-axiom-ledger.py --check` ·
+`check-prelude-reuse-equivalence.sh`.
+
+What *did* run on a snapshot of the exact committed tree: `+stable clippy
+--workspace --all-targets --all-features -- -D warnings` **exit 0** — the gate
+that has red-ed `main` twice in a day, and the one most likely to be broken by a
+new module — plus `-p axeyum-solver --lib --features full`, `check-links.sh`,
+`validate-facts.py`, `check-fact-derived-numbers.py`, `gen-adr-index.py --check`
+and `gen-plan.py --check`.
+
+The argument for the untried ones is that this lane adds a module and an example
+to `axeyum-solver` and changes no kernel code. That is an argument, not a
+measurement, which is why it is written here rather than in the status block.
+
+Two failures seen throughout, neither from this lane and both present unmutated:
+
+- `end_to_end_reflexive_disequality_reconstructs_directly` fails against another
+  lane's uncommitted `reject_self_refuting_module` in the shared worktree;
+- `crates/axeyum-lean-kernel/src/lean_pp.rs` reds STABLE clippy in the worktree
+  (`too_many_arguments`, 8/7) from an edit that is in no commit — which is why
+  the clippy run above had to be done on a `lane-snapshot.sh` extraction of the
+  commit rather than on the working tree.
+
+## Neither of the two examples this ADR reasons about is in any gate
+
+`front_door_carrier --require-axiom-free` and `ordered_ring_refutation
+--require-empty` are treated as gates by ADR-0480 and by the lane briefs built
+on it. Measured 2026-08-18: `grep` for `require-axiom-free`, `require-empty` and
+`constructed-reals` across `scripts/*.sh`, the `justfile` and
+`.github/workflows/` finds **zero** invocations. They are commands lanes are
+told to run, and nothing runs them otherwise. `ring_interface_pin
+--require-identical` is in the same position, deliberately — wiring one of the
+three and not the others would be worse — but the whole set belongs in the
+aggregate gate before the ledger's pin moves onto the telescope.
