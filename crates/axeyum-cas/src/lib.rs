@@ -65,6 +65,7 @@ pub mod geometry_certify;
 pub mod geometry_check;
 pub mod geometry_corpus;
 pub mod geometry_json;
+pub mod gf2;
 pub mod gfp;
 mod gosper;
 pub mod groebner;
