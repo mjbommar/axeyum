@@ -68,14 +68,15 @@ if [ -f docs/plan/generated/lean-axiom-ledger.md ]; then
   grep -E '^- \*\*[0-9]+ total assumptions|^- \*\*[0-9]+ assumptions have been retired' \
     docs/plan/generated/lean-axiom-ledger.md | sed 's/^/  /'
   echo "  authority: python3 scripts/gen-lean-axiom-ledger.py --check   (rebuilds the preludes)"
-  # The ledger covers the preludes the reconstruction ADMITS. The CONSTRUCTED
-  # developments are a different question and a different tool: measured
-  # 2026-08-18, `nat_axiom_inventory` builds logic/nat/real/integer/rat/string
-  # and NOT creal/complex, so grepping it for the constructed reals returns an
-  # empty answer to a question it was never asked -- which is how one brief
-  # concluded ℝ-as-constructed was axiom-free from evidence that did not exist.
-  echo "  constructed carriers are NOT in the table above; they need the flag:"
-  echo "    cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed"
+  # The constructed carriers ARE in the table above as of 2026-08-18: the
+  # ledger's coverage command now passes `--include-constructed`, and
+  # `EXPECTED_PRELUDES` lists `creal`/`complex` so dropping that flag is a gate
+  # failure rather than a quieter ledger. Before that they were absent, and
+  # grepping the inventory for them returned an empty answer to a question it
+  # was never asked -- which is how one brief concluded ℝ-as-constructed was
+  # axiom-free from evidence that did not exist.
+  echo "  every row above is pinned BY VALUE; a moved number fails --check with"
+  echo "  its direction (a rise is a regression, a fall is a result to publish)."
 else
   echo "  (docs/plan/generated/lean-axiom-ledger.md absent — run scripts/gen-lean-axiom-ledger.py)"
 fi

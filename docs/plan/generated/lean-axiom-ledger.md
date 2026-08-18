@@ -9,7 +9,7 @@ This ledger inventories declarations actually admitted as trusted after construc
 ## Snapshot
 
 - **30 total assumptions:** real 30.
-- Axiom-free preludes, enumerated rather than inferred from absence: `integer`, `logic`, `nat`, `rat`, `string`. An axiom-free prelude emits no rows, so the measurement declares its own coverage; a prelude that silently stopped being built fails the gate instead of shrinking the total.
+- Axiom-free preludes, enumerated rather than inferred from absence: `complex`, `creal`, `integer`, `logic`, `nat`, `rat`, `string`. An axiom-free prelude emits no rows, so the measurement declares its own coverage; a prelude that silently stopped being built fails the gate instead of shrinking the total.
 - 0 names are shared by the isolated real and integer preludes; ADR-0387's `Int.*` / `Real.*` namespaces make the packages composable.
 - Integer trust policy: [ADR-0465](../../research/09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md) — The integer prelude admits no assumption; a checked dependency closure using it inherits nothing from this ledger.
 - **35 assumptions have been retired** from the trusted surface since this ledger was first frozen; they are kept below rather than deleted, because a reduction in the trusted base is the result, not a smaller table.
@@ -22,6 +22,8 @@ Counts are over the whole trusted surface, not `Declaration::Axiom` alone: `Opaq
 
 | Prelude | Axiom | Opaque | Quotient | Trusted total | Ledger rows |
 |---|---|---|---|---|---|
+| `complex` | 0 | 0 | 0 | 0 | 0 |
+| `creal` | 0 | 0 | 0 | 0 | 0 |
 | `integer` | 0 | 0 | 0 | 0 | 0 |
 | `logic` | 0 | 0 | 0 | 0 | 0 |
 | `nat` | 0 | 0 | 0 | 0 | 0 |
@@ -32,10 +34,11 @@ Counts are over the whole trusted surface, not `Declaration::Axiom` alone: `Opaq
 ## Machine-checked contract
 
 - Row source: `cargo run --quiet -p axeyum-lean-kernel --example prelude_axiom_inventory`.
-- Coverage source: `cargo run --quiet -p axeyum-lean-kernel --example nat_axiom_inventory` — enumerates 6 preludes and declares a per-prelude count line for each, including the axiom-free ones.
+- Coverage source: `cargo run --quiet --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed` — enumerates 8 preludes and declares a per-prelude count line for each, including the axiom-free ones.
 - The two are cross-checked against each other: per-prelude axiom counts, name sets, and canonical types must all agree, so a filter bug in either shows up as a disagreement rather than as a smaller number.
 - Type identity: sha256 of Kernel::render_lean(declaration.ty) UTF-8 bytes.
 - Any added/removed axiom, renamed declaration, or canonical type change fails validation before the generated ledger can remain current. A population change additionally requires an explicit `--accept-population-change` run.
+- **Every prelude above is pinned by value, and a moved number is reported with its direction.** A *rise* is a regression — something previously proved is now assumed. A *fall* is a result this ledger has not published yet, and it is the direction a blanket axiom-free assertion structurally cannot see, because that assertion only ever becomes more true. Both fail the gate; what differs is what the operator is told to do next.
 - Every row has source, semantic classification, owner, review owner, discharge state, and retained-evidence fields.
 - `discharged` requires a real repository evidence path; a `derivable-theorem` may not be marked `retained`.
 - Documents that cite these counts are listed in the manifest's `live_documents` and scanned: a stale count fails the gate, and so does a document that stops citing the ledger at all.

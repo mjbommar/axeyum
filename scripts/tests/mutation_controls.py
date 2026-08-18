@@ -193,6 +193,58 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
             ),
         ],
     ),
+    # Cargo-backed: every run rebuilds the isolated kernel preludes, so the
+    # first `run()` in the scratch tree pays a cold build and the rest reuse it.
+    # Slower than the pure-Python suites and worth it -- the guards here are what
+    # stop the project's headline trust number from moving unobserved.
+    "lean-axiom-ledger": (
+        "scripts/gen-lean-axiom-ledger.py",
+        "scripts.tests.test_lean_axiom_ledger",
+        [
+            ("EXPECTED_PRELUDES drops creal", '    "creal",\n', ""),
+            ("EXPECTED_PRELUDES drops complex", '    "complex",\n', ""),
+            ("EXPECTED_PRELUDES drops rat", '    "rat",\n', ""),
+            (
+                "rise reported as REGRESSION",
+                "if isinstance(was, int) and now > was:",
+                "if False:",
+            ),
+            (
+                "fall reported as IMPROVEMENT",
+                "elif isinstance(was, int) and now < was:",
+                "elif False:",
+            ),
+            ("coverage-lost branch", "if after is None:", "if False:"),
+            ("coverage-added branch", "if before is None:", "if False:"),
+            (
+                "kind-reshape branch",
+                '            else:\n                failures.append(\n'
+                '                    f"{STALE} -- RESHAPED: `{prelude}` trusted surface is still "',
+                '            elif False:\n                failures.append(\n'
+                '                    f"{STALE} -- RESHAPED: `{prelude}` trusted surface is still "',
+            ),
+            (
+                "unexplained-drift catch-all",
+                "    if not failures:\n        failures.append(\n"
+                '            f"{STALE}; committed {json.dumps(committed, sort_keys=True)} vs "\n'
+                '            f"measured {json.dumps(derived, sort_keys=True)}"\n        )\n',
+                "",
+            ),
+            (
+                "non-object measurement guard",
+                "if not isinstance(committed, dict):",
+                "if False:",
+            ),
+            # Not independently isolable: without the flag `measure()` fails
+            # cross-check and the whole suite dies at setUpClass. Listed so the
+            # control records that, rather than leaving it untested-looking.
+            (
+                "--include-constructed on the coverage command",
+                ' -- --include-constructed"',
+                '"',
+            ),
+        ],
+    ),
     "lra-hypothesis-binding": (
         "scripts/check-lra-hypothesis-binding.py",
         "scripts.tests.test_check_lra_hypothesis_binding",

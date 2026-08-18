@@ -4,9 +4,11 @@
   "population_as_of": "2026-08-17",
   "measurement": {
     "axiom_rows_command": "cargo run --quiet -p axeyum-lean-kernel --example prelude_axiom_inventory",
-    "trusted_surface_command": "cargo run --quiet -p axeyum-lean-kernel --example nat_axiom_inventory",
+    "trusted_surface_command": "cargo run --quiet --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed",
     "type_identity": "sha256 of Kernel::render_lean(declaration.ty) UTF-8 bytes",
     "preludes": [
+      "complex",
+      "creal",
       "integer",
       "logic",
       "nat",
@@ -15,6 +17,18 @@
       "string"
     ],
     "trusted_surface": {
+      "complex": {
+        "axiom": 0,
+        "opaque": 0,
+        "quotient": 0,
+        "total_trusted": 0
+      },
+      "creal": {
+        "axiom": 0,
+        "opaque": 0,
+        "quotient": 0,
+        "total_trusted": 0
+      },
       "integer": {
         "axiom": 0,
         "opaque": 0,
@@ -53,6 +67,8 @@
       }
     },
     "axiom_counts": {
+      "complex": 0,
+      "creal": 0,
       "integer": 0,
       "logic": 0,
       "nat": 0,

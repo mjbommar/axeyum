@@ -231,6 +231,140 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
             GEN.cross_check(blind)
         self.assertIn("no coverage line", str(caught.exception))
 
+    # ---- the constructed carriers are measured, not assumed measured ------
+    #
+    # `creal` and `complex` need `--include-constructed`; without it they emit
+    # no coverage line and no rows, and a pin of 0 for them would pass
+    # vacuously. Each of the three deletions below is checked to kill exactly
+    # one test, so the coverage tuple is not one shared reject path.
+
+    def test_the_trusted_surface_command_asks_for_the_constructed_carriers(self) -> None:
+        # NOT independently mutation-isolable, and deliberately so: removing
+        # this flag makes `GEN.measure()` fail cross-check, which takes the
+        # whole suite's setUpClass down. Recorded rather than hidden.
+        self.assertIn("--include-constructed", GEN.TRUSTED_SURFACE_COMMAND)
+        self.assertIn("--release", GEN.TRUSTED_SURFACE_COMMAND)
+
+    def test_creal_is_measured_and_pinned(self) -> None:
+        self.assertIn("creal", self.measurement.surface_counts)
+        self.assertEqual(
+            self.measurement.surface_counts["creal"],
+            self.data["measurement"]["trusted_surface"]["creal"],
+        )
+
+    def test_complex_is_measured_and_pinned(self) -> None:
+        self.assertIn("complex", self.measurement.surface_counts)
+        self.assertEqual(
+            self.measurement.surface_counts["complex"],
+            self.data["measurement"]["trusted_surface"]["complex"],
+        )
+
+    def test_every_measured_prelude_is_pinned_by_value(self) -> None:
+        # The property the whole change exists for: no prelude is merely
+        # asserted to be zero, each is asserted to equal its measured number.
+        self.assertEqual(
+            self.data["measurement"]["trusted_surface"],
+            {
+                prelude: dict(counts)
+                for prelude, counts in self.measurement.surface_counts.items()
+            },
+        )
+        self.assertTrue(
+            set(GEN.EXPECTED_PRELUDES) <= set(self.measurement.surface_counts)
+        )
+
+    def test_creal_dropping_out_of_coverage_fails(self) -> None:
+        blind = clone(self.measurement)
+        del blind.surface_counts["creal"]
+        with self.assertRaises(GEN.LedgerError) as caught:
+            GEN.cross_check(blind)
+        self.assertIn("'creal' has no coverage line", str(caught.exception))
+
+    def test_complex_dropping_out_of_coverage_fails(self) -> None:
+        blind = clone(self.measurement)
+        del blind.surface_counts["complex"]
+        with self.assertRaises(GEN.LedgerError) as caught:
+            GEN.cross_check(blind)
+        self.assertIn("'complex' has no coverage line", str(caught.exception))
+
+    def test_rat_dropping_out_of_coverage_fails(self) -> None:
+        blind = clone(self.measurement)
+        del blind.surface_counts["rat"]
+        with self.assertRaises(GEN.LedgerError) as caught:
+            GEN.cross_check(blind)
+        self.assertIn("'rat' has no coverage line", str(caught.exception))
+
+    # ---- a moved number is reported WITH ITS DIRECTION --------------------
+    #
+    # Every case below also fails the gate; what is under test is that the two
+    # directions do not read the same, because they are not the same event.
+
+    def test_a_risen_count_is_reported_as_a_regression(self) -> None:
+        self.data["measurement"]["trusted_surface"]["real"] = {
+            "axiom": 28, "opaque": 0, "quotient": 0, "total_trusted": 28,
+        }
+        failures = self.failures()
+        self.assertTrue(any("REGRESSION" in f and "ROSE 28 -> 30" in f for f in failures))
+        self.assertFalse(any("IMPROVEMENT" in f for f in failures))
+
+    def test_a_fallen_count_is_reported_as_an_improvement_to_publish(self) -> None:
+        self.data["measurement"]["trusted_surface"]["real"] = {
+            "axiom": 32, "opaque": 0, "quotient": 0, "total_trusted": 32,
+        }
+        failures = self.failures()
+        self.assertTrue(any("IMPROVEMENT" in f and "FELL 32 -> 30" in f for f in failures))
+        self.assertFalse(any("REGRESSION" in f for f in failures))
+
+    def test_an_axiom_free_prelude_falling_to_zero_is_still_reported(self) -> None:
+        # The direction `--require-axiom-free` structurally cannot see: a pin of
+        # 1 against a measured 0 is a result, and it must not read as noise.
+        self.data["measurement"]["trusted_surface"]["creal"] = {
+            "axiom": 1, "opaque": 0, "quotient": 0, "total_trusted": 1,
+        }
+        self.assertTrue(
+            any("IMPROVEMENT" in f and "`creal`" in f for f in self.failures())
+        )
+
+    def test_a_newly_measured_prelude_is_reported_as_coverage_added(self) -> None:
+        del self.data["measurement"]["trusted_surface"]["complex"]
+        self.assertTrue(
+            any("COVERAGE ADDED" in f and "`complex`" in f for f in self.failures())
+        )
+
+    def test_a_prelude_leaving_the_measurement_is_reported_as_coverage_lost(self) -> None:
+        shrunk = clone(self.measurement)
+        del shrunk.surface_counts["complex"]
+        shrunk.surface_rows = [
+            row for row in shrunk.surface_rows if row["prelude"] != "complex"
+        ]
+        failures = self.failures(shrunk)
+        self.assertTrue(
+            any("COVERAGE LOST" in f and "`complex`" in f for f in failures)
+        )
+
+    def test_a_kind_reshape_at_an_unchanged_total_fails(self) -> None:
+        # `opaque` and `quotient` are trusted for different reasons than
+        # `axiom`; a swap that holds the total constant is still a change.
+        self.data["measurement"]["trusted_surface"]["real"] = {
+            "axiom": 29, "opaque": 1, "quotient": 0, "total_trusted": 30,
+        }
+        self.assertTrue(
+            any("RESHAPED" in f and "`real`" in f for f in self.failures())
+        )
+
+    def test_unexplained_measurement_drift_still_fails(self) -> None:
+        # The catch-all. Without it a shape the per-prelude walk cannot read
+        # produces an empty failure list -- a checker that cannot fail.
+        self.data["measurement"]["trusted_surface"] = []
+        failures = self.failures()
+        self.assertTrue(any("measurement block is stale" in f for f in failures))
+
+    def test_a_non_object_measurement_block_fails(self) -> None:
+        self.data["measurement"] = "thirty"
+        self.assertTrue(
+            any("it is not an object" in f for f in self.failures())
+        )
+
     def test_the_two_inventories_must_agree_on_counts(self) -> None:
         skewed = clone(self.measurement)
         skewed.surface_counts["real"]["axiom"] += 1

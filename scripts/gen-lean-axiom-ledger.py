@@ -19,8 +19,9 @@ Two independent measurements, cross-checked against each other
     row per admitted ``Declaration::Axiom``: ``prelude<TAB>name<TAB>type-hex``.
     This is the row-level source: names and canonical types, SHA-256 bound.
 
-``nat_axiom_inventory``
-    Constructs **five** preludes -- `logic`, `nat`, `real`, `integer`, `string`
+``nat_axiom_inventory --include-constructed``
+    Constructs **eight** preludes -- `logic`, `nat`, `real`, `integer`, `rat`,
+    `string`, and (only under the flag) the constructed `creal` and `complex`
     -- and emits the whole *trusted surface* (``axiom`` + ``opaque`` +
     ``quotient``), plus a per-prelude count line on stderr **for every prelude
     it built, including the axiom-free ones**.
@@ -41,7 +42,11 @@ trusted surface) shows up as a disagreement rather than as a smaller number.
 What ``--check`` fails on
 -------------------------
 
-* any drift in the derived block (counts, trusted surface, prelude set);
+* any drift in the derived block (counts, trusted surface, prelude set) --
+  reported per prelude and **with its direction**, because a rise and a fall are
+  different events: a rise means something previously proved is now assumed, a
+  fall is a result the ledger has not published yet.  Both fail the gate; see
+  ``describe_measurement_drift``;
 * any drift in a row's name or canonical type digest;
 * a ledger population change -- rows added or removed -- which requires a
   deliberate ``--accept-population-change`` run that files the departed rows in
@@ -75,11 +80,33 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
 OUT_MD = ROOT / "docs" / "plan" / "generated" / "lean-axiom-ledger.md"
 
+AXIOM_ROWS_EXAMPLE = "prelude_axiom_inventory"
+TRUSTED_SURFACE_EXAMPLE = "nat_axiom_inventory"
+
 AXIOM_ROWS_COMMAND = (
-    "cargo run --quiet -p axeyum-lean-kernel --example prelude_axiom_inventory"
+    f"cargo run --quiet -p axeyum-lean-kernel --example {AXIOM_ROWS_EXAMPLE}"
 )
+
+# `--include-constructed` is NOT optional here, and the profile is not a taste
+# call.  Without the flag `nat_axiom_inventory` never builds `CReal` (ADR-0468)
+# or `Complex` (ADR-0472), so the two developments this repository most recently
+# staked a trust claim on emit no coverage line and no rows -- an empty answer to
+# a question the tool was never asked, which reads identically to "measured, and
+# axiom-free".  `EXPECTED_PRELUDES` is what makes dropping the flag a gate
+# failure rather than a quieter ledger.
+#
+# `--release` because the flag costs kernel type-checking, and the profile
+# changes that by 12x: measured 2026-08-18 on this host, `--include-constructed`
+# runs in 2m03s debug and 10.3s release, against a one-off marginal rebuild cost
+# of 8.9s release versus 6.4s debug.  Two minutes on a gate that also runs in
+# `scripts/check.sh` is the kind of cost lanes route around.
+#
+# Keeping the row source in DEBUG is deliberate too: the cross-check below then
+# compares two profiles as well as two enumerations, so a measurement that
+# depended on optimisation settings would surface as a disagreement.
 TRUSTED_SURFACE_COMMAND = (
-    "cargo run --quiet -p axeyum-lean-kernel --example nat_axiom_inventory"
+    f"cargo run --quiet --release -p axeyum-lean-kernel "
+    f"--example {TRUSTED_SURFACE_EXAMPLE} -- --include-constructed"
 )
 TYPE_IDENTITY = "sha256 of Kernel::render_lean(declaration.ty) UTF-8 bytes"
 
@@ -88,7 +115,10 @@ SOURCE_PATHS = {
     "nat": "crates/axeyum-lean-kernel/src/nat_prelude.rs",
     "real": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
     "integer": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+    "rat": "crates/axeyum-lean-kernel/src/rat_prelude.rs",
     "string": "crates/axeyum-lean-kernel/src/string_prelude.rs",
+    "creal": "crates/axeyum-lean-kernel/src/creal.rs",
+    "complex": "crates/axeyum-lean-kernel/src/complex.rs",
 }
 TRUSTED_KINDS = ("axiom", "opaque", "quotient")
 
@@ -131,7 +161,23 @@ ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 #
 # `test_a_prelude_dropping_out_of_coverage_fails` is the control, and it went
 # green-for-the-wrong-reason the moment `integer` hit zero.
-EXPECTED_PRELUDES: tuple[str, ...] = ("integer", "logic", "nat", "real", "string")
+#
+# Extended 2026-08-18 with `rat`, `creal` and `complex`.  `rat` had been in the
+# measurement since 2026-08-17 but not in this tuple, so the second-line coverage
+# guard did not cover it.  `creal`/`complex` were in NEITHER: they need
+# `--include-constructed`, and a gate that pins a number for a prelude the
+# command never builds passes vacuously.  Their membership here is precisely what
+# makes silently dropping that flag fail.
+EXPECTED_PRELUDES: tuple[str, ...] = (
+    "complex",
+    "creal",
+    "integer",
+    "logic",
+    "nat",
+    "rat",
+    "real",
+    "string",
+)
 
 # Anchored count phrasings.  Each entry is (label, pattern, quantity-per-group).
 # Anchoring on ledger vocabulary -- prelude names, "ledger", "prelude
@@ -384,8 +430,8 @@ def cross_check(measurement: Measurement) -> None:
         if observed != declared["axiom"]:
             raise LedgerError(
                 f"the two inventories disagree on {prelude}: "
-                f"{AXIOM_ROWS_COMMAND.split()[-1]} emitted {observed} axiom rows, "
-                f"{TRUSTED_SURFACE_COMMAND.split()[-1]} declared "
+                f"{AXIOM_ROWS_EXAMPLE} emitted {observed} axiom rows, "
+                f"{TRUSTED_SURFACE_EXAMPLE} declared "
                 f"axiom={declared['axiom']}"
             )
     for prelude in EXPECTED_PRELUDES:
@@ -462,6 +508,127 @@ def scan_live_document(
     return failures
 
 
+REPIN = "python3 scripts/gen-lean-axiom-ledger.py"
+REPIN_POPULATION = (
+    "python3 scripts/gen-lean-axiom-ledger.py --accept-population-change "
+    "--retirement-note '<why it left>' --retirement-evidence <path>"
+)
+
+# The stable, greppable half of every drift failure.  The directional half is
+# appended after it; callers and older greps key on this.
+STALE = "measurement block is stale"
+
+
+def _kind_breakdown(before: dict[str, Any], after: dict[str, Any]) -> str:
+    return ", ".join(
+        f"{kind} {before.get(kind)} -> {after.get(kind)}"
+        for kind in TRUSTED_KINDS
+        if before.get(kind) != after.get(kind)
+    )
+
+
+def describe_measurement_drift(
+    committed: Any, derived: dict[str, Any]
+) -> list[str]:
+    """Say WHICH WAY a trusted-surface number moved, and what to do about it.
+
+    The previous form of this check emitted two whole JSON blobs and left the
+    reader to diff them.  That is adequate for a number that only ever grows and
+    useless for one that moves both ways, which this one does: `integer` fell
+    34 -> 1 -> 0 and `string` 1 -> 0 while the example's own doc comment still
+    asserted 1 for both.
+
+    The two directions are not the same event and must not read the same:
+
+    * a **rise** is a regression -- something that used to be proved is now
+      assumed, and the ledger is the only place that would say so;
+    * a **fall** is a *result*.  The flywheel is supposed to notice that a
+      prelude became axiom-free and hand out the next goal, and a gate that
+      merely says "stale" invites the lane to re-run the generator without ever
+      registering that the trusted base shrank.
+
+    Both fail.  A gate whose exit status did not depend on the finding would be
+    worse than no gate; what changes with direction is what the operator is told
+    to do next.
+    """
+    if committed == derived:
+        return []
+    if not isinstance(committed, dict):
+        return [f"{STALE}: it is not an object; run {REPIN}"]
+
+    failures: list[str] = []
+    committed_surface = committed.get("trusted_surface")
+    derived_surface = derived["trusted_surface"]
+    if isinstance(committed_surface, dict):
+        for prelude in sorted(set(committed_surface) | set(derived_surface)):
+            before = committed_surface.get(prelude)
+            after = derived_surface.get(prelude)
+            if before == after:
+                continue
+            if after is None:
+                failures.append(
+                    f"{STALE} -- COVERAGE LOST: `{prelude}` is pinned at "
+                    f"{before.get('total_trusted') if isinstance(before, dict) else before}"
+                    " but the measurement no longer builds it. An unmeasured "
+                    "prelude and an axiom-free one print the same zero, so this "
+                    "must never be resolved by deleting the pin: restore the "
+                    "prelude to the inventory (or the `--include-constructed` "
+                    "flag to its command) instead."
+                )
+                continue
+            if before is None:
+                failures.append(
+                    f"{STALE} -- COVERAGE ADDED: `{prelude}` is newly measured at "
+                    f"trusted surface {after['total_trusted']} and is not pinned "
+                    f"yet. Pin it: {REPIN}"
+                )
+                continue
+            if not isinstance(before, dict):
+                failures.append(f"{STALE}: `{prelude}` pin is not an object; run {REPIN}")
+                continue
+            was = before.get("total_trusted")
+            now = after["total_trusted"]
+            detail = _kind_breakdown(before, after) or "kinds unchanged"
+            if isinstance(was, int) and now > was:
+                failures.append(
+                    f"{STALE} -- REGRESSION: `{prelude}` trusted surface ROSE "
+                    f"{was} -> {now} ({detail}). Something previously proved is "
+                    "now assumed. Do not re-pin until you know which declaration "
+                    f"lost its proof body; then: {REPIN_POPULATION}"
+                )
+            elif isinstance(was, int) and now < was:
+                failures.append(
+                    f"{STALE} -- IMPROVEMENT: `{prelude}` trusted surface FELL "
+                    f"{was} -> {now} ({detail}). The trusted base shrank and "
+                    "nothing recorded it -- that is a result to publish, not a "
+                    "gate to satisfy. Re-pin, which files the departed rows as "
+                    f"retired rather than deleting them: {REPIN_POPULATION}"
+                )
+            else:
+                failures.append(
+                    f"{STALE} -- RESHAPED: `{prelude}` trusted surface is still "
+                    f"{now} but its kinds moved ({detail}). `opaque` and "
+                    "`quotient` are trusted for different reasons than `axiom`; "
+                    f"re-pin only once you know which: {REPIN}"
+                )
+
+    for key in sorted(set(committed) | set(derived)):
+        if key == "trusted_surface" or committed.get(key) == derived.get(key):
+            continue
+        failures.append(
+            f"{STALE}: {key} committed "
+            f"{json.dumps(committed.get(key), sort_keys=True)} vs measured "
+            f"{json.dumps(derived.get(key), sort_keys=True)}; run {REPIN}"
+        )
+
+    if not failures:
+        failures.append(
+            f"{STALE}; committed {json.dumps(committed, sort_keys=True)} vs "
+            f"measured {json.dumps(derived, sort_keys=True)}"
+        )
+    return failures
+
+
 def validate_manifest(data: dict[str, Any], measurement: Measurement) -> list[str]:
     failures: list[str] = []
     if data.get("version") != 2:
@@ -472,12 +639,7 @@ def validate_manifest(data: dict[str, Any], measurement: Measurement) -> list[st
         failures.append("population_as_of must be an ISO date")
 
     derived = measurement.derived_block()
-    if data.get("measurement") != derived:
-        failures.append(
-            "measurement block is stale; committed "
-            f"{json.dumps(data.get('measurement'), sort_keys=True)} vs measured "
-            f"{json.dumps(derived, sort_keys=True)}"
-        )
+    failures.extend(describe_measurement_drift(data.get("measurement"), derived))
 
     authored_policy = data.get("trust_policy")
     if not isinstance(authored_policy, dict):
@@ -760,6 +922,13 @@ def render(data: dict[str, Any]) -> str:
             "change fails validation before the generated ledger can remain "
             "current. A population change additionally requires an explicit "
             "`--accept-population-change` run.",
+            "- **Every prelude above is pinned by value, and a moved number is "
+            "reported with its direction.** A *rise* is a regression — something "
+            "previously proved is now assumed. A *fall* is a result this ledger "
+            "has not published yet, and it is the direction a blanket "
+            "axiom-free assertion structurally cannot see, because that "
+            "assertion only ever becomes more true. Both fail the gate; what "
+            "differs is what the operator is told to do next.",
             "- Every row has source, semantic classification, owner, review owner, "
             "discharge state, and retained-evidence fields.",
             "- `discharged` requires a real repository evidence path; a "
