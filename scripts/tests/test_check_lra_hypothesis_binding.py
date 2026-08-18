@@ -787,6 +787,167 @@ class AnAttestationIsConfirmedContentFree(unittest.TestCase):
         self.assertFalse(ok)
 
 
+# ---------------------------------------------------------------------------
+# Structural binding
+# ---------------------------------------------------------------------------
+
+STRUCTURAL_QUERY = """
+(set-logic QF_ABV)
+(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))
+(declare-const i (_ BitVec 4))
+(declare-const j (_ BitVec 4))
+(declare-const v (_ BitVec 8))
+(assert (not (= (select (store a i v) j) (select a j))))
+(check-sat)
+"""
+
+# `select(store(a, i, v), j)` beside `select(a, j)`: both are subterms of the
+# query above, under atom._0 = a, atom._1 = i, atom._2 = v, atom._3 = j,
+# func._4 = store, func._5 = select.
+STRUCTURAL_MODULE = """
+axiom α : Sort (1)
+axiom axeyum.reconstruct.atom._0 : α
+axiom axeyum.reconstruct.atom._1 : α
+axiom axeyum.reconstruct.atom._2 : α
+axiom axeyum.reconstruct.atom._3 : α
+axiom axeyum.reconstruct.func._4 : ((x0 : α) -> ((x1 : α) -> ((x2 : α) -> α)))
+axiom axeyum.reconstruct.func._5 : ((x0 : α) -> ((x1 : α) -> α))
+axiom axeyum.reconstruct.hyp._6 : Eq.{1} α (axeyum.reconstruct.func._5 \
+(axeyum.reconstruct.func._4 axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._1 \
+axeyum.reconstruct.atom._2) axeyum.reconstruct.atom._3) \
+(axeyum.reconstruct.func._5 axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._3)
+axiom axeyum.reconstruct.hyp._7 : Not (Eq.{1} α (axeyum.reconstruct.func._5 \
+(axeyum.reconstruct.func._4 axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._1 \
+axeyum.reconstruct.atom._2) axeyum.reconstruct.atom._3) \
+(axeyum.reconstruct.func._5 axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._3))
+theorem axeyum_refutation : False := axeyum.reconstruct.hyp._7 axeyum.reconstruct.hyp._6
+"""
+
+
+def _query_file(text: str):
+    import tempfile
+
+    handle = tempfile.NamedTemporaryFile(
+        "w", suffix=".smt2", delete=False, encoding="utf-8"
+    )
+    handle.write(text)
+    handle.close()
+    return pathlib.Path(handle.name)
+
+
+class AStructuralModuleTranscribesTheQuerysTerms(unittest.TestCase):
+    """The array/EUF routes cannot bind a hypothesis to an `(assert …)` line —
+    theirs is the conclusion of a congruence derivation, not a constraint. What
+    holds is one step weaker and still sharp: every term they equate is a
+    SUBTERM of the file, under one injective correspondence."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.query = _query_file(STRUCTURAL_QUERY)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.query.unlink(missing_ok=True)
+
+    def test_the_fixture_binds(self) -> None:
+        ok, why, nodes = HB.bind_structural(STRUCTURAL_MODULE, self.query)
+        self.assertTrue(ok, why)
+        self.assertEqual(nodes, 2 * (6 + 3))
+
+    def test_swapping_two_arguments_is_rejected(self) -> None:
+        """`store(a, i, v)` becomes `store(i, a, v)`, which the file does not
+        contain. No name is added or removed, so only the match can catch it."""
+        damaged = HB.mutate_structural_module(STRUCTURAL_MODULE, "swap-arguments")
+        self.assertIsNotNone(damaged)
+        ok, _why, _n = HB.bind_structural(damaged, self.query)
+        self.assertFalse(ok)
+
+    def test_dropping_an_argument_is_rejected(self) -> None:
+        damaged = HB.mutate_structural_module(STRUCTURAL_MODULE, "drop-argument")
+        self.assertIsNotNone(damaged)
+        ok, _why, _n = HB.bind_structural(damaged, self.query)
+        self.assertFalse(ok)
+
+    def test_collapsing_two_constants_is_rejected(self) -> None:
+        """Injectivity: one Lean name cannot stand for two query symbols."""
+        damaged = HB.mutate_structural_module(
+            STRUCTURAL_MODULE, "collapse-two-constants"
+        )
+        self.assertIsNotNone(damaged)
+        ok, _why, _n = HB.bind_structural(damaged, self.query)
+        self.assertFalse(ok)
+
+    def test_an_application_must_match_one_of_the_same_arity(self) -> None:
+        """Driven on `_match` directly, because the bucket index would reject a
+        wrong-arity term before the matcher ever saw it — and a guard that only
+        ever fires behind another guard is untested, not redundant."""
+        self.assertIsNone(HB._match(["f", "x"], ("store", "a", "i", "v"), {}))
+        self.assertIsNotNone(HB._match(["f", "x", "y", "z"], ("store", "a", "i", "v"), {}))
+
+    def test_a_rendered_application_never_matches_a_query_leaf(self) -> None:
+        self.assertIsNone(HB._match(["f", "x"], "a", {}))
+
+    def test_a_rendered_constant_never_matches_a_query_application(self) -> None:
+        self.assertIsNone(HB._match("atom._0", ("select", "a", "j"), {}))
+
+    def test_one_lean_name_cannot_mean_two_query_symbols(self) -> None:
+        self.assertIsNone(HB._bind_name({"atom._0": "a"}, "atom._0", "i"))
+
+    def test_two_lean_names_cannot_mean_one_query_symbol(self) -> None:
+        self.assertIsNone(HB._bind_name({"atom._0": "a"}, "atom._1", "a"))
+
+    def test_a_bare_pair_of_constants_carries_no_structure(self) -> None:
+        """Both sides opaque constants: an injective map onto two of the query's
+        symbols exists for ANY query with two symbols, so a match would show
+        nothing. That is the attestation class, and it must not reach this one."""
+        ok, why, _n = HB.bind_structural(
+            "\n".join(
+                [
+                    "axiom α : Sort (1)",
+                    "axiom axeyum.reconstruct.atom._0 : α",
+                    "axiom axeyum.reconstruct.atom._1 : α",
+                    "axiom axeyum.reconstruct.hyp._2 : Eq.{1} α "
+                    "axeyum.reconstruct.atom._0 axeyum.reconstruct.atom._1",
+                ]
+            ),
+            self.query,
+        )
+        self.assertFalse(ok)
+        self.assertIn("carries no structure", why)
+
+    def test_a_declared_constant_no_rendered_term_uses_is_rejected(self) -> None:
+        damaged = STRUCTURAL_MODULE.replace(
+            "axiom axeyum.reconstruct.func._5 :",
+            "axiom axeyum.reconstruct.atom._9 : α\naxiom axeyum.reconstruct.func._5 :",
+        )
+        ok, why, _n = HB.bind_structural(damaged, self.query)
+        self.assertFalse(ok)
+        self.assertIn("no rendered term binds it", why)
+
+    def test_an_indexed_literal_is_a_leaf_not_an_application(self) -> None:
+        """`(_ bv13 16)` is a literal. Reading it as a 3-argument application
+        made every module mentioning one unmatchable — a false negative, which
+        pushes a transcribing module into the attestation class."""
+        self.assertEqual(HB._smt_term(["_", "bv13", "16"], {}), "_ bv13 16")
+
+    def test_an_indexed_operator_is_still_an_application(self) -> None:
+        self.assertEqual(
+            HB._smt_term([["_", "zero_extend", "13"], "v"], {}),
+            ("_ zero_extend 13", "v"),
+        )
+
+    def test_a_let_bound_name_is_expanded(self) -> None:
+        self.assertEqual(
+            HB._smt_term(["let", [["x", ["f", "a"]]], ["g", "x"]], {}),
+            ("g", ("f", "a")),
+        )
+
+    def test_a_quantifier_is_opaque_rather_than_guessed_at(self) -> None:
+        self.assertEqual(
+            HB._smt_term(["forall", [["x", "Int"]], ["p", "x"]], {}), ("!quantified",)
+        )
+
+
 class ASelfRefutingAttestationIsRejected(unittest.TestCase):
     """A module carrying `Not (Eq.{1} α t t)` — an axiom Lean's own `rfl`
     refutes — has a `False` that follows from that one axiom alone: not even the
@@ -886,6 +1047,9 @@ class AVacuousBindingIsNotAPass(unittest.TestCase):
                     "--min-required-mutations", "0",
                     "--min-attestations", "0",
                     "--min-represented", "0",
+                    "--min-structural", "0",
+                    "--min-structural-nodes", "0",
+                    "--min-structural-mutations", "0",
                     *extra,
                 ]
             )
@@ -912,6 +1076,28 @@ class AVacuousBindingIsNotAPass(unittest.TestCase):
     def test_a_content_bearing_module_pinned_as_attested_fails(self) -> None:
         self.assertEqual(
             self._run_driver(DIO_MODULE, DIO_QUERY, "--expect", "attested"), 1
+        )
+
+    def test_a_structural_module_pinned_as_attested_fails(self) -> None:
+        """The anti-absorption guard. An attestation's claim is that NOTHING
+        relates the module to the query; if the structural binder can relate it,
+        that claim is false. Without this, a renderer that started transcribing
+        would leave every pinned attestation green while the words `transcribes
+        NOTHING` quietly stopped being true — which is exactly what happened to
+        the 6 `QfAbv`/`QfUf` instances that were structural all along."""
+        self.assertEqual(
+            self._run_driver(
+                STRUCTURAL_MODULE, STRUCTURAL_QUERY, "--expect", "attested"
+            ),
+            1,
+        )
+
+    def test_the_same_structural_module_passes_when_pinned_structural(self) -> None:
+        self.assertEqual(
+            self._run_driver(
+                STRUCTURAL_MODULE, STRUCTURAL_QUERY, "--expect", "structural"
+            ),
+            0,
         )
 
     def test_a_self_refuting_attestation_fails_the_run(self) -> None:

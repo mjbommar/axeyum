@@ -243,14 +243,18 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "            if False:",
             ),
             (
+                # Both this guard and the next are duplicated in
+                # `bind_structural`, so the find-string carries the following
+                # line: without it `str.replace` hits whichever copy comes first
+                # in the file and the mutation silently controls the wrong one.
                 "attestation: no axiom beyond the opaque sort",
-                "            if (name, ty) != ATTESTATION_SORT_AXIOM:",
-                "            if False:",
+                "            if (name, ty) != ATTESTATION_SORT_AXIOM:\n                return (\n                    False,",
+                "            if False:\n                return (\n                    False,",
             ),
             (
                 "attestation: a truncated multi-line type is refused",
-                'if ty.count("(") != ty.count(")"):',
-                "if False:",
+                'if ty.count("(") != ty.count(")"):\n            # A type that spilled',
+                "if False:\n            # A type that spilled",
             ),
             (
                 "attestation: an `atom`/`prop` declares the opaque type it claims",
@@ -281,6 +285,41 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "a self-refuting attestation FAILS rather than being counted",
                 "            attested_vacuous += vacuous\n            if vacuous:",
                 "            attested_vacuous += vacuous\n            if False:",
+            ),
+            (
+                "structural: the renaming is injective",
+                "    if smt in phi.values():\n        return None",
+                "    if False:\n        return None",
+            ),
+            (
+                "structural: the renaming is a function",
+                "        return phi if phi[lean] == smt else None",
+                "        return phi",
+            ),
+            (
+                "structural: a rendered application must match one of the same arity",
+                "    if isinstance(smt, str) or len(smt) - 1 != len(lean) - 1:",
+                "    if isinstance(smt, str):",
+            ),
+            (
+                "structural: a bare pair of constants carries no structure",
+                "    if not any(isinstance(side, list) for side in sides):",
+                "    if False:",
+            ),
+            (
+                "structural: a declared constant no rendered term uses is refused",
+                "        if name not in phi:",
+                "        if False:",
+            ),
+            (
+                "structural: an indexed identifier is a literal, not an application",
+                '    if head == "_":',
+                "    if False:",
+            ),
+            (
+                "an attestation that CAN be bound structurally is not an attestation",
+                "            bound_anyway, _why, nodes = bind_structural(source, path)\n            if bound_anyway:",
+                "            bound_anyway, _why, nodes = bind_structural(source, path)\n            if False:",
             ),
             (
                 "the converse direction counts UNrendered rows as unrepresented",

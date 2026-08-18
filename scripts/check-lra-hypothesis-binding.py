@@ -96,15 +96,16 @@ Advertised scope is the part people believe, so it is a measurement here, not an
 estimate. Swept 2026-08-18 over all **1404** committed `.smt2` files. **270** of
 them render a Lean module at all, and those 270 split exactly three ways:
 
-    125  BOUND      every rendered hypothesis bound back to an `(assert …)` line
-    123  ATTESTED   the module transcribes NOTHING; verified to be content-free
-     21  DECLINED   neither — not pinned, not checked, listed by name
+    125  BOUND       every rendered hypothesis bound back to an `(assert …)` line
+     95  STRUCTURAL  every rendered TERM is a subterm of the query, injectively
+     28  ATTESTED    the module transcribes NOTHING; verified to be content-free
+     21  DECLINED    none of the three — not pinned, not checked, listed by name
 
 `scripts/lra-hypothesis-binding-instances.txt` pins the 125;
-`scripts/hypothesis-binding-attestations.txt` pins the 123 and names the 21.
-The 124th attestation was `neg-no-self-negating-proposition.smt2`, whose module
-was *self-refuting*; the route now declines rather than rendering it (see
-`attested_vacuous` below), so it renders no theory module at all.
+`scripts/hypothesis-binding-structural-instances.txt` pins the 95;
+`scripts/hypothesis-binding-attestations.txt` pins the 28 and names the 21.
+A 270th instance, `neg-no-self-negating-proposition.smt2`, renders no theory
+module at all any more: its was *self-refuting* and its route now declines.
 The three bound routes are `lra.hyp._N` (Real Farkas), `lra.int_hyp._N` (Int
 Farkas) and `dio.hyp._N` (Int Diophantine).
 
@@ -116,7 +117,7 @@ Farkas) and `dio.hyp._N` (Int Diophantine).
   any assertion, so there is no assertion for it to bind to. An unrecognized
   `axeyum.reconstruct.*` axiom fails the run rather than being skipped, so these
   stay visible rather than silently blessed.
-- **The 123 attestations transcribe nothing, and that is the finding, not a
+- **The 28 attestations transcribe nothing, and that is the finding, not a
   gap this closes.** Their correspondence to the query lives in the Rust
   certificate and is checked there. What is checked here is only that each really
   is the content-free skeleton it claims to be. A *self-refuting* module — one
@@ -183,13 +184,13 @@ ATTESTATION_MANIFEST = ROOT / "scripts/hypothesis-binding-attestations.txt"
 
 # Floors. A scanner that goes blind reports a beautiful clean zero. Measured
 # 2026-08-18 over the whole committed corpus: 125 bound instances, 288
-# hypotheses, 1210 corruptions caught, 123 attestations of which 0 are
-# self-refuting (one was, and its route now declines), and 286 of 531 spine
-# assertions represented.
+# hypotheses, 1210 corruptions caught, 95 structural instances over 2982 matched
+# term nodes, 28 attestations of which 0 are self-refuting (one was, and its
+# route now declines), and 286 of 531 spine assertions represented.
 MIN_INSTANCES = 120
 MIN_HYPOTHESES = 280
 MIN_REQUIRED_MUTATIONS = 1150
-MIN_ATTESTATIONS = 120
+MIN_ATTESTATIONS = 25
 # The converse direction, measured rather than assumed: how many of the spine's
 # `(assert …)` rows a rendered hypothesis actually stands for. 286 of 531 --
 # barely over half. That is not a soundness hole (a refutation of a subset
@@ -734,6 +735,262 @@ def read_module(source: str) -> tuple[dict[str, str], list[tuple[str, str, str]]
 
 
 # ---------------------------------------------------------------------------
+# Structural binding: the module's terms ARE the query's terms
+# ---------------------------------------------------------------------------
+#
+# The arithmetic routes above bind a hypothesis to an `(assert …)` LINE, because
+# a Farkas hypothesis IS one of the query's constraints in normalized form. The
+# array/EUF routes cannot be bound that way and it would be wrong to pretend
+# otherwise: their hypothesis is the *conclusion of a congruence derivation*, so
+# for 89 of the 105 queries `ArrayAxiom` certifies there is no assertion saying
+# `¬(lhs = rhs)` at all. Binding those to an assert line is not a check that is
+# hard — it is a check with no true instance.
+#
+# What IS true of them, and is checked here, is one step weaker and still sharp:
+#
+#     every term the module equates is a SUBTERM of the `.smt2` file, under one
+#     injective correspondence between the module's opaque names and the file's
+#     own symbols, literals and operators.
+#
+# So `axeyum.reconstruct.func._2 atom._0 atom._1` must be some `(select a2 v1)`
+# the file actually contains, with `func._2` standing for `select` everywhere it
+# occurs and `atom._0` for `a2` everywhere it occurs. Swap two arguments, drop a
+# `store`, point an atom at the wrong symbol, or reuse one Lean name for two
+# query symbols, and no correspondence exists — the run fails. That is the
+# difference between this and the attestation class below, whose vocabulary has
+# NO declared relationship to the query and where a match therefore cannot fail.
+#
+# Two things this does NOT show, stated because the gap is the interesting part:
+# the array-axiom instance `lhs = rhs` is still an ASSUMED hypothesis (nothing
+# here proves it follows from the array axioms), and the query's entailment of
+# `¬(lhs = rhs)` is re-derived in Rust, not here.
+
+STRUCTURAL_MANIFEST = ROOT / "scripts/hypothesis-binding-structural-instances.txt"
+# Floor on the structural class and on how much of it is actually matched.
+# Measured 2026-08-18: 95 instances, 2982 matched term nodes. The node floor is
+# the one that matters: the instance count alone cannot see a renderer that
+# degraded to bare constants, because those would still be "structural" and
+# would bind vacuously.
+MIN_STRUCTURAL = 90
+MIN_STRUCTURAL_NODES = 2900
+MIN_STRUCTURAL_MUTATIONS = 340
+
+# `let` and the quantifiers need a binder environment; everything else is a
+# plain head-and-arguments tree.
+_BINDERS = frozenset({"forall", "exists", "let"})
+
+
+def structural_instances() -> list[str]:
+    return _manifest(STRUCTURAL_MANIFEST)
+
+
+def _smt_term(form, env: dict) -> object:
+    """One `.smt2` term as a `str` leaf or a `(head, arg, …)` tuple.
+
+    `let` is expanded. A quantifier is NOT descended into: it is returned as an
+    opaque leaf that no rendered term can match, which is fail-closed — a module
+    claiming to transcribe a quantified subterm stays unmatched and its instance
+    fails, rather than matching a shape this reader guessed at.
+    """
+    if isinstance(form, str):
+        return env.get(form, form)
+    if not form:
+        raise Unsupported("empty s-expression")
+    head = form[0]
+    if head == "let" and len(form) == 3:
+        extended = dict(env)
+        for binding in form[1]:
+            if not isinstance(binding, list) or len(binding) != 2:
+                raise Unsupported("`let` binding shape")
+            extended[binding[0]] = _smt_term(binding[1], env)
+        return _smt_term(form[2], extended)
+    if isinstance(head, str) and head in _BINDERS:
+        return ("!quantified",)
+    if head == "_":
+        # `(_ bv13 16)` is an indexed IDENTIFIER -- a literal -- not an
+        # application of a function `_`. Reading it as a 3-argument application
+        # made every module mentioning one unmatchable, a false negative that
+        # pushes a transcribing module into the attestation class: exactly the
+        # direction that must not fail silently.
+        return " ".join(t for t in form if isinstance(t, str))
+    if isinstance(head, list):
+        # An indexed OPERATOR, `((_ extract 7 0) x)`. Flatten it into one head
+        # token: the indices are part of which operator this is.
+        head = " ".join(t for t in head if isinstance(t, str))
+    if len(form) == 1:
+        return head
+    return (head, *(_smt_term(arg, env) for arg in form[1:]))
+
+
+def query_subterms(path: pathlib.Path) -> dict[tuple[int, int], list]:
+    """Every subterm of every `(assert …)`, bucketed by `(node count, arity)`.
+
+    Bucketing is a pure search prune: a rendered term can only match a subterm
+    with the same tree size and the same top arity.
+    """
+    forms = sexprs(path.read_text(encoding="utf-8"))
+    buckets: dict[tuple[int, int], list] = {}
+    seen: set = set()
+
+    def visit(term) -> int:
+        if term in seen:
+            return _nodes(term)
+        seen.add(term)
+        if isinstance(term, str):
+            count = 1
+        else:
+            count = 1 + sum(visit(arg) for arg in term[1:])
+        buckets.setdefault((count, _arity(term)), []).append(term)
+        return count
+
+    for form in forms:
+        if isinstance(form, list) and len(form) == 2 and form[0] == "assert":
+            try:
+                visit(_smt_term(form[1], {}))
+            except Unsupported:
+                continue
+    return buckets
+
+
+def _nodes(term) -> int:
+    if isinstance(term, str):
+        return 1
+    return 1 + sum(_nodes(arg) for arg in term[1:])
+
+
+def _arity(term) -> int:
+    return 0 if isinstance(term, str) else len(term) - 1
+
+
+def _lean_nodes(term) -> int:
+    if isinstance(term, str):
+        return 1
+    return 1 + sum(_lean_nodes(arg) for arg in term[1:])
+
+
+def _lean_arity(term) -> int:
+    return 0 if isinstance(term, str) else len(term) - 1
+
+
+def _bind_name(phi: dict[str, str], lean: str, smt: str) -> dict[str, str] | None:
+    """Extend `phi` with `lean -> smt`, keeping it a function and injective."""
+    if lean in phi:
+        return phi if phi[lean] == smt else None
+    if smt in phi.values():
+        return None
+    out = dict(phi)
+    out[lean] = smt
+    return out
+
+
+def _match(lean, smt, phi: dict[str, str]) -> dict[str, str] | None:
+    """Extend `phi` so the rendered `lean` term transcribes the query's `smt`."""
+    if isinstance(lean, str):
+        return _bind_name(phi, lean, smt) if isinstance(smt, str) else None
+    if not lean or not isinstance(lean[0], str):
+        return None
+    if isinstance(smt, str) or len(smt) - 1 != len(lean) - 1:
+        return None
+    phi = _bind_name(phi, lean[0], smt[0])
+    if phi is None:
+        return None
+    for lean_arg, smt_arg in zip(lean[1:], smt[1:]):
+        phi = _match(lean_arg, smt_arg, phi)
+        if phi is None:
+            return None
+    return phi
+
+
+def _equated_sides(ty: str) -> tuple[object, object] | None:
+    """The two sides of `Eq.{1} α L R` (optionally under `Not`), as trees."""
+    try:
+        expr = lean_expr(ty)
+    except Unsupported:
+        return None
+    if isinstance(expr, list) and len(expr) == 2 and expr[0] == "Not":
+        expr = expr[1]
+    if isinstance(expr, str) or len(expr) != 4 or expr[0] not in EQ_HEADS:
+        return None
+    return (expr[2], expr[3])
+
+
+def bind_structural(source: str, path: pathlib.Path) -> tuple[bool, str, int]:
+    """`(bound, why not, matched term nodes)` for a rendered module.
+
+    Shares no code with the arithmetic binder and none with the attestation
+    classifier: this decides that a module DOES transcribe the query, and it
+    must not be able to reach that verdict through machinery whose job is to
+    decide something else.
+    """
+    sides: list[object] = []
+    declared: set[str] = set()
+    for line in source.splitlines():
+        match = AXIOM_LINE.match(line.strip())
+        if not match:
+            continue
+        name, ty = match.group(1), match.group(2).strip()
+        if ty.count("(") != ty.count(")"):
+            return (False, f"{name}: the rendered type is not balanced on one line", 0)
+        if not name.startswith(QUERY_NAMESPACE):
+            if (name, ty) != ATTESTATION_SORT_AXIOM:
+                return (False, f"`{name} : {ty}` is not the opaque sort `α : Sort (1)`", 0)
+            continue
+        if name.startswith(ATTESTATION_HYP_PREFIXES):
+            pair = _equated_sides(ty)
+            if pair is None:
+                return (False, f"{name} is not an equality between two rendered terms", 0)
+            sides.extend(pair)
+            continue
+        declared.add(name)
+    if not sides:
+        return (False, "the module states no equality between rendered terms", 0)
+    if not any(isinstance(side, list) for side in sides):
+        # Both sides of every equality are bare opaque constants. An injective
+        # map onto two of the query's symbols exists for ANY query with two
+        # symbols, so a match here would show nothing: this is the attestation
+        # class, not this one.
+        return (False, "every rendered term is a bare opaque constant, so it carries no structure", 0)
+
+    buckets = query_subterms(path)
+    # Largest first: the constrained sides pin the renaming before the loose ones
+    # get to guess, which is a search order, not a soundness property -- every
+    # side still has to match.
+    order = sorted(range(len(sides)), key=lambda i: -_lean_nodes(sides[i]))
+
+    def extend(index: int, phi: dict[str, str]) -> dict[str, str] | None:
+        if index == len(order):
+            return phi
+        side = sides[order[index]]
+        key = (_lean_nodes(side), _lean_arity(side))
+        for candidate in buckets.get(key, ()):
+            next_phi = _match(side, candidate, phi)
+            if next_phi is None:
+                continue
+            found = extend(index + 1, next_phi)
+            if found is not None:
+                return found
+        return None
+
+    phi = extend(0, {})
+    if phi is None:
+        return (
+            False,
+            "no injective correspondence makes the module's rendered terms subterms "
+            "of this query -- so the module states something the file does not contain",
+            0,
+        )
+    for name in declared:
+        if name not in phi:
+            return (
+                False,
+                f"{name} is declared but no rendered term binds it, so the module "
+                "carries a constant with no query counterpart",
+                0,
+            )
+    return (True, "", sum(_lean_nodes(side) for side in sides))
+
+
+# ---------------------------------------------------------------------------
 # Opaque-skeleton attestations
 # ---------------------------------------------------------------------------
 #
@@ -1221,6 +1478,94 @@ def _balanced_body(ty: str, at: int, head_len: int) -> tuple[str, int] | None:
     return None
 
 
+STRUCTURAL_MUTATIONS = (
+    "swap-arguments",
+    "drop-argument",
+    "retarget-leaf",
+    "collapse-two-constants",
+)
+
+
+def mutate_structural(ty: str, kind: str) -> str | None:
+    """One corruption of a rendered structural type, or `None` if inapplicable.
+
+    Operates on the parsed tree and re-renders, so a corruption is a corruption
+    of the STATEMENT and not of the text around it. `swap-arguments` and
+    `drop-argument` remove no name, so the only thing that can reject them is
+    the match against the query — which is the guard being controlled.
+    """
+    try:
+        expr = lean_expr(ty)
+    except Unsupported:
+        return None
+    negated = isinstance(expr, list) and len(expr) == 2 and expr[0] == "Not"
+    body = expr[1] if negated else expr
+    if isinstance(body, str) or len(body) != 4 or body[0] not in EQ_HEADS:
+        return None
+
+    def first_app(node):
+        """The first application with at least two arguments, pre-order."""
+        if isinstance(node, str):
+            return None
+        if len(node) >= 3:
+            return node
+        for item in node[1:]:
+            hit = first_app(item)
+            if hit is not None:
+                return hit
+        return None
+
+    def leaves(node, out):
+        if isinstance(node, str):
+            out.append(node)
+            return
+        for item in node[1:]:
+            leaves(item, out)
+
+    sides = [body[2], body[3]]
+    if kind in ("swap-arguments", "drop-argument"):
+        target = next((first_app(side) for side in sides if first_app(side)), None)
+        if target is None:
+            return None
+        if kind == "swap-arguments":
+            replacement = [target[0], target[2], target[1], *target[3:]]
+        else:
+            replacement = target[:-1]
+        rendered = _render(target)
+        damaged = _render(replacement)
+        if rendered == damaged:
+            return None
+        return ty.replace(rendered, damaged, 1)
+    names: list[str] = []
+    for side in sides:
+        leaves(side, names)
+    distinct = sorted({name for name in names if name.startswith(QUERY_NAMESPACE)})
+    if len(distinct) < 2:
+        return None
+    if kind == "retarget-leaf":
+        # One occurrence points at a different query symbol.
+        return ty.replace(distinct[0], distinct[1], 1)
+    if kind == "collapse-two-constants":
+        # Two distinct constants become one, which no injective renaming admits.
+        return ty.replace(distinct[0], distinct[1])
+    raise Unsupported(f"structural mutation `{kind}`")
+
+
+def mutate_structural_module(source: str, kind: str) -> str | None:
+    """`source` with every hypothesis type corrupted the same way, or `None`."""
+    lines, changed = [], False
+    for line in source.splitlines():
+        match = AXIOM_LINE.match(line.strip())
+        if match and match.group(1).startswith(ATTESTATION_HYP_PREFIXES):
+            damaged = mutate_structural(match.group(2).strip(), kind)
+            if damaged is not None:
+                lines.append(f"axiom {match.group(1)} : {damaged}")
+                changed = True
+                continue
+        lines.append(line)
+    return "\n".join(lines) if changed else None
+
+
 def _render(expr) -> str:
     if isinstance(expr, str):
         return expr
@@ -1343,13 +1688,15 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--no-self-check", action="store_true")
     parser.add_argument(
         "--expect",
-        choices=("bound", "attested"),
+        choices=("bound", "structural", "attested"),
         default="bound",
         help="the verdict every --instance must reach. `bound` (the default) "
         "requires the module's hypotheses to bind to the query's assertions; "
-        "`attested` requires it to be a content-free opaque skeleton. Which "
+        "`structural` requires every rendered term to be a subterm of the query "
+        "under one injective correspondence; `attested` requires it to be a "
+        "content-free opaque skeleton AND to fail the structural check. Which "
         "verdict is required comes from the MANIFEST when no --instance is given, "
-        "so an instance cannot quietly move between the two.",
+        "so an instance cannot quietly move between the three.",
     )
     parser.add_argument("--min-instances", type=int, default=MIN_INSTANCES)
     parser.add_argument("--min-hypotheses", type=int, default=MIN_HYPOTHESES)
@@ -1357,6 +1704,13 @@ def main(argv: list[str]) -> int:
         "--min-required-mutations", type=int, default=MIN_REQUIRED_MUTATIONS
     )
     parser.add_argument("--min-attestations", type=int, default=MIN_ATTESTATIONS)
+    parser.add_argument("--min-structural", type=int, default=MIN_STRUCTURAL)
+    parser.add_argument(
+        "--min-structural-nodes", type=int, default=MIN_STRUCTURAL_NODES
+    )
+    parser.add_argument(
+        "--min-structural-mutations", type=int, default=MIN_STRUCTURAL_MUTATIONS
+    )
     parser.add_argument("--min-represented", type=int, default=MIN_REPRESENTED)
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
@@ -1365,6 +1719,7 @@ def main(argv: list[str]) -> int:
         targets = [(pathlib.Path(p), args.expect) for p in args.instance]
     else:
         targets = [(pathlib.Path(p), "bound") for p in manifest_instances()]
+        targets += [(pathlib.Path(p), "structural") for p in structural_instances()]
         targets += [(pathlib.Path(p), "attested") for p in attestation_instances()]
     instances = [path for path, want in targets if want == "bound"]
     if args.module is not None and len(targets) != 1:
@@ -1377,6 +1732,10 @@ def main(argv: list[str]) -> int:
     accepted_mutations = 0
     attested = 0
     attested_vacuous = 0
+    structural = 0
+    structural_nodes = 0
+    structural_caught = 0
+    structural_accepted = 0
     spine_assertions = 0
     represented = 0
     escaped: list[str] = []
@@ -1393,7 +1752,50 @@ def main(argv: list[str]) -> int:
         else:
             source, indices, fragment = render_module(binary, path)
 
+        if want == "structural":
+            ok, why, nodes = bind_structural(source, path)
+            if not ok:
+                failures.append(f"{instance}: pinned as structurally bound, but {why}")
+                continue
+            structural += 1
+            structural_nodes += nodes
+            if not args.no_self_check:
+                # Corrupt this module's own statement, four ways, and require
+                # each corruption to stop being a subterm of THIS query. A
+                # matcher that accepts everything reports a beautiful clean pass;
+                # this is the number that says it does not.
+                for kind in STRUCTURAL_MUTATIONS:
+                    mutant = mutate_structural_module(source, kind)
+                    if mutant is None:
+                        continue
+                    mutated, _why, _nodes = bind_structural(mutant, path)
+                    if mutated:
+                        # Not automatically a defect: a swapped `bvadd` can name
+                        # a different genuine subterm of the same file. Counted,
+                        # not failed — the floor is on the CAUGHT side.
+                        structural_accepted += 1
+                    else:
+                        structural_caught += 1
+            if args.verbose:
+                print(f"  {instance} [{fragment}] structural, {nodes} term nodes bound")
+            continue
+
         if want == "attested":
+            # The guard that keeps the two classes from absorbing each other. An
+            # attestation's claim is that nothing relates the module to the
+            # query; if the structural binder can relate it, that claim is FALSE
+            # and the instance belongs in the manifest above. Without this, a
+            # renderer that started transcribing would leave every pinned
+            # attestation green while the words `transcribes NOTHING` quietly
+            # stopped being true.
+            bound_anyway, _why, nodes = bind_structural(source, path)
+            if bound_anyway:
+                failures.append(
+                    f"{instance}: pinned as a content-free attestation, but its rendered "
+                    f"terms ARE {nodes} nodes of this query under an injective renaming. "
+                    "It transcribes something; pin it as `structural`"
+                )
+                continue
             ok, why, vacuous = classify_attestation(source)
             if not ok:
                 failures.append(
@@ -1504,7 +1906,9 @@ def main(argv: list[str]) -> int:
     print(
         f"LRA_HYP_BINDING|instances={len(instances)}|hypotheses={total_hypotheses}|"
         f"mutants_caught={caught_mutations}|mutants_accepted={accepted_mutations}|"
-        f"unjustified={len(escaped)}|attested={attested}|"
+        f"unjustified={len(escaped)}|structural={structural}|"
+        f"structural_nodes={structural_nodes}|structural_caught={structural_caught}|"
+        f"structural_accepted={structural_accepted}|attested={attested}|"
         f"attested_vacuous={attested_vacuous}|spine_assertions={spine_assertions}|"
         f"represented_assertions={represented}|failures={len(failures)}"
     )
@@ -1521,6 +1925,29 @@ def main(argv: list[str]) -> int:
             "of the corpus whose Lean evidence transcribes NOTHING from the query, and "
             "a checker that stopped confirming that would stop reporting it"
         )
+    if any(want == "structural" for _p, want in targets):
+        if structural < args.min_structural:
+            failures.append(
+                f"only {structural} modules were structurally bound to their query "
+                f"(floor {args.min_structural})"
+            )
+        if (
+            not args.no_self_check
+            and structural_caught < args.min_structural_mutations
+        ):
+            failures.append(
+                f"only {structural_caught} corruptions of a structural module were "
+                f"CAUGHT (floor {args.min_structural_mutations}). A matcher that "
+                "accepts every corruption of the statement it is checking is not a "
+                "check"
+            )
+        if structural_nodes < args.min_structural_nodes:
+            failures.append(
+                f"only {structural_nodes} term nodes were structurally matched (floor "
+                f"{args.min_structural_nodes}). The instance count alone cannot see a "
+                "renderer that degraded to bare constants: those still bind, and bind "
+                "vacuously"
+            )
     if total_hypotheses < args.min_hypotheses:
         failures.append(
             f"only {total_hypotheses} hypothesis axioms were bound (floor "

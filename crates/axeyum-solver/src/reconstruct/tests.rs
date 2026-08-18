@@ -5554,3 +5554,135 @@ mod lra_dispatch_tests {
         );
     }
 }
+
+/// The array-axiom route renders the query's OWN terms.
+///
+/// Until 2026-08-18 it rendered one opaque constant per whole term, so
+/// `select(store(a, i, v), j)` reached Lean as `atom._0` and the module's entire
+/// vocabulary had no declared relationship to any symbol in the query. Nothing
+/// about the certificate required that — its `lhs`/`rhs` are the query's own
+/// `TermId`s. It was how the emitter was written.
+#[cfg(test)]
+mod array_axiom_transcription {
+    use axeyum_ir::{TermArena, TermId};
+
+    use super::super::prove_unsat_to_lean_module;
+
+    /// `¬(select(store(a, i, v), j) = ite(i = j, v, select(a, j)))`, the McCarthy
+    /// read-over-write axiom denied.
+    fn mccarthy(arena: &mut TermArena) -> Vec<TermId> {
+        let a = arena.array_var("a", 4, 8).expect("array a");
+        let i = arena.bv_var("i", 4).expect("i");
+        let j = arena.bv_var("j", 4).expect("j");
+        let v = arena.bv_var("v", 8).expect("v");
+        let stored = arena.store(a, i, v).expect("store");
+        let lhs = arena.select(stored, j).expect("select");
+        let cond = arena.eq(i, j).expect("i = j");
+        let fallback = arena.select(a, j).expect("select a j");
+        let rhs = arena.ite(cond, v, fallback).expect("ite");
+        let eq = arena.eq(lhs, rhs).expect("eq");
+        vec![arena.not(eq).expect("not")]
+    }
+
+    /// `¬(select(ite(c, a, b), i) = ite(c, select(a, i), select(b, i)))`.
+    fn select_over_ite(arena: &mut TermArena) -> Vec<TermId> {
+        let a = arena.array_var("a", 4, 8).expect("array a");
+        let b = arena.array_var("b", 4, 8).expect("array b");
+        let c = arena.bool_var("c").expect("c");
+        let i = arena.bv_var("i", 4).expect("i");
+        let chosen = arena.ite(c, a, b).expect("ite arrays");
+        let lhs = arena.select(chosen, i).expect("select");
+        let from_a = arena.select(a, i).expect("select a i");
+        let from_b = arena.select(b, i).expect("select b i");
+        let rhs = arena.ite(c, from_a, from_b).expect("ite values");
+        let eq = arena.eq(lhs, rhs).expect("eq");
+        vec![arena.not(eq).expect("not")]
+    }
+
+    fn module(build: fn(&mut TermArena) -> Vec<TermId>) -> String {
+        let mut arena = TermArena::new();
+        let assertions = build(&mut arena);
+        prove_unsat_to_lean_module(&mut arena, &assertions)
+            .expect("array-axiom module")
+            .1
+    }
+
+    #[test]
+    fn the_rendered_hypothesis_has_the_querys_term_structure() {
+        let source = module(mccarthy);
+
+        // Four distinct leaves (`a`, `i`, `j`, `v`) and four distinct operators
+        // (`store`, `select`, `ite`, `=`). A module that collapses each side
+        // into one opaque constant declares TWO atoms and no function at all.
+        let atoms = source.matches("axiom axeyum.reconstruct.atom._").count();
+        let funcs = source.matches("axiom axeyum.reconstruct.func._").count();
+        assert_eq!(atoms, 4, "one constant per distinct query leaf:\n{source}");
+        assert_eq!(
+            funcs, 4,
+            "one function per distinct query operator:\n{source}"
+        );
+
+        // `select` is used twice and is one constant both times: that is what
+        // makes the rendering a function of the query's syntax, and what lets an
+        // independent structural match against the `.smt2` file FAIL.
+        let hypothesis = source
+            .lines()
+            .find(|line| line.starts_with("axiom axeyum.reconstruct.hyp.") && line.contains("Not"))
+            .expect("the denied equality");
+        let nesting = hypothesis.matches("axeyum.reconstruct.func._").count();
+        assert!(
+            nesting >= 5,
+            "the denied equality must spell the query's applications out rather than \
+             name them opaquely: {hypothesis}"
+        );
+    }
+
+    #[test]
+    fn two_different_array_axioms_no_longer_render_the_same_module() {
+        // Read-over-write and select-over-ite are different axioms over
+        // different terms in different queries. Under the pre-2026-08-18
+        // emitter they rendered `atom._0 = atom._1` beside its negation --
+        // the same module, byte for byte, and so did every other instance the
+        // route certified. That is what "the module says nothing about the
+        // file" means concretely, and it is the property this test denies.
+        assert_ne!(module(mccarthy), module(select_over_ite));
+    }
+
+    #[test]
+    fn a_query_bigger_than_the_render_cap_falls_back_to_the_opaque_form() {
+        // The cap exists because nothing in the recognizer bounds the term it
+        // matches, and the rendered form is a TREE: a shared DAG is duplicated
+        // at every use. Over the committed corpus the maximum is 156 nodes
+        // against a cap of 512, so no real instance takes this path -- which is
+        // exactly why it needs a test that does. The chain below is deliberately
+        // over the cap and well UNDER the depth at which the kernel's own
+        // recursion overflows (~2050), so removing the cap makes this test fail
+        // on its assertion rather than abort the whole binary.
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).expect("array a");
+        let j = arena.bv_var("j", 4).expect("j");
+        let v = arena.bv_var("v", 8).expect("v");
+        let mut stored = a;
+        for k in 0..600u32 {
+            let index = arena.bv_var(&format!("i{k}"), 4).expect("index");
+            stored = arena.store(stored, index, v).expect("store");
+        }
+        let outer = arena.bv_var("iz", 4).expect("iz");
+        let base = arena.store(stored, outer, v).expect("store");
+        let lhs = arena.select(base, j).expect("select");
+        let cond = arena.eq(outer, j).expect("iz = j");
+        let fallback = arena.select(stored, j).expect("select");
+        let rhs = arena.ite(cond, v, fallback).expect("ite");
+        let eq = arena.eq(lhs, rhs).expect("eq");
+        let assertions = vec![arena.not(eq).expect("not")];
+
+        let source = prove_unsat_to_lean_module(&mut arena, &assertions)
+            .expect("array-axiom module")
+            .1;
+        let funcs = source.matches("axiom axeyum.reconstruct.func._").count();
+        assert_eq!(
+            funcs, 0,
+            "over the cap the route renders one opaque constant per side:\n{source}"
+        );
+    }
+}

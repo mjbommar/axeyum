@@ -46,8 +46,8 @@ impl ArrayAxiomRefutationCertificate {
     /// Is this certificate **degenerate** — are its two sides the same term?
     ///
     /// A degenerate certificate justifies nothing. The Lean module the
-    /// [`crate::reconstruct`] route renders from it keys its opaque constants on
-    /// the [`TermId`], so `lhs == rhs` becomes
+    /// [`crate::prove_unsat_to_lean_module`] route renders from it keys its
+    /// opaque constants on the [`TermId`], so `lhs == rhs` becomes
     ///
     /// ```text
     /// axiom hyp._1 : Eq.{1} α atom._0 atom._0
