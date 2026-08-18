@@ -51,10 +51,10 @@
     {
       "id": "kernel-Int.Characterization.rec-unique",
       "kind": "kernel-term",
-      "supports": "The UNIQUENESS half of the universal property: two maps out of Int agreeing at 0 with the same +/-1 recurrences are equal.",
+      "supports": "The UNIQUENESS half of the universal property: two maps out of Int agreeing at 0 with the same +/-1 recurrences are equal. Paired with the existence half (F:int-categoricity) this makes Int the initial Z-structure.",
       "check_status": "checked",
       "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-universal-property[[:space:]]+Int[.]Characterization[.]rec_unique[[:space:]]+\\[\\][[:space:]]'",
-      "notes": "Proved from `Int.Characterization.induction`. `characterization_tests::the_int_hypothesis_shapes_are_satisfiable` instantiates the whole premise list and admits the result, so the theorem is not vacuous."
+      "notes": "Proved from `Int.Characterization.induction`. `characterization_tests::the_int_hypothesis_shapes_are_satisfiable` instantiates the whole premise list and admits the result, so the theorem is not vacuous. Since 2026-08-18 it is also what proves the Int-side half of `Int.Characterization.iso`: `psi . iter` and the identity map agree at 0 with the same recurrences, so they are equal."
     },
     {
       "id": "integer-trusted-surface-empty",
@@ -84,5 +84,5 @@
     "established_by": "axeyum-lean-kernel characterization module (agent-characterization lane)",
     "source": "hand-built foundational library; the property list is the standard characterization of the integers among ordered rings, authored here"
   },
-  "notes": "WHAT THIS FACT DOES NOT CLAIM, stated so it cannot be misread as the Int analogue of F:nat-peano-categoricity: these properties are PROVED to hold of `Int`, but it is NOT proved that they determine `Int` up to isomorphism. The missing piece is the EXISTENCE half of the universal property -- a map `Int -> R` built from an arbitrary target's own data -- which needs the target to carry more structure than a bare hypothesis list makes convenient. `Nat` has both halves and therefore a real categoricity theorem; `Int` has uniqueness only. Ordered-ring laws alone pin nothing (the rationals satisfy every one of them), which is why the no-junk, generation and discreteness rows are the substance here and the ordered-ring rows are not restated as this fact's evidence."
+  "notes": "WHAT THIS FACT CLAIMS AND WHAT F:int-categoricity ADDS. These properties are proved to HOLD of `Int`. Until 2026-08-18 it was NOT proved that they determine `Int` up to isomorphism -- the existence half of the universal property, a map `Int -> R` built from an arbitrary target's own data, was missing, so `rec_unique` was uniqueness of a map nobody had constructed. That half is now built (`Int.Characterization.iter` with `iter_zero`/`iter_succ`/`iter_pred`) and the categoricity theorem that follows from it is F:int-categoricity, which supersedes this fact's former caveat. The categoricity there is over Z-STRUCTURES (a point with an automorphism), not over discretely ordered rings: the order properties recorded HERE are what separate Z from Q and from lexicographic Z[x], and they are proved of `Int` rather than assumed of an arbitrary target. Ordered-ring laws alone pin nothing (the rationals satisfy every one of them), which is why the no-junk, generation and discreteness rows are the substance here and the ordered-ring rows are not restated as this fact's evidence."
 }

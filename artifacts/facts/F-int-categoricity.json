@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "id": "F:int-categoricity",
+  "title": "The constructed Int is THE integers: every generated aperiodic Z-structure is in structure-preserving bijection with it",
+  "statement": "Call a carrier R with a point e and two endomorphisms up, down a Z-STRUCTURE when down (up x) = x and up (down x) = x -- a pointed set with an automorphism. The constructed `Int` is the INITIAL Z-structure: `Int.Characterization.iter R e up down` is a map Int -> R built from R's own data, it sends 0 to e, t+1 to up (iter t) and t-1 to down (iter t), and by the already-proved `rec_unique` it is the only such map. If R is moreover GENERATED (every Prop-valued predicate holding at e and closed under up and down holds everywhere) and APERIODIC at e (e is not any positive up-iterate of itself), that map is also injective and surjective. Generation rules out the disjoint union of two copies of Z; aperiodicity rules out Z/n; the two inverse laws rule out N. The statement is universe-polymorphic. Surjectivity is a Prop-level existential and no inverse FUNCTION is extracted -- the same limit `Nat.Peano.categorical` has, and for the same reason. `Int.Characterization.iso` is the constructed form: given ANY structure-preserving map psi : R -> Int, both composites are proved to be the identity.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.Characterization.categorical.{u} : ((x0 : Sort (u)) -> ((x1 : x0) -> ((x2 : ((x2 : x0) -> x0)) -> ((x3 : ((x3 : x0) -> x0)) -> ((x4 : ((x4 : x0) -> Eq.{u} x0 (x3 (x2 x4)) x4)) -> ((x5 : ((x5 : x0) -> Eq.{u} x0 (x2 (x3 x5)) x5)) -> ((x6 : ((x6 : ((x6 : x0) -> Prop)) -> ((x7 : x6 x1) -> ((x8 : ((x8 : x0) -> ((x9 : x6 x8) -> x6 (x2 x8)))) -> ((x9 : ((x9 : x0) -> ((x10 : x6 x9) -> x6 (x3 x9)))) -> ((x10 : x0) -> x6 x10)))))) -> ((x7 : ((x7 : AxNat) -> Not (Eq.{u} x0 x1 (AxNat.Peano.iter.{u} x0 x1 x2 (AxNat.succ x7))))) -> And (And (Eq.{u} x0 (Int.Characterization.iter.{u} x0 x1 x2 x3 Int.zero) x1) (And (((x8 : Int) -> Eq.{u} x0 (Int.Characterization.iter.{u} x0 x1 x2 x3 (Int.add x8 Int.one)) (x2 (Int.Characterization.iter.{u} x0 x1 x2 x3 x8)))) (((x8 : Int) -> Eq.{u} x0 (Int.Characterization.iter.{u} x0 x1 x2 x3 (Int.add x8 (Int.neg Int.one))) (x3 (Int.Characterization.iter.{u} x0 x1 x2 x3 x8)))))) (And (((x8 : Int) -> ((x9 : Int) -> ((x10 : Eq.{u} x0 (Int.Characterization.iter.{u} x0 x1 x2 x3 x8) (Int.Characterization.iter.{u} x0 x1 x2 x3 x9)) -> Eq.{1} Int x8 x9)))) (((x8 : x0) -> Exists.{1} Int (fun (x9 : Int) => Eq.{u} x0 (Int.Characterization.iter.{u} x0 x1 x2 x3 x9) x8))))))))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:int-characterization",
+    "F:nat-peano-categoricity"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.Characterization.categorical",
+      "kind": "kernel-term",
+      "supports": "Every generated aperiodic Z-structure is in structure-preserving bijection with the constructed Int, and the axiom footprint of the witness is empty.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-categoricity[[:space:]]+Int[.]Characterization[.]categorical[[:space:]]+\\[\\][[:space:]]'",
+      "notes": "The grep is anchored on the declaration name AND on an EMPTY footprint column, so neither a rename nor a theorem that grew a dependency on a trusted declaration can satisfy it. The `&&` is load-bearing: `characterization_status` is itself a checker that exits non-zero when any entry is not a `Declaration::Theorem`, when any footprint is non-empty, when the population changes, or when any injected `Weakening` is ACCEPTED by the kernel or is refused BEFORE the declaration it was aimed at. Verified 2026-08-18: the command exits 0, and the same command with a non-existent declaration name exits 1."
+    },
+    {
+      "id": "kernel-Int.Characterization.categorical-at-int",
+      "kind": "kernel-term",
+      "supports": "NON-VACUITY: the hypothesis list is inhabited -- `categorical` instantiated at (Int, 0, (.+1), (.-1)) with every premise discharged by a real theorem, admitted by the kernel with an empty footprint.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-categoricity[[:space:]]+Int[.]Characterization[.]categorical_at_int[[:space:]]+\\[\\][[:space:]]'",
+      "notes": "A categoricity theorem whose premises nothing satisfies is axiom-free and worthless, so this witness is a DECLARATION OF THE SHIPPED PACKAGE rather than a test: the inverse laws come from `add_assoc`/`add_neg`/`add_zero`/`add_comm`, generation is `Int.Characterization.induction` verbatim, and aperiodicity is `Nat.Peano.zero_ne_succ` composed with `Int.natAbs` through `Int.Characterization.iter_at_int`. It is checked on every build and printed as its own row."
+    },
+    {
+      "id": "kernel-Int.Characterization.iter-succ",
+      "kind": "kernel-term",
+      "supports": "The EXISTENCE half of the universal property, which is what F:int-characterization was missing: the comparison map exists and preserves the +1 recurrence.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-universal-property[[:space:]]+Int[.]Characterization[.]iter_succ[[:space:]]+\\[\\][[:space:]]'",
+      "notes": "`iter_zero` is definitional; `iter_succ` needs ONLY `up (down x) = x` and `iter_pred` needs ONLY `down (up x) = x`, because in the normalized ofNat/negSucc representation each is definitional except at the branch that crosses zero. Two `Weakening` variants replace exactly those hypotheses with `True` and the kernel refuses each at its own declaration. With `rec_unique` (uniqueness) this makes Int the initial Z-structure."
+    },
+    {
+      "id": "kernel-Int.Characterization.iso",
+      "kind": "kernel-term",
+      "supports": "The CONSTRUCTED isomorphism, as opposed to the Prop-level bijection: given any structure-preserving psi : R -> Int, iter . psi = id_R and psi . iter = id_Int.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-categoricity[[:space:]]+Int[.]Characterization[.]iso[[:space:]]+\\[\\][[:space:]]'",
+      "notes": "This is the honest statement of the stronger form and of its price. The R-side identity is proved by the target's generation principle; the Int-side identity is `rec_unique` applied to psi . iter against the identity map. What is NOT proved, and does not follow from these premises, is that such a psi exists -- a Prop-valued generation principle can prove `forall y, exists t, iter t = y` and cannot define a function R -> Int."
+    },
+    {
+      "id": "integer-trusted-surface-empty-categoricity",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude everything here rests on has an empty trusted surface.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer --require-axiom-free nat --require-axiom-free logic",
+      "notes": "Enumerates the built environments over the FULL trusted surface (Axiom/Opaque/Quotient), not `Declaration::Axiom` alone, and exits non-zero on any member. Measured 2026-08-18: logic=0, nat=0, integer=0."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:integers",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:peano-axioms",
+      "relation": "uses",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "axeyum-lean-kernel characterization module, `int_categoricity` (agent-int-categoricity lane)",
+    "source": "hand-built foundational library; the statement is the standard categoricity of the integers as the free Z-set on one generator, authored here rather than imported"
+  },
+  "notes": "WHY THIS FACT EXISTS. F:int-characterization proved the properties that separate Z from Q and from lexicographic Z[x] HOLD of `Int`, and said in its own notes that it was not proved they DETERMINE it -- only the uniqueness half of the universal property was checked. This closes the gap by constructing the map out of an arbitrary target and proving it a bijection. FRAMING MATTERS: the theorem is about Z-structures (point + automorphism), NOT about discretely ordered rings; `every discretely ordered ring generated by 1 is isomorphic to Int` would need the order axioms as hypotheses and a derivation of the automorphism from them. What is proved is that the order properties hold of Int (F:int-characterization) and that the Z-structure properties determine it (here). WHAT IS NOT PROVED: no inverse FUNCTION is extracted -- surjectivity is a Prop-level existential, exactly as in F:nat-peano-categoricity, because the generation hypothesis is Prop-valued. `iso` gives the constructed two-sided inverse but HYPOTHESISES the back-map. LOAD-BEARING: thirteen new injected `Weakening` variants (22 in the package) replace one hypothesis with `True` and the kernel must refuse each ONE AT THE DECLARATION IT WAS AIMED AT, with the declaration immediately before it in build order still admitted. Both guards were mutation-probed on 2026-08-18: making one injection inert killed exactly one test, and aiming one defect at the wrong declaration made both the test and the example fail."
+}
