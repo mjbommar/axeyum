@@ -213,25 +213,42 @@ from"**, and the systems split on it rather than on the representation.
 
 | system | ℝ obtained by | equality | trusted cost |
 |---|---|---|---|
-| **Coq/Rocq stdlib** (`Reals.Raxioms`) | **axiomatized** | primitive | ~17 axioms incl. `completeness` and the *informative* `total_order_T`, which is classical |
-| **Coquelicot** | a *layer over* the axiomatic ℝ | inherited | inherits all of the above |
-| **CoRN** (C-CoRN, Nijmegen) | constructive, **setoid** (`CSetoid`, book equality `[=]` with apartness `#`) | a defined relation | none beyond the base logic |
+| **Coq/Rocq stdlib ≥ 8.11** | Bool-valued Dedekind cuts, *proved* a quotient of the constructive Cauchy reals | `Eq`, recovered via `Rquot1` | **3 logical axioms**: `sig_forall_dec` (LPO), `sig_not_dec`, `functional_extensionality_dep` |
+| **Coq stdlib ≤ 8.10** | **axiomatized** | primitive | 26 declarations (9 `Parameter` + 17 `Axiom`) incl. `completeness` and the *informative* `total_order_T` |
+| **Coq `ConstructiveCauchyReals`** | Cauchy sequences with an **explicit fixed modulus** (`|x_p − x_q| < 2^k`), **no quotient** | a defined relation `CRealEq` | **zero** |
+| **Coquelicot** | a *layer over* the classical stdlib ℝ | inherited | inherits the stdlib's three |
+| **CoRN** (C-CoRN, Nijmegen) | constructive Cauchy, **setoid** (`CSetoid`, book equality `[=]`, apartness `[#]`) | a defined relation | **zero** |
 | **Lean 4 / Mathlib** | `CauSeq.Completion.Cauchy` over ℚ — a **quotient** | `Eq`, via `Quot.sound` | `propext`, `Quot.sound`, `Classical.choice` |
-| **Isabelle/HOL** | Cauchy sequences via `quotient_type` over ℚ | `Eq` (HOL) | none — `typedef` is a conservative definitional extension, but HOL is classical and extensional *by construction* |
-| **HOL Light** | Harrison's "nearly-additive" sequences on ℕ | `Eq` | none beyond HOL's axioms |
-| **Metamath** `set.m` | Dedekind-style cuts of positive rationals | set equality | none beyond ZFC |
+| **Isabelle/HOL** | Cauchy sequences, one `quotient_type` over `nat ⇒ rat` by a *partial* equivalence | `Eq` (HOL) | none — `typedef` is conservative, but HOL is classical and extensional *by construction* |
+| **HOL Light** | Harrison's nearly-**multiplicative** functions `ℕ → ℕ` (ℤ and ℚ both skipped) | `Eq` | none beyond HOL's three |
+| **Metamath** `set.mm` | lower Dedekind cuts of ℚ⁺ → ℂ **first**, then ℝ ⊆ ℂ | set equality | none beyond ZFC — then **22 properties deliberately re-axiomatized** and the construction hidden |
+| **ACL2(r)** / **PVS** | **no construction** | primitive | ~25 axioms each |
 
 Two things in that table are load-bearing for us.
 
+> **Corrected 2026-08-17, after this ADR was accepted.** The first version of
+> this table said the Coq/Rocq standard library *axiomatizes* ℝ with ~17 axioms.
+> That has been false since **Coq 8.11 (January 2020)**: `Raxioms.v` now declares
+> zero axioms, all 17 are `Lemma`s, and its own header says "the name `Raxioms`
+> and its contents are kept for backward compatibility, when the classical reals
+> were axiomatized". The decision below is unchanged — the correction *supports*
+> it, since the Coq route it uncovers is the one this ADR chose. Recorded rather
+> than silently rewritten because the wrong row was the single most-cited claim
+> about ℝ in proof assistants, and this project has been burned before by
+> repeating a description instead of measuring the thing.
+
+Three things in that table are load-bearing for us.
+
 **First, the systems that pay nothing for ℝ are the ones that already paid.**
 Isabelle/HOL and HOL Light get `Eq`-based quotients "for free" only because HOL's
-logic is classical and has extensionality as a *primitive rule*; Metamath gets
-cuts for free because ZFC has extensionality as an *axiom*. Our logic prelude has
-neither, at zero trusted declarations, which is precisely why `Int.eq_em` had to
-be a restricted decidable equality rather than excluded middle. We are in the
-constructive type theory column, and the only system in that column that
-constructs ℝ with no additional trusted surface is **CoRN, by setoid**. That is
-the precedent this ADR follows.
+logic is classical and has extensionality as a *primitive rule* (`ext` is an
+axiom of `HOL.thy`); Metamath gets cuts for free because ZFC has extensionality
+as an *axiom*. Our logic prelude has neither, at zero trusted declarations, which
+is precisely why `Int.eq_em` had to be a restricted decidable equality rather
+than excluded middle. We are in the constructive type theory column, and **every
+system in that column that reaches ℝ with no added trusted surface does it by
+setoid** — CoRN, and the Coq standard library's own `ConstructiveCauchyReals`.
+That is the precedent this ADR follows, and it is unanimous rather than singular.
 
 **Second, Lean's own numbers do not support the "quotient is standard" reading.**
 Mathlib's `Real` is a quotient (`CauSeq.Completion.Cauchy` over ℚ) and its
@@ -242,6 +259,37 @@ structure with proof fields and no quotient at all
 `int_prelude/rat.rs` already copied, deliberately, and the move `Int` made with
 `ofNat`/`negSucc`. Following Lean's *quotient* for ℝ while having followed Lean's
 *structure* for ℚ and ℤ would be picking the worse half of Lean's design.
+
+**Third, Metamath already ran ADR-0457's play, on purpose.** `set.mm` constructs
+ℝ (via ℂ), then *re-introduces 22 properties as axioms* `ax-resscn … ax-pre-sup`,
+each carrying a machine-readable justification link back to the proved theorem,
+and marks every construction-level definition "New usage is discouraged". Its
+stated reason — "this lets us easily identify which axioms are needed for a
+particular complex number proof, without the obfuscation of the set theory used
+to derive them… another construction that develops the same axioms could be used
+in place of it" — is exactly the argument for keeping a `Real` *interface* and
+instantiating it, which is what ADR-0457 built and what Phase R3 below extends.
+The lesson to take is that the interface and the construction are complements,
+not alternatives: Metamath ships both and keeps them separated by a hard
+boundary.
+
+**An independent measurement of the same three routes.** Run in plain Lean 4.30.0
+with no Mathlib, as a cross-check on `creal_shape_probe`:
+
+| route | quotient used? | `#print axioms` |
+|---|---|---|
+| Cauchy quotient | yes | `[Quot.sound]` |
+| Dedekind, `Prop`-valued cut | **no** | `[propext, Quot.sound]` |
+| Dedekind, `Bool`-valued cut | **no** | `[Quot.sound]` |
+| **Bishop setoid** (`=` never used) | no | **none** |
+
+Two things to take from it. The setoid row reproduces this ADR's own zero in a
+different kernel, on a different encoding, so the measurement is not an artifact
+of our probe. And the Dedekind rows show the route does not escape `Quot.sound`
+*even without using a quotient at all* — because it needs `funext`, and `funext`
+is `Quot.sound`. Making the cut `Bool`-valued sheds `propext` and nothing else.
+`Subtype.ext` and proof irrelevance are both free in Lean, so wrapping a cut in a
+subtype buys nothing; the whole cost is function extensionality.
 
 Third, the folk trade-off between the two representations does not survive
 contact with this kernel:
@@ -279,6 +327,28 @@ contact with this kernel:
   Cauchy-completeness of ℝ a choice principle; that is the trap the HoTT book's
   chapter 11 goes to a higher inductive type to escape, and a fixed modulus
   escapes it more cheaply.
+
+**Two honest counterpoints, recorded because they cut against this decision.**
+
+*The setoid tax is real, and one system paid to escape it.* Coq's standard
+library had `ConstructiveCauchyReals` — axiom-free, computing, setoid — and
+still built a *second*, classical ℝ on top of three logical axioms, adding
+`Rquot1 : CRealEq (Rrepr x) (Rrepr y) → x = y` specifically to recover Leibniz
+equality. The reason is the one our Measurement 2 quantifies: with a setoid you
+cannot reuse anything built on `=`, and every operation carries a congruence
+obligation. We are betting that 9 restated laws and 5 congruences is a smaller
+bill than a permanent trusted item; Coq, with a far larger downstream library,
+bet the other way. If our `Equiv`-restated laws turn out to infect the
+reconstruction path the way `Proper` obligations infect Coq's, revisit.
+
+*Our size estimate is small by an order of magnitude against the only real
+calibration available.* Mathlib's ℝ costs roughly **576 additional kernel
+declarations** on top of ℚ (transitive constant closure for a complete
+Archimedean ordered field), and ℂ about 190 more on top of ℝ. Phase R1+R2 below
+is sized at ~47. The gap is mostly scope — Mathlib's number is a full analysis-
+ready API, ours is the 22 laws plus congruences and nothing else — but it is not
+*only* scope, and a lane that finds itself at 150 declarations should conclude
+the estimate was wrong rather than that it is doing something wrong.
 
 ## Alternatives
 
