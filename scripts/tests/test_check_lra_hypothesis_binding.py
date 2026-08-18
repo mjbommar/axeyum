@@ -1169,12 +1169,13 @@ class TheConverseDirectionIsMeasured(unittest.TestCase):
         sorts, assertions = _read(DIO_QUERY)
         phi, hypotheses, _allowed, detail = run(DIO_MODULE, DIO_QUERY)
         self.assertIsNotNone(phi, detail)
-        spine, covered = HB.represented_assertions(
+        spine, covered, opaque_rows = HB.represented_assertions(
             phi, hypotheses, list(range(len(assertions))), assertions
         )
         self.assertEqual(spine, 3)
         # `(= y 0)` is never rendered: two hypotheses, two represented rows.
         self.assertEqual(covered, 2)
+        self.assertEqual(opaque_rows, 0)
 
     def test_a_module_rendering_every_row_is_fully_represented(self) -> None:
         module = DIO_MODULE.replace(
@@ -1185,10 +1186,123 @@ class TheConverseDirectionIsMeasured(unittest.TestCase):
         sorts, assertions = _read(DIO_QUERY)
         phi, hypotheses, _allowed, detail = run(module, DIO_QUERY)
         self.assertIsNotNone(phi, detail)
-        spine, covered = HB.represented_assertions(
+        spine, covered, opaque_rows = HB.represented_assertions(
             phi, hypotheses, list(range(len(assertions))), assertions
         )
-        self.assertEqual((spine, covered), (3, 3))
+        self.assertEqual((spine, covered, opaque_rows), (3, 3, 0))
+
+    def test_one_hypothesis_cannot_represent_two_rows_at_once(self) -> None:
+        """The count is a maximum MATCHING, not an overlap. Two assertions of the
+        same query can entail a common atom -- here `(= x 1)` twice over, which
+        `atoms_of` decomposes identically -- and an overlap count would credit
+        BOTH to a module that rendered it once. The shortfall this number exists
+        to expose would then be smaller than the truth, in the direction nobody
+        is checking."""
+        query = """
+(set-logic QF_LIA)
+(declare-fun x () Int)
+(declare-fun y () Int)
+(assert (= x 1))
+(assert (= x 1))
+(assert (= y 0))
+(check-sat)
+"""
+        module = f"""
+axiom {D0} : Int
+axiom axeyum.reconstruct.dio.hyp._2 : Eq.{{1}} Int {D0} Int.one
+theorem axeyum_refutation : False := trivial
+"""
+        sorts, assertions = _read(query)
+        phi, hypotheses, _allowed, detail = run(module, query)
+        self.assertIsNotNone(phi, detail)
+        self.assertEqual(len(hypotheses), 1)
+        spine, covered, opaque_rows = HB.represented_assertions(
+            phi, hypotheses, list(range(len(assertions))), assertions
+        )
+        self.assertEqual((spine, covered, opaque_rows), (3, 1, 0))
+
+    def test_two_hypotheses_from_ONE_row_represent_ONE_row(self) -> None:
+        """The sharpest form of the matching requirement, and the only shape that
+        can see it: both hypotheses descend from `(= x 2)` -- one as the equality,
+        one as the bound it entails -- so together they stand for ONE spine row.
+        An adjacency that credited every row to every hypothesis would report 2
+        here and go unnoticed in the tests above, where the matching is capped by
+        the hypothesis count anyway."""
+        module = f"""
+axiom {D0} : Int
+axiom axeyum.reconstruct.dio.hyp._2 : Eq.{{1}} Int {D0} (Int.add Int.one Int.one)
+axiom axeyum.reconstruct.dio.hyp._3 : Int.le (Int.add {D0} \
+(Int.neg (Int.add Int.one Int.one))) Int.zero
+theorem axeyum_refutation : False := trivial
+"""
+        sorts, assertions = _read(DIO_QUERY)
+        phi, hypotheses, _allowed, detail = run(module, DIO_QUERY)
+        self.assertIsNotNone(phi, detail)
+        self.assertEqual(len(hypotheses), 2)
+        spine, covered, opaque_rows = HB.represented_assertions(
+            phi, hypotheses, list(range(len(assertions))), assertions
+        )
+        self.assertEqual((spine, covered, opaque_rows), (3, 1, 0))
+
+    def test_a_row_this_parser_cannot_decompose_is_reported_separately(self) -> None:
+        """A row yielding no atoms is unrepresentable whatever the module
+        renders, so folding it into the shortfall would blame the refutation for
+        a blind spot in this script. Measured over the corpus the count is zero,
+        and the driver fails on any nonzero one -- but the two must be
+        distinguishable before that can mean anything."""
+        query = DIO_QUERY.replace(
+            "(check-sat)", "(assert (or (= x 5) (= x 6)))\n(check-sat)"
+        )
+        sorts, assertions = _read(query)
+        phi, hypotheses, _allowed, detail = run(DIO_MODULE, query)
+        self.assertIsNotNone(phi, detail)
+        spine, covered, opaque_rows = HB.represented_assertions(
+            phi, hypotheses, list(range(len(assertions))), assertions
+        )
+        self.assertEqual((spine, covered, opaque_rows), (4, 2, 1))
+
+    def test_such_a_row_FAILS_the_run_rather_than_lowering_the_number(self) -> None:
+        query = DIO_QUERY.replace(
+            "(check-sat)", "(assert (or (= x 5) (= x 6)))\n(check-sat)"
+        )
+        self.assertEqual(_drive(DIO_MODULE, query), 1)
+
+    def test_the_same_driver_passes_without_the_undecomposable_row(self) -> None:
+        """Without this twin the test above would pass against a driver that
+        failed every run."""
+        self.assertEqual(_drive(DIO_MODULE, DIO_QUERY), 0)
+
+
+def _drive(module: str, query: str, *extra: str) -> int:
+    """`main` over one in-memory instance with every floor released."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as scratch:
+        qpath = pathlib.Path(scratch) / "q.smt2"
+        mpath = pathlib.Path(scratch) / "m.lean"
+        qpath.write_text(query, encoding="utf-8")
+        mpath.write_text(module, encoding="utf-8")
+        return HB.main(
+            [
+                "--instance", str(qpath),
+                "--module", str(mpath),
+                "--no-build",
+                "--no-self-check",
+                "--min-instances", "0",
+                "--min-hypotheses", "0",
+                "--min-required-mutations", "0",
+                "--min-attestations", "0",
+                "--min-represented", "0",
+                "--min-structural", "0",
+                "--min-structural-nodes", "0",
+                "--min-structural-mutations", "0",
+                "--min-anchored", "0",
+                "--min-anchored-nodes", "0",
+                "--min-anchored-mutations", "0",
+                "--min-structural-anchored", "0",
+                *extra,
+            ]
+        )
 
 
 class AVacuousBindingIsNotAPass(unittest.TestCase):

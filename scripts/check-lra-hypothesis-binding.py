@@ -208,6 +208,19 @@ Farkas) and `dio.hyp._N` (Int Diophantine).
   the rows these refutations are handed are rendered at all. The number is
   recomputed from the accepted renaming, never from the search's own bookkeeping,
   and `--min-represented` floors it so a wholesale drop cannot pass quietly.
+
+  Two further measurements, because "296 of 541" is worth nothing until you know
+  which side of the check the missing 245 are on. **`undecomposable_spine=0`**:
+  every one of the 541 rows was decomposed into atoms, so not one of the 245 is
+  unrepresentable because this parser could not read it. The shortfall is a
+  property of the REFUTATIONS — they rest on 296 rows and Lean derives `False`
+  from those alone — and not of this script, and a nonzero count now fails the
+  run rather than arriving as a lower `represented`. And the 296 is a maximum
+  bipartite MATCHING, so each represented row has its own hypothesis standing
+  for it; an overlap count would credit three rows entailing a common atom to a
+  module that rendered it once. Measured, every one of the 298 hypotheses
+  matches exactly one row, so the two agree today — which is a fact, not a
+  reason to compute the cheaper one.
 - **Constant-only atoms are compared up to positive scaling.** `0 = 5` and
   `0 = 1` normalize to the same atom (dividing through by the gcd), because both
   are the false proposition and the relation is preserved. So this checker cannot
@@ -275,7 +288,16 @@ MIN_ATTESTATIONS = 5
 # `(assert …)` rows a rendered hypothesis actually stands for. 296 of 541 --
 # barely over half. That is not a soundness hole (a refutation of a subset
 # refutes the whole) but it IS the precise size of what binding does not show.
-MIN_REPRESENTED = 285
+MIN_REPRESENTED = 290
+# ...and 296 of 541 is a fact about the REFUTATIONS, not about this script. That
+# distinction was not available to a reader until it was measured: a row this
+# parser cannot decompose is unrepresentable no matter what the module renders,
+# so it would arrive as a lower `represented_assertions` and read as the modules
+# resting on less of the query. Measured 2026-08-18 across all 135 bound
+# instances: ZERO of the 541 rows are in that state. The ceiling holds it there,
+# because the alternative is a number that can shrink for two opposite reasons
+# and cannot be told which.
+MAX_UNDECOMPOSABLE_SPINE = 0
 
 
 def _manifest(path: pathlib.Path) -> list[str]:
@@ -1753,8 +1775,8 @@ def represented_assertions(
     hypotheses: list[tuple[str, str, tuple]],
     indices: list[int],
     assertions: list[list[tuple]],
-) -> tuple[int, int]:
-    """`(assertions in the spine, how many a rendered hypothesis stands for)`.
+) -> tuple[int, int, int]:
+    """`(spine rows, rows a DISTINCT hypothesis stands for, rows with no atoms)`.
 
     The CONVERSE of what `bind` establishes, and the honest measure of its limit.
     Binding shows every rendered hypothesis comes FROM the query; it says nothing
@@ -1764,15 +1786,53 @@ def represented_assertions(
     than the binding supports, so the shortfall is counted and printed instead of
     being left to the reader's imagination.
 
+    Two things make the count mean what it says, and neither is free:
+
+    **It is a maximum MATCHING, not an overlap.** Counting a row as represented
+    whenever *some* renamed hypothesis appears in it lets ONE hypothesis stand
+    for several rows at once — three assertions entailing a common atom would all
+    be credited to a module that rendered that atom once. The measured shortfall
+    would then be smaller than the truth, in the direction nobody checks. So each
+    represented row must be assigned its OWN hypothesis, and the number reported
+    is the largest such assignment. Measured 2026-08-18: every one of the 298
+    hypotheses matches exactly one spine row, so matching and overlap coincide at
+    296 today. Computing it as a matching is what keeps them from diverging
+    silently later.
+
+    **Rows this parser could not decompose are counted separately.** An assertion
+    that yields no atoms cannot be represented no matter what the module renders,
+    so folding it into the shortfall would blame the refutation for a blind spot
+    in the checker. Measured 2026-08-18: ZERO of the 541 spine rows across all
+    135 bound instances are in that state — this parser understands every
+    assertion these reconstructions were handed, so 296/541 is a property of the
+    refutations and not of this script. The driver treats any nonzero count as a
+    failure rather than as a quietly lower `represented`.
+
     Recomputed from `phi` alone. The search's own `origins` are not consulted:
     an untrusted search must not be the source of the number that describes it.
     """
-    renamed = {_rename(atom, phi) for _name, _carrier, atom in hypotheses}
-    covered = 0
-    for index in indices:
-        if index < len(assertions) and renamed.intersection(assertions[index]):
-            covered += 1
-    return (len(indices), covered)
+    renamed = [_rename(atom, phi) for _name, _carrier, atom in hypotheses]
+    spine = [index for index in indices if index < len(assertions)]
+    undecomposable = sum(1 for index in spine if not assertions[index])
+    # Bipartite adjacency: which spine rows each hypothesis could stand for.
+    adjacency = [
+        [index for index in spine if atom in assertions[index]] for atom in renamed
+    ]
+    owner: dict[int, int] = {}
+
+    def assign(hypothesis: int, seen: set[int]) -> bool:
+        for index in adjacency[hypothesis]:
+            if index in seen:
+                continue
+            seen.add(index)
+            if index not in owner or assign(owner[index], seen):
+                owner[index] = hypothesis
+                return True
+        return False
+
+    for hypothesis in range(len(renamed)):
+        assign(hypothesis, set())
+    return (len(indices), len(owner), undecomposable)
 
 
 def sort_compatible(carrier: str | None, declared: str | None) -> bool:
@@ -2349,6 +2409,9 @@ def main(argv: list[str]) -> int:
         "--min-anchored-mutations", type=int, default=MIN_ANCHORED_MUTATIONS
     )
     parser.add_argument("--min-represented", type=int, default=MIN_REPRESENTED)
+    parser.add_argument(
+        "--max-undecomposable-spine", type=int, default=MAX_UNDECOMPOSABLE_SPINE
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -2385,6 +2448,7 @@ def main(argv: list[str]) -> int:
     anchored_accepted = 0
     spine_assertions = 0
     represented = 0
+    undecomposable_spine = 0
     escaped: list[str] = []
 
     for instance, want in targets:
@@ -2563,9 +2627,12 @@ def main(argv: list[str]) -> int:
             )
             continue
         total_hypotheses += len(hypotheses)
-        spine, covered = represented_assertions(phi, hypotheses, indices, assertions)
+        spine, covered, opaque_rows = represented_assertions(
+            phi, hypotheses, indices, assertions
+        )
         spine_assertions += spine
         represented += covered
+        undecomposable_spine += opaque_rows
         if args.verbose:
             print(
                 f"  {instance} [{fragment}] {len(hypotheses)} hypotheses bound, "
@@ -2636,7 +2703,8 @@ def main(argv: list[str]) -> int:
         f"anchored_accepted={anchored_accepted}|"
         f"structural_anchored={structural_anchored}|attested={attested}|"
         f"attested_vacuous={attested_vacuous}|spine_assertions={spine_assertions}|"
-        f"represented_assertions={represented}|failures={len(failures)}"
+        f"represented_assertions={represented}|"
+        f"undecomposable_spine={undecomposable_spine}|failures={len(failures)}"
     )
 
     failures.extend(escaped)
@@ -2708,6 +2776,16 @@ def main(argv: list[str]) -> int:
         failures.append(
             f"only {total_hypotheses} hypothesis axioms were bound (floor "
             f"{args.min_hypotheses}); a run that binds nothing proves nothing"
+        )
+    if undecomposable_spine > args.max_undecomposable_spine:
+        failures.append(
+            f"{undecomposable_spine} spine assertions yielded NO atoms to this "
+            f"parser (ceiling {args.max_undecomposable_spine}). Such a row cannot be "
+            "represented whatever the module renders, so it would show up as a lower "
+            "`represented_assertions` and be read as the refutation resting on less "
+            "of the query -- when it is this script that stopped understanding the "
+            "query. The two must not be confusable, so a blind row fails the run "
+            "instead of quietly shrinking the number that describes the refutations"
         )
     if instances and represented < args.min_represented:
         failures.append(

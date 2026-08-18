@@ -326,9 +326,33 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
                 "            bound_anyway, _why, nodes = bind_structural(source, path)\n            if False:",
             ),
             (
+                # Keyed on the adjacency, not on the old overlap test: the
+                # converse count became a maximum matching on 2026-08-18 and this
+                # control's find-string went with it. A control whose text has
+                # drifted reports MUTATION DID NOT APPLY, which is how three
+                # guards in this file went dead once already.
                 "the converse direction counts UNrendered rows as unrepresented",
-                "        if index < len(assertions) and renamed.intersection(assertions[index]):",
-                "        if True:",
+                "        [index for index in spine if atom in assertions[index]] for atom in renamed",
+                "        [index for index in spine] for atom in renamed",
+            ),
+            (
+                # A maximum MATCHING, not an overlap: let one hypothesis claim
+                # every row it appears in and three assertions entailing a common
+                # atom are all credited to a module that rendered it once. The
+                # measured shortfall shrinks, in the direction nobody checks.
+                "the converse direction gives each row its OWN hypothesis",
+                "                owner[index] = hypothesis\n                return True",
+                "                owner[index] = hypothesis\n                continue",
+            ),
+            (
+                # A row this parser cannot decompose is unrepresentable whatever
+                # the module renders. Without the ceiling it arrives as a lower
+                # `represented_assertions` and reads as the refutations resting
+                # on less of the query -- one number shrinking for two opposite
+                # reasons, with no way to tell which.
+                "an undecomposable spine row FAILS rather than lowering the number",
+                "    if undecomposable_spine > args.max_undecomposable_spine:",
+                "    if False:",
             ),
             (
                 # `_AND_HEADS` / `_OR_HEADS` are propagated under OPPOSITE
