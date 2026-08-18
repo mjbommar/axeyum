@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "F:real-inverse-is-partial-and-its-modulus-is-data",
+  "title": "No function on all of the constructed reals is a multiplicative inverse, and the modulus that would make one possible cannot be extracted from positivity",
+  "statement": "Two statements about the constructed reals CReal, both proved with empty axiom footprints. (1) CReal.no_total_inverse: for every f : CReal -> CReal it is false that CReal.Equiv (CReal.mul x (f x)) CReal.one for all x -- evaluate at zero, where mul_comm and mul_zero make the product Equiv-equal to zero, and Equiv.not_zero_one refutes zero ≈ one by computation at index 3. So the multiplicative inverse is PARTIAL as a matter of proof, not of scope. (2) CReal.pos_of_pos_bound and CReal.pos_bound_of_lt: CReal.lt CReal.zero x and Exists (k : Nat), CReal.le (CReal.ofRat (Rat.natDivSucc 1 k)) x are the same proposition, so the separating modulus a constructive inverse needs always exists -- and it exists inside an Exists, which is a Prop, so Exists.rec eliminates only into Prop and that k can never be extracted into a CReal. Together they say the inverse must take its modulus as an explicit Nat argument. The proof, by contrast, need not be data: a function may TAKE a Prop argument and return a Type, so inv : (x : CReal) -> (k : Nat) -> PosBound x k -> CReal is definable while inv : (x : CReal) -> Apart x zero -> CReal is not, Apart being an Or that would have to be branched on.",
+  "formal": {
+    "language": "lean4",
+    "statement": "CReal.no_total_inverse : forall (f : CReal -> CReal), Not (forall (x : CReal), CReal.Equiv (CReal.mul x (f x)) CReal.one)  --  together with  CReal.pos_of_pos_bound : forall (x : CReal) (k : Nat), CReal.PosBound x k -> CReal.lt CReal.zero x  and  CReal.pos_bound_of_lt : forall (x : CReal), CReal.lt CReal.zero x -> Exists Nat (fun (k : Nat) => CReal.PosBound x k),  where CReal.PosBound x k := CReal.le (CReal.ofRat (Rat.natDivSucc 1 k)) x",
+    "fragment": "CReal",
+    "free_symbols": [
+      "CReal",
+      "CReal.Equiv",
+      "CReal.mul",
+      "CReal.zero",
+      "CReal.one",
+      "CReal.lt",
+      "CReal.le",
+      "CReal.ofRat",
+      "CReal.PosBound",
+      "Rat.natDivSucc"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:rationals-are-a-field-axiom-free"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "real-inverse-no-total-inverse",
+      "kind": "kernel-term",
+      "supports": "CReal.no_total_inverse is a checked Theorem -- not an axiom, not an opaque -- with an empty footprint, and the witness example's EXIT STATUS depends on its presence.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE 'no total inverse exists = true')\" = 1 && test \"$(printf '%s\\n' \"$out\" | grep -cE '69 declarations admitted, trusted surface = 0 \\(empty\\)')\" = 1",
+      "notes": "Two anchors on one run: the guard flag, and the declaration count with the trusted surface on the same line. Deleting declare_no_total_inverse flips the example to exit 1 with a matching FAIL line and kills exactly two tests (measured); the count anchor stops the row surviving a build that quietly dropped declarations."
+    },
+    {
+      "id": "real-inverse-modulus-cannot-be-extracted",
+      "kind": "kernel-term",
+      "supports": "The two directions between positivity and a witnessed modulus are checked Theorems whose RENDERED types are the ones claimed, including the Exists that cannot be eliminated into Type.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -q -p axeyum-lean-kernel --lib creal::creal_tests::positivity_and_a_witnessed_modulus_are_the_same_proposition 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE '^test result: ok\\. 1 passed; 0 failed')\" = 1",
+      "notes": "Anchored on a NONZERO test count on the pass line, because a filter matching nothing prints 'ok. 0 passed' and exits 0. The test renders the types verbatim: an Exists in the CONCLUSION is what makes the modulus inextractable, and a version stating PosBound for a fixed k would pass a footprint check and fail this one."
+    },
+    {
+      "id": "real-inverse-negative-control",
+      "kind": "kernel-term",
+      "supports": "The negative control: the no_total_inverse script pointed at a FALSE statement is REFUSED by the kernel, so the theorem closes on the content of Equiv.not_zero_one and not on a shape that would go through for any right-hand side.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -q -p axeyum-lean-kernel --lib creal::creal_tests::the_no_total_inverse_route_cannot_refute_a_universally_zero_product 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE '^test result: ok\\. 1 passed; 0 failed')\" = 1",
+      "notes": "The mutated statement is 'no f makes x * f x ≈ 0 for every x', which is FALSE -- f := fun _ => zero satisfies it by mul_zero -- so a script proving it would prove anything. Without this row the other two would pass just as happily against a refutation that never used its hypothesis."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:real-numbers",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:constructive-analysis",
+      "relation": "uses",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "axeyum-lean-kernel creal::field (ADR-0474; agent-creal-field lane)",
+    "source": "Bishop-style constructive analysis: the inverse is defined on the reals APART from zero, and the apartness must carry the separating modulus"
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It does not say CReal.inv exists -- it is not built, and this fact is precisely about the shape its signature must have. It does not say the reals apart from zero are exactly the reals not equal to zero: CReal.not_equiv_of_apart is ONE-WAY, and the converse is Markov's principle, which is neither proved nor assumed here. It does not say a Prop hypothesis blocks a Type-valued definition -- that reading is wrong, and the distinction is the point: a function may take a Prop and return a Type, it may not BRANCH on one, which is why the one-sided PosBound works where the disjunctive Apart does not."
+}

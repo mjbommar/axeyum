@@ -1,5 +1,5 @@
 //! **ℚ is a field**: the one law that makes `Rat.inv` an inverse, and the
-//! ordered-field toolkit derived from it (ADR-0473, phase F2).
+//! ordered-field toolkit derived from it (ADR-0474, phase F2).
 //!
 //! ## What was missing, and why it was not noticed
 //!

@@ -54,7 +54,7 @@
 //!    `apart_symm`, `apart_irrefl` and `apart_congr` all hold, footprint-free,
 //!    of the relation that separates nothing — and the second refutes every
 //!    total multiplicative inverse, so "the inverse is partial" is a proved
-//!    obstruction rather than a scoping note (ADR-0473).
+//!    obstruction rather than a scoping note (ADR-0474).
 //!
 //! # How far the ordered-field structure gets (ADR-0468 phase R2, partial)
 //!
@@ -526,6 +526,6 @@ fn main() {
          (∃ k, 1/(k+1) ≤ x) are the SAME proposition, so the separating \
          modulus always exists — and Exists is a Prop, so it can never be \
          extracted into a CReal, which is why an inverse must take k as an \
-         explicit Nat (ADR-0473)"
+         explicit Nat (ADR-0474)"
     );
 }
