@@ -31,10 +31,10 @@ operationally reachable.
 | Required observation | Evidence that proves it | Current verdict | Earliest missing foundation |
 |---|---|---|---|
 | Inputs were fixed | Clean execution capture binds commit and generated baseline digest | Fixture | Bind execution identity into the eventual transaction |
-| B and A were selected without intervention | Content-addressed frontier snapshot plus deterministic selection rationale | Missing | Stable machine-readable frontier output |
+| B and A were selected without intervention | Content-addressed frontier snapshot plus deterministic selection rationale | Partial | Register typed operations; the authoritative selector currently refuses every candidate |
 | A was unavailable before B | The identical A target under the identical route policy and budget receives no credit before B | Fixture | Bind the result into a replayed episode transaction |
 | B was established | Catalog-only structural search produces typed, content-addressed, kernel-checked evidence for fresh B | Fixture | Admit the result through the durable transaction path |
-| B became durable knowledge | Atomic application after fresh-process replay and fact validation | Missing | Episode-wide transaction boundary |
+| B became durable knowledge | Atomic application after fresh-process replay and fact validation | Fixture | Repeat the accepted boundary against one genuinely open authoritative fact |
 | A became newly ready | Readiness changes only after the accepted B event | Fixture | Repeat against authoritative frontier state rather than a counterfactual fixture |
 | A was established using B | Fresh proof is accepted and its dependency on B is derived from the proof term | Fixture | Transactional admission and readiness event |
 | Corruption cannot receive credit | Independent mutations of statement, evidence, checker, dependency, footprint, and status all reject | Missing | Typed episode and evidence identities |
@@ -342,7 +342,8 @@ and the expected pre-B failure.
 These improvements are ordered by how many later steps they simplify:
 
 1. **One machine-readable frontier contract.** Text views remain for humans;
-   selection, chain enumeration, and unlock deltas share one canonical object.
+   the authoritative queue is now content-addressed; make chain enumeration and
+   admission-triggered unlock deltas consume that same object.
 2. **One content-identity helper.** Statements, files, library snapshots,
    budgets, and artifacts should not each invent digest formatting.
 3. **Registered checker operations.** An evidence kind maps to typed arguments

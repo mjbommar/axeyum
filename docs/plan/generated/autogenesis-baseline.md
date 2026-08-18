@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:394edca3af68ec759b587e3b7cff6ad925c2a4cbb65164566db8b3e6c56f02af`
+Source identity: `sha256:b8067d81f046f8af4b5152a6e4b009f100faf811d1261d27b496f98fd8f05590`
 
 ## Ledger and chain substrate
 
@@ -27,7 +27,7 @@ the remaining facts stay explicit rather than being guessed.
 | `A1-real-derived-chain` | replay-candidate | kernel ledger graph has 52 edges at depth 6 and 0 unsettled nodes | qualify a primary and fallback with proof-derived dependency and pre-B counterfactual |
 | `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | broaden the structural grammar and bind plans into typed evidence |
 | `A1-operational-unlock-control` | fixture | catalog search produces B; a durable fixture event makes the same A target ready and fresh A depends on B | repeat the causal unlock on an authoritative open fact |
-| `A1-machine-selection` | missing | selection remains a human choice from text output | content-address a machine-readable frontier snapshot and rationale |
+| `A1-machine-selection` | partial | content-addressed authoritative frontier records every candidate and refuses unregistered dispatch | register typed producer/checker operations, then select only a fact with an admissible operation |
 | `A1-typed-dispatch-evidence` | partial | typed B evidence derives its route, footprint, evidence row, and transaction; shell still orchestrates dispatch | replace shell route dispatch with one typed operation registry |
 | `A1-atomic-admission` | fixture | fixture fact admission has compare-and-swap, fsynced intent, durable event, and fault recovery | admit one genuinely open authoritative fact with matching typed evidence |
 | `A1-admission-triggered-retry` | fixture | durable fixture admission event derives B-to-A readiness and gates the post-B catalog | generalize the readiness input from counterfactual snapshot to authoritative frontier state |
@@ -37,7 +37,7 @@ the remaining facts stay explicit rather than being guessed.
 
 | Seam | State | Owner | Gap | Source |
 |---|---|---|---|---|
-| `goal-selection` | manual | fact frontier | the command prints a queue; a person still selects the goal | `scripts/fact-frontier.py` |
+| `goal-selection` | partial | fact frontier | machine frontier refuses every live fact until a typed operation registry exists | `scripts/fact-frontier.py` |
 | `route-dispatch` | manual | route adapters | no typed fact-to-route dispatch contract exists | `scripts/close-fact.py` |
 | `evidence-assembly` | manual | transactional closer | the caller authors the evidence rows and route metadata | `scripts/close-fact.py` |
 | `checker-selection` | manual | evidence registry | caller-authored shell text chooses the checker | `scripts/close-fact.py` |

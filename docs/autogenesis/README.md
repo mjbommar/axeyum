@@ -123,10 +123,8 @@ but a fresh, B-dependent proof afterward under the same budget. The chain is
 now bound to an internal typed B evidence handoff and a replay-derived,
 zero-ledger-write episode transition. A checked accepted-transition event is
 now required to construct the post-B catalog, so the snapshot alone cannot
-unlock A. This remains a counterfactual phase projection rather than frontier
-recomputation from a durable ledger transition, so it is an operational unlock
-control rather than Autogenesis-1 credit. The exact-commit retained bundle at
-`42dad8ffa` also reproduces through the separate read-only replay command.
+unlock A. The exact-commit retained bundle at `42dad8ffa` also reproduces
+through the separate read-only replay command.
 The next boundary now has a typed, read-only fact-transaction proposal: its
 positive test is explicitly counterfactual, while mismatched evidence for a
 real open fact rejects. No authoritative ledger write is claimed; its durable
@@ -136,7 +134,12 @@ with compare-and-swap and roll-forward recovery tested at all three durable
 boundaries. Production write authority rejects this fixture path.
 The durable fixture event now derives a content-addressed readiness delta, and
 that delta is mandatory input to the post-B catalog. It authorizes exactly A
-from the ledger's B-to-A edge; project-wide machine selection remains open.
+from the ledger's B-to-A edge. The authoritative fact frontier now has a
+content-addressed JSON form with deterministic rationale. It selects nothing:
+all ten dependency-ready open/conjectured facts lack a registered typed
+producer/checker operation, so broad fragment reachability cannot silently
+become dispatch authority. These remain fixture controls rather than
+Autogenesis-1 credit.
 
 ## Phase summary
 

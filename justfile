@@ -43,6 +43,11 @@ next:
 next-unlocks:
     python3 scripts/fact-frontier.py --unlocks
 
+# Stable scheduler input. This can honestly select nothing: fragment reachability
+# does not become a typed fact-to-producer/checker operation by implication.
+next-json:
+    python3 scripts/fact-frontier.py --json
+
 facts:
     python3 scripts/validate-facts.py
     # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
@@ -392,6 +397,7 @@ smtcomp-resume:
 # the flagship R_4(5(x-y)=4z) result as `open` at "> 740" when the ledger had it
 # `computed` at exactly 741. Nobody edited it wrongly; nobody ran it at all.
 generated-trackers:
+    python3 -m unittest scripts.tests.test_fact_frontier
     python3 -m unittest scripts.tests.test_gen_autogenesis_baseline
     python3 -m unittest scripts.tests.test_create_autogenesis_snapshot
     python3 -m unittest scripts.tests.test_create_autogenesis_proposer_catalog

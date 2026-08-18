@@ -38,16 +38,21 @@ Usage:
     python3 scripts/fact-frontier.py            # the queue
     python3 scripts/fact-frontier.py --band research
     python3 scripts/fact-frontier.py --unlocks  # what each open fact would free
+    python3 scripts/fact-frontier.py --json     # content-addressed scheduler input
+    python3 scripts/fact-frontier.py --output frontier.json
+    python3 scripts/fact-frontier.py --verify frontier.json
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from collections import defaultdict
 import pathlib
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 FACTS = ROOT / "artifacts" / "facts"
@@ -117,11 +122,32 @@ NOT_A_FRAGMENT = {"none", "None", "unknown", "", None}
 PROOF_ROUTE = {"Nat", "Int", "Real"}
 # Anything else, `none` included, has no route at all today.
 
+# There is intentionally no inferred fact-to-operation mapping yet. Fragment
+# reachability says that some procedure has solved something in the same logic;
+# it does not say which typed producer/checker operation is valid for this exact
+# statement. Autonomous selection therefore fails closed until the next seam
+# supplies a reviewed registry instead of caller-authored shell text.
+REGISTERED_OPERATIONS: tuple[dict[str, Any], ...] = ()
+
+
+class FrontierError(RuntimeError):
+    """A machine frontier artifact is stale, malformed, or unsafe to use."""
+
+
+def canonical_json(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def digest(value: Any) -> str:
+    return hashlib.sha256(canonical_json(value).encode()).hexdigest()
+
 
 def load() -> dict[str, dict]:
     facts = {}
     for path in sorted(FACTS.glob("*.json")):
         d = json.loads(path.read_text())
+        if d["id"] in facts:
+            raise FrontierError(f"duplicate fact id {d['id']!r}")
         facts[d["id"]] = d
     return facts
 
@@ -233,17 +259,177 @@ def describe(fact: dict, facts: dict[str, dict], show_unlocks: bool,
     return line
 
 
+def route_class(fragment: str, decidable: set[str]) -> str:
+    if fragment in decidable:
+        return "decidable"
+    if fragment in PROOF_ROUTE:
+        return "proof-route-only"
+    return "no-route"
+
+
+def build_machine_frontier(facts: dict[str, dict]) -> dict[str, Any]:
+    """Build the content-addressed authoritative queue and selection refusal.
+
+    This snapshot deliberately distinguishes dependency readiness, broad route
+    reachability, and an admissible registered operation. Only the last of those
+    licenses autonomous dispatch.
+    """
+    held = gate_holds(facts)
+    decidable, demonstrated_by = decidable_fragments(facts)
+    unlocks: dict[str, list[str]] = defaultdict(list)
+    for fact in facts.values():
+        if settled(fact):
+            continue
+        for dependency in fact["depends_on"]:
+            unlocks[dependency].append(fact["id"])
+
+    entries: list[dict[str, Any]] = []
+    for fact_id in sorted(facts):
+        fact = facts[fact_id]
+        fact_band = band(fact, facts)
+        if fact_band == "done":
+            continue
+        missing = sorted(
+            dependency
+            for dependency in fact["depends_on"]
+            if dependency not in facts or not settled(facts[dependency])
+        )
+        fragment = fact["formal"]["fragment"]
+        entries.append(
+            {
+                "fact_id": fact_id,
+                "fact_sha256": digest(fact),
+                "epistemic_status": fact["epistemic_status"],
+                "external_status": fact.get("external_status"),
+                "fragment": fragment,
+                "band": fact_band,
+                "dependency_ready": not missing,
+                "missing_dependencies": missing,
+                "route_class": route_class(fragment, decidable),
+                "registered_operation_ids": [],
+                "gate_mentions": sorted(held.get(fact_id, [])),
+                "would_unlock": sorted(unlocks.get(fact_id, [])),
+            }
+        )
+
+    priority = {"research": 0, "backlog": 1}
+    considered = sorted(
+        (
+            entry
+            for entry in entries
+            if entry["band"] in priority and entry["dependency_ready"]
+        ),
+        key=lambda entry: (priority[entry["band"]], entry["fact_id"]),
+    )
+    rationale = []
+    admissible = []
+    for entry in considered:
+        reasons = []
+        if entry["route_class"] == "no-route":
+            reasons.append("no-supported-route")
+        if not entry["registered_operation_ids"]:
+            reasons.append("no-registered-operation")
+        if entry["gate_mentions"]:
+            reasons.append("gate-coupling-review-required")
+        rationale.append({"fact_id": entry["fact_id"], "rejected_by": reasons})
+        if not reasons:
+            admissible.append(entry["fact_id"])
+
+    artifact: dict[str, Any] = {
+        "schema_version": 1,
+        "kind": "axeyum-fact-frontier",
+        "authority": "artifacts/facts",
+        "ledger": {
+            "fact_count": len(facts),
+            "ledger_sha256": digest(
+                [
+                    {"fact_id": fact_id, "fact_sha256": digest(facts[fact_id])}
+                    for fact_id in sorted(facts)
+                ]
+            ),
+        },
+        "policy": {
+            "band_order": ["research", "backlog"],
+            "fact_order": "lexicographic-fact-id",
+            "settled_statuses": sorted(SETTLED),
+            "terminating_routes": sorted(TERMINATING_ROUTES),
+            "proof_route_fragments": sorted(PROOF_ROUTE),
+            "registered_operations": list(REGISTERED_OPERATIONS),
+            "autonomous_dispatch_requires_registered_operation": True,
+        },
+        "capabilities": {
+            "decidable_fragments": sorted(decidable),
+            "demonstrated_by": {
+                fragment: demonstrated_by[fragment]
+                for fragment in sorted(demonstrated_by)
+            },
+        },
+        "entries": entries,
+        "selection": {
+            "ready_fact_ids": [entry["fact_id"] for entry in considered],
+            "admissible_fact_ids": admissible,
+            "selected_fact_id": admissible[0] if admissible else None,
+            "outcome": "selected" if admissible else "refused-no-admissible-candidate",
+            "rationale": rationale,
+        },
+    }
+    artifact["frontier_sha256"] = digest(artifact)
+    return artifact
+
+
+def verify_machine_frontier(actual: dict[str, Any], facts: dict[str, dict]) -> None:
+    claimed = actual.get("frontier_sha256")
+    unsigned = dict(actual)
+    unsigned.pop("frontier_sha256", None)
+    if not isinstance(claimed, str) or digest(unsigned) != claimed:
+        raise FrontierError("frontier digest is missing or invalid")
+    expected = build_machine_frontier(facts)
+    if actual != expected:
+        raise FrontierError("frontier is stale or does not match the authoritative ledger")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--band", choices=["research", "backlog", "blocked", "novel"])
     ap.add_argument("--unlocks", action="store_true",
                     help="show which open facts each entry would unblock")
+    machine = ap.add_mutually_exclusive_group()
+    machine.add_argument("--json", action="store_true",
+                         help="write the content-addressed machine frontier to stdout")
+    machine.add_argument("--output", type=Path,
+                         help="write the machine frontier to a new file")
+    machine.add_argument("--verify", type=Path,
+                         help="verify a saved machine frontier against the ledger")
     args = ap.parse_args()
 
     if not FACTS.is_dir():
         print("fact-frontier: no artifacts/facts/ directory", file=sys.stderr)
         return 2
-    facts = load()
+    try:
+        facts = load()
+    except (OSError, json.JSONDecodeError, KeyError, FrontierError) as error:
+        print(f"FACT_FRONTIER_ERROR|{error}", file=sys.stderr)
+        return 1
+    if (args.json or args.output or args.verify) and (args.band or args.unlocks):
+        ap.error("machine frontier modes cannot be combined with --band or --unlocks")
+    if args.json or args.output or args.verify:
+        try:
+            artifact = build_machine_frontier(facts)
+            if args.verify:
+                verify_machine_frontier(json.loads(args.verify.read_text()), facts)
+                print(f"FACT_FRONTIER_OK|{artifact['frontier_sha256']}")
+            elif args.output:
+                if args.output.exists():
+                    raise FrontierError(f"refusing to overwrite {args.output}")
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
+                print(f"FACT_FRONTIER|{artifact['frontier_sha256']}|{args.output}")
+            else:
+                print(json.dumps(artifact, indent=2, sort_keys=True))
+            return 0
+        except (OSError, json.JSONDecodeError, FrontierError) as error:
+            print(f"FACT_FRONTIER_ERROR|{error}", file=sys.stderr)
+            return 1
     held = gate_holds(facts)
 
     # Reverse dependency edges: proving X frees everything that names X.

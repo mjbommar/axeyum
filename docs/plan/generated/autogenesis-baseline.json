@@ -25,10 +25,10 @@
       "state": "fixture"
     },
     {
-      "evidence": "selection remains a human choice from text output",
+      "evidence": "content-addressed authoritative frontier records every candidate and refuses unregistered dispatch",
       "id": "A1-machine-selection",
-      "next": "content-address a machine-readable frontier snapshot and rationale",
-      "state": "missing"
+      "next": "register typed producer/checker operations, then select only a fact with an admissible operation",
+      "state": "partial"
     },
     {
       "evidence": "typed B evidence derives its route, footprint, evidence row, and transaction; shell still orchestrates dispatch",
@@ -588,11 +588,11 @@
   },
   "manual_seams": [
     {
-      "gap": "the command prints a queue; a person still selects the goal",
+      "gap": "machine frontier refuses every live fact until a typed operation registry exists",
       "id": "goal-selection",
       "owner": "fact frontier",
       "source": "scripts/fact-frontier.py",
-      "state": "manual"
+      "state": "partial"
     },
     {
       "gap": "no typed fact-to-route dispatch contract exists",
@@ -659,7 +659,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "394edca3af68ec759b587e3b7cff6ad925c2a4cbb65164566db8b3e6c56f02af",
+    "digest": "b8067d81f046f8af4b5152a6e4b009f100faf811d1261d27b496f98fd8f05590",
     "inputs": [
       {
         "bytes": 3519,
@@ -1242,9 +1242,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 71728,
+        "bytes": 72000,
         "path": "justfile",
-        "sha256": "3890330696deffba92ad0a4feeb945603f8a46c1497c71d161a15db64160b9b5"
+        "sha256": "497fef37b59fb5f95310040d6485fce024257f8aca28bcb3c4aaedc1f34d6687"
       },
       {
         "bytes": 10192,
@@ -1297,9 +1297,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 21557,
+        "bytes": 21635,
         "path": "scripts/check.sh",
-        "sha256": "9d2e74078fb7f8af2acf90d552ae57b0fbec4a1926ae33581162745eef827ec0"
+        "sha256": "69da3666c9522c335a773e4056798437298a6993a59f56c3f294c86a0774bb80"
       },
       {
         "bytes": 6846,
@@ -1337,14 +1337,14 @@
         "sha256": "cb7b1b6ed2cb8f268b6adac42cc1bfb4ff3b99ce9e85b438c23790b4ce92c9e1"
       },
       {
-        "bytes": 14525,
+        "bytes": 22265,
         "path": "scripts/fact-frontier.py",
-        "sha256": "db6757cc801ed3996d0ba3c40ba55123e2855e8944054c2a391b46ff5678b81b"
+        "sha256": "ce29b62b718ff471d58936ed70328d189abc8e98de55bd588ad308decffd4e8b"
       },
       {
-        "bytes": 23900,
+        "bytes": 23943,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "a750fed51c8fe2dd8d33e6a0360fc737e181c7a54418eb10d1bbf95cedff3fc7"
+        "sha256": "69c7c1b8785d507f937af27dc6fd144164e6687852b916fe682f2ae8bba6f9f0"
       },
       {
         "bytes": 17112,

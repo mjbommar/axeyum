@@ -82,11 +82,11 @@ THEOREM_RE = re.compile(
 SEAMS = (
     {
         "id": "goal-selection",
-        "state": "manual",
+        "state": "partial",
         "owner": "fact frontier",
         "source": "scripts/fact-frontier.py",
-        "marker": "nothing consumed `artifacts/facts/` except the validator",
-        "gap": "the command prints a queue; a person still selects the goal",
+        "marker": "content-addressed authoritative queue",
+        "gap": "machine frontier refuses every live fact until a typed operation registry exists",
     },
     {
         "id": "route-dispatch",
@@ -358,9 +358,9 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
         },
         {
             "id": "A1-machine-selection",
-            "state": "missing" if seam_state.get("goal-selection", "manual") == "manual" else "partial",
-            "evidence": "selection remains a human choice from text output",
-            "next": "content-address a machine-readable frontier snapshot and rationale",
+            "state": seam_state.get("goal-selection", "missing"),
+            "evidence": "content-addressed authoritative frontier records every candidate and refuses unregistered dispatch",
+            "next": "register typed producer/checker operations, then select only a fact with an admissible operation",
         },
         {
             "id": "A1-typed-dispatch-evidence",
