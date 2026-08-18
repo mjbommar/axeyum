@@ -70,7 +70,11 @@ def build_transaction(
     evidence_identity = evidence.get("identity")
     evidence_result = evidence.get("result")
     acceptance = evidence.get("acceptance")
-    if not all(isinstance(value, dict) for value in (evidence_identity, evidence_result, acceptance)):
+    route = evidence.get("route")
+    if not all(
+        isinstance(value, dict)
+        for value in (evidence_identity, evidence_result, acceptance, route)
+    ):
         raise TransactionError("typed premise evidence is malformed")
     if evidence_identity.get("fact_id") != fact_id:
         raise TransactionError("typed evidence names a different fact")
@@ -84,6 +88,12 @@ def build_transaction(
     dependencies = acceptance.get("retained_answer_dependencies")
     if footprint != [] or dependencies != []:
         raise TransactionError("fixture route requires an axiom-free isolated result")
+    if (
+        route.get("operation_id") != "autogenesis-kernel-premise-evidence-v1"
+        or not isinstance(route.get("operation_registry_sha256"), str)
+        or len(route["operation_registry_sha256"]) != 64
+    ):
+        raise TransactionError("typed evidence is not bound to the registered operation")
     event_identity = event.get("identity")
     if not isinstance(event_identity, dict):
         raise TransactionError("accepted event identity is malformed")
@@ -149,7 +159,8 @@ def build_transaction(
             "source_is_authoritative": source_is_authoritative,
         },
         "registered_checker_operation": {
-            "id": "autogenesis-kernel-premise-evidence-v1",
+            "id": route["operation_id"],
+            "registry_sha256": route["operation_registry_sha256"],
             "arguments": {
                 "fact_id": fact_id,
                 "evidence_sha256": evidence_sha,

@@ -47,6 +47,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import sys
 from collections import defaultdict
@@ -56,6 +57,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 FACTS = ROOT / "artifacts" / "facts"
+OPERATIONS = ROOT / "artifacts" / "autogenesis" / "operations.json"
+OPERATION_VALIDATOR = ROOT / "scripts" / "validate-autogenesis-operations.py"
 
 # A status asserting we settled it. `axiom` counts: a dependency taken as an
 # axiom is available to build on, whatever one thinks of taking it.
@@ -122,14 +125,6 @@ NOT_A_FRAGMENT = {"none", "None", "unknown", "", None}
 PROOF_ROUTE = {"Nat", "Int", "Real"}
 # Anything else, `none` included, has no route at all today.
 
-# There is intentionally no inferred fact-to-operation mapping yet. Fragment
-# reachability says that some procedure has solved something in the same logic;
-# it does not say which typed producer/checker operation is valid for this exact
-# statement. Autonomous selection therefore fails closed until the next seam
-# supplies a reviewed registry instead of caller-authored shell text.
-REGISTERED_OPERATIONS: tuple[dict[str, Any], ...] = ()
-
-
 class FrontierError(RuntimeError):
     """A machine frontier artifact is stale, malformed, or unsafe to use."""
 
@@ -140,6 +135,33 @@ def canonical_json(value: Any) -> str:
 
 def digest(value: Any) -> str:
     return hashlib.sha256(canonical_json(value).encode()).hexdigest()
+
+
+def operation_validator_module():
+    spec = importlib.util.spec_from_file_location(
+        "validate_autogenesis_operations_for_frontier", OPERATION_VALIDATOR
+    )
+    if spec is None or spec.loader is None:
+        raise FrontierError(f"cannot load {OPERATION_VALIDATOR}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_operation_registry() -> dict[str, Any]:
+    module = operation_validator_module()
+    try:
+        return module.load_registry(OPERATIONS, ROOT)
+    except (OSError, json.JSONDecodeError, module.RegistryError) as error:
+        raise FrontierError(f"operation registry invalid: {error}") from error
+
+
+def validate_operation_registry(registry: dict[str, Any]) -> None:
+    module = operation_validator_module()
+    try:
+        module.validate_registry(registry, ROOT)
+    except module.RegistryError as error:
+        raise FrontierError(f"operation registry invalid: {error}") from error
 
 
 def load() -> dict[str, dict]:
@@ -267,13 +289,34 @@ def route_class(fragment: str, decidable: set[str]) -> str:
     return "no-route"
 
 
-def build_machine_frontier(facts: dict[str, dict]) -> dict[str, Any]:
+def matching_operations(
+    fact: dict[str, Any], operations: list[dict[str, Any]]
+) -> list[str]:
+    formal = fact["formal"]
+    return sorted(
+        operation["id"]
+        for operation in operations
+        if operation["scope"] == "authoritative"
+        and fact["id"] in operation["applicability"]["fact_ids"]
+        and formal["language"] in operation["applicability"]["formal_languages"]
+        and formal["fragment"] in operation["applicability"]["fragments"]
+    )
+
+
+def build_machine_frontier(
+    facts: dict[str, dict], registry: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Build the content-addressed authoritative queue and selection refusal.
 
     This snapshot deliberately distinguishes dependency readiness, broad route
     reachability, and an admissible registered operation. Only the last of those
     licenses autonomous dispatch.
     """
+    if registry is None:
+        registry = load_operation_registry()
+    else:
+        validate_operation_registry(registry)
+    operations = registry["operations"]
     held = gate_holds(facts)
     decidable, demonstrated_by = decidable_fragments(facts)
     unlocks: dict[str, list[str]] = defaultdict(list)
@@ -306,7 +349,7 @@ def build_machine_frontier(facts: dict[str, dict]) -> dict[str, Any]:
                 "dependency_ready": not missing,
                 "missing_dependencies": missing,
                 "route_class": route_class(fragment, decidable),
-                "registered_operation_ids": [],
+                "registered_operation_ids": matching_operations(fact, operations),
                 "gate_mentions": sorted(held.get(fact_id, [])),
                 "would_unlock": sorted(unlocks.get(fact_id, [])),
             }
@@ -354,7 +397,10 @@ def build_machine_frontier(facts: dict[str, dict]) -> dict[str, Any]:
             "settled_statuses": sorted(SETTLED),
             "terminating_routes": sorted(TERMINATING_ROUTES),
             "proof_route_fragments": sorted(PROOF_ROUTE),
-            "registered_operations": list(REGISTERED_OPERATIONS),
+            "operation_registry_sha256": digest(registry),
+            "registered_operations": sorted(
+                operation["id"] for operation in operations
+            ),
             "autonomous_dispatch_requires_registered_operation": True,
         },
         "capabilities": {

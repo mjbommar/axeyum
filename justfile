@@ -48,6 +48,10 @@ next-unlocks:
 next-json:
     python3 scripts/fact-frontier.py --json
 
+autogenesis-operations:
+    python3 scripts/validate-autogenesis-operations.py
+    python3 -m unittest scripts.tests.test_validate_autogenesis_operations
+
 facts:
     python3 scripts/validate-facts.py
     # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
@@ -397,6 +401,8 @@ smtcomp-resume:
 # the flagship R_4(5(x-y)=4z) result as `open` at "> 740" when the ledger had it
 # `computed` at exactly 741. Nobody edited it wrongly; nobody ran it at all.
 generated-trackers:
+    python3 scripts/validate-autogenesis-operations.py
+    python3 -m unittest scripts.tests.test_validate_autogenesis_operations
     python3 -m unittest scripts.tests.test_fact_frontier
     python3 -m unittest scripts.tests.test_gen_autogenesis_baseline
     python3 -m unittest scripts.tests.test_create_autogenesis_snapshot

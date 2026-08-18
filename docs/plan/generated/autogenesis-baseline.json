@@ -27,7 +27,7 @@
     {
       "evidence": "content-addressed authoritative frontier records every candidate and refuses unregistered dispatch",
       "id": "A1-machine-selection",
-      "next": "register typed producer/checker operations, then select only a fact with an admissible operation",
+      "next": "register the first authoritative producer/checker operation, then select only an exact matching fact",
       "state": "partial"
     },
     {
@@ -588,18 +588,18 @@
   },
   "manual_seams": [
     {
-      "gap": "machine frontier refuses every live fact until a typed operation registry exists",
+      "gap": "machine frontier consumes the fixture registry and refuses every live fact without an authoritative operation",
       "id": "goal-selection",
       "owner": "fact frontier",
       "source": "scripts/fact-frontier.py",
       "state": "partial"
     },
     {
-      "gap": "no typed fact-to-route dispatch contract exists",
+      "gap": "typed producer/checker contract is fixture-scoped; no authoritative operation exists",
       "id": "route-dispatch",
-      "owner": "route adapters",
-      "source": "scripts/close-fact.py",
-      "state": "manual"
+      "owner": "operation registry",
+      "source": "artifacts/autogenesis/operations.json",
+      "state": "partial"
     },
     {
       "gap": "the caller authors the evidence rows and route metadata",
@@ -609,11 +609,11 @@
       "state": "manual"
     },
     {
-      "gap": "caller-authored shell text chooses the checker",
+      "gap": "fixture checker is typed; manual closer and authoritative routes still accept caller-authored shell text",
       "id": "checker-selection",
       "owner": "evidence registry",
-      "source": "scripts/close-fact.py",
-      "state": "manual"
+      "source": "artifacts/autogenesis/operations.json",
+      "state": "partial"
     },
     {
       "gap": "compare-and-swap plus roll-forward recovery is fixture-only; no open authoritative fact has matching evidence",
@@ -659,8 +659,13 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "b8067d81f046f8af4b5152a6e4b009f100faf811d1261d27b496f98fd8f05590",
+    "digest": "1a0802019887664865bd5b0c12f74d41ab7c1a69745c47237083bef64343bd41",
     "inputs": [
+      {
+        "bytes": 1168,
+        "path": "artifacts/autogenesis/operations.json",
+        "sha256": "5b3f14701714d1b1bc30badcd46bed108dca355dd7ee3053f8246d80c6ca610e"
+      },
       {
         "bytes": 3519,
         "path": "artifacts/facts/F-affirming-the-consequent.json",
@@ -1242,9 +1247,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 72000,
+        "bytes": 72285,
         "path": "justfile",
-        "sha256": "497fef37b59fb5f95310040d6485fce024257f8aca28bcb3c4aaedc1f34d6687"
+        "sha256": "3a029203af5aa1e3856e16dc8bc290806589b52b22066cdbbf8971a736a6f7e9"
       },
       {
         "bytes": 10192,
@@ -1297,9 +1302,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 21635,
+        "bytes": 21835,
         "path": "scripts/check.sh",
-        "sha256": "69da3666c9522c335a773e4056798437298a6993a59f56c3f294c86a0774bb80"
+        "sha256": "dbbc53deaf25bcb5c7a014abcf918a5565579a85590139432fd7f81978f75f8d"
       },
       {
         "bytes": 6846,
@@ -1312,9 +1317,9 @@
         "sha256": "71e352e4fd277f290c6405982e0589c019674764368ef05e1738b3d2a91e62c3"
       },
       {
-        "bytes": 8648,
+        "bytes": 9953,
         "path": "scripts/create-autogenesis-premise-evidence.py",
-        "sha256": "d57b810821cf6cdc03dfb595bc22527cca5a8990f8bc0fbde7278840b040dd9c"
+        "sha256": "6a97e327ff408c5ad25c08cf8ff5626b3680e525ded4189380a3578c5e897199"
       },
       {
         "bytes": 8723,
@@ -1337,14 +1342,14 @@
         "sha256": "cb7b1b6ed2cb8f268b6adac42cc1bfb4ff3b99ce9e85b438c23790b4ce92c9e1"
       },
       {
-        "bytes": 22265,
+        "bytes": 23819,
         "path": "scripts/fact-frontier.py",
-        "sha256": "ce29b62b718ff471d58936ed70328d189abc8e98de55bd588ad308decffd4e8b"
+        "sha256": "4dd8164fc8a1e384cbb9686e1d380444018847ca85ebd5095566db4e3d49d73a"
       },
       {
-        "bytes": 23943,
+        "bytes": 24238,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "69c7c1b8785d507f937af27dc6fd144164e6687852b916fe682f2ae8bba6f9f0"
+        "sha256": "564be726ea189b7c213d0f9c24473a2f4cffb11386224e821e49ec8d19af88c2"
       },
       {
         "bytes": 17112,
@@ -1352,9 +1357,9 @@
         "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
       },
       {
-        "bytes": 11669,
+        "bytes": 12092,
         "path": "scripts/prepare-autogenesis-fact-transaction.py",
-        "sha256": "d225d4227dea5db0687d4dcd143278b329ad0ecec7b78b83bffe27153dce30b6"
+        "sha256": "7ce151846caf78c0b2ad2fc5e29083b9ebbd25acf8721fc9b22f8b4f486f9cca"
       },
       {
         "bytes": 10990,
@@ -1390,6 +1395,11 @@
         "bytes": 1688,
         "path": "scripts/tests/fixtures/autogenesis-proposer-probe.py",
         "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
+      },
+      {
+        "bytes": 6886,
+        "path": "scripts/validate-autogenesis-operations.py",
+        "sha256": "344e337e74b09d7b0d5cdf693557ddd3e75068c22edf15d093164cf0fbe63565"
       },
       {
         "bytes": 2711,

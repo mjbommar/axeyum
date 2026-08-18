@@ -39,6 +39,10 @@ class FactTransactionTests(unittest.TestCase):
                 "axiom_footprint": [],
                 "retained_answer_dependencies": [],
             },
+            "route": {
+                "operation_id": "autogenesis-kernel-premise-evidence-v1",
+                "operation_registry_sha256": "a" * 64,
+            },
             "evidence_sha256": "evidence",
         }
         transition = {"transition_sha256": "transition"}
@@ -75,6 +79,10 @@ class FactTransactionTests(unittest.TestCase):
         self.assertEqual(
             after["evidence"][0]["checker_operation"]["id"],
             "autogenesis-kernel-premise-evidence-v1",
+        )
+        self.assertEqual(
+            transaction["registered_checker_operation"]["registry_sha256"],
+            "a" * 64,
         )
 
     def test_settled_or_evidence_bearing_precondition_rejects(self):

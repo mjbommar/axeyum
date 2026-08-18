@@ -141,6 +141,12 @@ producer/checker operation, so broad fragment reachability cannot silently
 become dispatch authority. These remain fixture controls rather than
 Autogenesis-1 credit.
 
+The reviewed [`operations.json`](../../artifacts/autogenesis/operations.json)
+now names the exercised Nat producer, independent kernel checker, exact fact
+shape, and admission semantics without shell text. Its only entry is explicitly
+`counterfactual-fixture-only`; the authoritative frontier consumes the registry
+and still selects nothing.
+
 ## Phase summary
 
 | Phase | Future state | Decisive exit |

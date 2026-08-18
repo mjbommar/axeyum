@@ -234,8 +234,10 @@ binds ledger digest
 `87566ce3c063d615acba30c6c180b72aaba7582ba3e5eec6f240fb2db7987f17`.
 It records ten dependency-ready open/conjectured facts, zero admissible typed
 operations, and no selection. This replaces human-only selection input, but it
-does not satisfy autonomous selection: the next seam is a reviewed typed
-producer/checker operation registry.
+does not satisfy autonomous selection. A reviewed registry now describes the
+exercised Nat fixture producer/checker without caller-authored shell, but its
+scope is explicitly counterfactual; the next seam is the first authoritative
+operation backed by a route that can actually produce matching evidence.
 
 ## Assumptions tested now
 

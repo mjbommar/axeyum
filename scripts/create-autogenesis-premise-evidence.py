@@ -15,6 +15,8 @@ from typing import Any
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CATALOG_SCRIPT = ROOT / "scripts/create-autogenesis-proposer-catalog.py"
 PROPOSAL_VERIFIER = ROOT / "scripts/verify-autogenesis-induction-proposals.py"
+OPERATION_VALIDATOR = ROOT / "scripts/validate-autogenesis-operations.py"
+OPERATION_REGISTRY = ROOT / "artifacts/autogenesis/operations.json"
 
 
 class EvidenceError(RuntimeError):
@@ -40,6 +42,27 @@ def digest(value: Any) -> str:
 
 def byte_digest(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
+
+
+def registered_operation(fact_id: str) -> tuple[dict[str, Any], str]:
+    module = load_module(
+        "validate_autogenesis_operations_for_evidence", OPERATION_VALIDATOR
+    )
+    try:
+        registry = module.load_registry(OPERATION_REGISTRY, ROOT)
+    except (OSError, json.JSONDecodeError, module.RegistryError) as error:
+        raise EvidenceError(f"operation registry validation failed: {error}") from error
+    matches = [
+        operation
+        for operation in registry["operations"]
+        if operation["scope"] == "counterfactual-fixture-only"
+        and fact_id in operation["applicability"]["fact_ids"]
+    ]
+    if len(matches) != 1:
+        raise EvidenceError(
+            f"fact {fact_id!r} has {len(matches)} fixture operations; expected exactly one"
+        )
+    return matches[0], module.digest(registry)
 
 
 KERNEL_FIELDS = {
@@ -116,6 +139,9 @@ def build_evidence(
     if len(matching) != 1:
         raise EvidenceError("accepted plan rank is absent or duplicated in proposal bundle")
     fact_id = snapshot["chain"]["premise"]["fact_id"]
+    operation, registry_sha = registered_operation(fact_id)
+    if operation["checker"]["operation"] != "axeyum-lean-kernel/autogenesis-induction-plan-check-v1":
+        raise EvidenceError("registered operation names an unsupported kernel checker")
     evidence: dict[str, Any] = {
         "schema_version": 1,
         "kind": "axeyum-autogenesis-kernel-premise-evidence",
@@ -128,8 +154,10 @@ def build_evidence(
             ),
         },
         "route": {
-            "kind": "catalog-structural-nat-induction",
-            "checker_operation": "axeyum-lean-kernel/autogenesis-induction-plan-check-v1",
+            "kind": operation["producer"]["operation"],
+            "operation_id": operation["id"],
+            "operation_registry_sha256": registry_sha,
+            "checker_operation": operation["checker"]["operation"],
             "catalog_sha256": catalog["catalog_sha256"],
             "proposal_bundle_sha256": bundle["bundle_sha256"],
             "plan_projection_sha256": byte_digest(plans_bytes),

@@ -30,7 +30,7 @@ def fact(
         "id": fact_id,
         "epistemic_status": status,
         "external_status": external,
-        "formal": {"fragment": fragment, "statement": fact_id},
+        "formal": {"language": "lean4", "fragment": fragment, "statement": fact_id},
         "proof_route": route,
         "depends_on": depends_on or [],
     }
@@ -86,6 +86,26 @@ class MachineFrontierTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(frontier.FrontierError, "stale"):
             frontier.verify_machine_frontier(actual, self.facts)
+
+    def test_only_exact_authoritative_operation_can_license_selection(self) -> None:
+        facts = frontier.load()
+        registry = frontier.load_operation_registry()
+        operation = copy.deepcopy(registry["operations"][0])
+        operation["scope"] = "authoritative"
+        operation["applicability"] = {
+            "fact_ids": ["F:goldbach-strong"],
+            "formal_languages": ["lean4"],
+            "fragments": ["Nat"],
+        }
+        registry["operations"] = [operation]
+        selected = frontier.build_machine_frontier(facts, registry)
+        self.assertEqual(
+            selected["selection"]["selected_fact_id"],
+            "F:goldbach-strong",
+        )
+        operation["scope"] = "counterfactual-fixture-only"
+        refused = frontier.build_machine_frontier(facts, registry)
+        self.assertIsNone(refused["selection"]["selected_fact_id"])
 
     def test_ledger_change_invalidates_saved_frontier(self) -> None:
         actual = frontier.build_machine_frontier(self.facts)
