@@ -97,7 +97,7 @@ fn run() -> Result<(), String> {
     }
 
     for (origin, rows) in [("real", &real), ("int", &int)] {
-        for row in rows.iter() {
+        for row in rows {
             println!(
                 "{origin}\t{}\t{}\t{}",
                 row.binder,
