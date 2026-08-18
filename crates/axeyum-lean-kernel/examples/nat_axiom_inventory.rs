@@ -52,12 +52,18 @@
 //! alone.
 //!
 //! Measured 2026-08-15: `logic=0`, `nat=0`, `real=30`, `integer=1`, `string=1`.
+//!
+//! Re-measured 2026-08-17 with `rat` added: `logic=0`, `nat=0`, `integer=0`,
+//! **`rat=0`**, `real=30`, `string=1`. `rat` is the ordered field ℚ built over
+//! the constructed ℤ (`build_rat_prelude`), and it is enumerated as its own
+//! group for exactly the reason this file exists: a zero read off the
+//! `integer` row says nothing about the development built on top of it.
 
 use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_int_prelude, build_logic_prelude,
-    build_nat_prelude, build_string_prelude,
+    build_nat_prelude, build_rat_prelude, build_string_prelude,
 };
 
 fn hex(bytes: &[u8]) -> String {
@@ -168,6 +174,14 @@ fn main() -> ExitCode {
     let _ = build_int_prelude(&mut integer).expect("Int prelude must build");
     let integer_rows = inventory("integer", &integer);
 
+    // ℚ, constructed over the ℤ above. Enumerated separately from `integer`
+    // because the two are different claims: `integer` is the carrier the
+    // rationals are built FROM, and reading a zero for it says nothing about
+    // the ordered field built on top.
+    let mut rational = Kernel::new();
+    let _ = build_rat_prelude(&mut rational).expect("Rat prelude must build");
+    let rational_rows = inventory("rat", &rational);
+
     let mut string = Kernel::new();
     let logic = build_logic_prelude(&mut string).expect("logic prelude must build");
     let _ = build_string_prelude(&mut string, logic, 2).expect("string prelude must build");
@@ -178,6 +192,7 @@ fn main() -> ExitCode {
         ("nat", &nat_rows),
         ("real", &real_rows),
         ("integer", &integer_rows),
+        ("rat", &rational_rows),
         ("string", &string_rows),
     ];
 

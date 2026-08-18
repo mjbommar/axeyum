@@ -208,7 +208,7 @@ pub fn build_int_model_of_arith(kernel: &mut Kernel) -> Result<ArithModel, Kerne
 
 /// The declared type of `name`, or [`KernelError::UnknownConst`] if the
 /// environment does not carry it.
-fn declaration_type(kernel: &Kernel, name: NameId) -> Result<ExprId, KernelError> {
+pub(crate) fn declaration_type(kernel: &Kernel, name: NameId) -> Result<ExprId, KernelError> {
     kernel
         .environment()
         .get(name)
@@ -217,7 +217,7 @@ fn declaration_type(kernel: &Kernel, name: NameId) -> Result<ExprId, KernelError
 }
 
 /// The final component of a dotted name (`Real.add_comm` ↦ `add_comm`).
-fn leaf_name(kernel: &Kernel, name: NameId) -> String {
+pub(crate) fn leaf_name(kernel: &Kernel, name: NameId) -> String {
     let rendered = kernel.display_name(name).to_string();
     rendered
         .rsplit('.')
@@ -233,7 +233,7 @@ fn leaf_name(kernel: &Kernel, name: NameId) -> String {
 /// untouched: the interpretation renames constants and nothing else, which is
 /// what makes the resulting obligation the `Real` axiom rather than a
 /// convenient restatement of it.
-fn interpret(
+pub(crate) fn interpret(
     kernel: &mut Kernel,
     e: ExprId,
     map: &HashMap<NameId, NameId>,

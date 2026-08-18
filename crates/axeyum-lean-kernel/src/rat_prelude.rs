@@ -55,8 +55,12 @@ use crate::{Kernel, KernelError};
 mod core;
 mod defs;
 mod laws;
+mod model;
 mod ops;
+mod scaling;
 mod statements;
+
+pub use model::{RatModel, RatModelLaw, build_rat_model_of_arith};
 
 use crate::int_prelude::ops::IntDev;
 
@@ -136,6 +140,18 @@ pub struct RatPrelude {
     /// `Rat.int_mul_lt_mul_right : ∀ (a b : Int) (c : Nat), 1 ≤ c →
     /// Int.lt a b → Int.lt (a * ofNat c) (b * ofNat c)`.
     pub int_mul_lt_mul_right: NameId,
+    /// `Rat.int_right_distrib : ∀ (a b c : Int), (a+b)*c = a*c + b*c` — the
+    /// integer prelude has `left_distrib` only, and every cross-multiplication
+    /// of a *sum* needs the other side.
+    pub int_right_distrib: NameId,
+    /// `Rat.int_zero_mul : ∀ (a : Int), Int.zero * a = Int.zero`.
+    pub int_zero_mul: NameId,
+    /// `Rat.eq_zero_of_num_zero : ∀ q, Int.Eq (num q) Int.zero → q = 0`.
+    pub eq_zero_of_num_zero: NameId,
+    /// `Rat.int_nonneg_of_nonneg : ∀ q, le 0 q → Int.le Int.zero (num q)`.
+    pub int_nonneg_of_nonneg: NameId,
+    /// `Rat.nonneg_of_int_nonneg : ∀ q, Int.le Int.zero (num q) → le 0 q`.
+    pub nonneg_of_int_nonneg: NameId,
     /// `Rat.int_zero_le_of_nat : ∀ (n : Nat), Int.le Int.zero (Int.ofNat n)`.
     pub int_zero_le_of_nat: NameId,
     /// `Rat.int_of_nat_pos : ∀ (n : Nat), 1 ≤ n → Int.lt Int.zero (Int.ofNat n)`.
@@ -164,6 +180,18 @@ pub struct RatPrelude {
     pub normalize_congr: NameId,
     /// `Rat.self_normalize : ∀ q, normalize (num q) (den q) (den_pos q) = q`.
     pub self_normalize: NameId,
+    /// `Rat.normalize_add_normalize : ∀ n1 e1 h1 n2 e2 h2,
+    /// normalize n1 e1 h1 + normalize n2 e2 h2
+    ///   = normalize (n1 * ofNat e2 + n2 * ofNat e1) (e1*e2) _`.
+    ///
+    /// Adding two normalised fractions is normalising the naive sum. With
+    /// [`Self::self_normalize`] this is what makes `add_assoc` and
+    /// `left_distrib` reachable: every compound `Rat` expression collapses to a
+    /// **single** `Rat.normalize`, and the law becomes one identity in `ℤ`.
+    pub normalize_add_normalize: NameId,
+    /// `Rat.normalize_mul_normalize : ∀ n1 e1 h1 n2 e2 h2,
+    /// normalize n1 e1 h1 * normalize n2 e2 h2 = normalize (n1*n2) (e1*e2) _`.
+    pub normalize_mul_normalize: NameId,
     /// `Rat.add_cross : ∀ a b,
     /// num (a+b) * ofNat (den a * den b)
     ///   = (num a * ofNat (den b) + num b * ofNat (den a)) * ofNat (den (a+b))`.
@@ -280,6 +308,11 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         int_lt_of_mul_lt_mul_right: child(kernel, "int_lt_of_mul_lt_mul_right"),
         int_mul_le_mul_right: child(kernel, "int_mul_le_mul_right"),
         int_mul_lt_mul_right: child(kernel, "int_mul_lt_mul_right"),
+        int_right_distrib: child(kernel, "int_right_distrib"),
+        int_zero_mul: child(kernel, "int_zero_mul"),
+        eq_zero_of_num_zero: child(kernel, "eq_zero_of_num_zero"),
+        int_nonneg_of_nonneg: child(kernel, "int_nonneg_of_nonneg"),
+        nonneg_of_int_nonneg: child(kernel, "nonneg_of_int_nonneg"),
         int_zero_le_of_nat: child(kernel, "int_zero_le_of_nat"),
         int_of_nat_pos: child(kernel, "int_of_nat_pos"),
         mk_congr: child(kernel, "mk_congr"),
@@ -290,6 +323,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         normalize_cross: child(kernel, "normalize_cross"),
         normalize_congr: child(kernel, "normalize_congr"),
         self_normalize: child(kernel, "self_normalize"),
+        normalize_add_normalize: child(kernel, "normalize_add_normalize"),
+        normalize_mul_normalize: child(kernel, "normalize_mul_normalize"),
         add_cross: child(kernel, "add_cross"),
         mul_cross: child(kernel, "mul_cross"),
         le_refl: child(kernel, "le_refl"),
@@ -347,6 +382,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         core::declare_normalize_laws(&mut d, prelude)?;
         laws::declare_order_laws(&mut d, prelude)?;
         laws::declare_ring_laws(&mut d, prelude)?;
+        scaling::declare_scaling_laws(&mut d, prelude)?;
         Ok(())
     })();
     match built {

@@ -9,7 +9,7 @@ This ledger inventories declarations actually admitted as trusted after construc
 ## Snapshot
 
 - **30 total assumptions:** real 30.
-- Axiom-free preludes, enumerated rather than inferred from absence: `integer`, `logic`, `nat`, `string`. An axiom-free prelude emits no rows, so the measurement declares its own coverage; a prelude that silently stopped being built fails the gate instead of shrinking the total.
+- Axiom-free preludes, enumerated rather than inferred from absence: `integer`, `logic`, `nat`, `rat`, `string`. An axiom-free prelude emits no rows, so the measurement declares its own coverage; a prelude that silently stopped being built fails the gate instead of shrinking the total.
 - 0 names are shared by the isolated real and integer preludes; ADR-0387's `Int.*` / `Real.*` namespaces make the packages composable.
 - Integer trust policy: [ADR-0465](../../research/09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md) — The integer prelude admits no assumption; a checked dependency closure using it inherits nothing from this ledger.
 - **35 assumptions have been retired** from the trusted surface since this ledger was first frozen; they are kept below rather than deleted, because a reduction in the trusted base is the result, not a smaller table.
@@ -25,13 +25,14 @@ Counts are over the whole trusted surface, not `Declaration::Axiom` alone: `Opaq
 | `integer` | 0 | 0 | 0 | 0 | 0 |
 | `logic` | 0 | 0 | 0 | 0 | 0 |
 | `nat` | 0 | 0 | 0 | 0 | 0 |
+| `rat` | 0 | 0 | 0 | 0 | 0 |
 | `real` | 30 | 0 | 0 | 30 | 30 |
 | `string` | 0 | 0 | 0 | 0 | 0 |
 
 ## Machine-checked contract
 
 - Row source: `cargo run --quiet -p axeyum-lean-kernel --example prelude_axiom_inventory`.
-- Coverage source: `cargo run --quiet -p axeyum-lean-kernel --example nat_axiom_inventory` — enumerates 5 preludes and declares a per-prelude count line for each, including the axiom-free ones.
+- Coverage source: `cargo run --quiet -p axeyum-lean-kernel --example nat_axiom_inventory` — enumerates 6 preludes and declares a per-prelude count line for each, including the axiom-free ones.
 - The two are cross-checked against each other: per-prelude axiom counts, name sets, and canonical types must all agree, so a filter bug in either shows up as a disagreement rather than as a smaller number.
 - Type identity: sha256 of Kernel::render_lean(declaration.ty) UTF-8 bytes.
 - Any added/removed axiom, renamed declaration, or canonical type change fails validation before the generated ledger can remain current. A population change additionally requires an explicit `--accept-population-change` run.

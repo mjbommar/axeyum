@@ -93,7 +93,9 @@ pub use prelude::{
     DatatypeFamily, DatatypeInductive, LogicPrelude, RecField, RecursiveDatatypeFamily,
     build_logic_prelude,
 };
-pub use rat_prelude::{RatPrelude, build_rat_prelude};
+pub use rat_prelude::{
+    RatModel, RatModelLaw, RatPrelude, build_rat_model_of_arith, build_rat_prelude,
+};
 pub use string_prelude::{StringPrelude, build_string_prelude};
 pub use tc::{KernelError, LocalContext, LocalDecl};
 

@@ -231,6 +231,23 @@ pub(super) fn rchain(
     (current, proof)
 }
 
+/// Congruence at `Rat`: `h : Eq Rat a b ⊢ Eq Rat (f a) (f b)`.
+pub(super) fn rcongr(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = req_motive(d, a, &|d, x| {
+        let fx = f(d, x);
+        req(d, fa, fx)
+    });
+    let refl_case = rrefl(d, fa);
+    rtransport(d, a, motive, refl_case, b, h)
+}
+
 /// From `h : Eq Rat p q` and a proof of `motive p`, derive `motive q`.
 pub(super) fn rat_eq_rewrite(
     d: &mut IntDev<'_>,
@@ -242,40 +259,6 @@ pub(super) fn rat_eq_rewrite(
 ) -> ExprId {
     let built = req_motive(d, p, motive);
     rtransport(d, p, built, proof, q, h)
-}
-
-/// From `h : Eq Int a b`, derive `Eq Rat (f a) (f b)`.
-pub(super) fn int_eq_to_rat(
-    d: &mut IntDev<'_>,
-    a: ExprId,
-    b: ExprId,
-    h: ExprId,
-    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
-) -> ExprId {
-    let fa = f(d, a);
-    let motive = d.ieq_motive(a, &|d, x| {
-        let fx = f(d, x);
-        req(d, fa, fx)
-    });
-    let refl_case = rrefl(d, fa);
-    d.itransport(a, motive, refl_case, b, h)
-}
-
-/// From `h : Eq Nat a b`, derive `Eq Rat (f a) (f b)`.
-pub(super) fn nat_eq_to_rat(
-    d: &mut IntDev<'_>,
-    a: ExprId,
-    b: ExprId,
-    h: ExprId,
-    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
-) -> ExprId {
-    let fa = f(d, a);
-    let motive = d.eq_motive(a, &|d, x| {
-        let fx = f(d, x);
-        req(d, fa, fx)
-    });
-    let refl_case = rrefl(d, fa);
-    d.transport(a, motive, refl_case, b, h)
 }
 
 /// From `h : Eq Int a b`, derive `Eq Nat (f a) (f b)` — the direction
@@ -518,6 +501,191 @@ pub(super) fn iprod_head_rewrite(
         ],
     );
     chained
+}
+
+/// `Eq Int ((a*b)*c) ((x*y)*z)` when `[x,y,z]` is a permutation of `[a,b,c]`.
+///
+/// The order arguments all scale a cross-product by a third denominator and
+/// then need the factors in a different order; this is that step.
+pub(super) fn iregroup3(d: &mut IntDev<'_>, from: [ExprId; 3], to: [ExprId; 3]) -> ExprId {
+    let int = d.int();
+    let start = {
+        let head = d.imul(from[0], from[1]);
+        d.imul(head, from[2])
+    };
+    let flat_from = iprod(d, &from);
+    let opened = d.lemma(int.mul_assoc, &[from[0], from[1], from[2]]);
+    let flat_to = iprod(d, &to);
+    let permuted = iprod_perm(d, &from, &to);
+    let target = {
+        let head = d.imul(to[0], to[1]);
+        d.imul(head, to[2])
+    };
+    let closed = {
+        let forward = d.lemma(int.mul_assoc, &[to[0], to[1], to[2]]);
+        d.isymm(target, flat_to, forward)
+    };
+    let (_, chained) = d.ichain(
+        start,
+        &[(flat_from, opened), (flat_to, permuted), (target, closed)],
+    );
+    chained
+}
+
+/// `Eq Int ((iprod xs) * (iprod ys)) (iprod (xs ++ ys))`.
+pub(super) fn iprod_append(d: &mut IntDev<'_>, xs: &[ExprId], ys: &[ExprId]) -> ExprId {
+    let int = d.int();
+    if xs.len() == 1 {
+        // `x * iprod ys` IS `iprod ([x] ++ ys)`.
+        let head = xs[0];
+        let tail = iprod(d, ys);
+        let joined = d.imul(head, tail);
+        return d.irefl(joined);
+    }
+    let head = xs[0];
+    let rest = &xs[1..];
+    let rest_product = iprod(d, rest);
+    let ys_product = iprod(d, ys);
+    let xs_product = iprod(d, xs);
+    let start = d.imul(xs_product, ys_product);
+    let opened = d.lemma(int.mul_assoc, &[head, rest_product, ys_product]);
+    let inner_start = d.imul(rest_product, ys_product);
+    let nested = d.imul(head, inner_start);
+    let joined_rest: Vec<ExprId> = rest.iter().chain(ys.iter()).copied().collect();
+    let rest_joined = iprod(d, &joined_rest);
+    let inner = iprod_append(d, rest, ys);
+    let step = d.icongr(inner_start, rest_joined, inner, &|d, t| d.imul(head, t));
+    let target = d.imul(head, rest_joined);
+    let (_, chained) = d.ichain(start, &[(nested, opened), (target, step)]);
+    chained
+}
+
+/// From `h : iprod from = iprod to`, prove `iprod (from ++ rest) = iprod (to ++ rest)`.
+pub(super) fn iprod_prefix_rewrite(
+    d: &mut IntDev<'_>,
+    from: &[ExprId],
+    to: &[ExprId],
+    rest: &[ExprId],
+    h: ExprId,
+) -> ExprId {
+    if rest.is_empty() {
+        return h;
+    }
+    let from_product = iprod(d, from);
+    let to_product = iprod(d, to);
+    let rest_product = iprod(d, rest);
+    let from_all: Vec<ExprId> = from.iter().chain(rest.iter()).copied().collect();
+    let to_all: Vec<ExprId> = to.iter().chain(rest.iter()).copied().collect();
+    let start = iprod(d, &from_all);
+    let split_from = d.imul(from_product, rest_product);
+    let append_from = iprod_append(d, from, rest);
+    let back = d.isymm(split_from, start, append_from);
+    let split_to = d.imul(to_product, rest_product);
+    let step = d.icongr(from_product, to_product, h, &|d, t| d.imul(t, rest_product));
+    let target = iprod(d, &to_all);
+    let append_to = iprod_append(d, to, rest);
+    let (_, chained) = d.ichain(
+        start,
+        &[(split_from, back), (split_to, step), (target, append_to)],
+    );
+    chained
+}
+
+/// A product being carried, as a factor **multiset**, with a running proof that
+/// the expression it started from equals the right-nested product of those
+/// factors.
+///
+/// Cross-multiplication arguments are all the same shape — scale by a
+/// denominator, reorder the factors, substitute a cross lemma for some of them,
+/// reorder again — and doing that inline is where these proofs go wrong. Here
+/// the reordering is checked (`iprod_perm` panics on a non-permutation) and the
+/// proof is assembled once.
+pub(super) struct Flat {
+    atoms: Vec<ExprId>,
+    start: ExprId,
+    proof: ExprId,
+}
+
+impl Flat {
+    /// Start from `left * right`, where `left` is definitionally `iprod ls` and
+    /// `right` definitionally `iprod rs`.
+    ///
+    /// The definitional slack is what makes this usable: `ofNat (a*b)` and
+    /// `ofNat a * ofNat b` are the same term to the kernel, so a denominator
+    /// product can be split into its factors for free — but only when it is
+    /// nested to the right, which is why every scaling factor below is written
+    /// `x * (y * z)`.
+    pub(super) fn begin_product(
+        d: &mut IntDev<'_>,
+        left: ExprId,
+        ls: &[ExprId],
+        right: ExprId,
+        rs: &[ExprId],
+    ) -> Self {
+        let start = d.imul(left, right);
+        let atoms: Vec<ExprId> = ls.iter().chain(rs.iter()).copied().collect();
+        let proof = iprod_append(d, ls, rs);
+        Self {
+            atoms,
+            start,
+            proof,
+        }
+    }
+
+    /// Multiply through by `factor`, which must be definitionally
+    /// `iprod factor_atoms`.
+    pub(super) fn scale(&mut self, d: &mut IntDev<'_>, factor: ExprId, factor_atoms: &[ExprId]) {
+        let current = iprod(d, &self.atoms);
+        let scaled_start = d.imul(self.start, factor);
+        let scaled_current = d.imul(current, factor);
+        let lifted = d.icongr(self.start, current, self.proof, &|d, t| d.imul(t, factor));
+        let joined: Vec<ExprId> = self
+            .atoms
+            .iter()
+            .chain(factor_atoms.iter())
+            .copied()
+            .collect();
+        let target = iprod(d, &joined);
+        let append = iprod_append(d, &self.atoms, factor_atoms);
+        let (_, chained) = d.ichain(scaled_start, &[(scaled_current, lifted), (target, append)]);
+        self.start = scaled_start;
+        self.atoms = joined;
+        self.proof = chained;
+    }
+
+    /// Reorder the factors.
+    pub(super) fn perm(&mut self, d: &mut IntDev<'_>, to: &[ExprId]) {
+        let current = iprod(d, &self.atoms);
+        let next = iprod(d, to);
+        let step = iprod_perm(d, &self.atoms, to);
+        self.proof = d.itrans(self.start, current, next, self.proof, step);
+        self.atoms = to.to_vec();
+    }
+
+    /// Replace the first `n` factors, given `h : iprod (first n) = iprod to`.
+    pub(super) fn rewrite_prefix(
+        &mut self,
+        d: &mut IntDev<'_>,
+        n: usize,
+        to: &[ExprId],
+        h: ExprId,
+    ) {
+        let rest: Vec<ExprId> = self.atoms[n..].to_vec();
+        let prefix: Vec<ExprId> = self.atoms[..n].to_vec();
+        let current = iprod(d, &self.atoms);
+        let step = iprod_prefix_rewrite(d, &prefix, to, &rest, h);
+        let joined: Vec<ExprId> = to.iter().chain(rest.iter()).copied().collect();
+        let next = iprod(d, &joined);
+        self.proof = d.itrans(self.start, current, next, self.proof, step);
+        self.atoms = joined;
+    }
+
+    /// The expression this started from, the normal form it reached, and the
+    /// proof that they are equal.
+    pub(super) fn finish(self, d: &mut IntDev<'_>) -> (ExprId, ExprId, ExprId) {
+        let current = iprod(d, &self.atoms);
+        (self.start, current, self.proof)
+    }
 }
 
 // --- declaration plumbing --------------------------------------------------
