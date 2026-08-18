@@ -215,9 +215,8 @@ snapshot nor the earlier bootstrap event can schedule A alone. Mutation controls
 reject a different admitted fact, a missing B-to-A ledger edge, and extra
 newly-ready facts even when the attacker rehashes the artifact.
 
-This is event-driven frontier logic over the counterfactual fixture, not yet the
-project-wide machine-readable frontier contract. Selection is still human, and
-authoritative fact admission remains zero.
+This is event-driven readiness over the counterfactual fixture, distinct from
+the authoritative project frontier. Authoritative fact admission remains zero.
 
 The complete durable-readiness episode was retained and replayed from exact
 commit `6a675c9c1`: experiment digest
@@ -227,6 +226,16 @@ readiness digest
 and durable fixture event
 `d9b00c9f0eca2187f0f52511223a19a8215c46a71e2b2a294421760329960f3d`.
 The replay reports `authoritative_writes=0|fixture_writes=1`.
+
+The authoritative ledger now also produces a stable machine frontier. At exact
+commit `7cb64a542`, frontier digest
+`df57a47bd7df3ae5fb28db7fff1a99611486c460590a8057d470c74e640c1d88`
+binds ledger digest
+`87566ce3c063d615acba30c6c180b72aaba7582ba3e5eec6f240fb2db7987f17`.
+It records ten dependency-ready open/conjectured facts, zero admissible typed
+operations, and no selection. This replaces human-only selection input, but it
+does not satisfy autonomous selection: the next seam is a reviewed typed
+producer/checker operation registry.
 
 ## Assumptions tested now
 

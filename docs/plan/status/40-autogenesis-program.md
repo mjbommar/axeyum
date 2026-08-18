@@ -2,10 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Phase 0 WIP.** Durable readiness `24e5196a` replayed at `6a675c9c1`; zero
-authoritative writes. Next: authoritative frontier and fail-closed selection,
-then an open fact with typed evidence.
+**Phase 0 WIP.** Authoritative frontier `df57a47b` retained at `7cb64a542`:
+10 ready, 0 admissible, no selection. Next: typed operation registry.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-18 | `2abe2652d..6a675c9c1` | Programme through durable-event readiness replay. |
+| 2026-08-18 | `2abe2652d..7cb64a542` | Programme through fail-closed machine frontier. |
