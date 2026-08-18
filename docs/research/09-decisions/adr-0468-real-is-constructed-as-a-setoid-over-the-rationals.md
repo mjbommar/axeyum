@@ -332,13 +332,34 @@ above): `CReal.inv_succ n := Rat.normalize (Int.ofNat 1) (Nat.succ n) h`, with
 lemma. Anything else this lane discovers missing is a request to
 `agent-rationals`, not a fork of ℚ.
 
-**Phase R1 — the carrier (~10 declarations).** `CReal.Regular`, `CReal`,
-`CReal.mk`, `CReal.rec` (generated), `CReal.seq`, `CReal.regular` (the two
-projections), `CReal.Equiv`, and `Equiv`'s three equivalence laws (`refl`,
-`symm`, `trans`). The `trans` proof is the first real one: it needs the
-`2/(n+1)` bound to close under the standard "compare at `2n`" argument, which is
-the one place a regular-sequence development is fiddlier than a bare-Cauchy one.
-Shape already measured admissible by `creal_shape_probe`.
+**Phase R1 — the carrier (~12 declarations).** `CReal.inv_succ`, `CReal.Regular`,
+`CReal`, `CReal.mk`, `CReal.rec` (generated), `CReal.seq`, `CReal.regular` (the
+two projections), `CReal.Equiv`, and `Equiv`'s three equivalence laws (`refl`,
+`symm`, `trans`). Shape already measured admissible by `creal_shape_probe`.
+
+`trans` is the one proof in R1 that is not routine, and the shape of it is worth
+recording so nobody loses a session to the obvious dead end. Chaining the two
+hypotheses directly gives `|x_n − z_n| ≤ 4/n`, which is **not** `≤ 2/n`, and no
+amount of rearranging fixes that. Bishop's argument compares at an *arbitrary*
+third index `j`:
+
+```text
+|x_n − z_n| ≤ |x_n − x_j| + |x_j − y_j| + |y_j − z_j| + |z_j − z_n|
+            ≤ (1/n + 1/j) + 2/j + 2/j + (1/j + 1/n)  =  2/n + 6/j
+```
+
+and then discharges the `6/j` with a lemma **about ℚ, not about ℝ**:
+
+```text
+Rat.le_of_le_add_inv_succ : (∀ j, a ≤ b + 6 · inv_succ j) → a ≤ b
+```
+
+which is the Archimedean property of ℚ and is provable from the `Nat`/`Int`
+developments. It is the only genuinely new ℚ lemma the whole construction needs,
+it belongs in `rat_prelude` rather than here, and it should be requested from
+`agent-rationals` at the start of R1 rather than discovered in the middle of it.
+This is also precisely the step a bare-Cauchy development does not have — it is
+the price of the fixed modulus, paid once.
 
 **Phase R2 — the ordered ring (~35 declarations).** `CReal.zero`, `one`, `add`,
 `neg`, `mul`, `le`, `lt`, each with its regularity proof (that is the work —
