@@ -19,13 +19,21 @@ class modulo `x^ceil(n/2)`.  The current mathematical blocker is a positivity
 theorem at that exact fixed-field half-degree boundary; Gao's Hayes-class
 formula is the first target for specialization.
 
-**Next.** Define the canonical artifact and second checker; then run bounded,
-thermally conservative search/check shards on s1, s4, s5, s6, and s7.  Fleet
-completion alone earns no credit.  In parallel, derive an exact identity-class
-recurrence or sharpened positive count, then reconstruct the reciprocal and
-central lemmas through the kernel and fact ledger before claiming a universal
-proof.
+The portable boundary is now complete for bounded witnesses. `98f2d953f` adds
+canonical JSON, a dense-coefficient second checker, and a standalone dual-check
+CLI; `b678ec7e6` adds the fail-closed producer. `3718aab11` commits and gates the
+188,458-byte degree-400 certificate (SHA-256 `30ae3f33...383d5`) from both
+aggregate check paths. This is one checked degree, not the range through 400 and
+not the universal theorem.
+
+**Next.** Add deterministic candidate enumeration and sharded manifests, then
+run bounded, thermally conservative search/check shards on s1, s4, s5, s6, and
+s7. Fleet completion alone earns no credit. In parallel, derive an exact
+identity-class recurrence or sharpened positive count, then reconstruct the
+reciprocal and central lemmas through the kernel and fact ledger before claiming
+a universal proof.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-18 | `98f2d953f` `b678ec7e6` `3718aab11` | Added canonical bounded artifacts, an algebraically separate dense checker, standalone producer/checker CLIs, and the dual-gated degree-400 witness; completion does not claim the universal theorem. |
 | 2026-08-18 | `81321fc65` | Added bounded bit-packed `GF(2)[x]`, untrusted Rabin certificate production, independent identity checking, exhaustive degree-10 oracle agreement, certificate mutations, the exact Lemire theorem contract, and accepted ADR-0480. |
