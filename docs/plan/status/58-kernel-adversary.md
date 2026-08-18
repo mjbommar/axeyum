@@ -54,7 +54,26 @@ sides exchanged between rules of one recursor, and the rules permuted.
   auxiliary recursor is a byte Lean never reads. Admitting it would have meant a
   false failure or an exemption that restores the 37% blind spot, so the group
   is off the wire and `restore_nested_inductive_group` — the fourth admission
-  gate — has **no adversarial coverage**. And `quot` records cannot
+  gate — has **no adversarial coverage**.
+
+  > **FALSIFIED 2026-08-18 by lane `agent-nested-gate` (`926d66518`).** The
+  > blocker was a defect in the INSTRUMENT, not a property of Lean. Lean's
+  > *kernel* does build a nested group's auxiliary recursor; what does not know
+  > about it is `Environment.find?`, the ELABORATOR's lookup, which
+  > `replay-lean4export.lean` was using — `addDeclCore` republishes only
+  > `Declaration.getNames`, whose own docstring says the list excludes auxiliary
+  > recursors computed by the kernel for nested types. On one environment value
+  > under pinned 4.30.0, `env.find? …rec_1` is `none` while
+  > `env.constants.find? …rec_1` is a recursor with two motives, three minors and
+  > both ι-rules. The fix is one line (`env.toKernelEnv`) with **no exemption and
+  > no weakened comparison**, so the claim stays independent corroboration by
+  > Lean's kernel. The gate now has coverage: 14 `ind.aux-*` families, 0
+  > violations across 274/752/57/42/178-mutant runs, and the residue is 18
+  > `expr.binder-info` mutants — elaborator metadata neither kernel type-checks.
+  > The decision to stop rather than fake it was still right; what was wrong was
+  > the conclusion drawn about Lean.
+
+  And `quot` records cannot
   discriminate at all: `addDeclCore` ignores a quotient package's carried types
   and adds its own, so it accepts every damaged quotient record.
 
