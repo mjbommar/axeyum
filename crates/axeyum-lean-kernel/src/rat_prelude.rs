@@ -59,6 +59,7 @@ pub(crate) mod group;
 mod laws;
 mod model;
 pub(crate) mod ops;
+mod product;
 mod scaling;
 mod statements;
 
@@ -379,6 +380,76 @@ pub struct RatPrelude {
     /// `Rat.add_nonneg : ∀ a b, Rat.le Rat.zero a → Rat.le Rat.zero b →
     /// Rat.le Rat.zero (Rat.add a b)`.
     pub add_nonneg: NameId,
+
+    // --- the multiplicative toolkit (ADR-0468 phase R2, `CReal.mul`) ----------
+    /// `Rat.mul_neg : ∀ a b, Rat.mul a (Rat.neg b) = Rat.neg (Rat.mul a b)`.
+    pub mul_neg: NameId,
+    /// `Rat.neg_mul : ∀ a b, Rat.mul (Rat.neg a) b = Rat.neg (Rat.mul a b)`.
+    pub neg_mul: NameId,
+    /// `Rat.mul_le_mul_of_nonneg_right : ∀ a b c, Rat.le Rat.zero c →
+    /// Rat.le a b → Rat.le (Rat.mul a c) (Rat.mul b c)` — the side
+    /// [`Self::mul_le_mul_of_nonneg_left`] does not give, one `mul_comm` away.
+    pub mul_le_mul_of_nonneg_right: NameId,
+    /// `Rat.mul_sub_mul : ∀ a b c e,
+    /// Rat.sub (a·b) (c·e) = Rat.add (a · Rat.sub b e) (Rat.sub a c · e)`.
+    ///
+    /// **The identity Bishop's product estimate is the shadow of.** A difference
+    /// of two products only ever becomes bounded by splitting this way: each
+    /// summand pairs a factor bounded by a canonical magnitude with a factor
+    /// bounded by regularity.
+    pub mul_sub_mul: NameId,
+    /// `Rat.bounds_mul : ∀ u p v q, Rat.le Rat.zero p →
+    /// Rat.le (neg p) u → Rat.le u p → Rat.le (neg q) v → Rat.le v q →
+    /// And (Rat.le (neg (p·q)) (u·v)) (Rat.le (u·v) (p·q))`.
+    ///
+    /// The **product** form of [`Self::bounds_add`], in the same
+    /// `−b ≤ a ∧ a ≤ b` encoding, so `Rat.abs` still never exists. The sign
+    /// analysis happens once, on the proved `Rat.le_or_lt`, and never as an
+    /// argument by contradiction.
+    pub bounds_mul: NameId,
+    /// `Rat.neg_mul_le_of_bounds : ∀ u v e b, Rat.le Rat.zero e →
+    /// Rat.le Rat.zero b → Rat.le (neg e) u → Rat.le u b → Rat.le (neg e) v →
+    /// Rat.le v b → Rat.le (neg (e·b)) (u·v)`.
+    ///
+    /// The **one-sided** product estimate. `0 ≤ x` over the reals does not say
+    /// any sample of `x` is non-negative — only that each is above `−2/(n+1)` —
+    /// so a lower bound on a product has to trade that residue off against the
+    /// other factor's canonical magnitude. This is what `CReal.mul_nonneg` runs
+    /// on, and the resulting `e·b` fuses back into a single `natDivSucc` by
+    /// [`Self::nat_div_succ_mul`].
+    pub neg_mul_le_of_bounds: NameId,
+    /// `Rat.natDivSucc_mul : ∀ (a b j : Nat),
+    /// Rat.mul (natDivSucc a 0) (natDivSucc b j) = natDivSucc (a·b) j`.
+    ///
+    /// Scaling a bound by a whole number keeps it a **single** `natDivSucc`,
+    /// which is what stops `CReal.mul`'s estimate from degenerating into a
+    /// product of two rationals whose projections are opaque.
+    pub nat_div_succ_mul: NameId,
+    /// `Rat.natDivSucc_le_one : ∀ (j : Nat),
+    /// Rat.le (natDivSucc 1 j) (natDivSucc 1 0)`.
+    ///
+    /// Still **not** antitonicity of `natDivSucc` in its index:
+    /// [`Self::nat_div_succ_le_add_left`] widens the numerator `1 ↦ 1 + j` at
+    /// the index `j`, and [`Self::nat_div_succ_scale`] at `m = 0` says
+    /// `(j+1)/(j+1)` is `1/1`. Both steps compare at one denominator.
+    pub nat_div_succ_le_one: NameId,
+    /// `Rat.int_le_natAbs : ∀ (x : Int), Int.le x (Int.ofNat (Int.natAbs x))`.
+    pub int_le_nat_abs: NameId,
+    /// `Rat.int_neg_natAbs_le : ∀ (x : Int),
+    /// Int.le (Int.neg (Int.ofNat (Int.natAbs x))) x`.
+    pub int_neg_nat_abs_le: NameId,
+    /// `Rat.bounds_num : ∀ q,
+    /// And (Rat.le (neg (natDivSucc (natAbs (num q)) 0)) q)
+    ///     (Rat.le q (natDivSucc (natAbs (num q)) 0))`.
+    ///
+    /// **The canonical magnitude of a rational, as a natural number.** This is
+    /// what makes `CReal.bound` a projection rather than a search: a regular
+    /// sequence's zeroth sample is a rational, its numerator an integer, and
+    /// `Int.natAbs` of that is the `ℕ` `CReal.mul`'s sampling index is scaled
+    /// by. A development over an *existential* modulus (Bishop's own, and
+    /// Mathlib's `CauSeq`) has to extract that number; the fixed modulus of
+    /// ADR-0468 computes it.
+    pub bounds_num: NameId,
 }
 
 impl RatPrelude {
@@ -513,6 +584,17 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         neg_nonpos_of_nonneg: child(kernel, "neg_nonpos_of_nonneg"),
         bounds_neg: child(kernel, "bounds_neg"),
         add_nonneg: child(kernel, "add_nonneg"),
+        mul_neg: child(kernel, "mul_neg"),
+        neg_mul: child(kernel, "neg_mul"),
+        mul_le_mul_of_nonneg_right: child(kernel, "mul_le_mul_of_nonneg_right"),
+        mul_sub_mul: child(kernel, "mul_sub_mul"),
+        bounds_mul: child(kernel, "bounds_mul"),
+        neg_mul_le_of_bounds: child(kernel, "neg_mul_le_of_bounds"),
+        nat_div_succ_mul: child(kernel, "natDivSucc_mul"),
+        nat_div_succ_le_one: child(kernel, "natDivSucc_le_one"),
+        int_le_nat_abs: child(kernel, "int_le_natAbs"),
+        int_neg_nat_abs_le: child(kernel, "int_neg_natAbs_le"),
+        bounds_num: child(kernel, "bounds_num"),
     }
 }
 
@@ -549,6 +631,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         scaling::declare_scaling_laws(&mut d, prelude)?;
         archimedean::declare_archimedean(&mut d, prelude)?;
         group::declare_group_laws(&mut d, prelude)?;
+        product::declare_product_laws(&mut d, prelude)?;
         Ok(())
     })();
     match built {

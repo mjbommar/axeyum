@@ -35,7 +35,14 @@
 //!    `CReal.lt` is neither empty nor total. Six of the seven strict-order laws
 //!    only *consume* a `lt`, so all six hold — footprint-free — of the relation
 //!    that relates nothing at all; `zero_lt_one` is the only one that exhibits
-//!    an inhabitant and `lt_irrefl` the only one that refuses a pair.
+//!    an inhabitant and `lt_irrefl` the only one that refuses a pair; and
+//! 7. `CReal.ofRat_mul` **and** `CReal.not_equiv_mul_one_one_zero` are both
+//!    present, so `CReal.mul` is the product and not a degenerate binary
+//!    operation. `mul_zero`, `mul_comm` and `sq_nonneg` all hold —
+//!    footprint-free — of `fun _ _ => zero`. `ofRat_mul` pins the *operation*
+//!    on the whole embedded `ℚ` rather than asserting a property of it, and
+//!    `not_equiv_mul_one_one_zero` refuses the constant-zero product by
+//!    computation.
 //!
 //! # How far the ordered-field structure gets (ADR-0468 phase R2, partial)
 //!
@@ -60,6 +67,31 @@
 //! 2/(n+1)`, read at the common denominator `2n+2` as `3 ≤ 4`. Monotonicity of
 //! `Rat.natDivSucc` in its *index* is not needed and was not built. The other
 //! three are the order laws below, which restate verbatim.
+//!
+//! # The product (ADR-0468 phase R2, continued)
+//!
+//! `CReal.mul` samples at `(c+1)·n + c` with `c := bound x + bound y + 1`, and
+//! `CReal.bound x := |num (x_0)| + 1`. The usual story is that this bound is the
+//! expensive part, because Bishop — and Mathlib's `CauSeq` after him — reads it
+//! off an *existential* modulus and has to extract it. With ADR-0468's **fixed**
+//! modulus there is nothing to extract: regularity at index `0` gives
+//! `|x_m| ≤ |x_0| + 2` for every `m` outright, and the one genuinely missing
+//! piece was an ℕ-valued magnitude, which is `Rat.bounds_num` — two `Int` facts
+//! about `Int.natAbs` and one cross-multiplication.
+//!
+//! The estimate then closes **exactly**. The four terms
+//! `Kx/(A+1) + Kx/(B+1) + Ky/(A+1) + Ky/(B+1)` fuse in the numerator, and
+//! `Rat.natDivSucc_scale` reads `(c+1)/((c+1)·n + c + 1)` as `1/(n+1)` — so the
+//! product bound *is* the regularity bound, with no slack and no weakening
+//! step. `Rat.natDivSucc` is still never needed antitone in its index: every
+//! comparison here happens at one denominator.
+//!
+//! `mul_comm` and `mul_zero` are *pointwise*. `mul_one` is not — `mul x one`
+//! samples `x` at `(c+1)·n + c` where `x` samples it at `n` — and `mul_nonneg`
+//! is the one that is genuinely about the order: `0 ≤ x` over the reals does
+//! **not** say any sample of `x` is non-negative, only that each sits above
+//! `−2/(j+1)`, so the product's lower bound trades that residue against the
+//! other factor's canonical magnitude.
 //!
 //! # The order (ADR-0468 phase R2, continued)
 //!
@@ -113,13 +145,17 @@
 //! # What this does NOT claim
 //!
 //! `Eq CReal` is not the equality of real numbers — `CReal.Equiv` is, and every
-//! statement about reals will say so. `mul` is **not** built, and the eight
-//! remaining laws are exactly the eight that mention it: `mul` needs a
-//! canonical bound on a representative derived from regularity, which is the
-//! one place a naive port from Mathlib will not transfer.
+//! statement about reals will say so. **Three of the 22 are still missing**:
+//! `mul_assoc`, `left_distrib` and `mul_le_mul_of_nonneg_left`. All three
+//! compare two products sampled at *different* indices — `mul x (add y z)` and
+//! `add (mul x y) (mul x z)` agree at no index and their shifts are not even
+//! equal as naturals — so each needs the arbitrary-third-index estimate
+//! `Equiv.trans` runs on, plus the Archimedean lemma. `CReal.mul_congr`, the
+//! fifth of the setoid's congruence obligations, is missing for the same
+//! reason and is a prerequisite for phase R4.
 //! Completeness, division and `√` are each a separate ADR. And the `Real`
 //! package's 30 axioms are **unchanged** by this: ADR-0468 retires them by
-//! *deletion* in phase R3, once consumers are generalized, not by exhibiting a
+//! *deletion* in phase R4, once consumers are generalized, not by exhibiting a
 //! model.
 
 #![allow(clippy::too_many_lines)]
@@ -173,6 +209,20 @@ fn main() {
         ("CReal.add_lt_add_of_le_of_lt", p.add_lt_add_of_le_of_lt),
         ("CReal.le_congr", p.le_congr),
         ("CReal.lt_congr", p.lt_congr),
+        ("CReal.bound", p.bound),
+        ("CReal.bound_within", p.bound_within),
+        ("CReal.mulShift", p.mul_shift),
+        ("CReal.mul", p.mul),
+        ("CReal.ofRat_mul", p.of_rat_mul),
+        ("CReal.mul_comm", p.mul_comm),
+        ("CReal.mul_one", p.mul_one),
+        ("CReal.mul_zero", p.mul_zero),
+        ("CReal.mul_nonneg", p.mul_nonneg),
+        ("CReal.sq_nonneg", p.sq_nonneg),
+        (
+            "CReal.not_equiv_mul_one_one_zero",
+            p.not_equiv_mul_one_one_zero,
+        ),
     ];
 
     let mut failed = false;
@@ -239,6 +289,16 @@ fn main() {
         kernel.environment().get(p.lt_irrefl),
         Some(Declaration::Theorem { .. })
     );
+    // (7): `mul` is the product, not a degenerate binary operation that happens
+    // to satisfy the five laws proved about it.
+    let multiplicative = matches!(
+        kernel.environment().get(p.of_rat_mul),
+        Some(Declaration::Theorem { .. })
+    );
+    let mul_discriminates = matches!(
+        kernel.environment().get(p.not_equiv_mul_one_one_zero),
+        Some(Declaration::Theorem { .. })
+    );
     if !inhabited {
         eprintln!(
             "FAIL: CReal.ofRat is not a checked definition, so CReal.Regular has no \
@@ -279,6 +339,22 @@ fn main() {
         );
         failed = true;
     }
+    if !multiplicative {
+        eprintln!(
+            "FAIL: CReal.ofRat_mul is not a checked theorem, so nothing pins CReal.mul \
+             to Rat.mul ANYWHERE. mul_zero, mul_comm and sq_nonneg all hold — with \
+             empty footprints — of the product that returns zero on every input."
+        );
+        failed = true;
+    }
+    if !mul_discriminates {
+        eprintln!(
+            "FAIL: CReal.not_equiv_mul_one_one_zero is not a checked theorem, so \
+             nothing exhibits a product the setoid separates from zero. The \
+             constant-zero product satisfies three of the five laws proved here."
+        );
+        failed = true;
+    }
 
     let trusted: Vec<String> = kernel
         .environment()
@@ -298,7 +374,9 @@ fn main() {
         "ℝ as a Bishop setoid over the constructed ℚ: {} declarations admitted, \
          trusted surface = {} ({}); carrier inhabited = {inhabited}, \
          Equiv discriminates = {discriminating}, le discriminates = {ordered}, \
-         lt inhabited = {strictly_inhabited}, lt irreflexive = {strictly_irreflexive}",
+         lt inhabited = {strictly_inhabited}, lt irreflexive = {strictly_irreflexive}, \
+         mul agrees with Rat.mul on ℚ = {multiplicative}, mul discriminates = \
+         {mul_discriminates}",
         admitted.len(),
         trusted.len(),
         if trusted.is_empty() {
@@ -318,11 +396,14 @@ fn main() {
         "reflexivity, symmetry and transitivity of CReal.Equiv all hold at ZERO \
          trusted declarations; Equiv.trans and CReal.lt_irrefl are the two \
          consumers of Rat.le_of_le_add_natDivSucc (the Archimedean property of \
-         ℚ). 14 of the 22 ordered-ring laws hold: the additive group in Equiv \
-         form (add_comm, add_neg, add_zero, add_assoc) and ten order laws \
+         ℚ). 19 of the 22 ordered-ring laws hold: the additive group in Equiv \
+         form (add_comm, add_neg, add_zero, add_assoc), ten order laws \
          verbatim (le_refl, le_trans, add_le_add, lt_irrefl, lt_trans, \
          lt_of_lt_of_le, lt_of_le_of_lt, le_of_lt, zero_lt_one, \
-         add_lt_add_of_le_of_lt). The 8 that remain are exactly the 8 that \
-         mention mul"
+         add_lt_add_of_le_of_lt), and five product laws (mul_comm, mul_one and \
+         mul_zero in Equiv form; mul_nonneg and sq_nonneg verbatim). The 3 that \
+         remain are mul_assoc, left_distrib and mul_le_mul_of_nonneg_left — \
+         each compares two products sampled at DIFFERENT indices, so each needs \
+         the arbitrary-third-index estimate Equiv.trans runs on"
     );
 }

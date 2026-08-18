@@ -46,6 +46,17 @@ fn every_named_declaration_exists() {
         ("lt_of_not_le", p.lt_of_not_le),
         ("normalize_add_normalize", p.normalize_add_normalize),
         ("normalize_mul_normalize", p.normalize_mul_normalize),
+        ("mul_neg", p.mul_neg),
+        ("neg_mul", p.neg_mul),
+        ("mul_le_mul_of_nonneg_right", p.mul_le_mul_of_nonneg_right),
+        ("mul_sub_mul", p.mul_sub_mul),
+        ("bounds_mul", p.bounds_mul),
+        ("neg_mul_le_of_bounds", p.neg_mul_le_of_bounds),
+        ("natDivSucc_mul", p.nat_div_succ_mul),
+        ("natDivSucc_le_one", p.nat_div_succ_le_one),
+        ("int_le_natAbs", p.int_le_nat_abs),
+        ("int_neg_natAbs_le", p.int_neg_nat_abs_le),
+        ("bounds_num", p.bounds_num),
     ];
     for (label, name) in expected {
         assert!(
@@ -400,4 +411,98 @@ fn nat_div_succ_scale_subsumes_halve_and_is_monotone_in_the_numerator() {
          type-check, so the generalisation does not subsume the special case: \
          {admitted:?}"
     );
+}
+
+/// The multiplicative toolkit says what `CReal.mul` needs it to say.
+///
+/// Rendered verbatim, because an empty axiom footprint on a *weaker* statement
+/// is this repository's standing failure mode and the product estimate is
+/// exactly where a silently weakened bound would not be noticed: every one of
+/// these is consumed inside a proof whose conclusion is checked only for
+/// well-typedness.
+#[test]
+fn the_product_toolkit_has_the_statements_creal_mul_needs() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.mul_sub_mul),
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> \
+         Eq.{1} Rat (Rat.sub (Rat.mul x0 x1) (Rat.mul x2 x3)) \
+         (Rat.add (Rat.mul x0 (Rat.sub x1 x3)) (Rat.mul (Rat.sub x0 x2) x3))))))"
+    );
+    // `bounds_mul` must bound the product by the product of the two bounds —
+    // NOT by one of them, and not one-sidedly.
+    assert_eq!(
+        rendered(&mut kernel, p.bounds_mul),
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> \
+         ((x4 : Rat.le Rat.zero x1) -> ((x5 : Rat.le (Rat.neg x1) x0) -> \
+         ((x6 : Rat.le x0 x1) -> ((x7 : Rat.le (Rat.neg x3) x2) -> \
+         ((x8 : Rat.le x2 x3) -> \
+         And (Rat.le (Rat.neg (Rat.mul x1 x3)) (Rat.mul x0 x2)) \
+         (Rat.le (Rat.mul x0 x2) (Rat.mul x1 x3)))))))))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.nat_div_succ_mul),
+        "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> \
+         Eq.{1} Rat (Rat.mul (Rat.natDivSucc x0 AxNat.zero) (Rat.natDivSucc x1 x2)) \
+         (Rat.natDivSucc (AxNat.mul x0 x1) x2))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.nat_div_succ_le_one),
+        "((x0 : AxNat) -> Rat.le (Rat.natDivSucc (AxNat.succ AxNat.zero) x0) \
+         (Rat.natDivSucc (AxNat.succ AxNat.zero) AxNat.zero))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.bounds_num),
+        "((x0 : Rat) -> \
+         And (Rat.le (Rat.neg (Rat.natDivSucc (Int.natAbs (Rat.num x0)) AxNat.zero)) x0) \
+         (Rat.le x0 (Rat.natDivSucc (Int.natAbs (Rat.num x0)) AxNat.zero)))"
+    );
+}
+
+/// Every new multiplicative lemma is a **checked theorem** with an empty axiom
+/// footprint.
+#[test]
+fn the_product_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let laws = [
+        p.mul_neg,
+        p.neg_mul,
+        p.mul_le_mul_of_nonneg_right,
+        p.mul_sub_mul,
+        p.bounds_mul,
+        p.neg_mul_le_of_bounds,
+        p.nat_div_succ_mul,
+        p.nat_div_succ_le_one,
+        p.int_le_nat_abs,
+        p.int_neg_nat_abs_le,
+        p.bounds_num,
+    ];
+    for law in laws {
+        let label = kernel.display_name(law).to_string();
+        let declaration = kernel
+            .environment()
+            .get(law)
+            .unwrap_or_else(|| panic!("{label} is not declared at all"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "{label} must be a checked Theorem"
+        );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(law)
+            .into_iter()
+            .map(|name| kernel.display_name(name).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "{label} rests on {footprint:?}");
+    }
 }

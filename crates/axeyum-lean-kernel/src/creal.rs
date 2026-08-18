@@ -330,6 +330,69 @@ pub struct CRealPrelude {
     ///
     /// The other relation congruence of the equality slot.
     pub lt_congr: NameId,
+
+    // --- the product (ADR-0468 phase R2, continued) --------------------------
+    /// `CReal.bound : CReal → Nat` — `Int.natAbs (Rat.num (seq x 0)) + 1`.
+    ///
+    /// The **canonical magnitude**, and the one thing `CReal.mul` needs that
+    /// `CReal.add` did not. It is a projection, not a search: with ADR-0468's
+    /// *fixed* modulus, regularity at index `0` bounds every sample by
+    /// `|x_0| + 2` outright, so nothing has to be extracted from an
+    /// existential — which is exactly what a `CauSeq` development has to do.
+    pub bound: NameId,
+    /// `CReal.bound_within : ∀ x m,
+    /// Within (seq x m) (Rat.natDivSucc (CReal.bound x + 1) 0)`.
+    pub bound_within: NameId,
+    /// `CReal.mulShift : CReal → CReal → Nat` —
+    /// `bound x + bound y + 1`, the `c` of the sampling index `(c+1)·n + c`.
+    ///
+    /// Written as a successor so that `c + 1` **is** `(bound x + 1) +
+    /// (bound y + 1)`, the sum of the two canonical magnitudes, with no
+    /// ℕ-subtraction anywhere.
+    pub mul_shift: NameId,
+    /// `CReal.mul : CReal → CReal → CReal` — `(x·y)_n := x_j · y_j` at
+    /// `j = (c+1)·n + c`.
+    ///
+    /// The estimate closes **exactly**: the four terms of the product bound
+    /// fuse to `(Kx+Ky)/(A+1) + (Kx+Ky)/(B+1)`, and `Rat.natDivSucc_scale`
+    /// reads each as the regularity bound on the nose. No slack, no weakening,
+    /// and `Rat.natDivSucc` still never needed antitone in its index.
+    pub mul: NameId,
+    /// `CReal.ofRat_mul : ∀ q r, Equiv (mul (ofRat q) (ofRat r)) (ofRat (q·r))`
+    /// — `CReal.mul` restricted to the embedded `ℚ` **is** `Rat.mul`.
+    ///
+    /// Not one of the 22, and the reason the ones that are mean anything: it
+    /// pins the operation rather than asserting a property of it. Every
+    /// degenerate product a footprint check would wave through — the constant
+    /// `zero`, either projection, `add` in disguise — fails it.
+    pub of_rat_mul: NameId,
+    /// `CReal.mul_comm : ∀ x y, Equiv (mul x y) (mul y x)` — one of the 22, in
+    /// `Equiv` form, and *pointwise*: the two shifts differ only by
+    /// `Nat.add_comm` inside `CReal.mulShift`.
+    pub mul_comm: NameId,
+    /// `CReal.mul_one : ∀ x, Equiv (mul x one) x` — one of the 22, and the
+    /// first product law that is **not** pointwise.
+    pub mul_one: NameId,
+    /// `CReal.mul_zero : ∀ x, Equiv (mul x zero) zero` — one of the 22, in
+    /// `Equiv` form, and pointwise: `Rat.mul_zero` at every index.
+    pub mul_zero: NameId,
+    /// `CReal.mul_nonneg : ∀ x y, le zero x → le zero y → le zero (mul x y)` —
+    /// one of the 22, verbatim.
+    ///
+    /// `0 ≤ x` over the reals does **not** say any sample of `x` is
+    /// non-negative — only that each sits above `−2/(j+1)` — so the product's
+    /// lower bound trades that residue against the other factor's canonical
+    /// magnitude, and `2/(j+1) · (c+1)/1` fuses back to exactly `2/(n+1)`.
+    pub mul_nonneg: NameId,
+    /// `CReal.sq_nonneg : ∀ x, le zero (mul x x)` — one of the 22, verbatim,
+    /// and free: `x_j·x_j ≥ 0` already holds in `ℚ`.
+    pub sq_nonneg: NameId,
+    /// `CReal.not_equiv_mul_one_one_zero : Not (Equiv (mul one one) zero)`.
+    ///
+    /// The **discrimination** witness for the product. `mul_zero`, `mul_comm`
+    /// and `sq_nonneg` all hold, footprint-free, of `fun _ _ => zero`; this
+    /// refuses that product by computation, through [`Self::of_rat_mul`].
+    pub not_equiv_mul_one_one_zero: NameId,
 }
 
 fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
@@ -380,6 +443,17 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         add_lt_add_of_le_of_lt: kernel.name_str(creal, "add_lt_add_of_le_of_lt"),
         le_congr: kernel.name_str(creal, "le_congr"),
         lt_congr: kernel.name_str(creal, "lt_congr"),
+        bound: kernel.name_str(creal, "bound"),
+        bound_within: kernel.name_str(creal, "bound_within"),
+        mul_shift: kernel.name_str(creal, "mulShift"),
+        mul: kernel.name_str(creal, "mul"),
+        of_rat_mul: kernel.name_str(creal, "ofRat_mul"),
+        mul_comm: kernel.name_str(creal, "mul_comm"),
+        mul_one: kernel.name_str(creal, "mul_one"),
+        mul_zero: kernel.name_str(creal, "mul_zero"),
+        mul_nonneg: kernel.name_str(creal, "mul_nonneg"),
+        sq_nonneg: kernel.name_str(creal, "sq_nonneg"),
+        not_equiv_mul_one_one_zero: kernel.name_str(creal, "not_equiv_mul_one_one_zero"),
     }
 }
 
@@ -417,7 +491,8 @@ pub fn build_creal_prelude(kernel: &mut Kernel) -> Result<CRealPrelude, KernelEr
         declare_addition(&mut d, prelude)?;
         declare_additive_laws(&mut d, prelude)?;
         declare_order(&mut d, prelude)?;
-        declare_strict_order(&mut d, prelude)
+        declare_strict_order(&mut d, prelude)?;
+        product::declare_product(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -1322,6 +1397,8 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
         value,
     })
 }
+
+mod product;
 
 #[cfg(test)]
 mod creal_tests;

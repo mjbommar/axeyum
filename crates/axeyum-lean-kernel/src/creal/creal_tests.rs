@@ -53,7 +53,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 42] = [
+    let expected: [(&str, crate::NameId, &str); 53] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -100,6 +100,21 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ),
         ("CReal.le_congr", p.le_congr, "theorem"),
         ("CReal.lt_congr", p.lt_congr, "theorem"),
+        ("CReal.bound", p.bound, "def"),
+        ("CReal.bound_within", p.bound_within, "theorem"),
+        ("CReal.mulShift", p.mul_shift, "def"),
+        ("CReal.mul", p.mul, "def"),
+        ("CReal.ofRat_mul", p.of_rat_mul, "theorem"),
+        ("CReal.mul_comm", p.mul_comm, "theorem"),
+        ("CReal.mul_one", p.mul_one, "theorem"),
+        ("CReal.mul_zero", p.mul_zero, "theorem"),
+        ("CReal.mul_nonneg", p.mul_nonneg, "theorem"),
+        ("CReal.sq_nonneg", p.sq_nonneg, "theorem"),
+        (
+            "CReal.not_equiv_mul_one_one_zero",
+            p.not_equiv_mul_one_one_zero,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -278,6 +293,147 @@ fn the_setoid_laws_have_the_statements_adr_0468_specifies() {
         "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
          ((x4 : CReal.Equiv x0 x1) -> ((x5 : CReal.Equiv x2 x3) -> \
          ((x6 : CReal.lt x0 x2) -> CReal.lt x1 x3)))))))"
+    );
+    // The five product laws. Two of the 22 in `Equiv` form, three verbatim —
+    // and `mul_nonneg`/`sq_nonneg` are the `Real` package's statements
+    // unchanged, so a weakened restatement would show up here as a diff.
+    assert_eq!(
+        rendered(&mut kernel, p.mul_comm),
+        "((x0 : CReal) -> ((x1 : CReal) -> \
+         CReal.Equiv (CReal.mul x0 x1) (CReal.mul x1 x0)))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.mul_one),
+        "((x0 : CReal) -> CReal.Equiv (CReal.mul x0 CReal.one) x0)"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.mul_zero),
+        "((x0 : CReal) -> CReal.Equiv (CReal.mul x0 CReal.zero) CReal.zero)"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.mul_nonneg),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.le CReal.zero x0) -> \
+         ((x3 : CReal.le CReal.zero x1) -> CReal.le CReal.zero (CReal.mul x0 x1)))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.sq_nonneg),
+        "((x0 : CReal) -> CReal.le CReal.zero (CReal.mul x0 x0))"
+    );
+    // The two witnesses that stop the five above being satisfiable by a
+    // degenerate product. `ofRat_mul` pins the OPERATION on the embedded `ℚ`;
+    // `not_equiv_mul_one_one_zero` exhibits a separated pair by computation.
+    assert_eq!(
+        rendered(&mut kernel, p.of_rat_mul),
+        "((x0 : Rat) -> ((x1 : Rat) -> \
+         CReal.Equiv (CReal.mul (CReal.ofRat x0) (CReal.ofRat x1)) \
+         (CReal.ofRat (Rat.mul x0 x1))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.not_equiv_mul_one_one_zero),
+        "Not (CReal.Equiv (CReal.mul CReal.one CReal.one) CReal.zero)"
+    );
+    // The canonical bound is a bound on EVERY sample, not just the zeroth —
+    // which is the whole reason `CReal.mul`'s index can be a fixed function of
+    // the two factors.
+    assert_eq!(
+        rendered(&mut kernel, p.bound_within),
+        "((x0 : CReal) -> ((x1 : AxNat) -> \
+         CReal.Within (CReal.seq x0 x1) \
+         (Rat.natDivSucc (AxNat.succ (CReal.bound x0)) AxNat.zero)))"
+    );
+}
+
+/// **The product is not the degenerate one**, and the check is by computation.
+///
+/// `CReal.mul_zero`, `CReal.mul_comm` and `CReal.sq_nonneg` all hold — with
+/// empty axiom footprints — of `fun _ _ => CReal.zero`. So does every
+/// footprint check that only asks whether they were *derived*. This asks the
+/// kernel for a closed instance instead: `1 · 1` is `Equiv`-equal to `1`, and
+/// `Equiv 1 0` is refuted.
+#[test]
+fn the_product_is_not_the_constant_zero() {
+    let (kernel, p) = built();
+    // PRESENCE FIRST. `Kernel::axiom_footprint` of a name that was interned but
+    // never declared is the empty vector, which is indistinguishable from
+    // "declared and axiom-free" — the failure mode this repository keeps
+    // rediscovering. Assert the declaration exists and is a Theorem before
+    // reading anything off it.
+    assert!(
+        matches!(
+            kernel.environment().get(p.not_equiv_mul_one_one_zero),
+            Some(Declaration::Theorem { .. })
+        ),
+        "CReal.not_equiv_mul_one_one_zero must be a checked theorem: without it \
+         nothing separates any product from zero, and mul_zero / mul_comm / \
+         sq_nonneg all still hold of `fun _ _ => zero`"
+    );
+    assert!(
+        matches!(
+            kernel.environment().get(p.of_rat_mul),
+            Some(Declaration::Theorem { .. })
+        ),
+        "CReal.ofRat_mul must be a checked theorem: without it nothing pins \
+         CReal.mul to Rat.mul anywhere at all"
+    );
+    let footprint = kernel.axiom_footprint(p.not_equiv_mul_one_one_zero);
+    assert!(
+        footprint.is_empty(),
+        "the product's discrimination witness rests on {:?}",
+        footprint
+            .into_iter()
+            .map(|name| kernel.display_name(name).to_string())
+            .collect::<Vec<_>>()
+    );
+}
+
+/// The negative control for the product witness: the **same script**, pointed
+/// at a claim that is false.
+///
+/// `Not (Equiv (mul one one) one)` is false — `mul_one` proves the positive
+/// form — and it differs from the proved witness in one constant. The kernel
+/// must refuse it, which is what says the witness is checking the pair it
+/// names rather than any pair.
+#[test]
+fn the_product_discrimination_route_cannot_refute_mul_one_one_one() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rat_eq_rewrite, rmul, rone};
+
+    let (mut kernel, p) = built();
+    let rat = p.rat;
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, rat.int);
+
+    let cone = d.kernel().const_(p.one, vec![]);
+    let product = d.const_app(p.mul, &[cone, cone]);
+    let claim = super::equiv(&mut d, p, product, cone);
+    let stmt = d.not(claim);
+
+    let unit = rone(&mut d, rat);
+    let homomorphism = d.lemma(p.of_rat_mul, &[unit, unit]);
+    let square = rmul(&mut d, unit, unit);
+    let collapse = d.lemma(rat.mul_one, &[unit]);
+    let at_one = rat_eq_rewrite(&mut d, square, unit, collapse, homomorphism, &|d, t| {
+        let embedded = d.const_app(p.of_rat, &[t]);
+        super::equiv(d, p, product, embedded)
+    });
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let reversed = d.lemma(p.equiv_symm, &[product, cone, h]);
+    let chained = d.lemma(p.equiv_trans, &[cone, product, cone, reversed, at_one]);
+    let absurd = d.lemma(p.not_zero_one, &[chained]);
+    let value = d.lam_fv(h_fv, claim, absurd);
+    let name = d.kernel().name_str(anon, "Check.not_mul_one_one_one");
+    let refused = d.kernel().add_declaration(crate::Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: stmt,
+        value,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted `Not (CReal.Equiv (mul one one) one)`, which \
+         contradicts CReal.mul_one — the product witness proves nothing"
     );
 }
 

@@ -1,33 +1,46 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
-> **STATUS 2026-08-18 (latest) — the strict order landed, and it is 14 of 22,
-> not 7. The eight that remain are exactly the eight that mention `mul`.**
-> `CReal.lt x y := ∃ (q : Rat), 0 < q ∧ le (add x (ofRat q)) y` — the gap is a
-> **rational, carried**, not an index recomputed. That is what unblocks the
-> seven: `lt_trans` hands `q₁` through untouched and reads its second hypothesis
-> only through `le_of_lt`, so the margin the naive `∃ n, y_n − x_n > 2/(n+1)`
-> spends on two regularity round trips is never spent at all. Both dead ends
-> this document named are confirmed dead and neither had to be walked: `Not (le
-> y x)` still makes `le_of_lt` non-constructive, and the index form still fails
-> `lt_trans`. The costing "budget `lt` as new mathematics" was right about the
-> *definition* and wrong about the *proofs*: once the gap is carried, six of the
-> seven laws are `le_trans` and `add_le_add` rearrangements, and only
-> `lt_irrefl` needs an estimate — it is the Archimedean property's second
-> consumer, forcing `q ≤ 4/(n+1)` at every `n`.
+> **STATUS 2026-08-18 (latest) — `mul` landed, and it is 19 of 22. The costing
+> that made `mul` the keystone blocker was wrong in the direction that
+> mattered.** That costing — repeated in this document and in two agent briefs —
+> said the blocker was a canonical bound on a representative, "which Mathlib
+> takes from `CauSeq`'s *existential* modulus and a fixed modulus does not
+> supply." Measured: with a **fixed** modulus, regularity at `n = 0` bounds every
+> sample by `|x_0| + 2` outright. There is nothing to extract, and
+> `CReal.bound x := natAbs (num (seq x 0)) + 1` is a projection. What a fixed
+> modulus genuinely lacks is the ℕ-valued `K`, and the bridge is two `Int` facts
+> about `Int.natAbs` that *compute* — `Int.le` is a four-case definition, so
+> `Int.le (negSucc m) (ofNat (succ m))` reduces to `True`.
 >
-> **42 declarations, trusted surface still 0**, every footprint empty:
+> `CReal.mul` samples at `(c+1)·n + c` with `c := bound x + bound y + 1`, written
+> as a successor so `c + 1` **is** `Kx + Ky` and ℕ-subtraction never appears. The
+> estimate closes **exactly**: the four terms
+> `Kx/(A+1) + Kx/(B+1) + Ky/(A+1) + Ky/(B+1)` fuse in the numerator to the
+> regularity bound, with no weakening step, because `natDivSucc_scale` reads
+> `(c+1)/((c+1)·n + c + 1)` as `1/(n+1)`. **`Rat.natDivSucc` antitone in its
+> index — the ~250-line lemma dodged three times now — is still not built and
+> still not needed.**
+>
+> Five of the eight land: `mul_comm`, `mul_one`, `mul_zero` in `Equiv` form,
+> `mul_nonneg` and `sq_nonneg` verbatim. **53 declarations, trusted surface still
+> 0**, every footprint empty:
 > `cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness`. Two new
-> vacuity guards, because six of the seven strict-order laws only *consume* a
-> `lt` and so hold, footprint-free, of the EMPTY relation: `zero_lt_one`
-> exhibits an inhabitant, `lt_irrefl` refuses a pair, and the example's exit
-> status depends on both — verified by deleting each and watching the exit flip
-> to 1 with every other row still green. `le_congr` and `lt_congr` are also
-> built: two of the nine equality-slot binders R4 asks for by name.
+> vacuity guards, because `mul_zero`, `mul_comm` and `sq_nonneg` all hold —
+> footprint-free — of `fun _ _ => zero`: `CReal.ofRat_mul` pins the *operation*
+> on the whole embedded ℚ, and `CReal.not_equiv_mul_one_one_zero` refuses the
+> constant-zero product by computation. Verified load-bearing by deletion, and by
+> a negative control the kernel refuses.
 >
-> What is left for R4 is `mul` and its eight laws, and that costing is
-> unchanged: the blocker is a canonical bound on a representative, which
-> Mathlib takes from `CauSeq`'s *existential* modulus and a fixed modulus does
-> not supply.
+> **Three of the 22 remain, and they are one problem, not three.** `mul_assoc`,
+> `left_distrib` and `mul_le_mul_of_nonneg_left` each compare two products whose
+> *sampling indices differ* — `mul x (add y z)` and `add (mul x y) (mul x z)`
+> agree at no index and their shifts are not even equal as naturals. So does
+> `mul_congr`, the fifth congruence obligation and an R4 prerequisite. All four
+> go through the arbitrary-third-index argument `Equiv.trans` already runs on,
+> closing on `Rat.le_of_le_add_natDivSucc` with a **symbolic** `k` (its `k` is a
+> `Nat` parameter, so that is allowed). `mul_le_mul_of_nonneg_left` is
+> *downstream* of `left_distrib`, not a fourth estimate — do `left_distrib`
+> first.
 
 > **STATUS 2026-08-18 (later) — R3 landed, and the distance to `real: 0` is
 > longer than ADR-0468's end-state paragraph reads.** That paragraph says the 30
