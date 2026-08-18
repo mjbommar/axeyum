@@ -142,7 +142,7 @@ do not capture the reasoning state that preceded a result.
 
 | Existing component | Immediate engineering gap | Why it blocks the loop |
 |---|---|---|
-| `fact-frontier.py` | Authoritative operation for A and event-driven two-write orchestration | Clean authoritative B admission now makes A newly ready; A remains fixture-only and is correctly refused |
+| `fact-frontier.py` | Clean two-write orchestration and replay | B admission makes A newly ready and A now has an exact event-bound operation; no retained run has executed both authoritative writes |
 | Fact schema | Candidate/attempt identity is absent by design | Attempts and knowledge need separate schemas |
 | Solver `Evidence` | No route-neutral portable result envelope for closure | The closer cannot derive ledger evidence safely |
 | Reconstruction | No generic obligation-composition interface | Multi-step plans cannot become one kernel proof |

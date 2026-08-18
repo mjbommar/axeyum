@@ -257,6 +257,33 @@ def build_authoritative_transaction(
             "formal statement through the registered fresh-kernel operation and "
             "requires an axiom-free result without retained-answer dependencies"
         )
+    elif executor["driver"] == "axeyum-lean-kernel/nat-mul-one-episode-apply-v1":
+        expected_statement_sha = hashlib.sha256(
+            before_fact["formal"]["statement"].encode()
+        ).hexdigest()
+        trigger = identity.get("trigger")
+        if (
+            identity.get("formal_statement_sha256") != expected_statement_sha
+            or not isinstance(trigger, dict)
+            or trigger.get("premise_fact_id") != executor["premise_fact_id"]
+            or trigger.get("premise_operation_id") != executor["premise_operation_id"]
+            or trigger.get("frontier_after_sha256") != identity.get("frontier_sha256")
+        ):
+            raise TransactionError("episode-local execution trigger is inconsistent")
+        execution_input_binding = {
+            "target_theorem": executor["target_theorem"],
+            "formal_statement_sha256": expected_statement_sha,
+            "premise_fact_id": executor["premise_fact_id"],
+            "premise_operation_id": executor["premise_operation_id"],
+            "premise_budget": executor["premise_budget"],
+            "budget": executor["budget"],
+            "trigger": trigger,
+        }
+        result_description = "event-bound episode-local axiom-free apply proof"
+        replay_description = (
+            "formal statement by reconstructing and applying the event-bound premise "
+            "and requires no retained-answer dependency"
+        )
     else:
         raise TransactionError("authoritative operation uses an unsupported driver")
     after_fact = json.loads(json.dumps(before_fact))
@@ -447,7 +474,14 @@ def derive_authoritative(args: argparse.Namespace) -> dict[str, Any]:
         "autogenesis_executor_for_transaction", EXECUTOR_SCRIPT
     )
     try:
-        expected_execution = executor_module.derive(args.frontier.resolve())
+        expected_execution = executor_module.derive(
+            args.frontier.resolve(),
+            trigger_bundle=(
+                args.trigger_bundle.resolve()
+                if getattr(args, "trigger_bundle", None) is not None
+                else None
+            ),
+        )
         execution = json.loads(args.execution.read_text())
         executor_module.verify_receipt(execution, expected_execution)
         frontier = json.loads(args.frontier.read_text())
@@ -492,6 +526,7 @@ def main() -> int:
     parser.add_argument("--bundle", type=pathlib.Path)
     parser.add_argument("--frontier", type=pathlib.Path)
     parser.add_argument("--execution", type=pathlib.Path)
+    parser.add_argument("--trigger-bundle", type=pathlib.Path)
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--output", type=pathlib.Path)
     action.add_argument("--verify", type=pathlib.Path)

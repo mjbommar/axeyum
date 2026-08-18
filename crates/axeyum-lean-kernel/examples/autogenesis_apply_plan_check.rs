@@ -12,6 +12,9 @@ mod autogenesis_support;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -74,6 +77,7 @@ struct Args {
     expected: Expected,
     bundle_sha256: String,
     catalog_sha256: String,
+    evidence_output: Option<PathBuf>,
 }
 
 fn take_value(arguments: &mut impl Iterator<Item = String>, flag: &str) -> Result<String, String> {
@@ -95,6 +99,7 @@ fn parse_args() -> Result<Args, String> {
     let mut expected = None;
     let mut bundle_sha256 = None;
     let mut catalog_sha256 = None;
+    let mut evidence_output = None;
     let mut arguments = std::env::args().skip(1);
     while let Some(flag) = arguments.next() {
         match flag.as_str() {
@@ -128,6 +133,9 @@ fn parse_args() -> Result<Args, String> {
             "--expect" => expected = Some(Expected::parse(&take_value(&mut arguments, &flag)?)?),
             "--bundle-sha256" => bundle_sha256 = Some(take_value(&mut arguments, &flag)?),
             "--catalog-sha256" => catalog_sha256 = Some(take_value(&mut arguments, &flag)?),
+            "--evidence-output" => {
+                evidence_output = Some(PathBuf::from(take_value(&mut arguments, &flag)?));
+            }
             _ => return Err(format!("unknown flag {flag:?}")),
         }
     }
@@ -144,6 +152,7 @@ fn parse_args() -> Result<Args, String> {
         expected: expected.ok_or("--expect is required")?,
         bundle_sha256: bundle_sha256.ok_or("--bundle-sha256 is required")?,
         catalog_sha256: catalog_sha256.ok_or("--catalog-sha256 is required")?,
+        evidence_output,
     };
     if parsed.budget == 0 {
         return Err("--budget must be positive".to_owned());
@@ -163,6 +172,11 @@ fn parse_args() -> Result<Args, String> {
     }
     if parsed.premise_budget == Some(0) {
         return Err("--premise-budget must be positive".to_owned());
+    }
+    if parsed.evidence_output.is_some()
+        && (parsed.phase != Phase::PostB || parsed.expected != Expected::Proved)
+    {
+        return Err("--evidence-output requires --phase post_b --expect proved".to_owned());
     }
     Ok(parsed)
 }
@@ -375,10 +389,18 @@ fn candidate_is_creditable(
         && kernel.render_lean(candidate_type) == kernel.render_lean(target_type))
 }
 
-fn search(
-    args: &Args,
-    plans: &[Plan],
-) -> Result<(usize, Option<usize>, usize, Option<String>), String> {
+struct ApplySearch {
+    kernel: Kernel,
+    candidate: Option<NameId>,
+    premise: Option<NameId>,
+    premise_attempted: usize,
+    premise_plan_rank: Option<usize>,
+    attempted: usize,
+    accepted_plan_rank: Option<usize>,
+    theorem: Option<String>,
+}
+
+fn search(args: &Args, plans: &[Plan]) -> Result<ApplySearch, String> {
     let base = build_base(args)?;
     let limited = plans.iter().take(args.budget);
     let mut attempted = 0;
@@ -415,39 +437,132 @@ fn search(
         if !candidate_is_creditable(&mut accepted, candidate, &base)? {
             return Err("trial passed but exact candidate failed the same audit".to_owned());
         }
-        return Ok((
-            base.premise_attempted,
-            base.premise_plan_rank,
+        return Ok(ApplySearch {
+            kernel: accepted,
+            candidate: Some(candidate),
+            premise: base.premise,
+            premise_attempted: base.premise_attempted,
+            premise_plan_rank: base.premise_plan_rank,
             attempted,
-            Some(plan.theorem.clone()),
-        ));
+            accepted_plan_rank: Some(plan.rank),
+            theorem: Some(plan.theorem.clone()),
+        });
     }
-    Ok((
-        base.premise_attempted,
-        base.premise_plan_rank,
+    Ok(ApplySearch {
+        kernel: base.kernel,
+        candidate: None,
+        premise: base.premise,
+        premise_attempted: base.premise_attempted,
+        premise_plan_rank: base.premise_plan_rank,
         attempted,
-        None,
-    ))
+        accepted_plan_rank: None,
+        theorem: None,
+    })
+}
+
+fn write_evidence(path: &Path, args: &Args, search: &ApplySearch) -> Result<(), String> {
+    let candidate = search
+        .candidate
+        .ok_or("proved apply result has no candidate")?;
+    let premise = search
+        .premise
+        .ok_or("proved post-B result has no premise")?;
+    let declaration = search
+        .kernel
+        .environment()
+        .get(candidate)
+        .ok_or("accepted apply candidate is absent while writing evidence")?;
+    let canonical_type = search.kernel.render_lean(declaration.ty());
+    let premise_name = search.kernel.display_name(premise).to_string();
+    let applied = search
+        .theorem
+        .as_deref()
+        .ok_or("proved apply result has no applied theorem")?;
+    let accepted_rank = search
+        .accepted_plan_rank
+        .ok_or("proved apply result has no accepted plan rank")?;
+    let premise_rank = search
+        .premise_plan_rank
+        .ok_or("proved post-B result has no premise plan rank")?;
+    if canonical_type.contains(['\t', '\n', '\r'])
+        || args.candidate.contains(['\t', '\n', '\r'])
+        || premise_name.contains(['\t', '\n', '\r'])
+        || applied.contains(['\t', '\n', '\r'])
+    {
+        return Err("kernel apply evidence fields are not TSV-safe".to_owned());
+    }
+    let footprint: BTreeSet<String> = search
+        .kernel
+        .axiom_footprint(candidate)
+        .into_iter()
+        .map(|name| search.kernel.display_name(name).to_string())
+        .collect();
+    let closure: BTreeSet<String> = search
+        .kernel
+        .declaration_dependency_closure(candidate)
+        .into_iter()
+        .map(|name| search.kernel.display_name(name).to_string())
+        .collect();
+    if !closure.contains(&premise_name) || applied != premise_name {
+        return Err("accepted apply proof does not use exactly the episode premise".to_owned());
+    }
+    let retained: Vec<&str> = ["Nat.mul_one", "Nat.zero_add"]
+        .into_iter()
+        .filter(|name| closure.contains(*name))
+        .collect();
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(|error| format!("cannot create {}: {error}", path.display()))?;
+    writeln!(file, "AXEYUM_AUTOGENESIS_APPLY_EVIDENCE_V1")
+        .and_then(|()| writeln!(file, "candidate\t{}", args.candidate))
+        .and_then(|()| writeln!(file, "canonical_type\t{canonical_type}"))
+        .and_then(|()| writeln!(file, "bundle_sha256\t{}", args.bundle_sha256))
+        .and_then(|()| writeln!(file, "catalog_sha256\t{}", args.catalog_sha256))
+        .and_then(|()| writeln!(file, "attempted\t{}", search.attempted))
+        .and_then(|()| writeln!(file, "budget\t{}", args.budget))
+        .and_then(|()| writeln!(file, "accepted_plan_rank\t{accepted_rank}"))
+        .and_then(|()| writeln!(file, "applied_theorem\t{applied}"))
+        .and_then(|()| writeln!(file, "premise_candidate\t{premise_name}"))
+        .and_then(|()| writeln!(file, "premise_attempted\t{}", search.premise_attempted))
+        .and_then(|()| writeln!(file, "premise_plan_rank\t{premise_rank}"))
+        .and_then(|()| {
+            writeln!(
+                file,
+                "axiom_footprint\t{}",
+                footprint.into_iter().collect::<Vec<_>>().join(",")
+            )
+        })
+        .and_then(|()| writeln!(file, "retained_answer_dependencies\t{}", retained.join(",")))
+        .map_err(|error| format!("cannot write {}: {error}", path.display()))
 }
 
 fn run() -> Result<bool, String> {
     let args = parse_args()?;
     let plans = parse_plans(&args)?;
-    let (premise_attempted, premise_plan_rank, attempted, theorem) = search(&args, &plans)?;
-    let outcome = if theorem.is_some() {
+    let search = search(&args, &plans)?;
+    let outcome = if search.theorem.is_some() {
         "proved"
     } else {
         "no-proof"
     };
     println!(
-        "AUTOGENESIS_APPLY_RESULT|phase={}|premise_attempted={premise_attempted}|premise_plan_rank={}|attempted={attempted}|budget={}|outcome={outcome}|theorem={}",
+        "AUTOGENESIS_APPLY_RESULT|phase={}|premise_attempted={}|premise_plan_rank={}|attempted={}|budget={}|outcome={outcome}|theorem={}",
         args.phase.rendered(),
-        premise_plan_rank.map_or_else(|| "-".to_owned(), |rank| rank.to_string()),
+        search.premise_attempted,
+        search
+            .premise_plan_rank
+            .map_or_else(|| "-".to_owned(), |rank| rank.to_string()),
+        search.attempted,
         args.budget,
-        theorem.as_deref().unwrap_or("-")
+        search.theorem.as_deref().unwrap_or("-")
     );
+    if let Some(path) = &args.evidence_output {
+        write_evidence(path, &args, &search)?;
+    }
     Ok(matches!(
-        (args.expected, theorem.is_some()),
+        (args.expected, search.theorem.is_some()),
         (Expected::Proved, true) | (Expected::NoProof, false)
     ))
 }

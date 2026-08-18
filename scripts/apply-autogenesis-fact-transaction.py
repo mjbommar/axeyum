@@ -234,6 +234,7 @@ def main() -> int:
     parser.add_argument("--bundle", type=pathlib.Path)
     parser.add_argument("--frontier", type=pathlib.Path)
     parser.add_argument("--execution", type=pathlib.Path)
+    parser.add_argument("--trigger-bundle", type=pathlib.Path)
     parser.add_argument("--before-fact", type=pathlib.Path)
     parser.add_argument("--journal-dir", required=True, type=pathlib.Path)
     parser.add_argument("--fixture-fact-root", type=pathlib.Path)
@@ -256,7 +257,13 @@ def main() -> int:
         if args.recover:
             if any(
                 value is not None
-                for value in (args.bundle, args.frontier, args.execution, args.before_fact)
+                for value in (
+                    args.bundle,
+                    args.frontier,
+                    args.execution,
+                    args.before_fact,
+                    args.trigger_bundle,
+                )
             ):
                 raise ApplyError("recovery accepts only transaction, journal, and target mode")
             require_recovery_intent(transaction, journal_root)
@@ -268,6 +275,7 @@ def main() -> int:
                 bundle=args.bundle,
                 frontier=args.frontier,
                 execution=args.execution,
+                trigger_bundle=args.trigger_bundle,
             )
             expected = prepare.derive(derive_args)
             prepare.verify_transaction(transaction, expected)

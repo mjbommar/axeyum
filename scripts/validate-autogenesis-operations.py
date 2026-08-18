@@ -19,6 +19,7 @@ SCOPES = {"counterfactual-fixture-only", "authoritative"}
 EXECUTION_DRIVERS = {
     "axeyum-bench/smtcomp-evidence-v1",
     "axeyum-lean-kernel/nat-zero-add-induction-v1",
+    "axeyum-lean-kernel/nat-mul-one-episode-apply-v1",
 }
 ADMISSION_CONTRACTS = {
     ("proved", "kernel-lean", "kernel-term", "must-be-empty"),
@@ -117,6 +118,15 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
         expected = common | {"input_artifact"}
     elif driver == "axeyum-lean-kernel/nat-zero-add-induction-v1":
         expected = common | {"target_theorem", "denied_theorems", "budget"}
+    elif driver == "axeyum-lean-kernel/nat-mul-one-episode-apply-v1":
+        expected = common | {
+            "target_theorem",
+            "premise_fact_id",
+            "premise_operation_id",
+            "denied_theorems",
+            "premise_budget",
+            "budget",
+        }
     else:
         expected = common
     exact_keys(value, expected, label)
@@ -130,7 +140,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
         expected_artifact_root = (root / "artifacts/facts/smt2").resolve()
         if not artifact.is_relative_to(expected_artifact_root) or artifact.suffix != ".smt2":
             raise RegistryError(f"{label}.input_artifact is not a fact SMT-LIB instance")
-    else:
+    elif driver == "axeyum-lean-kernel/nat-zero-add-induction-v1":
         theorem = value["target_theorem"]
         if not isinstance(theorem, str) or not re.fullmatch(r"Nat\.[A-Za-z0-9_']+", theorem):
             raise RegistryError(f"{label}.target_theorem is invalid")
@@ -144,6 +154,18 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
         budget = value["budget"]
         if budget != 2:
             raise RegistryError(f"{label}.budget must be exactly 2 for the v1 checker")
+    else:
+        if value["target_theorem"] != "Nat.mul_one":
+            raise RegistryError(f"{label}.target_theorem exceeds the exact A scope")
+        if value["premise_fact_id"] != "F:nat-zero-add":
+            raise RegistryError(f"{label}.premise_fact_id exceeds the exact A scope")
+        if value["premise_operation_id"] != "authoritative-kernel-nat-zero-add-induction-v1":
+            raise RegistryError(f"{label}.premise_operation_id exceeds the exact A scope")
+        denied = nonempty_strings(value["denied_theorems"], f"{label}.denied_theorems")
+        if denied != ["Nat.mul_one", "Nat.zero_add"]:
+            raise RegistryError(f"{label}.denied_theorems exceeds the exact A scope")
+        if value["premise_budget"] != 2 or value["budget"] != 1:
+            raise RegistryError(f"{label} requires premise budget 2 and apply budget 1")
     timeout = value["timeout_seconds"]
     if type(timeout) is not int or not 1 <= timeout <= 900:
         raise RegistryError(f"{label}.timeout_seconds must be an integer in 1..900")
@@ -304,6 +326,19 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                 raise RegistryError(
                     f"{label}.executor driver is inconsistent with applicability/admission"
                 )
+            if executor["driver"] == "axeyum-lean-kernel/nat-mul-one-episode-apply-v1":
+                premise_matches = [
+                    candidate
+                    for candidate in registry["operations"]
+                    if candidate.get("id") == executor["premise_operation_id"]
+                    and candidate.get("scope") == "authoritative"
+                    and candidate.get("applicability", {}).get("fact_ids")
+                    == [executor["premise_fact_id"]]
+                ]
+                if len(premise_matches) != 1:
+                    raise RegistryError(
+                        f"{label}.executor premise operation is absent or ambiguous"
+                    )
 
 
 def load_registry(

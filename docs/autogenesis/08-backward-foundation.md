@@ -444,9 +444,9 @@ constructs its proof-body-free goal catalog from the selected formal statement,
 enumerates two structural induction plans, and checks the accepted proof in a
 fresh kernel. The observed result is plan rank 2 of 2, exact canonical type,
 empty axiom footprint, and no retained-answer dependency. The typed receipt,
-authoritative transaction adapter, and settled-fact replay all accept it. A
-reviewed three-script gate-mention list is exact: a new or stale review blocks
-selection, as do multiple matching operations.
+authoritative transaction adapter, and settled-fact replay all accept it. Its
+reviewed gate-mention list is exact: a new or stale review blocks selection, as
+do multiple matching operations.
 
 The next clean isolated run reconstructed both B and A as valid open ledger
 rows. B alone was selected, proved, and admitted after intentional post-intent
@@ -456,6 +456,16 @@ write, zero fixture writes, and
 authoritative operation. The retained identities and negative controls are in
 the [authoritative B result](09-authoritative-b-admission-result.md). This
 closes B admission and causal unlock, not A or Autogenesis-1.
+
+The A route is now implemented as an exact event-bound operation. It accepts a
+typed trigger bundle only when B's before frontier, execution, transaction,
+durable event, and recomputed readiness delta form one content-addressed chain ending at the selected A
+frontier. The kernel reconstructs an episode-named B proof and applies only that
+declaration to `Nat.mul_one`; retained `Nat.zero_add` and `Nat.mul_one` remain
+denied. Because B's legitimate ledger write makes the checkout dirty, the
+executor also constructs a deterministic detached Git state commit whose sole
+change is the verified B row. This removes the hidden human-commit requirement.
+A clean two-write replay remains the decisive test.
 
 ### Foundation 1 — make one closure portable
 

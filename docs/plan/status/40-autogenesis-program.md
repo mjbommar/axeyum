@@ -2,6 +2,6 @@
 
 <!-- plan-section: lane-status -->
 
-**Phase 0 WIP.** Clean authoritative B admission/recovery now unlocks A; retained
-evidence is in `docs/autogenesis/`. A is correctly refused. Next: authorize its
-episode-local apply route, then replay both writes.
+**Phase 0 WIP.** B admission durably unlocks A. A's exact event-bound apply route
+is implemented with a detached post-B state identity. Next: cleanly replay both
+authoritative writes; no Autogenesis-1 credit yet.

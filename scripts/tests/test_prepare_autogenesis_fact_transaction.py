@@ -273,6 +273,73 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
         checked = checker.check_fact(after, lambda _operation: observation)
         self.assertEqual(checked["operation_id"], operation["id"])
 
+    def test_episode_local_apply_delta_retains_trigger_chain(self):
+        executor = MODULE.load_module(
+            "executor_for_apply_transaction_test", MODULE.EXECUTOR_SCRIPT
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_apply_transaction_test", executor.FRONTIER_SCRIPT
+        )
+        facts = frontier_module.load()
+        target = copy.deepcopy(facts["F:nat-mul-one"])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[target["id"]] = target
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
+        trigger = {
+            "premise_fact_id": "F:nat-zero-add",
+            "premise_operation_id": "authoritative-kernel-nat-zero-add-induction-v1",
+            "premise_source_commit": "0" * 40,
+            "premise_before_fact_sha256": "1" * 64,
+            "premise_after_fact_sha256": "2" * 64,
+            "premise_execution_sha256": "3" * 64,
+            "premise_transaction_sha256": "4" * 64,
+            "premise_admission_event_sha256": "5" * 64,
+            "readiness_delta_sha256": "6" * 64,
+            "frontier_after_sha256": frontier["frontier_sha256"],
+        }
+        observation = {
+            "verdict": "proved",
+            "evidence_label": operation["executor"]["expected_evidence_label"],
+            "canonical_type": executor.formal_type(before),
+            "axiom_footprint": [],
+            "retained_answer_dependencies": [],
+            "episode_dependency": "Autogenesis.Authoritative.E1111111111111111.premise",
+            "attempted": 1,
+            "accepted_plan_rank": 1,
+            "premise_attempted": 2,
+            "premise_plan_rank": 2,
+        }
+        receipt = executor.build_receipt(
+            frontier=frontier,
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="f" * 40,
+            observation=observation,
+            trigger=trigger,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=receipt,
+            operation=operation,
+            registry=registry,
+        )
+        after = transaction["authoritative_write"]["after_fact"]
+        binding = after["evidence"][0]["checker_operation"]
+        self.assertEqual(binding["trigger"], trigger)
+        self.assertEqual(binding["premise_fact_id"], "F:nat-zero-add")
+        checker = MODULE.load_module(
+            "fact_checker_for_apply_transaction_test", MODULE.FACT_OPERATION_SCRIPT
+        )
+        checked = checker.check_fact(
+            after, lambda _operation, _trigger: observation
+        )
+        self.assertEqual(checked["operation_id"], operation["id"])
+
 
 if __name__ == "__main__":
     unittest.main()

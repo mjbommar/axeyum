@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_two_authoritative_operations(self) -> None:
+    def test_committed_registry_has_one_fixture_and_three_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 3)
+        self.assertEqual(len(self.registry["operations"]), 4)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
@@ -46,6 +46,13 @@ class OperationRegistryTests(unittest.TestCase):
         self.assertEqual(
             kernel["executor"]["driver"],
             "axeyum-lean-kernel/nat-zero-add-induction-v1",
+        )
+        apply = self.registry["operations"][3]
+        self.assertEqual(apply["scope"], "authoritative")
+        self.assertEqual(apply["applicability"]["fact_ids"], ["F:nat-mul-one"])
+        self.assertEqual(
+            apply["executor"]["driver"],
+            "axeyum-lean-kernel/nat-mul-one-episode-apply-v1",
         )
 
     def test_duplicate_operation_id_is_rejected(self) -> None:
@@ -91,6 +98,11 @@ class OperationRegistryTests(unittest.TestCase):
         mutated = copy.deepcopy(self.registry)
         mutated["operations"][2]["executor"]["target_theorem"] = "Nat.add_zero"
         with self.assertRaisesRegex(registry_module.RegistryError, "target"):
+            registry_module.validate_registry(mutated, ROOT)
+
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][3]["executor"]["premise_operation_id"] = "invented"
+        with self.assertRaisesRegex(registry_module.RegistryError, "premise_operation"):
             registry_module.validate_registry(mutated, ROOT)
 
     def test_executor_cannot_escape_or_name_an_unknown_driver(self) -> None:

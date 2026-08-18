@@ -21,19 +21,19 @@
     {
       "evidence": "clean authoritative B admission now makes the same A target newly ready; the earlier fixture retains the pre-B no-proof and post-B proof control",
       "id": "A1-operational-unlock-control",
-      "next": "authorize A and preserve the same causal boundary across the second write",
+      "next": "execute A from the authoritative B event and preserve the causal boundary across the second write",
       "state": "fixture"
     },
     {
       "evidence": "content-addressed authoritative frontier selected B alone; after its admission A became ready but remained refused without an exact operation",
       "id": "A1-machine-selection",
-      "next": "register A's episode-local apply operation",
+      "next": "replay B then A from one clean reconstructed chain pre-state",
       "state": "partial"
     },
     {
-      "evidence": "the registry now fixes both the admitted SMT route and an exact fresh-kernel Nat.zero_add route; B's typed receipt, axiom-free transaction, and settled-fact replay work without caller-authored metadata",
+      "evidence": "the registry fixes SMT, exact Nat.zero_add, and event-bound Nat.mul_one routes; A reconstructs and applies only an episode-local B candidate",
       "id": "A1-typed-dispatch-evidence",
-      "next": "add the dependent Nat.mul_one operation",
+      "next": "retain and replay the complete two-write receipt chain",
       "state": "authoritative-multi-route"
     },
     {
@@ -588,7 +588,7 @@
   },
   "manual_seams": [
     {
-      "gap": "clean authoritative B admission now makes A newly ready; A still has no exact operation and is correctly refused",
+      "gap": "B admission makes A newly ready and A has an exact event-bound operation; the two-write sequence has not yet replayed cleanly",
       "id": "goal-selection",
       "owner": "fact frontier",
       "source": "scripts/fact-frontier.py",
@@ -602,14 +602,14 @@
       "state": "qualified-primary-fixture"
     },
     {
-      "gap": "authoritative SMT and exact Nat.zero_add kernel drivers exist; the dependent Nat.mul_one operation remains missing",
+      "gap": "authoritative SMT, exact Nat.zero_add, and event-bound Nat.mul_one drivers exist; the two-write chain remains unreplayed",
       "id": "route-dispatch",
       "owner": "operation registry",
       "source": "artifacts/autogenesis/operations.json",
       "state": "partial"
     },
     {
-      "gap": "SMT and exact Nat.zero_add kernel drivers emit normalized replayable receipts; the chain's A driver remains missing",
+      "gap": "SMT, Nat.zero_add, and event-bound Nat.mul_one drivers emit normalized receipts; clean two-write replay remains missing",
       "id": "operation-execution",
       "owner": "typed operation executor",
       "source": "scripts/execute-autogenesis-operation.py",
@@ -673,12 +673,12 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "71bc96655bae020ade86f3d16188233c62104c592719d004b812ce9daa8b0ee3",
+    "digest": "481565c1ac24ed54fa841e1f8f32c11261521e8493118bd807deb2203eeeaa8e",
     "inputs": [
       {
-        "bytes": 4601,
+        "bytes": 6557,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "ef0cc0705a2f1f0441af7aa67c44c0be4697dae6a553169056a9abba8c0ddc66"
+        "sha256": "d2778e9be43f6b7566f971febec024161328382a1d7802c5c60a13fe4aa84675"
       },
       {
         "bytes": 3519,
@@ -1236,9 +1236,9 @@
         "sha256": "ca3d41c6386a4d75424052a0f44ea4d794a8d139b8f98bd4d1c14e32913a19aa"
       },
       {
-        "bytes": 15718,
+        "bytes": 20474,
         "path": "crates/axeyum-lean-kernel/examples/autogenesis_apply_plan_check.rs",
-        "sha256": "42e1db47be627a78bf0c4b95541f19a741b0c2f02960bc3224a9ee55daf89e93"
+        "sha256": "883e05bfd5342b5f7dcb554ad8269458297e46ee071d748795a31259838355ad"
       },
       {
         "bytes": 7383,
@@ -1266,9 +1266,9 @@
         "sha256": "969bb4e6a2c9571b7d4e1c21ce047cafe3b748b60e5767d40e5fa7fce39e3f15"
       },
       {
-        "bytes": 11674,
+        "bytes": 11929,
         "path": "scripts/apply-autogenesis-fact-transaction.py",
-        "sha256": "f15929b04e52a859c7353f81c3cde7bbbf33fce40755fedc191b8f8f9bb03d60"
+        "sha256": "bec81d8759569dd739e95af5934e9460fd8bfd8177202928a37770b7dc124634"
       },
       {
         "bytes": 2896,
@@ -1291,9 +1291,9 @@
         "sha256": "be51051e66d990696f495596327242c94e6ed2e543875f4646f18dda5ff61b88"
       },
       {
-        "bytes": 7440,
+        "bytes": 10292,
         "path": "scripts/check-autogenesis-fact-operation.py",
-        "sha256": "37b7402d67a63ccd633e8938d994ff994ac1dd0c0783ddf87f3a6795f10e12e7"
+        "sha256": "c6567c2318511ba1f96ad3246fb73ec9ab2b3ab222bbbedc784235e12b1951f1"
       },
       {
         "bytes": 3677,
@@ -1366,9 +1366,9 @@
         "sha256": "cb7b1b6ed2cb8f268b6adac42cc1bfb4ff3b99ce9e85b438c23790b4ce92c9e1"
       },
       {
-        "bytes": 19048,
+        "bytes": 41220,
         "path": "scripts/execute-autogenesis-operation.py",
-        "sha256": "ad2e6b3b9061bf8ff710c073de5f6a884d3e4d96851cf86b21dd77feeb0753c2"
+        "sha256": "dfc6b131d999ad5a2d35ffcea9647f54e203717674fa27fa28ebd83ed86c5fc6"
       },
       {
         "bytes": 27844,
@@ -1376,9 +1376,9 @@
         "sha256": "fb367504828dc9aa0d09ecf349b645eb33b83402b69c53df65e43e937271526c"
       },
       {
-        "bytes": 25810,
+        "bytes": 25829,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "786e15385114e95ba26aa3d20fbe73d535054eabde8f5590fe7c5cbc3f8ea3f6"
+        "sha256": "ec4f9ec5dd7b69358ef3db738cd44fb7723e36a0bb33697c480a1c022ea01f6f"
       },
       {
         "bytes": 17112,
@@ -1386,9 +1386,9 @@
         "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
       },
       {
-        "bytes": 22197,
+        "bytes": 23897,
         "path": "scripts/prepare-autogenesis-fact-transaction.py",
-        "sha256": "24874acf5fda5bc2af1a0f77d6e42b97014e540487788800bc77c20daa592ea0"
+        "sha256": "7d08be51e5cc81cfcb748e85cb9411875423ee5d902e06d9805213c437db4a26"
       },
       {
         "bytes": 10990,
@@ -1431,9 +1431,9 @@
         "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
       },
       {
-        "bytes": 14152,
+        "bytes": 16111,
         "path": "scripts/validate-autogenesis-operations.py",
-        "sha256": "cde2b42e5dd26882a474cd531ab5be4168ae8d0a3a9be75d231d5e7aaba652e1"
+        "sha256": "56804a2020502f42d40d11d2107eb4c78221ba334b6533aa91d81685b7923d73"
       },
       {
         "bytes": 2711,

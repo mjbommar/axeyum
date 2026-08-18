@@ -185,9 +185,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Phase 0 WIP.** Clean authoritative B admission/recovery now unlocks A; retained
-evidence is in `docs/autogenesis/`. A is correctly refused. Next: authorize its
-episode-local apply route, then replay both writes.
+**Phase 0 WIP.** B admission durably unlocks A. A's exact event-bound apply route
+is implemented with a detached post-B state identity. Next: cleanly replay both
+authoritative writes; no Autogenesis-1 credit yet.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

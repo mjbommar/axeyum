@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import json
 import pathlib
+import tempfile
 import unittest
 from unittest import mock
 
@@ -48,6 +50,96 @@ class OperationExecutionTests(unittest.TestCase):
             registry=self.registry,
             git_commit="a" * 40,
             observation=self.observation,
+        )
+
+    def episode_trigger_inputs(self):
+        frontier_module = execution.load_module(
+            "frontier_for_episode_test", execution.FRONTIER_SCRIPT
+        )
+        facts = frontier_module.load()
+        for fact_id in ("F:nat-zero-add", "F:nat-mul-one"):
+            target = copy.deepcopy(facts[fact_id])
+            target["epistemic_status"] = "open"
+            target["evidence"] = []
+            target.pop("proof_route", None)
+            target.pop("axiom_footprint", None)
+            facts[fact_id] = target
+        registry = execution.load_module(
+            "registry_for_episode_test", execution.REGISTRY_SCRIPT
+        ).load_registry()
+        before_frontier = frontier_module.build_machine_frontier(facts, registry)
+        before, premise_operation, _ = execution.selected_inputs(before_frontier, facts)
+        premise_observation = {
+            "verdict": "proved",
+            "evidence_label": "kernel-term-axiom-free",
+            "canonical_type": execution.formal_type(before),
+            "axiom_footprint": [],
+            "retained_answer_dependencies": [],
+            "attempted": 2,
+            "accepted_plan_rank": 2,
+        }
+        premise_execution = execution.build_receipt(
+            frontier=before_frontier,
+            fact=before,
+            operation=premise_operation,
+            registry=registry,
+            git_commit="d" * 40,
+            observation=premise_observation,
+        )
+        prepare = execution.load_module(
+            "prepare_for_episode_test",
+            execution.ROOT / "scripts/prepare-autogenesis-fact-transaction.py",
+        )
+        transaction = prepare.build_authoritative_transaction(
+            before_fact=before,
+            execution=premise_execution,
+            operation=premise_operation,
+            registry=registry,
+        )
+        apply = execution.load_module(
+            "apply_for_episode_test", execution.APPLY_TRANSACTION_SCRIPT
+        )
+        event = apply.build_admission_event(transaction)
+        facts[before["id"]] = transaction["authoritative_write"]["after_fact"]
+        after_frontier = frontier_module.build_machine_frontier(facts, registry)
+        self.assertEqual(
+            after_frontier["selection"]["selected_fact_id"], "F:nat-mul-one"
+        )
+        readiness = {
+            "schema_version": 1,
+            "kind": "axeyum-autogenesis-readiness-delta",
+            "mode": "authoritative-ledger",
+            "identity": {
+                "episode_id": transaction["identity"]["episode_id"],
+                "transaction_sha256": transaction["transaction_sha256"],
+                "execution_sha256": premise_execution["execution_sha256"],
+                "durable_admission_event_sha256": event["event_sha256"],
+                "before_frontier_sha256": before_frontier["frontier_sha256"],
+                "after_frontier_sha256": after_frontier["frontier_sha256"],
+            },
+            "frontier_change": {
+                "selected_before": "F:nat-zero-add",
+                "selected_after": "F:nat-mul-one",
+                "no_longer_ready": ["F:nat-zero-add"],
+            },
+            "newly_ready": ["F:nat-mul-one"],
+            "cause": {
+                "event_type": "fact-admitted",
+                "admitted_fact_id": "F:nat-zero-add",
+            },
+            "authoritative_ledger_writes": 1,
+            "fixture_writes": 0,
+        }
+        readiness["readiness_delta_sha256"] = execution.digest(readiness)
+        return (
+            facts,
+            registry,
+            before_frontier,
+            after_frontier,
+            premise_execution,
+            transaction,
+            event,
+            readiness,
         )
 
     def test_receipt_binds_selection_registry_fact_input_and_commit(self) -> None:
@@ -175,6 +267,102 @@ class OperationExecutionTests(unittest.TestCase):
             ):
                 with self.assertRaisesRegex(execution.ExecutionError, "forbids"):
                     execution.run_registered(operation)
+
+    def test_episode_trigger_chain_uniquely_authorizes_a(self) -> None:
+        (
+            facts,
+            registry,
+            before_frontier,
+            frontier,
+            premise_execution,
+            transaction,
+            event,
+            readiness,
+        ) = self.episode_trigger_inputs()
+        operation = registry["operations"][3]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            for name, value in (
+                ("frontier-before.json", before_frontier),
+                ("execution.json", premise_execution),
+                ("transaction.json", transaction),
+                ("admission-event.json", event),
+                ("readiness.json", readiness),
+            ):
+                (root / name).write_text(json.dumps(value))
+            original_load = execution.load_module
+
+            class FakeReadiness:
+                class ReadinessError(RuntimeError):
+                    pass
+
+                @staticmethod
+                def repository_inputs_from_execution(_execution):
+                    return {}, registry
+
+                @staticmethod
+                def build_authoritative_delta(**_kwargs):
+                    return readiness
+
+            def load_for_test(name, path):
+                if path == execution.READINESS_SCRIPT:
+                    return FakeReadiness
+                return original_load(name, path)
+
+            with mock.patch.object(execution, "load_module", side_effect=load_for_test):
+                trigger = execution.load_episode_trigger(
+                    bundle=root,
+                    frontier=frontier,
+                    facts=facts,
+                    registry=registry,
+                    operation=operation,
+                )
+            self.assertEqual(trigger["premise_fact_id"], "F:nat-zero-add")
+            observation = {
+                "verdict": "proved",
+                "evidence_label": operation["executor"]["expected_evidence_label"],
+                "canonical_type": execution.formal_type(facts["F:nat-mul-one"]),
+                "axiom_footprint": [],
+                "retained_answer_dependencies": [],
+                "episode_dependency": execution.theorem_candidate(
+                    trigger["premise_before_fact_sha256"], "premise"
+                ),
+                "attempted": 1,
+                "accepted_plan_rank": 1,
+                "premise_attempted": 2,
+                "premise_plan_rank": 2,
+            }
+            receipt = execution.build_receipt(
+                frontier=frontier,
+                fact=facts["F:nat-mul-one"],
+                operation=operation,
+                registry=registry,
+                git_commit="e" * 40,
+                observation=observation,
+                trigger=trigger,
+            )
+            self.assertEqual(receipt["identity"]["trigger"], trigger)
+
+            readiness["newly_ready"] = []
+            readiness["readiness_delta_sha256"] = execution.digest(
+                {k: v for k, v in readiness.items() if k != "readiness_delta_sha256"}
+            )
+            (root / "readiness.json").write_text(json.dumps(readiness))
+            with mock.patch.object(execution, "load_module", side_effect=load_for_test):
+                with self.assertRaisesRegex(
+                    execution.ExecutionError, "stale or mutated|uniquely authorize"
+                ):
+                    execution.load_episode_trigger(
+                        bundle=root,
+                        frontier=frontier,
+                        facts=facts,
+                        registry=registry,
+                        operation=operation,
+                    )
+
+    def test_apply_evidence_parser_is_closed(self) -> None:
+        with self.assertRaisesRegex(execution.ExecutionError, "wrong kind"):
+            execution.parse_apply_evidence("wrong\n")
 
 
 if __name__ == "__main__":

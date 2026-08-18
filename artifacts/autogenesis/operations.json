@@ -76,7 +76,8 @@
       "reviewed_gate_mentions": [
         "check-autogenesis-apply-search.sh",
         "check-autogenesis-induction-search.sh",
-        "check-autogenesis-proposer-isolation.sh"
+        "check-autogenesis-proposer-isolation.sh",
+        "validate-autogenesis-operations.py"
       ],
       "applicability": {
         "fact_ids": ["F:nat-zero-add"],
@@ -104,6 +105,53 @@
         "budget": 2,
         "timeout_seconds": 120,
         "expected_evidence_label": "kernel-term-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    },
+    {
+      "id": "authoritative-kernel-nat-mul-one-episode-apply-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-apply-search.sh",
+        "check-autogenesis-induction-search.sh",
+        "check-autogenesis-proposer-isolation.sh",
+        "gen-autogenesis-baseline.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:nat-mul-one"],
+        "formal_languages": ["lean4"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "catalog-episode-local-theorem-apply-v1",
+        "implementation": "scripts/autogenesis-apply-proposer.py",
+        "input_kind": "axeyum-authoritative-kernel-apply-catalog",
+        "output_kind": "axeyum-autogenesis-apply-proposals"
+      },
+      "checker": {
+        "operation": "axeyum-lean-kernel/autogenesis-apply-plan-check-v1",
+        "implementation": "crates/axeyum-lean-kernel/examples/autogenesis_apply_plan_check.rs",
+        "input_kind": "axeyum-autogenesis-apply-proposals",
+        "output_kind": "axeyum-autogenesis-apply-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-kernel/nat-mul-one-episode-apply-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:nat-mul-one",
+        "target_theorem": "Nat.mul_one",
+        "premise_fact_id": "F:nat-zero-add",
+        "premise_operation_id": "authoritative-kernel-nat-zero-add-induction-v1",
+        "denied_theorems": ["Nat.mul_one", "Nat.zero_add"],
+        "premise_budget": 2,
+        "budget": 1,
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-episode-local-apply-axiom-free"
       },
       "admission": {
         "epistemic_status": "proved",

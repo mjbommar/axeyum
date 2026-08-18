@@ -181,8 +181,11 @@ selected statement in a fresh kernel, accepts plan 2 of 2, and requires both an
 empty axiom footprint and no retained-answer dependencies. The retained
 [authoritative B admission](09-authoritative-b-admission-result.md) then
 crash-recovered one real write and derived A as newly ready. The live ledger was
-untouched; A still needs its own episode-local apply operation before the chain
-can run across two authoritative writes.
+untouched. A's exact episode-local apply operation is now implemented: it
+verifies B's execution-to-readiness trigger chain, reconstructs
+an episode-local B candidate, and applies only that candidate. It also creates a
+deterministic detached post-B state commit without touching the branch or index.
+This is implementation evidence; the clean two-write replay remains uncredited.
 
 ## Phase summary
 

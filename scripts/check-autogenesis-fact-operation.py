@@ -58,7 +58,7 @@ def checker_command(fact_id: str) -> str:
 
 def check_fact(
     fact: dict[str, Any],
-    runner: Callable[[dict[str, Any]], dict[str, Any]],
+    runner: Callable[..., dict[str, Any]],
 ) -> dict[str, Any]:
     registry_module = load_module("registry_for_fact_operation", REGISTRY_SCRIPT)
     try:
@@ -117,6 +117,49 @@ def check_fact(
                 "budget": executor["budget"],
             }
         )
+    elif executor["driver"] == "axeyum-lean-kernel/nat-mul-one-episode-apply-v1":
+        trigger = binding.get("trigger")
+        expected_trigger_keys = {
+            "premise_fact_id",
+            "premise_operation_id",
+            "premise_source_commit",
+            "premise_before_fact_sha256",
+            "premise_after_fact_sha256",
+            "premise_execution_sha256",
+            "premise_transaction_sha256",
+            "premise_admission_event_sha256",
+            "readiness_delta_sha256",
+            "frontier_after_sha256",
+        }
+        if (
+            not isinstance(trigger, dict)
+            or set(trigger) != expected_trigger_keys
+            or trigger.get("premise_fact_id") != executor["premise_fact_id"]
+            or trigger.get("premise_operation_id") != executor["premise_operation_id"]
+            or not isinstance(trigger.get("premise_source_commit"), str)
+            or len(trigger["premise_source_commit"]) != 40
+            or trigger.get("frontier_after_sha256") != binding.get("frontier_sha256")
+            or any(
+                not isinstance(trigger.get(field), str)
+                or len(trigger[field]) != 64
+                for field in expected_trigger_keys
+                if field.endswith("sha256")
+            )
+        ):
+            raise FactOperationError("episode trigger binding is malformed")
+        expected_binding.update(
+            {
+                "target_theorem": executor["target_theorem"],
+                "formal_statement_sha256": byte_digest(
+                    fact["formal"]["statement"].encode()
+                ),
+                "premise_fact_id": executor["premise_fact_id"],
+                "premise_operation_id": executor["premise_operation_id"],
+                "premise_budget": executor["premise_budget"],
+                "budget": executor["budget"],
+                "trigger": trigger,
+            }
+        )
     else:
         raise FactOperationError("fact operation uses an unsupported driver")
     if binding != expected_binding:
@@ -139,7 +182,11 @@ def check_fact(
         or row.get("checker_command") != checker_command(fact["id"])
     ):
         raise FactOperationError("fact admission fields differ from the registered operation")
-    observation = runner(operation)
+    observation = (
+        runner(operation, binding["trigger"])
+        if executor["driver"] == "axeyum-lean-kernel/nat-mul-one-episode-apply-v1"
+        else runner(operation)
+    )
     if executor["driver"] == "axeyum-bench/smtcomp-evidence-v1":
         expected_observation = {
             "verdict": "unsat",
@@ -148,7 +195,7 @@ def check_fact(
             "recheck": "na",
             "arena": "ok",
         }
-    else:
+    elif executor["driver"] == "axeyum-lean-kernel/nat-zero-add-induction-v1":
         expected_observation = {
             "verdict": "proved",
             "evidence_label": executor["expected_evidence_label"],
@@ -157,6 +204,24 @@ def check_fact(
             "retained_answer_dependencies": [],
             "attempted": executor["budget"],
             "accepted_plan_rank": executor["budget"],
+        }
+    else:
+        premise_candidate = (
+            "Autogenesis.Authoritative.E"
+            + binding["trigger"]["premise_before_fact_sha256"][:16]
+            + ".premise"
+        )
+        expected_observation = {
+            "verdict": "proved",
+            "evidence_label": executor["expected_evidence_label"],
+            "canonical_type": formal_type(fact),
+            "axiom_footprint": [],
+            "retained_answer_dependencies": [],
+            "episode_dependency": premise_candidate,
+            "attempted": executor["budget"],
+            "accepted_plan_rank": executor["budget"],
+            "premise_attempted": executor["premise_budget"],
+            "premise_plan_rank": executor["premise_budget"],
         }
     if observation != expected_observation:
         raise FactOperationError(

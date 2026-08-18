@@ -92,7 +92,7 @@ SEAMS = (
         "owner": "fact frontier",
         "source": "scripts/fact-frontier.py",
         "marker": "content-addressed authoritative queue",
-        "gap": "clean authoritative B admission now makes A newly ready; A still has no exact operation and is correctly refused",
+        "gap": "B admission makes A newly ready and A has an exact event-bound operation; the two-write sequence has not yet replayed cleanly",
     },
     {
         "id": "chain-qualification",
@@ -108,7 +108,7 @@ SEAMS = (
         "owner": "operation registry",
         "source": "artifacts/autogenesis/operations.json",
         "marker": "smt-int-quadratic-negative-discriminant-v1",
-        "gap": "authoritative SMT and exact Nat.zero_add kernel drivers exist; the dependent Nat.mul_one operation remains missing",
+        "gap": "authoritative SMT, exact Nat.zero_add, and event-bound Nat.mul_one drivers exist; the two-write chain remains unreplayed",
     },
     {
         "id": "operation-execution",
@@ -116,7 +116,7 @@ SEAMS = (
         "owner": "typed operation executor",
         "source": "scripts/execute-autogenesis-operation.py",
         "marker": "Callers supply none of",
-        "gap": "SMT and exact Nat.zero_add kernel drivers emit normalized replayable receipts; the chain's A driver remains missing",
+        "gap": "SMT, Nat.zero_add, and event-bound Nat.mul_one drivers emit normalized receipts; clean two-write replay remains missing",
     },
     {
         "id": "evidence-assembly",
@@ -373,19 +373,19 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
             "id": "A1-operational-unlock-control",
             "state": "fixture",
             "evidence": "clean authoritative B admission now makes the same A target newly ready; the earlier fixture retains the pre-B no-proof and post-B proof control",
-            "next": "authorize A and preserve the same causal boundary across the second write",
+            "next": "execute A from the authoritative B event and preserve the causal boundary across the second write",
         },
         {
             "id": "A1-machine-selection",
             "state": seam_state.get("goal-selection", "missing"),
             "evidence": "content-addressed authoritative frontier selected B alone; after its admission A became ready but remained refused without an exact operation",
-            "next": "register A's episode-local apply operation",
+            "next": "replay B then A from one clean reconstructed chain pre-state",
         },
         {
             "id": "A1-typed-dispatch-evidence",
             "state": seam_state.get("operation-execution", "missing"),
-            "evidence": "the registry now fixes both the admitted SMT route and an exact fresh-kernel Nat.zero_add route; B's typed receipt, axiom-free transaction, and settled-fact replay work without caller-authored metadata",
-            "next": "add the dependent Nat.mul_one operation",
+            "evidence": "the registry fixes SMT, exact Nat.zero_add, and event-bound Nat.mul_one routes; A reconstructs and applies only an episode-local B candidate",
+            "next": "retain and replay the complete two-write receipt chain",
         },
         {
             "id": "A1-atomic-admission",
