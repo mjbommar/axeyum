@@ -60,6 +60,12 @@ facts:
     # an oracle is not an external check and is tiered separately.
     python3 -m unittest scripts.tests.test_check_capability_assurance
     python3 scripts/check-capability-assurance.py --quiet
+    # Item A's minimum: the table NAMES the function behind each capability, and a
+    # row naming a route that no longer exists is its cheapest lie -- the
+    # capability reads as real and nothing notices the rename. 42 routes, 0 missing
+    # when this landed, so it is a ratchet rather than a repair.
+    python3 -m unittest scripts.tests.test_check_capability_routes
+    python3 scripts/check-capability-routes.py
     # The layer under every other checker: a control that NO gate runs cannot
     # fail, so it is not a control. Runners name modules one by one, so wiring a
     # new one is a separate forgettable step -- measured 2026-08-17, 63 of 137

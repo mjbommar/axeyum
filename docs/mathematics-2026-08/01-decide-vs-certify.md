@@ -139,9 +139,29 @@ So the actionable form of this section is not "add Lean proofs to 21 areas". It
 is:
 
 **A. Re-derive the capability table from the code rather than maintaining it by
-hand.** A 1,858-line hand-written table of what the system can do is the same
+hand.** A 1,908-line hand-written table of what the system can do is the same
 category of artifact as a guard that exists only in a comment. It should be
 generated, or at minimum gated against the routes it describes.
+
+*The minimum is done (2026-08-17): `python3 scripts/check-capability-routes.py`,
+in both gates.* The table names the function behind each capability by
+convention — `"CERTIFIED Craig interpolation (lra_interpolant_certified): ..."` —
+and that half is checkable even though the rest is not. **42 routes named, 0
+missing**, so this is a ratchet rather than a repair: it keeps the names true
+through the renames this repository does constantly. A row naming a route that no
+longer exists is the table's cheapest lie — the capability reads as real, the
+name looks authoritative, and nothing notices.
+
+Deliberately name-only. No static check can confirm the named function
+*implements* what the row claims, and pretending otherwise would be the same
+overreach the assurance tiering exists to avoid. Writing the naive version first
+was worth it: it reported `(vocabulary)` — prose in a sentence about Craig
+condition 3 — and `(nia_square)`, which is a `mod` rather than a `fn`. Both are
+now pinned as controls.
+
+Full generation stays open, and is a much larger job: the `feature` and
+`evidence` fields carry boundaries, declines, and measured numbers that no
+signature can produce.
 
 **B. Rank the gap by how much a certificate would be worth.** *Done
 2026-08-17, and derived rather than written down* — `python3

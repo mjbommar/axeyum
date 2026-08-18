@@ -71,6 +71,11 @@ step capability-assurance-tests python3 -m unittest scripts.tests.test_check_cap
 # `evidence` fields, so it drifted unmeasured from 4 areas to 11. Derived and
 # floored now; a differential oracle is NOT counted as an external check.
 step capability-assurance python3 scripts/check-capability-assurance.py --quiet
+# The table names the function behind each capability; a row naming a route that
+# no longer exists is a lie nothing else catches. Item A's "at minimum gated
+# against the routes it describes".
+step capability-routes python3 scripts/check-capability-routes.py
+step capability-routes-controls python3 -m unittest scripts.tests.test_check_capability_routes
 # A control that no gate RUNS cannot fail, so it is not a control. Measured
 # 2026-08-17: 63 of 137 control modules were executed by nothing, and running the
 # 51 that need no cargo found 6 that no longer even import. Ratchet, not a wall.
