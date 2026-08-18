@@ -219,6 +219,15 @@ This is event-driven frontier logic over the counterfactual fixture, not yet the
 project-wide machine-readable frontier contract. Selection is still human, and
 authoritative fact admission remains zero.
 
+The complete durable-readiness episode was retained and replayed from exact
+commit `6a675c9c1`: experiment digest
+`f1ffeea2f07f11479bb88b84ce5605828d3e224a63da343f2ca89e32ea9743c9`,
+readiness digest
+`24e5196ab256da6e6bf0d27b723f90e7022530cd92f0618c8cdfea602dc42e19`,
+and durable fixture event
+`d9b00c9f0eca2187f0f52511223a19a8215c46a71e2b2a294421760329960f3d`.
+The replay reports `authoritative_writes=0|fixture_writes=1`.
+
 ## Assumptions tested now
 
 ### A. The ledger has a usable chain substrate

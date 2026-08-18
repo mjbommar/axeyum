@@ -2,10 +2,10 @@
 
 <!-- plan-section: lane-status -->
 
-**Phase 0 WIP.** Recoverable fixture admission `e5d29bc5` replayed at
-`0ee7143ea`; authoritative writes zero. Next: durable-event frontier readiness,
-then a genuinely open fact when evidence exists.
+**Phase 0 WIP.** Durable readiness `24e5196a` replayed at `6a675c9c1`; zero
+authoritative writes. Next: authoritative frontier and fail-closed selection,
+then an open fact with typed evidence.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-18 | `2abe2652d..0ee7143ea` | Programme through recoverable fixture admission. |
+| 2026-08-18 | `2abe2652d..6a675c9c1` | Programme through durable-event readiness replay. |
