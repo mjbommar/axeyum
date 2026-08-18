@@ -27,9 +27,11 @@ sentence names a fact already closed later in history.
 
 ### Tasks
 
-- **AG0.1 — Baseline schema.** Define a generated snapshot containing exact
-  commit, fact counts and DAG shape, route/assurance inventory, proof-gap
-  population, kernel theorem/fact coverage, and manual seams.
+- **AG0.1 — Baseline schema.** Define a generated snapshot containing source
+  identities, fact counts and DAG shape, route/assurance inventory, proof-gap
+  population, kernel theorem/fact coverage, and manual seams; bind it to an
+  exact clean commit only in a separate execution capture to avoid a
+  self-referential committed hash.
 - **AG0.2 — Semantic plan checks.** Reject a `pending` landed row whose commit is
   reachable, a next-target fact that is already settled, and a current defect
   contradicted by a later authoritative result.

@@ -47,6 +47,23 @@ is the executable current-state half of this matrix. It refuses stale reviewed
 seams and content-identifies the fact ledger, proof-gap authority, schemas, and
 the scripts that define their semantics.
 
+The counterfactual half now has an executable first contract:
+
+```sh
+python3 scripts/create-autogenesis-snapshot.py \
+  --premise F:nat-zero-add \
+  --consequent F:nat-mul-one \
+  --output /tmp/autogenesis-snapshot.json
+```
+
+The creator accepts only a settled `kernel-lean` B -> A edge present in both the
+ledger and the kernel-derived direct dependency inventory. It withholds the
+original fact rows and theorem names in every phase. Post-B, only a fresh,
+episode-namespaced B declaration becomes visible. Candidate admission can then
+be checked with `theorem_knowledge_audit`, whose deny/require decisions use the
+full transitive declaration closure, so hiding a forbidden proof behind a
+helper theorem does not pass.
+
 ## Assumptions tested now
 
 ### A. The ledger has a usable chain substrate
@@ -118,7 +135,9 @@ useful primitive, not the Autogenesis transaction boundary.
 
 1. Land deterministic derived-chain enumeration with machine-readable output.
 2. Choose several small axiom-free Nat candidates from distinct subgraphs.
-3. Build a knowledge snapshot that masks declarations as well as ledger rows.
+3. Build a knowledge snapshot that masks retained declarations, ledger rows,
+   and evidence. Keep the complete environment for checking, but audit the
+   candidate theorem's transitive declaration closure against the deny policy.
 4. Measure A before B, B itself, and A after B under fixed budgets.
 5. Preregister one primary and one fallback only after those measurements are
    reproducible.
@@ -158,7 +177,8 @@ These improvements are ordered by how many later steps they simplify:
 4. **Proposed-delta validation.** Validate and display a complete ledger change
    without touching the authoritative fact file.
 5. **Snapshot overlays.** Counterfactual experiments name withheld facts and
-   declarations without editing committed truth.
+   declarations without editing committed truth. Original B remains withheld
+   after acceptance; only the episode-local B declaration becomes available.
 6. **Mutation harness.** Controls declare the field or artifact mutated and the
    exact gate expected to fail; surviving mutations are test failures.
 7. **Gate parity.** Every lightweight Autogenesis authority runs from both

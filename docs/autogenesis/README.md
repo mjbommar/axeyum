@@ -106,6 +106,13 @@ compounding, not automation theatre.
 | [First 90 days](07-first-90-days.md) | What is the first bounded execution programme? |
 | [Backward foundation](08-backward-foundation.md) | What must be true immediately before Autogenesis-1, and which assumptions already fail? |
 
+The first executable counterfactual primitive is
+[`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
+It derives a content-addressed B -> A overlay without editing committed facts;
+[`theorem_knowledge_audit`](../../crates/axeyum-lean-kernel/examples/theorem_knowledge_audit.rs)
+then rejects required/forbidden dependency violations over the full transitive
+kernel closure.
+
 ## Phase summary
 
 | Phase | Future state | Decisive exit |

@@ -115,7 +115,9 @@ Autogenesis-1.
 - **S4.1** Materialize the existing proof-derived kernel chains as candidate
   curricula; do not duplicate their retained proofs into the runnable snapshot.
 - **S4.2** Define a counterfactual overlay that withholds B, A, and their proof
-  terms while leaving the authoritative ledger unchanged.
+  terms and retained evidence while leaving the authoritative ledger unchanged.
+  After B is accepted, expose only its episode-local declaration; never reveal
+  the original B fact or theorem as a shortcut.
 - **S4.3** Freeze the primary chain, fallback, mutations, and pre-B snapshot.
 - **S4.4** Implement deterministic scoring from readiness, route feasibility,
   cost, unlock count, diversity, and gate coupling.

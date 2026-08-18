@@ -381,6 +381,7 @@ smtcomp-resume:
 # `computed` at exactly 741. Nobody edited it wrongly; nobody ran it at all.
 generated-trackers:
     python3 -m unittest scripts.tests.test_gen_autogenesis_baseline
+    python3 -m unittest scripts.tests.test_create_autogenesis_snapshot
     python3 scripts/gen-autogenesis-baseline.py --check
     python3 -m unittest scripts.tests.test_gen_plan
     python3 scripts/gen-plan.py --check

@@ -32,6 +32,7 @@ OUT_MD = Path("docs/plan/generated/autogenesis-baseline.md")
 
 STATIC_SOURCES = (
     Path("scripts/gen-autogenesis-baseline.py"),
+    Path("scripts/create-autogenesis-snapshot.py"),
     Path("scripts/check-fact-dag.py"),
     Path("scripts/check-fact-depends-derived.py"),
     Path("scripts/fact-frontier.py"),
@@ -40,6 +41,7 @@ STATIC_SOURCES = (
     Path("artifacts/ontology/fact.schema.json"),
     Path("justfile"),
     Path("scripts/check.sh"),
+    Path("crates/axeyum-lean-kernel/examples/theorem_knowledge_audit.rs"),
 )
 
 SETTLED = {"axiom", "proved", "computed", "refuted"}
