@@ -1,0 +1,189 @@
+# Axeyum Autogenesis
+
+## Purpose
+
+This programme turns Axeyum from a collection of increasingly capable,
+evidence-aware reasoning components into a system whose **verified reasoning
+capability compounds automatically**.
+
+The target is not merely a better solver, a larger theorem library, or an agent
+that emits plausible proofs. It is:
+
+> **A self-extending verified reasoning system: untrusted search may propose
+> goals, decompositions, representations, tactics, algorithms, and even changes
+> to its own search policy; only independently checkable evidence becomes
+> durable knowledge.**
+
+The trusted core stays small and stable while the untrusted intelligence around
+it becomes broader, more adaptive, and more ambitious.
+
+## Authority and scope
+
+This directory is a durable long-horizon programme, not a second live task
+tracker. Root [`PLAN.md`](../../PLAN.md) remains the sole authority for current
+status and the next authorized increment. Each implementation phase in this
+programme must enter the live queue through an owned file in
+[`docs/plan/status/`](../plan/status/README.md), and consequential public or
+trust-boundary decisions still require an ADR.
+
+The existing [research roadmap](../research/08-planning/roadmap.md),
+[foundational DAG](../research/08-planning/foundational-dag.md), and hard rules
+remain in force. Autogenesis changes the criterion by which work is selected;
+it does not waive foundation gates or authorize speculative implementation.
+
+## Redefined goal
+
+Axeyum succeeds when it can repeatedly perform this cycle:
+
+```text
+domain and checked knowledge
+          |
+          v
+select or formulate a valuable claim
+          |
+          v
+propose proof plans and representations       untrusted
+          |
+          v
+search across solver / CAS / rewriting / library / induction
+          |
+          v
+produce explicit evidence and a kernel term
+          |
+          v
+independently replay, check, and admit         trusted boundary
+          |
+          v
+record dependencies, assumptions, and provenance
+          |
+          v
+measure what this result unlocked
+          |
+          +------> improve selection and search, then repeat
+```
+
+The unit of progress is a **verified capability gain**: a result that makes a
+new useful class of problems reachable, cheaper, more assured, or more
+automatic. A theorem counts when it unlocks descendants or teaches a reusable
+method; a certified procedure may count more than a hundred isolated theorems.
+
+The programme's primary objective is:
+
+```text
+verified capability gain
+------------------------
+human intervention * compute * trusted-base growth
+```
+
+No single scalar can carry the assurance claim. The operational dashboard must
+also show the full conversion funnel from eligible goal to independently
+replayed ledger transition.
+
+## Programme outcome
+
+The first decisive result is **Autogenesis-1**:
+
+> From a fixed kernel, initial library, fact DAG, configuration, and resource
+> budget, Axeyum autonomously selects and proves a reusable fact, admits it with
+> checked evidence, observes that it unlocks another fact, then selects and
+> proves that descendant. A clean-room replay reproduces the two-step acquisition
+> sequence with no human-written or repaired proof and no unaccounted assumption.
+
+This is deliberately stronger than “one automatic theorem.” It demonstrates
+compounding, not automation theatre.
+
+## Programme map
+
+| Document | Question answered |
+|---|---|
+| [Current state and gaps](00-current-state-and-gaps.md) | What exists now, and what is genuinely absent? |
+| [Target architecture](01-target-architecture.md) | What objects, boundaries, and feedback loops must exist? |
+| [Phased roadmap](02-phased-roadmap.md) | What phases and concrete tasks get from here to the horizon? |
+| [Workstreams and sequencing](03-workstreams-and-sequencing.md) | How do bottom-up and top-down work compose without starving each other? |
+| [Metrics and evaluation](04-metrics-and-evaluation.md) | How is real capability gain distinguished from activity and self-report? |
+| [Trust, safety, and governance](05-trust-safety-and-governance.md) | What remains immutable as autonomy increases? |
+| [Research horizon](06-research-horizon.md) | What do current external systems teach, and what lies beyond them? |
+| [First 90 days](07-first-90-days.md) | What is the first bounded execution programme? |
+
+## Phase summary
+
+| Phase | Future state | Decisive exit |
+|---|---|---|
+| 0. Bind reality | Current claims and interfaces are machine-readable and non-contradictory | One generated baseline names every existing seam and refuses stale plan/fact state |
+| 1. Close one loop | A deterministic orchestrator performs one evidence-backed fact transition | Clean replay of one autonomous closure; no learning or conjecturing |
+| 2. Demonstrate compounding | A dense nursery and scheduler produce a two-fact unlock chain | Autogenesis-1 passes from a clean checkout |
+| 3. Plan proofs | A typed proof-plan IR composes heterogeneous checked substeps | One goal solved by a multi-route plan that no monolithic route can solve |
+| 4. Acquire capabilities | Structured declines drive reusable lemma, route, and representation work | Measured capability acquisition raises held-out autonomous yield |
+| 5. Learn search, not truth | Search policy improves from replayable reasoning episodes | Learned policy beats deterministic baselines without changing acceptance |
+| 6. Discover | The system proposes and filters useful new conjectures and algorithms | Novel candidates survive independent proof/refutation and novelty review |
+| 7. Become domain-general | Domain adapters produce typed, epistemically classified knowledge | Two non-mathematical domains complete the same checked loop |
+| 8. Govern recursive improvement | The system proposes bounded improvements to its own untrusted machinery | Improvements pass immutable evaluation, regression, and trust-budget gates |
+
+Phases are capability gates, not dates. Work may begin on a later phase's
+research or fixtures early, but no later phase may receive product credit before
+its prerequisites pass.
+
+## Strategic rules
+
+1. **Composition before breadth.** Prefer closing an existing seam over adding
+   another isolated capability.
+2. **Demand pulls mechanisms.** Solver and reconstruction work should normally
+   be selected by structured declines from valuable, dependency-ready goals.
+3. **Learning proposes; formal machinery disposes.** Learned systems never
+   decide truth, evidence validity, axiom freedom, or publication.
+4. **Failures are products.** A typed decline with a minimal blocker and replay
+   is valuable training and planning data; a timeout string is not.
+5. **The ledger records knowledge, episodes record attempts.** Do not overload
+   the fact schema with search traces or treat every attempted conjecture as a
+   fact.
+6. **Novelty is a separate judgment.** Kernel acceptance establishes formal
+   consequence, not importance, originality, correct formalization, or truth of
+   empirical premises.
+7. **Scale follows demonstrated pull.** Sharding, caching, distributed search,
+   and learned policies are justified by observed bottlenecks in the closed
+   loop, not projected theorem counts.
+8. **Over-the-horizon pressure is explicit.** Every phase must preserve typed
+   binders, extensible evidence, deterministic replay, domain separation, and a
+   path to richer proof calculi.
+
+## Relationship to existing programmes
+
+Autogenesis does not replace the A1-A11 solver programme or the existing proof,
+Lean, CAS, verified-systems, and frontend tracks. It supplies their selection
+function:
+
+```text
+autonomous attempt
+      |
+      v
+structured blocker --+--> solver/theory task
+                     +--> reconstruction/checker task
+                     +--> library lemma task
+                     +--> representation task
+                     +--> resource/observability task
+                     +--> domain/formalization task
+      |
+      v
+repair the smallest reusable blocker
+      |
+      v
+retry the original attempt and measure unlocked descendants
+```
+
+The complete-solver and Lean horizons remain valuable. They become capability
+reservoirs serving a measurable knowledge-growth loop rather than independent
+feature-count races.
+
+## Definition of done
+
+The programme is not complete because a model generates a proof, because a
+solver returns `unsat`, because Lean reads a generated module, or because a
+dashboard reports growth. It is complete only when Axeyum can sustain bounded,
+reproducible capability acquisition across domains while:
+
+- every durable formal result is independently checkable;
+- every assumption and trust step is explicit;
+- every policy improvement is evaluated against immutable held-out populations;
+- regressions and failed experiments remain visible;
+- the trusted base grows only through deliberate, reviewed decisions; and
+- human intervention per verified capability gain declines over time.
