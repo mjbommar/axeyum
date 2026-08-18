@@ -38,13 +38,16 @@
 //! sequences doubles the error, and sampling twice as deep halves each modulus
 //! back, exactly, with no slack.
 //!
-//! Of the 22 ordered-ring laws, **2 hold in `Equiv` form** here — `add_comm`
-//! and `add_neg` — and both are *pointwise*: their two sides sample at the same
-//! index, so `Equiv.of_pointwise` reduces each to one `Rat` law. `add_assoc`
-//! and `add_zero` are not pointwise (`(x+y)+z` samples `x` at `2(2n+1)+1` while
-//! `x+(y+z)` samples it at `2n+1`), so each needs the analytic argument;
-//! `add_zero` additionally needs monotonicity of `Rat.natDivSucc` in its index,
-//! which does not exist yet.
+//! Of the 22 ordered-ring laws, **4 hold in `Equiv` form** here — the whole
+//! additive group: `add_comm`, `add_neg`, `add_zero` and `add_assoc`. The
+//! first two are *pointwise*: their two sides sample at the same index, so
+//! `Equiv.of_pointwise` reduces each to one `Rat` law. The other two are not,
+//! and are the reason `Equiv` had to be an equivalence relation first —
+//! `add x zero` samples `x` at `2n+1` where `x` samples it at `n`, and
+//! `(x+y)+z` samples `x` at `2(2n+1)+1` where `x+(y+z)` samples it at `2n+1`.
+//! Both close on regularity plus one inequality, `1/(2n+2) + 1/(n+1) ≤
+//! 2/(n+1)`, read at the common denominator `2n+2` as `3 ≤ 4`. Monotonicity of
+//! `Rat.natDivSucc` in its *index* is not needed and was not built.
 //!
 //! # What this does NOT claim
 //!
@@ -88,6 +91,8 @@ fn main() {
         ("CReal.add_congr", p.add_congr),
         ("CReal.add_comm", p.add_comm),
         ("CReal.add_neg", p.add_neg),
+        ("CReal.add_zero", p.add_zero),
+        ("CReal.add_assoc", p.add_assoc),
     ];
 
     let mut failed = false;
@@ -194,6 +199,8 @@ fn main() {
     eprintln!(
         "reflexivity, symmetry and transitivity of CReal.Equiv all hold at ZERO \
          trusted declarations; transitivity is the only consumer of \
-         Rat.le_of_le_add_natDivSucc (the Archimedean property of ℚ)"
+         Rat.le_of_le_add_natDivSucc (the Archimedean property of ℚ). 4 of the \
+         22 ordered-ring laws hold in Equiv form: the additive group is closed \
+         (add_comm, add_neg, add_zero, add_assoc)"
     );
 }

@@ -53,7 +53,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 22] = [
+    let expected: [(&str, crate::NameId, &str); 24] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -76,6 +76,8 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.add_congr", p.add_congr, "theorem"),
         ("CReal.add_comm", p.add_comm, "theorem"),
         ("CReal.add_neg", p.add_neg, "theorem"),
+        ("CReal.add_zero", p.add_zero, "theorem"),
+        ("CReal.add_assoc", p.add_assoc, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -154,6 +156,18 @@ fn the_setoid_laws_have_the_statements_adr_0468_specifies() {
         rendered(&mut kernel, p.add_neg),
         "((x0 : CReal) -> \
          CReal.Equiv (CReal.add x0 (CReal.neg x0)) CReal.zero)"
+    );
+    // The two that are NOT pointwise, and are the reason `Equiv` had to be an
+    // equivalence relation before any of this was worth stating.
+    assert_eq!(
+        rendered(&mut kernel, p.add_zero),
+        "((x0 : CReal) -> CReal.Equiv (CReal.add x0 CReal.zero) x0)"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.add_assoc),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> \
+         CReal.Equiv (CReal.add (CReal.add x0 x1) x2) \
+         (CReal.add x0 (CReal.add x1 x2)))))"
     );
     assert_eq!(
         rendered(&mut kernel, p.add_congr),
@@ -242,5 +256,74 @@ fn the_discrimination_route_can_fail() {
         refused.is_err(),
         "the kernel accepted `Not (CReal.Equiv (ofRat 0) (ofRat 0))`, which \
          contradicts CReal.Equiv.refl — the discrimination witness proves nothing"
+    );
+}
+
+/// The negative control for `add_zero`: the **same script**, pointed at a law
+/// that is false.
+///
+/// `add_zero` is the first law whose two sides are not equal at any index, so
+/// what carries it is regularity plus a bound comparison — and a bound
+/// comparison is exactly the kind of argument that would still go through if
+/// the kernel were not actually looking at which sequence is being sampled.
+/// `Equiv (add x one) x` is false, differs from the proved statement in one
+/// constant, and must be **refused**.
+#[test]
+fn the_add_zero_route_cannot_prove_add_one() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::{radd, rat_eq_rewrite, rsymm, rzero};
+
+    let (mut kernel, p) = built();
+    let rat = p.rat;
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    // The one changed token: `CReal.one` where the proved law has `CReal.zero`.
+    let one_real = d.kernel().const_(p.one, vec![]);
+    let left = d.const_app(p.add, &[x, one_real]);
+    let body = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let index = super::shift(&mut d, n);
+        let deep = super::sample(&mut d, p, x, index);
+        let shallow = super::sample(&mut d, p, x, n);
+        let difference = rsub(&mut d, rat, deep, shallow);
+        let bound = super::modulus(&mut d, p, index, n);
+        let goal_bound = super::div_succ(&mut d, p, 2, n);
+        let source = d.lemma(p.regular, &[x, index, n]);
+        let order = super::shifted_bound_le(&mut d, p, n);
+        let widened = super::weaken(&mut d, p, difference, bound, goal_bound, source, order);
+        let zero_rat = rzero(&mut d, rat);
+        let padded = radd(&mut d, deep, zero_rat);
+        let collapse = d.lemma(rat.add_zero, &[deep]);
+        let restore = rsymm(&mut d, padded, deep, collapse);
+        let at_index = rat_eq_rewrite(&mut d, deep, padded, restore, widened, &|d, t| {
+            let quantity = rsub(d, rat, t, shallow);
+            super::within(d, p, quantity, goal_bound)
+        });
+        d.lam_fv(n_fv, nat, at_index)
+    };
+    let value = d.lam_fv(x_fv, carrier, body);
+    let ty = {
+        let conclusion = super::equiv(&mut d, p, left, x);
+        d.pi_fv(x_fv, carrier, conclusion)
+    };
+    let name = d.kernel().name_str(anon, "Check.add_one");
+    let refused = d.kernel().add_declaration(crate::Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted `Equiv (add x one) x`, so the add_zero route is not \
+         checking which sequence the shifted index samples"
     );
 }
