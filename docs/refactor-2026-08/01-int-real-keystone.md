@@ -1,5 +1,44 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
+> **STATUS 2026-08-18 — ℝ is CONSTRUCTED, and `real: 30` has still not moved.**
+> Both halves of that sentence are load-bearing. `crates/axeyum-lean-kernel/src/creal.rs`
+> is a Bishop setoid of regular ℚ-sequences over the constructed ℚ: **31
+> declarations, trusted surface 0**, `Equiv` reflexive/symmetric/transitive, and
+> **7 of the 22 ordered-ring laws** — the additive group in `Equiv` form
+> (`add_comm`, `add_neg`, `add_zero`, `add_assoc`) and three order laws verbatim
+> (`le_refl`, `le_trans`, `add_le_add`).
+>
+> The 30 axioms do **not** retire by exhibiting this model. They retire by
+> *deletion*, when no consumer references the `Real` package — ADR-0468 phase R3,
+> which binds equality as a telescope parameter (`RING_BINDER_NAMES` 30 → 39) so
+> a generalized refutation can be instantiated at a carrier whose equality is
+> `CReal.Equiv` rather than `Eq`. Until that lands, "ℝ is constructed" and
+> "`real: axiom=30`" are both true at once, and reading the first as the second
+> is the error this note exists to prevent.
+>
+> Three costings were corrected by building rather than estimating. The
+> Archimedean property of ℚ came in at about a third of its ~750-line estimate.
+> `add_zero`/`add_assoc` were costed behind a missing `natDivSucc`-antitone
+> lemma that turned out **not to be needed** — read at a common denominator the
+> bound is `3/(2n+2) ≤ 4/(2n+2)`. And this document's own claim that "the 13
+> order laws restate verbatim" was optimistic: only **3 of 13** were reachable
+> without `mul` or `lt`.
+>
+> What remains is honestly harder than transcription. Eight laws need `mul`,
+> whose bound Mathlib derives from `CauSeq`'s *existential* modulus — a fixed
+> modulus does not supply it, so that is invention rather than porting. Seven
+> need `lt`, and the naive `∃ n, y_n − x_n > 2/(n+1)` does not give `lt_trans`:
+> two regularity round trips consume the margin exactly. `lt := Not (le y x)` is
+> a dead end, because `le_of_lt` is then not constructive and there is no
+> `le_total` over ℝ to recover it from.
+>
+> The vacuity risk here is severe and axiom footprints cannot see it: every law
+> is a statement about inhabitants of `CReal`, so an uninhabited carrier or a
+> total `Equiv` would make all of them hold, footprint-free, of nothing.
+> `creal_setoid_witness` therefore reports `carrier inhabited`, `Equiv
+> discriminates` and `le discriminates`, and its exit status depends on all
+> three — verified by mutation, not asserted.
+
 > **STATUS 2026-08-17 — the trusted surface is now `real` ALONE.** Measured by
 > `cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory`, with
 > `scripts/gen-lean-axiom-ledger.py --check` green:
