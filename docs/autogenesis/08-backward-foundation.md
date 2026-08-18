@@ -30,15 +30,15 @@ operationally reachable.
 
 | Required observation | Evidence that proves it | Current verdict | Earliest missing foundation |
 |---|---|---|---|
-| Inputs were fixed | Clean execution capture binds commit and generated baseline digest | Partial | Retain the first clean `--capture` record |
+| Inputs were fixed | Clean execution capture binds commit and generated baseline digest | Fixture | Bind execution identity into the eventual transaction |
 | B and A were selected without intervention | Content-addressed frontier snapshot plus deterministic selection rationale | Missing | Stable machine-readable frontier output |
 | A was unavailable before B | The identical A target under the identical route policy and budget receives no credit before B | Fixture | Bind the result into a replayed episode transaction |
-| B was established | Catalog-only structural search produces typed, content-addressed, kernel-checked evidence for fresh B | Fixture | Fresh-process replay of the staged transition bundle |
+| B was established | Catalog-only structural search produces typed, content-addressed, kernel-checked evidence for fresh B | Fixture | Admit the result through the durable transaction path |
 | B became durable knowledge | Atomic application after fresh-process replay and fact validation | Missing | Episode-wide transaction boundary |
 | A became newly ready | Readiness changes only after the accepted B event | Fixture | Replace phase projection with frontier recomputation from durable state |
 | A was established using B | Fresh proof is accepted and its dependency on B is derived from the proof term | Fixture | Transactional admission and readiness event |
 | Corruption cannot receive credit | Independent mutations of statement, evidence, checker, dependency, footprint, and status all reject | Missing | Typed episode and evidence identities |
-| The sequence reproduces | Clean checkout repeats the same accepted transitions from retained inputs | Missing | Replay command and portable artifact bundle |
+| The sequence reproduces | Clean checkout repeats the same accepted transitions from retained inputs | Fixture | Repeat from a second clean checkout and compare identities |
 | Human proof work was zero after launch | Append-only intervention log contains no proof-affecting action | Missing | Episode event model and audit vocabulary |
 | Trusted base did not grow | Before/after kernel declaration classification and checker registry are identical | Partial | Bind both inventories into the execution result |
 
@@ -143,9 +143,8 @@ This establishes an operational-unlock and catalog-only search substrate, not
 Autogenesis-1. The chain remains preregistered by a human; route dispatch is
 still shell orchestration; the B change is an episode-local bootstrap overlay,
 not a durable ledger admission; event-gated phase projection is not yet a
-frontier recomputation from durable state; and the full kernel search has not
-yet been replayed from a retained bundle in a clean process. No transaction or
-programme credit is claimed. A clean, exact-commit evidence bundle can be
+frontier recomputation from durable state. No durable transaction or programme
+credit is claimed. A clean, exact-commit evidence bundle can be
 retained outside Git with `--retain NEW-DIRECTORY`; the repository keeps only the
 generator, gates, and content identities rather than vendoring execution
 artifacts.
@@ -160,6 +159,8 @@ It requires the exact clean commit captured at launch, verifies every artifact
 identity and proposal projection, regenerates B's kernel evidence, typed
 receipt, transition, and event in fresh files, reruns the pre-A and post-B
 kernel checks, compares the exact outcomes, and fails if the checkout changes.
+The first retained replay passed at exact commit `42dad8ffa` with experiment
+digest `ebfaa7eb6c6f5acc0cd805cfc943d974a3837a2cc74f84a364da84db06d22468`.
 
 ## Assumptions tested now
 
