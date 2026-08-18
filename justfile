@@ -403,6 +403,7 @@ generated-trackers:
     python3 -m unittest scripts.tests.test_create_autogenesis_premise_transition
     python3 -m unittest scripts.tests.test_create_autogenesis_accepted_event
     python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction
+    python3 -m unittest scripts.tests.test_apply_autogenesis_fact_transaction
     python3 scripts/gen-autogenesis-baseline.py --check
     python3 -m unittest scripts.tests.test_gen_plan
     python3 scripts/gen-plan.py --check

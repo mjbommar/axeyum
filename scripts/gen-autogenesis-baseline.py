@@ -46,6 +46,7 @@ STATIC_SOURCES = (
     Path("scripts/stage-autogenesis-premise.sh"),
     Path("scripts/replay-autogenesis-apply-experiment.sh"),
     Path("scripts/prepare-autogenesis-fact-transaction.py"),
+    Path("scripts/apply-autogenesis-fact-transaction.py"),
     Path("scripts/tests/fixtures/F-nat-zero-add-open.json"),
     Path("scripts/check-autogenesis-knowledge-controls.sh"),
     Path("scripts/check-autogenesis-proposer-isolation.sh"),

@@ -129,7 +129,11 @@ control rather than Autogenesis-1 credit. The exact-commit retained bundle at
 `42dad8ffa` also reproduces through the separate read-only replay command.
 The next boundary now has a typed, read-only fact-transaction proposal: its
 positive test is explicitly counterfactual, while mismatched evidence for a
-real open fact rejects. No durable ledger write or admission event is claimed.
+real open fact rejects. No authoritative ledger write is claimed; its durable
+admission event is fixture-scoped.
+ADR-0468's applicant now commits that proposal only in a temporary fact root,
+with compare-and-swap and roll-forward recovery tested at all three durable
+boundaries. Production write authority rejects this fixture path.
 
 ## Phase summary
 

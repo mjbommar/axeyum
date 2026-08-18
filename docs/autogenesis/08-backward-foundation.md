@@ -185,6 +185,22 @@ The prepared proposal was retained and independently replayed at exact commit
 transaction digest
 `e4db86cadd69b305101c9dacbf6f0939cee6d45da9f485b631892d9dd32ceda1`.
 
+ADR-0468 now fixes the write boundary, and
+`apply-autogenesis-fact-transaction.py` exercises it against a temporary fact
+root. The applicant replays the prepared proposal, compare-and-swaps the exact
+before digest, fsyncs a same-filesystem intent, atomically replaces the fact,
+then emits the uniquely derived durable admission event. Fault injection after
+intent, fact replacement, and event publication converges to the same event;
+unknown fact state and event/fact disagreement refuse recovery. Production mode
+rejects the fixture proposal because its source is explicitly non-authoritative.
+
+This is a real crash-recovery implementation but still not an authoritative
+admission: the positive write is one temporary fixture file, and the run reports
+`authoritative_writes=0|fixture_writes=1`. The next step is to make readiness
+consume the durable event rather than the earlier bootstrap event. A production
+write remains blocked on matching typed evidence for one of the seven genuinely
+open facts; the programme will not relabel a settled fact to manufacture it.
+
 ## Assumptions tested now
 
 ### A. The ledger has a usable chain substrate

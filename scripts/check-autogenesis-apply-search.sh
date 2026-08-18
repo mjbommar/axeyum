@@ -93,6 +93,32 @@ if python3 scripts/prepare-autogenesis-fact-transaction.py \
 fi
 grep -qF 'typed evidence names a different fact' \
   "$scratch/invalid-wrong-fact-transaction.stderr"
+mkdir "$scratch/fixture-facts" "$scratch/fixture-journal"
+install -m 0644 scripts/tests/fixtures/F-nat-zero-add-open.json \
+  "$scratch/fixture-facts/F-nat-zero-add.json"
+admission_args=(
+  --transaction "$scratch/fact-transaction-proposal.json"
+  --bundle "$scratch"
+  --before-fact scripts/tests/fixtures/F-nat-zero-add-open.json
+  --journal-dir "$scratch/fixture-journal"
+  --fixture-fact-root "$scratch/fixture-facts"
+)
+set +e
+python3 scripts/apply-autogenesis-fact-transaction.py \
+  "${admission_args[@]}" --fault-after fact \
+  >"$scratch/admission-fault.stdout" 2>"$scratch/admission-fault.stderr"
+admission_fault_status=$?
+set -e
+[ "$admission_fault_status" -eq 75 ] || {
+  echo "after-fact admission fault returned $admission_fault_status, expected 75" >&2
+  exit 1
+}
+grep -qF 'AUTOGENESIS_FACT_ADMISSION_FAULT|after-fact' \
+  "$scratch/admission-fault.stderr"
+admission_result=$(python3 scripts/apply-autogenesis-fact-transaction.py \
+  "${admission_args[@]}")
+grep -qE '^AUTOGENESIS_FACT_ADMISSION\|.*\|state=committed\|artifact_archived=false\|git_published=false$' \
+  <<<"$admission_result"
 
 transition_chain=(
   --premise-evidence "$scratch/premise-evidence.json"
@@ -234,8 +260,10 @@ premise_evidence = json.load(open(root / "premise-evidence.json"))
 premise_transition = json.load(open(root / "premise-transition.json"))
 premise_event = json.load(open(root / "premise-accepted-event.json"))
 fact_transaction = json.load(open(root / "fact-transaction-proposal.json"))
+transaction_dir = root / "fixture-journal" / fact_transaction["transaction_sha256"]
+durable_event = json.load(open(transaction_dir / "admission-event.json"))
 report = {
-    "schema_version": 6,
+    "schema_version": 7,
     "kind": "axeyum-autogenesis-apply-experiment",
     "git_commit": baseline["git_commit"],
     "baseline_source_sha256": baseline["baseline_source_sha256"],
@@ -254,6 +282,8 @@ report = {
         "accepted_event_sha256": premise_event["event_sha256"],
         "fact_transaction_sha256": fact_transaction["transaction_sha256"],
         "fact_transaction_source_authoritative": fact_transaction["precondition"]["source_is_authoritative"],
+        "durable_admission_event_sha256": durable_event["event_sha256"],
+        "durable_admission_source": "fixture",
         "result": sys.argv[4],
     },
     "pre_a": {
@@ -271,6 +301,7 @@ report = {
         "denied_retained_answers": snapshot["withheld"]["retained_theorems"],
         "expected_outcome_mismatch_rejected": True,
         "proposer_isolated": True,
+        "after_fact_fault_recovered": True,
     },
 }
 payload = json.dumps(report, sort_keys=True, separators=(",", ":")).encode()
@@ -281,4 +312,4 @@ PY
   trap - EXIT
 fi
 
-echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved+accepted-event|transaction=prepared-fixture|target=A|budget=$budget|pre_a=no-proof|post_b=proved|readiness=event-driven|dependency=episode-premise|ledger_writes=0"
+echo "AUTOGENESIS_APPLY_SEARCH|premise=B:proved+accepted-event|transaction=committed-fixture+fault-recovered|target=A|budget=$budget|pre_a=no-proof|post_b=proved|readiness=event-driven|dependency=episode-premise|authoritative_writes=0|fixture_writes=1"

@@ -659,7 +659,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "98ba9ed82159986de87a6af00c3b6941b97ef064fd9327499e00981938580462",
+    "digest": "aa7262969160ca61b5d0ec1bac522c985b717ace98999002e159c5265a453c75",
     "inputs": [
       {
         "bytes": 3519,
@@ -1247,9 +1247,14 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 71572,
+        "bytes": 71650,
         "path": "justfile",
-        "sha256": "eca944c864bd300ce56ae751d402eddc206e49f9b15527628a333774364225f7"
+        "sha256": "194c9dfc47f4b2c011241758806373c43155273d05b583545a2c368331020fd6"
+      },
+      {
+        "bytes": 10192,
+        "path": "scripts/apply-autogenesis-fact-transaction.py",
+        "sha256": "3460dfd92aa5cfa786501f3ee4d81999c2ff4870b2799a72b7903c99a1068b4c"
       },
       {
         "bytes": 2896,
@@ -1267,9 +1272,9 @@
         "sha256": "4ca7f8a489610cede17b3ab4cecc4dc4813fcab2230c42cc0d3e3fb76ca32081"
       },
       {
-        "bytes": 11446,
+        "bytes": 12915,
         "path": "scripts/check-autogenesis-apply-search.sh",
-        "sha256": "fdf29d556239e800e8779442e37846d2384be0684513bbbc0334dfde21ebb173"
+        "sha256": "46fb46790319ec870ed49ce1852e48e0d1c54fe70ab9d4fad6e8cae9ac33096c"
       },
       {
         "bytes": 3677,
@@ -1297,9 +1302,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 21332,
+        "bytes": 21444,
         "path": "scripts/check.sh",
-        "sha256": "101b255b4ab542a9bf69f028c351e3df9cf428d8f1116fc371f03f7b5b814f67"
+        "sha256": "a76d64ac0e1702248101ec8b2fbc563f5c98e51c2330da350e73f0a078a6781d"
       },
       {
         "bytes": 6846,
@@ -1337,9 +1342,9 @@
         "sha256": "db6757cc801ed3996d0ba3c40ba55123e2855e8944054c2a391b46ff5678b81b"
       },
       {
-        "bytes": 23262,
+        "bytes": 23321,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "80e86707325aad23e0ef2788ab00b25182092479b1c04aa151c8a0764707a0d2"
+        "sha256": "a131b05f0708f5d8085000d0af9c58adda4c25b166a69dd79c441fb05993af1d"
       },
       {
         "bytes": 17112,
@@ -1357,9 +1362,9 @@
         "sha256": "f9ceaa822e1d7c090f79608b238276c8921581f151a6b814648e95f6e5b87f00"
       },
       {
-        "bytes": 12051,
+        "bytes": 14320,
         "path": "scripts/replay-autogenesis-apply-experiment.sh",
-        "sha256": "784baa687012a28668d24289d111518110e5a87ea77e65528abf75acf510949e"
+        "sha256": "9765fd5a60c60e80108bebc7c93296883d952c7bb5a8e632fed7d0e6c6a236bd"
       },
       {
         "bytes": 3627,

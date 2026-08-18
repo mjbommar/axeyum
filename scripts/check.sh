@@ -229,6 +229,7 @@ step autogenesis-premise-evidence-tests python3 -m unittest scripts.tests.test_c
 step autogenesis-premise-transition-tests python3 -m unittest scripts.tests.test_create_autogenesis_premise_transition
 step autogenesis-accepted-event-tests python3 -m unittest scripts.tests.test_create_autogenesis_accepted_event
 step autogenesis-fact-transaction-tests python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction
+step autogenesis-fact-admission-tests python3 -m unittest scripts.tests.test_apply_autogenesis_fact_transaction
 step autogenesis-baseline python3 scripts/gen-autogenesis-baseline.py --check
 step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
 step gen-plan       python3 scripts/gen-plan.py --check
