@@ -61,13 +61,16 @@ theorems of ordered groups plus one `natDivSucc` identity rather than facts
 about ℚ's encoding.
 
 **Next, in cost order — and the two cheap strands are gone, so what is left is
-genuinely analytic.** (a) `mul`, which unlocks 4 of the remaining 15
-(`mul_comm`, `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib` are 5, of which
-the first four plus `mul_nonneg`/`sq_nonneg`/`mul_le_mul_of_nonneg_left` need
-it): the blocker is a canonical bound on a representative derived from
+genuinely analytic.** The remaining 15 split cleanly: **8 need
+`mul`** (`mul_comm`, `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib`,
+`mul_nonneg`, `sq_nonneg`, `mul_le_mul_of_nonneg_left` — the last of these needs
+`le` as well, which now exists) and **7 need `lt`** (`lt_irrefl`, `lt_trans`,
+`lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`, `zero_lt_one`,
+`add_lt_add_of_le_of_lt`). (a) `mul`, therefore, is worth 8: the blocker is a
+canonical bound on a representative derived from
 regularity, and this is the one place a Mathlib port will NOT transfer, because
 `CauSeq` gets its bound from an *existential* modulus that a fixed modulus does
-not supply. Expect to invent. (b) `lt`, which is the other 7 and is harder than
+not supply. Expect to invent. (b) `lt`, the other 7, is harder than
 "restate verbatim" suggests — a constructive `<` needs a witness index, so
 `Exists` (which the logic prelude has, `exists_elim`), and the naive
 `lt x y := ∃ n, y_n − x_n > 2/(n+1)` does NOT give `lt_trans` without a
