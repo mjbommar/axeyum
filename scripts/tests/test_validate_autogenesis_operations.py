@@ -24,11 +24,17 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_is_valid_and_fixture_scoped(self) -> None:
+    def test_committed_registry_has_one_fixture_and_one_authoritative_operation(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 1)
+        self.assertEqual(len(self.registry["operations"]), 2)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
+        )
+        authoritative = self.registry["operations"][1]
+        self.assertEqual(authoritative["scope"], "authoritative")
+        self.assertEqual(
+            authoritative["applicability"]["fact_ids"],
+            ["F:no-integer-square-is-minus-one"],
         )
 
     def test_duplicate_operation_id_is_rejected(self) -> None:
@@ -47,6 +53,19 @@ class OperationRegistryTests(unittest.TestCase):
         mutated = copy.deepcopy(self.registry)
         mutated["operations"][0]["producer"]["implementation"] = "missing.py"
         with self.assertRaisesRegex(registry_module.RegistryError, "does not exist"):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_unknown_route_evidence_pair_is_rejected(self) -> None:
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][1]["admission"]["proof_route"] = "smt-clausal"
+        with self.assertRaisesRegex(registry_module.RegistryError, "outside the v1"):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_authoritative_scope_cannot_target_a_settled_fact(self) -> None:
+        mutated = copy.deepcopy(self.registry)
+        operation = mutated["operations"][0]
+        operation["scope"] = "authoritative"
+        with self.assertRaisesRegex(registry_module.RegistryError, "settled fact"):
             registry_module.validate_registry(mutated, ROOT)
 
 

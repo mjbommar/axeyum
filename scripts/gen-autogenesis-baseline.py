@@ -88,15 +88,15 @@ SEAMS = (
         "owner": "fact frontier",
         "source": "scripts/fact-frontier.py",
         "marker": "content-addressed authoritative queue",
-        "gap": "machine frontier consumes the fixture registry and refuses every live fact without an authoritative operation",
+        "gap": "machine frontier selects one exact fact with an authoritative operation; no executor yet consumes that selection",
     },
     {
         "id": "route-dispatch",
         "state": "partial",
         "owner": "operation registry",
         "source": "artifacts/autogenesis/operations.json",
-        "marker": "counterfactual-fixture-only",
-        "gap": "typed producer/checker contract is fixture-scoped; no authoritative operation exists",
+        "marker": "smt-int-quadratic-negative-discriminant-v1",
+        "gap": "one authoritative producer/checker contract exists; typed execution and transaction preparation remain route-specific",
     },
     {
         "id": "evidence-assembly",
@@ -112,7 +112,7 @@ SEAMS = (
         "owner": "evidence registry",
         "source": "artifacts/autogenesis/operations.json",
         "marker": "autogenesis-induction-plan-check-v1",
-        "gap": "fixture checker is typed; manual closer and authoritative routes still accept caller-authored shell text",
+        "gap": "fixture and first authoritative checkers are typed; the manual closer still accepts caller-authored shell text",
     },
     {
         "id": "ledger-transition",
@@ -120,7 +120,7 @@ SEAMS = (
         "owner": "transactional closer",
         "source": "scripts/apply-autogenesis-fact-transaction.py",
         "marker": "fact compare-and-swap precondition failed",
-        "gap": "compare-and-swap plus roll-forward recovery is fixture-only; no open authoritative fact has matching evidence",
+        "gap": "compare-and-swap plus roll-forward recovery is fixture-only; the first matching authoritative evidence lacks a typed transaction adapter",
     },
     {
         "id": "dependency-derivation",
@@ -361,14 +361,14 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
         {
             "id": "A1-machine-selection",
             "state": seam_state.get("goal-selection", "missing"),
-            "evidence": "content-addressed authoritative frontier records every candidate and refuses unregistered dispatch",
-            "next": "register the first authoritative producer/checker operation, then select only an exact matching fact",
+            "evidence": "content-addressed authoritative frontier selects exactly one matching fact and refuses every unregistered candidate",
+            "next": "execute only the selected registered operation and bind its result to the frontier identity",
         },
         {
             "id": "A1-typed-dispatch-evidence",
             "state": "partial",
-            "evidence": "typed B evidence derives its route, footprint, evidence row, and transaction; shell still orchestrates dispatch",
-            "next": "replace shell route dispatch with one typed operation registry",
+            "evidence": "registry has fixture and authoritative producer/checker contracts; route-specific code can produce and recheck the authoritative certificate",
+            "next": "add a typed executor and derive the authoritative evidence row and transaction without caller-authored shell",
         },
         {
             "id": "A1-atomic-admission",

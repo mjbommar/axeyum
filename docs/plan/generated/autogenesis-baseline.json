@@ -25,15 +25,15 @@
       "state": "fixture"
     },
     {
-      "evidence": "content-addressed authoritative frontier records every candidate and refuses unregistered dispatch",
+      "evidence": "content-addressed authoritative frontier selects exactly one matching fact and refuses every unregistered candidate",
       "id": "A1-machine-selection",
-      "next": "register the first authoritative producer/checker operation, then select only an exact matching fact",
+      "next": "execute only the selected registered operation and bind its result to the frontier identity",
       "state": "partial"
     },
     {
-      "evidence": "typed B evidence derives its route, footprint, evidence row, and transaction; shell still orchestrates dispatch",
+      "evidence": "registry has fixture and authoritative producer/checker contracts; route-specific code can produce and recheck the authoritative certificate",
       "id": "A1-typed-dispatch-evidence",
-      "next": "replace shell route dispatch with one typed operation registry",
+      "next": "add a typed executor and derive the authoritative evidence row and transaction without caller-authored shell",
       "state": "partial"
     },
     {
@@ -588,14 +588,14 @@
   },
   "manual_seams": [
     {
-      "gap": "machine frontier consumes the fixture registry and refuses every live fact without an authoritative operation",
+      "gap": "machine frontier selects one exact fact with an authoritative operation; no executor yet consumes that selection",
       "id": "goal-selection",
       "owner": "fact frontier",
       "source": "scripts/fact-frontier.py",
       "state": "partial"
     },
     {
-      "gap": "typed producer/checker contract is fixture-scoped; no authoritative operation exists",
+      "gap": "one authoritative producer/checker contract exists; typed execution and transaction preparation remain route-specific",
       "id": "route-dispatch",
       "owner": "operation registry",
       "source": "artifacts/autogenesis/operations.json",
@@ -609,14 +609,14 @@
       "state": "manual"
     },
     {
-      "gap": "fixture checker is typed; manual closer and authoritative routes still accept caller-authored shell text",
+      "gap": "fixture and first authoritative checkers are typed; the manual closer still accepts caller-authored shell text",
       "id": "checker-selection",
       "owner": "evidence registry",
       "source": "artifacts/autogenesis/operations.json",
       "state": "partial"
     },
     {
-      "gap": "compare-and-swap plus roll-forward recovery is fixture-only; no open authoritative fact has matching evidence",
+      "gap": "compare-and-swap plus roll-forward recovery is fixture-only; the first matching authoritative evidence lacks a typed transaction adapter",
       "id": "ledger-transition",
       "owner": "transactional closer",
       "source": "scripts/apply-autogenesis-fact-transaction.py",
@@ -659,12 +659,12 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "1a0802019887664865bd5b0c12f74d41ab7c1a69745c47237083bef64343bd41",
+    "digest": "48a6fdd1159da2ca947c41921b809e8cac7a8681f7389dbfcf2011c38f3e0556",
     "inputs": [
       {
-        "bytes": 1168,
+        "bytes": 2230,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "5b3f14701714d1b1bc30badcd46bed108dca355dd7ee3053f8246d80c6ca610e"
+        "sha256": "04cfe1141f62d95a0b82e1be545faa88239938903eb68df3a2cb311ba67decf9"
       },
       {
         "bytes": 3519,
@@ -1302,9 +1302,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 21835,
+        "bytes": 21837,
         "path": "scripts/check.sh",
-        "sha256": "dbbc53deaf25bcb5c7a014abcf918a5565579a85590139432fd7f81978f75f8d"
+        "sha256": "fad53c0f7e94e211f1970c8ed0cf7b2b4f8e6aac59c326a37ec7ccd60002610c"
       },
       {
         "bytes": 6846,
@@ -1347,9 +1347,9 @@
         "sha256": "4dd8164fc8a1e384cbb9686e1d380444018847ca85ebd5095566db4e3d49d73a"
       },
       {
-        "bytes": 24238,
+        "bytes": 24405,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "564be726ea189b7c213d0f9c24473a2f4cffb11386224e821e49ec8d19af88c2"
+        "sha256": "84e8f39431f60be68ad70c49822b1e755b37f73005542dd0102d3c9aad2546d8"
       },
       {
         "bytes": 17112,
@@ -1397,9 +1397,9 @@
         "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
       },
       {
-        "bytes": 6886,
+        "bytes": 7738,
         "path": "scripts/validate-autogenesis-operations.py",
-        "sha256": "344e337e74b09d7b0d5cdf693557ddd3e75068c22edf15d093164cf0fbe63565"
+        "sha256": "6dedb1208feeba8e0db6488f44f8b21cf2a1d95182ee2c1d0703c0b6df37e06c"
       },
       {
         "bytes": 2711,

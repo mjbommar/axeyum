@@ -28,6 +28,33 @@
         "evidence_kind": "kernel-term",
         "axiom_footprint_policy": "must-be-empty"
       }
+    },
+    {
+      "id": "smt-int-quadratic-negative-discriminant-v1",
+      "scope": "authoritative",
+      "applicability": {
+        "fact_ids": ["F:no-integer-square-is-minus-one"],
+        "formal_languages": ["smtlib2"],
+        "fragments": ["QF_NIA"]
+      },
+      "producer": {
+        "operation": "axeyum-solver/int-quadratic-negative-discriminant-v1",
+        "implementation": "crates/axeyum-solver/src/evidence.rs",
+        "input_kind": "axeyum-ir-original-assertions",
+        "output_kind": "axeyum-evidence-report"
+      },
+      "checker": {
+        "operation": "axeyum-solver/check-int-quadratic-negative-discriminant-v1",
+        "implementation": "crates/axeyum-solver/src/nia_square.rs",
+        "input_kind": "axeyum-original-assertions-and-certificate",
+        "output_kind": "axeyum-source-bound-certificate-verdict"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "smt-term-level",
+        "evidence_kind": "unsat-certificate",
+        "axiom_footprint_policy": "must-be-nonempty"
+      }
     }
   ]
 }

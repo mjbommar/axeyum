@@ -16,6 +16,15 @@ REGISTRY = ROOT / "artifacts/autogenesis/operations.json"
 ID_RE = re.compile(r"^[a-z0-9]+(?:[a-z0-9./-]*[a-z0-9])?$")
 FACT_ID_RE = re.compile(r"^F:[a-z0-9]+(?:-[a-z0-9]+)*$")
 SCOPES = {"counterfactual-fixture-only", "authoritative"}
+ADMISSION_CONTRACTS = {
+    ("proved", "kernel-lean", "kernel-term", "must-be-empty"),
+    (
+        "proved",
+        "smt-term-level",
+        "unsat-certificate",
+        "must-be-nonempty",
+    ),
+}
 
 
 class RegistryError(RuntimeError):
@@ -141,13 +150,28 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
             {"epistemic_status", "proof_route", "evidence_kind", "axiom_footprint_policy"},
             f"{label}.admission",
         )
-        if admission != {
-            "epistemic_status": "proved",
-            "proof_route": "kernel-lean",
-            "evidence_kind": "kernel-term",
-            "axiom_footprint_policy": "must-be-empty",
-        }:
+        admission_contract = (
+            admission["epistemic_status"],
+            admission["proof_route"],
+            admission["evidence_kind"],
+            admission["axiom_footprint_policy"],
+        )
+        if admission_contract not in ADMISSION_CONTRACTS:
             raise RegistryError(f"{label}.admission is outside the v1 contract")
+        if operation["scope"] == "authoritative":
+            for fact_id in fact_ids:
+                fact_path = root / "artifacts/facts" / (
+                    fact_id.replace("F:", "F-") + ".json"
+                )
+                fact = json.loads(fact_path.read_text())
+                if fact.get("epistemic_status") not in {
+                    "open",
+                    "conjectured",
+                    "empirical",
+                }:
+                    raise RegistryError(
+                        f"{label} grants authoritative scope to settled fact {fact_id}"
+                    )
 
 
 def load_registry(

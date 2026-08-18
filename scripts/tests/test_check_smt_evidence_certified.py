@@ -102,9 +102,8 @@ class TheExtractorSelectsTheRightFacts(unittest.TestCase):
         self.assertGreaterEqual(len(found), CE.MIN_INSTANCES, found)
         self.assertTrue(all(p.endswith(".smt2") for _, p in found))
 
-    def test_the_negative_control_is_not_swept_as_a_settled_instance(self) -> None:
-        """The control must stay OUT of the enforced set -- otherwise the check
-        fails on its own fixture and someone deletes the fixture."""
+    def test_the_negative_control_is_not_a_ledger_evidence_instance(self) -> None:
+        """A mutation control must not force a mathematical fact to stay open."""
         self.assertNotIn(CE.PROBE, [p for _, p in CE.instances()])
 
 

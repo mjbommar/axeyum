@@ -11,7 +11,7 @@
 #![cfg(feature = "full")]
 
 use axeyum_ir::{Sort, TermArena, Value};
-use axeyum_solver::{CheckResult, SolverConfig, solve};
+use axeyum_solver::{CheckResult, Evidence, SolverConfig, produce_evidence, solve};
 
 /// Solve a single assertion built by `build`, returning the result and the arena
 /// so a `Sat` model can be independently replayed.
@@ -76,6 +76,33 @@ fn assert_sat_replays(result: &CheckResult, arena: &TermArena, assertion: axeyum
 }
 
 // --- DECIDES: equality (the headline gap) -------------------------------------
+
+#[test]
+fn negative_discriminant_unsat_carries_source_bound_evidence() {
+    let mut arena = TermArena::new();
+    let assertion = square_cmp_const(&mut arena, -1, eq);
+    let report = produce_evidence(&mut arena, &[assertion], &SolverConfig::default()).unwrap();
+    assert!(matches!(
+        report.evidence,
+        Evidence::UnsatIntQuadraticNegativeDiscriminant(_)
+    ));
+    assert!(report.evidence.check(&arena, &[assertion]).unwrap());
+
+    let mut changed_arena = TermArena::new();
+    let satisfiable = square_cmp_const(&mut changed_arena, 1, eq);
+    assert!(
+        !report
+            .evidence
+            .check(&changed_arena, &[satisfiable])
+            .unwrap()
+    );
+    assert!(
+        !report
+            .evidence
+            .check(&arena, &[assertion, assertion])
+            .unwrap()
+    );
+}
 
 #[test]
 fn square_eq_2_is_unsat() {
