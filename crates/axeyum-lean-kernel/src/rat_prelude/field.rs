@@ -69,8 +69,8 @@ use super::RatPrelude;
 use super::defs::inv_body;
 use super::group::rsub;
 use super::ops::{
-    den, den_pos, normalize, num, one_le_succ, radd, rat_eq_rewrite, rat_theorem, rat_ty, rchain,
-    rcongr, req, rle, rlt, rmul, rone, rsymm, rzero,
+    den, den_pos, nat_eq_to_rat, nat_rewrite_prop, normalize, num, one_le_succ, radd,
+    rat_eq_rewrite, rat_theorem, rat_ty, rchain, rcongr, req, rle, rlt, rmul, rone, rsymm, rzero,
 };
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -89,7 +89,8 @@ pub(super) fn declare_field_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_inverse_identities(d, p)?;
     declare_inv_antitone(d, p)?;
     declare_mul_pos(d, p)?;
-    declare_nat_div_succ_pos(d, p)
+    declare_nat_div_succ_pos(d, p)?;
+    declare_inv_nat_div_succ(d, p)
 }
 
 /// `Rat.mul_pos : ∀ a b, 0 < a → 0 < b → 0 < a·b`.
@@ -917,4 +918,117 @@ fn declare_inv_pos(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError>
         (stmt, proof)
     })?;
     Ok(())
+}
+
+/// `Rat.inv_natDivSucc : ∀ m, (1/(m+1))⁻¹ = (m+1)/1`.
+///
+/// **The one place an inverse's *value* is computed rather than a property of
+/// it derived**, and the real construction cannot do without it: every bound
+/// there is a single `Rat.natDivSucc` whose numerator is a `Nat`, so a
+/// reciprocal left as an opaque `Rat` would fuse with nothing and
+/// `natDivSucc_mul` would have no numerator to multiply.
+///
+/// It is still not about the representation. `natDivSucc_mul` gives
+/// `((m+1)/1)·(1/(m+1)) = (m+1)/(m+1)`, `natDivSucc_scale` at `m = 0` reads
+/// that as `1/1`, `self_normalize` says `1/1` **is** `Rat.one`, and then the
+/// uniqueness of a multiplicative inverse — `mul_inv_cancel` plus the 22 laws —
+/// finishes: `w·c = 1` and `c·c⁻¹ = 1` force `c⁻¹ = w`.
+fn declare_inv_nat_div_succ(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat_ty = d.nat_ty();
+    let nat = p.int.nat;
+    super::archimedean::mixed_theorem(d, p.inv_nat_div_succ, &[nat_ty], &|d, v| {
+        let m = v[0];
+        let one_nat = d.num(1);
+        let zero_nat = d.num(0);
+        let successor = d.succ(m);
+        let modulus = d.const_app(p.nat_div_succ, &[one_nat, m]);
+        let whole = d.const_app(p.nat_div_succ, &[successor, zero_nat]);
+        let reciprocal = d.const_app(p.inv, &[modulus]);
+        let stmt = req(d, reciprocal, whole);
+
+        let one = rone(d, p);
+
+        // `w·c = 1`, with `w := (m+1)/1` and `c := 1/(m+1)`.
+        let product = rmul(d, whole, modulus);
+        let fused = {
+            let scaled = NatOps::mul(d, successor, one_nat);
+            d.const_app(p.nat_div_succ, &[scaled, m])
+        };
+        let fuse = d.lemma(p.nat_div_succ_mul, &[successor, one_nat, m]);
+        let collapsed = d.const_app(p.nat_div_succ, &[successor, m]);
+        let collapse = {
+            let scaled = NatOps::mul(d, successor, one_nat);
+            let identity = d.lemma(nat.mul_one, &[successor]);
+            nat_eq_to_rat(d, scaled, successor, identity, &|d, t| {
+                d.const_app(p.nat_div_succ, &[t, m])
+            })
+        };
+        // `natDivSucc_scale m 0 : (m+1)/((m+1)·0 + m + 1) = 1/1`, and the index
+        // `(m+1)·0 + m` is `m` — `Nat.mul _ 0` by ι, then `zero_add`.
+        let unit = d.const_app(p.nat_div_succ, &[one_nat, zero_nat]);
+        let scale = {
+            let deep = NatOps::mul(d, successor, zero_nat);
+            let index = NatOps::add(d, deep, m);
+            let law = d.lemma(p.nat_div_succ_scale, &[m, zero_nat]);
+            let flatten = d.lemma(nat.zero_add, &[m]);
+            nat_rewrite_prop(d, index, m, flatten, law, &|d, t| {
+                let left = d.const_app(p.nat_div_succ, &[successor, t]);
+                req(d, left, unit)
+            })
+        };
+        let unit_is_one = d.const_app(p.self_normalize, &[one]);
+        let (_, cancel) = rchain(
+            d,
+            product,
+            &[
+                (fused, fuse),
+                (collapsed, collapse),
+                (unit, scale),
+                (one, unit_is_one),
+            ],
+        );
+
+        // Uniqueness: `c⁻¹ = 1·c⁻¹ = (w·c)·c⁻¹ = w·(c·c⁻¹) = w·1 = w`.
+        let modulus_positive = {
+            let unit_le = d.lemma(nat.le_refl, &[one_nat]);
+            d.lemma(p.nat_div_succ_pos, &[one_nat, m, unit_le])
+        };
+        let self_cancel = d.lemma(p.mul_inv_cancel, &[modulus, modulus_positive]);
+        let padded = rmul(d, one, reciprocal);
+        let restore = {
+            let strip = d.lemma(p.mul_one, &[reciprocal]);
+            let flipped = d.lemma(p.mul_comm, &[one, reciprocal]);
+            let swapped = rmul(d, reciprocal, one);
+            let (_, chained) = rchain(d, padded, &[(swapped, flipped), (reciprocal, strip)]);
+            rsymm(d, padded, reciprocal, chained)
+        };
+        let reopened = rmul(d, product, reciprocal);
+        let reopen = {
+            let back = rsymm(d, product, one, cancel);
+            rcongr(d, one, product, back, &|d, t| rmul(d, t, reciprocal))
+        };
+        let regrouped = {
+            let inner = rmul(d, modulus, reciprocal);
+            rmul(d, whole, inner)
+        };
+        let regroup = d.lemma(p.mul_assoc, &[whole, modulus, reciprocal]);
+        let stripped = rmul(d, whole, one);
+        let strip_inner = {
+            let inner = rmul(d, modulus, reciprocal);
+            rcongr(d, inner, one, self_cancel, &|d, t| rmul(d, whole, t))
+        };
+        let strip = d.lemma(p.mul_one, &[whole]);
+        let (_, proof) = rchain(
+            d,
+            reciprocal,
+            &[
+                (padded, restore),
+                (reopened, reopen),
+                (regrouped, regroup),
+                (stripped, strip_inner),
+                (whole, strip),
+            ],
+        );
+        (stmt, proof)
+    })
 }

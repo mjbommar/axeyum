@@ -67,6 +67,8 @@ fn every_named_declaration_exists() {
         ("inv_le_of_pos_le", p.inv_le_of_pos_le),
         ("mul_pos", p.mul_pos),
         ("natDivSucc_pos", p.nat_div_succ_pos),
+        ("inv_natDivSucc", p.inv_nat_div_succ),
+        ("nat_index_symm", p.nat_index_symm),
     ];
     for (label, name) in expected {
         assert!(
@@ -186,7 +188,7 @@ fn rationals_model_the_real_axioms() {
     );
 }
 
-// --- the Archimedean property (ADR-0468 phase R1) ---------------------------
+// --- the Archimedean property (ADR-0483 phase R1) ---------------------------
 
 /// Every declaration the Archimedean development adds is a **checked** theorem
 /// (or definition) with an empty axiom footprint — read out of the kernel, not
@@ -228,7 +230,7 @@ fn the_archimedean_development_is_axiom_free() {
     }
 }
 
-/// The Archimedean statement is the one ADR-0468 asks for, **verbatim**.
+/// The Archimedean statement is the one ADR-0483 asks for, **verbatim**.
 ///
 /// A footprint of `[]` on a theorem that says something weaker than intended is
 /// the failure mode this repository keeps hitting, so this asserts the rendered
@@ -254,7 +256,7 @@ fn the_archimedean_statement_is_the_one_adr_0468_needs() {
         "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : AxNat) -> \
          ((x3 : ((x3 : AxNat) -> Rat.le x0 (Rat.add x1 (Rat.natDivSucc x2 x3)))) -> \
          Rat.le x0 x1))))",
-        "the Archimedean statement drifted from ADR-0468's"
+        "the Archimedean statement drifted from ADR-0483's"
     );
 }
 
@@ -653,5 +655,134 @@ fn the_inverse_reduction_check_can_fail() {
         refused.is_err(),
         "the kernel accepted `(2/1)⁻¹ = 2/1`, so `Rat.inv` does not compute a \
          reciprocal and the reduction check above proves nothing"
+    );
+}
+
+/// **The two lemmas `CReal.inv`'s index arithmetic is written in**, asserted
+/// verbatim rather than by footprint.
+///
+/// `inv_natDivSucc` is the only lemma in this development that computes the
+/// *value* of an inverse; `nat_index_symm` says Bishop's sampling index is
+/// symmetric in its shift and its argument, which is what lets a bound read at
+/// a product index come back to the **shift** without `Rat.natDivSucc` ever
+/// having to be antitone in its index.
+#[test]
+fn the_inverse_index_toolkit_has_the_statements_creal_inv_needs() {
+    let (mut kernel, p) = built();
+    let render = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        render(&mut kernel, p.inv_nat_div_succ),
+        "((x0 : AxNat) -> Eq.{1} Rat \
+         (Rat.inv (Rat.natDivSucc (AxNat.succ AxNat.zero) x0)) \
+         (Rat.natDivSucc (AxNat.succ x0) AxNat.zero))"
+    );
+    assert_eq!(
+        render(&mut kernel, p.nat_index_symm),
+        "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat \
+         (AxNat.add (AxNat.mul (AxNat.succ x0) x1) x0) \
+         (AxNat.add (AxNat.mul (AxNat.succ x1) x0) x1)))"
+    );
+    for (label, name) in [
+        ("inv_natDivSucc", p.inv_nat_div_succ),
+        ("nat_index_symm", p.nat_index_symm),
+    ] {
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// The negative control for
+/// [`the_inverse_index_toolkit_has_the_statements_creal_inv_needs`]: the
+/// **same proof term**, pointed at a statement one token away, is REFUSED.
+///
+/// `(1/(m+1))⁻¹ = m/1` is false at every `m ≥ 1` — at `m = 1` it claims
+/// `(1/2)⁻¹ = 1` — and `nat_index_symm` with one argument left unswapped is
+/// false at every `a ≠ b`. If either mutation were accepted, the statement
+/// tests above would be pinning a shape rather than a fact.
+#[test]
+fn the_inverse_index_toolkit_cannot_prove_the_off_by_one_statements() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat_ty = d.nat_ty();
+
+    // (1/(m+1))⁻¹ = m/1 — the numerator is `m`, not `m+1`.
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let modulus = d.const_app(p.nat_div_succ, &[one_nat, m]);
+    let reciprocal = d.const_app(p.inv, &[modulus]);
+    let short = d.const_app(p.nat_div_succ, &[m, zero_nat]);
+    let claim = crate::rat_prelude::ops::req(&mut d, reciprocal, short);
+    let ty = d.pi_fv(m_fv, nat_ty, claim);
+    let value = {
+        let instance = d.lemma(p.inv_nat_div_succ, &[m]);
+        d.lam_fv(m_fv, nat_ty, instance)
+    };
+    let name = d.kernel().name_str(anon, "Check.inv_off_by_one");
+    let refused = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted `(1/(m+1))⁻¹ = m/1`, which is FALSE at m = 1"
+    );
+
+    // (a+1)·b + a = (b+1)·a + a — the trailing summand is not swapped.
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let sa = d.succ(a);
+    let sb = d.succ(b);
+    let start = {
+        let scaled = NatOps::mul(&mut d, sa, b);
+        NatOps::add(&mut d, scaled, a)
+    };
+    let unswapped = {
+        let scaled = NatOps::mul(&mut d, sb, a);
+        NatOps::add(&mut d, scaled, a)
+    };
+    let claim = d.eq(start, unswapped);
+    let ty = {
+        let inner = d.pi_fv(b_fv, nat_ty, claim);
+        d.pi_fv(a_fv, nat_ty, inner)
+    };
+    let value = {
+        let instance = d.lemma(p.nat_index_symm, &[a, b]);
+        let inner = d.lam_fv(b_fv, nat_ty, instance);
+        d.lam_fv(a_fv, nat_ty, inner)
+    };
+    let name = d.kernel().name_str(anon, "Check.index_half_swapped");
+    let refused = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted `(a+1)·b + a = (b+1)·a + a`, which is FALSE at a = 0, b = 1"
     );
 }

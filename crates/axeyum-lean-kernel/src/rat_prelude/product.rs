@@ -24,7 +24,7 @@
 //!    sequence's zeroth sample is a *rational*, its numerator is an *integer*,
 //!    and `Int.natAbs` of that is the ℕ the sampling index is scaled by.
 //!    Bishop, and Mathlib after him, reach this bound by extracting a modulus
-//!    from an existential `CauSeq`; with the fixed modulus of ADR-0468 there is
+//!    from an existential `CauSeq`; with the fixed modulus of ADR-0483 there is
 //!    nothing to extract — regularity at `n = 0` gives `|x_m| ≤ |x_0| + 2`
 //!    outright, and the only genuinely missing piece was the ℕ-valued `K`.
 //! 3. **`natDivSucc` under multiplication.**
@@ -829,6 +829,74 @@ fn declare_nat_div_succ_product(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(),
             (stmt, proof)
         },
     )?;
+
+    // nat_index_symm : (a+1)·b + a = (b+1)·a + b.
+    //
+    // **Bishop's sampling index is symmetric in its shift and its argument**,
+    // and that is not decoration. `natDivSucc_le_scaled` reads a bound at
+    // `(c+1)·n + c` back to `n` — the SECOND slot — because that is the slot
+    // that shrinks. The real inverse needs the other reading: its samples are
+    // bounded BELOW by a constant fixed by the modulus, so the same index has
+    // to come back to the shift, and the only way there without a new lemma
+    // about `natDivSucc` is to notice the index is already the right shape
+    // with its arguments swapped.
+    //
+    // Degree 2 in the two variables and still not an induction: `succ_mul`
+    // opens both sides to `a·b + b + a`, and `add_right_comm` and `mul_comm`
+    // close the gap.
+    mixed_theorem(d, p.nat_index_symm, &[nat_ty, nat_ty], &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let sa = d.succ(a);
+        let sb = d.succ(b);
+        let start = {
+            let scaled = NatOps::mul(d, sa, b);
+            NatOps::add(d, scaled, a)
+        };
+        let target = {
+            let scaled = NatOps::mul(d, sb, a);
+            NatOps::add(d, scaled, b)
+        };
+        let stmt = d.eq(start, target);
+
+        let flat = NatOps::mul(d, a, b);
+        let opened_head = NatOps::add(d, flat, b);
+        let opened = NatOps::add(d, opened_head, a);
+        let step_open = {
+            let expand = d.lemma(nat.succ_mul, &[a, b]);
+            let scaled = NatOps::mul(d, sa, b);
+            NatOps::congr(d, scaled, opened_head, expand, &|d, t| NatOps::add(d, t, a))
+        };
+        let swapped_head = NatOps::add(d, flat, a);
+        let regrouped = NatOps::add(d, swapped_head, b);
+        let step_regroup = d.lemma(nat.add_right_comm, &[flat, b, a]);
+        let mirrored = NatOps::mul(d, b, a);
+        let mirrored_head = NatOps::add(d, mirrored, a);
+        let commuted = NatOps::add(d, mirrored_head, b);
+        let step_commute = {
+            let swap = d.lemma(nat.mul_comm, &[a, b]);
+            NatOps::congr(d, flat, mirrored, swap, &|d, t| {
+                let head = NatOps::add(d, t, a);
+                NatOps::add(d, head, b)
+            })
+        };
+        let step_close = {
+            let expand = d.lemma(nat.succ_mul, &[b, a]);
+            let scaled = NatOps::mul(d, sb, a);
+            let back = NatOps::symm(d, scaled, mirrored_head, expand);
+            NatOps::congr(d, mirrored_head, scaled, back, &|d, t| NatOps::add(d, t, b))
+        };
+        let (_, proof) = NatOps::chain(
+            d,
+            start,
+            &[
+                (opened, step_open),
+                (regrouped, step_regroup),
+                (commuted, step_commute),
+                (target, step_close),
+            ],
+        );
+        (stmt, proof)
+    })?;
 
     // natDivSucc_le_scaled : k/((c+1)·n + c + 1) ≤ k/(n+1).
     //
