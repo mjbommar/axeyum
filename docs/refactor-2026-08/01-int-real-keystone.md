@@ -1,5 +1,29 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
+> **STATUS 2026-08-17 — the ℝ half has a route, and it is free.**
+> [ADR-0468](../research/09-decisions/adr-0468-real-is-constructed-as-a-setoid-over-the-rationals.md)
+> decides **a Bishop setoid of regular ℚ-sequences**: a one-constructor carrier
+> with no quotient, and equality carried by a *defined* `CReal.Equiv` rather
+> than by `Eq`. ADR-0456's two rejections below are both correct — a Cauchy
+> quotient needs the `Quot.sound` this kernel does not have, Dedekind cuts need
+> `propext` + `funext` — but the conclusion "therefore ℝ is deferred" does not
+> follow, because **equality does not have to be `Eq`**. That third option was
+> missing from the accounting.
+>
+> Measured, not argued: `creal_shape_probe` admits the carrier, its recursor,
+> the representative projection (large elimination) and the setoid relation over
+> the *constructed* `Rat` with a **trusted surface of 0**, against a `funext`
+> negative control in a second kernel that comes back non-empty — so the zero
+> discriminates. The price is counted too: **9 of the 30 `Real` declarations
+> mention `Eq`**, so 13 of the 22 laws are discharged verbatim and 9 only in
+> `Equiv` form. The order fragment a Farkas refutation actually invokes is
+> untouched.
+>
+> One claim below is now superseded rather than merely dated: "a Cauchy-sequence
+> ℝ is *inexpressible*" is true of a Cauchy ℝ **with `Eq`**, and false of one
+> with a defined equivalence. And the ℚ trigger fired early — `rat_prelude.rs`
+> landed ℚ as an ordered field on 2026-08-17, so R1 is unblocked.
+
 > **STATUS 2026-08-16 — the integer half is DONE. `int_prelude` has 0 axioms.**
 > `Int.euclidean_decomposition` — the last assumption, and the only member that
 > was not a ring or order law — is now a theorem with an empty axiom footprint.
