@@ -44,6 +44,7 @@ STATIC_SOURCES = (
     Path("scripts/create-autogenesis-premise-transition.py"),
     Path("scripts/create-autogenesis-accepted-event.py"),
     Path("scripts/stage-autogenesis-premise.sh"),
+    Path("scripts/replay-autogenesis-apply-experiment.sh"),
     Path("scripts/check-autogenesis-knowledge-controls.sh"),
     Path("scripts/check-autogenesis-proposer-isolation.sh"),
     Path("scripts/run-autogenesis-python-proposer.sh"),

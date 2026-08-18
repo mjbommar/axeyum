@@ -145,10 +145,21 @@ still shell orchestration; the B change is an episode-local bootstrap overlay,
 not a durable ledger admission; event-gated phase projection is not yet a
 frontier recomputation from durable state; and the full kernel search has not
 yet been replayed from a retained bundle in a clean process. No transaction or
-programme credit is claimed. A clean, exact-commit evidence bundle can be retained
-outside Git with `--retain NEW-DIRECTORY`; the repository keeps only the
+programme credit is claimed. A clean, exact-commit evidence bundle can be
+retained outside Git with `--retain NEW-DIRECTORY`; the repository keeps only the
 generator, gates, and content identities rather than vendoring execution
 artifacts.
+
+The retained bundle has a separate read-only replay entry point:
+
+```sh
+scripts/replay-autogenesis-apply-experiment.sh RETAINED-DIRECTORY
+```
+
+It requires the exact clean commit captured at launch, verifies every artifact
+identity and proposal projection, regenerates B's kernel evidence, typed
+receipt, transition, and event in fresh files, reruns the pre-A and post-B
+kernel checks, compares the exact outcomes, and fails if the checkout changes.
 
 ## Assumptions tested now
 
