@@ -164,3 +164,169 @@ fn rationals_model_the_real_axioms() {
         "these Real declarations have no ℚ interpretation: {missed:?}"
     );
 }
+
+// --- the Archimedean property (ADR-0468 phase R1) ---------------------------
+
+/// Every declaration the Archimedean development adds is a **checked** theorem
+/// (or definition) with an empty axiom footprint — read out of the kernel, not
+/// off the diff.
+#[test]
+fn the_archimedean_development_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("natDivSucc", p.nat_div_succ, false),
+        ("int_le_or_lt", p.int_le_or_lt, true),
+        ("le_or_lt", p.le_or_lt, true),
+        ("int_pos_of_pos", p.int_pos_of_pos, true),
+        ("int_one_le_of_pos", p.int_one_le_of_pos, true),
+        ("natDivSucc_lt_of_pos", p.nat_div_succ_lt_of_pos, true),
+        ("le_of_le_add_natDivSucc", p.le_of_le_add_nat_div_succ, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// The Archimedean statement is the one ADR-0468 asks for, **verbatim**.
+///
+/// A footprint of `[]` on a theorem that says something weaker than intended is
+/// the failure mode this repository keeps hitting, so this asserts the rendered
+/// type rather than the declaration's existence: the hypothesis has to be
+/// universally quantified over the index (`∀ j`, not one fixed `j`), the bound
+/// has to be `Rat.natDivSucc k j` under that quantifier, and the conclusion has
+/// to be the *unweakened* `Rat.le a b`.
+#[test]
+fn the_archimedean_statement_is_the_one_adr_0468_needs() {
+    let (kernel, p) = built();
+    let rendered = match kernel
+        .environment()
+        .get(p.le_of_le_add_nat_div_succ)
+        .expect("the Archimedean property must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("the Archimedean property must be a Theorem, found {other:?}"),
+    };
+    let text = kernel.render_lean(rendered);
+    let normalised: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert_eq!(
+        normalised,
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : AxNat) -> \
+         ((x3 : ((x3 : AxNat) -> Rat.le x0 (Rat.add x1 (Rat.natDivSucc x2 x3)))) -> \
+         Rat.le x0 x1))))",
+        "the Archimedean statement drifted from ADR-0468's"
+    );
+}
+
+/// `Rat.natDivSucc k j` really is the rational `k/(j+1)` **in lowest terms**,
+/// checked by the kernel's own reduction (`Eq.refl` only typechecks if the two
+/// sides are definitionally equal).
+///
+/// This is the guard that stops the Archimedean property being vacuous. A
+/// `natDivSucc` that collapsed to `0` — or that never renormalised — would leave
+/// every theorem above provable and every one of them worthless, and neither an
+/// empty footprint nor the rendered statement would notice. `6/(1+1)` is chosen
+/// because it exercises the `gcd` reduction: the answer is `3/1`, not `6/2`.
+///
+/// **Measured 2026-08-18, so the redundancy is stated rather than assumed.**
+/// Mutating the development to `k/(j+2)` — consistently, in both the definition
+/// and the witness proof — does not reach this test: the *kernel* refuses the
+/// witness lemma first, because `Int.lt (ofNat (k·q)) (ofNat (k·q+2))` is no
+/// longer `Nat.le_refl`, and all ten tests in this module die on the build. So
+/// today `Rat.natDivSucc`'s meaning is pinned by the proofs that consume it, and
+/// this test is defence for the refactor that re-proves the witness lemma some
+/// other way and no longer pins it. Its own discriminating power is measured by
+/// [`nat_div_succ_reduction_check_can_fail`], which requires the kernel to
+/// **reject** a wrong numerator through the same `Eq.refl` route.
+#[test]
+fn nat_div_succ_computes_the_reduced_fraction() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    // `Rat.num (Rat.natDivSucc 6 1) = Int.ofNat 3` and `Rat.den … = 1`.
+    let cases: [(&str, u32, u32, u32, u32); 3] = [
+        ("six_halves", 6, 1, 3, 1),
+        ("one_quarter", 1, 3, 1, 4),
+        ("four_sixths", 4, 5, 2, 3),
+    ];
+    for (label, k, j, expected_num, expected_den) in cases {
+        let numerator_arg = d.num(k);
+        let index = d.num(j);
+        let value = d.const_app(p.nat_div_succ, &[numerator_arg, index]);
+
+        let actual_num = super::ops::num(&mut d, value);
+        let wanted = d.num(expected_num);
+        let wanted_num = d.of_nat(wanted);
+        let num_stmt = d.ieq(actual_num, wanted_num);
+        let num_proof = d.irefl(actual_num);
+        let num_name = d.kernel().name_str(anon, format!("Check.num_{label}"));
+        d.declare_theorem(num_name, num_stmt, num_proof)
+            .unwrap_or_else(|e| {
+                panic!("Rat.natDivSucc {k} {j} did not reduce to numerator {expected_num}: {e:?}")
+            });
+
+        let actual_den = super::ops::den(&mut d, value);
+        let wanted_den = d.num(expected_den);
+        let den_stmt = NatOps::eq(&mut d, actual_den, wanted_den);
+        let den_proof = NatOps::refl(&mut d, actual_den);
+        let den_name = d.kernel().name_str(anon, format!("Check.den_{label}"));
+        d.declare_theorem(den_name, den_stmt, den_proof)
+            .unwrap_or_else(|e| {
+                panic!("Rat.natDivSucc {k} {j} did not reduce to denominator {expected_den}: {e:?}")
+            });
+    }
+}
+
+/// The negative control for
+/// [`nat_div_succ_computes_the_reduced_fraction`]: the same `Eq.refl` route,
+/// pointed at a value `Rat.natDivSucc` does **not** take.
+///
+/// Without this, a kernel whose conversion checker accepted anything would make
+/// the test above pass while measuring nothing. `6/(1+1)` is `3/1`, so asking it
+/// to be `6/1` must be **refused**.
+#[test]
+fn nat_div_succ_reduction_check_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let six = d.num(6);
+    let one = d.num(1);
+    let value = d.const_app(p.nat_div_succ, &[six, one]);
+    let actual_num = super::ops::num(&mut d, value);
+    let wrong = d.num(6);
+    let wrong_num = d.of_nat(wrong);
+    let stmt = d.ieq(actual_num, wrong_num);
+    let proof = d.irefl(actual_num);
+    let name = d.kernel().name_str(anon, "Check.wrong_numerator");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `Rat.num (Rat.natDivSucc 6 1) = Int.ofNat 6`, \
+         so the reduction check above proves nothing"
+    );
+}

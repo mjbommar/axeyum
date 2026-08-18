@@ -52,6 +52,7 @@ use crate::int_prelude::{IntPrelude, build_int_prelude};
 use crate::name::NameId;
 use crate::{Kernel, KernelError};
 
+mod archimedean;
 mod core;
 mod defs;
 mod laws;
@@ -260,6 +261,47 @@ pub struct RatPrelude {
     /// particular the first step of an Archimedean argument: `¬(a ≤ b)` gives
     /// `b < a`, and only then is there a positive quantity to bound.
     pub lt_of_not_le: NameId,
+
+    // --- the Archimedean property (ADR-0468 phase R1) -------------------------
+    /// `Rat.natDivSucc : Nat → Nat → Rat` — the rational `k/(j+1)`, as a single
+    /// `Rat.normalize` whose denominator is positive by construction.
+    ///
+    /// One definition serves the regularity bound (`k = 1`), the setoid
+    /// closeness bound (`k = 2`) and the Archimedean bound (`k = 6`) of
+    /// ADR-0468's real construction, and `Rat.abs` is never needed because
+    /// `|a| ≤ b` is written as the pair `−b ≤ a ∧ a ≤ b`.
+    pub nat_div_succ: NameId,
+    /// `Rat.int_le_or_lt : ∀ (x y : Int), Or (Int.le x y) (Int.lt y x)`.
+    ///
+    /// The *decidable* form of the order. `¬¬P → P` does not exist in this
+    /// logic prelude, so an argument that wants "suppose not" takes this
+    /// instead — which is available because `Int.le_total` and `Int.eq_em` are
+    /// both proved.
+    pub int_le_or_lt: NameId,
+    /// `Rat.le_or_lt : ∀ (a b : Rat), Or (Rat.le a b) (Rat.lt b a)` — the same,
+    /// read through the cross-multiplication definition, so it costs nothing.
+    pub le_or_lt: NameId,
+    /// `Rat.int_pos_of_pos : ∀ q, Rat.lt Rat.zero q → Int.lt Int.zero (Rat.num q)`
+    /// — the strict companion of [`Self::int_nonneg_of_nonneg`].
+    pub int_pos_of_pos: NameId,
+    /// `Rat.int_one_le_of_pos : ∀ (x : Int), Int.lt Int.zero x → Int.le (Int.ofNat 1) x`
+    /// — the **discreteness** of `ℤ`, which is what makes `ℚ` Archimedean.
+    pub int_one_le_of_pos: NameId,
+    /// `Rat.natDivSucc_lt_of_pos : ∀ (k : Nat) (c : Rat), Rat.lt Rat.zero c →
+    /// Rat.lt (Rat.natDivSucc k (Nat.mul k (Rat.den c))) c`.
+    ///
+    /// The Archimedean **witness**, computed rather than asserted to exist: for
+    /// `c = p/q` with `p ≥ 1`, the index `k·q` works because `k·q < p·(k·q+1)`.
+    /// No `Exists`, so no elimination at the use site.
+    pub nat_div_succ_lt_of_pos: NameId,
+    /// `Rat.le_of_le_add_natDivSucc : ∀ (a b : Rat) (k : Nat),
+    /// (∀ (j : Nat), Rat.le a (Rat.add b (Rat.natDivSucc k j))) → Rat.le a b`.
+    ///
+    /// **The Archimedean property of `ℚ`.** ADR-0468 identifies this as the one
+    /// genuinely new rational lemma the Bishop-setoid construction of `ℝ` needs:
+    /// transitivity of `CReal.Equiv` only reaches `|x_n − z_n| ≤ 2/n + 6/j` for
+    /// every `j`, and this is what turns that into `≤ 2/n`.
+    pub le_of_le_add_nat_div_succ: NameId,
 }
 
 impl RatPrelude {
@@ -366,6 +408,13 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sq_nonneg: child(kernel, "sq_nonneg"),
         le_total: child(kernel, "le_total"),
         lt_of_not_le: child(kernel, "lt_of_not_le"),
+        nat_div_succ: child(kernel, "natDivSucc"),
+        int_le_or_lt: child(kernel, "int_le_or_lt"),
+        le_or_lt: child(kernel, "le_or_lt"),
+        int_pos_of_pos: child(kernel, "int_pos_of_pos"),
+        int_one_le_of_pos: child(kernel, "int_one_le_of_pos"),
+        nat_div_succ_lt_of_pos: child(kernel, "natDivSucc_lt_of_pos"),
+        le_of_le_add_nat_div_succ: child(kernel, "le_of_le_add_natDivSucc"),
     }
 }
 
@@ -400,6 +449,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         laws::declare_order_laws(&mut d, prelude)?;
         laws::declare_ring_laws(&mut d, prelude)?;
         scaling::declare_scaling_laws(&mut d, prelude)?;
+        archimedean::declare_archimedean(&mut d, prelude)?;
         Ok(())
     })();
     match built {
