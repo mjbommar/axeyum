@@ -30,8 +30,8 @@
 
 use axeyum_ir::{TermArena, TermId};
 use axeyum_solver::{
-    LraReconstructCtx, RingTelescope, generalize_over_ordered_ring, instantiate_at_int_model,
-    reconstruct_lra_proof,
+    LeanModuleContent, LraReconstructCtx, RingTelescope, generalize_over_ordered_ring,
+    instantiate_at_int_model, reconstruct_lra_proof, refutation_over_int_axioms,
 };
 
 /// `x < y ∧ y < x` — refuted by transitivity and irreflexivity alone.
@@ -288,4 +288,114 @@ fn the_query_that_renders_an_attestation_has_an_axiom_free_integer_refutation() 
         (1, 2),
         "one variable and two constraints, matching the query"
     );
+}
+
+/// The closed form: `False`, from declared integer axioms, rendered as a module.
+///
+/// `instantiate_at_int_model` stops at a ∀-statement. A Lean module needs a
+/// closed `False`, so the binders are discharged against fresh `Int` axioms —
+/// the query's own variables and constraints — and the result is rendered.
+///
+/// This is what a dispatched integer route would emit, and it is asserted to be
+/// a THEORY RECONSTRUCTION rather than the `axiom P` / `axiom ¬P` attestation
+/// those queries render today. A module that merely attested would also compile.
+#[test]
+fn the_integer_refutation_closes_and_renders_a_theory_module() {
+    let (arena, assertions) = farkas_three();
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("Farkas refutation");
+    let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
+        .expect("generalizes");
+    let at_int = instantiate_at_int_model(&mut ctx, &generalized).expect("instantiates at Z");
+    let closed = refutation_over_int_axioms(&mut ctx, &at_int).expect("discharges its binders");
+
+    assert_eq!(
+        (closed.variables.len(), closed.hypotheses.len()),
+        (3, 4),
+        "the discharge must supply one axiom per variable and one per constraint; a different \
+         split means the telescope was mis-peeled and the module would be about other constraints"
+    );
+
+    let false_ = {
+        let logic_false = ctx.arith().logic.false_;
+        ctx.kernel_mut().const_(logic_false, vec![])
+    };
+    let module = ctx
+        .kernel()
+        .render_lean_module("axeyum_int_refutation", false_, closed.proof);
+    let content = LeanModuleContent::of_module_source(&module);
+    println!(
+        "  integer module: {content:?}, {} bytes, {} vars + {} hyps",
+        module.len(),
+        closed.variables.len(),
+        closed.hypotheses.len()
+    );
+    assert_eq!(
+        content,
+        LeanModuleContent::TheoryReconstruction,
+        "the integer module is a structural attestation — the very thing this route exists to \
+         replace"
+    );
+    assert!(
+        module.contains("Int"),
+        "the rendered module never mentions Int"
+    );
+
+    // Hand it to official Lean when one is available, exactly as the crosscheck
+    // suites do. A missing binary skips; it does not silently pass as checked.
+    if let Some(lean) = lean_binary() {
+        let dir = std::env::temp_dir().join(format!("axeyum-int-farkas-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("scratch dir");
+        let path = dir.join("int_refutation.lean");
+        std::fs::write(&path, &module).expect("write module");
+        let out = std::process::Command::new(&lean)
+            .arg(&path)
+            .output()
+            .expect("lean runs");
+        let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(
+            out.status.success(),
+            "official Lean rejected the integer refutation module:\n{stderr}"
+        );
+        println!("  official Lean accepted the integer refutation");
+
+        // ...and it must be able to say otherwise. Weaken one hypothesis from a
+        // strict `<` to `<=`: the proof was built for the strict form, so a Lean
+        // that is typechecking must refuse it. Without this, "accepted" is
+        // indistinguishable from a checker that reads nothing.
+        let mutated = module.replacen("Int.le", "Int.lt", 1);
+        assert_ne!(
+            mutated, module,
+            "the mutation did not apply, so the control below proves nothing"
+        );
+        let mutant_dir =
+            std::env::temp_dir().join(format!("axeyum-int-farkas-mut-{}", std::process::id()));
+        std::fs::create_dir_all(&mutant_dir).expect("scratch dir");
+        let mutant = mutant_dir.join("mutated.lean");
+        std::fs::write(&mutant, &mutated).expect("write mutant");
+        let out = std::process::Command::new(&lean)
+            .arg(&mutant)
+            .output()
+            .expect("lean runs");
+        let _ = std::fs::remove_dir_all(&mutant_dir);
+        assert!(
+            !out.status.success(),
+            "official Lean ACCEPTED a module with a hypothesis relation swapped. Its acceptance \
+             of the real module therefore establishes nothing"
+        );
+        println!("  official Lean rejected the mutated module");
+    } else {
+        eprintln!("SKIP: no lean binary for the integer module");
+    }
+}
+
+/// `AXEYUM_LEAN_BIN`, else elan's newest toolchain, else `None` (skip).
+fn lean_binary() -> Option<std::path::PathBuf> {
+    if let Ok(p) = std::env::var("AXEYUM_LEAN_BIN") {
+        let p = std::path::PathBuf::from(p);
+        return p.is_file().then_some(p);
+    }
+    let root = std::path::PathBuf::from(std::env::var("HOME").ok()?).join(".elan/bin/lean");
+    root.is_file().then_some(root)
 }

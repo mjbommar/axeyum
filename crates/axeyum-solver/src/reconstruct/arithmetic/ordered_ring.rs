@@ -576,7 +576,114 @@ pub fn instantiate_at_int_model(
         axiom_footprint,
         laws_modelled: model.laws.len(),
         symbols_interpreted: model.symbols.len(),
+        var_binders_hint: refutation.var_binders,
     })
+}
+
+/// Discharge an [`IntInstantiation`]'s binders against fresh integer axioms,
+/// producing a kernel-checked `False`.
+///
+/// [`instantiate_at_int_model`] stops at a ∀-statement — the refutation restated
+/// over `ℤ`, still waiting for variables and constraints. A Lean *module* needs
+/// a closed `False`, so this supplies them: one opaque `Int` axiom per variable
+/// binder and one hypothesis axiom per constraint binder, then applies.
+///
+/// The hypothesis types are **read off the statement**, not rebuilt. Peeling a
+/// binder and substituting the fresh constant leaves exactly the type the
+/// theorem expects next, so there is no second normalization that could disagree
+/// with the first — the failure mode where a sound certificate is rejected
+/// because the consumer encoded the same constraint differently.
+///
+/// The declared hypotheses ARE the query's constraints, in the normalized form
+/// the refutation uses. That is the same bar the `Real` LRA modules meet, where
+/// the rendered hypothesis axioms are likewise normalized rather than verbatim
+/// source syntax.
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if a binder cannot be discharged or the
+/// application does not infer `False` — which is where a mis-peeled telescope
+/// would surface rather than producing a module about the wrong constraints.
+pub fn refutation_over_int_axioms(
+    ctx: &mut LraReconstructCtx,
+    instantiation: &IntInstantiation,
+) -> Result<IntRefutation, ReconstructError> {
+    let mut ty = instantiation.statement;
+    let mut arguments: Vec<ExprId> = Vec::new();
+    let mut variables: Vec<NameId> = Vec::new();
+    let mut hypotheses: Vec<NameId> = Vec::new();
+
+    // Peel every binder, declaring what it asks for. A variable binder wants an
+    // inhabitant of `Int`; a constraint binder wants a proof of a Prop. Both are
+    // supplied as axioms — they are the query's own data, exactly as the `Real`
+    // route treats its variables and assertions.
+    while let ExprNode::Pi(_, domain, body, _) = *ctx.kernel.expr_node(ty) {
+        let is_variable = variables.len() < instantiation.var_binders_hint;
+        let name = if is_variable {
+            ctx.fresh_name("int_var")
+        } else {
+            ctx.fresh_name("int_hyp")
+        };
+        ctx.kernel
+            .add_declaration(Declaration::Axiom {
+                name,
+                uparams: vec![],
+                ty: domain,
+            })
+            .map_err(|e| ReconstructError::KernelRejected {
+                rule: "int_axioms".to_owned(),
+                detail: format!("could not declare a binder's axiom: {e:?}"),
+            })?;
+        let constant = ctx.kernel.const_(name, vec![]);
+        arguments.push(constant);
+        if is_variable {
+            variables.push(name);
+        } else {
+            hypotheses.push(name);
+        }
+        ty = ctx.kernel.instantiate(body, &[constant]);
+    }
+
+    let mut applied = ctx.kernel.const_(instantiation.theorem, vec![]);
+    for argument in &arguments {
+        applied = ctx.kernel.app(applied, *argument);
+    }
+    let inferred = ctx
+        .kernel
+        .infer(applied)
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "int_axioms".to_owned(),
+            detail: format!("the discharged integer refutation does not infer: {e:?}"),
+        })?;
+    let false_ = {
+        let f = ctx.arith.logic.false_;
+        ctx.kernel.const_(f, vec![])
+    };
+    if !ctx.kernel.def_eq(inferred, false_) {
+        return Err(ReconstructError::KernelRejected {
+            rule: "int_axioms".to_owned(),
+            detail: "discharging every binder did not leave False; the statement's telescope is \
+                     not what this route assumed"
+                .to_owned(),
+        });
+    }
+
+    Ok(IntRefutation {
+        proof: applied,
+        variables,
+        hypotheses,
+    })
+}
+
+/// A closed integer refutation: `False`, from declared integer axioms.
+#[derive(Debug, Clone)]
+pub struct IntRefutation {
+    /// The proof term, of type `False`.
+    pub proof: ExprId,
+    /// The opaque `Int` axioms standing for the query's variables.
+    pub variables: Vec<NameId>,
+    /// The hypothesis axioms standing for its constraints, in binder order.
+    pub hypotheses: Vec<NameId>,
 }
 
 /// A generalized refutation, instantiated at the integers.
@@ -598,6 +705,10 @@ pub struct IntInstantiation {
     pub laws_modelled: usize,
     /// How many carrier/operation symbols it interpreted (8).
     pub symbols_interpreted: usize,
+    /// How many of the statement's leading binders are VARIABLES rather than
+    /// constraints — carried from the generalization, because the two are both
+    /// `Pi` nodes and telling them apart by inspecting types would be a guess.
+    pub var_binders_hint: usize,
 }
 
 fn ring_telescope(arith: &axeyum_lean_kernel::ArithPrelude) -> [NameId; 30] {
