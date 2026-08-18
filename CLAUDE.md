@@ -447,6 +447,26 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   --cached --stat HEAD` is the one that fires.** And after committing, read the
   FILE COUNT in `git show --stat`, not whether your own hunks look right: the
   only symptom in the second incident was 15 files where 11 were staged.
+
+  **One invocation is still not enough — VERIFY THE STAGED SET.** Tenth incident,
+  2026-08-18, by a lane that did put `read-tree`, `add` and `commit` in a single
+  Bash call: another lane committed during the `git add`, and the commit reverted
+  six of its files (−302 lines). The window is real work, not a race you can win
+  by typing faster. Amended within a minute, nothing lost, but the rule above
+  does not prevent it.
+
+  So do not trust the sequence — assert the outcome. The staged set must equal
+  your pathspec, checked between `add` and `commit` in the same invocation:
+
+      P="a.rs b.rs"
+      git read-tree HEAD && git add -- $P && \
+        test -z "$(git diff --cached --name-only HEAD | grep -vxF "$(printf '%s\n' $P)")" && \
+        git commit -F - <<'MSG'
+      …
+      MSG
+
+  If that `test` fails, HEAD moved: re-run `read-tree`/`add` and check again. The
+  diff-against-HEAD is what sees it; the index's own base cannot.
 - **`git commit -m "…"` SILENTLY DELETES anything in backticks.** Double quotes
   mean the shell runs each backtick span as a command and substitutes its output,
   which for prose is almost always empty. This repository's commit messages are
