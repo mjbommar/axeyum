@@ -342,6 +342,53 @@ logics** before and after. What changed is that `unclassified` went 15 → 0, so
 the report no longer holds a bucket of rows whose assurance nobody had stated.
 `self` went 48 → 62 to match.
 
+## What "axiom-free" does and does not mean here
+
+Measured 2026-08-17 against official Lean 4.30.0, because the claim invites an
+overstatement and the numbers settle it.
+
+| | axiom footprint |
+| --- | --- |
+| the generalized ordered-ring refutation | none |
+| instantiated at **our constructed ℤ** | none |
+| instantiated at **Lean core's standard `Int`** | `propext` |
+| Lean core `omega`, same goal | `propext`, `Quot.sound` |
+
+Three things follow, and the first two are limits on the claim.
+
+**Axiom-freedom over the STANDARD integers is not achievable, by us or anyone.**
+Lean core's own `Int.add_comm`, `Int.add_assoc`, `Int.mul_comm`, `Int.lt_irrefl`,
+`Int.lt_trans` and `Int.le_refl` each depend on `propext`. Any route that
+instantiates at the standard `Int` inherits it. The `propext` is a floor set by
+the library, not a defect of a reconstruction strategy.
+
+**So our empty footprint is a consequence of instantiating at OUR ℤ**, which
+`int_prelude` constructs inductively over a proved ℕ with zero axioms. That is a
+real construction, not a dodge — but it is a different object from Lean's `Int`,
+and no bridge between them has been proved. Until one is, the theorem is about
+our integers.
+
+**And the generalized form being axiom-free is not special to this system.** The
+same shape, written by hand in four lines of Lean, is likewise axiom-free. What
+is ours is producing it automatically from a machine-found refutation, and
+measuring the footprint per theorem rather than asserting it.
+
+What survives as a genuine, if narrow, difference: even after bridging to the
+standard ℤ this route would land at `propext`, strictly lighter than `omega`'s
+`propext` + `Quot.sound` on the identical goal.
+
+For orientation, the neighbouring systems are not optimizing this metric at all.
+[lean-smt](https://arxiv.org/pdf/2505.15796) replays cvc5 proofs into Lean and,
+SMT-LIB's logic being classical, parts rest on choice.
+[SMTCoq](https://github.com/smtcoq/smtcoq) verifies a *checker* inside Coq and
+discharges linear arithmetic through Micromega — a reflective trust story rather
+than a term-reconstruction one.
+
+**The next measurement that would move this:** prove a bridge from our `Int` to
+Lean core's `Int`. That converts "axiom-free about our ℤ" into "`propext`-only
+about ℤ", which is a weaker footprint but a stronger *claim*, and is probably
+the better trade.
+
 ## The measurement to repeat
 
 For each area: does a verdict come with an artifact a third party can check
