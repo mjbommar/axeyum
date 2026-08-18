@@ -2,10 +2,10 @@
 //! the proved `ℚ`, with equality carried by a *defined* relation rather than by
 //! `Eq`, and costing **zero** trusted declarations.
 //!
-//! This is [ADR-0468](../../../docs/research/09-decisions/adr-0468-real-is-a-bishop-setoid-over-rat.md)
-//! phase R1, and it is what
-//! [`examples/creal_shape_probe.rs`](../../examples/creal_shape_probe.rs)
-//! measured the shape of before `ℚ` had an order. The probe admitted
+//! This is ADR-0468
+//! (`docs/research/09-decisions/adr-0468-real-is-constructed-as-a-setoid-over-the-rationals.md`)
+//! phase R1, and it is what `examples/creal_shape_probe.rs` measured the shape
+//! of before `ℚ` had an order. The probe admitted
 //! `CReal.Of (reg : (Nat → Rat) → Prop)` — the carrier *parametric* in its
 //! regularity predicate, because `Rat.le` did not exist. It does now, so the
 //! predicate is a definition and the carrier is concrete.

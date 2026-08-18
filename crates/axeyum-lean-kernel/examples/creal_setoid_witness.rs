@@ -1,7 +1,7 @@
 //! **ℝ, constructed, at trusted cost zero** — the finding, with the exit status
 //! depending on it (ADR-0468 phase R1).
 //!
-//! [`creal_shape_probe`](creal_shape_probe.rs) answered the *expressibility*
+//! `creal_shape_probe` answered the *expressibility*
 //! question before `ℚ` had an order, by admitting the carrier parametrically in
 //! its regularity predicate. This is the same measurement on the real thing:
 //! `CReal` over the constructed `Rat`, with regularity and closeness as
