@@ -214,8 +214,8 @@ pub enum ReconstructError {
         fragment: String,
     },
     /// The rendered module carries an axiom its own prelude refutes, so its
-    /// `False` follows without consulting the query at all. See
-    /// [`reject_self_refuting_module`].
+    /// `False` follows without consulting the query at all. See the private
+    /// `reject_self_refuting_module`.
     SelfRefutingModule {
         /// The routed fragment.
         fragment: String,
