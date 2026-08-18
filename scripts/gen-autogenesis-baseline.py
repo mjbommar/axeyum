@@ -92,7 +92,7 @@ SEAMS = (
         "owner": "fact frontier",
         "source": "scripts/fact-frontier.py",
         "marker": "content-addressed authoritative queue",
-        "gap": "the qualified chain's B now has an exact authoritative kernel operation; A still has none, and the live settled ledger correctly selects neither",
+        "gap": "clean authoritative B admission now makes A newly ready; A still has no exact operation and is correctly refused",
     },
     {
         "id": "chain-qualification",
@@ -372,38 +372,38 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
         {
             "id": "A1-operational-unlock-control",
             "state": "fixture",
-            "evidence": "catalog search produces B; a durable fixture event makes the same A target ready and fresh A depends on B",
-            "next": "repeat the causal unlock on an authoritative open fact",
+            "evidence": "clean authoritative B admission now makes the same A target newly ready; the earlier fixture retains the pre-B no-proof and post-B proof control",
+            "next": "authorize A and preserve the same causal boundary across the second write",
         },
         {
             "id": "A1-machine-selection",
             "state": seam_state.get("goal-selection", "missing"),
-            "evidence": "content-addressed authoritative frontier selected exactly one matching fact, which typed execution and admission consumed; the post-state refuses all remaining unregistered candidates",
-            "next": "register and qualify an actual B-to-A chain operation rather than another isolated leaf",
+            "evidence": "content-addressed authoritative frontier selected B alone; after its admission A became ready but remained refused without an exact operation",
+            "next": "register A's episode-local apply operation",
         },
         {
             "id": "A1-typed-dispatch-evidence",
             "state": seam_state.get("operation-execution", "missing"),
             "evidence": "the registry now fixes both the admitted SMT route and an exact fresh-kernel Nat.zero_add route; B's typed receipt, axiom-free transaction, and settled-fact replay work without caller-authored metadata",
-            "next": "run B from a clean reconstructed checkout and add the dependent Nat.mul_one operation",
+            "next": "add the dependent Nat.mul_one operation",
         },
         {
             "id": "A1-atomic-admission",
             "state": seam_state.get("ledger-transition", "missing"),
-            "evidence": "one real selected fact recovered from an intentional post-intent stop through compare-and-swap, fsynced journal, atomic replacement, and durable event",
-            "next": "reproduce the accepted acquisition from a second clean checkout",
+            "evidence": "both the first leaf and the qualified chain's B recovered from intentional post-intent stops through compare-and-swap, fsynced journal, atomic replacement, and durable event",
+            "next": "extend the same boundary through A",
         },
         {
             "id": "A1-admission-triggered-retry",
             "state": seam_state.get("accepted-transition-event", "missing"),
-            "evidence": "the durable authoritative event binds exact before/after frontiers; the admitted leaf leaves newly_ready empty rather than manufacturing an unlock",
-            "next": "repeat against an authoritative B-to-A edge and schedule A only from the event-derived delta",
+            "evidence": "the durable authoritative B event binds exact before/after frontiers and derives newly_ready=[F:nat-mul-one] with one authoritative write and zero fixture writes",
+            "next": "dispatch A only from this event-derived eligibility",
         },
         {
             "id": "A1-clean-reproduction",
             "state": seam_state.get("clean-replay", "missing"),
-            "evidence": "a second isolated clean checkout reproduced selection, certified execution, intent-fault recovery, authoritative admission, settled-fact replay, and the honest empty leaf readiness delta",
-            "next": "extend the same replay boundary through an authoritative B-to-A acquisition",
+            "evidence": "isolated clean checkouts reproduced both the leaf and B acquisition; the latter retained a complete synthetic-prestate bundle and event-derived A readiness",
+            "next": "extend the same replay boundary through A's proof and admission",
         },
     ]
 

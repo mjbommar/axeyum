@@ -185,10 +185,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Phase 0 WIP.** Leaf admission/recovery and the proof-derived B -> A chain are
-retained in `docs/autogenesis/`. The exact `Nat.zero_add` kernel operation is
-green without rewriting settled B. Next: replay B from a clean reconstructed
-checkout, then authorize A's episode-local apply route.
+**Phase 0 WIP.** Clean authoritative B admission/recovery now unlocks A; retained
+evidence is in `docs/autogenesis/`. A is correctly refused. Next: authorize its
+episode-local apply route, then replay both writes.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

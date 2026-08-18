@@ -2,7 +2,6 @@
 
 <!-- plan-section: lane-status -->
 
-**Phase 0 WIP.** Leaf admission/recovery and the proof-derived B -> A chain are
-retained in `docs/autogenesis/`. The exact `Nat.zero_add` kernel operation is
-green without rewriting settled B. Next: replay B from a clean reconstructed
-checkout, then authorize A's episode-local apply route.
+**Phase 0 WIP.** Clean authoritative B admission/recovery now unlocks A; retained
+evidence is in `docs/autogenesis/`. A is correctly refused. Next: authorize its
+episode-local apply route, then replay both writes.

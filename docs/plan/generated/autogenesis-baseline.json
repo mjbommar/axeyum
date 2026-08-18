@@ -19,39 +19,39 @@
       "state": "fixture"
     },
     {
-      "evidence": "catalog search produces B; a durable fixture event makes the same A target ready and fresh A depends on B",
+      "evidence": "clean authoritative B admission now makes the same A target newly ready; the earlier fixture retains the pre-B no-proof and post-B proof control",
       "id": "A1-operational-unlock-control",
-      "next": "repeat the causal unlock on an authoritative open fact",
+      "next": "authorize A and preserve the same causal boundary across the second write",
       "state": "fixture"
     },
     {
-      "evidence": "content-addressed authoritative frontier selected exactly one matching fact, which typed execution and admission consumed; the post-state refuses all remaining unregistered candidates",
+      "evidence": "content-addressed authoritative frontier selected B alone; after its admission A became ready but remained refused without an exact operation",
       "id": "A1-machine-selection",
-      "next": "register and qualify an actual B-to-A chain operation rather than another isolated leaf",
+      "next": "register A's episode-local apply operation",
       "state": "partial"
     },
     {
       "evidence": "the registry now fixes both the admitted SMT route and an exact fresh-kernel Nat.zero_add route; B's typed receipt, axiom-free transaction, and settled-fact replay work without caller-authored metadata",
       "id": "A1-typed-dispatch-evidence",
-      "next": "run B from a clean reconstructed checkout and add the dependent Nat.mul_one operation",
+      "next": "add the dependent Nat.mul_one operation",
       "state": "authoritative-multi-route"
     },
     {
-      "evidence": "one real selected fact recovered from an intentional post-intent stop through compare-and-swap, fsynced journal, atomic replacement, and durable event",
+      "evidence": "both the first leaf and the qualified chain's B recovered from intentional post-intent stops through compare-and-swap, fsynced journal, atomic replacement, and durable event",
       "id": "A1-atomic-admission",
-      "next": "reproduce the accepted acquisition from a second clean checkout",
+      "next": "extend the same boundary through A",
       "state": "authoritative"
     },
     {
-      "evidence": "the durable authoritative event binds exact before/after frontiers; the admitted leaf leaves newly_ready empty rather than manufacturing an unlock",
+      "evidence": "the durable authoritative B event binds exact before/after frontiers and derives newly_ready=[F:nat-mul-one] with one authoritative write and zero fixture writes",
       "id": "A1-admission-triggered-retry",
-      "next": "repeat against an authoritative B-to-A edge and schedule A only from the event-derived delta",
+      "next": "dispatch A only from this event-derived eligibility",
       "state": "authoritative-leaf"
     },
     {
-      "evidence": "a second isolated clean checkout reproduced selection, certified execution, intent-fault recovery, authoritative admission, settled-fact replay, and the honest empty leaf readiness delta",
+      "evidence": "isolated clean checkouts reproduced both the leaf and B acquisition; the latter retained a complete synthetic-prestate bundle and event-derived A readiness",
       "id": "A1-clean-reproduction",
-      "next": "extend the same replay boundary through an authoritative B-to-A acquisition",
+      "next": "extend the same replay boundary through A's proof and admission",
       "state": "authoritative-leaf"
     }
   ],
@@ -588,7 +588,7 @@
   },
   "manual_seams": [
     {
-      "gap": "the qualified chain's B now has an exact authoritative kernel operation; A still has none, and the live settled ledger correctly selects neither",
+      "gap": "clean authoritative B admission now makes A newly ready; A still has no exact operation and is correctly refused",
       "id": "goal-selection",
       "owner": "fact frontier",
       "source": "scripts/fact-frontier.py",
@@ -673,7 +673,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "0d223154726521fe15a75022ed17615d522b1a71794ba436ade1d2be496498e2",
+    "digest": "71bc96655bae020ade86f3d16188233c62104c592719d004b812ce9daa8b0ee3",
     "inputs": [
       {
         "bytes": 4601,
@@ -1376,9 +1376,9 @@
         "sha256": "fb367504828dc9aa0d09ecf349b645eb33b83402b69c53df65e43e937271526c"
       },
       {
-        "bytes": 25992,
+        "bytes": 25810,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "9d4f40d20e4c86ae23c6556809ee8ee67df89ae09f95eca0aa9925bc621c917c"
+        "sha256": "786e15385114e95ba26aa3d20fbe73d535054eabde8f5590fe7c5cbc3f8ea3f6"
       },
       {
         "bytes": 17112,

@@ -445,8 +445,17 @@ enumerates two structural induction plans, and checks the accepted proof in a
 fresh kernel. The observed result is plan rank 2 of 2, exact canonical type,
 empty axiom footprint, and no retained-answer dependency. The typed receipt,
 authoritative transaction adapter, and settled-fact replay all accept it. A
-reviewed three-script gate-mention list is exact: a new unreviewed mention blocks
-selection. This is B route authority, not yet a B admission or an A route.
+reviewed three-script gate-mention list is exact: a new or stale review blocks
+selection, as do multiple matching operations.
+
+The next clean isolated run reconstructed both B and A as valid open ledger
+rows. B alone was selected, proved, and admitted after intentional post-intent
+failure and recovery. The durable event produced exactly one authoritative
+write, zero fixture writes, and
+`newly_ready: [F:nat-mul-one]`. A was then refused because it has no registered
+authoritative operation. The retained identities and negative controls are in
+the [authoritative B result](09-authoritative-b-admission-result.md). This
+closes B admission and causal unlock, not A or Autogenesis-1.
 
 ### Foundation 1 — make one closure portable
 

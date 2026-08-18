@@ -105,6 +105,7 @@ compounding, not automation theatre.
 | [Research horizon](06-research-horizon.md) | What do current external systems teach, and what lies beyond them? |
 | [First 90 days](07-first-90-days.md) | What is the first bounded execution programme? |
 | [Backward foundation](08-backward-foundation.md) | What must be true immediately before Autogenesis-1, and which assumptions already fail? |
+| [Authoritative B result](09-authoritative-b-admission-result.md) | Did a real B admission durably unlock A, and what remains uncredited? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -174,13 +175,14 @@ selects it for engineering while explicitly granting no authoritative-write
 authority. The next bridge is therefore operation authority for B and A, not
 more chain prose.
 
-B's first production-capable route is now deliberately exact rather than
+B's first production-capable route is deliberately exact rather than
 generic: `authoritative-kernel-nat-zero-add-induction-v1` reconstructs the
 selected statement in a fresh kernel, accepts plan 2 of 2, and requires both an
-empty axiom footprint and no retained-answer dependencies. It prepares a typed
-authoritative transaction and replays through the registered fact checker. The
-live B remains settled and untouched; A still needs its own episode-local apply
-operation before the qualified chain can run across two authoritative writes.
+empty axiom footprint and no retained-answer dependencies. The retained
+[authoritative B admission](09-authoritative-b-admission-result.md) then
+crash-recovered one real write and derived A as newly ready. The live ledger was
+untouched; A still needs its own episode-local apply operation before the chain
+can run across two authoritative writes.
 
 ## Phase summary
 
