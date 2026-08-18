@@ -59,6 +59,8 @@ fn every_named_declaration_exists() {
         ("int_le_natAbs", p.int_le_nat_abs),
         ("int_neg_natAbs_le", p.int_neg_nat_abs_le),
         ("bounds_num", p.bounds_num),
+        ("mul_inv_cancel", p.mul_inv_cancel),
+        ("inv_pos", p.inv_pos),
     ];
     for (label, name) in expected {
         assert!(
@@ -529,4 +531,121 @@ fn the_product_toolkit_is_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "{label} rests on {footprint:?}");
     }
+}
+
+/// **ℚ is a field, and the statement is asserted verbatim.**
+///
+/// `Rat.inv` was a definition with no law about it for the whole life of this
+/// prelude; an empty footprint on a theorem *named* `mul_inv_cancel` says
+/// nothing, so the rendered type is the assertion. `Rat.div` is `a · b⁻¹`, so
+/// this is also the first law division has.
+#[test]
+fn the_rationals_are_a_field_and_the_inverse_is_positive() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.mul_inv_cancel),
+        "((x0 : Rat) -> ((x1 : Rat.lt Rat.zero x0) -> \
+         Eq.{1} Rat (Rat.mul x0 (Rat.inv x0)) Rat.one))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.inv_pos),
+        "((x0 : Rat) -> ((x1 : Rat.lt Rat.zero x0) -> Rat.lt Rat.zero (Rat.inv x0)))"
+    );
+    for (label, name) in [("mul_inv_cancel", p.mul_inv_cancel), ("inv_pos", p.inv_pos)] {
+        assert!(
+            matches!(
+                kernel.environment().get(name),
+                Some(Declaration::Theorem { .. })
+            ),
+            "Rat.{label} must be a checked Theorem"
+        );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// **`Rat.inv` is the reciprocal, by computation.** `(2/1)⁻¹` reduces to `1/2`,
+/// so `Eq.refl` proves it and the kernel checks the reduction.
+///
+/// `mul_inv_cancel` alone does not pin the operation as tightly as it looks:
+/// its hypothesis is `0 < q`, so it says nothing at all about `inv` on the
+/// non-positive rationals, and a "reciprocal" that agreed with the real one
+/// only on the positives would satisfy it. This is the point check that fails
+/// for the identity, for the constant, and for the negated reciprocal — the
+/// paired negative control below runs the identity and is REFUSED.
+#[test]
+fn the_inverse_computes_the_reciprocal() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let two = d.num(2);
+    let one = d.num(1);
+    let zero = d.zero();
+    // `2/1` and `1/2`, as `Rat.natDivSucc k j = k/(j+1)`.
+    let doubled = d.const_app(p.nat_div_succ, &[two, zero]);
+    let halved = d.const_app(p.nat_div_succ, &[one, one]);
+    let reciprocal = d.const_app(p.inv, &[doubled]);
+    let claim = crate::rat_prelude::ops::req(&mut d, reciprocal, halved);
+    let proof = crate::rat_prelude::ops::rrefl(&mut d, halved);
+    let name = d.kernel().name_str(anon, "Check.inv_two");
+    let accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: claim,
+        value: proof,
+    });
+    assert!(
+        accepted.is_ok(),
+        "`Rat.inv (2/1)` must REDUCE to `1/2`; the kernel refused the reflexivity \
+         proof, so the definition does not compute the reciprocal: {accepted:?}"
+    );
+}
+
+/// The negative control: the identical `Eq.refl` script pointed at
+/// `(2/1)⁻¹ = 2/1` is REFUSED, so the check above is a check.
+#[test]
+fn the_inverse_reduction_check_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let two = d.num(2);
+    let zero = d.zero();
+    let doubled = d.const_app(p.nat_div_succ, &[two, zero]);
+    let reciprocal = d.const_app(p.inv, &[doubled]);
+    // The one changed token: the claimed value is `2/1`, not `1/2`.
+    let claim = crate::rat_prelude::ops::req(&mut d, reciprocal, doubled);
+    let proof = crate::rat_prelude::ops::rrefl(&mut d, doubled);
+    let name = d.kernel().name_str(anon, "Check.inv_two_is_two");
+    let refused = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: claim,
+        value: proof,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted `(2/1)⁻¹ = 2/1`, so `Rat.inv` does not compute a \
+         reciprocal and the reduction check above proves nothing"
+    );
 }

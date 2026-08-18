@@ -953,7 +953,7 @@ fn the_apartness_laws_have_the_statements_bishop_specifies() {
 /// `Complex.no_compatible_order` set.
 #[test]
 fn no_function_on_all_of_creal_is_a_multiplicative_inverse() {
-    let (mut kernel, p) = built();
+    let (kernel, p) = built();
     let ty = match kernel
         .environment()
         .get(p.no_total_inverse)

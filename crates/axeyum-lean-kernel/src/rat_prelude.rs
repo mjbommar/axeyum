@@ -55,6 +55,7 @@ use crate::{Kernel, KernelError};
 mod archimedean;
 mod core;
 mod defs;
+mod field;
 pub(crate) mod group;
 mod laws;
 mod model;
@@ -91,6 +92,26 @@ pub struct RatPrelude {
     pub le: NameId,
     /// `Rat.lt : Rat → Rat → Prop`, by cross-multiplication into `Int.lt`.
     pub lt: NameId,
+    /// `Rat.mul_inv_cancel : ∀ q, Rat.lt Rat.zero q →
+    /// Eq Rat (Rat.mul q (Rat.inv q)) Rat.one`.
+    ///
+    /// **The law that makes `ℚ` a field.** `Rat.inv` existed as a definition
+    /// from the start and nothing said it inverted anything; this is the gap
+    /// between the 22 ordered-*ring* laws and an ordered *field*. The proof is
+    /// the only one in the field module that touches the representation — a
+    /// three-way case split on `Rat.num q` — because `Rat.inv q` is stuck until
+    /// the numerator is in constructor form.
+    ///
+    /// The hypothesis is `0 < q`, not `q ≠ 0`: over `ℚ` the two are one
+    /// (proved) case split apart, but they are **not** interchangeable over the
+    /// reals, and stating it positively is what lets `CReal`'s inverse consume
+    /// it without a sign decision it cannot make.
+    pub mul_inv_cancel: NameId,
+    /// `Rat.inv_pos : ∀ q, Rat.lt Rat.zero q → Rat.lt Rat.zero (Rat.inv q)`.
+    ///
+    /// Derived from [`Self::mul_inv_cancel`] and the 22 laws alone — no
+    /// numerator — so it is a theorem of ordered fields.
+    pub inv_pos: NameId,
     /// `Rat.inv : Rat → Rat` — the multiplicative inverse, with `inv 0 = 0`
     /// (the standard total convention; `ℚ` has no partial operations here for
     /// the same reason SMT-LIB's `bvudiv` is total).
@@ -520,6 +541,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         le: child(kernel, "le"),
         lt: child(kernel, "lt"),
         inv: child(kernel, "inv"),
+        mul_inv_cancel: child(kernel, "mul_inv_cancel"),
+        inv_pos: child(kernel, "inv_pos"),
         sub: child(kernel, "sub"),
         div: child(kernel, "div"),
         gcd_one_right: child(kernel, "gcd_one_right"),
@@ -656,6 +679,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         archimedean::declare_archimedean(&mut d, prelude)?;
         group::declare_group_laws(&mut d, prelude)?;
         product::declare_product_laws(&mut d, prelude)?;
+        field::declare_field_laws(&mut d, prelude)?;
         Ok(())
     })();
     match built {

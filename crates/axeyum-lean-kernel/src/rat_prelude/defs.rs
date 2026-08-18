@@ -161,6 +161,65 @@ pub(super) fn declare_order(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ker
     relation(d, p.lt, &|d, a, b| d.ilt(a, b))
 }
 
+/// The body of [`Rat.inv`](RatPrelude::inv), as a function of the **integer it
+/// dispatches on** rather than of the rational it came from.
+///
+/// `Rat.inv q` is `inv_body q (num q)` by definition, so a proof that needs
+/// `Rat.inv q` to *reduce* — which needs `num q` in constructor form, and
+/// therefore a case split — rewrites inside this application instead of
+/// duplicating the three-way dispatch. That is the only reason it is factored
+/// out: `super::field` builds the same term with `Int.ofNat (Nat.succ k)` in
+/// place of `num q`, and the two agree by construction rather than by a comment
+/// claiming they do.
+pub(super) fn inv_body(d: &mut IntDev<'_>, p: RatPrelude, q: ExprId, dispatch: ExprId) -> ExprId {
+    let carrier = rat_ty(d);
+    let nat_ty = d.nat_ty();
+    let one = d.level_one();
+    let anon = d.anon_name();
+    let denominator = den(d, q);
+
+    // The reciprocal `± den q / k`, for a positive natural magnitude `k`.
+    let reciprocal = |d: &mut IntDev<'_>, k: ExprId, negative: bool| -> ExprId {
+        let lifted = d.of_nat(denominator);
+        let numerator = if negative { d.ineg(lifted) } else { lifted };
+        let positive = one_le_succ(d, k);
+        let magnitude = d.succ(k);
+        normalize(d, numerator, magnitude, positive)
+    };
+
+    let minor_of_nat = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        // Nat.rec on the magnitude: zero ↦ Rat.zero, succ k ↦ (den q)/(k+1).
+        let motive = d.kernel().lam(anon, nat_ty, carrier, BinderInfo::Default);
+        let zero_case = d.kernel().const_(p.zero, vec![]);
+        let succ_case = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let ih_fv = d.fresh_fvar();
+            let body = reciprocal(d, k, false);
+            let inner = d.lam_fv(ih_fv, carrier, body);
+            d.lam_fv(k_fv, nat_ty, inner)
+        };
+        let rec_name = d.prelude().rec;
+        let rec = d.kernel().const_(rec_name, vec![one]);
+        let body = d.apply(rec, &[motive, zero_case, succ_case, n]);
+        d.lam_fv(n_fv, nat_ty, body)
+    };
+    let minor_neg_succ = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let body = reciprocal(d, m, true);
+        d.lam_fv(m_fv, nat_ty, body)
+    };
+    let motive = {
+        let int_ty = d.int_ty();
+        d.kernel().lam(anon, int_ty, carrier, BinderInfo::Default)
+    };
+    let rec = d.kernel().const_(p.int.rec, vec![one]);
+    d.apply(rec, &[motive, minor_of_nat, minor_neg_succ, dispatch])
+}
+
 /// Admit `Rat.inv`, and the two derived operations `Rat.sub` and `Rat.div`.
 ///
 /// The inverse is total, with `inv 0 = 0` — the same convention SMT-LIB takes
@@ -183,57 +242,13 @@ pub(super) fn declare_order(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ker
 /// Returns the trusted gate's rejection.
 pub(super) fn declare_inverse(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     let carrier = rat_ty(d);
-    let nat_ty = d.nat_ty();
-    let one = d.level_one();
-    let anon = d.anon_name();
 
-    // Rat.inv
+    // Rat.inv q := inv_body q (num q).
     {
         let q_fv = d.fresh_fvar();
         let q = d.kernel().fvar(q_fv);
-        let denominator = den(d, q);
-
-        // The reciprocal `± den q / k`, for a positive natural magnitude `k`.
-        let reciprocal = |d: &mut IntDev<'_>, k: ExprId, negative: bool| -> ExprId {
-            let lifted = d.of_nat(denominator);
-            let numerator = if negative { d.ineg(lifted) } else { lifted };
-            let positive = one_le_succ(d, k);
-            let magnitude = d.succ(k);
-            normalize(d, numerator, magnitude, positive)
-        };
-
-        let minor_of_nat = {
-            let n_fv = d.fresh_fvar();
-            let n = d.kernel().fvar(n_fv);
-            // Nat.rec on the magnitude: zero ↦ Rat.zero, succ k ↦ (den q)/(k+1).
-            let motive = d.kernel().lam(anon, nat_ty, carrier, BinderInfo::Default);
-            let zero_case = d.kernel().const_(p.zero, vec![]);
-            let succ_case = {
-                let k_fv = d.fresh_fvar();
-                let k = d.kernel().fvar(k_fv);
-                let ih_fv = d.fresh_fvar();
-                let body = reciprocal(d, k, false);
-                let inner = d.lam_fv(ih_fv, carrier, body);
-                d.lam_fv(k_fv, nat_ty, inner)
-            };
-            let rec_name = d.prelude().rec;
-            let rec = d.kernel().const_(rec_name, vec![one]);
-            let body = d.apply(rec, &[motive, zero_case, succ_case, n]);
-            d.lam_fv(n_fv, nat_ty, body)
-        };
-        let minor_neg_succ = {
-            let m_fv = d.fresh_fvar();
-            let m = d.kernel().fvar(m_fv);
-            let body = reciprocal(d, m, true);
-            d.lam_fv(m_fv, nat_ty, body)
-        };
         let numerator = num(d, q);
-        let motive = {
-            let int_ty = d.int_ty();
-            d.kernel().lam(anon, int_ty, carrier, BinderInfo::Default)
-        };
-        let rec = d.kernel().const_(p.int.rec, vec![one]);
-        let body = d.apply(rec, &[motive, minor_of_nat, minor_neg_succ, numerator]);
+        let body = inv_body(d, p, q, numerator);
         let value = d.lam_fv(q_fv, carrier, body);
         let ty = d.arrow(carrier, carrier);
         d.kernel().add_declaration(Declaration::Definition {
