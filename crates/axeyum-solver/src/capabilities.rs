@@ -405,9 +405,23 @@ pub const CAPABILITIES: &[Capability] = &[
                    kernel-checked Lean proof (reconstruct_lra_proof) — conjunctive Farkas AND now \
                    2-leaf BOOLEAN-STRUCTURED (disjunctive) refutations: a clause (L₁ ∨ L₂) whose leaves \
                    are each Farkas-unsat, closed by a kernel Or.rec case-split over the per-leaf Farkas \
-                   (no new prelude axiom; audit shows no sorryAx). Strict/multi-clause disjunctions decline",
+                   (no new prelude axiom; audit shows no sorryAx). Strict/multi-clause disjunctions \
+                   decline. CARRIER, since 2026-08-18: the shipped front door \
+                   (prove_unsat_to_lean_module, fragments Lra/DisjunctiveLra/Sos) reconstructs over the \
+                   CONSTRUCTED reals (CReal, ADR-0468) rather than the axiomatized Real package, so a \
+                   refutation rests on ZERO carrier axioms — measured through the front door itself by \
+                   the front_door_carrier example, whose exit status depends on the finding: footprint \
+                   15/22/10 of which 12/17/8 are carrier over Real, against 3/5/2 of which 0/0/0 over \
+                   CReal, the residue being the query's own variables and hypotheses. The Real column is \
+                   an in-output control (an empty one would mean the measurement broke). Two \
+                   classifiers must BOTH be empty: carrier_axioms_of (outside axeyum.reconstruct.) and \
+                   minted_axioms_of (inside it but not an indexed x/hyp) — the namespace is not \
+                   reserved for query variables, the Real route mints 18 equality-slot axioms there, \
+                   and excluding it wholesale would let a route buy the result by minting under its own \
+                   name. The module axiom lines equal the kernel footprint, so Lean #print axioms \
+                   agrees. Cost: modules 2.4-41 kB -> ~2.6 MB",
         checked_by: CheckedBy::ExternalChecker,
-        reference: "ADR-0015",
+        reference: "ADR-0015/0468",
     },
     Capability {
         area: "QF_LRA / QF_LIA",

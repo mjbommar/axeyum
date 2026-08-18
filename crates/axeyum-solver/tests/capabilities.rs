@@ -19,12 +19,18 @@ fn capability_matrix_doc_is_in_sync() {
     }
     let committed = std::fs::read_to_string(DOC).expect(
         "docs/research/08-planning/capability-matrix.md missing — regenerate with \
-         `UPDATE_CAPABILITY_MATRIX=1 cargo test -p axeyum-solver --test capabilities`",
+         `UPDATE_CAPABILITY_MATRIX=1 cargo test -p axeyum-solver --features full \
+         --test capabilities`. WITHOUT `--features full` this file is \
+         `#![cfg(feature = 'full')]`, so the command compiles an EMPTY binary, \
+         reports zero tests, exits 0, and regenerates nothing",
     );
     assert_eq!(
         committed, generated,
         "capability-matrix.md is stale vs the ledger — regenerate with \
-         `UPDATE_CAPABILITY_MATRIX=1 cargo test -p axeyum-solver --test capabilities`",
+         `UPDATE_CAPABILITY_MATRIX=1 cargo test -p axeyum-solver --features full \
+         --test capabilities`. WITHOUT `--features full` this file is \
+         `#![cfg(feature = 'full')]`, so the command compiles an EMPTY binary, \
+         reports zero tests, exits 0, and regenerates nothing",
     );
 }
 
