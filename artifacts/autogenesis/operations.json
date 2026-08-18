@@ -77,6 +77,7 @@
         "check-autogenesis-apply-search.sh",
         "check-autogenesis-induction-search.sh",
         "check-autogenesis-proposer-isolation.sh",
+        "run-autogenesis-authoritative-chain.py",
         "validate-autogenesis-operations.py"
       ],
       "applicability": {
@@ -121,7 +122,8 @@
         "check-autogenesis-apply-search.sh",
         "check-autogenesis-induction-search.sh",
         "check-autogenesis-proposer-isolation.sh",
-        "gen-autogenesis-baseline.py"
+        "gen-autogenesis-baseline.py",
+        "run-autogenesis-authoritative-chain.py"
       ],
       "applicability": {
         "fact_ids": ["F:nat-mul-one"],

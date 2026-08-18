@@ -47,6 +47,8 @@ STATIC_SOURCES = (
     Path("scripts/stage-autogenesis-premise.sh"),
     Path("scripts/replay-autogenesis-apply-experiment.sh"),
     Path("scripts/replay-autogenesis-authoritative-admission.sh"),
+    Path("scripts/run-autogenesis-authoritative-chain.py"),
+    Path("scripts/compare-autogenesis-authoritative-chains.py"),
     Path("scripts/prepare-autogenesis-fact-transaction.py"),
     Path("scripts/apply-autogenesis-fact-transaction.py"),
     Path("scripts/create-autogenesis-readiness-delta.py"),

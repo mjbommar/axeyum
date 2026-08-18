@@ -673,12 +673,12 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "481565c1ac24ed54fa841e1f8f32c11261521e8493118bd807deb2203eeeaa8e",
+    "digest": "eac71f1560bbfc38ba35b290871c0c55e977fb43c7af56ffb62413def9732427",
     "inputs": [
       {
-        "bytes": 6557,
+        "bytes": 6657,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "d2778e9be43f6b7566f971febec024161328382a1d7802c5c60a13fe4aa84675"
+        "sha256": "5bbd95b97054c861731aca975f72368c48d4031686faa142731c1aed4a11cd4f"
       },
       {
         "bytes": 3519,
@@ -1261,9 +1261,9 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 72944,
+        "bytes": 73472,
         "path": "justfile",
-        "sha256": "969bb4e6a2c9571b7d4e1c21ce047cafe3b748b60e5767d40e5fa7fce39e3f15"
+        "sha256": "c1348c84b30960aaaca78125c721b36bc279a20818ae5e9e956e4446ef358f54"
       },
       {
         "bytes": 11929,
@@ -1286,9 +1286,9 @@
         "sha256": "4ca7f8a489610cede17b3ab4cecc4dc4813fcab2230c42cc0d3e3fb76ca32081"
       },
       {
-        "bytes": 12162,
+        "bytes": 12778,
         "path": "scripts/check-autogenesis-apply-search.sh",
-        "sha256": "be51051e66d990696f495596327242c94e6ed2e543875f4646f18dda5ff61b88"
+        "sha256": "98361cbd4b978273d5e49270f2614af91755379c5229fbba00812281797493fa"
       },
       {
         "bytes": 10292,
@@ -1321,14 +1321,19 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 22259,
+        "bytes": 22387,
         "path": "scripts/check.sh",
-        "sha256": "95f56b50070a3ef2046a463d7296246c0a92d5d20f8aa2c02bf3290e10b6d0ec"
+        "sha256": "16940b0e3215cd1061e41e808c3076f07d9c0bd9efa91df1edadfa635eca01fb"
       },
       {
         "bytes": 6846,
         "path": "scripts/close-fact.py",
         "sha256": "1946ed9f4d89dffed5cc57ed0f88cf5c5ed7f3b49c6ecb497c3e2862775c4d8a"
+      },
+      {
+        "bytes": 4604,
+        "path": "scripts/compare-autogenesis-authoritative-chains.py",
+        "sha256": "c6dbaadda9d4e9bbbec049e3dfa7439e2f47d97aea0f16e8475635a5622c4bc5"
       },
       {
         "bytes": 4919,
@@ -1376,9 +1381,9 @@
         "sha256": "fb367504828dc9aa0d09ecf349b645eb33b83402b69c53df65e43e937271526c"
       },
       {
-        "bytes": 25829,
+        "bytes": 25954,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "ec4f9ec5dd7b69358ef3db738cd44fb7723e36a0bb33697c480a1c022ea01f6f"
+        "sha256": "f5f165adb56a8839ac3347f0390cf32eda98dc35e5d126b43ab39bc88ed471f5"
       },
       {
         "bytes": 17112,
@@ -1404,6 +1409,11 @@
         "bytes": 10184,
         "path": "scripts/replay-autogenesis-authoritative-admission.sh",
         "sha256": "27c2b6efd57159b9a03f02da835ce5764b71b6a86bd4509256c18b975d7faf93"
+      },
+      {
+        "bytes": 19717,
+        "path": "scripts/run-autogenesis-authoritative-chain.py",
+        "sha256": "336a24362bacb7a3671f077d8edb5c22fa0ef5e770b65ee6923702468e9c371e"
       },
       {
         "bytes": 4157,

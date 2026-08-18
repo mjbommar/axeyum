@@ -36,7 +36,10 @@ else
   scratch=$(mktemp -d /tmp/axeyum-autogenesis-apply.XXXXXX)
   trap 'rm -r "$scratch"' EXIT
 fi
-budget=20
+# The authoritative Nat.mul_one operation has one plan and budget 1. Keep the
+# pre-B counterfactual at that exact budget so it is a causal control for the
+# credited operation rather than merely a stronger search failure.
+budget=1
 premise_budget=2
 
 python3 scripts/create-autogenesis-snapshot.py \
@@ -67,8 +70,12 @@ scripts/stage-autogenesis-fixture-admission.sh \
   --snapshot "$scratch/snapshot.json" \
   --bundle-root "$scratch" \
   --fault-after fact >/dev/null
+# Keep the settled-precondition control in fixture scope. Passing the canonical
+# path now (correctly) hits the stronger fixture-to-authority escalation guard
+# first and therefore no longer tests that a settled row itself is refused.
+cp artifacts/facts/F-nat-zero-add.json "$scratch/settled-F-nat-zero-add.json"
 if python3 scripts/prepare-autogenesis-fact-transaction.py \
-  --fact artifacts/facts/F-nat-zero-add.json \
+  --fact "$scratch/settled-F-nat-zero-add.json" \
   --bundle "$scratch" \
   --output "$scratch/invalid-settled-transaction.json" \
   >"$scratch/invalid-settled-transaction.stdout" \
@@ -78,8 +85,10 @@ if python3 scripts/prepare-autogenesis-fact-transaction.py \
 fi
 grep -qF 'fact precondition is not open' \
   "$scratch/invalid-settled-transaction.stderr"
+cp artifacts/facts/F-continuum-hypothesis-independent.json \
+  "$scratch/open-wrong-fact.json"
 if python3 scripts/prepare-autogenesis-fact-transaction.py \
-  --fact artifacts/facts/F-no-integer-square-is-minus-one.json \
+  --fact "$scratch/open-wrong-fact.json" \
   --bundle "$scratch" \
   --output "$scratch/invalid-wrong-fact-transaction.json" \
   >"$scratch/invalid-wrong-fact-transaction.stdout" \
@@ -178,7 +187,7 @@ pre_result=$(cargo run -q -p axeyum-lean-kernel \
   --bundle-sha256 "$pre_bundle" \
   --catalog-sha256 "$pre_catalog")
 grep -qxF \
-  "AUTOGENESIS_APPLY_RESULT|phase=pre_a|premise_attempted=0|premise_plan_rank=-|attempted=20|budget=$budget|outcome=no-proof|theorem=-" \
+  "AUTOGENESIS_APPLY_RESULT|phase=pre_a|premise_attempted=0|premise_plan_rank=-|attempted=$budget|budget=$budget|outcome=no-proof|theorem=-" \
   <<<"$pre_result"
 
 post_result=$(cargo run -q -p axeyum-lean-kernel \

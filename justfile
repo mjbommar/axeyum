@@ -60,6 +60,16 @@ autogenesis-operations:
     python3 scripts/validate-autogenesis-operations.py
     python3 -m unittest scripts.tests.test_validate_autogenesis_operations
 
+# Explicit external experiment: launch one complete B -> A authoritative chain
+# from a clean checkout and retain its independently checkable receipts.
+autogenesis-authoritative-chain output:
+    python3 scripts/run-autogenesis-authoritative-chain.py "{{ output }}"
+
+# Credit requires two independently retained runs from the same exact source.
+autogenesis-authoritative-compare first second output:
+    python3 scripts/compare-autogenesis-authoritative-chains.py \
+        "{{ first }}" "{{ second }}" --output "{{ output }}"
+
 facts:
     python3 scripts/validate-facts.py
     # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
