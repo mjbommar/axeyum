@@ -156,6 +156,50 @@ pub struct ArithPrelude {
     pub sq_nonneg: NameId,
 }
 
+impl ArithPrelude {
+    /// The package's 22 **laws**, in declaration order — i.e. the 30 trusted
+    /// declarations minus the eight carrier/operation symbols (`Real`, `add`,
+    /// `mul`, `neg`, `zero`, `one`, `le`, `lt`).
+    ///
+    /// The order is the one
+    /// [`CRealPrelude::ordered_ring_laws`](crate::CRealPrelude::ordered_ring_laws)
+    /// and `RatPrelude::ring_laws` mirror, so the three lists line up entry by
+    /// entry and a model can be built by zipping them rather than by writing
+    /// out 22 pairs. That the entries really do correspond is checked by leaf
+    /// name in `creal_model`'s tests, not assumed.
+    ///
+    /// This list exists so that "22 of 22" is read out of the kernel rather
+    /// than asserted in prose; the population it must exhaust is derived from
+    /// the environment by `arith_model`'s coverage test.
+    #[must_use]
+    pub fn ordered_ring_laws(&self) -> [NameId; 22] {
+        [
+            self.le_refl,
+            self.le_trans,
+            self.lt_irrefl,
+            self.lt_trans,
+            self.lt_of_lt_of_le,
+            self.lt_of_le_of_lt,
+            self.le_of_lt,
+            self.add_le_add,
+            self.add_comm,
+            self.add_assoc,
+            self.add_zero,
+            self.add_neg,
+            self.mul_le_mul_of_nonneg_left,
+            self.zero_lt_one,
+            self.add_lt_add_of_le_of_lt,
+            self.mul_comm,
+            self.mul_assoc,
+            self.mul_one,
+            self.mul_zero,
+            self.left_distrib,
+            self.mul_nonneg,
+            self.sq_nonneg,
+        ]
+    }
+}
+
 /// Declare the axiomatized **linear ordered field** into `kernel`'s environment,
 /// returning the [`ArithPrelude`] of interned names. The logical prelude is built
 /// or exact-validated first. Every declaration in this package is namespaced

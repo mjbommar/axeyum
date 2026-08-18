@@ -16,10 +16,16 @@
 //! That matters because `ℤ` is *constructed* here (see
 //! [`build_int_prelude`](crate::build_int_prelude)) and its laws are theorems
 //! with an empty [`axiom_footprint`](crate::Kernel::axiom_footprint), whereas
-//! `ℝ` cannot be constructed in this kernel at all today — the quotient package
-//! is `Quot`/`Quot.mk`/`Quot.lift`/`Quot.ind` and contains **no `Quot.sound`**,
-//! so a Cauchy-sequence quotient is not merely expensive, it is inexpressible.
-//! ADR-0456 carries the full accounting.
+//! `ℝ` — when this module was written — could not be constructed in this kernel
+//! at all: the quotient package is `Quot`/`Quot.mk`/`Quot.lift`/`Quot.ind` and
+//! contains **no `Quot.sound`**, so a Cauchy-sequence quotient is not merely
+//! expensive, it is inexpressible. ADR-0456 carries that accounting.
+//!
+//! **That conclusion was overturned, and the correction is why this module has
+//! a successor.** The missing option was that ring equality need not be `Eq`:
+//! ADR-0468 constructs ℝ as a Bishop setoid whose equality is a *defined*
+//! relation, so no quotient is needed and `Quot.sound` never comes up. See
+//! "Superseded by the constructed reals" below.
 //!
 //! ## What this module establishes, and what it does not
 //!
@@ -57,6 +63,22 @@
 //! declaration in the environment must be either an interpreted symbol or a
 //! law with a witness, so a future 31st axiom cannot slip past this module
 //! while the count still reads "all covered".
+//!
+//! ## Superseded by the constructed reals
+//!
+//! [`build_creal_model_of_arith`](crate::build_creal_model_of_arith) (ADR-0468
+//! phase R4) now models the same 22 laws in
+//! [`CReal`](crate::CRealPrelude) — a Bishop setoid of regular ℚ-sequences over
+//! the constructed ℚ, also at zero trusted declarations — which discharges the
+//! "`ℤ` is not ℝ" caveat above: the carrier there **is** the real numbers.
+//!
+//! This module is kept, and is not redundant. `ℤ` models the package with the
+//! kernel's own `Eq` as ring equality, and the `CReal` model cannot: nine of
+//! the 22 laws are satisfied only after `Eq Real` is read as `CReal.Equiv`, and
+//! `Eq CReal` is not the equality of real numbers. So the two models bracket
+//! the package from opposite sides — one keeps `Eq` and loses ℝ, the other
+//! keeps ℝ and loses `Eq` — and it is the pair, not either alone, that says
+//! which of the 30 declarations the equality slot is load-bearing for.
 
 use std::collections::HashMap;
 
