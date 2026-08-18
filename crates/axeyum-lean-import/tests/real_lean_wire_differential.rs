@@ -160,12 +160,65 @@
 //!   never handed the exported binding list). Regression:
 //!   `recursor_universe_params_must_be_bound.rs`.
 //!
-//! Round 3 also found the instrument's next blind spot and did not paper over
-//! it: see the NESTED-group note in [`development`]. `addDeclCore` regenerates
-//! a nested group's own recursor but not the auxiliary one the frontend
-//! publishes, so a nested group's auxiliary recursor is a byte Lean never
-//! reads. Rather than exempt it — which is how the 32-mutant hole above was
-//! created — the group is off the wire and the gap is stated.
+//! # Round 4: the fourth admission gate, and the blind spot that was ours
+//!
+//! Round 3 stated a gap rather than papering over it: a NESTED group was off
+//! the wire because the *undamaged* stream failed on `axeyum_wire_rose.rec_1`,
+//! and the reading was that `addDeclCore` regenerates a nested group's own
+//! recursor but not the auxiliary one, so every field of an auxiliary recursor
+//! is a byte Lean never reads. Stating it was right. The reading was wrong.
+//!
+//! Lean's **kernel** does build `X.rec_1`. What does not know about it is
+//! `Environment.find?`, which this script was using and which is the
+//! *elaborator's* view: `addDeclCore` republishes only
+//! `Declaration.getNames`, whose own docstring says the list "does not include
+//! ... auxiliary recursors computed by the kernel for nested inductive types".
+//! Measured 2026-08-18 on pinned 4.30.0, on the same environment value:
+//! `env.find? …rec_1` is `none`, `env.constants.find? …rec_1` is a recursor
+//! with two motives, three minors and both ι-rules. The replay script now looks
+//! constants up in `env.toKernelEnv`; all three official nested fixtures
+//! replay clean where each previously failed with exactly one disagreement.
+//!
+//! So the fix is a lookup, not an exemption, and the uncovered residue is
+//! **zero bytes** rather than a bounded allowance. `axeyum_wire_rose` is on the
+//! wire, fourteen `ind.aux-*` families damage the auxiliary recursor
+//! specifically (a separate family per field, so the stratifier cannot sample
+//! only main recursors and read as covered), and 17 of 17 such mutants were
+//! discriminated by Lean's kernel. **0 violations in 274 mutants across 80
+//! families** at the default budget and **0 in 752** at
+//! `AXEYUM_WIRE_MUTANTS=1600`; `stricter_than_lean` 0 and 1. [`MIN_AUX_RECURSOR_DISCRIMINATED`] is
+//! the floor that fails if the lookup regresses or an absent constant is ever
+//! exempted rather than reported, and
+//! [`the_official_nested_fixtures_reach_the_auxiliary_recursor`] fails the same
+//! two ways on official `lean4export` bytes.
+//!
+//! The residue was measured rather than asserted, twice, and both are the
+//! numbers a reader should hold this against:
+//!
+//! * **The nested `inductive` record, exhaustively.** All 42 mutants the
+//!   generator can produce against it: our importer declined 42, Lean's kernel
+//!   discriminated 42, Lean accepted none, 0 violations.
+//! * **The expression records only the auxiliary recursor reaches.** Of 888
+//!   expression records on this development, 69 are reachable from the
+//!   auxiliary recursor's type or ι-rules and **33 are reachable from nothing
+//!   else** — the auxiliary analogue of the 37% hole above. All 178 mutants
+//!   damaging those 33 were checked: Lean discriminated 160 and accepted 18,
+//!   and every one of the 18 is `expr.binder-info`, the family this file
+//!   documents as *expected* to agree because binder info is elaborator
+//!   metadata neither kernel type-checks (`normExpr` erases it). 0 violations.
+//!   So the uncovered residue on this gate is one non-type-checking field, not
+//!   a class of unread bytes.
+//!
+//! The general lesson is one this repository already knows: **an empty answer
+//! from a tool that was never pointed at your subject is indistinguishable from
+//! a strong negative result.** `Environment.find?` ran, exited cleanly, and
+//! returned a correct `none` to a question about the elaborator that had been
+//! asked about the kernel.
+//!
+//! Still unreachable, and for a reason that is about the interface rather than
+//! about where we looked: `quot` records. `addDeclCore` ignores a quotient
+//! package's carried types and adds its own, so it accepts every damaged
+//! quotient record and the axis cannot discriminate.
 //!
 //! The one "stricter than Lean" mutant round 2 recorded is understood, which is
 //! the whole difference from the 32 it replaced (round 3's wider sample did not
@@ -208,11 +261,24 @@ const MIN_OURS_DECLINED: usize = 8;
 /// against 4,747 generated (measured 2026-08-18) would not notice 99% of the
 /// corpus disappearing either. This is a ratchet on the GENERATOR, independent
 /// of the sampling budget, so it can be tight.
-const MIN_MUTANTS: usize = 3_600;
+const MIN_MUTANTS: usize = 4_800;
 /// Distinct mutation families required. The corpus is stratified by family, so
 /// a family that stops generating quietly removes a whole class of damage from
 /// the sweep without changing the mutant count much.
-const MIN_FAMILIES: usize = 60;
+const MIN_FAMILIES: usize = 78;
+/// Mutants confined to a NESTED group's auxiliary recursor that Lean's kernel
+/// must discriminate.
+///
+/// This is the floor that keeps the fourth admission gate covered. An auxiliary
+/// recursor is republished by `Kernel::restore_nested_inductive_group` and by
+/// nothing else, and Lean's kernel builds its own — but `addDeclCore` does not
+/// announce it, so a lookup through `Environment.find?` finds nothing. Round 3
+/// read that as "Lean never reads these bytes" and left the group off the wire;
+/// the truth was that the replay script was asking the wrong environment.
+/// Should anyone reintroduce that lookup, or exempt an absent constant instead
+/// of reporting it, every `ind.aux-*` mutant goes back to `Accepted` and this
+/// floor is what fails. Measured 2026-08-18: 16 of 16 were discriminated.
+const MIN_AUX_RECURSOR_DISCRIMINATED: usize = 12;
 
 /// The toolchain `lean-toolchain` pins, as elan names its directory.
 ///
@@ -399,7 +465,7 @@ fn development() -> String {
     //                         minors, one recursor per family,
     //   `axeyum_wire_rose`    a NESTED group, i.e. the fourth admission gate
     //                         (`restore_nested_inductive_group`), which had no
-    //                         adversarial coverage at all,
+    //                         adversarial coverage until round 4 (see below),
     //   an `axiom`, an `opaque`, an `abbrev`-hinted and an `opaque`-hinted
     //                         definition, so the `decl.*` families stop firing
     //                         on two of the four declaration kinds they claim.
@@ -564,22 +630,41 @@ fn development() -> String {
             .expect("a mutual group must be admissible");
     }
 
-    // A NESTED group is deliberately NOT on this wire, and the reason is a
-    // measurement rather than an omission. `inductive axeyum_wire_rose | node :
-    // axeyum_wire_list axeyum_wire_rose -> axeyum_wire_rose` was added here on
-    // 2026-08-18 and the UNDAMAGED stream failed: `addDeclCore` accepted the
-    // record and regenerated `axeyum_wire_rose.rec` with its two motives, but
-    // published no `axeyum_wire_rose.rec_1` — the auxiliary recursor of the
-    // nested expansion, which an official `lean4export` stream does carry (see
-    // `docs/plan/fixtures/lean4export-v4.30-construct-matrix-nested.ndjson`,
-    // where Lean's own environment holds both `Rose.rec_1` and `Rose.rec`).
-    // Lean's kernel nests internally; only the frontend publishes the auxiliary
-    // constant. So every field of an auxiliary recursor is a byte Lean never
-    // reads, and admitting the group would have meant either a false failure on
-    // the base or an exemption that quietly restores the blind spot the
-    // regeneration channel exists to close. `restore_nested_inductive_group`,
-    // the fourth admission gate, therefore has no adversarial coverage here;
-    // it is covered non-adversarially by `official_nested_inductive_groups.rs`.
+    // A NESTED group: `inductive axeyum_wire_rose | node : axeyum_wire_list
+    // axeyum_wire_rose -> axeyum_wire_rose`. This is the fourth admission gate,
+    // `Kernel::restore_nested_inductive_group`, and reaching it is the point of
+    // the whole declaration.
+    //
+    // Round 3 tried this and backed out, because the UNDAMAGED stream failed:
+    // the replay script reported `axeyum_wire_rose.rec_1` — the auxiliary
+    // recursor of the nested expansion — as a constant "Lean's kernel generated
+    // no such constant" for. The conclusion drawn was that Lean's kernel nests
+    // internally and only the frontend publishes the auxiliary constant, so
+    // every field of an auxiliary recursor is a byte Lean never reads.
+    //
+    // That conclusion was wrong, and the instrument was what lied. Lean's
+    // KERNEL does build `Rose.rec_1`; `Environment.find?` — which the replay
+    // script was using — is the *elaborator's* view, and `addDeclCore`
+    // republishes only `Declaration.getNames`, whose own docstring says it
+    // "does not include ... auxiliary recursors computed by the kernel for
+    // nested inductive types". Measured 2026-08-18 on the pinned 4.30.0:
+    // `env.find? `…rec_1`` is `none` while `env.constants.find? `…rec_1`` is a
+    // recursor with two motives, three minors and both ι-rules. The replay
+    // script now looks constants up in `env.toKernelEnv`, all three official
+    // nested fixtures replay clean, and every field of the auxiliary recursor
+    // is compared against Lean's own regeneration — no exemption, no residue.
+    // `the_official_nested_fixtures_reach_the_auxiliary_recursor` below is the
+    // test that fails if that stops holding.
+    {
+        let rose_name = kernel.name_str(anonymous, "axeyum_wire_rose");
+        let rose_node = kernel.name_str(rose_name, "node");
+        let rose_const = kernel.const_(rose_name, vec![]);
+        let container = kernel.app(list_const, rose_const);
+        let node_ty = kernel.pi(anonymous, container, rose_const, BinderInfo::Default);
+        kernel
+            .add_inductive(rose_name, &[], 0, type_, &[(rose_node, node_ty)])
+            .expect("a nested group must be admissible");
+    }
 
     // The remaining two declaration kinds and the remaining two reducibility
     // hints. `decl.type` / `decl.value` / `decl.hints` claim to cover all four
@@ -649,6 +734,14 @@ struct Wire {
     records: Vec<Option<Value>>,
     /// The line that defines each expression index.
     expr_line: Vec<usize>,
+    /// The name table, resolved to dotted text.
+    ///
+    /// Nothing else here needs a name's *spelling* — indices are enough to
+    /// rewire a field. The auxiliary-recursor split does: `axeyum_wire_rose.rec`
+    /// is a recursor Lean's kernel names from the family, and
+    /// `axeyum_wire_rose.rec_1` is one it derives for the nested expansion, and
+    /// the only thing on the wire that distinguishes them is the name.
+    names: Vec<String>,
     /// Table sizes visible to each line, i.e. the legal retarget windows.
     names_before: Vec<usize>,
     levels_before: Vec<usize>,
@@ -665,6 +758,7 @@ impl Wire {
         // `Name.anonymous` occupies name slot 0 and `Level.zero` level slot 0
         // before any record is read; the expression table starts empty.
         let (mut names, mut levels, mut exprs) = (1_usize, 1_usize, 0_usize);
+        let mut name_text = vec![String::new()];
         let mut expr_line = Vec::new();
         let mut names_before = Vec::with_capacity(lines.len());
         let mut levels_before = Vec::with_capacity(lines.len());
@@ -675,6 +769,27 @@ impl Wire {
             exprs_before.push(exprs);
             let Some(record) = record else { continue };
             if record.get("in").is_some() {
+                let (parent, component) = record.get("str").map_or_else(
+                    || {
+                        let entry = &record["num"];
+                        (
+                            entry["pre"].as_u64().unwrap_or(0),
+                            entry["i"].as_u64().unwrap_or(0).to_string(),
+                        )
+                    },
+                    |entry| {
+                        (
+                            entry["pre"].as_u64().unwrap_or(0),
+                            entry["str"].as_str().unwrap_or_default().to_owned(),
+                        )
+                    },
+                );
+                let prefix = &name_text[usize::try_from(parent).expect("name index fits")];
+                name_text.push(if prefix.is_empty() {
+                    component
+                } else {
+                    format!("{prefix}.{component}")
+                });
                 names += 1;
             } else if record.get("il").is_some() {
                 levels += 1;
@@ -688,6 +803,7 @@ impl Wire {
             lines,
             records,
             expr_line,
+            names: name_text,
             names_before,
             levels_before,
             exprs_before,
@@ -1176,6 +1292,25 @@ fn declaration_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record:
     }
 }
 
+/// Name a recursor mutation family, splitting the auxiliary recursors out.
+///
+/// A nested group publishes one recursor per source family — `X.rec` — plus one
+/// `X.rec_N` per auxiliary family the nested expansion introduced, and the
+/// second kind exists only because `Kernel::restore_nested_inductive_group`,
+/// the fourth admission gate, republished it. Damaging it under the same family
+/// name as `X.rec` would leave the stratifier free to sample only main
+/// recursors, and the gate would read as covered while nothing had touched it.
+/// A separate family means the corpus is *required* to carry one of each (the
+/// exhaustive list in `the_mutator_is_derived_from_the_stream_and_changes_bytes`)
+/// and the stratifier is required to sample it.
+fn recursor_family(is_auxiliary: bool, base: &str) -> String {
+    if is_auxiliary {
+        base.replacen("ind.", "ind.aux-", 1)
+    } else {
+        base.to_owned()
+    }
+}
+
 /// The `inductive` record: previously skipped whole, and it is the largest
 /// record on the wire.
 ///
@@ -1358,6 +1493,20 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
         }
     }
 
+    // Which recursors this group's *source* families own. Everything else in
+    // `recs` is an auxiliary recursor of a nested expansion, republished by the
+    // fourth admission gate rather than generated for a declared family.
+    let main_recursor_names: std::collections::BTreeSet<String> = group["types"]
+        .as_array()
+        .map(|families| {
+            families
+                .iter()
+                .filter_map(|family| family["name"].as_u64())
+                .map(|name| format!("{}.rec", wire.names[usize::try_from(name).expect("fits")]))
+                .collect()
+        })
+        .unwrap_or_default();
+
     for (position, recursor) in group["recs"]
         .as_array()
         .cloned()
@@ -1365,6 +1514,10 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
         .iter()
         .enumerate()
     {
+        let is_auxiliary = recursor["name"]
+            .as_u64()
+            .and_then(|name| wire.names.get(usize::try_from(name).expect("fits")))
+            .is_some_and(|name| !main_recursor_names.contains(name));
         if let Some(current) = recursor["type"].as_u64()
             && let Some(next) = retarget(current, 1, exprs)
         {
@@ -1373,7 +1526,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
             emit(
                 wire,
                 out,
-                "ind.rec-type",
+                &recursor_family(is_auxiliary, "ind.rec-type"),
                 &format!("{position}+1"),
                 &[(index, m)],
             );
@@ -1390,7 +1543,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
             emit(
                 wire,
                 out,
-                family_name,
+                &recursor_family(is_auxiliary, family_name),
                 &format!("{position}+1"),
                 &[(index, m)],
             );
@@ -1403,7 +1556,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
         emit(
             wire,
             out,
-            "ind.rec-k",
+            &recursor_family(is_auxiliary, "ind.rec-k"),
             &format!("{position}flip"),
             &[(index, m)],
         );
@@ -1422,7 +1575,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
             emit(
                 wire,
                 out,
-                "ind.rec-uparams",
+                &recursor_family(is_auxiliary, "ind.rec-uparams"),
                 &format!("{position}+1"),
                 &[(index, m)],
             );
@@ -1435,7 +1588,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
             emit(
                 wire,
                 out,
-                "ind.rec-uparams-swap",
+                &recursor_family(is_auxiliary, "ind.rec-uparams-swap"),
                 &format!("{position}01"),
                 &[(index, m)],
             );
@@ -1451,7 +1604,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
             emit(
                 wire,
                 out,
-                "ind.rec-all",
+                &recursor_family(is_auxiliary, "ind.rec-all"),
                 &format!("{position}+1"),
                 &[(index, m)],
             );
@@ -1473,7 +1626,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
             emit(
                 wire,
                 out,
-                "ind.rule-rhs-swap",
+                &recursor_family(is_auxiliary, "ind.rule-rhs-swap"),
                 &format!("{position}01"),
                 &[(index, m)],
             );
@@ -1489,7 +1642,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
             emit(
                 wire,
                 out,
-                "ind.rule-order",
+                &recursor_family(is_auxiliary, "ind.rule-order"),
                 &format!("{position}01"),
                 &[(index, m)],
             );
@@ -1502,7 +1655,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
             emit(
                 wire,
                 out,
-                "ind.rec-name",
+                &recursor_family(is_auxiliary, "ind.rec-name"),
                 &format!("{position}+1"),
                 &[(index, m)],
             );
@@ -1522,7 +1675,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
                 emit(
                     wire,
                     out,
-                    "ind.rule-rhs",
+                    &recursor_family(is_auxiliary, "ind.rule-rhs"),
                     &format!("{position}.{rule_position}+1"),
                     &[(index, m)],
                 );
@@ -1534,7 +1687,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
             emit(
                 wire,
                 out,
-                "ind.rule-nfields",
+                &recursor_family(is_auxiliary, "ind.rule-nfields"),
                 &format!("{position}.{rule_position}+1"),
                 &[(index, m)],
             );
@@ -1547,7 +1700,7 @@ fn inductive_mutants(wire: &Wire, out: &mut Vec<Mutant>, index: usize, record: &
                 emit(
                     wire,
                     out,
-                    "ind.rule-ctor",
+                    &recursor_family(is_auxiliary, "ind.rule-ctor"),
                     &format!("{position}.{rule_position}+1"),
                     &[(index, m)],
                 );
@@ -1751,6 +1904,13 @@ fn our_kernel_admits_nothing_the_real_lean_kernel_refuses() {
     let mut ours_declined = 0_usize;
     let mut stricter_than_lean = Vec::new();
     let mut recorded = Vec::new();
+    // The fourth admission gate's own tally, kept apart from the aggregate:
+    // damage confined to a nested group's auxiliary recursor is the one class
+    // that was believed unreachable, so "the sweep was clean" must not be able
+    // to mean "those mutants were never looked at".
+    let mut auxiliary_seen = 0_usize;
+    let mut auxiliary_discriminated = 0_usize;
+    let mut auxiliary_accepted = Vec::new();
 
     for (position, mutant) in corpus.iter().enumerate() {
         let admitted = ours(&mutant.stream).is_ok();
@@ -1758,6 +1918,14 @@ fn our_kernel_admits_nothing_the_real_lean_kernel_refuses() {
         recorded.push((mutant.id.clone(), verdict));
         if !admitted {
             ours_declined += 1;
+        }
+        if mutant.family.starts_with("ind.aux-") {
+            auxiliary_seen += 1;
+            if verdict == Theirs::Accepted {
+                auxiliary_accepted.push(mutant.id.clone());
+            } else {
+                auxiliary_discriminated += 1;
+            }
         }
         match verdict {
             Theirs::KernelRejected => kernel_rejections += 1,
@@ -1785,7 +1953,8 @@ fn our_kernel_admits_nothing_the_real_lean_kernel_refuses() {
     println!(
         "WIRE_DIFFERENTIAL|generated={}|checked={}|families={}|lean_kernel_rejected={}|\
          lean_regeneration_mismatch={}|lean_malformed={}|lean_accepted={}|ours_declined={}|\
-         stricter_than_lean={}|violations={}",
+         stricter_than_lean={}|aux_recursor_checked={}|aux_recursor_discriminated={}|\
+         violations={}",
         all.len(),
         corpus.len(),
         families.len(),
@@ -1795,6 +1964,8 @@ fn our_kernel_admits_nothing_the_real_lean_kernel_refuses() {
         corpus.len() - kernel_rejections - regeneration_mismatches - malformed,
         ours_declined,
         stricter_than_lean.len(),
+        auxiliary_seen,
+        auxiliary_discriminated,
         violations.len()
     );
     println!("  families sampled: {families:?}");
@@ -1814,6 +1985,18 @@ fn our_kernel_admits_nothing_the_real_lean_kernel_refuses() {
          (floor {MIN_REGENERATION_MISMATCHES}); that is the ONLY channel through \
          which Lean sees a recursor-only expression record, and 37% of this \
          stream is reachable no other way"
+    );
+    if !auxiliary_accepted.is_empty() {
+        println!("  auxiliary-recursor damage Lean accepted: {auxiliary_accepted:?}");
+    }
+    assert!(
+        auxiliary_discriminated >= MIN_AUX_RECURSOR_DISCRIMINATED,
+        "Lean's kernel discriminated only {auxiliary_discriminated} of \
+         {auxiliary_seen} mutants confined to a nested group's AUXILIARY \
+         recursor (floor {MIN_AUX_RECURSOR_DISCRIMINATED}). That is the only \
+         evidence `restore_nested_inductive_group` — the fourth admission gate \
+         — is covered at all; without it the nested group is on the wire but \
+         nothing on Lean's side reads the half of it that gate republishes"
     );
     assert!(
         ours_declined >= MIN_OURS_DECLINED,
@@ -1847,6 +2030,95 @@ fn our_kernel_admits_nothing_the_real_lean_kernel_refuses() {
     lean_probe::report_checked("wire-differential", corpus.len() + 1);
 }
 
+/// The official `lean4export` nested fixtures, and the auxiliary recursor in
+/// each of them, put through the real Lean kernel.
+///
+/// This is the test that fails if the argument behind the nested coverage stops
+/// holding, and it fails in both directions:
+///
+/// * **undamaged fixture rejected** — the replay script stopped being able to
+///   see `X.rec_1`. That is what `Environment.find?` does (it consults the
+///   elaborator's async constant map, which `addDeclCore` populates only from
+///   `Declaration.getNames`, and that list excludes auxiliary recursors by
+///   documented design). Under it these three fixtures each failed with exactly
+///   one disagreement.
+/// * **damaged auxiliary recursor accepted** — the comparison started skipping
+///   a constant it could not find, or stopped reading the auxiliary recursor's
+///   fields. Either would restore the blind spot with the count still looking
+///   healthy.
+///
+/// These are official bytes, not ours: they were produced by `lean4export` from
+/// a development Lean itself elaborated, so the auxiliary recursor here is the
+/// shape the reference toolchain publishes rather than the shape our exporter
+/// happens to render.
+#[test]
+fn the_official_nested_fixtures_reach_the_auxiliary_recursor() {
+    let Some(lean) = pinned_lean() else {
+        assert!(!lean_probe::lean_required(), "AXEYUM_REQUIRE_LEAN=1");
+        println!(
+            "{} nested-auxiliary-fixtures not_checked=unknown reason=pinned-toolchain-missing",
+            lean_probe::SKIPPED_MARKER
+        );
+        return;
+    };
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/plan/fixtures");
+    let directory = std::env::temp_dir().join(format!("axeyum_wire_aux_{}", std::process::id()));
+    std::fs::create_dir_all(&directory).expect("create mutant directory");
+
+    let mut checked = 0_usize;
+    for fixture in [
+        "lean4export-v4.30-construct-matrix-nested.ndjson",
+        "lean4export-v4.30-nested-aux-computation.ndjson",
+        "lean4export-v4.30-nested-indexed-computation.ndjson",
+    ] {
+        let base = std::fs::read_to_string(root.join(fixture)).expect("official fixture");
+        let (verdict, report) = theirs(&lean, &directory, &base, "base");
+        assert_eq!(
+            verdict,
+            Theirs::Accepted,
+            "{fixture}: the real Lean kernel rejected an UNDAMAGED official \
+             stream. The auxiliary recursor of a nested group is the only \
+             construct here that `Environment.find?` cannot see, so a lookup \
+             that regressed to it reports exactly this:\n{report}"
+        );
+        checked += 1;
+
+        let auxiliary: Vec<&Mutant> = mutants(&base)
+            .leak()
+            .iter()
+            .filter(|mutant| mutant.family.starts_with("ind.aux-"))
+            .collect();
+        assert!(
+            auxiliary.len() >= 8,
+            "{fixture}: only {} auxiliary-recursor mutants were generated; a \
+             fixture whose nested group stopped being recognised as nested \
+             would make every assertion below vacuous",
+            auxiliary.len()
+        );
+        for mutant in auxiliary {
+            let admitted = ours(&mutant.stream).is_ok();
+            let (verdict, report) = theirs(&lean, &directory, &mutant.stream, "aux");
+            assert_ne!(
+                verdict,
+                Theirs::Accepted,
+                "{fixture} {}: Lean's kernel accepted a stream whose AUXILIARY \
+                 recursor was damaged. Those bytes are republished by \
+                 `restore_nested_inductive_group` and by nothing else, so if \
+                 Lean does not read them the fourth admission gate has no \
+                 independent check at all:\n{report}",
+                mutant.id
+            );
+            assert!(
+                violation(&mutant.id, admitted, verdict).is_none(),
+                "{fixture}: our kernel admitted auxiliary-recursor damage the \
+                 real Lean kernel refused:\n{report}"
+            );
+            checked += 1;
+        }
+    }
+    lean_probe::report_checked("nested-auxiliary-fixtures", checked);
+}
+
 #[test]
 fn the_audit_reports_a_more_permissive_kernel_and_nothing_else() {
     assert!(violation("m", true, Theirs::KernelRejected).is_some());
@@ -1860,6 +2132,7 @@ fn the_audit_reports_a_more_permissive_kernel_and_nothing_else() {
     assert!(violation("m", false, Theirs::Accepted).is_none());
 }
 
+#[allow(clippy::too_many_lines)]
 #[test]
 fn the_mutator_is_derived_from_the_stream_and_changes_bytes() {
     let base = development();
@@ -1932,6 +2205,20 @@ fn the_mutator_is_derived_from_the_stream_and_changes_bytes() {
         "ind.family-num-params",
         "ind.family-type",
         "ind.family-uparams",
+        "ind.aux-rec-all",
+        "ind.aux-rec-k",
+        "ind.aux-rec-name",
+        "ind.aux-rec-num-indices",
+        "ind.aux-rec-num-minors",
+        "ind.aux-rec-num-motives",
+        "ind.aux-rec-num-params",
+        "ind.aux-rec-type",
+        "ind.aux-rec-uparams",
+        "ind.aux-rule-ctor",
+        "ind.aux-rule-nfields",
+        "ind.aux-rule-order",
+        "ind.aux-rule-rhs",
+        "ind.aux-rule-rhs-swap",
         "ind.rec-all",
         "ind.rec-k",
         "ind.rec-name",

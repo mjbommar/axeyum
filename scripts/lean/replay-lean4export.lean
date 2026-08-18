@@ -34,6 +34,12 @@ Lean's own kernel generated — arities, `cidx`, `k`, the ι-rules, and the type
 themselves up to universe-parameter position and binder names. A disagreement
 prints `LEAN KERNEL REGENERATION MISMATCH` and exits nonzero. This makes the
 recursor half of the stream a real verdict rather than an unread field.
+
+That comparison looks constants up in `env.toKernelEnv`, Lean's kernel
+environment, and not in `Environment.find?`, the elaborator's view — which is
+what makes a NESTED group's auxiliary recursor (`Rose.rec_1`) checkable at all.
+See `inductiveAgreesWithLean` for the measurement; the short version is that
+Lean's kernel does build it, `addDeclCore` just never announces it.
 -/
 import Lean
 open Lean
@@ -195,21 +201,45 @@ private def typeAgrees (env : Environment) (what : String) (ourParams : List Nam
 Check every family, constructor and recursor an `inductive` record carries
 against the constant Lean's kernel generated for it.
 
-Returns the disagreements; an empty list means the exported record and Lean's
-own regeneration describe the same declarations.
+Returns the disagreements and how many constants were actually compared; an
+empty disagreement list means the exported record and Lean's own regeneration
+describe the same declarations.
+
+**The lookup goes to `toKernelEnv`, not to `Environment.find?`, and that is the
+whole reason a NESTED group can be checked here at all.** `Environment.find?`
+is the *elaborator's* view: `addDeclCore` republishes only
+`Declaration.getNames` into the async constant map, and that function's own
+docstring says it "does not include ... auxiliary recursors computed by the
+kernel for nested inductive types" — for `.inductDecl` it is
+`t.name :: t.name ++ `rec :: ctors`. So `env.find? `Rose.rec_1` is `none` while
+`env.constants.find? `Rose.rec_1` is the recursor Lean's kernel built, with its
+two motives, three minors and both ι-rules. Measured 2026-08-18 on Lean 4.30.0:
+under `Environment.find?` the three official nested fixtures each failed with
+exactly one disagreement, "`Rose.rec_1`: no such constant"; under
+`toKernelEnv.find?` all seventeen official fixtures replay clean and every
+field of the auxiliary recursor is compared.
+
+This matters because the earlier reading — "Lean does not regenerate the
+auxiliary recursor, so those bytes cannot be checked" — would have justified an
+exemption, and an exemption is how the 37% blind spot above was created in the
+first place. The auxiliary recursor was never unread by Lean's kernel; it was
+unread by this script.
 -/
 private def inductiveAgreesWithLean (env : Environment) (tables : Tables) (entry : Json) :
-    IO (List Disagreement) := do
+    IO (List Disagreement × Nat) := do
   let mut found : List Disagreement := []
+  let mut compared := 0
   let types ← jArr (← jField entry "types")
   let ctors ← jArr (← jField entry "ctors")
   let recs ← jArr (← jField entry "recs")
-  let lookup (name : Name) : IO (Option ConstantInfo) := pure (env.find? name)
+  let kernelEnv := env.toKernelEnv
+  let lookup (name : Name) : IO (Option ConstantInfo) := pure (kernelEnv.find? name)
   for family in types do
     let name := tables.names[(← jFieldNat family "name")]!
     let ourParams ← levelParams tables (← jField family "levelParams")
     match ← lookup name with
     | some (.inductInfo value) =>
+      compared := compared + 1
       found := found
         ++ natAgrees s!"{name}.numParams" (← jFieldNat family "numParams") value.numParams
         ++ natAgrees s!"{name}.numIndices" (← jFieldNat family "numIndices") value.numIndices
@@ -231,6 +261,7 @@ private def inductiveAgreesWithLean (env : Environment) (tables : Tables) (entry
     let ourParams ← levelParams tables (← jField ctor "levelParams")
     match ← lookup name with
     | some (.ctorInfo value) =>
+      compared := compared + 1
       found := found
         ++ nameAgrees s!"{name}.induct" tables.names[(← jFieldNat ctor "induct")]! value.induct
         ++ natAgrees s!"{name}.cidx" (← jFieldNat ctor "cidx") value.cidx
@@ -245,6 +276,7 @@ private def inductiveAgreesWithLean (env : Environment) (tables : Tables) (entry
     let ourParams ← levelParams tables (← jField recursor "levelParams")
     match ← lookup name with
     | some (.recInfo value) =>
+      compared := compared + 1
       found := found
         ++ natAgrees s!"{name}.numParams" (← jFieldNat recursor "numParams") value.numParams
         ++ natAgrees s!"{name}.numIndices" (← jFieldNat recursor "numIndices") value.numIndices
@@ -265,7 +297,7 @@ private def inductiveAgreesWithLean (env : Environment) (tables : Tables) (entry
           ++ typeAgrees env s!"{name}.rule.{ctor}.rhs" ourParams
                tables.exprs[(← jFieldNat rule "rhs")]! value.levelParams theirs.rhs
     | _ => found := found ++ missing (toString name) "a recursor"
-  return found
+  return (found, compared)
 
 def main (args : List String) : IO UInt32 := do
   -- A result that does not name its checker is not evidence: every run says
@@ -282,6 +314,10 @@ def main (args : List String) : IO UInt32 := do
   let mut inductives := 0
   let mut regenerationCheck : Option Json := none
   let mut regenerationsChecked := 0
+  -- Constants actually compared against Lean's regeneration. `regenerationsChecked`
+  -- counts RECORDS, so it stays at 1 whether a group's whole surface was compared
+  -- or a lookup silently found nothing; this counts what was really looked at.
+  let mut constantsCompared := 0
   let mut lineNumber := 0
   for rawLine in content.splitOn "\n" do
     let line := rawLine.trimAscii.toString
@@ -428,7 +464,8 @@ def main (args : List String) : IO UInt32 := do
         -- and never looked at ours. Compare them, or those bytes are unread.
         if let some entry := regenerationCheck then
           regenerationCheck := none
-          let found ← inductiveAgreesWithLean env tables entry
+          let (found, compared) ← inductiveAgreesWithLean env tables entry
+          constantsCompared := constantsCompared + compared
           unless found.isEmpty do
             IO.eprintln s!"line {lineNumber}: LEAN KERNEL REGENERATION MISMATCH: the \
 exported inductive record disagrees with the {found.length} field(s) Lean's own kernel \
@@ -444,5 +481,6 @@ but Lean's kernel generated {disagreement.theirs}"
         return 1
   IO.println s!"lean4export replay: the real Lean kernel accepted {declarations} declaration records \
 ({inductives} inductive groups, {regenerationsChecked} of them also compared field-by-field \
-against Lean's own regeneration), environment now holds {env.constants.toList.length} constants"
+against Lean's own regeneration over {constantsCompared} constants), environment now holds \
+{env.constants.toList.length} constants"
   return 0

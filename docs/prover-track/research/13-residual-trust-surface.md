@@ -52,7 +52,9 @@ Three things the previous hand estimate ("roughly 9.4k lines") got wrong:
    filed as "trusted only for the Lean crosscheck".
 2. **There are four admission gates, not three.**
    `restore_nested_inductive_group` inserts declarations directly, after the
-   nested-inductive expansion has been checked under temporary names.
+   nested-inductive expansion has been checked under temporary names. It has
+   carried adversarial coverage since round 4 (below); through round 3 it had
+   none.
 3. **Whole files are not trusted.** `tc.rs` contributes 1,644 of its 1,673
    function-body lines but `lib.rs` only 683 of 995 and `lean_export.rs` 32 of
    891. Counting files overstates the surface by ~80%.
@@ -190,17 +192,34 @@ Four things, in descending order of how well we can defend them.
    defect twice. So a clean round is evidence in proportion to its budget, and
    "the rate is levelling off" remains unsupported.
 
-   Round 3 also names the next hole rather than closing it. A **nested**
-   inductive group cannot be compared through this instrument at all:
-   `addDeclCore` regenerates the group's own recursor but not the auxiliary one
-   the Lean frontend publishes, so every field of an auxiliary recursor is a
-   byte Lean never reads. Admitting the group would have meant either a false
-   failure on the undamaged stream or an exemption that silently restores the
-   blind spot the regeneration channel exists to close, so the group is off the
-   wire and `restore_nested_inductive_group` — the fourth admission gate — has
-   **no adversarial coverage**. Likewise `quot` records: Lean's `addDeclCore`
+   Round 3 named a hole it could not close, and round 4 (2026-08-18) closed it
+   by finding that the hole was in the instrument. Round 3 read "the undamaged
+   nested stream fails on `axeyum_wire_rose.rec_1`" as *Lean's kernel does not
+   build the auxiliary recursor*. It does. What does not know about it is
+   `Environment.find?`, the **elaborator's** lookup: `addDeclCore` republishes
+   only `Declaration.getNames`, and that function's own docstring says the list
+   "does not include ... auxiliary recursors computed by the kernel for nested
+   inductive types". Asking `env.toKernelEnv` instead returns the recursor Lean
+   built, with its two motives, three minors and both ι-rules. One line of the
+   replay script; no exemption; the residue is **zero bytes**, not a bounded
+   allowance. Measured against pinned 4.30.0: all three official nested fixtures
+   now replay clean where they previously failed with exactly one disagreement
+   each, and 17 of 17 mutants confined to an auxiliary recursor were
+   discriminated by Lean's kernel. `restore_nested_inductive_group` — the fourth
+   admission gate — is adversarially covered, with a floor
+   (`MIN_AUX_RECURSOR_DISCRIMINATED`) that fails if the lookup regresses or an
+   absent constant is ever exempted rather than reported.
+
+   The lesson generalises past this gate, and it is this repository's own:
+   **an empty answer from a tool that was never pointed at your subject is
+   indistinguishable from a strong negative result.** `Environment.find?` ran,
+   returned a correct `none`, and answered a question about the elaborator's
+   view that had been asked about the kernel's.
+
+   `quot` records remain a genuinely undiscriminating axis: Lean's `addDeclCore`
    ignores the carried types for a quotient package and adds its own, so it
-   accepts every damaged quotient record and the axis cannot discriminate.
+   accepts every damaged quotient record. That one is a property of the
+   interface, not of where we looked.
 
    What would change this estimate is rounds that find nothing, not rounds that
    are not run.
