@@ -39,7 +39,9 @@ The validator requires that the fact ID be the operation's sole applicability
 target, that the input follow the fact-ledger negation-artifact convention, and
 that this driver be paired with `smtlib2`, `smt-term-level`, and
 `unsat-certificate`. It rejects path traversal, missing files, unknown drivers,
-settled authoritative targets, and inconsistent route/evidence tuples.
+fact/artifact mismatch, and inconsistent route/evidence/footprint tuples. An
+operation remains a durable capability after its target settles; frontier state,
+not registry validity, determines whether it can be scheduled again.
 
 The executor re-verifies the frontier against the live ledger and registry and
 requires exactly one admissible selected fact and one exact authoritative
@@ -55,8 +57,8 @@ commit and requires byte-for-byte equality of the normalized derived object.
 ## Evidence
 
 - Registry mutation tests reject missing executors, unknown drivers, path
-  escape, fact/artifact mismatch, unsupported admission tuples, and
-  authoritative scope over settled facts.
+  escape, fact/artifact mismatch, unsupported admission tuples, and footprints
+  that contradict their declared policy.
 - Frontier tests show that the exact authoritative operation selects only its
   registered fact and that fixture scope restores selection refusal.
 - Executor mutation tests reject every weakened observation field, missing or

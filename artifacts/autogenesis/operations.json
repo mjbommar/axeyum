@@ -26,7 +26,8 @@
         "epistemic_status": "proved",
         "proof_route": "kernel-lean",
         "evidence_kind": "kernel-term",
-        "axiom_footprint_policy": "must-be-empty"
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
       }
     },
     {
@@ -61,7 +62,12 @@
         "epistemic_status": "proved",
         "proof_route": "smt-term-level",
         "evidence_kind": "unsat-certificate",
-        "axiom_footprint_policy": "must-be-nonempty"
+        "axiom_footprint_policy": "must-be-nonempty",
+        "axiom_footprint": [
+          "axeyum-ir.integer-arithmetic-semantics",
+          "axeyum-solver.single-variable-polynomial-collector",
+          "negative-discriminant-quadratic-root-theorem"
+        ]
       }
     }
   ]

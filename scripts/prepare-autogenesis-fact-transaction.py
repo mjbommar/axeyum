@@ -17,6 +17,8 @@ FACTS = ROOT / "artifacts/facts"
 EVIDENCE_SCRIPT = ROOT / "scripts/create-autogenesis-premise-evidence.py"
 EVENT_SCRIPT = ROOT / "scripts/create-autogenesis-accepted-event.py"
 VALIDATOR_SCRIPT = ROOT / "scripts/validate-facts.py"
+EXECUTOR_SCRIPT = ROOT / "scripts/execute-autogenesis-operation.py"
+FACT_OPERATION_SCRIPT = ROOT / "scripts/check-autogenesis-fact-operation.py"
 
 
 class TransactionError(RuntimeError):
@@ -178,6 +180,139 @@ def build_transaction(
     return transaction
 
 
+def build_authoritative_transaction(
+    *,
+    before_fact: dict[str, Any],
+    execution: dict[str, Any],
+    operation: dict[str, Any],
+    registry: dict[str, Any],
+) -> dict[str, Any]:
+    """Derive a real open-to-proved delta from a replayed operation receipt."""
+    validate_before(before_fact)
+    fact_id = before_fact.get("id")
+    identity = execution.get("identity")
+    result = execution.get("result")
+    acceptance = execution.get("acceptance")
+    if not all(isinstance(value, dict) for value in (identity, result, acceptance)):
+        raise TransactionError("typed operation execution is malformed")
+    if (
+        identity.get("fact_id") != fact_id
+        or identity.get("fact_sha256") != digest(before_fact)
+        or identity.get("operation_id") != operation.get("id")
+        or identity.get("operation_registry_sha256") != digest(registry)
+    ):
+        raise TransactionError("typed execution does not bind the selected fact operation")
+    admission = operation["admission"]
+    if (
+        result.get("outcome") != "proved"
+        or result.get("epistemic_status") != admission["epistemic_status"]
+        or result.get("proof_route") != admission["proof_route"]
+        or result.get("evidence_kind") != admission["evidence_kind"]
+        or result.get("axiom_footprint_policy")
+        != admission["axiom_footprint_policy"]
+        or result.get("axiom_footprint") != admission["axiom_footprint"]
+        or acceptance
+        != {
+            "source_bound": True,
+            "fresh_arena_rechecked": True,
+            "caller_authored_command": False,
+        }
+    ):
+        raise TransactionError("typed execution assurance differs from admission policy")
+
+    fact_operation = load_module(
+        "autogenesis_fact_operation_for_transaction", FACT_OPERATION_SCRIPT
+    )
+    execution_sha = execution.get("execution_sha256")
+    if not isinstance(execution_sha, str) or len(execution_sha) != 64:
+        raise TransactionError("typed execution digest is invalid")
+    executor = operation["executor"]
+    operation_sha = digest(operation)
+    after_fact = json.loads(json.dumps(before_fact))
+    after_fact["epistemic_status"] = admission["epistemic_status"]
+    after_fact["proof_route"] = admission["proof_route"]
+    after_fact["axiom_footprint"] = admission["axiom_footprint"]
+    after_fact["evidence"] = [
+        {
+            "id": f"autogenesis-operation-{execution_sha[:16]}",
+            "kind": admission["evidence_kind"],
+            "supports": before_fact["statement"],
+            "check_status": "checked",
+            "checkers": [
+                operation["producer"]["operation"],
+                operation["checker"]["operation"],
+                executor["driver"],
+            ],
+            "checker_command": fact_operation.checker_command(fact_id),
+            "checker_operation": {
+                "id": operation["id"],
+                "operation_sha256": operation_sha,
+                "registry_sha256_at_execution": identity[
+                    "operation_registry_sha256"
+                ],
+                "execution_sha256": execution_sha,
+                "frontier_sha256": identity["frontier_sha256"],
+                "input_artifact": executor["input_artifact"],
+                "input_artifact_sha256": identity["input_artifact_sha256"],
+            },
+            "artifact": f"sha256:{execution_sha}",
+            "notes": (
+                "Derived from a clean-commit typed execution receipt. The "
+                "registered fact-operation checker replays the exact source "
+                "artifact and requires its fresh-arena certified result; no "
+                "caller-authored route, footprint, checker, or shell command "
+                "is accepted."
+            ),
+        }
+    ]
+    provenance = dict(after_fact["provenance"])
+    provenance["established_by"] = (
+        f"axeyum-autogenesis execution {identity['execution_id']}"
+    )
+    after_fact["provenance"] = provenance
+
+    before_sha = digest(before_fact)
+    after_sha = digest(after_fact)
+    transaction: dict[str, Any] = {
+        "schema_version": 1,
+        "kind": "axeyum-autogenesis-fact-transaction-proposal",
+        "state": "prepared",
+        "identity": {
+            "fact_id": fact_id,
+            "episode_id": identity["execution_id"],
+            "before_fact_sha256": before_sha,
+            "after_fact_sha256": after_sha,
+            "premise_evidence_sha256": execution_sha,
+            "execution_sha256": execution_sha,
+            "frontier_sha256": identity["frontier_sha256"],
+        },
+        "precondition": {
+            "epistemic_status": "open",
+            "evidence": [],
+            "source_is_authoritative": True,
+        },
+        "registered_checker_operation": {
+            "id": operation["id"],
+            "operation_sha256": operation_sha,
+            "registry_sha256": identity["operation_registry_sha256"],
+            "arguments": {
+                "fact_id": fact_id,
+                "execution_sha256": execution_sha,
+                "input_artifact_sha256": identity["input_artifact_sha256"],
+            },
+        },
+        "authoritative_write": {
+            "path": f"artifacts/facts/{fact_id.replace('F:', 'F-')}.json",
+            "before_sha256": before_sha,
+            "after_sha256": after_sha,
+            "after_fact": after_fact,
+        },
+        "admission_event": None,
+    }
+    transaction["transaction_sha256"] = digest(transaction)
+    return transaction
+
+
 def verify_transaction(actual: dict[str, Any], expected: dict[str, Any]) -> None:
     claimed = actual.get("transaction_sha256")
     unsigned = dict(actual)
@@ -190,7 +325,7 @@ def verify_transaction(actual: dict[str, Any], expected: dict[str, Any]) -> None
         raise TransactionError("fact transaction proposal is stale or mutated")
 
 
-def derive(args: argparse.Namespace) -> dict[str, Any]:
+def derive_fixture(args: argparse.Namespace) -> dict[str, Any]:
     before_fact = json.loads(args.fact.read_text())
     root = args.bundle.resolve()
     paths = {
@@ -256,10 +391,62 @@ def derive(args: argparse.Namespace) -> dict[str, Any]:
     return transaction
 
 
+def derive_authoritative(args: argparse.Namespace) -> dict[str, Any]:
+    before_fact = json.loads(args.fact.read_text())
+    authoritative = FACTS / (before_fact["id"].replace("F:", "F-") + ".json")
+    if args.fact.resolve() != authoritative.resolve():
+        raise TransactionError(
+            "authoritative transaction preparation requires the canonical fact source"
+        )
+    executor_module = load_module(
+        "autogenesis_executor_for_transaction", EXECUTOR_SCRIPT
+    )
+    try:
+        expected_execution = executor_module.derive(args.frontier.resolve())
+        execution = json.loads(args.execution.read_text())
+        executor_module.verify_receipt(execution, expected_execution)
+        frontier = json.loads(args.frontier.read_text())
+        selected_fact, operation, registry = executor_module.selected_inputs(frontier)
+    except executor_module.ExecutionError as error:
+        raise TransactionError(f"typed operation execution replay failed: {error}") from error
+    if selected_fact != before_fact:
+        raise TransactionError("frontier-selected fact differs from authoritative source")
+    transaction = build_authoritative_transaction(
+        before_fact=before_fact,
+        execution=execution,
+        operation=operation,
+        registry=registry,
+    )
+    validator = load_module("validate_facts_for_authoritative_transaction", VALIDATOR_SCRIPT)
+    errors = validator.validate_one(
+        authoritative,
+        transaction["authoritative_write"]["after_fact"],
+        {json.loads(path.read_text())["id"] for path in FACTS.glob("*.json")},
+    )
+    if errors:
+        raise TransactionError("proposed after-fact fails validation: " + "; ".join(errors))
+    return transaction
+
+
+def derive(args: argparse.Namespace) -> dict[str, Any]:
+    bundle = getattr(args, "bundle", None)
+    frontier = getattr(args, "frontier", None)
+    execution = getattr(args, "execution", None)
+    if bundle is not None and frontier is None and execution is None:
+        return derive_fixture(args)
+    if bundle is None and frontier is not None and execution is not None:
+        return derive_authoritative(args)
+    raise TransactionError(
+        "choose exactly one input mode: --bundle, or --frontier plus --execution"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fact", required=True, type=pathlib.Path)
-    parser.add_argument("--bundle", required=True, type=pathlib.Path)
+    parser.add_argument("--bundle", type=pathlib.Path)
+    parser.add_argument("--frontier", type=pathlib.Path)
+    parser.add_argument("--execution", type=pathlib.Path)
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--output", type=pathlib.Path)
     action.add_argument("--verify", type=pathlib.Path)

@@ -4,7 +4,7 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:3c6c4c2d230faf250910e97b9c79927199d8dec125d456a7712c474981288dad`
+Source identity: `sha256:b4d49810cf7c875fd06922b2bf06f8368641819d178ef4abf4c9407b32cefa0f`
 
 ## Ledger and chain substrate
 
@@ -28,8 +28,8 @@ the remaining facts stay explicit rather than being guessed.
 | `A1-proof-leakage-boundary` | fixture | proof-body-free catalog plus Bubblewrap repository/network isolation control | broaden the structural grammar and bind plans into typed evidence |
 | `A1-operational-unlock-control` | fixture | catalog search produces B; a durable fixture event makes the same A target ready and fresh A depends on B | repeat the causal unlock on an authoritative open fact |
 | `A1-machine-selection` | partial | content-addressed authoritative frontier selects exactly one matching fact; typed execution binds the frontier, registry, fact, source bytes, and clean commit | consume the normalized execution receipt in a typed transaction adapter |
-| `A1-typed-dispatch-evidence` | partial | the authoritative registry fixes the driver, input artifact, budget, and expected evidence label; the executor normalizes only certified fresh-arena observations | derive the authoritative evidence row and transaction without caller-authored shell |
-| `A1-atomic-admission` | fixture | fixture fact admission has compare-and-swap, fsynced intent, durable event, and fault recovery | admit one genuinely open authoritative fact with matching typed evidence |
+| `A1-typed-dispatch-evidence` | partial | the authoritative registry fixes the driver, input artifact, budget, expected label, and footprint; the executor and transaction adapter derive the receipt and evidence row without caller-authored metadata | apply and recover the first authoritative transaction, then replay its settled-fact checker |
+| `A1-atomic-admission` | fixture | fixture admission has compare-and-swap, fsynced intent, durable event, and fault recovery; a real selected fact now has a typed prepared delta | exercise the same applicant and recovery path on that authoritative fact |
 | `A1-admission-triggered-retry` | fixture | durable fixture admission event derives B-to-A readiness and gates the post-B catalog | generalize the readiness input from counterfactual snapshot to authoritative frontier state |
 | `A1-clean-reproduction` | fixture | retained exact-commit command regenerates B, transaction, event, readiness, pre-A failure, and post-B success | repeat the same replay for an authoritative acquisition |
 
@@ -40,9 +40,9 @@ the remaining facts stay explicit rather than being guessed.
 | `goal-selection` | partial | fact frontier | machine frontier selects one exact fact and the typed executor consumes that identity; no transaction adapter consumes the execution receipt | `scripts/fact-frontier.py` |
 | `route-dispatch` | partial | operation registry | one authoritative producer/checker contract exists; typed execution and transaction preparation remain route-specific | `artifacts/autogenesis/operations.json` |
 | `operation-execution` | partial | typed operation executor | one authoritative SMT driver emits a normalized replayable receipt; no second driver or transaction adapter exists | `scripts/execute-autogenesis-operation.py` |
-| `evidence-assembly` | manual | transactional closer | the caller authors the evidence rows and route metadata | `scripts/close-fact.py` |
+| `evidence-assembly` | partial | transactional closer | the first authoritative adapter derives its evidence row and route metadata; other routes through the manual closer remain caller-authored | `scripts/close-fact.py` |
 | `checker-selection` | partial | evidence registry | fixture and first authoritative checkers are typed; the manual closer still accepts caller-authored shell text | `artifacts/autogenesis/operations.json` |
-| `ledger-transition` | fixture | transactional closer | compare-and-swap plus roll-forward recovery is fixture-only; the first matching authoritative evidence lacks a typed transaction adapter | `scripts/apply-autogenesis-fact-transaction.py` |
+| `ledger-transition` | fixture | transactional closer | the first authoritative execution derives a complete prepared transaction; production apply and recovery have not yet been exercised | `scripts/apply-autogenesis-fact-transaction.py` |
 | `dependency-derivation` | partial | kernel dependency inventory | kernel facts are covered where checker commands name the theorem; other routes are authored | `scripts/check-fact-depends-derived.py` |
 | `accepted-transition-event` | fixture | episode/orchestrator | durable fixture event triggers a counterfactual readiness delta; authoritative frontier consumption remains | `scripts/create-autogenesis-readiness-delta.py` |
 | `clean-replay` | fixture | episode replay | exact-commit fixture replay exists; authoritative acquisition replay remains | `scripts/replay-autogenesis-apply-experiment.sh` |

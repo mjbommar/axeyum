@@ -206,7 +206,13 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
             raise RegistryError(f"{label}.admission must be an object")
         exact_keys(
             admission,
-            {"epistemic_status", "proof_route", "evidence_kind", "axiom_footprint_policy"},
+            {
+                "epistemic_status",
+                "proof_route",
+                "evidence_kind",
+                "axiom_footprint_policy",
+                "axiom_footprint",
+            },
             f"{label}.admission",
         )
         admission_contract = (
@@ -217,6 +223,18 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
         )
         if admission_contract not in ADMISSION_CONTRACTS:
             raise RegistryError(f"{label}.admission is outside the v1 contract")
+        footprint = admission["axiom_footprint"]
+        if (
+            not isinstance(footprint, list)
+            or any(not isinstance(item, str) or not item for item in footprint)
+            or len(footprint) != len(set(footprint))
+        ):
+            raise RegistryError(f"{label}.admission.axiom_footprint is invalid")
+        footprint_policy = admission["axiom_footprint_policy"]
+        if (footprint_policy == "must-be-empty") != (footprint == []):
+            raise RegistryError(f"{label}.admission footprint violates its policy")
+        if footprint_policy == "must-be-nonempty" and not footprint:
+            raise RegistryError(f"{label}.admission footprint violates its policy")
         if scope == "authoritative":
             executor = operation["executor"]
             if executor["input_fact_id"] not in fact_ids or fact_ids != [
@@ -243,19 +261,6 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                 raise RegistryError(
                     f"{label}.executor driver is inconsistent with applicability/admission"
                 )
-            for fact_id in fact_ids:
-                fact_path = root / "artifacts/facts" / (
-                    fact_id.replace("F:", "F-") + ".json"
-                )
-                fact = json.loads(fact_path.read_text())
-                if fact.get("epistemic_status") not in {
-                    "open",
-                    "conjectured",
-                    "empirical",
-                }:
-                    raise RegistryError(
-                        f"{label} grants authoritative scope to settled fact {fact_id}"
-                    )
 
 
 def load_registry(

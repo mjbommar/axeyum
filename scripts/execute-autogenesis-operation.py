@@ -243,6 +243,7 @@ def build_receipt(
             "axiom_footprint_policy": operation["admission"][
                 "axiom_footprint_policy"
             ],
+            "axiom_footprint": operation["admission"]["axiom_footprint"],
             "observation": observation,
         },
         "acceptance": {

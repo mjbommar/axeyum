@@ -60,6 +60,7 @@ STATIC_SOURCES = (
     Path("scripts/fact-frontier.py"),
     Path("scripts/validate-autogenesis-operations.py"),
     Path("scripts/execute-autogenesis-operation.py"),
+    Path("scripts/check-autogenesis-fact-operation.py"),
     Path("artifacts/autogenesis/operations.json"),
     Path("scripts/close-fact.py"),
     Path("scripts/gen-proof-gap-matrix.py"),
@@ -109,11 +110,11 @@ SEAMS = (
     },
     {
         "id": "evidence-assembly",
-        "state": "manual",
+        "state": "partial",
         "owner": "transactional closer",
         "source": "scripts/close-fact.py",
         "marker": "writing the evidence rows",
-        "gap": "the caller authors the evidence rows and route metadata",
+        "gap": "the first authoritative adapter derives its evidence row and route metadata; other routes through the manual closer remain caller-authored",
     },
     {
         "id": "checker-selection",
@@ -129,7 +130,7 @@ SEAMS = (
         "owner": "transactional closer",
         "source": "scripts/apply-autogenesis-fact-transaction.py",
         "marker": "fact compare-and-swap precondition failed",
-        "gap": "compare-and-swap plus roll-forward recovery is fixture-only; the first matching authoritative evidence lacks a typed transaction adapter",
+        "gap": "the first authoritative execution derives a complete prepared transaction; production apply and recovery have not yet been exercised",
     },
     {
         "id": "dependency-derivation",
@@ -376,14 +377,14 @@ def requirement_rows(kernel: dict[str, Any], seams: list[dict[str, str]]) -> lis
         {
             "id": "A1-typed-dispatch-evidence",
             "state": seam_state.get("operation-execution", "missing"),
-            "evidence": "the authoritative registry fixes the driver, input artifact, budget, and expected evidence label; the executor normalizes only certified fresh-arena observations",
-            "next": "derive the authoritative evidence row and transaction without caller-authored shell",
+            "evidence": "the authoritative registry fixes the driver, input artifact, budget, expected label, and footprint; the executor and transaction adapter derive the receipt and evidence row without caller-authored metadata",
+            "next": "apply and recover the first authoritative transaction, then replay its settled-fact checker",
         },
         {
             "id": "A1-atomic-admission",
             "state": seam_state.get("ledger-transition", "missing"),
-            "evidence": "fixture fact admission has compare-and-swap, fsynced intent, durable event, and fault recovery",
-            "next": "admit one genuinely open authoritative fact with matching typed evidence",
+            "evidence": "fixture admission has compare-and-swap, fsynced intent, durable event, and fault recovery; a real selected fact now has a typed prepared delta",
+            "next": "exercise the same applicant and recovery path on that authoritative fact",
         },
         {
             "id": "A1-admission-triggered-retry",

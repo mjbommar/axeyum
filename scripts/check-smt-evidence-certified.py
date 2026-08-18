@@ -142,6 +142,17 @@ def run(instance: str) -> dict[str, Any]:
     }
 
 
+def evidence_instance_paths(item: dict[str, Any]) -> list[str]:
+    """SMT instances named by legacy commands or typed operation bindings."""
+    found = INSTANCE_RE.findall(item.get("checker_command", ""))
+    operation = item.get("checker_operation")
+    if isinstance(operation, dict):
+        artifact = operation.get("input_artifact")
+        if isinstance(artifact, str) and INSTANCE_RE.fullmatch(artifact):
+            found.append(artifact)
+    return list(dict.fromkeys(found))
+
+
 def instances() -> list[tuple[str, str]]:
     """(fact id, instance path) for every settled SMT-route fact."""
     out: list[tuple[str, str]] = []
@@ -153,7 +164,7 @@ def instances() -> list[tuple[str, str]]:
         if data.get("proof_route") not in SMT_ROUTES:
             continue
         for item in data.get("evidence") or []:
-            for found in INSTANCE_RE.findall(item.get("checker_command", "")):
+            for found in evidence_instance_paths(item):
                 if found not in seen:
                     seen.add(found)
                     out.append((data["id"], found))

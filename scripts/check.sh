@@ -235,6 +235,7 @@ step autogenesis-operation-registry python3 scripts/validate-autogenesis-operati
 step autogenesis-operation-registry-tests python3 -m unittest scripts.tests.test_validate_autogenesis_operations
 step fact-frontier-tests python3 -m unittest scripts.tests.test_fact_frontier
 step autogenesis-operation-execution-tests python3 -m unittest scripts.tests.test_execute_autogenesis_operation
+step autogenesis-fact-operation-tests python3 -m unittest scripts.tests.test_check_autogenesis_fact_operation
 step autogenesis-baseline python3 scripts/gen-autogenesis-baseline.py --check
 step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
 step gen-plan       python3 scripts/gen-plan.py --check

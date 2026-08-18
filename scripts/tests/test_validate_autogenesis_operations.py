@@ -65,21 +65,6 @@ class OperationRegistryTests(unittest.TestCase):
         with self.assertRaisesRegex(registry_module.RegistryError, "outside the v1"):
             registry_module.validate_registry(mutated, ROOT)
 
-    def test_authoritative_scope_cannot_target_a_settled_fact(self) -> None:
-        mutated = copy.deepcopy(self.registry)
-        operation = mutated["operations"][1]
-        operation["applicability"] = {
-            "fact_ids": ["F:contraposition"],
-            "formal_languages": ["smtlib2"],
-            "fragments": ["QF_UF"],
-        }
-        operation["executor"]["input_fact_id"] = "F:contraposition"
-        operation["executor"]["input_artifact"] = (
-            "artifacts/facts/smt2/neg-contraposition.smt2"
-        )
-        with self.assertRaisesRegex(registry_module.RegistryError, "settled fact"):
-            registry_module.validate_registry(mutated, ROOT)
-
     def test_authoritative_operation_requires_a_typed_executor(self) -> None:
         mutated = copy.deepcopy(self.registry)
         del mutated["operations"][1]["executor"]
@@ -108,6 +93,17 @@ class OperationRegistryTests(unittest.TestCase):
             "artifacts/facts/smt2/neg-contraposition.smt2"
         )
         with self.assertRaisesRegex(registry_module.RegistryError, "does not match"):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_admission_footprint_must_match_its_policy(self) -> None:
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][1]["admission"]["axiom_footprint"] = []
+        with self.assertRaisesRegex(registry_module.RegistryError, "violates"):
+            registry_module.validate_registry(mutated, ROOT)
+
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][0]["admission"]["axiom_footprint"] = ["invented"]
+        with self.assertRaisesRegex(registry_module.RegistryError, "violates"):
             registry_module.validate_registry(mutated, ROOT)
 
 

@@ -31,15 +31,15 @@
       "state": "partial"
     },
     {
-      "evidence": "the authoritative registry fixes the driver, input artifact, budget, and expected evidence label; the executor normalizes only certified fresh-arena observations",
+      "evidence": "the authoritative registry fixes the driver, input artifact, budget, expected label, and footprint; the executor and transaction adapter derive the receipt and evidence row without caller-authored metadata",
       "id": "A1-typed-dispatch-evidence",
-      "next": "derive the authoritative evidence row and transaction without caller-authored shell",
+      "next": "apply and recover the first authoritative transaction, then replay its settled-fact checker",
       "state": "partial"
     },
     {
-      "evidence": "fixture fact admission has compare-and-swap, fsynced intent, durable event, and fault recovery",
+      "evidence": "fixture admission has compare-and-swap, fsynced intent, durable event, and fault recovery; a real selected fact now has a typed prepared delta",
       "id": "A1-atomic-admission",
-      "next": "admit one genuinely open authoritative fact with matching typed evidence",
+      "next": "exercise the same applicant and recovery path on that authoritative fact",
       "state": "fixture"
     },
     {
@@ -609,11 +609,11 @@
       "state": "partial"
     },
     {
-      "gap": "the caller authors the evidence rows and route metadata",
+      "gap": "the first authoritative adapter derives its evidence row and route metadata; other routes through the manual closer remain caller-authored",
       "id": "evidence-assembly",
       "owner": "transactional closer",
       "source": "scripts/close-fact.py",
-      "state": "manual"
+      "state": "partial"
     },
     {
       "gap": "fixture and first authoritative checkers are typed; the manual closer still accepts caller-authored shell text",
@@ -623,7 +623,7 @@
       "state": "partial"
     },
     {
-      "gap": "compare-and-swap plus roll-forward recovery is fixture-only; the first matching authoritative evidence lacks a typed transaction adapter",
+      "gap": "the first authoritative execution derives a complete prepared transaction; production apply and recovery have not yet been exercised",
       "id": "ledger-transition",
       "owner": "transactional closer",
       "source": "scripts/apply-autogenesis-fact-transaction.py",
@@ -666,12 +666,12 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "3c6c4c2d230faf250910e97b9c79927199d8dec125d456a7712c474981288dad",
+    "digest": "b4d49810cf7c875fd06922b2bf06f8368641819d178ef4abf4c9407b32cefa0f",
     "inputs": [
       {
-        "bytes": 2648,
+        "bytes": 2892,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "09291f3580726a227d44c23c28b2fff5642c74858df6dc64cca4d3a2e0c7f85a"
+        "sha256": "f24c21f96b40f562e0085c24f0c762092aab426d2d4130dca675b1939a924d14"
       },
       {
         "bytes": 3519,
@@ -1254,14 +1254,14 @@
         "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
       },
       {
-        "bytes": 72353,
+        "bytes": 72429,
         "path": "justfile",
-        "sha256": "1183fc203bd397a71eef0af5cc84f35449b98dac7da66b051620f0c669d323ea"
+        "sha256": "d99ec970bcd3e2e712255a3b0125ba7c0ae4f22308d5fffbb91c86a6171988d7"
       },
       {
-        "bytes": 10192,
+        "bytes": 11674,
         "path": "scripts/apply-autogenesis-fact-transaction.py",
-        "sha256": "3460dfd92aa5cfa786501f3ee4d81999c2ff4870b2799a72b7903c99a1068b4c"
+        "sha256": "f15929b04e52a859c7353f81c3cde7bbbf33fce40755fedc191b8f8f9bb03d60"
       },
       {
         "bytes": 2896,
@@ -1282,6 +1282,11 @@
         "bytes": 12162,
         "path": "scripts/check-autogenesis-apply-search.sh",
         "sha256": "be51051e66d990696f495596327242c94e6ed2e543875f4646f18dda5ff61b88"
+      },
+      {
+        "bytes": 6020,
+        "path": "scripts/check-autogenesis-fact-operation.py",
+        "sha256": "04a6851abc3ddadddf12a12821bfb464ad244503a942dfb2f801d5f047541792"
       },
       {
         "bytes": 3677,
@@ -1309,9 +1314,9 @@
         "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
       },
       {
-        "bytes": 21949,
+        "bytes": 22059,
         "path": "scripts/check.sh",
-        "sha256": "3b8a775396f83d1396793c487f1ae0e08b8d37fb71eae6dbca632fca158e5379"
+        "sha256": "02f92955e6b4527f28834706b983471cdd9173d9e4a79e40888a3b84f253f39a"
       },
       {
         "bytes": 6846,
@@ -1349,9 +1354,9 @@
         "sha256": "cb7b1b6ed2cb8f268b6adac42cc1bfb4ff3b99ce9e85b438c23790b4ce92c9e1"
       },
       {
-        "bytes": 11371,
+        "bytes": 11445,
         "path": "scripts/execute-autogenesis-operation.py",
-        "sha256": "776327d743253431a2bb337c16ed9dfd76e6f046314bde62d2811638647ffb24"
+        "sha256": "43938fade4770c0ba55e704b0f1fc310b7b35e8d2a39048e1219f1c553333227"
       },
       {
         "bytes": 23819,
@@ -1359,9 +1364,9 @@
         "sha256": "4dd8164fc8a1e384cbb9686e1d380444018847ca85ebd5095566db4e3d49d73a"
       },
       {
-        "bytes": 24907,
+        "bytes": 25144,
         "path": "scripts/gen-autogenesis-baseline.py",
-        "sha256": "a3cf4252a435e6ec8783219d79510092e3ab0343775a56593d1b8c8a7bfe2651"
+        "sha256": "26848aba3e40b4011824751e3170f6e4f695a4e00a49695406dab643716e28a9"
       },
       {
         "bytes": 17112,
@@ -1369,9 +1374,9 @@
         "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
       },
       {
-        "bytes": 12092,
+        "bytes": 20116,
         "path": "scripts/prepare-autogenesis-fact-transaction.py",
-        "sha256": "7ce151846caf78c0b2ad2fc5e29083b9ebbd25acf8721fc9b22f8b4f486f9cca"
+        "sha256": "1e632a3fa362c57d69f3d9831295d57461165a68b98a5be0a4ac81297497b683"
       },
       {
         "bytes": 10990,
@@ -1409,9 +1414,9 @@
         "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
       },
       {
-        "bytes": 11479,
+        "bytes": 11745,
         "path": "scripts/validate-autogenesis-operations.py",
-        "sha256": "29606bd3f4988e9c806b35ee92c500e398027e6f64714c0b6f574c55d200b58b"
+        "sha256": "4097689851a2f3ef5161f549404fc943f93a3eb147f1fbc91185551b8f1b41a8"
       },
       {
         "bytes": 2711,

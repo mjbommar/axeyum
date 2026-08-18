@@ -106,6 +106,22 @@ class TheExtractorSelectsTheRightFacts(unittest.TestCase):
         """A mutation control must not force a mathematical fact to stay open."""
         self.assertNotIn(CE.PROBE, [p for _, p in CE.instances()])
 
+    def test_typed_operation_binding_is_covered_without_shell_parsing(self) -> None:
+        item = {
+            "checker_command": "python3 typed-checker.py",
+            "checker_operation": {
+                "input_artifact": "artifacts/facts/smt2/neg-typed-example.smt2"
+            },
+        }
+        self.assertEqual(
+            CE.evidence_instance_paths(item),
+            ["artifacts/facts/smt2/neg-typed-example.smt2"],
+        )
+
+    def test_typed_operation_artifact_must_have_the_canonical_smt_path(self) -> None:
+        item = {"checker_operation": {"input_artifact": "../../escape.smt2"}}
+        self.assertEqual(CE.evidence_instance_paths(item), [])
+
 
 if __name__ == "__main__":
     unittest.main()

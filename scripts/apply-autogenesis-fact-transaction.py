@@ -153,6 +153,19 @@ def authorize_target(
     return fixture_fact_root.resolve() / relative.name
 
 
+def require_recovery_intent(
+    transaction: dict[str, Any], journal_root: pathlib.Path
+) -> pathlib.Path:
+    """Authorize replay-free recovery only after the checked first phase persisted."""
+    verify_content_addressed(transaction, "transaction_sha256", "transaction")
+    intent_path = (
+        journal_root / transaction["transaction_sha256"] / "intent.json"
+    )
+    if not intent_path.is_file():
+        raise ApplyError("recovery requires an existing durable transaction intent")
+    return intent_path
+
+
 def apply_or_recover(
     *,
     transaction: dict[str, Any],
@@ -218,10 +231,17 @@ def apply_or_recover(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--transaction", required=True, type=pathlib.Path)
-    parser.add_argument("--bundle", required=True, type=pathlib.Path)
-    parser.add_argument("--before-fact", required=True, type=pathlib.Path)
+    parser.add_argument("--bundle", type=pathlib.Path)
+    parser.add_argument("--frontier", type=pathlib.Path)
+    parser.add_argument("--execution", type=pathlib.Path)
+    parser.add_argument("--before-fact", type=pathlib.Path)
     parser.add_argument("--journal-dir", required=True, type=pathlib.Path)
     parser.add_argument("--fixture-fact-root", type=pathlib.Path)
+    parser.add_argument(
+        "--recover",
+        action="store_true",
+        help="recover only from an existing durable intent; do not replay pre-state inputs",
+    )
     parser.add_argument(
         "--fault-after", choices=("intent", "fact", "event"), help=argparse.SUPPRESS
     )
@@ -230,17 +250,36 @@ def main() -> int:
     try:
         prepare = load_prepare_module()
         prepare_error = prepare.TransactionError
-        derive_args = argparse.Namespace(fact=args.before_fact, bundle=args.bundle)
-        expected = prepare.derive(derive_args)
         transaction = json.loads(args.transaction.read_text())
-        prepare.verify_transaction(transaction, expected)
         target = authorize_target(transaction, args.fixture_fact_root)
-        if args.fixture_fact_root is None and args.before_fact.resolve() != target.resolve():
-            raise ApplyError("production before-fact must be the authoritative target")
+        journal_root = args.journal_dir.resolve()
+        if args.recover:
+            if any(
+                value is not None
+                for value in (args.bundle, args.frontier, args.execution, args.before_fact)
+            ):
+                raise ApplyError("recovery accepts only transaction, journal, and target mode")
+            require_recovery_intent(transaction, journal_root)
+        else:
+            if args.before_fact is None:
+                raise ApplyError("initial apply requires --before-fact")
+            derive_args = argparse.Namespace(
+                fact=args.before_fact,
+                bundle=args.bundle,
+                frontier=args.frontier,
+                execution=args.execution,
+            )
+            expected = prepare.derive(derive_args)
+            prepare.verify_transaction(transaction, expected)
+            if (
+                args.fixture_fact_root is None
+                and args.before_fact.resolve() != target.resolve()
+            ):
+                raise ApplyError("production before-fact must be the authoritative target")
         event = apply_or_recover(
             transaction=transaction,
             target=target,
-            journal_root=args.journal_dir.resolve(),
+            journal_root=journal_root,
             fault_after=args.fault_after,
         )
         print(

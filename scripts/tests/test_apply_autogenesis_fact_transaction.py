@@ -138,6 +138,26 @@ class FactTransactionApplyTests(unittest.TestCase):
                     journal_root=root / "journal",
                 )
 
+    def test_replay_free_recovery_requires_the_durable_intent(self):
+        before, _after, transaction = self.transaction()
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            journal = root / "journal"
+            with self.assertRaisesRegex(MODULE.ApplyError, "existing durable"):
+                MODULE.require_recovery_intent(transaction, journal)
+
+            target = root / "F-nat-zero-add.json"
+            target.write_text(json.dumps(before))
+            with self.assertRaises(MODULE.InjectedFault):
+                MODULE.apply_or_recover(
+                    transaction=transaction,
+                    target=target,
+                    journal_root=journal,
+                    fault_after="intent",
+                )
+            intent = MODULE.require_recovery_intent(transaction, journal)
+            self.assertTrue(intent.is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -405,6 +405,7 @@ generated-trackers:
     python3 -m unittest scripts.tests.test_validate_autogenesis_operations
     python3 -m unittest scripts.tests.test_fact_frontier
     python3 -m unittest scripts.tests.test_execute_autogenesis_operation
+    python3 -m unittest scripts.tests.test_check_autogenesis_fact_operation
     python3 -m unittest scripts.tests.test_gen_autogenesis_baseline
     python3 -m unittest scripts.tests.test_create_autogenesis_snapshot
     python3 -m unittest scripts.tests.test_create_autogenesis_proposer_catalog

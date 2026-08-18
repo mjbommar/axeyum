@@ -137,5 +137,72 @@ class FactTransactionTests(unittest.TestCase):
             MODULE.verify_transaction(mutated, expected)
 
 
+class AuthoritativeFactTransactionTests(unittest.TestCase):
+    def inputs(self):
+        executor = MODULE.load_module("executor_for_transaction_test", MODULE.EXECUTOR_SCRIPT)
+        frontier_module = executor.load_module("frontier_for_transaction_test", executor.FRONTIER_SCRIPT)
+        facts = frontier_module.load()
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier)
+        observation = {
+            "verdict": "unsat",
+            "evidence_label": "unsat-int-quadratic-negative-discriminant",
+            "certified": True,
+            "recheck": "na",
+            "arena": "ok",
+        }
+        execution = executor.build_receipt(
+            frontier=frontier,
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="a" * 40,
+            observation=observation,
+        )
+        return before, execution, operation, registry, observation
+
+    def test_real_delta_is_derived_entirely_from_registered_execution(self):
+        before, execution, operation, registry, observation = self.inputs()
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution,
+            operation=operation,
+            registry=registry,
+        )
+        after = transaction["authoritative_write"]["after_fact"]
+        self.assertTrue(transaction["precondition"]["source_is_authoritative"])
+        self.assertEqual(after["proof_route"], "smt-term-level")
+        self.assertEqual(after["axiom_footprint"], operation["admission"]["axiom_footprint"])
+        self.assertNotEqual(after["axiom_footprint"], [])
+        row = after["evidence"][0]
+        self.assertEqual(row["kind"], "unsat-certificate")
+        self.assertEqual(
+            row["checker_command"],
+            "python3 scripts/check-autogenesis-fact-operation.py --fact "
+            "artifacts/facts/F-no-integer-square-is-minus-one.json",
+        )
+        checker = MODULE.load_module("fact_checker_for_transaction_test", MODULE.FACT_OPERATION_SCRIPT)
+        checked = checker.check_fact(after, lambda _operation: observation)
+        self.assertEqual(checked["operation_id"], operation["id"])
+
+    def test_execution_identity_and_assurance_mutations_reject(self):
+        before, execution, operation, registry, _observation = self.inputs()
+        for path, value, message in (
+            (("identity", "fact_sha256"), "b" * 64, "does not bind"),
+            (("result", "axiom_footprint"), ["invented"], "assurance"),
+            (("acceptance", "source_bound"), False, "assurance"),
+        ):
+            with self.subTest(path=path):
+                changed = copy.deepcopy(execution)
+                changed[path[0]][path[1]] = value
+                with self.assertRaisesRegex(MODULE.TransactionError, message):
+                    MODULE.build_authoritative_transaction(
+                        before_fact=before,
+                        execution=changed,
+                        operation=operation,
+                        registry=registry,
+                    )
+
+
 if __name__ == "__main__":
     unittest.main()
