@@ -152,6 +152,47 @@ SUITES: dict[str, tuple[str, str, list[tuple[str, str, str]]]] = {
             ),
         ],
     ),
+    "fact-derived-numbers": (
+        "scripts/check-fact-derived-numbers.py",
+        "scripts.tests.test_check_fact_derived_numbers",
+        [
+            (
+                "empty-literal claim vs a non-empty array",
+                'if c.kind == "empty-literal" and total != 0:',
+                "if False:",
+            ),
+            (
+                "no-axiom prose vs a named declaration",
+                'if c.kind == "no-axiom" and decls != 0:',
+                "if False:",
+            ),
+            (
+                "count in `supports` vs the array",
+                'if c.kind == "count" and c.where.endswith(".supports") and c.asserted != decls:',
+                "if False:",
+            ),
+            (
+                "count in `notes` vs the array",
+                'if c.kind == "count" and c.where.endswith(".notes") and c.asserted != decls:',
+                "if False:",
+            ),
+            (
+                "--expect-axioms flag vs the array",
+                'if c.kind == "expect-axioms" and c.asserted != total:',
+                "if False:",
+            ),
+            (
+                "unchecked-claim ceiling",
+                "if len(unchecked) > ceiling:",
+                "if False:",
+            ),
+            (
+                "anchored-slot floor (reader liveness)",
+                "if reading.anchored_slots < floor:",
+                "if False:",
+            ),
+        ],
+    ),
     "lra-hypothesis-binding": (
         "scripts/check-lra-hypothesis-binding.py",
         "scripts.tests.test_check_lra_hypothesis_binding",

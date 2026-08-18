@@ -65,6 +65,11 @@ step fact-depends-tests python3 -m unittest scripts.tests.test_check_fact_depend
 # (`Kernel::theorem_dependencies`) instead of being transcribed -- 18 real edges
 # were missing when this first ran, including two facts proved the same day.
 step fact-depends python3 scripts/check-fact-depends-derived.py --quiet
+step fact-derived-numbers-tests python3 -m unittest scripts.tests.test_check_fact_derived_numbers
+# Same ledger, its PROSE: every number a fact states about its own
+# `axiom_footprint` is re-derived from the array instead of re-read. The fact it
+# was built from said "the 30 axioms" for three days after the array became 26.
+step fact-derived-numbers python3 scripts/check-fact-derived-numbers.py --quiet
 step capability-assurance-tests python3 -m unittest scripts.tests.test_check_capability_assurance
 # The mathematics strand's PRIMARY metric — "does a verdict come with an artifact
 # a third party can check without trusting us?" — existed only as 101 prose

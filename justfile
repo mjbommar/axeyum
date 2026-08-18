@@ -55,6 +55,13 @@ facts:
     # dependency is a failure rather than an indistinguishable silence.
     python3 -m unittest scripts.tests.test_check_fact_depends_derived
     python3 scripts/check-fact-depends-derived.py --quiet
+    # The ledger's PROSE, re-derived rather than re-read: a number a fact states
+    # about its own `axiom_footprint` is compared to the array. It caught the
+    # instance it was built from -- a fact that said "the 30 axioms" for three
+    # days after its footprint was corrected to 26, with the `--expect-axioms`
+    # flag right beside it already correct.
+    python3 -m unittest scripts.tests.test_check_fact_derived_numbers
+    python3 scripts/check-fact-derived-numbers.py --quiet
     # The mathematics strand's primary metric, derived rather than read: how many
     # capabilities carry an artifact an EXTERNAL checker accepts. Agreement with
     # an oracle is not an external check and is tiered separately.

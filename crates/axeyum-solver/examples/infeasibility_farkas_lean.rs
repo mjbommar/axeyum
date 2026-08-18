@@ -41,8 +41,12 @@
 //! routed to `ProofFragment::Lra`.
 //!
 //! It also counts the axioms the resulting module actually rests on, because the
-//! `Real` prelude is 30 asserted ordered-field laws plus one hypothesis axiom
-//! per row — this route is not, and cannot presently be, axiom-free.
+//! `Real` prelude is a block of asserted ordered-field laws plus one variable
+//! axiom per symbol and one hypothesis axiom per row — this route is not, and
+//! cannot presently be, axiom-free. The count is NOT written down here: it was
+//! `30` in this comment for three days after the code produced `26`, which is
+//! the same prose-goes-stale failure `--expect-axioms` exists to stop. Pass
+//! `--dump-axioms` to read it, and `--expect-axioms N` to pin it.
 //!
 //! ```sh
 //! cargo run --release -q -p axeyum-solver --features full --example infeasibility_farkas_lean -- \
