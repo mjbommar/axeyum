@@ -82,6 +82,12 @@ step capability-routes-controls python3 -m unittest scripts.tests.test_check_cap
 step control-tests-reachable python3 scripts/check-control-tests-reachable.py
 step control-tests-reachable-controls python3 -m unittest scripts.tests.test_check_control_tests_reachable
 step adopted-controls scripts/check-adopted-controls.sh
+# The trusted base, derived rather than eyeballed: the forward call-graph closure
+# from every non-test caller of `Environment::insert_unchecked`. 5,129 function
+# lines of 29,929 in axeyum-lean-kernel/src. Pins the admission gates and the SET
+# of files on the path -- which is how `lean_export.rs` turned up inside it.
+step kernel-trusted-core python3 scripts/check-kernel-trusted-core.py
+step kernel-trusted-core-controls python3 -m unittest scripts.tests.test_check_kernel_trusted_core
 step smt-evidence-tests python3 -m unittest scripts.tests.test_check_smt_evidence_certified
 # Every settled SMT-route fact's own evidence command tests only the VERDICT
 # (`... | tail -1` = unsat), which passes on an UNCERTIFIED refutation --

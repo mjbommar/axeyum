@@ -75,6 +75,13 @@ facts:
     # 44 controls that were already written and already correct, but which no
     # gate ran. 257 tests, ~31s. The seven not adopted are listed in the script.
     scripts/check-adopted-controls.sh
+    # How much code must be CORRECT for an admitted theorem to be true? Derived
+    # from the only call that makes a declaration exist -- Environment::insert_unchecked
+    # -- not from a list: 5,129 function-body lines across 9 files, forward
+    # closure from the four admission gates. It found that lean_export.rs, filed
+    # as "interop", owns `is_k_like_inductive` on the iota-reduction path.
+    python3 -m unittest scripts.tests.test_check_kernel_trusted_core
+    python3 scripts/check-kernel-trusted-core.py
     # The CLAIM ledger's structural pass, which `scripts/check.sh` has always run
     # and `just check` did not -- so the fallback gate checked something the
     # preferred one skipped, which is exactly the divergence
