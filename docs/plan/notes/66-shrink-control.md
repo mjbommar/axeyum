@@ -101,16 +101,30 @@ STABLE clippy from a change that is in no commit.
 | `--test farkas_over_the_integers` | **9 passed, 0 failed** |
 | `--test front_door_reaches_no_real_axiom` | **1 passed, 0 failed** |
 | `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` | **101, then 0** — see below |
+| `gen-lean-axiom-ledger.py --check` | **0**, `real=30` unchanged |
+| `check-prelude-reuse-equivalence.sh` | **0**, compared=8 failures=0 |
 
 Also green in the working tree: `-p axeyum-solver --lib --features full`,
 `check-links.sh`, `validate-facts.py` (122 facts, 0 errors),
 `check-fact-derived-numbers.py`, `gen-adr-index.py --check`,
 `gen-plan.py --check`.
 
-**Not run at all:** `gen-lean-axiom-ledger.py --check` and
-`check-prelude-reuse-equivalence.sh`. Recorded as not run rather than assumed:
-this lane changes no kernel code and adds no prelude, but that is an argument,
-not a measurement.
+The two kernel-side gates ran last, once the flock cleared, each captured to a
+file and read by the command's own exit status rather than through a pipe:
+
+```text
+gen-lean-axiom-ledger.py --check            exit 0
+  total=30 complex=0 creal=0 integer=0 logic=0 nat=0 rat=0 real=30 string=0
+  retired=35 axiom_free=7 unclassified=0
+
+check-prelude-reuse-equivalence.sh          exit 0
+  compared=8 failures=0; cache on hits=18 misses=0, cache off hits=0 misses=32
+```
+
+The ledger line is the one that matters for this lane's claim: `real=30` is
+**unchanged**, which is exactly what ADR-0486 says it should be. Nothing here
+moved the published trusted surface, and the telescope work did not disturb the
+two independent inventories the ledger cross-checks.
 
 ## The gate I wrote could not fail, while I was checking work about exactly that
 
