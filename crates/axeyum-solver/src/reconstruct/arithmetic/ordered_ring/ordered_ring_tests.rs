@@ -12,7 +12,7 @@ use super::{
     RING_BINDER_NAMES, RING_LAW_BINDERS, RING_SYMBOL_BINDERS, RingTelescope,
     generalize_over_ordered_ring, ring_telescope,
 };
-use crate::reconstruct::arithmetic::{LraReconstructCtx, reconstruct_lra_proof};
+use crate::reconstruct::arithmetic::{LraReconstructCtx, RingSignature, reconstruct_lra_proof};
 
 /// `x ≤ 0 ∧ 1 ≤ x` — the baby-Farkas order chain, the smallest refutation that
 /// reaches the kernel.
@@ -505,5 +505,113 @@ fn only_indexed_variable_and_hypothesis_names_count_as_query_local() {
             "axeyum.reconstruct.func._0".to_string(),
         ],
         "anything under the namespace that is not an INDEXED x/hyp is minted"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The interface telescope, detached from any refutation (ADR-0475).
+// ---------------------------------------------------------------------------
+
+/// The 30 binder types [`ring_interface_telescope`] computes are **the same
+/// expressions** the generalized statement opens into.
+///
+/// This is what makes the standalone telescope a pin on the shipped statement
+/// rather than a lookalike built beside it: both are interned in the same
+/// kernel, so equality here is `ExprId` identity.
+#[test]
+fn the_standalone_telescope_is_the_generalized_statements_own_prefix() {
+    use axeyum_lean_kernel::ExprNode;
+
+    let (arena, assertions) = baby_farkas();
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions)
+        .expect("baby-Farkas instance reconstructs to False");
+    let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
+        .expect("the refutation generalizes");
+
+    let signature = ctx.arith;
+    let interface = super::ring_interface_telescope(&mut ctx.kernel, &signature)
+        .expect("the interface telescope is computable from the same signature");
+    assert_eq!(interface.len(), RING_BINDER_NAMES.len());
+
+    let mut body = generalized.statement;
+    for (position, binder) in interface.iter().enumerate() {
+        let ExprNode::Pi(_, domain, rest, _) = *ctx.kernel.expr_node(body) else {
+            panic!("the generalized statement runs out of binders at position {position}");
+        };
+        assert_eq!(
+            domain, binder.ty,
+            "binder {position} (`{}`) of the generalized statement is not the interface's",
+            binder.binder
+        );
+        body = rest;
+    }
+}
+
+/// **The result ADR-0475 rests on.** The interface telescope read off the
+/// axiomatized `Real` package and the one read off the **axiom-free** `Int`
+/// development are the same 30 statements, rendered byte for byte.
+///
+/// So the ledger's 30 digest pins do not need the axioms: the same canonical
+/// types are produced by a development whose trusted surface is zero. A
+/// difference here would not be a bug in this test — it would be the honest
+/// report that the two say different things, and that moving the pin is a
+/// silent weakening.
+#[test]
+fn the_interface_is_the_same_statements_over_real_and_over_int() {
+    use axeyum_lean_kernel::{Kernel, build_arith_prelude, build_int_prelude};
+
+    let mut real_kernel = Kernel::new();
+    let arith = build_arith_prelude(&mut real_kernel).expect("the Real package builds");
+    let real = super::ring_interface_telescope(&mut real_kernel, &RingSignature::from(arith))
+        .expect("the Real interface telescope is computable");
+
+    let mut int_kernel = Kernel::new();
+    let int = build_int_prelude(&mut int_kernel).expect("the Int development builds");
+    let integer = super::ring_interface_telescope(&mut int_kernel, &RingSignature::from(int))
+        .expect("the Int interface telescope is computable");
+
+    assert_eq!(real.len(), 30);
+    assert_eq!(integer.len(), 30);
+    let differing: Vec<&str> = real
+        .iter()
+        .zip(integer.iter())
+        .filter(|(r, i)| r.rendered != i.rendered)
+        .map(|(r, _)| r.binder)
+        .collect();
+    assert!(
+        differing.is_empty(),
+        "the axiom-free `Int` interface differs from the axiomatized `Real` one at {} of 30 \
+         binders: {differing:?}",
+        differing.len()
+    );
+    // The control on that zero: the two telescopes really were read from
+    // different environments, so "identical" is not "compared with itself".
+    assert!(real[0].source.starts_with("Real"), "{}", real[0].source);
+    assert!(
+        integer[0].source.starts_with("Int"),
+        "{}",
+        integer[0].source
+    );
+}
+
+/// The presence guard: a signature naming a declaration that is not in the
+/// environment is refused, rather than producing a telescope with a hole in it.
+#[test]
+fn the_interface_telescope_refuses_a_signature_the_environment_does_not_carry() {
+    use axeyum_lean_kernel::{Kernel, build_arith_prelude, build_int_prelude};
+
+    let mut real_kernel = Kernel::new();
+    let arith = build_arith_prelude(&mut real_kernel).expect("the Real package builds");
+    let mut foreign = Kernel::new();
+    let _ = build_int_prelude(&mut foreign).expect("the Int development builds");
+
+    // `RingSignature::from(arith)` names `Real.*`; `foreign` has no such names.
+    let err = super::ring_interface_telescope(&mut foreign, &RingSignature::from(arith))
+        .expect_err("a signature from another environment must be refused");
+    let rendered = format!("{err:?}");
+    assert!(
+        rendered.contains("is not in the environment"),
+        "the refusal must name the missing entry: {rendered}"
     );
 }

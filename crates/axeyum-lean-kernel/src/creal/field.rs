@@ -1,5 +1,5 @@
 //! **Apartness**, and the theorem that says why a total inverse cannot exist
-//! (ADR-0474, phase F1).
+//! (ADR-0481, phase F1).
 //!
 //! ## Why the field structure starts with a *relation*
 //!

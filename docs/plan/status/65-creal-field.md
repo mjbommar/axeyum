@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-**ADR-0474: ℚ is now a FIELD, ℝ has Bishop apartness, and the inverse's
+**ADR-0481: ℚ is now a FIELD, ℝ has Bishop apartness, and the inverse's
 partiality is two theorems rather than a scoping note (`WIP`,
 agent-creal-field, 2026-08-18).** The prerequisite nobody had listed:
 `Rat.inv` existed from the start as a definition with **no law about it**, so

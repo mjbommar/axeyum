@@ -69,7 +69,7 @@
   ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "axeyum-lean-kernel complex module (ADR-0472; agent-complex-foundation lane)",
+    "established_by": "axeyum-lean-kernel complex module (ADR-0479; agent-complex-foundation lane)",
     "source": "the standard argument that a formally real field cannot contain a square root of -1, stated over this kernel's setoid equality"
   },
   "notes": "WHAT THIS DOES NOT SAY. It does not say ℂ carries no order at all -- the lexicographic order on pairs is a perfectly good total order on Complex, and it satisfies le_refl, le_trans and add_le_add. It says no order is compatible with the RING structure, because sq_nonneg and zero_lt_one cannot both hold. Nor does it rule out CReal-valued statements about ℂ: Complex.normSq lands in CReal's existing nonneg cone (Complex.normSq_nonneg), which is available precisely because it is a statement about the components."

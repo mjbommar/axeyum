@@ -423,7 +423,7 @@ pub struct CRealPrelude {
     /// refuses that product by computation, through [`Self::of_rat_mul`].
     pub not_equiv_mul_one_one_zero: NameId,
 
-    // --- apartness, and the obstruction to a total inverse (ADR-0474) --------
+    // --- apartness, and the obstruction to a total inverse (ADR-0481) --------
     /// `CReal.Apart : CReal → CReal → Prop` — `Apart x y := lt x y ∨ lt y x`.
     ///
     /// **Bishop's apartness, verbatim.** [`CReal.lt`](Self::lt) already carries

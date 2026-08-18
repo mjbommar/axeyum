@@ -89,7 +89,7 @@ AXIOM_ROWS_COMMAND = (
 
 # `--include-constructed` is NOT optional here, and the profile is not a taste
 # call.  Without the flag `nat_axiom_inventory` never builds `CReal` (ADR-0468)
-# or `Complex` (ADR-0472), so the two developments this repository most recently
+# or `Complex` (ADR-0479), so the two developments this repository most recently
 # staked a trust claim on emit no coverage line and no rows -- an empty answer to
 # a question the tool was never asked, which reads identically to "measured, and
 # axiom-free".  `EXPECTED_PRELUDES` is what makes dropping the flag a gate

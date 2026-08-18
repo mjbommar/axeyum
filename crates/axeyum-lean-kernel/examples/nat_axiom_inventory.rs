@@ -64,7 +64,7 @@
 //!
 //! The `real=30` row is `build_arith_prelude` — the `Real` sort and its 22
 //! ordered-ring laws, *assumed*. The **constructed** ℝ (`CReal`, ADR-0468) and
-//! ℂ (`Complex`, ADR-0472) are different developments over different carriers,
+//! ℂ (`Complex`, ADR-0479) are different developments over different carriers,
 //! and until 2026-08-18 this example did not build either, so grepping its
 //! output for them returned an empty result that was indistinguishable from a
 //! strong negative one — the standing trap this file exists to rule out, one
@@ -225,7 +225,7 @@ fn parse_args() -> Result<Expectations, String> {
     })
 }
 
-/// The **constructed** ℝ and ℂ (ADR-0468, ADR-0472), or nothing.
+/// The **constructed** ℝ and ℂ (ADR-0468, ADR-0479), or nothing.
 ///
 /// Separated from `main` because building both costs about two minutes of debug
 /// kernel type-checking (ten seconds on `--release`), and the reader should see

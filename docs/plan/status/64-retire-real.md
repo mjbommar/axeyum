@@ -4,7 +4,7 @@
 
 **No shipped route BUILDS the `Real` axiom package, and a counter says so
 (`WIP`, agent-retire-real, 2026-08-18).** The ledger's 30 does not move;
-ADR-0473 says why rather than working around it. What that number stood for is
+ADR-0480 says why rather than working around it. What that number stood for is
 now measured and gated.
 
 **The hole found.** `a6ee37c6a` moved the front door to `CReal` and the claim
@@ -33,11 +33,11 @@ mutated output first.
 **Why 30 stays.** They are the digest-pinned kernel statement of the interface
 three constructed carriers are checked against, and the NEGATIVE CONTROL for
 every axiom-freedom measurement here — delete them and no such claim can fail.
-ADR-0473 names the bounded route to declared = 0: move the specification onto
+ADR-0480 names the bounded route to declared = 0: move the specification onto
 the axiom-free 30-binder telescope the abstraction already produces, then shrink
 the control from 30 axioms to one.
 [Notes](../notes/64-retire-real.md).
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-18 | 61c466b53 | **The shipped front door reaches no `Real` axiom, measured at `build_arith_prelude` itself.** `RingSignature: From<IntPrelude>` + `try_new_over_integers`; `reconstruct_int_farkas_to_lean_module` off the `Real` package. `arith_prelude_builds()` = 0 across all four arithmetic arms, 1 for the control. Mutation-checked twice, exactly one test dead each — and all 9 tests of the suite named for that route pass under both mutations. Fact + ADR-0473 (declared vs reached). Also unbroke `clippy` on STABLE, red on `main` since `94d51fbc6`. |
+| 2026-08-18 | 61c466b53 | **The shipped front door reaches no `Real` axiom, measured at `build_arith_prelude` itself.** `RingSignature: From<IntPrelude>` + `try_new_over_integers`; `reconstruct_int_farkas_to_lean_module` off the `Real` package. `arith_prelude_builds()` = 0 across all four arithmetic arms, 1 for the control. Mutation-checked twice, exactly one test dead each — and all 9 tests of the suite named for that route pass under both mutations. Fact + ADR-0480 (declared vs reached). Also unbroke `clippy` on STABLE, red on `main` since `94d51fbc6`. |

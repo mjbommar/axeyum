@@ -69,7 +69,7 @@
   ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "axeyum-lean-kernel creal::field (ADR-0474; agent-creal-field lane)",
+    "established_by": "axeyum-lean-kernel creal::field (ADR-0481; agent-creal-field lane)",
     "source": "Bishop-style constructive analysis: the inverse is defined on the reals APART from zero, and the apartness must carry the separating modulus"
   },
   "notes": "WHAT THIS DOES NOT SAY. It does not say CReal.inv exists -- it is not built, and this fact is precisely about the shape its signature must have. It does not say the reals apart from zero are exactly the reals not equal to zero: CReal.not_equiv_of_apart is ONE-WAY, and the converse is Markov's principle, which is neither proved nor assumed here. It does not say a Prop hypothesis blocks a Type-valued definition -- that reading is wrong, and the distinction is the point: a function may take a Prop and return a Type, it may not BRANCH on one, which is why the one-sided PosBound works where the disjunctive Apart does not."

@@ -941,6 +941,83 @@ fn ring_telescope(arith: &RingSignature) -> [NameId; 30] {
     arith.declarations()
 }
 
+/// One binder of the **ordered-ring interface telescope**: a single `∀`-binder
+/// of the statement [`generalize_over_ordered_ring`] produces, detached from any
+/// particular refutation.
+///
+/// The 30 binder types are a function of the signature's 30 declaration *types*
+/// alone — [`ring_interface_telescope`] computes them by the same
+/// [`abstract_consts`] step the generalization uses, so this is the interface as
+/// the generalized theorem actually states it, not a restatement of it.
+#[derive(Debug, Clone)]
+pub struct RingInterfaceBinder {
+    /// The binder's name in the generalized statement (`R`, `add`, …,
+    /// `sq_nonneg`) — [`RING_BINDER_NAMES`] in declaration order.
+    pub binder: &'static str,
+    /// The declaration in the source environment this binder abstracts,
+    /// rendered (`Real.add_comm`, `Int.add_comm`, …).
+    pub source: String,
+    /// The abstracted binder type: the declaration's type with every *earlier*
+    /// telescope entry replaced by its bound variable.
+    pub ty: ExprId,
+    /// [`Kernel::render_lean`] of [`Self::ty`] — the canonical text the ledger
+    /// digests.
+    pub rendered: String,
+}
+
+/// The ordered-ring interface as a 30-binder telescope over `signature`, with
+/// each binder's type computed from the environment.
+///
+/// This is the [`RingTelescope::FullInterface`] prefix of what
+/// [`generalize_over_ordered_ring`] builds, available without a refutation to
+/// generalize. It exists so the interface can be *pinned* — the same 30
+/// statements the `Real` package declares as axioms, stated as binders and
+/// therefore assuming nothing (ADR-0480's route to `declared = 0`).
+///
+/// The rendered types are independent of which environment they were read from
+/// whenever two signatures state the same laws over the same connectives:
+/// abstraction replaces `Real`/`Int` and their operations by the *same* bound
+/// variables, so `Real.add_comm` and `Int.add_comm` abstract to the same
+/// expression. That is a measurement, not a promise — see
+/// `examples/ring_interface_pin.rs`, which is the thing that would fail if it
+/// stopped holding.
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if one of the 30 declarations is not in
+/// `kernel`'s environment. Call [`RingSignature::validate_in`] first if you also
+/// want the shapes checked.
+pub fn ring_interface_telescope(
+    kernel: &mut Kernel,
+    signature: &RingSignature,
+) -> Result<Vec<RingInterfaceBinder>, ReconstructError> {
+    let telescope = ring_telescope(signature);
+    let mut out = Vec::with_capacity(telescope.len());
+    for (position, &name) in telescope.iter().enumerate() {
+        let declared = kernel
+            .environment()
+            .get(name)
+            .map(Declaration::ty)
+            .ok_or_else(|| ReconstructError::KernelRejected {
+                rule: "ring_interface_telescope".to_owned(),
+                detail: format!(
+                    "interface entry `{}` is not in the environment",
+                    kernel.display_name(name)
+                ),
+            })?;
+        let source = kernel.display_name(name).to_string();
+        let ty = abstract_consts(kernel, declared, &telescope[..position]);
+        let rendered = kernel.render_lean(ty);
+        out.push(RingInterfaceBinder {
+            binder: RING_BINDER_NAMES[position],
+            source,
+            ty,
+            rendered,
+        });
+    }
+    Ok(out)
+}
+
 /// `Kernel::axiom_footprint`, rendered and sorted (the kernel already sorts by
 /// rendered name).
 fn footprint(kernel: &Kernel, name: NameId) -> Vec<String> {
