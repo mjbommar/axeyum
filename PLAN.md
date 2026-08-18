@@ -172,6 +172,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | (pending) | `LraReconstructCtx`'s carrier is a parameter: `RingSignature` + `RingEquality` replace the by-value `ArithPrelude`, `with_ring_signature`/`try_new` replace the panicking constructor, and five mutation-verified guards check a signature against the kernel. `CReal` passes them today with `CReal.Equiv` in the equality slot. Baseline output byte-identical. |
 | 2026-08-18 | (pending) | **ADR-0468 phase R4 reaches reconstruction: `LraReconstructCtx::adopt_setoid_equality` fills the ring interface's equality slot from `CRealPrelude`'s own theorems, and a Farkas/SOS refutation over the CONSTRUCTED reals rests on zero carrier axioms.** Measured on all five `ordered_ring_refutation` fixtures: 30 carrier axioms over `Real` against **0** over `CReal`, and the slot costs **0** declarations against 18 for the `Real` route — both read out of `Environment::len` and `Kernel::axiom_footprint`, with the `Real` column as the in-output control. Four adoption guards plus the ctx's one-slot rule, each killed by exactly one test under mutation. The nine slot-member types come from one builder shared with `declare_setoid_equality`, so an interface change cannot move only one of them. `--require-empty` output is byte-identical to before. |
 | 2026-08-18 | (pending) | **`PreludeKey::CReal`, and the shipped LRA/SOS front door moves onto the constructed reals.** `build_creal_prelude` 43.97 s -> **0.149 s** per call (debug; release 4.69 s -> 0.067 s) via the ADR-0464 template. `prove_unsat_to_lean_module` now reconstructs over `CReal` with an adopted equality slot: carrier axioms 12/17/8 -> **0/0/0** on three front-door fixtures, `Real` control non-empty, module axiom lines equal the kernel footprint. Also fixes a module-renderer ordering defect the constructed carrier exposed, which rejected 5 of 77 `lean_crosscheck` families; 77 of 77 now check under lean 4.30.0. Cost: modules 2.4-41 kB -> ~2.6 MB. Every new guard mutation-checked, exactly one test dead each. `nat_axiom_inventory --include-constructed` is now under the prelude-reuse differential gate. |
+| 2026-08-18 | 61c466b53 | **The shipped front door reaches no `Real` axiom, measured at `build_arith_prelude` itself.** `RingSignature: From<IntPrelude>` + `try_new_over_integers`; `reconstruct_int_farkas_to_lean_module` off the `Real` package. `arith_prelude_builds()` = 0 across all four arithmetic arms, 1 for the control. Mutation-checked twice, exactly one test dead each — and all 9 tests of the suite named for that route pass under both mutations. Fact + ADR-0473 (declared vs reached). Also unbroke `clippy` on STABLE, red on `main` since `94d51fbc6`. |
 | 2026-08-18 | `c9223e4` | binding: the converse number says which side of the check the missing 245 rows are on — `undecomposable_spine=0` measured and gated, `represented` is a maximum matching rather than an overlap. |
 | 2026-08-18 | `b9d2f0a` | binding: the 4 `FiniteArrayExtensionality` rows were never content-free — the emitter collapsed each `(select a i)`; `attested` 9 → 5, `structural` 98 → 102 with 360 new matched term nodes. |
 | 2026-08-18 | `a25b18a` | binding: 66 rows were recording the weaker of two true statements — four verdicts become a partition with two-sided pins; `anchored` 10 → 73, `structural_anchored=66` new. |
@@ -704,6 +705,42 @@ the per-query module kilobytes. Out of scope here: it changes the
 single-file contract that `lean_crosscheck` (77 families), `lean_module_fixtures`
 and two more suites all assume, and needs an `.olean` build plus `LEAN_PATH`.
 ADR-sized. Details: `docs/plan/notes/64-module-size.md`.
+
+**No shipped route BUILDS the `Real` axiom package, and a counter says so
+(`WIP`, agent-retire-real, 2026-08-18).** The ledger's 30 does not move;
+ADR-0473 says why rather than working around it. What that number stood for is
+now measured and gated.
+
+**The hole found.** `a6ee37c6a` moved the front door to `CReal` and the claim
+went out as axiom-free. `ProofFragment::IntFarkas` — also shipped — still built
+`LraReconstructCtx::new()`, refuted over the 30, abstracted them back out and
+instantiated at ℤ. Its module named no `Real` axiom and its footprint was empty,
+so every footprint-shaped check passed while the route built the whole trusted
+surface **twice** per query (the scan trial-builds to classify).
+`front_door_carrier --require-axiom-free`, the gate for exactly this claim, has
+three fixtures, all real-typed: it never reached that arm.
+
+**Fixed by an instance already there.** `IntPrelude` carries all 30 signature
+fields with every law proved, so `RingSignature: From<IntPrelude>` is the
+interface at ℤ with the kernel's own `Eq` — the corner `Real` (30 axioms) and
+`CReal` (defined equality) cannot occupy. All 30 integer declarations are
+footprint-empty against 30 non-empty for `Real` in the same test; the four
+integer tests take **1.0 s** to the `CReal` tests' **98 s**. IntFarkas refutes
+directly there; Lean still accepts the module (172,934 bytes).
+
+**Measured, not argued.** `arith_prelude_builds()` counts calls to
+`build_arith_prelude`. Through `prove_unsat_to_lean_module`: **0** on `Lra`,
+`Sos`, `DisjunctiveLra`, `IntFarkas`; **1** for the control in the same process.
+`F:shipped-front-door-reaches-no-real-axiom`, 7 rows, each proven to fail on
+mutated output first.
+
+**Why 30 stays.** They are the digest-pinned kernel statement of the interface
+three constructed carriers are checked against, and the NEGATIVE CONTROL for
+every axiom-freedom measurement here — delete them and no such claim can fail.
+ADR-0473 names the bounded route to declared = 0: move the specification onto
+the axiom-free 30-binder telescope the abstraction already produces, then shrink
+the control from 30 axioms to one.
+[Notes](docs/plan/notes/64-retire-real.md).
 
 **66 instances were recording the weaker of two true statements, 4 more were
 recording nothing at all, and the converse number could not be read** (`WIP`,
