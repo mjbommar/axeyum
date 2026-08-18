@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions local-ci-freshness
 
 # THE AXIOM-FREEDOM MEASUREMENTS, which nothing ran until 2026-08-18.
 #
@@ -206,8 +206,26 @@ gate-controls:
     # guard was unreachable when written) and the fact scaffolder (a
     # `checker_command` must be proved able to FAIL before the fact exists).
     scripts/tests/test-local-ci-record.sh
+    # Controls for `local-ci-freshness` below: a stale / non-ancestor / FAIL /
+    # vacuous-step / unreadable-step / self-inconsistent record must each red
+    # it by name, and a fresh all-pass ancestor record must go green. Every
+    # guard was mutation-tested individually (delete one, exactly one control
+    # dies) -- see the header of scripts/check-local-ci-freshness.sh.
+    scripts/tests/test-check-local-ci-freshness.sh
     scripts/tests/test-new-fact-controls.sh
     scripts/tests/test-lane-commit.sh
+
+# Is there a FRESH, PASSING, fully-measured `local-ci --record` for (an
+# ancestor of) HEAD? A green record proves nothing on its own -- see
+# scripts/check-local-ci-freshness.sh's header for what "fresh" means here and
+# why. REPORT-ONLY (always exits 0): the one record that exists as of this
+# commit is `verdict: FAIL` (a6ee37c6a-s4.json, 4 nextest failures), so
+# enforcing today would red this gate for every lane over an unrelated
+# ~107-minute lock-serialized run nobody has re-triggered. Delete
+# `--report-only` here (and in scripts/check.sh) once a fresh all-pass record
+# lands -- this step already prints that flip the moment it happens.
+local-ci-freshness:
+    scripts/check-local-ci-freshness.sh --report-only
 
 # `frontier_*` is skipped here and run by `frontier` instead. Those ratchets
 # measure "the largest N decided within a fixed WALL-CLOCK budget", so running

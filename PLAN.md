@@ -165,6 +165,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `e069afa03` | `local-ci`: the zero-test guard could not fire on the workspace sweep — nextest's summary is indented and the pattern was `^`-anchored. Fixtures now captured from the tool; a test step whose count is unparseable is `unreadable` (89), not `pass`. |
 | 2026-08-18 | `69c12646c` | `artifacts/local-ci-runs/a6ee37c6a-s4.json` — first completed run of `scripts/local-ci.sh` in this repository's history. FAIL, 6401 s, 4 of 7511. |
 | 2026-08-18 | `a2841965e` | `local-ci` gates the COMMIT, not the working tree: stable flock'd detached worktree, `--no-worktree` opt-out, controls mutation-tested. |
+| 2026-08-18 | (pending) | `scripts/check-local-ci-freshness.sh` + `scripts/tests/test-check-local-ci-freshness.sh`: the local-ci record freshness gate, wired `--report-only` into `check.sh` and `justfile`. |
 | 2026-08-18 | `2abe2652d` | Authored the nine-phase Autogenesis programme and bounded Autogenesis-1 plan. |
 | 2026-08-18 | `00f998ccb` | ℤ categoricity: the existence half of the universal property (`iter` + three preservation equations, making `Int` the initial ℤ-structure) and `categorical` — every generated aperiodic ℤ-structure is in structure-preserving bijection with `Int`, universe-polymorphic. `iso` is the constructed two-sided-inverse form, honest about hypothesising the back-map. 32 theorems, all footprints empty; 22 injected weakenings each refused at their own declaration, now bracketed by `reached_declaration` on the near side too. |
 | 2026-08-18 | `a2a36590b` | `F:int-categoricity` recorded, and `F:int-characterization`'s "not proved that they determine it" caveat removed because it stopped being true. Every checker anchored on the declaration name AND the empty-footprint column, each run with its subject mangled: 0 on the finding, 1 on the mangle. |
@@ -361,6 +362,46 @@ Next: a timer on s5/s7 — which **measured today cannot run it** (no stable, no
 1.88.0, no nextest; 342 and 422 commits behind) — read by a freshness step in
 `just check`, not a dashboard.
 Detail in [`../notes/102-local-ci-run.md`](docs/plan/notes/102-local-ci-run.md).
+
+**`scripts/check-local-ci-freshness.sh` exists and is wired in REPORT-ONLY
+mode** (`WIP`, local-ci-freshness, 2026-08-18). Continues 102-local-ci-run's
+proposed-not-landed piece: a record for `scripts/local-ci.sh --record` proves
+nothing by itself — it can be green for a sha nobody has built on in days, a
+rebased-away branch, or a step array that disagrees with its own top-level
+`verdict`. This checker re-derives pass/fail from the record's own `steps[]`
+(never trusts the summary field) and requires the sha be HEAD-or-an-ancestor
+and no older than 48h (chosen over a commit-count budget: velocity measured
+7–10 commits/h in bursts across lanes, so a fixed commit ceiling is either too
+strict in a burst or too loose on a quiet weekend; the run's own cost —
+~107 min, one lock across the whole fleet — sets the 48h floor).
+
+**Wiring is `--report-only` in both `scripts/check.sh` and `justfile`'s
+`check`, deliberately not enforcing yet**: the only record that exists
+(`a6ee37c6a-s4.json`) is `verdict: FAIL` (4 nextest failures, per
+102-local-ci-run), so enforcing today reds the aggregate gate for every lane
+over an unrelated 107-minute run nobody has re-triggered — "a gate that is red
+from the day it lands is a gate people learn to ignore." Report mode runs the
+identical guards every check and prints the verdict; the moment a fresh
+all-pass record lands, delete `--report-only` from both call sites (one line
+each) to make it enforcing. Confirmed on the real repo: it currently reports
+FAIL, naming the nextest step, exactly matching 102's record.
+
+9 guards (no-record / non-ancestor-in-loop / no-applicable-record / stale /
+fail-step / vacuous-step / unreadable-step / top-verdict-mismatch /
+report-only-override), each mutation-tested by hand-deleting it and
+confirming exactly one control in
+`scripts/tests/test-check-local-ci-freshness.sh` dies — no shared-check
+pattern. First draft of the fail/vacuous/unreadable fixtures used a
+top-level-FAIL record, which let the top-verdict guard mask a deleted
+per-step guard (0 controls died); fixed by using top-level PASS + a bad step,
+which is also the actually dangerous direction (a record lying that it
+passed).
+
+Left undone: flipping to enforcing (blocked on a fresh PASS record, not on
+this checker); no automated mutation-testing harness (done by hand this
+session, documented in notes).
+
+Detail: [`../notes/104-local-ci-freshness.md`](docs/plan/notes/104-local-ci-freshness.md).
 
 **Programme specified; implementation not authorized** (`WIP`,
 autogenesis-program, 2026-08-18). If selected, execute only Phase 0 in the

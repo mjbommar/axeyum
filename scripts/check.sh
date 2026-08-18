@@ -134,6 +134,19 @@ step gate-controls ./scripts/tests/test-gate-scope-controls.sh
 # when written) and the fact scaffolder (a `checker_command` must be proved to
 # fail before the fact exists). Seconds each, no workspace build.
 step local-ci-record-controls ./scripts/tests/test-local-ci-record.sh
+# Is the record itself still evidence of anything? A record can exist, be
+# green, and describe a sha nobody has built on top of in days, or a branch
+# that got rebased away, or a step array that disagrees with its own
+# top-level verdict. `--report-only`: the only record that exists as of this
+# commit (a6ee37c6a-s4.json) has `verdict: FAIL` (4 nextest failures), so
+# running this ENFORCING would red the aggregate gate for every lane over a
+# ~107-minute, lock-serialized run nobody has re-triggered yet -- exactly "a
+# gate that is red from the day it lands is a gate people learn to ignore."
+# Report mode runs the identical guards every time and prints the verdict, so
+# the flip from FAIL to PASS is visible the moment a fresh record lands; at
+# that point delete `--report-only` here and in the justfile's `check` recipe.
+step local-ci-freshness ./scripts/check-local-ci-freshness.sh --report-only
+step local-ci-freshness-controls ./scripts/tests/test-check-local-ci-freshness.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
 # The axiom-freedom measurements. `real: axiom=30` is the whole remaining
