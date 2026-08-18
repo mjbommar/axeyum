@@ -5,7 +5,7 @@ use crate::{Declaration, Kernel};
 
 /// A built `CReal` kernel, as a **clone of one template**.
 ///
-/// The full development is now 58 declarations over the constructed ℚ and takes
+/// The full development is now 65 declarations over the constructed ℚ and takes
 /// tens of seconds to type-check; seventeen tests each building it from scratch
 /// dominated this crate's test time. The argument for cloning is
 /// [`prelude_cache`](crate::prelude_cache)'s, verbatim: prelude construction is
@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 58] = [
+    let expected: [(&str, crate::NameId, &str); 65] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -140,6 +140,13 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.mul_le_mul_of_nonneg_left,
             "theorem",
         ),
+        ("CReal.Apart", p.apart, "def"),
+        ("CReal.apart_symm", p.apart_symm, "theorem"),
+        ("CReal.apart_irrefl", p.apart_irrefl, "theorem"),
+        ("CReal.apart_congr", p.apart_congr, "theorem"),
+        ("CReal.not_equiv_of_apart", p.not_equiv_of_apart, "theorem"),
+        ("CReal.apart_zero_one", p.apart_zero_one, "theorem"),
+        ("CReal.no_total_inverse", p.no_total_inverse, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -888,5 +895,161 @@ fn the_creal_law_list_matches_the_rat_law_list_position_by_position() {
         real_tails, rational_tails,
         "CReal's ordered-ring law list must be the SAME 22 laws in the SAME \
          order as Rat's, or the two are not the same interface"
+    );
+}
+
+/// The apartness laws say what Bishop says they say, rendered verbatim.
+///
+/// The statements are the point here, not the footprints: `Apart` defined as
+/// `Not ∘ Equiv` would satisfy symmetry, irreflexivity and the congruence with
+/// an empty footprint apiece, and it is exactly the relation the inverse cannot
+/// be defined over. So the *definition* is asserted too, through
+/// `CReal.apart_zero_one` — which is `zero_lt_one` under `Or.inl` and could not
+/// be proved for a relation that separates nothing.
+#[test]
+fn the_apartness_laws_have_the_statements_bishop_specifies() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.apart_symm),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.Apart x0 x1) -> CReal.Apart x1 x0)))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.apart_irrefl),
+        "((x0 : CReal) -> Not (CReal.Apart x0 x0))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.apart_congr),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
+         ((x4 : CReal.Equiv x0 x1) -> ((x5 : CReal.Equiv x2 x3) -> \
+         ((x6 : CReal.Apart x0 x2) -> CReal.Apart x1 x3)))))))"
+    );
+    // ONE-WAY. The converse is Markov's principle; nothing here proves it and
+    // nothing here assumes it.
+    assert_eq!(
+        rendered(&mut kernel, p.not_equiv_of_apart),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.Apart x0 x1) -> \
+         Not (CReal.Equiv x0 x1))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.apart_zero_one),
+        "CReal.Apart CReal.zero CReal.one"
+    );
+}
+
+/// **The missing structure is a theorem.** `CReal.no_total_inverse` refutes
+/// every total multiplicative inverse at once, so "the inverse is partial"
+/// is a proved obstruction rather than a scoping note — the standard
+/// `Complex.no_compatible_order` set.
+#[test]
+fn no_function_on_all_of_creal_is_a_multiplicative_inverse() {
+    let (mut kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.no_total_inverse)
+        .expect("CReal.no_total_inverse must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    let rendered = kernel
+        .render_lean(ty)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert_eq!(
+        rendered,
+        "((x0 : ((x0 : CReal) -> CReal)) -> \
+         Not (((x1 : CReal) -> CReal.Equiv (CReal.mul x1 (x0 x1)) CReal.one)))"
+    );
+    let footprint: Vec<String> = kernel
+        .axiom_footprint(p.no_total_inverse)
+        .into_iter()
+        .map(|name| kernel.display_name(name).to_string())
+        .collect();
+    assert!(
+        footprint.is_empty(),
+        "the refutation of a total inverse rests on {footprint:?}"
+    );
+}
+
+/// The negative control for [`no_function_on_all_of_creal_is_a_multiplicative_inverse`]:
+/// the **identical script**, with `CReal.one` replaced by `CReal.zero` in the
+/// statement, is REFUSED.
+///
+/// `∀ f, ¬ ∀ x, x · f x ≈ 0` is false — `f := fun _ => zero` satisfies the
+/// inner law by `mul_zero` — so a script that proved it would prove anything.
+/// The refusal is what says `no_total_inverse` closes on the *content* of
+/// `Equiv.not_zero_one` and not on a shape that would go through for any
+/// right-hand side.
+#[test]
+fn the_no_total_inverse_route_cannot_refute_a_universally_zero_product() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+    let function_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    // The one changed token: the target of the inner law is `zero`, not `one`.
+    let target = d.kernel().const_(p.zero, vec![]);
+    let law = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let applied = d.apply(f, &[x]);
+        let product = d.const_app(p.mul, &[x, applied]);
+        let claim = d.const_app(p.equiv, &[product, target]);
+        d.pi_fv(x_fv, carrier, claim)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let zero = d.kernel().const_(p.zero, vec![]);
+    let reciprocal = d.apply(f, &[zero]);
+    let product = d.const_app(p.mul, &[zero, reciprocal]);
+    let flipped = d.const_app(p.mul, &[reciprocal, zero]);
+    let commuted = d.lemma(p.mul_comm, &[zero, reciprocal]);
+    let vanishes = d.lemma(p.mul_zero, &[reciprocal]);
+    let collapses = d.lemma(p.equiv_trans, &[product, flipped, zero, commuted, vanishes]);
+    let restored = d.lemma(p.equiv_symm, &[product, zero, collapses]);
+    let at_zero = d.apply(h, &[zero]);
+    let degenerate = d.lemma(p.equiv_trans, &[zero, product, target, restored, at_zero]);
+    let refuted = d.lemma(p.not_zero_one, &[]);
+    let contradiction = d.apply(refuted, &[degenerate]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, law, contradiction);
+        d.lam_fv(f_fv, function_ty, with_h)
+    };
+    let ty = {
+        let negated = d.not(law);
+        d.pi_fv(f_fv, function_ty, negated)
+    };
+    let name = d.kernel().name_str(anon, "Check.no_total_annihilator");
+    let refused = d.kernel().add_declaration(crate::Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        refused.is_err(),
+        "the kernel accepted a refutation of `∀ x, x · f x ≈ 0`, which is FALSE \
+         (take f := fun _ => zero). The no_total_inverse script would then close \
+         for any right-hand side, and its content would be nil."
     );
 }

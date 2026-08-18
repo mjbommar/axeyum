@@ -422,6 +422,42 @@ pub struct CRealPrelude {
     /// and `sq_nonneg` all hold, footprint-free, of `fun _ _ => zero`; this
     /// refuses that product by computation, through [`Self::of_rat_mul`].
     pub not_equiv_mul_one_one_zero: NameId,
+
+    // --- apartness, and the obstruction to a total inverse (ADR-0473) --------
+    /// `CReal.Apart : CReal → CReal → Prop` — `Apart x y := lt x y ∨ lt y x`.
+    ///
+    /// **Bishop's apartness, verbatim.** [`CReal.lt`](Self::lt) already carries
+    /// the separation as a rational gap, so the disjunction is the whole
+    /// definition and every law below is a rearrangement of the strict order.
+    ///
+    /// `Apart x y` is *strictly stronger* than `Not (Equiv x y)`
+    /// ([`Self::not_equiv_of_apart`] is the one direction that holds), and it
+    /// is the domain the multiplicative inverse has to be stated over. The
+    /// converse is Markov's principle and is neither proved nor assumed here.
+    pub apart: NameId,
+    /// `CReal.apart_symm : ∀ x y, Apart x y → Apart y x`.
+    pub apart_symm: NameId,
+    /// `CReal.apart_irrefl : ∀ x, Not (Apart x x)`.
+    pub apart_irrefl: NameId,
+    /// `CReal.apart_congr : ∀ a b c e, Equiv a b → Equiv c e → Apart a c →
+    /// Apart b e` — the setoid congruence for apartness.
+    pub apart_congr: NameId,
+    /// `CReal.not_equiv_of_apart : ∀ x y, Apart x y → Not (Equiv x y)`.
+    ///
+    /// One-way on purpose: the converse is Markov's principle.
+    pub not_equiv_of_apart: NameId,
+    /// `CReal.apart_zero_one : Apart CReal.zero CReal.one` — the **non-vacuity**
+    /// witness. The three laws above all hold, footprint-free, of the relation
+    /// that separates nothing.
+    pub apart_zero_one: NameId,
+    /// `CReal.no_total_inverse : ∀ (f : CReal → CReal),
+    /// Not (∀ x, Equiv (mul x (f x)) one)`.
+    ///
+    /// **The missing structure, as a theorem.** No function on all of `CReal`
+    /// is a multiplicative inverse — evaluate at `zero` — so "the inverse is
+    /// partial" is a proved obstruction here rather than a scoping note. The
+    /// field analogue of `Complex.no_compatible_order`.
+    pub no_total_inverse: NameId,
 }
 
 impl CRealPrelude {
@@ -534,6 +570,13 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_nonneg: kernel.name_str(creal, "mul_nonneg"),
         sq_nonneg: kernel.name_str(creal, "sq_nonneg"),
         not_equiv_mul_one_one_zero: kernel.name_str(creal, "not_equiv_mul_one_one_zero"),
+        apart: kernel.name_str(creal, "Apart"),
+        apart_symm: kernel.name_str(creal, "apart_symm"),
+        apart_irrefl: kernel.name_str(creal, "apart_irrefl"),
+        apart_congr: kernel.name_str(creal, "apart_congr"),
+        not_equiv_of_apart: kernel.name_str(creal, "not_equiv_of_apart"),
+        apart_zero_one: kernel.name_str(creal, "apart_zero_one"),
+        no_total_inverse: kernel.name_str(creal, "no_total_inverse"),
     }
 }
 
@@ -597,7 +640,8 @@ pub(crate) fn build_creal_prelude_uncached(
         declare_additive_laws(&mut d, prelude)?;
         declare_order(&mut d, prelude)?;
         declare_strict_order(&mut d, prelude)?;
-        product::declare_product(&mut d, prelude)
+        product::declare_product(&mut d, prelude)?;
+        field::declare_field(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -1510,6 +1554,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     })
 }
 
+mod field;
 mod product;
 
 #[cfg(test)]

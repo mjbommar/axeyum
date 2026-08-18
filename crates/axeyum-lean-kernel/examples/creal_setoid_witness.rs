@@ -49,6 +49,13 @@
 //!    dropped or duplicated law flips the exit status rather than shrinking a
 //!    sentence in a document.
 //!
+//! 9. `CReal.apart_zero_one` **and** `CReal.no_total_inverse` are both
+//!    present. The first exhibits a pair `CReal.Apart` separates —
+//!    `apart_symm`, `apart_irrefl` and `apart_congr` all hold, footprint-free,
+//!    of the relation that separates nothing — and the second refutes every
+//!    total multiplicative inverse, so "the inverse is partial" is a proved
+//!    obstruction rather than a scoping note (ADR-0473).
+//!
 //! # How far the ordered-field structure gets (ADR-0468 phase R2, partial)
 //!
 //! `zero`, `one`, `neg` and `add` are built, with `neg` and `add` each carrying
@@ -253,6 +260,13 @@ fn main() {
             "CReal.mul_le_mul_of_nonneg_left",
             p.mul_le_mul_of_nonneg_left,
         ),
+        ("CReal.Apart", p.apart),
+        ("CReal.apart_symm", p.apart_symm),
+        ("CReal.apart_irrefl", p.apart_irrefl),
+        ("CReal.apart_congr", p.apart_congr),
+        ("CReal.not_equiv_of_apart", p.not_equiv_of_apart),
+        ("CReal.apart_zero_one", p.apart_zero_one),
+        ("CReal.no_total_inverse", p.no_total_inverse),
     ];
 
     // (8): the headline count itself, read out of the kernel. Every one of the
@@ -348,6 +362,18 @@ fn main() {
         kernel.environment().get(p.not_equiv_mul_one_one_zero),
         Some(Declaration::Theorem { .. })
     );
+    // (9): `Apart` separates a pair, and no total inverse exists. `apart_symm`,
+    // `apart_irrefl` and `apart_congr` all hold — footprint-free — of the
+    // relation that separates NOTHING, which is also the relation over which
+    // an inverse would be vacuously definable.
+    let apart_inhabited = matches!(
+        kernel.environment().get(p.apart_zero_one),
+        Some(Declaration::Theorem { .. })
+    );
+    let inverse_refuted = matches!(
+        kernel.environment().get(p.no_total_inverse),
+        Some(Declaration::Theorem { .. })
+    );
     if !inhabited {
         eprintln!(
             "FAIL: CReal.ofRat is not a checked definition, so CReal.Regular has no \
@@ -396,6 +422,24 @@ fn main() {
         );
         failed = true;
     }
+    if !apart_inhabited {
+        eprintln!(
+            "FAIL: CReal.apart_zero_one is not a checked theorem, so nothing exhibits \
+             a pair CReal.Apart separates. apart_symm, apart_irrefl and apart_congr \
+             all hold — with empty footprints — of the relation that separates \
+             NOTHING, and that is exactly the relation an inverse would be \
+             vacuously definable over."
+        );
+        failed = true;
+    }
+    if !inverse_refuted {
+        eprintln!(
+            "FAIL: CReal.no_total_inverse is not a checked theorem, so the claim that \
+             the multiplicative inverse is PARTIAL is a scoping note rather than a \
+             proved obstruction."
+        );
+        failed = true;
+    }
     if !laws_distinct {
         eprintln!(
             "FAIL: CRealPrelude::ordered_ring_laws does not name 22 DISTINCT \
@@ -441,7 +485,9 @@ fn main() {
          Equiv discriminates = {discriminating}, le discriminates = {ordered}, \
          lt inhabited = {strictly_inhabited}, lt irreflexive = {strictly_irreflexive}, \
          mul agrees with Rat.mul on ℚ = {multiplicative}, mul discriminates = \
-         {mul_discriminates}; all 22 ordered-ring laws proved = {all_laws}",
+         {mul_discriminates}, Apart separates a pair = {apart_inhabited}, no total \
+         inverse exists = {inverse_refuted}; all 22 ordered-ring laws proved = \
+         {all_laws}",
         admitted.len(),
         trusted.len(),
         if trusted.is_empty() {
@@ -467,6 +513,10 @@ fn main() {
          there and are stated over CReal.Equiv here, because Eq CReal is not \
          the equality of real numbers. CReal.mul_congr — the fifth congruence \
          obligation, not one of the 22 — is proved too, so the ordered-ring \
-         interface ADR-0468 phase R4 instantiates is complete"
+         interface ADR-0468 phase R4 instantiates is complete. CReal.Apart — \
+         Bishop's apartness, lt both ways — is defined with its four laws, and \
+         CReal.no_total_inverse REFUTES every total multiplicative inverse, so \
+         the field structure is missing as a proved obstruction and not as a \
+         scoping note (ADR-0473)"
     );
 }
