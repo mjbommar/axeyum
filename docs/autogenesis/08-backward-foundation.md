@@ -179,6 +179,12 @@ stage a valid open-to-proved delta without pretending that any currently open
 fact has evidence it does not have. Atomic application, crash recovery, and the
 durable admission event remain missing.
 
+The prepared proposal was retained and independently replayed at exact commit
+`b64f6a8dd`: experiment digest
+`8810fd9a46736d9ed745457a169a14b297bd2116f6e6e2d711bb87a8dea97b3f`,
+transaction digest
+`e4db86cadd69b305101c9dacbf6f0939cee6d45da9f485b631892d9dd32ceda1`.
+
 ## Assumptions tested now
 
 ### A. The ledger has a usable chain substrate

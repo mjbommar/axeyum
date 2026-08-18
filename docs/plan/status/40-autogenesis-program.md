@@ -2,10 +2,10 @@
 
 <!-- plan-section: lane-status -->
 
-**Phase 0 WIP.** Accepted B now gates post-B search; retained `ebfaa7eb` replayed
-at exact `42dad8ffa` with A failing before B and passing after. Next: durable
-fact admission and frontier recomputation.
+**Phase 0 WIP.** Typed open→proved proposal `e4db86ca` replayed at exact
+`b64f6a8dd`; settled/mismatched-open controls reject. Next: atomic authoritative
+admission, recovery, then frontier recomputation.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-18 | `2abe2652d..42dad8ffa` | Programme through event-gated, retained replay. |
+| 2026-08-18 | `2abe2652d..b64f6a8dd` | Programme through replayed fact-transaction proposal. |
