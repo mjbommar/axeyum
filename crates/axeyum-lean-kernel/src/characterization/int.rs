@@ -17,10 +17,9 @@
 //!   ([`IntCharacterization::rec_unique`]): two maps out of `Int` that agree at
 //!   `0` and satisfy the same `+1` and `−1` recurrences are equal.
 //!
-//! What is *not* here is spelled out in the crate-level module docs: the
-//! existence half of the universal property for an arbitrary target, and a
-//! machine-checked statement that these properties determine `Int` up to
-//! isomorphism (the `Nat` side has that; see [`super::nat`]).
+//! The other half — the *existence* of a map `Int → R` out of an arbitrary
+//! target and the categoricity theorem that follows from it — is in
+//! [`super::int_categoricity`], which declares into this same namespace.
 
 // Proof scripts are long, straight-line term constructions over short
 // mathematical names; splitting them would obscure the derivation they mirror,
@@ -73,49 +72,49 @@ pub struct IntCharacterization {
 }
 
 /// `Int.add a b`.
-fn iadd(dev: &mut CharDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+pub(super) fn iadd(dev: &mut CharDev<'_>, a: ExprId, b: ExprId) -> ExprId {
     let name = dev.int_prelude().add;
     dev.const_app(name, &[a, b])
 }
 
 /// `Int.neg a`.
-fn ineg(dev: &mut CharDev<'_>, a: ExprId) -> ExprId {
+pub(super) fn ineg(dev: &mut CharDev<'_>, a: ExprId) -> ExprId {
     let name = dev.int_prelude().neg;
     dev.const_app(name, &[a])
 }
 
 /// `Int.ofNat n`.
-fn of_nat(dev: &mut CharDev<'_>, n: ExprId) -> ExprId {
+pub(super) fn of_nat(dev: &mut CharDev<'_>, n: ExprId) -> ExprId {
     let name = dev.int_prelude().of_nat;
     dev.const_app(name, &[n])
 }
 
 /// `Int.negSucc n`.
-fn neg_succ(dev: &mut CharDev<'_>, n: ExprId) -> ExprId {
+pub(super) fn neg_succ(dev: &mut CharDev<'_>, n: ExprId) -> ExprId {
     let name = dev.int_prelude().neg_succ;
     dev.const_app(name, &[n])
 }
 
 /// `Int.zero`.
-fn izero(dev: &mut CharDev<'_>) -> ExprId {
+pub(super) fn izero(dev: &mut CharDev<'_>) -> ExprId {
     let name = dev.int_prelude().zero;
     dev.kernel().const_(name, vec![])
 }
 
 /// `Int.one`.
-fn ione(dev: &mut CharDev<'_>) -> ExprId {
+pub(super) fn ione(dev: &mut CharDev<'_>) -> ExprId {
     let name = dev.int_prelude().one;
     dev.kernel().const_(name, vec![])
 }
 
 /// The successor `t + 1`.
-fn plus_one(dev: &mut CharDev<'_>, t: ExprId) -> ExprId {
+pub(super) fn plus_one(dev: &mut CharDev<'_>, t: ExprId) -> ExprId {
     let one = ione(dev);
     iadd(dev, t, one)
 }
 
 /// The predecessor `t + (−1)`.
-fn minus_one(dev: &mut CharDev<'_>, t: ExprId) -> ExprId {
+pub(super) fn minus_one(dev: &mut CharDev<'_>, t: ExprId) -> ExprId {
     let one = ione(dev);
     let negated = ineg(dev, one);
     iadd(dev, t, negated)

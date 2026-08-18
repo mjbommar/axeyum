@@ -39,8 +39,9 @@ use axeyum_lean_kernel::{
 
 /// The number of characterization theorems this example expects to find.
 /// Asserted, not printed: a package that silently lost a theorem must fail.
-const EXPECTED_ENTRIES: usize = 18;
+const EXPECTED_ENTRIES: usize = 32;
 
+#[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     let mut kernel = Kernel::new();
     let package = match build_characterization(&mut kernel) {
@@ -105,13 +106,22 @@ fn main() -> ExitCode {
                 "negative control {defect:?} was ACCEPTED; {target} does not depend on it"
             ));
         } else {
-            let still_there = probe
-                .environment()
-                .iter()
-                .any(|(name, _)| probe.display_name(*name).to_string() == target);
-            if still_there {
+            let declared = |dotted: &str| {
+                probe
+                    .environment()
+                    .iter()
+                    .any(|(name, _)| probe.display_name(*name).to_string() == dotted)
+            };
+            if declared(target) {
                 failures.push(format!(
                     "negative control {defect:?} failed, but {target} was still admitted"
+                ));
+            } else if defect.reached_declaration().is_some_and(|r| !declared(r)) {
+                // The build died before the declaration the defect was aimed at,
+                // so its absence proves nothing about that hypothesis.
+                failures.push(format!(
+                    "negative control {defect:?} failed BEFORE reaching {target}: {} is absent",
+                    defect.reached_declaration().unwrap_or("<unnamed>")
                 ));
             } else {
                 refused += 1;
@@ -121,7 +131,8 @@ fn main() -> ExitCode {
 
     eprintln!(
         "Nat: 3 Peano axioms + the universal property + categoricity (universe-polymorphic); \
-         Int: no-junk + generation by 1 + discreteness + total order + uniqueness of maps out"
+         Int: no-junk + generation by 1 + discreteness + total order + BOTH halves of the \
+         universal property + categoricity (universe-polymorphic), instantiated at Int itself"
     );
     eprintln!(
         "{}/{} theorems admitted with an EMPTY axiom footprint; {refused}/{} injected defects \
@@ -131,9 +142,12 @@ fn main() -> ExitCode {
         defects.len()
     );
     eprintln!(
-        "NOT proved: that Int's properties determine it up to isomorphism (only the \
-         UNIQUENESS half of its universal property is checked; Nat has both halves). \
-         Discreteness itself IS proved at every a, not only at 0."
+        "NOT proved: that an inverse FUNCTION can be extracted. Both categoricity theorems \
+         prove the comparison map injective and surjective, and surjectivity is a Prop-level \
+         exists -- a Prop-valued generation principle on the target cannot define a map back. \
+         Int.Characterization.iso is the stronger, constructed form, and it HYPOTHESISES the \
+         back-map: given any structure-preserving psi it proves both composites are the \
+         identity."
     );
 
     if failures.is_empty() {

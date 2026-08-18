@@ -27,7 +27,7 @@ fn the_characterization_package_builds_and_every_witness_is_axiom_free() {
     let package = build_characterization(&mut kernel).expect("the characterization must build");
     assert_eq!(
         package.entries.len(),
-        18,
+        32,
         "the reported population must match the declared one"
     );
     for entry in &package.entries {
@@ -77,7 +77,7 @@ fn the_characterization_namespaces_declare_nothing_trusted() {
         );
     }
     assert!(
-        checked >= 19,
+        checked >= 34,
         "the namespace sweep saw only {checked} declarations; it was pointed at the wrong names"
     );
 }
@@ -327,7 +327,7 @@ fn every_injected_defect_is_rejected() {
         .expect("the unweakened package must build");
 
     let defects = Weakening::defects();
-    assert!(defects.len() >= 9, "the defect sweep shrank");
+    assert!(defects.len() >= 22, "the defect sweep shrank");
     for &defect in defects {
         let mut kernel = Kernel::new();
         let outcome = build_characterization_with(&mut kernel, defect);
@@ -345,10 +345,13 @@ fn every_injected_defect_is_rejected() {
             !is_declared(&kernel, target),
             "{defect:?} failed, but {target} was still admitted"
         );
-        if target != "Nat.Peano.zero_ne_succ" {
+        // ... and it got all the way there: the declaration immediately before
+        // it in build order is present, so the failure is bracketed rather than
+        // merely "somewhere at or before the target".
+        if let Some(reached) = defect.reached_declaration() {
             assert!(
-                is_declared(&kernel, "Nat.Peano.zero_ne_succ"),
-                "{defect:?} failed before reaching {target}"
+                is_declared(&kernel, reached),
+                "{defect:?} failed before reaching {target}: {reached} is absent"
             );
         }
     }
