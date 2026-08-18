@@ -20,7 +20,7 @@ use crate::nat_prelude::{NatOps, NatState};
 
 /// Which `Int` constructor a case-analysis branch is under.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum Shape {
+pub(crate) enum Shape {
     /// `Int.ofNat n` — the non-negative branch.
     OfNat,
     /// `Int.negSucc n` — the branch for `-(n+1)`.
@@ -28,11 +28,11 @@ pub(super) enum Shape {
 }
 
 /// One case-analysis branch: the constructor and the `Nat` field bound in it.
-pub(super) type Branch = (Shape, ExprId);
+pub(crate) type Branch = (Shape, ExprId);
 
 /// A development over a kernel that already carries (or is in the middle of
 /// declaring) the integer prelude.
-pub(super) struct IntDev<'k> {
+pub(crate) struct IntDev<'k> {
     kernel: &'k mut Kernel,
     state: NatState,
     int: IntPrelude,
@@ -42,7 +42,7 @@ pub(super) struct IntDev<'k> {
 impl<'k> IntDev<'k> {
     /// A development over `kernel` for the interned (not necessarily yet
     /// declared) names in `int`.
-    pub(super) fn new(kernel: &'k mut Kernel, int: IntPrelude) -> Self {
+    pub(crate) fn new(kernel: &'k mut Kernel, int: IntPrelude) -> Self {
         let state = NatState::new(kernel, int.nat);
         let int_ty = kernel.const_(int.z, vec![]);
         Self {
@@ -54,31 +54,31 @@ impl<'k> IntDev<'k> {
     }
 
     /// The interned integer names (a `Copy` snapshot).
-    pub(super) fn int(&self) -> IntPrelude {
+    pub(crate) fn int(&self) -> IntPrelude {
         self.int
     }
 
     /// The expression `Int`.
-    pub(super) fn int_ty(&self) -> ExprId {
+    pub(crate) fn int_ty(&self) -> ExprId {
         self.int_ty
     }
 
     // --- carrier terms -------------------------------------------------------
 
     /// `Int.ofNat n`.
-    pub(super) fn of_nat(&mut self, n: ExprId) -> ExprId {
+    pub(crate) fn of_nat(&mut self, n: ExprId) -> ExprId {
         let f = self.int.of_nat;
         self.const_app(f, &[n])
     }
 
     /// `Int.negSucc n` (the integer `-(n+1)`).
-    pub(super) fn neg_succ(&mut self, n: ExprId) -> ExprId {
+    pub(crate) fn neg_succ(&mut self, n: ExprId) -> ExprId {
         let f = self.int.neg_succ;
         self.const_app(f, &[n])
     }
 
     /// Rebuild the constructor application a [`Branch`] stands for.
-    pub(super) fn branch_term(&mut self, branch: Branch) -> ExprId {
+    pub(crate) fn branch_term(&mut self, branch: Branch) -> ExprId {
         match branch {
             (Shape::OfNat, n) => self.of_nat(n),
             (Shape::NegSucc, n) => self.neg_succ(n),
@@ -86,55 +86,55 @@ impl<'k> IntDev<'k> {
     }
 
     /// `Int.zero`.
-    pub(super) fn izero(&mut self) -> ExprId {
+    pub(crate) fn izero(&mut self) -> ExprId {
         let n = self.int.zero;
         self.kernel.const_(n, vec![])
     }
 
     /// `Int.one`.
-    pub(super) fn ione(&mut self) -> ExprId {
+    pub(crate) fn ione(&mut self) -> ExprId {
         let n = self.int.one;
         self.kernel.const_(n, vec![])
     }
 
     /// `Int.add a b`.
-    pub(super) fn iadd(&mut self, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn iadd(&mut self, a: ExprId, b: ExprId) -> ExprId {
         let f = self.int.add;
         self.const_app(f, &[a, b])
     }
 
     /// `Int.mul a b`.
-    pub(super) fn imul(&mut self, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn imul(&mut self, a: ExprId, b: ExprId) -> ExprId {
         let f = self.int.mul;
         self.const_app(f, &[a, b])
     }
 
     /// `Int.neg a`.
-    pub(super) fn ineg(&mut self, a: ExprId) -> ExprId {
+    pub(crate) fn ineg(&mut self, a: ExprId) -> ExprId {
         let f = self.int.neg;
         self.const_app(f, &[a])
     }
 
     /// `Int.negOfNat n` — the integer `-n`, for a natural `n`.
-    pub(super) fn neg_of_nat(&mut self, n: ExprId) -> ExprId {
+    pub(crate) fn neg_of_nat(&mut self, n: ExprId) -> ExprId {
         let f = self.int.neg_of_nat;
         self.const_app(f, &[n])
     }
 
     /// `Int.subNatNat m n` — the normalized integer `m - n`.
-    pub(super) fn sub_nat_nat(&mut self, m: ExprId, n: ExprId) -> ExprId {
+    pub(crate) fn sub_nat_nat(&mut self, m: ExprId, n: ExprId) -> ExprId {
         let f = self.int.sub_nat_nat;
         self.const_app(f, &[m, n])
     }
 
     /// `Int.le a b`.
-    pub(super) fn ile(&mut self, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn ile(&mut self, a: ExprId, b: ExprId) -> ExprId {
         let f = self.int.le;
         self.const_app(f, &[a, b])
     }
 
     /// `Int.lt a b`.
-    pub(super) fn ilt(&mut self, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn ilt(&mut self, a: ExprId, b: ExprId) -> ExprId {
         let f = self.int.lt;
         self.const_app(f, &[a, b])
     }
@@ -142,7 +142,7 @@ impl<'k> IntDev<'k> {
     // --- Eq at Int -----------------------------------------------------------
 
     /// `Eq.{1} Int a b` (the carrier is `Sort 1`, so the universe argument is 1).
-    pub(super) fn ieq(&mut self, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn ieq(&mut self, a: ExprId, b: ExprId) -> ExprId {
         let one = self.level_one();
         let name = self.int.logic.eq;
         let eq = self.kernel.const_(name, vec![one]);
@@ -151,7 +151,7 @@ impl<'k> IntDev<'k> {
     }
 
     /// `Eq.refl.{1} Int a`.
-    pub(super) fn irefl(&mut self, a: ExprId) -> ExprId {
+    pub(crate) fn irefl(&mut self, a: ExprId) -> ExprId {
         let one = self.level_one();
         let name = self.int.logic.eq_refl;
         let refl = self.kernel.const_(name, vec![one]);
@@ -160,7 +160,7 @@ impl<'k> IntDev<'k> {
     }
 
     /// `Eq.rec.{0,1} Int p motive refl_case q h`.
-    pub(super) fn itransport(
+    pub(crate) fn itransport(
         &mut self,
         p: ExprId,
         motive: ExprId,
@@ -177,7 +177,7 @@ impl<'k> IntDev<'k> {
     }
 
     /// `fun (x : Int) (_ : Eq Int a x) => body(x)`.
-    pub(super) fn ieq_motive(
+    pub(crate) fn ieq_motive(
         &mut self,
         a: ExprId,
         body: &dyn Fn(&mut Self, ExprId) -> ExprId,
@@ -193,14 +193,14 @@ impl<'k> IntDev<'k> {
     }
 
     /// `h : Eq Int a b  ⊢  Eq Int b a`.
-    pub(super) fn isymm(&mut self, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    pub(crate) fn isymm(&mut self, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
         let motive = self.ieq_motive(a, &|d, x| d.ieq(x, a));
         let refl_case = self.irefl(a);
         self.itransport(a, motive, refl_case, b, h)
     }
 
     /// `h1 : Eq Int a b`, `h2 : Eq Int b c  ⊢  Eq Int a c`.
-    pub(super) fn itrans(
+    pub(crate) fn itrans(
         &mut self,
         a: ExprId,
         b: ExprId,
@@ -218,7 +218,7 @@ impl<'k> IntDev<'k> {
     /// Every intermediate term only has to be **definitionally** the previous
     /// step's right-hand side, which is what makes the branch scripts readable:
     /// a step may be stated at whichever ι-reduct of the term is convenient.
-    pub(super) fn ichain(&mut self, start: ExprId, steps: &[(ExprId, ExprId)]) -> (ExprId, ExprId) {
+    pub(crate) fn ichain(&mut self, start: ExprId, steps: &[(ExprId, ExprId)]) -> (ExprId, ExprId) {
         let mut current = start;
         let mut proof = self.irefl(start);
         for &(next, step) in steps {
@@ -229,7 +229,7 @@ impl<'k> IntDev<'k> {
     }
 
     /// Congruence at `Int`: `h : Eq Int a b  ⊢  Eq Int (f a) (f b)`.
-    pub(super) fn icongr(
+    pub(crate) fn icongr(
         &mut self,
         a: ExprId,
         b: ExprId,
@@ -248,7 +248,7 @@ impl<'k> IntDev<'k> {
     /// From `h : Eq Nat a b` and a proof of `motive a`, derive `motive b` — the
     /// `Nat`-indexed rewrite the `subNatNat` scripts run on, where the equation
     /// is between naturals but the proposition being moved is about integers.
-    pub(super) fn nat_rewrite(
+    pub(crate) fn nat_rewrite(
         &mut self,
         a: ExprId,
         b: ExprId,
@@ -266,7 +266,7 @@ impl<'k> IntDev<'k> {
     /// (`motive y := Eq Nat (magnitude p) (magnitude y)`) and discrimination
     /// (`motive y := <a Prop that is True on one constructor and False on the
     /// other>`).
-    pub(super) fn int_eq_rewrite(
+    pub(crate) fn int_eq_rewrite(
         &mut self,
         p: ExprId,
         q: ExprId,
@@ -286,7 +286,7 @@ impl<'k> IntDev<'k> {
     /// This is the workhorse of the construction: every algebraic law of `ℤ`
     /// that lives inside one constructor is exactly a law of `ℕ` pushed through
     /// `Int.ofNat`, `Int.negSucc`, or `Int.negOfNat` by this combinator.
-    pub(super) fn nat_eq_to_int(
+    pub(crate) fn nat_eq_to_int(
         &mut self,
         a: ExprId,
         b: ExprId,
@@ -305,55 +305,55 @@ impl<'k> IntDev<'k> {
     // --- propositional plumbing ---------------------------------------------
 
     /// `True.intro`.
-    pub(super) fn true_intro(&mut self) -> ExprId {
+    pub(crate) fn true_intro(&mut self) -> ExprId {
         let n = self.int.logic.true_intro;
         self.kernel.const_(n, vec![])
     }
 
     /// `True`.
-    pub(super) fn true_ty(&mut self) -> ExprId {
+    pub(crate) fn true_ty(&mut self) -> ExprId {
         let n = self.int.logic.true_;
         self.kernel.const_(n, vec![])
     }
 
     /// `False`.
-    pub(super) fn false_ty(&mut self) -> ExprId {
+    pub(crate) fn false_ty(&mut self) -> ExprId {
         let n = self.int.logic.false_;
         self.kernel.const_(n, vec![])
     }
 
     /// `Not p`.
-    pub(super) fn not(&mut self, p: ExprId) -> ExprId {
+    pub(crate) fn not(&mut self, p: ExprId) -> ExprId {
         let n = self.int.logic.not;
         self.const_app(n, &[p])
     }
 
     /// `And p q`.
-    pub(super) fn and(&mut self, p: ExprId, q: ExprId) -> ExprId {
+    pub(crate) fn and(&mut self, p: ExprId, q: ExprId) -> ExprId {
         let n = self.int.logic.and;
         self.const_app(n, &[p, q])
     }
 
     /// `Or p q`.
-    pub(super) fn or(&mut self, p: ExprId, q: ExprId) -> ExprId {
+    pub(crate) fn or(&mut self, p: ExprId, q: ExprId) -> ExprId {
         let n = self.int.logic.or;
         self.const_app(n, &[p, q])
     }
 
     /// `Or.inl p q proof : Or p q`.
-    pub(super) fn or_inl(&mut self, p: ExprId, q: ExprId, proof: ExprId) -> ExprId {
+    pub(crate) fn or_inl(&mut self, p: ExprId, q: ExprId, proof: ExprId) -> ExprId {
         let n = self.int.logic.or_inl;
         self.const_app(n, &[p, q, proof])
     }
 
     /// `Or.inr p q proof : Or p q`.
-    pub(super) fn or_inr(&mut self, p: ExprId, q: ExprId, proof: ExprId) -> ExprId {
+    pub(crate) fn or_inr(&mut self, p: ExprId, q: ExprId, proof: ExprId) -> ExprId {
         let n = self.int.logic.or_inr;
         self.const_app(n, &[p, q, proof])
     }
 
     /// `False.rec.{0} (fun _ => target) proof : target`.
-    pub(super) fn absurd(&mut self, target: ExprId, proof: ExprId) -> ExprId {
+    pub(crate) fn absurd(&mut self, target: ExprId, proof: ExprId) -> ExprId {
         let zero = self.kernel.level_zero();
         let false_rec = self.int.logic.false_rec;
         let rec = self.kernel.const_(false_rec, vec![zero]);
@@ -364,7 +364,7 @@ impl<'k> IntDev<'k> {
     }
 
     /// The left projection of `proof : And left right`.
-    pub(super) fn and_left(&mut self, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
+    pub(crate) fn and_left(&mut self, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
         let and_ty = self.and(left, right);
         let motive = {
             let pair_fv = self.fresh_fvar();
@@ -384,7 +384,7 @@ impl<'k> IntDev<'k> {
     }
 
     /// The right projection of `proof : And left right`.
-    pub(super) fn and_right(&mut self, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
+    pub(crate) fn and_right(&mut self, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
         let and_ty = self.and(left, right);
         let motive = {
             let pair_fv = self.fresh_fvar();
@@ -405,7 +405,7 @@ impl<'k> IntDev<'k> {
 
     /// Case-eliminate `proof : Or left right` into `target`, given both
     /// branch builders.
-    pub(super) fn or_elim(
+    pub(crate) fn or_elim(
         &mut self,
         left: ExprId,
         right: ExprId,
@@ -454,7 +454,7 @@ impl<'k> IntDev<'k> {
     /// Returns the trusted gate's rejection — the kernel re-checks `proof`
     /// against `stmt` inside `add_declaration`, so an `Err` means the proof was
     /// **refused**.
-    pub(super) fn int_theorem(
+    pub(crate) fn int_theorem(
         &mut self,
         name: NameId,
         arity: usize,
@@ -496,7 +496,7 @@ impl NatOps for IntDev<'_> {
 /// `Exists` is a `Prop` with one non-subsingleton constructor, so its recursor
 /// eliminates only into `Prop` and carries exactly one universe parameter — the
 /// one of the *quantified* type, here `Nat : Sort 1`.
-pub(super) fn exists_elim(
+pub(crate) fn exists_elim(
     d: &mut IntDev<'_>,
     predicate: ExprId,
     target: ExprId,
@@ -524,7 +524,7 @@ pub(super) fn exists_elim(
 /// their constructor applications, and must build the *statement* for those
 /// arguments; `case` receives one [`Branch`] per position and must build the
 /// proof for that combination. With `n` targets this generates `2^n` branches.
-pub(super) fn case_split(
+pub(crate) fn case_split(
     d: &mut IntDev<'_>,
     targets: &[ExprId],
     stmt: &dyn Fn(&mut IntDev<'_>, &[ExprId]) -> ExprId,
