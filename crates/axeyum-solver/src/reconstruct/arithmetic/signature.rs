@@ -54,8 +54,8 @@
 //! nine `Eq`-stated laws become stray constants.
 
 use axeyum_lean_kernel::{
-    ArithPrelude, BinderInfo, CRealPrelude, Declaration, ExprId, ExprNode, Kernel, LogicPrelude,
-    NameId,
+    ArithPrelude, BinderInfo, CRealPrelude, Declaration, ExprId, ExprNode, IntPrelude, Kernel,
+    LogicPrelude, NameId,
 };
 
 use super::ReconstructError;
@@ -259,6 +259,72 @@ impl From<CRealPrelude> for RingSignature {
             left_distrib: c.left_distrib,
             mul_nonneg: c.mul_nonneg,
             sq_nonneg: c.sq_nonneg,
+        }
+    }
+}
+
+impl From<IntPrelude> for RingSignature {
+    /// The **constructed** integers as a signature: the same 30 field names,
+    /// read off `IntPrelude`, with equality the kernel's own `Eq`.
+    ///
+    /// This is the third instance, and it fills the one slot the other two
+    /// cannot both occupy. `build_arith_prelude` gives kernel equality at the
+    /// cost of 30 **axioms**; `build_creal_prelude` costs nothing but its
+    /// equality is the *defined* relation `CReal.Equiv`, because `Eq CReal` is
+    /// equality of representatives (ADR-0468). `ℤ` is the case where both hold
+    /// at once: `build_int_prelude` proves all 22 laws — `build_int_model_of_arith`
+    /// admits each `Real` axiom's interpretation with `Int.<law>` as its proof and
+    /// records `identical: true` for all 22, so the statements agree symbol for
+    /// symbol after renaming — and its equality really is the kernel's `Eq`,
+    /// since `Int` is a one-constructor inductive with no setoid over it.
+    ///
+    /// So a route that only needs *an* axiom-free ordered commutative ring with
+    /// `Eq` — which is every consumer of the `Real` package that is not
+    /// specifically about ℝ — can take this and reach no axiom at all. It is
+    /// also cheap: the `Int` development is a small fraction of `CReal`'s
+    /// construction cost.
+    ///
+    /// What it is **not** is a carrier for ℝ. `ℤ` is not ℝ (ADR-0456), and a
+    /// theorem instantiated here is a theorem about the integers; the
+    /// constructed reals are [`From<CRealPrelude>`].
+    ///
+    /// `IntPrelude` carries far more than the interface (division, `nat_abs`,
+    /// the rational quotient, …); this reads exactly the 30 the signature names
+    /// and nothing else.
+    fn from(i: IntPrelude) -> Self {
+        Self {
+            logic: i.logic,
+            equality: RingEquality::KernelEq,
+            r: i.z,
+            add: i.add,
+            mul: i.mul,
+            neg: i.neg,
+            zero: i.zero,
+            one: i.one,
+            le: i.le,
+            lt: i.lt,
+            le_refl: i.le_refl,
+            le_trans: i.le_trans,
+            lt_irrefl: i.lt_irrefl,
+            lt_trans: i.lt_trans,
+            lt_of_lt_of_le: i.lt_of_lt_of_le,
+            lt_of_le_of_lt: i.lt_of_le_of_lt,
+            le_of_lt: i.le_of_lt,
+            add_le_add: i.add_le_add,
+            add_comm: i.add_comm,
+            add_assoc: i.add_assoc,
+            add_zero: i.add_zero,
+            add_neg: i.add_neg,
+            mul_le_mul_of_nonneg_left: i.mul_le_mul_of_nonneg_left,
+            zero_lt_one: i.zero_lt_one,
+            add_lt_add_of_le_of_lt: i.add_lt_add_of_le_of_lt,
+            mul_comm: i.mul_comm,
+            mul_assoc: i.mul_assoc,
+            mul_one: i.mul_one,
+            mul_zero: i.mul_zero,
+            left_distrib: i.left_distrib,
+            mul_nonneg: i.mul_nonneg,
+            sq_nonneg: i.sq_nonneg,
         }
     }
 }

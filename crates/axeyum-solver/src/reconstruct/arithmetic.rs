@@ -47,7 +47,7 @@ use super::{
 // base; the only added axioms are the input-constraint hypotheses.
 // ===========================================================================
 
-use axeyum_lean_kernel::{build_arith_prelude, build_creal_prelude};
+use axeyum_lean_kernel::{build_arith_prelude, build_creal_prelude, build_int_prelude};
 
 pub(crate) mod signature;
 
@@ -235,6 +235,36 @@ impl LraReconstructCtx {
                 detail: format!("the real prelude did not build in a fresh kernel: {e:?}"),
             })?;
         Self::with_ring_signature(kernel, RingSignature::from(arith))
+    }
+
+    /// Build a fresh LRA reconstruction context over the **constructed
+    /// integers**: `Int`, with the kernel's own `Eq` as ring equality.
+    ///
+    /// The axiom-free counterpart of [`Self::try_new`] that keeps kernel
+    /// equality. [`Self::try_new_over_constructed_reals`] is also axiom-free but
+    /// its equality is the defined relation `CReal.Equiv`, so a consumer that
+    /// wants `Eq` back has to go through the equality slot; here `Eq` *is* ring
+    /// equality, exactly as on the `Real` package, and the 30 declarations are
+    /// theorems rather than axioms.
+    ///
+    /// Use it wherever the route needs *an* ordered commutative ring with `1`
+    /// and is not specifically about ℝ — a Farkas combination uses ring
+    /// operations and order and never division, which is why the abstraction is
+    /// possible at all. `ℤ` is not ℝ (ADR-0456): a refutation instantiated here
+    /// is a theorem about the integers.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] if the `Int` development does not
+    /// build in a fresh kernel, or if it does not satisfy the interface
+    /// [`RingSignature::validate_in`] checks.
+    pub fn try_new_over_integers() -> Result<Self, ReconstructError> {
+        let mut kernel = Kernel::new();
+        let int = build_int_prelude(&mut kernel).map_err(|e| ReconstructError::KernelRejected {
+            rule: "int_prelude".to_owned(),
+            detail: format!("the integer development did not build in a fresh kernel: {e:?}"),
+        })?;
+        Self::with_ring_signature(kernel, RingSignature::from(int))
     }
 
     /// Build a fresh LRA reconstruction context over the **constructed reals**:

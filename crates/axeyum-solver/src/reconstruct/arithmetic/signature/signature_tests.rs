@@ -11,9 +11,12 @@
 //! `Real` declaration at all.
 
 use axeyum_ir::{Rational, TermArena, TermId};
-use axeyum_lean_kernel::{CRealPrelude, Kernel, build_arith_prelude, build_creal_prelude};
+use axeyum_lean_kernel::{
+    CRealPrelude, Kernel, NameId, build_arith_prelude, build_creal_prelude,
+    build_int_model_of_arith, build_int_prelude,
+};
 
-use super::{RingEquality, RingSignature};
+use super::{RingEquality, RingSignature, SIGNATURE_LAWS, SIGNATURE_SYMBOLS};
 use crate::reconstruct::arithmetic::ordered_ring::setoid::EqualitySlot;
 use crate::reconstruct::arithmetic::ordered_ring::{
     EQUALITY_SLOT_BINDERS, RingTelescope, generalize_over_ordered_ring, render_ordered_ring_module,
@@ -600,5 +603,202 @@ fn adopting_a_second_equality_slot_is_refused() {
     assert!(
         format!("{err:?}").contains("already has an equality slot"),
         "got: {err:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The constructed **integers** as the third instance of the interface.
+// ---------------------------------------------------------------------------
+
+/// A kernel with the `Int` development built, and it as a signature.
+///
+/// Built once per process and cloned by `PreludeKey::Int` for the same reason
+/// `creal_signature` is; `Int` is far cheaper than `CReal` but not free.
+fn int_signature() -> (Kernel, RingSignature) {
+    let mut kernel = Kernel::new();
+    let int = build_int_prelude(&mut kernel).expect("the integer development builds");
+    let sig = RingSignature::from(int);
+    (kernel, sig)
+}
+
+/// `ℤ` satisfies the interface **at the kernel's own `Eq`** — the combination
+/// neither of the other two instances offers.
+///
+/// `Real` has kernel equality and costs 30 axioms; `CReal` costs nothing and
+/// has a *defined* equality. This is the third corner: nothing assumed, and the
+/// nine `Eq`-shaped laws really are stated with `Eq`, so a consumer that wants
+/// `Eq.rec` transport back does not have to go through the equality slot.
+#[test]
+fn the_integers_satisfy_the_ring_signature_at_kernel_equality() {
+    let (mut kernel, sig) = int_signature();
+    assert_eq!(
+        sig.equality,
+        RingEquality::KernelEq,
+        "ℤ is a one-constructor inductive with no setoid over it, so `Eq Int` IS its equality"
+    );
+
+    let report = sig
+        .validate_in(&mut kernel)
+        .expect("the Int development is an ordered-ring signature");
+
+    assert_eq!(
+        report.carrier_level, 1,
+        "`Int : Type` is `Sort 1`, like `Real` and `CReal`"
+    );
+    assert_eq!(
+        report.equality_laws,
+        vec![
+            "Int.add_comm",
+            "Int.add_assoc",
+            "Int.add_zero",
+            "Int.add_neg",
+            "Int.mul_comm",
+            "Int.mul_assoc",
+            "Int.mul_one",
+            "Int.mul_zero",
+            "Int.left_distrib",
+        ],
+        "the same nine laws the Real package states with `Eq`, stated with `Eq` here too"
+    );
+}
+
+/// **The number this instance exists for.** All 30 of the integer signature's
+/// declarations have an *empty* axiom footprint; all 30 of the `Real`
+/// package's do not.
+///
+/// The `Real` column is the negative control in the same test: without it an
+/// empty-footprint assertion would pass just as happily against a kernel where
+/// `axiom_footprint` had stopped reporting anything.
+#[test]
+fn the_integer_signature_assumes_nothing_and_the_real_package_assumes_thirty() {
+    let (kernel, sig) = int_signature();
+    let assumed: Vec<String> = sig
+        .symbols()
+        .into_iter()
+        .chain(sig.laws())
+        .filter(|&n| !kernel.axiom_footprint(n).is_empty())
+        .map(|n| kernel.display_name(n).to_string())
+        .collect();
+    assert!(
+        assumed.is_empty(),
+        "the integer instance of the interface must assume nothing; these do: {assumed:?}"
+    );
+
+    let (real_kernel, real_sig) = real_signature();
+    let real_assumed: Vec<String> = real_sig
+        .symbols()
+        .into_iter()
+        .chain(real_sig.laws())
+        .filter(|&n| !real_kernel.axiom_footprint(n).is_empty())
+        .map(|n| real_kernel.display_name(n).to_string())
+        .collect();
+    assert_eq!(
+        real_assumed.len(),
+        30,
+        "the control: every one of the Real package's 30 declarations is its own assumption, \
+         so the measurement above is reading something real; got {real_assumed:?}"
+    );
+}
+
+/// **The mapping is not taken on trust.** Field by field, the 30 names
+/// `From<IntPrelude>` picks are exactly the ones the kernel's own
+/// `build_int_model_of_arith` proved model the corresponding `Real`
+/// declaration.
+///
+/// That model admits, for each `Real` law, a witness whose type is the
+/// *computed* interpretation of the axiom and whose proof is the paired `Int`
+/// theorem — so the kernel refused it unless ℤ really satisfies that law. This
+/// test says the signature reads the same pairing. Without it a transposed
+/// field (`le_refl := Int.le_trans`) still validates — both are propositions in
+/// the ring language — and only a fixture that happens to use the transposed
+/// law would notice.
+#[test]
+fn the_integer_signature_is_the_kernel_checked_model_field_for_field() {
+    let mut kernel = Kernel::new();
+    let model = build_int_model_of_arith(&mut kernel).expect("the Int model of Real builds");
+
+    let real_sig = RingSignature::from(model.arith);
+    let int_sig = RingSignature::from(model.int);
+
+    let expected: Vec<(NameId, NameId)> = model
+        .symbols
+        .iter()
+        .copied()
+        .chain(model.laws.iter().map(|law| (law.real, law.int)))
+        .collect();
+    assert_eq!(
+        expected.len(),
+        SIGNATURE_SYMBOLS + SIGNATURE_LAWS,
+        "the model must account for all 30 positions"
+    );
+
+    let actual: Vec<(NameId, NameId)> = real_sig
+        .symbols()
+        .into_iter()
+        .chain(real_sig.laws())
+        .zip(int_sig.symbols().into_iter().chain(int_sig.laws()))
+        .collect();
+
+    let mismatched: Vec<(String, String, String)> = expected
+        .iter()
+        .zip(&actual)
+        .filter(|(want, got)| want != got)
+        .map(|(want, got)| {
+            (
+                kernel.display_name(want.0).to_string(),
+                kernel.display_name(want.1).to_string(),
+                kernel.display_name(got.1).to_string(),
+            )
+        })
+        .collect();
+    assert!(
+        mismatched.is_empty(),
+        "the signature's Int name disagrees with the kernel-checked model \
+         (Real law, model's Int theorem, signature's pick): {mismatched:?}"
+    );
+}
+
+/// A Farkas refutation reconstructs in a context built by
+/// [`LraReconstructCtx::try_new_over_integers`], generalizes over the 30-binder
+/// interface, and the *instantiated* `False` rests on **no carrier axiom** —
+/// with the kernel's `Eq` still doing the equality reasoning.
+///
+/// The `CReal` payoff test above proves the same thing through the equality
+/// slot (39 binders, no `Eq` in the term). This one keeps `Eq` and still reaches
+/// zero, which is what makes the `Real` package replaceable in the consumers
+/// that are not about ℝ.
+#[test]
+fn a_farkas_refutation_reconstructs_over_the_integers() {
+    let (arena, assertions) = baby_farkas();
+    let mut ctx = LraReconstructCtx::try_new_over_integers().expect("the integer context builds");
+
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions)
+        .expect("baby-Farkas reconstructs over the integers");
+
+    let general = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
+        .expect("it generalizes over the 30-binder interface");
+    assert_eq!(general.ring_binders, 30);
+    assert!(general.footprint.is_empty());
+
+    let carrier_axioms: Vec<&String> = general
+        .instantiated_footprint
+        .iter()
+        .filter(|n| n.starts_with("Real") || n.starts_with("Int"))
+        .collect();
+    assert!(
+        carrier_axioms.is_empty(),
+        "the closed refutation over ℤ must rest on no carrier axiom; got {carrier_axioms:?} \
+         out of {:?}",
+        general.instantiated_footprint
+    );
+    assert!(
+        !general.instantiated_footprint.is_empty(),
+        "it does still rest on the query's own variable/hypothesis axioms"
+    );
+
+    let module = render_ordered_ring_module(&ctx, &general);
+    assert!(
+        !module.contains("Real"),
+        "the emitted Lean module still names the Real package"
     );
 }
