@@ -131,7 +131,26 @@ cd "$(dirname "$0")/.." || exit 2
 # indistinguishable from an import that did nothing: the query module checked
 # with `LEAN_PATH=""` must FAIL, and a module that re-declares what its import
 # supplies must FAIL. Eighteen suites now.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-212}"
+#
+# Raised 212 -> 218 on 2026-08-18 by lane `creal-lean-divergence`:
+# `real_lean_creal_carrier_kernel_replay` adds TWO and is the first check that
+# hands Lean the WHOLE carrier -- all 470 declarations of `build_creal_prelude`,
+# with no reachability filter. Every other suite renders the closure of one
+# refutation, so Lean had only ever seen the 343 declarations some query cited;
+# the other 122 had never been handed to any Lean, and the first time anything
+# pointed Lean at them two were refused (ADR-0482). It replays through
+# `Environment.addDeclCore` -- Lean's KERNEL -- which accepts all 470 in 1.4 s,
+# and its exit status depends on Lean's reported constant count EQUALLING the
+# count read out of our kernel, so "accepted" cannot mean "accepted a subset".
+# `real_lean_wellfounded_elaborator_divergence` adds FOUR and names the residue
+# the source route leaves: Lean's ELABORATOR does not unfold a `theorem` while
+# reducing, so `Nat.gcd 2 4 = 2` is refused where the structurally recursive
+# `Nat.mod 4 2 = 0` is accepted and Lean's kernel takes both (ADR-0488). Two of
+# the four are controls -- the `mod` module, without which the refusal would be
+# a statement about module size, and the SAME gcd module with every `theorem`
+# re-spelled `def`, which Lean accepts and which isolates the mechanism to one
+# token per line. Twenty suites now.
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-218}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
 # Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s
@@ -191,6 +210,8 @@ axeyum-lean-kernel||real_lean_structure_eta_crosscheck
 axeyum-lean-kernel||real_lean_compact_share_crosscheck
 axeyum-lean-kernel||real_lean_shared_prelude_crosscheck
 axeyum-lean-kernel||real_lean_kernel_replay
+axeyum-lean-kernel||real_lean_creal_carrier_kernel_replay
+axeyum-lean-kernel||real_lean_wellfounded_elaborator_divergence
 axeyum-lean-import||real_lean_wire_differential
 axeyum-solver|full|int_inequality_lean_reconstruct
 axeyum-solver|full|lean_module_fixtures

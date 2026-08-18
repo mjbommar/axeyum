@@ -165,6 +165,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `e069afa03` | `local-ci`: the zero-test guard could not fire on the workspace sweep — nextest's summary is indented and the pattern was `^`-anchored. Fixtures now captured from the tool; a test step whose count is unparseable is `unreadable` (89), not `pass`. |
 | 2026-08-18 | `69c12646c` | `artifacts/local-ci-runs/a6ee37c6a-s4.json` — first completed run of `scripts/local-ci.sh` in this repository's history. FAIL, 6401 s, 4 of 7511. |
 | 2026-08-18 | `a2841965e` | `local-ci` gates the COMMIT, not the working tree: stable flock'd detached worktree, `--no-worktree` opt-out, controls mutation-tested. |
+| 2026-08-18 | `PENDING` | Lean has two checkers (ADR-0488): the kernel accepts all 470 carrier declarations, the elaborator refuses those whose checking must reduce a `theorem`. `real_lean_creal_carrier_kernel_replay` (whole carrier, no reachability filter, count-equality + tamper control) and `real_lean_wellfounded_elaborator_divergence` (`gcd` refused / `mod` accepted / same module with `theorem`->`def` accepted / kernel takes both); gate floor 212 -> 218. |
 | 2026-08-18 | (pending) | `scripts/check-local-ci-freshness.sh` + `scripts/tests/test-check-local-ci-freshness.sh`: the local-ci record freshness gate, wired `--report-only` into `check.sh` and `justfile`. |
 | 2026-08-18 | `2abe2652d` | Authored the nine-phase Autogenesis programme and bounded Autogenesis-1 plan. |
 | 2026-08-18 | `00f998ccb` | ℤ categoricity: the existence half of the universal property (`iter` + three preservation equations, making `Int` the initial ℤ-structure) and `categorical` — every generated aperiodic ℤ-structure is in structure-preserving bijection with `Int`, universe-polymorphic. `iso` is the constructed two-sided-inverse form, honest about hypothesising the back-map. 32 theorems, all footprints empty; 22 injected weakenings each refused at their own declaration, now bracketed by `reached_declaration` on the near side too. |
@@ -362,6 +363,42 @@ Next: a timer on s5/s7 — which **measured today cannot run it** (no stable, no
 1.88.0, no nextest; 342 and 422 commits behind) — read by a freshness step in
 `just check`, not a dashboard.
 Detail in [`../notes/102-local-ci-run.md`](docs/plan/notes/102-local-ci-run.md).
+
+**Lean's kernel accepts all 470 declarations of the constructed-real carrier;
+it is Lean's ELABORATOR that refuses four** (`WIP`, creal-lean-divergence,
+2026-08-18). The handover said our kernel admits what Lean's kernel rejects.
+It does not. `scripts/lean/replay-lean4export.lean` drives
+`Environment.addDeclCore` from our official NDJSON — Lean's kernel, from
+`mkEmptyEnvironment` — and over the **whole** carrier reports
+`the real Lean kernel accepted 438 declaration records … environment now holds
+470 constants` in **1.4 s**. Tampering `CReal.Equiv.not_zero_one`'s proof makes
+the same binary reject it naming `Not (CReal.Equiv (CReal.ofRat Rat.zero)
+(CReal.ofRat Rat.one))`, so it checked *that* declaration against *that* type.
+
+**The mechanism, isolated to one token per line.** Lean's elaborator does not
+unfold a `theorem` while reducing; its kernel does. Re-spell every `theorem` in
+the *same emitted file* as `def` — nothing else changed — and the elaborator
+accepts it: the `not_zero_one` module (695,655 B) in 5.0 s and the **whole
+carrier** (2,541,928 B) in 27.9 s, against 4 refusals as emitted.
+`Nat.gcd` is `WellFounded.fix` over the *definition* `Nat.lt_well_founded` with
+its descent justified by the *theorem* `Nat.mod_lt`, so `gcd 0 3` (base case)
+is accepted and every recursive `gcd` is refused, while `Nat.mod/div/sub` and a
+bare `WellFounded.fix` reduce fine. Not the sharing pass (hand-inlined:
+identical refusal), not a budget (`maxRecDepth 1000000`, `maxHeartbeats 0`,
+`smartUnfolding false` move nothing; `diagnostics` shows it give up, not run
+out). `internal exception #3` is the command abort after the term error.
+
+**The coverage hole is closed.** Emission was reachability-driven, so Lean had
+only ever seen 343 of the carrier. `real_lean_creal_carrier_kernel_replay`
+exports the complete environment with no filter and requires Lean's reported
+constant count to **equal** the count read out of our kernel, so "accepted"
+cannot mean "accepted a subset". `real_lean_wellfounded_elaborator_divergence`
+pins the residue over the ℕ prelude alone. Lean gate **20 suites, floor
+212 -> 218**. The fix (`theorem` -> `def` in the renderer) is measured and
+deliberately handed to the renderer's owner, not taken here.
+
+ADR-0488. Detail in
+[`../notes/103-creal-lean-divergence.md`](docs/plan/notes/103-creal-lean-divergence.md).
 
 **`scripts/check-local-ci-freshness.sh` exists and is wired in REPORT-ONLY
 mode** (`WIP`, local-ci-freshness, 2026-08-18). Continues 102-local-ci-run's
