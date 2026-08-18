@@ -33,7 +33,7 @@ operationally reachable.
 | Inputs were fixed | Clean execution capture binds commit and generated baseline digest | Fixture | Bind execution identity into the eventual transaction |
 | B and A were selected without intervention | Content-addressed frontier snapshot plus deterministic selection rationale | Partial | One exact authoritative fact is now selected; qualify and register a real B -> A chain rather than mistaking a leaf closure for compounding |
 | A was unavailable before B | The identical A target under the identical route policy and budget receives no credit before B | Fixture | Bind the result into a replayed episode transaction |
-| B was established | Catalog-only structural search produces typed, content-addressed, kernel-checked evidence for fresh B | Route-ready | The first real SMT certificate is source-bound; execute it through a typed operation receipt and admit it through the durable transaction path |
+| B was established | Catalog-only structural search produces typed, content-addressed, kernel-checked evidence for fresh B | Transaction-ready | The first real SMT certificate has a replayed execution receipt and complete prepared fact delta; admit it through the durable transaction path |
 | B became durable knowledge | Atomic application after fresh-process replay and fact validation | Fixture | Repeat the accepted boundary against one genuinely open authoritative fact |
 | A became newly ready | Readiness changes only after the accepted B event | Fixture | Repeat against authoritative frontier state rather than a counterfactual fixture |
 | A was established using B | Fresh proof is accepted and its dependency on B is derived from the proof term | Fixture | Transactional admission and readiness event |
@@ -276,6 +276,35 @@ candidate. This closes the selection refusal seam, not Autogenesis-1: the
 selected fact unlocks no descendant in the current ledger, and no generic typed
 executor or authoritative transaction adapter has consumed the selection yet.
 Authoritative writes remain zero.
+
+That execution and preparation seam is now closed. At exact pushed commit
+`dbd6f3e00`, the first typed executor consumed the selected frontier and emitted
+execution receipt
+`8261298f4a95c47fd9b7c40dd991c17eb5cabff5606f49c8a78a267bcaf61fad`.
+The registry—not the caller—fixed the driver, source artifact, timeout, expected
+evidence label, route, and footprint; replay reproduced the normalized receipt.
+
+At exact pushed commit `5ac434ef9`, the stronger registry digest
+`2bf6c209e7b303ba6982c911d35f84f86b07e5c052e56f75f20fe3af5c4ad062`
+produced frontier
+`f822e6c6c1b6cddeb1482628ea1192bff8372b503aa0d61919f120e08fa096a8`,
+execution
+`2064f5ccbaa2b99c80c4d2d60e22ba827b2747fda8142d2c79c0ad3f97612f8c`,
+and prepared authoritative transaction
+`b8d45d9ae718c645aa5cffea61fea9087bb9408080ca91b14684e6628de102e1`.
+Independent replay regenerated all three. The transaction derives the complete
+proved fact row, including its non-empty SMT trust footprint and typed replay
+checker, without accepting caller-authored status, route, evidence, footprint,
+checker, artifact, or shell text. Fault injection after intent, fact replacement,
+and event publication converged to the same durable event
+`d49c31dd98eeee25e15aefff15039b15550ff89cee1be12b2878b87cb896838a`
+against temporary copies of that exact authoritative transaction.
+
+No live fact has been changed yet. This is the last pre-write checkpoint: the
+next step is one production compare-and-swap admission, recovery replay from its
+durable intent, post-write fact-operation replay, and frontier recomputation.
+Because the selected fact has no descendants, readiness must honestly report no
+new unlock; the separate B -> A chain remains required for Autogenesis-1.
 
 ## Assumptions tested now
 

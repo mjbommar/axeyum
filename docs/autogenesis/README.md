@@ -145,10 +145,14 @@ The reviewed [`operations.json`](../../artifacts/autogenesis/operations.json)
 names both the fixture-only Nat producer/checker and the first authoritative
 QF_NIA certificate operation. The latter is source-bound, narrow, and carries
 a non-empty SMT trust footprint rather than impersonating a kernel theorem.
-Selection is therefore real, but execution and admission are not yet: the
-selected fact unlocks no descendant, no generic typed executor consumes the
-frontier, and authoritative ledger writes remain zero. It validates the next
-admission seam without receiving Autogenesis-1 compounding credit.
+Selection and typed execution are therefore real. The executor binds a clean
+commit, frontier, registry, fact, source bytes, budget, and independently
+rechecked result; the transaction adapter derives the complete proposed fact
+delta and its replay checker without caller-authored metadata. Authoritative
+ledger writes remain zero until that prepared transaction crosses ADR-0468's
+compare-and-swap boundary. The selected fact unlocks no descendant, so this
+validates admission infrastructure without receiving Autogenesis-1 compounding
+credit.
 
 ## Phase summary
 

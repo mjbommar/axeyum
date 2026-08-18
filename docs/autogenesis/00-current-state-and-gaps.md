@@ -3,7 +3,7 @@
 ## Snapshot boundary
 
 This assessment was refreshed through exact pushed feature checkpoint
-`5c38bf95d` on 2026-08-18. It uses live code, root `PLAN.md`, generated reports,
+`5ac434ef9` on 2026-08-18. It uses live code, root `PLAN.md`, generated reports,
 and recent Git history rather than treating older roadmap prose as current.
 Numerical claims are snapshot claims and must be regenerated before an
 implementation phase relies on them.
@@ -140,7 +140,7 @@ do not capture the reasoning state that preceded a result.
 
 | Existing component | Immediate engineering gap | Why it blocks the loop |
 |---|---|---|
-| `fact-frontier.py` | Typed execution of its selected operation | The first authoritative producer/checker operation selects one exact fact, but no executor binds frontier, result, and transaction identities |
+| `fact-frontier.py` | Durable application of its prepared transaction | The first authoritative operation now binds frontier, result, receipt, evidence row, footprint, and transaction identities without caller-authored metadata; production apply remains unexercised |
 | Fact schema | Candidate/attempt identity is absent by design | Attempts and knowledge need separate schemas |
 | Solver `Evidence` | No route-neutral portable result envelope for closure | The closer cannot derive ledger evidence safely |
 | Reconstruction | No generic obligation-composition interface | Multi-step plans cannot become one kernel proof |
