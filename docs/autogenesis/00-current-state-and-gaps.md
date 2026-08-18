@@ -2,10 +2,11 @@
 
 ## Snapshot boundary
 
-This assessment was written against `main` at `a8a862133` on 2026-08-18. It
-uses live code, root `PLAN.md`, generated reports, and recent Git history rather
-than treating older roadmap prose as current. Numerical claims are snapshot
-claims and must be regenerated before an implementation phase relies on them.
+This assessment was refreshed through exact pushed feature checkpoint
+`5c38bf95d` on 2026-08-18. It uses live code, root `PLAN.md`, generated reports,
+and recent Git history rather than treating older roadmap prose as current.
+Numerical claims are snapshot claims and must be regenerated before an
+implementation phase relies on them.
 
 Useful live commands are:
 
@@ -25,7 +26,7 @@ cycle already exist:
 | Layer | Current asset | Current assurance |
 |---|---|---|
 | Formal problem | Typed term IR, queries, SMT-LIB parser, fact `formal.statement` | Typed and validated; surface support remains uneven |
-| Selection | `fact-frontier.py`, dependency readiness, unlock view, gate-coupling warning | Human and content-addressed JSON views; one fixture-only typed operation is registered, so autonomous dispatch still refuses all live facts |
+| Selection | `fact-frontier.py`, dependency readiness, unlock view, gate-coupling warning | Human and content-addressed JSON views; exact authoritative operation matching selects one live fact and refuses every unregistered candidate |
 | Search | Pure-Rust SAT/BV, arithmetic, quantifier, string, FP, CAS, and specialized routes | Broad, uneven; `unknown` is first-class |
 | Strategy | Solver strategy combinators and route dispatch | Route-local; not a general proof planner |
 | SAT checking | Original-model replay and multiple clausal proof routes | Strong for supported routes |
@@ -139,7 +140,7 @@ do not capture the reasoning state that preceded a result.
 
 | Existing component | Immediate engineering gap | Why it blocks the loop |
 |---|---|---|
-| `fact-frontier.py` | First authoritative producer/checker operation | Registry and machine snapshot exist; the sole operation is fixture-scoped and grants no live dispatch authority |
+| `fact-frontier.py` | Typed execution of its selected operation | The first authoritative producer/checker operation selects one exact fact, but no executor binds frontier, result, and transaction identities |
 | Fact schema | Candidate/attempt identity is absent by design | Attempts and knowledge need separate schemas |
 | Solver `Evidence` | No route-neutral portable result envelope for closure | The closer cannot derive ledger evidence safely |
 | Reconstruction | No generic obligation-composition interface | Multi-step plans cannot become one kernel proof |

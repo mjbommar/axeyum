@@ -31,9 +31,9 @@ operationally reachable.
 | Required observation | Evidence that proves it | Current verdict | Earliest missing foundation |
 |---|---|---|---|
 | Inputs were fixed | Clean execution capture binds commit and generated baseline digest | Fixture | Bind execution identity into the eventual transaction |
-| B and A were selected without intervention | Content-addressed frontier snapshot plus deterministic selection rationale | Partial | Register typed operations; the authoritative selector currently refuses every candidate |
+| B and A were selected without intervention | Content-addressed frontier snapshot plus deterministic selection rationale | Partial | One exact authoritative fact is now selected; qualify and register a real B -> A chain rather than mistaking a leaf closure for compounding |
 | A was unavailable before B | The identical A target under the identical route policy and budget receives no credit before B | Fixture | Bind the result into a replayed episode transaction |
-| B was established | Catalog-only structural search produces typed, content-addressed, kernel-checked evidence for fresh B | Fixture | Admit the result through the durable transaction path |
+| B was established | Catalog-only structural search produces typed, content-addressed, kernel-checked evidence for fresh B | Route-ready | The first real SMT certificate is source-bound; execute it through a typed operation receipt and admit it through the durable transaction path |
 | B became durable knowledge | Atomic application after fresh-process replay and fact validation | Fixture | Repeat the accepted boundary against one genuinely open authoritative fact |
 | A became newly ready | Readiness changes only after the accepted B event | Fixture | Repeat against authoritative frontier state rather than a counterfactual fixture |
 | A was established using B | Fresh proof is accepted and its dependency on B is derived from the proof term | Fixture | Transactional admission and readiness event |
@@ -248,6 +248,34 @@ The retained episode replayed as
 the registry-aware authoritative frontier
 `565b1a02212a138428c35460e586a97867c48886c4362491c40f0cd35d454706`
 still selected nothing. Authoritative writes remain zero.
+
+The first authoritative operation is now licensed at exact pushed commit
+`5c38bf95d`. `smt-int-quadratic-negative-discriminant-v1` applies only to
+`F:no-integer-square-is-minus-one`; its producer derives a bounded exact
+integer-quadratic certificate and its checker re-collects the original source
+assertion in a fresh arena. The public harness reports
+`kind=unsat-int-quadratic-negative-discriminant certified=1 arena=ok`. Source,
+assertion-count, coefficient, and discriminant mutations reject.
+
+The settled-SMT certification gate failed on purpose when that fact's former
+negative control became certified. The control now uses the dedicated
+`x*x = 2` fixture: it is genuinely `unsat` but remains `certified=0`, because
+positive-discriminant integer-root exclusion is outside the new certificate.
+This separates checker calibration from ledger status; a mathematical fact no
+longer has to remain open merely to keep a test discriminating.
+
+The retained authoritative frontier at
+`/nas3/data/axeyum/autogenesis/frontiers/5c38bf95d/frontier.json` binds ledger
+digest `87566ce3c063d615acba30c6c180b72aaba7582ba3e5eec6f240fb2db7987f17`,
+operation-registry digest
+`1ff5187cca502f32370e390d6faa7ddb569efc7118a7d58ee9e3048e6678a6f9`,
+and frontier digest
+`d58fe67194b2b83759ad671fbb7acfa7511d87236b06837c7eeb61cf00e80e72`.
+It deterministically selects exactly that fact and refuses every other ready
+candidate. This closes the selection refusal seam, not Autogenesis-1: the
+selected fact unlocks no descendant in the current ledger, and no generic typed
+executor or authoritative transaction adapter has consumed the selection yet.
+Authoritative writes remain zero.
 
 ## Assumptions tested now
 

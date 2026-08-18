@@ -135,17 +135,20 @@ boundaries. Production write authority rejects this fixture path.
 The durable fixture event now derives a content-addressed readiness delta, and
 that delta is mandatory input to the post-B catalog. It authorizes exactly A
 from the ledger's B-to-A edge. The authoritative fact frontier now has a
-content-addressed JSON form with deterministic rationale. It selects nothing:
-all ten dependency-ready open/conjectured facts lack a registered typed
-producer/checker operation, so broad fragment reachability cannot silently
-become dispatch authority. These remain fixture controls rather than
-Autogenesis-1 credit.
+content-addressed JSON form with deterministic rationale. At exact pushed
+checkpoint `5c38bf95d`, it selects exactly
+`F:no-integer-square-is-minus-one`: the only open fact matching an
+authoritative typed operation. Every unregistered candidate remains refused,
+so broad fragment reachability cannot silently become dispatch authority.
 
 The reviewed [`operations.json`](../../artifacts/autogenesis/operations.json)
-now names the exercised Nat producer, independent kernel checker, exact fact
-shape, and admission semantics without shell text. Its only entry is explicitly
-`counterfactual-fixture-only`; the authoritative frontier consumes the registry
-and still selects nothing.
+names both the fixture-only Nat producer/checker and the first authoritative
+QF_NIA certificate operation. The latter is source-bound, narrow, and carries
+a non-empty SMT trust footprint rather than impersonating a kernel theorem.
+Selection is therefore real, but execution and admission are not yet: the
+selected fact unlocks no descendant, no generic typed executor consumes the
+frontier, and authoritative ledger writes remain zero. It validates the next
+admission seam without receiving Autogenesis-1 compounding credit.
 
 ## Phase summary
 
