@@ -159,6 +159,31 @@ the left column must run on a host that satisfies the right one.
 | kernel / library / export | `scripts/check-lean-gate.sh`, the Lean axiom ledger | **Lean at the repo pin** |
 | linear arithmetic | the z3 differential fuzzes (`--features z3`) | `GITHUB_TOKEN` for the `z3/gh-release` fetch |
 | ledgers, claims, facts | `validate-facts.py`, `validate-claims.py`, `check-links.sh` | Python only — runs anywhere |
+| **anything merged to `main`** | `scripts/local-ci.sh` — hosted CI calls this *the authoritative gate for main* | `cargo-nextest`, rust **stable**, rust **1.88.0**, `z3` |
+
+The `local-ci.sh` row was added on 2026-08-18, after measuring that **no host in
+this fleet could run it** — including the dev box. `cargo nextest --version`
+exited 101 (`no such command`) on s4, s5 and s7; `rustup run 1.88.0 cargo
+--version` exited 1 (toolchain not installed) on all three; `provision-fleet-host.sh`
+installed none of them. Since `cargo nextest run --profile local --workspace
+--all-features` *is* the test sweep, and each step is `run … || rc=$?`, the
+script would not have stopped — it would have carried on with the two central
+steps never executing. Four independent signals said it had never been run at
+all: `artifacts/local-ci/` absent, the isolated target dir
+`~/.cache/axeyum-local-ci-target` absent, no crontab entry and no user systemd
+timer, and only four tracked files mentioning it, none of them an entry point.
+
+Two things changed as a result. `local-ci.sh` now **refuses to start** on a host
+missing any prerequisite (`--preflight-only` asks the question without running
+the gate), because a gate that limps still produces output shaped like a gate's.
+And `--record` writes a tracked JSON per (sha, host) under
+`artifacts/local-ci-runs/`, so "did the authoritative gate pass on this SHA" has
+an answer — the log directory is gitignored, which is why it never did.
+
+Installing 1.88.0 needs `--profile minimal`: the plain form fails on this
+fleet's rustup with *"some components are unavailable for download for channel
+'1.88.0': 'miri', 'rustc-codegen-cranelift'"*, inherited from the nightly
+channel's default profile.
 
 The Lean row is the one that shapes scheduling. Two of the three roadmap strands
 are Lean-bound, so before this baseline existed they both serialised onto the

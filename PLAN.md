@@ -174,6 +174,9 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `3076b6ae0` | the one Lean module `rfl` refuted on its own: root-caused to a degenerate `(t, t)` witness, the route now declines, and a self-refuting attestation FAILS the run instead of being counted |
 | 2026-08-18 | `8e4894de4` | `ArrayAxiom` renders the query's own terms; a third `structural` verdict binds 95 modules to their query's subterms, 359 of 372 corruptions caught, and the attested class drops 124 → 28 with an anti-absorption guard |
 | 2026-08-18 | `pending` | binding coverage: +20 bound (105 → 125), 124 modules proved content-free, and the converse direction measured at 286/531 |
+| 2026-08-18 | `pending` | `scripts/cargo-serialized.sh`: heavy cargo now takes an flock and a memory ceiling, because "serialize" was prose and prose does not hold a lock (two dev boxes downed, one agent session OOM-killed). **`MemoryMax` alone does not bite** — it *is* applied (`memory.max` = 67108864) and a 400 MB allocation still succeeds by swapping, on a box whose 7 G of swap is 6 G full. With `MemorySwapMax=0` the same allocation is SIGKILLed by the cgroup (137), host untouched. `--self-check` proves it per host and discriminates: `AXEYUM_CARGO_SWAP=1G` flips it to `SURVIVED`, exit 1. |
+| 2026-08-18 | `pending` | `local-ci.sh`, the declared authoritative gate for `main`, cannot run on any fleet host and never has (`cargo nextest` 101, `rustup run 1.88.0` 1, on s4/s5/s7). Now refuses to start rather than limp, `--record` leaves a tracked per-(sha,host) JSON, and `provision-fleet-host.sh` installs the prerequisites (`1.88.0` needs `--profile minimal`, else rustup fails on `miri`/`cranelift` inherited from the nightly profile). The record carries per-step TEST COUNTS and marks a step that exited 0 having run zero tests as `vacuous`. |
+| 2026-08-18 | `pending` | The vacuous-step guard was itself unreachable when written: `tee -a a b` appends to BOTH files, so the per-step slice accumulated and every step inherited the previous step's count (5, 5, 9, 9 where the answer is 5, 0, 4, -1). Found by a harness, not by reading. Controls in `scripts/tests/test-local-ci-record.sh`; mutation counts — zero-test guard 1, nextest branch 1, slice truncation 2, libtest branch 4. |
 | 2026-08-18 | `590e2ff8c` | **ADR-0468 phase R2 completes: all 22 ordered-ring laws hold over the constructed ℝ.** `mul_assoc`, `left_distrib` and `mul_le_mul_of_nonneg_left` land, plus `mul_congr` — the fifth congruence obligation and the R4 prerequisite. The four were one problem: each compares two products whose *sampling indices differ*, so `CReal.mul`'s exact estimate is unavailable and the naive bound is `C/(n+1)` for a `C > 2`. Two new pieces make that enough. `CReal.Equiv.of_bounded` — **`Equiv` only needs the difference to be `O(1/n)`; the constant is free** — is `Equiv.trans`'s argument with one term deleted, closing on `Rat.le_of_le_add_natDivSucc`, whose numerator is a `Nat` *parameter* so a symbolic `K` is as good as a literal; and `Rat.nat_index_compose` says **Bishop's sampling indices are closed under composition** (the additive shift `2n+1` is the `c = 1` case), so every nested index reads back at `n` through one `natDivSucc_le_scaled`. `mul_le_mul_of_nonneg_left` needed no estimate at all, exactly as costed — it is `left_distrib` + `mul_nonneg` + `mul_congr`. **22 of 22**, 58 declarations, trusted surface still 0, and the count is now read out of the kernel: `CRealPrelude::ordered_ring_laws` must name 22 *distinct* footprint-empty theorems matching `RatPrelude::ring_laws` position by position, asserted by the example's exit status and three tests, verified by deleting `mul_assoc`. |
 | 2026-08-18 | `de85ba7ff` | ℝ gets **multiplication**: `CReal.mul` at Bishop's product index `(c+1)·n + c` with `c := bound x + bound y + 1`, plus `CReal.bound` (a *projection*, `natAbs (num (seq x 0)) + 1`) and `bound_within`. Five of the 22 land — `mul_comm`, `mul_one`, `mul_zero` in `Equiv` form, `mul_nonneg` and `sq_nonneg` **verbatim** — taking it to **19 of 22**, 53 declarations, trusted surface still 0. The canonical bound is cheap after all: the fixed modulus bounds every sample by `\|x_0\| + 2` at `n = 0` with nothing to extract, and the ℕ bridge is two computing `Int.natAbs` facts. The estimate closes **exactly** — the four product terms fuse to the regularity bound with no weakening step — and `Rat.natDivSucc` is still never needed antitone in its index. Eleven new ℚ lemmas (`bounds_mul`, `neg_mul_le_of_bounds`, `mul_sub_mul`, `natDivSucc_mul`, `natDivSucc_le_one`, `bounds_num`, …), all axiom-free. `ofRat_mul` + `not_equiv_mul_one_one_zero` are the product's discrimination witnesses, verified load-bearing by deletion (three tests die, every other row stays green) and by a refused negative control. |
 | 2026-08-18 | `PENDING2` | `Rat.natDivSucc_scale` and `Rat.natDivSucc_le_add_left`: the two ℚ lemmas that take **`natDivSucc` antitone in its index** off `CReal.mul`'s path. `scale` generalises `natDivSucc_halve` to an arbitrary factor (`halve` is its `c = 1` instance definitionally, and the kernel is asked to confirm the subsumption, not a doc comment); `le_add_left` is monotonicity in the numerator, stated additively so ℕ-subtraction never appears. Together `1/(K(n+1)) ≤ 1/(n+1)` becomes `1 ≤ K` at one denominator, for **any** K — which is what the fixed-shift trick behind `add_zero`/`add_assoc` was thought not to generalise to. |
@@ -1583,6 +1586,34 @@ module, and 41 of 74 Lean-checked families prove nothing about their proposition
 — so the two must never be summed. And `just check` is red independently of this
 lane: `check-plan-authority.py` budgets the `PLAN.md` sources at 52 KB and they
 were already 57 KB before this lane existed.
+
+**The gate hosted CI calls "the authoritative gate for main" has never run, and
+could not have** (`WIP`, capability-assurance, 2026-08-18).
+`.github/workflows/ci.yml` deliberately keeps only the light checks and says
+`scripts/local-ci.sh` is the real one — run on local hardware, because the ~32
+z3/cvc5 differential-fuzz binaries starve on 4-core hosted runners. The reasoning
+is sound. The gate is not:
+
+```
+cargo nextest --version          -> 101  no such command      (s4, s5, s7)
+rustup run 1.88.0 cargo --version ->   1  not installed        (s4, s5, s7)
+```
+
+`cargo nextest run --profile local --workspace --all-features` *is* the test
+sweep, and every step is `run … || rc=$?`, so it would not have stopped — it
+would have carried on with the two central steps never executing. Four
+independent signals say it had never run at all: `artifacts/local-ci/` absent,
+the isolated target dir absent, no crontab and no user systemd timer, and four
+tracked files mentioning it, none an entry point. `provision-fleet-host.sh`
+installs none of the three prerequisites. **`main` has no heavy pre-merge gate
+and has not had one.**
+
+Landed against that: a loud preflight (`--preflight-only`), `--record` writing a
+*tracked* run record per (sha, host) — the log dir is gitignored, which is why
+"did the gate pass on this SHA" had no answer — and provisioning that installs
+what the gate needs. Next: run it, commit the first record, and decide whether it
+belongs on a timer on an idle fleet host (s5/s7 are at load 0.0).
+
 
 **The mathematics strand's primary metric drifted 4 → 11 areas unnoticed**
 (`WIP`, capability-assurance, 2026-08-17). Detail:
