@@ -30,4 +30,12 @@ imported theorem nor its source name counts as Axeyum proof construction.
 ```sh
 python3 scripts/check-autogenesis-mathlib-source.py
 python3 scripts/create-autogenesis-mathlib-candidates.py --check
+python3 scripts/create-autogenesis-mathlib-dependency-components.py --check
 ```
+
+`mathlib-dependency-source-v1.json` binds a second, evaluation-only external
+artifact. Its extractor can inspect upstream theorem values, but emits only
+names and direct theorem dependencies. The committed component projection
+contains only candidate identities, candidate-to-candidate edges, and whole
+weak components. It is split input, not proposer input, and it still assigns no
+train, development, or held-out membership.

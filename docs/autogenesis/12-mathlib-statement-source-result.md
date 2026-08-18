@@ -92,9 +92,9 @@ turning source availability into false evaluation credit.
 
 ## Next boundary
 
-Derive a graph-only dependency view for these 240 candidates in a sandbox that
-can read Mathlib proof values but emits only names/edges and cannot write the
-candidate set. Use that graph to reject cross-component, family, and proof-shape
-leakage before selecting train/development/held-out membership. Only then run
-fixed-budget Axeyum episodes and let their typed declines choose the first
-Phase 3 proof-plan primitive.
+The graph-only dependency view has now been derived and is reported in the
+[dependency-component result](13-mathlib-dependency-components-result.md).
+The remaining boundary is human review plus mutation authoring before a frozen
+train/development/held-out assignment. Only after that freeze should
+fixed-budget Axeyum episodes let typed declines choose the first Phase 3
+proof-plan primitive.
