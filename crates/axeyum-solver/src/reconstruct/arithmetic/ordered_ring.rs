@@ -946,13 +946,13 @@ fn ring_telescope(arith: &RingSignature) -> [NameId; 30] {
 /// particular refutation.
 ///
 /// The 30 binder types are a function of the signature's 30 declaration *types*
-/// alone — [`ring_interface_telescope`] computes them by the same
-/// [`abstract_consts`] step the generalization uses, so this is the interface as
-/// the generalized theorem actually states it, not a restatement of it.
+/// alone — [`ring_interface_telescope`] computes them by the same private
+/// `abstract_consts` step the generalization uses, so this is the interface as the
+/// generalized theorem actually states it, not a restatement of it.
 #[derive(Debug, Clone)]
 pub struct RingInterfaceBinder {
     /// The binder's name in the generalized statement (`R`, `add`, …,
-    /// `sq_nonneg`) — [`RING_BINDER_NAMES`] in declaration order.
+    /// `sq_nonneg`) — the private `RING_BINDER_NAMES` table, in declaration order.
     pub binder: &'static str,
     /// The declaration in the source environment this binder abstracts,
     /// rendered (`Real.add_comm`, `Int.add_comm`, …).
