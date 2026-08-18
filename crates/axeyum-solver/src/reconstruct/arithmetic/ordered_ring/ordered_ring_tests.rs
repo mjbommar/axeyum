@@ -509,7 +509,7 @@ fn only_indexed_variable_and_hypothesis_names_count_as_query_local() {
 }
 
 // ---------------------------------------------------------------------------
-// The interface telescope, detached from any refutation (ADR-0475).
+// The interface telescope, detached from any refutation (ADR-0486).
 // ---------------------------------------------------------------------------
 
 /// The 30 binder types [`ring_interface_telescope`] computes are **the same
@@ -548,7 +548,7 @@ fn the_standalone_telescope_is_the_generalized_statements_own_prefix() {
     }
 }
 
-/// **The result ADR-0475 rests on.** The interface telescope read off the
+/// **The result ADR-0486 rests on.** The interface telescope read off the
 /// axiomatized `Real` package and the one read off the **axiom-free** `Int`
 /// development are the same 30 statements, rendered byte for byte.
 ///
