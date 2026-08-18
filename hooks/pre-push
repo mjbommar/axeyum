@@ -268,9 +268,32 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   # empty binary and exited 0. `--test-threads=1`: the frontier counts decided
   # files under a wall-clock budget, so parallel load makes it report false
   # REGRESSIONs (task #40).
-  gated_test "capability frontier ratchet" \
-    cargo test -p axeyum-solver --test progress_frontier --features full --quiet \
-    -- --test-threads=1
+  #
+  # SCOPED TO THE DIFF, 2026-08-18. It is 216s of a ~900s hook (24%), and it ran
+  # on pushes touching only docs and the kernel — which cannot move a solver
+  # frontier. Worse, it is the one step whose ANSWER depends on machine load:
+  # CLAUDE.md records the same commit on the same box scoring 35 (load 34), 39
+  # (load 5.4) and 40 (idle), and this repository routinely runs several lanes at
+  # once, so an unscoped run is both the slowest step and the least trustworthy
+  # one. The suite marks such runs NOT COMPARABLE itself.
+  #
+  # The filter is deliberately the SAME breadth as the evidence suite's below,
+  # and for the same reason: the 2026-08-04 drift came from `dl_online.rs`, a
+  # file whose name has nothing to do with the thing it broke. Any change under a
+  # crate that can move a decision runs it.
+  if [ -n "$(git diff --name-only "$PREPUSH_BASE" "$PREPUSH_TIP" -- \
+      'crates/axeyum-solver/src/**' \
+      'crates/axeyum-rewrite/src/**' \
+      'crates/axeyum-cnf/src/**' \
+      'crates/axeyum-bv/src/**' \
+      'crates/axeyum-aig/src/**' | head -1)" ]; then
+    echo "pre-push: decision-path source changed — capability frontier ratchet" >&2
+    gated_test "capability frontier ratchet" \
+      cargo test -p axeyum-solver --test progress_frontier --features full --quiet \
+      -- --test-threads=1
+  else
+    echo "pre-push: no decision-path source changed — frontier ratchet SKIPPED" >&2
+  fi
 
   # The ALWAYS-ON integration slice: four cheap `tests/*.rs` suites (measured
   # 2026-08-04: 0.00s + 0.01s + 0.00s + 0.82s warm) that no fast gate ran.
