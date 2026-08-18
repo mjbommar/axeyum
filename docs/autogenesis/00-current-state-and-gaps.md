@@ -25,7 +25,7 @@ cycle already exist:
 | Layer | Current asset | Current assurance |
 |---|---|---|
 | Formal problem | Typed term IR, queries, SMT-LIB parser, fact `formal.statement` | Typed and validated; surface support remains uneven |
-| Selection | `fact-frontier.py`, dependency readiness, unlock view, gate-coupling warning | Deterministic, ledger-derived, but queue is sparse |
+| Selection | `fact-frontier.py`, dependency readiness, unlock view, gate-coupling warning | Deterministic and ledger-derived; text-only, and the live open queue has no kernel chain |
 | Search | Pure-Rust SAT/BV, arithmetic, quantifier, string, FP, CAS, and specialized routes | Broad, uneven; `unknown` is first-class |
 | Strategy | Solver strategy combinators and route dispatch | Route-local; not a general proof planner |
 | SAT checking | Original-model replay and multiple clausal proof routes | Strong for supported routes |
@@ -145,7 +145,7 @@ do not capture the reasoning state that preceded a result.
 | Reconstruction | No generic obligation-composition interface | Multi-step plans cannot become one kernel proof |
 | Kernel dependency inventory | Mapping from kernel constants back to fact IDs is partial | Newly admitted facts cannot always derive ledger edges |
 | `close-fact.py` | Shell commands in caller-authored rows | Command text is too weak as a typed trust boundary |
-| Fact DAG | 63/110 isolated, max depth 6 | Scheduler has little compounding work to select |
+| Fact DAG | 63/110 isolated overall; generated baseline finds 40 `kernel-lean` facts, 52 internal edges, 6 isolated, depth 6 | Existing proofs form a bootstrap replay curriculum, but all kernel nodes are settled and no counterfactual knowledge snapshot exists |
 | Capability matrices | Primarily capability reporting | Declines are not converted into ranked reusable work |
 | Benchmark corpora | Measure solver verdicts | Do not measure autonomous acquisition or human intervention |
 | Plan generation | Syntactic consistency only | Semantically stale next actions can still pass |
@@ -167,9 +167,11 @@ that emits a proposal and a separate replay command that authorizes closure.
 
 ### Phase 2: demonstrate compounding
 
-Gap: the current fact frontier is not a production curriculum. Required bridge:
-a dense, non-trivial nursery with known dependencies, mutations, route
-expectations, budgets, and held-out chains.
+Gap: the kernel subgraph is connected enough for a bootstrap replay, but every
+kernel fact is already settled. Required bridge: a counterfactual knowledge
+snapshot that withholds ledger entries *and proof retrieval*, followed by a
+dense, non-trivial nursery for sustained evaluation with known dependencies,
+mutations, route expectations, budgets, and held-out chains.
 
 ### Phase 3: plan proofs
 

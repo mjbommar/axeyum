@@ -213,6 +213,9 @@ step smtcomp-resume ./scripts/check-smtcomp-resume.sh
 # the two files concurrent lanes clobbered four times on 2026-08-14 (67 and 60
 # touches in 24 hours), because the session protocol told every lane to append
 # to them. These gates make a hand edit a failure instead of a lost line.
+step autogenesis-proof-gap-source python3 scripts/gen-proof-gap-matrix.py --check
+step autogenesis-baseline-tests python3 -m unittest scripts.tests.test_gen_autogenesis_baseline
+step autogenesis-baseline python3 scripts/gen-autogenesis-baseline.py --check
 step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
 step gen-plan       python3 scripts/gen-plan.py --check
 step adr-index-tests python3 -m unittest scripts.tests.test_gen_adr_index

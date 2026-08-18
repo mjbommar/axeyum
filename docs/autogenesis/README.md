@@ -104,6 +104,7 @@ compounding, not automation theatre.
 | [Trust, safety, and governance](05-trust-safety-and-governance.md) | What remains immutable as autonomy increases? |
 | [Research horizon](06-research-horizon.md) | What do current external systems teach, and what lies beyond them? |
 | [First 90 days](07-first-90-days.md) | What is the first bounded execution programme? |
+| [Backward foundation](08-backward-foundation.md) | What must be true immediately before Autogenesis-1, and which assumptions already fail? |
 
 ## Phase summary
 
@@ -111,7 +112,7 @@ compounding, not automation theatre.
 |---|---|---|
 | 0. Bind reality | Current claims and interfaces are machine-readable and non-contradictory | One generated baseline names every existing seam and refuses stale plan/fact state |
 | 1. Close one loop | A deterministic orchestrator performs one evidence-backed fact transition | Clean replay of one autonomous closure; no learning or conjecturing |
-| 2. Demonstrate compounding | A dense nursery and scheduler produce a two-fact unlock chain | Autogenesis-1 passes from a clean checkout |
+| 2. Demonstrate compounding | A counterfactual knowledge snapshot and scheduler produce a two-fact unlock chain; a dense nursery follows for sustained evaluation | Autogenesis-1 passes from a clean checkout |
 | 3. Plan proofs | A typed proof-plan IR composes heterogeneous checked substeps | One goal solved by a multi-route plan that no monolithic route can solve |
 | 4. Acquire capabilities | Structured declines drive reusable lemma, route, and representation work | Measured capability acquisition raises held-out autonomous yield |
 | 5. Learn search, not truth | Search policy improves from replayable reasoning episodes | Learned policy beats deterministic baselines without changing acceptance |

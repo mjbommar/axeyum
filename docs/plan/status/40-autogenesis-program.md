@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Programme specified; implementation not authorized** (`WIP`,
-autogenesis-program, 2026-08-18). If selected, execute only Phase 0 in the
-[`Autogenesis plan`](../../autogenesis/README.md).
+**Phase 0 is active** (`WIP`, autogenesis-program, 2026-08-18). Baseline finds
+connected but settled kernel graph. Next: a proof-leakage-safe pre-B snapshot;
+no orchestrator before counterfactual passes.
 
 <!-- plan-section: landed-changes -->
 

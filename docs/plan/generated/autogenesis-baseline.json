@@ -1,0 +1,1260 @@
+{
+  "autogenesis1_requirements": [
+    {
+      "evidence": "baseline source digest plus clean execution capture",
+      "id": "A1-fixed-input-identity",
+      "next": "capture the preregistered experiment at an exact clean commit",
+      "state": "ready"
+    },
+    {
+      "evidence": "kernel ledger graph has 52 edges at depth 6 and 0 unsettled nodes",
+      "id": "A1-real-derived-chain",
+      "next": "qualify a primary and fallback with proof-derived dependency and pre-B counterfactual",
+      "state": "replay-candidate"
+    },
+    {
+      "evidence": "selection remains a human choice from text output",
+      "id": "A1-machine-selection",
+      "next": "content-address a machine-readable frontier snapshot and rationale",
+      "state": "missing"
+    },
+    {
+      "evidence": "route dispatch, evidence assembly, and checker selection remain caller-authored",
+      "id": "A1-typed-dispatch-evidence",
+      "next": "exercise one typed adapter and registered checker operation",
+      "state": "missing"
+    },
+    {
+      "evidence": "single fact rollback exists; an episode-wide transaction does not",
+      "id": "A1-atomic-admission",
+      "next": "stage and replay a proposed fact delta before atomic application",
+      "state": "partial"
+    },
+    {
+      "evidence": "no accepted-transition event recomputes readiness",
+      "id": "A1-admission-triggered-retry",
+      "next": "make accepted ledger state, never solver success, trigger retry",
+      "state": "missing"
+    },
+    {
+      "evidence": "no content-addressed episode or clean replay command exists",
+      "id": "A1-clean-reproduction",
+      "next": "replay B then A from committed inputs and retained artifacts only",
+      "state": "missing"
+    }
+  ],
+  "contract": "internal-autogenesis-phase0",
+  "ledger": {
+    "assurance": {
+      "axiom_free_kernel_facts": 39,
+      "check_statuses": {
+        "checked": 196
+      },
+      "evidence_rows": 196,
+      "with_checker_command": 194,
+      "with_multiple_named_checkers": 123
+    },
+    "dependency_graph": {
+      "dangling": [],
+      "depth_histogram": {
+        "1": 77,
+        "2": 13,
+        "3": 8,
+        "4": 7,
+        "5": 4,
+        "6": 1
+      },
+      "edges": 60,
+      "edges_detail": [
+        {
+          "consequent": "F:bcnf-decomposition-lossless-not-dependency-preserving",
+          "premise": "F:orders-fd-implication-certified"
+        },
+        {
+          "consequent": "F:chu-vandermonde-convolution",
+          "premise": "F:chu-vandermonde-convolution-recurrence"
+        },
+        {
+          "consequent": "F:double-negation-elimination",
+          "premise": "F:excluded-middle"
+        },
+        {
+          "consequent": "F:excluded-middle-not-intuitionistic",
+          "premise": "F:excluded-middle"
+        },
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:int-add-comm",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:int-add-le-add",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-le-add",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-le-add"
+        },
+        {
+          "consequent": "F:int-euclidean-decomposition",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:int-euclidean-decomposition",
+          "premise": "F:nat-div-mod-unique"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:int-mul-assoc",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:int-mul-comm",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:int-sq-nonneg",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-elim",
+          "premise": "F:int-sub-nat-nat-shift"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-elim",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-shift",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:modus-tollens-valid",
+          "premise": "F:contraposition"
+        },
+        {
+          "consequent": "F:modus-tollens-valid",
+          "premise": "F:modus-ponens-valid"
+        },
+        {
+          "consequent": "F:nat-add-comm",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:nat-add-comm",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-add-sub-cancel-left",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:nat-dvd-add",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-dvd-gcd-iff"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-gcd-bezout"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-exists-prime-dvd"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-gcd-succ"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-mul-one"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-left-distrib",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-mul-assoc",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-mul-one",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-one"
+        },
+        {
+          "consequent": "F:orders-candidate-keys-and-normal-forms",
+          "premise": "F:orders-fd-implication-certified"
+        },
+        {
+          "consequent": "F:rat-add-neg-inverse",
+          "premise": "F:rat-mul-renormalises"
+        },
+        {
+          "consequent": "F:rat-mul-renormalises",
+          "premise": "F:rat-normalize-reduces"
+        },
+        {
+          "consequent": "F:rat-normalize-reduces",
+          "premise": "F:int-euclidean-decomposition"
+        },
+        {
+          "consequent": "F:schedule-deadline-iis",
+          "premise": "F:schedule-critical-chain-infeasible"
+        }
+      ],
+      "isolated": 63,
+      "max_depth": 6,
+      "nodes": 110,
+      "with_dependencies": 33,
+      "with_dependents": 30
+    },
+    "facts": 110,
+    "kernel_dependency_coverage": {
+      "authority_gate": "scripts/check-fact-depends-derived.py",
+      "facts": 40,
+      "named": 35,
+      "unnamed_fact_ids": [
+        "F:ordered-ring-farkas-refutation",
+        "F:rat-add-neg-inverse",
+        "F:rat-mul-renormalises",
+        "F:rat-normalize-reduces",
+        "F:schedule-critical-chain-infeasible"
+      ]
+    },
+    "kernel_lean_graph": {
+      "dangling": [],
+      "depth_histogram": {
+        "1": 14,
+        "2": 6,
+        "3": 8,
+        "4": 7,
+        "5": 4,
+        "6": 1
+      },
+      "edges": 52,
+      "edges_detail": [
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:int-add-comm",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:int-add-le-add",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-le-add",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-le-add"
+        },
+        {
+          "consequent": "F:int-euclidean-decomposition",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:int-euclidean-decomposition",
+          "premise": "F:nat-div-mod-unique"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:int-mul-assoc",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:int-mul-comm",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:int-sq-nonneg",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-elim",
+          "premise": "F:int-sub-nat-nat-shift"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-elim",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-shift",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:nat-add-comm",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:nat-add-comm",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-add-sub-cancel-left",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:nat-dvd-add",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-dvd-gcd-iff"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-gcd-bezout"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-exists-prime-dvd"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-gcd-succ"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-mul-one"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-left-distrib",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-mul-assoc",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-mul-one",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-one"
+        },
+        {
+          "consequent": "F:rat-add-neg-inverse",
+          "premise": "F:rat-mul-renormalises"
+        },
+        {
+          "consequent": "F:rat-mul-renormalises",
+          "premise": "F:rat-normalize-reduces"
+        },
+        {
+          "consequent": "F:rat-normalize-reduces",
+          "premise": "F:int-euclidean-decomposition"
+        }
+      ],
+      "isolated": 6,
+      "max_depth": 6,
+      "nodes": 40,
+      "statuses": {
+        "proved": 40
+      },
+      "unsettled": 0,
+      "with_dependencies": 26,
+      "with_dependents": 24
+    },
+    "routes": {
+      "(missing)": 10,
+      "cas-certificate": 19,
+      "imported-kernel-lean": 5,
+      "kernel-lean": 40,
+      "search-certificate": 12,
+      "smt-clausal": 9,
+      "smt-term-level": 15
+    },
+    "statuses": {
+      "computed": 2,
+      "conjectured": 3,
+      "open": 7,
+      "proved": 95,
+      "refuted": 3
+    }
+  },
+  "manual_seams": [
+    {
+      "gap": "the command prints a queue; a person still selects the goal",
+      "id": "goal-selection",
+      "owner": "fact frontier",
+      "source": "scripts/fact-frontier.py",
+      "state": "manual"
+    },
+    {
+      "gap": "no typed fact-to-route dispatch contract exists",
+      "id": "route-dispatch",
+      "owner": "route adapters",
+      "source": "scripts/close-fact.py",
+      "state": "manual"
+    },
+    {
+      "gap": "the caller authors the evidence rows and route metadata",
+      "id": "evidence-assembly",
+      "owner": "transactional closer",
+      "source": "scripts/close-fact.py",
+      "state": "manual"
+    },
+    {
+      "gap": "caller-authored shell text chooses the checker",
+      "id": "checker-selection",
+      "owner": "evidence registry",
+      "source": "scripts/close-fact.py",
+      "state": "manual"
+    },
+    {
+      "gap": "single-file rollback exists; no staged multi-artifact transaction exists",
+      "id": "ledger-transition",
+      "owner": "transactional closer",
+      "source": "scripts/close-fact.py",
+      "state": "partial"
+    },
+    {
+      "gap": "kernel facts are covered where checker commands name the theorem; other routes are authored",
+      "id": "dependency-derivation",
+      "owner": "kernel dependency inventory",
+      "source": "scripts/check-fact-depends-derived.py",
+      "state": "partial"
+    },
+    {
+      "gap": "no durable event triggers frontier recomputation",
+      "id": "accepted-transition-event",
+      "owner": "episode/orchestrator",
+      "source": "docs/autogenesis/07-first-90-days.md",
+      "state": "missing"
+    },
+    {
+      "gap": "there is no content-addressed episode to replay",
+      "id": "clean-replay",
+      "owner": "episode replay",
+      "source": "docs/autogenesis/07-first-90-days.md",
+      "state": "missing"
+    }
+  ],
+  "proof_gap": {
+    "audit_reported_checked": 267,
+    "audit_unsat": 325,
+    "baseline_unsat": 327,
+    "complete_audits": 35,
+    "dominant_unsat": 259,
+    "evidence_certified": 267,
+    "evidence_checked": 267,
+    "lean_checked": 260,
+    "proof_errors": 2,
+    "trust_hole_free": 325,
+    "trust_hole_instances": 0
+  },
+  "source_identity": {
+    "algorithm": "sha256",
+    "digest": "5647411403666c819691da51305b64eda827eccfd1dbec505f7a1fc28161ff7c",
+    "inputs": [
+      {
+        "bytes": 3519,
+        "path": "artifacts/facts/F-affirming-the-consequent.json",
+        "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+      },
+      {
+        "bytes": 4889,
+        "path": "artifacts/facts/F-alternating-binomial-row-sum-zero.json",
+        "sha256": "e880a652f1b638aa5771f11308763396eaeefe8b9494f7814bbd559065c0cfcd"
+      },
+      {
+        "bytes": 7262,
+        "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+        "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+      },
+      {
+        "bytes": 12285,
+        "path": "artifacts/facts/F-barber-no-such-barber.json",
+        "sha256": "14a35ea41c66f079abd32124802a4eb7067b135591963d32a3f8a9b36bca139e"
+      },
+      {
+        "bytes": 11881,
+        "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+        "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+      },
+      {
+        "bytes": 4883,
+        "path": "artifacts/facts/F-binomial-row-sum-two-power.json",
+        "sha256": "b40e1097c670223e1c561e5481ac16908d602427ff35154e7d4846038ddec3c6"
+      },
+      {
+        "bytes": 5003,
+        "path": "artifacts/facts/F-bool-and-comm.json",
+        "sha256": "4ee5d8ffcaf59f9092fd841ee4a6c8074847c17ab29d7ed19862534a99663242"
+      },
+      {
+        "bytes": 5375,
+        "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+        "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+      },
+      {
+        "bytes": 6196,
+        "path": "artifacts/facts/F-chu-vandermonde-convolution.json",
+        "sha256": "1938c1c073ddd4a91fe23189963fb44c6c17ed63d34083b4fd48fa76435b553f"
+      },
+      {
+        "bytes": 1985,
+        "path": "artifacts/facts/F-collatz-reaches-one.json",
+        "sha256": "b189142039a4e84d081b03b3a8c4f78ff5486344123d461508464eae8e41f006"
+      },
+      {
+        "bytes": 9692,
+        "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+        "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+      },
+      {
+        "bytes": 2818,
+        "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+        "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+      },
+      {
+        "bytes": 4048,
+        "path": "artifacts/facts/F-contraposition.json",
+        "sha256": "5be5233192c2dddfe52b8e35be36f06071874e96a0e01aaa2cda712905b5f50b"
+      },
+      {
+        "bytes": 4989,
+        "path": "artifacts/facts/F-cross-binomial-row-sum.json",
+        "sha256": "0ff7e9017770ccde5ed93229216206571acccaaaacdf77a86c32a39a204909a9"
+      },
+      {
+        "bytes": 4431,
+        "path": "artifacts/facts/F-de-morgan-laws.json",
+        "sha256": "6506a8a0a261feef0af65df225c8eb379bc500acb4740c3fe6fecaeff59064b9"
+      },
+      {
+        "bytes": 4638,
+        "path": "artifacts/facts/F-double-negation-elimination.json",
+        "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+      },
+      {
+        "bytes": 4248,
+        "path": "artifacts/facts/F-ex-falso-quodlibet.json",
+        "sha256": "b31659b88133bd2f63b5f125346b45368d7944aa0d40523b3c363cab8fef0aba"
+      },
+      {
+        "bytes": 3861,
+        "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+        "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+      },
+      {
+        "bytes": 4639,
+        "path": "artifacts/facts/F-excluded-middle.json",
+        "sha256": "c4248a5a5019f103f171e24cc5ba3e51555ca98a965bb0f6ab4d398f15fbba85"
+      },
+      {
+        "bytes": 4740,
+        "path": "artifacts/facts/F-exportation.json",
+        "sha256": "a633e580813411f7c2668e82a30950eda4f40bb3a3653d409093f0d56e1bcbdd"
+      },
+      {
+        "bytes": 2365,
+        "path": "artifacts/facts/F-fermat-last-theorem.json",
+        "sha256": "498198ca4681bb4141ac42f7d46edc4577eadc5ef24a848fbe861a7cf531b833"
+      },
+      {
+        "bytes": 2877,
+        "path": "artifacts/facts/F-fol-validity-undecidable.json",
+        "sha256": "a6a2d38609b5d2e3d0ce03ac55d996417b58fd215a2a7127c6cd837d17499771"
+      },
+      {
+        "bytes": 4114,
+        "path": "artifacts/facts/F-fp16-add-monotone-rne.json",
+        "sha256": "1cb0d5f10bb28cb8de8e60d71e1ef20cbf6dec1d7d6f9bda0f10bde15c46c701"
+      },
+      {
+        "bytes": 7085,
+        "path": "artifacts/facts/F-fp16-bf16-roundtrip-not-identity.json",
+        "sha256": "64786eff05a54c890fddbfe6605dca57bf29643ee4a6204bfd48be163f42b315"
+      },
+      {
+        "bytes": 7105,
+        "path": "artifacts/facts/F-fp16-doubling-add-equals-mul-two.json",
+        "sha256": "7b7603137c2393ffac2c3ba51c8b4a6f2de4b36e2ccd05ca1bf34a0532f15a0e"
+      },
+      {
+        "bytes": 5754,
+        "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+        "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+      },
+      {
+        "bytes": 6534,
+        "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+        "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+      },
+      {
+        "bytes": 8018,
+        "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+        "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+      },
+      {
+        "bytes": 8566,
+        "path": "artifacts/facts/F-fp8-add-not-associative.json",
+        "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+      },
+      {
+        "bytes": 5219,
+        "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+        "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+      },
+      {
+        "bytes": 7257,
+        "path": "artifacts/facts/F-geometry-centroid-divides-medians.json",
+        "sha256": "7e70210039662c71fd974da497295a2f7499f37476daa1ef27fa92336948a915"
+      },
+      {
+        "bytes": 14762,
+        "path": "artifacts/facts/F-geometry-euler-line.json",
+        "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+      },
+      {
+        "bytes": 5484,
+        "path": "artifacts/facts/F-geometry-medians-concurrent.json",
+        "sha256": "ddabdf1fd4221faf0a701188a6747383892fceba44afa598782199af0c255e59"
+      },
+      {
+        "bytes": 5327,
+        "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+        "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+      },
+      {
+        "bytes": 16516,
+        "path": "artifacts/facts/F-geometry-pappus-hexagon.json",
+        "sha256": "34e8a01322d06e00bdaa01b00c47b162568c6201cf2febb9a857e1328b73bed3"
+      },
+      {
+        "bytes": 7141,
+        "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+        "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+      },
+      {
+        "bytes": 9741,
+        "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+        "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+      },
+      {
+        "bytes": 22913,
+        "path": "artifacts/facts/F-geometry-simson-line.json",
+        "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+      },
+      {
+        "bytes": 5486,
+        "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+        "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+      },
+      {
+        "bytes": 5720,
+        "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+        "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+      },
+      {
+        "bytes": 3389,
+        "path": "artifacts/facts/F-godel-first-incompleteness.json",
+        "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+      },
+      {
+        "bytes": 2706,
+        "path": "artifacts/facts/F-goldbach-strong.json",
+        "sha256": "79b9a3bdf8e748da41c8c9cd09cb54719fa42fa51e10fd5a767a21772aab108e"
+      },
+      {
+        "bytes": 4337,
+        "path": "artifacts/facts/F-int-add-assoc.json",
+        "sha256": "c7422512ed450f47ab184ad50566a2a0644245c4a1c44ae3af66cf40f7eb3e11"
+      },
+      {
+        "bytes": 3676,
+        "path": "artifacts/facts/F-int-add-comm.json",
+        "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+      },
+      {
+        "bytes": 4402,
+        "path": "artifacts/facts/F-int-add-le-add.json",
+        "sha256": "04fb3e8e80888d49ffced93aa1ddc18c944f94512aeb7b24b459a5b2457eb9af"
+      },
+      {
+        "bytes": 4433,
+        "path": "artifacts/facts/F-int-add-lt-add-of-le-of-lt.json",
+        "sha256": "d567f659297401f78d795caa8a433794818b401c3abf214a72e4ec195af62d43"
+      },
+      {
+        "bytes": 4819,
+        "path": "artifacts/facts/F-int-add-neg.json",
+        "sha256": "413649b045b1616f295d3f9b49b38028a24ff0d8d9e6be49d36786e6ed51a632"
+      },
+      {
+        "bytes": 3700,
+        "path": "artifacts/facts/F-int-equality-is-decidable.json",
+        "sha256": "cc1a5725b6579bcdbf90917b298552b7c962083662d3920ec5827c37bc69d1f3"
+      },
+      {
+        "bytes": 3023,
+        "path": "artifacts/facts/F-int-euclidean-decomposition.json",
+        "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+      },
+      {
+        "bytes": 4341,
+        "path": "artifacts/facts/F-int-left-distrib.json",
+        "sha256": "97cbe9365e1cb7043a13564c85b43115359f1a63dac559bda8c86c686345fe0d"
+      },
+      {
+        "bytes": 4333,
+        "path": "artifacts/facts/F-int-mul-assoc.json",
+        "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+      },
+      {
+        "bytes": 3719,
+        "path": "artifacts/facts/F-int-mul-comm.json",
+        "sha256": "aba467954f1f3f2afbe7ea39c433f44368b780483abc88ea80d5dd44775d2f69"
+      },
+      {
+        "bytes": 4597,
+        "path": "artifacts/facts/F-int-no-integer-strictly-between-zero-and-one.json",
+        "sha256": "27d34cf3d9afef0c47884af022e5e9d44c516fdae6bd7a7d3317298b5c505c47"
+      },
+      {
+        "bytes": 3649,
+        "path": "artifacts/facts/F-int-sq-nonneg.json",
+        "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+      },
+      {
+        "bytes": 5041,
+        "path": "artifacts/facts/F-int-sub-nat-nat-elim.json",
+        "sha256": "58d1a99763a3e5424ec08339c1bc42dd815ce27ed13369f9efaae1257014f8b3"
+      },
+      {
+        "bytes": 4965,
+        "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+        "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+      },
+      {
+        "bytes": 5114,
+        "path": "artifacts/facts/F-list-nil-append.json",
+        "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+      },
+      {
+        "bytes": 13268,
+        "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+        "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+      },
+      {
+        "bytes": 4202,
+        "path": "artifacts/facts/F-modus-ponens-valid.json",
+        "sha256": "4f760695fbf59e1358485dfdf451d774db551d929b977a957f1d87a7c5be33cd"
+      },
+      {
+        "bytes": 4112,
+        "path": "artifacts/facts/F-modus-tollens-valid.json",
+        "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+      },
+      {
+        "bytes": 4712,
+        "path": "artifacts/facts/F-nand-functional-completeness.json",
+        "sha256": "f8de95eee65f9c7dc7cee52f0095e58ee7f066f85cceda7fde3bfc472044a5f4"
+      },
+      {
+        "bytes": 3455,
+        "path": "artifacts/facts/F-nat-add-assoc.json",
+        "sha256": "bd18999eb6c6c6c4de419ae716d27f21ce391b43fb3f518e7294a6bee3ac101e"
+      },
+      {
+        "bytes": 2724,
+        "path": "artifacts/facts/F-nat-add-comm.json",
+        "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+      },
+      {
+        "bytes": 4077,
+        "path": "artifacts/facts/F-nat-add-sub-cancel-left.json",
+        "sha256": "ac41c33587cbff489830578e474a2bb9ea87467ad379a796b428124cc13b50f8"
+      },
+      {
+        "bytes": 3441,
+        "path": "artifacts/facts/F-nat-add-zero.json",
+        "sha256": "3bd4d57f29edded307d8c995f3de47b115d8bf96548ef8bf60e48581ddf41a9b"
+      },
+      {
+        "bytes": 4007,
+        "path": "artifacts/facts/F-nat-div-mod-exists.json",
+        "sha256": "3ff422e395249991b71a63c1aa733ecb7fc7ec971c950b4d3029e401a0e96539"
+      },
+      {
+        "bytes": 3956,
+        "path": "artifacts/facts/F-nat-div-mod-unique.json",
+        "sha256": "9c6d2017174b8a0fb4ad4ce8a8a6f46130f2dd82d35f338dace2770771bb2a16"
+      },
+      {
+        "bytes": 3717,
+        "path": "artifacts/facts/F-nat-dvd-add.json",
+        "sha256": "b769d28a2b7b952e4ad0397625e9254e9aff47b32636c83b26adea3f28596425"
+      },
+      {
+        "bytes": 4110,
+        "path": "artifacts/facts/F-nat-dvd-gcd-iff.json",
+        "sha256": "4ff93f5783c75a1c0ca128df329e60554778c230c6cb29bcf87f5b33044bfbc1"
+      },
+      {
+        "bytes": 5979,
+        "path": "artifacts/facts/F-nat-euclid-lemma.json",
+        "sha256": "a2c108ceba74d3171346e5b6d3ce3c21f710d214c320eb65c831a3f4d3a13db0"
+      },
+      {
+        "bytes": 6632,
+        "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+        "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+      },
+      {
+        "bytes": 6526,
+        "path": "artifacts/facts/F-nat-exists-prime-gt.json",
+        "sha256": "6cb7eb93bf72e59f86ac344e6053ecb5f4418de77f8d30cb4ce68f077bd4d03e"
+      },
+      {
+        "bytes": 4175,
+        "path": "artifacts/facts/F-nat-gcd-bezout.json",
+        "sha256": "f74c9064a3014d8cf691f1d0b8ffec233ef40585a1689f026d5ed0afaf8d2d82"
+      },
+      {
+        "bytes": 4132,
+        "path": "artifacts/facts/F-nat-gcd-succ.json",
+        "sha256": "e0fb1cf85f0d8e52770b9bf457242d4f15d76dbac82671a507f17d5884ca93ef"
+      },
+      {
+        "bytes": 5516,
+        "path": "artifacts/facts/F-nat-le-refl.json",
+        "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+      },
+      {
+        "bytes": 5755,
+        "path": "artifacts/facts/F-nat-le-succ.json",
+        "sha256": "72465fc1fe07b4305c3098314a720648c9d0b96462e96f17ac8bae6bceb8c3e1"
+      },
+      {
+        "bytes": 3661,
+        "path": "artifacts/facts/F-nat-left-distrib.json",
+        "sha256": "6a25df7aec622c1a773a56290463275ea50e5301f80e64c7f53aee6e161f3b1e"
+      },
+      {
+        "bytes": 4030,
+        "path": "artifacts/facts/F-nat-mod-eq-mul.json",
+        "sha256": "bcff2d90ed232a3032e67d51c778dad6dd220768ce2eaa1870536b94ddf69640"
+      },
+      {
+        "bytes": 3495,
+        "path": "artifacts/facts/F-nat-mul-assoc.json",
+        "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+      },
+      {
+        "bytes": 3371,
+        "path": "artifacts/facts/F-nat-mul-comm.json",
+        "sha256": "1a0fdadda76cc90edec73adb119933a3cb3c130ab11c4f83d55fff53aab3e020"
+      },
+      {
+        "bytes": 3558,
+        "path": "artifacts/facts/F-nat-mul-one.json",
+        "sha256": "3f5cba9ea3a950081dc762e74ab433385503dbb37ead805723d4d18b01944480"
+      },
+      {
+        "bytes": 5082,
+        "path": "artifacts/facts/F-nat-pow-add.json",
+        "sha256": "4da8efbb7943f23c0ab6fc3de1ef54badfdc75525ded899480a4134d5ed12b63"
+      },
+      {
+        "bytes": 2451,
+        "path": "artifacts/facts/F-nat-succ-add.json",
+        "sha256": "982b8c151d6d5432d029fcb86759b37c91f400cef1eaff5bb9ca1cacf9e2ccb2"
+      },
+      {
+        "bytes": 2352,
+        "path": "artifacts/facts/F-nat-zero-add.json",
+        "sha256": "3fdb7a9949fdf181416c28403449e55f181c9b9938626285f2f7001dfeda86ce"
+      },
+      {
+        "bytes": 3189,
+        "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+        "sha256": "8a15f1775ab30a542d58fc47028c499bb4e8032eda9f0d6813c38bb08245b5d8"
+      },
+      {
+        "bytes": 4534,
+        "path": "artifacts/facts/F-no-self-negating-proposition.json",
+        "sha256": "b2a8c563c13582450078e9cddda7137da437d83b59554f4cc64c335366c99898"
+      },
+      {
+        "bytes": 11217,
+        "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+        "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+      },
+      {
+        "bytes": 10680,
+        "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+        "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+      },
+      {
+        "bytes": 11030,
+        "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+        "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+      },
+      {
+        "bytes": 4332,
+        "path": "artifacts/facts/F-peirce-law.json",
+        "sha256": "df7d87675964a164cc6be5ffc051d5f78a4fb8be25de3132fbc670c10aa747f9"
+      },
+      {
+        "bytes": 6282,
+        "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+        "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+      },
+      {
+        "bytes": 6890,
+        "path": "artifacts/facts/F-quantifier-negation-duality.json",
+        "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+      },
+      {
+        "bytes": 4612,
+        "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+        "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+      },
+      {
+        "bytes": 2145,
+        "path": "artifacts/facts/F-rado-r4-a5-b4.json",
+        "sha256": "bcdd70d99fd8dc65f5cb6d44ef50b1461282e9046869a6793674e7eda96f6b0f"
+      },
+      {
+        "bytes": 2528,
+        "path": "artifacts/facts/F-rat-add-neg-inverse.json",
+        "sha256": "e7ee314bc69063f96fc6902dc1658743ed3fde572dc4e6172b634bffebd6460f"
+      },
+      {
+        "bytes": 2580,
+        "path": "artifacts/facts/F-rat-mul-renormalises.json",
+        "sha256": "33c60509f0c800e5abee384df79a32e5fe6a7d2a58978988926ba03e8e85a6c3"
+      },
+      {
+        "bytes": 2738,
+        "path": "artifacts/facts/F-rat-normalize-reduces.json",
+        "sha256": "595714e8e93cbd24998c0d3d7cc83f0e25e8f00e426cab6d1ae1ef5bb1fc8926"
+      },
+      {
+        "bytes": 4893,
+        "path": "artifacts/facts/F-resolution-rule-sound.json",
+        "sha256": "edca31fb14db96ee34684b42083160be05180ba1f2ed85796fb0de9817e4bb51"
+      },
+      {
+        "bytes": 6922,
+        "path": "artifacts/facts/F-roster-icu-night-iis.json",
+        "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+      },
+      {
+        "bytes": 7088,
+        "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+        "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+      },
+      {
+        "bytes": 5669,
+        "path": "artifacts/facts/F-schedule-deadline-iis.json",
+        "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+      },
+      {
+        "bytes": 3216,
+        "path": "artifacts/facts/F-sorting-network-optimal-size-n3.json",
+        "sha256": "18e3187248c898df46e6e84f6def1451c07156be10ae5e835353e0cbf6a37cfa"
+      },
+      {
+        "bytes": 3216,
+        "path": "artifacts/facts/F-sorting-network-optimal-size-n4.json",
+        "sha256": "8c44ca80a16a269156d6a125f6c9167086525983515d32706201bb09956f016d"
+      },
+      {
+        "bytes": 3216,
+        "path": "artifacts/facts/F-sorting-network-optimal-size-n5.json",
+        "sha256": "7ca4e16702e2ded7c6ae3dc27d0f02f600455cbb72537ef742d7db90ca5ff8d3"
+      },
+      {
+        "bytes": 4714,
+        "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+        "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+      },
+      {
+        "bytes": 4957,
+        "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+        "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+      },
+      {
+        "bytes": 4620,
+        "path": "artifacts/facts/F-tseitin-and-gate.json",
+        "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+      },
+      {
+        "bytes": 2721,
+        "path": "artifacts/facts/F-twin-prime-unbounded.json",
+        "sha256": "118e4b369778f692dab528a22fc748e946877648d07887435053d192c2899a94"
+      },
+      {
+        "bytes": 4795,
+        "path": "artifacts/facts/F-weighted-binomial-row-sum.json",
+        "sha256": "e8002775b2c8184b4fbfe2ec383cebdf18506dfe8da4a4530e917e47c2229946"
+      },
+      {
+        "bytes": 4036,
+        "path": "artifacts/facts/F-xor-associative.json",
+        "sha256": "cd39de8638f6e24feaec74820d422bf114d160a8739d3f3f3cd9904a80bf2cad"
+      },
+      {
+        "bytes": 18412,
+        "path": "artifacts/ontology/fact.schema.json",
+        "sha256": "ca3d41c6386a4d75424052a0f44ea4d794a8d139b8f98bd4d1c14e32913a19aa"
+      },
+      {
+        "bytes": 9513,
+        "path": "docs/autogenesis/07-first-90-days.md",
+        "sha256": "8af6065ba14d0dbcd1b8b741292fc8828d18fe09c77969f0dbdd9d2f2d5b080a"
+      },
+      {
+        "bytes": 46105,
+        "path": "docs/plan/generated/proof-gap-matrix.json",
+        "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
+      },
+      {
+        "bytes": 70361,
+        "path": "justfile",
+        "sha256": "f764b0194af2433bfabba74619d869f60fe7ffd12d658950360101aaee6e28d8"
+      },
+      {
+        "bytes": 6597,
+        "path": "scripts/check-fact-dag.py",
+        "sha256": "224a2672fd9a41730ca47e860a3a6a0b0c605113a924f6066f4a3287422fde81"
+      },
+      {
+        "bytes": 7054,
+        "path": "scripts/check-fact-depends-derived.py",
+        "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
+      },
+      {
+        "bytes": 19890,
+        "path": "scripts/check.sh",
+        "sha256": "8914d0bf02fc919ce93796778f26cb225aa3b0ae077cef2338ff7ae5ec93e0ca"
+      },
+      {
+        "bytes": 6846,
+        "path": "scripts/close-fact.py",
+        "sha256": "1946ed9f4d89dffed5cc57ed0f88cf5c5ed7f3b49c6ecb497c3e2862775c4d8a"
+      },
+      {
+        "bytes": 14525,
+        "path": "scripts/fact-frontier.py",
+        "sha256": "db6757cc801ed3996d0ba3c40ba55123e2855e8944054c2a391b46ff5678b81b"
+      },
+      {
+        "bytes": 21136,
+        "path": "scripts/gen-autogenesis-baseline.py",
+        "sha256": "ab338ff1a21060a2cc408ef5c8b4c3b8af19ec81d5e0f2155626428e6bcc505d"
+      },
+      {
+        "bytes": 17112,
+        "path": "scripts/gen-proof-gap-matrix.py",
+        "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
+      }
+    ]
+  },
+  "version": 0
+}

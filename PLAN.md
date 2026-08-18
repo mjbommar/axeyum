@@ -186,9 +186,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Programme specified; implementation not authorized** (`WIP`,
-autogenesis-program, 2026-08-18). If selected, execute only Phase 0 in the
-[`Autogenesis plan`](docs/autogenesis/README.md).
+**Phase 0 is active** (`WIP`, autogenesis-program, 2026-08-18). Baseline finds
+connected but settled kernel graph. Next: a proof-leakage-safe pre-B snapshot;
+no orchestrator before counterfactual passes.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

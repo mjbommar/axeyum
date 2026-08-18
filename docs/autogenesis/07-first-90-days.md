@@ -108,15 +108,15 @@ and no caller-authored label can upgrade its assurance.
 B closes automatically and reproducibly. This is Phase 1 completion, not yet
 Autogenesis-1.
 
-## Sprint 4 — Nursery and scheduler
+## Sprint 4 — Counterfactual snapshot and scheduler
 
 ### Tasks
 
-- **S4.1** Author the first 100 connected nursery facts across several Nat/Int
-  topics, with one-writer-per-topic ownership.
-- **S4.2** Validate cycles, dangling dependencies, formal statements, provenance,
-  and epistemic status.
-- **S4.3** Freeze train/dev and held-out dependency components.
+- **S4.1** Materialize the existing proof-derived kernel chains as candidate
+  curricula; do not duplicate their retained proofs into the runnable snapshot.
+- **S4.2** Define a counterfactual overlay that withholds B, A, and their proof
+  terms while leaving the authoritative ledger unchanged.
+- **S4.3** Freeze the primary chain, fallback, mutations, and pre-B snapshot.
 - **S4.4** Implement deterministic scoring from readiness, route feasibility,
   cost, unlock count, diversity, and gate coupling.
 - **S4.5** Ensure an accepted transition, not a mere solver result, triggers
@@ -125,8 +125,10 @@ Autogenesis-1.
 
 ### Exit
 
-The scheduler produces a deterministic ranked queue with enough connected open
-work to exercise admission-triggered retry.
+The scheduler produces a deterministic ranked queue over a content-identified
+pre-B snapshot, and the snapshot cannot retrieve the retained B or A proof. A
+larger nursery is subsequent evaluation infrastructure, not a prerequisite to
+the first two-step closure.
 
 ## Sprint 5 — Two-step compounding
 

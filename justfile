@@ -380,6 +380,8 @@ smtcomp-resume:
 # the flagship R_4(5(x-y)=4z) result as `open` at "> 740" when the ledger had it
 # `computed` at exactly 741. Nobody edited it wrongly; nobody ran it at all.
 generated-trackers:
+    python3 -m unittest scripts.tests.test_gen_autogenesis_baseline
+    python3 scripts/gen-autogenesis-baseline.py --check
     python3 -m unittest scripts.tests.test_gen_plan
     python3 scripts/gen-plan.py --check
     python3 -m unittest scripts.tests.test_gen_adr_index

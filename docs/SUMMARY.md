@@ -15,6 +15,7 @@
   - [Trust, safety, and governance](autogenesis/05-trust-safety-and-governance.md)
   - [Research horizon](autogenesis/06-research-horizon.md)
   - [First 90 days](autogenesis/07-first-90-days.md)
+  - [Backward foundation from Autogenesis-1](autogenesis/08-backward-foundation.md)
 
 [Sibling Project Notes](sibling-projects.md)
 - [Foundational Resource Expansion](foundational-resources/README.md)
