@@ -67,8 +67,7 @@
 //! `add_congr` is literally `congr₂ R add` applied to two bound variables.
 
 use axeyum_lean_kernel::{
-    ArithPrelude, BinderInfo, Declaration, ExprId, ExprNode, Kernel, KernelError, LogicPrelude,
-    NameId,
+    BinderInfo, Declaration, ExprId, ExprNode, Kernel, KernelError, LogicPrelude, NameId,
 };
 
 use std::collections::HashMap;
@@ -246,7 +245,7 @@ pub const EQUALITY_SLOT_BINDERS: usize = 9;
 #[allow(clippy::too_many_lines)]
 pub fn declare_setoid_equality(
     kernel: &mut Kernel,
-    arith: &ArithPrelude,
+    arith: &super::super::RingSignature,
 ) -> Result<SetoidEq, ReconstructError> {
     let ns = kernel.name_str(arith.r, "Setoid");
     let r_ty = kernel.const_(arith.r, vec![]);

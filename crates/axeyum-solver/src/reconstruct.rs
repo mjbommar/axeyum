@@ -63,6 +63,9 @@ pub use arithmetic::ordered_ring::{
     reconstruct_int_farkas_to_lean_module, refutation_over_int_axioms, render_ordered_ring_module,
     residual_eq_constants, specialize_setoid_to_eq,
 };
+pub use arithmetic::signature::{
+    RingEquality, RingSignature, RingSignatureReport, SIGNATURE_LAWS, SIGNATURE_SYMBOLS,
+};
 pub use arithmetic::{LraReconstructCtx, reconstruct_lra_proof, reconstruct_sos_proof};
 pub use bitblast::{
     prove_const_shift_lowering_to_lean_module, reconstruct_bitblast_step,

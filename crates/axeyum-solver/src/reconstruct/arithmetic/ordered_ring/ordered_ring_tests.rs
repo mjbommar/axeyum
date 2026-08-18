@@ -225,7 +225,8 @@ fn the_ring_telescope_is_every_real_declaration() {
 
     let mut kernel = Kernel::new();
     let arith = build_arith_prelude(&mut kernel).expect("Real prelude builds");
-    let telescope: std::collections::BTreeSet<_> = ring_telescope(&arith).into_iter().collect();
+    let signature = crate::reconstruct::arithmetic::RingSignature::from(arith);
+    let telescope: std::collections::BTreeSet<_> = ring_telescope(&signature).into_iter().collect();
     assert_eq!(telescope.len(), RING_BINDER_NAMES.len());
     assert_eq!(RING_SYMBOL_BINDERS + RING_LAW_BINDERS, telescope.len());
 

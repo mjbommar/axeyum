@@ -47,7 +47,11 @@ use super::{
 // base; the only added axioms are the input-constraint hypotheses.
 // ===========================================================================
 
-use axeyum_lean_kernel::{ArithPrelude, build_arith_prelude};
+use axeyum_lean_kernel::build_arith_prelude;
+
+pub(crate) mod signature;
+
+pub(crate) use signature::{RingEquality, RingSignature};
 
 // The LRA reconstruction items below are the public API surface a `lib.rs`
 // re-export will expose (mirroring the EUF `reconstruct_qf_uf_proof` re-export);
@@ -138,7 +142,15 @@ impl LinR {
 #[allow(dead_code)]
 pub struct LraReconstructCtx {
     kernel: Kernel,
-    arith: ArithPrelude,
+    /// The ordered-ring interface this context reconstructs over.
+    ///
+    /// A [`RingSignature`], not an
+    /// [`ArithPrelude`](axeyum_lean_kernel::ArithPrelude): the carrier is a
+    /// *parameter* of the route, and [`Self::new`] simply supplies the `Real`
+    /// package's instance of it. The field keeps its historical name so the 158
+    /// reads of it across this module, `ordered_ring` and
+    /// `ordered_ring::setoid` are unchanged.
+    arith: RingSignature,
     /// Dense variable index → its opaque `R`-typed constant `NameId`.
     vars: BTreeMap<usize, NameId>,
     /// Every hypothesis axiom minted by [`Self::hyp_axiom`], in mint order.
@@ -184,26 +196,86 @@ impl Default for LraReconstructCtx {
 
 #[allow(dead_code)]
 impl LraReconstructCtx {
-    /// Build a fresh LRA reconstruction context: a kernel with the arithmetic
-    /// prelude declared and an empty variable map.
+    /// Build a fresh LRA reconstruction context over the **`Real` package**: a
+    /// kernel with the arithmetic prelude declared, its 30 declarations as the
+    /// [`RingSignature`], and an empty variable map.
+    ///
+    /// This is the default carrier and the only one the shipped routes use
+    /// today. [`Self::with_ring_signature`] is the same context over any other
+    /// carrier that satisfies the interface.
     ///
     /// # Panics
     ///
-    /// Panics if the fixed real prelude is rejected in a fresh kernel. Input
-    /// terms are not consulted during this invariant-only initialization.
+    /// Panics if the fixed real prelude is rejected in a fresh kernel, or if the
+    /// package it just built fails [`RingSignature::validate_in`] — both are
+    /// invariant failures of this crate, not of any input, and input terms are
+    /// not consulted during this initialization. [`Self::try_new`] is the
+    /// non-panicking form.
     #[must_use]
     pub fn new() -> Self {
+        Self::try_new().expect("real prelude should build in a fresh reconstruction kernel")
+    }
+
+    /// [`Self::new`] without the panic: build the `Real` package into a fresh
+    /// kernel and validate it as an ordered-ring signature.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] if the trusted gate declines one of
+    /// the prelude's 30 declarations, or if the package it built does not
+    /// satisfy the interface [`RingSignature::validate_in`] checks. The second
+    /// is the interesting one: it is this crate's independent restatement of
+    /// what the `Real` package is supposed to be, checked against what the
+    /// kernel actually declared.
+    pub fn try_new() -> Result<Self, ReconstructError> {
         let mut kernel = Kernel::new();
-        let arith = build_arith_prelude(&mut kernel)
-            .expect("real prelude should build in a fresh reconstruction kernel");
-        Self {
+        let arith =
+            build_arith_prelude(&mut kernel).map_err(|e| ReconstructError::KernelRejected {
+                rule: "arith_prelude".to_owned(),
+                detail: format!("the real prelude did not build in a fresh kernel: {e:?}"),
+            })?;
+        Self::with_ring_signature(kernel, RingSignature::from(arith))
+    }
+
+    /// Build a reconstruction context over an **arbitrary ordered-ring
+    /// signature** in an already-populated kernel.
+    ///
+    /// This is the seam that makes the carrier a parameter. `kernel` must
+    /// already contain the signature's 30 declarations and the propositional
+    /// prelude they are stated over; `ring` names them. Every subsequent step —
+    /// variable declaration, hypothesis minting, Farkas chaining, the
+    /// `ordered_ring` abstraction telescope — reads the carrier and the laws
+    /// out of `ring`, so nothing about the route is `Real`-specific.
+    ///
+    /// The signature is *checked* against `kernel`, not trusted:
+    /// [`RingSignature::validate_in`] runs first and its five guards are what
+    /// stand between a mistyped signature and a proof term built over the wrong
+    /// constants.
+    ///
+    /// Note the one thing this does **not** yet make parametric: the
+    /// reconstruction builds `Eq`, `Eq.refl` and `Eq.rec` at a fixed universe
+    /// `1`, so a carrier at any level other than `Sort 1` will be reported by
+    /// `RingSignatureReport::carrier_level` and then mis-elaborated. `Real`
+    /// and `CReal` are both `Sort 1`; anything else needs that generalization
+    /// first.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] carrying the guard that the
+    /// signature failed and the declarations that failed it.
+    pub fn with_ring_signature(
+        mut kernel: Kernel,
+        ring: RingSignature,
+    ) -> Result<Self, ReconstructError> {
+        ring.validate_in(&mut kernel)?;
+        Ok(Self {
             kernel,
-            arith,
+            arith: ring,
             vars: BTreeMap::new(),
             hyps: Vec::new(),
             next_id: 0,
             setoid: None,
-        }
+        })
     }
 
     /// Declare the **equality slot** into this context and route every
@@ -263,10 +335,22 @@ impl LraReconstructCtx {
         &mut self.kernel
     }
 
-    /// The arithmetic prelude names (`R`, `le`, `lt`, `le_trans`, …).
+    /// The ordered-ring signature this context reconstructs over (`R`, `le`,
+    /// `lt`, `le_trans`, …).
+    ///
+    /// For a context built by [`Self::new`] these are the `Real` package's 30
+    /// declarations; for one built by [`Self::with_ring_signature`] they are
+    /// whatever carrier that signature named.
     #[must_use]
-    pub fn arith(&self) -> &ArithPrelude {
+    pub fn arith(&self) -> &RingSignature {
         &self.arith
+    }
+
+    /// The signature's [`RingEquality`] — which relation its nine `Eq`-shaped
+    /// laws are stated with.
+    #[must_use]
+    pub fn equality(&self) -> RingEquality {
+        self.arith.equality
     }
 
     /// Mint a fresh private name component under the anonymous root.

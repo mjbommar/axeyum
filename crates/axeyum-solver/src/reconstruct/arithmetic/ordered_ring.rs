@@ -53,7 +53,7 @@ use axeyum_lean_kernel::{
 
 use axeyum_ir::{TermArena, TermId};
 
-use super::{LraReconstructCtx, ReconstructError, reconstruct_lra_proof};
+use super::{LraReconstructCtx, ReconstructError, RingSignature, reconstruct_lra_proof};
 
 pub(crate) mod setoid;
 
@@ -871,10 +871,7 @@ pub struct IntInstantiation {
 /// Positionally aligned with [`SETOID_RING_BINDER_NAMES`], and — outside the
 /// equality slot — with [`ring_telescope`], which is what makes the round trip
 /// through `Eq` a straight positional hand-off.
-fn setoid_ring_telescope(
-    arith: &axeyum_lean_kernel::ArithPrelude,
-    slot: &SetoidEq,
-) -> [NameId; 39] {
+fn setoid_ring_telescope(arith: &RingSignature, slot: &SetoidEq) -> [NameId; 39] {
     [
         arith.r,
         arith.add,
@@ -918,39 +915,13 @@ fn setoid_ring_telescope(
     ]
 }
 
-fn ring_telescope(arith: &axeyum_lean_kernel::ArithPrelude) -> [NameId; 30] {
-    [
-        arith.r,
-        arith.add,
-        arith.mul,
-        arith.neg,
-        arith.zero,
-        arith.one,
-        arith.le,
-        arith.lt,
-        arith.le_refl,
-        arith.le_trans,
-        arith.lt_irrefl,
-        arith.lt_trans,
-        arith.lt_of_lt_of_le,
-        arith.lt_of_le_of_lt,
-        arith.le_of_lt,
-        arith.add_le_add,
-        arith.add_comm,
-        arith.add_assoc,
-        arith.add_zero,
-        arith.add_neg,
-        arith.mul_le_mul_of_nonneg_left,
-        arith.zero_lt_one,
-        arith.add_lt_add_of_le_of_lt,
-        arith.mul_comm,
-        arith.mul_assoc,
-        arith.mul_one,
-        arith.mul_zero,
-        arith.left_distrib,
-        arith.mul_nonneg,
-        arith.sq_nonneg,
-    ]
+/// The 30-entry ring prefix of the abstraction telescope, in the declaration
+/// order [`RING_BINDER_NAMES`] names.
+///
+/// Read off the signature rather than written out again here: the two lists have
+/// to agree entry for entry, and one of them is enough.
+fn ring_telescope(arith: &RingSignature) -> [NameId; 30] {
+    arith.declarations()
 }
 
 /// `Kernel::axiom_footprint`, rendered and sorted (the kernel already sorts by
