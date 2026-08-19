@@ -1996,6 +1996,38 @@ pub struct IdentityClassMobiusConvolution {
     pub terms: Vec<MobiusConvolutionTerm>,
 }
 
+/// One symmetric convolution-order cell in the connected fourth cumulant.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectedOrderCumulantCell {
+    /// Nondecreasing interval degrees indexing this symmetric cell.
+    pub interval_degrees: [usize; 4],
+    /// Number of ordered quadruples represented by this cell.
+    pub permutation_multiplicity: usize,
+    /// `sum_e T_a(e)T_b(e)T_c(e)T_d(e)`.
+    pub raw_fourth_sum: BigInt,
+    /// Sum of the three covariance pairings for this order quadruple.
+    pub pairing_sum: BigInt,
+    /// `2^ell raw_fourth_sum-pairing_sum`.
+    pub connected_numerator: BigInt,
+}
+
+/// Exact decomposition of the endpoint fourth cumulant by convolution order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectedOrderCumulantReport {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree.
+    pub degree: usize,
+    /// Number of interval orders, exactly `ell-1`.
+    pub order_count: usize,
+    /// Symmetric order cells in lexicographic order.
+    pub cells: Vec<ConnectedOrderCumulantCell>,
+    /// Sum of cells with their permutation multiplicities.
+    pub reconstructed_fourth_cumulant_numerator: BigInt,
+    /// Direct `2^ell M_4-3M_2^2` control from the class distribution.
+    pub direct_fourth_cumulant_numerator: BigInt,
+}
+
 /// Exact removal of proper prime powers from one identity-class population.
 ///
 /// The checked identity is
@@ -7883,6 +7915,213 @@ pub fn inverse_mobius_fourier_regroup(
     })
 }
 
+fn symmetric_quadruple_multiplicity(indices: [usize; 4]) -> usize {
+    let mut denominator = 1_usize;
+    let mut run = 1_usize;
+    for position in 1..4 {
+        if indices[position] == indices[position - 1] {
+            run += 1;
+        } else {
+            denominator *= match run {
+                1 => 1,
+                2 => 2,
+                3 => 6,
+                4 => 24,
+                _ => unreachable!(),
+            };
+            run = 1;
+        }
+    }
+    denominator *= match run {
+        1 => 1,
+        2 => 2,
+        3 => 6,
+        4 => 24,
+        _ => unreachable!(),
+    };
+    24 / denominator
+}
+
+/// Expand the exact endpoint fourth cumulant into convolution-order cells.
+///
+/// For `1<=d<ell`, let
+///
+/// ```text
+/// T_d(e)=d sum_(u in V_d) M_(degree-d)(e u^(-1)).
+/// ```
+///
+/// The operation first checks `D_e=sum_d T_d(e)` against every exact class
+/// discrepancy.  It then returns the symmetric tensor cells
+///
+/// ```text
+/// 2^ell sum_e T_a T_b T_c T_d
+///   -(C_ab C_cd+C_ac C_bd+C_ad C_bc),
+/// C_ab=sum_e T_a T_b.
+/// ```
+///
+/// Summing the cells with their permutation multiplicities reconstructs the
+/// direct fourth-cumulant numerator exactly.  This is a finite diagnostic and
+/// does not bound any cell uniformly.
+///
+/// # Errors
+///
+/// Returns typed parameter/resource declines or an invariant error if the
+/// order decomposition fails either classwise or cumulant reconstruction.
+#[allow(clippy::too_many_lines)]
+pub fn connected_order_cumulant_report(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<ConnectedOrderCumulantReport, HayesError> {
+    admit(ell, degree, limits)?;
+    let odd = ell.checked_mul(2).and_then(|value| value.checked_add(1));
+    let even = ell.checked_mul(2).and_then(|value| value.checked_add(2));
+    if Some(degree) != odd && Some(degree) != even {
+        return Err(HayesError::InvalidParameter(
+            "connected order cumulant is Lemire-endpoint-only".to_owned(),
+        ));
+    }
+    let order_count = ell.saturating_sub(1);
+    let group_order = 1_usize
+        .checked_shl(u32::try_from(ell).map_err(|_| {
+            HayesError::InvalidParameter("connected order level exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| HayesError::InvalidParameter("connected order group overflow".to_owned()))?;
+    let mut tuple_count = 0_usize;
+    for a in 0..order_count {
+        for b in a..order_count {
+            for c in b..order_count {
+                tuple_count = tuple_count.checked_add(order_count - c).ok_or_else(|| {
+                    HayesError::InvalidParameter("order tuple count overflow".to_owned())
+                })?;
+            }
+        }
+    }
+    let interval_work = (1..ell).try_fold(0_usize, |sum, d| {
+        sum.checked_add(1_usize << d)
+            .ok_or_else(|| HayesError::InvalidParameter("order interval work overflow".to_owned()))
+    })?;
+    let work = group_order
+        .checked_mul(interval_work.checked_add(tuple_count).ok_or_else(|| {
+            HayesError::InvalidParameter("connected order work overflow".to_owned())
+        })?)
+        .ok_or_else(|| HayesError::InvalidParameter("connected order work overflow".to_owned()))?;
+    check_limit(
+        "connected_order_cumulant_cells",
+        work,
+        limits.max_table_cells,
+    )?;
+
+    let (factors, unit_indices) = principal_unit_index_table(ell, limits)?;
+    let mut order_vectors = Vec::with_capacity(order_count);
+    for interval_degree in 1..ell {
+        let mobius = class_mobius_distribution(ell, degree - interval_degree, limits)?;
+        let mut inverse_indices = Vec::with_capacity(1_usize << interval_degree);
+        for tail in 0..1_u64 << interval_degree {
+            let unit = 1 | (tail << 1);
+            let inverse = principal_unit_inverse(unit, ell);
+            inverse_indices.push(unit_indices[&inverse]);
+        }
+        let weight = i128::try_from(interval_degree)
+            .map_err(|_| HayesError::InvalidParameter("interval degree exceeds i128".to_owned()))?;
+        let mut values = Vec::with_capacity(group_order);
+        for class in 0..group_order {
+            let sum = inverse_indices.iter().try_fold(0_i128, |sum, inverse| {
+                let shifted = add_mixed_radix_indices(class, *inverse, &factors)?;
+                sum.checked_add(mobius.values[shifted]).ok_or_else(|| {
+                    HayesError::InvalidParameter("order class sum overflow".to_owned())
+                })
+            })?;
+            values.push(sum.checked_mul(weight).ok_or_else(|| {
+                HayesError::InvalidParameter("weighted order class sum overflow".to_owned())
+            })?);
+        }
+        order_vectors.push(values);
+    }
+
+    let distribution = class_population_distribution(ell, degree, limits)?;
+    let mean = distribution.uniform_mean().ok_or_else(|| {
+        HayesError::InvalidParameter("endpoint distribution has no uniform mean".to_owned())
+    })?;
+    for class in 0..group_order {
+        let reconstructed = order_vectors.iter().try_fold(0_i128, |sum, values| {
+            sum.checked_add(values[class]).ok_or_else(|| {
+                HayesError::InvalidParameter("classwise order reconstruction overflow".to_owned())
+            })
+        })?;
+        let expected = i128::try_from(distribution.counts[class])
+            .and_then(|count| i128::try_from(mean).map(|mean| count - mean))
+            .map_err(|_| {
+                HayesError::InvalidParameter("class discrepancy exceeds i128".to_owned())
+            })?;
+        if reconstructed != expected {
+            return Err(HayesError::Invariant(format!(
+                "class {class}: order sum {reconstructed}, expected {expected}"
+            )));
+        }
+    }
+
+    let mut covariance = vec![vec![BigInt::from(0_i8); order_count]; order_count];
+    for a in 0..order_count {
+        for b in a..order_count {
+            let value = (0..group_order)
+                .map(|class| {
+                    BigInt::from(order_vectors[a][class]) * BigInt::from(order_vectors[b][class])
+                })
+                .sum::<BigInt>();
+            covariance[a][b].clone_from(&value);
+            covariance[b][a] = value;
+        }
+    }
+    let group_order_big = BigInt::from(group_order);
+    let mut cells = Vec::with_capacity(tuple_count);
+    let mut reconstructed = BigInt::from(0_i8);
+    for a in 0..order_count {
+        for b in a..order_count {
+            for c in b..order_count {
+                for d in c..order_count {
+                    let raw = (0..group_order)
+                        .map(|class| {
+                            BigInt::from(order_vectors[a][class])
+                                * BigInt::from(order_vectors[b][class])
+                                * BigInt::from(order_vectors[c][class])
+                                * BigInt::from(order_vectors[d][class])
+                        })
+                        .sum::<BigInt>();
+                    let pairing = &covariance[a][b] * &covariance[c][d]
+                        + &covariance[a][c] * &covariance[b][d]
+                        + &covariance[a][d] * &covariance[b][c];
+                    let connected = &group_order_big * &raw - &pairing;
+                    let indices = [a, b, c, d];
+                    let multiplicity = symmetric_quadruple_multiplicity(indices);
+                    reconstructed += BigInt::from(multiplicity) * &connected;
+                    cells.push(ConnectedOrderCumulantCell {
+                        interval_degrees: [a + 1, b + 1, c + 1, d + 1],
+                        permutation_multiplicity: multiplicity,
+                        raw_fourth_sum: raw,
+                        pairing_sum: pairing,
+                        connected_numerator: connected,
+                    });
+                }
+            }
+        }
+    }
+    let direct = distribution.fourth_cumulant_numerator()?;
+    if reconstructed != direct {
+        return Err(HayesError::Invariant(format!(
+            "order cumulant reconstructs {reconstructed}, expected {direct}"
+        )));
+    }
+    Ok(ConnectedOrderCumulantReport {
+        ell,
+        degree,
+        order_count,
+        cells,
+        reconstructed_fourth_cumulant_numerator: reconstructed,
+        direct_fourth_cumulant_numerator: direct,
+    })
+}
+
 /// Decompose one identity-class Mangoldt discrepancy into Möbius terms.
 ///
 /// If `A_d` is the class distribution of monic degree-`d` polynomials and
@@ -11580,6 +11819,79 @@ mod tests {
             ),
             Err(HayesError::InvalidParameter(_))
         ));
+    }
+
+    #[test]
+    fn connected_order_cumulant_reconstructs_both_endpoints() {
+        let limits = HayesLimits::default();
+        for degree in [9, 10] {
+            let report = connected_order_cumulant_report(4, degree, limits).unwrap();
+            assert_eq!(report.order_count, 3);
+            assert_eq!(report.cells.len(), 15);
+            assert_eq!(
+                report.reconstructed_fourth_cumulant_numerator,
+                report.direct_fourth_cumulant_numerator
+            );
+            assert!(report.cells.iter().all(|cell| {
+                cell.interval_degrees
+                    .windows(2)
+                    .all(|pair| pair[0] <= pair[1])
+                    && matches!(cell.permutation_multiplicity, 1 | 4 | 6 | 12 | 24)
+            }));
+        }
+        assert!(connected_order_cumulant_report(4, 8, limits).is_err());
+        assert!(matches!(
+            connected_order_cumulant_report(
+                4,
+                9,
+                HayesLimits {
+                    max_table_cells: 463,
+                    ..limits
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "connected_order_cumulant_cells",
+                requested: 464,
+                limit: 463,
+            })
+        ));
+    }
+
+    #[test]
+    #[ignore = "extended finite diagnostic; select ell/offset with AXEYUM_ORDER_CUMULANT_ELL/OFFSET"]
+    fn connected_order_cumulant_extended_probe() {
+        let ell = std::env::var("AXEYUM_ORDER_CUMULANT_ELL")
+            .expect("missing AXEYUM_ORDER_CUMULANT_ELL")
+            .parse::<usize>()
+            .expect("invalid AXEYUM_ORDER_CUMULANT_ELL");
+        let offset = std::env::var("AXEYUM_ORDER_CUMULANT_OFFSET")
+            .expect("missing AXEYUM_ORDER_CUMULANT_OFFSET")
+            .parse::<usize>()
+            .expect("invalid AXEYUM_ORDER_CUMULANT_OFFSET");
+        assert!(matches!(offset, 1 | 2));
+        let degree = 2 * ell + offset;
+        let report = connected_order_cumulant_report(ell, degree, HayesLimits::default()).unwrap();
+        let mut ranked = report.cells.iter().collect::<Vec<_>>();
+        ranked.sort_by(|left, right| {
+            right
+                .connected_numerator
+                .magnitude()
+                .cmp(left.connected_numerator.magnitude())
+        });
+        eprintln!(
+            "ell={ell} degree={degree} cells={} K4={} top={:?}",
+            report.cells.len(),
+            report.direct_fourth_cumulant_numerator,
+            ranked
+                .into_iter()
+                .take(12)
+                .map(|cell| (
+                    cell.interval_degrees,
+                    cell.permutation_multiplicity,
+                    cell.connected_numerator.clone(),
+                ))
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]

@@ -2293,7 +2293,32 @@ polynomial-times-`2^(4ell)` bound for their total remains open.
 
 This formulation identifies what a proof must control.  Parseval handles the
 three paired character quadruples; the new obstruction is the connected
-off-diagonal quadruple sum represented by `K_4`.  Existing geometric
+off-diagonal quadruple sum represented by `K_4`.
+
+The first gcd-stratification prerequisite is now exact.  For every
+`1<=d<ell`, the CAS constructs the full class vector
+
+```text
+T_d(e)=d sum_(u in V_d) M_(n-d)(e u^(-1))
+```
+
+and independently checks `D_e=sum_d T_d(e)` in every Hayes class.  It then
+forms the symmetric connected-order tensor
+
+```text
+K_(a,b,c,d)=2^ell sum_e T_a T_b T_c T_d
+ -(C_ab C_cd+C_ac C_bd+C_ad C_bc),
+```
+
+where `C_ab=sum_e T_aT_b`.  Multiplicity-weighted summation over
+nondecreasing order quadruples must reconstruct `K_4` exactly.  At
+`(ell,n)=(9,19)`, `330` cells sum to `-2086965956608`, while the largest cell
+is `K_(7,7,7,7)=-70637290307584`; the next two dominant cells have opposite
+signs and comparable size.  Cancellation is already substantial **between
+connected order cells**.  Gcd graphs must be classified inside this tensor
+and recombined with sign; summing absolute cell bounds cannot be the proof.
+
+Existing geometric
 higher-moment work of Hast and Matei treats fixed polynomial degree as the
 field size tends to infinity, whereas this problem fixes the field at two and
 moves both degree and conductor.  It therefore motivates the complete-
