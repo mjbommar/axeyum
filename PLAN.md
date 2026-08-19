@@ -159,7 +159,7 @@ evidence and unrelated temporary projects were untouched.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-08-19 | `f02916fa9` | Proved translation pairing for level `2^v_2(n)`, bounded all but the top `ceil(log_2 ell)+2` levels by ordinary Weil, retained the bounded one-level runner, and extended the exact native endpoint diagnostic to `ell=24`. |
-| 2026-08-19 | pending | Independently replayed the level-24 endpoint transform in C++ on s1, matching both native Axeyum discrepancies with hashed source, binary, output, and resource provenance. |
+| 2026-08-19 | `fda041d49` | Independently replayed the level-24 endpoint transform in C++ on s1, matched both native Axeyum discrepancies with hashed provenance, and identified the family norm as one cyclotomic curve's zeta numerator without misusing the generic Hasse--Weil bound. |
 | 2026-08-18 | `cf998788b` | Automated the exact authoritative B-then-A chain; two isolated fixed-budget runs matched all 56 retained artifact bytes and passed Autogenesis-1. |
 | 2026-08-18 | `2d65f19d8` | Froze the leakage-safe nursery contract and the Autogenesis-1 longitudinal partition; readiness remains explicitly false with zero evaluation facts and nine blockers. |
 | 2026-08-18 | `bd7b55bff` | Extracted 9,729 proof-isolated Mathlib Nat/Int statements externally and selected 240 outcome-blind source candidates across twelve families without vendoring bulk exports. |

@@ -129,7 +129,7 @@ finite ledger fact or claiming a universal proof.
 
 | 2026-08-19 | `f02916fa9` | Proved translation pairing for level `2^v_2(n)`, bounded all but the top `ceil(log_2 ell)+2` levels by ordinary Weil, retained the bounded one-level runner, and extended the exact native endpoint diagnostic to `ell=24`. |
 
-| 2026-08-19 | pending | Independently replayed the level-24 endpoint transform in C++ on s1, matching both native Axeyum discrepancies with hashed source, binary, output, and resource provenance. |
+| 2026-08-19 | `fda041d49` | Independently replayed the level-24 endpoint transform in C++ on s1, matched both native Axeyum discrepancies with hashed provenance, and identified the family norm as one cyclotomic curve's zeta numerator without misusing the generic Hasse--Weil bound. |
 
 | 2026-08-18 | `01cc5dfdf` | Pinned the exact centered-order cancellation vector and refuted a second triangle route: its absolute sum is `145632` where the full endpoint discrepancy is `32`. |
 | 2026-08-18 | `f247587c6` | Derived the exact centered endpoint logarithm, proved its linear and quadratic orders vanish structurally, and independently checked the resulting connected-correlation expansion. |
