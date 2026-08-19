@@ -1023,6 +1023,27 @@ class AStructuralModuleTranscribesTheQuerysTerms(unittest.TestCase):
         self.assertTrue(ok, why)
         self.assertEqual(nodes, 2 * (6 + 3))
 
+    def test_an_axiom_beyond_the_opaque_sort_is_refused_structurally(self) -> None:
+        """The third copy of the opaque-sort guard, which nothing covered.
+
+        `bind_anchored` and `classify_attestation` each carry this check and each
+        had a control. `bind_structural`'s copy did not: the mutation harness
+        measured it **SURVIVED** on 2026-08-19 — deleting it changed no test
+        result — so the structural class could have admitted a module carrying an
+        axiom the query never mentions, and the verdict would still have read
+        `structural`.
+
+        `structural` is the largest class in the census (102 of 135 instances),
+        so an unguarded smuggled axiom there is not a corner case; it is most of
+        the coverage this repository claims for transcription binding.
+        """
+        smuggled = STRUCTURAL_MODULE.replace(
+            "axiom α : Sort (1)", "axiom α : Sort (1)\naxiom Int.one : Int"
+        )
+        ok, why, _n = HB.bind_structural(smuggled, self.query)
+        self.assertFalse(ok)
+        self.assertIn("opaque sort", why)
+
     def test_swapping_two_arguments_is_rejected(self) -> None:
         """`store(a, i, v)` becomes `store(i, a, v)`, which the file does not
         contain. No name is added or removed, so only the match can catch it."""

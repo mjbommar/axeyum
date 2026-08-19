@@ -603,6 +603,22 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
             (
                 # Same shape as the structural/attestation copies above; the
                 # find-string carries the `bind_anchored` message that follows it.
+                # THE THIRD COPY. The mutation harness measured this one
+                # SURVIVED on 2026-08-19 -- deleting it changed no test result --
+                # while the two below had controls. `structural` is the largest
+                # class in the census (102 of 135), so an unguarded smuggled
+                # axiom there is most of the coverage this repository claims for
+                # transcription binding, not a corner case. Anchored on the
+                # SINGLE-LINE return, which is the only one of the three copies
+                # written that way; the other two spread it over four lines. An
+                # anchor that matches more than one copy is how the previous two
+                # controls came to drive the same code path under different
+                # labels.
+                "structural: no axiom beyond the opaque sort",
+                '                return (False, f"`{name} : {ty}` is not the opaque sort `\u03b1 : Sort (1)`", 0)',
+                '                return (True, "", 0)  # MUTANT',
+            ),
+            (
                 "anchor: no axiom beyond the opaque sort",
                 "            if (name, ty) != ATTESTATION_SORT_AXIOM:\n                return (\n                    False,\n                    f\"`{name} : {ty}` is not the opaque sort `α : Sort (1)`\",\n                    0,\n                )",
                 "            if False:\n                return (\n                    False,\n                    f\"`{name} : {ty}` is not the opaque sort `α : Sort (1)`\",\n                    0,\n                )",
