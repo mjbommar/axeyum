@@ -146,3 +146,16 @@ guard's deletion and only dies if the `--report-only` override itself breaks
 - `--report-only`'s exit code is unconditionally 0 by design; a lane wanting a
   non-zero-but-non-blocking signal (e.g. for a dashboard) would need a third
   mode — not built, no current consumer needs it.
+
+## Enforcing, 2026-08-19
+
+One thing that is NOT a usable negative control:
+`AXEYUM_LOCAL_CI_FRESHNESS_MAX_AGE_HOURS=0` does not red a minutes-old record,
+because the guard compares integer hours with `-gt` and a fresh record is `0`.
+Correct behaviour, useless as a probe — backdate `finished_utc` instead.
+
+Flipping was re-tested through the real call site rather than the control suite,
+since deleting a flag is exactly how a gate stops being able to fail: empty
+record dir → `NO_RECORD`; `finished_utc` backdated five days → `STALE: 120h
+exceeds 48h`; the nextest step rewritten `vacuous` → `STEP VACUOUS`; unmodified
+→ `PASS`.
