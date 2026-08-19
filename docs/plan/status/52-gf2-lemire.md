@@ -142,8 +142,14 @@ fibres contain `61,264` of `130,048` points and reach support degree seven.
 Their signed correlation is `-202` versus `8,622` after fibrewise absolute
 values, while the full off-diagonal total is `-68`.  The remaining dyadic
 cancellation is therefore cross-fibre in this witness: the next bounded task
-is to aggregate the shift and inverse-difference parameters in Witt blocks
-before applying an absolute-value inequality.  The multi-minute endpoint
+is to estimate the now-checked aggregate layers.  Combining first by exact
+`(shift,inverse difference)`, then by the normalized Artin--Schreier product
+parameter `h_0/w_0=f(f+h)`, and finally by common valuation reduces the pinned
+absolute totals from `33,680` to `16,972`, `3,956`, and `388`, before the
+signed total `-68`.  The tempting valuation bound `2^(d+1)` is already false
+at the even `(9,12,8)` row (`672>512`), so the next theorem must use
+cross-valuation/Witt orthogonality or a larger loss-aware layer envelope and
+immediately feed it into the endpoint ledger.  The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
 the bounded `ell<=7` controls and the earlier `ell<=9` results remain
@@ -154,6 +160,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `a226f25ef` | Aggregated exact dyadic autocorrelation fibres by shift/inverse pair, the checked Artin--Schreier product parameter, and valuation; exposed the large finite cancellation while refuting the simplest valuation envelope. |
 | 2026-08-19 | `ebdfc678d` | Reconstructed the product-discriminant phase on every exact affine autocorrelation fibre and showed that nonquadratic fibres are substantial, moving the dyadic target to cancellation across shift/inverse-difference parameters. |
 | 2026-08-19 | `125b2131e` | Computed every integral discriminant residue modulo eight by fraction-free elimination, reconstructed its exact coefficient ANF, and proved its full-support coefficient is always odd, ruling out a global bounded-degree phase shortcut. |
 | 2026-08-19 | `c43e7bb68` | Extended the Swan sign to the universal identity `mu(f)=(-1)^degree chi_8(Disc(F))`, including squareful zeros, and checked its exact four-phase cyclotomic Fourier expansion. |
