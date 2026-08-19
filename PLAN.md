@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `84ea01df2` | Embedded every signed valuation layer into one checked Witt group before absolute values, computed exact spectral moments and conductor support, ruled out sparse/imprimitive support in the pinned witness, and recorded the missing cocycle boundary for a valid Heisenberg rank. |
 | 2026-08-19 | `4527543a4` | Exposed the connected off-diagonal square-root target, pinned the necessary factor-two boundary, and checked that the conjectural bound would imply the desired endpoint energy scale without claiming the remaining cross-order theorem. |
 | 2026-08-19 | `a226f25ef` | Aggregated exact dyadic autocorrelation fibres by shift/inverse pair, the checked Artin--Schreier product parameter, and valuation; exposed the large finite cancellation while refuting the simplest valuation envelope. |
 | 2026-08-19 | `ebdfc678d` | Reconstructed the product-discriminant phase on every exact affine autocorrelation fibre and showed that nonquadratic fibres are substantial, moving the dyadic target to cancellation across shift/inverse-difference parameters. |
@@ -517,8 +518,17 @@ candidate `abs(offdiag)^2<=2^(k+d+1)` survives the endpoint matrix through
 shows that a proof would imply `E<=2^k` at both endpoints; the factor two is
 necessary already at `(6,9,5)`.  This remains an unproved local lemma and
 still does not control the complementary signed cross-order block.  The next
-bounded experiment is one connected signed Witt spectrum, followed by its
-commutator rank and exact-conductor decomposition.  The multi-minute endpoint
+bounded experiment now has one connected signed Witt spectrum: blockwise
+Verschiebung is checked injective/additive, all valuation layers combine
+before absolute values, and exact second/fourth moments plus general-character
+conductors are replayable.  The pinned `214` parameters occupy `184` Witt
+classes and retain signed total `-68`, but all `512` characters are nonzero,
+closing sparse/imprimitive support as the mechanism.  A primary-source audit
+also shows that a Heisenberg rank requires an explicit central-extension
+cocycle; the integer spectrum alone does not define one.  The next bounded
+task is therefore a phase-resolved connected object retaining the modulo-eight
+and affine-fibre variables, followed by checked associativity/commutator tests.
+The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
 the bounded `ell<=7` controls and the earlier `ell<=9` results remain
