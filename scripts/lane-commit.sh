@@ -76,7 +76,7 @@ if [ -z "${AXEYUM_AGENT:-}" ]; then
   exit 2
 fi
 
-WANT=$(printf '%s\n' "$@" | sort -u)
+WANT=$(printf '%s\n' "$@" | LC_ALL=C sort -u)
 
 # A private index, refreshed and staged and committed in ONE process, because a
 # refresh in an earlier shell invocation is already stale (incidents 8 and 9).
@@ -87,10 +87,13 @@ git add -A -- "$@" || exit 3
 # `--no-renames` on purpose: with rename detection ON, `--name-only` prints only
 # the DESTINATION of a rename, so comparing it against a pathspec that correctly
 # names both sides reports the source as "did not stage".
-GOT=$(git diff --cached --no-renames --name-only HEAD | sort -u)
+GOT=$(git diff --cached --no-renames --name-only HEAD | LC_ALL=C sort -u)
 
-extra=$(comm -13 <(printf '%s\n' "$WANT") <(printf '%s\n' "$GOT"))
-missing=$(comm -23 <(printf '%s\n' "$WANT") <(printf '%s\n' "$GOT"))
+# LC_ALL=C on the comparison too: `comm` requires both inputs sorted in the
+# SAME collation and silently produces garbage otherwise. It emitted "file 1 is
+# not in sorted order" on a real commit here; a warning is the lucky case.
+extra=$(LC_ALL=C comm -13 <(printf '%s\n' "$WANT") <(printf '%s\n' "$GOT"))
+missing=$(LC_ALL=C comm -23 <(printf '%s\n' "$WANT") <(printf '%s\n' "$GOT"))
 
 fail=0
 if [ -n "$extra" ]; then
