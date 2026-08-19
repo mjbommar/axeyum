@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `1b4d42d60` | Applied the exact primitive modulo-eight autocorrelation criterion to every affine fibre, found zero generalized-bent fibres in the pinned obstruction, and pivoted from fibrewise Heisenberg rank to connected fourth-cumulant/gcd strata. |
 | 2026-08-19 | `8e3ec9324` | Rejected positive four-phase complementarity by exact integer autocorrelation, pinned the large off-identity mass, and preserved the indefinite Gauss combination as the only viable phase-level input. |
 | 2026-08-19 | `09d70c7f5` | Retained the full modulo-eight phase in the connected Witt object, reconstructed the signed spectrum by a mutation-checked four-phase Gauss identity, and showed every primitive additive phase still has full Fourier support in the pinned witness. |
 | 2026-08-19 | `84ea01df2` | Embedded every signed valuation layer into one checked Witt group before absolute values, computed exact spectral moments and conductor support, ruled out sparse/imprimitive support in the pinned witness, and recorded the missing cocycle boundary for a valid Heisenberg rank. |
@@ -538,7 +539,12 @@ off-identity autocorrelation about `0.7735` of the identity and total square
 mass about `26.89` times the complementary value.  Positive spectral powers
 therefore erase essential indefinite Gauss cancellation.  If no natural
 joined-domain cocycle survives, pivot to the connected fourth-cumulant/gcd
-strata rather than computing more unrestricted spectra.
+strata rather than computing more unrestricted spectra.  The exact primitive
+autocorrelation test now supplies that stopping result: zero of `18,884`
+original affine fibres are generalized bent in the pinned row, despite
+`16,587` having at-most-quadratic ANF.  The simple fibrewise Gauss/Heisenberg
+route is therefore closed, and connected fourth-cumulant/gcd stratification is
+the active bounded task.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
