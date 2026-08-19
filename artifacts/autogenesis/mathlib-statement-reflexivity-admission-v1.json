@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-statement-reflexivity-admission",
-  "state": "durably-admitted-and-externally-archived",
+  "state": "durably-admitted-archived-and-clean-replayed",
   "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
   "operation_id": "authoritative-mathlib-statement-reflexivity-v1",
   "registration_commit": "e70ab2449bdaf165c771f559917014d9d3fac739",
@@ -40,6 +40,17 @@
     "axiom_footprint": [],
     "theorem_dependencies": [],
     "target_dependency": false
+  },
+  "clean_replay": {
+    "source_commit": "b9daf91a5473ae7e33e33ed8853262575d8cb0a2",
+    "external_root": "/nas3/data/axeyum/autogenesis/replays/b9daf91a5-mathlib-reflexivity-v1",
+    "external_index_sha256": "2694a990c8ca501cfd8ca2b8c347eb4e448b433853106f2da92742bbd73f49ae",
+    "replay_file_sha256": "57357ef024092c69de2b914a19c6c9efd05428964c7bcf95ef73a04f6accbcf1",
+    "replay_sha256": "265571de5fadd6e4b7ce505ea38ac0c140e6685748e6cac322e825f775c7b27b",
+    "fresh_execution_sha256": "07125ab62dcd65056597fdff8a92c3ba2b66edba2c6d5b87dc8b212549139d8f",
+    "fresh_transaction_sha256": "cc416eae1558719b9b6b7b1e8ec5c91516b988223ed2c5e9560a8933e57b390d",
+    "fresh_event_sha256": "7029c1e195cc3b6cf1fd97798aec0a455ecd60bbd3efde088c89c39accb2c8ca",
+    "fresh_readiness_delta_sha256": "87c7731c4dc0bfa574737fa65faf987f8a3cb9019fef5ab54f0b49b85686f68f"
   },
   "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity-admission.py",
   "limitations": "This establishes one preregistered train fact through definitional reflexivity. It does not measure family coverage, non-reflexive search, held-out yield, or a dependency unlock."

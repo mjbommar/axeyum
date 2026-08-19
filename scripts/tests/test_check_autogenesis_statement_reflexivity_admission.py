@@ -98,6 +98,11 @@ class StatementReflexivityAdmissionResultTests(unittest.TestCase):
             "fact_id": fact_id,
             "operation_id": operation_id,
             "registration_commit": "a" * 40,
+            "fault_injection": {
+                "boundary": "after-intent",
+                "exit_status": 75,
+                "fact_unchanged_before_recovery": True,
+            },
             "identities": {
                 "frontier_before_sha256": before["frontier_sha256"],
                 "execution_sha256": execution["execution_sha256"],
@@ -118,6 +123,82 @@ class StatementReflexivityAdmissionResultTests(unittest.TestCase):
             },
         }
         return manifest, objects, after_fact
+
+    def replay_inputs(self):
+        manifest, objects, current = self.inputs()
+        fresh = {
+            name: copy.deepcopy(objects[name])
+            for name in (
+                "frontier-before.json",
+                "execution.json",
+                "transaction.json",
+                "admission-event.json",
+                "frontier-after.json",
+                "readiness.json",
+            )
+        }
+        checks = {
+            "same_fact": True,
+            "same_registered_operation": True,
+            "same_certified_result": True,
+            "same_acceptance_policy": True,
+            "selected_before": True,
+            "admitted_event": True,
+            "removed_from_ready": True,
+            "honest_leaf_unlock": True,
+            "one_authoritative_write": True,
+            "zero_fixture_writes": True,
+        }
+        report = {
+            "schema_version": 1,
+            "kind": "axeyum-autogenesis-authoritative-admission-replay",
+            "mode": "isolated-clean-worktree-semantic-reproduction",
+            "source_head": "b" * 40,
+            "historical_prestate_commit": manifest["registration_commit"],
+            "reconstructed_replay_commit": "c" * 40,
+            "identity": {
+                "fact_id": manifest["fact_id"],
+                "operation_id": manifest["operation_id"],
+            },
+            "fault_injection": manifest["fault_injection"],
+            "checks": checks,
+            "retained": {
+                "execution_sha256": manifest["identities"]["execution_sha256"],
+                "transaction_sha256": manifest["identities"]["transaction_sha256"],
+                "event_sha256": manifest["identities"]["admission_event_sha256"],
+                "readiness_delta_sha256": manifest["identities"][
+                    "readiness_delta_sha256"
+                ],
+            },
+            "fresh": {
+                "frontier_before_sha256": fresh["frontier-before.json"][
+                    "frontier_sha256"
+                ],
+                "execution_sha256": fresh["execution.json"]["execution_sha256"],
+                "transaction_sha256": fresh["transaction.json"][
+                    "transaction_sha256"
+                ],
+                "event_sha256": fresh["admission-event.json"]["event_sha256"],
+                "frontier_after_sha256": fresh["frontier-after.json"][
+                    "frontier_sha256"
+                ],
+                "readiness_delta_sha256": fresh["readiness.json"][
+                    "readiness_delta_sha256"
+                ],
+            },
+        }
+        addressed(report, "replay_sha256")
+        manifest["clean_replay"] = {
+            "source_commit": "b" * 40,
+            "replay_sha256": report["replay_sha256"],
+            "fresh_execution_sha256": report["fresh"]["execution_sha256"],
+            "fresh_transaction_sha256": report["fresh"]["transaction_sha256"],
+            "fresh_event_sha256": report["fresh"]["event_sha256"],
+            "fresh_readiness_delta_sha256": report["fresh"][
+                "readiness_delta_sha256"
+            ],
+        }
+        return manifest, report, fresh, objects, current
 
     def test_exact_admission_chain_is_accepted(self):
         manifest, objects, current = self.inputs()
@@ -149,6 +230,19 @@ class StatementReflexivityAdmissionResultTests(unittest.TestCase):
         changed["proof_route"] = "smt-term-level"
         with self.assertRaisesRegex(MODULE.AdmissionResultError, "ledger differs"):
             MODULE.validate_objects(manifest, objects, changed)
+
+    def test_exact_clean_replay_chain_is_accepted(self):
+        manifest, report, fresh, retained, _current = self.replay_inputs()
+        MODULE.validate_replay_objects(manifest, report, fresh, retained)
+
+    def test_clean_replay_must_retain_every_semantic_check(self):
+        manifest, report, fresh, retained, _current = self.replay_inputs()
+        report["checks"]["same_certified_result"] = False
+        report.pop("replay_sha256")
+        addressed(report, "replay_sha256")
+        manifest["clean_replay"]["replay_sha256"] = report["replay_sha256"]
+        with self.assertRaisesRegex(MODULE.AdmissionResultError, "incomplete"):
+            MODULE.validate_replay_objects(manifest, report, fresh, retained)
 
 
 if __name__ == "__main__":

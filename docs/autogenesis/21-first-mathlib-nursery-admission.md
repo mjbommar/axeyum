@@ -46,6 +46,24 @@ verification reports complete history.
 - The frozen nursery census now distinguishes 1 already-established row from
   137 pre-execution declines and reports zero redispatchable rows.
 
+## Independent clean replay
+
+Commit `b9daf91a5473ae7e33e33ed8853262575d8cb0a2` was checked out into a clean,
+detached worktree. The replay reconstructed the open fact from the registered
+implementation prestate, recomputed the frontier, re-executed the operation,
+repeated the intent fault and recovery, rechecked the settled fact, and
+recomputed the readiness delta without reusing the retained receipts.
+
+The fresh execution, transaction, durable event, and readiness identities are
+`07125ab62dcd65056597fdff8a92c3ba2b66edba2c6d5b87dc8b212549139d8f`,
+`cc416eae1558719b9b6b7b1e8ec5c91516b988223ed2c5e9560a8933e57b390d`,
+`7029c1e195cc3b6cf1fd97798aec0a455ecd60bbd3efde088c89c39accb2c8ca`,
+and `87c7731c4dc0bfa574737fa65faf987f8a3cb9019fef5ab54f0b49b85686f68f`.
+Their content-addressed replay report is
+`265571de5fadd6e4b7ce505ea38ac0c140e6685748e6cac322e825f775c7b27b`.
+The read-only external replay directory is
+`/nas3/data/axeyum/autogenesis/replays/b9daf91a5-mathlib-reflexivity-v1/`.
+
 ## Scope and next horizon
 
 This closes one complete **library-source -> checked goal -> constructed proof
@@ -53,9 +71,9 @@ This closes one complete **library-source -> checked goal -> constructed proof
 generalization: the operation is exact to one train row, the proof family is
 definitional reflexivity, and the fact is a dependency leaf.
 
-The immediate next step is isolated clean replay from the retained prestate.
-After that, work bottom-up by measuring which remaining train/development
-statements fit the existing reflexivity grammar, and top-down by adapting one
+The immediate next step is to work bottom-up by measuring which remaining
+train/development statements fit the existing reflexivity grammar, and
+top-down by adapting one
 non-reflexive statement family whose proof requires a newly produced library
 fact. Held-out rows remain inaccessible until the preregistered evaluation
 boundary.

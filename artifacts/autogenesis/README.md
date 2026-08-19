@@ -64,8 +64,10 @@ python3 scripts/check-autogenesis-statement-reflexivity.py
 open-to-proved ledger transition produced from that candidate. Its external
 bundle retains both frontiers, the clean-commit execution, prepared transaction,
 crash-recovery journal, durable event, readiness delta, before/after facts, and
-a complete Git bundle. Unlike the pre-admission checker, this result checker
-requires the external bundle and replays the settled operation:
+a complete Git bundle. It also binds the separately retained raw objects from
+an isolated clean-worktree semantic replay. Unlike the pre-admission checker,
+this result checker requires both external bundles, validates their complete
+file indexes and content-addressed chains, and replays the settled operation:
 
 ```sh
 python3 scripts/check-autogenesis-statement-reflexivity-admission.py
