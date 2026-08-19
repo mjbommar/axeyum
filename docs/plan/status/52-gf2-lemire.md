@@ -60,6 +60,17 @@ control the full identity-class discrepancy or exploit cancellation between
 conductor levels; neither characterwise triangle bounds nor unweighted
 second moments can finish the proof.
 
+`f247587c6` now removes the conductor partition from the exact formula.  After
+projecting the monic-class series away from its uniform idempotent, the
+remaining polynomial has degree `ell-1`; consequently its logarithmic
+coefficient at either endpoint has no linear or quadratic term.  The full
+discrepancy is an alternating sum of centered factor-tuple correlations that
+begins at order at least three.  A separate exact-rational group-ring route
+checks this centered logarithm at both endpoints through `ell=5` and agrees
+with the integral recurrence.  This is a cancellation-preserving reduction,
+not a bound: controlling those connected correlations remains the central
+mathematical obligation.
+
 The portable boundary is complete for bounded witnesses. `98f2d953f` adds
 canonical JSON, a dense-coefficient second checker, and a standalone dual-check
 CLI; `b678ec7e6` adds the fail-closed producer. `3718aab11` commits and gates the
@@ -86,6 +97,7 @@ fact or claiming a universal proof.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-18 | `f247587c6` | Derived the exact centered endpoint logarithm, proved its linear and quadratic orders vanish structurally, and independently checked the resulting connected-correlation expansion. |
 | 2026-08-18 | `a48c57824` | Added exact conductor-family second moments, refuted generic Cauchy at `(8,17)`, and pinned the direct `(5,45)` counterexample to the otherwise sufficient constant-one layer target. |
 
 | 2026-08-18 | `1ff1ca6b7` | Extracted bounded reusable Hayes/principal-unit/conductor CAS APIs, dual-checked the conditional sufficient-bound arithmetic, retained the missing cancellation lemma as an explicit obligation, and independently reproduced `ell=23`. |
