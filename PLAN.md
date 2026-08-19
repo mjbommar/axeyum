@@ -159,6 +159,8 @@ evidence and unrelated temporary projects were untouched.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-08-19 | `43da1d4c1` | Averaged the combined Berlekamp/inverse shift energy exactly over annihilators, proved its squarefree diagonal, refuted the constant-one scale, and exposed global and fibrewise conjectural targets with exact endpoint ledgers. |
+| 2026-08-19 | `b9eebcdab` | Reduced every inverse-coset shift fibre to a truncated binary Artin--Schreier equation, proved its exact kernel dimension, and attached a checked unsigned support ceiling to every energy row. |
+| 2026-08-19 | `0aeeb68d8` | Moved the extended endpoint-energy sweep behind an explicit ignored probe while retaining bounded theorem checks in the ordinary gate. |
 | 2026-08-19 | `e587bb854` | Added an exact Berlekamp-plus-inverse stationary-fibre and Cauchy ledger for the residual aggregate, checked the squarefree phase boundary, and pointed the universal Autogenesis fact at the live Möbius-convolution obligation. |
 | 2026-08-19 | `381748943` | Replaced the crude binary divisor factor by an exact finite-degree optimizer, carried the proved wrapped-energy ceiling through every endpoint Vaughan row, and showed the former ideal tail is not yet rigorous. |
 | 2026-08-19 | `85e9ba5cd` | Regrouped the signed Möbius convolution exactly by Fourier annihilator depth, added the odd-endpoint buffered-tail margin ledger, and isolated the weighted summation-by-parts obligation. |
@@ -452,7 +454,17 @@ through `ell=9`: global energy at most `2^k`, and the local square-root bound
 `ell=300` pointwise tail at `d=207/208` and `d=210`, respectively, but neither
 controls the complementary signed convolution block.  Proving the local
 two-sided fibre estimate or finding its first counterexample is the current
-bounded task; finite controls remain non-evidence.
+bounded task; finite controls remain non-evidence.  The inverse-coset support
+is no longer opaque: cancelling the common valuation reduces every nonzero
+shift to `z^2+hz=a` in a truncated binary local ring, whose kernel dimension
+is exactly `v+1` for `2v<r` and `floor(r/2)` otherwise.  Every shift row now
+carries the resulting proved support ceiling, exhaustively checked in all
+quotient rings through modulus degree twelve.  This classifies the affine
+fibres needed by a Berlekamp argument, but does not yet prove cancellation of
+the Möbius signs on them.  The multi-minute endpoint sweep is now an explicit
+ignored, environment-selected research probe; the ordinary theorem gate keeps
+the bounded `ell<=7` controls and the earlier `ell<=9` results remain
+uncredited finite evidence.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
