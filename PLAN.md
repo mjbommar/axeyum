@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-18 | `161adde83` | Adapted one frozen Mathlib train proposition into a pinned independent-kernel goal with zero axioms/proof declarations and fail-closed proof/type mutation controls. |
 | 2026-08-18 | `5490b8dff` | Measured all 138 train/development dispatch contracts: every row declined before execution on unsupported `lean4-surface`, with held-out and proof outcomes untouched. |
 | 2026-08-18 | `c9717b3bc` | Froze 214 Mathlib facts into a preregistered 78/60/76 evaluation split with zero dependency, source-group, family, proof-shape, mutation, or longitudinal leakage. |
 | 2026-08-18 | `cf998788b` | Automated the exact authoritative B-then-A chain; two isolated fixed-budget runs matched all 56 retained artifact bytes and passed Autogenesis-1. |
@@ -238,11 +239,18 @@ proofs, or target outcomes. All 138 declined before execution because no
 authoritative operation accepts `lean4-surface`; zero producer invocations and
 zero executor budget distinguish this from proof-search failure.
 
-**Next:** build one proof-isolated statement adapter from pinned Mathlib surface
-syntax to the independent kernel goal form. Bind source and toolchain identity,
-export only declaration types, and reject proof-bearing or type-altered inputs.
-Only after that bridge passes negative controls should fixed-budget episodes
-measure induction, retrieval, reconstruction, and checker seams.
+**One official surface proposition is now a proof-isolated kernel goal.** Commit
+`161adde83` encodes a frozen train statement as a transparent `Prop`
+definition, independently imports 55 declarations with zero trusted/proof-
+bearing rows, and pins the checked goal identity. The adapter rejects theorem,
+axiom, non-`Prop`, wrong-target, and changed-identity controls. Dispatch now
+separates one adapter-ready/no-producer row from 137 unsupported surface rows.
+
+**Next:** implement a bounded definitional-reflexivity producer against the
+adapter's checked goal, deny any use of the target definition as evidence, and
+independently check the candidate in the imported environment. Only after that
+operation produces an exact receipt should the fact be considered for ordinary
+admission and adapter coverage broaden beyond one statement.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
