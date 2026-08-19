@@ -8073,7 +8073,9 @@ mod tests {
         assert_eq!(direct_energy, report.averaged_shift_energy);
         assert!(report.has_signed_collision_cancellation());
 
-        for probe_ell in 2_usize..=9 {
+        // Keep the ordinary gate bounded.  The extended ell<=9 research
+        // sweep is replayed by the ignored environment-selected probe below.
+        for probe_ell in 2_usize..=7 {
             for endpoint in [2 * probe_ell + 1, 2 * probe_ell + 2] {
                 for d in 1..probe_ell {
                     let k = endpoint - d;
@@ -8117,6 +8119,38 @@ mod tests {
         assert_eq!(constant_one_failure.off_diagonal_signed_correlation, 138);
         assert!(constant_one_failure.signed_coset_energy > BigUint::from(1_u8) << 8);
         assert!(constant_one_failure.signed_coset_energy <= BigUint::from(1_u8) << 9);
+    }
+
+    #[test]
+    #[ignore = "extended finite diagnostic; select one row with AXEYUM_BERLEKAMP_PROBE_ELL/D/OFFSET"]
+    fn berlekamp_annihilator_energy_extended_probe() {
+        let parse = |name: &str| {
+            std::env::var(name)
+                .unwrap_or_else(|_| panic!("missing {name}"))
+                .parse::<usize>()
+                .unwrap_or_else(|_| panic!("invalid {name}"))
+        };
+        let ell = parse("AXEYUM_BERLEKAMP_PROBE_ELL");
+        let d = parse("AXEYUM_BERLEKAMP_PROBE_D");
+        let endpoint_offset = parse("AXEYUM_BERLEKAMP_PROBE_OFFSET");
+        assert!(matches!(endpoint_offset, 1 | 2));
+        let endpoint = 2 * ell + endpoint_offset;
+        let k = endpoint - d;
+        let report =
+            binary_berlekamp_annihilator_energy_report(ell, k, d, d, HayesLimits::default())
+                .unwrap();
+        let global_bound = BigUint::from(1_u8) << k;
+        let local_bound = BigUint::from(2 * d) * report.worst_bucket_population;
+        eprintln!(
+            "ell={ell} endpoint={endpoint} d={d} k={k} energy={} global_bound={} worst_square={} worst_population={} local_bound={}",
+            report.signed_coset_energy,
+            global_bound,
+            report.worst_bucket_signed_square,
+            report.worst_bucket_population,
+            local_bound
+        );
+        assert!(report.signed_coset_energy <= global_bound);
+        assert!(report.worst_bucket_signed_square <= local_bound);
     }
 
     #[test]
