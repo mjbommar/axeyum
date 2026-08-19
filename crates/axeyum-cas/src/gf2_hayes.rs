@@ -2340,6 +2340,36 @@ pub struct PopulationRefinementEnvelopeImplication {
     pub candidate_target_numerator: BigUint,
 }
 
+/// Hybrid endpoint implication using the proved individual Weil estimate at
+/// low conductor and the proposed square-root-fibre estimate only in a top
+/// conductor window.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PopulationRefinementHybridImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// One of the two Lemire endpoint degrees.
+    pub degree: usize,
+    /// First level at which the square-root-fibre estimate is used.
+    pub first_square_root_fibre_level: usize,
+    /// Number of top levels requiring the square-root-fibre estimate.
+    pub square_root_fibre_level_count: usize,
+    /// Contribution from the proved individual Weil estimate.
+    pub weil_triangle_numerator: BigUint,
+    /// Contribution from the proposed square-root-fibre estimate.
+    pub square_root_fibre_triangle_numerator: BigUint,
+    /// Required numerator `2^(2ell)`.
+    pub candidate_target_numerator: BigUint,
+}
+
+impl PopulationRefinementHybridImplication {
+    /// Whether the hybrid assumptions close the exact endpoint triangle.
+    #[must_use]
+    pub fn proves_candidate_discrepancy_bound(&self) -> bool {
+        &self.weil_triangle_numerator + &self.square_root_fibre_triangle_numerator
+            <= self.candidate_target_numerator
+    }
+}
+
 impl PopulationRefinementEnvelopeImplication {
     /// Whether the proposed envelope alone closes this endpoint.
     #[must_use]
@@ -2411,6 +2441,77 @@ pub fn population_refinement_envelope_implication(
         envelope_triangle_numerator,
         candidate_target_numerator: BigUint::from(1_u8) << doubled,
     })
+}
+
+/// Minimize the conductor window on which the proposed square-root-fibre
+/// estimate is needed in the exact Haar triangle.
+///
+/// For `j < first_square_root_fibre_level`, this substitutes the proved
+/// individual-character Weil consequence
+///
+/// ```text
+/// H_j^* <= (j-1) 2^ceil(degree/2).
+/// ```
+///
+/// At the remaining top levels it substitutes
+///
+/// ```text
+/// H_j^* <= 3j 2^ceil((degree-j)/2).
+/// ```
+///
+/// The returned split uses the fewest top levels for which the latter bound
+/// makes the endpoint triangle close.  It is an implication ledger: the Weil
+/// part is proved, while the square-root-fibre part remains an assumption.
+///
+/// # Errors
+///
+/// Rejects zero `ell`, a non-endpoint degree, or host-width overflow.
+pub fn population_refinement_hybrid_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<PopulationRefinementHybridImplication, HayesError> {
+    let doubled = ell
+        .checked_mul(2)
+        .ok_or_else(|| HayesError::InvalidParameter("hybrid refinement ell overflow".to_owned()))?;
+    if ell == 0 || !matches!(degree.checked_sub(doubled), Some(1 | 2)) {
+        return Err(HayesError::InvalidParameter(
+            "hybrid refinement implication requires degree=2ell+1 or 2ell+2".to_owned(),
+        ));
+    }
+    let target = BigUint::from(1_u8) << doubled;
+    let weil_scale = BigUint::from(1_u8) << degree.div_ceil(2);
+    for first_family_level in (1..=ell + 1).rev() {
+        let mut weil = BigUint::from(0_u8);
+        let mut family = BigUint::from(0_u8);
+        for level in 1..=ell {
+            let maximum = if level < first_family_level {
+                BigUint::from(level - 1) * &weil_scale
+            } else {
+                let exponent = (degree - level).div_ceil(2);
+                (BigUint::from(3_u8) * BigUint::from(level)) << exponent
+            };
+            let contribution = maximum << (level - 1);
+            if level < first_family_level {
+                weil += contribution;
+            } else {
+                family += contribution;
+            }
+        }
+        if &weil + &family <= target {
+            return Ok(PopulationRefinementHybridImplication {
+                ell,
+                degree,
+                first_square_root_fibre_level: first_family_level,
+                square_root_fibre_level_count: ell + 1 - first_family_level,
+                weil_triangle_numerator: weil,
+                square_root_fibre_triangle_numerator: family,
+                candidate_target_numerator: target,
+            });
+        }
+    }
+    Err(HayesError::Invariant(
+        "full square-root-fibre envelope did not close the endpoint".to_owned(),
+    ))
 }
 
 impl FourthMomentConductorDecomposition {
@@ -11857,7 +11958,25 @@ mod tests {
             assert_eq!(odd.proves_candidate_discrepancy_bound(), ell >= 13);
             assert_eq!(even.proves_candidate_discrepancy_bound(), ell >= 15);
         }
+        let odd_hybrid = population_refinement_hybrid_implication(200, 401).unwrap();
+        let even_hybrid = population_refinement_hybrid_implication(200, 402).unwrap();
+        for report in [&odd_hybrid, &even_hybrid] {
+            assert_eq!(report.first_square_root_fibre_level, 192);
+            assert_eq!(report.square_root_fibre_level_count, 9);
+            assert!(report.proves_candidate_discrepancy_bound());
+            assert!(report.weil_triangle_numerator > BigUint::from(0_u8));
+            assert!(report.square_root_fibre_triangle_numerator > BigUint::from(0_u8));
+        }
+        for ell in 200_usize..=512 {
+            let first = ell - ell.ilog2() as usize - usize::from(!ell.is_power_of_two());
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report = population_refinement_hybrid_implication(ell, degree).unwrap();
+                assert!(report.first_square_root_fibre_level >= first);
+                assert!(report.square_root_fibre_level_count <= ell + 1 - first);
+            }
+        }
         assert!(population_refinement_envelope_implication(12, 24).is_err());
+        assert!(population_refinement_hybrid_implication(12, 24).is_err());
         assert!(matches!(
             class_population_distribution(12, 25, HayesLimits::default())
                 .unwrap()

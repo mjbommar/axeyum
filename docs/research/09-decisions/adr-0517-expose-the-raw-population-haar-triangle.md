@@ -52,6 +52,47 @@ The separate symbolic operation substitutes (RF) into the exact triangle. It
 closes the odd endpoint for every `ell>=13` and the even endpoint for every
 `ell>=15`.  This is an implication checker, not a proof of (RF).
 
+The full range `1<=j<=ell` is stronger than necessary.  If `X_j` is the
+family of characters of exact conductor level `j` and
+`S_n(chi)=sum_(deg f=n) Lambda(f) chi(f)`, Fourier inversion gives
+
+```text
+H_j(b)=2^(1-j) sum_(chi in X_j) conjugate(chi(b)) S_n(chi).
+```
+
+There are `2^(j-1)` such characters, and the proved individual Weil estimate
+`abs(S_n(chi))<=(j-1)2^(n/2)` therefore gives the safe integer bound
+
+```text
+H_j^* <= (j-1) 2^ceil(n/2).                         (W)
+```
+
+Add `population_refinement_hybrid_implication`, which uses (W) below a split,
+(RF) above it, and chooses the smallest top (RF) window that closes the exact
+triangle.  Put `L=ceil(log2 ell)`.  For every `ell>=200`, (W) is sufficient
+for `j<ell-L`, so (RF) is needed only for
+
+```text
+ell-L <= j <= ell.
+```
+
+Indeed, at the worse even endpoint the normalized low-conductor contribution
+is at most
+
+```text
+(ell-L-3)/2^L + 2^(2-ell),
+```
+
+while the top-window contribution is at most
+
+```text
+3 ell (L+1) 2^(-floor(ell/2)).
+```
+
+Their sum is less than one for `ell>=200`; the odd endpoint is no larger.  At
+the finite handoff `ell=200`, the exact optimizer uses only the nine levels
+`192<=j<=200` at both endpoints.
+
 ## Evidence
 
 The ordinary mutation-resistant test reconstructs both level-12 endpoints and
@@ -70,7 +111,8 @@ and the arithmetic implication, not the uniform square-root-fibre estimate.
 ## Consequences
 
 - The endpoint can be finished by a family of conditional one-bit refinement
-  estimates without proving the fourth-cumulant bound.
+  estimates in a logarithmic top-conductor window without proving the
+  fourth-cumulant bound.
 - The required scale is square root in the residual fibre dimension, with
   only a linear conductor factor.  This is a precise target for relative
   Artin--Schreier--Witt or long-cycle geometry.

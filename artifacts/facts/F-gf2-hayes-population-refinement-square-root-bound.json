@@ -2,10 +2,10 @@
   "schema_version": 1,
   "id": "F:gf2-hayes-population-refinement-square-root-bound",
   "title": "Square-root bound for binary Hayes population refinements",
-  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, and let N_j(b) be the level-j quotient population obtained by aggregating the degree-n Mangoldt populations in E_ell. For every 1 <= j <= ell and every level-(j-1) parent b, the absolute difference between its two level-j child populations is at most 3 j times 2^ceil((n-j)/2).",
+  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, let L=ceil(log_2 ell), and let N_j(b) be the level-j quotient population obtained by aggregating the degree-n Mangoldt populations in E_ell. For every ell-L <= j <= ell and every level-(j-1) parent b, the absolute difference between its two level-j child populations is at most 3 j times 2^ceil((n-j)/2).",
   "formal": {
     "language": "certificate-spec",
-    "statement": "{\"bound\":\"max_b |N_j(b,0)-N_j(b,1)| <= 3*j*2^ceil((n-j)/2)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-population-refinement-square-root-bound\",\"level_min\":200,\"version\":1}",
+    "statement": "{\"bound\":\"max_b |N_j(b,0)-N_j(b,1)| <= 3*j*2^ceil((n-j)/2)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"ell_min\":200,\"field_order\":2,\"format\":\"axeyum-gf2-hayes-population-refinement-square-root-bound\",\"level_range\":\"ell-ceil(log2(ell)) <= j <= ell\",\"version\":2}",
     "fragment": "none",
     "free_symbols": ["ell", "n", "j", "b"]
   },
@@ -19,5 +19,5 @@
     "established_by": "not established in this ledger",
     "source": "Axeyum gf2-lemire lane; exact raw-population Haar refinement of the binary Hayes class distribution"
   },
-  "notes": "This is a uniform analytic obligation, not a finite computation result. The CAS reconstructs every finite leaf population from the signed sibling differences and checks that the displayed bound implies the desired endpoint discrepancy: the symbolic triangle closes the odd endpoint from ell=13 and the even endpoint from ell=15. Both endpoint rows satisfy the exact triangle for every tested ell from 16 through 20. The sharper coefficient-two version is false at (ell,n,j)=(19,40,4): 2112512 exceeds 2097152. The coefficient-three version survives the tested rows, but finite survival does not establish ell>=200. Unlike the previously refuted valuationwise square-root claim, each sibling population here already aggregates the complete Mangoldt class population at its quotient level. No proof operation is registered."
+  "notes": "This is a uniform analytic obligation, not a finite computation result. Exact Fourier inversion plus the proved individual Weil bound controls every lower level j<ell-ceil(log2 ell); a proved geometric-series calculation then reduces the missing hypothesis to the displayed logarithmic top-conductor window. At ell=200 only j=192,...,200 remain. The CAS reconstructs every finite leaf population from the signed sibling differences and checks the hybrid implication with exact integers. Both endpoint rows satisfy the exact triangle for every tested ell from 16 through 20. The sharper coefficient-two all-level version is false at (ell,n,j)=(19,40,4): 2112512 exceeds 2097152. The coefficient-three top-window version survives the tested rows, but finite survival does not establish ell>=200. Unlike the previously refuted valuationwise square-root claim, each sibling population here already aggregates the complete Mangoldt class population at its quotient level. No proof operation is registered."
 }

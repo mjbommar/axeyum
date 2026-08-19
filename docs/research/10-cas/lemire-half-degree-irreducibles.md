@@ -164,8 +164,11 @@ lemma.
   sums over all monic polynomials and explicitly leaves the restriction to
   irreducibles open. Their von-Mangoldt Corollary 3.9 handles one special
   power-sum character, whereas the layer `T_(j,n)` below aggregates every
-  character of exact conductor `x^(j+1)`. It therefore does not supply the
-  missing family cancellation: [Equidistribution of high traces of random
+  character of exact conductor `x^(j+1)`. Their Appendix Proposition 6.1 is
+  likewise an individual general-character bound; after (HF) below, summing
+  it character by character loses exactly the required `2^(j/2)` family
+  gain. It therefore does not supply the missing family cancellation:
+  [Equidistribution of high traces of random
   matrices over finite fields and cancellation in character sums of high
   conductor](https://doi.org/10.1112/blms.13057).
 - Sawin's stationary-phase analysis of wild hyper-Kloosterman sums is a direct
@@ -2487,6 +2490,53 @@ certificates without any fourth-moment or cross-order remainder.  The
 coefficient three is a real reserve: the initially tested coefficient two is
 false at `(ell,n,j)=(19,40,4)`, where the exact maximum `2,112,512` exceeds
 `2,097,152`.
+
+Only a logarithmic top-conductor part of (RF) is actually needed.  Let `X_j`
+be the `2^(j-1)` characters that are nontrivial on the kernel of
+`E_j -> E_(j-1)`, and put
+
+```text
+S_n(chi)=sum_(deg f=n) Lambda(f) chi(<f>).
+```
+
+Fourier inversion on the two children of a parent gives the exact identity
+
+```text
+H_j(b)=2^(1-j) sum_(chi in X_j) conjugate(chi(b)) S_n(chi).   (HF)
+```
+
+The standard individual Weil estimate
+`abs(S_n(chi)) <= (j-1)2^(n/2)` and the size of `X_j` therefore imply the safe
+integer envelope
+
+```text
+H_j^* <= (j-1)2^ceil(n/2).                                  (W)
+```
+
+Set `L=ceil(log2 ell)`.  Substituting (W) for `j<ell-L` and (RF) only for
+`ell-L<=j<=ell` closes both endpoints for every `ell>=200`.  At the worse even
+endpoint, after division by the target `2^(2ell)`, the low part is at most
+
+```text
+(ell-L-3)/2^L + 2^(2-ell),
+```
+
+and the top part is at most
+
+```text
+3 ell (L+1) 2^(-floor(ell/2)).
+```
+
+Since `ell<=2^L`, the first expression leaves at least
+`(L+3)/2^L-2^(2-ell)` of margin; the second is smaller than that margin for
+`ell>=200` (for example, bound it by `3ell^2 2^(1-ell/2)` and use
+`24ell^3<2^(ell/2)`, which holds at 200 and increases thereafter, together
+with `2^(2-ell)<1/(4ell)`).  The odd
+endpoint is no larger.  The native
+`population_refinement_hybrid_implication` performs the exact integer
+optimization: at `ell=200`, only the nine levels `192<=j<=200` require (RF).
+Thus the live uniform theorem is now (RF) in a logarithmic top-conductor
+window, not across the whole filtration.
 
 Exact fleet runs at both endpoints for every `16<=ell<=20` satisfy the Haar
 triangle and (RF).  At `ell=20`, the odd and even triangle numerators are
