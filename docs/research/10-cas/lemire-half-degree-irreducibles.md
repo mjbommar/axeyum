@@ -723,6 +723,16 @@ raw `L^2` estimate: a higher-moment, hypercontractive, or otherwise
 class-sensitive bound could still work, but it must preserve enough structure
 to avoid the extraneous square root of the number of classes.
 
+The distribution-only executable
+`axeyum-gf2-hayes-distribution` exposes this exact `L^infinity` diagnostic
+without paying for the moment tables used by the broader research runner.  It
+is resource-bounded to `ell<=23`, uses the same two-prime NTT plus exact CRT
+reconstruction as the public CAS API, and reports the minimum, maximum, maximum
+absolute deviation, conservation-compatible uniform mean, and whether every
+class is positive.  Its bounded output is experimental evidence for choosing
+the missing lemma; positivity in any finite range is not substituted for that
+lemma.
+
 The exact algebra is no longer trapped in that executable. ADR-0482 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
 identity-class populations, endpoint discrepancies, conductor layers, and the
