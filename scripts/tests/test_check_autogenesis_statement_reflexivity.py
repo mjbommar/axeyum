@@ -58,6 +58,36 @@ class StatementReflexivityCheckerTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.ReflexivityError, "receipt shape"):
             MODULE.parse_receipt("STATEMENT_REFLEXIVITY_OK|target=x\nGOAL|x\nPROOF|x\nextra")
 
+    def test_credit_state_accepts_only_open_or_exact_authoritative_admission(self) -> None:
+        self.assertEqual(
+            MODULE.validate_credit_state(
+                self.manifest, {"epistemic_status": "open", "evidence": []}
+            ),
+            "credit=open-uncredited",
+        )
+        admitted = {
+            "epistemic_status": "proved",
+            "proof_route": "kernel-lean",
+            "axiom_footprint": [],
+            "evidence": [
+                {
+                    "check_status": "checked",
+                    "checker_operation": {
+                        "id": "authoritative-mathlib-statement-reflexivity-v1",
+                        "reflexivity_manifest": "artifacts/autogenesis/mathlib-statement-reflexivity-v1.json",
+                        "proof_sha256": self.manifest["operation"]["proof_sha256"],
+                    },
+                }
+            ],
+        }
+        self.assertEqual(
+            MODULE.validate_credit_state(self.manifest, admitted),
+            "credit=authoritatively-admitted",
+        )
+        admitted["evidence"][0]["checker_operation"]["proof_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.ReflexivityError, "not bound"):
+            MODULE.validate_credit_state(self.manifest, admitted)
+
 
 if __name__ == "__main__":
     unittest.main()

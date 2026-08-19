@@ -47,11 +47,14 @@ declaration, and pins the resulting goal identity:
 python3 scripts/check-autogenesis-statement-adapter.py
 ```
 
-`mathlib-statement-reflexivity-v1.json` binds the first proof candidate built
+`mathlib-statement-reflexivity-v1.json` binds the immutable pre-admission
+identity of the first proof candidate built
 from that checked goal. The untrusted proposer recognizes only a bounded Pi
 telescope ending in exact equality; the independent kernel, dependency audit,
 and receipt checker decide whether its `Eq.refl` term is acceptable. The
-artifact deliberately records zero ledger writes and leaves the fact open:
+artifact deliberately records zero ledger writes. The exact authoritative
+operation is registered separately in `operations.json`; any later fact credit
+must bind this unchanged manifest through the durable transaction protocol:
 
 ```sh
 python3 scripts/check-autogenesis-statement-reflexivity.py

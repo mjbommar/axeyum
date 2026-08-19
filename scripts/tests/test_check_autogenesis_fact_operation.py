@@ -174,6 +174,83 @@ class FactOperationReplayTests(unittest.TestCase):
         with self.assertRaisesRegex(checker.FactOperationError, "trigger"):
             checker.check_fact(changed, lambda _operation, _trigger: observation)
 
+    def test_statement_reflexivity_binding_and_result_replay(self) -> None:
+        registry = checker.load_module(
+            "registry_for_reflexivity_replay_test", checker.REGISTRY_SCRIPT
+        ).load_registry()
+        operation = registry["operations"][4]
+        executor = operation["executor"]
+        adapter = checker.json.loads(
+            (ROOT / executor["statement_adapter_manifest"]).read_text()
+        )
+        reflexivity = checker.json.loads(
+            (ROOT / executor["reflexivity_manifest"]).read_text()
+        )
+        evidence = reflexivity["operation"]
+        statement = "∀ (n : ℕ), n.ascFactorial 0 = 1"
+        binding = {
+            "id": operation["id"],
+            "operation_sha256": checker.digest(operation),
+            "registry_sha256_at_execution": "a" * 64,
+            "execution_sha256": "b" * 64,
+            "frontier_sha256": "c" * 64,
+            "statement_adapter_manifest": executor["statement_adapter_manifest"],
+            "statement_adapter_manifest_sha256": checker.digest(adapter),
+            "reflexivity_manifest": executor["reflexivity_manifest"],
+            "reflexivity_manifest_sha256": checker.digest(reflexivity),
+            "external_artifact_sha256": adapter["external_artifact"]["sha256"],
+            "formal_statement_sha256": checker.byte_digest(statement.encode()),
+            "target_definition": executor["target_definition"],
+            "goal_sha256": evidence["goal_sha256"],
+            "proof_sha256": evidence["proof_sha256"],
+            "target_content_sha256": evidence["target_content_sha256"],
+            "max_binders": executor["max_binders"],
+            "max_constructed_nodes": executor["max_constructed_nodes"],
+        }
+        fact = {
+            "id": "F:ml430-nat-ascfactorial-zero-fd183202",
+            "statement": "ascFactorial zero",
+            "formal": {"statement": statement},
+            "epistemic_status": "proved",
+            "proof_route": "kernel-lean",
+            "axiom_footprint": [],
+            "evidence": [
+                {
+                    "kind": "kernel-term",
+                    "supports": "ascFactorial zero",
+                    "check_status": "checked",
+                    "checker_command": checker.checker_command(
+                        "F:ml430-nat-ascfactorial-zero-fd183202"
+                    ),
+                    "checker_operation": binding,
+                }
+            ],
+        }
+        observation = {
+            "verdict": "proved",
+            "evidence_label": executor["expected_evidence_label"],
+            "goal_sha256": evidence["goal_sha256"],
+            "proof_sha256": evidence["proof_sha256"],
+            "target_content_sha256": evidence["target_content_sha256"],
+            "external_artifact_sha256": adapter["external_artifact"]["sha256"],
+            "binders": evidence["binders"],
+            "constructed_nodes": evidence["constructed_nodes"],
+            "max_binders": evidence["max_binders"],
+            "max_constructed_nodes": evidence["max_constructed_nodes"],
+            "admitted_declarations": evidence["admitted_declarations"],
+            "axiom_footprint": [],
+            "retained_answer_dependencies": [],
+            "target_dependency": False,
+            "ledger_writes": 0,
+        }
+        result = checker.check_fact(fact, lambda _operation: observation)
+        self.assertEqual(result["operation_id"], operation["id"])
+
+        changed = copy.deepcopy(fact)
+        changed["evidence"][0]["checker_operation"]["proof_sha256"] = "0" * 64
+        with self.assertRaisesRegex(checker.FactOperationError, "stale or mutated"):
+            checker.check_fact(changed, lambda _operation: observation)
+
 
 if __name__ == "__main__":
     unittest.main()

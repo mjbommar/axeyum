@@ -284,6 +284,44 @@ def build_authoritative_transaction(
             "formal statement by reconstructing and applying the event-bound premise "
             "and requires no retained-answer dependency"
         )
+    elif executor["driver"] == "axeyum-lean-import/statement-reflexivity-v1":
+        expected_statement_sha = hashlib.sha256(
+            before_fact["formal"]["statement"].encode()
+        ).hexdigest()
+        observation = result.get("observation")
+        if (
+            identity.get("formal_statement_sha256") != expected_statement_sha
+            or not isinstance(observation, dict)
+            or observation.get("verdict") != "proved"
+            or observation.get("axiom_footprint") != []
+            or observation.get("retained_answer_dependencies") != []
+            or observation.get("target_dependency") is not False
+            or observation.get("ledger_writes") != 0
+        ):
+            raise TransactionError(
+                "statement-reflexivity execution assurance is inconsistent"
+            )
+        execution_input_binding = {
+            "statement_adapter_manifest": executor["statement_adapter_manifest"],
+            "statement_adapter_manifest_sha256": identity[
+                "statement_adapter_manifest_sha256"
+            ],
+            "reflexivity_manifest": executor["reflexivity_manifest"],
+            "reflexivity_manifest_sha256": identity["reflexivity_manifest_sha256"],
+            "external_artifact_sha256": identity["external_artifact_sha256"],
+            "formal_statement_sha256": expected_statement_sha,
+            "target_definition": executor["target_definition"],
+            "goal_sha256": observation["goal_sha256"],
+            "proof_sha256": observation["proof_sha256"],
+            "target_content_sha256": observation["target_content_sha256"],
+            "max_binders": executor["max_binders"],
+            "max_constructed_nodes": executor["max_constructed_nodes"],
+        }
+        result_description = "fresh-import axiom-free reflexivity proof"
+        replay_description = (
+            "the proof-isolated statement artifact through a fresh importer and "
+            "requires the exact kernel-checked proof and dependency-free result"
+        )
     else:
         raise TransactionError("authoritative operation uses an unsupported driver")
     after_fact = json.loads(json.dumps(before_fact))

@@ -49,9 +49,10 @@ cover exact replay, mutated proof text, a claimed target dependency, and extra
 output. The artifact checker also requires the source fact to remain `open`,
 with an empty evidence list and no proof route.
 
-The dispatch census therefore reports
-`reflexivity-candidate-checked:not-registered-or-admitted`. It still reports
-zero dispatchable facts and consumes zero authoritative executor budget.
+At this result boundary the dispatch census reported
+`reflexivity-candidate-checked:not-registered-or-admitted`. The subsequent
+registration increment preserves this manifest unchanged and moves the row to
+`eligible-for-dispatch`; neither state by itself grants proof credit.
 
 ## Next arrow
 

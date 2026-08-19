@@ -20,6 +20,7 @@ EXECUTION_DRIVERS = {
     "axeyum-bench/smtcomp-evidence-v1",
     "axeyum-lean-kernel/nat-zero-add-induction-v1",
     "axeyum-lean-kernel/nat-mul-one-episode-apply-v1",
+    "axeyum-lean-import/statement-reflexivity-v1",
 }
 ADMISSION_CONTRACTS = {
     ("proved", "kernel-lean", "kernel-term", "must-be-empty"),
@@ -127,6 +128,14 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "premise_budget",
             "budget",
         }
+    elif driver == "axeyum-lean-import/statement-reflexivity-v1":
+        expected = common | {
+            "statement_adapter_manifest",
+            "reflexivity_manifest",
+            "target_definition",
+            "max_binders",
+            "max_constructed_nodes",
+        }
     else:
         expected = common
     exact_keys(value, expected, label)
@@ -154,7 +163,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
         budget = value["budget"]
         if budget != 2:
             raise RegistryError(f"{label}.budget must be exactly 2 for the v1 checker")
-    else:
+    elif driver == "axeyum-lean-kernel/nat-mul-one-episode-apply-v1":
         if value["target_theorem"] != "Nat.mul_one":
             raise RegistryError(f"{label}.target_theorem exceeds the exact A scope")
         if value["premise_fact_id"] != "F:nat-zero-add":
@@ -166,6 +175,50 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             raise RegistryError(f"{label}.denied_theorems exceeds the exact A scope")
         if value["premise_budget"] != 2 or value["budget"] != 1:
             raise RegistryError(f"{label} requires premise budget 2 and apply budget 1")
+    else:
+        adapter_path = repository_file(
+            value["statement_adapter_manifest"],
+            f"{label}.statement_adapter_manifest",
+            root,
+        )
+        reflexivity_path = repository_file(
+            value["reflexivity_manifest"],
+            f"{label}.reflexivity_manifest",
+            root,
+        )
+        expected_root = (root / "artifacts/autogenesis").resolve()
+        if adapter_path.parent != expected_root or reflexivity_path.parent != expected_root:
+            raise RegistryError(f"{label} manifests must be canonical autogenesis artifacts")
+        adapter = json.loads(adapter_path.read_text())
+        reflexivity = json.loads(reflexivity_path.read_text())
+        operation = reflexivity.get("operation") or {}
+        if (
+            adapter.get("kind") != "axeyum-autogenesis-mathlib-statement-adapter"
+            or adapter.get("state") != "independent-kernel-goal-admitted-proof-free"
+            or reflexivity.get("kind")
+            != "axeyum-autogenesis-mathlib-statement-reflexivity"
+            or reflexivity.get("state") != "candidate-checked-not-admitted"
+            or adapter.get("source_fact_id") != value["input_fact_id"]
+            or reflexivity.get("source_fact_id") != value["input_fact_id"]
+            or reflexivity.get("statement_adapter")
+            != value["statement_adapter_manifest"]
+            or operation.get("target_definition") != value["target_definition"]
+            or operation.get("max_binders") != value["max_binders"]
+            or operation.get("max_constructed_nodes")
+            != value["max_constructed_nodes"]
+        ):
+            raise RegistryError(f"{label} statement-reflexivity manifests disagree")
+        fact_path = root / "artifacts/facts" / (
+            value["input_fact_id"].replace("F:", "F-") + ".json"
+        )
+        fact = json.loads(fact_path.read_text())
+        statement = (fact.get("formal") or {}).get("statement")
+        if (
+            not isinstance(statement, str)
+            or hashlib.sha256(statement.encode()).hexdigest()
+            != adapter.get("source_statement_sha256")
+        ):
+            raise RegistryError(f"{label} statement identity disagrees with its fact")
     timeout = value["timeout_seconds"]
     if type(timeout) is not int or not 1 <= timeout <= 900:
         raise RegistryError(f"{label}.timeout_seconds must be an integer in 1..900")
@@ -312,6 +365,17 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                     applicability["formal_languages"] != ["smtlib2"]
                     or admission["proof_route"] != "smt-term-level"
                     or admission["evidence_kind"] != "unsat-certificate"
+                ):
+                    raise RegistryError(
+                        f"{label}.executor driver is inconsistent with applicability/admission"
+                    )
+            elif executor["driver"] == "axeyum-lean-import/statement-reflexivity-v1":
+                if (
+                    applicability["formal_languages"] != ["lean4-surface"]
+                    or applicability["fragments"] != ["Nat"]
+                    or admission["proof_route"] != "kernel-lean"
+                    or admission["evidence_kind"] != "kernel-term"
+                    or admission["axiom_footprint"] != []
                 ):
                     raise RegistryError(
                         f"{label}.executor driver is inconsistent with applicability/admission"

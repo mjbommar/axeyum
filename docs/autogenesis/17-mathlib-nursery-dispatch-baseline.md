@@ -5,29 +5,29 @@ Date: 2026-08-18
 ## Result
 
 The first post-freeze census inspected all 138 train and development contracts
-and deliberately inspected none of the 76 held-out contracts. Zero facts are
+and deliberately inspected none of the 76 held-out contracts. Zero facts were
 eligible for authoritative dispatch. The initial census had all 138 decline on
-surface syntax. After the first statement-adapter increment, the same frozen
-population separates into:
+surface syntax. The adapter and checked-candidate increments then separated one
+row from the unsupported population.
+
+The exact source-bound operation is now registered. The current census is:
 
 ```text
-unsupported-formal-language:lean4-surface                 137
-statement-adapter-ready:no-authoritative-producer           1
+eligible-for-dispatch                                        1
+no-exact-authoritative-operation                           137
 ```
 
-No producer ran, no executor budget was consumed, no proof body or target
-outcome was accessed, and no fact received credit. The content-addressed result
-is
+The census itself still runs no producer, consumes no executor budget, accesses
+no proof body or target outcome, and grants no fact credit. The content-
+addressed result is
 [`mathlib-nursery-dispatch-baseline-v1.json`](../../artifacts/autogenesis/mathlib-nursery-dispatch-baseline-v1.json).
 
 ## What this corrects
 
-“Axeyum failed to prove 138 theorems” would be false. The theorem statements
-have only crossed the proof-free Mathlib syntax/type boundary. Current
-authoritative operations accept exact preregistered facts in `lean4` kernel
-form or `smtlib2`. One proposition now has an independently checked kernel goal,
-but it deliberately remains non-dispatchable until a producer and checker are
-registered. The remaining 137 have no typed goal to give a producer.
+“Axeyum failed to prove 138 theorems” would be false. One proposition now has an
+independently checked kernel goal and one exact registered operation. The
+remaining 137 have no exact operation; calling them unsupported by the entire
+`lean4-surface` language would now be too broad.
 
 This changes the immediate sequence. Building induction search, library
 retrieval, or tactic planning first would produce machinery with no legitimate
@@ -42,6 +42,9 @@ input path from the nursery. The narrow bridge must come first:
 5. register one bounded operation only after negative controls show that a
    changed proposition, proof-bearing export, or unsupported construct is
    rejected.
+
+All five steps are complete for one train row. Authoritative execution and
+durable admission remain separate events.
 
 Only then can fixed-budget proof episodes distinguish missing lemmas, search
 limits, reconstruction gaps, and checker failures.

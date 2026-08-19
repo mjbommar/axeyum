@@ -160,6 +160,30 @@ def check_fact(
                 "trigger": trigger,
             }
         )
+    elif executor["driver"] == "axeyum-lean-import/statement-reflexivity-v1":
+        adapter = json.loads((ROOT / executor["statement_adapter_manifest"]).read_text())
+        reflexivity = json.loads((ROOT / executor["reflexivity_manifest"]).read_text())
+        evidence = reflexivity["operation"]
+        expected_binding.update(
+            {
+                "statement_adapter_manifest": executor[
+                    "statement_adapter_manifest"
+                ],
+                "statement_adapter_manifest_sha256": digest(adapter),
+                "reflexivity_manifest": executor["reflexivity_manifest"],
+                "reflexivity_manifest_sha256": digest(reflexivity),
+                "external_artifact_sha256": adapter["external_artifact"]["sha256"],
+                "formal_statement_sha256": byte_digest(
+                    fact["formal"]["statement"].encode()
+                ),
+                "target_definition": executor["target_definition"],
+                "goal_sha256": evidence["goal_sha256"],
+                "proof_sha256": evidence["proof_sha256"],
+                "target_content_sha256": evidence["target_content_sha256"],
+                "max_binders": executor["max_binders"],
+                "max_constructed_nodes": executor["max_constructed_nodes"],
+            }
+        )
     else:
         raise FactOperationError("fact operation uses an unsupported driver")
     if binding != expected_binding:
@@ -204,6 +228,27 @@ def check_fact(
             "retained_answer_dependencies": [],
             "attempted": executor["budget"],
             "accepted_plan_rank": executor["budget"],
+        }
+    elif executor["driver"] == "axeyum-lean-import/statement-reflexivity-v1":
+        adapter = json.loads((ROOT / executor["statement_adapter_manifest"]).read_text())
+        reflexivity = json.loads((ROOT / executor["reflexivity_manifest"]).read_text())
+        evidence = reflexivity["operation"]
+        expected_observation = {
+            "verdict": "proved",
+            "evidence_label": executor["expected_evidence_label"],
+            "goal_sha256": evidence["goal_sha256"],
+            "proof_sha256": evidence["proof_sha256"],
+            "target_content_sha256": evidence["target_content_sha256"],
+            "external_artifact_sha256": adapter["external_artifact"]["sha256"],
+            "binders": evidence["binders"],
+            "constructed_nodes": evidence["constructed_nodes"],
+            "max_binders": evidence["max_binders"],
+            "max_constructed_nodes": evidence["max_constructed_nodes"],
+            "admitted_declarations": evidence["admitted_declarations"],
+            "axiom_footprint": [],
+            "retained_answer_dependencies": [],
+            "target_dependency": False,
+            "ledger_writes": 0,
         }
     else:
         premise_candidate = (

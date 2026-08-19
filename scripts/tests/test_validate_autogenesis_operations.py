@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_three_authoritative_operations(self) -> None:
+    def test_committed_registry_has_one_fixture_and_four_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 4)
+        self.assertEqual(len(self.registry["operations"]), 5)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
@@ -53,6 +53,15 @@ class OperationRegistryTests(unittest.TestCase):
         self.assertEqual(
             apply["executor"]["driver"],
             "axeyum-lean-kernel/nat-mul-one-episode-apply-v1",
+        )
+        reflexivity = self.registry["operations"][4]
+        self.assertEqual(
+            reflexivity["applicability"]["fact_ids"],
+            ["F:ml430-nat-ascfactorial-zero-fd183202"],
+        )
+        self.assertEqual(
+            reflexivity["executor"]["driver"],
+            "axeyum-lean-import/statement-reflexivity-v1",
         )
 
     def test_duplicate_operation_id_is_rejected(self) -> None:
@@ -134,6 +143,18 @@ class OperationRegistryTests(unittest.TestCase):
         mutated["operations"][1]["admission"]["axiom_footprint"] = []
         with self.assertRaisesRegex(registry_module.RegistryError, "violates"):
             registry_module.validate_registry(mutated, ROOT)
+
+    def test_statement_reflexivity_driver_is_exactly_manifest_bound(self) -> None:
+        for field, value in (
+            ("target_definition", "Axeyum.Wrong"),
+            ("max_binders", 9),
+            ("max_constructed_nodes", 17),
+        ):
+            with self.subTest(field=field):
+                mutated = copy.deepcopy(self.registry)
+                mutated["operations"][4]["executor"][field] = value
+                with self.assertRaisesRegex(registry_module.RegistryError, "manifests disagree"):
+                    registry_module.validate_registry(mutated, ROOT)
 
         mutated = copy.deepcopy(self.registry)
         mutated["operations"][0]["admission"]["axiom_footprint"] = ["invented"]

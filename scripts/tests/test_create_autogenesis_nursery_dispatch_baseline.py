@@ -25,16 +25,16 @@ class DispatchBaselineTests(unittest.TestCase):
         self.assertEqual({row["partition"] for row in result["rows"]}, {"train", "development"})
         self.assertEqual(result["coverage"]["candidates"], 138)
 
-    def test_current_population_separates_checked_candidate_from_unsupported(self) -> None:
+    def test_current_population_selects_only_the_registered_checked_candidate(self) -> None:
         result = MODULE.build(self.nursery, self.registry, self.facts)
-        self.assertEqual(result["coverage"]["eligible_for_dispatch"], 0)
+        self.assertEqual(result["coverage"]["eligible_for_dispatch"], 1)
         self.assertEqual(
             result["coverage"]["decline_reasons"],
             {
-                "reflexivity-candidate-checked:not-registered-or-admitted": 1,
-                "unsupported-formal-language:lean4-surface": 137,
+                "no-exact-authoritative-operation": 137,
             },
         )
+        self.assertEqual(result["coverage"]["already_established"], 0)
         self.assertEqual(result["budget"]["executor_invocations"], 0)
 
     def test_matching_authoritative_operation_is_dispatchable(self) -> None:
@@ -62,6 +62,17 @@ class DispatchBaselineTests(unittest.TestCase):
             MODULE.classify(fact, [], {"F:x"}, {"F:x"}),
             ("reflexivity-candidate-checked:not-registered-or-admitted", []),
         )
+
+    def test_established_row_is_not_redispatched(self) -> None:
+        nursery = copy.deepcopy(self.nursery)
+        facts = copy.deepcopy(self.facts)
+        fact_id = "F:ml430-nat-ascfactorial-zero-fd183202"
+        facts[fact_id]["epistemic_status"] = "proved"
+        result = MODULE.build(nursery, self.registry, facts)
+        row = next(row for row in result["rows"] if row["fact_id"] == fact_id)
+        self.assertEqual(row["outcome"], "already-established")
+        self.assertIsNone(row["decline_reason"])
+        self.assertEqual(result["coverage"]["already_established"], 1)
 
     def test_population_drift_fails_closed(self) -> None:
         nursery = copy.deepcopy(self.nursery)

@@ -107,9 +107,17 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
         reason, operation_ids = classify(
             fact, operations, adapted_fact_ids, checked_candidate_fact_ids
         )
-        outcome = "eligible-for-dispatch" if reason == "dispatchable" else "declined-before-execution"
-        reasons[reason] += 1
-        by_family[entry["family"]][reason] += 1
+        if fact.get("epistemic_status") in {"proved", "refuted", "disproved"}:
+            outcome = "already-established"
+        else:
+            outcome = (
+                "eligible-for-dispatch"
+                if reason == "dispatchable"
+                else "declined-before-execution"
+            )
+            if reason != "dispatchable":
+                reasons[reason] += 1
+                by_family[entry["family"]][reason] += 1
         rows.append({
             "fact_id": entry["fact_id"],
             "family": entry["family"],
@@ -117,7 +125,9 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
             "formal_language": fact["formal"]["language"],
             "fragment": fact["formal"]["fragment"],
             "outcome": outcome,
-            "decline_reason": None if reason == "dispatchable" else reason,
+            "decline_reason": (
+                reason if outcome == "declined-before-execution" else None
+            ),
             "registered_operation_ids": operation_ids,
             "executor_budget_consumed": 0,
             "statement_adapter_ready": entry["fact_id"] in adapted_fact_ids,
@@ -148,13 +158,14 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
             "candidates": len(rows),
             "eligible_for_dispatch": sum(row["outcome"] == "eligible-for-dispatch" for row in rows),
             "declined_before_execution": sum(row["outcome"] == "declined-before-execution" for row in rows),
+            "already_established": sum(row["outcome"] == "already-established" for row in rows),
             "decline_reasons": dict(sorted(reasons.items())),
             "families": {
                 family: dict(sorted(counts.items())) for family, counts in sorted(by_family.items())
             },
         },
         "rows": rows,
-        "interpretation": "This is a dispatch-contract census, not a proof episode or theorem outcome. A pre-execution decline consumes no producer budget and earns no proof credit.",
+        "interpretation": "This is a dispatch-contract census, not a proof episode. A pre-execution decline consumes no producer budget and earns no proof credit; an already-established row is counted separately and is not redispatched.",
     }
     result["baseline_sha256"] = digest(result)
     return result
@@ -180,7 +191,8 @@ def main() -> int:
             "AUTOGENESIS_NURSERY_DISPATCH_BASELINE_OK|"
             f"{expected['baseline_sha256']}|candidates={expected['coverage']['candidates']}|"
             f"dispatchable={expected['coverage']['eligible_for_dispatch']}|"
-            f"declined={expected['coverage']['declined_before_execution']}"
+            f"declined={expected['coverage']['declined_before_execution']}|"
+            f"established={expected['coverage']['already_established']}"
         )
     except (OSError, json.JSONDecodeError, KeyError, BaselineError) as error:
         print(f"autogenesis-nursery-dispatch-baseline: {error}", file=sys.stderr)

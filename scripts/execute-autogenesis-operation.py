@@ -16,6 +16,7 @@ import json
 import os
 import pathlib
 import re
+import stat
 import subprocess
 import sys
 import tempfile
@@ -30,6 +31,9 @@ INDUCTION_PROPOSER = ROOT / "scripts/autogenesis-induction-proposer.py"
 APPLY_PROPOSER = ROOT / "scripts/autogenesis-apply-proposer.py"
 APPLY_TRANSACTION_SCRIPT = ROOT / "scripts/apply-autogenesis-fact-transaction.py"
 READINESS_SCRIPT = ROOT / "scripts/create-autogenesis-readiness-delta.py"
+STATEMENT_REFLEXIVITY_CHECKER = (
+    ROOT / "scripts/check-autogenesis-statement-reflexivity.py"
+)
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 EVIDENCE_RE = re.compile(
     r"^;\s*evidence\s+kind=(\S+)\s+certified=(\S+)\s+"
@@ -61,6 +65,163 @@ def digest(value: Any) -> str:
 
 def byte_digest(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
+
+
+def statement_reflexivity_contract(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    executor = operation["executor"]
+    adapter = json.loads((ROOT / executor["statement_adapter_manifest"]).read_text())
+    reflexivity = json.loads((ROOT / executor["reflexivity_manifest"]).read_text())
+    evidence = reflexivity.get("operation") or {}
+    statement = (fact.get("formal") or {}).get("statement")
+    if (
+        adapter.get("source_fact_id") != fact.get("id")
+        or reflexivity.get("source_fact_id") != fact.get("id")
+        or reflexivity.get("statement_adapter")
+        != executor["statement_adapter_manifest"]
+        or not isinstance(statement, str)
+        or byte_digest(statement.encode()) != adapter.get("source_statement_sha256")
+        or evidence.get("target_definition") != executor["target_definition"]
+        or evidence.get("max_binders") != executor["max_binders"]
+        or evidence.get("max_constructed_nodes")
+        != executor["max_constructed_nodes"]
+    ):
+        raise ExecutionError("statement-reflexivity source contract is inconsistent")
+    return adapter, reflexivity
+
+
+def expected_statement_reflexivity_observation(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> dict[str, Any]:
+    adapter, reflexivity = statement_reflexivity_contract(operation, fact)
+    evidence = reflexivity["operation"]
+    return {
+        "verdict": "proved",
+        "evidence_label": operation["executor"]["expected_evidence_label"],
+        "goal_sha256": evidence["goal_sha256"],
+        "proof_sha256": evidence["proof_sha256"],
+        "target_content_sha256": evidence["target_content_sha256"],
+        "external_artifact_sha256": adapter["external_artifact"]["sha256"],
+        "binders": evidence["binders"],
+        "constructed_nodes": evidence["constructed_nodes"],
+        "max_binders": evidence["max_binders"],
+        "max_constructed_nodes": evidence["max_constructed_nodes"],
+        "admitted_declarations": evidence["admitted_declarations"],
+        "axiom_footprint": [],
+        "retained_answer_dependencies": [],
+        "target_dependency": False,
+        "ledger_writes": 0,
+    }
+
+
+def run_statement_reflexivity_registered(
+    operation: dict[str, Any],
+) -> dict[str, Any]:
+    executor = operation["executor"]
+    frontier_module = load_module(
+        "frontier_for_statement_reflexivity_execution", FRONTIER_SCRIPT
+    )
+    fact = frontier_module.load().get(executor["input_fact_id"])
+    if not isinstance(fact, dict):
+        raise ExecutionError("statement-reflexivity input fact is absent")
+    adapter, reflexivity = statement_reflexivity_contract(operation, fact)
+    external = adapter["external_artifact"]
+    artifact = pathlib.Path(external["path"])
+    if not artifact.is_file():
+        raise ExecutionError("registered statement artifact is unavailable")
+    payload = artifact.read_bytes()
+    if (
+        len(payload) != external["bytes"]
+        or byte_digest(payload) != external["sha256"]
+        or len(payload.splitlines()) != external["records"]
+        or stat.S_IMODE(artifact.stat().st_mode) != int(external["mode"], 8)
+    ):
+        raise ExecutionError("registered statement artifact identity changed")
+    command = [
+        "cargo",
+        "run",
+        "-q",
+        "-p",
+        "axeyum-lean-import",
+        "--example",
+        "statement_reflexivity_operation",
+        "--",
+        str(artifact),
+        executor["target_definition"],
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=executor["timeout_seconds"],
+        )
+    except subprocess.TimeoutExpired as error:
+        raise ExecutionError(
+            "statement-reflexivity operation exceeded its timeout"
+        ) from error
+    if completed.returncode != 0:
+        diagnostic = completed.stderr.strip().splitlines()
+        suffix = diagnostic[-1] if diagnostic else "no diagnostic"
+        raise ExecutionError(
+            f"statement-reflexivity executor exited {completed.returncode}: {suffix}"
+        )
+    checker = load_module(
+        "statement_reflexivity_checker_for_execution",
+        STATEMENT_REFLEXIVITY_CHECKER,
+    )
+    try:
+        receipt = checker.parse_receipt(completed.stdout.rstrip("\n"))
+        checker.validate_receipt(reflexivity, receipt)
+    except checker.ReflexivityError as error:
+        raise ExecutionError(f"statement-reflexivity receipt failed: {error}") from error
+    expected_keys = {
+        "target",
+        "goal_sha256",
+        "proof_sha256",
+        "target_content_sha256",
+        "binders",
+        "constructed_nodes",
+        "max_binders",
+        "max_nodes",
+        "declarations",
+        "axioms",
+        "theorem_dependencies",
+        "target_dependency",
+        "ledger_writes",
+        "goal",
+        "proof",
+    }
+    if set(receipt) != expected_keys:
+        raise ExecutionError("statement-reflexivity receipt fields differ from v1")
+    observation = expected_statement_reflexivity_observation(operation, fact)
+    observed_counts = {
+        "binders": receipt["binders"],
+        "constructed_nodes": receipt["constructed_nodes"],
+        "max_binders": receipt["max_binders"],
+        "max_constructed_nodes": receipt["max_nodes"],
+        "admitted_declarations": receipt["declarations"],
+        "axioms": receipt["axioms"],
+        "theorem_dependencies": receipt["theorem_dependencies"],
+        "target_dependency": receipt["target_dependency"],
+        "ledger_writes": receipt["ledger_writes"],
+    }
+    expected_counts = {
+        "binders": str(observation["binders"]),
+        "constructed_nodes": str(observation["constructed_nodes"]),
+        "max_binders": str(observation["max_binders"]),
+        "max_constructed_nodes": str(observation["max_constructed_nodes"]),
+        "admitted_declarations": str(observation["admitted_declarations"]),
+        "axioms": "0",
+        "theorem_dependencies": "0",
+        "target_dependency": "false",
+        "ledger_writes": "0",
+    }
+    if observed_counts != expected_counts:
+        raise ExecutionError("statement-reflexivity assurance counters changed")
+    return observation
 
 
 def verify_content_addressed(value: dict[str, Any], field: str, label: str) -> str:
@@ -815,6 +976,10 @@ def run_registered(
         return run_kernel_registered(operation)
     if driver == "axeyum-lean-kernel/nat-mul-one-episode-apply-v1":
         return run_kernel_apply_registered(operation, trigger)
+    if driver == "axeyum-lean-import/statement-reflexivity-v1":
+        if trigger is not None:
+            raise ExecutionError("statement-reflexivity operation rejects a trigger")
+        return run_statement_reflexivity_registered(operation)
     raise ExecutionError(f"unsupported execution driver {driver!r}")
 
 
@@ -896,6 +1061,26 @@ def build_receipt(
             "denied_theorems": executor["denied_theorems"],
             "premise_budget": executor["premise_budget"],
             "budget": executor["budget"],
+        }
+    elif executor["driver"] == "axeyum-lean-import/statement-reflexivity-v1":
+        adapter, reflexivity = statement_reflexivity_contract(operation, fact)
+        expected_observation = expected_statement_reflexivity_observation(
+            operation, fact
+        )
+        input_identity = {
+            "formal_statement_sha256": byte_digest(
+                fact["formal"]["statement"].encode()
+            ),
+            "statement_adapter_manifest_sha256": digest(adapter),
+            "reflexivity_manifest_sha256": digest(reflexivity),
+            "external_artifact_sha256": adapter["external_artifact"]["sha256"],
+        }
+        request_input = {
+            "statement_adapter_manifest": executor["statement_adapter_manifest"],
+            "reflexivity_manifest": executor["reflexivity_manifest"],
+            "target_definition": executor["target_definition"],
+            "max_binders": executor["max_binders"],
+            "max_constructed_nodes": executor["max_constructed_nodes"],
         }
     else:
         raise ExecutionError(f"unsupported execution driver {executor['driver']!r}")

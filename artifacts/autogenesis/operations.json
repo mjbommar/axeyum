@@ -77,7 +77,9 @@
         "check-autogenesis-1-result.py",
         "check-autogenesis-apply-search.sh",
         "check-autogenesis-induction-search.sh",
+        "check-autogenesis-nursery.py",
         "check-autogenesis-proposer-isolation.sh",
+        "create-autogenesis-mathlib-nursery-split.py",
         "run-autogenesis-authoritative-chain.py",
         "validate-autogenesis-operations.py"
       ],
@@ -123,7 +125,9 @@
         "check-autogenesis-1-result.py",
         "check-autogenesis-apply-search.sh",
         "check-autogenesis-induction-search.sh",
+        "check-autogenesis-nursery.py",
         "check-autogenesis-proposer-isolation.sh",
+        "create-autogenesis-mathlib-nursery-split.py",
         "gen-autogenesis-baseline.py",
         "run-autogenesis-authoritative-chain.py"
       ],
@@ -156,6 +160,46 @@
         "budget": 1,
         "timeout_seconds": 120,
         "expected_evidence_label": "kernel-term-episode-local-apply-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    },
+    {
+      "id": "authoritative-mathlib-statement-reflexivity-v1",
+      "scope": "authoritative",
+      "applicability": {
+        "fact_ids": ["F:ml430-nat-ascfactorial-zero-fd183202"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "bounded-pi-equality-reflexivity-v1",
+        "implementation": "crates/axeyum-lean-import/examples/statement_reflexivity_support/mod.rs",
+        "input_kind": "axeyum-proof-isolated-kernel-goal",
+        "output_kind": "axeyum-bounded-reflexivity-candidate"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/statement-reflexivity-operation-v1",
+        "implementation": "crates/axeyum-lean-import/examples/statement_reflexivity_operation.rs",
+        "input_kind": "axeyum-bounded-reflexivity-candidate",
+        "output_kind": "axeyum-source-bound-kernel-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/statement-reflexivity-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+        "statement_adapter_manifest": "artifacts/autogenesis/mathlib-statement-adapter-v1.json",
+        "reflexivity_manifest": "artifacts/autogenesis/mathlib-statement-reflexivity-v1.json",
+        "target_definition": "Axeyum.Autogenesis.Statement.natAscFactorialZero",
+        "max_binders": 8,
+        "max_constructed_nodes": 16,
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-statement-reflexivity-axiom-free"
       },
       "admission": {
         "epistemic_status": "proved",

@@ -12,6 +12,14 @@ assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
+REFLEXIVITY_FACT = "F:ml430-nat-ascfactorial-zero-fd183202"
+
+
+def settle_reflexivity_fact(facts):
+    target = copy.deepcopy(facts[REFLEXIVITY_FACT])
+    target["epistemic_status"] = "proved"
+    facts[REFLEXIVITY_FACT] = target
+
 
 class FactTransactionTests(unittest.TestCase):
     def inputs(self):
@@ -153,6 +161,7 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
         executor = MODULE.load_module("executor_for_transaction_test", MODULE.EXECUTOR_SCRIPT)
         frontier_module = executor.load_module("frontier_for_transaction_test", executor.FRONTIER_SCRIPT)
         facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
         target = copy.deepcopy(facts["F:no-integer-square-is-minus-one"])
         target["epistemic_status"] = "open"
         target["evidence"] = []
@@ -230,6 +239,7 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
             "frontier_for_kernel_transaction_test", executor.FRONTIER_SCRIPT
         )
         facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
         target = copy.deepcopy(facts["F:nat-zero-add"])
         target["epistemic_status"] = "open"
         target["evidence"] = []
@@ -281,6 +291,7 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
             "frontier_for_apply_transaction_test", executor.FRONTIER_SCRIPT
         )
         facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
         target = copy.deepcopy(facts["F:nat-mul-one"])
         target["epistemic_status"] = "open"
         target["evidence"] = []
@@ -338,6 +349,49 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
         checked = checker.check_fact(
             after, lambda _operation, _trigger: observation
         )
+        self.assertEqual(checked["operation_id"], operation["id"])
+
+    def test_statement_reflexivity_delta_retains_external_and_proof_identities(self):
+        executor = MODULE.load_module(
+            "executor_for_reflexivity_transaction_test", MODULE.EXECUTOR_SCRIPT
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_reflexivity_transaction_test", executor.FRONTIER_SCRIPT
+        )
+        facts = frontier_module.load()
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
+        observation = executor.expected_statement_reflexivity_observation(
+            operation, before
+        )
+        execution_receipt = executor.build_receipt(
+            frontier=frontier,
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="9" * 40,
+            observation=observation,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution_receipt,
+            operation=operation,
+            registry=registry,
+        )
+        after = transaction["authoritative_write"]["after_fact"]
+        self.assertEqual(after["proof_route"], "kernel-lean")
+        self.assertEqual(after["axiom_footprint"], [])
+        binding = after["evidence"][0]["checker_operation"]
+        self.assertEqual(binding["proof_sha256"], observation["proof_sha256"])
+        self.assertEqual(
+            binding["external_artifact_sha256"],
+            observation["external_artifact_sha256"],
+        )
+        checker = MODULE.load_module(
+            "fact_checker_for_reflexivity_transaction_test",
+            MODULE.FACT_OPERATION_SCRIPT,
+        )
+        checked = checker.check_fact(after, lambda _operation: observation)
         self.assertEqual(checked["operation_id"], operation["id"])
 
 

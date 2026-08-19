@@ -19,11 +19,20 @@ assert SPEC is not None and SPEC.loader is not None
 execution = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(execution)
 
+REFLEXIVITY_FACT = "F:ml430-nat-ascfactorial-zero-fd183202"
+
+
+def settle_reflexivity_fact(facts):
+    target = copy.deepcopy(facts[REFLEXIVITY_FACT])
+    target["epistemic_status"] = "proved"
+    facts[REFLEXIVITY_FACT] = target
+
 
 class OperationExecutionTests(unittest.TestCase):
     def setUp(self) -> None:
         frontier_module = execution.load_module("frontier_for_test", execution.FRONTIER_SCRIPT)
         self.facts = frontier_module.load()
+        settle_reflexivity_fact(self.facts)
         target = copy.deepcopy(self.facts["F:no-integer-square-is-minus-one"])
         target["epistemic_status"] = "open"
         target["evidence"] = []
@@ -57,6 +66,7 @@ class OperationExecutionTests(unittest.TestCase):
             "frontier_for_episode_test", execution.FRONTIER_SCRIPT
         )
         facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
         for fact_id in ("F:nat-zero-add", "F:nat-mul-one"):
             target = copy.deepcopy(facts[fact_id])
             target["epistemic_status"] = "open"
@@ -211,6 +221,7 @@ class OperationExecutionTests(unittest.TestCase):
             "frontier_for_kernel_execution_test", execution.FRONTIER_SCRIPT
         )
         facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
         target = copy.deepcopy(facts["F:nat-zero-add"])
         target["epistemic_status"] = "open"
         target["evidence"] = []
@@ -363,6 +374,45 @@ class OperationExecutionTests(unittest.TestCase):
     def test_apply_evidence_parser_is_closed(self) -> None:
         with self.assertRaisesRegex(execution.ExecutionError, "wrong kind"):
             execution.parse_apply_evidence("wrong\n")
+
+    def test_statement_reflexivity_receipt_binds_manifests_artifact_and_proof(self) -> None:
+        frontier_module = execution.load_module(
+            "frontier_for_reflexivity_execution_test", execution.FRONTIER_SCRIPT
+        )
+        facts = frontier_module.load()
+        frontier = frontier_module.build_machine_frontier(facts)
+        fact, operation, registry = execution.selected_inputs(frontier, facts)
+        self.assertEqual(fact["id"], REFLEXIVITY_FACT)
+        observation = execution.expected_statement_reflexivity_observation(
+            operation, fact
+        )
+        receipt = execution.build_receipt(
+            frontier=frontier,
+            fact=fact,
+            operation=operation,
+            registry=registry,
+            git_commit="f" * 40,
+            observation=observation,
+        )
+        self.assertEqual(
+            receipt["identity"]["external_artifact_sha256"],
+            observation["external_artifact_sha256"],
+        )
+        self.assertEqual(
+            receipt["request"]["reflexivity_manifest"],
+            "artifacts/autogenesis/mathlib-statement-reflexivity-v1.json",
+        )
+        changed = copy.deepcopy(observation)
+        changed["proof_sha256"] = "0" * 64
+        with self.assertRaisesRegex(execution.ExecutionError, "required source-bound"):
+            execution.build_receipt(
+                frontier=frontier,
+                fact=fact,
+                operation=operation,
+                registry=registry,
+                git_commit="f" * 40,
+                observation=changed,
+            )
 
 
 if __name__ == "__main__":
