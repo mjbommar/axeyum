@@ -1473,6 +1473,29 @@ variables, propose a central extension, and verify associativity and its
 commutator identity.
 None of these finite moments proves the connected candidate.
 
+The remaining simple joined-domain precursor also fails in the pinned row.
+For each exact affine fibre, the CAS tests generalized bentness directly.  If
+`c_r(h)` counts the differences `q(x+h)-q(x)=r mod 8`, then the primitive
+autocorrelation vanishes exactly when
+
+```text
+c_r(h)=c_(r+4)(h),  r=0,1,2,3,
+```
+
+for every nonzero translation `h`; this follows from
+`zeta_8^4+1=0` and is equivalent to a flat primitive Walsh spectrum.  At
+`(ell,k,d)=(9,11,8)`, **zero** of the `18,884` fibres pass, containing zero of
+the `130,048` fibre points.  Even the `16,587` at-most-quadratic phases are
+therefore degenerate or non-flat.  A known bent phase `4 x_1 x_2` passes the
+same checker, while changing its `(1,1)` value to zero fails.
+
+This does not logically exclude a larger group mixing fibre, shift, and Witt
+variables.  It does remove the measured basis for inventing such a group: the
+collapsed functions are neither sparse nor complementary, and none of the
+original fibres is generalized bent.  Following the stopping rule, the active
+route now moves to connected fourth-cumulant/gcd strata, where cancellation
+between fibres, valuations, and convolution orders remains intact.
+
 The Arf coordinate is a better representation of the live squarefree sign,
 but not yet its estimate.
 For each squarefree `f` the adjusted second-trace space is nondegenerate by

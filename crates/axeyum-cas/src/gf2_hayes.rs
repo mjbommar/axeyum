@@ -1547,6 +1547,10 @@ pub struct BinaryDyadicAutocorrelationFibreReport {
     /// Fibres whose product-discriminant phase is at most quadratic modulo
     /// eight in the recovered affine coordinates.
     pub at_most_quadratic_fibre_count: usize,
+    /// Fibres whose primitive modulo-eight Walsh spectrum is exactly flat.
+    pub generalized_bent_fibre_count: usize,
+    /// Total points in the generalized-bent fibres.
+    pub generalized_bent_fibre_points: u128,
     /// Total points in the complementary nonquadratic fibres.
     pub nonquadratic_fibre_points: u128,
     /// Signed dyadic-character correlation on the nonquadratic fibres.
@@ -6733,8 +6737,24 @@ struct BinaryDyadicFibrePhase {
     dimension: usize,
     maxima: (Option<usize>, Option<usize>, Option<usize>),
     support_degree: usize,
+    is_generalized_bent: bool,
     signed_correlation: i128,
     residue_counts: [u128; 8],
+}
+
+fn mod_eight_phase_is_generalized_bent(truth_table: &[u8]) -> bool {
+    for shift in 1..truth_table.len() {
+        let mut differences = [0_usize; 8];
+        for (input, phase) in truth_table.iter().copied().enumerate() {
+            let shifted = truth_table[input ^ shift];
+            let difference = usize::from((shifted + 8 - phase) % 8);
+            differences[difference] += 1;
+        }
+        if (0..4).any(|residue| differences[residue] != differences[residue + 4]) {
+            return false;
+        }
+    }
+    true
 }
 
 fn binary_dyadic_fibre_phase(
@@ -6762,10 +6782,12 @@ fn binary_dyadic_fibre_phase(
         .flatten()
         .max()
         .unwrap_or(0);
+    let is_generalized_bent = mod_eight_phase_is_generalized_bent(&truth_table);
     Ok(BinaryDyadicFibrePhase {
         dimension,
         maxima,
         support_degree,
+        is_generalized_bent,
         signed_correlation,
         residue_counts,
     })
@@ -6793,6 +6815,15 @@ fn record_binary_dyadic_fibre_statistics(
         .ok_or_else(|| HayesError::InvalidParameter("dyadic fibre total overflow".to_owned()))?;
     report.max_fibre_dimension = report.max_fibre_dimension.max(phase.dimension);
     report.at_most_quadratic_fibre_count += usize::from(phase.support_degree <= 2);
+    if phase.is_generalized_bent {
+        report.generalized_bent_fibre_count += 1;
+        report.generalized_bent_fibre_points = report
+            .generalized_bent_fibre_points
+            .checked_add(population)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("generalized-bent fibre total overflow".to_owned())
+            })?;
+    }
     if phase.support_degree > 2 {
         report.nonquadratic_fibre_points = report
             .nonquadratic_fibre_points
@@ -7520,6 +7551,8 @@ pub fn binary_dyadic_autocorrelation_fibre_report(
         total_fibre_points: 0,
         max_fibre_dimension: 0,
         at_most_quadratic_fibre_count: 0,
+        generalized_bent_fibre_count: 0,
+        generalized_bent_fibre_points: 0,
         nonquadratic_fibre_points: 0,
         nonquadratic_signed_correlation: 0,
         nonquadratic_absolute_correlation: 0,
@@ -11135,6 +11168,14 @@ mod tests {
     }
 
     #[test]
+    fn generalized_bent_test_detects_a_phase_mutation() {
+        let mut phase = [0_u8, 0, 0, 4];
+        assert!(mod_eight_phase_is_generalized_bent(&phase));
+        phase[3] = 0;
+        assert!(!mod_eight_phase_is_generalized_bent(&phase));
+    }
+
+    #[test]
     fn dyadic_product_discriminants_reconstruct_affine_shift_fibres() {
         let report =
             binary_dyadic_autocorrelation_fibre_report(9, 11, 8, HayesLimits::default()).unwrap();
@@ -11143,6 +11184,8 @@ mod tests {
         assert_eq!(report.total_fibre_points, 130_048);
         assert_eq!(report.max_fibre_dimension, 8);
         assert_eq!(report.at_most_quadratic_fibre_count, 16_587);
+        assert_eq!(report.generalized_bent_fibre_count, 0);
+        assert_eq!(report.generalized_bent_fibre_points, 0);
         assert_eq!(report.nonquadratic_fibre_points, 61_264);
         assert_eq!(report.nonquadratic_signed_correlation, -202);
         assert_eq!(report.nonquadratic_absolute_correlation, 8_622);
@@ -11214,12 +11257,14 @@ mod tests {
             binary_dyadic_autocorrelation_fibre_report(ell, degree, d, HayesLimits::default())
                 .unwrap();
         eprintln!(
-            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} pair_abs={} normalized_abs={} valuation_abs={} witt_support={} witt_abs={} witt_m2={} witt_fourier_m2={} witt_fourier_m4={} phase_residues={:?} phase_comp_identity={} phase_comp_max_off={} phase_comp_square_sum={} additive_phases={:?} witt_conductors={:?} layers={:?}",
+            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} pair_abs={} normalized_abs={} valuation_abs={} gbent_fibres={} gbent_points={} witt_support={} witt_abs={} witt_m2={} witt_fourier_m2={} witt_fourier_m4={} phase_residues={:?} phase_comp_identity={} phase_comp_max_off={} phase_comp_square_sum={} additive_phases={:?} witt_conductors={:?} layers={:?}",
             report.off_diagonal_signed_correlation,
             report.fibrewise_absolute_correlation,
             report.shift_inverse_pairwise_absolute_correlation,
             report.normalized_parameterwise_absolute_correlation,
             report.valuationwise_absolute_correlation,
+            report.generalized_bent_fibre_count,
+            report.generalized_bent_fibre_points,
             report.connected_witt_spectrum.embedded_support_count,
             report.connected_witt_spectrum.embedded_absolute_sum,
             report.connected_witt_spectrum.spatial_second_moment,
