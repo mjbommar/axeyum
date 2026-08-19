@@ -7,6 +7,17 @@ already have a reader for them.
 
 Both activities are defensible. Doing both without a stated boundary is not.
 
+> **The boundary below was taken, and the build side won on the ground.**
+> Re-measured 2026-08-19: `nat_prelude` holds **139** theorems, and ℤ, ℚ, the
+> constructed ℝ and ℂ have been proved out natively — the kernel reads
+> `complex 0 · creal 0 · integer 0 · logic 0 · nat 0 · rat 0 · string 0 · real 30`,
+> with `real` being the *axiomatized* package the constructed carrier replaces.
+> So "106" below is a 2026-08-14 figure kept for the argument it supports, and the
+> tier table's "**import** ℚ, ℝ" row describes a policy that events overtook:
+> both were built. That is a finding about the boundary, not a violation of it —
+> the deciding question was always "does our evidence depend on it?", and our
+> certificates quantify over ℝ.
+
 ## Why building by hand is not obviously wrong
 
 The instinct is that importing dominates. It does not, for three measured
@@ -59,6 +70,15 @@ kernel and reported **no axioms at all** — strictly smaller than the
 `[propext, Classical.choice, Quot.sound]` footprint a competing effort
 publishes. Mathlib's content, imported, will not be axiom-free.
 
+That sentence survives 2026-08-18's finding, but say it precisely now that
+"Lean" is ambiguous: it was Lean's **kernel**, and on the whole constructed-real
+carrier the kernel takes all 470 declarations while the **elaborator** refuses
+four ([`03-integrate.md`](03-integrate.md#lean-has-two-checkers-and-they-disagree)).
+The axiom-freedom claim is unaffected — it is a property of the footprint, not of
+which Lean read the file — but any *comparison* against another project's
+`#print axioms` has to state which checker produced it, or it compares two
+different measurements.
+
 That test is no longer hypothetical, and it is now measured in **both**
 directions. Imported 2026-08-15: four of the five first imports
 (`Nat.le_refl`, `Nat.le_succ`, `List.nil_append`, `Bool.and_comm`)
@@ -90,6 +110,12 @@ an architectural argument into a number.
   Mathlib's `Int` would duplicate the other lane's work with a weaker artifact.
 - The two meet at ℚ, and that is the first genuine decision point rather than a
   foregone conclusion. Take it deliberately, with the axiom-footprint test.
+  **Settled 2026-08-19: ℚ was built.** It reads `rat: axiom=0 opaque=0
+  quotient=0` from the kernel, and the constructed ℝ and ℂ were built on top of
+  it. The axiom-footprint test would have given the same answer — a certificate
+  quantifying over an imported ℚ inherits Lean's axioms — but the decision was
+  taken by construction rather than by argument, so record it as an outcome
+  rather than as evidence that the test was applied.
 
 ## What to do first
 
@@ -98,9 +124,17 @@ an architectural argument into a number.
    so concurrent lanes no longer contend on it. ADR-0454 settles the narrower
    question of how an imported fact is labelled; the tier boundary in the table
    above is still unwritten.
-2. **Instrument the axiom footprint per certificate**, so the test above is
+2. ~~**Instrument the axiom footprint per certificate**, so the test above is
    mechanical rather than a judgement call. Today it is one `#print axioms` line
-   run by hand.
+   run by hand.~~ **Done — verified 2026-08-19.**
+   `cargo run -p axeyum-solver --features full --example front_door_carrier --
+   --require-axiom-free` reads `Kernel::axiom_footprint` off the shipped front
+   door's own refutations and **makes the exit status depend on the finding**:
+   nonzero unless every fixture reconstructs over `CReal` with an empty carrier
+   footprint, the `Real` control is non-empty on every fixture (so a broken
+   measurement cannot read as success), and the emitted module names the
+   constructed carrier. It exits 0 today at 12 / 17 / 8 carrier axioms over
+   `Real` and 0 / 0 / 0 over `CReal`.
 3. **Do not import ℤ.** Not because import is wrong, but because two lanes
    producing the same artifact by different routes, with no stated preference,
    is how a project ends up with two Sturm implementations and two colouring
