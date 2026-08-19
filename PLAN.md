@@ -158,6 +158,9 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `125b2131e` | Computed every integral discriminant residue modulo eight by fraction-free elimination, reconstructed its exact coefficient ANF, and proved its full-support coefficient is always odd, ruling out a global bounded-degree phase shortcut. |
+| 2026-08-19 | `c43e7bb68` | Extended the Swan sign to the universal identity `mu(f)=(-1)^degree chi_8(Disc(F))`, including squareful zeros, and checked its exact four-phase cyclotomic Fourier expansion. |
+| 2026-08-19 | `11e781a03` | Exposed the native odd-generator factors as checked truncated binary Witt blocks and projected every simultaneous coset onto all order-two characters, showing the failed translation witness is not confined to a tiny real sector. |
 | 2026-08-19 | `a0b13e7a6` | Cross-checked every squarefree binary polynomial Mobius sign by factor parity, integral discriminant modulo eight, and second-trace Arf invariant through degree ten, while preserving squareful zero weights and the boundary against claiming cancellation. |
 | 2026-08-19 | `43da1d4c1` | Averaged the combined Berlekamp/inverse shift energy exactly over annihilators, proved its squarefree diagonal, refuted the constant-one scale, and exposed global and fibrewise conjectural targets with exact endpoint ledgers. |
 | 2026-08-19 | `b9eebcdab` | Reduced every inverse-coset shift fibre to a truncated binary Artin--Schreier equation, proved its exact kernel dimension, and attached a checked unsigned support ceiling to every energy row. |
@@ -475,7 +478,23 @@ bridge and keeps squareful inputs at weight zero.  Since the per-polynomial
 second-trace Gauss sum merely re-encodes the same sign, the next theorem must
 control the joint quadratic system after imposing the affine inverse-coset
 constraints; full rank of each isolated trace form is not itself endpoint
-cancellation.  The multi-minute endpoint sweep is now an explicit
+cancellation.  The existing odd-generator factors are now exposed and
+roundtrip-checked as truncated binary 2-typical Witt blocks.  Every order-two
+character is projected inside the simultaneous cosets with exact conductor
+and quotient Parseval.  At the failed `(9,11,8)` translation row, its 32 real
+modes have total energy `20832=32*651` spread across all conductors, so a fixed
+tiny exceptional-real sector is not supported by that witness.  The Swan
+coordinate also extends through squareful inputs exactly:
+`mu(f)=(-1)^degree chi_8(Disc(F))`, where the dyadic character vanishes on an
+even discriminant.  Fraction-free integer elimination now computes every
+residue modulo eight, derivative gcd checks its parity independently, and an
+exact cyclotomic identity rewrites the weight as four additive modulo-eight
+phases.  This removes the squarefree gate from a joint Artin--Schreier--Witt
+sum, but the unrestricted phase is provably not low degree: its full-support
+multilinear coefficient is odd in every degree because the exact constant-one
+squarefree population is odd.  Thus the next rank theorem must act after
+restriction to the affine inverse fibres, or cancellation must be retained
+across convolution orders.  The multi-minute endpoint sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
 the bounded `ell<=7` controls and the earlier `ell<=9` results remain
 uncredited finite evidence.
