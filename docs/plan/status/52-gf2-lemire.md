@@ -31,6 +31,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `6e02ac7d6` | Proved the uniform binary wild-Kloosterman amplitude bound by stationary phase, exposed its bounded native CAS report, and pinned exhaustive direct controls through level 9. |
 | 2026-08-19 | `afec92512` | Isolated the top inverse-coefficient plateau-spectrum candidate, its exact connection to `V_(ell-1)^2`, and dual local/fleet evidence through `ell=26` without granting theorem credit. |
 | 2026-08-19 | `0513b1a22` | Generalized the equal-degree product energy to every ordered interval-degree pair, proved the two closed-form regimes, and checked all mixed collision tables through `ell=8`. |
 | 2026-08-19 | `31b862946` | Added the exact closed-form principal-unit product energy and Fourier fourth moment, with direct native collision-table controls and an explicit boundary against the still-open Mangoldt moment. |
