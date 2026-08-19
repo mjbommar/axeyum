@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "F:real-inverse-is-built-and-well-defined",
+  "title": "The constructed reals have a multiplicative inverse whose modulus is an explicit natural, and it is a function on the reals rather than on representatives",
+  "statement": "CReal.inv : (x : CReal) -> (k : Nat) -> CReal.PosBound x k -> CReal is a Definition in the axeyum Lean kernel with an empty axiom footprint, and CReal.mul_inv_cancel : forall x k (h : PosBound x k), CReal.Equiv (CReal.mul x (CReal.inv x k h)) CReal.one is a checked Theorem, likewise footprint-free. The definition is possible because a function may TAKE a Prop argument and return a Type; it may only not BRANCH on one. PosBound x k carries no disjunction, the representative sequence n |-> Rat.inv (CReal.seq x (j n)) at j n = (CReal.invShift k + 1) * n + CReal.invShift k depends on k alone, and the hypothesis is consumed only inside CReal.mk's Prop-valued regularity field. So the MODULUS is the thing that must be data; the proof need not be. Two further theorems make it a function on the reals rather than on representatives: CReal.inv_congr : forall x y k1 k2 h1 h2, CReal.Equiv x y -> CReal.Equiv (CReal.inv x k1 h1) (CReal.inv y k2 h2), which quantifies over the two moduli INDEPENDENTLY because two callers with different k for the same x build genuinely different sequences (k = 0 samples at 7n+7, k = 1 at 32n+31), and CReal.inv_index_irrelevant, that theorem at y := x. Neither is an estimate: an inverse in a commutative monoid is unique, so mul_inv_cancel at both ends closes them. The domain is inhabited -- CReal.PosBound CReal.one 0 is admitted THROUGH THE KERNEL -- and the operation is not the constant zero, since mul_inv_cancel and Equiv.not_zero_one give forall h, Not (CReal.Equiv (CReal.inv CReal.one 0 h) CReal.zero).",
+  "formal": {
+    "language": "lean4",
+    "statement": "CReal.inv : forall (x : CReal) (k : Nat), CReal.PosBound x k -> CReal  --  together with  CReal.mul_inv_cancel : forall (x : CReal) (k : Nat) (h : CReal.PosBound x k), CReal.Equiv (CReal.mul x (CReal.inv x k h)) CReal.one,  CReal.inv_congr : forall (x y : CReal) (k1 k2 : Nat) (h1 : CReal.PosBound x k1) (h2 : CReal.PosBound y k2), CReal.Equiv x y -> CReal.Equiv (CReal.inv x k1 h1) (CReal.inv y k2 h2),  and  CReal.inv_index_irrelevant : forall (x : CReal) (k1 k2 : Nat) (h1 : CReal.PosBound x k1) (h2 : CReal.PosBound x k2), CReal.Equiv (CReal.inv x k1 h1) (CReal.inv x k2 h2),  where CReal.PosBound x k := CReal.le (CReal.ofRat (Rat.natDivSucc 1 k)) x",
+    "fragment": "CReal",
+    "free_symbols": [
+      "CReal",
+      "CReal.inv",
+      "CReal.invShift",
+      "CReal.PosBound",
+      "CReal.Equiv",
+      "CReal.mul",
+      "CReal.one",
+      "CReal.zero",
+      "CReal.seq",
+      "Rat.inv",
+      "Rat.natDivSucc"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:real-inverse-is-partial-and-its-modulus-is-data"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "real-inverse-built-statements-and-non-vacuity",
+      "kind": "kernel-term",
+      "supports": "The five statements are asserted VERBATIM as rendered types (not by footprint); CReal.PosBound CReal.one 0 is admitted THROUGH THE KERNEL so the guarded theorems are not vacuous; the inverse is proved not to be the constant zero; and the two one-token mutations are REFUSED.",
+      "check_status": "checked",
+      "checker_command": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal::creal_tests::the_inverse 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 3 passed; 0 failed')\" = 1",
+      "notes": "Anchored on a NONZERO test count (3), because a filter matching nothing prints 'ok. 0 passed' and exits 0 -- and on 0 failed, so a green-looking partial run cannot pass. Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails under every mutation of it. The three tests are the verbatim-statement test, the non-vacuity/discrimination test (PosBound one 0 admitted, then forall h, not (inv one 0 h ~ zero) from mul_inv_cancel and Equiv.not_zero_one alone), and the negative-control test (x*inv x ~ 0 and inv x ~ x both REFUSED). Vacuity, not weakness, is the failure mode this row exists for: every statement about CReal.inv is guarded by PosBound x k, and an uninhabited guard would let all of them hold footprint-free with their statements verbatim."
+    },
+    {
+      "id": "real-inverse-built-declaration-inventory",
+      "kind": "kernel-term",
+      "supports": "All 76 CReal declarations -- the five new ones included -- are checked Theorems or Definitions with EMPTY axiom footprints, read out of the kernel's own environment rather than off the diff.",
+      "check_status": "checked",
+      "checker_command": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal::creal_tests::every_creal_declaration_is_checked_and_axiom_free 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 1 passed; 0 failed')\" = 1",
+      "notes": "Anchored on a NONZERO count for the same reason as the row above; verified discriminating by scripts/new-fact.py. The test enumerates all 76 declarations by NameId, asserts the KIND of each (a Definition demoted to an Axiom fails), and asserts kernel.axiom_footprint(name) is empty for each. Deleting declare_inv_index_irrelevant kills exactly two tests -- this one and the verbatim-statement test -- measured 2026-08-18 against a 24-test baseline."
+    },
+    {
+      "id": "real-inverse-built-witness-example",
+      "kind": "kernel-term",
+      "supports": "The witness example's EXIT STATUS depends on the finding, and its declaration count moved 71 -> 76 with the trusted surface still empty on the same line.",
+      "check_status": "checked",
+      "checker_command": "out=$(scripts/cargo-serialized.sh run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '76 declarations admitted, trusted surface = 0 [(]empty[)]')\" = 1 && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^CReal[.](inv|invShift|mul_inv_cancel|inv_congr|inv_index_irrelevant)[[:space:]]+(definition|theorem)[[:space:]]+-$')\" = 5",
+      "notes": "The first pattern pins a VALUE (the count 76 and the trusted surface 0) and was verified discriminating by scripts/new-fact.py. The SECOND is population-only and is here deliberately: it pins that all five new declarations appear with an empty footprint column, so a build that quietly dropped one of them fails, but no mutation of a surviving row changes its count. It is the weaker of the two and is not load-bearing on its own."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:real-numbers",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:constructive-analysis",
+      "relation": "uses",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "axeyum-lean-kernel creal::inverse (ADR-0487; agent-creal-inv lane)",
+    "source": "Bishop-style constructive analysis: the reciprocal of a real apart from zero, sampled deep enough that every sample clears the separating modulus"
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It does not say the reals are a field: there is no inverse for x < 0 (Rat.mul_inv_cancel's hypothesis is 0 < q, and the general x # 0 case cannot be reduced to the positive one by BRANCHING on the disjunction, which is the elimination Or.rec does not permit), and there is no CReal.div. It does not say the modulus can be recovered from positivity -- F:real-inverse-is-partial-and-its-modulus-is-data says the opposite, and that is why k is an argument. It does not say two callers get the same REPRESENTATIVE for different k: they do not (k = 0 samples at 7n+7, k = 1 at 32n+31); it says they get Equiv results, which is what makes x^-1 an element of the reals. It does not assume or use Markov's principle in any disguise: not (x ~ 0) -> x # 0 is neither proved nor assumed. And it does not say a wrong sampling index would be caught quickly -- perturbing one factor makes the kernel refuse CReal.inv after 1,043 s where the accepting build takes 78 s warm."
+}
