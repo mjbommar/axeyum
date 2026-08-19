@@ -74,6 +74,8 @@ autogenesis-nursery:
     cargo test -p axeyum-lean-import --test statement_reflexivity_operation
     python3 -m unittest scripts.tests.test_check_autogenesis_statement_reflexivity
     python3 scripts/check-autogenesis-statement-reflexivity.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_statement_reflexivity_admission
+    python3 scripts/check-autogenesis-statement-reflexivity-admission.py
 
 # The bulk source is external and optional on CI. The first checker reports
 # verified/unavailable without conflating them; the committed 240-row view is

@@ -117,6 +117,7 @@ compounding, not automation theatre.
 | [First statement adapter](18-first-proof-isolated-statement-adapter.md) | Can an official Mathlib surface proposition become an independently checked goal without importing its proof or installing it as an assumption? |
 | [First checked reflexivity candidate](19-first-checked-reflexivity-candidate.md) | Can a bounded generic producer construct a fresh proof from that goal and survive independent kernel and dependency checks without receiving ledger credit? |
 | [Authoritative reflexivity registration](20-authoritative-reflexivity-operation.md) | Can that candidate route become one exact machine-selectable operation without yet changing the ledger? |
+| [First nursery fact admission](21-first-mathlib-nursery-admission.md) | Did the registered operation durably establish its frozen train fact through the ordinary crash-safe ledger protocol? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

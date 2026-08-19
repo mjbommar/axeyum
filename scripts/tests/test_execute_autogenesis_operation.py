@@ -380,6 +380,12 @@ class OperationExecutionTests(unittest.TestCase):
             "frontier_for_reflexivity_execution_test", execution.FRONTIER_SCRIPT
         )
         facts = frontier_module.load()
+        target = copy.deepcopy(facts[REFLEXIVITY_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[REFLEXIVITY_FACT] = target
         frontier = frontier_module.build_machine_frontier(facts)
         fact, operation, registry = execution.selected_inputs(frontier, facts)
         self.assertEqual(fact["id"], REFLEXIVITY_FACT)

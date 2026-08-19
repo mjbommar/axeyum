@@ -359,6 +359,12 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
             "frontier_for_reflexivity_transaction_test", executor.FRONTIER_SCRIPT
         )
         facts = frontier_module.load()
+        target = copy.deepcopy(facts[REFLEXIVITY_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[REFLEXIVITY_FACT] = target
         frontier = frontier_module.build_machine_frontier(facts)
         before, operation, registry = executor.selected_inputs(frontier, facts)
         observation = executor.expected_statement_reflexivity_observation(

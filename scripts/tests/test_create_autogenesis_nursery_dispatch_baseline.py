@@ -25,16 +25,16 @@ class DispatchBaselineTests(unittest.TestCase):
         self.assertEqual({row["partition"] for row in result["rows"]}, {"train", "development"})
         self.assertEqual(result["coverage"]["candidates"], 138)
 
-    def test_current_population_selects_only_the_registered_checked_candidate(self) -> None:
+    def test_current_population_separates_admitted_row_from_pre_execution_declines(self) -> None:
         result = MODULE.build(self.nursery, self.registry, self.facts)
-        self.assertEqual(result["coverage"]["eligible_for_dispatch"], 1)
+        self.assertEqual(result["coverage"]["eligible_for_dispatch"], 0)
         self.assertEqual(
             result["coverage"]["decline_reasons"],
             {
                 "no-exact-authoritative-operation": 137,
             },
         )
-        self.assertEqual(result["coverage"]["already_established"], 0)
+        self.assertEqual(result["coverage"]["already_established"], 1)
         self.assertEqual(result["budget"]["executor_invocations"], 0)
 
     def test_matching_authoritative_operation_is_dispatchable(self) -> None:

@@ -79,6 +79,8 @@ step autogenesis-statement-adapter python3 scripts/check-autogenesis-statement-a
 step autogenesis-statement-reflexivity-rust cargo test -p axeyum-lean-import --test statement_reflexivity_operation
 step autogenesis-statement-reflexivity-tests python3 -m unittest scripts.tests.test_check_autogenesis_statement_reflexivity
 step autogenesis-statement-reflexivity python3 scripts/check-autogenesis-statement-reflexivity.py
+step autogenesis-statement-reflexivity-admission-tests python3 -m unittest scripts.tests.test_check_autogenesis_statement_reflexivity_admission
+step autogenesis-statement-reflexivity-admission python3 scripts/check-autogenesis-statement-reflexivity-admission.py
 step autogenesis-mathlib-source-tests python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source
 step autogenesis-mathlib-source python3 scripts/check-autogenesis-mathlib-source.py
 step autogenesis-mathlib-candidate-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_candidates

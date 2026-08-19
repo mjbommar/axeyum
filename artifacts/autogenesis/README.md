@@ -60,6 +60,17 @@ must bind this unchanged manifest through the durable transaction protocol:
 python3 scripts/check-autogenesis-statement-reflexivity.py
 ```
 
+`mathlib-statement-reflexivity-admission-v1.json` binds the first ordinary
+open-to-proved ledger transition produced from that candidate. Its external
+bundle retains both frontiers, the clean-commit execution, prepared transaction,
+crash-recovery journal, durable event, readiness delta, before/after facts, and
+a complete Git bundle. Unlike the pre-admission checker, this result checker
+requires the external bundle and replays the settled operation:
+
+```sh
+python3 scripts/check-autogenesis-statement-reflexivity-admission.py
+```
+
 `mathlib-statement-source-v1.json` binds the external statement-only Mathlib
 v4.30.0 inventory. Bulk NDJSON stays on `/nas3`; Git retains the extractor,
 source identity, selection policy, and small derived candidate view. Neither an
