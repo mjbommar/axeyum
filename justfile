@@ -87,6 +87,7 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-factorial-zero-family.py
     python3 -m unittest scripts.tests.test_check_autogenesis_semantic_abstraction_census
     python3 scripts/check-autogenesis-semantic-abstraction-census.py
+    cargo test -p axeyum-lean-import --test semantic_function_contract
 
 # The bulk source is external and optional on CI. The first checker reports
 # verified/unavailable without conflating them; the committed 240-row view is
