@@ -574,3 +574,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0495](adr-0495-fibonacci-gcd-progress-starts-at-the-iterator-recurrence-foothold.md) | Select Nat.fib_gcd for two-fact fanout but execute first on zero-dependency Nat.fib_add_two under a bounded iterator-recurrence proof plan | accepted |
 | [0496](adr-0496-negative-recurrence-runs-localize-capability-without-credit.md) | Retain the one-shot Nat.fib_add_two rejection and repair equality-elimination composition before another target execution | accepted |
 | [0497](adr-0497-equality-elimination-infers-motive-and-carrier-universes.md) | Construct Eq.rec with motive-first inferred universes and require target-free composition controls before retrying recurrence | accepted |
+| [0498](adr-0498-corrected-recurrence-reuses-the-original-budget.md) | Authorize one Nat.fib_add_two v2 run after target-free Eq.rec controls without widening the original search budget | accepted |

@@ -140,6 +140,7 @@ compounding, not automation theatre.
 | [Fibonacci/GCD premise sequence](41-nat-fib-gcd-premise-selection.md) | Which strategic premise and bottom-up foothold maximize compounding without skipping the first missing capability? |
 | [First bounded Fibonacci recurrence result](42-nat-fib-iterate-recurrence-result.md) | Did the one-shot iterator-recurrence plan establish `Nat.fib_add_two`, and which exact capability boundary failed? |
 | [Equality-elimination composition control](43-eqrec-composition-control.md) | Does the corrected motive-first `Eq.rec` universe contract close the measured constructor gap without another target execution? |
+| [Corrected Fibonacci recurrence v2 selection](44-nat-fib-recurrence-v2-selection.md) | Which exact repair evidence and unchanged budget authorize one second `Nat.fib_add_two` execution? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
