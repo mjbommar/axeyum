@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `77209a5ee` | Added exact bounded central moments and signed fourth cumulants, independently checked the conditional fourth-moment implication and its low-level failure control, recorded exact evidence through level 23, and created empty-evidence ledger facts for the open lemma and universal conjecture without inventing SMT or Autogenesis credit. |
 | 2026-08-19 | `7f73d02cd` | Added a bounded native distribution-only runner for exact per-class minima, maxima, maximum deviations, and positivity, keeping finite evidence distinct from the missing uniform theorem. |
 | 2026-08-19 | `8649aa085` | Added exact bounded inverse-Fourier class distributions, matched Parseval and an independent group-ring implementation, and isolated the surviving class-sensitive `L^infinity` problem. |
 | 2026-08-19 | `5ddfe3984` | Added an exact full-family Parseval diagnostic, dual-checked both `ell=8` endpoints, and showed that raw total variance cannot supply the missing positivity estimate. |
@@ -168,18 +169,6 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `bd7b55bff` | Extracted 9,729 proof-isolated Mathlib Nat/Int statements externally and selected 240 outcome-blind source candidates across twelve families without vendoring bulk exports. |
 | 2026-08-18 | `30e7e6ec3` | Projected 95 direct Mathlib candidate dependencies into 146 whole leakage components without exposing proof terms or freezing evaluation splits. |
 | 2026-08-18 | `f4dc0d4f1` | Registered and cleanly exercised the exact axiom-free authoritative B operation, whose durable event made A newly ready. |
-| 2026-08-18 | `01cc5dfdf` | Pinned the exact centered-order cancellation vector and refuted a second triangle route: its absolute sum is `145632` where the full endpoint discrepancy is `32`. |
-| 2026-08-18 | `f247587c6` | Derived the exact centered endpoint logarithm, proved its linear and quadratic orders vanish structurally, and independently checked the resulting connected-correlation expansion. |
-| 2026-08-18 | `a48c57824` | Added exact conductor-family second moments, refuted generic Cauchy at `(8,17)`, and pinned the direct `(5,45)` counterexample to the otherwise sufficient constant-one layer target. |
-| 2026-08-18 | `1ff1ca6b7` | Extracted bounded reusable Hayes/principal-unit/conductor CAS APIs, dual-checked the conditional sufficient-bound arithmetic, retained the missing cancellation lemma as an explicit obligation, and independently reproduced `ell=23`. |
-| 2026-08-18 | `4b129601c` | Extended the exact NTT/CRT endpoint oracle through `ell=22`, added an a-priori CRT uniqueness guard, reduced peak memory, and isolated the family-norm cancellation factor that the universal proof must recover. |
-| 2026-08-18 | `6aff45e82` | Added accepted ADR-0481 and a canonical, mutation-checked certificate-spec fact for the dual-replayed degree-1-through-400 result without inventing finite-field SMT or kernel support. |
-| 2026-08-18 | `30a004188` | Audited the tempting Hsu half-coefficient survey claim against the explicit bound and the 2023 Gao follow-up; neither supplies positivity at the exact fixed-`GF(2)` endpoint. |
-| 2026-08-18 | `fd1e8793b` | Added an exact finite principal-unit Fourier oracle using two NTT primes and CRT, verified the sufficient endpoint-discrepancy candidate through `ell=18`, and kept the candidate explicitly outside the theorem and fact ledger. |
-| 2026-08-18 | `d32ebbdb1` | Corrected the half-boundary parameterization, derived the exact integral Hayes recurrence, and gated its identity-class counts against an independent direct Rabin enumeration through degree 20. |
-| 2026-08-18 | `6e1372073` `d308c7bc1` | Added deterministic content-bound search shards; five hosts produced and the repository admitted 400/400 dual-checked degrees, with finite-range credit explicitly separated from the universal conjecture. |
-| 2026-08-18 | `98f2d953f` `b678ec7e6` `3718aab11` | Added canonical bounded artifacts, an algebraically separate dense checker, standalone producer/checker CLIs, and the dual-gated degree-400 witness; completion does not claim the universal theorem. |
-| 2026-08-18 | `81321fc65` | Added bounded bit-packed `GF(2)[x]`, untrusted Rabin certificate production, independent identity checking, exhaustive degree-10 oracle agreement, certificate mutations, the exact Lemire theorem contract, and accepted ADR-0480. |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
@@ -353,13 +342,16 @@ modulo `x^ceil(n/2)`.
 
 The bounded machinery is complete for present research needs.  ADRs 0480--0482
 cover bit-packed `GF(2)[x]`, portable Frobenius/Bezout certificates, the finite
-fact-ledger contract, and the public resource-bounded Hayes CAS API.  The lane
-gate dual-checks all degrees `1..=400`, direct class counts through degree 20,
-and exact NTT/CRT endpoint diagnostics.  Rust and independent C++ agree at
-`ell=24`: `Delta_(24,49)=1651`, `Delta_(24,50)=4787`.  These are finite facts,
-not a universal proof.  No SMT surface is missing: the outstanding statement
-is an analytic cancellation theorem, with no solver/model/replay consumer that
-would justify new SMT semantics.
+fact-ledger contract, and the public resource-bounded Hayes CAS API.  The API
+now includes exact full-class distributions, bounded central power sums,
+signed fourth-cumulant numerators, and a checked implication from an explicit
+fourth-moment assumption to the theorem.  The lane gate dual-checks all degrees
+`1..=400`, direct class counts through degree 20, and exact NTT/CRT endpoint
+diagnostics.  Rust and independent C++ agree at `ell=24`:
+`Delta_(24,49)=1651`, `Delta_(24,50)=4787`.  These are finite facts, not a
+universal proof.  No SMT surface is missing: the outstanding statement is an
+analytic cancellation theorem, with no solver/model/replay consumer that would
+justify new SMT semantics.
 
 The exact reductions leave a sharply bounded obligation.  Characterwise Weil
 controls all but the highest `ceil(log_2 ell)+2` conductor levels within half
@@ -378,22 +370,33 @@ squares `512^2` and `1024^2`; an independent integer group-ring checker agrees.
 Thus raw unweighted variance cannot force positivity at these controls.
 `8649aa085` adds the missing bounded inverse-Fourier distribution API: the
 actual maximum class errors are only `155` and `290`, and every class is
-positive.  A distribution-only native runner now exposes the exact bounded
-`L^infinity` diagnostic independently of the heavier moment runner.  The live
-analytic distinction is therefore `L^infinity` versus raw `L^2`, suggesting a
-class-sensitive higher-moment or hypercontractive estimate.
+positive.  `77209a5ee` adds exact fourth moments and the connected numerator
+`K_4=2^ell M_4-3M_2^2`.  The experimental envelope
+`M_4<=64 ell^2 2^(3ell)` fails at the retained low control `(ell,n)=(5,12)`
+but holds at both endpoints for every exact level `6..=23`; from `ell=200` it
+would finish the universal theorem together with the certified finite range.
+The universal conjecture and this selected sufficient lemma now have explicit
+empty-evidence ledger facts, and no Autogenesis operation falsely claims to
+establish either one.  The live problem is the connected off-diagonal
+four-character bound, not missing CAS or SMT representation.
 Global supersingularity is not that estimate: Gorodetsky proves this exact
 cyclotomic curve nonsupersingular for every `ell>=4`.  Hsu's known bound retains
 a logarithmic loss, and sparse-polynomial conjectures plus standard
 Artin--Schreier doubling do not close the endpoint.
 
-**Next.** Prove a class-sensitive `L^infinity` or signed/weighted estimate for
-the highest
-`ceil(log_2 ell)+2` conductor levels at `n=2 ell+1,2 ell+2`, or find a universal
-construction.  Then reconstruct reciprocity and the central lemma through the
-kernel before promoting the finite ledger fact or claiming a proof.  Full
-derivations, literature audits, provenance, and rejected routes remain in
+**Next.** Prove a polynomial-times-`2^(3ell)` fourth-moment bound, equivalently
+control the connected fourth cumulant after the three Gaussian pairings, at
+`n=2 ell+1,2 ell+2`; a direct class-sensitive `L^infinity` estimate or universal
+construction remains an alternative.  Then reconstruct reciprocity and the
+central lemma through the kernel before promoting the universal ledger fact or
+claiming a proof.  Full derivations, literature audits, provenance, and
+rejected routes remain in
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
+
+Earlier certificate, range-search, recurrence, Fourier, conductor, and centered-
+log increments are retained with their exact commits and evidence in the linked
+research note; this operational table keeps only the current proof-direction
+changes.
 
 **Claim-dashboard gate, finding-8 re-measurement, and PLAN.md returned under its
 ceiling** (`WIP`, ledger-integrity, 2026-08-16). Three defects behind a dashboard
