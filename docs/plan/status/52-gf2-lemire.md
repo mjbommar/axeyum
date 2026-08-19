@@ -106,7 +106,20 @@ is exactly `v+1` for `2v<r` and `floor(r/2)` otherwise.  Every shift row now
 carries the resulting proved support ceiling, exhaustively checked in all
 quotient rings through modulus degree twelve.  This classifies the affine
 fibres needed by a Berlekamp argument, but does not yet prove cancellation of
-the Möbius signs on them.  The multi-minute endpoint sweep is now an explicit
+the Möbius signs on them.  A single-translation pairing route has now been
+closed negatively: its exact defect inequality already fails at
+`(ell,k,d)=(9,11,8)`, even though the stronger local signed target still holds
+there.  Twenty selected fleet rows through `ell=12` continue to satisfy the
+global and local energy targets, but remain uncredited finite evidence.  The
+binary Möbius sign now has three independently checked exact realizations on
+the squarefree locus: factor parity, Stickelberger--Swan discriminant modulo
+eight, and the Arf invariant of the second trace form (with the degree-class
+correction).  Exhaustive agreement through degree ten validates this algebraic
+bridge and keeps squareful inputs at weight zero.  Since the per-polynomial
+second-trace Gauss sum merely re-encodes the same sign, the next theorem must
+control the joint quadratic system after imposing the affine inverse-coset
+constraints; full rank of each isolated trace form is not itself endpoint
+cancellation.  The multi-minute endpoint sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
 the bounded `ell<=7` controls and the earlier `ell<=9` results remain
 uncredited finite evidence.
@@ -116,6 +129,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `a0b13e7a6` | Cross-checked every squarefree binary polynomial Mobius sign by factor parity, integral discriminant modulo eight, and second-trace Arf invariant through degree ten, while preserving squareful zero weights and the boundary against claiming cancellation. |
 | 2026-08-19 | `43da1d4c1` | Averaged the combined Berlekamp/inverse shift energy exactly over annihilators, proved its squarefree diagonal, refuted the constant-one scale, and exposed global and fibrewise conjectural targets with exact endpoint ledgers. |
 | 2026-08-19 | `b9eebcdab` | Reduced every inverse-coset shift fibre to a truncated binary Artin--Schreier equation, proved its exact kernel dimension, and attached a checked unsigned support ceiling to every energy row. |
 | 2026-08-19 | `0aeeb68d8` | Moved the extended endpoint-energy sweep behind an explicit ignored probe while retaining bounded theorem checks in the ordinary gate. |
