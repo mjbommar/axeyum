@@ -1070,6 +1070,39 @@ pub struct FourthMomentBoundReport {
     pub first_even_degree: usize,
 }
 
+/// A linear local concentration bound on every Witt cylinder.
+///
+/// The mathematical assumption is `R_j(b) <= ell` for every cylinder in the
+/// two endpoint distributions once `ell >= threshold`.  Only the root case is
+/// needed by the arithmetic implication; retaining the local statement makes
+/// the target compatible with a future Carleson or martingale proof.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WittCylinderLinearBoundAssumption {
+    /// First `ell` at which the concentration estimate is assumed.
+    pub threshold: usize,
+    /// Largest degree covered by separate finite certificates.
+    pub finite_max_degree: usize,
+}
+
+impl Default for WittCylinderLinearBoundAssumption {
+    fn default() -> Self {
+        Self {
+            threshold: 200,
+            finite_max_degree: 400,
+        }
+    }
+}
+
+/// Checked implication from linear Witt-cylinder concentration to endpoint
+/// irreducible positivity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WittCylinderLinearBoundReport {
+    /// Assumption checked by the exact arithmetic route.
+    pub assumption: WittCylinderLinearBoundAssumption,
+    /// Derived fourth-moment envelope checked by the existing endpoint route.
+    pub derived_fourth_moment: FourthMomentBoundReport,
+}
+
 /// A constant-one square-root bound on every exact-conductor family.
 ///
 /// The mathematical assumption is
@@ -2202,6 +2235,12 @@ pub struct WittCylinderConcentrationLevel {
     pub maximum_ratio_numerator: BigUint,
     /// Denominator `(sum_(e below b) D_e^2)^2`.
     pub maximum_ratio_denominator: BigUint,
+    /// Cylinder attaining the largest max-to-average squared discrepancy.
+    pub dominance_witness_cylinder: usize,
+    /// Numerator `descendant_count * max_(e below b) D_e^2`.
+    pub maximum_dominance_numerator: BigUint,
+    /// Denominator `sum_(e below b) D_e^2`.
+    pub maximum_dominance_denominator: BigUint,
 }
 
 /// Local concentration ledger for squared discrepancies on every Witt cylinder.
@@ -2213,6 +2252,34 @@ pub struct WittCylinderConcentrationReport {
     pub degree: usize,
     /// Levels `0..=ell` in increasing order.
     pub levels: Vec<WittCylinderConcentrationLevel>,
+}
+
+impl WittCylinderConcentrationReport {
+    /// Whether every measured cylinder satisfies the conjectural linear bound.
+    ///
+    /// This checks a finite report only and grants no universal theorem credit.
+    #[must_use]
+    pub fn satisfies_linear_ceiling(&self) -> bool {
+        let ceiling = BigUint::from(self.ell);
+        self.levels.iter().all(|level| {
+            level.maximum_ratio_denominator != BigUint::from(0_u8)
+                && level.maximum_ratio_numerator <= &ceiling * &level.maximum_ratio_denominator
+        })
+    }
+
+    /// Whether max-to-average dominance proves the linear concentration bound.
+    ///
+    /// Since `sum f_e^2 <= (max f_e) sum f_e`, this strictly stronger finite
+    /// diagnostic implies [`Self::satisfies_linear_ceiling`].
+    #[must_use]
+    pub fn satisfies_linear_dominance_ceiling(&self) -> bool {
+        let ceiling = BigUint::from(self.ell);
+        self.levels.iter().all(|level| {
+            level.maximum_dominance_denominator != BigUint::from(0_u8)
+                && level.maximum_dominance_numerator
+                    <= &ceiling * &level.maximum_dominance_denominator
+        })
+    }
 }
 
 impl ClassPopulationDistribution {
@@ -2517,6 +2584,7 @@ impl ClassPopulationDistribution {
             let quotient_factors = principal_unit_factors(level);
             let mut masses = vec![BigUint::from(0_u8); cylinder_count];
             let mut square_masses = vec![BigUint::from(0_u8); cylinder_count];
+            let mut maxima = vec![BigUint::from(0_u8); cylinder_count];
             for (index, value) in squared.iter().enumerate() {
                 let cylinder = if level == 0 {
                     0
@@ -2525,10 +2593,14 @@ impl ClassPopulationDistribution {
                 };
                 masses[cylinder] += value;
                 square_masses[cylinder] += value.pow(2);
+                maxima[cylinder] = maxima[cylinder].clone().max(value.clone());
             }
             let mut witness = 0_usize;
             let mut maximum_numerator = BigUint::from(0_u8);
             let mut maximum_denominator = BigUint::from(1_u8);
+            let mut dominance_witness = 0_usize;
+            let mut maximum_dominance_numerator = BigUint::from(0_u8);
+            let mut maximum_dominance_denominator = BigUint::from(1_u8);
             for cylinder in 0..cylinder_count {
                 if masses[cylinder] == BigUint::from(0_u8) {
                     continue;
@@ -2540,6 +2612,15 @@ impl ClassPopulationDistribution {
                     maximum_numerator = numerator;
                     maximum_denominator = denominator;
                 }
+                let dominance_numerator = BigUint::from(descendant_count) * &maxima[cylinder];
+                let dominance_denominator = masses[cylinder].clone();
+                if &dominance_numerator * &maximum_dominance_denominator
+                    > &maximum_dominance_numerator * &dominance_denominator
+                {
+                    dominance_witness = cylinder;
+                    maximum_dominance_numerator = dominance_numerator;
+                    maximum_dominance_denominator = dominance_denominator;
+                }
             }
             levels.push(WittCylinderConcentrationLevel {
                 level,
@@ -2548,6 +2629,9 @@ impl ClassPopulationDistribution {
                 witness_cylinder: witness,
                 maximum_ratio_numerator: maximum_numerator,
                 maximum_ratio_denominator: maximum_denominator,
+                dominance_witness_cylinder: dominance_witness,
+                maximum_dominance_numerator,
+                maximum_dominance_denominator,
             });
         }
         Ok(WittCylinderConcentrationReport {
@@ -4762,6 +4846,41 @@ pub fn check_fourth_moment_bound_sufficiency(
         assumption,
         first_odd_degree,
         first_even_degree,
+    })
+}
+
+/// Check that linear Witt-cylinder concentration would finish the endpoint proof.
+///
+/// The proved second-moment estimate is
+///
+/// ```text
+/// M_2 <= 2^(n-ell) sum_(j=2)^ell 2^(j-1) (j-1)^2
+///     <= ell^2 2^n.
+/// ```
+///
+/// The assumed root inequality `R_0 <= ell` therefore gives
+/// `M_4 <= 16 ell^5 2^(3ell)` for both `n=2ell+1` and
+/// `n=2ell+2`.  The existing fourth-moment implication checks the finite
+/// handoff and proper-power margins.  This function does not prove the local
+/// concentration assumption.
+///
+/// # Errors
+///
+/// Returns an error when the finite handoff or the derived exact endpoint
+/// inequalities fail.
+pub fn check_witt_cylinder_linear_bound_sufficiency(
+    assumption: WittCylinderLinearBoundAssumption,
+) -> Result<WittCylinderLinearBoundReport, HayesError> {
+    let derived_fourth_moment =
+        check_fourth_moment_bound_sufficiency(FourthMomentBoundAssumption {
+            constant: 16,
+            power: 5,
+            threshold: assumption.threshold,
+            finite_max_degree: assumption.finite_max_degree,
+        })?;
+    Ok(WittCylinderLinearBoundReport {
+        assumption,
+        derived_fourth_moment,
     })
 }
 
@@ -12315,6 +12434,20 @@ mod tests {
         let last = &report.levels[8];
         assert_eq!(last.descendant_count, 1);
         assert_eq!(last.maximum_ratio_numerator, last.maximum_ratio_denominator);
+        assert!(report.satisfies_linear_ceiling());
+        assert!(!report.satisfies_linear_dominance_ceiling());
+        assert_eq!(
+            report.levels[0].maximum_dominance_numerator,
+            6_150_400_u32.into()
+        );
+        assert_eq!(
+            report.levels[0].maximum_dominance_denominator,
+            693_360_u32.into()
+        );
+        let mut falsified = report.clone();
+        falsified.levels[0].maximum_ratio_numerator =
+            BigUint::from(falsified.ell) * &falsified.levels[0].maximum_ratio_denominator + 1_u8;
+        assert!(!falsified.satisfies_linear_ceiling());
         assert!(matches!(
             distribution.witt_cylinder_concentration(9 * 256 - 1),
             Err(HayesError::ResourceLimit {
@@ -12344,7 +12477,9 @@ mod tests {
             .witt_cylinder_concentration((ell + 1) * (1_usize << ell))
             .unwrap();
         eprintln!(
-            "ell={ell} degree={degree} levels={:?}",
+            "ell={ell} degree={degree} linear={} dominance={} levels={:?}",
+            report.satisfies_linear_ceiling(),
+            report.satisfies_linear_dominance_ceiling(),
             report
                 .levels
                 .iter()
@@ -12353,9 +12488,30 @@ mod tests {
                     row.witness_cylinder,
                     row.maximum_ratio_numerator.clone(),
                     row.maximum_ratio_denominator.clone(),
+                    row.dominance_witness_cylinder,
+                    row.maximum_dominance_numerator.clone(),
+                    row.maximum_dominance_denominator.clone(),
                 ))
                 .collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn linear_witt_cylinder_target_closes_the_symbolic_endpoint_ledger() {
+        let report = check_witt_cylinder_linear_bound_sufficiency(
+            WittCylinderLinearBoundAssumption::default(),
+        )
+        .unwrap();
+        assert_eq!(report.derived_fourth_moment.assumption.constant, 16);
+        assert_eq!(report.derived_fourth_moment.assumption.power, 5);
+        assert_eq!(report.derived_fourth_moment.first_odd_degree, 401);
+        assert_eq!(report.derived_fourth_moment.first_even_degree, 402);
+
+        let unchecked_remainder = WittCylinderLinearBoundAssumption {
+            finite_max_degree: 399,
+            ..WittCylinderLinearBoundAssumption::default()
+        };
+        assert!(check_witt_cylinder_linear_bound_sufficiency(unchecked_remainder).is_err());
     }
 
     #[test]

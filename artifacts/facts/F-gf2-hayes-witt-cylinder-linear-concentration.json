@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-witt-cylinder-linear-concentration",
+  "title": "Linear local Witt-cylinder concentration at the binary Hayes endpoints",
+  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, and put D_e=N_n(e)-2^(n-ell) for the degree-n von Mangoldt population N_n(e) of each invertible class modulo x^(ell+1). For every level j and every Witt cylinder b modulo x^(j+1), 2^(ell-j) times the sum of D_e^4 over descendants e of b is at most ell times the square of the sum of D_e^2 over those descendants.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"2^(ell-j)*sum_(e below b) D_e^4 <= ell*(sum_(e below b) D_e^2)^2\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-witt-cylinder-linear-concentration\",\"interval\":\"0<=j<=ell\",\"level_min\":200,\"modulus\":\"x^(ell+1)\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "ell",
+      "n",
+      "j",
+      "b",
+      "e"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; exact Witt-cylinder concentration decomposition and endpoint implication ledger"
+  },
+  "notes": "This is an open uniform Carleson-type obligation, not a promoted finite computation. The bounded native report checks exact rational inequalities only for enumerated levels; both endpoint parities satisfy the target through ell=19, but that is not evidence for the quantified statement. The earlier constant-eight diagnostic is false at ell=12 and ell=15. A stronger max-to-average reduction is already false at the ell=8 odd endpoint. The root case, combined with the proved second-moment envelope, implies M_4 <= 16 ell^5 2^(3 ell); the separate exact implication ledger then closes endpoint positivity after the independently certified degree-400 handoff. No Autogenesis operation is registered because no checker can establish this universally."
+}

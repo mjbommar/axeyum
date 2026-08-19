@@ -586,3 +586,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0511](adr-0511-expand-the-fourth-cumulant-before-classifying-gcd-strata.md) | Decompose every class discrepancy by convolution order and subtract Wick pairings cellwise before gcd classification | accepted |
 | [0512](adr-0512-do-not-apply-magic-square-gcd-matrices-to-the-full-connected-tensor.md) | Restrict gcd-matrix arguments to genuine two-sided product equations; the connected cumulant has a larger character-tuple constraint | accepted |
 | [0513](adr-0513-test-local-witt-cylinder-concentration.md) | Measure exact local fourth-over-second concentration on every conductor cylinder before proposing a Carleson bound | accepted |
+| [0514](adr-0514-replace-constant-cylinder-ceiling-with-linear-target.md) | Refute the provisional constant-eight cylinder ceiling and retain the sufficient linear Carleson target | accepted |

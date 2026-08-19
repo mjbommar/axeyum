@@ -2352,17 +2352,31 @@ The numerator and denominator are retained as exact integers.  The excess
 over one is the normalized Haar square energy below `b`; at the root,
 `R_0=2^ell M_4/M_2^2`.  At `(ell,n)=(9,19)`, the root ratio is about `2.813`
 and the worst local ratio is the level-six value
-`7244949696/1224440064<5.92`; singleton cylinders return to one.  The
-provisional ceiling `R_j(b)<=8` is therefore a fleet diagnostic.  If proved
-uniformly, it combines with the already proved exact-conductor Weil envelope
+`7244949696/1224440064<5.92`; singleton cylinders return to one.  The original
+provisional ceiling `R_j(b)<=8` is false: the even `ell=12` row already has
+`1226465917304832/149099338469376>8`, and the even `ell=15` row exceeds nine.
+Both endpoint parities satisfy the replacement linear target
+`R_j(b)<=ell` through `ell=19`.  This is finite evidence only.  The tempting
+pointwise reduction `2^(ell-j) max f_e <= ell sum f_e` is already false at the
+root of `(ell,n)=(8,17)`, where its exact ratio is
+`6150400/693360>8` even though the aggregate concentration target holds.  Thus
+the proof must retain distribution across descendants.  If proved uniformly,
+the root case combines with the already proved exact-conductor Weil envelope
 
 ```text
 M_2 <= 2^(n-ell) sum_(j=2)^ell 2^(j-1)(j-1)^2
 ```
 
-to give `M_4<=8 M_2^2/2^ell`, which has the required
-`poly(ell) 2^(3ell)` scale at both endpoints.  The implication is algebraic;
-the uniform local ceiling remains the new theorem obligation.
+and the elementary bound on the displayed sum to give
+
+```text
+M_4 <= ell M_2^2/2^ell <= 16 ell^5 2^(3ell)
+```
+
+at both endpoints.  The native implication ledger checks that this exact
+envelope closes degrees from `401` and `402`, after the finite certificates
+through degree `400`.  The implication is algebraic; the uniform linear local
+ceiling remains the new theorem obligation.
 
 Existing geometric
 higher-moment work of Hast and Matei treats fixed polynomial degree as the
