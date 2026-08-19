@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-recurrence-stage-control",
+  "state": "all-stages-checked-no-target-submission-or-credit",
+  "tooling": {
+    "commit": "1676557d5811e56f1bdbaa38b6b6d57f503b3dff",
+    "path": "crates/axeyum-lean-import/examples/nat_fib_iterate_recurrence.rs",
+    "sha256": "ae9f8311b45146c58130a113578c731ae42d3b134386ade7433c634ebadff104"
+  },
+  "input": {
+    "v2_result_path": "artifacts/autogenesis/mathlib-nat-fib-iterate-recurrence-result-v2.json",
+    "v2_result_sha256": "ebacb279d1818675efd536e76c7c516edb0dc6dcbbea99de071dbba3ac6a34a2",
+    "artifact_file": "r080.ndjson",
+    "stream_sha256": "00578e949d71154cf5d9e79005b2a1c8f7fe73d9885ae96b0dd5cb6744c30501"
+  },
+  "stages": [
+    {
+      "name": "helper-n",
+      "proof_sha256": "cdebb756859a182ad7a6f35ab9b705e4a35ad1be26c6305709ae29c097ae8786",
+      "expected_sha256": "b825a80fd239077f822cce16e7458548111a81ca00c58300a15f46ecb484a3ef"
+    },
+    {
+      "name": "helper-succ",
+      "proof_sha256": "572e0f74285e362a79397bec0db703de88ca7e3e3842ceb092edcdc8a310f32d",
+      "expected_sha256": "258c8568e8129c42ac2237ce885e0304fb2e20f3b3862b9a15dd10ac00788dda"
+    },
+    {
+      "name": "fst-congruence",
+      "proof_sha256": "feaeaeb8762bf62a4db13b29fb9d448c981a7c971630b0c8def35b193b3dc164",
+      "expected_sha256": "b3b7712b24bb6bd4da60fa132b4a12558831b1ef525ad6e43c725e72486fb28c"
+    },
+    {
+      "name": "snd-congruence",
+      "proof_sha256": "7a6bae8b574bcaad81efae0211b40bb0e68e4ae8f94927bed209978bec7d04d5",
+      "expected_sha256": "4b4d2ee6ddb5a317d9a154a7b8eb9e7219ff5cf8d061d1e410bfd4a9a4d3a7a5"
+    },
+    {
+      "name": "fst-helper",
+      "proof_sha256": "e489f5c90e7a5b3551c7c49edb69aaf8fe64de5a282c882e2cb0e1a2590bc1ca",
+      "expected_sha256": "b4e36a6a9486ace94bba79a0e5d855f14b4fdaff442a89ab0f35296dc7b54353"
+    },
+    {
+      "name": "fst-helper-symm",
+      "proof_sha256": "34bb98df195e152c2d17956497e051dfd2ccea3397b16778c642904ef2b14bbb",
+      "expected_sha256": "c1eb644cdfff49c5823c114d678f513dbbb12ac3df522c7b9d0a32c5858ad0c2"
+    },
+    {
+      "name": "rhs-bridge",
+      "proof_sha256": "5fab06ab2e4f6f8cd37f946f99ba79bd7585e005974c00ae688ff1c80bbb3e9e",
+      "expected_sha256": "7155bf84bb95484ef39b681f9fc2fe17bb06dfd22ab031e7b28bd6f2700bcde1"
+    },
+    {
+      "name": "transitivity",
+      "proof_sha256": "b5965831fd4654e708b03bd3145f9124f02fc57aaa04bc16ded8287b6cee50f2",
+      "expected_sha256": "5433b34c4a138d615c488e4c7dfbee5dac8dc253e14680e114f40a55cf5eb16d"
+    }
+  ],
+  "result": {
+    "stages_inferred": 8,
+    "stages_matching": 8,
+    "failures": [],
+    "target_submissions": 0,
+    "target_outcomes": 0,
+    "semantic_theorem_receipts_issued": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "cargo run -p axeyum-lean-import --example nat_fib_iterate_recurrence -- --stage-control --stream <r080.ndjson>",
+  "limitations": "This validates the complete closed proof term by inference and definitional type comparison but does not submit a theorem declaration or authorize v3."
+}

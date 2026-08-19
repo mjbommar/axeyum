@@ -2,10 +2,11 @@
 
 ## Snapshot boundary
 
-This assessment was written against `main` at `a8a862133` on 2026-08-18. It
-uses live code, root `PLAN.md`, generated reports, and recent Git history rather
-than treating older roadmap prose as current. Numerical claims are snapshot
-claims and must be regenerated before an implementation phase relies on them.
+This assessment was refreshed through exact pushed feature checkpoint
+`5ac434ef9` on 2026-08-18. It uses live code, root `PLAN.md`, generated reports,
+and recent Git history rather than treating older roadmap prose as current.
+Numerical claims are snapshot claims and must be regenerated before an
+implementation phase relies on them.
 
 Useful live commands are:
 
@@ -25,7 +26,7 @@ cycle already exist:
 | Layer | Current asset | Current assurance |
 |---|---|---|
 | Formal problem | Typed term IR, queries, SMT-LIB parser, fact `formal.statement` | Typed and validated; surface support remains uneven |
-| Selection | `fact-frontier.py`, dependency readiness, unlock view, gate-coupling warning | Deterministic, ledger-derived, but queue is sparse |
+| Selection | `fact-frontier.py`, dependency readiness, unlock view, gate-coupling warning | Human and content-addressed JSON views; exact authoritative operation matching selects one live fact and refuses every unregistered candidate |
 | Search | Pure-Rust SAT/BV, arithmetic, quantifier, string, FP, CAS, and specialized routes | Broad, uneven; `unknown` is first-class |
 | Strategy | Solver strategy combinators and route dispatch | Route-local; not a general proof planner |
 | SAT checking | Original-model replay and multiple clausal proof routes | Strong for supported routes |
@@ -101,7 +102,9 @@ terms, but no typed orchestration language for operations such as:
 - compose all subproofs into one kernel term.
 
 Without this layer, complex reasoning remains either monolithic solver dispatch
-or handwritten kernel-term construction.
+or handwritten kernel-term construction. One narrow registered QF_NIA operation
+now exercises the typed authoritative path end to end; it is a route instance,
+not yet the general orchestration language described above.
 
 ### Autonomous closure transaction
 
@@ -114,7 +117,7 @@ checker commands, but it does not itself:
 - derive the proof route and footprint;
 - stage the transition as a portable proposal;
 - retry dependents; or
-- prove that a clean environment reproduces the acquisition.
+- prove that a clean environment reproduces a multi-fact acquisition.
 
 ### Capability-learning substrate
 
@@ -127,8 +130,8 @@ do not capture the reasoning state that preceded a result.
 
 | Desired future state | Current state | Missing bridge |
 |---|---|---|
-| One autonomous verified theorem | Selection and closure exist separately | Transactional orchestrator plus episode artifact |
-| Compounding theorem sequence | Ledger has few useful open dependency chains | Dense nursery, scheduler, retry-on-admission |
+| One autonomous verified theorem | Autogenesis-1 selected, proved, admitted, recovered, and byte-identically reproduced two linked facts | Generalize beyond exact registered bootstrap operations |
+| Compounding theorem sequence | One exact Nat chain passed; the ledger still has few useful open dependency chains | Dense held-out nursery and generic scheduler/retry policy |
 | Heterogeneous proof planning | Route-specific dispatch and reconstruction | Typed proof-plan IR and obligation semantics |
 | Experience-driven improvement | Logs and Git history | Replayable episode corpus and immutable evaluation splits |
 | Useful conjecture generation | Mostly authored fact set | Typed candidate lifecycle, falsification, utility and novelty filters |
@@ -139,13 +142,13 @@ do not capture the reasoning state that preceded a result.
 
 | Existing component | Immediate engineering gap | Why it blocks the loop |
 |---|---|---|
-| `fact-frontier.py` | Stable machine-readable selection output and snapshot digest | Text output is not a durable scheduler input |
+| `fact-frontier.py` | General multi-step orchestration beyond the bootstrap chain | Autogenesis-1 retained two byte-identical B-then-A authoritative runs; dispatch remains exact to this preregistered chain |
 | Fact schema | Candidate/attempt identity is absent by design | Attempts and knowledge need separate schemas |
 | Solver `Evidence` | No route-neutral portable result envelope for closure | The closer cannot derive ledger evidence safely |
 | Reconstruction | No generic obligation-composition interface | Multi-step plans cannot become one kernel proof |
 | Kernel dependency inventory | Mapping from kernel constants back to fact IDs is partial | Newly admitted facts cannot always derive ledger edges |
 | `close-fact.py` | Shell commands in caller-authored rows | Command text is too weak as a typed trust boundary |
-| Fact DAG | 63/110 isolated, max depth 6 | Scheduler has little compounding work to select |
+| Fact DAG | 63/110 isolated overall; 52 authored internal kernel-subgraph edges narrow to 23 direct proof-derived edges across 10 consequents | One primary is operationally qualified; 14 named kernel facts remain outside dependency-inventory coverage and no fallback is measured |
 | Capability matrices | Primarily capability reporting | Declines are not converted into ranked reusable work |
 | Benchmark corpora | Measure solver verdicts | Do not measure autonomous acquisition or human intervention |
 | Plan generation | Syntactic consistency only | Semantically stale next actions can still pass |
@@ -167,9 +170,11 @@ that emits a proposal and a separate replay command that authorizes closure.
 
 ### Phase 2: demonstrate compounding
 
-Gap: the current fact frontier is not a production curriculum. Required bridge:
-a dense, non-trivial nursery with known dependencies, mutations, route
-expectations, budgets, and held-out chains.
+Gap: the kernel subgraph is connected enough for a bootstrap replay, but every
+kernel fact is already settled. Required bridge: a counterfactual knowledge
+snapshot that withholds ledger entries *and proof retrieval*, followed by a
+dense, non-trivial nursery for sustained evaluation with known dependencies,
+mutations, route expectations, budgets, and held-out chains.
 
 ### Phase 3: plan proofs
 

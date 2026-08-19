@@ -100,7 +100,7 @@ Two readings I ruled out rather than assumed:
 ## 3. Fix or bound it — bounded, with the fix named and deferred
 
 Nothing here is soundness-relevant, so the priority rule about a red `main` does
-not fire. ADR-0488 records the decision: **the kernel is the checker we target**.
+not fire. ADR-0517 records the decision: **the kernel is the checker we target**.
 
 The fix is *known and measured*: emitting proofs as `def` makes the source route
 carry the whole carrier in 27.9 s. It is **not taken here** for blast radius, not
@@ -159,15 +159,15 @@ signature defect one level down, in the mutation check itself: the re-run greps
 | mutation | tests that died |
 | --- | --- |
 | **M1** carrier replay: drop the LAST theorem record from the replayed stream. Lean still accepts it and `not_zero_one` is still present, so only the count moves. | **1**, at `real_lean_creal_carrier_kernel_replay.rs:235`: *"Lean's kernel ended with 469 constants where this kernel holds 470. A replay that admits a SUBSET is exactly the reachability hole this suite exists to close."* Lean still ACCEPTED the stream and the name-coverage precondition still passed, so the count-equality guard fired alone — it is what distinguishes "accepted" from "accepted a subset". The divergence suite stayed green (2.64 s). |
-| **M2** divergence: make `theorems_as_defs` a no-op, so row 3 elaborates the unmodified module. | **1**, at `real_lean_wellfounded_elaborator_divergence.rs:331`: *"Lean's elaborator refused the module even with every proof spelled `def`, so the divergence is NOT the opacity of `theorem` and ADR-0488's account of it is wrong."* The carrier suite stayed green (115.00 s). |
+| **M2** divergence: make `theorems_as_defs` a no-op, so row 3 elaborates the unmodified module. | **1**, at `real_lean_wellfounded_elaborator_divergence.rs:331`: *"Lean's elaborator refused the module even with every proof spelled `def`, so the divergence is NOT the opacity of `theorem` and ADR-0517's account of it is wrong."* The carrier suite stayed green (115.00 s). |
 
 ## Left undone
 
 - **The fix.** `theorem` → `def` in the renderer, measured to work on the whole
-  carrier, deliberately left to the renderer's owner (ADR-0488).
+  carrier, deliberately left to the renderer's owner (ADR-0517).
 - **A gate on the source-route residue itself.** The whole-carrier `.lean`
   elaboration takes 14 s and enumerates the four refusals in one pass; it is not
   wired into `check-lean-gate.sh`, because the kernel replay makes that number
   informational rather than load-bearing. If the `def` fix lands, this becomes
   the natural gate and the residue becomes zero.
-- The structural-recursion `Nat.gcd`, per ADR-0488.
+- The structural-recursion `Nat.gcd`, per ADR-0517.

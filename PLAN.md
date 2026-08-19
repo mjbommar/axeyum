@@ -161,6 +161,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-19 | `pending` | `scripts/check-kernel-suites.sh`: the kernel's push-time / real-Lean suite partition, discovered from the source and asserted total; `hooks/pre-push` repointed at the non-Lean half (2,296 s → 80 s warm). Found `real_lean_string_monoid_crosscheck` owned by nothing and mis-formatting its check count; floor 218 → 219. |
 | 2026-08-19 | `e3e105cd6` | The local-ci freshness gate is ENFORCING in both `check.sh` and `justfile`, on a `PASS` record (`57af69142-s4.json`, 6656 s, 7561 tests + 179 doctests, no vacuous/unreadable step). Landed report-only the day before because the only record was FAIL; that was the sole blocker. Flip re-tested through the real call site: NO_RECORD / STALE / STEP VACUOUS all red, unmodified green. |
 | 2026-08-19 | (pending) | `artifacts/local-ci-runs/57af69142-s4.json`: first all-pass authoritative-gate record (5/5 steps, 7561+179 tests, 6656 s); `check-local-ci-freshness` flipped from `--report-only` to ENFORCING in `scripts/check.sh` and `justfile`. |
+| 2026-08-19 | `11c700a9b` | Fib admission operation |
 | 2026-08-19 | `4c7af898d` | **ℝ is a lattice.** 15 `Rat` + 18 `CReal` declarations, every one accepted on first submission, all footprint-free. The predicted obstacle — a four-way sign split over `|a| − |b| ≤ |a − b|` — never appears. Nothing here has a side condition, so the failure mode is a *degenerate operation*, not a vacuous guard: `max x y := x` satisfies `le_max_left` by reflexivity and `abs x := x` satisfies `le_abs_self`, `neg_le_abs` and `abs_le`. So `not_le_zero_neg_one` and `not_equiv_abs_neg_one` are proved from the laws alone, the witness's exit status depends on both, and `max x x ≈ x` / `max 0 1 ≉ 0` / `min 0 1 ≉ 1` are admitted **through the kernel**. One level down, `Rat.max`/`Rat.min` are checked to COMPUTE on both branches with the wrong answer REFUSED — the nine `ℚ` laws are all one-sided and would hold of a projection. Three one-token mutations refused. |
 | 2026-08-18 | `4b5613e26` | `check-fact-derived-numbers.py`: every number a fact asserts about its own `axiom_footprint` re-derived from the array. Fixes `F:schedule-critical-chain-infeasible` (prose 30 vs array 26, plus an obsolete facade paragraph found by re-measuring: `Lra`/62 lines, not a 21-line shim) and the example's stale module doc. 52 of 3,243 prose numbers bound, denominator printed every run; 7 guards, each deletion kills exactly 1 test; wired into both `just check` (`facts`) and `check.sh` so `check-aggregate-scope.sh` records no new divergence. |
 | 2026-08-18 | `24578036f` | `gen-lean-axiom-ledger.py`: coverage command gains `--include-constructed` (on `--release`, 12x faster), `EXPECTED_PRELUDES` gains `rat`/`creal`/`complex`, and measurement drift is reported per prelude **with its direction** — REGRESSION / IMPROVEMENT / COVERAGE LOST / ADDED / RESHAPED, each with the re-pin command. Ledger now pins 8 groups by value (was 6); 39 tests (was 24); 11-mutation control registered in `mutation_controls.py`, no survivors. Already wired in both `check.sh` and `just check`, so no new gate divergence. |
@@ -169,20 +170,19 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `e069afa03` | `local-ci`: the zero-test guard could not fire on the workspace sweep — nextest's summary is indented and the pattern was `^`-anchored. Fixtures now captured from the tool; a test step whose count is unparseable is `unreadable` (89), not `pass`. |
 | 2026-08-18 | `69c12646c` | `artifacts/local-ci-runs/a6ee37c6a-s4.json` — first completed run of `scripts/local-ci.sh` in this repository's history. FAIL, 6401 s, 4 of 7511. |
 | 2026-08-18 | `a2841965e` | `local-ci` gates the COMMIT, not the working tree: stable flock'd detached worktree, `--no-worktree` opt-out, controls mutation-tested. |
-| 2026-08-18 | `PENDING` | Lean has two checkers (ADR-0488): the kernel accepts all 470 carrier declarations, the elaborator refuses those whose checking must reduce a `theorem`. `real_lean_creal_carrier_kernel_replay` (whole carrier, no reachability filter, count-equality + tamper control) and `real_lean_wellfounded_elaborator_divergence` (`gcd` refused / `mod` accepted / same module with `theorem`->`def` accepted / kernel takes both); gate floor 212 -> 218. |
-| 2026-08-18 | `2abe2652d` | Authored the nine-phase Autogenesis programme and bounded Autogenesis-1 plan. |
+| 2026-08-18 | `PENDING` | Lean has two checkers (ADR-0517): the kernel accepts all 470 carrier declarations, the elaborator refuses those whose checking must reduce a `theorem`. `real_lean_creal_carrier_kernel_replay` (whole carrier, no reachability filter, count-equality + tamper control) and `real_lean_wellfounded_elaborator_divergence` (`gcd` refused / `mod` accepted / same module with `theorem`->`def` accepted / kernel takes both); gate floor 212 -> 218. |
 | 2026-08-18 | `00f998ccb` | ℤ categoricity: the existence half of the universal property (`iter` + three preservation equations, making `Int` the initial ℤ-structure) and `categorical` — every generated aperiodic ℤ-structure is in structure-preserving bijection with `Int`, universe-polymorphic. `iso` is the constructed two-sided-inverse form, honest about hypothesising the back-map. 32 theorems, all footprints empty; 22 injected weakenings each refused at their own declaration, now bracketed by `reached_declaration` on the near side too. |
 | 2026-08-18 | `a2a36590b` | `F:int-categoricity` recorded, and `F:int-characterization`'s "not proved that they determine it" caveat removed because it stopped being true. Every checker anchored on the declaration name AND the empty-footprint column, each run with its subject mangled: 0 on the finding, 1 on the mangle. |
-| 2026-08-18 | (pending) | ADR-0483 phase R3: the ordered-ring telescope gains an equality slot (30 → 39 binders) and `specialize_setoid_to_eq` proves it specializes back to today's statement — conclusion **and** all 30 non-slot binder types, node for node. Three mutation kills recorded; `residual_eq_constants` guards the one failure the footprint cannot see. |
+| 2026-08-18 | (pending) | ADR-0512 phase R3: the ordered-ring telescope gains an equality slot (30 → 39 binders) and `specialize_setoid_to_eq` proves it specializes back to today's statement — conclusion **and** all 30 non-slot binder types, node for node. Three mutation kills recorded; `residual_eq_constants` guards the one failure the footprint cannot see. |
 | 2026-08-18 | (pending) | `Sos` reconstruction accepts a **nonzero affine row** in the `LDLᵀ` linear forms (`rational_affine_squares`, `int_affine_lin_to_rexpr`), so `Σ xᵢ² + 1 < 0` and `(x−1)² + (y−2)² + 1 < 0` reconstruct instead of emitting `axiom P; axiom Not P`. The transcription checker's two normalizers learned degree-2 monomials to match, with square/cross discrimination driven to failure six ways. Binding gate `instances=125 → 135`, `attested=28 → 19`, `failures=0`. |
 | 2026-08-18 | (this change) | Round 3: corpus widened 51 -> 66 mutation families over a development that now carries a Type-valued structure, a `Nat` literal, an indexed family, a parameterized family and a mutual group; a fourth defect found and fixed — a **recursor's** `levelParams` was decorative, because a recursor is generated and compared rather than admitted, and the comparison's positional alpha-rename leaves an unbound parameter untouched |
 | 2026-08-18 | `2633d7186` | Kernel-vs-Lean differential widened to 51 mutation families; recursor/constructor regeneration compared against Lean's own, closing the 37% of the stream `addDeclCore` never reads; two defects fixed — universe closure on `check_declaration` **and** the inductive gate, and the recursor `k` flag validated on import |
-| 2026-08-18 | (pending) | ADR-0483 phase R4: `build_creal_model_of_arith` — the `Real` axiom package modelled by the **constructed** reals. 22/22 witnesses axiom-free, 9/22 restated over `CReal.Equiv`, 7/7 discrimination witnesses, exit status depending on all of it (`creal_model_witness`). Four mutation kills; ADR-0456's "`Int` is not ℝ" caveat discharged. |
+| 2026-08-18 | (pending) | ADR-0512 phase R4: `build_creal_model_of_arith` — the `Real` axiom package modelled by the **constructed** reals. 22/22 witnesses axiom-free, 9/22 restated over `CReal.Equiv`, 7/7 discrimination witnesses, exit status depending on all of it (`creal_model_witness`). Four mutation kills; ADR-0456's "`Int` is not ℝ" caveat discharged. |
 | 2026-08-18 | (this change) | Round 4: the fourth admission gate (`restore_nested_inductive_group`) gains adversarial coverage — the auxiliary recursor was never unread by Lean's kernel, only by `Environment.find?`, the elaborator's lookup; the replay script now asks `env.toKernelEnv`, a nested group is on the wire, and 14 `ind.aux-*` families cover it. 0 violations in 274 and 752 mutants, 80 families; residue measured exhaustively and is one non-type-checking field |
 | 2026-08-18 | (pending) | `LraReconstructCtx`'s carrier is a parameter: `RingSignature` + `RingEquality` replace the by-value `ArithPrelude`, `with_ring_signature`/`try_new` replace the panicking constructor, and five mutation-verified guards check a signature against the kernel. `CReal` passes them today with `CReal.Equiv` in the equality slot. Baseline output byte-identical. |
-| 2026-08-18 | (pending) | **ADR-0483 phase R4 reaches reconstruction: `LraReconstructCtx::adopt_setoid_equality` fills the ring interface's equality slot from `CRealPrelude`'s own theorems, and a Farkas/SOS refutation over the CONSTRUCTED reals rests on zero carrier axioms.** Measured on all five `ordered_ring_refutation` fixtures: 30 carrier axioms over `Real` against **0** over `CReal`, and the slot costs **0** declarations against 18 for the `Real` route — both read out of `Environment::len` and `Kernel::axiom_footprint`, with the `Real` column as the in-output control. Four adoption guards plus the ctx's one-slot rule, each killed by exactly one test under mutation. The nine slot-member types come from one builder shared with `declare_setoid_equality`, so an interface change cannot move only one of them. `--require-empty` output is byte-identical to before. |
+| 2026-08-18 | (pending) | **ADR-0512 phase R4 reaches reconstruction: `LraReconstructCtx::adopt_setoid_equality` fills the ring interface's equality slot from `CRealPrelude`'s own theorems, and a Farkas/SOS refutation over the CONSTRUCTED reals rests on zero carrier axioms.** Measured on all five `ordered_ring_refutation` fixtures: 30 carrier axioms over `Real` against **0** over `CReal`, and the slot costs **0** declarations against 18 for the `Real` route — both read out of `Environment::len` and `Kernel::axiom_footprint`, with the `Real` column as the in-output control. Four adoption guards plus the ctx's one-slot rule, each killed by exactly one test under mutation. The nine slot-member types come from one builder shared with `declare_setoid_equality`, so an interface change cannot move only one of them. `--require-empty` output is byte-identical to before. |
 | 2026-08-18 | (pending) | **`PreludeKey::CReal`, and the shipped LRA/SOS front door moves onto the constructed reals.** `build_creal_prelude` 43.97 s -> **0.149 s** per call (debug; release 4.69 s -> 0.067 s) via the ADR-0464 template. `prove_unsat_to_lean_module` now reconstructs over `CReal` with an adopted equality slot: carrier axioms 12/17/8 -> **0/0/0** on three front-door fixtures, `Real` control non-empty, module axiom lines equal the kernel footprint. Also fixes a module-renderer ordering defect the constructed carrier exposed, which rejected 5 of 77 `lean_crosscheck` families; 77 of 77 now check under lean 4.30.0. Cost: modules 2.4-41 kB -> ~2.6 MB. Every new guard mutation-checked, exactly one test dead each. `nat_axiom_inventory --include-constructed` is now under the prelude-reuse differential gate. |
-| 2026-08-18 | 61c466b53 | **The shipped front door reaches no `Real` axiom, measured at `build_arith_prelude` itself.** `RingSignature: From<IntPrelude>` + `try_new_over_integers`; `reconstruct_int_farkas_to_lean_module` off the `Real` package. `arith_prelude_builds()` = 0 across all four arithmetic arms, 1 for the control. Mutation-checked twice, exactly one test dead each — and all 9 tests of the suite named for that route pass under both mutations. Fact + ADR-0480 (declared vs reached). Also unbroke `clippy` on STABLE, red on `main` since `94d51fbc6`. |
+| 2026-08-18 | 61c466b53 | **The shipped front door reaches no `Real` axiom, measured at `build_arith_prelude` itself.** `RingSignature: From<IntPrelude>` + `try_new_over_integers`; `reconstruct_int_farkas_to_lean_module` off the `Real` package. `arith_prelude_builds()` = 0 across all four arithmetic arms, 1 for the control. Mutation-checked twice, exactly one test dead each — and all 9 tests of the suite named for that route pass under both mutations. Fact + ADR-0509 (declared vs reached). Also unbroke `clippy` on STABLE, red on `main` since `94d51fbc6`. |
 | 2026-08-18 | `5734b7449` | **Positivity is closed under multiplication**, over ℚ and over ℝ. Not one of the 22 — they give `mul_nonneg`, of which the zero product is a model — and over ℚ it is a *field* lemma, going through `inv_pos`. Over ℝ it needs no estimate: `CReal.lt`'s rational gaps plus `ofRat_mul`. First proof to open the strict order's `Exists` twice, which works because the target is a `Prop`. |
 | 2026-08-18 | `fc52b07f3` | **The inverse's domain, both directions, and the Prop/data line drawn correctly.** `0 < x` and `∃ k, 1/(k+1) ≤ x` are the same proposition, and the `Exists` is a `Prop`, so the modulus can never be extracted into a `CReal`. It is *computed*, not searched: `CReal.lt` already carries a rational gap. **Corrects the previous commit's doc** — a function may TAKE a `Prop` and return a `Type`, it may not BRANCH on one, so the disjunctive `Apart` blocks a definition and the one-sided `PosBound` does not. Plus `CReal.ofRat_le`, `Rat.natDivSucc_pos`. |
 | 2026-08-18 | `b91b6dac5` | The four ordered-field lemmas ℝ's inverse is written in — `sub_mul`, `mul_inv_sub_one`, `inv_sub_inv`, `inv_le_of_pos_le` — from `mul_inv_cancel` and the 22 alone, so each transcribes one level up. |
@@ -192,9 +192,9 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `facde4243` | The two ℕ/ℚ lemmas the index arithmetic is written in. `Rat.inv_natDivSucc : (1/(m+1))⁻¹ = (m+1)/1` — the only place the *value* of an inverse is computed, and needed because every bound over ℝ is one `natDivSucc` with a `Nat` numerator. `Rat.nat_index_symm : (a+1)b + a = (b+1)a + b` — **Bishop's sampling index is symmetric in shift and argument**, which is how a bound read at a product index comes back to the *shift* rather than to `n`. |
 | 2026-08-18 | 570b5c738 | **The interface as a telescope, and it is the same over ℤ.** `ring_interface_telescope` + `examples/ring_interface_pin.rs`, 30 of 30 byte-identical. Also repaired a test `61906c585` swept in broken, and the finding behind it: a `NameId` is an INDEX, so a signature read against another *populated* kernel resolves silently to `Nat.le`, `Nat.beq_refl`, … rather than failing. |
 | 2026-08-18 | 9ab8d7977 | **The negative control at one axiom instead of thirty.** `build_control_carrier`, three mutations, one test dead each. |
-| 2026-08-18 | 6c08c906f | **ADR-0486** + `F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers`. |
+| 2026-08-18 | 6c08c906f | **ADR-0515** + `F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers`. |
 | 2026-08-18 | `74946dd3b` | Split Lean module layout: `render_lean_prelude_module` / `render_lean_module_compact_importing` / `declarations_reached` / `lean_name`, `real_lean_shared_prelude_crosscheck` (4 real-Lean checks, 2 of them refusals), `examples/shared_prelude_module.rs --require-split`, gate floor 208 -> 212. 257x per query; found two `CReal` theorems Lean 4.30.0 rejects that the in-tree kernel admits. |
-| 2026-08-18 | `035a92d9a` | ADR-0489: proofs stay spelled `theorem`. `Kernel::set_render_proofs_as_def` built as a `Kernel` field, OFF by default, so nothing shipped moves; 7 guards in `tests/proof_keyword_render_option.rs` (no `lean` binary, 0.69 s, so `hooks/pre-push` is unaffected), mutation-checked 1/1/1/1/2; `examples/proof_keyword_cost.rs` renders the front door, the shared half and the whole carrier both ways and `--require-keyword-only` fails if the switch moves anything but the keyword. Measured: the shipped artefacts already elaborate clean under `theorem`; flipping the default costs 1.36-1.69x elaboration, +9.7% on the Lean gate, and makes `real_lean_wellfounded_elaborator_divergence` report that Lean CLOSED the divergence. |
+| 2026-08-18 | `035a92d9a` | ADR-0518: proofs stay spelled `theorem`. `Kernel::set_render_proofs_as_def` built as a `Kernel` field, OFF by default, so nothing shipped moves; 7 guards in `tests/proof_keyword_render_option.rs` (no `lean` binary, 0.69 s, so `hooks/pre-push` is unaffected), mutation-checked 1/1/1/1/2; `examples/proof_keyword_cost.rs` renders the front door, the shared half and the whole carrier both ways and `--require-keyword-only` fails if the switch moves anything but the keyword. Measured: the shipped artefacts already elaborate clean under `theorem`; flipping the default costs 1.36-1.69x elaboration, +9.7% on the Lean gate, and makes `real_lean_wellfounded_elaborator_divergence` report that Lean CLOSED the divergence. |
 | 2026-08-18 | `c9223e4` | binding: the converse number says which side of the check the missing 245 rows are on — `undecomposable_spine=0` measured and gated, `represented` is a maximum matching rather than an overlap. |
 | 2026-08-18 | `b9d2f0a` | binding: the 4 `FiniteArrayExtensionality` rows were never content-free — the emitter collapsed each `(select a i)`; `attested` 9 → 5, `structural` 98 → 102 with 360 new matched term nodes. |
 | 2026-08-18 | `a25b18a` | binding: 66 rows were recording the weaker of two true statements — four verdicts become a partition with two-sided pins; `anchored` 10 → 73, `structural_anchored=66` new. |
@@ -207,15 +207,15 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | (pending) | `lean_pp::split_module_banner` + `tests/support/lean_golden.rs`: golden pins cover the module BODY, banner pinned once as committed text in `module_banner_pin`. |
 | 2026-08-18 | (pending) | `scripts/check-lean-golden-pins.sh` (+ controls): the golden-module gate, membership DISCOVERED not listed; wired into `just check`, `check.sh`, and diff-scoped `hooks/pre-push`. |
 | 2026-08-18 | (pending) | `mutation_controls.py`: a mutation check can no longer report a result it did not measure. `DID NOT BUILD` / `DID NOT RUN` / `AMBIGUOUS ANCHOR` / `INCONSISTENT` are distinct from `killed N` and `SURVIVED` and are counted separately; build probe, two independent kill counts, baseline test count, verified restore, and a `cargo` runner for the route the defect was reported on. `self-demo` demonstrates all four outcomes live; `mutation-controls` mutation-checks the harness (24 guards, 31 controls, 24/24 killed after 3 real survivors were fixed). Found and repaired two dead controls in `lra-hypothesis-binding` (53/53), and one mutation in `lean-axiom-ledger` that was scored as a kill while running **zero** tests, so that control is 10 guards and not the 11 recorded. Wired into both `just check` and `check.sh`. |
-| 2026-08-18 | `pending` | **ADR-0479: ℂ is constructed over the constructed ℝ at zero trusted declarations, and ℂ's absence of an order becomes a theorem.** `Complex` is `mk : CReal → CReal → Complex` with `Complex.Equiv` componentwise — no quotient at either level, so `Quot.sound` is never needed. Every ℂ law reduces by δι to two `CReal.Equiv` obligations that are *algebraic*, so they are **decided, not hand-derived**: `complex/ring.rs` normalizes a `CReal` expression to a sorted multiset of signed monomials with opposite pairs cancelled and emits the `Equiv` proof, declaring nothing (every function returns a proof term, in `shifted_bound_le`'s style), so the `CReal` namespace and the trusted surface are untouched by construction. `add` and `mul` are the same commutative monoid, so the reassociation machinery is `rsum_perm`/`iprod_perm` written once against an `Op` tag, one level up and over a *defined* equality — the transcription ADR-0483 predicted. Landed with `conj`, `normSq`, `mul_conj` (`z·z̄ = ‖z‖²`, the law that needs the cancellation pass) and `normSq_nonneg` into `CReal`'s existing nonneg cone. **The finding that is not a construction:** `Complex.no_compatible_order : ∀ le lt, le_refl → lt_irrefl → lt_of_le_of_lt → add_le_add → le_congr → sq_nonneg → zero_lt_one → False`, proved directly with no classical step, so the 13 order laws are refuted rather than skipped. |
-| 2026-08-18 | `590e2ff8c` | **ADR-0483 phase R2 completes: all 22 ordered-ring laws hold over the constructed ℝ.** `mul_assoc`, `left_distrib` and `mul_le_mul_of_nonneg_left` land, plus `mul_congr` — the fifth congruence obligation and the R4 prerequisite. The four were one problem: each compares two products whose *sampling indices differ*, so `CReal.mul`'s exact estimate is unavailable and the naive bound is `C/(n+1)` for a `C > 2`. Two new pieces make that enough. `CReal.Equiv.of_bounded` — **`Equiv` only needs the difference to be `O(1/n)`; the constant is free** — is `Equiv.trans`'s argument with one term deleted, closing on `Rat.le_of_le_add_natDivSucc`, whose numerator is a `Nat` *parameter* so a symbolic `K` is as good as a literal; and `Rat.nat_index_compose` says **Bishop's sampling indices are closed under composition** (the additive shift `2n+1` is the `c = 1` case), so every nested index reads back at `n` through one `natDivSucc_le_scaled`. `mul_le_mul_of_nonneg_left` needed no estimate at all, exactly as costed — it is `left_distrib` + `mul_nonneg` + `mul_congr`. **22 of 22**, 58 declarations, trusted surface still 0, and the count is now read out of the kernel: `CRealPrelude::ordered_ring_laws` must name 22 *distinct* footprint-empty theorems matching `RatPrelude::ring_laws` position by position, asserted by the example's exit status and three tests, verified by deleting `mul_assoc`. |
+| 2026-08-18 | `pending` | **ADR-0508: ℂ is constructed over the constructed ℝ at zero trusted declarations, and ℂ's absence of an order becomes a theorem.** `Complex` is `mk : CReal → CReal → Complex` with `Complex.Equiv` componentwise — no quotient at either level, so `Quot.sound` is never needed. Every ℂ law reduces by δι to two `CReal.Equiv` obligations that are *algebraic*, so they are **decided, not hand-derived**: `complex/ring.rs` normalizes a `CReal` expression to a sorted multiset of signed monomials with opposite pairs cancelled and emits the `Equiv` proof, declaring nothing (every function returns a proof term, in `shifted_bound_le`'s style), so the `CReal` namespace and the trusted surface are untouched by construction. `add` and `mul` are the same commutative monoid, so the reassociation machinery is `rsum_perm`/`iprod_perm` written once against an `Op` tag, one level up and over a *defined* equality — the transcription ADR-0512 predicted. Landed with `conj`, `normSq`, `mul_conj` (`z·z̄ = ‖z‖²`, the law that needs the cancellation pass) and `normSq_nonneg` into `CReal`'s existing nonneg cone. **The finding that is not a construction:** `Complex.no_compatible_order : ∀ le lt, le_refl → lt_irrefl → lt_of_le_of_lt → add_le_add → le_congr → sq_nonneg → zero_lt_one → False`, proved directly with no classical step, so the 13 order laws are refuted rather than skipped. |
+| 2026-08-18 | `590e2ff8c` | **ADR-0512 phase R2 completes: all 22 ordered-ring laws hold over the constructed ℝ.** `mul_assoc`, `left_distrib` and `mul_le_mul_of_nonneg_left` land, plus `mul_congr` — the fifth congruence obligation and the R4 prerequisite. The four were one problem: each compares two products whose *sampling indices differ*, so `CReal.mul`'s exact estimate is unavailable and the naive bound is `C/(n+1)` for a `C > 2`. Two new pieces make that enough. `CReal.Equiv.of_bounded` — **`Equiv` only needs the difference to be `O(1/n)`; the constant is free** — is `Equiv.trans`'s argument with one term deleted, closing on `Rat.le_of_le_add_natDivSucc`, whose numerator is a `Nat` *parameter* so a symbolic `K` is as good as a literal; and `Rat.nat_index_compose` says **Bishop's sampling indices are closed under composition** (the additive shift `2n+1` is the `c = 1` case), so every nested index reads back at `n` through one `natDivSucc_le_scaled`. `mul_le_mul_of_nonneg_left` needed no estimate at all, exactly as costed — it is `left_distrib` + `mul_nonneg` + `mul_congr`. **22 of 22**, 58 declarations, trusted surface still 0, and the count is now read out of the kernel: `CRealPrelude::ordered_ring_laws` must name 22 *distinct* footprint-empty theorems matching `RatPrelude::ring_laws` position by position, asserted by the example's exit status and three tests, verified by deleting `mul_assoc`. |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
-| 2026-08-17 | `pending` | `string` prelude reaches **axiom=0**: `append` becomes a checked `Str.rec` recursion with four proved monoid laws (ADR-0484); ledger `total` 31 → 30, row filed as retired; real-Lean cross-check pins that `#print axioms` names no `axeyum.string.*` row. |
+| 2026-08-17 | `pending` | `string` prelude reaches **axiom=0**: `append` becomes a checked `Str.rec` recursion with four proved monoid laws (ADR-0513); ledger `total` 31 → 30, row filed as retired; real-Lean cross-check pins that `#print axioms` names no `axeyum.string.*` row. |
 | 2026-08-17 | `fae708aa5` | Characterization theorems: our ℕ proved categorical (any Peano structure is uniquely isomorphic to it), our ℤ proved no-junk + generated by 1 + discrete everywhere + unique maps out. 18 theorems, all footprints empty; 9 injected weakenings each refused at their own declaration. |
 | 2026-08-17 | `f532e04d3` | Restored `rat_prelude` after `fae708aa5` reverted `cf205e9a8`: a per-lane index refreshed in one shell invocation and committed in the next, with HEAD moving in between. The refresh must be in the SAME invocation as the commit, and `git show --stat`'s file COUNT is the tell — the diff you expected to see is not. |
-| 2026-08-17 | `b15debdfa` | One Lean resolution policy (the `lean-toolchain` pin) shared by `check-lean-gate.sh` and `lean_probe.rs`; every suite names the binary and version it used and the gate cross-checks them; `replay-lean4export.lean` elaborates under 4.30 and 4.34; exercised negative controls in `scripts/tests/test-lean-toolchain-policy.sh` (ADR-0485) |
+| 2026-08-17 | `b15debdfa` | One Lean resolution policy (the `lean-toolchain` pin) shared by `check-lean-gate.sh` and `lean_probe.rs`; every suite names the binary and version it used and the gate cross-checks them; `replay-lean4export.lean` elaborates under 4.30 and 4.34; exercised negative controls in `scripts/tests/test-lean-toolchain-policy.sh` (ADR-0514) |
 | 2026-08-17 | `pending` | transcription: bind every rendered Lean hypothesis back to the query text — 105 instances, 248 hypotheses, 869 corruptions caught per run |
 | 2026-08-17 | `7337f708` `caaf2906` | A SKOLEMISED refutation certifies: the elimination is recorded POSITIONALLY (binder counts, anchor by index, a binding as "the k-th witness of assertion i"), so the checker re-runs the eliminator in its own arena and no producer-side id is trusted. `F:barber-no-such-barber` closes on `smt-clausal` with a NON-EMPTY axiom footprint naming skolemisation and universal instantiation. The negative control failed on purpose and moved to `F:no-integer-square-is-minus-one`; the gate now sweeps 18/18. |
 | 2026-08-17 | `ae13cd6e` | A kernel fact's `depends_on` is DERIVED from the proof term, not transcribed: `Kernel::theorem_dependencies` keeps the half of the constant closure `axiom_footprint` discards. 18 edges were missing — two of them on facts proved the same day, by hand. Isolation 65 → 62. Restraints pinned by tests; the vacuity floor had no test until mutation-checking found it killed zero. |
@@ -224,7 +224,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-17 | `3cc574c7` `502c0503` | Both counted proof-production errors closed (`int_blast`'s deliberate `int.pow2` decline was mapped to a backend error, losing a verdict `check_auto` decides in 0.13ms), and settled SMT-route facts gated on certification rather than verdict — 17 of 17, enforced. |
 | 2026-08-17 | `ea9500bc` `e97db72b` `2c535667` `f40f7dc4` | Gate repairs: `check-parity-docs.py` crashed before running a single check (hiding 14 failures); CI's crosscheck grep still pinned 73 families; and `PLAN.md`'s sources were 24 KB over a 52 KB budget, journal moved to result notes. |
 | 2026-08-17 | `f18904db7` | R3: reachability census re-derived and committed as `artifacts/reachability/r3-census.tsv` (190 rows over both corpora); the ranked tables in `04-reachability.md` are now a generated view of it, gated by `scripts/check-reachability-census.py` inside `check-foundational-resources.sh`. 13 guards, each with its own rejection path; mutation-verified that deleting any one kills exactly one test. Corpus coverage checked in both directions and reported SKIPPED, never passed, when the sibling checkout is absent. Stale numbers corrected in `04` and `05`. |
-| 2026-08-17 | `pending` | ADR-0483: ℝ is a Bishop setoid over ℚ at **zero** trusted declarations, with `creal_shape_probe` measuring the carrier's admissibility against a `funext` negative control; ℂ scoped and deferred. |
+| 2026-08-17 | `pending` | ADR-0512: ℝ is a Bishop setoid over ℚ at **zero** trusted declarations, with `creal_shape_probe` measuring the carrier's admissibility against a `funext` negative control; ℂ scoped and deferred. |
 | 2026-08-16 | `pending` | Claim dashboard regenerated and gated: `gen-claims-dashboard.py --check` added and wired into `generated-trackers` (justfile) and `check.sh`; `validate-claims.py` now type-checks `frontier.known` / `would_settle` / `attack_notes` against `claim.schema.json`; the one schema-violating claim normalised. DASHBOARD.md goes from a stale 38 claims / 1 family / 81 rows to the actual 104 / 3 / 266. Both negative controls exercised. |
 Older landed changes (including the 2026-08-06 A1/A2 closure commits) remain
 in Git and their dated result notes; this table is deliberately bounded to
@@ -310,7 +310,7 @@ comparison exactly as a rise does. Converting those 28 would change no bit:
 does, and the only preludes any fact names (`nat` 23, `integer` 6, `logic` 2)
 already measure 0, the floor.
 
-The real gap was coverage. `creal` (ADR-0483) and `complex` (ADR-0479) were in
+The real gap was coverage. `creal` (ADR-0512) and `complex` (ADR-0508) were in
 **no** measurement the ledger consumed — they need `--include-constructed`, and
 the coverage command did not pass it — so their counts could move either way
 unobserved; `rat` was measured but missing from `EXPECTED_PRELUDES`. All three
@@ -429,7 +429,7 @@ accepted and every recursive `gcd` refused, while `Nat.mod/div/sub` and a bare
 refusal), not a budget. `internal exception #3` is the command abort.
 
 **The coverage hole is closed.** Emission was reachability-driven, so Lean saw
-only the reachable slice (343 of 465 when ADR-0482's lane measured it).
+only the reachable slice (343 of 465 when ADR-0511's lane measured it).
 `real_lean_creal_carrier_kernel_replay` exports the complete environment and
 requires Lean's constant count to **equal** our kernel's, so "accepted" cannot
 mean "accepted a subset"; `real_lean_wellfounded_elaborator_divergence` pins the
@@ -440,7 +440,7 @@ still accepting); a no-op `theorems_as_defs` kills the divergence suite on the
 `def` row alone; each left the other green. The fix (`theorem` -> `def` in the
 renderer) is measured and handed to the renderer's owner, not taken here.
 
-ADR-0488. Detail in
+ADR-0517. Detail in
 [`../notes/103-creal-lean-divergence.md`](docs/plan/notes/103-creal-lean-divergence.md).
 
 **`scripts/check-local-ci-freshness.sh` exists and is wired in REPORT-ONLY
@@ -511,9 +511,9 @@ foreground shell caps at 10 min and an ordinary background job was killed at
 
 Detail: [`../notes/105-local-ci-run-2.md`](docs/plan/notes/105-local-ci-run-2.md).
 
-**Programme specified; implementation not authorized** (`WIP`,
-autogenesis-program, 2026-08-18). If selected, execute only Phase 0 in the
-[`Autogenesis plan`](docs/autogenesis/README.md).
+**Status:** Fib recurrence admitted; clean replay pending.
+
+**Next:** clean-replay the non-leaf admission, then select one newly ready child.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
@@ -612,14 +612,14 @@ Detail moved to [`../notes/51-induction-dispatch.md`](docs/plan/notes/51-inducti
 prelude assumption outside `real` is retired: `axeyum.string.<n>.append` was a
 `Declaration::Axiom` and is now a checked structural recursion over `Str.rec`,
 with `nil_append` / `cons_append` / `append_nil` / `append_assoc` admitted as
-`Declaration::Theorem`s the kernel re-checks (ADR-0484). Measured, not read off
+`Declaration::Theorem`s the kernel re-checks (ADR-0513). Measured, not read off
 the diff: `nat_axiom_inventory` reports `string: axiom=0 opaque=0 quotient=0`,
 and the derived ledger is `total=30 | real=30 | everything else 0`. Verified
 outside this kernel as well — a real `lean` 4.34.0-rc1 accepts the exported
 module and its `#print axioms` lists only the problem's own opaque words.
 
 The whole trusted surface of this project is now the `real` prelude (30 rows,
-being constructed under ADR-0483 by another lane).
+being constructed under ADR-0512 by another lane).
 
 Next for this lane: length (`str.len : Str → Nat`) and the cancellation lemmas,
 which are what the monoid laws were the prerequisite for — a word-level
@@ -671,7 +671,7 @@ Under 4.34, 21 of 77 `lean_crosscheck` families were rejected and
 `scripts/lean/replay-lean4export.lean` did not elaborate at all — so the gate's
 verdict depended on which toolchain happened to be installed and on which entry
 point ran, and nothing in the output said which one produced it.
-[ADR-0485](docs/research/09-decisions/adr-0485-the-pinned-lean-toolchain-is-the-one-that-runs.md)
+[ADR-0514](docs/research/09-decisions/adr-0514-the-pinned-lean-toolchain-is-the-one-that-runs.md)
 decides **the pin runs**: `lean-toolchain` is the single source, `PATH` and other
 elan toolchains are candidates only if `--version` matches it, there is no
 "newest wins" step, and a non-pinned toolchain is a refusal naming both versions
@@ -700,7 +700,7 @@ declaring into the existing `Int.Characterization` namespace:
 
 Detail moved to [`../notes/55-int-categoricity.md`](docs/plan/notes/55-int-categoricity.md).
 
-**ADR-0483 phase R3 has landed: the ring interface takes equality as a
+**ADR-0512 phase R3 has landed: the ring interface takes equality as a
 parameter, 30 → 39, and instantiating it back at `Eq` reproduces today's
 statement node for node (`WIP`, agent-r3-telescope, 2026-08-18).**
 `LraReconstructCtx::enable_setoid_equality` declares nine equality-interface
@@ -771,7 +771,7 @@ sides exchanged between rules of one recursor, and the rules permuted.
 
 Detail moved to [`../notes/58-kernel-adversary.md`](docs/plan/notes/58-kernel-adversary.md).
 
-**ADR-0483 phase R4 has landed: the `Real` axiom package is modelled by the
+**ADR-0512 phase R4 has landed: the `Real` axiom package is modelled by the
 CONSTRUCTED reals, and ADR-0456's "`Int` is not ℝ" caveat is discharged
 (`WIP`, agent-r4-model, 2026-08-18).** `build_creal_model_of_arith` admits one
 theorem per law,
@@ -798,7 +798,7 @@ the obligation still reads `Eq CReal …` while the proof proves
 `build_creal_model_of_arith` return `DeclarationValueMismatch` and the example
 exit 101.
 
-**9 of 22 is now measured three independent ways.** ADR-0483 Measurement 2
+**9 of 22 is now measured three independent ways.** ADR-0512 Measurement 2
 counted `Eq` in the axiom types; R3's η-expansion mutation isolated the same
 nine as binder-type mismatches; this model reports `restated_over_equiv` from
 whether the rewrite fired, and the nine names agree exactly.
@@ -848,7 +848,7 @@ caught three broken intra-doc links nothing else did).
 
 Detail moved to [`../notes/61-real-migration.md`](docs/plan/notes/61-real-migration.md).
 
-**ADR-0483 phase R4 reaches the reconstruction route: a Farkas/SOS refutation
+**ADR-0512 phase R4 reaches the reconstruction route: a Farkas/SOS refutation
 now reconstructs over `CReal`, and the closed `False` rests on ZERO carrier
 axioms (`WIP`, agent-creal-reconstruct, 2026-08-18).** R3 made equality a
 parameter of the ring telescope; R4 modelled the `Real` package by `CReal`. The
@@ -941,7 +941,7 @@ single-file contract four Lean suites assume and needs an `.olean` build plus
 
 **No shipped route BUILDS the `Real` axiom package, and a counter says so
 (`WIP`, agent-retire-real, 2026-08-18).** The ledger's 30 does not move;
-ADR-0480 says why rather than working around it. What that number stood for is
+ADR-0509 says why rather than working around it. What that number stood for is
 now measured and gated.
 
 **The hole found.** `a6ee37c6a` moved the front door to `CReal` and the claim
@@ -970,12 +970,12 @@ mutated output first.
 **Why 30 stays.** They are the digest-pinned kernel statement of the interface
 three constructed carriers are checked against, and the NEGATIVE CONTROL for
 every axiom-freedom measurement here — delete them and no such claim can fail.
-ADR-0480 names the bounded route to declared = 0: move the specification onto
+ADR-0509 names the bounded route to declared = 0: move the specification onto
 the axiom-free 30-binder telescope the abstraction already produces, then shrink
 the control from 30 axioms to one.
 [Notes](docs/plan/notes/64-retire-real.md).
 
-**ADR-0481: ℚ is now a FIELD, ℝ has Bishop apartness, and the inverse's
+**ADR-0510: ℚ is now a FIELD, ℝ has Bishop apartness, and the inverse's
 partiality is two theorems rather than a scoping note (`WIP`,
 agent-creal-field, 2026-08-18).** The prerequisite nobody had listed:
 `Rat.inv` existed from the start as a definition with **no law about it**, so
@@ -989,7 +989,7 @@ the **same** `Prop`, so the modulus always exists and can never be extracted.
 [`../notes/creal-field.md`](docs/plan/notes/creal-field.md), which is also where the
 next task is.
 
-**ADR-0487: `CReal.inv` is BUILT, and `x⁻¹` denotes one real rather than one
+**ADR-0516: `CReal.inv` is BUILT, and `x⁻¹` denotes one real rather than one
 per modulus (`WIP`, agent-creal-inv, 2026-08-18).**
 `CReal.inv : (x : CReal) → (k : Nat) → PosBound x k → CReal` — a function may
 *take* a `Prop` and return a `Type`, it may only not *branch* on one, so the
@@ -1003,12 +1003,12 @@ is the fifth time `Rat.natDivSucc` has been kept off the antitone path. Design,
 measurements and what is deliberately absent (the negative branch, `abs`,
 cotransitivity): [`../notes/creal-inv.md`](docs/plan/notes/creal-inv.md).
 
-**Both of ADR-0480's reasons for keeping the 30 axioms are discharged in
+**Both of ADR-0509's reasons for keeping the 30 axioms are discharged in
 principle; the rows have not moved (`WIP`, agent-shrink-control, 2026-08-18).**
 `real: axiom=30` is unchanged and I did not force it down — "what stops it"
 below is the finding.
 
-**The specification, measured rather than asserted.** ADR-0480 says the
+**The specification, measured rather than asserted.** ADR-0509 says the
 30-binder telescope "is the interface, assuming nothing" — true only if the
 telescope read off an axiom-free development says the *same* thing as the one
 read off `Real`. `examples/ring_interface_pin.rs` compares them: **30 binders,
@@ -1066,31 +1066,31 @@ reproduced with the sharing pass off, and `maxHeartbeats 0` does not move it.
 **That belongs to the constructed-real lane and is not fixed here.** The root
 set is the reached union (343 of 465) instead.
 
-ADR-0482. Detail in [`../notes/67-prelude-module.md`](docs/plan/notes/67-prelude-module.md).
+ADR-0511. Detail in [`../notes/67-prelude-module.md`](docs/plan/notes/67-prelude-module.md).
 
 **Do not flip the default: every `.lean` artefact this repository SHIPS already
 elaborates clean under `theorem`** (`DONE`, theorem-opacity, 2026-08-18).
-ADR-0488 measured that re-spelling proofs as `def` makes Lean's elaborator take
+ADR-0517 measured that re-spelling proofs as `def` makes Lean's elaborator take
 the whole constructed-real carrier, and left the change untaken. Built as
 `Kernel::set_render_proofs_as_def` — a `Kernel` field, off by default — and
 measured on the pin (Lean 4.30.0 `d024af09`): the single-file front door
 (1,304,276 B) and the shared half (1,300,891 B) **both exit 0 today**, at 9.3 s
 and 9.7 s; under `def` they still exit 0, at 14.9 s and 13.2 s. Only the
-whole-carrier module gains — 4 refusals to none — and ADR-0482 does not ship it,
+whole-carrier module gains — 4 refusals to none — and ADR-0511 does not ship it,
 while Lean's *kernel* already accepts it in 1.4 s. So the switch costs 1.36–1.69x
 elaboration and 212 lines of "this is a proof" to fix a refusal no shipped
 artefact suffers. `#print axioms` reads the same either way, so soundness is not
 in play; ADR-0458's honesty argument is what decides it. Decision:
-[ADR-0489](docs/research/09-decisions/adr-0489-proofs-stay-spelled-theorem-and-the-def-option-is-a-measuring-instrument.md);
+[ADR-0518](docs/research/09-decisions/adr-0518-proofs-stay-spelled-theorem-and-the-def-option-is-a-measuring-instrument.md);
 numbers: [notes](docs/plan/notes/68-theorem-opacity.md).
 
-**ADR-0488's blast-radius argument was narrower than stated.** "18 real-Lean
+**ADR-0517's blast-radius argument was narrower than stated.** "18 real-Lean
 suites read the single-file front door" — they assert on the module's ROOT
 theorem, which this option deliberately leaves alone, so they are indifferent to
 it. The option's boundaries are pinned by 7 tests, mutation-checked 1/1/1/1/2.
 
 **Nothing that ships moved.** The default path is byte-identical (the carrier
-renders at 2,541,928 B, ADR-0488's figure to the byte),
+renders at 2,541,928 B, ADR-0517's figure to the byte),
 `front_door_carrier --require-axiom-free` still reports
 `the module's axiom lines equal the kernel footprint: true`, and
 `scripts/check-lean-gate.sh` is **OK at 472 real-Lean checks** (floor 218),
@@ -1098,9 +1098,9 @@ renders at 2,541,928 B, ADR-0488's figure to the byte),
 
 **Next**: a structurally recursive `Nat.gcd`. It closes the same elaborator gap
 from the other end, with no keyword change and no elaboration cost, and it is
-now the preferred route to the residue ADR-0488 named.
+now the preferred route to the residue ADR-0517 named.
 
-**ADR-0490: `CReal.max`, `CReal.min` and `CReal.abs` are BUILT, and they cost
+**ADR-0519: `CReal.max`, `CReal.min` and `CReal.abs` are BUILT, and they cost
 no index shift (`WIP`, agent-creal-order, 2026-08-19).**
 `max` looks like it needs a decision, and ℝ has none — but it does not have to
 be *derived* from one. `Rat.le a b` **is** `Int.le (num a·den b) (num b·den a)`,
@@ -1448,7 +1448,7 @@ death. Removed with the reasoning in place; 10/10.
 
 Detail: [`../notes/agent-mutation-harness.md`](docs/plan/notes/agent-mutation-harness.md).
 
-**ADR-0479: ℂ is built, it is free, and its missing order is REFUTED rather than
+**ADR-0508: ℂ is built, it is free, and its missing order is REFUTED rather than
 omitted (`WIP`, agent-complex-foundation, 2026-08-18).** `Complex` — a
 one-constructor pair of `CReal`s with equality the *defined* relation
 `Complex.Equiv` — carries `zero`/`one`/`I`/`ofReal`, `add`/`neg`/`mul`/`conj`,
@@ -1466,10 +1466,10 @@ declared — a refutation and an omission look identical otherwise.
 
 Next: (a) a plain-commutative-ring telescope, since ADR-0457's is parameterised
 over an *ordered* ring and ℂ is not one; (b) ℚ(i) for `geometry_certify`, which
-ADR-0483 deferred ℂ in favour of; (c) `CReal` completeness, which `abs`, `√` and
+ADR-0512 deferred ℂ in favour of; (c) `CReal` completeness, which `abs`, `√` and
 algebraic closure are all downstream of.
 
-**ADR-0483 phase R2 is COMPLETE: ℝ is built, it is free, and ALL 22
+**ADR-0512 phase R2 is COMPLETE: ℝ is built, it is free, and ALL 22
 ordered-commutative-ring laws hold over it (`WIP`, agent-creal-mul,
 2026-08-18).** `CReal` — a Bishop setoid of regular ℚ-sequences — with `Equiv`
 **reflexive, symmetric and transitive**, `zero`/`one`/`neg`/`add`/`mul`, all
@@ -1514,7 +1514,7 @@ school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
-[ADR-0483](docs/research/09-decisions/adr-0483-real-is-constructed-as-a-setoid-over-the-rationals.md)
+[ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
 decides **a Bishop setoid of regular ℚ-sequences** — no quotient, no cuts.
 ADR-0456's two rejections were both correct and its conclusion did not follow:
 equality does not have to be `Eq`. Measured, not argued —
@@ -1773,7 +1773,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 84 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 103 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

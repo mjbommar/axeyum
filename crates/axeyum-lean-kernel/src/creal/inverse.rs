@@ -1,5 +1,5 @@
 //! **The multiplicative inverse of a real number, with its modulus as data**
-//! (ADR-0481, phase F3).
+//! (ADR-0510, phase F3).
 //!
 //! ## What is data, and what is only a proof
 //!

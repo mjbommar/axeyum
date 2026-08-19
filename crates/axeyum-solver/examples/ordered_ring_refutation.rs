@@ -49,7 +49,7 @@
 //! buys. The *instantiated* one is not: applying it back at the `Real` package
 //! re-imports all 30 of that package's declarations, which are this repository's
 //! entire remaining trusted surface. `--constructed-reals` applies it at
-//! `CReal` instead (ADR-0483): a Bishop setoid of regular ℚ-sequences that
+//! `CReal` instead (ADR-0512): a Bishop setoid of regular ℚ-sequences that
 //! **proves** all 22 ordered-ring laws and all nine equality-slot obligations,
 //! with an empty axiom footprint for each. The closed `False` then rests on
 //! **zero** carrier axioms — only on the query's own variable and hypothesis
@@ -240,7 +240,7 @@ fn run() -> Result<(), String> {
         let tight = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::Used)
             .map_err(|error| format!("{label}: tight generalization failed: {error:?}"))?;
 
-        // ADR-0483 phase R3: the same query again, but with equality routed
+        // ADR-0512 phase R3: the same query again, but with equality routed
         // through the declared slot instead of the kernel's `Eq`, generalized
         // over 39 binders, and then specialized BACK at `Eq` in the same kernel.
         // The specialization's inferred type must be the very expression `full`
@@ -449,7 +449,7 @@ fn run() -> Result<(), String> {
 }
 
 /// The constructed reals as an ordered-ring signature, plus the equality slot
-/// `CRealPrelude` already proves (ADR-0483 phase R4).
+/// `CRealPrelude` already proves (ADR-0512 phase R4).
 fn creal_signature() -> Result<(Kernel, RingSignature, EqualitySlot), String> {
     // Built once and cloned, on the same argument as `prelude_cache` (ADR-0464):
     // a clone is a bit-exact copy of a state this caller could have reached
@@ -538,7 +538,7 @@ fn creal_signature() -> Result<(Kernel, RingSignature, EqualitySlot), String> {
 fn over_the_constructed_reals(fixtures: &[Fixture]) -> Result<bool, String> {
     let (kernel, sig, slot) = creal_signature()?;
     println!();
-    println!("=== the CONSTRUCTED reals (ADR-0483 phase R4): the same fixtures over `CReal`");
+    println!("=== the CONSTRUCTED reals (ADR-0512 phase R4): the same fixtures over `CReal`");
 
     // The equality slot, adopted rather than axiomatized. The control is in the
     // same line: the `Real` route has to declare eighteen axioms for it.

@@ -27,9 +27,11 @@ sentence names a fact already closed later in history.
 
 ### Tasks
 
-- **AG0.1 — Baseline schema.** Define a generated snapshot containing exact
-  commit, fact counts and DAG shape, route/assurance inventory, proof-gap
-  population, kernel theorem/fact coverage, and manual seams.
+- **AG0.1 — Baseline schema.** Define a generated snapshot containing source
+  identities, fact counts and DAG shape, route/assurance inventory, proof-gap
+  population, kernel theorem/fact coverage, and manual seams; bind it to an
+  exact clean commit only in a separate execution capture to avoid a
+  self-referential committed hash.
 - **AG0.2 — Semantic plan checks.** Reject a `pending` landed row whose commit is
   reachable, a next-target fact that is already settled, and a current defect
   contradicted by a later authoritative result.
@@ -100,17 +102,21 @@ two-step acquisition chain.
 
 ### Gap from Phase 1
 
-A one-shot pipeline proves composition but not knowledge compounding. The live
-ledger is too sparse and contains few appropriately scaled open chains.
+A one-shot pipeline proves composition but not knowledge compounding. The
+kernel ledger is already connected enough for a bootstrap replay, but all of
+its facts are settled: changing statuses alone would leak the retained proofs.
+There is no counterfactual knowledge snapshot for the first chain and no dense
+held-out nursery for sustained evaluation afterward.
 
 ### Tasks
 
-- **AG2.1 — Nursery design.** Define 100-300 Nat/Int facts with real dependency
-  depth, route diversity, statement mutations, and known truth status.
-- **AG2.2 — Provenance-safe population.** Distinguish authored exercises,
-  generated variants, imported known theorems, and genuinely open candidates.
-- **AG2.3 — Hidden chains.** Reserve held-out dependency chains so scheduler
-  evaluation cannot be tuned against every target.
+- **AG2.1 — Counterfactual knowledge snapshot.** Withhold facts and their proof
+  terms from eligibility and retrieval without editing the authoritative ledger.
+- **AG2.2 — Bootstrap chain.** Qualify a primary and fallback from the existing
+  proof-derived kernel graph with fixed budgets and pre-B controls.
+- **AG2.3 — Nursery design.** After the bootstrap path is credible, define
+  100-300 provenance-classified Nat/Int facts with real dependency depth, route
+  diversity, mutations, and held-out components for sustained evaluation.
 - **AG2.4 — Scheduler baseline.** Rank dependency-ready facts by assurance
   feasibility, estimated cost, unlock count, and curriculum diversity.
 - **AG2.5 — Admission event.** Recompute readiness only after a replayed ledger
@@ -119,8 +125,9 @@ ledger is too sparse and contains few appropriately scaled open chains.
   repeated identical attempts by episode digest.
 - **AG2.7 — Two-step chain.** Establish B automatically, use B in the admitted
   library or plan context, then establish previously unreachable A.
-- **AG2.8 — Counterfactual.** Replay A against the pre-B snapshot and require it
-  to fail or exceed the registered budget for the expected reason.
+- **AG2.8 — Counterfactual.** Replay the identical A target against the pre-B
+  snapshot under the same policy and budget, and require a no-credit result for
+  the registered reason.
 - **AG2.9 — Human-intervention accounting.** Record every edit, route override,
   and proof repair; the credited chain permits none after launch.
 

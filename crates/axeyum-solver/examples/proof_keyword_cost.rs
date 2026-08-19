@@ -1,13 +1,13 @@
 //! What `Kernel::set_render_proofs_as_def` costs and buys, measured on the
-//! artefacts this repository actually ships (ADR-0489).
+//! artefacts this repository actually ships (ADR-0518).
 //!
 //! # The question
 //!
-//! Lean has two checkers and they disagree about a proof's opacity (ADR-0488).
+//! Lean has two checkers and they disagree about a proof's opacity (ADR-0517).
 //! Lean's *kernel* unfolds anything carrying a value and accepts the whole
 //! constructed-real carrier; Lean's *elaborator* refuses to unfold a `theorem`
 //! while reducing, so four `CReal` declarations whose type-checking must compute
-//! through `Nat.gcd` are refused from `.lean` source. ADR-0488 measured that
+//! through `Nat.gcd` are refused from `.lean` source. ADR-0517 measured that
 //! re-spelling every `theorem` as `def` closes that gap and deliberately did not
 //! take the change. This example renders both spellings of every artefact so the
 //! cost and the benefit can be read off the same run.
@@ -19,7 +19,7 @@
 //!
 //! * `FrontDoor.lean` — the shipped single-file front door, one refutation over
 //!   the constructed reals, self-contained.
-//! * `AxeyumShared.lean` — the shared half of the split layout (ADR-0482),
+//! * `AxeyumShared.lean` — the shared half of the split layout (ADR-0511),
 //!   rooted at what this family of queries REACHES.
 //! * `AxeyumCarrier.lean` — the WHOLE carrier, every declaration of the
 //!   constructed-real context with no reachability filter. This is the module

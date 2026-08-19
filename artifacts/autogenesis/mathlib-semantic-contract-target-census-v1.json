@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-semantic-contract-target-census",
+  "state": "selection-diagnostic-no-contract-proof-or-ledger-credit",
+  "tooling_commit": "fb87e18cb9728915bdb07e1f305c1c48c943597f",
+  "tooling_file": {
+    "path": "crates/axeyum-lean-import/examples/semantic_contract_target_census.rs",
+    "sha256": "6bfdceac14ecba9a39dab3c80c1afa45b03d74d8feb87d34b1b0af8eba25627b"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/contract-target-census/fb87e18cb-mathlib-v4.30.0-v1",
+    "file": "observation.json",
+    "bytes": 142399,
+    "mode": "0444",
+    "file_sha256": "dd2b1da9b36549e767a670eefb255715111ef1892be1bbc10621b3fa1c197860",
+    "observation_sha256": "caef4de329757abc280d77e52a3196f9a6903a6f9dbfa4565095f883386d084c"
+  },
+  "population": {
+    "pointwise_definition_identities": 15,
+    "affected_rows": 50,
+    "direct_equation_environment_eligible_rows": 0,
+    "train_rows": 34,
+    "development_rows": 16,
+    "terminal_equality_rows": 38,
+    "axiom_free_source_rows": 17,
+    "single_missing_dependency_rows": 5,
+    "single_missing_dependency_axiom_free_rows": 1
+  },
+  "narrowest_residualization_control": {
+    "artifact_file": "r018.ndjson",
+    "fact_id": "F:ml430-int-gcd-div-5e01872f",
+    "source_name": "Int.gcd",
+    "source_content_sha256": "1b4460e69780e5080a107bc178b77ffe064585b9712c5f7468a80c02cdee0655",
+    "missing_dependency": "Nat.gcd",
+    "source_value_nodes": 11,
+    "source_axiom_footprint": 0,
+    "source_occurrences": 2,
+    "abstraction_count": 3,
+    "terminal_relation": "Eq"
+  },
+  "verification": "python3 scripts/check-autogenesis-semantic-contract-target-census.py",
+  "limitations": "This census authorizes no target, contract, producer, proof, held-out access, or ledger credit. Direct-equation environment eligibility is only a representation prerequisite, not proof sufficiency."
+}

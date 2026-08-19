@@ -102,10 +102,25 @@ class TheExtractorSelectsTheRightFacts(unittest.TestCase):
         self.assertGreaterEqual(len(found), CE.MIN_INSTANCES, found)
         self.assertTrue(all(p.endswith(".smt2") for _, p in found))
 
-    def test_the_negative_control_is_not_swept_as_a_settled_instance(self) -> None:
-        """The control must stay OUT of the enforced set -- otherwise the check
-        fails on its own fixture and someone deletes the fixture."""
+    def test_the_negative_control_is_not_a_ledger_evidence_instance(self) -> None:
+        """A mutation control must not force a mathematical fact to stay open."""
         self.assertNotIn(CE.PROBE, [p for _, p in CE.instances()])
+
+    def test_typed_operation_binding_is_covered_without_shell_parsing(self) -> None:
+        item = {
+            "checker_command": "python3 typed-checker.py",
+            "checker_operation": {
+                "input_artifact": "artifacts/facts/smt2/neg-typed-example.smt2"
+            },
+        }
+        self.assertEqual(
+            CE.evidence_instance_paths(item),
+            ["artifacts/facts/smt2/neg-typed-example.smt2"],
+        )
+
+    def test_typed_operation_artifact_must_have_the_canonical_smt_path(self) -> None:
+        item = {"checker_operation": {"input_artifact": "../../escape.smt2"}}
+        self.assertEqual(CE.evidence_instance_paths(item), [])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "F:ml430-mutation-a6dd1759bce60d820292e107",
+  "title": "Outcome-blind mutation of Nat.lor_comm",
+  "statement": "A `operator-substitution` mutation of the pinned source proposition `Nat.lor_comm`.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "∀ (n m : ℕ), n ||| m = n &&& m",
+    "fragment": "Nat"
+  },
+  "epistemic_status": "open",
+  "external_status": "unknown",
+  "depends_on": [],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "not established in this ledger",
+    "source": "outcome-blind `operator-substitution` mutation of Nat.lor_comm"
+  },
+  "notes": "Open generated mutation. No expected truth value, proof, witness, route, budget, or Axeyum outcome is recorded. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module. The nursery manifest, not depends_on, keeps this row in the same partition as its source."
+}

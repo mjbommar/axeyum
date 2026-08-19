@@ -6,14 +6,13 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom aggregate-scope test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions local-ci-freshness
 
 # THE AXIOM-FREEDOM MEASUREMENTS, which nothing ran until 2026-08-18.
 #
 # `real: axiom=30` is this repository's whole remaining trusted surface, and the
 # claim that the shipped front door no longer reaches it rests on three
 # examples. Grepped across `scripts/*.sh`, `justfile` and `.github/workflows/`
-# on 2026-08-18: ZERO invocations. ADR-0480 and ADR-0486 both cite them as
+# on 2026-08-18: ZERO invocations. ADR-0509 and ADR-0515 both cite them as
 # evidence; they were lane-run commands that happened to have been run once.
 #
 # Each carries a `--require-*` flag that makes its EXIT STATUS depend on the
@@ -40,6 +39,7 @@ axiom-freedom:
     cargo run --release -q -p axeyum-solver --features full --example ring_interface_pin -- --require-identical
     cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --require-empty
     cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts aggregate-scope test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions local-ci-freshness
 
 fmt:
     cargo fmt --all --check
@@ -76,6 +76,115 @@ next:
 next-unlocks:
     python3 scripts/fact-frontier.py --unlocks
 
+# Stable scheduler input. This can honestly select nothing: fragment reachability
+# does not become a typed fact-to-producer/checker operation by implication.
+next-json:
+    python3 scripts/fact-frontier.py --json
+
+# Proof-derived B -> A replay candidates. This intersects ledger edges with the
+# kernel dependency inventory; a kernel-route label alone is not derivation.
+next-chains:
+    python3 scripts/fact-frontier.py --chains
+
+next-chains-json:
+    python3 scripts/create-autogenesis-chain-catalog.py --json
+
+autogenesis-operations:
+    python3 scripts/validate-autogenesis-operations.py
+    python3 -m unittest scripts.tests.test_validate_autogenesis_operations
+
+# Validate and exactly regenerate the frozen leakage-safe population contract.
+autogenesis-nursery:
+    python3 -m unittest scripts.tests.test_check_autogenesis_nursery
+    python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_nursery_split
+    python3 -m unittest scripts.tests.test_create_autogenesis_nursery_dispatch_baseline
+    python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
+    python3 scripts/check-autogenesis-nursery.py
+    python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check
+    cargo test -p axeyum-lean-import --test statement_adapter
+    python3 -m unittest scripts.tests.test_check_autogenesis_statement_adapter
+    python3 scripts/check-autogenesis-statement-adapter.py
+    cargo test -p axeyum-lean-import --test statement_reflexivity_operation
+    python3 -m unittest scripts.tests.test_check_autogenesis_statement_reflexivity
+    python3 scripts/check-autogenesis-statement-reflexivity.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_statement_reflexivity_admission
+    python3 scripts/check-autogenesis-statement-reflexivity-admission.py
+    python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-factorial-zero-admission-v1.json
+    cargo test -p axeyum-lean-import --example statement_reflexivity_coverage
+    python3 -m unittest scripts.tests.test_create_autogenesis_reflexivity_coverage_input
+    python3 -m unittest scripts.tests.test_check_autogenesis_reflexivity_coverage
+    python3 scripts/check-autogenesis-reflexivity-coverage.py
+    python3 -m unittest scripts.tests.test_analyze_autogenesis_type_slices scripts.tests.test_check_autogenesis_type_slice_feasibility
+    python3 scripts/check-autogenesis-type-slice-feasibility.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
+    python3 scripts/check-autogenesis-factorial-zero-family.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_semantic_abstraction_census
+    python3 scripts/check-autogenesis-semantic-abstraction-census.py
+    cargo test -p axeyum-lean-import --test semantic_function_contract
+    cargo test -p axeyum-lean-import --example semantic_contract_target_census
+    python3 -m unittest scripts.tests.test_check_autogenesis_semantic_contract_target_census
+    python3 scripts/check-autogenesis-semantic-contract-target-census.py
+    cargo test -p axeyum-lean-import --test contract_residualization
+    cargo test -p axeyum-lean-import --example int_gcd_contract_residualization
+    python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_residualization
+    python3 scripts/check-autogenesis-int-gcd-contract-residualization.py
+    cargo test -p axeyum-lean-import --test source_delta_trace
+    cargo test -p axeyum-lean-import --example int_gcd_source_delta_trace
+    python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_source_delta
+    python3 scripts/check-autogenesis-int-gcd-source-delta.py
+    cargo test -p axeyum-lean-import --test trace_contract_receipt
+    cargo test -p axeyum-lean-import --example int_gcd_trace_contract_receipt
+    python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_trace_contract_receipt
+    python3 scripts/check-autogenesis-int-gcd-trace-contract-receipt.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_theorem_control_policy
+    python3 scripts/check-autogenesis-int-gcd-contract-theorem-control-policy.py
+    cargo test -p axeyum-lean-import --test trace_contract_theorem_receipt
+    cargo test -p axeyum-lean-import --example int_gcd_contract_theorem_control
+    python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_theorem_control
+    python3 scripts/check-autogenesis-int-gcd-contract-theorem-control.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_nat_fib_gcd_premise_selection_policy
+    python3 scripts/check-autogenesis-nat-fib-gcd-premise-selection-policy.py
+
+# The bulk source is external and optional on CI. The first checker reports
+# verified/unavailable without conflating them; the committed 240-row view is
+# always structurally checked and is re-derived when the content-addressed
+# source is mounted.
+autogenesis-mathlib-source:
+    python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source
+    python3 scripts/check-autogenesis-mathlib-source.py
+    python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_candidates
+    python3 scripts/create-autogenesis-mathlib-candidates.py --check
+
+# This evaluation-only pass may inspect upstream theorem values, but its
+# external artifact and committed projection contain names and edges only.
+# Whole weak components are indivisible future split units.
+autogenesis-mathlib-dependencies:
+    python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_dependency_components
+    python3 scripts/create-autogenesis-mathlib-dependency-components.py --check
+
+# Statement-only review removes aliases and internal surfaces, reserves simple
+# calibrations, and binds one answer-free mutation to every source family.
+autogenesis-mathlib-review:
+    python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_nursery_review
+    python3 scripts/create-autogenesis-mathlib-nursery-review.py --check
+
+# Materialize only open facts. The exact Mathlib environment accepts every
+# formal.statement as an axiom TYPE; that proves proposition well-formedness,
+# not the proposition, and no imported theorem becomes local proof credit.
+autogenesis-mathlib-facts:
+    python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_fact_catalog
+    python3 scripts/create-autogenesis-mathlib-fact-catalog.py --check
+
+# Explicit external experiment: launch one complete B -> A authoritative chain
+# from a clean checkout and retain its independently checkable receipts.
+autogenesis-authoritative-chain output:
+    python3 scripts/run-autogenesis-authoritative-chain.py "{{ output }}"
+
+# Credit requires two independently retained runs from the same exact source.
+autogenesis-authoritative-compare first second output:
+    python3 scripts/compare-autogenesis-authoritative-chains.py \
+        "{{ first }}" "{{ second }}" --output "{{ output }}"
+
 facts:
     python3 scripts/validate-facts.py
     # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
@@ -95,6 +204,8 @@ facts:
     # flag right beside it already correct.
     python3 -m unittest scripts.tests.test_check_fact_derived_numbers
     python3 scripts/check-fact-derived-numbers.py --quiet
+    python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
+    python3 scripts/create-autogenesis-chain-catalog.py --check
     # The mathematics strand's primary metric, derived rather than read: how many
     # capabilities carry an artifact an EXTERNAL checker accepts. Agreement with
     # an oracle is not an external check and is tiered separately.
@@ -144,8 +255,8 @@ facts:
     python3 scripts/validate-claims.py
     # A settled SMT-route fact's evidence command tests the VERDICT and not the
     # CERTIFICATION: `test "$(... | tail -1)" = unsat` exits 0 on an uncertified
-    # refutation, verified against artifacts/facts/smt2/neg-barber-no-such-barber.smt2.
-    # 17 of 17 such instances are certified today -- by practice, not enforcement.
+    # refutation, verified against a dedicated uncertified integer-square fixture.
+    # 18 of 18 such instances are certified today -- by practice, not enforcement.
     python3 -m unittest scripts.tests.test_check_smt_evidence_certified
     python3 scripts/check-smt-evidence-certified.py --quiet
     # A `cas-certificate` geometry fact states its theorem twice -- as SMT-LIB in
@@ -236,6 +347,23 @@ gate-controls:
 # commit the record. Do not re-add `--report-only`.
 local-ci-freshness:
     scripts/check-local-ci-freshness.sh
+
+autogenesis-knowledge-controls:
+    scripts/check-autogenesis-knowledge-controls.sh
+
+autogenesis-proposer-isolation:
+    scripts/check-autogenesis-proposer-isolation.sh
+
+autogenesis-induction-search:
+    scripts/check-autogenesis-induction-search.sh
+
+autogenesis-apply-search:
+    scripts/check-autogenesis-apply-search.sh
+
+autogenesis-result:
+    python3 -m unittest scripts.tests.test_compare_autogenesis_authoritative_chains
+    python3 -m unittest scripts.tests.test_check_autogenesis_1_result
+    python3 scripts/check-autogenesis-1-result.py
 
 # `frontier_*` is skipped here and run by `frontier` instead. Those ratchets
 # measure "the largest N decided within a fixed WALL-CLOCK budget", so running
@@ -529,6 +657,26 @@ smtcomp-resume:
 # the flagship R_4(5(x-y)=4z) result as `open` at "> 740" when the ledger had it
 # `computed` at exactly 741. Nobody edited it wrongly; nobody ran it at all.
 generated-trackers:
+    python3 scripts/validate-autogenesis-operations.py
+    python3 -m unittest scripts.tests.test_validate_autogenesis_operations
+    python3 -m unittest scripts.tests.test_fact_frontier
+    python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
+    python3 -m unittest scripts.tests.test_execute_autogenesis_operation
+    python3 -m unittest scripts.tests.test_check_autogenesis_fact_operation
+    python3 -m unittest scripts.tests.test_gen_autogenesis_baseline
+    python3 -m unittest scripts.tests.test_create_autogenesis_snapshot
+    python3 -m unittest scripts.tests.test_create_autogenesis_proposer_catalog
+    python3 -m unittest scripts.tests.test_autogenesis_apply_proposer
+    python3 -m unittest scripts.tests.test_verify_autogenesis_apply_proposals
+    python3 -m unittest scripts.tests.test_autogenesis_induction_proposer
+    python3 -m unittest scripts.tests.test_verify_autogenesis_induction_proposals
+    python3 -m unittest scripts.tests.test_create_autogenesis_premise_evidence
+    python3 -m unittest scripts.tests.test_create_autogenesis_premise_transition
+    python3 -m unittest scripts.tests.test_create_autogenesis_accepted_event
+    python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction
+    python3 -m unittest scripts.tests.test_apply_autogenesis_fact_transaction
+    python3 -m unittest scripts.tests.test_create_autogenesis_readiness_delta
+    python3 scripts/gen-autogenesis-baseline.py --check
     python3 -m unittest scripts.tests.test_gen_plan
     python3 scripts/gen-plan.py --check
     python3 -m unittest scripts.tests.test_gen_adr_index

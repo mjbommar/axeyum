@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-statement-reflexivity",
+  "state": "candidate-checked-not-admitted",
+  "source_fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+  "statement_adapter": "artifacts/autogenesis/mathlib-descfactorial-zero-statement-adapter-v1.json",
+  "operation": {
+    "implementation": "crates/axeyum-lean-import/examples/statement_reflexivity_operation.rs",
+    "target_definition": "Axeyum.Autogenesis.Statement.FactorialZero.natDescFactorialZero",
+    "goal_sha256": "84c2cb6ba48868786799c28aef4104a845cf9d238ff6786285645562570c5d23",
+    "proof_sha256": "15725b2125daf99a7f779d218f36de67fe85dc42eaae4e1db23f55e5b628856a",
+    "target_content_sha256": "c92518c5aa5532a7583223937b8f355f1ea36187c2c5e399a9ee5b4932a03493",
+    "binders": 1,
+    "constructed_nodes": 4,
+    "max_binders": 8,
+    "max_constructed_nodes": 16,
+    "admitted_declarations": 59,
+    "axioms": 0,
+    "theorem_dependencies": 0,
+    "target_dependency": false,
+    "ledger_writes": 0
+  },
+  "reproduction": "python3 scripts/check-autogenesis-factorial-zero-family.py",
+  "limitations": "The candidate is independently kernel checked but remains uncredited until the exact registered operation completes the crash-safe authoritative transaction."
+}

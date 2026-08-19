@@ -219,6 +219,9 @@ Likely initial placement:
   `axeyum-solver`, `axeyum-cas`, and reconstruction;
 - portable evidence bundle extensions alongside existing solver evidence;
 - scripts for prototype selection, orchestration, and clean replay;
+- a process boundary between proposing and checking: the proposer receives a
+  proof-body-free catalog, while only the checker receives the full kernel
+  environment;
 - JSON schemas under `artifacts/ontology/` only after the prototype reveals the
   exercised boundary; and
 - a dedicated crate only after Rust API and command-line consumers both use the

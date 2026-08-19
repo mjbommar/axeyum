@@ -309,6 +309,48 @@ fn no_declaration_is_dropped_by_the_emitter() {
     assert_eq!(expected, admitted);
 }
 
+/// A root-selected stream is a complete environment in its own right: its
+/// atomic dependency closure re-admits in a fresh kernel, unrelated declarations
+/// stay unavailable, and selecting the same root after re-admission is
+/// byte-stable.
+#[test]
+fn root_selected_environment_round_trips_without_unrelated_declarations() {
+    let mut kernel = Kernel::new();
+    let logic = build_logic_prelude(&mut kernel).expect("logic prelude must build");
+    let metadata = Lean4ExportMetadata::axeyum("4.30.0");
+    let emitted = kernel
+        .render_lean4export_ndjson_roots(&metadata, &[logic.true_intro])
+        .expect("the True constructor closure must emit");
+    let (round_tripped, report) = import(&emitted, "root-selected True");
+    let admitted: Vec<_> = report
+        .declaration_identities
+        .iter()
+        .map(|identity| identity.name.as_str())
+        .collect();
+    assert_eq!(admitted, ["True", "True.rec", "True.intro"]);
+    assert!(
+        round_tripped
+            .environment()
+            .iter()
+            .all(|(&name, _)| !round_tripped
+                .display_name(name)
+                .to_string()
+                .starts_with("False")),
+        "an unrelated inductive must not enter the fresh kernel"
+    );
+    let true_intro = round_tripped
+        .environment()
+        .iter()
+        .find_map(|(&name, _)| {
+            (round_tripped.display_name(name).to_string() == "True.intro").then_some(name)
+        })
+        .expect("the selected constructor must re-admit");
+    let again = round_tripped
+        .render_lean4export_ndjson_roots(&metadata, &[true_intro])
+        .expect("the re-admitted root must re-emit");
+    assert_eq!(emitted, again);
+}
+
 // ---------------------------------------------------------------------------
 // Wire-metadata comparison against Lean's own bytes.
 //

@@ -386,7 +386,7 @@ impl Kernel {
     }
 
     /// Whether [`Declaration::Theorem`] renders with the `def` keyword rather
-    /// than `theorem` (ADR-0489). Off unless [`Self::set_render_proofs_as_def`]
+    /// than `theorem` (ADR-0518). Off unless [`Self::set_render_proofs_as_def`]
     /// turned it on.
     #[must_use]
     pub const fn render_proofs_as_def(&self) -> bool {
@@ -405,7 +405,7 @@ impl Kernel {
     /// # Why the option exists
     ///
     /// Lean has two checkers and they disagree about a proof's opacity
-    /// (ADR-0488). Lean's *kernel* unfolds anything carrying a value and accepts
+    /// (ADR-0517). Lean's *kernel* unfolds anything carrying a value and accepts
     /// the whole constructed-real carrier; Lean's *elaborator* refuses to unfold
     /// a `theorem` while reducing, so a declaration whose type-checking must
     /// compute through `Nat.gcd` — whose Euclidean descent is justified by the
@@ -414,7 +414,7 @@ impl Kernel {
     ///
     /// It is off by default because a `def` is a weaker statement about the
     /// artefact than a `theorem` is, and because it costs elaboration time; the
-    /// numbers and the recommendation are in ADR-0489.
+    /// numbers and the recommendation are in ADR-0518.
     pub fn set_render_proofs_as_def(&mut self, render_as_def: bool) {
         self.render_proofs_as_def = render_as_def;
     }
@@ -1337,7 +1337,7 @@ impl Kernel {
     /// importing it. Intersecting this answer with the carrier snapshot gives a
     /// root set that is both shared and checkable.
     ///
-    /// **Elaborator, not kernel** — this said "Lean" until ADR-0488, and the
+    /// **Elaborator, not kernel** — this said "Lean" until ADR-0517, and the
     /// difference is the whole diagnosis. Lean's *kernel* accepts all four, and
     /// the whole carrier with them (`real_lean_creal_carrier_kernel_replay`
     /// replays 470 of 470 through `Environment.addDeclCore` in 1.4 s). The
@@ -1437,6 +1437,34 @@ impl Kernel {
         deps
     }
 
+    /// Every declaration transitively referenced by `name`, excluding `name`
+    /// itself.
+    ///
+    /// Unlike [`Self::theorem_dependencies`], this retains definitions,
+    /// inductives, axioms, and opaque declarations as well as theorems.  It is
+    /// the fail-closed primitive for knowledge-boundary audits: checking only a
+    /// proof's direct constants would miss a forbidden theorem reached through
+    /// an allowed helper theorem.
+    ///
+    /// Names are sorted by rendered name, so snapshots and audit output are
+    /// stable across construction orders.  An absent root yields an empty
+    /// result; callers that need to distinguish absence from an independent
+    /// declaration must first query [`Self::environment`].
+    #[must_use]
+    pub fn declaration_dependency_closure(&self, name: NameId) -> Vec<NameId> {
+        let mut seen = BTreeSet::new();
+        let mut work = self.decl_deps(name);
+        while let Some(dependency) = work.pop() {
+            if dependency == name || !seen.insert(dependency) {
+                continue;
+            }
+            work.extend(self.decl_deps(dependency));
+        }
+        let mut dependencies: Vec<NameId> = seen.into_iter().collect();
+        dependencies.sort_by_key(|&dependency| self.display_name(dependency).to_string());
+        dependencies
+    }
+
     fn decl_deps(&self, name: NameId) -> Vec<NameId> {
         let mut deps = Vec::new();
         if let Some(decl) = self.environment().get(name) {
@@ -1528,7 +1556,11 @@ impl Kernel {
                     stack.push(*v);
                     stack.push(*b);
                 }
-                ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Sort(_) | ExprNode::Lit(_) => {}
+                ExprNode::Lit(Lit::Str(_)) => out.extend(self.string_literal_dependency_names()),
+                ExprNode::BVar(_)
+                | ExprNode::FVar(_)
+                | ExprNode::Sort(_)
+                | ExprNode::Lit(Lit::Nat(_)) => {}
             }
         }
     }
@@ -3174,6 +3206,55 @@ mod tests {
         let mut dependencies = Vec::new();
         k.collect_const_deps(shared, &mut dependencies);
         assert_eq!(dependencies, vec![p_name]);
+    }
+
+    #[test]
+    fn declaration_dependency_closure_catches_indirect_references() {
+        use crate::Declaration;
+
+        let mut k = Kernel::new();
+        let anon = k.anon();
+        let prop = k.sort_zero();
+        let proposition = k.name_str(anon, "P");
+        k.add_declaration(Declaration::Axiom {
+            name: proposition,
+            uparams: Vec::new(),
+            ty: prop,
+        })
+        .unwrap();
+        let proposition_expr = k.const_(proposition, Vec::new());
+        let witness = k.name_str(anon, "p");
+        k.add_declaration(Declaration::Axiom {
+            name: witness,
+            uparams: Vec::new(),
+            ty: proposition_expr,
+        })
+        .unwrap();
+        let witness_expr = k.const_(witness, Vec::new());
+        let helper = k.name_str(anon, "helper");
+        k.add_declaration(Declaration::Theorem {
+            name: helper,
+            uparams: Vec::new(),
+            ty: proposition_expr,
+            value: witness_expr,
+        })
+        .unwrap();
+        let helper_expr = k.const_(helper, Vec::new());
+        let root = k.name_str(anon, "root");
+        k.add_declaration(Declaration::Theorem {
+            name: root,
+            uparams: Vec::new(),
+            ty: proposition_expr,
+            value: helper_expr,
+        })
+        .unwrap();
+
+        let rendered: Vec<String> = k
+            .declaration_dependency_closure(root)
+            .into_iter()
+            .map(|name| k.display_name(name).to_string())
+            .collect();
+        assert_eq!(rendered, ["P", "helper", "p"]);
     }
 
     #[test]

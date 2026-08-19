@@ -1,0 +1,2774 @@
+{
+  "candidate_set_sha256": "3b4cd0e02466c26560dbbb0552db8aba442de4d6df52e13b1486ad61b75b0dc3",
+  "component_semantics": "weakly-connected-components; assign-whole-component-to-one-future-split",
+  "components": [
+    {
+      "component_id": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "edges": [
+        {
+          "dependency": "Int.ModEq.rfl",
+          "dependent": "Int.ModEq.add_left"
+        },
+        {
+          "dependency": "Int.ModEq.rfl",
+          "dependent": "Int.ModEq.add_left_cancel'"
+        },
+        {
+          "dependency": "Int.ModEq.refl",
+          "dependent": "Int.ModEq.rfl"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "6e17c69a5219a9aca3d66c83d339fe64edbfa4276280c5e01fa8e8201ffc38c9",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.ModEq.add_left",
+          "theme": "integer-modular-equivalence"
+        },
+        {
+          "candidate_id": "062ad5febaa60f88fb0c1ad660f5c979e4b3606838a94476338cdcae7f05f1c3",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.ModEq.add_left_cancel'",
+          "theme": "integer-modular-equivalence"
+        },
+        {
+          "candidate_id": "30e15520fdbbc7b52282d4e43c2062e0216ed017c4f16cdce5c9b6b84236989d",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.ModEq.refl",
+          "theme": "integer-modular-equivalence"
+        },
+        {
+          "candidate_id": "39917cf95c0c06b88ae36a1d1eeeb73a0f8a27d788a71b350c56324631ccf98d",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.ModEq.rfl",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "edges": [
+        {
+          "dependency": "Int.ModEq.symm",
+          "dependent": "Int.ModEq.dvd_iff"
+        },
+        {
+          "dependency": "Int.ModEq.trans",
+          "dependent": "Int.ModEq.dvd_iff"
+        },
+        {
+          "dependency": "Int.ModEq.symm",
+          "dependent": "Int.modEq_comm"
+        },
+        {
+          "dependency": "Int.ModEq.symm",
+          "dependent": "Int.modEq_sub"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "b7ffeff8240104793a71d9f4c5ace492e6b9cb79a550305b711f7ecf7849c7d6",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.ModEq.dvd_iff",
+          "theme": "integer-modular-equivalence"
+        },
+        {
+          "candidate_id": "984a6e6752f637b830a90cc8a450550d3b11132f8cdf2b24a9afcefecd131360",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.ModEq.symm",
+          "theme": "integer-modular-equivalence"
+        },
+        {
+          "candidate_id": "6d7863e0d948a224aed30407b4da470b93b744b0dfad14589de71a9b5425901a",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.ModEq.trans",
+          "theme": "integer-modular-equivalence"
+        },
+        {
+          "candidate_id": "1e4bcc078b464b6dc27bfcc755004c7ec9cdd444669327272c39a9cfc755b406",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.modEq_comm",
+          "theme": "integer-modular-equivalence"
+        },
+        {
+          "candidate_id": "3148f130c5632f3f308651f8c0f237aaf4b88dd9649d812525e670cf79d4c9d8",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.modEq_sub",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-be80f6203158797b",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "f649f6c5278473dd0a67ac1c26bba50da5d98cef10ee23432b599a724199fcab",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.ModEq.neg",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-8a9b388391142d26",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "b9c41fce3281da41448e50d2831139c472d7f88e8e3b5da3cb02bf85a14e1793",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.ModEq.of_dvd",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-221b47afb20afd1a",
+      "edges": [
+        {
+          "dependency": "Int.ModEq.of_mul_left",
+          "dependent": "Int.ModEq.of_mul_right"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "c4ccd51e988f3c1d03c1fcdb36d3a5394160d500b11614da99c38c50dc222233",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.ModEq.of_mul_left",
+          "theme": "integer-modular-equivalence"
+        },
+        {
+          "candidate_id": "c92b7bf0289803be4f2c1b4287a89a59ec9721b7acd31980881ec3eb1b9d8d1a",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.ModEq.of_mul_right",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-fcf7017e9257db89",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "ee732b5b39df2bdbd4fbc276d7a6e3e9724015252a6c1afd13421a1bc185632f",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.add_modEq_left",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-ef8adf35bc935542",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "e58108ee4ccde04b29cb45de86596522ffe2feec955f99243e2b15673568523c",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.add_modEq_right",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-bef809d855cc57c1",
+      "edges": [
+        {
+          "dependency": "Int.gcd_eq_gcd_ab",
+          "dependent": "Int.dvd_of_dvd_mul_left_of_gcd_one"
+        },
+        {
+          "dependency": "Int.dvd_of_dvd_mul_left_of_gcd_one",
+          "dependent": "Int.dvd_of_dvd_mul_right_of_gcd_one"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "649e349bc18a5424434e8e8e1322d35fc8417299a72540d70e94c80ca4912d1a",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Int.dvd_of_dvd_mul_left_of_gcd_one",
+          "theme": "integer-gcd"
+        },
+        {
+          "candidate_id": "77817ff09968beddb825941c70b2989f54afa65509964c3e3a1ff12eee9db795",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Int.dvd_of_dvd_mul_right_of_gcd_one",
+          "theme": "integer-gcd"
+        },
+        {
+          "candidate_id": "63005aef3632a806a1f609ee15a8fe0f3799231388149ed4ded2b91f902c3b25",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Int.gcd_eq_gcd_ab",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-11abc97c89380ee4",
+      "edges": [
+        {
+          "dependency": "Int.fib_add",
+          "dependent": "Int.fib_two_mul"
+        },
+        {
+          "dependency": "Int.fib_two_mul",
+          "dependent": "Int.fib_two_mul_add_two"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "181b6a2cde087fc33e472825f255f915f0080b28ae440c583e0aa02c0a2e69a4",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_add",
+          "theme": "integer-fibonacci"
+        },
+        {
+          "candidate_id": "0e70f3dd0b5a8b488cf1610d88ca381bf67b2aae393edc06b5c035a33333ad5e",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_two_mul",
+          "theme": "integer-fibonacci"
+        },
+        {
+          "candidate_id": "0ba4a94838c54e185fba05017c9bb220ee402f6933768bdb4cdf7f912c53ef1f",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_two_mul_add_two",
+          "theme": "integer-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "edges": [
+        {
+          "dependency": "Int.fib_add_two",
+          "dependent": "Int.fib_add_one"
+        },
+        {
+          "dependency": "Int.fib_natCast",
+          "dependent": "Int.fib_add_two"
+        },
+        {
+          "dependency": "Nat.fib_add_two",
+          "dependent": "Int.fib_add_two"
+        },
+        {
+          "dependency": "Int.fib_add_two",
+          "dependent": "Int.fib_eq_fib_add_two_sub_fib_add_one"
+        },
+        {
+          "dependency": "Nat.fib_add_two",
+          "dependent": "Nat.fib_coprime_fib_succ"
+        },
+        {
+          "dependency": "Nat.fib_add_two",
+          "dependent": "Nat.fib_le_fib_succ"
+        },
+        {
+          "dependency": "Nat.fib_le_fib_succ",
+          "dependent": "Nat.fib_mono"
+        },
+        {
+          "dependency": "Nat.fib_coprime_fib_succ",
+          "dependent": "Nat.gcd_fib_add_self"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "33f1b748eeb0ffed033873eb490eaa1c9c31956a8b6d38e5d160d1d0bff3ca95",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_add_one",
+          "theme": "integer-fibonacci"
+        },
+        {
+          "candidate_id": "739358dd0577c0112e426774eac649b33bb4b5c0bfcbebd5e4c3b3e4d552356b",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_add_two",
+          "theme": "integer-fibonacci"
+        },
+        {
+          "candidate_id": "0dab3f6d41c76602ca2d34391f6c82ea3ab36d18f5f18faf29c6933e252fc30c",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_eq_fib_add_two_sub_fib_add_one",
+          "theme": "integer-fibonacci"
+        },
+        {
+          "candidate_id": "d5886be47e8fce0ae39517f183c799339f5ef214c606b980905fc80bae576971",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_natCast",
+          "theme": "integer-fibonacci"
+        },
+        {
+          "candidate_id": "b86e0c82f43166a7fdd18a5af326103067c99ac89bb3fe0f989c9d4786460d1c",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_add_two",
+          "theme": "natural-fibonacci"
+        },
+        {
+          "candidate_id": "162fc738bc7bd5f230d26b637e7217a03b67d96663493c6dc75bbc5d5d876933",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_coprime_fib_succ",
+          "theme": "natural-fibonacci"
+        },
+        {
+          "candidate_id": "d1ef4a3d10c2a485bc6b694b32774153785fe50dd3be7172d531f0672cee283a",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_le_fib_succ",
+          "theme": "natural-fibonacci"
+        },
+        {
+          "candidate_id": "cc6afe0955d34c964ffabbd0601a085b4f891570ac9847182806875d00869457",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_mono",
+          "theme": "natural-fibonacci"
+        },
+        {
+          "candidate_id": "5a92d5e3a2e1adbd9f94ff325825fa9c3dee0ae5ad082f98754e40f9fc761c70",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.gcd_fib_add_self",
+          "theme": "natural-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-292800e4421fa31a",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "ffb3c5c17dc7c959683db74e36a55945012451c4e8372053de50d8d7721e1de9",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_dvd",
+          "theme": "integer-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-bc8c8765b9355652",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "8193c7cb68729d02f7d739b77b78990c65e9fef54686f0e489544890f71601f9",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_eq_zero",
+          "theme": "integer-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "edges": [
+        {
+          "dependency": "Int.gcd_fib",
+          "dependent": "Int.fib_gcd"
+        },
+        {
+          "dependency": "Int.fib_neg",
+          "dependent": "Int.gcd_fib"
+        },
+        {
+          "dependency": "Nat.fib_gcd",
+          "dependent": "Int.gcd_fib"
+        },
+        {
+          "dependency": "Nat.fib_gcd",
+          "dependent": "Nat.fib_dvd"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "3a8bfdece32a55f4a31f7d2068d5cf3c280e9984839109a5f5f3176581ab0fe2",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_gcd",
+          "theme": "integer-fibonacci"
+        },
+        {
+          "candidate_id": "b4021d37220e00caf34f69e036adf61eb1990782a35e5ba4dcd2df7293d55dda",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_neg",
+          "theme": "integer-fibonacci"
+        },
+        {
+          "candidate_id": "73bdafc25249002c7fb1f63f78672a8a25081bc2c495e0209fdd37c8c6de6388",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.gcd_fib",
+          "theme": "integer-fibonacci"
+        },
+        {
+          "candidate_id": "f80f3de1a7a32485f14b13ff9a1f3b70bcffecc54088063ec44be4479d386582",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_dvd",
+          "theme": "natural-fibonacci"
+        },
+        {
+          "candidate_id": "d1d984076d06443ae897f4a52fb500281df328db088206ce7d99cc17b4234e99",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_gcd",
+          "theme": "natural-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-52954723caf82727",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "2d8ff3a2ada0706a10edeaae5f283d2c39621dfcbb9a2fc3a64ec29a3c8a7d18",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_neg_one",
+          "theme": "integer-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-4424f7e97ad88904",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "d728ce1fbeaee4d8e479bfdf09db3fb61043d2eef39fa2a628f907f333b07b22",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_neg_two",
+          "theme": "integer-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-cd344903f04530b2",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "438018c529fdedaf379e38d8a43b18801baf9f3b7b3abaa1773bbb59f9a679f9",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_of_nonneg",
+          "theme": "integer-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-349664929d4b20cf",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "6656049505ef0ffef5fbaa10ceb49cd9239ea4801e8165ea8329c0c257dac024",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_of_odd",
+          "theme": "integer-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-75c3a0b56b4be1fb",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "d4a7f58d27f0f8804cda3eeca6de51484bcc4a992a897cd0fdcf0bd859224a15",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_one",
+          "theme": "integer-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-b286729026bf7947",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "fee2725fee929a80dfe7e54ccf19e5245cc33f38e4e89f06dbf43d6090623d70",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_two",
+          "theme": "integer-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-f72b51f6b6106a61",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "8977f65f2a7ff54256764119ca007853010bb1b5e4c537f08d4939f7ffbad838",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_two_mul_add_one_pos",
+          "theme": "integer-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-c9a1209c46a7058b",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "4b36e1e13f8964cdbaf287d9ce34333a5cf1abafb4b8f0f32b9635405c1f8f48",
+          "module": "Mathlib.Data.Int.Fib.Basic",
+          "name": "Int.fib_zero",
+          "theme": "integer-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-b7c5d64ddc678ce9",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "744a8bc1bd21d17b686caa1d873be28fa6f3be2349cf0c9cf0bcd07b685f7dd9",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Int.gcd_def",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-4c725f39100b926a",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "5e01872fb1e56814f3dd9da950233727b8fca6a52d162cbf60b0efc30184e424",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Int.gcd_div",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-29d8a4807856ddb4",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "2db608dcf22dbb88c3171454b691618f9167f37b4641516c0221ef8a3b11da96",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Int.gcd_div_gcd_div_gcd",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-fbe0b99ece942a46",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "8533eb82a5787422d65cf777e6eb936a1e196378558b3c42b75df364fb8f606c",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Int.gcd_eq_one_of_gcd_mul_right_eq_one_left",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-bc196822165c7f58",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "a9b1922275735b46eb960c6a7bd92d9e16c57e134a912149f553bf6dc56aa34d",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Int.gcd_eq_one_of_gcd_mul_right_eq_one_right",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-84ffc18b86745c93",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "5b31c5fe59c9091e7a818c107619aeaab51ee0b8ae1ce2d00ebe93a680c96313",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Int.gcd_greatest",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-6e3f7972f13e24f1",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "4b968e4c87be7b59b3fdd49d7057484670c42c90b8735cd5cf0d44786b05559e",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Int.lcm_def",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-7131d99a953dc330",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "d6ff57b6c657a45df706fdb8ace19edd0efc361f90bf12738752577bac79ee76",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.modEq_neg",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-7ea970a1a23d9dcd",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "01d9de39e98bdc65d6f1e9d3aa22574f08ce15fada3fe648e5db7553339a635b",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.modEq_one",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-6e1b2f332b43a55c",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "6bec7847113b4e07e07c3e0cdf56cad7edde8206708ee3d93c204ab0c7caadda",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.mod_modEq",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-77595c4fe0b2aedf",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "5b57a898479edef10ab364272fd51d3c9173f29339f0c24766fcaeccafc7f262",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.modulus_modEq_zero",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-f1ef809f7abb9158",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "f71f00dff9741bcd53b008bbf07545e005fa0cedf60d0f14e6f15305450b846c",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Int.ne_zero_of_gcd",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-af1fb231b4a4420a",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "30d98479baccb9f1e9e01eb5b63eba1acac1690fa75d24d7bfcd243e4f26686f",
+          "module": "Mathlib.Data.Int.ModEq",
+          "name": "Int.neg_modEq_neg",
+          "theme": "integer-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "edges": [
+        {
+          "dependency": "Nat.coprime_two_left",
+          "dependent": "Nat.Coprime.odd_of_left"
+        },
+        {
+          "dependency": "Nat.coprime_two_right",
+          "dependent": "Nat.Coprime.odd_of_right"
+        },
+        {
+          "dependency": "Nat.coprime_two_left",
+          "dependent": "Nat.coprime_two_right"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "ed80ab44a18e719e492d64b8b7e3f47dd652d0343da4f09dc02a51ea6e634298",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.Coprime.odd_of_left",
+          "theme": "natural-primes"
+        },
+        {
+          "candidate_id": "8dc1deccb9d5fd7e99c73fea44daa5b8259bfb86794a9f10d4de45d31fe60d2c",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.Coprime.odd_of_right",
+          "theme": "natural-primes"
+        },
+        {
+          "candidate_id": "1b47e7c4fd27bc3faf442a89853227af1176f8314587022bd83fe310474ee71e",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.coprime_two_left",
+          "theme": "natural-primes"
+        },
+        {
+          "candidate_id": "7c5a185087d336ec6c8a4080c6bba0986e046bc60f1e380864968f155b2b9145",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.coprime_two_right",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-39256e2968b0e1d2",
+      "edges": [
+        {
+          "dependency": "Nat.Coprime.of_dvd_left",
+          "dependent": "Nat.Coprime.of_dvd"
+        },
+        {
+          "dependency": "Nat.Coprime.of_dvd_right",
+          "dependent": "Nat.Coprime.of_dvd"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "18fcd09f980e8a0885770a1ceb99cdce603312683cca8b05913699b6f98edaaf",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.Coprime.of_dvd",
+          "theme": "natural-gcd"
+        },
+        {
+          "candidate_id": "b0e2aa94a53d6b3f5ed4250aac7f082c5796e6ecf493d88e09798c0d1f48929a",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.Coprime.of_dvd_left",
+          "theme": "natural-gcd"
+        },
+        {
+          "candidate_id": "a640bd561c230c3963de1a87c7aa9800396e54be112c22b3da2aa102de98cb67",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.Coprime.of_dvd_right",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-0a92c5444156fa80",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "9b5cfa1236b69c7543180dafa99e395abdaad15cb22de79e771b1be1bf0e5e48",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.Coprime.symmetric",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-3b9de7b385a5a0cb",
+      "edges": [
+        {
+          "dependency": "Nat.dvd_lcm_of_dvd_right",
+          "dependent": "Nat.Dvd.dvd.nat_lcm_left"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "6fdf1c214686be42167a62be2d68b6deb2a0263bb830263c4a587ed48e650952",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.Dvd.dvd.nat_lcm_left",
+          "theme": "natural-gcd"
+        },
+        {
+          "candidate_id": "61a50fc330bdecd49fee7fa92c427be77bd90ed9bede4a2394f571d69550e465",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.dvd_lcm_of_dvd_right",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-3c41a84178f748e7",
+      "edges": [
+        {
+          "dependency": "Nat.dvd_lcm_of_dvd_left",
+          "dependent": "Nat.Dvd.dvd.nat_lcm_right"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "f57eb0b19dbd97d56b253128c85856e632e87eb0eff35ab23e506750e342b30d",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.Dvd.dvd.nat_lcm_right",
+          "theme": "natural-gcd"
+        },
+        {
+          "candidate_id": "141a64bb16ac27edee0324076d95632bea908c1dc16f03b68370d82a874201c5",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.dvd_lcm_of_dvd_left",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "edges": [
+        {
+          "dependency": "Nat.ModEq.rfl",
+          "dependent": "Nat.ModEq.add_left"
+        },
+        {
+          "dependency": "Nat.ModEq.rfl",
+          "dependent": "Nat.ModEq.add_left_cancel'"
+        },
+        {
+          "dependency": "Nat.ModEq.rfl",
+          "dependent": "Nat.ModEq.add_right"
+        },
+        {
+          "dependency": "Nat.ModEq.rfl",
+          "dependent": "Nat.ModEq.add_right_cancel'"
+        },
+        {
+          "dependency": "Nat.ModEq.refl",
+          "dependent": "Nat.ModEq.rfl"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "e83f07008b70f4475e4d856773367b3641a3e79395668d2d2ccaab17e3e3afaf",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.add_left",
+          "theme": "natural-modular-equivalence"
+        },
+        {
+          "candidate_id": "e5287cf694fef43541ad3ee05e735a4fffa09bb73b5ed7fcc15b25fe8b3912b7",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.add_left_cancel'",
+          "theme": "natural-modular-equivalence"
+        },
+        {
+          "candidate_id": "8e2ca0cc8f8d660ff1d16b273b8cf4eed5bcf79c16a57f1034bf05d615e3adc2",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.add_right",
+          "theme": "natural-modular-equivalence"
+        },
+        {
+          "candidate_id": "e871facf4c055e5d259baa4683d8090ae9f66298227160d140ef5d35b166d091",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.add_right_cancel'",
+          "theme": "natural-modular-equivalence"
+        },
+        {
+          "candidate_id": "d870c8f577c49d725fa77c63379998199e5884b0df40a6cea97f766e64710f3a",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.refl",
+          "theme": "natural-modular-equivalence"
+        },
+        {
+          "candidate_id": "323448c03e6778ca5e759409a472a35847339d596923d9c51f91ace3649c8f4f",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.rfl",
+          "theme": "natural-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "edges": [
+        {
+          "dependency": "Nat.ModEq.symm",
+          "dependent": "Nat.ModEq.comm"
+        },
+        {
+          "dependency": "Nat.ModEq.of_dvd",
+          "dependent": "Nat.ModEq.dvd_iff"
+        },
+        {
+          "dependency": "Nat.ModEq.symm",
+          "dependent": "Nat.ModEq.dvd_iff"
+        },
+        {
+          "dependency": "Nat.ModEq.trans",
+          "dependent": "Nat.ModEq.dvd_iff"
+        },
+        {
+          "dependency": "Nat.ModEq.dvd_iff",
+          "dependent": "Nat.ModEq.gcd_eq"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "24b71e7aff48c3e5606850df7fc3dc6f335c2e69e65c59236ced860dfa1f2879",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.comm",
+          "theme": "natural-modular-equivalence"
+        },
+        {
+          "candidate_id": "8f130450413936f02a349991edbad9f1dfe9a9bdb6a12ee681f52448a19e3503",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.dvd_iff",
+          "theme": "natural-modular-equivalence"
+        },
+        {
+          "candidate_id": "5167ff4f082130b5f407c5c354dd8d881de0c0fb2af94d5169c4e1f7cda4e5c5",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.gcd_eq",
+          "theme": "natural-modular-equivalence"
+        },
+        {
+          "candidate_id": "d75cc374332e28a249443dca069254e237537e080a5346e0b6278079bcbb2db5",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.of_dvd",
+          "theme": "natural-modular-equivalence"
+        },
+        {
+          "candidate_id": "0a3d4d18c5d91748fe411abec25ebad3d69cd17a993c0eb86c55c2a0845b621d",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.symm",
+          "theme": "natural-modular-equivalence"
+        },
+        {
+          "candidate_id": "ef9d1c4679752990ea62e021b05febcf315c78dc7e43518591a0ffa8048eefe4",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.trans",
+          "theme": "natural-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-d4e21b6b7acdcecb",
+      "edges": [
+        {
+          "dependency": "Nat.ModEq.of_mul_left",
+          "dependent": "Nat.ModEq.of_mul_right"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "88d20bca2eb876f49675c618b197d1889cc54bc49fe510ae5831c103fbd4e45e",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.of_mul_left",
+          "theme": "natural-modular-equivalence"
+        },
+        {
+          "candidate_id": "43078e1cd27dc88b79223363b6318ac823dc9572060348f64d291ba9c81a7126",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.ModEq.of_mul_right",
+          "theme": "natural-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-7c36b21bbb3a5dae",
+      "edges": [
+        {
+          "dependency": "Nat.coprime_or_dvd_of_prime",
+          "dependent": "Nat.coprime_of_lt_prime"
+        },
+        {
+          "dependency": "Nat.Prime.dvd_iff_not_coprime",
+          "dependent": "Nat.coprime_or_dvd_of_prime"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "77854741e6ec7a1ca838962885772db5d9bd485fbc3e8671ff015e182bb0698f",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.Prime.dvd_iff_not_coprime",
+          "theme": "natural-primes"
+        },
+        {
+          "candidate_id": "1978a91904145501909899abe0e3b993a86dedd7f9958f0a948292f108f56494",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.coprime_of_lt_prime",
+          "theme": "natural-primes"
+        },
+        {
+          "candidate_id": "65f47114f39f7f41ff762df3d8b6a89c99798c921789499cd14493180a2d8f81",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.coprime_or_dvd_of_prime",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-3e9e176afeb222f8",
+      "edges": [
+        {
+          "dependency": "Nat.coprime_primes",
+          "dependent": "Nat.Prime.dvd_mul_of_dvd_ne"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "6c253439629922cd287e053e303275c8a5c49f7a3513fe3f1edfe1cfdbe6fa67",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.Prime.dvd_mul_of_dvd_ne",
+          "theme": "natural-primes"
+        },
+        {
+          "candidate_id": "5769049f396ea56000ae983729e30fd83682d007541087ea32eaa48ffd055b26",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.coprime_primes",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-7f777cc1a0316e33",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "e76f834adbd6510de3f827186cc70114fd9c450226169910a00de93e48988b9f",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.Prime.dvd_of_dvd_pow",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-e4a351263398fa5d",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "d068ec8206aa89e04b99f53ff1d096e17f297257e63005f2ea5c2f22142d7d2e",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.Prime.even_iff",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-7f2909c7d58a9007",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "c069e7864cdf25e1a773eace966ee31123577a3416f407d25a0aa9fe7c60eaa4",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.Prime.five_le_of_ne_two_of_ne_three",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-c3c6c5f60ad0b6b5",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "cb3a915e18b905c53e5828e7c144a696d94b80c8b994bfab7e0d6aa032cacc6c",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.Prime.not_dvd_mul",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-35005e802231af21",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "91e1195f75b045a13a21bcbd6d83b371f7777b13b4a0b46f2b6976ecd597cc8d",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.Prime.odd_of_ne_two",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-f5e0081ba0d3ce13",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "4e67ac4c8eb11ed694a1550bc7eedb858aa1549632b9c1975fca17cef2e8d3b5",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.Prime.pred_pos",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-6fc2be2d83334e77",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "e3b1fba9165406f4177667a54396ad76e1fe8b6ecf32f2b4eafae6c156443a75",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.add_modEq_left",
+          "theme": "natural-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-d2b3ae01ee9a9ed0",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "e2f11f214d4aeebca0e80a01786a464646d668fdbf3a22057d42f8d7b740b379",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.add_modEq_right",
+          "theme": "natural-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-8d01187efd126f0b",
+      "edges": [
+        {
+          "dependency": "Nat.ascFactorial_eq_ascFactorialBinary",
+          "dependent": "Nat.descFactorial_eq_descFactorialBinary"
+        },
+        {
+          "dependency": "Nat.descFactorial_of_lt",
+          "dependent": "Nat.descFactorial_eq_descFactorialBinary"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "977b84c1c776208294f11c74cfddf862c3e3ab3ec2f15551ae5bbfdf6a72ca24",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.ascFactorial_eq_ascFactorialBinary",
+          "theme": "natural-factorial"
+        },
+        {
+          "candidate_id": "055f766354a4257763ef69ab7903f551a3ed0336669c83e10ee1b6f301b9933f",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.descFactorial_eq_descFactorialBinary",
+          "theme": "natural-factorial"
+        },
+        {
+          "candidate_id": "fbcf5d260f4402509e6b9ea03dfa20ceb7c8a1a4e7fe470bff71d94bdf257684",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.descFactorial_of_lt",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-2552fe053a3976ed",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "fd183202d1f2e73c2b941aa17bbfb0d45454e9f644963031e1bac7e5b5e627cd",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.ascFactorial_zero",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "edges": [
+        {
+          "dependency": "Nat.land_bit",
+          "dependent": "Nat.land_assoc"
+        },
+        {
+          "dependency": "Nat.bitwise_bit",
+          "dependent": "Nat.land_bit"
+        },
+        {
+          "dependency": "Nat.bitwise_bit",
+          "dependent": "Nat.ldiff_bit"
+        },
+        {
+          "dependency": "Nat.lor_bit",
+          "dependent": "Nat.lor_assoc"
+        },
+        {
+          "dependency": "Nat.bitwise_bit",
+          "dependent": "Nat.lor_bit"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "696e51cc0291a01c72b9fcb01ade97301d116d251be1b21a5e6d4b7d2b204b95",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.bitwise_bit",
+          "theme": "natural-bitwise"
+        },
+        {
+          "candidate_id": "ad4775b85d11a0201c73fa163b65f2646604b968e1c5cab65dcc25e01811d18a",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.land_assoc",
+          "theme": "natural-bitwise"
+        },
+        {
+          "candidate_id": "b9ab74753cfeef315fb5f80ca218d562bc40ff4b44c17541dc7708d6ef9b9652",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.land_bit",
+          "theme": "natural-bitwise"
+        },
+        {
+          "candidate_id": "6be49bb8659e3582a60200171a15756cca5daee2407ac421e2ad9d3e92f1636f",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.ldiff_bit",
+          "theme": "natural-bitwise"
+        },
+        {
+          "candidate_id": "82c4d0fdb0c05055b66dc5684631c43b2c28a67d89ed48cf31fbb80ee8cf2514",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.lor_assoc",
+          "theme": "natural-bitwise"
+        },
+        {
+          "candidate_id": "a2f98c7ce4f1e5611fe1732e45a0b8a9a51d8d3a840eff68b9cd03440114557b",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.lor_bit",
+          "theme": "natural-bitwise"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-72882823816e8782",
+      "edges": [
+        {
+          "dependency": "Nat.bitwise_swap",
+          "dependent": "Nat.bitwise_comm"
+        },
+        {
+          "dependency": "Nat.bitwise_bit'",
+          "dependent": "Nat.bitwise_swap"
+        },
+        {
+          "dependency": "Nat.bitwise_comm",
+          "dependent": "Nat.land_comm"
+        },
+        {
+          "dependency": "Nat.bitwise_comm",
+          "dependent": "Nat.lor_comm"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "4c4b28a8a424f46d7b4538554e56e793cc70640fd3754826fc989967c3d3c594",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.bitwise_bit'",
+          "theme": "natural-bitwise"
+        },
+        {
+          "candidate_id": "1a273baec70a651fff399923677f2950bc0013d86d778673792256cf4970adb3",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.bitwise_comm",
+          "theme": "natural-bitwise"
+        },
+        {
+          "candidate_id": "7175e90ee55335b1598cf1f3386d0e191c47ca47e0b4a5a4cefbc5f153a1a2c2",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.bitwise_swap",
+          "theme": "natural-bitwise"
+        },
+        {
+          "candidate_id": "7e6ad72e56603f327dfc6f07b994a6013f6963b140a813f58a2e701a7ae125db",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.land_comm",
+          "theme": "natural-bitwise"
+        },
+        {
+          "candidate_id": "2666d7ef4b460ad10de1dd3972c668e8e03215cc86d5f80641e337fff67f082a",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.lor_comm",
+          "theme": "natural-bitwise"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-d88af54e8f3084c6",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "a1dba087370b3642d4f5b01ae7120b5a6e3c374085166c0acf46978c710801be",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.bitwise_zero",
+          "theme": "natural-bitwise"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-abcd38826ef974a2",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "c0c6c9ad49b41ed35d78437499caafb3ff4b07c30dc5970d81ebff8da29228e9",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_eq_fast_choose",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-21034a8981d599dd",
+      "edges": [
+        {
+          "dependency": "Nat.choose_eq_zero_of_lt",
+          "dependent": "Nat.choose_succ_self"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "92ebab29176a487ec2354ff9cdc8c07413772828500715521be92071da921eda",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_eq_zero_of_lt",
+          "theme": "natural-binomial"
+        },
+        {
+          "candidate_id": "e396f6c29e5b0ad50e25f2903013bf9c4305459ecd84a54a91fcc666c75b421d",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_succ_self",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-03318a97f5d9c067",
+      "edges": [
+        {
+          "dependency": "Nat.choose_le_succ",
+          "dependent": "Nat.choose_le_add"
+        },
+        {
+          "dependency": "Nat.choose_le_add",
+          "dependent": "Nat.choose_le_choose"
+        },
+        {
+          "dependency": "Nat.choose_le_choose",
+          "dependent": "Nat.choose_mono"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "9c463139d470b96cbdb89931d243316eaaa11dcc8238f3787e44583b56d4e5ae",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_le_add",
+          "theme": "natural-binomial"
+        },
+        {
+          "candidate_id": "907b5042ba8144b0577187dfd364fff852d356c472eae4be36e8af2f1080f19d",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_le_choose",
+          "theme": "natural-binomial"
+        },
+        {
+          "candidate_id": "62ae968bbd58d7cb2c33295dfc24eeda1d561b24812acac44a168e8f48f7c659",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_le_succ",
+          "theme": "natural-binomial"
+        },
+        {
+          "candidate_id": "a1af9c18b5d3838c60223d7ad9095d6c25263bf4bddc21707e97c841c6c23e32",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_mono",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-784b337733caaefb",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "49c3d3cba0e0248d0225dda4b6ce26544151b83f6238ae6c616d50205ff306d9",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_ne_zero",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-772791fcb89127a3",
+      "edges": [
+        {
+          "dependency": "Nat.choose_zero_right",
+          "dependent": "Nat.choose_one_right"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "7eda8e3925028dd3d1e8175a7a9d8f39d77bc4cd8f39558ad96cf586e53dc89f",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_one_right",
+          "theme": "natural-binomial"
+        },
+        {
+          "candidate_id": "1ed2802ae23837389c3c069622b2524455616ddd6ca680ede254e73019d17428",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_zero_right",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-6f230047ce83981a",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "25bb9fb8deec28ac8bedc77b5c1d6728f98426efdb968d0585ae4aaf6a0387cd",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_self",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-be1c3ada4fef6ea6",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "671856b6da3f9540aedcc05356366b451593b80f771980c3766ef01dc8584ec0",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_succ_succ",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-52448fed5f91002d",
+      "edges": [
+        {
+          "dependency": "Nat.choose_symm_of_eq_add",
+          "dependent": "Nat.choose_symm_add"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "e4b68161fa92d11b5aa63902d4f4eabc5437254aaea2a94bea1cd096b16e9338",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_symm_add",
+          "theme": "natural-binomial"
+        },
+        {
+          "candidate_id": "9b5f9a204da0d4580398e2cc9dfcdc083a11d5a66fdca9c185513dcaeaafb826",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_symm_of_eq_add",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-9556aecf1bb98439",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "62c6520b93397f0445c4be2c2780d27e621e418c10a8963e1b0a6c6426114b69",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.choose_zero_succ",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-0e70ff905b4e67d7",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "44a877711f61cc690f01daf1aebafe80a03133b6914ac9c52b6c2efbfc727090",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.clog_antitone_left",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-67733b1101973f6f",
+      "edges": [
+        {
+          "dependency": "Nat.clog_mono_right",
+          "dependent": "Nat.clog_monotone"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "8d87a410f1642465fdc3b640fab6b5880ca31c24b845c8920fdb7b5cc549d96f",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.clog_mono_right",
+          "theme": "natural-logarithm"
+        },
+        {
+          "candidate_id": "48fe50c6cf120c8ba529d5280631e031d68f4b5cf636b9c23b552603d8d0d3f8",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.clog_monotone",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-1f0eac984fc2e8b7",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "b496af12585d6cf0fbc9944a39bba60e148804cf33a03f3b1cd0aa2817f7e9c6",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.clog_one_left",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-c851a7fdd6dacbde",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "1ce3d52fc3968b3efaefe8ab12b2c5964affb6eae900753ff655f1b07b85bf45",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.clog_one_right",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-7a0f0e674194da44",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "00852cb879b1a68d4fe508636ff271d02fd794ea3ec418df1e3ef44fcc5d9369",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.clog_pos",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-32d9b36c9de57a64",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "1c61a5bffbea7779c7de5701277680a2490685e1ad5ab0e0df06e687750fb2a6",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.clog_zero_left",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-04b5992203855fc2",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "d42d47b166056985990b441fd6f05876a1b116ccde91b0f1733b2af74560811f",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.clog_zero_right",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-dad675b054e7a82a",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "5e93448cb7efe3271a259cd7b9a7eec5bb5fed5716284328ca07d9bd742c68d4",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.coprime_add_self_left",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-0948bc81df7acdcc",
+      "edges": [
+        {
+          "dependency": "Nat.coprime_add_self_right",
+          "dependent": "Nat.coprime_self_add_right"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "c3ed0f45fae21146ff20710f0c9e04409f72447ebecabbecb6bf424f9b4d0cc8",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.coprime_add_self_right",
+          "theme": "natural-gcd"
+        },
+        {
+          "candidate_id": "966e5434f9d2a9262c18538e93bbfedb842912a961ef4104f8db369e90037f84",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.coprime_self_add_right",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-c4d6980fa7b38432",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "0c08eb2599c2d4dbb38da5ca80678233be477d26a52b9066f8a545a0214873eb",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.coprime_iff_isRelPrime",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-eb36cbc0baee7f2c",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "6f65267337688ae678875e9ded4fbbf520f77b1764da141c2cfa8b3165fa66fa",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.coprime_of_dvd'",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-14fb60aba4988f41",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "0f79bdbaaf06310fb0493bc42f5fefb9a8c7f7a3780c6c2ee2d80c6012509632",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.coprime_of_lt_minFac",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-c42a5cca06e73e07",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "45945e80046c24a97c910cc10b6d046edb3796c75d11affb1ac663fdd93d7243",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.coprime_one_left_iff",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-0f5b970407bcc279",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "42fed4ceef6a5c3510b0b2a9521e00e1949dfe120bfeb6773afcbe903f4c5a46",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.coprime_one_right_iff",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-a5e2f0f0fb66e795",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "51351fa1d8fe3b4bfd460ca35ef5dc061ad62a915de04bdcd510bf98effb9966",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.coprime_self_add_left",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-f752f40b1b7067eb",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "2b8cc09ada1346c233d60a5d1707f0042b7c5022fd8aa557653f4a618147f2d6",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.descFactorial_le",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-f495858cd421b817",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "d4856d4a7bed7e0d06c10d21ac5fd101c6d35ec9b7962c00aba90ed9d7d9d508",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.descFactorial_one",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-6d39b59d22fd3649",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "899fc0e0036a387ca7255c1ee78f579acdd02f90219a8100fd1d4f4296e81989",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.descFactorial_self",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-96996505b088b81a",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "966b01df3047db2bf2d2cd2324c5ebdf857b932a6217a25173bb037af3624a5d",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.descFactorial_zero",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-36db9e2cb36c31b5",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "b56f6f7c628422a9652d0fed77f43a77f4733f4430df7a2440670d5a3ee9c61e",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.div_dvd_div_left",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-85cf153fd2a3d00a",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "5898723bd9ee8d316376089469554f7b8b71b9f841533183c498fa15258ba089",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.dvd_of_forall_prime_mul_dvd",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-0f4a2909bae26f91",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "d6b2407c34a5776fbc04aa6e736b2ede2f8f686c5ed16650be76f2a4663faa56",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.dvd_of_lcm_left_dvd",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-22ed23121a880dda",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "61bd1a60e1fddb3ef054b667a755660e25b4ccf554e7d9b0e66f37008f75513a",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.dvd_of_lcm_right_dvd",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-b413bfcde9767d29",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "78a3943287674c96eb0655f361aef7e99fbce3ec6bf30830ba1b1b8d3eb3d3a5",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.even_xor",
+          "theme": "natural-bitwise"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-bfc4303ba1ab035e",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "8bf9ec7ea929b5a79eb9abbf3efa9d36341c7b2cd2b023e6e88146a0acfd182c",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Nat.exists_mul_mod_eq_gcd",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-a39a4e278c870ecd",
+      "edges": [
+        {
+          "dependency": "Nat.sqrt_eq",
+          "dependent": "Nat.exists_mul_self"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "e73ca9fa6f1c175ae389ce46cddbc12cadee177fc6652c4fad3143982c3aa54c",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.exists_mul_self",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "79ae8eaea0b633bc93bed92a04b8beb47426dfeeaac1f898c06eabeb3840feeb",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_eq",
+          "theme": "natural-square-root"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-b92098ec339263f0",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "44a4e6413e9d1fe72ba708b73d6c09b96f4dec3e33dd5ff3bc0a4138fa502c01",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.factorial_dvd_ascFactorial",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-841c7d52cf03e6e4",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "bbf6124feec49e894832be36a58ccd518b88f7feb6865b54af8644ab287a9f7f",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.factorial_dvd_descFactorial",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "edges": [
+        {
+          "dependency": "Nat.factorial_dvd_factorial",
+          "dependent": "Nat.factorial_le"
+        },
+        {
+          "dependency": "Nat.factorial_pos",
+          "dependent": "Nat.factorial_le"
+        },
+        {
+          "dependency": "Nat.factorial_pos",
+          "dependent": "Nat.factorial_ne_zero"
+        },
+        {
+          "dependency": "Nat.factorial_pos",
+          "dependent": "Nat.self_le_factorial"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "e9d148457e2b47199916e6643ee479e69716b546c8d11855374337362653bdf5",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.factorial_dvd_factorial",
+          "theme": "natural-factorial"
+        },
+        {
+          "candidate_id": "d0f4a9124cb1d5bbf5f3a04ce495cd21daec3c3572a38fed4326dd6b75274de1",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.factorial_le",
+          "theme": "natural-factorial"
+        },
+        {
+          "candidate_id": "5fc0b0a1c0b5d98d8f9749f50bcde36729eedb836bb759b870250cd8da7deda0",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.factorial_ne_zero",
+          "theme": "natural-factorial"
+        },
+        {
+          "candidate_id": "f1dd24056996ebd5bb5afc6dd05787d45a5f5b8e741d8439641efe5e2741477d",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.factorial_pos",
+          "theme": "natural-factorial"
+        },
+        {
+          "candidate_id": "cfdffc69a3470b40dec543e5031dcc0555c6997ef76bcaa2d41da99a6c29a980",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.self_le_factorial",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-4f7f93a429b7752d",
+      "edges": [
+        {
+          "dependency": "Nat.one_ascFactorial",
+          "dependent": "Nat.factorial_eq_factorialBinarySplitting"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "587d3fd15273f9d46b321e48a556c152cee3b0f6c84ca42d0ffc5bd616d81b75",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.factorial_eq_factorialBinarySplitting",
+          "theme": "natural-factorial"
+        },
+        {
+          "candidate_id": "8bacb017969f5ab8322dac6470ed9255a35593056452220cff0bfc7fa7c73c77",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.one_ascFactorial",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-2f841ec7bfb62e80",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "d6c2125dd9291fcd4cd02c213da24c16b50bcbae72a9972f08a8079f35788028",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.factorial_lt_of_lt",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-9cf64f2611469e4e",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "92e2a95a5c589b9d185f4f4c7657f54e0a18d74e5144275c9ac932e27a7eeee8",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.factorial_one",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-e12a86f60a56889a",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "b292bf82004cf05b16ac78f08351a7c045fe069f2a88a90ebc691fc6b8e74f98",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.factorial_two",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-aef7730a9d5356bf",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "193c5e67d7056d5591728c17c77e53c747a6f590c4934195a4ff70f244e94c8f",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.factorial_zero",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-61d815b2edf793ed",
+      "edges": [
+        {
+          "dependency": "Nat.fastFib_eq",
+          "dependent": "Nat.fast_fib_eq"
+        },
+        {
+          "dependency": "Nat.fastFib_eq",
+          "dependent": "Nat.fib_eq_fastFib"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "cde11774d34ae861fa354cadc429a3d6a73a39ac4664e4de6dfee840be6bcd78",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fastFib_eq",
+          "theme": "natural-fibonacci"
+        },
+        {
+          "candidate_id": "0bd4469f3ef48a5afe8711de4a03000d11790eae20bddf65ed7d744986e16a47",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fast_fib_eq",
+          "theme": "natural-fibonacci"
+        },
+        {
+          "candidate_id": "a6283a5fb2bfe700ade91444f33805abf64e63a283e65c5371c7de8fa311fdc2",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_eq_fastFib",
+          "theme": "natural-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-e7e80bd79f8762e6",
+      "edges": [
+        {
+          "dependency": "Nat.fib_strictMonoOn",
+          "dependent": "Nat.fib_lt_fib"
+        },
+        {
+          "dependency": "Nat.fib_add_two_strictMono",
+          "dependent": "Nat.fib_strictMonoOn"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "c1e86d4dcbefc7046d1b38928034359aedd358a61bbbda01354918943cef603e",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_add_two_strictMono",
+          "theme": "natural-fibonacci"
+        },
+        {
+          "candidate_id": "3582b881abd3a04dcb9d132d9e7af82c8adf080e90c6d0872bbceb84917b26fe",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_lt_fib",
+          "theme": "natural-fibonacci"
+        },
+        {
+          "candidate_id": "905810a915423881a4111e7bc9fa87e94cd9b4d06e4eb6daacb7df051ccbb85c",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_strictMonoOn",
+          "theme": "natural-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-4ae13ae945c61591",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "61879073cf08ae48481990cf5b91c10e59efc064c4672b116149df5ccc2bb4c1",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_eq_zero",
+          "theme": "natural-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-0d4cc5a4856d45d5",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "fd5c5318289cb4681c8249ded2f84eebd9644de0482fa7de34d26dc4097ca56e",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_one",
+          "theme": "natural-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-d22c0fd2eb74e7fd",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "9e67bd8eb2cb8320d0c52b722551b32cab32271fb53daef1443fbe0d9b1c3917",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_pos",
+          "theme": "natural-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-d633538b9f565fee",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "f28e2801365d319a2d281f4e111d02f59d22f35347249c59c770f754f692b8fa",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_two",
+          "theme": "natural-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-45a43e8c324537a3",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "8f67070f35fb7c482bfd7a2bc0540d5e8c99aa4c112d38757028a1c4dcd56f31",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.fib_zero",
+          "theme": "natural-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-bdd949b7af2ea68c",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "5003b05116ab649c6cc5841d1c78f60f0d122b930c95e74fc66832ade7f582cc",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Nat.gcdA_zero_left",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-7d1474d30dc3b4ac",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "88cc46fbd70b1d702528142195506d7ece031d2fbe91cccda071bde7699c8de4",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Nat.gcdA_zero_right",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-3839f014e21c0695",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "123278abee1f9eab049d48427fd001ab230b2fba126febb5fa8d6f60bfd15070",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Nat.gcdB_zero_left",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-132a7a4ef7338bfc",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "798d200fcb5ccf492493ef1c2fa6b1abe3992ef1f1b77d6450e42d5ad76a4239",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Nat.gcdB_zero_right",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-77912b67b18f2e18",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "0a04214a6f71adea8f9ac7bc8b702e7fd69a136d4776ad60cb7fd3b196be515c",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.gcd_greatest",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-14a4bdea3716db7b",
+      "edges": [
+        {
+          "dependency": "Nat.le_fib_self",
+          "dependent": "Nat.le_fib_add_one"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "5284f0bf7e9f1669ee58f888e197f6061e752c7ec83132b106b456d05e09a51e",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.le_fib_add_one",
+          "theme": "natural-fibonacci"
+        },
+        {
+          "candidate_id": "0cbccb4d6afcca7bc7652c3cdd92524462319b4915cfb20f01029d815e2b6960",
+          "module": "Mathlib.Data.Nat.Fib.Basic",
+          "name": "Nat.le_fib_self",
+          "theme": "natural-fibonacci"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "edges": [
+        {
+          "dependency": "Nat.lt_succ_sqrt",
+          "dependent": "Nat.le_sqrt"
+        },
+        {
+          "dependency": "Nat.sqrt_le",
+          "dependent": "Nat.le_sqrt"
+        },
+        {
+          "dependency": "Nat.le_sqrt",
+          "dependent": "Nat.le_sqrt_of_eq_mul"
+        },
+        {
+          "dependency": "Nat.sqrt_le",
+          "dependent": "Nat.sqrt_le_self"
+        },
+        {
+          "dependency": "Nat.le_sqrt",
+          "dependent": "Nat.sqrt_le_sqrt"
+        },
+        {
+          "dependency": "Nat.sqrt_le",
+          "dependent": "Nat.sqrt_le_sqrt"
+        },
+        {
+          "dependency": "Nat.le_sqrt",
+          "dependent": "Nat.sqrt_pos"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "e6996680e4257ef612d92e577fdb8fb137db1f8e0f98460a408cea756288cf9b",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.le_sqrt",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "503c5afe5afb7b42a1f9277db9f54fdf8769f1825dea5cb054b65146c7d093e2",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.le_sqrt_of_eq_mul",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "39389df2c9454c260a2cc0fb23a201a815899b3e4610c1ded5281baa50241604",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.lt_succ_sqrt",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "7918582bd530b37197b44665eb7aeba473bdac414707320730331ed16274da52",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_le",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "1ed5eb85a339c6b344521b4379eeaf8f1e55bf17f858457e851c37ec2f0928bd",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_le_self",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "6e2bfc47e0d07907202c12fdf1f6cbb5e4dfa6a8713270ab7af2c2bf158ac675",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_le_sqrt",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "f75e5114b17c377f335a0e37329e6ec24b52af0d168b52d8efbc67d8b933c3b0",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_pos",
+          "theme": "natural-square-root"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "edges": [
+        {
+          "dependency": "Nat.sqrt_lt",
+          "dependent": "Nat.le_three_of_sqrt_eq_one"
+        },
+        {
+          "dependency": "Nat.sqrt_lt",
+          "dependent": "Nat.sqrt_eq_zero"
+        },
+        {
+          "dependency": "Nat.sqrt_lt",
+          "dependent": "Nat.sqrt_lt_self"
+        },
+        {
+          "dependency": "Nat.sqrt_lt",
+          "dependent": "Nat.sqrt_succ_le_succ_sqrt"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "0c48a8688c73c0ccc548fe0a20dbe6b8626b5ddac21ceba363195ddd3872b61b",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.le_three_of_sqrt_eq_one",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "53666a3bcc7293f79d85ed9e6604631b95b2098d40cde8d4476043ab0f01b14c",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_eq_zero",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "4909537fde919f3984f4d107fa32d2bd6a57a75321cc183ca2cefc671cfb651d",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_lt",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "ff7a155a2dead2b3adea6b1a989d48528ee514379b4e32e181f8f49d4ecbddc3",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_lt_self",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "6b041183d1f0e04073db03703e39b3b40c3c37e10c1e5b94e539bb54d6cac097",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_succ_le_succ_sqrt",
+          "theme": "natural-square-root"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "edges": [
+        {
+          "dependency": "Nat.log_zero_right",
+          "dependent": "Nat.log2_eq_log_two"
+        },
+        {
+          "dependency": "Nat.log_zero_right",
+          "dependent": "Nat.log_le_clog"
+        },
+        {
+          "dependency": "Nat.log_lt_self",
+          "dependent": "Nat.log_le_self"
+        },
+        {
+          "dependency": "Nat.log_zero_right",
+          "dependent": "Nat.log_le_self"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "28085932cb516a29b52017b38ac8c17d6407c10e9af73e2b4ac222fb150b20d7",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log2_eq_log_two",
+          "theme": "natural-logarithm"
+        },
+        {
+          "candidate_id": "ac8ab2d4cdaa3c594beb63f9fa47338a93e62ab695e5aad04d819ac0453955c3",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log_le_clog",
+          "theme": "natural-logarithm"
+        },
+        {
+          "candidate_id": "da3871722c5cf4e39dca1c65bef8fdda4b35e2942dc02850300642e57907009d",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log_le_self",
+          "theme": "natural-logarithm"
+        },
+        {
+          "candidate_id": "529f89fa444b3e0ad9ca4f2d6e4e9e51dafbcea95543a5f1246777ebd45aca6c",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log_lt_self",
+          "theme": "natural-logarithm"
+        },
+        {
+          "candidate_id": "8ea186db3196eeb36b2eda00477afcd3b468e399a2720f797c7ea50d05315b74",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log_zero_right",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-2a0d26edbcf44a53",
+      "edges": [
+        {
+          "dependency": "Nat.log2_two",
+          "dependent": "Nat.sqrt_two"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "28edb6fccb38160c1cbe626e22e91cc5ad123951daec8e92005fddd6f2bec423",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.log2_two",
+          "theme": "natural-square-root"
+        },
+        {
+          "candidate_id": "1649750411303ab7904c9c815fa30b53c22a688786fc8b2481c14fdd3421db32",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_two",
+          "theme": "natural-square-root"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-9da63bd4e59d00f6",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "20d1326c4ea1e1db1795c76ba60b4f49ea7d913e9dc20a1532d6159f001be89f",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log_antitone_left",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-7d1d4a6a6f597955",
+      "edges": [
+        {
+          "dependency": "Nat.log_monotone",
+          "dependent": "Nat.log_mono_right"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "b8939fee1a8fee139dd44bbed713b1321a43d631a79d67e643c57e2a4cfe081f",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log_mono_right",
+          "theme": "natural-logarithm"
+        },
+        {
+          "candidate_id": "52fad774e583689a2fcda29294b7f9df32bb2c56e22f741c5f3573488ce09821",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log_monotone",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-d48a520ede3cd1e8",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "89eaf42e746bbdc300f01c878838bf9222288d46e1c3767149b172d6a4c6d348",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log_of_lt",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-f9d5f5029ac8431f",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "73efc1193c01022ba05281ca71382aa07b926dc94b7662963dcfe6a2c53a0963",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log_one_left",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-fc2d188b8c710774",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "282332ef1b6fcaefabcf6b031f7af2c064daf3160df3e055b3c065537c486e97",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log_one_right",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-754b540be332facb",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "9ec8541e633661c04d551fbfc1e6e4c5d7b00209961f21f48cc40cecfb4b2c35",
+          "module": "Mathlib.Data.Nat.Log",
+          "name": "Nat.log_zero_left",
+          "theme": "natural-logarithm"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-28d465b4d0fa4c90",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "72f64ab8ced9f2980d6fa9c6a4883d756e92e4ab2ec9d7cd21457b76aafc843d",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.lt_of_testBit",
+          "theme": "natural-bitwise"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-50d3735f1a086e77",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "c43a1e8576d81050cb97c3a46ebd6873d4ad6efb9cdfe21d86938902e88b20f7",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.lt_xor_cases",
+          "theme": "natural-bitwise"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-08ee032d9058b06c",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "516d46e813338e693c7df06e95f462751b0776b883eca197c47e01cebda3bd0c",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.modEq_one",
+          "theme": "natural-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-c0029d24c3bb7a7f",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "ee6bdd417900d6aeafa06c864d6661285e6d088f4fe837d84ac7b7a093b34d1f",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.mod_lcm",
+          "theme": "natural-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-ce4e3e890bcf8f1c",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "436e4c108acfe57f642816e8ef0210c8cac16f8c5a09352fa7ade4a0f38bf08f",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.mod_modEq",
+          "theme": "natural-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-2bd246da70511653",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "fd9af096e593f53c7611e80cbcc66f917f9bf371c1b1b625663eb0805fb832e9",
+          "module": "Mathlib.Data.Nat.ModEq",
+          "name": "Nat.modulus_modEq_zero",
+          "theme": "natural-modular-equivalence"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-3149d7f9cd050cac",
+      "edges": [
+        {
+          "dependency": "Nat.multichoose_zero_right",
+          "dependent": "Nat.multichoose_one"
+        },
+        {
+          "dependency": "Nat.multichoose_zero_right",
+          "dependent": "Nat.multichoose_one_right"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "b210386adc615c2419ee1483634d38daec5d44a5200d175be356e34800d30b36",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.multichoose_one",
+          "theme": "natural-binomial"
+        },
+        {
+          "candidate_id": "7755072d622a8a122d427cc3dc3b8efc2ef70bcf7ea00a1c3f14fddb2b90039e",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.multichoose_one_right",
+          "theme": "natural-binomial"
+        },
+        {
+          "candidate_id": "6ef827c819dea62366707e76432ef4f2b1c3c51e74bc3935c8b0ace8fb1ac72c",
+          "module": "Mathlib.Data.Nat.Choose.Basic",
+          "name": "Nat.multichoose_zero_right",
+          "theme": "natural-binomial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-429ffadfbb38d5ea",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "6c4e8dd8ac6ec23fed0818ef4603f5d57d730d318b2d67453ee37c0fe7493979",
+          "module": "Mathlib.Data.Nat.GCD.Basic",
+          "name": "Nat.not_coprime_zero_zero",
+          "theme": "natural-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-ec11d4735cad89fd",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "4ff592c092c654fe2f21296a5dd75e0fe9dff85ee835c9af90083067a2ce7711",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.not_prime_of_dvd_of_ne",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-223932c3fc921072",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "13393d616366248bbfcf95ea97df2cd709f3550ed3a519fe7ffc909109fbf7b4",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt.iter_sq_le",
+          "theme": "natural-square-root"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-3625c080cb3916be",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "c036815bf26647445e2a40c4ef070feec6b742e39e53f12affae970e0a3b1d9f",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_eq'",
+          "theme": "natural-square-root"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-33a77d5f86129f5f",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "689a74bbe3c42a110100542e6f59eb78cb5d7a2e5e433f3bcd067216b0b3cfca",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_one",
+          "theme": "natural-square-root"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-4a570e16b8fd238e",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "4e82ae912a206dd301f13dba80d46727e41d50150b9a7009182b8952510430fb",
+          "module": "Mathlib.Data.Nat.Sqrt",
+          "name": "Nat.sqrt_zero",
+          "theme": "natural-square-root"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-5d1003a0d2494aec",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "4feb123fa2b8eac63b17159a0ea8b9b07ae2de176781fa489f6f62cbff2d973e",
+          "module": "Mathlib.Data.Nat.Prime.Basic",
+          "name": "Nat.succ_pred_prime",
+          "theme": "natural-primes"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-68252a7d4d8c1329",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "ffa0739247e90fc8c54b534b8ae553118d743abbd45dfa4c5dcd87d21420ffe8",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.testBit_eq_inth",
+          "theme": "natural-bitwise"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-a88e55a985ea72d4",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "dfef7ca4455f9c12046d19d789b791c06eee60ed5e788d9d1e8b5ce2c0ed88f3",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.testBit_land",
+          "theme": "natural-bitwise"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-06206e0a59d7c3da",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "16f94162b3b2e04d79ed77848c1474408c53a111211eb1e7f22b6506a92bca22",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.testBit_ldiff",
+          "theme": "natural-bitwise"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-11da32849191a5ae",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "7644e067bf3f50a6dfa794a875f3a0e3829981117e592cea99f87bcf3e339f0e",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.testBit_lor",
+          "theme": "natural-bitwise"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-ebe2daeab5608147",
+      "edges": [
+        {
+          "dependency": "Nat.xgcdAux_fst",
+          "dependent": "Nat.xgcdAux_val"
+        }
+      ],
+      "members": [
+        {
+          "candidate_id": "276e8c3b5c505c945a01a09b73a479980269fd46c97f57a15246d7f8254131b2",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Nat.xgcdAux_fst",
+          "theme": "integer-gcd"
+        },
+        {
+          "candidate_id": "4910b90c323ab459ef5b8463cd5559a4e4a883116712d83ab403e5aa120383f2",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Nat.xgcdAux_val",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-125d95291d60c67f",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "c1d708954c8fef8ec7605664f421a44c275fd6966787552636d27b931e2c14be",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Nat.xgcd_val",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-01799845fe88d7b8",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "6caf85d087ebb23d61ef38df7ce0cd3115422b972166dbbcf156d6ab46ffbc98",
+          "module": "Mathlib.Data.Int.GCD",
+          "name": "Nat.xgcd_zero_left",
+          "theme": "integer-gcd"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-d666bed9b70442ab",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "af4fcdca34030261f41321d9911288c92cf8fcb6c140907a91d0dfdf53215071",
+          "module": "Mathlib.Data.Nat.Factorial.Basic",
+          "name": "Nat.zero_ascFactorial",
+          "theme": "natural-factorial"
+        }
+      ]
+    },
+    {
+      "component_id": "mathlib-v4.30.0-3c547df4c5be18f3",
+      "edges": [],
+      "members": [
+        {
+          "candidate_id": "e244c9a1a30e936d1fb8468eb6642f29bfffca1b6ce0235b810b042052e76d14",
+          "module": "Mathlib.Data.Nat.Bitwise",
+          "name": "Nat.zero_of_testBit_eq_false",
+          "theme": "natural-bitwise"
+        }
+      ]
+    }
+  ],
+  "components_sha256": "79e40b9ee1a6a57a2d511fd63dbb998d12fc325994fff069018162c54e8a5d4c",
+  "coverage": {
+    "candidate_count": 240,
+    "candidate_rows_found": 240,
+    "component_count": 146,
+    "component_size_counts": {
+      "1": 108,
+      "2": 16,
+      "3": 8,
+      "4": 3,
+      "5": 6,
+      "6": 3,
+      "7": 1,
+      "9": 1
+    },
+    "cross_module_edges": 2,
+    "cross_theme_edges": 2,
+    "direct_edges": 95,
+    "isolated_candidates": 108,
+    "largest_component": 9,
+    "nodes_with_dependencies_in_population": 84
+  },
+  "dependency_manifest_sha256": "25dd39ea7efe95308acbcf741bfd8cb4494d74e3877def733a90ec61d31be66f",
+  "edge_semantics": "dependent-directly-uses-dependency; both endpoints are candidates",
+  "kind": "axeyum-autogenesis-mathlib-candidate-dependency-components",
+  "limitations": [
+    "direct proof dependencies outside the 240-candidate population are intentionally projected away",
+    "a missing candidate-to-candidate edge can still reflect an extractor or upstream representation limitation",
+    "component membership prevents direct dependency leakage but does not replace family, proof-shape, mutation, or longitudinal controls",
+    "dependency metadata grants no Axeyum route, outcome, proof-plan, or construction credit",
+    "this artifact does not assign train, development, or held-out membership"
+  ],
+  "schema_version": 1,
+  "state": "dependency-metadata-not-frozen-split"
+}

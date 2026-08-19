@@ -12,7 +12,7 @@ comparison exactly as a rise does. Converting those 28 would change no bit:
 does, and the only preludes any fact names (`nat` 23, `integer` 6, `logic` 2)
 already measure 0, the floor.
 
-The real gap was coverage. `creal` (ADR-0483) and `complex` (ADR-0479) were in
+The real gap was coverage. `creal` (ADR-0512) and `complex` (ADR-0508) were in
 **no** measurement the ledger consumed — they need `--include-constructed`, and
 the coverage command did not pass it — so their counts could move either way
 unobserved; `rat` was measured but missing from `EXPECTED_PRELUDES`. All three

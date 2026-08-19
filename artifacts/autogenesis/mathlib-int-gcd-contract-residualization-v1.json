@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-contract-residualization",
+  "state": "mechanism-control-no-contract-proof-or-ledger-credit",
+  "tooling_commit": "7cbd8548dead677dbddcb34153f32f4a07b1c9b3",
+  "tooling_file": {
+    "path": "crates/axeyum-lean-import/examples/int_gcd_contract_residualization.rs",
+    "sha256": "d830cee3785ea5d47452a9f844cb887b7827d88a5de0b803243382af8256ba18"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/contract-residualization/7cbd8548d-int-gcd-r018-v1",
+    "file": "observation.json",
+    "bytes": 3642,
+    "mode": "0444",
+    "file_sha256": "ebbebfc1d4670903c56258c8c2cb5d20acdd0593e477e6af57a6f826e939f2db",
+    "observation_sha256": "af928f24ea7dae4420ea1d4aece3c172589529d23ea8936c3456ccb70515f303"
+  },
+  "result": {
+    "source": "Int.gcd",
+    "source_content_sha256": "1b4460e69780e5080a107bc178b77ffe064585b9712c5f7468a80c02cdee0655",
+    "residual": "Nat.gcd",
+    "retained": ["Int", "Int.natAbs"],
+    "function_arity": 2,
+    "contract_binders": 2,
+    "source_witness_axioms": 0,
+    "source_witness_direct_theorems": 0,
+    "source_witness_transitive_theorems": 52,
+    "specialization_verified": true,
+    "receipt_eligible": false
+  },
+  "verification": "python3 scripts/check-autogenesis-int-gcd-contract-residualization.py",
+  "limitations": "Residualization and exact specialization pass. The source witness is not receipt-eligible because its complete declaration closure contains 52 upstream theorems even though its direct theorem count is zero. No target, contract, proof, held-out, or ledger credit is granted."
+}

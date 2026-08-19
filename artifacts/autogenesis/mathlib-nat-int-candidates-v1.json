@@ -1,0 +1,3984 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "ffb3c5c17dc7c959683db74e36a55945012451c4e8372053de50d8d7721e1de9",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_dvd",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 870
+      },
+      "source_row_sha256": "18b291ba59660dbdefb61179ec5ace9284cb45403ac3a56de3679820d42380a5",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 (m n : \u2124), m \u2223 n \u2192 Int.fib m \u2223 Int.fib n",
+      "type_repr_sha256": "4d9945b4f2c5c9c56732c3253ecd44dcf7974831615a64db8349b416d78f2798"
+    },
+    {
+      "candidate_id": "d4a7f58d27f0f8804cda3eeca6de51484bcc4a992a897cd0fdcf0bd859224a15",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_one",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 757
+      },
+      "source_row_sha256": "72d30ee05721763b32bc5860026b13f7f44baa437630867852e8a3c515e12de6",
+      "theme": "integer-fibonacci",
+      "type": "Int.fib 1 = 1",
+      "type_repr_sha256": "1d97e1bfcae0454c0efb819a24fa7dfe6179563e71094a9ac2f0aaee53c9ce3b"
+    },
+    {
+      "candidate_id": "fee2725fee929a80dfe7e54ccf19e5245cc33f38e4e89f06dbf43d6090623d70",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_two",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 757
+      },
+      "source_row_sha256": "0c3d8c545ded20a23578dabd6bd8aeabbe1e624a26b7bcd18ab1a0ffe1a4db93",
+      "theme": "integer-fibonacci",
+      "type": "Int.fib 2 = 1",
+      "type_repr_sha256": "7e837376ba35f001f730d61564ff4df7b1854824547b847394585e66f5a3d1d7"
+    },
+    {
+      "candidate_id": "4b36e1e13f8964cdbaf287d9ce34333a5cf1abafb4b8f0f32b9635405c1f8f48",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_zero",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 757
+      },
+      "source_row_sha256": "7d3900e939db136849e6dac39d2136e12f0c708399d33221ffde934b0f8a29dc",
+      "theme": "integer-fibonacci",
+      "type": "Int.fib 0 = 0",
+      "type_repr_sha256": "1c4dba3d01ff1ac6bd9bac35ef27322fb58908e13e277562c9a0bd1de8a3e882"
+    },
+    {
+      "candidate_id": "73bdafc25249002c7fb1f63f78672a8a25081bc2c495e0209fdd37c8c6de6388",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.gcd_fib",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 705
+      },
+      "source_row_sha256": "9cda175823479178b35bd575551c131666728e5acb09da2c40f8150e3ca933f5",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 (m n : \u2124), (Int.fib m).gcd (Int.fib n) = Nat.fib (m.gcd n)",
+      "type_repr_sha256": "784e21b30ce753c729db4a32991635d600c483f10801c6d044fb4c6be4199b7c"
+    },
+    {
+      "candidate_id": "3a8bfdece32a55f4a31f7d2068d5cf3c280e9984839109a5f5f3176581ab0fe2",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_gcd",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1111
+      },
+      "source_row_sha256": "dd0b4951a8c0cf5dfde9b614f7418b0e30b84f4bcf02e328d9d1c3caaa9e4866",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 (m n : \u2124), Int.fib \u2191(m.gcd n) = \u2191((Int.fib m).gcd (Int.fib n))",
+      "type_repr_sha256": "129683305485a6a2d12a11152a96463233c733aa1e767f1835225bc209c47284"
+    },
+    {
+      "candidate_id": "8193c7cb68729d02f7d739b77b78990c65e9fef54686f0e489544890f71601f9",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_eq_zero",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1153
+      },
+      "source_row_sha256": "3aae6097293551e2272035df48b6d1d1c792e8ef6ad58f2ae5e943341067ac2f",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 {n : \u2124}, Int.fib n = 0 \u2194 n = 0",
+      "type_repr_sha256": "10239918c7261921a9c7e80b6a9fcde854d5bab140e0a38f24e3d1478d8a3680"
+    },
+    {
+      "candidate_id": "d5886be47e8fce0ae39517f183c799339f5ef214c606b980905fc80bae576971",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_natCast",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 764
+      },
+      "source_row_sha256": "f3681ac246e0d17dc9e836fe964409c9534f8a0e37ed43a1aa5246db525b6f12",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 (n : \u2115), Int.fib \u2191n = \u2191(Nat.fib n)",
+      "type_repr_sha256": "2e59f1a00038d7d78a1c91dfaa94b350c7ad89853b6a9b19569a83c2c277303c"
+    },
+    {
+      "candidate_id": "2d8ff3a2ada0706a10edeaae5f283d2c39621dfcbb9a2fc3a64ec29a3c8a7d18",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_neg_one",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 957
+      },
+      "source_row_sha256": "4bc46e3326db2e88fc087ee4fb03ebbd69d8630f3e5d5e0bf16c9645f45ed76e",
+      "theme": "integer-fibonacci",
+      "type": "Int.fib (-1) = 1",
+      "type_repr_sha256": "1265b1e356630f887b290082f8024ba95a66d09af712e64c258b778adc9f13cd"
+    },
+    {
+      "candidate_id": "d728ce1fbeaee4d8e479bfdf09db3fb61043d2eef39fa2a628f907f333b07b22",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_neg_two",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1141
+      },
+      "source_row_sha256": "e69efc5a0b591c99b95eecafd49822f13628704dd9c17b2aca802420be049f64",
+      "theme": "integer-fibonacci",
+      "type": "Int.fib (-2) = -1",
+      "type_repr_sha256": "f6fb6f1bb7b145358857acc51d8253e441f5193e3f6845cf4bca6107342b70af"
+    },
+    {
+      "candidate_id": "739358dd0577c0112e426774eac649b33bb4b5c0bfcbebd5e4c3b3e4d552356b",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_add_two",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 2824
+      },
+      "source_row_sha256": "9c7a6bea92f60f6211fc08d57f4cccc5aa6728ca84a27083ff01c7bca9fe192b",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 (n : \u2124), Int.fib (n + 2) = Int.fib n + Int.fib (n + 1)",
+      "type_repr_sha256": "12be5dac9f04c1401d2dd0b444002fe06c15252656d80f50f726202debdd1a56"
+    },
+    {
+      "candidate_id": "6656049505ef0ffef5fbaa10ceb49cd9239ea4801e8165ea8329c0c257dac024",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_of_odd",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 9,
+        "type_repr_bytes": 900
+      },
+      "source_row_sha256": "fc531fa8dd09a8eb1256fbb4bc1fc2f9409d3f4e8b32de4c2ad94b1ab40bd50b",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 {n : \u2124}, Odd n \u2192 Int.fib n = \u2191(Nat.fib n.natAbs)",
+      "type_repr_sha256": "bfe045e78107eb676a2b7756e2289e9f4bcd082913f81250eda13895d0206481"
+    },
+    {
+      "candidate_id": "b4021d37220e00caf34f69e036adf61eb1990782a35e5ba4dcd2df7293d55dda",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_neg",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 9,
+        "type_repr_bytes": 1392
+      },
+      "source_row_sha256": "ba0984714644d3eb0fb540de0959053941f0ae3b10bd3307fc46c15b8ad37c86",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 (n : \u2124), Int.fib (-n) = if Even n then -Int.fib n else Int.fib n",
+      "type_repr_sha256": "01a8c6224b47df17cbfe1e4539328af7b5c5ad8c163862bab42afaad621bfcd1"
+    },
+    {
+      "candidate_id": "438018c529fdedaf379e38d8a43b18801baf9f3b7b3abaa1773bbb59f9a679f9",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_of_nonneg",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 11,
+        "type_repr_bytes": 1229
+      },
+      "source_row_sha256": "37ef6cfd81f70b4dfaf637a7b7eef75a1a76d3205e5d48174b11253e701b9fdd",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 {n : \u2124}, 0 \u2264 n \u2192 Int.fib n = \u2191(Nat.fib n.toNat)",
+      "type_repr_sha256": "55a2d2b544c378397ab7a650e7063b520270f72686e350769a2ba6ebf6776068"
+    },
+    {
+      "candidate_id": "33f1b748eeb0ffed033873eb490eaa1c9c31956a8b6d38e5d160d1d0bff3ca95",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_add_one",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 11,
+        "type_repr_bytes": 2864
+      },
+      "source_row_sha256": "b044f0fb3f12cb542e26c14d9113ad9f3adb353eb38c0bf7718af7bfe33a5b84",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 (n : \u2124), Int.fib (n + 1) = Int.fib (n + 2) - Int.fib n",
+      "type_repr_sha256": "e4597b3606f7466f6bc52c074dc4b7b288c8cdc4f0d7e1a4dbfec2f7c9302ee6"
+    },
+    {
+      "candidate_id": "0dab3f6d41c76602ca2d34391f6c82ea3ab36d18f5f18faf29c6933e252fc30c",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_eq_fib_add_two_sub_fib_add_one",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 11,
+        "type_repr_bytes": 2864
+      },
+      "source_row_sha256": "a4cb649215af0946a3e77992bea1eed7013563bcffa6372cbc09eb0f5727e351",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 (n : \u2124), Int.fib n = Int.fib (n + 2) - Int.fib (n + 1)",
+      "type_repr_sha256": "a8074a0e0db8f31dbf05efabfc3810cb271dbdba99034906abd1666e6af7ce54"
+    },
+    {
+      "candidate_id": "0ba4a94838c54e185fba05017c9bb220ee402f6933768bdb4cdf7f912c53ef1f",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_two_mul_add_two",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 11,
+        "type_repr_bytes": 6410
+      },
+      "source_row_sha256": "6c2326b27e8b220cba380b89b767028376e710293aa292404e16ab2d1c125e13",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 (n : \u2124), Int.fib (2 * n + 2) = Int.fib (n + 1) * (2 * Int.fib n + Int.fib (n + 1))",
+      "type_repr_sha256": "b471e81c0d50cc37b2699dbdaa5367c828cccfa070adf54606a84678c1b60d0a"
+    },
+    {
+      "candidate_id": "8977f65f2a7ff54256764119ca007853010bb1b5e4c537f08d4939f7ffbad838",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_two_mul_add_one_pos",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 12,
+        "type_repr_bytes": 2474
+      },
+      "source_row_sha256": "7f52843a803e3145775d79c59ff72b1bf1d6df25dd25be36194e422d4bfff056",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 {n : \u2124}, 0 < Int.fib (2 * n + 1)",
+      "type_repr_sha256": "16105b4967f4f00191c7a3e636cec612117101a514e8bedee68a98b67cc232cb"
+    },
+    {
+      "candidate_id": "0e70f3dd0b5a8b488cf1610d88ca381bf67b2aae393edc06b5c035a33333ad5e",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_two_mul",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 14,
+        "type_repr_bytes": 4546
+      },
+      "source_row_sha256": "d2ccf95ad9e29364fead7dccec0232ed64be7c4a37ea9915a36b5c555ad2b46e",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 (n : \u2124), Int.fib (2 * n) = Int.fib n * (2 * Int.fib (n + 1) - Int.fib n)",
+      "type_repr_sha256": "c93d29a0340d6dbeced069740fab306de2cebe38fb952b8a6618e1f076f1f6d9"
+    },
+    {
+      "candidate_id": "181b6a2cde087fc33e472825f255f915f0080b28ae440c583e0aa02c0a2e69a4",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "name": "Int.fib_add",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 14,
+        "type_repr_bytes": 5231
+      },
+      "source_row_sha256": "73de31d22408fb550eb37d528603e9399a88c9873468343b8cebb9ff657017bd",
+      "theme": "integer-fibonacci",
+      "type": "\u2200 (m n : \u2124), Int.fib (m + n) = Int.fib (m - 1) * Int.fib n + Int.fib m * Int.fib (n + 1)",
+      "type_repr_sha256": "be1bfeab157e08d131aa1ffb86e19e8598f0bcb67c8334cfd99d177fa59cf567"
+    },
+    {
+      "candidate_id": "744a8bc1bd21d17b686caa1d873be28fa6f3be2349cf0c9cf0bcd07b685f7dd9",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_def",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 665
+      },
+      "source_row_sha256": "42730ba0c24f42f5724b151b58988cbc0b5a6bd007652f06162a5ae4a44e31ad",
+      "theme": "integer-gcd",
+      "type": "\u2200 (i j : \u2124), i.gcd j = i.natAbs.gcd j.natAbs",
+      "type_repr_sha256": "504e2f4e1c33650a7a67caea1072c3ee93e762c2087356178258f95454e86555"
+    },
+    {
+      "candidate_id": "4b968e4c87be7b59b3fdd49d7057484670c42c90b8735cd5cf0d44786b05559e",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.lcm_def",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 665
+      },
+      "source_row_sha256": "422851fd3235035d9310039cb53d333f99d87895a4a06116e08f9c3aa6c1218a",
+      "theme": "integer-gcd",
+      "type": "\u2200 (i j : \u2124), i.lcm j = i.natAbs.lcm j.natAbs",
+      "type_repr_sha256": "5e061e1cb7688932af1edbb1dc92f55ecca15fb965170f8b5b48c95642d18dd1"
+    },
+    {
+      "candidate_id": "5003b05116ab649c6cc5841d1c78f60f0d122b930c95e74fc66832ade7f582cc",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.gcdA_zero_left",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 936
+      },
+      "source_row_sha256": "a430598bf28ed74709fa2290570f738ecd15fb729f934666b7217cf4bc626e05",
+      "theme": "integer-gcd",
+      "type": "\u2200 {s : \u2115}, Nat.gcdA 0 s = 0",
+      "type_repr_sha256": "dcc92815c55f0a1b0e2112c824fac9806814ff41da16532b2df66ec93cde627a"
+    },
+    {
+      "candidate_id": "123278abee1f9eab049d48427fd001ab230b2fba126febb5fa8d6f60bfd15070",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.gcdB_zero_left",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 936
+      },
+      "source_row_sha256": "b67bcc1b27cd37bdc9d728f4d2116ecc507ccbccc8523812ca5523d26892190a",
+      "theme": "integer-gcd",
+      "type": "\u2200 {s : \u2115}, Nat.gcdB 0 s = 1",
+      "type_repr_sha256": "286b355bf9d7dfc55e909c9b79f0e6273b15a62a9b52ab19dd004bfe03c9bb78"
+    },
+    {
+      "candidate_id": "276e8c3b5c505c945a01a09b73a479980269fd46c97f57a15246d7f8254131b2",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.xgcdAux_fst",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1885
+      },
+      "source_row_sha256": "ec08367e75e60d6c6ce35c3645e26cd863c2dc52a71822f02b2d3f1b77ceac19",
+      "theme": "integer-gcd",
+      "type": "\u2200 (x y : \u2115) (s t s' t' : \u2124), (x.xgcdAux s t y s' t').1 = x.gcd y",
+      "type_repr_sha256": "d7a1248a14855bd79057b82416b076d40a3dd9d8f2d1d2c09e0106da681bf47f"
+    },
+    {
+      "candidate_id": "c1d708954c8fef8ec7605664f421a44c275fd6966787552636d27b931e2c14be",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.xgcd_val",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1033
+      },
+      "source_row_sha256": "c5c37d3cace9a55227b97e589b0436080823e8185fe9791c4126e5f7e1547328",
+      "theme": "integer-gcd",
+      "type": "\u2200 (x y : \u2115), x.xgcd y = (x.gcdA y, x.gcdB y)",
+      "type_repr_sha256": "17791b9c4a2d56e129e1509ad1c180f84ed446928a82605be009ea062ab34f53"
+    },
+    {
+      "candidate_id": "88cc46fbd70b1d702528142195506d7ece031d2fbe91cccda071bde7699c8de4",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.gcdA_zero_right",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1470
+      },
+      "source_row_sha256": "a8b40e53b16f6b3435410d5a8a358481340629a22476ec22ae7d2dcc679c22e3",
+      "theme": "integer-gcd",
+      "type": "\u2200 {s : \u2115}, s \u2260 0 \u2192 s.gcdA 0 = 1",
+      "type_repr_sha256": "15f912f76892b2fb1695243df6f9445c92178594ef926fa0a7ab1cc4ec4ae5ef"
+    },
+    {
+      "candidate_id": "798d200fcb5ccf492493ef1c2fa6b1abe3992ef1f1b77d6450e42d5ad76a4239",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.gcdB_zero_right",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1470
+      },
+      "source_row_sha256": "d4c5829e9f18890336acf0b975d08389d56e9c2ed08b44c858d6577f5297a630",
+      "theme": "integer-gcd",
+      "type": "\u2200 {s : \u2115}, s \u2260 0 \u2192 s.gcdB 0 = 0",
+      "type_repr_sha256": "a12aa355cdf1dfb9a22a638fd38da5b5e0000e4ffd0d437806cc56d366181f03"
+    },
+    {
+      "candidate_id": "f71f00dff9741bcd53b008bbf07545e005fa0cedf60d0f14e6f15305450b846c",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.ne_zero_of_gcd",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1918
+      },
+      "source_row_sha256": "9b07eea242f72ec982527760f1afd5e9b8c378e397f89541ae2f13a1d2683f1e",
+      "theme": "integer-gcd",
+      "type": "\u2200 {x y : \u2124}, x.gcd y \u2260 0 \u2192 x \u2260 0 \u2228 y \u2260 0",
+      "type_repr_sha256": "db031753562061cdb904422030092cbc668ea7c8eca7207424234e12f0faa3ac"
+    },
+    {
+      "candidate_id": "6caf85d087ebb23d61ef38df7ce0cd3115422b972166dbbcf156d6ab46ffbc98",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.xgcd_zero_left",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 2731
+      },
+      "source_row_sha256": "c9d9582b1f5520b452a0e1ced9b48981d594e4eb4bd635fc9319c695463f657c",
+      "theme": "integer-gcd",
+      "type": "\u2200 {s t : \u2124} {r' : \u2115} {s' t' : \u2124}, Nat.xgcdAux 0 s t r' s' t' = (r', s', t')",
+      "type_repr_sha256": "a70b29af3a887c34daa05af5d3382a3bfe06d8cb006628204f5c90c295b1b1a5"
+    },
+    {
+      "candidate_id": "4910b90c323ab459ef5b8463cd5559a4e4a883116712d83ab403e5aa120383f2",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.xgcdAux_val",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 10,
+        "type_repr_bytes": 2805
+      },
+      "source_row_sha256": "1f2d328a702b12ebd361cd361737efa60ad176d7eafe9113c40b3279e58d3d8c",
+      "theme": "integer-gcd",
+      "type": "\u2200 (x y : \u2115), x.xgcdAux 1 0 y 0 1 = (x.gcd y, x.xgcd y)",
+      "type_repr_sha256": "a15b2f158a104bbe1e30c8bb6de3671a6dec0ffbe4ff64020ec29ba17e6de5bb"
+    },
+    {
+      "candidate_id": "649e349bc18a5424434e8e8e1322d35fc8417299a72540d70e94c80ca4912d1a",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.dvd_of_dvd_mul_left_of_gcd_one",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 11,
+        "type_repr_bytes": 2268
+      },
+      "source_row_sha256": "c91933a58b57011f9a60584a0c78c5c26a0ed49e4b1b81ccf98cf73057e0efd1",
+      "theme": "integer-gcd",
+      "type": "\u2200 {a b c : \u2124}, a \u2223 b * c \u2192 a.gcd c = 1 \u2192 a \u2223 b",
+      "type_repr_sha256": "ee43b71f0e8f8a1bf1d20065f9c82c3e22b8df58b7fb5c1fb5fbfaed3538715e"
+    },
+    {
+      "candidate_id": "77817ff09968beddb825941c70b2989f54afa65509964c3e3a1ff12eee9db795",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.dvd_of_dvd_mul_right_of_gcd_one",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 11,
+        "type_repr_bytes": 2268
+      },
+      "source_row_sha256": "d4b997ceb2cbca6f10e806eca65398e7afb2e5f3044436f3c601d5ef160e7add",
+      "theme": "integer-gcd",
+      "type": "\u2200 {a b c : \u2124}, a \u2223 b * c \u2192 a.gcd b = 1 \u2192 a \u2223 c",
+      "type_repr_sha256": "37190aa55f4ce27f77e74443ebf90680bd6f7d14e31e2af5d9f3cc44eb270ce4"
+    },
+    {
+      "candidate_id": "8533eb82a5787422d65cf777e6eb936a1e196378558b3c42b75df364fb8f606c",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_eq_one_of_gcd_mul_right_eq_one_left",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 11,
+        "type_repr_bytes": 2981
+      },
+      "source_row_sha256": "7f50772d15764bb35c7e6c37363d834b449004e757a20dc479c592d9861f2a7a",
+      "theme": "integer-gcd",
+      "type": "\u2200 {a : \u2124} {m n : \u2115}, a.gcd (\u2191m * \u2191n) = 1 \u2192 a.gcd \u2191m = 1",
+      "type_repr_sha256": "8fd667b2a8dea0981c14143cc13a5774b034d59b8ba72b5f7a88e37a9f4454f9"
+    },
+    {
+      "candidate_id": "a9b1922275735b46eb960c6a7bd92d9e16c57e134a912149f553bf6dc56aa34d",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_eq_one_of_gcd_mul_right_eq_one_right",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 11,
+        "type_repr_bytes": 2981
+      },
+      "source_row_sha256": "1bc3431e761d67506409f81961645c52b1fd7cec61a27d07d9fceae16a398ea8",
+      "theme": "integer-gcd",
+      "type": "\u2200 {a : \u2124} {m n : \u2115}, a.gcd (\u2191m * \u2191n) = 1 \u2192 a.gcd \u2191n = 1",
+      "type_repr_sha256": "212537d610fb09708c8b3556c80ac67cf183e98cfe410fbee6f01e1a938ac55b"
+    },
+    {
+      "candidate_id": "5e01872fb1e56814f3dd9da950233727b8fca6a52d162cbf60b0efc30184e424",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_div",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 11,
+        "type_repr_bytes": 3696
+      },
+      "source_row_sha256": "ec5f51c562c6971d33fad4530ba6b47b0acd63d6643782a1c682096077004409",
+      "theme": "integer-gcd",
+      "type": "\u2200 {a b c : \u2124}, c \u2223 a \u2192 c \u2223 b \u2192 (a / c).gcd (b / c) = a.gcd b / c.natAbs",
+      "type_repr_sha256": "540dedac418b9875ee831f74fed5bb39885477f9682a5d12d90164210d6a9b28"
+    },
+    {
+      "candidate_id": "5b31c5fe59c9091e7a818c107619aeaab51ee0b8ae1ce2d00ebe93a680c96313",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_greatest",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 11,
+        "type_repr_bytes": 3878
+      },
+      "source_row_sha256": "55c637bf9b0d19c45ee66dd9c4c7935f3056382eeb57f9d2e3111ed34d8f7019",
+      "theme": "integer-gcd",
+      "type": "\u2200 {a b d : \u2124}, 0 \u2264 d \u2192 d \u2223 a \u2192 d \u2223 b \u2192 (\u2200 (e : \u2124), e \u2223 a \u2192 e \u2223 b \u2192 e \u2223 d) \u2192 d = \u2191(a.gcd b)",
+      "type_repr_sha256": "784df8c685d3bea3895d7549b594a2b08d6ed2974330d8ebf2e18cdc5136a675"
+    },
+    {
+      "candidate_id": "63005aef3632a806a1f609ee15a8fe0f3799231388149ed4ded2b91f902c3b25",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_eq_gcd_ab",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 13,
+        "type_repr_bytes": 2687
+      },
+      "source_row_sha256": "f891633531ce88e912a2396229d6256a0310d8d94f5a99efa45823cc05c0aa83",
+      "theme": "integer-gcd",
+      "type": "\u2200 (x y : \u2124), \u2191(x.gcd y) = x * x.gcdA y + y * x.gcdB y",
+      "type_repr_sha256": "39a09c5916fcc660cad633287cd30b94e1883db28ddc70f6fb6c18c979dddcc6"
+    },
+    {
+      "candidate_id": "8bf9ec7ea929b5a79eb9abbf3efa9d36341c7b2cd2b023e6e88146a0acfd182c",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Nat.exists_mul_mod_eq_gcd",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 13,
+        "type_repr_bytes": 3097
+      },
+      "source_row_sha256": "504133721c29d026ea0209c571130adfdc8d3640d1349ed94c51fde887c2e906",
+      "theme": "integer-gcd",
+      "type": "\u2200 {k n : \u2115}, n.gcd k < k \u2192 \u2203 m < k, n * m % k = n.gcd k",
+      "type_repr_sha256": "e115cf7060127febcf995737e88ef32c03b599149e684c7aa045ef74415c6c39"
+    },
+    {
+      "candidate_id": "2db608dcf22dbb88c3171454b691618f9167f37b4641516c0221ef8a3b11da96",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.GCD",
+      "name": "Int.gcd_div_gcd_div_gcd",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 13,
+        "type_repr_bytes": 3503
+      },
+      "source_row_sha256": "094025ed26cb4b65775f6a53fbb676333bc584f173bacddf095211f92d8e9c38",
+      "theme": "integer-gcd",
+      "type": "\u2200 {i j : \u2124}, 0 < i.gcd j \u2192 (i / \u2191(i.gcd j)).gcd (j / \u2191(i.gcd j)) = 1",
+      "type_repr_sha256": "ce99487376bd166d5de5bb24a4e53499e925f0d059bffad3d0f590b46460ba2d"
+    },
+    {
+      "candidate_id": "30e15520fdbbc7b52282d4e43c2062e0216ed017c4f16cdce5c9b6b84236989d",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.refl",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 2,
+        "type_repr_bytes": 321
+      },
+      "source_row_sha256": "e0db1fb269984d01bde05f9cb464a7d89591c4217b5e74f8a360179a74e96641",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n : \u2124} (a : \u2124), a \u2261 a [ZMOD n]",
+      "type_repr_sha256": "174536743d6a9413f2868839ae501e0c6c4b4fcd8fe5afc79dd0e10c358402c0"
+    },
+    {
+      "candidate_id": "39917cf95c0c06b88ae36a1d1eeeb73a0f8a27d788a71b350c56324631ccf98d",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.rfl",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 2,
+        "type_repr_bytes": 322
+      },
+      "source_row_sha256": "56063e7e096df7f0c04e5cc40b8a0ceb3e6278d4e1852f94ae6289a5e130ed45",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a : \u2124}, a \u2261 a [ZMOD n]",
+      "type_repr_sha256": "efeb659d5f6a15e6a770a7bb0328d645cb3d671deac38cc9e7b46bfdfac34f00"
+    },
+    {
+      "candidate_id": "984a6e6752f637b830a90cc8a450550d3b11132f8cdf2b24a9afcefecd131360",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.symm",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 2,
+        "type_repr_bytes": 706
+      },
+      "source_row_sha256": "cbdb6b2e17ac6de138258904b4050f9131e4a1178c6a6e26a201af9e88a2d947",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a b : \u2124}, a \u2261 b [ZMOD n] \u2192 b \u2261 a [ZMOD n]",
+      "type_repr_sha256": "ee8afe7e2f9ab70d64b75d3f11451b3d8647d9d95bb298914d9381bda3ba5089"
+    },
+    {
+      "candidate_id": "6d7863e0d948a224aed30407b4da470b93b744b0dfad14589de71a9b5425901a",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.trans",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 2,
+        "type_repr_bytes": 1134
+      },
+      "source_row_sha256": "6fff73223a5ce74f028b58b3d8aa30b9281dcd5c0535e39905ab7a8b5357b3ed",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a b c : \u2124}, a \u2261 b [ZMOD n] \u2192 b \u2261 c [ZMOD n] \u2192 a \u2261 c [ZMOD n]",
+      "type_repr_sha256": "4758d13fe21951882a3d871bf06d8d2bcb93c1c4a9c07fa5264e96295ca39a22"
+    },
+    {
+      "candidate_id": "1e4bcc078b464b6dc27bfcc755004c7ec9cdd444669327272c39a9cfc755b406",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.modEq_comm",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 3,
+        "type_repr_bytes": 685
+      },
+      "source_row_sha256": "cf69aa081902e977b23b7dc0c432d095de0372b6d48fcd1fa1edc0e6010711ee",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a b : \u2124}, a \u2261 b [ZMOD n] \u2194 b \u2261 a [ZMOD n]",
+      "type_repr_sha256": "8f38acffe13bbb2a2878d8ea04ddc5ff7fca209e4876b33b9a2a9e3ec7b359f2"
+    },
+    {
+      "candidate_id": "5b57a898479edef10ab364272fd51d3c9173f29339f0c24766fcaeccafc7f262",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.modulus_modEq_zero",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 486
+      },
+      "source_row_sha256": "9fc5be1e23cfd4d736ec1be351e390dbc218822164f174a0d65258659613d557",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n : \u2124}, n \u2261 0 [ZMOD n]",
+      "type_repr_sha256": "54806ada26eb07a790f97c75841991a9a104b80b7ffb5d90dcf17e01da6c09c2"
+    },
+    {
+      "candidate_id": "01d9de39e98bdc65d6f1e9d3aa22574f08ce15fada3fe648e5db7553339a635b",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.modEq_one",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 642
+      },
+      "source_row_sha256": "30bd1cc00178ef59916e17b80a7d66d7cef9965824958175070bcb4d29ceb42d",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {a b : \u2124}, a \u2261 b [ZMOD 1]",
+      "type_repr_sha256": "880609470ef33e15cf06e26f467619248d676dc35d903e8571344937803f7922"
+    },
+    {
+      "candidate_id": "f649f6c5278473dd0a67ac1c26bba50da5d98cef10ee23432b599a724199fcab",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.neg",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 1116
+      },
+      "source_row_sha256": "4a7ead4d55793cf723fe1e745b31a86cfc39243c57fe87c672caf6c6a888ff71",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a b : \u2124}, a \u2261 b [ZMOD n] \u2192 -a \u2261 -b [ZMOD n]",
+      "type_repr_sha256": "ba18ad1a2bdfe672a40f48101c9346320c27f4aeb06e9d2eb7bee935d3c43e5f"
+    },
+    {
+      "candidate_id": "b9c41fce3281da41448e50d2831139c472d7f88e8e3b5da3cb02bf85a14e1793",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.of_dvd",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 1188
+      },
+      "source_row_sha256": "d77332091f2a936fd14453a6ddfc39350b3ac15c7341611821881fe13c3971fc",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {m n a b : \u2124}, m \u2223 n \u2192 a \u2261 b [ZMOD n] \u2192 a \u2261 b [ZMOD m]",
+      "type_repr_sha256": "ac27c4194db440413e65fae24b3d66d275911b9e210aa4f2b7b33b95e93af7d8"
+    },
+    {
+      "candidate_id": "6bec7847113b4e07e07c3e0cdf56cad7edde8206708ee3d93c204ab0c7caadda",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.mod_modEq",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 960
+      },
+      "source_row_sha256": "c7bc82c7c8021c67bd191b63aa05cb9601073f275b1be4b9de9603675b91f9be",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 (a n : \u2124), a % n \u2261 a [ZMOD n]",
+      "type_repr_sha256": "b6de4fb0fa5f75fc310f92b8359170ef86ff2e122749ab987a53da5492e1bf56"
+    },
+    {
+      "candidate_id": "ee732b5b39df2bdbd4fbc276d7a6e3e9724015252a6c1afd13421a1bc185632f",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.add_modEq_left",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 962
+      },
+      "source_row_sha256": "4a1c01c044ec6ec760cecd0c72047bd434e7f143660741d9722e0952876bad13",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a : \u2124}, n + a \u2261 a [ZMOD n]",
+      "type_repr_sha256": "1757b9906cdc83befc668c409477f9411b7ae79d7a9a4bfa67f84a2b710b7582"
+    },
+    {
+      "candidate_id": "e58108ee4ccde04b29cb45de86596522ffe2feec955f99243e2b15673568523c",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.add_modEq_right",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 962
+      },
+      "source_row_sha256": "2ff7f9bc0905fc1369648c2fd6aca9eae0a298bef831176f08936f58011bd818",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a : \u2124}, a + n \u2261 a [ZMOD n]",
+      "type_repr_sha256": "a993ef8aa84d1ed5f83e3078af9d8ec34981ddc2530cca1fdbec2c4f5ab2e8c4"
+    },
+    {
+      "candidate_id": "d6ff57b6c657a45df706fdb8ace19edd0efc361f90bf12738752577bac79ee76",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.modEq_neg",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 977
+      },
+      "source_row_sha256": "87265d3cd6cfdb46cad8f9d777219b78bde64db39deb765ab5ff7c9118fb32db",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a b : \u2124}, a \u2261 b [ZMOD -n] \u2194 a \u2261 b [ZMOD n]",
+      "type_repr_sha256": "dba7aa4b0efffc31e05226e72c82f7dac2f9685c52bbcb02db68a10490f532e4"
+    },
+    {
+      "candidate_id": "3148f130c5632f3f308651f8c0f237aaf4b88dd9649d812525e670cf79d4c9d8",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.modEq_sub",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 1008
+      },
+      "source_row_sha256": "732789eb9ebaae82fa550ff4eccd8102b7155e1950e01b4b0ecfa0eae67156ce",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 (a b : \u2124), a \u2261 b [ZMOD a - b]",
+      "type_repr_sha256": "8f3e3eaa19c8b7aa8e5bbfe0f53b629ba526ec111dad0fb167d4dd72daf69068"
+    },
+    {
+      "candidate_id": "30d98479baccb9f1e9e01eb5b63eba1acac1690fa75d24d7bfcd243e4f26686f",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.neg_modEq_neg",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 1153
+      },
+      "source_row_sha256": "fa8e53a13c85b8bfc47c584368f8477fff5c76b4ca5889bbbc21fa0eb5677aed",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a b : \u2124}, -a \u2261 -b [ZMOD n] \u2194 a \u2261 b [ZMOD n]",
+      "type_repr_sha256": "046fc87be98c8d3cee53527332d5718b84ae955f7a7b1a55e164947c6c4de713"
+    },
+    {
+      "candidate_id": "b7ffeff8240104793a71d9f4c5ace492e6b9cb79a550305b711f7ecf7849c7d6",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.dvd_iff",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 1207
+      },
+      "source_row_sha256": "03e2b8bc2447cde3f2ef1a34d541cd923a312342c0161b42cd5f42495496cfc6",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a b : \u2124}, a \u2261 b [ZMOD n] \u2192 (n \u2223 a \u2194 n \u2223 b)",
+      "type_repr_sha256": "3c7018ab8ab829bbefb864e9a858408dd53dacdf9e0e159775fb87082895ed2e"
+    },
+    {
+      "candidate_id": "c4ccd51e988f3c1d03c1fcdb36d3a5394160d500b11614da99c38c50dc222233",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.of_mul_left",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 1587
+      },
+      "source_row_sha256": "a62a6cb6b33bdb9b7439b4366fde1286831f837b5c23f0ad9ae42f9a97e0e109",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a b : \u2124} (m : \u2124), a \u2261 b [ZMOD m * n] \u2192 a \u2261 b [ZMOD n]",
+      "type_repr_sha256": "5130486e72c58cbca60a8ac1594cfe5dcee01361a3ba611d710ebaa599bb461e"
+    },
+    {
+      "candidate_id": "c92b7bf0289803be4f2c1b4287a89a59ec9721b7acd31980881ec3eb1b9d8d1a",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.of_mul_right",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 1625
+      },
+      "source_row_sha256": "4d301573e13bfb1abb0c4f521daa1dcbfa6e791d1c9d77280402a3642094703d",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a b : \u2124} (m : \u2124), a \u2261 b [ZMOD n * m] \u2192 a \u2261 b [ZMOD n]",
+      "type_repr_sha256": "82ed4d03120f7f3d4461d7dc04116ae3793fdec770feaa853f942ed77102efba"
+    },
+    {
+      "candidate_id": "6e17c69a5219a9aca3d66c83d339fe64edbfa4276280c5e01fa8e8201ffc38c9",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.add_left",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 2207
+      },
+      "source_row_sha256": "a81cc054a9eb6c6d90075f2704c4235836955bd89d5d256a32e847f55642600a",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a b : \u2124} (c : \u2124), a \u2261 b [ZMOD n] \u2192 c + a \u2261 c + b [ZMOD n]",
+      "type_repr_sha256": "9f253dca5a68b301782ca68c756509d2a595c0083dbfd6431cc0a8090af3414f"
+    },
+    {
+      "candidate_id": "062ad5febaa60f88fb0c1ad660f5c979e4b3606838a94476338cdcae7f05f1c3",
+      "domain": "Int",
+      "level_params": [],
+      "module": "Mathlib.Data.Int.ModEq",
+      "name": "Int.ModEq.add_left_cancel'",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 2207
+      },
+      "source_row_sha256": "ac001cec2958ddb7ee1fa96cbc70861b8dd4fb641da11aaa371a3c3b8b8a82ba",
+      "theme": "integer-modular-equivalence",
+      "type": "\u2200 {n a b : \u2124} (c : \u2124), c + a \u2261 c + b [ZMOD n] \u2192 a \u2261 b [ZMOD n]",
+      "type_repr_sha256": "9f2d99acfd40dd9bf932fdf038e4731855767b46e74cab634c55397de1c5f7fa"
+    },
+    {
+      "candidate_id": "1a273baec70a651fff399923677f2950bc0013d86d778673792256cf4970adb3",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.bitwise_comm",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 1692
+      },
+      "source_row_sha256": "e707c700c1b097a67b6419f50fc5467129768e2566b2d4c9f09ce40d1e36cd11",
+      "theme": "natural-bitwise",
+      "type": "\u2200 {f : Bool \u2192 Bool \u2192 Bool}, (\u2200 (b b' : Bool), f b b' = f b' b) \u2192 \u2200 (n m : \u2115), Nat.bitwise f n m = Nat.bitwise f m n",
+      "type_repr_sha256": "ca0eeca118d69b6df717d47147c357bd22f7aaa5ba3ce71be4665c09471ae890"
+    },
+    {
+      "candidate_id": "2666d7ef4b460ad10de1dd3972c668e8e03215cc86d5f80641e337fff67f082a",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.lor_comm",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 1597
+      },
+      "source_row_sha256": "467073bef3f59f8962210e0f562ece291759f3528a386c4a9d07d8d1034f9463",
+      "theme": "natural-bitwise",
+      "type": "\u2200 (n m : \u2115), n ||| m = m ||| n",
+      "type_repr_sha256": "0d6d0b3354e0f54ddb074e328710caff8dbe37fc51a9b2cfb0aa83772f1c96cc"
+    },
+    {
+      "candidate_id": "7e6ad72e56603f327dfc6f07b994a6013f6963b140a813f58a2e701a7ae125db",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.land_comm",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 1607
+      },
+      "source_row_sha256": "e36fa5a6cd398f0e82e6fcddad30b714f8c5defb17635a816a31122d54e2809a",
+      "theme": "natural-bitwise",
+      "type": "\u2200 (n m : \u2115), n &&& m = m &&& n",
+      "type_repr_sha256": "43f4d085a763c72b91dc5df397512722668675320f7b92e3bd8c11927b7aef8c"
+    },
+    {
+      "candidate_id": "7175e90ee55335b1598cf1f3386d0e191c47ca47e0b4a5a4cefbc5f153a1a2c2",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.bitwise_swap",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 2227
+      },
+      "source_row_sha256": "299be99f00cc3ff83df5cd051cbeb3d7883954e973c0b1c42daab81cc5f29055",
+      "theme": "natural-bitwise",
+      "type": "\u2200 {f : Bool \u2192 Bool \u2192 Bool}, Nat.bitwise (Function.swap f) = Function.swap (Nat.bitwise f)",
+      "type_repr_sha256": "0bbbe2a42848303454d8aabdbd7c12a568567c1c2e5af901e0d5920c8c788090"
+    },
+    {
+      "candidate_id": "82c4d0fdb0c05055b66dc5684631c43b2c28a67d89ed48cf31fbb80ee8cf2514",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.lor_assoc",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 3128
+      },
+      "source_row_sha256": "5b7a188932de686065fd71c65774dd9450aa59b2ca4b0712522b735bc33e8121",
+      "theme": "natural-bitwise",
+      "type": "\u2200 (n m k : \u2115), n ||| m ||| k = n ||| (m ||| k)",
+      "type_repr_sha256": "63ce5d11ab3f6d5e252edf65f4242154979d5153b62a8d781a3485dd6661ccfd"
+    },
+    {
+      "candidate_id": "ad4775b85d11a0201c73fa163b65f2646604b968e1c5cab65dcc25e01811d18a",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.land_assoc",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 3148
+      },
+      "source_row_sha256": "cc6626a8063bf2a8ad617fb7abf5e21dc11d0be30e659e1c8738ef5185155607",
+      "theme": "natural-bitwise",
+      "type": "\u2200 (n m k : \u2115), n &&& m &&& k = n &&& (m &&& k)",
+      "type_repr_sha256": "497739ecf8416efec3321d81cb2c83a2d280623596e1feadc8223be88b2d5af2"
+    },
+    {
+      "candidate_id": "a1dba087370b3642d4f5b01ae7120b5a6e3c374085166c0acf46978c710801be",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.bitwise_zero",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1525
+      },
+      "source_row_sha256": "b010a1e47d4d723310e07e1679d9ecb37ebe528f92c9a63c4c78ce079a1deb6f",
+      "theme": "natural-bitwise",
+      "type": "\u2200 {f : Bool \u2192 Bool \u2192 Bool}, Nat.bitwise f 0 0 = 0",
+      "type_repr_sha256": "a0aac4921a01055d220c64085144d6c1c3275f0ee0353339573811abb4fa3511"
+    },
+    {
+      "candidate_id": "ffa0739247e90fc8c54b534b8ae553118d743abbd45dfa4c5dcd87d21420ffe8",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.testBit_eq_inth",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 759
+      },
+      "source_row_sha256": "e3b239879648b3f3f76433944ceb79f117daedaa9599660bc519edb671aeff0f",
+      "theme": "natural-bitwise",
+      "type": "\u2200 (n i : \u2115), n.testBit i = n.bits.getI i",
+      "type_repr_sha256": "46b9fd126b62d0a500fceebede307d4f5d3ce14b5edaf506b6bcf64136fab489"
+    },
+    {
+      "candidate_id": "e244c9a1a30e936d1fb8468eb6642f29bfffca1b6ce0235b810b042052e76d14",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.zero_of_testBit_eq_false",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1020
+      },
+      "source_row_sha256": "7ffcd6a2ced5b9747a4527b3a69ac1a0f7c9a0c74bf5d6c6ee1d975044018f9e",
+      "theme": "natural-bitwise",
+      "type": "\u2200 {n : \u2115}, (\u2200 (i : \u2115), n.testBit i = false) \u2192 n = 0",
+      "type_repr_sha256": "4438f5d0419f14216eccc0ad1720785d645c45d51b38ee35d58823416c938168"
+    },
+    {
+      "candidate_id": "16f94162b3b2e04d79ed77848c1474408c53a111211eb1e7f22b6506a92bca22",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.testBit_ldiff",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1064
+      },
+      "source_row_sha256": "d2b4130127d533e3b36039dbf946b95efdc56b573670f2ba1aa3b03cdded7c25",
+      "theme": "natural-bitwise",
+      "type": "\u2200 (m n k : \u2115), (m.ldiff n).testBit k = (m.testBit k && !n.testBit k)",
+      "type_repr_sha256": "4530db5728cc885bb6b992e849db8f3f7f9100afd522da80cff18f649c85d8ab"
+    },
+    {
+      "candidate_id": "6be49bb8659e3582a60200171a15756cca5daee2407ac421e2ad9d3e92f1636f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.ldiff_bit",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1275
+      },
+      "source_row_sha256": "b7069964c310412a4d546aab3e382d1b6d675bbfe7cc9f495f45bb197e4cc620",
+      "theme": "natural-bitwise",
+      "type": "\u2200 (a : Bool) (m : \u2115) (b : Bool) (n : \u2115), (Nat.bit a m).ldiff (Nat.bit b n) = Nat.bit (a && !b) (m.ldiff n)",
+      "type_repr_sha256": "1d30fa116a3462fd8185c5ba5ecd4a415a56decb0bc53d569b6a40c03e30bf6e"
+    },
+    {
+      "candidate_id": "78a3943287674c96eb0655f361aef7e99fbce3ec6bf30830ba1b1b8d3eb3d3a5",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.even_xor",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1658
+      },
+      "source_row_sha256": "cfdc2ef206d4697ec4b9103204c42ca8455cf067bb10ed45b80e0cd189d5f49e",
+      "theme": "natural-bitwise",
+      "type": "\u2200 {m n : \u2115}, Even (m ^^^ n) \u2194 (Even m \u2194 Even n)",
+      "type_repr_sha256": "afcdcb1dfa02820837e904f6af8a2093350989336361544f7b53568ccf66c494"
+    },
+    {
+      "candidate_id": "c43a1e8576d81050cb97c3a46ebd6873d4ad6efb9cdfe21d86938902e88b20f7",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.lt_xor_cases",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 3439
+      },
+      "source_row_sha256": "ebc8374714ea931d77cecd08c418457ef67a6cb4a056a40673fb7846df45a003",
+      "theme": "natural-bitwise",
+      "type": "\u2200 {a b c : \u2115}, a < b ^^^ c \u2192 a ^^^ c < b \u2228 a ^^^ b < c",
+      "type_repr_sha256": "9ef563850a826f2932d0d4b6932bf85efdab0e130f1a5f935d2c126c67209c0a"
+    },
+    {
+      "candidate_id": "7644e067bf3f50a6dfa794a875f3a0e3829981117e592cea99f87bcf3e339f0e",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.testBit_lor",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1621
+      },
+      "source_row_sha256": "8951cba3cc45292c2496894fd1d8cb7f875abcfce2fc9481687a44148da4afb1",
+      "theme": "natural-bitwise",
+      "type": "\u2200 (m n k : \u2115), (m ||| n).testBit k = (m.testBit k || n.testBit k)",
+      "type_repr_sha256": "0e78b17b1bf00c308ddf9ca7a514060886d3abc992a59b31b76a7f992a0bf0ea"
+    },
+    {
+      "candidate_id": "dfef7ca4455f9c12046d19d789b791c06eee60ed5e788d9d1e8b5ce2c0ed88f3",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.testBit_land",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1627
+      },
+      "source_row_sha256": "d7800253e5f75506866bede79744439195b9b536207bf3ee82911d4ad4d23df1",
+      "theme": "natural-bitwise",
+      "type": "\u2200 (m n k : \u2115), (m &&& n).testBit k = (m.testBit k && n.testBit k)",
+      "type_repr_sha256": "ec767b608f2b1dae07be7f06c851ad0d71c881a0a31bd14aee81ba499e57ed03"
+    },
+    {
+      "candidate_id": "a2f98c7ce4f1e5611fe1732e45a0b8a9a51d8d3a840eff68b9cd03440114557b",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.lor_bit",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 2337
+      },
+      "source_row_sha256": "18d064a04f927ea864fe77ab8005924a526bb5fac63c770f3dcabe1143cabeb1",
+      "theme": "natural-bitwise",
+      "type": "\u2200 (a : Bool) (m : \u2115) (b : Bool) (n : \u2115), Nat.bit a m ||| Nat.bit b n = Nat.bit (a || b) (m ||| n)",
+      "type_repr_sha256": "68385a98d0d9b2ec00d95aa76ff95fd7f5029d47e1ca9617bc3c7f4d72227358"
+    },
+    {
+      "candidate_id": "b9ab74753cfeef315fb5f80ca218d562bc40ff4b44c17541dc7708d6ef9b9652",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.land_bit",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 2348
+      },
+      "source_row_sha256": "6fddff9e3a6c1e8ac2565d108bfa3cf159e887943521b00fb92248f4d5974ad9",
+      "theme": "natural-bitwise",
+      "type": "\u2200 (a : Bool) (m : \u2115) (b : Bool) (n : \u2115), Nat.bit a m &&& Nat.bit b n = Nat.bit (a && b) (m &&& n)",
+      "type_repr_sha256": "10c2ed52f9cd9e2617b1194f03285e5bad916426e755bbd603119b9fd0e06e42"
+    },
+    {
+      "candidate_id": "696e51cc0291a01c72b9fcb01ade97301d116d251be1b21a5e6d4b7d2b204b95",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.bitwise_bit",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 2372
+      },
+      "source_row_sha256": "1ca5f35399349800081262a38f60ad23869be66ed753427fe598ce56c4487857",
+      "theme": "natural-bitwise",
+      "type": "\u2200 {f : Bool \u2192 Bool \u2192 Bool},\n  autoParam (f false false = false) Nat.bitwise_bit._auto_1 \u2192\n    \u2200 (a : Bool) (m : \u2115) (b : Bool) (n : \u2115),\n      Nat.bitwise f (Nat.bit a m) (Nat.bit b n) = Nat.bit (f a b) (Nat.bitwise f m n)",
+      "type_repr_sha256": "86c3ceb26fd6b24a7dc553237f42416c643d988c45633c649454507d0e6a138a"
+    },
+    {
+      "candidate_id": "72f64ab8ced9f2980d6fa9c6a4883d756e92e4ab2ec9d7cd21457b76aafc843d",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.lt_of_testBit",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 2583
+      },
+      "source_row_sha256": "bf35aabde88dbc5917fa6ea39b3c1d5829799f30f99d42d5a67f7b65bfb014ca",
+      "theme": "natural-bitwise",
+      "type": "\u2200 {n m : \u2115} (i : \u2115), n.testBit i = false \u2192 m.testBit i = true \u2192 (\u2200 (j : \u2115), i < j \u2192 n.testBit j = m.testBit j) \u2192 n < m",
+      "type_repr_sha256": "3b9ddb7716dd37a360734959d228143cef1ee3918261ccbf03e8509b2f1ef1f9"
+    },
+    {
+      "candidate_id": "4c4b28a8a424f46d7b4538554e56e793cc70640fd3754826fc989967c3d3c594",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Bitwise",
+      "name": "Nat.bitwise_bit'",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 4017
+      },
+      "source_row_sha256": "ec7e201095d2e86bbe5d204ddb816acb294d4866734304e130eae8156d5db3e0",
+      "theme": "natural-bitwise",
+      "type": "\u2200 {f : Bool \u2192 Bool \u2192 Bool} (a : Bool) (m : \u2115) (b : Bool) (n : \u2115),\n  (m = 0 \u2192 a = true) \u2192\n    (n = 0 \u2192 b = true) \u2192 Nat.bitwise f (Nat.bit a m) (Nat.bit b n) = Nat.bit (f a b) (Nat.bitwise f m n)",
+      "type_repr_sha256": "fce4d1b38f6d0d9c1ecf6fdfe9bfed993b158580f91fa425ece376e183f949bf"
+    },
+    {
+      "candidate_id": "c0c6c9ad49b41ed35d78437499caafb3ff4b07c30dc5970d81ebff8da29228e9",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_eq_fast_choose",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 522
+      },
+      "source_row_sha256": "90f1a3454fb29079ee1b420bae32ad33a031c2598349adf2a91e087b9486e3d8",
+      "theme": "natural-binomial",
+      "type": "Nat.choose = Nat.fast_choose",
+      "type_repr_sha256": "776f139209c6f44871b9a4cc9fcddc186f7a4f92ed5278b41e334c369b68b929"
+    },
+    {
+      "candidate_id": "a1af9c18b5d3838c60223d7ad9095d6c25263bf4bddc21707e97c841c6c23e32",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_mono",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 607
+      },
+      "source_row_sha256": "e0b057241cd5b87c24b07d109a0dab9ea872645547909b34129d90df35e2f22f",
+      "theme": "natural-binomial",
+      "type": "\u2200 (b : \u2115), Monotone fun a => a.choose b",
+      "type_repr_sha256": "e80ace313eb0ff6834e926edda0b80cecd682561edb03697df7da302a39a8e72"
+    },
+    {
+      "candidate_id": "907b5042ba8144b0577187dfd364fff852d356c472eae4be36e8af2f1080f19d",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_le_choose",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 1071
+      },
+      "source_row_sha256": "bbcb67e55b4b8decfd86b64432dbc2f5f519a36bf579db82adf98256bb953290",
+      "theme": "natural-binomial",
+      "type": "\u2200 {a b : \u2115} (c : \u2115), a \u2264 b \u2192 a.choose c \u2264 b.choose c",
+      "type_repr_sha256": "f3613160e931fa423220591040e60c4d2b19b9212199f3f25618d07b101107ef"
+    },
+    {
+      "candidate_id": "44a4e6413e9d1fe72ba708b73d6c09b96f4dec3e33dd5ff3bc0a4138fa502c01",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.factorial_dvd_ascFactorial",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 568
+      },
+      "source_row_sha256": "aaeced262c8b465a1d41c05cc4c8208fbb81c8b59181afaa77a1a783d79e8313",
+      "theme": "natural-binomial",
+      "type": "\u2200 (n k : \u2115), k.factorial \u2223 n.ascFactorial k",
+      "type_repr_sha256": "431218b8a39736d4fefa1dfa4304ccb2278ba4992c72607ccc6c23c51697ca0d"
+    },
+    {
+      "candidate_id": "bbf6124feec49e894832be36a58ccd518b88f7feb6865b54af8644ab287a9f7f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.factorial_dvd_descFactorial",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 569
+      },
+      "source_row_sha256": "bcdf0311c363c358d144d040c0f537bbca6f495b9324fbfd417813a83b29f493",
+      "theme": "natural-binomial",
+      "type": "\u2200 (n k : \u2115), k.factorial \u2223 n.descFactorial k",
+      "type_repr_sha256": "6f105b96073a7dc8bbf21ae771baf63a732592cafab3f0c9369b3af593a24f3e"
+    },
+    {
+      "candidate_id": "25bb9fb8deec28ac8bedc77b5c1d6728f98426efdb968d0585ae4aaf6a0387cd",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_self",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 617
+      },
+      "source_row_sha256": "37a2540ef96cc082af840e71fd08e6b9e250900e45a4a55ead9696bf9656f14e",
+      "theme": "natural-binomial",
+      "type": "\u2200 (n : \u2115), n.choose n = 1",
+      "type_repr_sha256": "e6448ead484c27b26bae91e77e391436ccc38a2ae85eeeff28b8254c723da48e"
+    },
+    {
+      "candidate_id": "7eda8e3925028dd3d1e8175a7a9d8f39d77bc4cd8f39558ad96cf586e53dc89f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_one_right",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 649
+      },
+      "source_row_sha256": "0481e15c3a6e4121c208b4c04a0c7579ed7f9e5979410822c78810ab964d1f54",
+      "theme": "natural-binomial",
+      "type": "\u2200 (n : \u2115), n.choose 1 = n",
+      "type_repr_sha256": "bd2c21de70e4f72f2ad2f37908efc250e71afbbd9c4f94bd4713ef09eb7eab61"
+    },
+    {
+      "candidate_id": "7755072d622a8a122d427cc3dc3b8efc2ef70bcf7ea00a1c3f14fddb2b90039e",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.multichoose_one_right",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 654
+      },
+      "source_row_sha256": "0efcc475841814762554ba4cc7a9a618cd0e2e642020040939172b8244759dd9",
+      "theme": "natural-binomial",
+      "type": "\u2200 (n : \u2115), n.multichoose 1 = n",
+      "type_repr_sha256": "ab42f60147b67f9d8811db8f22f6ca9e069ce5bc4f0116f747873981fc84c992"
+    },
+    {
+      "candidate_id": "62ae968bbd58d7cb2c33295dfc24eeda1d561b24812acac44a168e8f48f7c659",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_le_succ",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 673
+      },
+      "source_row_sha256": "c37723962b04ae508101c81b5a45b1c7b9df80cf7e970153908475a6602083ed",
+      "theme": "natural-binomial",
+      "type": "\u2200 (a c : \u2115), a.choose c \u2264 a.succ.choose c",
+      "type_repr_sha256": "3ae2889a50f7d161410fd2b925a85e8ff5b289720c3219dcbd78ea758650daa4"
+    },
+    {
+      "candidate_id": "1ed2802ae23837389c3c069622b2524455616ddd6ca680ede254e73019d17428",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_zero_right",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 912
+      },
+      "source_row_sha256": "178c3ea4977efb8bad767ba6a0c1ae8ca4d108df821469e880463ba2764eef5e",
+      "theme": "natural-binomial",
+      "type": "\u2200 (n : \u2115), n.choose 0 = 1",
+      "type_repr_sha256": "4a1a26d2cf96d2eb6fa6a69eb7dae0b8500b90c64f4b1ffaa95a7dbf6e8a3438"
+    },
+    {
+      "candidate_id": "6ef827c819dea62366707e76432ef4f2b1c3c51e74bc3935c8b0ace8fb1ac72c",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.multichoose_zero_right",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 917
+      },
+      "source_row_sha256": "7d349b069b333313e2fbedd211f6191588e2a54411bf4f98dff0caea1d8f6932",
+      "theme": "natural-binomial",
+      "type": "\u2200 (n : \u2115), n.multichoose 0 = 1",
+      "type_repr_sha256": "f8173ef40c085b1df5a0dceed61547a71b159b2f101ec7ad888b38a9a3325cf9"
+    },
+    {
+      "candidate_id": "b210386adc615c2419ee1483634d38daec5d44a5200d175be356e34800d30b36",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.multichoose_one",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 945
+      },
+      "source_row_sha256": "8db60a0b638ed3e476bbf005106325d31dd81f50eec18e0954840359f249032e",
+      "theme": "natural-binomial",
+      "type": "\u2200 (k : \u2115), Nat.multichoose 1 k = 1",
+      "type_repr_sha256": "7790411ebfd033baa02a494636de0ad47b30bb3ca2f2c4b5393d1506ecfb10ae"
+    },
+    {
+      "candidate_id": "e396f6c29e5b0ad50e25f2903013bf9c4305459ecd84a54a91fcc666c75b421d",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_succ_self",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 680
+      },
+      "source_row_sha256": "e19b5ac4a2ebe0ba9471af6efe528a4a447bfd8751f52fea5afe845839bd2534",
+      "theme": "natural-binomial",
+      "type": "\u2200 (n : \u2115), n.choose n.succ = 0",
+      "type_repr_sha256": "4cf7220a04fef8f6c0d422f2d9320fc5bef2a540ebe2270bfb29d3fc7d8e277b"
+    },
+    {
+      "candidate_id": "62c6520b93397f0445c4be2c2780d27e621e418c10a8963e1b0a6c6426114b69",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_zero_succ",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 987
+      },
+      "source_row_sha256": "546f1104740dbe4fa9404ab0beabc0387d98393e46e7b44419f58c304a536ee4",
+      "theme": "natural-binomial",
+      "type": "\u2200 (k : \u2115), Nat.choose 0 k.succ = 0",
+      "type_repr_sha256": "a949b8b1235466d8fca334b412be33334b5d17d8f9ddbe7122729fa817321b90"
+    },
+    {
+      "candidate_id": "9b5f9a204da0d4580398e2cc9dfcdc083a11d5a66fdca9c185513dcaeaafb826",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_symm_of_eq_add",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1601
+      },
+      "source_row_sha256": "ab518fc811de45581e01ff3663a51a2a217a1f784a5c7db4ca86b6d576e4dd10",
+      "theme": "natural-binomial",
+      "type": "\u2200 {n a b : \u2115}, n = a + b \u2192 n.choose a = n.choose b",
+      "type_repr_sha256": "a769c45a64df50e9db887c5a80125472f512aff64c9854bc08615052860677ec"
+    },
+    {
+      "candidate_id": "e4b68161fa92d11b5aa63902d4f4eabc5437254aaea2a94bea1cd096b16e9338",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_symm_add",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1949
+      },
+      "source_row_sha256": "4c100bd1c4e649bd236b09ae03ed4eee1e4b70f036f641226b09865012894cc0",
+      "theme": "natural-binomial",
+      "type": "\u2200 {a b : \u2115}, (a + b).choose a = (a + b).choose b",
+      "type_repr_sha256": "77e1c24fa15f60d80927e6cb66c3e001bb3763adc5c2877db70fa7edaab63269"
+    },
+    {
+      "candidate_id": "49c3d3cba0e0248d0225dda4b6ce26544151b83f6238ae6c616d50205ff306d9",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_ne_zero",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1078
+      },
+      "source_row_sha256": "91f10a94134b6313cbcbcbf93fc0c41adbe46f9242eb11d88d233873a1816c35",
+      "theme": "natural-binomial",
+      "type": "\u2200 {n k : \u2115}, k \u2264 n \u2192 n.choose k \u2260 0",
+      "type_repr_sha256": "7435360e3dfd95a3fd42168350553e58f1a2d11fd035e1468036b450fb2d7ab8"
+    },
+    {
+      "candidate_id": "92ebab29176a487ec2354ff9cdc8c07413772828500715521be92071da921eda",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_eq_zero_of_lt",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1116
+      },
+      "source_row_sha256": "61710db3755e2ea0c2ccd7c30d7397d441b767adf914191f5e0f091191c46f87",
+      "theme": "natural-binomial",
+      "type": "\u2200 {n k : \u2115}, n < k \u2192 n.choose k = 0",
+      "type_repr_sha256": "fbe60023a732011a5c59877469fde8917a37f3b9faf41fa799a3c9c29cdf3008"
+    },
+    {
+      "candidate_id": "671856b6da3f9540aedcc05356366b451593b80f771980c3766ef01dc8584ec0",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_succ_succ",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1421
+      },
+      "source_row_sha256": "ea873c69600f59237f08f26f176fb736a98b210addce4888891aaba99216886a",
+      "theme": "natural-binomial",
+      "type": "\u2200 (n k : \u2115), n.succ.choose k.succ = n.choose k + n.choose k.succ",
+      "type_repr_sha256": "9c10a11e03e8e9ed5a5a461b6dd95d577fcd2e6d624fcd5af6784e4107f23a8e"
+    },
+    {
+      "candidate_id": "9c463139d470b96cbdb89931d243316eaaa11dcc8238f3787e44583b56d4e5ae",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose_le_add",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1424
+      },
+      "source_row_sha256": "83576229265f9547217796e24f67fbac2d9812b467cc3bfcbe731f3115061cd9",
+      "theme": "natural-binomial",
+      "type": "\u2200 (a b c : \u2115), a.choose c \u2264 (a + b).choose c",
+      "type_repr_sha256": "9b4340692189d68b36276b5cc648732877a33c2f22184c296ce94f44553ed02e"
+    },
+    {
+      "candidate_id": "cfdffc69a3470b40dec543e5031dcc0555c6997ef76bcaa2d41da99a6c29a980",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.self_le_factorial",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 371
+      },
+      "source_row_sha256": "97741d082f737ea20d568bd52135e8c23ab51f1141c8f68ccaeb82afcbcd9070",
+      "theme": "natural-factorial",
+      "type": "\u2200 (n : \u2115), n \u2264 n.factorial",
+      "type_repr_sha256": "81e4437b191860348b6a1275329e5ed0e7f6994facfbb6d3b81f0c3817b88d95"
+    },
+    {
+      "candidate_id": "587d3fd15273f9d46b321e48a556c152cee3b0f6c84ca42d0ffc5bd616d81b75",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_eq_factorialBinarySplitting",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 385
+      },
+      "source_row_sha256": "64582263b8a7e948e1082d3a6e845d5bf6767b81bb56c487f581d7b2265c31e5",
+      "theme": "natural-factorial",
+      "type": "Nat.factorial = Nat.factorialBinarySplitting",
+      "type_repr_sha256": "1c8e963deaa4e98de01ae684d6ea962e43941488b9558dbef2342cf1e1871e00"
+    },
+    {
+      "candidate_id": "899fc0e0036a387ca7255c1ee78f579acdd02f90219a8100fd1d4f4296e81989",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_self",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 413
+      },
+      "source_row_sha256": "5adf8c13347d6e7584dd6c717de3504a6089780ced79b45758056e33973be1e0",
+      "theme": "natural-factorial",
+      "type": "\u2200 (n : \u2115), n.descFactorial n = n.factorial",
+      "type_repr_sha256": "995ed94165e8526a7e566181e19c3a79ee43c1de450fd0ae923c485c6451d32d"
+    },
+    {
+      "candidate_id": "977b84c1c776208294f11c74cfddf862c3e3ab3ec2f15551ae5bbfdf6a72ca24",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.ascFactorial_eq_ascFactorialBinary",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 497
+      },
+      "source_row_sha256": "1d620615d0ef0cb73b8524775d453d4956cdcc55cc444a138ad66b5619f31d2f",
+      "theme": "natural-factorial",
+      "type": "Nat.ascFactorial = Nat.ascFactorialBinary",
+      "type_repr_sha256": "a990ff07d8f9aad37f06c2005926847b7923f4454998624902952a8e30d2c5bc"
+    },
+    {
+      "candidate_id": "055f766354a4257763ef69ab7903f551a3ed0336669c83e10ee1b6f301b9933f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_eq_descFactorialBinary",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 499
+      },
+      "source_row_sha256": "d1da6839e9b80513f3023a93deccef6a7b9cb27ec6b2b5a35894d4e1e90e1401",
+      "theme": "natural-factorial",
+      "type": "Nat.descFactorial = Nat.descFactorialBinary",
+      "type_repr_sha256": "088e76c152ec8db824a006635cc843d8486e09c3eec4fab53cb635fa1a074324"
+    },
+    {
+      "candidate_id": "d0f4a9124cb1d5bbf5f3a04ce495cd21daec3c3572a38fed4326dd6b75274de1",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_le",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 876
+      },
+      "source_row_sha256": "a6c8b3d7137d0487e12fada8e4e75dd2596895276329d971d9bf4836f4dc777d",
+      "theme": "natural-factorial",
+      "type": "\u2200 {m n : \u2115}, m \u2264 n \u2192 m.factorial \u2264 n.factorial",
+      "type_repr_sha256": "d990e981fe9286c0e205af1726861aac3185d4ee36a6a61ecd95e3858f982167"
+    },
+    {
+      "candidate_id": "2b8cc09ada1346c233d60a5d1707f0042b7c5022fd8aa557653f4a618147f2d6",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_le",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 1113
+      },
+      "source_row_sha256": "2767ef86b1befa36999427264c5eb0ef083e3d926f5284ce9805a700560b28b3",
+      "theme": "natural-factorial",
+      "type": "\u2200 (n : \u2115) {k m : \u2115}, k \u2264 m \u2192 k.descFactorial n \u2264 m.descFactorial n",
+      "type_repr_sha256": "a170d3615faf5ae83fe19d535aa6a5e0a79207c129ce4b0f4e24e6260304f053"
+    },
+    {
+      "candidate_id": "5fc0b0a1c0b5d98d8f9749f50bcde36729eedb836bb759b870250cd8da7deda0",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_ne_zero",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 585
+      },
+      "source_row_sha256": "55bc8cec103750dd189c6c5e09a53c4b17bffaf6c2318fd9878f6070b7e46e46",
+      "theme": "natural-factorial",
+      "type": "\u2200 (n : \u2115), n.factorial \u2260 0",
+      "type_repr_sha256": "f4fb47cda90b310f90c1602a0b5c0641dfe41240d98076b887258a412dd00258"
+    },
+    {
+      "candidate_id": "d4856d4a7bed7e0d06c10d21ac5fd101c6d35ec9b7962c00aba90ed9d7d9d508",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_one",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 656
+      },
+      "source_row_sha256": "7c75a01b458ebd75720af6301cf0c75e7ffd127687d08d35abe7c69f79a7172e",
+      "theme": "natural-factorial",
+      "type": "\u2200 (n : \u2115), n.descFactorial 1 = n",
+      "type_repr_sha256": "4cd7022aa6db75849ab62e1d86a4cc301d1c11da5da2a13d5eeb29492fa8ff4e"
+    },
+    {
+      "candidate_id": "92e2a95a5c589b9d185f4f4c7657f54e0a18d74e5144275c9ac932e27a7eeee8",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_one",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 769
+      },
+      "source_row_sha256": "3527b72010cd2aed543632524c4b015206e592fdc0f65e81ecd3a0ca88795cd6",
+      "theme": "natural-factorial",
+      "type": "Nat.factorial 1 = 1",
+      "type_repr_sha256": "0451180364b83602db1932ffe7eb298822d9dd9e247b0c8e86a66f758d70cf22"
+    },
+    {
+      "candidate_id": "b292bf82004cf05b16ac78f08351a7c045fe069f2a88a90ebc691fc6b8e74f98",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_two",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 769
+      },
+      "source_row_sha256": "e22b88d78543c2e02630b7bcda25608240000c00b93b92d8d3d23ee4f91eb6be",
+      "theme": "natural-factorial",
+      "type": "Nat.factorial 2 = 2",
+      "type_repr_sha256": "5f6b02e8ae542c24d416f1a2596052aba506b69019b4391db212b42e25f1f8e9"
+    },
+    {
+      "candidate_id": "193c5e67d7056d5591728c17c77e53c747a6f590c4934195a4ff70f244e94c8f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_zero",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 769
+      },
+      "source_row_sha256": "24f4ba5bc9ff5751b7d84ea71547a53531bcef6ea370c443d6dc748db6d719f7",
+      "theme": "natural-factorial",
+      "type": "Nat.factorial 0 = 1",
+      "type_repr_sha256": "53f03981a119a569a3b4f1a161d1add65d512a781034782855c06115a0531eb2"
+    },
+    {
+      "candidate_id": "fd183202d1f2e73c2b941aa17bbfb0d45454e9f644963031e1bac7e5b5e627cd",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.ascFactorial_zero",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 918
+      },
+      "source_row_sha256": "0b370b706aadaada67cbef2eec2cd07370b1a1f1b19e5091d0065f0de5405efb",
+      "theme": "natural-factorial",
+      "type": "\u2200 (n : \u2115), n.ascFactorial 0 = 1",
+      "type_repr_sha256": "7c1a1d48963cb679837dd5e92f448d3304a125bb826efc3a68b0a8841d9f2034"
+    },
+    {
+      "candidate_id": "966b01df3047db2bf2d2cd2324c5ebdf857b932a6217a25173bb037af3624a5d",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_zero",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 919
+      },
+      "source_row_sha256": "6289ec3ad44a7128367fd01e8ad0b32a0ad93b664807ca269f7ca3c1afc23110",
+      "theme": "natural-factorial",
+      "type": "\u2200 (n : \u2115), n.descFactorial 0 = 1",
+      "type_repr_sha256": "96ac9dc698b2c022c7703f520807cc482afd767167e68537def1eedbf91027b6"
+    },
+    {
+      "candidate_id": "f1dd24056996ebd5bb5afc6dd05787d45a5f5b8e741d8439641efe5e2741477d",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_pos",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 642
+      },
+      "source_row_sha256": "fc940a11d6209b1b77b3c2066f549c11d50f064b61be884c3c09eefc21c6e27f",
+      "theme": "natural-factorial",
+      "type": "\u2200 (n : \u2115), 0 < n.factorial",
+      "type_repr_sha256": "ce4157d36ce4d0ec80ac1ff5190bffee31022c20803762b744e8a6aa81c0cd0a"
+    },
+    {
+      "candidate_id": "8bacb017969f5ab8322dac6470ed9255a35593056452220cff0bfc7fa7c73c77",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.one_ascFactorial",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 735
+      },
+      "source_row_sha256": "edb5a2aa473e323a7998bdf2e921f395b5be46d678e281979c05ac5bd14b37d1",
+      "theme": "natural-factorial",
+      "type": "\u2200 (k : \u2115), Nat.ascFactorial 1 k = k.factorial",
+      "type_repr_sha256": "a89b8d7f22d99330d629793362218a7bbb4169969d82df1a98e39153fea40497"
+    },
+    {
+      "candidate_id": "e9d148457e2b47199916e6643ee479e69716b546c8d11855374337362653bdf5",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_dvd_factorial",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 880
+      },
+      "source_row_sha256": "e00dece7e43a49eb2064c150cd9e797e0a735158c83a2835b38e409fa0a3128a",
+      "theme": "natural-factorial",
+      "type": "\u2200 {m n : \u2115}, m \u2264 n \u2192 m.factorial \u2223 n.factorial",
+      "type_repr_sha256": "6101ccbf44bfb5cad530dc563e7125aeca1829d473bb4977832ac5fc5ce19f56"
+    },
+    {
+      "candidate_id": "af4fcdca34030261f41321d9911288c92cf8fcb6c140907a91d0dfdf53215071",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.zero_ascFactorial",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 993
+      },
+      "source_row_sha256": "0fc783b6f22da99b369567fde923cd0602712a280ab85de92934801dbab82c0e",
+      "theme": "natural-factorial",
+      "type": "\u2200 (k : \u2115), Nat.ascFactorial 0 k.succ = 0",
+      "type_repr_sha256": "c760d2c8f00cf81eb449ead316f08de73fe8261061253bfb9ce96b2e23b40daa"
+    },
+    {
+      "candidate_id": "d6c2125dd9291fcd4cd02c213da24c16b50bcbae72a9972f08a8079f35788028",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.factorial_lt_of_lt",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1532
+      },
+      "source_row_sha256": "f83e4f1460a0d067e9a167499a8cc1ca3145faddb0a3ad0de5e34e04f2e5f58e",
+      "theme": "natural-factorial",
+      "type": "\u2200 {m n : \u2115}, 0 < n \u2192 n < m \u2192 n.factorial < m.factorial",
+      "type_repr_sha256": "3be675979397a5046fb153975fd13123c783220c9d1d5f71b54d43bd5ce5df2e"
+    },
+    {
+      "candidate_id": "fbcf5d260f4402509e6b9ea03dfa20ceb7c8a1a4e7fe470bff71d94bdf257684",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Factorial.Basic",
+      "name": "Nat.descFactorial_of_lt",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1123
+      },
+      "source_row_sha256": "962603bb34d174a33b6867ed9f7452ab5c40bf90ba49c53b04068328b8421da5",
+      "theme": "natural-factorial",
+      "type": "\u2200 {n k : \u2115}, n < k \u2192 n.descFactorial k = 0",
+      "type_repr_sha256": "eb7f3441309a7a831af167597042b8912d490bb66dee4197543e3569d9fd8f1a"
+    },
+    {
+      "candidate_id": "a6283a5fb2bfe700ade91444f33805abf64e63a283e65c5371c7de8fa311fdc2",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_eq_fastFib",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 292
+      },
+      "source_row_sha256": "bc3fe99aeff34d895b3ea087b313773a3758c00075d8c5803faaa703b5305891",
+      "theme": "natural-fibonacci",
+      "type": "Nat.fib = Nat.fastFib",
+      "type_repr_sha256": "25a2706d3e6cb40e7947d401cc78de916dd33514ea183a8b12f9d6978f686b07"
+    },
+    {
+      "candidate_id": "cc6afe0955d34c964ffabbd0601a085b4f891570ac9847182806875d00869457",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_mono",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 340
+      },
+      "source_row_sha256": "0c30db38a7ef16b76c3c0b643a69047acd40635ba845ba10848ef18276d6e9c2",
+      "theme": "natural-fibonacci",
+      "type": "Monotone Nat.fib",
+      "type_repr_sha256": "045f99b40f66309005ab776d698e480bfe69a4997e08976986e2a17c7f220440"
+    },
+    {
+      "candidate_id": "cde11774d34ae861fa354cadc429a3d6a73a39ac4664e4de6dfee840be6bcd78",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fastFib_eq",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 366
+      },
+      "source_row_sha256": "a15319921e190f7161a27e9cbf6789e75f3670c2f6f62eae330acb6d4bd2c62a",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 (n : \u2115), n.fastFib = Nat.fib n",
+      "type_repr_sha256": "592dae121ed472f3efe7aa4b04b67ad8584ba132d2c7da4db5ccb1e963482554"
+    },
+    {
+      "candidate_id": "0bd4469f3ef48a5afe8711de4a03000d11790eae20bddf65ed7d744986e16a47",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fast_fib_eq",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 366
+      },
+      "source_row_sha256": "cfde3c5adbc3cb8332ef06746ebc941facf667e1484328892a709e9b9e5c15da",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 (n : \u2115), n.fastFib = Nat.fib n",
+      "type_repr_sha256": "592dae121ed472f3efe7aa4b04b67ad8584ba132d2c7da4db5ccb1e963482554"
+    },
+    {
+      "candidate_id": "d1d984076d06443ae897f4a52fb500281df328db088206ce7d99cc17b4234e99",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_gcd",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 705
+      },
+      "source_row_sha256": "b3b9f30274ef4f8168614553cc59732bfbe708ab06ae040c0bec8a6d6e2b6d85",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 (m n : \u2115), Nat.fib (m.gcd n) = (Nat.fib m).gcd (Nat.fib n)",
+      "type_repr_sha256": "7deb86dfc16aa8c7da0e6aaf6e7066e6c7d86cc4c83ae13aaeb71e2ee77b751a"
+    },
+    {
+      "candidate_id": "f80f3de1a7a32485f14b13ff9a1f3b70bcffecc54088063ec44be4479d386582",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_dvd",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 870
+      },
+      "source_row_sha256": "2192efce302089fe48678704788cc41389e64242b6b00bc2e40fa09e36d6271e",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 (m n : \u2115), m \u2223 n \u2192 Nat.fib m \u2223 Nat.fib n",
+      "type_repr_sha256": "9b0b1b8e0663ae1150fa8121f02c6dd59c33f1d8dc290d41482fbf17dc18d22e"
+    },
+    {
+      "candidate_id": "fd5c5318289cb4681c8249ded2f84eebd9644de0482fa7de34d26dc4097ca56e",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_one",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 763
+      },
+      "source_row_sha256": "2f6ae524f358f3656fadc59527c00d040a47fbc9927e06b6bcb789c1e6f720a1",
+      "theme": "natural-fibonacci",
+      "type": "Nat.fib 1 = 1",
+      "type_repr_sha256": "ab8ee892d00f2fa5b0e05c66f2f5e1749ca915a1329dd72d2bce6e7c5c9eeb4e"
+    },
+    {
+      "candidate_id": "f28e2801365d319a2d281f4e111d02f59d22f35347249c59c770f754f692b8fa",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_two",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 763
+      },
+      "source_row_sha256": "3a238ff82da32d29c9b4f86c66f99952e60700e1513382d3ef0d56791e689548",
+      "theme": "natural-fibonacci",
+      "type": "Nat.fib 2 = 1",
+      "type_repr_sha256": "dae1d53bc46ecb3b6ce112c44f391d5a18e6ba589a465f41e8e761f4d859d727"
+    },
+    {
+      "candidate_id": "8f67070f35fb7c482bfd7a2bc0540d5e8c99aa4c112d38757028a1c4dcd56f31",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_zero",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 763
+      },
+      "source_row_sha256": "9d48fb74569d3441fc46937c3b4d222d0ff320b8d3f2d8190920c3285260940a",
+      "theme": "natural-fibonacci",
+      "type": "Nat.fib 0 = 0",
+      "type_repr_sha256": "09595e8870b260a613f91c51172562e3e699565e8eacd9ac4ecf87c628b68d6b"
+    },
+    {
+      "candidate_id": "0cbccb4d6afcca7bc7652c3cdd92524462319b4915cfb20f01029d815e2b6960",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.le_fib_self",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 981
+      },
+      "source_row_sha256": "caa329750b18439a534348ad2c6eafe26bac057549da4b8df11dee42c7a10dde",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 {n : \u2115}, 5 \u2264 n \u2192 n \u2264 Nat.fib n",
+      "type_repr_sha256": "c1fc47f43c825923957a21025c02ee6eb6450e07e43038c79027bebef87599f5"
+    },
+    {
+      "candidate_id": "61879073cf08ae48481990cf5b91c10e59efc064c4672b116149df5ccc2bb4c1",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_eq_zero",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1159
+      },
+      "source_row_sha256": "1aec67aae9a594b577a83369a80977cc85927738c027957bf45533c0358185c5",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 {n : \u2115}, Nat.fib n = 0 \u2194 n = 0",
+      "type_repr_sha256": "0b95a73a5c6d70d7eedc40bad801fdbc1e10f7db64df955999f55063b7b7fb42"
+    },
+    {
+      "candidate_id": "905810a915423881a4111e7bc9fa87e94cd9b4d06e4eb6daacb7df051ccbb85c",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_strictMonoOn",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 840
+      },
+      "source_row_sha256": "02a3374d79e3920687a1e511f7ad5c64419d1b5d877cbc7ee846e39862c66761",
+      "theme": "natural-fibonacci",
+      "type": "StrictMonoOn Nat.fib (Set.Ici 2)",
+      "type_repr_sha256": "ef159142b471eceac17bdff767c8e2ae6bcee15bd393e871474d9f61440a760d"
+    },
+    {
+      "candidate_id": "9e67bd8eb2cb8320d0c52b722551b32cab32271fb53daef1443fbe0d9b1c3917",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_pos",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1285
+      },
+      "source_row_sha256": "2c29358551c2b9f85fbab5ba79b26fcd9b017fb0e2924ea7f8e9591101c68543",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 {n : \u2115}, 0 < Nat.fib n \u2194 0 < n",
+      "type_repr_sha256": "18b2011f6450ba5d196b160796d37bf13b8446c722078e4dfb1189d2c481d0eb"
+    },
+    {
+      "candidate_id": "5a92d5e3a2e1adbd9f94ff325825fa9c3dee0ae5ad082f98754e40f9fc761c70",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.gcd_fib_add_self",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1454
+      },
+      "source_row_sha256": "edd98c29e7c5a496c953b1b04285675df39bd99ed68e586b5fcc0883ed04c347",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 (m n : \u2115), (Nat.fib m).gcd (Nat.fib (n + m)) = (Nat.fib m).gcd (Nat.fib n)",
+      "type_repr_sha256": "875d653994ed2c2c5c49f8deffed02ed742f1397ade2c581fb95b207711ed353"
+    },
+    {
+      "candidate_id": "162fc738bc7bd5f230d26b637e7217a03b67d96663493c6dc75bbc5d5d876933",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_coprime_fib_succ",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1170
+      },
+      "source_row_sha256": "e4c871cdf87e5b797c0da408938c681e7f5467cfbf9abaf2ebb5f7f630f545ab",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 (n : \u2115), (Nat.fib n).Coprime (Nat.fib (n + 1))",
+      "type_repr_sha256": "02d8199306405c955abe2f62b966085dd96b3dd2681213c3fd1c1dc0a9110e20"
+    },
+    {
+      "candidate_id": "b86e0c82f43166a7fdd18a5af326103067c99ac89bb3fe0f989c9d4786460d1c",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_add_two",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 2828
+      },
+      "source_row_sha256": "aa4822367565371aa50c4b791526e7b59d1b17b7842f1aca03afaf2af3e8727c",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 {n : \u2115}, Nat.fib (n + 2) = Nat.fib n + Nat.fib (n + 1)",
+      "type_repr_sha256": "e1abc081d7113555d627e496ae9632433840c3dda18352442fd0e96f25a86f95"
+    },
+    {
+      "candidate_id": "5284f0bf7e9f1669ee58f888e197f6061e752c7ec83132b106b456d05e09a51e",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.le_fib_add_one",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 9,
+        "type_repr_bytes": 1203
+      },
+      "source_row_sha256": "90a9accf86e22167f4c0592e8a0557f4a344413d3192e8ae08ab2310bee6f1c1",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 (n : \u2115), n \u2264 Nat.fib n + 1",
+      "type_repr_sha256": "4cd3609ee46a22e9e831854d85ffb902421acf1d516072b0cebbd31f834bf198"
+    },
+    {
+      "candidate_id": "d1ef4a3d10c2a485bc6b694b32774153785fe50dd3be7172d531f0672cee283a",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_le_fib_succ",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 9,
+        "type_repr_bytes": 1298
+      },
+      "source_row_sha256": "b7db2802016abaee25ef8c6f876d5dd8357c59c0951f194fc56c760aa8cc3015",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 {n : \u2115}, Nat.fib n \u2264 Nat.fib (n + 1)",
+      "type_repr_sha256": "bd76bd50c31d765b5b05a0a74cac2092f50474f56af16916dd52229a63967a2c"
+    },
+    {
+      "candidate_id": "c1e86d4dcbefc7046d1b38928034359aedd358a61bbbda01354918943cef603e",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_add_two_strictMono",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 9,
+        "type_repr_bytes": 1350
+      },
+      "source_row_sha256": "e284f5e8c4d66611315f2d2ce5ba5089b45288ef42c16f6c9d2d46b1a6f0b141",
+      "theme": "natural-fibonacci",
+      "type": "StrictMono fun n => Nat.fib (n + 2)",
+      "type_repr_sha256": "2dd3fdb540e5a04d034850c3eb356ed4714b8d3eab04a2b9ebec535611f8a39d"
+    },
+    {
+      "candidate_id": "3582b881abd3a04dcb9d132d9e7af82c8adf080e90c6d0872bbceb84917b26fe",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "name": "Nat.fib_lt_fib",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 9,
+        "type_repr_bytes": 1525
+      },
+      "source_row_sha256": "8e731ffcf3915524bd06ae45ea22964bca6c9038e9cd6e97c63424337af96e2f",
+      "theme": "natural-fibonacci",
+      "type": "\u2200 {m : \u2115}, 2 \u2264 m \u2192 \u2200 {n : \u2115}, Nat.fib m < Nat.fib n \u2194 m < n",
+      "type_repr_sha256": "aefe6165085c8acf2069d8196eb3081bd3cabcfcaffaee2c7eb416a27b55275a"
+    },
+    {
+      "candidate_id": "9b5cfa1236b69c7543180dafa99e395abdaad15cb22de79e771b1be1bf0e5e48",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Coprime.symmetric",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 3,
+        "type_repr_bytes": 158
+      },
+      "source_row_sha256": "9f7d1400a6f263372dd9bb93d711b93c50d679a39eb9c317669adb4c25271cdf",
+      "theme": "natural-gcd",
+      "type": "Symmetric Nat.Coprime",
+      "type_repr_sha256": "3aebac07d6c88383f903be2f4fa648fce4ad4e67d59eb1f91393f9484b80cd64"
+    },
+    {
+      "candidate_id": "b0e2aa94a53d6b3f5ed4250aac7f082c5796e6ecf493d88e09798c0d1f48929a",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Coprime.of_dvd_left",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 937
+      },
+      "source_row_sha256": "9dea71275447f71432e685b1ff584f951db9fc2c1aa1d48996e75abb0b7d2587",
+      "theme": "natural-gcd",
+      "type": "\u2200 {a\u2081 a\u2082 b : \u2115}, a\u2081 \u2223 a\u2082 \u2192 a\u2082.Coprime b \u2192 a\u2081.Coprime b",
+      "type_repr_sha256": "89cd27ccb10d156781c204b2e9d411e0a690fd58ade11e408ff8dd3487821b49"
+    },
+    {
+      "candidate_id": "a640bd561c230c3963de1a87c7aa9800396e54be112c22b3da2aa102de98cb67",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Coprime.of_dvd_right",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 937
+      },
+      "source_row_sha256": "433dd47c42a7475ff37d6123f5a1b5c28b510334f88ba7af22aaf52553fa2642",
+      "theme": "natural-gcd",
+      "type": "\u2200 {a b\u2081 b\u2082 : \u2115}, b\u2081 \u2223 b\u2082 \u2192 a.Coprime b\u2082 \u2192 a.Coprime b\u2081",
+      "type_repr_sha256": "9d68746bf91a58088406bf77b1a197334ba67858928b86b27adf61bafed0a618"
+    },
+    {
+      "candidate_id": "6fdf1c214686be42167a62be2d68b6deb2a0263bb830263c4a587ed48e650952",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Dvd.dvd.nat_lcm_left",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 980
+      },
+      "source_row_sha256": "04f6dc2e50a6b9a8ea11d50c47e394fd28338654be198029cc100cdf6138dc55",
+      "theme": "natural-gcd",
+      "type": "\u2200 {a b : \u2115}, a \u2223 b \u2192 \u2200 (c : \u2115), a \u2223 c.lcm b",
+      "type_repr_sha256": "e60bfbeab999531471a590cbfcde2b1ac80e376ac4fef9846314750acc0686f4"
+    },
+    {
+      "candidate_id": "f57eb0b19dbd97d56b253128c85856e632e87eb0eff35ab23e506750e342b30d",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Dvd.dvd.nat_lcm_right",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 980
+      },
+      "source_row_sha256": "48d4f729095d660c105d080b1bf49d4b1af719627b7c678aaaf462daa1114585",
+      "theme": "natural-gcd",
+      "type": "\u2200 {a b : \u2115}, a \u2223 b \u2192 \u2200 (c : \u2115), a \u2223 b.lcm c",
+      "type_repr_sha256": "79f4809b86fca17bf0ccfe583516821c71f04e5715aaf4df80d85ff5bac74c35"
+    },
+    {
+      "candidate_id": "141a64bb16ac27edee0324076d95632bea908c1dc16f03b68370d82a874201c5",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.dvd_lcm_of_dvd_left",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 980
+      },
+      "source_row_sha256": "83174c058a424ec824a50bb36d9e6dd060c146923b9885ea93aa55dd71f19360",
+      "theme": "natural-gcd",
+      "type": "\u2200 {a b : \u2115}, a \u2223 b \u2192 \u2200 (c : \u2115), a \u2223 b.lcm c",
+      "type_repr_sha256": "79f4809b86fca17bf0ccfe583516821c71f04e5715aaf4df80d85ff5bac74c35"
+    },
+    {
+      "candidate_id": "61a50fc330bdecd49fee7fa92c427be77bd90ed9bede4a2394f571d69550e465",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.dvd_lcm_of_dvd_right",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 980
+      },
+      "source_row_sha256": "5891a0fec3f8cbd1f35d9a6c79855a97a133b8d1a69010e75424cfc6900b54a7",
+      "theme": "natural-gcd",
+      "type": "\u2200 {a b : \u2115}, a \u2223 b \u2192 \u2200 (c : \u2115), a \u2223 c.lcm b",
+      "type_repr_sha256": "e60bfbeab999531471a590cbfcde2b1ac80e376ac4fef9846314750acc0686f4"
+    },
+    {
+      "candidate_id": "d6b2407c34a5776fbc04aa6e736b2ede2f8f686c5ed16650be76f2a4663faa56",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.dvd_of_lcm_left_dvd",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 993
+      },
+      "source_row_sha256": "0084f84fa3cb626470336db907bacd448677d2e07b3f0e4514ec2270cd7af022",
+      "theme": "natural-gcd",
+      "type": "\u2200 {a b c : \u2115}, a.lcm b \u2223 c \u2192 b \u2223 c",
+      "type_repr_sha256": "35a4d4e52a5141008134ee5f041df177f8456a30bb39bad9e276a89f93bc7173"
+    },
+    {
+      "candidate_id": "61bd1a60e1fddb3ef054b667a755660e25b4ccf554e7d9b0e66f37008f75513a",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.dvd_of_lcm_right_dvd",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 993
+      },
+      "source_row_sha256": "eb5393ee23b4a23af7ca9030ee97fbf5a04bc3435f2e6e463fd34b5f10ad67ce",
+      "theme": "natural-gcd",
+      "type": "\u2200 {a b c : \u2115}, a.lcm b \u2223 c \u2192 a \u2223 c",
+      "type_repr_sha256": "7f241dc8468d8c589c6896d5dec0dab5673ab8cdf7c2446b5861d45036b761c6"
+    },
+    {
+      "candidate_id": "18fcd09f980e8a0885770a1ceb99cdce603312683cca8b05913699b6f98edaaf",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.Coprime.of_dvd",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 1488
+      },
+      "source_row_sha256": "1cc921b870984c03faf0f0b2c67aa0eba3c24edc6f30f7ce669a2f31c5c48c41",
+      "theme": "natural-gcd",
+      "type": "\u2200 {a\u2081 a\u2082 b\u2081 b\u2082 : \u2115}, a\u2081 \u2223 a\u2082 \u2192 b\u2081 \u2223 b\u2082 \u2192 a\u2082.Coprime b\u2082 \u2192 a\u2081.Coprime b\u2081",
+      "type_repr_sha256": "951849573fd5d5af8cd602647a5934d6c840329ad32a3675d2a7b49948ed546b"
+    },
+    {
+      "candidate_id": "0c08eb2599c2d4dbb38da5ca80678233be477d26a52b9066f8a545a0214873eb",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_iff_isRelPrime",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 636
+      },
+      "source_row_sha256": "ecaf46edea27d21639d5bbaca77cf00568eb106919b472e6cbeae19c8a461d2c",
+      "theme": "natural-gcd",
+      "type": "\u2200 {m n : \u2115}, m.Coprime n \u2194 IsRelPrime m n",
+      "type_repr_sha256": "7880fbedc88614aafa523502c9d5304706f47d8d8964f45014679250c87e2f46"
+    },
+    {
+      "candidate_id": "6c4e8dd8ac6ec23fed0818ef4603f5d57d730d318b2d67453ee37c0fe7493979",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.not_coprime_zero_zero",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 701
+      },
+      "source_row_sha256": "b017185e7b6d03856d81d2598c1b044da640bf428c5228afe63e52d4c873e11f",
+      "theme": "natural-gcd",
+      "type": "\u00acNat.Coprime 0 0",
+      "type_repr_sha256": "f5d37378266c3cbe049ba0c914fad779775c58eb10245785fc7c2af266f68101"
+    },
+    {
+      "candidate_id": "0a04214a6f71adea8f9ac7bc8b702e7fd69a136d4776ad60cb7fd3b196be515c",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.gcd_greatest",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 2872
+      },
+      "source_row_sha256": "4dc37da86bd70f0ea31a6fb284059b407256b07d74cd853b7eb8f1095ce51eee",
+      "theme": "natural-gcd",
+      "type": "\u2200 {a b d : \u2115}, d \u2223 a \u2192 d \u2223 b \u2192 (\u2200 (e : \u2115), e \u2223 a \u2192 e \u2223 b \u2192 e \u2223 d) \u2192 d = a.gcd b",
+      "type_repr_sha256": "b0c17481a610ea0f81ffaab3b72a5e6b5002da954b8a75ee2ff33fc11341f744"
+    },
+    {
+      "candidate_id": "42fed4ceef6a5c3510b0b2a9521e00e1949dfe120bfeb6773afcbe903f4c5a46",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_one_right_iff",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 584
+      },
+      "source_row_sha256": "032c7cee95c70ea716d84f05a03815280c10eec1ebe8e1da96c25f6b200fb3e5",
+      "theme": "natural-gcd",
+      "type": "\u2200 (n : \u2115), n.Coprime 1 \u2194 True",
+      "type_repr_sha256": "fe9cff6a0a57c0eb002d881c224452af8cfea0c0e7e5fea65f7c341e01abbd18"
+    },
+    {
+      "candidate_id": "45945e80046c24a97c910cc10b6d046edb3796c75d11affb1ac663fdd93d7243",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_one_left_iff",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 612
+      },
+      "source_row_sha256": "bbe33d11e2db55d9d29d4668c70e8583db8d1f87bd03e893ea9f4e82b2bb02a5",
+      "theme": "natural-gcd",
+      "type": "\u2200 (n : \u2115), Nat.Coprime 1 n \u2194 True",
+      "type_repr_sha256": "f2cf30c61ad277946254ed0cf881037427b2f6591ac2867379e533ae00d27aaa"
+    },
+    {
+      "candidate_id": "c3ed0f45fae21146ff20710f0c9e04409f72447ebecabbecb6bf424f9b4d0cc8",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_add_self_right",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1138
+      },
+      "source_row_sha256": "9200b9e1c2fa6e0f4f337739fcdf0ce687f8beed643dfc2f948643081e2a69a4",
+      "theme": "natural-gcd",
+      "type": "\u2200 {m n : \u2115}, m.Coprime (n + m) \u2194 m.Coprime n",
+      "type_repr_sha256": "6fe48f25786e8d92fd016d41c91f57ff0a064cd80f0f0cd2f82b4dec3a800c6a"
+    },
+    {
+      "candidate_id": "966e5434f9d2a9262c18538e93bbfedb842912a961ef4104f8db369e90037f84",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_self_add_right",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1138
+      },
+      "source_row_sha256": "62dde65233e7059cead81ee877af2464620ee5938b02af3054d4436e0c0e4f4e",
+      "theme": "natural-gcd",
+      "type": "\u2200 {m n : \u2115}, m.Coprime (m + n) \u2194 m.Coprime n",
+      "type_repr_sha256": "5bea2a43fbaff1d0f8743f0548b22cab17fcf4705b177baf59dc0d289de5a628"
+    },
+    {
+      "candidate_id": "5e93448cb7efe3271a259cd7b9a7eec5bb5fed5716284328ca07d9bd742c68d4",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_add_self_left",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1190
+      },
+      "source_row_sha256": "0b0b0b2c0a19a1dfb400783a015fd2aec58e5450a9b8106a4e8af886bfac2c7b",
+      "theme": "natural-gcd",
+      "type": "\u2200 {m n : \u2115}, (m + n).Coprime n \u2194 m.Coprime n",
+      "type_repr_sha256": "cfb74794070a798d5f9510d3923364e67678917285faff14a2e83c19364f9d46"
+    },
+    {
+      "candidate_id": "51351fa1d8fe3b4bfd460ca35ef5dc061ad62a915de04bdcd510bf98effb9966",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.coprime_self_add_left",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1190
+      },
+      "source_row_sha256": "a38d37809bedec29c5058508f9432265f94711c6f413875a0265b7d9fccdf221",
+      "theme": "natural-gcd",
+      "type": "\u2200 {m n : \u2115}, (m + n).Coprime m \u2194 n.Coprime m",
+      "type_repr_sha256": "eb1ac9710d15be6928159cfb8a286f84c65a8e8c8565b63c5692b3a5d0ce824d"
+    },
+    {
+      "candidate_id": "b56f6f7c628422a9652d0fed77f43a77f4733f4430df7a2440670d5a3ee9c61e",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.GCD.Basic",
+      "name": "Nat.div_dvd_div_left",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 2696
+      },
+      "source_row_sha256": "ca0c9ba7d2fe39075aa02598ab089673f3dd436ab8f2c33dffdb82349fe86dbd",
+      "theme": "natural-gcd",
+      "type": "\u2200 {n m k : \u2115}, m \u2223 k \u2192 n \u2223 m \u2192 k / m \u2223 k / n",
+      "type_repr_sha256": "f1add716ad316a1af2c6d30b73de1ba846abb8672cad7129b3194cea1d511474"
+    },
+    {
+      "candidate_id": "48fe50c6cf120c8ba529d5280631e031d68f4b5cf636b9c23b552603d8d0d3f8",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_monotone",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 475
+      },
+      "source_row_sha256": "4d431b6093de645b90f5929b5253b26438d2a1201cc5f4cee73b9b4010592d2f",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (b : \u2115), Monotone (Nat.clog b)",
+      "type_repr_sha256": "aff94959113ccad8ea3db83052f4f7a7a4764a698dba376e10ba78180eeb3317"
+    },
+    {
+      "candidate_id": "52fad774e583689a2fcda29294b7f9df32bb2c56e22f741c5f3573488ce09821",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_monotone",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 475
+      },
+      "source_row_sha256": "3d347bbd45dabf9041cf4817a23c0382e84477471102ed8da0c05d4d816c0de0",
+      "theme": "natural-logarithm",
+      "type": "\u2200 {b : \u2115}, Monotone (Nat.log b)",
+      "type_repr_sha256": "37cf53dc273617094ad887af70f7a61281689b2cc1738bda85ebeddb9e5f9a3d"
+    },
+    {
+      "candidate_id": "da3871722c5cf4e39dca1c65bef8fdda4b35e2942dc02850300642e57907009d",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_le_self",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 503
+      },
+      "source_row_sha256": "0a6e7aa5d52b13a8de8d4285e94de5b80c2c51b4749c6c3b17460365d109ab93",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (b x : \u2115), Nat.log b x \u2264 x",
+      "type_repr_sha256": "eb76b08bb8c12b1a71eb5d9afaeb49f406ebca022c8ca732ec8a739f4d7da38d"
+    },
+    {
+      "candidate_id": "b8939fee1a8fee139dd44bbed713b1321a43d631a79d67e643c57e2a4cfe081f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_mono_right",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 1066
+      },
+      "source_row_sha256": "a6fee9a698f626715f6e1624604d3d1674fa102fc1aa5e8a639fa18ac27895b1",
+      "theme": "natural-logarithm",
+      "type": "\u2200 {b n m : \u2115}, n \u2264 m \u2192 Nat.log b n \u2264 Nat.log b m",
+      "type_repr_sha256": "7ed6bf38bed295f833e1e62d0b613a931fd6df11480aa8060985cc1283aa205e"
+    },
+    {
+      "candidate_id": "8d87a410f1642465fdc3b640fab6b5880ca31c24b845c8920fdb7b5cc549d96f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_mono_right",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 1067
+      },
+      "source_row_sha256": "958580fbcdef406494ee8eab48eee02e4d047a4da89017969aa41737073dd37f",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (b : \u2115) {n m : \u2115}, n \u2264 m \u2192 Nat.clog b n \u2264 Nat.clog b m",
+      "type_repr_sha256": "37924f2e119c96efb03524d47fa00cd50694328f2194c4bbb7878c1329d7832a"
+    },
+    {
+      "candidate_id": "ac8ab2d4cdaa3c594beb63f9fa47338a93e62ab695e5aad04d819ac0453955c3",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_le_clog",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 585
+      },
+      "source_row_sha256": "ada0d44f28d617c944c61df4af019d099ccfb3dfdd47c00cf104ebd1bd4a4f69",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (b n : \u2115), Nat.log b n \u2264 Nat.clog b n",
+      "type_repr_sha256": "0889e0b2b89b0f57833a26ef4feb452241746c6ec85765ee6d838039c9e213fc"
+    },
+    {
+      "candidate_id": "282332ef1b6fcaefabcf6b031f7af2c064daf3160df3e055b3c065537c486e97",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_one_right",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 909
+      },
+      "source_row_sha256": "43412abaaa4551fdb6597387cdfb6d9b1bf6d65eb5211636e276034cf39f21ce",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (b : \u2115), Nat.log b 1 = 0",
+      "type_repr_sha256": "d244e19ed0732d9da4d46a7d83f022eff77dcf37d7b107cd22bff35da7d2a268"
+    },
+    {
+      "candidate_id": "8ea186db3196eeb36b2eda00477afcd3b468e399a2720f797c7ea50d05315b74",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_zero_right",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 909
+      },
+      "source_row_sha256": "7188d8298c9fca4cfca6479982e990ed4ad08dfa49f64e7d0dddf42169e71c54",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (b : \u2115), Nat.log b 0 = 0",
+      "type_repr_sha256": "3fc5e4bd20485cba0ecc99e1250b1f7770d136ec6bdd54dc9014eeec4731cc18"
+    },
+    {
+      "candidate_id": "1ce3d52fc3968b3efaefe8ab12b2c5964affb6eae900753ff655f1b07b85bf45",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_one_right",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 910
+      },
+      "source_row_sha256": "6d9cec0e12ecdbb26709a252b0452671a4af49f921d2350f42a796cb3a5ba0ac",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (b : \u2115), Nat.clog b 1 = 0",
+      "type_repr_sha256": "c36b4963d172fb0060d5796b9a88dca22df15b9e7d7e2112dcecb86646a81332"
+    },
+    {
+      "candidate_id": "d42d47b166056985990b441fd6f05876a1b116ccde91b0f1733b2af74560811f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_zero_right",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 910
+      },
+      "source_row_sha256": "8cdd5fdf73a2aec01eb564b86743bb3e931a4f4cfe9b8af63774cb306eeb16b2",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (b : \u2115), Nat.clog b 0 = 0",
+      "type_repr_sha256": "b6bd86a60fd609ec04434f1082be14ce91064656e2bc489f2e3ca60094d5b973"
+    },
+    {
+      "candidate_id": "73efc1193c01022ba05281ca71382aa07b926dc94b7662963dcfe6a2c53a0963",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_one_left",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 937
+      },
+      "source_row_sha256": "f75c494ad40739098e54b6531805badf04544996770a03e8d37309e67ffdbe90",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (n : \u2115), Nat.log 1 n = 0",
+      "type_repr_sha256": "0e3dd7c6f888ddb4de9a13d14f995d429f22990a2fd1c2bcc2a17e48f6b786fa"
+    },
+    {
+      "candidate_id": "9ec8541e633661c04d551fbfc1e6e4c5d7b00209961f21f48cc40cecfb4b2c35",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_zero_left",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 937
+      },
+      "source_row_sha256": "427abcedb2e91284e6e47cbf3165b23ca4173fdb717c238b81516638d3b3161e",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (n : \u2115), Nat.log 0 n = 0",
+      "type_repr_sha256": "ee5652ba2985c511f1eac50aa533caedaa493b27bc8cb5bf4818b0f04f35d5b4"
+    },
+    {
+      "candidate_id": "b496af12585d6cf0fbc9944a39bba60e148804cf33a03f3b1cd0aa2817f7e9c6",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_one_left",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 938
+      },
+      "source_row_sha256": "cc6f732f02bcfaa4c820273b7f7cc1637b964e785aa2998a2c5a6ffba5db1d66",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (n : \u2115), Nat.clog 1 n = 0",
+      "type_repr_sha256": "802095439192a9248852999e51a146b2d715bc328d58d1d3f7f42b03b3ab4a12"
+    },
+    {
+      "candidate_id": "1c61a5bffbea7779c7de5701277680a2490685e1ad5ab0e0df06e687750fb2a6",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_zero_left",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 938
+      },
+      "source_row_sha256": "e2428d7c68fd439b246ef81204526da74ddcab773ca67140da3640f88f05f8d4",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (n : \u2115), Nat.clog 0 n = 0",
+      "type_repr_sha256": "6aa96fd71bdade513e6dc173abd51294aa13fb8ce8d0791bea80036509538d58"
+    },
+    {
+      "candidate_id": "28085932cb516a29b52017b38ac8c17d6407c10e9af73e2b4ac222fb150b20d7",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log2_eq_log_two",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 706
+      },
+      "source_row_sha256": "927d2cb840b39c865d615a9a8a78395a698c00e60eeec83722bc7d71392c5b52",
+      "theme": "natural-logarithm",
+      "type": "\u2200 {n : \u2115}, n.log2 = Nat.log 2 n",
+      "type_repr_sha256": "c75ebf80b151a35be669156c66b272c3c519c40c50cd36b15ceaef3e9d819e29"
+    },
+    {
+      "candidate_id": "00852cb879b1a68d4fe508636ff271d02fd794ea3ec418df1e3ef44fcc5d9369",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_pos",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 2101
+      },
+      "source_row_sha256": "54d91eb1a0437b3aaa8128496fe6e4d461fc7a39601b04f8d1f93b4a4bb8b0e0",
+      "theme": "natural-logarithm",
+      "type": "\u2200 {b n : \u2115}, 1 < b \u2192 1 < n \u2192 0 < Nat.clog b n",
+      "type_repr_sha256": "4888b9f79ae2f1f9fec475339eb618a02fb2e855d736642f71f5221f41b4f125"
+    },
+    {
+      "candidate_id": "529f89fa444b3e0ad9ca4f2d6e4e9e51dafbcea95543a5f1246777ebd45aca6c",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_lt_self",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1075
+      },
+      "source_row_sha256": "4f85cebce165cc2d44e4b1e422dfc276a2f5270918948baf1903439610968b3e",
+      "theme": "natural-logarithm",
+      "type": "\u2200 (b : \u2115) {x : \u2115}, x \u2260 0 \u2192 Nat.log b x < x",
+      "type_repr_sha256": "dd9ad5f1d7d062e98057e5dd4899e94e8e98eabafb99596f07c03d403f8bd6cb"
+    },
+    {
+      "candidate_id": "89eaf42e746bbdc300f01c878838bf9222288d46e1c3767149b172d6a4c6d348",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_of_lt",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1076
+      },
+      "source_row_sha256": "a8f9b8b2911fdf6aa897111fb5edd090d78254077b74f1c6dfe9b3a0333b00e6",
+      "theme": "natural-logarithm",
+      "type": "\u2200 {b n : \u2115}, n < b \u2192 Nat.log b n = 0",
+      "type_repr_sha256": "48fb0b1330805a769e3d69b1ce6effcea83e86e5f330ae687a4c8d0bb976d3fa"
+    },
+    {
+      "candidate_id": "20d1326c4ea1e1db1795c76ba60b4f49ea7d913e9dc20a1532d6159f001be89f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log_antitone_left",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1131
+      },
+      "source_row_sha256": "0c1c87ec96ccfb4db3a25073f42ab9a5c72106d8389ddd8d8dff994ce4a31ff1",
+      "theme": "natural-logarithm",
+      "type": "\u2200 {n : \u2115}, AntitoneOn (fun b => Nat.log b n) (Set.Ioi 1)",
+      "type_repr_sha256": "fd1f399616712c4df263bc9e6805ebf24b1d9a508b25b8ff328de27d52623821"
+    },
+    {
+      "candidate_id": "44a877711f61cc690f01daf1aebafe80a03133b6914ac9c52b6c2efbfc727090",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.clog_antitone_left",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1132
+      },
+      "source_row_sha256": "78afd68f73e69d93c7c0e267ff548d16556d9d32d7bf2fdfc15bb33536941542",
+      "theme": "natural-logarithm",
+      "type": "\u2200 {n : \u2115}, AntitoneOn (fun b => Nat.clog b n) (Set.Ioi 1)",
+      "type_repr_sha256": "52dad1b5e6465faf43e86aab17f5ede20c8327da15abb36dd77aebbcd2f47b6b"
+    },
+    {
+      "candidate_id": "d870c8f577c49d725fa77c63379998199e5884b0df40a6cea97f766e64710f3a",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.refl",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 2,
+        "type_repr_bytes": 321
+      },
+      "source_row_sha256": "e0dcdf4036ac31663e2d72b59ed61fc40aab54cad0afb2d8c9f58c7c6556a255",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n : \u2115} (a : \u2115), a \u2261 a [MOD n]",
+      "type_repr_sha256": "2777c6163661d0de15fb55c59de6eed8d17452f0ba2a5f9a1317f0340acaf91e"
+    },
+    {
+      "candidate_id": "323448c03e6778ca5e759409a472a35847339d596923d9c51f91ace3649c8f4f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.rfl",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 2,
+        "type_repr_bytes": 322
+      },
+      "source_row_sha256": "6914cfc9f5a2d5e051fd6297dd08dff153d701480ef73d6f371a11175e3d551f",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a : \u2115}, a \u2261 a [MOD n]",
+      "type_repr_sha256": "0048e0b63f7fef9425e5ce3856d9f7e8b3504ea454e2a3867f1a564da38abf40"
+    },
+    {
+      "candidate_id": "0a3d4d18c5d91748fe411abec25ebad3d69cd17a993c0eb86c55c2a0845b621d",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.symm",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 2,
+        "type_repr_bytes": 706
+      },
+      "source_row_sha256": "131fb6a3ac7073f01b3d2e7dd0d28ebf044dac2ff22c803990fbc357590b027d",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a b : \u2115}, a \u2261 b [MOD n] \u2192 b \u2261 a [MOD n]",
+      "type_repr_sha256": "5d844101ff15d4dde41b9a43a4781b0a38742a659a8013dc4c3018fff5ac64e6"
+    },
+    {
+      "candidate_id": "ef9d1c4679752990ea62e021b05febcf315c78dc7e43518591a0ffa8048eefe4",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.trans",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 2,
+        "type_repr_bytes": 1134
+      },
+      "source_row_sha256": "2a9417fc18a258db267715f4fd1ba947ffc6cbc32900a03becc82daf1a0c6412",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a b c : \u2115}, a \u2261 b [MOD n] \u2192 b \u2261 c [MOD n] \u2192 a \u2261 c [MOD n]",
+      "type_repr_sha256": "51d106e3b628a4e9a7fa544c8475c46f8fab38e0819acf634cbfbac6f45fec81"
+    },
+    {
+      "candidate_id": "24b71e7aff48c3e5606850df7fc3dc6f335c2e69e65c59236ced860dfa1f2879",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.comm",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 3,
+        "type_repr_bytes": 685
+      },
+      "source_row_sha256": "c1bb3f675bb865994940fbad072f42178e2a44493caf026accfe860b790ccf4b",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a b : \u2115}, a \u2261 b [MOD n] \u2194 b \u2261 a [MOD n]",
+      "type_repr_sha256": "1186a5b5345e93521a6007c39a7cfc5c752c3fd2c6d3b3b58c27251d53324424"
+    },
+    {
+      "candidate_id": "ee6bdd417900d6aeafa06c864d6661285e6d088f4fe837d84ac7b7a093b34d1f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.mod_lcm",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 3,
+        "type_repr_bytes": 1209
+      },
+      "source_row_sha256": "7ff5f979219e64a8a1f89f0a2d01844440ea55c34f65179e3d4fa2d72510c55a",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {m n a b : \u2115}, a \u2261 b [MOD n] \u2192 a \u2261 b [MOD m] \u2192 a \u2261 b [MOD n.lcm m]",
+      "type_repr_sha256": "a45916a83c40c70dcbb48ebd3a7a946a1293bacc57e91c410ef4f78cde70ec7f"
+    },
+    {
+      "candidate_id": "fd9af096e593f53c7611e80cbcc66f917f9bf371c1b1b625663eb0805fb832e9",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.modulus_modEq_zero",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 489
+      },
+      "source_row_sha256": "b9af59ecb60b9448f33f339410dab44ee5cf1d23c85d6ac0d808c30839044011",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n : \u2115}, n \u2261 0 [MOD n]",
+      "type_repr_sha256": "b65de9cfb1449ddac9b4e6316a8554cd7da5c1ce9f85f8dcf294e1a143fd42de"
+    },
+    {
+      "candidate_id": "516d46e813338e693c7df06e95f462751b0776b883eca197c47e01cebda3bd0c",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.modEq_one",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 645
+      },
+      "source_row_sha256": "2469cad1a6b246a9fe56565f6497f9819c004d876d427a1673f2f97a2fe14a6f",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {a b : \u2115}, a \u2261 b [MOD 1]",
+      "type_repr_sha256": "5940e8f380660a71988e64fdf63445ac2fc6031eb1cf64e3be187843ddd47659"
+    },
+    {
+      "candidate_id": "5167ff4f082130b5f407c5c354dd8d881de0c0fb2af94d5169c4e1f7cda4e5c5",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.gcd_eq",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 887
+      },
+      "source_row_sha256": "d2194acf20e2020690b2a0c8d0c1633eca96f89cd89aab5d41f9a674986a6e9e",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {m a b : \u2115}, a \u2261 b [MOD m] \u2192 a.gcd m = b.gcd m",
+      "type_repr_sha256": "e44c6f95fe27bf448f6c6b2e45ed200bce695c2838905140c27f128f9aa5917f"
+    },
+    {
+      "candidate_id": "d75cc374332e28a249443dca069254e237537e080a5346e0b6278079bcbb2db5",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.of_dvd",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 1188
+      },
+      "source_row_sha256": "bb265053bb21f6050a076d5bf6fd23a5930a9c21420205b03923c635f9dc92d7",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {m n a b : \u2115}, m \u2223 n \u2192 a \u2261 b [MOD n] \u2192 a \u2261 b [MOD m]",
+      "type_repr_sha256": "2738af1e7680f3270c8e3282b11f1fbf7fcd80326b11b337762313cbadda74d6"
+    },
+    {
+      "candidate_id": "436e4c108acfe57f642816e8ef0210c8cac16f8c5a09352fa7ade4a0f38bf08f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.mod_modEq",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 960
+      },
+      "source_row_sha256": "c6cd4da39aa78695c9c739a02689448349bc0b512c65abbcd0e97cf8f2489a8e",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 (a n : \u2115), a % n \u2261 a [MOD n]",
+      "type_repr_sha256": "70442d0ceb7ff3e80c38ee87b66a0926663bdd3276f8905cdcfc33a3c3aa63e5"
+    },
+    {
+      "candidate_id": "e3b1fba9165406f4177667a54396ad76e1fe8b6ecf32f2b4eafae6c156443a75",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.add_modEq_left",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 961
+      },
+      "source_row_sha256": "d63a45b3bf30e4333af390a20094dddd5e631417516ae6227b6067d08aa693c9",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a : \u2115}, n + a \u2261 a [MOD n]",
+      "type_repr_sha256": "e7cdb6bebd6d07ec5be36a88934d2359e9dbb3c864d915afa616086899dc9393"
+    },
+    {
+      "candidate_id": "e2f11f214d4aeebca0e80a01786a464646d668fdbf3a22057d42f8d7b740b379",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.add_modEq_right",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 961
+      },
+      "source_row_sha256": "3e1dac01d9e62cf9126b5d233661b1f8343424cd2c37bfb4662a3cac956b1b6b",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a : \u2115}, a + n \u2261 a [MOD n]",
+      "type_repr_sha256": "3da302cf5c3140d5ee02abad082ace90a2d79e92ef71700969cd900109193603"
+    },
+    {
+      "candidate_id": "88d20bca2eb876f49675c618b197d1889cc54bc49fe510ae5831c103fbd4e45e",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.of_mul_left",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 1586
+      },
+      "source_row_sha256": "21175a7ea6e291f119ea00455a2137c0247e83acdacbab52744b0c8cf40eb3ee",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a b : \u2115} (m : \u2115), a \u2261 b [MOD m * n] \u2192 a \u2261 b [MOD n]",
+      "type_repr_sha256": "da4279cea02da3f7a9adfcbd184917d3452cfa6c2b16130689f2738aaefdf128"
+    },
+    {
+      "candidate_id": "43078e1cd27dc88b79223363b6318ac823dc9572060348f64d291ba9c81a7126",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.of_mul_right",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 1624
+      },
+      "source_row_sha256": "53dff5c8a6439af5d87bc09278d6dcca0a70c3a6aaea9ccab7a687ddb7485b86",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a b : \u2115} (m : \u2115), a \u2261 b [MOD n * m] \u2192 a \u2261 b [MOD n]",
+      "type_repr_sha256": "7dc9abbbfb849986a6b061688875693a1d703261d48af49f897dffd5f6b0dee1"
+    },
+    {
+      "candidate_id": "8f130450413936f02a349991edbad9f1dfe9a9bdb6a12ee681f52448a19e3503",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.dvd_iff",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 1793
+      },
+      "source_row_sha256": "5e2a90ab7700a836332a7349b0d69e8aaa572feacccc0a6606f4bf6dd4bcff38",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {m a b d : \u2115}, a \u2261 b [MOD m] \u2192 d \u2223 m \u2192 (d \u2223 a \u2194 d \u2223 b)",
+      "type_repr_sha256": "277b7038e434eb1f0394596a2fe07a1e045467f93d06691765885a0d4dd5bf24"
+    },
+    {
+      "candidate_id": "e83f07008b70f4475e4d856773367b3641a3e79395668d2d2ccaab17e3e3afaf",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.add_left",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 2205
+      },
+      "source_row_sha256": "013514c6915b1363ae730d6ef55698c3f03c189a457bd1feee1d8aa526b48ff6",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a b : \u2115} (c : \u2115), a \u2261 b [MOD n] \u2192 c + a \u2261 c + b [MOD n]",
+      "type_repr_sha256": "18b90af4d58bfe2e1062b5fe7c42b89d8061d2a3a74c9b2c709478681da998ec"
+    },
+    {
+      "candidate_id": "e5287cf694fef43541ad3ee05e735a4fffa09bb73b5ed7fcc15b25fe8b3912b7",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.add_left_cancel'",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 2205
+      },
+      "source_row_sha256": "f6a046981cf7b036dbfe607387844d366fec62f1b73c8d8c53375496d9f4bc33",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a b : \u2115} (c : \u2115), c + a \u2261 c + b [MOD n] \u2192 a \u2261 b [MOD n]",
+      "type_repr_sha256": "da60c4323b635468adf230fdb02d39ede0f4a7447f71cb9dfc2912797a9e9dd5"
+    },
+    {
+      "candidate_id": "8e2ca0cc8f8d660ff1d16b273b8cf4eed5bcf79c16a57f1034bf05d615e3adc2",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.add_right",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 2205
+      },
+      "source_row_sha256": "01eacfe74e89e6146c75b4c742662443ab1df3911b515591ff37ce3330c0932a",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a b : \u2115} (c : \u2115), a \u2261 b [MOD n] \u2192 a + c \u2261 b + c [MOD n]",
+      "type_repr_sha256": "06a7cc055d3514f4195dbdc83dcfe10e392ba14271a071a2eb58da2d7e72d3e6"
+    },
+    {
+      "candidate_id": "e871facf4c055e5d259baa4683d8090ae9f66298227160d140ef5d35b166d091",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.ModEq",
+      "name": "Nat.ModEq.add_right_cancel'",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 2205
+      },
+      "source_row_sha256": "740f3bf8cb5fcf898ee03610af81f80b325f6636880d52d6d72974fec29480b3",
+      "theme": "natural-modular-equivalence",
+      "type": "\u2200 {n a b : \u2115} (c : \u2115), a + c \u2261 b + c [MOD n] \u2192 a \u2261 b [MOD n]",
+      "type_repr_sha256": "e3cda190b4c7404c10a1ab8d7bf370f2d931f7c0e5a53d3c6fbe84d6b5b11330"
+    },
+    {
+      "candidate_id": "4feb123fa2b8eac63b17159a0ea8b9b07ae2de176781fa489f6f62cbff2d973e",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.succ_pred_prime",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 526
+      },
+      "source_row_sha256": "71201c93f35cb6eabbfebae96629bf581d4be012d932faa2bde8a8fe220eb30f",
+      "theme": "natural-primes",
+      "type": "\u2200 {p : \u2115}, Nat.Prime p \u2192 p.pred.succ = p",
+      "type_repr_sha256": "1ac7b54450a9789a2a97edf8a8044c458efc7cf6877a3de7d43e41d95cc24806"
+    },
+    {
+      "candidate_id": "5769049f396ea56000ae983729e30fd83682d007541087ea32eaa48ffd055b26",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_primes",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 891
+      },
+      "source_row_sha256": "baa69c8039db92fdc2e2d9a86e05e4d17adb00b3c1cd2f0b18098f5815cef12d",
+      "theme": "natural-primes",
+      "type": "\u2200 {p q : \u2115}, Nat.Prime p \u2192 Nat.Prime q \u2192 (p.Coprime q \u2194 p \u2260 q)",
+      "type_repr_sha256": "119cd8bbe0b0d7af65c422dc285dc90885fbd575d7cba9aba1df41a6c3469f0f"
+    },
+    {
+      "candidate_id": "8dc1deccb9d5fd7e99c73fea44daa5b8259bfb86794a9f10d4de45d31fe60d2c",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Coprime.odd_of_right",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 772
+      },
+      "source_row_sha256": "c50c2a296c188745d9f24e7876a40416a1c97c1e26921e1fbdc013f295e3fc9b",
+      "theme": "natural-primes",
+      "type": "\u2200 {n : \u2115}, n.Coprime 2 \u2192 Odd n",
+      "type_repr_sha256": "36d24d4c52608029e0a16256b9a94ea52070a3c77a51293a38739138f711c1ed"
+    },
+    {
+      "candidate_id": "65f47114f39f7f41ff762df3d8b6a89c99798c921789499cd14493180a2d8f81",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_or_dvd_of_prime",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 789
+      },
+      "source_row_sha256": "c41de99eaa3abd845ff1acd979401ec4c78dbf15bff485968bc8a2e20df2a792",
+      "theme": "natural-primes",
+      "type": "\u2200 {p : \u2115}, Nat.Prime p \u2192 \u2200 (i : \u2115), p.Coprime i \u2228 p \u2223 i",
+      "type_repr_sha256": "b18b9218c5c52c11ea8360a3b268c7c4ab636c0893771c356ceb197e1b3e6058"
+    },
+    {
+      "candidate_id": "ed80ab44a18e719e492d64b8b7e3f47dd652d0343da4f09dc02a51ea6e634298",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Coprime.odd_of_left",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 796
+      },
+      "source_row_sha256": "dd5582485af1579e25c2d83ca564445ff461ac3023e413b0a41e575e45bcf452",
+      "theme": "natural-primes",
+      "type": "\u2200 {n : \u2115}, Nat.Coprime 2 n \u2192 Odd n",
+      "type_repr_sha256": "5e251a9f9016f81cdf0c736e5253d47ed32d4c8b715f33079affa467c4c4f094"
+    },
+    {
+      "candidate_id": "7c5a185087d336ec6c8a4080c6bba0986e046bc60f1e380864968f155b2b9145",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_two_right",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 759
+      },
+      "source_row_sha256": "c244d12456d0cdf61b3dfe90439b75e1b5f317552125c92c3d8d6fc710d71f00",
+      "theme": "natural-primes",
+      "type": "\u2200 {n : \u2115}, n.Coprime 2 \u2194 Odd n",
+      "type_repr_sha256": "02176b62346bf4025fb5fa4ef93dc82062ffe838825b37cdb89ed039eca37d06"
+    },
+    {
+      "candidate_id": "1b47e7c4fd27bc3faf442a89853227af1176f8314587022bd83fe310474ee71e",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_two_left",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 787
+      },
+      "source_row_sha256": "156ee99ff2ba4ffa5ce9534d6381ad24d6860718d8d876ee1973e1172352c8c3",
+      "theme": "natural-primes",
+      "type": "\u2200 {n : \u2115}, Nat.Coprime 2 n \u2194 Odd n",
+      "type_repr_sha256": "67531f8e81b79780007cefddc904fbd628986b14211a46b71fddb86c59f65702"
+    },
+    {
+      "candidate_id": "4e67ac4c8eb11ed694a1550bc7eedb858aa1549632b9c1975fca17cef2e8d3b5",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.pred_pos",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 791
+      },
+      "source_row_sha256": "c2ffe430bb37dacc056bda65d5e818cb3b95f6287de3f217a32042d2261b744a",
+      "theme": "natural-primes",
+      "type": "\u2200 {p : \u2115}, Nat.Prime p \u2192 0 < p.pred",
+      "type_repr_sha256": "7492b6b4873d34c3237140187b4f96c616ba4561ff240709f445d8f1d621fb55"
+    },
+    {
+      "candidate_id": "77854741e6ec7a1ca838962885772db5d9bd485fbc3e8671ff015e182bb0698f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.dvd_iff_not_coprime",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 865
+      },
+      "source_row_sha256": "224851797322a63b2876bb69b60a0a8e2c2d7d6027a09c7caed54ffc33ee57e4",
+      "theme": "natural-primes",
+      "type": "\u2200 {p n : \u2115}, Nat.Prime p \u2192 (p \u2223 n \u2194 \u00acp.Coprime n)",
+      "type_repr_sha256": "395b49b34d564be32611a26a6aae48449433879b9335a182b4cbd6601eec82fd"
+    },
+    {
+      "candidate_id": "91e1195f75b045a13a21bcbd6d83b371f7777b13b4a0b46f2b6976ecd597cc8d",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.odd_of_ne_two",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 985
+      },
+      "source_row_sha256": "b40a5fe0c66de4ddb5c72752de9dafd76e5ab9bdec996c2f4c6e4fc98e17e405",
+      "theme": "natural-primes",
+      "type": "\u2200 {p : \u2115}, Nat.Prime p \u2192 p \u2260 2 \u2192 Odd p",
+      "type_repr_sha256": "cf5bcd9543a517f5c194d4ef1c739b3d2f14eec2ed526cf6e1958dc0a5950e0a"
+    },
+    {
+      "candidate_id": "c069e7864cdf25e1a773eace966ee31123577a3416f407d25a0aa9fe7c60eaa4",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.five_le_of_ne_two_of_ne_three",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1934
+      },
+      "source_row_sha256": "e4a62dee6db42d2cc59ddeb0f6326d80d86ab8b0c62b932caf19cb089758c317",
+      "theme": "natural-primes",
+      "type": "\u2200 {p : \u2115}, Nat.Prime p \u2192 p \u2260 2 \u2192 p \u2260 3 \u2192 5 \u2264 p",
+      "type_repr_sha256": "f83dd59b0dda66925bcf5c5fe42f351858746005f81a2f94d97a5e45424b0ab2"
+    },
+    {
+      "candidate_id": "6f65267337688ae678875e9ded4fbbf520f77b1764da141c2cfa8b3165fa66fa",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_of_dvd'",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 2173
+      },
+      "source_row_sha256": "6c2c2606433492f56a2a267f858451b1049835f7f4d578f256e7f76128a3fb22",
+      "theme": "natural-primes",
+      "type": "\u2200 {m n : \u2115}, (\u2200 (k : \u2115), Nat.Prime k \u2192 k \u2223 m \u2192 k \u2223 n \u2192 k \u2223 1) \u2192 m.Coprime n",
+      "type_repr_sha256": "b73b84cf23a865eb0805c903b017fd4985c93d8384cf7c9a5042c65c9ba2b60f"
+    },
+    {
+      "candidate_id": "5898723bd9ee8d316376089469554f7b8b71b9f841533183c498fa15258ba089",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.dvd_of_forall_prime_mul_dvd",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 2293
+      },
+      "source_row_sha256": "a8c1f82e512704a4c1bbdb90781204b76a72737ac380ccfe3c78163e03c77c3b",
+      "theme": "natural-primes",
+      "type": "\u2200 {a b : \u2115}, (\u2200 (p : \u2115), Nat.Prime p \u2192 p \u2223 a \u2192 p * a \u2223 b) \u2192 a \u2223 b",
+      "type_repr_sha256": "9f42fad8aa42a5829135d198c85c5f0024b899466fea98989e5ab09bb5edfaec"
+    },
+    {
+      "candidate_id": "d068ec8206aa89e04b99f53ff1d096e17f297257e63005f2ea5c2f22142d7d2e",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.even_iff",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 997
+      },
+      "source_row_sha256": "db98585b8760b9ca3d31f4b3cf3e7975c35d9bd1b807458a3267bbab889d2ed9",
+      "theme": "natural-primes",
+      "type": "\u2200 {p : \u2115}, Nat.Prime p \u2192 (Even p \u2194 p = 2)",
+      "type_repr_sha256": "ab690adb1f60e8f512a3dde6d2f04adfbb6574112be3ede902e4bbff0191a052"
+    },
+    {
+      "candidate_id": "0f79bdbaaf06310fb0493bc42f5fefb9a8c7f7a3780c6c2ee2d80c6012509632",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_of_lt_minFac",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1243
+      },
+      "source_row_sha256": "6eb06711ae766aef00922789eb99dc8dd81b1184f70412b69a2e2095571d32c4",
+      "theme": "natural-primes",
+      "type": "\u2200 {n m : \u2115}, m \u2260 0 \u2192 m < n.minFac \u2192 n.Coprime m",
+      "type_repr_sha256": "e2e00abbd57b6ba9814fc157cf2fed14a34566b6546d2589f233b129d63f9f7a"
+    },
+    {
+      "candidate_id": "1978a91904145501909899abe0e3b993a86dedd7f9958f0a948292f108f56494",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.coprime_of_lt_prime",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1356
+      },
+      "source_row_sha256": "0370e882542fa96fb323f8af9d6fcd69a71e62f131fbd207eee0ff1017d3e135",
+      "theme": "natural-primes",
+      "type": "\u2200 {n p : \u2115}, n \u2260 0 \u2192 n < p \u2192 Nat.Prime p \u2192 p.Coprime n",
+      "type_repr_sha256": "0c6c60b2bba3cd2812d4f40cb0947160aeb6cd79fa123c0d1d9ab69fe2be1de9"
+    },
+    {
+      "candidate_id": "4ff592c092c654fe2f21296a5dd75e0fe9dff85ee835c9af90083067a2ce7711",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.not_prime_of_dvd_of_ne",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1518
+      },
+      "source_row_sha256": "3d2a9acca380615ccb1de5473c7de3a0c13214b29d51a1d925cf86758ba85196",
+      "theme": "natural-primes",
+      "type": "\u2200 {m n : \u2115}, m \u2223 n \u2192 m \u2260 1 \u2192 m \u2260 n \u2192 \u00acNat.Prime n",
+      "type_repr_sha256": "bfcce4ee886c66e183786187fd2e43ecbff1a92691b5ca126d8a7d1ada4fd986"
+    },
+    {
+      "candidate_id": "e76f834adbd6510de3f827186cc70114fd9c450226169910a00de93e48988b9f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.dvd_of_dvd_pow",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 2079
+      },
+      "source_row_sha256": "6a6e4f1158abdeaf18f6b3e120e787989af9605c28780b4ed3346297a744bd08",
+      "theme": "natural-primes",
+      "type": "\u2200 {p m n : \u2115}, Nat.Prime p \u2192 p \u2223 m ^ n \u2192 p \u2223 m",
+      "type_repr_sha256": "554d0fcd96409c88d6f1785fa7c3e0aefcdf9f3866aa36c6037740c8e16e7537"
+    },
+    {
+      "candidate_id": "cb3a915e18b905c53e5828e7c144a696d94b80c8b994bfab7e0d6aa032cacc6c",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.not_dvd_mul",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 2484
+      },
+      "source_row_sha256": "d6695870675c0d013ff4d44cf4c21cb02240f64e336d540cb07cd076dbe08f99",
+      "theme": "natural-primes",
+      "type": "\u2200 {p m n : \u2115}, Nat.Prime p \u2192 \u00acp \u2223 m \u2192 \u00acp \u2223 n \u2192 \u00acp \u2223 m * n",
+      "type_repr_sha256": "f41dc37aa03fd2ab7a174c06b93f2a898892a71c01a8087b1c89c526716d1d0a"
+    },
+    {
+      "candidate_id": "6c253439629922cd287e053e303275c8a5c49f7a3513fe3f1edfe1cfdbe6fa67",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "name": "Nat.Prime.dvd_mul_of_dvd_ne",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 2877
+      },
+      "source_row_sha256": "0f3752d1b0de234b6811d522af3de6c2cc254896d3c94aa6d8a5becc5afc8fd1",
+      "theme": "natural-primes",
+      "type": "\u2200 {p1 p2 n : \u2115}, p1 \u2260 p2 \u2192 Nat.Prime p1 \u2192 Nat.Prime p2 \u2192 p1 \u2223 n \u2192 p2 \u2223 n \u2192 p1 * p2 \u2223 n",
+      "type_repr_sha256": "0a9a564acad799252c31f3ba13c11423b10b012b0c6c60faf359f45133f8f672"
+    },
+    {
+      "candidate_id": "1ed5eb85a339c6b344521b4379eeaf8f1e55bf17f858457e851c37ec2f0928bd",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_le_self",
+      "rank_within_family": 1,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 366
+      },
+      "source_row_sha256": "944e99af3c4518de1923a74e8ea8f0692e1fd0d9b78e36fd4c8214c27e1bf243",
+      "theme": "natural-square-root",
+      "type": "\u2200 (n : \u2115), n.sqrt \u2264 n",
+      "type_repr_sha256": "7b155a77ded6370433793c5cfc86f9b07f6e09e85107f661191028f5c4ff56fd"
+    },
+    {
+      "candidate_id": "6e2bfc47e0d07907202c12fdf1f6cbb5e4dfa6a8713270ab7af2c2bf158ac675",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_le_sqrt",
+      "rank_within_family": 2,
+      "shape": {
+        "distinct_type_constants": 4,
+        "type_repr_bytes": 866
+      },
+      "source_row_sha256": "c0dd784994fb9dccd1862cbe162f201e87dba9214f076d6f88305fbd5ecb5369",
+      "theme": "natural-square-root",
+      "type": "\u2200 {m n : \u2115}, m \u2264 n \u2192 m.sqrt \u2264 n.sqrt",
+      "type_repr_sha256": "e8b267c35add31c5cce498f07c334c1efc07c2fc4833aa826e6a1ebe4b9752bb"
+    },
+    {
+      "candidate_id": "6b041183d1f0e04073db03703e39b3b40c3c37e10c1e5b94e539bb54d6cac097",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_succ_le_succ_sqrt",
+      "rank_within_family": 3,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 507
+      },
+      "source_row_sha256": "844799490b9467458bd7bfe788f269794b77131ec7fb2cb5e39a20be2e1ff48e",
+      "theme": "natural-square-root",
+      "type": "\u2200 (n : \u2115), n.succ.sqrt \u2264 n.sqrt.succ",
+      "type_repr_sha256": "99058e7d800db3a54cda78c7a79cb6358cb09df5a13c8d8a825dc22115a6573f"
+    },
+    {
+      "candidate_id": "28edb6fccb38160c1cbe626e22e91cc5ad123951daec8e92005fddd6f2bec423",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.log2_two",
+      "rank_within_family": 4,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 764
+      },
+      "source_row_sha256": "b3157c1d4c48d2a52de9b8655b4133a3291fac88579ebf4a9dd0150286fb3be2",
+      "theme": "natural-square-root",
+      "type": "Nat.log2 2 = 1",
+      "type_repr_sha256": "851cee9c9794df8faeb29c478728b6386663dfbbf406a4bc09b1af97b1a74a75"
+    },
+    {
+      "candidate_id": "689a74bbe3c42a110100542e6f59eb78cb5d7a2e5e433f3bcd067216b0b3cfca",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_one",
+      "rank_within_family": 5,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 764
+      },
+      "source_row_sha256": "4a3b09c8bf207c9306b5e8757ba5e71b0b01e27e61651373341bbddfaa971ebd",
+      "theme": "natural-square-root",
+      "type": "Nat.sqrt 1 = 1",
+      "type_repr_sha256": "00b4a82890119c379779c7ed994cc43d03d5e657e13e881cf59b2ce4dffffe7a"
+    },
+    {
+      "candidate_id": "1649750411303ab7904c9c815fa30b53c22a688786fc8b2481c14fdd3421db32",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_two",
+      "rank_within_family": 6,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 764
+      },
+      "source_row_sha256": "a00143555aa8656dd1060b48c4281889d319a432147fe2f7c7c594d8e0365740",
+      "theme": "natural-square-root",
+      "type": "Nat.sqrt 2 = 1",
+      "type_repr_sha256": "d322aafbd65cd6a76a86e835163a79208bd16b45bc034f000c53f1ebcb77aeb4"
+    },
+    {
+      "candidate_id": "4e82ae912a206dd301f13dba80d46727e41d50150b9a7009182b8952510430fb",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_zero",
+      "rank_within_family": 7,
+      "shape": {
+        "distinct_type_constants": 5,
+        "type_repr_bytes": 764
+      },
+      "source_row_sha256": "fd39675c0f1a814bdf93f56662fa7b53e846f545f4b69a4acaf50d2f4b46db38",
+      "theme": "natural-square-root",
+      "type": "Nat.sqrt 0 = 0",
+      "type_repr_sha256": "eeb522b7d952931edf43dce4c8fc169385f76f96d002c5637b5bd153347496be"
+    },
+    {
+      "candidate_id": "79ae8eaea0b633bc93bed92a04b8beb47426dfeeaac1f898c06eabeb3840feeb",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_eq",
+      "rank_within_family": 8,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 956
+      },
+      "source_row_sha256": "d58c2e1d3660f1211e2c8bbd8d32698631976647c85872a7ec4a250b50604dfc",
+      "theme": "natural-square-root",
+      "type": "\u2200 (n : \u2115), (n * n).sqrt = n",
+      "type_repr_sha256": "a1a9f07cec869a33039a25b8dcbf6f9bc2b12884ea4ef415c4e7baccb589b3d3"
+    },
+    {
+      "candidate_id": "ff7a155a2dead2b3adea6b1a989d48528ee514379b4e32e181f8f49d4ecbddc3",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_lt_self",
+      "rank_within_family": 9,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 974
+      },
+      "source_row_sha256": "e3f4198c9a4956c0fe85ceb47c95e39e75664a20f2650b25fd0ea07dce53da6f",
+      "theme": "natural-square-root",
+      "type": "\u2200 {n : \u2115}, 1 < n \u2192 n.sqrt < n",
+      "type_repr_sha256": "0f947ea96f3f11186a94c1fcbaadd082e530bd3b6398a423e9aeb6b9607d565e"
+    },
+    {
+      "candidate_id": "53666a3bcc7293f79d85ed9e6604631b95b2098d40cde8d4476043ab0f01b14c",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_eq_zero",
+      "rank_within_family": 10,
+      "shape": {
+        "distinct_type_constants": 6,
+        "type_repr_bytes": 1160
+      },
+      "source_row_sha256": "fdfc5b58b27c80d5ad342c60c99c2eb0233fa55c6ed5a1196b2ca92d4713f5b1",
+      "theme": "natural-square-root",
+      "type": "\u2200 {n : \u2115}, n.sqrt = 0 \u2194 n = 0",
+      "type_repr_sha256": "37a1dcf17e6ef859a9e53b7179263a212c5f642249a4edc0c298b463a6cc0cbc"
+    },
+    {
+      "candidate_id": "7918582bd530b37197b44665eb7aeba473bdac414707320730331ed16274da52",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_le",
+      "rank_within_family": 11,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1008
+      },
+      "source_row_sha256": "0f0a777a69d5c43b9553793d24e49fc2db81595499f431b72b3fe319c579f132",
+      "theme": "natural-square-root",
+      "type": "\u2200 (n : \u2115), n.sqrt * n.sqrt \u2264 n",
+      "type_repr_sha256": "b388f26feaeb7bad4beda914cd4177aa6ce6eecb2e2a53975afea420f168d24d"
+    },
+    {
+      "candidate_id": "0c48a8688c73c0ccc548fe0a20dbe6b8626b5ddac21ceba363195ddd3872b61b",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.le_three_of_sqrt_eq_one",
+      "rank_within_family": 12,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1184
+      },
+      "source_row_sha256": "8b79d0febd1fba92819148e2a9d6eeb7c42bc422e5abf44e910713f1dd63023b",
+      "theme": "natural-square-root",
+      "type": "\u2200 {n : \u2115}, n.sqrt = 1 \u2192 n \u2264 3",
+      "type_repr_sha256": "ce20923cc4c335e6d6e279e0a6ac1967ba3642e2cecb73ddb188d2f7964814ed"
+    },
+    {
+      "candidate_id": "13393d616366248bbfcf95ea97df2cd709f3550ed3a519fe7ffc909109fbf7b4",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt.iter_sq_le",
+      "rank_within_family": 13,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1223
+      },
+      "source_row_sha256": "ea7dd76e888c79546631f4686e742bc6dedc2651ba54ee6702db59a2d0f01f05",
+      "theme": "natural-square-root",
+      "type": "\u2200 (n guess : \u2115), Nat.sqrt.iter n guess * Nat.sqrt.iter n guess \u2264 n",
+      "type_repr_sha256": "a0783435e92f36b5f78e176feafc0614efe0129029a9e6dcc017875c7305857d"
+    },
+    {
+      "candidate_id": "f75e5114b17c377f335a0e37329e6ec24b52af0d168b52d8efbc67d8b933c3b0",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_pos",
+      "rank_within_family": 14,
+      "shape": {
+        "distinct_type_constants": 7,
+        "type_repr_bytes": 1286
+      },
+      "source_row_sha256": "7a44297b63c25dabbcbfda0ce3b8a0517a6e0f1c549283efa85e1225464340a3",
+      "theme": "natural-square-root",
+      "type": "\u2200 {n : \u2115}, 0 < n.sqrt \u2194 0 < n",
+      "type_repr_sha256": "1c92f507faf021a807f8d4b238685204500584c4257169c4ee8497d0b1a4e7b2"
+    },
+    {
+      "candidate_id": "39389df2c9454c260a2cc0fb23a201a815899b3e4610c1ded5281baa50241604",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.lt_succ_sqrt",
+      "rank_within_family": 15,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1094
+      },
+      "source_row_sha256": "9e2536eb6a9afdae952f66c66fe9d39d33a674807dfe438756b6380a93cf18e3",
+      "theme": "natural-square-root",
+      "type": "\u2200 (n : \u2115), n < n.sqrt.succ * n.sqrt.succ",
+      "type_repr_sha256": "8f7376773d95a437790d157ca0ce3e7c7af44d1377e34afb5bc3ea4c80e3adcb"
+    },
+    {
+      "candidate_id": "4909537fde919f3984f4d107fa32d2bd6a57a75321cc183ca2cefc671cfb651d",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_lt",
+      "rank_within_family": 16,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1467
+      },
+      "source_row_sha256": "6e0c720406e389895c9cd50d6e17e0615f3fcd4f246f11fe1cfb9c8af3d5ee89",
+      "theme": "natural-square-root",
+      "type": "\u2200 {m n : \u2115}, m.sqrt < n \u2194 m < n * n",
+      "type_repr_sha256": "98ac935c5f66640b1b10ee9e881972d68550a7140cb9a92823132ce3ef0635df"
+    },
+    {
+      "candidate_id": "e6996680e4257ef612d92e577fdb8fb137db1f8e0f98460a408cea756288cf9b",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.le_sqrt",
+      "rank_within_family": 17,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 1495
+      },
+      "source_row_sha256": "4daeb10c1333ef95db077edc61d41aae2384b3114a6b9e53a68d34d33859f97d",
+      "theme": "natural-square-root",
+      "type": "\u2200 {m n : \u2115}, m \u2264 n.sqrt \u2194 m * m \u2264 n",
+      "type_repr_sha256": "5cf3a1258f5c3b8e6d51b4eee4a2b2b077fca8a3b0534a92290af64b5ffd91fc"
+    },
+    {
+      "candidate_id": "e73ca9fa6f1c175ae389ce46cddbc12cadee177fc6652c4fad3143982c3aa54c",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.exists_mul_self",
+      "rank_within_family": 18,
+      "shape": {
+        "distinct_type_constants": 8,
+        "type_repr_bytes": 2249
+      },
+      "source_row_sha256": "eeef1a6318559afda0becd141707d2110e2f8db346a7d9b86f49a1bbf37ec2ff",
+      "theme": "natural-square-root",
+      "type": "\u2200 (x : \u2115), (\u2203 n, n * n = x) \u2194 x.sqrt * x.sqrt = x",
+      "type_repr_sha256": "f41204ed374be21c067bcb39a7953153f25b172add5ef7f14c00d6eadf3ff2eb"
+    },
+    {
+      "candidate_id": "c036815bf26647445e2a40c4ef070feec6b742e39e53f12affae970e0a3b1d9f",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.sqrt_eq'",
+      "rank_within_family": 19,
+      "shape": {
+        "distinct_type_constants": 9,
+        "type_repr_bytes": 1523
+      },
+      "source_row_sha256": "917665f7ec79093c05c7b677e181d17c487b315fde21e9d6db4e17702616835c",
+      "theme": "natural-square-root",
+      "type": "\u2200 (n : \u2115), (n ^ 2).sqrt = n",
+      "type_repr_sha256": "1399af055225bd9918213ede4a1dbd9692020f459c38ebfc19aa4d0d7d909ed0"
+    },
+    {
+      "candidate_id": "503c5afe5afb7b42a1f9277db9f54fdf8769f1825dea5cb054b65146c7d093e2",
+      "domain": "Nat",
+      "level_params": [],
+      "module": "Mathlib.Data.Nat.Sqrt",
+      "name": "Nat.le_sqrt_of_eq_mul",
+      "rank_within_family": 20,
+      "shape": {
+        "distinct_type_constants": 9,
+        "type_repr_bytes": 2000
+      },
+      "source_row_sha256": "d870625e989116dba107359e993a98f6922532221a684a94a1d8b682479ef10d",
+      "theme": "natural-square-root",
+      "type": "\u2200 {a b c : \u2115}, a = b * c \u2192 b \u2264 a.sqrt \u2228 c \u2264 a.sqrt",
+      "type_repr_sha256": "6cafe93d65a16c49cdcc95283de60a6652886125fab65098113afcb8d7709d72"
+    }
+  ],
+  "candidates_sha256": "3b4cd0e02466c26560dbbb0552db8aba442de4d6df52e13b1486ad61b75b0dc3",
+  "coverage": {
+    "candidate_count": 240,
+    "families": [
+      {
+        "domain": "Int",
+        "eligible": 24,
+        "module": "Mathlib.Data.Int.Fib.Basic",
+        "rejected": {
+          "generated-name-segment": 2
+        },
+        "selected": 20,
+        "theme": "integer-fibonacci"
+      },
+      {
+        "domain": "Int",
+        "eligible": 28,
+        "module": "Mathlib.Data.Int.GCD",
+        "rejected": {
+          "generated-name-segment": 3
+        },
+        "selected": 20,
+        "theme": "integer-gcd"
+      },
+      {
+        "domain": "Int",
+        "eligible": 83,
+        "module": "Mathlib.Data.Int.ModEq",
+        "rejected": {
+          "generated-name-segment": 30
+        },
+        "selected": 20,
+        "theme": "integer-modular-equivalence"
+      },
+      {
+        "domain": "Nat",
+        "eligible": 39,
+        "module": "Mathlib.Data.Nat.Bitwise",
+        "rejected": {
+          "generated-name-segment": 2
+        },
+        "selected": 20,
+        "theme": "natural-bitwise"
+      },
+      {
+        "domain": "Nat",
+        "eligible": 58,
+        "module": "Mathlib.Data.Nat.Choose.Basic",
+        "rejected": {
+          "generated-name-segment": 13
+        },
+        "selected": 20,
+        "theme": "natural-binomial"
+      },
+      {
+        "domain": "Nat",
+        "eligible": 69,
+        "module": "Mathlib.Data.Nat.Factorial.Basic",
+        "rejected": {
+          "generated-name-segment": 20
+        },
+        "selected": 20,
+        "theme": "natural-factorial"
+      },
+      {
+        "domain": "Nat",
+        "eligible": 36,
+        "module": "Mathlib.Data.Nat.Fib.Basic",
+        "rejected": {
+          "generated-name-segment": 5
+        },
+        "selected": 20,
+        "theme": "natural-fibonacci"
+      },
+      {
+        "domain": "Nat",
+        "eligible": 48,
+        "module": "Mathlib.Data.Nat.GCD.Basic",
+        "rejected": {
+          "generated-name-segment": 21
+        },
+        "selected": 20,
+        "theme": "natural-gcd"
+      },
+      {
+        "domain": "Nat",
+        "eligible": 73,
+        "module": "Mathlib.Data.Nat.Log",
+        "rejected": {
+          "generated-name-segment": 16
+        },
+        "selected": 20,
+        "theme": "natural-logarithm"
+      },
+      {
+        "domain": "Nat",
+        "eligible": 103,
+        "module": "Mathlib.Data.Nat.ModEq",
+        "rejected": {
+          "generated-name-segment": 30
+        },
+        "selected": 20,
+        "theme": "natural-modular-equivalence"
+      },
+      {
+        "domain": "Nat",
+        "eligible": 45,
+        "module": "Mathlib.Data.Nat.Prime.Basic",
+        "rejected": {
+          "generated-name-segment": 8
+        },
+        "selected": 20,
+        "theme": "natural-primes"
+      },
+      {
+        "domain": "Nat",
+        "eligible": 36,
+        "module": "Mathlib.Data.Nat.Sqrt",
+        "rejected": {
+          "generated-name-segment": 5
+        },
+        "selected": 20,
+        "theme": "natural-square-root"
+      }
+    ],
+    "source_records": 9729
+  },
+  "kind": "axeyum-autogenesis-mathlib-statement-candidates",
+  "limitations": [
+    "candidate rows are not fact-ledger entries",
+    "dependencies and split components are not assigned",
+    "route hypotheses and Axeyum reachability are not measured",
+    "Mathlib theorem status and proof do not count as Axeyum construction"
+  ],
+  "policy_sha256": "805265b28ea107c292c975d549ce0288c7e4543277a2eaa0e5f8af4bec3383f8",
+  "schema_version": 1,
+  "selection_authority": "statement-shape-only-no-axeyum-outcomes-no-proof-values",
+  "source_artifact_sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+  "source_manifest_sha256": "8fdafd50b9598b4aeb7573e960f061040cbd1234609db1655b27128c7b4a4ddb",
+  "state": "source-candidates-not-nursery-facts"
+}

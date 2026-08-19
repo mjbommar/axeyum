@@ -101,7 +101,7 @@ const RING_BINDER_NAMES: [&str; 30] = [
     "sq_nonneg",
 ];
 
-/// The binder names of the **setoid** telescope (ADR-0483 phase R3), in
+/// The binder names of the **setoid** telescope (ADR-0512 phase R3), in
 /// declaration order: the same eight carrier/operation symbols, then the nine
 /// equality-slot binders, then the same 22 laws — nine of which are now stated
 /// through the bound `eq` rather than through the kernel's `Eq`.
@@ -183,7 +183,7 @@ pub enum RingTelescope {
     /// instantiation reproduces the original footprint **exactly**, which is
     /// the crispest available demonstration that nothing was lost.
     Used,
-    /// Bind all 39 of the **setoid** interface (ADR-0483 phase R3): the eight
+    /// Bind all 39 of the **setoid** interface (ADR-0512 phase R3): the eight
     /// symbols, an equality *parameter* with its three equivalence laws and five
     /// congruences, and the 22 laws — the nine `Eq`-stated ones restated through
     /// the parameter.
@@ -972,7 +972,7 @@ pub struct RingInterfaceBinder {
 /// [`generalize_over_ordered_ring`] builds, available without a refutation to
 /// generalize. It exists so the interface can be *pinned* — the same 30
 /// statements the `Real` package declares as axioms, stated as binders and
-/// therefore assuming nothing (ADR-0480's route to `declared = 0`).
+/// therefore assuming nothing (ADR-0509's route to `declared = 0`).
 ///
 /// The rendered types are independent of which environment they were read from
 /// whenever two signatures state the same laws over the same connectives:
@@ -1189,7 +1189,7 @@ pub struct EqSpecialization {
 /// kernel's `Eq`, and check that what comes back is today's `Eq`-shaped
 /// statement.
 ///
-/// This is the test ADR-0483 phase R3 names. Widening the interface from 30
+/// This is the test ADR-0512 phase R3 names. Widening the interface from 30
 /// binders to 39 is only sound as a *generalization* if the 39-binder statement
 /// specializes back to the 30-binder one — otherwise the rewrite quietly changed
 /// what the theorem proves, and every downstream instantiation (including at the

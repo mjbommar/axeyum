@@ -69,8 +69,8 @@
   ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "axeyum-lean-kernel creal::field (ADR-0481; agent-creal-field lane)",
+    "established_by": "axeyum-lean-kernel creal::field (ADR-0510; agent-creal-field lane)",
     "source": "Bishop-style constructive analysis: the inverse is defined on the reals APART from zero, and the apartness must carry the separating modulus"
   },
-  "notes": "WHAT THIS DOES NOT SAY. It does not say CReal.inv exists. It did not when this fact was written -- this fact is precisely about the shape its signature must have -- and it does now (ADR-0487, F:real-inverse-is-built-and-well-defined), with exactly the signature stated here. It does not say the reals apart from zero are exactly the reals not equal to zero: CReal.not_equiv_of_apart is ONE-WAY, and the converse is Markov's principle, which is neither proved nor assumed here. It does not say a Prop hypothesis blocks a Type-valued definition -- that reading is wrong, and the distinction is the point: a function may take a Prop and return a Type, it may not BRANCH on one, which is why the one-sided PosBound works where the disjunctive Apart does not."
+  "notes": "WHAT THIS DOES NOT SAY. It does not say CReal.inv exists. It did not when this fact was written -- this fact is precisely about the shape its signature must have -- and it does now (ADR-0516, F:real-inverse-is-built-and-well-defined), with exactly the signature stated here. It does not say the reals apart from zero are exactly the reals not equal to zero: CReal.not_equiv_of_apart is ONE-WAY, and the converse is Markov's principle, which is neither proved nor assumed here. It does not say a Prop hypothesis blocks a Type-valued definition -- that reading is wrong, and the distinction is the point: a function may take a Prop and return a Type, it may not BRANCH on one, which is why the one-sided PosBound works where the disjunctive Apart does not."
 }

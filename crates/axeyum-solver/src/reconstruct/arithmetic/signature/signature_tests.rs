@@ -45,7 +45,7 @@ fn baby_farkas() -> (TermArena, Vec<TermId>) {
 
 /// The `Real` package satisfies this module's independent statement of the
 /// ordered-ring interface, and the two numbers the check reads out of the kernel
-/// are the ones ADR-0456 and ADR-0483 recorded.
+/// are the ones ADR-0456 and ADR-0512 recorded.
 #[test]
 fn the_real_package_satisfies_the_ring_interface() {
     let (mut kernel, sig) = real_signature();
@@ -377,7 +377,7 @@ fn creal_signature() -> (Kernel, RingSignature, EqualitySlot) {
 }
 
 // ===========================================================================
-// ADR-0483 phase R4: the equality slot, ADOPTED from the constructed reals.
+// ADR-0512 phase R4: the equality slot, ADOPTED from the constructed reals.
 // ===========================================================================
 
 /// A `CReal` reconstruction context with the equality slot adopted, plus the

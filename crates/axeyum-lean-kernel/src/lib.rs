@@ -92,7 +92,9 @@ pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use inductive::InductiveFamilySpec;
 pub use int_prelude::{IntPrelude, build_int_prelude};
-pub use lean_export::{EXPORT_FORMAT_VERSION, ExportError, Lean4ExportMetadata};
+pub use lean_export::{
+    AutoParamTypeNormalizationReport, EXPORT_FORMAT_VERSION, ExportError, Lean4ExportMetadata,
+};
 pub use lean_pp::{
     LeanPreludeModule, importing_module_banner, self_contained_module_banner,
     shared_prelude_module_banner, split_module_banner,
@@ -331,7 +333,7 @@ pub struct Kernel {
     /// One-way guard set after transient tables are released for serialization.
     export_only: bool,
     /// Render `Declaration::Theorem` with the `def` keyword instead of
-    /// `theorem` (ADR-0489). **Off by default**: it changes nothing this
+    /// `theorem` (ADR-0518). **Off by default**: it changes nothing this
     /// repository ships. See [`Kernel::set_render_proofs_as_def`].
     render_proofs_as_def: bool,
 

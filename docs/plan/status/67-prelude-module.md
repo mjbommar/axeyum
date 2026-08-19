@@ -31,7 +31,7 @@ reproduced with the sharing pass off, and `maxHeartbeats 0` does not move it.
 **That belongs to the constructed-real lane and is not fixed here.** The root
 set is the reached union (343 of 465) instead.
 
-ADR-0482. Detail in [`../notes/67-prelude-module.md`](../notes/67-prelude-module.md).
+ADR-0511. Detail in [`../notes/67-prelude-module.md`](../notes/67-prelude-module.md).
 
 <!-- plan-section: landed-changes -->
 

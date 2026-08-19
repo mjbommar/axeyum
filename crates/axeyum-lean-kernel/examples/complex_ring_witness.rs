@@ -47,7 +47,7 @@
 //! `mul_one`, `mul_zero`, `left_distrib` — are exactly what ℂ satisfies, and
 //! all nine are stated over `Complex.Equiv` rather than `Eq`, because
 //! `Eq Complex` is not the equality of complex numbers any more than
-//! `Eq CReal` is the equality of real ones (ADR-0483).
+//! `Eq CReal` is the equality of real ones (ADR-0512).
 //!
 //! # What this does NOT claim
 //!

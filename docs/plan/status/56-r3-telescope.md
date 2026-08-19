@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-**ADR-0483 phase R3 has landed: the ring interface takes equality as a
+**ADR-0512 phase R3 has landed: the ring interface takes equality as a
 parameter, 30 → 39, and instantiating it back at `Eq` reproduces today's
 statement node for node (`WIP`, agent-r3-telescope, 2026-08-18).**
 `LraReconstructCtx::enable_setoid_equality` declares nine equality-interface
@@ -31,4 +31,4 @@ Detail moved to [`../notes/56-r3-telescope.md`](../notes/56-r3-telescope.md).
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-18 | (pending) | ADR-0483 phase R3: the ordered-ring telescope gains an equality slot (30 → 39 binders) and `specialize_setoid_to_eq` proves it specializes back to today's statement — conclusion **and** all 30 non-slot binder types, node for node. Three mutation kills recorded; `residual_eq_constants` guards the one failure the footprint cannot see. |
+| 2026-08-18 | (pending) | ADR-0512 phase R3: the ordered-ring telescope gains an equality slot (30 → 39 binders) and `specialize_setoid_to_eq` proves it specializes back to today's statement — conclusion **and** all 30 non-slot binder types, node for node. Three mutation kills recorded; `residual_eq_constants` guards the one failure the footprint cannot see. |

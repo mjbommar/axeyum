@@ -1,4 +1,4 @@
-//! **The `Real` axiom package has a model that is actually ℝ** — ADR-0483
+//! **The `Real` axiom package has a model that is actually ℝ** — ADR-0512
 //! phase R4, with the exit status depending on it.
 //!
 //! `arith_model_witness` prints the same table for the `Int` model and ends
@@ -34,7 +34,7 @@
 //!    is either one of the eight interpreted symbols or a modelled law, so a
 //!    31st axiom is a shortfall here rather than a smaller-but-tidy count;
 //! 3. exactly **nine** are restated over `CReal.Equiv` and thirteen are
-//!    verbatim — ADR-0483 Measurement 2, read out of the kernel; and
+//!    verbatim — ADR-0512 Measurement 2, read out of the kernel; and
 //! 4. the seven **discrimination** witnesses are present and axiom-free. This
 //!    is the one the footprints cannot do for themselves. An empty carrier
 //!    satisfies every ∀-law; the total relation is an equivalence relation and
@@ -49,7 +49,7 @@
 //! `Eq CReal` is **not** the equality of real numbers — `CReal.Equiv` is — and
 //! nine of the 22 obligations say so in their own statement. A consumer that
 //! wants its `Eq`-rewriting back goes through the ordered-ring telescope's
-//! equality slot (ADR-0483 phase R3), which is the interface this model
+//! equality slot (ADR-0512 phase R3), which is the interface this model
 //! satisfies; it does not get Leibniz equality on reals, which is what would
 //! cost `Quot.sound`.
 //!
@@ -57,7 +57,7 @@
 //! the standard homomorphism argument over the term language and is not
 //! machine-checked here — the kernel cannot state it.
 //!
-//! And the `Real` package's 30 axioms are **unchanged** by this: ADR-0483
+//! And the `Real` package's 30 axioms are **unchanged** by this: ADR-0512
 //! retires them by *deletion*, once no consumer references them, not by
 //! exhibiting a model. Measured after phase R3 landed, 18 files still reference
 //! `build_arith_prelude`/`ArithPrelude`, and `LraReconstructCtx`'s own doc says
@@ -158,11 +158,11 @@ fn main() {
         failed = true;
     }
 
-    // (3): ADR-0483 Measurement 2, read out of the kernel.
+    // (3): ADR-0512 Measurement 2, read out of the kernel.
     if restated != 9 {
         eprintln!(
             "FAIL: {restated} laws were restated over CReal.Equiv, not 9. The Real \
-             package's Eq-fragment changed shape and ADR-0483's Measurement 2 no \
+             package's Eq-fragment changed shape and ADR-0512's Measurement 2 no \
              longer describes it."
         );
         failed = true;
@@ -223,7 +223,7 @@ fn main() {
     if failed {
         eprintln!(
             "FAIL: the constructed reals are NOT a model of the Real axiom package as \
-             claimed — see above. ADR-0483 phase R4 does not hold as stated."
+             claimed — see above. ADR-0512 phase R4 does not hold as stated."
         );
         std::process::exit(1);
     }

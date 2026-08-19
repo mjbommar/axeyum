@@ -16,7 +16,7 @@ non-slot domains to be the same interned expressions. Verified by mutation:
 supplying an η-expanded `fun a b => Eq R a b` leaves the conclusion identical,
 admits, stays axiom-free — and drops the binder count to **21 of 30**, the nine
 mismatches being exactly the nine `Eq`-stated laws, which independently
-re-derives ADR-0483's Measurement 2.
+re-derives ADR-0512's Measurement 2.
 
 **A third guard exists because the other two cannot see the failure that
 matters.** `Eq`, `Eq.refl` and `Eq.rec` are an inductive, a constructor and a

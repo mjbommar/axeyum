@@ -154,7 +154,7 @@ class RemoteCollisionTests(unittest.TestCase):
 
     def test_same_number_different_content_is_a_collision(self) -> None:
         # A number no real ADR uses. The fixture originally used 0468, a LIVE
-        # number, and a repository-wide renumber (`ADR-0468` -> `ADR-0483`,
+        # number, and a repository-wide renumber (`ADR-0468` -> `ADR-0512`,
         # itself a collision fix) rewrote the two filenames here and left the
         # bare `"0468"` assertion behind, because the sed patterns were
         # `ADR-0468` and `adr-0468-` and a bare number matches neither. The

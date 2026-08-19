@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "F:ml430-mutation-aabb80b1f89f0c5847364692",
+  "title": "Outcome-blind mutation of Int.fib_eq_zero",
+  "statement": "A `boundary-widening-biconditional` mutation of the pinned source proposition `Int.fib_eq_zero`.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "∀ {n : ℤ}, Int.fib n = 0 ↔ n = 0 ∨ n = 1",
+    "fragment": "Int"
+  },
+  "epistemic_status": "open",
+  "external_status": "unknown",
+  "depends_on": [],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "not established in this ledger",
+    "source": "outcome-blind `boundary-widening-biconditional` mutation of Int.fib_eq_zero"
+  },
+  "notes": "Open generated mutation. No expected truth value, proof, witness, route, budget, or Axeyum outcome is recorded. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module. The nursery manifest, not depends_on, keeps this row in the same partition as its source."
+}

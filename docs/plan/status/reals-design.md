@@ -3,7 +3,7 @@
 <!-- plan-section: lane-status -->
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
-[ADR-0483](../../research/09-decisions/adr-0483-real-is-constructed-as-a-setoid-over-the-rationals.md)
+[ADR-0512](../../research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
 decides **a Bishop setoid of regular ℚ-sequences** — no quotient, no cuts.
 ADR-0456's two rejections were both correct and its conclusion did not follow:
 equality does not have to be `Eq`. Measured, not argued —
@@ -31,4 +31,4 @@ Detail moved to [`../notes/reals-design.md`](../notes/reals-design.md).
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-17 | `pending` | ADR-0483: ℝ is a Bishop setoid over ℚ at **zero** trusted declarations, with `creal_shape_probe` measuring the carrier's admissibility against a `funext` negative control; ℂ scoped and deferred. |
+| 2026-08-17 | `pending` | ADR-0512: ℝ is a Bishop setoid over ℚ at **zero** trusted declarations, with `creal_shape_probe` measuring the carrier's admissibility against a `funext` negative control; ℂ scoped and deferred. |

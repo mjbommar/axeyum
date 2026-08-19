@@ -22,8 +22,8 @@ index, and only `Equiv` can relate them). Thirteen restate **verbatim** —
 `le_refl`, `le_trans`, `add_le_add`, `lt_irrefl`, `lt_trans`, `lt_of_lt_of_le`,
 `lt_of_le_of_lt`, `le_of_lt`, `zero_lt_one`, `add_lt_add_of_le_of_lt`,
 `mul_nonneg`, `sq_nonneg`, `mul_le_mul_of_nonneg_left` — because none of them
-mentions `Eq`, which is ADR-0483's Measurement 2 cashed. `mul_congr`, the fifth
-congruence obligation and the R4 prerequisite ADR-0483 calls the setoid's real
+mentions `Eq`, which is ADR-0512's Measurement 2 cashed. `mul_congr`, the fifth
+congruence obligation and the R4 prerequisite ADR-0512 calls the setoid's real
 tax, is proved too; it is not one of the 22.
 
 **`add_zero` and `add_assoc` did not need the missing ℚ lemma.** The previous
@@ -200,7 +200,7 @@ module builds one template and clones it (`prelude_cache`'s argument verbatim;
 `crate::prelude_cache` does not cover it; that is the next lever if this becomes
 a gate problem.
 
-**`real: axiom=30` is unchanged, deliberately.** ADR-0483 retires those by
+**`real: axiom=30` is unchanged, deliberately.** ADR-0512 retires those by
 *deletion* in phase R4 — once `generalize_over_ordered_ring` grows an equality
 slot and no consumer references the `Real` package — not by exhibiting a model.
 Nor is `Eq CReal` the equality of real numbers: `CReal.Equiv` is, `0.999…` and

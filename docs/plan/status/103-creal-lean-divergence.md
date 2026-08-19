@@ -24,7 +24,7 @@ accepted and every recursive `gcd` refused, while `Nat.mod/div/sub` and a bare
 refusal), not a budget. `internal exception #3` is the command abort.
 
 **The coverage hole is closed.** Emission was reachability-driven, so Lean saw
-only the reachable slice (343 of 465 when ADR-0482's lane measured it).
+only the reachable slice (343 of 465 when ADR-0511's lane measured it).
 `real_lean_creal_carrier_kernel_replay` exports the complete environment and
 requires Lean's constant count to **equal** our kernel's, so "accepted" cannot
 mean "accepted a subset"; `real_lean_wellfounded_elaborator_divergence` pins the
@@ -35,9 +35,9 @@ still accepting); a no-op `theorems_as_defs` kills the divergence suite on the
 `def` row alone; each left the other green. The fix (`theorem` -> `def` in the
 renderer) is measured and handed to the renderer's owner, not taken here.
 
-ADR-0488. Detail in
+ADR-0517. Detail in
 [`../notes/103-creal-lean-divergence.md`](../notes/103-creal-lean-divergence.md).
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-18 | `PENDING` | Lean has two checkers (ADR-0488): the kernel accepts all 470 carrier declarations, the elaborator refuses those whose checking must reduce a `theorem`. `real_lean_creal_carrier_kernel_replay` (whole carrier, no reachability filter, count-equality + tamper control) and `real_lean_wellfounded_elaborator_divergence` (`gcd` refused / `mod` accepted / same module with `theorem`->`def` accepted / kernel takes both); gate floor 212 -> 218. |
+| 2026-08-18 | `PENDING` | Lean has two checkers (ADR-0517): the kernel accepts all 470 carrier declarations, the elaborator refuses those whose checking must reduce a `theorem`. `real_lean_creal_carrier_kernel_replay` (whole carrier, no reachability filter, count-equality + tamper control) and `real_lean_wellfounded_elaborator_divergence` (`gcd` refused / `mod` accepted / same module with `theorem`->`def` accepted / kernel takes both); gate floor 212 -> 218. |

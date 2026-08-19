@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-iterate-recurrence-result",
+  "state": "producer-v2-rejected-no-retry-evaluation-or-ledger-credit",
+  "tooling_commit": "1880e56dbe07c0eb1a8f430d4de983cf4212511a",
+  "tooling_file": {
+    "path": "crates/axeyum-lean-import/examples/nat_fib_iterate_recurrence.rs",
+    "sha256": "f98ad6db3274e762f9e4b0ac8d74c5a26297a9aca9f2d6ce72e0a8ad39cc6d84"
+  },
+  "frozen_policy": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-iterate-recurrence-policy-v2.json",
+    "sha256": "3e3771990b7adce8acc67e325d436046fdad389fa5b47abfbedb661aafaec969"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/iterate-recurrence/1880e56db-nat-fib-add-two-r080-v2",
+    "file": "observation.json",
+    "bytes": 2173,
+    "mode": "0444",
+    "file_sha256": "99b4eedbcc081bac23068b7777b295ba06f643b0566452100dbb4cf5f033852a",
+    "observation_sha256": "f69f0c6815e8d57a57e590756e62a8b08cdbf489673db648a159f20d14c0e9f1"
+  },
+  "result": {
+    "target": "Nat.fib_add_two",
+    "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+    "operation": "bounded-iterate-recurrence-v2",
+    "preexecution_controls_passed": true,
+    "plan_templates_attempted": 2,
+    "kernel_submissions_attempted": 2,
+    "executor_invocations": 1,
+    "producer_retries": 0,
+    "kernel_accepted": false,
+    "failure_boundary": "target-specific projected-equality composition",
+    "semantic_theorem_receipts_issued": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-fib-iterate-recurrence-result.py",
+  "limitations": "The corrected generic equality controls passed, but the sole v2 target execution was rejected. This narrows the next diagnostic boundary and does not establish Nat.fib_add_two."
+}

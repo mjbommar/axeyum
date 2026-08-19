@@ -30,9 +30,9 @@
 //! context — emits a file **Lean 4.30.0's ELABORATOR refuses**. Two `CReal`
 //! theorems the in-tree kernel admits are rejected, and they had never been in
 //! an emitted module because no refutation reaches them. `reached_carrier`
-//! explains the measurement; ADR-0482 records the decision it forced.
+//! explains the measurement; ADR-0511 records the decision it forced.
 //!
-//! **Which Lean matters, and this said the wrong one until ADR-0488.** Lean's
+//! **Which Lean matters, and this said the wrong one until ADR-0517.** Lean's
 //! *kernel* accepts all of them: replayed through `Environment.addDeclCore` from
 //! our `lean4export` NDJSON it admits the **whole** carrier, 470 of 470, in
 //! 1.4 s (`real_lean_creal_carrier_kernel_replay`). It is the *elaborator*,
@@ -253,7 +253,7 @@ struct Split {
 /// with the refutations that import it — measured 2026-08-18 and reproduced with
 /// the sharing pass off, so it is not a rendering artefact.
 ///
-/// Not a kernel divergence either, which is what this said before ADR-0488:
+/// Not a kernel divergence either, which is what this said before ADR-0517:
 /// Lean's own kernel accepts every one of them, and the whole carrier with them.
 /// The elaborator's reducer does not unfold a `theorem`, and these four proofs
 /// have to compute through `Nat.gcd`, whose recursive step rests on the theorem

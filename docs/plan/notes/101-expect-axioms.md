@@ -31,7 +31,7 @@ does. The only preludes any fact names are `nat` (23), `integer` (6), `logic`
 
 ## The gap that was real
 
-`creal` (ADR-0483) and `complex` (ADR-0479) were in **no** measurement the
+`creal` (ADR-0512) and `complex` (ADR-0508) were in **no** measurement the
 ledger consumed: they need `--include-constructed`, added the same day, and the
 ledger's coverage command did not pass it. Their counts could move either way
 unobserved. `rat` was measured but absent from `EXPECTED_PRELUDES`, so the

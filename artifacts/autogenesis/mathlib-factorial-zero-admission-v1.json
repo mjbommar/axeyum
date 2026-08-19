@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-statement-reflexivity-admission",
+  "state": "durably-admitted-archived-and-clean-replayed",
+  "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+  "operation_id": "authoritative-mathlib-nat-descfactorial-zero-reflexivity-v1",
+  "registration_commit": "22e49b92d9e4eac977cd232670898f3ad4f46d3b",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/22e49b92d-mathlib-nat-descfactorial-zero-v1",
+  "external_index_sha256": "237484fcab5730a662bcb12d3c8ff8aa0cde6033f5c67babb07563a4fb87be96",
+  "source_bundle_sha256": "c3cbb9da038e8addbbb473ccb932f7a18a690c67dc5a9c245a15fc18e368aeb6",
+  "identities": {
+    "frontier_before_sha256": "c86ae1d51b09ac8de45a45c29b11b732b20b72f4ce8f393784dc1c9ed955cbed",
+    "execution_sha256": "3675df4623f421cfc4c92df7a3c4523c1f915f1e7d5830621cb96662d2b05d0b",
+    "transaction_sha256": "95675ccb8d5509a06efebd892382514c90932ef1947dccaa5e8b4454b46e36d5",
+    "admission_event_sha256": "4cadf6dc6809a256743d58ad5c97dc6a8ef51c38d7736c5ac1146e93743fa8b8",
+    "frontier_after_sha256": "32f1f2b00a50ab29dfede5c99807b0d24fc11bc74436181ed25a9b621d3fddf8",
+    "readiness_delta_sha256": "0fa8dfa95754293d6d099baf37fe391e6d19488cbc04b5be9400071332f19939",
+    "before_fact_sha256": "f43e3ef4dce80dc6868bd03cc61c033b9dad8e15cdf6e5f1fb6affb6007b94af",
+    "after_fact_sha256": "70e7a0335d597c283232236bd6432987a2cf98eb45f01744c71609dc7c254aff"
+  },
+  "external_files": {
+    "frontier-before.json": "f9087517f1da07ab26eaaebd6309011252dc0f97aad14c7257e0ec3fb5252fcc",
+    "execution.json": "623821e0beb00bcee242354d405ef1f749c72f23fb079b51c20f6bc4920f84fc",
+    "transaction.json": "a7c29f11a98a037ccf9f4a6a2ea02a86c2f9389606326c805413249d5c35351a",
+    "admission-event.json": "10c25e88113900316ae1a68f8f47cbd6e68ab4015cf8a7bed08f92120b2e37e7",
+    "frontier-after.json": "b80e3b51d5d361ddecc604c2a363bfd81a7d5e05db6d5817bf90dac1dbb7b2c6",
+    "readiness.json": "eb106ff91428e8e0b178225713c8e0c5543be2c2bf36e082d7d760ae03d8d244",
+    "before-fact.json": "504087788f8ac3f20dd2d25c1ec931871f84f4175c3115b0143b805d4c52a580",
+    "after-fact.json": "eb0e801feec7e64693caaa227e2a2b5f2647c10f04f6da4443faeeaa8d958fd5"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [],
+    "axiom_footprint": [],
+    "theorem_dependencies": [],
+    "target_dependency": false
+  },
+  "clean_replay": {
+    "source_commit": "ddeec1fddebd987d3e43ba8c06ac6ee5921a50a4",
+    "external_root": "/nas3/data/axeyum/autogenesis/replays/ddeec1fdd-mathlib-factorial-zero-v1",
+    "external_index_sha256": "b53f99da111b86879e85aa0a778127999395cfc791c231b2e92855c725ccf43f",
+    "replay_file_sha256": "00adcd95001a51606d627dfda66eefe5b02a13b1d77539988cfe3cfd082b994f",
+    "replay_sha256": "17c7de26fda0595fe636db5770db300d3b282a392b95550c37bdfcd904fd6311",
+    "fresh_execution_sha256": "6ef789207ce41078dcf070e4eb267c8e0e9d956e7fb7a274f592cab07ce5c7d1",
+    "fresh_transaction_sha256": "37de48c03048b607c1c034153986e92b05dda1ddc9b6d41c25606da286906758",
+    "fresh_event_sha256": "8fa2e8b09b53248aefc2a5d0ebc76cc1bbd22cd3a17b9e6d2ac1498c371be151",
+    "fresh_readiness_delta_sha256": "b90274e57059a27066379c735028fd0fe744edf0229e5870e6a08e5bbec7a925"
+  },
+  "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-factorial-zero-admission-v1.json",
+  "limitations": "This establishes reuse across two exact frozen train facts in one reflexivity family. The admitted descendant is a dependency leaf, so the readiness delta honestly unlocks nothing. It does not broaden the operation to generic equalities or address the proof-free type-slice gap."
+}

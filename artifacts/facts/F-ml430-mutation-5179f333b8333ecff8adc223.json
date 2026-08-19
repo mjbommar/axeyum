@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "F:ml430-mutation-5179f333b8333ecff8adc223",
+  "title": "Outcome-blind mutation of Nat.Prime.pred_pos",
+  "statement": "A `bound-strengthening` mutation of the pinned source proposition `Nat.Prime.pred_pos`.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "∀ {p : ℕ}, Nat.Prime p → 1 < p.pred",
+    "fragment": "Nat"
+  },
+  "epistemic_status": "open",
+  "external_status": "unknown",
+  "depends_on": [],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "not established in this ledger",
+    "source": "outcome-blind `bound-strengthening` mutation of Nat.Prime.pred_pos"
+  },
+  "notes": "Open generated mutation. No expected truth value, proof, witness, route, budget, or Axeyum outcome is recorded. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module. The nursery manifest, not depends_on, keeps this row in the same partition as its source."
+}

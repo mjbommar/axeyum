@@ -24,7 +24,7 @@
 //! equality* — `Eq` at the carrier for the `Real` package, and a defined
 //! relation for a constructed carrier. `CReal`'s equality is `CReal.Equiv`, a
 //! definition rather than the kernel's `Eq`, and that difference is exactly what
-//! keeps its trusted surface at zero (ADR-0483 phase R3), so it has to be part of
+//! keeps its trusted surface at zero (ADR-0512 phase R3), so it has to be part of
 //! the signature rather than an assumption baked into the code.
 //!
 //! ## What is checked
@@ -271,7 +271,7 @@ impl From<IntPrelude> for RingSignature {
     /// cannot both occupy. `build_arith_prelude` gives kernel equality at the
     /// cost of 30 **axioms**; `build_creal_prelude` costs nothing but its
     /// equality is the *defined* relation `CReal.Equiv`, because `Eq CReal` is
-    /// equality of representatives (ADR-0483). `ℤ` is the case where both hold
+    /// equality of representatives (ADR-0512). `ℤ` is the case where both hold
     /// at once: `build_int_prelude` proves all 22 laws — `build_int_model_of_arith`
     /// admits each `Real` axiom's interpretation with `Int.<law>` as its proof and
     /// records `identical: true` for all 22, so the statements agree symbol for
@@ -597,7 +597,7 @@ pub struct RingSignatureReport {
     /// finding, not a configuration.
     pub carrier_level: usize,
     /// The laws whose statement mentions [`RingSignature::equality`], rendered
-    /// and in declaration order. Nine for the `Real` package — the nine ADR-0483
+    /// and in declaration order. Nine for the `Real` package — the nine ADR-0512
     /// Measurement 2 counted, and the nine
     /// [`enable_setoid_equality`](super::LraReconstructCtx::enable_setoid_equality)
     /// restates through the equality slot.

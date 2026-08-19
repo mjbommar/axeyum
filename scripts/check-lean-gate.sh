@@ -126,7 +126,7 @@ cd "$(dirname "$0")/.." || exit 2
 # Raised 208 -> 212 on 2026-08-18 by lane `lean-prelude-module`:
 # `real_lean_shared_prelude_crosscheck` adds FOUR, and it is the first suite that
 # hands Lean a module set rather than a module -- a shared development compiled
-# to an `.olean` plus a query module that `import`s it (ADR-0482). Two of the
+# to an `.olean` plus a query module that `import`s it (ADR-0511). Two of the
 # four are negative controls, because the positive result is otherwise
 # indistinguishable from an import that did nothing: the query module checked
 # with `LEAN_PATH=""` must FAIL, and a module that re-declares what its import
@@ -137,7 +137,7 @@ cd "$(dirname "$0")/.." || exit 2
 # hands Lean the WHOLE carrier -- all 470 declarations of `build_creal_prelude`,
 # with no reachability filter. Every other suite renders the closure of one
 # refutation, so Lean had only ever seen the declarations some query cited (343
-# of 465 when ADR-0482's lane measured it); the other 122 had never been handed
+# of 465 when ADR-0511's lane measured it); the other 122 had never been handed
 # to any Lean, and the first time anything pointed Lean at them two were
 # refused. It replays through
 # `Environment.addDeclCore` -- Lean's KERNEL -- which accepts all 470 in 1.4 s,
@@ -146,7 +146,7 @@ cd "$(dirname "$0")/.." || exit 2
 # `real_lean_wellfounded_elaborator_divergence` adds FOUR and names the residue
 # the source route leaves: Lean's ELABORATOR does not unfold a `theorem` while
 # reducing, so `Nat.gcd 2 4 = 2` is refused where the structurally recursive
-# `Nat.mod 4 2 = 0` is accepted and Lean's kernel takes both (ADR-0488). Two of
+# `Nat.mod 4 2 = 0` is accepted and Lean's kernel takes both (ADR-0517). Two of
 # the four are controls -- the `mod` module, without which the refusal would be
 # a statement about module size, and the SAME gcd module with every `theorem`
 # re-spelled `def`, which Lean accepts and which isolates the mechanism to one

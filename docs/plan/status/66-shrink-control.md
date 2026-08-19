@@ -2,12 +2,12 @@
 
 <!-- plan-section: lane-status -->
 
-**Both of ADR-0480's reasons for keeping the 30 axioms are discharged in
+**Both of ADR-0509's reasons for keeping the 30 axioms are discharged in
 principle; the rows have not moved (`WIP`, agent-shrink-control, 2026-08-18).**
 `real: axiom=30` is unchanged and I did not force it down — "what stops it"
 below is the finding.
 
-**The specification, measured rather than asserted.** ADR-0480 says the
+**The specification, measured rather than asserted.** ADR-0509 says the
 30-binder telescope "is the interface, assuming nothing" — true only if the
 telescope read off an axiom-free development says the *same* thing as the one
 read off `Real`. `examples/ring_interface_pin.rs` compares them: **30 binders,
@@ -40,4 +40,4 @@ of **31**. 29 `.rs` files name the package.
 
 | 2026-08-18 | 570b5c738 | **The interface as a telescope, and it is the same over ℤ.** `ring_interface_telescope` + `examples/ring_interface_pin.rs`, 30 of 30 byte-identical. Also repaired a test `61906c585` swept in broken, and the finding behind it: a `NameId` is an INDEX, so a signature read against another *populated* kernel resolves silently to `Nat.le`, `Nat.beq_refl`, … rather than failing. |
 | 2026-08-18 | 9ab8d7977 | **The negative control at one axiom instead of thirty.** `build_control_carrier`, three mutations, one test dead each. |
-| 2026-08-18 | 6c08c906f | **ADR-0486** + `F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers`. |
+| 2026-08-18 | 6c08c906f | **ADR-0515** + `F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers`. |

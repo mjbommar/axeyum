@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-semantic-abstraction-census",
+  "state": "diagnostic-no-contract-or-ledger-credit",
+  "tooling_commit": "efe7f0b70121db45205ad947ea04465e06f0451e",
+  "tooling_files": [
+    {
+      "path": "crates/axeyum-lean-import/examples/semantic_abstraction_census.rs",
+      "sha256": "0d6c27398c58d508a651fcdd2d5cc1cc0ebe3efaf83aac18c3bf287ccd13ea75"
+    }
+  ],
+  "source_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1",
+    "lean_version": "4.30.0",
+    "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "producer_observation": {
+    "root": "/nas3/data/axeyum/autogenesis/producer-census/10ab370a9-mathlib-v4.30.0-reflexivity-v1",
+    "file": "observation.json",
+    "file_sha256": "849cdcb67f0428b17db811d27fead774c099777bff8996b5ef8d952def18dd54",
+    "observation_sha256": "b37c5a6fcfffe257d3d0df6904fb6575ee41989814137b835609a1968d8f8e46"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/semantic-abstraction/efe7f0b70-mathlib-v4.30.0-census-v1",
+    "file": "observation.json",
+    "bytes": 279971,
+    "mode": "0444",
+    "file_sha256": "215372dc525a6467b51e598c9ca54d18540cf538a45e4119f8f9bb6098c1ba00",
+    "observation_sha256": "3c2a5d670255f9911ba96e4219803dbe7a61838407610785ca82cec78b5c3c6a"
+  },
+  "population": {
+    "abstracted_rows": 114,
+    "bindings": 152,
+    "source_occurrences": 244,
+    "rendered_names": 30,
+    "exact_definition_identities": 32,
+    "variant_names": [
+      "Int.gcd",
+      "Nat.gcd"
+    ]
+  },
+  "contract_shapes": {
+    "predicate-equivalence": {
+      "identities": 5,
+      "bindings": 73
+    },
+    "pointwise-function-equation": {
+      "identities": 15,
+      "bindings": 50
+    },
+    "nullary-observational-projections": {
+      "identities": 12,
+      "bindings": 29
+    }
+  },
+  "trusted_closure_occurrences": {
+    "theorem": 6346,
+    "axiom": 27,
+    "quotient": 20,
+    "opaque": 7
+  },
+  "reproduction": "cargo run -p axeyum-lean-import --example semantic_abstraction_census -- --archive /nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1 --observation /nas3/data/axeyum/autogenesis/producer-census/10ab370a9-mathlib-v4.30.0-reflexivity-v1/observation.json --output observation.json",
+  "verification": "python3 scripts/check-autogenesis-semantic-abstraction-census.py",
+  "limitations": "This census classifies exact definition identities and normalized trusted implementation closures. It generates no semantic contract, proof, operation, held-out result, or ledger credit. Trusted-closure occurrence totals are diagnostic transitive inventories, not proposed premise sets."
+}

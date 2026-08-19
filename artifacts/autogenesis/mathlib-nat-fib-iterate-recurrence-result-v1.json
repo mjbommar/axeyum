@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-iterate-recurrence-result",
+  "state": "producer-rejected-no-retry-evaluation-or-ledger-credit",
+  "tooling_commit": "ca30e87fbc26104fffd8a84e4e6613640d517e0f",
+  "tooling_file": {
+    "path": "crates/axeyum-lean-import/examples/nat_fib_iterate_recurrence.rs",
+    "sha256": "77a83744a06effd32818cd5a46a46aac6ee97c940469ac67582b9f0b52c924c4"
+  },
+  "frozen_policy": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-premise-selection-policy-v1.json",
+    "sha256": "74177fb996e3760fafb63b046c61929fa7b62e3cf7072f2304268865c4b5ec56"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/iterate-recurrence/ca30e87fb-nat-fib-add-two-r080-v1",
+    "file": "observation.json",
+    "bytes": 1868,
+    "mode": "0444",
+    "file_sha256": "753297fe6886905814563245394e4961b30ce8e4febe5a72e564bcb782611513",
+    "observation_sha256": "a5b3ec307e060c5da6a7255ef39fe8f9d568ddf1d15f9988e72ecbabe9f7eaa3"
+  },
+  "result": {
+    "target": "Nat.fib_add_two",
+    "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+    "operation": "bounded-iterate-recurrence-v1",
+    "helper_schema_kernel_accepted": true,
+    "plan_templates_attempted": 2,
+    "kernel_submissions_attempted": 2,
+    "executor_invocations": 1,
+    "producer_retries": 0,
+    "kernel_accepted": false,
+    "failure_boundary": "recurrence equality-elimination composition",
+    "semantic_theorem_receipts_issued": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-fib-iterate-recurrence-result.py",
+  "limitations": "The helper schema passed a zero-target preflight, but the sole preregistered target execution was rejected. This is capability-gap evidence only; Nat.fib_add_two remains open."
+}

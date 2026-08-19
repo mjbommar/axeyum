@@ -1,8 +1,8 @@
 # Notes: creal-lattice
 
 Detail kept out of [`../status/69-creal-lattice.md`](../status/69-creal-lattice.md)
-so the lane block stays inside the per-lane ceiling (ADR-0478). The decision is
-[ADR-0490](../../research/09-decisions/adr-0490-the-real-lattice-is-defined-on-the-representation-and-is-one-lipschitz.md);
+so the lane block stays inside the per-lane ceiling (ADR-0507). The decision is
+[ADR-0519](../../research/09-decisions/adr-0519-the-real-lattice-is-defined-on-the-representation-and-is-one-lipschitz.md);
 its predecessors, which costed this slice without building it, are
 [`creal-field.md`](creal-field.md) and [`creal-inv.md`](creal-inv.md).
 
@@ -34,7 +34,7 @@ The brief said the expected obstacle — a case split on a `Prop` — is
 "avoidable: `Rat.abs` is a definition on the representation, not a case split",
 and asked that this be checked before being relied on. It is true, and the
 reason is worth stating precisely, because the obvious reading is wrong in the
-same way ADR-0481's was.
+same way ADR-0510's was.
 
 `Rat.le_or_lt` is **proved**. It is also `Or`-valued, hence a `Prop`, and
 `Or.rec` does not eliminate into `Type`. So `max` cannot be *derived* from the

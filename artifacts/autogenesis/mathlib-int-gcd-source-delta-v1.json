@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-source-delta",
+  "state": "mechanism-control-no-contract-proof-or-ledger-credit",
+  "tooling_commit": "4bcfe58eb2b1a813b77e1db7c3593544469bac15",
+  "tooling_file": {
+    "path": "crates/axeyum-lean-import/examples/int_gcd_source_delta_trace.rs",
+    "sha256": "5c2f9391db9c4d47f73e457604460e1f45fec7b78784ca597683c5bba51bc0b4"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/source-delta/4bcfe58eb-int-gcd-r018-v1",
+    "file": "observation.json",
+    "bytes": 2090,
+    "mode": "0444",
+    "file_sha256": "41064c4840d7724f97f07235546e09b740e10eccd2ba09dd7110b06dc4695878",
+    "observation_sha256": "3c0d8500917fd4f39058a3603d3358bcdeef4adb9d4b60cd1603bca30e3dfd5c"
+  },
+  "result": {
+    "source": "Int.gcd",
+    "source_content_sha256": "1b4460e69780e5080a107bc178b77ffe064585b9712c5f7468a80c02cdee0655",
+    "selected_delta_steps": 1,
+    "consulted_declarations": ["Int.gcd"],
+    "residual_constants_left_opaque": ["Nat.gcd"],
+    "recursive_delta_steps": 0,
+    "theorem_dependency_walks": 0,
+    "proof_free_template": true,
+    "specialization_verified": true,
+    "trace_eligible": true,
+    "receipt_eligible": false
+  },
+  "verification": "python3 scripts/check-autogenesis-int-gcd-source-delta.py",
+  "limitations": "The bounded source trace and proof-free residual template pass. The semantic function-contract receipt does not yet consume trace evidence, so no target, proof, contract, held-out, or ledger credit is granted."
+}

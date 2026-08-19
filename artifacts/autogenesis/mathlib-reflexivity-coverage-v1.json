@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-reflexivity-coverage",
+  "state": "diagnostic-reproduced-no-ledger-credit",
+  "tooling_commit": "cacc8f700f328a745250caf564bdcec9e03920a1",
+  "external_root": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1",
+  "external_index_sha256": "7b9304881a888438e858e4a20887f2ccf83cd3c09afaf31fa36463e6352c0c7a",
+  "external_files": {
+    "source.lean": "1a1ed5d58ae3f15b47b4851a8482f2a9e4f8e1376d273b2f93a8c9779dd52bee",
+    "mapping.json": "4596d178d574b90b8bd17801719ff485a1fa588fd52f1ae1b4b3b3b47654239b",
+    "observation.json": "4515d41797f37bd4282feb1fedc85fa7246e9929be491b4f452f698439e7e202",
+    "observation-precommit.json": "4515d41797f37bd4282feb1fedc85fa7246e9929be491b4f452f698439e7e202",
+    "provenance.json": "73e802d0ee9cf8dd87b94b69727498478a4ce6590fca0405574644ad80c1c64e",
+    "rejected-combined-import.ndjson": "2436f22621c09da84edd099e071eb411bb1ac95a563a684245a5bdc7e2deeda8"
+  },
+  "input_sha256": "08c41f91ab02bb282df3323e54be72f91f623d25f22eb9559152c3f0860e7e72",
+  "population": {
+    "ledger_snapshot_commit": "26fcc2c2f431bdb6600f2150a21d7ec657e3f35f",
+    "train_development": 138,
+    "held_out_inspected": false,
+    "proof_bodies_requested": false,
+    "target_outcomes_accessed": false,
+    "isolated_streams": 138
+  },
+  "budget": {
+    "max_binders": 8,
+    "max_constructed_nodes": 16,
+    "executor_invocations": 0,
+    "ledger_writes": 0
+  },
+  "coverage": {
+    "adapter-rejection:trusted-declaration": 114,
+    "admissible-proof": 2,
+    "kernel-rejection:candidate-typecheck-failed": 7,
+    "producer-decline:terminal-not-exact-equality": 15
+  },
+  "admissible_proofs": [
+    {
+      "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+      "ledger_state_during_census": "proved",
+      "goal_sha256": "87e37902bb8b3958514c5a6831b28ebff2824c8a30fb45601ff47736ee3853d7",
+      "proof_sha256": "16600053e2afaa0d4d0bfa559fbac367bfeb41b860912f10c236cdcb82e08b53",
+      "binders": 1,
+      "constructed_nodes": 4,
+      "axioms": 0,
+      "theorem_dependencies": 0,
+      "target_dependency": false
+    },
+    {
+      "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+      "ledger_state_during_census": "open",
+      "goal_sha256": "84c2cb6ba48868786799c28aef4104a845cf9d238ff6786285645562570c5d23",
+      "proof_sha256": "15725b2125daf99a7f779d218f36de67fe85dc42eaae4e1db23f55e5b628856a",
+      "binders": 1,
+      "constructed_nodes": 4,
+      "axioms": 0,
+      "theorem_dependencies": 0,
+      "target_dependency": false
+    }
+  ],
+  "reproduction": "python3 scripts/check-autogenesis-reflexivity-coverage.py",
+  "limitations": "This is a diagnostic coverage result with zero ledger writes. The 114 trusted-declaration rejections measure the current full-definition export and strict proof-isolation contract, not mathematical impossibility. The open admissible row is a candidate, not proof credit or an authoritative operation. Held-out rows remain sealed."
+}

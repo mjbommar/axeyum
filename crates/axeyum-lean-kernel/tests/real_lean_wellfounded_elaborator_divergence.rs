@@ -59,9 +59,9 @@
 //!
 //! * The elaborator ACCEPTS the `theorem` spelling — a newer Lean closed the
 //!   gap, or the prelude stopped defining `gcd` this way. The residue recorded
-//!   in ADR-0488 shrank and the ADR is stale.
+//!   in ADR-0517 shrank and the ADR is stale.
 //! * The elaborator REJECTS the `def` spelling — the mechanism is not the one
-//!   named here and ADR-0488's account of it is wrong.
+//!   named here and ADR-0517's account of it is wrong.
 //! * The kernel REJECTS either probe — that is explanation (1) or (2) after
 //!   all, and it is a soundness-relevant defect rather than a routing note.
 //!
@@ -318,7 +318,7 @@ fn leans_kernel_unfolds_a_theorem_while_reducing_and_leans_elaborator_does_not()
     assert!(
         !accepted,
         "Lean's ELABORATOR now accepts a reduction through a `theorem` that this \
-         repository records it as refusing (ADR-0488). That is good news and this \
+         repository records it as refusing (ADR-0517). That is good news and this \
          suite is stale: re-measure the residue and update the ADR.\n{report}"
     );
     assert!(
@@ -338,7 +338,7 @@ fn leans_kernel_unfolds_a_theorem_while_reducing_and_leans_elaborator_does_not()
     assert!(
         accepted,
         "Lean's elaborator refused the module even with every proof spelled `def`, \
-         so the divergence is NOT the opacity of `theorem` and ADR-0488's account \
+         so the divergence is NOT the opacity of `theorem` and ADR-0517's account \
          of it is wrong:\n{report}"
     );
 

@@ -1,7 +1,7 @@
 # agent-retire-real — the last 30 axioms: what moved, what did not, and why
 
 Detail behind [`docs/plan/status/64-retire-real.md`](../status/64-retire-real.md).
-The decision is [ADR-0480](../../research/09-decisions/adr-0480-the-trusted-surface-is-measured-as-reached-not-only-declared.md);
+The decision is [ADR-0509](../../research/09-decisions/adr-0509-the-trusted-surface-is-measured-as-reached-not-only-declared.md);
 the measurement is `F:shipped-front-door-reaches-no-real-axiom`.
 
 ## Re-measured, 2026-08-18
@@ -72,7 +72,7 @@ and two consumers make that a migration rather than a deletion:
   Deleting it removes the only thing that can make an axiom-freedom measurement
   here fail.
 
-ADR-0480 records the bounded route out of both: pin the ledger's digests onto the
+ADR-0509 records the bounded route out of both: pin the ledger's digests onto the
 axiom-free 30-binder telescope `generalize_over_ordered_ring` already produces
 (it *is* the interface, stated in the kernel, assuming nothing), and shrink the
 control from 30 axioms to one declared for the purpose. Then

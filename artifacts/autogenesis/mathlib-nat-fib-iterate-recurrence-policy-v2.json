@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-iterate-recurrence-policy",
+  "state": "preregistered-v2-no-target-execution-or-credit",
+  "policy_version": "nat-fib-iterate-recurrence-v2",
+  "inputs": {
+    "strategic_selection": {
+      "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-premise-selection-policy-v1.json",
+      "sha256": "74177fb996e3760fafb63b046c61929fa7b62e3cf7072f2304268865c4b5ec56"
+    },
+    "v1_negative_result": {
+      "path": "artifacts/autogenesis/mathlib-nat-fib-iterate-recurrence-result-v1.json",
+      "sha256": "1bee8db259bf40c134008fe21d2441f9bc52ae713ab08bcf63cd3c655b7602e5",
+      "observation_sha256": "a5b3ec307e060c5da6a7255ef39fe8f9d568ddf1d15f9988e72ecbabe9f7eaa3"
+    },
+    "composition_control": {
+      "path": "artifacts/autogenesis/mathlib-eqrec-composition-control-v1.json",
+      "sha256": "e92e126aef61daa80969d1ff168165767aefd4b68a42fe971c41e062bdfd3776",
+      "eq_rec_type_sha256": "0103709339f24495981349289a7912aa10dc1bb7c2e1fe060566a654a7d9b177",
+      "transitivity_declaration_sha256": "cc4b8c535ad43a4ff88462ce4a4800ae9b3e7bb29a08b2b894206798d0eae49e",
+      "congruence_declaration_sha256": "fff923e8148cfd27c1bfb62f03c334e6d62998e613c2b4735494a84998df0b01"
+    }
+  },
+  "tooling": {
+    "commit": "1880e56dbe07c0eb1a8f430d4de983cf4212511a",
+    "path": "crates/axeyum-lean-import/examples/nat_fib_iterate_recurrence.rs",
+    "sha256": "f98ad6db3274e762f9e4b0ac8d74c5a26297a9aca9f2d6ce72e0a8ad39cc6d84"
+  },
+  "target": {
+    "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+    "name": "Nat.fib_add_two",
+    "target_definition": "Axeyum.Autogenesis.Coverage.r080",
+    "artifact_file": "r080.ndjson",
+    "stream_sha256": "00578e949d71154cf5d9e79005b2a1c8f7fe73d9885ae96b0dd5cb6744c30501"
+  },
+  "producer": {
+    "operation": "bounded-iterate-recurrence-v2",
+    "allowed_helper_schemas": 1,
+    "max_plan_templates": 2,
+    "max_kernel_submissions": 2,
+    "max_executor_invocations": 1,
+    "max_retries": 0,
+    "proof_bodies_allowed": false,
+    "held_out_allowed": false,
+    "historical_target_outcomes_are_search_inputs": false
+  },
+  "authority": {
+    "v2_executor_invocations_so_far": 0,
+    "semantic_theorem_receipts_so_far": 0,
+    "evaluation_credit_so_far": 0,
+    "ledger_writes_so_far": 0
+  },
+  "limitations": "This authorizes one corrected v2 execution, not a result. The v1 rejection motivates the exact constructor repair but supplies no proof step or successful target outcome to search."
+}

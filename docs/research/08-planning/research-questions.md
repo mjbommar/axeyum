@@ -797,6 +797,96 @@ Out of scope:
     admitted content digest so dependency mutations propagate without changing
     the dependent declaration's own content identity. See
     [ADR-0350](../09-decisions/adr-0350-canonical-lean-declaration-identity.md).
+- [x] How may a proof-isolated statement adapter exclude proof-bearing
+      implementation bodies without changing the exact source proposition?
+  - Answer (2026-08-19): reconstruct a fresh proof-free kernel and generalize
+    eligible non-`Prop` constants into explicit parameters identified by
+    declaration content plus universe instance. A generalized proof receives no
+    concrete-fact credit until a separate checker applies the exact source
+    constants and checks definitional equality to the frozen source goal.
+    Proposition-valued parameters, quotient participation, and missing required
+    computation fail closed. See
+    [ADR-0484](../09-decisions/adr-0484-proof-free-type-slices-are-generalized-and-exactly-specialized.md).
+- [x] May elaborator-only `autoParam` tactic syntax be removed from an atomic
+      structure package without weakening proof-free transport?
+  - Answer (2026-08-19): only for a saturated annotation in a declaration type,
+    after validating the canonical Lean 4.30 definition, checking source-kernel
+    definitional equality, sharing the normalized expression between
+    reachability and emission, and independently admitting the normalized
+    package. Values, partial applications, other annotations, and arbitrary
+    delta reduction remain exact. See
+    [ADR-0485](../09-decisions/adr-0485-auto-param-erasure-is-checked-type-only-normalization.md).
+- [x] Does type-only `autoParam` erasure remove the trusted closure from
+      generated structure recursors, and if not, what is the narrow extension?
+  - Answer (2026-08-19): no. Lean copies the annotation into recursor-rule
+    lambda domains. Normalize only those binder domains, check each complete
+    source and normalized rule definitionally equal, share the normalized rule
+    between dependency selection and emission, and independently admit the
+    atomic package. Direct value occurrences remain exact. See
+    [ADR-0486](../09-decisions/adr-0486-auto-param-normalization-includes-checked-recursor-binder-domains.md).
+- [x] Which proof producer and budget should define the first complete
+      train/development census after all checked type-slice boundaries exist?
+  - Answer (2026-08-19): run exactly ADR-0481's existing Pi-equality
+    reflexivity grammar once per row with its fixed eight-binder and
+    sixteen-node limits. Preserve producer, kernel, and assurance outcomes
+    separately; grant no ledger or operation authority; and do not inspect
+    held-out or add adaptive routing. See
+    [ADR-0487](../09-decisions/adr-0487-first-type-slice-producer-census-is-fixed-reflexivity-only.md).
+- [x] How may generalized definition behavior enter proof search without
+      becoming a global axiom or importing upstream proof closure?
+  - Answer (2026-08-19): key contracts by exact declaration content, type, and
+    universes; expose them only as local generalized-goal premises; and require
+    an independently checked source-specialization witness with a complete
+    dependency footprint before concrete fact credit. See
+    [ADR-0488](../09-decisions/adr-0488-semantic-abstractions-are-discharged-local-contracts.md).
+- [x] Is any real pointwise Mathlib target ready for a direct transparent
+      equation contract in its existing proof-free slice?
+  - Answer (2026-08-19): no; all 50 bindings omit at least one nonrecursive
+    constant named by the source body. Residualize those constants as exact
+    ordered local parameters and check source specialization before selecting a
+    theorem target. See
+    [ADR-0489](../09-decisions/adr-0489-contract-bodies-are-residualized-before-real-target-selection.md).
+- [x] May a source contract witness claim theorem independence from direct
+      theorem dependencies alone?
+  - Answer (2026-08-19): no. A theorem hidden behind one transparent definition
+    defeats the direct inventory, and the exact `Int.gcd` witness has zero
+    direct but 52 transitive theorem dependencies. Receipt authority uses the
+    complete declaration closure. See
+    [ADR-0490](../09-decisions/adr-0490-contract-witness-independence-uses-the-complete-theorem-closure.md).
+- [x] Can source contract discharge record only the selected definition unfold
+      while leaving residual body constants opaque?
+  - Answer (2026-08-19): yes, as a structural mechanism rather than a theorem
+    witness. The exact `Int.gcd` step consults only `Int.gcd`, leaves `Nat.gcd`
+    opaque, and binds a generalized template containing neither function
+    constant. Receipt integration remains open. See
+    [ADR-0491](../09-decisions/adr-0491-source-contract-discharge-uses-a-selected-structural-delta-step.md).
+- [x] Can the first real residualized source contract issue and replay without
+      constructing a theorem-valued source witness?
+  - Answer (2026-08-19): yes. The exact pinned `Int.gcd` receipt binds source,
+    residual and retained identities, residualization, specialization, one
+    selected delta step, and an empty source axiom footprint. It grants no
+    downstream theorem or ledger credit. See
+    [ADR-0492](../09-decisions/adr-0492-trace-backed-source-contract-receipts-precede-theorem-receipts.md).
+- [x] Which theorem should first consume the real `Int.gcd` source-contract
+      receipt?
+  - Answer (2026-08-19): preregister `Int.gcd_def` as a calibration-only bridge
+    with one fixed reflexivity construction and zero evaluation/ledger credit.
+    Keep `Int.gcd_fib` as the real horizon target; its named premises
+    `Int.fib_neg` and `Nat.fib_gcd` remain open. See
+    [ADR-0493](../09-decisions/adr-0493-calibration-closes-the-contract-to-theorem-seam-before-evaluation.md).
+- [x] Can one exact source-contract receipt authorize a bounded theorem receipt
+      without treating the source definition's theorem closure as premises?
+  - Answer (2026-08-19): yes. One frozen `Int.gcd_def` invocation constructed
+    two binders and five nodes, the independent kernel admitted it with zero
+    axioms and zero direct theorem dependencies, and the receipt replays. The
+    52 transitive source-closure theorems remain diagnostic only. See
+    [ADR-0494](../09-decisions/adr-0494-contract-receipt-authority-and-theorem-dependency-diagnostics-remain-distinct.md).
+- [x] Which open premise should begin the real Fibonacci/GCD evaluation chain?
+  - Answer (2026-08-19): select `Nat.fib_gcd` strategically because it has a
+    smaller checked boundary and two direct unlocks, but begin bottom-up with
+    zero-dependency `Nat.fib_add_two`. Its missing capability is a bounded
+    iterator-recurrence proof plan, not another source-contract control. See
+    [ADR-0495](../09-decisions/adr-0495-fibonacci-gcd-progress-starts-at-the-iterator-recurrence-foothold.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?
@@ -1595,6 +1685,15 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     2026-08-15, and the disclosure rule is generated from the measurement
     instead of written down. The Nat prefix-deficit
     boundary for credited Rado rigidity is re-accepted unchanged.
+
+- [x] What identity, episode, and transaction boundary may turn checked
+  Autogenesis evidence into durable knowledge without pretending Git, the fact
+  file, and an external artifact store share one atomic commit?
+  - [ADR-0468](../09-decisions/adr-0468-autogenesis-transaction-and-episode-boundary.md)
+    selects a content-addressed prepared proposal, registered checker replay,
+    compare-and-swap fact replacement, same-filesystem intent journal, monotone
+    roll-forward admission event, and separately reported archival/Git
+    publication. Fault-injected exact-commit replay accepts the decision.
 
 ## Source Pointers
 

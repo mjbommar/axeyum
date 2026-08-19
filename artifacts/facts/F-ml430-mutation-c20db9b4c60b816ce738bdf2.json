@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+  "title": "Outcome-blind mutation of Nat.not_coprime_zero_zero",
+  "statement": "A `polarity-reversal` mutation of the pinned source proposition `Nat.not_coprime_zero_zero`.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "Nat.Coprime 0 0",
+    "fragment": "Nat"
+  },
+  "epistemic_status": "open",
+  "external_status": "unknown",
+  "depends_on": [],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "not established in this ledger",
+    "source": "outcome-blind `polarity-reversal` mutation of Nat.not_coprime_zero_zero"
+  },
+  "notes": "Open generated mutation. No expected truth value, proof, witness, route, budget, or Axeyum outcome is recorded. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module. The nursery manifest, not depends_on, keeps this row in the same partition as its source."
+}

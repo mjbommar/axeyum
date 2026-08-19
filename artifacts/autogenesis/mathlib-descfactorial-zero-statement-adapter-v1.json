@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-statement-adapter",
+  "state": "independent-kernel-goal-admitted-proof-free",
+  "source_fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+  "source_statement_sha256": "f87b91ee7d953a7188b5ca71e37c370d67a0c26ffba643bdcc6ae2a8c255983f",
+  "adapter_source": {
+    "path": "scripts/lean/autogenesis_statement_adapter_factorial_zero_family.lean",
+    "sha256": "410ee35fe7201676e6455737d1b8862ea7c98c7c9560d6a8dc73d0336a7213ce",
+    "target_definition": "Axeyum.Autogenesis.Statement.FactorialZero.natDescFactorialZero",
+    "encoding": "transparent-definition-of-prop",
+    "proof_declarations_allowed": false
+  },
+  "toolchain": {
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_version": "3.1.0",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf"
+  },
+  "external_artifact": {
+    "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-factorial-zero-family-v1/desc.ndjson",
+    "sha256": "72e1f212f04576caf28bef07d2f291dc9e35444fd6a6757e621ca9c854d2e567",
+    "bytes": 55344,
+    "records": 974,
+    "mode": "0444"
+  },
+  "independent_import": {
+    "goal_sha256": "84c2cb6ba48868786799c28aef4104a845cf9d238ff6786285645562570c5d23",
+    "target_content_sha256": "c92518c5aa5532a7583223937b8f355f1ea36187c2c5e399a9ee5b4932a03493",
+    "direct_dependencies": 5,
+    "admitted_declarations": 59,
+    "axioms": 0
+  },
+  "reproduction": {
+    "host_profile": "s5 pinned Mathlib v4.30.0 checkout",
+    "export": "copy the tracked family source to the pinned Mathlib root as AxeyumAutogenesisFactorialZeroFamily.lean; compile it; export Axeyum.Autogenesis.Statement.FactorialZero.natDescFactorialZero with pinned lean4export 3.1",
+    "check": "python3 scripts/check-autogenesis-factorial-zero-family.py"
+  },
+  "limitations": "This adapts the second frozen natural-factorial zero proposition into a checked goal. It exposes no Mathlib proof and grants no proof credit before authoritative execution."
+}

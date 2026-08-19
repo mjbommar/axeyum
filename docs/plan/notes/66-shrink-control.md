@@ -1,7 +1,7 @@
-# Lane note: shrinking the control, and what it took to verify ADR-0480's route
+# Lane note: shrinking the control, and what it took to verify ADR-0509's route
 
 Detail for [`docs/plan/status/66-shrink-control.md`](../status/66-shrink-control.md).
-The decision is [ADR-0486](../../research/09-decisions/adr-0486-a-negative-control-is-one-assumed-law-over-a-constructed-carrier.md).
+The decision is [ADR-0515](../../research/09-decisions/adr-0515-a-negative-control-is-one-assumed-law-over-a-constructed-carrier.md).
 
 ## The measurement that discharges the specification
 
@@ -75,7 +75,7 @@ upward mid-lane as other lanes landed).
    interpretations of 30 axioms. `F:real-axioms-modelled-by-constructed-setoid`
    and its ℤ/ℚ siblings ride on these and must be restated, not dropped.
 2. Give `arith_prelude_builds()` and `F:shipped-front-door-reaches-no-real-axiom`
-   a home that survives the package's removal — *reached* is ADR-0480's second
+   a home that survives the package's removal — *reached* is ADR-0509's second
    published number and cannot simply lapse.
 3. Move the ledger's digest pin onto the telescope, and put
    `ring_interface_pin --require-identical` in the aggregate gate **before** the
@@ -122,7 +122,7 @@ check-prelude-reuse-equivalence.sh          exit 0
 ```
 
 The ledger line is the one that matters for this lane's claim: `real=30` is
-**unchanged**, which is exactly what ADR-0486 says it should be. Nothing here
+**unchanged**, which is exactly what ADR-0515 says it should be. Nothing here
 moved the published trusted surface, and the telescope work did not disturb the
 two independent inventories the ledger cross-checks.
 
@@ -176,7 +176,7 @@ Two failures seen throughout, neither from this lane and both present unmutated:
 ## Neither of the two examples this ADR reasons about is in any gate
 
 `front_door_carrier --require-axiom-free` and `ordered_ring_refutation
---require-empty` are treated as gates by ADR-0480 and by the lane briefs built
+--require-empty` are treated as gates by ADR-0509 and by the lane briefs built
 on it. Measured 2026-08-18: `grep` for `require-axiom-free`, `require-empty` and
 `constructed-reals` across `scripts/*.sh`, the `justfile` and
 `.github/workflows/` finds **zero** invocations. They are commands lanes are

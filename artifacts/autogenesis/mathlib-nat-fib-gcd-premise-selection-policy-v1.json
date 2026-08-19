@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-fib-gcd-premise-selection-policy",
+  "state": "preregistered-no-proof-evaluation-or-ledger-credit",
+  "inputs": {
+    "reviewed_nursery": {"path": "artifacts/autogenesis/mathlib-nat-int-reviewed-nursery-v1.json", "sha256": "c03b129cc2c576a8d5661ac026ad6a8adc7ae548f8bfa903c4d8b851f6c577b0"},
+    "dependency_components": {"path": "artifacts/autogenesis/mathlib-nat-int-dependency-components-v1.json", "sha256": "edf1b10be0f0bd4b7851587bd00e847a06cd094acf3d78b7026d6b0f905ade28"},
+    "checked_slice_manifest": {"path": "artifacts/autogenesis/mathlib-checked-type-slice-replay-v1.json", "sha256": "5657736b08dc858b2df9b097dcfbc43df250fd24ff160ae2291893624a1d00d7", "observation_sha256": "4c41833a5fa656fc7f38bf392e1dca0eb3dc47bb9ff010c411111af6c6bd4a36"}
+  },
+  "strategic_choice": {
+    "selected": "Nat.fib_gcd",
+    "selected_fact_id": "F:ml430-nat-fib-gcd-d1d98407",
+    "selected_direct_unlocks": ["F:ml430-int-gcd-fib-73bdafc2", "F:ml430-nat-fib-dvd-f80f3de1"],
+    "selected_slice_abstractions": 1,
+    "selected_slice_retained": 46,
+    "deferred": "Int.fib_neg",
+    "deferred_direct_unlocks": ["F:ml430-int-gcd-fib-73bdafc2"],
+    "deferred_slice_abstractions": 2,
+    "deferred_slice_retained": 93
+  },
+  "bottom_up_chain": [
+    {"fact_id": "F:ml430-nat-fib-add-two-b86e0c82", "name": "Nat.fib_add_two", "status": "open", "depends_on": []},
+    {"fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738", "name": "Nat.fib_coprime_fib_succ", "status": "open", "depends_on": ["F:ml430-nat-fib-add-two-b86e0c82"]},
+    {"fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3", "name": "Nat.gcd_fib_add_self", "status": "open", "depends_on": ["F:ml430-nat-fib-coprime-fib-succ-162fc738"]},
+    {"fact_id": "F:ml430-nat-fib-gcd-d1d98407", "name": "Nat.fib_gcd", "status": "open", "depends_on": []}
+  ],
+  "immediate_target": {
+    "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+    "candidate_id": "b86e0c82f43166a7fdd18a5af326103067c99ac89bb3fe0f989c9d4786460d1c",
+    "statement": "∀ {n : ℕ}, Nat.fib (n + 2) = Nat.fib n + Nat.fib (n + 1)",
+    "disposition": "evaluation-eligible",
+    "artifact_file": "r080.ndjson",
+    "stream_sha256": "00578e949d71154cf5d9e79005b2a1c8f7fe73d9885ae96b0dd5cb6744c30501",
+    "type_slice_receipt_sha256": "daf20a56a5dc6b70ed218fcdb29be0c057d86427520c96f29fae9712d2e7c0dd",
+    "slice_abstractions": 0,
+    "slice_retained": 46
+  },
+  "producer": {
+    "policy_version": "nat-fib-iterate-recurrence-v1",
+    "operation": "bounded-iterate-recurrence-v1",
+    "allowed_helper_schemas": 1,
+    "max_plan_templates": 2,
+    "max_kernel_submissions": 2,
+    "max_executor_invocations": 1,
+    "max_retries": 0,
+    "proof_bodies_allowed": false,
+    "historical_target_outcomes_are_inputs": false
+  },
+  "authority": {
+    "partitions_allowed": ["train"],
+    "held_out_allowed": false,
+    "executor_invocations_so_far": 0,
+    "semantic_theorem_receipts_so_far": 0,
+    "evaluation_credit_so_far": 0,
+    "ledger_writes_so_far": 0
+  },
+  "limitations": "This selects a strategic premise and its first bottom-up foothold. It does not run a producer, prove any Fibonacci fact, inspect a proof body or held-out outcome, issue a theorem receipt, or write the ledger."
+}

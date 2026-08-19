@@ -12,7 +12,7 @@ Under 4.34, 21 of 77 `lean_crosscheck` families were rejected and
 `scripts/lean/replay-lean4export.lean` did not elaborate at all — so the gate's
 verdict depended on which toolchain happened to be installed and on which entry
 point ran, and nothing in the output said which one produced it.
-[ADR-0485](../../research/09-decisions/adr-0485-the-pinned-lean-toolchain-is-the-one-that-runs.md)
+[ADR-0514](../../research/09-decisions/adr-0514-the-pinned-lean-toolchain-is-the-one-that-runs.md)
 decides **the pin runs**: `lean-toolchain` is the single source, `PATH` and other
 elan toolchains are candidates only if `--version` matches it, there is no
 "newest wins" step, and a non-pinned toolchain is a refusal naming both versions
@@ -31,4 +31,4 @@ Detail moved to [`../notes/54-lean-toolchain.md`](../notes/54-lean-toolchain.md)
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-17 | `b15debdfa` | One Lean resolution policy (the `lean-toolchain` pin) shared by `check-lean-gate.sh` and `lean_probe.rs`; every suite names the binary and version it used and the gate cross-checks them; `replay-lean4export.lean` elaborates under 4.30 and 4.34; exercised negative controls in `scripts/tests/test-lean-toolchain-policy.sh` (ADR-0485) |
+| 2026-08-17 | `b15debdfa` | One Lean resolution policy (the `lean-toolchain` pin) shared by `check-lean-gate.sh` and `lean_probe.rs`; every suite names the binary and version it used and the gate cross-checks them; `replay-lean4export.lean` elaborates under 4.30 and 4.34; exercised negative controls in `scripts/tests/test-lean-toolchain-policy.sh` (ADR-0514) |

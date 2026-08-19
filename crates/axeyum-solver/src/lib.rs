@@ -314,9 +314,11 @@ pub mod proofs {
             NoCheckReason, ProofOutcome, Provenance, SEMANTICS_VERSION,
             produce_diophantine_evidence, produce_evidence, produce_evidence_minimized,
             produce_evidence_minimized_with_objectives, produce_evidence_smtlib,
-            produce_evidence_smtlib_with_script, produce_lra_dpll_evidence, produce_lra_evidence,
-            produce_nra_even_power_evidence, produce_nra_evidence, produce_nra_sos_evidence,
-            produce_qf_bv_evidence, prove, prove_minimized, prove_minimized_with_objectives,
+            produce_evidence_smtlib_with_script,
+            produce_int_quadratic_negative_discriminant_evidence, produce_lra_dpll_evidence,
+            produce_lra_evidence, produce_nra_even_power_evidence, produce_nra_evidence,
+            produce_nra_sos_evidence, produce_qf_bv_evidence, prove, prove_minimized,
+            prove_minimized_with_objectives,
         };
     }
 
@@ -435,6 +437,11 @@ pub mod certificates {
         };
         pub use crate::lra::{FarkasAtom, FarkasCertificate, lra_farkas_certificate};
         pub use crate::nat_induction::prove_by_nat_induction;
+        pub use crate::nia_square::{
+            IntQuadraticNegativeDiscriminantCertificate,
+            check_int_quadratic_negative_discriminant_refutation,
+            int_quadratic_negative_discriminant_refutation,
+        };
         pub use crate::nra_even_power::{
             NraEvenPowerRefutationCertificate, nra_even_power_refutation,
         };
@@ -1010,9 +1017,11 @@ macro_rules! full_exports {
             NoCheckReason, ProofOutcome, Provenance, SEMANTICS_VERSION,
             produce_diophantine_evidence, produce_evidence, produce_evidence_minimized,
             produce_evidence_minimized_with_objectives, produce_evidence_smtlib,
-            produce_evidence_smtlib_with_script, produce_lra_dpll_evidence, produce_lra_evidence,
-            produce_nra_even_power_evidence, produce_nra_evidence, produce_nra_sos_evidence,
-            produce_qf_bv_evidence, prove, prove_minimized, prove_minimized_with_objectives,
+            produce_evidence_smtlib_with_script,
+            produce_int_quadratic_negative_discriminant_evidence, produce_lra_dpll_evidence,
+            produce_lra_evidence, produce_nra_even_power_evidence, produce_nra_evidence,
+            produce_nra_sos_evidence, produce_qf_bv_evidence, prove, prove_minimized,
+            prove_minimized_with_objectives,
         };
         #[doc(hidden)]
         pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};

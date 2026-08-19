@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-operation-registry",
+  "operations": [
+    {
+      "id": "autogenesis-kernel-premise-evidence-v1",
+      "scope": "counterfactual-fixture-only",
+      "applicability": {
+        "fact_ids": ["F:nat-zero-add"],
+        "formal_languages": ["lean4"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "catalog-structural-nat-induction-v1",
+        "implementation": "scripts/autogenesis-induction-proposer.py",
+        "input_kind": "axeyum-autogenesis-proposer-catalog",
+        "output_kind": "axeyum-autogenesis-induction-proposals"
+      },
+      "checker": {
+        "operation": "axeyum-lean-kernel/autogenesis-induction-plan-check-v1",
+        "implementation": "crates/axeyum-lean-kernel/examples/autogenesis_induction_plan_check.rs",
+        "input_kind": "axeyum-autogenesis-induction-proposals",
+        "output_kind": "axeyum-autogenesis-kernel-evidence-v1"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    },
+    {
+      "id": "smt-int-quadratic-negative-discriminant-v1",
+      "scope": "authoritative",
+      "applicability": {
+        "fact_ids": ["F:no-integer-square-is-minus-one"],
+        "formal_languages": ["smtlib2"],
+        "fragments": ["QF_NIA"]
+      },
+      "producer": {
+        "operation": "axeyum-solver/int-quadratic-negative-discriminant-v1",
+        "implementation": "crates/axeyum-solver/src/evidence.rs",
+        "input_kind": "axeyum-ir-original-assertions",
+        "output_kind": "axeyum-evidence-report"
+      },
+      "checker": {
+        "operation": "axeyum-solver/check-int-quadratic-negative-discriminant-v1",
+        "implementation": "crates/axeyum-solver/src/nia_square.rs",
+        "input_kind": "axeyum-original-assertions-and-certificate",
+        "output_kind": "axeyum-source-bound-certificate-verdict"
+      },
+      "executor": {
+        "driver": "axeyum-bench/smtcomp-evidence-v1",
+        "implementation": "crates/axeyum-bench/examples/smtcomp_cli.rs",
+        "input_fact_id": "F:no-integer-square-is-minus-one",
+        "input_artifact": "artifacts/facts/smt2/neg-no-integer-square-is-minus-one.smt2",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "unsat-int-quadratic-negative-discriminant"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "smt-term-level",
+        "evidence_kind": "unsat-certificate",
+        "axiom_footprint_policy": "must-be-nonempty",
+        "axiom_footprint": [
+          "axeyum-ir.integer-arithmetic-semantics",
+          "axeyum-solver.single-variable-polynomial-collector",
+          "negative-discriminant-quadratic-root-theorem"
+        ]
+      }
+    },
+    {
+      "id": "authoritative-kernel-nat-zero-add-induction-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-1-result.py",
+        "check-autogenesis-apply-search.sh",
+        "check-autogenesis-induction-search.sh",
+        "check-autogenesis-nursery.py",
+        "check-autogenesis-proposer-isolation.sh",
+        "create-autogenesis-mathlib-nursery-split.py",
+        "run-autogenesis-authoritative-chain.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:nat-zero-add"],
+        "formal_languages": ["lean4"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "catalog-structural-nat-induction-v1",
+        "implementation": "scripts/autogenesis-induction-proposer.py",
+        "input_kind": "axeyum-authoritative-kernel-goal-catalog",
+        "output_kind": "axeyum-autogenesis-induction-proposals"
+      },
+      "checker": {
+        "operation": "axeyum-lean-kernel/autogenesis-induction-plan-check-v1",
+        "implementation": "crates/axeyum-lean-kernel/examples/autogenesis_induction_plan_check.rs",
+        "input_kind": "axeyum-autogenesis-induction-proposals",
+        "output_kind": "axeyum-autogenesis-kernel-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-kernel/nat-zero-add-induction-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:nat-zero-add",
+        "target_theorem": "Nat.zero_add",
+        "denied_theorems": ["Nat.mul_one", "Nat.zero_add"],
+        "budget": 2,
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    },
+    {
+      "id": "authoritative-kernel-nat-mul-one-episode-apply-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-1-result.py",
+        "check-autogenesis-apply-search.sh",
+        "check-autogenesis-induction-search.sh",
+        "check-autogenesis-nursery.py",
+        "check-autogenesis-proposer-isolation.sh",
+        "create-autogenesis-mathlib-nursery-split.py",
+        "gen-autogenesis-baseline.py",
+        "run-autogenesis-authoritative-chain.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:nat-mul-one"],
+        "formal_languages": ["lean4"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "catalog-episode-local-theorem-apply-v1",
+        "implementation": "scripts/autogenesis-apply-proposer.py",
+        "input_kind": "axeyum-authoritative-kernel-apply-catalog",
+        "output_kind": "axeyum-autogenesis-apply-proposals"
+      },
+      "checker": {
+        "operation": "axeyum-lean-kernel/autogenesis-apply-plan-check-v1",
+        "implementation": "crates/axeyum-lean-kernel/examples/autogenesis_apply_plan_check.rs",
+        "input_kind": "axeyum-autogenesis-apply-proposals",
+        "output_kind": "axeyum-autogenesis-apply-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-kernel/nat-mul-one-episode-apply-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:nat-mul-one",
+        "target_theorem": "Nat.mul_one",
+        "premise_fact_id": "F:nat-zero-add",
+        "premise_operation_id": "authoritative-kernel-nat-zero-add-induction-v1",
+        "denied_theorems": ["Nat.mul_one", "Nat.zero_add"],
+        "premise_budget": 2,
+        "budget": 1,
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-episode-local-apply-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    },
+    {
+      "id": "authoritative-mathlib-statement-reflexivity-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-factorial-zero-family.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-nat-ascfactorial-zero-fd183202"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "bounded-pi-equality-reflexivity-v1",
+        "implementation": "crates/axeyum-lean-import/examples/statement_reflexivity_support/mod.rs",
+        "input_kind": "axeyum-proof-isolated-kernel-goal",
+        "output_kind": "axeyum-bounded-reflexivity-candidate"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/statement-reflexivity-operation-v1",
+        "implementation": "crates/axeyum-lean-import/examples/statement_reflexivity_operation.rs",
+        "input_kind": "axeyum-bounded-reflexivity-candidate",
+        "output_kind": "axeyum-source-bound-kernel-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/statement-reflexivity-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+        "statement_adapter_manifest": "artifacts/autogenesis/mathlib-statement-adapter-v1.json",
+        "reflexivity_manifest": "artifacts/autogenesis/mathlib-statement-reflexivity-v1.json",
+        "target_definition": "Axeyum.Autogenesis.Statement.natAscFactorialZero",
+        "max_binders": 8,
+        "max_constructed_nodes": 16,
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-statement-reflexivity-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    },
+    {
+      "id": "authoritative-mathlib-nat-descfactorial-zero-reflexivity-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-factorial-zero-family.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-nat-descfactorial-zero-966b01df"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "bounded-pi-equality-reflexivity-v1",
+        "implementation": "crates/axeyum-lean-import/examples/statement_reflexivity_support/mod.rs",
+        "input_kind": "axeyum-proof-isolated-kernel-goal",
+        "output_kind": "axeyum-bounded-reflexivity-candidate"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/statement-reflexivity-operation-v1",
+        "implementation": "crates/axeyum-lean-import/examples/statement_reflexivity_operation.rs",
+        "input_kind": "axeyum-bounded-reflexivity-candidate",
+        "output_kind": "axeyum-source-bound-kernel-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/statement-reflexivity-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+        "statement_adapter_manifest": "artifacts/autogenesis/mathlib-descfactorial-zero-statement-adapter-v1.json",
+        "reflexivity_manifest": "artifacts/autogenesis/mathlib-descfactorial-zero-reflexivity-v1.json",
+        "target_definition": "Axeyum.Autogenesis.Statement.FactorialZero.natDescFactorialZero",
+        "max_binders": 8,
+        "max_constructed_nodes": 16,
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-factorial-zero-reflexivity-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    },
+    {
+      "id": "authoritative-mathlib-nat-fib-add-two-receipt-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-nat-fib-gcd-premise-selection-policy.py",
+        "check-autogenesis-nat-fib-iterate-recurrence-result.py",
+        "check-autogenesis-nat-fib-recurrence-v3-result.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-nat-fib-add-two-b86e0c82"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "bounded-iterate-recurrence-v3",
+        "implementation": "crates/axeyum-lean-import/examples/nat_fib_iterate_recurrence.rs",
+        "input_kind": "axeyum-proof-isolated-kernel-goal",
+        "output_kind": "axeyum-fixed-semantic-theorem-candidate"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/checked-semantic-theorem-receipt-v1",
+        "implementation": "scripts/check-autogenesis-nat-fib-checked-theorem-receipt.py",
+        "input_kind": "axeyum-fixed-semantic-theorem-candidate",
+        "output_kind": "axeyum-checked-semantic-theorem-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/checked-theorem-receipt-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+        "receipt_manifest": "artifacts/autogenesis/mathlib-nat-fib-checked-theorem-receipt-v1.json",
+        "target_definition": "Axeyum.Autogenesis.Coverage.r080",
+        "receipt_sha256": "395f6e80e6addbc69cca8ad560b312dadc31d623fe05f6b1603b5fa523622329",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-nat-fib-add-two-receipt-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    }
+  ]
+}

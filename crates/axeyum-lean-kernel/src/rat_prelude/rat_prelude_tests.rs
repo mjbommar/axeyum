@@ -204,7 +204,7 @@ fn rationals_model_the_real_axioms() {
     );
 }
 
-// --- the Archimedean property (ADR-0483 phase R1) ---------------------------
+// --- the Archimedean property (ADR-0512 phase R1) ---------------------------
 
 /// Every declaration the Archimedean development adds is a **checked** theorem
 /// (or definition) with an empty axiom footprint — read out of the kernel, not
@@ -246,7 +246,7 @@ fn the_archimedean_development_is_axiom_free() {
     }
 }
 
-/// The Archimedean statement is the one ADR-0483 asks for, **verbatim**.
+/// The Archimedean statement is the one ADR-0512 asks for, **verbatim**.
 ///
 /// A footprint of `[]` on a theorem that says something weaker than intended is
 /// the failure mode this repository keeps hitting, so this asserts the rendered
@@ -272,7 +272,7 @@ fn the_archimedean_statement_is_the_one_adr_0468_needs() {
         "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : AxNat) -> \
          ((x3 : ((x3 : AxNat) -> Rat.le x0 (Rat.add x1 (Rat.natDivSucc x2 x3)))) -> \
          Rat.le x0 x1))))",
-        "the Archimedean statement drifted from ADR-0483's"
+        "the Archimedean statement drifted from ADR-0512's"
     );
 }
 

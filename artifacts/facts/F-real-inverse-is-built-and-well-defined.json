@@ -70,7 +70,7 @@
   ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "axeyum-lean-kernel creal::inverse (ADR-0487; agent-creal-inv lane)",
+    "established_by": "axeyum-lean-kernel creal::inverse (ADR-0516; agent-creal-inv lane)",
     "source": "Bishop-style constructive analysis: the reciprocal of a real apart from zero, sampled deep enough that every sample clears the separating modulus"
   },
   "notes": "WHAT THIS DOES NOT SAY. It does not say the reals are a field: there is no inverse for x < 0 (Rat.mul_inv_cancel's hypothesis is 0 < q, and the general x # 0 case cannot be reduced to the positive one by BRANCHING on the disjunction, which is the elimination Or.rec does not permit), and there is no CReal.div. It does not say the modulus can be recovered from positivity -- F:real-inverse-is-partial-and-its-modulus-is-data says the opposite, and that is why k is an argument. It does not say two callers get the same REPRESENTATIVE for different k: they do not (k = 0 samples at 7n+7, k = 1 at 32n+31); it says they get Equiv results, which is what makes x^-1 an element of the reals. It does not assume or use Markov's principle in any disguise: not (x ~ 0) -> x # 0 is neither proved nor assumed. And it does not say a wrong sampling index would be caught quickly -- perturbing one factor makes the kernel refuse CReal.inv after 1,043 s where the accepting build takes 78 s warm."

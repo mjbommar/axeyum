@@ -1,4 +1,4 @@
-//! The ordered-ring interface's **equality slot** (ADR-0483 phase R3).
+//! The ordered-ring interface's **equality slot** (ADR-0512 phase R3).
 //!
 //! Today's [`generalize_over_ordered_ring`](super::generalize_over_ordered_ring)
 //! abstracts the `Real` package's 30 declarations out of a Farkas refutation.
@@ -8,7 +8,7 @@
 //! rewrite is an `Eq.rec` transport. That is fine as long as the intended model
 //! interprets ring equality by `Eq`.
 //!
-//! ADR-0483 constructs ℝ as a **setoid**: `CReal.Equiv`, a defined relation on
+//! ADR-0512 constructs ℝ as a **setoid**: `CReal.Equiv`, a defined relation on
 //! regular ℚ-sequences, is real-number equality, and `Eq CReal` is not. That
 //! choice is what buys the construction its **zero** trusted declarations — a
 //! quotient would need `Quot.sound`, Dedekind cuts `propext` + `funext`. So a
@@ -52,7 +52,7 @@
 //! as strong as the 30-binder one: instantiate the slot at `Eq` and today's
 //! statement comes back, so nothing was weakened and no downstream consumer of
 //! the `Eq` form loses anything. It does **not** show the interface is
-//! satisfiable by an equality that is not `Eq` — that is ADR-0483 phase R4,
+//! satisfiable by an equality that is not `Eq` — that is ADR-0512 phase R4,
 //! where `CReal` supplies the slot from `CReal.Equiv` and its congruences, and
 //! it is the phase that turns "usable in principle" into a model. What this
 //! module removes is the obstacle: the proof term no longer mentions `Eq`

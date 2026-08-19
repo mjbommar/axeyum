@@ -66,7 +66,7 @@
   ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "axeyum-lean-kernel rat_prelude::field (ADR-0481; agent-creal-field lane)",
+    "established_by": "axeyum-lean-kernel rat_prelude::field (ADR-0510; agent-creal-field lane)",
     "source": "the usual construction of ℚ as reduced pairs, with the inverse's three-way sign dispatch discharged by ι-reduction rather than by a lemma"
   },
   "notes": "WHAT THIS DOES NOT SAY. It does not say Rat.inv satisfies a law on the NEGATIVES: the hypothesis is 0 < q, and the negative branch is deliberately unproved (inv q = -(inv (-q)) recovers it in one case split when something needs it). It does not say ℚ's order is decidable as a Bool -- Rat.le_or_lt is a Prop-valued Or, and no Bool-valued comparator exists here. It does not say anything about ℝ: CReal has no inverse, and CReal.no_total_inverse proves that no total one can exist."

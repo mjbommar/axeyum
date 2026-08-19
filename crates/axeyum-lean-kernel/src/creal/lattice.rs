@@ -1,5 +1,5 @@
 //! **The lattice on ℝ**: `CReal.max`, `CReal.min` and `CReal.abs`, pointwise
-//! and with **no index shift** (ADR-0490, phase R5).
+//! and with **no index shift** (ADR-0519, phase R5).
 //!
 //! ## Why this costs so little
 //!

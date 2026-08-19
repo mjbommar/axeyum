@@ -1,17 +1,17 @@
 //! Probe: **is a setoid ℝ expressible in this kernel, and does it cost an
-//! axiom?** (ADR-0483.)
+//! axiom?** (ADR-0512.)
 //!
 //! ADR-0456 measured that the two textbook routes to `ℝ` are both closed here:
 //! a Cauchy **quotient** needs `Quot.sound`, which the four-declaration
 //! quotient package does not contain, and a **Dedekind** cut needs `propext`
 //! and `funext`, neither of which exists in this intuitionistic, zero-axiom
-//! logic prelude. ADR-0483 takes the third route — a Bishop-style *setoid*: a
+//! logic prelude. ADR-0512 takes the third route — a Bishop-style *setoid*: a
 //! carrier of regular representatives (no quotient) with equality carried by a
 //! **defined** relation `Equiv` rather than by `Eq`.
 //!
 //! That route is only worth planning if the kernel can actually admit its
 //! carrier, so this probe admits the carrier and measures the cost. It answers
-//! four structural questions, all of which had to hold before ADR-0483 could
+//! four structural questions, all of which had to hold before ADR-0512 could
 //! name a plan:
 //!
 //! 1. an inductive in `Type 0` may carry a **function field** `Nat → Rat`
@@ -330,7 +330,7 @@ fn main() {
     if failed {
         eprintln!(
             "FAIL: the setoid carrier is NOT free — see the footprints above. \
-             ADR-0483's cost claim does not hold."
+             ADR-0512's cost claim does not hold."
         );
         std::process::exit(1);
     }

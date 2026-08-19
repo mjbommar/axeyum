@@ -1,0 +1,2941 @@
+{
+  "autogenesis1_passed": true,
+  "autogenesis1_requirements": [
+    {
+      "evidence": "the retained result binds one exact source, deterministic pre-B and pre-A state commits, registry, facts, statements, operations, and budgets",
+      "id": "A1-fixed-input-identity",
+      "next": "preserve this identity contract while generalizing beyond the bootstrap chain",
+      "state": "passed"
+    },
+    {
+      "evidence": "the proof-derived Nat.zero_add -> Nat.mul_one edge is now exercised by two authoritative writes and an episode-local kernel dependency",
+      "id": "A1-real-derived-chain",
+      "next": "measure a fallback and build the held-out nursery without weakening primary-chain credit",
+      "state": "passed"
+    },
+    {
+      "evidence": "proof-body-free catalog plus Bubblewrap repository/network isolation control",
+      "id": "A1-proof-leakage-boundary",
+      "next": "broaden the structural grammar while retaining the no-proof-body boundary",
+      "state": "passed"
+    },
+    {
+      "evidence": "the same A target and budget fail before B, then B's durable event makes A ready and A proves only through the episode-local B",
+      "id": "A1-operational-unlock-control",
+      "next": "apply the same causal control to held-out multi-step chains",
+      "state": "passed"
+    },
+    {
+      "evidence": "the content-addressed frontier selected B, then selected A only after B admission, and ended with no registered candidate",
+      "id": "A1-machine-selection",
+      "next": "replace bootstrap exact operations only after a typed generic contract is exercised",
+      "state": "passed"
+    },
+    {
+      "evidence": "the registry fixes SMT, exact Nat.zero_add, and event-bound Nat.mul_one routes; A reconstructs and applies only an episode-local B candidate",
+      "id": "A1-typed-dispatch-evidence",
+      "next": "lift the exercised receipts into the Phase 3 proof-plan contract",
+      "state": "passed"
+    },
+    {
+      "evidence": "both B and A stopped after durable intent, left their facts unchanged, and recovered through compare-and-swap to durable events",
+      "id": "A1-atomic-admission",
+      "next": "retain this boundary for every future multi-step admission",
+      "state": "passed"
+    },
+    {
+      "evidence": "the durable authoritative B event binds exact before/after frontiers and derives newly_ready=[F:nat-mul-one] with one authoritative write and zero fixture writes",
+      "id": "A1-admission-triggered-retry",
+      "next": "generalize event-driven retry without granting status-only dispatch authority",
+      "state": "passed"
+    },
+    {
+      "evidence": "two isolated runs from one exact source produced identical B and A receipts, events, state bundle, 56 artifact bytes, and semantic identity",
+      "id": "A1-clean-reproduction",
+      "next": "keep this result as the longitudinal Phase 3 regression baseline",
+      "state": "passed"
+    }
+  ],
+  "contract": "internal-autogenesis-phase0",
+  "ledger": {
+    "assurance": {
+      "axiom_free_kernel_facts": 39,
+      "check_statuses": {
+        "checked": 197
+      },
+      "evidence_rows": 197,
+      "with_checker_command": 195,
+      "with_multiple_named_checkers": 124
+    },
+    "dependency_graph": {
+      "dangling": [],
+      "depth_histogram": {
+        "1": 226,
+        "2": 59,
+        "3": 24,
+        "4": 10,
+        "5": 4,
+        "6": 1
+      },
+      "edges": 135,
+      "edges_detail": [
+        {
+          "consequent": "F:bcnf-decomposition-lossless-not-dependency-preserving",
+          "premise": "F:orders-fd-implication-certified"
+        },
+        {
+          "consequent": "F:chu-vandermonde-convolution",
+          "premise": "F:chu-vandermonde-convolution-recurrence"
+        },
+        {
+          "consequent": "F:double-negation-elimination",
+          "premise": "F:excluded-middle"
+        },
+        {
+          "consequent": "F:excluded-middle-not-intuitionistic",
+          "premise": "F:excluded-middle"
+        },
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:int-add-comm",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:int-add-le-add",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-le-add",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-le-add"
+        },
+        {
+          "consequent": "F:int-euclidean-decomposition",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:int-euclidean-decomposition",
+          "premise": "F:nat-div-mod-unique"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:int-mul-assoc",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:int-mul-comm",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:int-sq-nonneg",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-elim",
+          "premise": "F:int-sub-nat-nat-shift"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-elim",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-shift",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
+          "premise": "F:ml430-int-gcd-eq-gcd-ab-63005aef"
+        },
+        {
+          "consequent": "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
+          "premise": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b"
+        },
+        {
+          "consequent": "F:ml430-int-fib-add-one-33f1b748",
+          "premise": "F:ml430-int-fib-add-two-739358dd"
+        },
+        {
+          "consequent": "F:ml430-int-fib-add-two-739358dd",
+          "premise": "F:ml430-int-fib-natcast-d5886be4"
+        },
+        {
+          "consequent": "F:ml430-int-fib-add-two-739358dd",
+          "premise": "F:ml430-nat-fib-add-two-b86e0c82"
+        },
+        {
+          "consequent": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+          "premise": "F:ml430-int-fib-add-two-739358dd"
+        },
+        {
+          "consequent": "F:ml430-int-fib-gcd-3a8bfdec",
+          "premise": "F:ml430-int-gcd-fib-73bdafc2"
+        },
+        {
+          "consequent": "F:ml430-int-fib-two-mul-0e70f3dd",
+          "premise": "F:ml430-int-fib-add-181b6a2c"
+        },
+        {
+          "consequent": "F:ml430-int-fib-two-mul-add-two-0ba4a948",
+          "premise": "F:ml430-int-fib-two-mul-0e70f3dd"
+        },
+        {
+          "consequent": "F:ml430-int-gcd-fib-73bdafc2",
+          "premise": "F:ml430-int-fib-neg-b4021d37"
+        },
+        {
+          "consequent": "F:ml430-int-gcd-fib-73bdafc2",
+          "premise": "F:ml430-nat-fib-gcd-d1d98407"
+        },
+        {
+          "consequent": "F:ml430-int-modeq-comm-1e4bcc07",
+          "premise": "F:ml430-int-modeq-symm-984a6e67"
+        },
+        {
+          "consequent": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+          "premise": "F:ml430-int-modeq-symm-984a6e67"
+        },
+        {
+          "consequent": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+          "premise": "F:ml430-int-modeq-trans-6d7863e0"
+        },
+        {
+          "consequent": "F:ml430-int-modeq-of-mul-right-c92b7bf0",
+          "premise": "F:ml430-int-modeq-of-mul-left-c4ccd51e"
+        },
+        {
+          "consequent": "F:ml430-int-modeq-sub-3148f130",
+          "premise": "F:ml430-int-modeq-symm-984a6e67"
+        },
+        {
+          "consequent": "F:ml430-nat-bitwise-comm-1a273bae",
+          "premise": "F:ml430-nat-bitwise-swap-7175e90e"
+        },
+        {
+          "consequent": "F:ml430-nat-bitwise-swap-7175e90e",
+          "premise": "F:ml430-nat-bitwise-bit-4c4b28a8"
+        },
+        {
+          "consequent": "F:ml430-nat-choose-le-add-9c463139",
+          "premise": "F:ml430-nat-choose-le-succ-62ae968b"
+        },
+        {
+          "consequent": "F:ml430-nat-choose-le-choose-907b5042",
+          "premise": "F:ml430-nat-choose-le-add-9c463139"
+        },
+        {
+          "consequent": "F:ml430-nat-choose-mono-a1af9c18",
+          "premise": "F:ml430-nat-choose-le-choose-907b5042"
+        },
+        {
+          "consequent": "F:ml430-nat-choose-one-right-7eda8e39",
+          "premise": "F:ml430-nat-choose-zero-right-1ed2802a"
+        },
+        {
+          "consequent": "F:ml430-nat-choose-succ-self-e396f6c2",
+          "premise": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29"
+        },
+        {
+          "consequent": "F:ml430-nat-choose-symm-add-e4b68161",
+          "premise": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20"
+        },
+        {
+          "consequent": "F:ml430-nat-clog-monotone-48fe50c6",
+          "premise": "F:ml430-nat-clog-mono-right-8d87a410"
+        },
+        {
+          "consequent": "F:ml430-nat-coprime-odd-of-left-ed80ab44",
+          "premise": "F:ml430-nat-coprime-two-left-1b47e7c4"
+        },
+        {
+          "consequent": "F:ml430-nat-coprime-odd-of-right-8dc1decc",
+          "premise": "F:ml430-nat-coprime-two-right-7c5a1850"
+        },
+        {
+          "consequent": "F:ml430-nat-coprime-of-dvd-18fcd09f",
+          "premise": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94"
+        },
+        {
+          "consequent": "F:ml430-nat-coprime-of-dvd-18fcd09f",
+          "premise": "F:ml430-nat-coprime-of-dvd-right-a640bd56"
+        },
+        {
+          "consequent": "F:ml430-nat-coprime-of-lt-prime-1978a919",
+          "premise": "F:ml430-nat-coprime-or-dvd-of-prime-65f47114"
+        },
+        {
+          "consequent": "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
+          "premise": "F:ml430-nat-prime-dvd-iff-not-coprime-77854741"
+        },
+        {
+          "consequent": "F:ml430-nat-coprime-self-add-right-966e5434",
+          "premise": "F:ml430-nat-coprime-add-self-right-c3ed0f45"
+        },
+        {
+          "consequent": "F:ml430-nat-coprime-two-right-7c5a1850",
+          "premise": "F:ml430-nat-coprime-two-left-1b47e7c4"
+        },
+        {
+          "consequent": "F:ml430-nat-exists-mul-self-e73ca9fa",
+          "premise": "F:ml430-nat-sqrt-eq-79ae8eae"
+        },
+        {
+          "consequent": "F:ml430-nat-factorial-le-d0f4a912",
+          "premise": "F:ml430-nat-factorial-dvd-factorial-e9d14845"
+        },
+        {
+          "consequent": "F:ml430-nat-factorial-le-d0f4a912",
+          "premise": "F:ml430-nat-factorial-pos-f1dd2405"
+        },
+        {
+          "consequent": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+          "premise": "F:ml430-nat-factorial-pos-f1dd2405"
+        },
+        {
+          "consequent": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+          "premise": "F:ml430-nat-fib-add-two-b86e0c82"
+        },
+        {
+          "consequent": "F:ml430-nat-fib-dvd-f80f3de1",
+          "premise": "F:ml430-nat-fib-gcd-d1d98407"
+        },
+        {
+          "consequent": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+          "premise": "F:ml430-nat-fib-add-two-b86e0c82"
+        },
+        {
+          "consequent": "F:ml430-nat-fib-lt-fib-3582b881",
+          "premise": "F:ml430-nat-fib-strictmonoon-905810a9"
+        },
+        {
+          "consequent": "F:ml430-nat-fib-mono-cc6afe09",
+          "premise": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d"
+        },
+        {
+          "consequent": "F:ml430-nat-fib-strictmonoon-905810a9",
+          "premise": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d"
+        },
+        {
+          "consequent": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+          "premise": "F:ml430-nat-fib-coprime-fib-succ-162fc738"
+        },
+        {
+          "consequent": "F:ml430-nat-land-assoc-ad4775b8",
+          "premise": "F:ml430-nat-land-bit-b9ab7475"
+        },
+        {
+          "consequent": "F:ml430-nat-land-comm-7e6ad72e",
+          "premise": "F:ml430-nat-bitwise-comm-1a273bae"
+        },
+        {
+          "consequent": "F:ml430-nat-le-fib-add-one-5284f0bf",
+          "premise": "F:ml430-nat-le-fib-self-0cbccb4d"
+        },
+        {
+          "consequent": "F:ml430-nat-le-sqrt-e6996680",
+          "premise": "F:ml430-nat-lt-succ-sqrt-39389df2"
+        },
+        {
+          "consequent": "F:ml430-nat-le-sqrt-e6996680",
+          "premise": "F:ml430-nat-sqrt-le-7918582b"
+        },
+        {
+          "consequent": "F:ml430-nat-le-sqrt-of-eq-mul-503c5afe",
+          "premise": "F:ml430-nat-le-sqrt-e6996680"
+        },
+        {
+          "consequent": "F:ml430-nat-le-three-of-sqrt-eq-one-0c48a868",
+          "premise": "F:ml430-nat-sqrt-lt-4909537f"
+        },
+        {
+          "consequent": "F:ml430-nat-log-le-clog-ac8ab2d4",
+          "premise": "F:ml430-nat-log-zero-right-8ea186db"
+        },
+        {
+          "consequent": "F:ml430-nat-log-le-self-da387172",
+          "premise": "F:ml430-nat-log-lt-self-529f89fa"
+        },
+        {
+          "consequent": "F:ml430-nat-log-le-self-da387172",
+          "premise": "F:ml430-nat-log-zero-right-8ea186db"
+        },
+        {
+          "consequent": "F:ml430-nat-log-mono-right-b8939fee",
+          "premise": "F:ml430-nat-log-monotone-52fad774"
+        },
+        {
+          "consequent": "F:ml430-nat-log2-eq-log-two-28085932",
+          "premise": "F:ml430-nat-log-zero-right-8ea186db"
+        },
+        {
+          "consequent": "F:ml430-nat-lor-assoc-82c4d0fd",
+          "premise": "F:ml430-nat-lor-bit-a2f98c7c"
+        },
+        {
+          "consequent": "F:ml430-nat-lor-comm-2666d7ef",
+          "premise": "F:ml430-nat-bitwise-comm-1a273bae"
+        },
+        {
+          "consequent": "F:ml430-nat-modeq-comm-24b71e7a",
+          "premise": "F:ml430-nat-modeq-symm-0a3d4d18"
+        },
+        {
+          "consequent": "F:ml430-nat-modeq-dvd-iff-8f130450",
+          "premise": "F:ml430-nat-modeq-of-dvd-d75cc374"
+        },
+        {
+          "consequent": "F:ml430-nat-modeq-dvd-iff-8f130450",
+          "premise": "F:ml430-nat-modeq-symm-0a3d4d18"
+        },
+        {
+          "consequent": "F:ml430-nat-modeq-dvd-iff-8f130450",
+          "premise": "F:ml430-nat-modeq-trans-ef9d1c46"
+        },
+        {
+          "consequent": "F:ml430-nat-modeq-gcd-eq-5167ff4f",
+          "premise": "F:ml430-nat-modeq-dvd-iff-8f130450"
+        },
+        {
+          "consequent": "F:ml430-nat-modeq-of-mul-right-43078e1c",
+          "premise": "F:ml430-nat-modeq-of-mul-left-88d20bca"
+        },
+        {
+          "consequent": "F:ml430-nat-multichoose-one-b210386a",
+          "premise": "F:ml430-nat-multichoose-zero-right-6ef827c8"
+        },
+        {
+          "consequent": "F:ml430-nat-multichoose-one-right-7755072d",
+          "premise": "F:ml430-nat-multichoose-zero-right-6ef827c8"
+        },
+        {
+          "consequent": "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439",
+          "premise": "F:ml430-nat-coprime-primes-5769049f"
+        },
+        {
+          "consequent": "F:ml430-nat-self-le-factorial-cfdffc69",
+          "premise": "F:ml430-nat-factorial-pos-f1dd2405"
+        },
+        {
+          "consequent": "F:ml430-nat-sqrt-eq-zero-53666a3b",
+          "premise": "F:ml430-nat-sqrt-lt-4909537f"
+        },
+        {
+          "consequent": "F:ml430-nat-sqrt-le-self-1ed5eb85",
+          "premise": "F:ml430-nat-sqrt-le-7918582b"
+        },
+        {
+          "consequent": "F:ml430-nat-sqrt-le-sqrt-6e2bfc47",
+          "premise": "F:ml430-nat-le-sqrt-e6996680"
+        },
+        {
+          "consequent": "F:ml430-nat-sqrt-le-sqrt-6e2bfc47",
+          "premise": "F:ml430-nat-sqrt-le-7918582b"
+        },
+        {
+          "consequent": "F:ml430-nat-sqrt-lt-self-ff7a155a",
+          "premise": "F:ml430-nat-sqrt-lt-4909537f"
+        },
+        {
+          "consequent": "F:ml430-nat-sqrt-pos-f75e5114",
+          "premise": "F:ml430-nat-le-sqrt-e6996680"
+        },
+        {
+          "consequent": "F:ml430-nat-sqrt-succ-le-succ-sqrt-6b041183",
+          "premise": "F:ml430-nat-sqrt-lt-4909537f"
+        },
+        {
+          "consequent": "F:modus-tollens-valid",
+          "premise": "F:contraposition"
+        },
+        {
+          "consequent": "F:modus-tollens-valid",
+          "premise": "F:modus-ponens-valid"
+        },
+        {
+          "consequent": "F:nat-add-comm",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:nat-add-comm",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-add-sub-cancel-left",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:nat-dvd-add",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-dvd-gcd-iff"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-gcd-bezout"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-exists-prime-dvd"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-gcd-succ"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-mul-one"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-left-distrib",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-mul-assoc",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-mul-one",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-one"
+        },
+        {
+          "consequent": "F:orders-candidate-keys-and-normal-forms",
+          "premise": "F:orders-fd-implication-certified"
+        },
+        {
+          "consequent": "F:rat-add-neg-inverse",
+          "premise": "F:rat-mul-renormalises"
+        },
+        {
+          "consequent": "F:rat-mul-renormalises",
+          "premise": "F:rat-normalize-reduces"
+        },
+        {
+          "consequent": "F:rat-normalize-reduces",
+          "premise": "F:int-euclidean-decomposition"
+        },
+        {
+          "consequent": "F:schedule-deadline-iis",
+          "premise": "F:schedule-critical-chain-infeasible"
+        }
+      ],
+      "isolated": 173,
+      "max_depth": 6,
+      "nodes": 324,
+      "with_dependencies": 98,
+      "with_dependents": 84
+    },
+    "facts": 324,
+    "kernel_dependency_coverage": {
+      "authority_gate": "scripts/check-fact-depends-derived.py",
+      "facts": 40,
+      "named": 35,
+      "unnamed_fact_ids": [
+        "F:ordered-ring-farkas-refutation",
+        "F:rat-add-neg-inverse",
+        "F:rat-mul-renormalises",
+        "F:rat-normalize-reduces",
+        "F:schedule-critical-chain-infeasible"
+      ]
+    },
+    "kernel_lean_graph": {
+      "dangling": [],
+      "depth_histogram": {
+        "1": 14,
+        "2": 6,
+        "3": 8,
+        "4": 7,
+        "5": 4,
+        "6": 1
+      },
+      "edges": 52,
+      "edges_detail": [
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:int-add-assoc",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:int-add-comm",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:int-add-le-add",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-le-add",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:int-add-lt-add-of-le-of-lt",
+          "premise": "F:int-add-le-add"
+        },
+        {
+          "consequent": "F:int-euclidean-decomposition",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:int-euclidean-decomposition",
+          "premise": "F:nat-div-mod-unique"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:int-left-distrib",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:int-mul-assoc",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:int-mul-comm",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:int-sq-nonneg",
+          "premise": "F:int-mul-comm"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-elim",
+          "premise": "F:int-sub-nat-nat-shift"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-elim",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:int-sub-nat-nat-shift",
+          "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:nat-add-comm",
+          "premise": "F:nat-succ-add"
+        },
+        {
+          "consequent": "F:nat-add-comm",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-add-sub-cancel-left",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-div-mod-unique",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:nat-dvd-add",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-dvd-gcd-iff"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-gcd-bezout"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-euclid-lemma",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-div-mod-exists"
+        },
+        {
+          "consequent": "F:nat-exists-prime-dvd",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-dvd-add"
+        },
+        {
+          "consequent": "F:nat-exists-prime-gt",
+          "premise": "F:nat-exists-prime-dvd"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-add-comm"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-gcd-succ"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-mul-one"
+        },
+        {
+          "consequent": "F:nat-gcd-bezout",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-left-distrib",
+          "premise": "F:nat-add-assoc"
+        },
+        {
+          "consequent": "F:nat-mul-assoc",
+          "premise": "F:nat-left-distrib"
+        },
+        {
+          "consequent": "F:nat-mul-one",
+          "premise": "F:nat-zero-add"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-assoc"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-comm"
+        },
+        {
+          "consequent": "F:nat-pow-add",
+          "premise": "F:nat-mul-one"
+        },
+        {
+          "consequent": "F:rat-add-neg-inverse",
+          "premise": "F:rat-mul-renormalises"
+        },
+        {
+          "consequent": "F:rat-mul-renormalises",
+          "premise": "F:rat-normalize-reduces"
+        },
+        {
+          "consequent": "F:rat-normalize-reduces",
+          "premise": "F:int-euclidean-decomposition"
+        }
+      ],
+      "isolated": 6,
+      "max_depth": 6,
+      "nodes": 40,
+      "statuses": {
+        "proved": 40
+      },
+      "unsettled": 0,
+      "with_dependencies": 26,
+      "with_dependents": 24
+    },
+    "routes": {
+      "(missing)": 223,
+      "cas-certificate": 19,
+      "imported-kernel-lean": 5,
+      "kernel-lean": 40,
+      "search-certificate": 12,
+      "smt-clausal": 9,
+      "smt-term-level": 16
+    },
+    "statuses": {
+      "computed": 2,
+      "conjectured": 3,
+      "open": 220,
+      "proved": 96,
+      "refuted": 3
+    }
+  },
+  "manual_seams": [
+    {
+      "gap": "the frontier completed the credited B-to-A sequence; selection beyond exact preregistered operations remains ungeneralized",
+      "id": "goal-selection",
+      "owner": "fact frontier",
+      "source": "scripts/fact-frontier.py",
+      "state": "autogenesis-1-bootstrap"
+    },
+    {
+      "gap": "the Nat.zero_add to Nat.mul_one primary passed authoritatively; no fallback or held-out nursery chain is measured",
+      "id": "chain-qualification",
+      "owner": "proof-derived chain catalog",
+      "source": "scripts/create-autogenesis-chain-catalog.py",
+      "state": "autogenesis-1-bootstrap"
+    },
+    {
+      "gap": "the exact Nat.zero_add and event-bound Nat.mul_one drivers passed; a generic typed apply operation remains absent",
+      "id": "route-dispatch",
+      "owner": "operation registry",
+      "source": "artifacts/autogenesis/operations.json",
+      "state": "autogenesis-1-bootstrap"
+    },
+    {
+      "gap": "the two Nat drivers reproduced normalized receipts; heterogeneous proof-plan execution remains absent",
+      "id": "operation-execution",
+      "owner": "typed operation executor",
+      "source": "scripts/execute-autogenesis-operation.py",
+      "state": "autogenesis-1-bootstrap"
+    },
+    {
+      "gap": "the first authoritative adapter derives its evidence row and route metadata; other routes through the manual closer remain caller-authored",
+      "id": "evidence-assembly",
+      "owner": "transactional closer",
+      "source": "scripts/close-fact.py",
+      "state": "partial"
+    },
+    {
+      "gap": "fixture and first authoritative checkers are typed; the manual closer still accepts caller-authored shell text",
+      "id": "checker-selection",
+      "owner": "evidence registry",
+      "source": "artifacts/autogenesis/operations.json",
+      "state": "partial"
+    },
+    {
+      "gap": "two sequential authoritative compare-and-swaps recovered from durable intents; a generic multi-step orchestrator remains deferred",
+      "id": "ledger-transition",
+      "owner": "transactional closer",
+      "source": "scripts/apply-autogenesis-fact-transaction.py",
+      "state": "authoritative-two-write"
+    },
+    {
+      "gap": "kernel facts are covered where checker commands name the theorem; other routes are authored",
+      "id": "dependency-derivation",
+      "owner": "kernel dependency inventory",
+      "source": "scripts/check-fact-depends-derived.py",
+      "state": "partial"
+    },
+    {
+      "gap": "B's durable event triggered the credited A retry; retry policy beyond this exact operation remains absent",
+      "id": "accepted-transition-event",
+      "owner": "episode/orchestrator",
+      "source": "scripts/create-autogenesis-readiness-delta.py",
+      "state": "autogenesis-1-bootstrap"
+    },
+    {
+      "gap": "the bootstrap chain reproduces byte-identically; held-out longitudinal replay and generalization remain",
+      "id": "clean-replay",
+      "owner": "episode replay",
+      "source": "scripts/run-autogenesis-authoritative-chain.py",
+      "state": "autogenesis-1-passed"
+    },
+    {
+      "gap": "Autogenesis-1 is frozen as a longitudinal regression, but the leakage-safe train, development, and held-out population has zero evaluation facts",
+      "id": "evaluation-population",
+      "owner": "nursery manifest and readiness checker",
+      "source": "scripts/check-autogenesis-nursery.py",
+      "state": "foundation-only"
+    },
+    {
+      "gap": "214 proof-free surface propositions are open fact-ledger rows; split feasibility, frozen partitions, route hypotheses, and all Axeyum outcomes remain absent",
+      "id": "nursery-statement-source",
+      "owner": "proof-isolated Mathlib fact catalog",
+      "source": "scripts/create-autogenesis-mathlib-fact-catalog.py",
+      "state": "open-fact-catalog"
+    }
+  ],
+  "proof_gap": {
+    "audit_reported_checked": 267,
+    "audit_unsat": 325,
+    "baseline_unsat": 327,
+    "complete_audits": 35,
+    "dominant_unsat": 259,
+    "evidence_certified": 267,
+    "evidence_checked": 267,
+    "lean_checked": 260,
+    "proof_errors": 2,
+    "trust_hole_free": 325,
+    "trust_hole_instances": 0
+  },
+  "source_identity": {
+    "algorithm": "sha256",
+    "digest": "8dafbf1a197d61a814364468123fbe9463a0dce5fe10e3eb352ab88de81ecd07",
+    "inputs": [
+      {
+        "bytes": 1939,
+        "path": "artifacts/autogenesis/autogenesis-1-result.json",
+        "sha256": "d206d33a1cdf8392dc7fb3c4720ba8c55abd2d3334b35bb5ba5cbd3a6bcef8ca"
+      },
+      {
+        "bytes": 2456,
+        "path": "artifacts/autogenesis/mathlib-dependency-source-v1.json",
+        "sha256": "f1f7eab2f7c242a2384da3831339d9c19f9d918b3f3d1b216c451e46cf97ed09"
+      },
+      {
+        "bytes": 163886,
+        "path": "artifacts/autogenesis/mathlib-nat-int-candidates-v1.json",
+        "sha256": "adbb3aff520664495089312a35ac2be1fd017a4ce39e4eff6443ea067d5c0704"
+      },
+      {
+        "bytes": 87872,
+        "path": "artifacts/autogenesis/mathlib-nat-int-dependency-components-v1.json",
+        "sha256": "edf1b10be0f0bd4b7851587bd00e847a06cd094acf3d78b7026d6b0f905ade28"
+      },
+      {
+        "bytes": 109848,
+        "path": "artifacts/autogenesis/mathlib-nat-int-fact-catalog-v1.json",
+        "sha256": "4a6ac0c9ee34e7c6a09b596e501ba94be4b1d962cf9ed02c7f1ed4dece771117"
+      },
+      {
+        "bytes": 159243,
+        "path": "artifacts/autogenesis/mathlib-nat-int-reviewed-nursery-v1.json",
+        "sha256": "c03b129cc2c576a8d5661ac026ad6a8adc7ae548f8bfa903c4d8b851f6c577b0"
+      },
+      {
+        "bytes": 4518,
+        "path": "artifacts/autogenesis/mathlib-nursery-review-policy-v1.json",
+        "sha256": "b1970e4d4f5598a4ea119fa2e89947e541fce965cf1c4a937ec1b1d4689064b4"
+      },
+      {
+        "bytes": 2550,
+        "path": "artifacts/autogenesis/mathlib-nursery-source-policy-v1.json",
+        "sha256": "1e76666fb58e987c04ebb957d8152bc1b47cd7463b6c9f6340b5630ef67e3a6c"
+      },
+      {
+        "bytes": 2799,
+        "path": "artifacts/autogenesis/mathlib-statement-source-v1.json",
+        "sha256": "8d7df257783ab2cdcfad18719de68d6f40681e1bacb06e938c7f0827d07eebdc"
+      },
+      {
+        "bytes": 1942,
+        "path": "artifacts/autogenesis/nursery-v1.json",
+        "sha256": "ed158ff63645f73ac2cdcd96fe84b95ec8346a0a3f45f3b4f0d2b6705b56eb7e"
+      },
+      {
+        "bytes": 6739,
+        "path": "artifacts/autogenesis/operations.json",
+        "sha256": "c64f93d5c4443ccd1162bb6b898a8f1c78cd4ccce523a05b27c1dae6bf7ef602"
+      },
+      {
+        "bytes": 3519,
+        "path": "artifacts/facts/F-affirming-the-consequent.json",
+        "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+      },
+      {
+        "bytes": 4889,
+        "path": "artifacts/facts/F-alternating-binomial-row-sum-zero.json",
+        "sha256": "e880a652f1b638aa5771f11308763396eaeefe8b9494f7814bbd559065c0cfcd"
+      },
+      {
+        "bytes": 7262,
+        "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+        "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+      },
+      {
+        "bytes": 12285,
+        "path": "artifacts/facts/F-barber-no-such-barber.json",
+        "sha256": "14a35ea41c66f079abd32124802a4eb7067b135591963d32a3f8a9b36bca139e"
+      },
+      {
+        "bytes": 11881,
+        "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+        "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+      },
+      {
+        "bytes": 4883,
+        "path": "artifacts/facts/F-binomial-row-sum-two-power.json",
+        "sha256": "b40e1097c670223e1c561e5481ac16908d602427ff35154e7d4846038ddec3c6"
+      },
+      {
+        "bytes": 5003,
+        "path": "artifacts/facts/F-bool-and-comm.json",
+        "sha256": "4ee5d8ffcaf59f9092fd841ee4a6c8074847c17ab29d7ed19862534a99663242"
+      },
+      {
+        "bytes": 5375,
+        "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+        "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+      },
+      {
+        "bytes": 6196,
+        "path": "artifacts/facts/F-chu-vandermonde-convolution.json",
+        "sha256": "1938c1c073ddd4a91fe23189963fb44c6c17ed63d34083b4fd48fa76435b553f"
+      },
+      {
+        "bytes": 1985,
+        "path": "artifacts/facts/F-collatz-reaches-one.json",
+        "sha256": "b189142039a4e84d081b03b3a8c4f78ff5486344123d461508464eae8e41f006"
+      },
+      {
+        "bytes": 9692,
+        "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+        "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+      },
+      {
+        "bytes": 2818,
+        "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+        "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+      },
+      {
+        "bytes": 4048,
+        "path": "artifacts/facts/F-contraposition.json",
+        "sha256": "5be5233192c2dddfe52b8e35be36f06071874e96a0e01aaa2cda712905b5f50b"
+      },
+      {
+        "bytes": 4989,
+        "path": "artifacts/facts/F-cross-binomial-row-sum.json",
+        "sha256": "0ff7e9017770ccde5ed93229216206571acccaaaacdf77a86c32a39a204909a9"
+      },
+      {
+        "bytes": 4431,
+        "path": "artifacts/facts/F-de-morgan-laws.json",
+        "sha256": "6506a8a0a261feef0af65df225c8eb379bc500acb4740c3fe6fecaeff59064b9"
+      },
+      {
+        "bytes": 4638,
+        "path": "artifacts/facts/F-double-negation-elimination.json",
+        "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+      },
+      {
+        "bytes": 4248,
+        "path": "artifacts/facts/F-ex-falso-quodlibet.json",
+        "sha256": "b31659b88133bd2f63b5f125346b45368d7944aa0d40523b3c363cab8fef0aba"
+      },
+      {
+        "bytes": 3861,
+        "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+        "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+      },
+      {
+        "bytes": 4639,
+        "path": "artifacts/facts/F-excluded-middle.json",
+        "sha256": "c4248a5a5019f103f171e24cc5ba3e51555ca98a965bb0f6ab4d398f15fbba85"
+      },
+      {
+        "bytes": 4740,
+        "path": "artifacts/facts/F-exportation.json",
+        "sha256": "a633e580813411f7c2668e82a30950eda4f40bb3a3653d409093f0d56e1bcbdd"
+      },
+      {
+        "bytes": 2365,
+        "path": "artifacts/facts/F-fermat-last-theorem.json",
+        "sha256": "498198ca4681bb4141ac42f7d46edc4577eadc5ef24a848fbe861a7cf531b833"
+      },
+      {
+        "bytes": 2877,
+        "path": "artifacts/facts/F-fol-validity-undecidable.json",
+        "sha256": "a6a2d38609b5d2e3d0ce03ac55d996417b58fd215a2a7127c6cd837d17499771"
+      },
+      {
+        "bytes": 4114,
+        "path": "artifacts/facts/F-fp16-add-monotone-rne.json",
+        "sha256": "1cb0d5f10bb28cb8de8e60d71e1ef20cbf6dec1d7d6f9bda0f10bde15c46c701"
+      },
+      {
+        "bytes": 7085,
+        "path": "artifacts/facts/F-fp16-bf16-roundtrip-not-identity.json",
+        "sha256": "64786eff05a54c890fddbfe6605dca57bf29643ee4a6204bfd48be163f42b315"
+      },
+      {
+        "bytes": 7105,
+        "path": "artifacts/facts/F-fp16-doubling-add-equals-mul-two.json",
+        "sha256": "7b7603137c2393ffac2c3ba51c8b4a6f2de4b36e2ccd05ca1bf34a0532f15a0e"
+      },
+      {
+        "bytes": 5754,
+        "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+        "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+      },
+      {
+        "bytes": 6534,
+        "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+        "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+      },
+      {
+        "bytes": 8018,
+        "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+        "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+      },
+      {
+        "bytes": 8566,
+        "path": "artifacts/facts/F-fp8-add-not-associative.json",
+        "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+      },
+      {
+        "bytes": 5219,
+        "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+        "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+      },
+      {
+        "bytes": 7257,
+        "path": "artifacts/facts/F-geometry-centroid-divides-medians.json",
+        "sha256": "7e70210039662c71fd974da497295a2f7499f37476daa1ef27fa92336948a915"
+      },
+      {
+        "bytes": 14762,
+        "path": "artifacts/facts/F-geometry-euler-line.json",
+        "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+      },
+      {
+        "bytes": 5484,
+        "path": "artifacts/facts/F-geometry-medians-concurrent.json",
+        "sha256": "ddabdf1fd4221faf0a701188a6747383892fceba44afa598782199af0c255e59"
+      },
+      {
+        "bytes": 5327,
+        "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+        "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+      },
+      {
+        "bytes": 16516,
+        "path": "artifacts/facts/F-geometry-pappus-hexagon.json",
+        "sha256": "34e8a01322d06e00bdaa01b00c47b162568c6201cf2febb9a857e1328b73bed3"
+      },
+      {
+        "bytes": 7141,
+        "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+        "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+      },
+      {
+        "bytes": 9741,
+        "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+        "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+      },
+      {
+        "bytes": 22913,
+        "path": "artifacts/facts/F-geometry-simson-line.json",
+        "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+      },
+      {
+        "bytes": 5486,
+        "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+        "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+      },
+      {
+        "bytes": 5720,
+        "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+        "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+      },
+      {
+        "bytes": 3389,
+        "path": "artifacts/facts/F-godel-first-incompleteness.json",
+        "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+      },
+      {
+        "bytes": 2706,
+        "path": "artifacts/facts/F-goldbach-strong.json",
+        "sha256": "79b9a3bdf8e748da41c8c9cd09cb54719fa42fa51e10fd5a767a21772aab108e"
+      },
+      {
+        "bytes": 4337,
+        "path": "artifacts/facts/F-int-add-assoc.json",
+        "sha256": "c7422512ed450f47ab184ad50566a2a0644245c4a1c44ae3af66cf40f7eb3e11"
+      },
+      {
+        "bytes": 3676,
+        "path": "artifacts/facts/F-int-add-comm.json",
+        "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+      },
+      {
+        "bytes": 4402,
+        "path": "artifacts/facts/F-int-add-le-add.json",
+        "sha256": "04fb3e8e80888d49ffced93aa1ddc18c944f94512aeb7b24b459a5b2457eb9af"
+      },
+      {
+        "bytes": 4433,
+        "path": "artifacts/facts/F-int-add-lt-add-of-le-of-lt.json",
+        "sha256": "d567f659297401f78d795caa8a433794818b401c3abf214a72e4ec195af62d43"
+      },
+      {
+        "bytes": 4819,
+        "path": "artifacts/facts/F-int-add-neg.json",
+        "sha256": "413649b045b1616f295d3f9b49b38028a24ff0d8d9e6be49d36786e6ed51a632"
+      },
+      {
+        "bytes": 3700,
+        "path": "artifacts/facts/F-int-equality-is-decidable.json",
+        "sha256": "cc1a5725b6579bcdbf90917b298552b7c962083662d3920ec5827c37bc69d1f3"
+      },
+      {
+        "bytes": 3023,
+        "path": "artifacts/facts/F-int-euclidean-decomposition.json",
+        "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+      },
+      {
+        "bytes": 4341,
+        "path": "artifacts/facts/F-int-left-distrib.json",
+        "sha256": "97cbe9365e1cb7043a13564c85b43115359f1a63dac559bda8c86c686345fe0d"
+      },
+      {
+        "bytes": 4333,
+        "path": "artifacts/facts/F-int-mul-assoc.json",
+        "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+      },
+      {
+        "bytes": 3719,
+        "path": "artifacts/facts/F-int-mul-comm.json",
+        "sha256": "aba467954f1f3f2afbe7ea39c433f44368b780483abc88ea80d5dd44775d2f69"
+      },
+      {
+        "bytes": 4597,
+        "path": "artifacts/facts/F-int-no-integer-strictly-between-zero-and-one.json",
+        "sha256": "27d34cf3d9afef0c47884af022e5e9d44c516fdae6bd7a7d3317298b5c505c47"
+      },
+      {
+        "bytes": 3649,
+        "path": "artifacts/facts/F-int-sq-nonneg.json",
+        "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+      },
+      {
+        "bytes": 5041,
+        "path": "artifacts/facts/F-int-sub-nat-nat-elim.json",
+        "sha256": "58d1a99763a3e5424ec08339c1bc42dd815ce27ed13369f9efaae1257014f8b3"
+      },
+      {
+        "bytes": 4965,
+        "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+        "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+      },
+      {
+        "bytes": 5114,
+        "path": "artifacts/facts/F-list-nil-append.json",
+        "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+      },
+      {
+        "bytes": 13268,
+        "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+        "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+      },
+      {
+        "bytes": 1548,
+        "path": "artifacts/facts/F-ml430-int-add-modeq-left-ee732b5b.json",
+        "sha256": "a9348c57911f16cc57577821fd02cc2eb76b126fdd1529e9a767a16ab5aab0cf"
+      },
+      {
+        "bytes": 1553,
+        "path": "artifacts/facts/F-ml430-int-add-modeq-right-e58108ee.json",
+        "sha256": "b095283fc1da44c9a45053e411afb7111563a4be18e0e6836fe0a3db1faf9368"
+      },
+      {
+        "bytes": 1693,
+        "path": "artifacts/facts/F-ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b.json",
+        "sha256": "17d42fd88b76c51eee0f49c93eed71a19b357a4740dc7ea138084c98fe0969f3"
+      },
+      {
+        "bytes": 1715,
+        "path": "artifacts/facts/F-ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0.json",
+        "sha256": "9b97cd1e6b96607a7b96314d0a2070b25e7c82d4e2dbb8d50bcb8534a11d9f82"
+      },
+      {
+        "bytes": 1568,
+        "path": "artifacts/facts/F-ml430-int-fib-add-181b6a2c.json",
+        "sha256": "35c93059503fc4261e585ae2fa8897a1f1f174c96b940ab71ed43a483b2b7b13"
+      },
+      {
+        "bytes": 1598,
+        "path": "artifacts/facts/F-ml430-int-fib-add-one-33f1b748.json",
+        "sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02"
+      },
+      {
+        "bytes": 1638,
+        "path": "artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
+        "sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07"
+      },
+      {
+        "bytes": 1528,
+        "path": "artifacts/facts/F-ml430-int-fib-dvd-ffb3c5c1.json",
+        "sha256": "e090e582ec91f379392269820f00075ad9bec739deabe0558e491ee8c8209862"
+      },
+      {
+        "bytes": 1713,
+        "path": "artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
+        "sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8"
+      },
+      {
+        "bytes": 1534,
+        "path": "artifacts/facts/F-ml430-int-fib-eq-zero-8193c7cb.json",
+        "sha256": "0cd1fd11ec3c7d40a44f842e7343243a2d935c97880b9b40426183078aaeed92"
+      },
+      {
+        "bytes": 1586,
+        "path": "artifacts/facts/F-ml430-int-fib-gcd-3a8bfdec.json",
+        "sha256": "a608cd1893289740a18c2df3d5ba711b44e9c7d9a7022839870010cc09e90e40"
+      },
+      {
+        "bytes": 1540,
+        "path": "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json",
+        "sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42"
+      },
+      {
+        "bytes": 1546,
+        "path": "artifacts/facts/F-ml430-int-fib-neg-b4021d37.json",
+        "sha256": "be84c078d1d9b2a5af3119a2d86ef2a7511d541e8e8aaf7c8971b42203c6695d"
+      },
+      {
+        "bytes": 1565,
+        "path": "artifacts/facts/F-ml430-int-fib-of-nonneg-438018c5.json",
+        "sha256": "312711e8dc1d54a17b9efdad9c61ab46ca9ef77747acc80a0c24d5f6821d6d6e"
+      },
+      {
+        "bytes": 1549,
+        "path": "artifacts/facts/F-ml430-int-fib-of-odd-66560495.json",
+        "sha256": "a2d021a71a00c79a6630d80c2b0305ada5b9f6dec8fb8a371178dc3b465579ad"
+      },
+      {
+        "bytes": 1612,
+        "path": "artifacts/facts/F-ml430-int-fib-two-mul-0e70f3dd.json",
+        "sha256": "b5b500f059c191d1493f01da735257f00f946f62265a9c3edb60dedc9b0919c7"
+      },
+      {
+        "bytes": 1594,
+        "path": "artifacts/facts/F-ml430-int-fib-two-mul-add-one-pos-8977f65f.json",
+        "sha256": "e396d9222868793fe85b4a172b9683a0a87be13106396c652b263a9cae2c04f1"
+      },
+      {
+        "bytes": 1666,
+        "path": "artifacts/facts/F-ml430-int-fib-two-mul-add-two-0ba4a948.json",
+        "sha256": "a7274210c37c13aac7a225ce4aabf74b935ad2ce4664d1df580a7bd7131b7e59"
+      },
+      {
+        "bytes": 1559,
+        "path": "artifacts/facts/F-ml430-int-gcd-div-5e01872f.json",
+        "sha256": "f527d401dbeddf8f7fc9a76631e2d9345f7d5d4878520df23e03ea81845be434"
+      },
+      {
+        "bytes": 1614,
+        "path": "artifacts/facts/F-ml430-int-gcd-div-gcd-div-gcd-2db608dc.json",
+        "sha256": "1dee1aada60d0cc872999c830c37c8c93277d0dc2f3c01dc3f19ddcf61b89625"
+      },
+      {
+        "bytes": 1565,
+        "path": "artifacts/facts/F-ml430-int-gcd-eq-gcd-ab-63005aef.json",
+        "sha256": "686fb8863d192d94e03a541c4b0ffc1f5f7a1853ef6e22189527d78ee3ea3c6d"
+      },
+      {
+        "bytes": 1705,
+        "path": "artifacts/facts/F-ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82.json",
+        "sha256": "2fab718bd622071c655ba18c5d01f66f683e634929d2ded5729a8a46b22368dc"
+      },
+      {
+        "bytes": 1710,
+        "path": "artifacts/facts/F-ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222.json",
+        "sha256": "bd1f7ec6df8065f481d2368dabb267c082753aa505071a28b4f1eca64295f41b"
+      },
+      {
+        "bytes": 1614,
+        "path": "artifacts/facts/F-ml430-int-gcd-fib-73bdafc2.json",
+        "sha256": "0363e2fa200d99356050891f3c697b5447ca9744965ea0c554b0070f7f8607c5"
+      },
+      {
+        "bytes": 1625,
+        "path": "artifacts/facts/F-ml430-int-gcd-greatest-5b31c5fe.json",
+        "sha256": "05a248098443a32d01437d874f4ffa0aece2aaea4f2f4a15659b9c819144333e"
+      },
+      {
+        "bytes": 1523,
+        "path": "artifacts/facts/F-ml430-int-mod-modeq-6bec7847.json",
+        "sha256": "034e992fde87238a528c17baac20a15280f26ec8c845d89b84260edef481f26c"
+      },
+      {
+        "bytes": 1585,
+        "path": "artifacts/facts/F-ml430-int-modeq-add-left-6e17c69a.json",
+        "sha256": "d89485bdc010ab795c8023a121b91e383de72ef0029268662333c3777aca4626"
+      },
+      {
+        "bytes": 1624,
+        "path": "artifacts/facts/F-ml430-int-modeq-add-left-cancel-062ad5fe.json",
+        "sha256": "1e2ee9c0739df34a7f9f8d5f2b92b8d4a4bb5d31066269fab86175690618e66c"
+      },
+      {
+        "bytes": 1588,
+        "path": "artifacts/facts/F-ml430-int-modeq-comm-1e4bcc07.json",
+        "sha256": "c3655b1b54abec1efcaa88998e698d32e2d30e73c79d003254be1ad3b2dbe58d"
+      },
+      {
+        "bytes": 1648,
+        "path": "artifacts/facts/F-ml430-int-modeq-dvd-iff-b7ffeff8.json",
+        "sha256": "e46b10a27482efefd05dd480a61d88605bd692b306b42f9a1b000a0038039909"
+      },
+      {
+        "bytes": 1543,
+        "path": "artifacts/facts/F-ml430-int-modeq-neg-d6ff57b6.json",
+        "sha256": "4c696a77ffff4d712f9beffe244555e2b2f1166c95238c38ed7aebbef73d9f3f"
+      },
+      {
+        "bytes": 1544,
+        "path": "artifacts/facts/F-ml430-int-modeq-neg-f649f6c5.json",
+        "sha256": "c2191f1ad476c78e2858f1f726f3c089dfc884078f17798001ed26e07484d6c4"
+      },
+      {
+        "bytes": 1571,
+        "path": "artifacts/facts/F-ml430-int-modeq-of-dvd-b9c41fce.json",
+        "sha256": "aafae1f5fe5b277f21dbca3f1fb0b7ed99349b4f4862a69e16cb097503c6c2b1"
+      },
+      {
+        "bytes": 1596,
+        "path": "artifacts/facts/F-ml430-int-modeq-of-mul-left-c4ccd51e.json",
+        "sha256": "67b4610a1ce703e4097c3c588d34a9b2a2f538c2520e475c7e11e014a79ef32f"
+      },
+      {
+        "bytes": 1649,
+        "path": "artifacts/facts/F-ml430-int-modeq-of-mul-right-c92b7bf0.json",
+        "sha256": "7ceb5e06eda4f5f660ac0b87ca862f6bd446ce8f0555c485a5ff19b0cdae393b"
+      },
+      {
+        "bytes": 1519,
+        "path": "artifacts/facts/F-ml430-int-modeq-one-01d9de39.json",
+        "sha256": "4a1da3d76dba4d7384c28c059b252ed15c78e2a436cdbd3f0ea297409b4ac940"
+      },
+      {
+        "bytes": 1532,
+        "path": "artifacts/facts/F-ml430-int-modeq-refl-30e15520.json",
+        "sha256": "30231c3873e1ca82edf39f1c12fc8bc334371743ac22cff7818bd5fb3b9b3c93"
+      },
+      {
+        "bytes": 1564,
+        "path": "artifacts/facts/F-ml430-int-modeq-sub-3148f130.json",
+        "sha256": "fadd6fb2102934021d3e71cd7f492da4d35f104236f29cf2dadf03bc5527bdf5"
+      },
+      {
+        "bytes": 1547,
+        "path": "artifacts/facts/F-ml430-int-modeq-symm-984a6e67.json",
+        "sha256": "eac66085f981f571e118398b4a87d5ff497f37d481d6c3b25d6c410b7478f8aa"
+      },
+      {
+        "bytes": 1575,
+        "path": "artifacts/facts/F-ml430-int-modeq-trans-6d7863e0.json",
+        "sha256": "cc5a04f40626871458b89db960fb9de31696e1515dde49b0ba53bfc777bed769"
+      },
+      {
+        "bytes": 1562,
+        "path": "artifacts/facts/F-ml430-int-modulus-modeq-zero-5b57a898.json",
+        "sha256": "3bbf02f041dadacf25d6b67a247619a90b341b14a70ba3cb9a9117c5cfa47d3c"
+      },
+      {
+        "bytes": 1565,
+        "path": "artifacts/facts/F-ml430-int-ne-zero-of-gcd-f71f00df.json",
+        "sha256": "e8f45fdd0562ec77a06245e12eb04d04105f1b7a41085e7b08f3b7eba444e885"
+      },
+      {
+        "bytes": 1564,
+        "path": "artifacts/facts/F-ml430-int-neg-modeq-neg-30d98479.json",
+        "sha256": "7fba594bae8753ae2ef92a89fb6c3d4ca17ef838695dc534ad77d7520fa1e0ce"
+      },
+      {
+        "bytes": 1014,
+        "path": "artifacts/facts/F-ml430-mutation-1432b2277cf2cc26c1d11cd6.json",
+        "sha256": "7ff6585378dc5023fab6e923fd452b126b9706e6f1a50da78a6c4d16bc14e05a"
+      },
+      {
+        "bytes": 976,
+        "path": "artifacts/facts/F-ml430-mutation-2086302b3a338591b3179871.json",
+        "sha256": "40b21e276ea864c803de1c7e736b805095236079d94e27bdf730383f7fd673a0"
+      },
+      {
+        "bytes": 1015,
+        "path": "artifacts/facts/F-ml430-mutation-48fe130e2b8eadb6f626b66f.json",
+        "sha256": "806c9b8bed24b10c22b472aab44a6100233f56c46385e285c28f9689e30fd9b8"
+      },
+      {
+        "bytes": 992,
+        "path": "artifacts/facts/F-ml430-mutation-5179f333b8333ecff8adc223.json",
+        "sha256": "f78f6a5283bd12e354c43cb4919fd8a16055dbcbea97527753ad92dca2099497"
+      },
+      {
+        "bytes": 986,
+        "path": "artifacts/facts/F-ml430-mutation-7afa5ec620720a1501bf349d.json",
+        "sha256": "972817eb57200e9601c4957df35d408d04652066b06b6fe95e29d262947c560a"
+      },
+      {
+        "bytes": 971,
+        "path": "artifacts/facts/F-ml430-mutation-a6dd1759bce60d820292e107.json",
+        "sha256": "0996f0698c8ccb7418fea71a364a904410907d3a51dae3eb14206c9f14747e8d"
+      },
+      {
+        "bytes": 1014,
+        "path": "artifacts/facts/F-ml430-mutation-aabb80b1f89f0c5847364692.json",
+        "sha256": "584f357e85cb97fc594e3c2916fecb2b63eaaa24efee94c916f1321ac6cb4e7a"
+      },
+      {
+        "bytes": 966,
+        "path": "artifacts/facts/F-ml430-mutation-aca37b68d3cdf06f0127def9.json",
+        "sha256": "41fc8bd9122f9e6e693857ace6921747c07ba53ebed6b17a40cdd752d6084b39"
+      },
+      {
+        "bytes": 983,
+        "path": "artifacts/facts/F-ml430-mutation-c20db9b4c60b816ce738bdf2.json",
+        "sha256": "ed95796ff02505f073f34bfda92e91758d0bdf438060262842abad71f3dfec50"
+      },
+      {
+        "bytes": 965,
+        "path": "artifacts/facts/F-ml430-mutation-c86940b52af8159ca9b381d6.json",
+        "sha256": "64278a908ca150a62bb66f09ae093c79db9ca0976dc5c6c9e5231313b3e6b2a1"
+      },
+      {
+        "bytes": 980,
+        "path": "artifacts/facts/F-ml430-mutation-e8583599cfae2d40cefae3f0.json",
+        "sha256": "e21d20158e159a715806e79220c89e660a60c53678505f02c674b7613e73dfe2"
+      },
+      {
+        "bytes": 987,
+        "path": "artifacts/facts/F-ml430-mutation-edb05acf07d9ef3f9f8232fc.json",
+        "sha256": "417ed7caffc9dc7419a1c1dcf9eb4083fb52eb50d4ce8e7cc2e065827750cc73"
+      },
+      {
+        "bytes": 1547,
+        "path": "artifacts/facts/F-ml430-nat-add-modeq-left-e3b1fba9.json",
+        "sha256": "50f9b147f54cd444553fc24e6c281d4e76589bb049f18a2ca3c224d3c86e2639"
+      },
+      {
+        "bytes": 1552,
+        "path": "artifacts/facts/F-ml430-nat-add-modeq-right-e2f11f21.json",
+        "sha256": "e5a19eda16540b82085a700176ca6ba05a175bd1bb948b4fc65150e5362ef380"
+      },
+      {
+        "bytes": 1561,
+        "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+        "sha256": "568e49a6955bf7621741f0ca7c182e5f9552b33e0e754e38c37da770de800f34"
+      },
+      {
+        "bytes": 1713,
+        "path": "artifacts/facts/F-ml430-nat-bitwise-bit-4c4b28a8.json",
+        "sha256": "977f3f2a33acfd814b437a7c098559af6f755cf1195f725d9c467599e86d8b0f"
+      },
+      {
+        "bytes": 1673,
+        "path": "artifacts/facts/F-ml430-nat-bitwise-comm-1a273bae.json",
+        "sha256": "ed64e00c46d9cdc189811b32c9a591b34b0c61df14725c29ed4c7c362f40464b"
+      },
+      {
+        "bytes": 1638,
+        "path": "artifacts/facts/F-ml430-nat-bitwise-swap-7175e90e.json",
+        "sha256": "6b87cea01fbe355bfa9013c698e3d90134b9def7f89bb9fc4c80331dd67517bc"
+      },
+      {
+        "bytes": 1582,
+        "path": "artifacts/facts/F-ml430-nat-choose-eq-zero-of-lt-92ebab29.json",
+        "sha256": "7dc3c1ffb4a1bd1c05a1c23d4838170c93643afb3802b146e361aa1f939a035d"
+      },
+      {
+        "bytes": 1601,
+        "path": "artifacts/facts/F-ml430-nat-choose-le-add-9c463139.json",
+        "sha256": "eb48b076b5d66d4e57c3972c46d740384d3cf685258d8420d783bb742425db4e"
+      },
+      {
+        "bytes": 1629,
+        "path": "artifacts/facts/F-ml430-nat-choose-le-choose-907b5042.json",
+        "sha256": "d45feccad85f211058dc9b52b4814cd6060d55e785ee24bb7956f6a142f6bce4"
+      },
+      {
+        "bytes": 1558,
+        "path": "artifacts/facts/F-ml430-nat-choose-le-succ-62ae968b.json",
+        "sha256": "05c9feb5faead9ace7cb3fb9ecc1de5210b2a4b7a4924718a7333f654b251edb"
+      },
+      {
+        "bytes": 1594,
+        "path": "artifacts/facts/F-ml430-nat-choose-mono-a1af9c18.json",
+        "sha256": "16a82c4d64849fc41f96c15c6599ab11a75eda71a9b7da0cac40b62b9db504be"
+      },
+      {
+        "bytes": 1556,
+        "path": "artifacts/facts/F-ml430-nat-choose-ne-zero-49c3d3cb.json",
+        "sha256": "a38a52df54717a336cfaee40855b8ba4b0a237dc825f005ea72ca9fa92bcdbc7"
+      },
+      {
+        "bytes": 1598,
+        "path": "artifacts/facts/F-ml430-nat-choose-one-right-7eda8e39.json",
+        "sha256": "045221aa13daa5d761bc301b89d0dd3d0755f14cdc60b1fe5dc45d04e51b9ad1"
+      },
+      {
+        "bytes": 1525,
+        "path": "artifacts/facts/F-ml430-nat-choose-self-25bb9fb8.json",
+        "sha256": "ffea30ee6842446ad8891f1a0b4fd7b1c3949ab291e2db10b7a66eff79fbbc52"
+      },
+      {
+        "bytes": 1606,
+        "path": "artifacts/facts/F-ml430-nat-choose-succ-self-e396f6c2.json",
+        "sha256": "e52a1f9c391fdadad71d54e9ca9a29c873d4cdf701f5d721cebaf44fafe85f7c"
+      },
+      {
+        "bytes": 1589,
+        "path": "artifacts/facts/F-ml430-nat-choose-succ-succ-671856b6.json",
+        "sha256": "1667a2711bc267d6a4a8cfba429344c4e087708dc6a3b1b7bf4282769c18ff72"
+      },
+      {
+        "bytes": 1620,
+        "path": "artifacts/facts/F-ml430-nat-choose-symm-add-e4b68161.json",
+        "sha256": "7e1fe90d51af0dc58d4d30be1adcb1623cb5486458f10ba73f957c75f34bfa12"
+      },
+      {
+        "bytes": 1602,
+        "path": "artifacts/facts/F-ml430-nat-choose-symm-of-eq-add-9b5f9a20.json",
+        "sha256": "b493812b6b7f3875de5b21e0db5d9e86bb4a78b8db04f54c2f4ae76f468decc0"
+      },
+      {
+        "bytes": 1555,
+        "path": "artifacts/facts/F-ml430-nat-choose-zero-right-1ed2802a.json",
+        "sha256": "89ae03eb24d7ff52094818de827bde0fcaf5c4c0a807a0cd28e862217625601e"
+      },
+      {
+        "bytes": 1559,
+        "path": "artifacts/facts/F-ml430-nat-choose-zero-succ-62c6520b.json",
+        "sha256": "495feed080e81940aa1573f8b45f0b738825fb244232f3e56264c0429b5362a1"
+      },
+      {
+        "bytes": 1598,
+        "path": "artifacts/facts/F-ml430-nat-clog-antitone-left-44a87771.json",
+        "sha256": "34bc9be2783f077f2d9ab5ed4723e819821454f3c5ad657e4306479d2b2573b2"
+      },
+      {
+        "bytes": 1584,
+        "path": "artifacts/facts/F-ml430-nat-clog-mono-right-8d87a410.json",
+        "sha256": "b24b9b6d043245dc06a528de99cc28c85cac7290129835f754731567f0b0be66"
+      },
+      {
+        "bytes": 1588,
+        "path": "artifacts/facts/F-ml430-nat-clog-monotone-48fe50c6.json",
+        "sha256": "edc9ed117b2b66416707e89af4862e21c995b4b5d16d2e9e8224d583840ae730"
+      },
+      {
+        "bytes": 1537,
+        "path": "artifacts/facts/F-ml430-nat-clog-one-left-b496af12.json",
+        "sha256": "589151f748be9411a39fab805868dbbbdaaf244db94ed879ce7aed957e29d3da"
+      },
+      {
+        "bytes": 1542,
+        "path": "artifacts/facts/F-ml430-nat-clog-one-right-1ce3d52f.json",
+        "sha256": "9c8f5fbb555a7fd86e16632f326ef5be6ad8f498c7db3ffe8181b5825059da4b"
+      },
+      {
+        "bytes": 1534,
+        "path": "artifacts/facts/F-ml430-nat-clog-pos-00852cb8.json",
+        "sha256": "c3fcbed0606207664519cf0b748f18e9fa33e7fddbeb5ae0be6bbae322beafd9"
+      },
+      {
+        "bytes": 1542,
+        "path": "artifacts/facts/F-ml430-nat-clog-zero-left-1c61a5bf.json",
+        "sha256": "ad35b6d0f9d53387746f0238593e089722516c7296ba46d89b7a8b7640613e8d"
+      },
+      {
+        "bytes": 1547,
+        "path": "artifacts/facts/F-ml430-nat-clog-zero-right-d42d47b1.json",
+        "sha256": "b426259d51cb1d39275a0f393e5ba04df0cb234cdecee485a71980791bc189e7"
+      },
+      {
+        "bytes": 1596,
+        "path": "artifacts/facts/F-ml430-nat-coprime-add-self-left-5e93448c.json",
+        "sha256": "61cd794431dea5da8cefd392e3a4bd12c8f5415606ac7cf795c4e528615b79e0"
+      },
+      {
+        "bytes": 1601,
+        "path": "artifacts/facts/F-ml430-nat-coprime-add-self-right-c3ed0f45.json",
+        "sha256": "54f5e2e733b916696cd62e7617e71255e45097b1ab9db2ced6dc2cda51049fc4"
+      },
+      {
+        "bytes": 1598,
+        "path": "artifacts/facts/F-ml430-nat-coprime-iff-isrelprime-0c08eb25.json",
+        "sha256": "055079371532ac0a798d74c70a47fc27cfb7e9ac626de07d8865eb5ee0fdfe1d"
+      },
+      {
+        "bytes": 1623,
+        "path": "artifacts/facts/F-ml430-nat-coprime-odd-of-left-ed80ab44.json",
+        "sha256": "5c3f034f7924a2b158396968a9c9d94f6b754e2257c8f96befde110a1e708e17"
+      },
+      {
+        "bytes": 1625,
+        "path": "artifacts/facts/F-ml430-nat-coprime-odd-of-right-8dc1decc.json",
+        "sha256": "b90066e8a58ed25ab27259d4ade0a55bb03d78e17fedc70b7901f194b56e6715"
+      },
+      {
+        "bytes": 1718,
+        "path": "artifacts/facts/F-ml430-nat-coprime-of-dvd-18fcd09f.json",
+        "sha256": "a0daeb86f5f4c35c1d99828ffa447480def44439544a903b88b2eb4f4dce4ae3"
+      },
+      {
+        "bytes": 1612,
+        "path": "artifacts/facts/F-ml430-nat-coprime-of-dvd-6f652673.json",
+        "sha256": "4f24254d3c1751c75bd624e52ff827d100afc25eb0d524ad3ab88dbe4e3bd36e"
+      },
+      {
+        "bytes": 1612,
+        "path": "artifacts/facts/F-ml430-nat-coprime-of-dvd-left-b0e2aa94.json",
+        "sha256": "0305e4d297be9b09fe555d795346f56b76e3c74e1e79a120a70b4a1f21b87784"
+      },
+      {
+        "bytes": 1617,
+        "path": "artifacts/facts/F-ml430-nat-coprime-of-dvd-right-a640bd56.json",
+        "sha256": "e552933ce93649b27c25223e05a520d73d88de940f167822da00444568196959"
+      },
+      {
+        "bytes": 1598,
+        "path": "artifacts/facts/F-ml430-nat-coprime-of-lt-minfac-0f79bdba.json",
+        "sha256": "4e65331bfff7691e92b30539e9cc7c79da4b91df74eb68db9e06dfc0af18c0cb"
+      },
+      {
+        "bytes": 1656,
+        "path": "artifacts/facts/F-ml430-nat-coprime-of-lt-prime-1978a919.json",
+        "sha256": "a3e0489c390a033678d4be79d7bdd4bb7bab1dc39092db8d9e013cc30f46a7b1"
+      },
+      {
+        "bytes": 1580,
+        "path": "artifacts/facts/F-ml430-nat-coprime-one-left-iff-45945e80.json",
+        "sha256": "388df6e99f9862a82c3adfeb3d6d2eff7131bdbaa572997619fca9a5791d84d3"
+      },
+      {
+        "bytes": 1581,
+        "path": "artifacts/facts/F-ml430-nat-coprime-one-right-iff-42fed4ce.json",
+        "sha256": "46ff28aee10bd8516e1b8219185b45507ab14839d8dee43994cd91b79d65fcd0"
+      },
+      {
+        "bytes": 1681,
+        "path": "artifacts/facts/F-ml430-nat-coprime-or-dvd-of-prime-65f47114.json",
+        "sha256": "308cbfa39ee0444744b0c94ed24e490bd6dbb44e314e4bd5a43d6f52b10a5633"
+      },
+      {
+        "bytes": 1585,
+        "path": "artifacts/facts/F-ml430-nat-coprime-primes-5769049f.json",
+        "sha256": "551fb70eea159e91ca83f84ab210b4faa52c9df339bf93443148379eed3da2b9"
+      },
+      {
+        "bytes": 1596,
+        "path": "artifacts/facts/F-ml430-nat-coprime-self-add-left-51351fa1.json",
+        "sha256": "5545aa79b00dacb8863fdaeb3cb040f812e6d7fc10303fd6949f379b624075de"
+      },
+      {
+        "bytes": 1654,
+        "path": "artifacts/facts/F-ml430-nat-coprime-self-add-right-966e5434.json",
+        "sha256": "40b81be8e656950ddeab63c92ee63fc9b13ae521d33e2c49f977e1c1f752ac61"
+      },
+      {
+        "bytes": 1547,
+        "path": "artifacts/facts/F-ml430-nat-coprime-symmetric-9b5cfa12.json",
+        "sha256": "131145ff4b607716a8031ac1871a0a63998dfbaeeb2d0254cb96509250d3e93f"
+      },
+      {
+        "bytes": 1561,
+        "path": "artifacts/facts/F-ml430-nat-coprime-two-left-1b47e7c4.json",
+        "sha256": "b87cc62a15127c76a951217a0ae93aed4934307dfd49ce44136e6a941b9c5929"
+      },
+      {
+        "bytes": 1609,
+        "path": "artifacts/facts/F-ml430-nat-coprime-two-right-7c5a1850.json",
+        "sha256": "70517e349bc3dcbb57c00357a2435f5e28ada08da0aae400e5558819beb352c6"
+      },
+      {
+        "bytes": 1599,
+        "path": "artifacts/facts/F-ml430-nat-descfactorial-le-2b8cc09a.json",
+        "sha256": "792690d6a4a894b442fd4c45addbc0b4cd80854dd09c43678ed33a5d592c5744"
+      },
+      {
+        "bytes": 1584,
+        "path": "artifacts/facts/F-ml430-nat-descfactorial-of-lt-fbcf5d26.json",
+        "sha256": "ce699c6b2b948b2fb2235eb0b8a72b546010c78dc0092691671f4707e9b0f19e"
+      },
+      {
+        "bytes": 1562,
+        "path": "artifacts/facts/F-ml430-nat-descfactorial-one-d4856d4a.json",
+        "sha256": "0fe030f54ec25e60dae0bb5c19e6aa3d99180eb66462594fe289b25e754d6658"
+      },
+      {
+        "bytes": 1577,
+        "path": "artifacts/facts/F-ml430-nat-descfactorial-self-899fc0e0.json",
+        "sha256": "2baa2816bb05e1de20b8e07e0fcf73959d7d1386f84c57df17d9e08768e5761f"
+      },
+      {
+        "bytes": 1567,
+        "path": "artifacts/facts/F-ml430-nat-descfactorial-zero-966b01df.json",
+        "sha256": "504087788f8ac3f20dd2d25c1ec931871f84f4175c3115b0143b805d4c52a580"
+      },
+      {
+        "bytes": 1579,
+        "path": "artifacts/facts/F-ml430-nat-div-dvd-div-left-b56f6f7c.json",
+        "sha256": "44d822f16c9ae99f50aa50a1b7c80f53399167f85ff27c7dba2095868ceac850"
+      },
+      {
+        "bytes": 1593,
+        "path": "artifacts/facts/F-ml430-nat-dvd-lcm-of-dvd-left-141a64bb.json",
+        "sha256": "4b878d45409b87b445ae1f7492c3458c6461507b7cb0e1fb8c4dd32de75a150b"
+      },
+      {
+        "bytes": 1598,
+        "path": "artifacts/facts/F-ml430-nat-dvd-lcm-of-dvd-right-61a50fc3.json",
+        "sha256": "ff9c29c336f7ffe091a92217a412c1f9f65d88d06cdd40d874dc0dd8906c4e08"
+      },
+      {
+        "bytes": 1661,
+        "path": "artifacts/facts/F-ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b.json",
+        "sha256": "f25710f7160a60257f2fcba86fe1d94f64aab0ce5c35c0b23d9a913552aa675a"
+      },
+      {
+        "bytes": 1580,
+        "path": "artifacts/facts/F-ml430-nat-dvd-of-lcm-left-dvd-d6b2407c.json",
+        "sha256": "f3c28f14a4d32f1aa5e475ad760f8995652489a66b3a7e64a31c7103ab9db6aa"
+      },
+      {
+        "bytes": 1585,
+        "path": "artifacts/facts/F-ml430-nat-dvd-of-lcm-right-dvd-61bd1a60.json",
+        "sha256": "4c6d73359654cd1cc10fe308adbf56b2fbee58607d24b9b7b1310745630e25a9"
+      },
+      {
+        "bytes": 1536,
+        "path": "artifacts/facts/F-ml430-nat-even-xor-78a39432.json",
+        "sha256": "31991fc2709a8974620531fb499f6c78fa3ae26ab6d053b9149041938344315e"
+      },
+      {
+        "bytes": 1609,
+        "path": "artifacts/facts/F-ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e.json",
+        "sha256": "a38dd4434ce55c53a8341c59377c5a1b851acc412638935b89819636d3605b7c"
+      },
+      {
+        "bytes": 1611,
+        "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+        "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+      },
+      {
+        "bytes": 1620,
+        "path": "artifacts/facts/F-ml430-nat-factorial-dvd-ascfactorial-44a4e641.json",
+        "sha256": "81f903632c49a3de0241dd639f8f1749a9ce90ca3519d4a4c8c9bb1e95ea17d0"
+      },
+      {
+        "bytes": 1626,
+        "path": "artifacts/facts/F-ml430-nat-factorial-dvd-descfactorial-bbf6124f.json",
+        "sha256": "a775f4b25f08141cb2f8ebf9f6d501f7fc0856201bf65594c38ffadae0a2a89e"
+      },
+      {
+        "bytes": 1612,
+        "path": "artifacts/facts/F-ml430-nat-factorial-dvd-factorial-e9d14845.json",
+        "sha256": "f3f8ff4f79c949c7766e75c2b025341bf0ac60d802eea4c53469139f7c36441d"
+      },
+      {
+        "bytes": 1653,
+        "path": "artifacts/facts/F-ml430-nat-factorial-le-d0f4a912.json",
+        "sha256": "1031acf27702823cfd828b1f06b2983be92104d279df0472dfdd82421d6d7649"
+      },
+      {
+        "bytes": 1593,
+        "path": "artifacts/facts/F-ml430-nat-factorial-lt-of-lt-d6c2125d.json",
+        "sha256": "d215c472dc11ef333a2a31f6cef779c5fd4a12b2922dfa4115316fb652df57fc"
+      },
+      {
+        "bytes": 1602,
+        "path": "artifacts/facts/F-ml430-nat-factorial-ne-zero-5fc0b0a1.json",
+        "sha256": "91dffc6a32dd5166710573fac26f21dceb3e5f4e489ff965c2caf81f6345fda5"
+      },
+      {
+        "bytes": 1536,
+        "path": "artifacts/facts/F-ml430-nat-factorial-pos-f1dd2405.json",
+        "sha256": "3500a96fd69e5c823b67a741b8018e52a753926ad31be252c7fa5eabff10572a"
+      },
+      {
+        "bytes": 1527,
+        "path": "artifacts/facts/F-ml430-nat-fastfib-eq-cde11774.json",
+        "sha256": "854dc2f2b5dd09da6a53a65fdb212d2a65b11c915fbd0267c271aa5efed61422"
+      },
+      {
+        "bytes": 1556,
+        "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+        "sha256": "d51fc715b0c2f90fafb6b412de89cd05c9584c060d228242ad8942072aac3cf0"
+      },
+      {
+        "bytes": 1594,
+        "path": "artifacts/facts/F-ml430-nat-fib-add-two-strictmono-c1e86d4d.json",
+        "sha256": "1b84cdcf6598c53b8e7236572be634ae431b395f887f761da97c4981cd2a85b8"
+      },
+      {
+        "bytes": 1635,
+        "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
+        "sha256": "3a3949c4521f4e5b932d28175ea2bb29d118bd655da90bee128781a29d1e6555"
+      },
+      {
+        "bytes": 1566,
+        "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
+        "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+      },
+      {
+        "bytes": 1534,
+        "path": "artifacts/facts/F-ml430-nat-fib-eq-zero-61879073.json",
+        "sha256": "cbee4cd38f59d632e07e92fa92c0da8cfede149a8e1e3f2f9d76f934b56fba44"
+      },
+      {
+        "bytes": 1540,
+        "path": "artifacts/facts/F-ml430-nat-fib-gcd-d1d98407.json",
+        "sha256": "e678d6b3a3b3bb9d6d7915b14e0ed3deed6377583fc0a15e22ea2d9c191db25d"
+      },
+      {
+        "bytes": 1602,
+        "path": "artifacts/facts/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.json",
+        "sha256": "11705861f7f40bde4c599c7706dc0d1bad9738cdd68c6965c5472f69a3933175"
+      },
+      {
+        "bytes": 1611,
+        "path": "artifacts/facts/F-ml430-nat-fib-lt-fib-3582b881.json",
+        "sha256": "8c1cf6f0a5a8c7a42a2c6783d2e2f9707d6b2084278437bbd1c85f27965ae76c"
+      },
+      {
+        "bytes": 1543,
+        "path": "artifacts/facts/F-ml430-nat-fib-mono-cc6afe09.json",
+        "sha256": "7064a481cecf9754b6dd8c111569348f078be40161200d51aa3a735d083bb650"
+      },
+      {
+        "bytes": 1514,
+        "path": "artifacts/facts/F-ml430-nat-fib-pos-9e67bd8e.json",
+        "sha256": "bc4be3d2930895ed979325242c1fd3f94496eae418832bbb4e0fe7eea2a2dbe7"
+      },
+      {
+        "bytes": 1606,
+        "path": "artifacts/facts/F-ml430-nat-fib-strictmonoon-905810a9.json",
+        "sha256": "fa8bc484cb2aea516a969d093c09f2ef052abd20f51fab781c3f482530838eb0"
+      },
+      {
+        "bytes": 1652,
+        "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+        "sha256": "f5752e5060191ff58837f9f3a5f589dd0174827ba2a836bfdb2fbb775aaa733a"
+      },
+      {
+        "bytes": 1608,
+        "path": "artifacts/facts/F-ml430-nat-gcd-greatest-0a04214a.json",
+        "sha256": "fd8ff0e7627b03b0727e651f797218a6db938453edad70e86d10ba9c73429f77"
+      },
+      {
+        "bytes": 1580,
+        "path": "artifacts/facts/F-ml430-nat-land-assoc-ad4775b8.json",
+        "sha256": "129b5bc4fb96a802067a75d190a590934929ed951cd3d16d37619106310391ae"
+      },
+      {
+        "bytes": 1584,
+        "path": "artifacts/facts/F-ml430-nat-land-bit-b9ab7475.json",
+        "sha256": "3efa2859e93c9d942c87b306f79305c0f55a2d389c30494b4ad5843fb323c651"
+      },
+      {
+        "bytes": 1563,
+        "path": "artifacts/facts/F-ml430-nat-land-comm-7e6ad72e.json",
+        "sha256": "4d345001a65999c940f5195cda66695fdab28ca09975b244c010d6736bcac825"
+      },
+      {
+        "bytes": 1598,
+        "path": "artifacts/facts/F-ml430-nat-ldiff-bit-6be49bb8.json",
+        "sha256": "fc428f0cd29bf1fe50980b0ec55d023cecc566834066e97377d703498c4a6bc2"
+      },
+      {
+        "bytes": 1587,
+        "path": "artifacts/facts/F-ml430-nat-le-fib-add-one-5284f0bf.json",
+        "sha256": "db69e524d74e1b77bbef2f988d735678407db4d1ae39ee3facea0aed2a261ada"
+      },
+      {
+        "bytes": 1538,
+        "path": "artifacts/facts/F-ml430-nat-le-fib-self-0cbccb4d.json",
+        "sha256": "e117c2884f9badc1aecaefd7a48716ee832021054fcaebb2ea14f979e468e9bf"
+      },
+      {
+        "bytes": 1600,
+        "path": "artifacts/facts/F-ml430-nat-le-sqrt-e6996680.json",
+        "sha256": "7a388b9405405d2f40eda8a503037a8aa604ecde92b952f0ba5c5985942a0ecd"
+      },
+      {
+        "bytes": 1626,
+        "path": "artifacts/facts/F-ml430-nat-le-sqrt-of-eq-mul-503c5afe.json",
+        "sha256": "e86de26f0d0cc6e2987313d20e8bac7354ae7a65d4c24eec77111db0549f1280"
+      },
+      {
+        "bytes": 1631,
+        "path": "artifacts/facts/F-ml430-nat-le-three-of-sqrt-eq-one-0c48a868.json",
+        "sha256": "c2cc6757232adaff4d01f964ab3e348e5a11ddebffbf9266debec7fcc636f57f"
+      },
+      {
+        "bytes": 1592,
+        "path": "artifacts/facts/F-ml430-nat-log-antitone-left-20d1326c.json",
+        "sha256": "0662a5f112453b9c82e792b34fb0b57be11c577eedb0acfd7d352e39317875ee"
+      },
+      {
+        "bytes": 1586,
+        "path": "artifacts/facts/F-ml430-nat-log-le-clog-ac8ab2d4.json",
+        "sha256": "1cb0f4c1b3909d87dc69862d7d24c11ec68bcfaaacfcc03d202368c6348f2383"
+      },
+      {
+        "bytes": 1615,
+        "path": "artifacts/facts/F-ml430-nat-log-le-self-da387172.json",
+        "sha256": "387b4c22dca2a50ecef801944afe8f4932fc1c1530fb7c685464ca6440fb2fa6"
+      },
+      {
+        "bytes": 1548,
+        "path": "artifacts/facts/F-ml430-nat-log-lt-self-529f89fa.json",
+        "sha256": "d3708b4d7872f2f1c0b39431e95f8484c09f0eefe3162eb8ea974cbe5d0b9e6c"
+      },
+      {
+        "bytes": 1612,
+        "path": "artifacts/facts/F-ml430-nat-log-mono-right-b8939fee.json",
+        "sha256": "ceaeab4fc94e98762fc6f044a77be0252aeeae70ed0740173e7e7151a8183be2"
+      },
+      {
+        "bytes": 1536,
+        "path": "artifacts/facts/F-ml430-nat-log-monotone-52fad774.json",
+        "sha256": "b8cb60d7c4d31dc2a9eb8fe7851afcbc7b9eab57c75c88b540cd66570f2d27f7"
+      },
+      {
+        "bytes": 1528,
+        "path": "artifacts/facts/F-ml430-nat-log-of-lt-89eaf42e.json",
+        "sha256": "b1960239acbbc5272bcaee208c8377a8f6b2041eebcb5aaa3feb8505fa663186"
+      },
+      {
+        "bytes": 1531,
+        "path": "artifacts/facts/F-ml430-nat-log-one-left-73efc119.json",
+        "sha256": "ffb5872fd1b01445033d1055b57ad7a2061c21da036155419e0fc0ecb4b2cabe"
+      },
+      {
+        "bytes": 1536,
+        "path": "artifacts/facts/F-ml430-nat-log-one-right-282332ef.json",
+        "sha256": "2915f9701969f31f7e999832d757c947178f103b260262b874e98e792b252e36"
+      },
+      {
+        "bytes": 1536,
+        "path": "artifacts/facts/F-ml430-nat-log-zero-left-9ec8541e.json",
+        "sha256": "e9e18265a84016f9ae5053455937fd03d6e486b617d781954507ec2eb23be767"
+      },
+      {
+        "bytes": 1541,
+        "path": "artifacts/facts/F-ml430-nat-log-zero-right-8ea186db.json",
+        "sha256": "dd8a574056d19baf95578d80e0424abb059e9f991469fb97ad25e8f720437bd0"
+      },
+      {
+        "bytes": 1596,
+        "path": "artifacts/facts/F-ml430-nat-log2-eq-log-two-28085932.json",
+        "sha256": "62041b87093013105aaae2a69c2824a15e792d63ee48ba8d0f908e0bb22c5b07"
+      },
+      {
+        "bytes": 1574,
+        "path": "artifacts/facts/F-ml430-nat-lor-assoc-82c4d0fd.json",
+        "sha256": "406e55ba639de7a766c82a66b7a52dc06c72624fb9186d22d08f5d602155792c"
+      },
+      {
+        "bytes": 1579,
+        "path": "artifacts/facts/F-ml430-nat-lor-bit-a2f98c7c.json",
+        "sha256": "275736511d681f1a4e051877dce9e1856fc232b0387512eafce338627718ce57"
+      },
+      {
+        "bytes": 1558,
+        "path": "artifacts/facts/F-ml430-nat-lor-comm-2666d7ef.json",
+        "sha256": "b3545b4269f800290ceb843b69c973c944586bf465ee3e2319a9e29e82c5ffff"
+      },
+      {
+        "bytes": 1642,
+        "path": "artifacts/facts/F-ml430-nat-lt-of-testbit-72f64ab8.json",
+        "sha256": "e6ca36e77f7139a8437815b28042caf6913b37d476ebf414e67e0d552be73bcd"
+      },
+      {
+        "bytes": 1545,
+        "path": "artifacts/facts/F-ml430-nat-lt-succ-sqrt-39389df2.json",
+        "sha256": "e8c748edaad0cd56394f4ede8eb0d8acaf9fe721352173d238a7530596535032"
+      },
+      {
+        "bytes": 1563,
+        "path": "artifacts/facts/F-ml430-nat-lt-xor-cases-c43a1e85.json",
+        "sha256": "3db84dee3ed7edbe447b9fa0aa9fe0ab935c91458a19a8f6a88bea36d58ebc18"
+      },
+      {
+        "bytes": 1558,
+        "path": "artifacts/facts/F-ml430-nat-mod-lcm-ee6bdd41.json",
+        "sha256": "0f93bb084184e86610b876d0eb1bfd437f1d14ad404b8670335cf1599266ae48"
+      },
+      {
+        "bytes": 1522,
+        "path": "artifacts/facts/F-ml430-nat-mod-modeq-436e4c10.json",
+        "sha256": "9c2f00cf76c54440bb4b7c95b81b35dbb012c41dd4bb21bd85c0c21ced145e30"
+      },
+      {
+        "bytes": 1622,
+        "path": "artifacts/facts/F-ml430-nat-modeq-add-left-cancel-e5287cf6.json",
+        "sha256": "aa225f26089a2014b83cdbc6748609d9871788e467868b070dc1748a21de5b48"
+      },
+      {
+        "bytes": 1583,
+        "path": "artifacts/facts/F-ml430-nat-modeq-add-left-e83f0700.json",
+        "sha256": "d6be48a9f077e0065be5d7a512e83a8f73131efb516cb497d56c7a4c7f1039bc"
+      },
+      {
+        "bytes": 1588,
+        "path": "artifacts/facts/F-ml430-nat-modeq-add-right-8e2ca0cc.json",
+        "sha256": "6fbc14b6425ec588d28903bd3967a9c3d4f05f49305abd1479575fd2c194b735"
+      },
+      {
+        "bytes": 1627,
+        "path": "artifacts/facts/F-ml430-nat-modeq-add-right-cancel-e871facf.json",
+        "sha256": "1e1e10295435d15d64ca5ac58e013e25e2af945f25fec25c389c2b58ce1b5601"
+      },
+      {
+        "bytes": 1586,
+        "path": "artifacts/facts/F-ml430-nat-modeq-comm-24b71e7a.json",
+        "sha256": "91564a05dd325a304d02497fbb0b467c99b81d1738e69ef27e427873e1ea0f9a"
+      },
+      {
+        "bytes": 1702,
+        "path": "artifacts/facts/F-ml430-nat-modeq-dvd-iff-8f130450.json",
+        "sha256": "5fc3d257453c4e3f54f061b503249a515bb1ed72f10d2b152d921a4027e7602f"
+      },
+      {
+        "bytes": 1601,
+        "path": "artifacts/facts/F-ml430-nat-modeq-gcd-eq-5167ff4f.json",
+        "sha256": "0f65eaee57fab5ad59d660d89d94f37d62957423e3bf67e7724c0700492924cc"
+      },
+      {
+        "bytes": 1569,
+        "path": "artifacts/facts/F-ml430-nat-modeq-of-dvd-d75cc374.json",
+        "sha256": "9a2d7d0ac19277487c9cb7b2fc035b98dbba99c8a606006835d602991f60c1f6"
+      },
+      {
+        "bytes": 1594,
+        "path": "artifacts/facts/F-ml430-nat-modeq-of-mul-left-88d20bca.json",
+        "sha256": "7cef4a26d37dbd12c6fc6f145bbaa170b44b242d1783a20238c20cebb882f6c2"
+      },
+      {
+        "bytes": 1647,
+        "path": "artifacts/facts/F-ml430-nat-modeq-of-mul-right-43078e1c.json",
+        "sha256": "ece14fdbfce7fe10db0d2eb43cd96d14992834d1e7d9d3239af72e093de11b21"
+      },
+      {
+        "bytes": 1518,
+        "path": "artifacts/facts/F-ml430-nat-modeq-one-516d46e8.json",
+        "sha256": "228d5bcea687086659361f6520ed0cfde6315e05cdbeda03347fce37a69d5559"
+      },
+      {
+        "bytes": 1531,
+        "path": "artifacts/facts/F-ml430-nat-modeq-refl-d870c8f5.json",
+        "sha256": "6fd58b493ef540585c892b8add9e9dc78cd1087e99a3ebf3e0ce652c2a676213"
+      },
+      {
+        "bytes": 1545,
+        "path": "artifacts/facts/F-ml430-nat-modeq-symm-0a3d4d18.json",
+        "sha256": "57c606ba27411bf3e4d40806c29d3f6c14cd1d0d6ddabb9e05dae68b80c0961f"
+      },
+      {
+        "bytes": 1572,
+        "path": "artifacts/facts/F-ml430-nat-modeq-trans-ef9d1c46.json",
+        "sha256": "a24eda43a708d63583aaeee705b21885ebac623930584da7a6d5415372f9485e"
+      },
+      {
+        "bytes": 1561,
+        "path": "artifacts/facts/F-ml430-nat-modulus-modeq-zero-fd9af096.json",
+        "sha256": "a99cbdd8a6d14b0233e0e322f86f2dd3d066f723d38be16b31c132ac3c7a8958"
+      },
+      {
+        "bytes": 1607,
+        "path": "artifacts/facts/F-ml430-nat-multichoose-one-b210386a.json",
+        "sha256": "9facf2a30167f6f2e4c25474fe1897436b47f0f0c592db15122198ff0d07d2da"
+      },
+      {
+        "bytes": 1633,
+        "path": "artifacts/facts/F-ml430-nat-multichoose-one-right-7755072d.json",
+        "sha256": "64152a8569b5b9a6c258c2d0171a505894f82bc3f2bd07b5412108ddb8c2dbd1"
+      },
+      {
+        "bytes": 1585,
+        "path": "artifacts/facts/F-ml430-nat-multichoose-zero-right-6ef827c8.json",
+        "sha256": "4e7636279a55885304f46667e1dbdb16f3c34a7a3775a80749174f6f1e515b1d"
+      },
+      {
+        "bytes": 1563,
+        "path": "artifacts/facts/F-ml430-nat-not-coprime-zero-zero-6c4e8dd8.json",
+        "sha256": "57e25e0ffe09b5fafd82584566127eaeb4b8d8570f598f20a80f3dcabf5900e4"
+      },
+      {
+        "bytes": 1617,
+        "path": "artifacts/facts/F-ml430-nat-not-prime-of-dvd-of-ne-4ff592c0.json",
+        "sha256": "59cfaf88984fcedde9f6252a0c5e5c0c6cb082c524cc1e9c2316ff46e98392a3"
+      },
+      {
+        "bytes": 1570,
+        "path": "artifacts/facts/F-ml430-nat-one-ascfactorial-8bacb017.json",
+        "sha256": "2220a24b824344919931d50d51ff75f689c981b87ff2ad4ea854be04c43cea5b"
+      },
+      {
+        "bytes": 1626,
+        "path": "artifacts/facts/F-ml430-nat-prime-dvd-iff-not-coprime-77854741.json",
+        "sha256": "0fc5946be4b67a092e5e3ecdb156bbf851f959d836ea95705ec48e9f65c23c98"
+      },
+      {
+        "bytes": 1709,
+        "path": "artifacts/facts/F-ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439.json",
+        "sha256": "9982d9b8f243c8042a71f91bfd67e088ddc0a2182e02a030d168a47c877006ee"
+      },
+      {
+        "bytes": 1599,
+        "path": "artifacts/facts/F-ml430-nat-prime-dvd-of-dvd-pow-e76f834a.json",
+        "sha256": "1ee6def2a9a78c3f81fade26374c79c99205bf14886f00779f70786c2e389608"
+      },
+      {
+        "bytes": 1560,
+        "path": "artifacts/facts/F-ml430-nat-prime-even-iff-d068ec82.json",
+        "sha256": "113428e586bc258baabbb6229170e857c16e2f895e0de10fd0ac6362b051953f"
+      },
+      {
+        "bytes": 1678,
+        "path": "artifacts/facts/F-ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786.json",
+        "sha256": "fed4c60d7ad31a007784403d71e954fdc3610100b7a71dc9b40ee3827b88560e"
+      },
+      {
+        "bytes": 1602,
+        "path": "artifacts/facts/F-ml430-nat-prime-not-dvd-mul-cb3a915e.json",
+        "sha256": "991c941716442eb04e092c7cd7f5c9d915e5165fb5d3d0943ba746d000768a39"
+      },
+      {
+        "bytes": 1584,
+        "path": "artifacts/facts/F-ml430-nat-prime-odd-of-ne-two-91e1195f.json",
+        "sha256": "8f30e5e740919b9def2ae5103ff558782d5a0cda4b799c744d3eed2852cd51ea"
+      },
+      {
+        "bytes": 1552,
+        "path": "artifacts/facts/F-ml430-nat-prime-pred-pos-4e67ac4c.json",
+        "sha256": "12f3bf7c546565b6f065d35b04ea33258f0a91ef0b6d703772dc4dee65a35485"
+      },
+      {
+        "bytes": 1602,
+        "path": "artifacts/facts/F-ml430-nat-self-le-factorial-cfdffc69.json",
+        "sha256": "1e1131e9004562dc469e0d487f6ddc5619a73c8b25c6f05087365dee5cc1a243"
+      },
+      {
+        "bytes": 1507,
+        "path": "artifacts/facts/F-ml430-nat-sqrt-eq-79ae8eae.json",
+        "sha256": "98e295a232b52c7ef68999006599cff63593e9ac742072a9c4b46cd46b6a55f9"
+      },
+      {
+        "bytes": 1511,
+        "path": "artifacts/facts/F-ml430-nat-sqrt-eq-c036815b.json",
+        "sha256": "115b3f15b44917469388aba56ef186c9e9043a648fb572db895c916aaf5b5bd4"
+      },
+      {
+        "bytes": 1574,
+        "path": "artifacts/facts/F-ml430-nat-sqrt-eq-zero-53666a3b.json",
+        "sha256": "2ffed673e9ec9bea65f6f822d985db284378d61ca88a839a308f81fa5c3ca84d"
+      },
+      {
+        "bytes": 1512,
+        "path": "artifacts/facts/F-ml430-nat-sqrt-le-7918582b.json",
+        "sha256": "f1249028f0c9d238baa819d1802bf0c6bb7bf55f8bb55ff48fbb106784a7bb98"
+      },
+      {
+        "bytes": 1566,
+        "path": "artifacts/facts/F-ml430-nat-sqrt-le-self-1ed5eb85.json",
+        "sha256": "ec4ff630a65ce83cda35b6a11c606623ea625a4ec25f0b85f60990ddcf6b5058"
+      },
+      {
+        "bytes": 1621,
+        "path": "artifacts/facts/F-ml430-nat-sqrt-le-sqrt-6e2bfc47.json",
+        "sha256": "d0b08e166711774811003b59576c0c54f851831768e72b07941abd9b793a1f1e"
+      },
+      {
+        "bytes": 1517,
+        "path": "artifacts/facts/F-ml430-nat-sqrt-lt-4909537f.json",
+        "sha256": "933cfc6c7e7ba14a9c2e1782b163334aeee2f0d9b0a8a5f2af883c2914dc3f42"
+      },
+      {
+        "bytes": 1574,
+        "path": "artifacts/facts/F-ml430-nat-sqrt-lt-self-ff7a155a.json",
+        "sha256": "93b906513404314c040e421613b619b2e122f327210e4c690b772d50f3f4a491"
+      },
+      {
+        "bytes": 1554,
+        "path": "artifacts/facts/F-ml430-nat-sqrt-pos-f75e5114.json",
+        "sha256": "7d739902042bec8ff126262572f3692e3d7ff76c5eedd2a2ebac46e5c5d2a90c"
+      },
+      {
+        "bytes": 1631,
+        "path": "artifacts/facts/F-ml430-nat-sqrt-succ-le-succ-sqrt-6b041183.json",
+        "sha256": "9f8559ce9baba04880f43f6607d8d2331cc2254433652bef4822cc2b5bccad9a"
+      },
+      {
+        "bytes": 1562,
+        "path": "artifacts/facts/F-ml430-nat-succ-pred-prime-4feb123f.json",
+        "sha256": "6a6dd48c3cfd7b40893661392cebcadd4b236231ec82fbd7f16cc1d9b819a48b"
+      },
+      {
+        "bytes": 1560,
+        "path": "artifacts/facts/F-ml430-nat-testbit-eq-inth-ffa07392.json",
+        "sha256": "36e860ab826d8e379b8c8718fc0893667302b50e6d8fe428d81ad9ea84b02490"
+      },
+      {
+        "bytes": 1570,
+        "path": "artifacts/facts/F-ml430-nat-testbit-land-dfef7ca4.json",
+        "sha256": "29c5c4735f29c970358cd5639bd9a3d7c9b7eba1625b706e45eb237bd3e556d2"
+      },
+      {
+        "bytes": 1578,
+        "path": "artifacts/facts/F-ml430-nat-testbit-ldiff-16f94162.json",
+        "sha256": "8bd0b5afa231c5191da42df4a263e79809302fd0dd8f27b8401365906581ee0d"
+      },
+      {
+        "bytes": 1565,
+        "path": "artifacts/facts/F-ml430-nat-testbit-lor-7644e067.json",
+        "sha256": "ade92dfff282a7d68e381d43af29429e79c25f4c9735028e3cd18410c7736e5c"
+      },
+      {
+        "bytes": 1570,
+        "path": "artifacts/facts/F-ml430-nat-zero-ascfactorial-af4fcdca.json",
+        "sha256": "a02ef164f1b6a45348a1beb35d3e4dead2b3f4e4d344a217d4e0bd127a1fbc55"
+      },
+      {
+        "bytes": 1622,
+        "path": "artifacts/facts/F-ml430-nat-zero-of-testbit-eq-false-e244c9a1.json",
+        "sha256": "7659579265549a8663444fae18c9a2e5db4c59266d76962fe7b7193e237a7c0d"
+      },
+      {
+        "bytes": 4202,
+        "path": "artifacts/facts/F-modus-ponens-valid.json",
+        "sha256": "4f760695fbf59e1358485dfdf451d774db551d929b977a957f1d87a7c5be33cd"
+      },
+      {
+        "bytes": 4112,
+        "path": "artifacts/facts/F-modus-tollens-valid.json",
+        "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+      },
+      {
+        "bytes": 4712,
+        "path": "artifacts/facts/F-nand-functional-completeness.json",
+        "sha256": "f8de95eee65f9c7dc7cee52f0095e58ee7f066f85cceda7fde3bfc472044a5f4"
+      },
+      {
+        "bytes": 3455,
+        "path": "artifacts/facts/F-nat-add-assoc.json",
+        "sha256": "bd18999eb6c6c6c4de419ae716d27f21ce391b43fb3f518e7294a6bee3ac101e"
+      },
+      {
+        "bytes": 2724,
+        "path": "artifacts/facts/F-nat-add-comm.json",
+        "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+      },
+      {
+        "bytes": 4077,
+        "path": "artifacts/facts/F-nat-add-sub-cancel-left.json",
+        "sha256": "ac41c33587cbff489830578e474a2bb9ea87467ad379a796b428124cc13b50f8"
+      },
+      {
+        "bytes": 3441,
+        "path": "artifacts/facts/F-nat-add-zero.json",
+        "sha256": "3bd4d57f29edded307d8c995f3de47b115d8bf96548ef8bf60e48581ddf41a9b"
+      },
+      {
+        "bytes": 4007,
+        "path": "artifacts/facts/F-nat-div-mod-exists.json",
+        "sha256": "3ff422e395249991b71a63c1aa733ecb7fc7ec971c950b4d3029e401a0e96539"
+      },
+      {
+        "bytes": 3956,
+        "path": "artifacts/facts/F-nat-div-mod-unique.json",
+        "sha256": "9c6d2017174b8a0fb4ad4ce8a8a6f46130f2dd82d35f338dace2770771bb2a16"
+      },
+      {
+        "bytes": 3717,
+        "path": "artifacts/facts/F-nat-dvd-add.json",
+        "sha256": "b769d28a2b7b952e4ad0397625e9254e9aff47b32636c83b26adea3f28596425"
+      },
+      {
+        "bytes": 4110,
+        "path": "artifacts/facts/F-nat-dvd-gcd-iff.json",
+        "sha256": "4ff93f5783c75a1c0ca128df329e60554778c230c6cb29bcf87f5b33044bfbc1"
+      },
+      {
+        "bytes": 5979,
+        "path": "artifacts/facts/F-nat-euclid-lemma.json",
+        "sha256": "a2c108ceba74d3171346e5b6d3ce3c21f710d214c320eb65c831a3f4d3a13db0"
+      },
+      {
+        "bytes": 6632,
+        "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+        "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+      },
+      {
+        "bytes": 6526,
+        "path": "artifacts/facts/F-nat-exists-prime-gt.json",
+        "sha256": "6cb7eb93bf72e59f86ac344e6053ecb5f4418de77f8d30cb4ce68f077bd4d03e"
+      },
+      {
+        "bytes": 4175,
+        "path": "artifacts/facts/F-nat-gcd-bezout.json",
+        "sha256": "f74c9064a3014d8cf691f1d0b8ffec233ef40585a1689f026d5ed0afaf8d2d82"
+      },
+      {
+        "bytes": 4132,
+        "path": "artifacts/facts/F-nat-gcd-succ.json",
+        "sha256": "e0fb1cf85f0d8e52770b9bf457242d4f15d76dbac82671a507f17d5884ca93ef"
+      },
+      {
+        "bytes": 5516,
+        "path": "artifacts/facts/F-nat-le-refl.json",
+        "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+      },
+      {
+        "bytes": 5755,
+        "path": "artifacts/facts/F-nat-le-succ.json",
+        "sha256": "72465fc1fe07b4305c3098314a720648c9d0b96462e96f17ac8bae6bceb8c3e1"
+      },
+      {
+        "bytes": 3661,
+        "path": "artifacts/facts/F-nat-left-distrib.json",
+        "sha256": "6a25df7aec622c1a773a56290463275ea50e5301f80e64c7f53aee6e161f3b1e"
+      },
+      {
+        "bytes": 4030,
+        "path": "artifacts/facts/F-nat-mod-eq-mul.json",
+        "sha256": "bcff2d90ed232a3032e67d51c778dad6dd220768ce2eaa1870536b94ddf69640"
+      },
+      {
+        "bytes": 3495,
+        "path": "artifacts/facts/F-nat-mul-assoc.json",
+        "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+      },
+      {
+        "bytes": 3371,
+        "path": "artifacts/facts/F-nat-mul-comm.json",
+        "sha256": "1a0fdadda76cc90edec73adb119933a3cb3c130ab11c4f83d55fff53aab3e020"
+      },
+      {
+        "bytes": 3558,
+        "path": "artifacts/facts/F-nat-mul-one.json",
+        "sha256": "3f5cba9ea3a950081dc762e74ab433385503dbb37ead805723d4d18b01944480"
+      },
+      {
+        "bytes": 5082,
+        "path": "artifacts/facts/F-nat-pow-add.json",
+        "sha256": "4da8efbb7943f23c0ab6fc3de1ef54badfdc75525ded899480a4134d5ed12b63"
+      },
+      {
+        "bytes": 2451,
+        "path": "artifacts/facts/F-nat-succ-add.json",
+        "sha256": "982b8c151d6d5432d029fcb86759b37c91f400cef1eaff5bb9ca1cacf9e2ccb2"
+      },
+      {
+        "bytes": 2352,
+        "path": "artifacts/facts/F-nat-zero-add.json",
+        "sha256": "3fdb7a9949fdf181416c28403449e55f181c9b9938626285f2f7001dfeda86ce"
+      },
+      {
+        "bytes": 5536,
+        "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+        "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+      },
+      {
+        "bytes": 4534,
+        "path": "artifacts/facts/F-no-self-negating-proposition.json",
+        "sha256": "b2a8c563c13582450078e9cddda7137da437d83b59554f4cc64c335366c99898"
+      },
+      {
+        "bytes": 11217,
+        "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+        "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+      },
+      {
+        "bytes": 10680,
+        "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+        "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+      },
+      {
+        "bytes": 11030,
+        "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+        "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+      },
+      {
+        "bytes": 4332,
+        "path": "artifacts/facts/F-peirce-law.json",
+        "sha256": "df7d87675964a164cc6be5ffc051d5f78a4fb8be25de3132fbc670c10aa747f9"
+      },
+      {
+        "bytes": 6282,
+        "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+        "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+      },
+      {
+        "bytes": 6890,
+        "path": "artifacts/facts/F-quantifier-negation-duality.json",
+        "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+      },
+      {
+        "bytes": 4612,
+        "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+        "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+      },
+      {
+        "bytes": 2145,
+        "path": "artifacts/facts/F-rado-r4-a5-b4.json",
+        "sha256": "bcdd70d99fd8dc65f5cb6d44ef50b1461282e9046869a6793674e7eda96f6b0f"
+      },
+      {
+        "bytes": 2528,
+        "path": "artifacts/facts/F-rat-add-neg-inverse.json",
+        "sha256": "e7ee314bc69063f96fc6902dc1658743ed3fde572dc4e6172b634bffebd6460f"
+      },
+      {
+        "bytes": 2580,
+        "path": "artifacts/facts/F-rat-mul-renormalises.json",
+        "sha256": "33c60509f0c800e5abee384df79a32e5fe6a7d2a58978988926ba03e8e85a6c3"
+      },
+      {
+        "bytes": 2738,
+        "path": "artifacts/facts/F-rat-normalize-reduces.json",
+        "sha256": "595714e8e93cbd24998c0d3d7cc83f0e25e8f00e426cab6d1ae1ef5bb1fc8926"
+      },
+      {
+        "bytes": 4893,
+        "path": "artifacts/facts/F-resolution-rule-sound.json",
+        "sha256": "edca31fb14db96ee34684b42083160be05180ba1f2ed85796fb0de9817e4bb51"
+      },
+      {
+        "bytes": 6922,
+        "path": "artifacts/facts/F-roster-icu-night-iis.json",
+        "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+      },
+      {
+        "bytes": 7088,
+        "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+        "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+      },
+      {
+        "bytes": 5669,
+        "path": "artifacts/facts/F-schedule-deadline-iis.json",
+        "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+      },
+      {
+        "bytes": 3216,
+        "path": "artifacts/facts/F-sorting-network-optimal-size-n3.json",
+        "sha256": "18e3187248c898df46e6e84f6def1451c07156be10ae5e835353e0cbf6a37cfa"
+      },
+      {
+        "bytes": 3216,
+        "path": "artifacts/facts/F-sorting-network-optimal-size-n4.json",
+        "sha256": "8c44ca80a16a269156d6a125f6c9167086525983515d32706201bb09956f016d"
+      },
+      {
+        "bytes": 3216,
+        "path": "artifacts/facts/F-sorting-network-optimal-size-n5.json",
+        "sha256": "7ca4e16702e2ded7c6ae3dc27d0f02f600455cbb72537ef742d7db90ca5ff8d3"
+      },
+      {
+        "bytes": 4714,
+        "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+        "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+      },
+      {
+        "bytes": 4957,
+        "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+        "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+      },
+      {
+        "bytes": 4620,
+        "path": "artifacts/facts/F-tseitin-and-gate.json",
+        "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+      },
+      {
+        "bytes": 2721,
+        "path": "artifacts/facts/F-twin-prime-unbounded.json",
+        "sha256": "118e4b369778f692dab528a22fc748e946877648d07887435053d192c2899a94"
+      },
+      {
+        "bytes": 4795,
+        "path": "artifacts/facts/F-weighted-binomial-row-sum.json",
+        "sha256": "e8002775b2c8184b4fbfe2ec383cebdf18506dfe8da4a4530e917e47c2229946"
+      },
+      {
+        "bytes": 4036,
+        "path": "artifacts/facts/F-xor-associative.json",
+        "sha256": "cd39de8638f6e24feaec74820d422bf114d160a8739d3f3f3cd9904a80bf2cad"
+      },
+      {
+        "bytes": 18412,
+        "path": "artifacts/ontology/fact.schema.json",
+        "sha256": "ca3d41c6386a4d75424052a0f44ea4d794a8d139b8f98bd4d1c14e32913a19aa"
+      },
+      {
+        "bytes": 20474,
+        "path": "crates/axeyum-lean-kernel/examples/autogenesis_apply_plan_check.rs",
+        "sha256": "883e05bfd5342b5f7dcb554ad8269458297e46ee071d748795a31259838355ad"
+      },
+      {
+        "bytes": 7383,
+        "path": "crates/axeyum-lean-kernel/examples/autogenesis_induction_plan_check.rs",
+        "sha256": "cd9e1308a44a0db59164a243e06dbaf69525d43e6bd2e6a6cf60d4d06a16e17d"
+      },
+      {
+        "bytes": 11324,
+        "path": "crates/axeyum-lean-kernel/examples/autogenesis_support/mod.rs",
+        "sha256": "f0ddf68a72df73471b19241a803e275432e082c172f3a8f2fd3ba2f76072e53f"
+      },
+      {
+        "bytes": 14663,
+        "path": "crates/axeyum-lean-kernel/examples/theorem_knowledge_audit.rs",
+        "sha256": "05dddd7a636f3baf93aa43e5cd874e9994e7252303507bc11b2b8ea017454e0f"
+      },
+      {
+        "bytes": 46105,
+        "path": "docs/plan/generated/proof-gap-matrix.json",
+        "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
+      },
+      {
+        "bytes": 75948,
+        "path": "justfile",
+        "sha256": "3ca0b4cc91a96a1987cf29f1d6cdf6a4e8197566693cf459a921bf3d3dfbc828"
+      },
+      {
+        "bytes": 11929,
+        "path": "scripts/apply-autogenesis-fact-transaction.py",
+        "sha256": "bec81d8759569dd739e95af5934e9460fd8bfd8177202928a37770b7dc124634"
+      },
+      {
+        "bytes": 2896,
+        "path": "scripts/autogenesis-apply-proposer.py",
+        "sha256": "35dd906b403dea5ca35458b0f78b508c8b874962efbf3fe0d26b1bb138633e9a"
+      },
+      {
+        "bytes": 3044,
+        "path": "scripts/autogenesis-induction-proposer.py",
+        "sha256": "fbe54eba868c06a720194bf9f742a47a96737be1ec369a366a478291f854ea1c"
+      },
+      {
+        "bytes": 5999,
+        "path": "scripts/check-aggregate-scope.expected",
+        "sha256": "4ca7f8a489610cede17b3ab4cecc4dc4813fcab2230c42cc0d3e3fb76ca32081"
+      },
+      {
+        "bytes": 5187,
+        "path": "scripts/check-autogenesis-1-result.py",
+        "sha256": "97d0f77196b3dfcef79537b069887f1740b85b207ac3594abd218ebe5c3d252b"
+      },
+      {
+        "bytes": 12778,
+        "path": "scripts/check-autogenesis-apply-search.sh",
+        "sha256": "98361cbd4b978273d5e49270f2614af91755379c5229fbba00812281797493fa"
+      },
+      {
+        "bytes": 10292,
+        "path": "scripts/check-autogenesis-fact-operation.py",
+        "sha256": "c6567c2318511ba1f96ad3246fb73ec9ab2b3ab222bbbedc784235e12b1951f1"
+      },
+      {
+        "bytes": 3677,
+        "path": "scripts/check-autogenesis-induction-search.sh",
+        "sha256": "f90e17048b77fff226e8c9a1b3c2267c8ba3f9aa9a7396fa3a31fa3a42cfd4a3"
+      },
+      {
+        "bytes": 1498,
+        "path": "scripts/check-autogenesis-knowledge-controls.sh",
+        "sha256": "b95ff058b0fd33cfa5ef2743587c4b2db25a2cef5ff72529e0ff474951926d65"
+      },
+      {
+        "bytes": 6126,
+        "path": "scripts/check-autogenesis-mathlib-source.py",
+        "sha256": "6bfda36b437386c77a8e2ebe6f5466c91396b21fb169406f806f980388bfd8a0"
+      },
+      {
+        "bytes": 16108,
+        "path": "scripts/check-autogenesis-nursery.py",
+        "sha256": "2d2e888f040b0c6f4d2aad4ccc7486d8f7a547c78eb4805533b5e56ec76997e1"
+      },
+      {
+        "bytes": 3090,
+        "path": "scripts/check-autogenesis-proposer-isolation.sh",
+        "sha256": "c1a7caf9d14339f702b26196e21b835308a2e6818a5407b27adde9e570f2ec4f"
+      },
+      {
+        "bytes": 6597,
+        "path": "scripts/check-fact-dag.py",
+        "sha256": "224a2672fd9a41730ca47e860a3a6a0b0c605113a924f6066f4a3287422fde81"
+      },
+      {
+        "bytes": 7054,
+        "path": "scripts/check-fact-depends-derived.py",
+        "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
+      },
+      {
+        "bytes": 23809,
+        "path": "scripts/check.sh",
+        "sha256": "0fa5b08f99838cbcc2683616d4cc638ed7fa0c473862790d7fcac165ac4c1d62"
+      },
+      {
+        "bytes": 6846,
+        "path": "scripts/close-fact.py",
+        "sha256": "1946ed9f4d89dffed5cc57ed0f88cf5c5ed7f3b49c6ecb497c3e2862775c4d8a"
+      },
+      {
+        "bytes": 4604,
+        "path": "scripts/compare-autogenesis-authoritative-chains.py",
+        "sha256": "c6dbaadda9d4e9bbbec049e3dfa7439e2f47d97aea0f16e8475635a5622c4bc5"
+      },
+      {
+        "bytes": 4919,
+        "path": "scripts/create-autogenesis-accepted-event.py",
+        "sha256": "71e352e4fd277f290c6405982e0589c019674764368ef05e1738b3d2a91e62c3"
+      },
+      {
+        "bytes": 20459,
+        "path": "scripts/create-autogenesis-chain-catalog.py",
+        "sha256": "f593645e0464401022074d3e3e86fa52a1ee953f5afba36ac1bdf74ed1ca3c6b"
+      },
+      {
+        "bytes": 13559,
+        "path": "scripts/create-autogenesis-mathlib-candidates.py",
+        "sha256": "e69fbb0be70dc4c6ae0446083fd921fe3e8eb1e7d30d2139489035bf954466a4"
+      },
+      {
+        "bytes": 18808,
+        "path": "scripts/create-autogenesis-mathlib-dependency-components.py",
+        "sha256": "723fab940d133d952a8b309ab73c4b7048e5fe8da152133e74127b0e5540b021"
+      },
+      {
+        "bytes": 16338,
+        "path": "scripts/create-autogenesis-mathlib-fact-catalog.py",
+        "sha256": "5d73c9b6caa60d61704f0f61f4807b6b81f69ae4c341bdf5f44d75812fc6541c"
+      },
+      {
+        "bytes": 11913,
+        "path": "scripts/create-autogenesis-mathlib-nursery-review.py",
+        "sha256": "2a90e877297d1c48ef90e7c52d8a0f2a9e367b6426007aa66a2b4dabe65210cb"
+      },
+      {
+        "bytes": 9953,
+        "path": "scripts/create-autogenesis-premise-evidence.py",
+        "sha256": "6a97e327ff408c5ad25c08cf8ff5626b3680e525ded4189380a3578c5e897199"
+      },
+      {
+        "bytes": 8723,
+        "path": "scripts/create-autogenesis-premise-transition.py",
+        "sha256": "06b6758f7422c1750d2752ef4a92eee74523ff6ab062b123cd5a7bb546cc4a71"
+      },
+      {
+        "bytes": 19191,
+        "path": "scripts/create-autogenesis-proposer-catalog.py",
+        "sha256": "82826e2af0623d026083020ed7433d461ee0536eeff60fab261dbd13a346fe97"
+      },
+      {
+        "bytes": 18760,
+        "path": "scripts/create-autogenesis-readiness-delta.py",
+        "sha256": "a264ee29e74f4c0321edcbe3fab7760422d47709650b496b6f48189000d1bdc2"
+      },
+      {
+        "bytes": 9468,
+        "path": "scripts/create-autogenesis-snapshot.py",
+        "sha256": "cb7b1b6ed2cb8f268b6adac42cc1bfb4ff3b99ce9e85b438c23790b4ce92c9e1"
+      },
+      {
+        "bytes": 41220,
+        "path": "scripts/execute-autogenesis-operation.py",
+        "sha256": "dfc6b131d999ad5a2d35ffcea9647f54e203717674fa27fa28ebd83ed86c5fc6"
+      },
+      {
+        "bytes": 27844,
+        "path": "scripts/fact-frontier.py",
+        "sha256": "fb367504828dc9aa0d09ecf349b645eb33b83402b69c53df65e43e937271526c"
+      },
+      {
+        "bytes": 29065,
+        "path": "scripts/gen-autogenesis-baseline.py",
+        "sha256": "608da396eec9425da489f23e23e40bee9b1f84f06776dc604c1601b4db2a1a78"
+      },
+      {
+        "bytes": 17112,
+        "path": "scripts/gen-proof-gap-matrix.py",
+        "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
+      },
+      {
+        "bytes": 1789,
+        "path": "scripts/lean/autogenesis_mathlib_dependency_inventory.lean",
+        "sha256": "b43c383c3a1d99c37450dfee05114094764458725a23621b02e9963b34a2c7ad"
+      },
+      {
+        "bytes": 1652,
+        "path": "scripts/lean/autogenesis_mathlib_statement_inventory.lean",
+        "sha256": "78cc93de6ab3c1fed5378c757f0ebfcbee47e66ecd72c25022755a4707e2b376"
+      },
+      {
+        "bytes": 23897,
+        "path": "scripts/prepare-autogenesis-fact-transaction.py",
+        "sha256": "7d08be51e5cc81cfcb748e85cb9411875423ee5d902e06d9805213c437db4a26"
+      },
+      {
+        "bytes": 10990,
+        "path": "scripts/provision-fleet-host.sh",
+        "sha256": "f9ceaa822e1d7c090f79608b238276c8921581f151a6b814648e95f6e5b87f00"
+      },
+      {
+        "bytes": 14020,
+        "path": "scripts/replay-autogenesis-apply-experiment.sh",
+        "sha256": "afa2800620b4bc0b49826604f6c11e81e5669f6b209f3e6733fa53e8827192bb"
+      },
+      {
+        "bytes": 10184,
+        "path": "scripts/replay-autogenesis-authoritative-admission.sh",
+        "sha256": "27c2b6efd57159b9a03f02da835ce5764b71b6a86bd4509256c18b975d7faf93"
+      },
+      {
+        "bytes": 19717,
+        "path": "scripts/run-autogenesis-authoritative-chain.py",
+        "sha256": "336a24362bacb7a3671f077d8edb5c22fa0ef5e770b65ee6923702468e9c371e"
+      },
+      {
+        "bytes": 4157,
+        "path": "scripts/run-autogenesis-python-proposer.sh",
+        "sha256": "7342d35d4927e5b84228eab46fb8d1bcc84793ce8dd2bba5c79203889a4c26bd"
+      },
+      {
+        "bytes": 3917,
+        "path": "scripts/stage-autogenesis-fixture-admission.sh",
+        "sha256": "7935f3c45440c9530347ae4359d4b6d0d6cf915f9462257c62f0d5f4aec9a554"
+      },
+      {
+        "bytes": 4699,
+        "path": "scripts/stage-autogenesis-premise.sh",
+        "sha256": "fcfc52779c96981c43857c81b0fa8a9579f9649c380dbb8c5881123cf38656cd"
+      },
+      {
+        "bytes": 862,
+        "path": "scripts/tests/fixtures/F-nat-zero-add-open.json",
+        "sha256": "c09c1b97f49c0993b3545e0ffbb5c063108b19b80aa27707588ef02b87053687"
+      },
+      {
+        "bytes": 1688,
+        "path": "scripts/tests/fixtures/autogenesis-proposer-probe.py",
+        "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
+      },
+      {
+        "bytes": 16111,
+        "path": "scripts/validate-autogenesis-operations.py",
+        "sha256": "56804a2020502f42d40d11d2107eb4c78221ba334b6533aa91d81685b7923d73"
+      },
+      {
+        "bytes": 2711,
+        "path": "scripts/verify-autogenesis-apply-proposals.py",
+        "sha256": "e34c06957989f04fa85fc61dc239eed2340200378a46e6944b52b19872df765e"
+      },
+      {
+        "bytes": 2457,
+        "path": "scripts/verify-autogenesis-induction-proposals.py",
+        "sha256": "3cf09115be9a6edc0f9642e0dd8fd070cf49c7b26698c9a56861d0b77085464e"
+      }
+    ]
+  },
+  "version": 0
+}

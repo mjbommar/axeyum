@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-gcd-contract-theorem-control-policy",
+  "state": "preregistered-not-run-no-theorem-or-ledger-credit",
+  "inputs": {
+    "reviewed_nursery": {
+      "path": "artifacts/autogenesis/mathlib-nat-int-reviewed-nursery-v1.json",
+      "sha256": "c03b129cc2c576a8d5661ac026ad6a8adc7ae548f8bfa903c4d8b851f6c577b0"
+    },
+    "source_contract_manifest": {
+      "path": "artifacts/autogenesis/mathlib-int-gcd-trace-contract-receipt-v1.json",
+      "sha256": "d34818b0aabf44fdc15107a24de72a947eac12f937f1838f2b4283258bcc3dca",
+      "observation_sha256": "2c86744046efc1908e168eca804afc103a31473f7b7df93c4a22700d82a3533f",
+      "receipt_sha256": "ae7585751df713ac8fda6f611c3197b0917c9001dc8bda134e9a43416ce3ec82"
+    }
+  },
+  "immediate_control": {
+    "candidate_id": "744a8bc1bd21d17b686caa1d873be28fa6f3be2349cf0c9cf0bcd07b685f7dd9",
+    "dependency_component_id": "mathlib-v4.30.0-b7c5d64ddc678ce9",
+    "name": "Int.gcd_def",
+    "statement": "∀ (i j : ℤ), i.gcd j = i.natAbs.gcd j.natAbs",
+    "review_disposition": "calibration-only",
+    "credit_class": "mechanism-control-only",
+    "selection_reason": "The statement is exactly the received source contract and exercises contract-receipt-to-theorem-receipt integration without claiming evaluation yield."
+  },
+  "evaluation_horizon": {
+    "candidate_id": "73bdafc25249002c7fb1f63f78672a8a25081bc2c495e0209fdd37c8c6de6388",
+    "fact_id": "F:ml430-int-gcd-fib-73bdafc2",
+    "name": "Int.gcd_fib",
+    "statement": "∀ (m n : ℤ), (Int.fib m).gcd (Int.fib n) = Nat.fib (m.gcd n)",
+    "review_disposition": "evaluation-eligible",
+    "direct_premises": [
+      {
+        "fact_id": "F:ml430-int-fib-neg-b4021d37",
+        "epistemic_status": "open",
+        "file_sha256": "be84c078d1d9b2a5af3119a2d86ef2a7511d541e8e8aaf7c8971b42203c6695d"
+      },
+      {
+        "fact_id": "F:ml430-nat-fib-gcd-d1d98407",
+        "epistemic_status": "open",
+        "file_sha256": "e678d6b3a3b3bb9d6d7915b14e0ed3deed6377583fc0a15e22ea2d9c191db25d"
+      }
+    ],
+    "target_file_sha256": "0363e2fa200d99356050891f3c697b5447ca9744965ea0c554b0070f7f8607c5",
+    "selection_reason": "This is the only reviewed Int.gcd consumer with an explicit two-premise dependency chain, so it is the real compounding target after both premises are independently established."
+  },
+  "producer": {
+    "policy_version": "int-gcd-contract-theorem-control-v1",
+    "operation": "trace-contract-reflexivity-v1",
+    "grammar": "introduce exactly two pointwise arguments, then construct Eq.refl",
+    "max_binders": 2,
+    "max_constructed_nodes": 5,
+    "max_invocations": 1,
+    "max_retries": 0,
+    "required_source_contract_receipts": 1,
+    "required_source_axioms": 0
+  },
+  "acceptance": {
+    "exact_target": "Int.gcd_def",
+    "source_contract_receipt_replayed": true,
+    "kernel_accepts_constructed_theorem": true,
+    "theorem_axiom_footprint": 0,
+    "semantic_theorem_receipts_issued": 1,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "partitions_allowed": ["train"],
+    "held_out_allowed": false,
+    "proof_bodies_allowed": false,
+    "historical_producer_outcomes_are_selection_inputs": false,
+    "producer_invocations_so_far": 0,
+    "semantic_theorem_receipts_issued_so_far": 0,
+    "ledger_writes_so_far": 0
+  },
+  "limitations": "This policy preregisters one calibration-only bridge control. It does not run the producer, establish Int.gcd_def in the fact ledger, claim evaluation yield, or establish either open premise of Int.gcd_fib."
+}

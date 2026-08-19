@@ -12,7 +12,7 @@
 //! standing audit finding: a checker that cannot fail is worse than no checker.
 //!
 //! The `Real` package has been playing that part. It is 30 axioms, and
-//! [ADR-0480](../../../../docs/research/09-decisions/adr-0480-the-trusted-surface-is-measured-as-reached-not-only-declared.md)
+//! [ADR-0509](../../../../docs/research/09-decisions/adr-0509-the-trusted-surface-is-measured-as-reached-not-only-declared.md)
 //! records that its *only* remaining job is to be the thing that is not zero.
 //! Thirty is twenty-nine more than the job needs.
 //!

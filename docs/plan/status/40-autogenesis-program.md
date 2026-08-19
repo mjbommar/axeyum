@@ -2,10 +2,10 @@
 
 <!-- plan-section: lane-status -->
 
-**Programme specified; implementation not authorized** (`WIP`,
-autogenesis-program, 2026-08-18). If selected, execute only Phase 0 in the
-[`Autogenesis plan`](../../autogenesis/README.md).
+**Status:** Fib recurrence admitted; clean replay pending.
+
+**Next:** clean-replay the non-leaf admission, then select one newly ready child.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-18 | `2abe2652d` | Authored the nine-phase Autogenesis programme and bounded Autogenesis-1 plan. |
+| 2026-08-19 | `11c700a9b` | Fib admission operation |

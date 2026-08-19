@@ -70,6 +70,47 @@ step fact-derived-numbers-tests python3 -m unittest scripts.tests.test_check_fac
 # `axiom_footprint` is re-derived from the array instead of re-read. The fact it
 # was built from said "the 30 axioms" for three days after the array became 26.
 step fact-derived-numbers python3 scripts/check-fact-derived-numbers.py --quiet
+step autogenesis-chain-catalog-tests python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
+step autogenesis-chain-catalog python3 scripts/create-autogenesis-chain-catalog.py --check
+step autogenesis-nursery-tests python3 -m unittest scripts.tests.test_check_autogenesis_nursery
+step autogenesis-mathlib-nursery-split-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_nursery_split
+step autogenesis-nursery-dispatch-baseline-tests python3 -m unittest scripts.tests.test_create_autogenesis_nursery_dispatch_baseline
+step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
+step autogenesis-mathlib-nursery-split python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
+step autogenesis-nursery-dispatch-baseline python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check
+step autogenesis-statement-adapter-rust cargo test -p axeyum-lean-import --test statement_adapter
+step autogenesis-statement-adapter-tests python3 -m unittest scripts.tests.test_check_autogenesis_statement_adapter
+step autogenesis-statement-adapter python3 scripts/check-autogenesis-statement-adapter.py
+step autogenesis-statement-reflexivity-rust cargo test -p axeyum-lean-import --test statement_reflexivity_operation
+step autogenesis-statement-reflexivity-tests python3 -m unittest scripts.tests.test_check_autogenesis_statement_reflexivity
+step autogenesis-statement-reflexivity python3 scripts/check-autogenesis-statement-reflexivity.py
+step autogenesis-statement-reflexivity-admission-tests python3 -m unittest scripts.tests.test_check_autogenesis_statement_reflexivity_admission
+step autogenesis-statement-reflexivity-admission python3 scripts/check-autogenesis-statement-reflexivity-admission.py
+step autogenesis-factorial-zero-admission python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-factorial-zero-admission-v1.json
+step autogenesis-reflexivity-coverage-rust cargo test -p axeyum-lean-import --example statement_reflexivity_coverage
+step autogenesis-reflexivity-coverage-input-tests python3 -m unittest scripts.tests.test_create_autogenesis_reflexivity_coverage_input
+step autogenesis-reflexivity-coverage-tests python3 -m unittest scripts.tests.test_check_autogenesis_reflexivity_coverage
+step autogenesis-reflexivity-coverage python3 scripts/check-autogenesis-reflexivity-coverage.py
+step autogenesis-type-slice-feasibility-tests python3 -m unittest scripts.tests.test_analyze_autogenesis_type_slices scripts.tests.test_check_autogenesis_type_slice_feasibility
+step autogenesis-type-slice-feasibility python3 scripts/check-autogenesis-type-slice-feasibility.py
+step autogenesis-checked-type-slice-replay-tests python3 -m unittest scripts.tests.test_check_autogenesis_checked_type_slice_replay
+step autogenesis-checked-type-slice-replay python3 scripts/check-autogenesis-checked-type-slice-replay.py
+step autogenesis-auto-param-binder-replay-tests python3 -m unittest scripts.tests.test_check_autogenesis_auto_param_binder_replay
+step autogenesis-auto-param-binder-replay python3 scripts/check-autogenesis-auto-param-binder-replay.py
+step autogenesis-type-slice-producer-census-tests python3 -m unittest scripts.tests.test_check_autogenesis_type_slice_producer_census
+step autogenesis-type-slice-producer-census python3 scripts/check-autogenesis-type-slice-producer-census.py
+step autogenesis-factorial-zero-family-tests python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
+step autogenesis-factorial-zero-family python3 scripts/check-autogenesis-factorial-zero-family.py
+step autogenesis-mathlib-source-tests python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source
+step autogenesis-mathlib-source python3 scripts/check-autogenesis-mathlib-source.py
+step autogenesis-mathlib-candidate-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_candidates
+step autogenesis-mathlib-candidates python3 scripts/create-autogenesis-mathlib-candidates.py --check
+step autogenesis-mathlib-dependency-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_dependency_components
+step autogenesis-mathlib-dependencies python3 scripts/create-autogenesis-mathlib-dependency-components.py --check
+step autogenesis-mathlib-review-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_nursery_review
+step autogenesis-mathlib-review python3 scripts/create-autogenesis-mathlib-nursery-review.py --check
+step autogenesis-mathlib-fact-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_fact_catalog
+step autogenesis-mathlib-facts python3 scripts/create-autogenesis-mathlib-fact-catalog.py --check
 step capability-assurance-tests python3 -m unittest scripts.tests.test_check_capability_assurance
 # The mathematics strand's PRIMARY metric — "does a verdict come with an artifact
 # a third party can check without trusting us?" — existed only as 101 prose
@@ -112,9 +153,9 @@ step kernel-trusted-core-controls python3 -m unittest scripts.tests.test_check_k
 step smt-evidence-tests python3 -m unittest scripts.tests.test_check_smt_evidence_certified
 # Every settled SMT-route fact's own evidence command tests only the VERDICT
 # (`... | tail -1` = unsat), which passes on an UNCERTIFIED refutation --
-# demonstrated against neg-no-integer-square-is-minus-one.smt2. This requires
-# certified=1. (The control was neg-barber-no-such-barber.smt2 until 2026-08-17,
-# when that instance became certifiable and its fact was closed.)
+# demonstrated against a dedicated uncertified integer-square fixture. This
+# requires certified=1. Two earlier live-fact controls became certifiable and
+# were closed; the mutation control is now independent of ledger status.
 step smt-evidence python3 scripts/check-smt-evidence-certified.py --quiet
 # `facts` checks a fact against the SCHEMA; this checks its SMT-LIB
 # `formal.statement` against the certificate it cites, by evaluating both at 400
@@ -177,6 +218,10 @@ step axiom-freedom-generalized cargo run --release -q -p axeyum-solver --feature
     --example ordered_ring_refutation -- --require-empty
 step axiom-freedom-constructed cargo run --release -q -p axeyum-solver --features full \
     --example ordered_ring_refutation -- --constructed-reals
+step autogenesis-knowledge-controls ./scripts/check-autogenesis-knowledge-controls.sh
+step autogenesis-proposer-isolation ./scripts/check-autogenesis-proposer-isolation.sh
+step autogenesis-induction-search ./scripts/check-autogenesis-induction-search.sh
+step autogenesis-apply-search ./scripts/check-autogenesis-apply-search.sh
 # `frontier_*` runs in its own serialized step below: those ratchets are
 # wall-clock-budget based, so contention from the rest of the suite shrinks the
 # measured frontier and reports a false REGRESSION (measured 2026-07-30).
@@ -306,6 +351,29 @@ step smtcomp-resume ./scripts/check-smtcomp-resume.sh
 # the two files concurrent lanes clobbered four times on 2026-08-14 (67 and 60
 # touches in 24 hours), because the session protocol told every lane to append
 # to them. These gates make a hand edit a failure instead of a lost line.
+step autogenesis-proof-gap-source python3 scripts/gen-proof-gap-matrix.py --check
+step autogenesis-baseline-tests python3 -m unittest scripts.tests.test_gen_autogenesis_baseline
+step autogenesis-snapshot-tests python3 -m unittest scripts.tests.test_create_autogenesis_snapshot
+step autogenesis-catalog-tests python3 -m unittest scripts.tests.test_create_autogenesis_proposer_catalog
+step autogenesis-apply-proposer-tests python3 -m unittest scripts.tests.test_autogenesis_apply_proposer
+step autogenesis-apply-verifier-tests python3 -m unittest scripts.tests.test_verify_autogenesis_apply_proposals
+step autogenesis-induction-proposer-tests python3 -m unittest scripts.tests.test_autogenesis_induction_proposer
+step autogenesis-induction-verifier-tests python3 -m unittest scripts.tests.test_verify_autogenesis_induction_proposals
+step autogenesis-premise-evidence-tests python3 -m unittest scripts.tests.test_create_autogenesis_premise_evidence
+step autogenesis-premise-transition-tests python3 -m unittest scripts.tests.test_create_autogenesis_premise_transition
+step autogenesis-accepted-event-tests python3 -m unittest scripts.tests.test_create_autogenesis_accepted_event
+step autogenesis-fact-transaction-tests python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction
+step autogenesis-fact-admission-tests python3 -m unittest scripts.tests.test_apply_autogenesis_fact_transaction
+step autogenesis-readiness-delta-tests python3 -m unittest scripts.tests.test_create_autogenesis_readiness_delta
+step autogenesis-operation-registry python3 scripts/validate-autogenesis-operations.py
+step autogenesis-operation-registry-tests python3 -m unittest scripts.tests.test_validate_autogenesis_operations
+step autogenesis-authoritative-comparison-tests python3 -m unittest scripts.tests.test_compare_autogenesis_authoritative_chains
+step autogenesis-result python3 scripts/check-autogenesis-1-result.py
+step autogenesis-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_1_result
+step fact-frontier-tests python3 -m unittest scripts.tests.test_fact_frontier
+step autogenesis-operation-execution-tests python3 -m unittest scripts.tests.test_execute_autogenesis_operation
+step autogenesis-fact-operation-tests python3 -m unittest scripts.tests.test_check_autogenesis_fact_operation
+step autogenesis-baseline python3 scripts/gen-autogenesis-baseline.py --check
 step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
 step gen-plan       python3 scripts/gen-plan.py --check
 step adr-index-tests python3 -m unittest scripts.tests.test_gen_adr_index

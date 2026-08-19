@@ -45,7 +45,6 @@ just-only:     python3 scripts/check-reflection-semantics-gate.py --run
 just-only:     python3 scripts/gen-gap-ownership.py --check
 just-only:     python3 scripts/gen-lean-compatibility.py --check
 just-only:     python3 scripts/gen-measurement-provenance.py --check
-just-only:     python3 scripts/gen-proof-gap-matrix.py --check
 just-only:     python3 scripts/gen-proof-gap-shape-census.py --check
 just-only:     python3 scripts/gen-scoreboard.py --check
 just-only:     python3 scripts/gen-smtcomp-resume-contract.py --check

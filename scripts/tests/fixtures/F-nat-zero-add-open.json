@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-zero-add",
+  "title": "Nat zero_add transaction fixture",
+  "statement": "0 + a = a for all a ",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.zero_add : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.add AxNat.zero x0) x0)",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ]
+  },
+  "epistemic_status": "open",
+  "depends_on": [],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "not established in this counterfactual transaction fixture",
+    "source": "Exact Nat.zero_add statement projected from F:nat-zero-add; status and evidence are deliberately reset only in this non-ledger fixture."
+  },
+  "notes": "TEST FIXTURE, NOT AUTHORITATIVE KNOWLEDGE. This exercises open-to-proved admission without editing or misreporting the already-settled ledger fact."
+}

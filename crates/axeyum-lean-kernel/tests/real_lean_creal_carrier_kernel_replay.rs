@@ -6,7 +6,7 @@
 //! Every other real-Lean cross-check in this repository is *reachability
 //! driven*: it renders the closure of one refutation and hands Lean that. So
 //! Lean only ever saw the declarations some query happened to cite. Measured on
-//! 2026-08-18 by the lane that split the module (ADR-0482), a refutation over
+//! 2026-08-18 by the lane that split the module (ADR-0511), a refutation over
 //! the constructed reals reached 343 of the carrier's 465 declarations —
 //! **122 had never been handed to any Lean**, and the first time anything
 //! pointed Lean at them two of them were refused. The carrier is 470 today; the
@@ -21,7 +21,7 @@
 //!
 //! # Why the kernel route and not a `.lean` module
 //!
-//! The two routes are not equivalent, and that is the finding ADR-0488 records:
+//! The two routes are not equivalent, and that is the finding ADR-0517 records:
 //! `lean Module.lean` runs Lean's **elaborator**, whose reducer treats a
 //! `theorem` as opaque, so it cannot check any declaration whose type-checking
 //! must reduce one — which includes `Nat.gcd`'s recursive step (justified by

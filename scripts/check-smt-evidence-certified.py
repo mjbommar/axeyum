@@ -22,22 +22,22 @@ That tests the **verdict**. It does not test whether the refutation was
 
 So the invariant holds today — by practice, not by enforcement. Nothing stops
 the nineteenth from being uncertified, and the evidence command would not
-notice. Demonstrated on
-`artifacts/facts/smt2/neg-no-integer-square-is-minus-one.smt2`, a genuinely
-unsatisfiable instance the solver refutes but cannot certify: the command shape
-above **exits 0** on it, reporting `kind=unsat-uncertified certified=0`.
-
-That file is therefore this check's negative control, and it is a real one
-rather than a synthetic fixture — see `probe()` below.
+notice. Demonstrated on a dedicated mutation control,
+`scripts/tests/fixtures/qf-nia-square-two-uncertified.smt2`: a genuinely
+unsatisfiable instance the exact integer-square decider refutes but cannot yet
+certify. The verdict-only command shape **exits 0** on it while the evidence
+line reports `kind=unsat-uncertified certified=0`.
 
 THE CONTROL HAS ALREADY EXPIRED ONCE, which is the point of the guard that
 watches it. Until 2026-08-17 it was `neg-barber-no-such-barber.smt2`; on that
 date the `skolem-cert` lane made a skolemised refutation certify, the barber
 started reporting `kind=unsat-quant-instance-set certified=1 arena=ok`, this
-check failed on purpose, `F:barber-no-such-barber` was closed on the SMT route
-(so its instance is now SWEPT rather than a control), and the control moved
-here. Expect to do this again: a control that has become certifiable is good
-news and an action, never a defect to suppress.
+check failed on purpose, and `F:barber-no-such-barber` was closed on the SMT
+route. The next real control, the integer negative-square proposition, expired
+the same way on 2026-08-18 when its negative-discriminant certificate landed.
+It is now being closed through the Autogenesis path rather than kept open to
+serve a test. Expect dedicated controls to expire too: that is good news and an
+action, never a defect to suppress.
 
 Reported, never inferred: certification is read from the harness's own
 `; evidence` line per instance. An instance that prints no such line is a
@@ -69,15 +69,13 @@ MIN_INSTANCES = 15
 
 # The negative control: genuinely unsat, NOT certified. See probe().
 #
-# It is the instance behind `F:no-integer-square-is-minus-one`, which stays
-# `open` precisely because an uncertified unsat is not evidence under this
-# schema. That makes it a real control rather than a synthetic one, and it is
-# NOT swept as a settled instance -- the fact is open, so `instances()` does not
-# select it. It is also cheap (measured 0 ms), so the control costs this gate
-# nothing.
-#
-# Replaced `neg-barber-no-such-barber.smt2` on 2026-08-17 -- see the module note.
-PROBE = "artifacts/facts/smt2/neg-no-integer-square-is-minus-one.smt2"
+# It is a dedicated checker mutation fixture rather than an open knowledge fact:
+# leaving a proved proposition open merely to calibrate a gate would make test
+# state an authority over the fact ledger. The exact `x*x = 2` decider returns
+# Unsat, but the intentionally narrower negative-discriminant certificate
+# declines because D=8 is positive. If a later integer-root certificate covers
+# this shape, this gate must fail and the fixture must move again.
+PROBE = "scripts/tests/fixtures/qf-nia-square-two-uncertified.smt2"
 
 
 _CLI: list[str] | None = None
@@ -144,6 +142,17 @@ def run(instance: str) -> dict[str, Any]:
     }
 
 
+def evidence_instance_paths(item: dict[str, Any]) -> list[str]:
+    """SMT instances named by legacy commands or typed operation bindings."""
+    found = INSTANCE_RE.findall(item.get("checker_command", ""))
+    operation = item.get("checker_operation")
+    if isinstance(operation, dict):
+        artifact = operation.get("input_artifact")
+        if isinstance(artifact, str) and INSTANCE_RE.fullmatch(artifact):
+            found.append(artifact)
+    return list(dict.fromkeys(found))
+
+
 def instances() -> list[tuple[str, str]]:
     """(fact id, instance path) for every settled SMT-route fact."""
     out: list[tuple[str, str]] = []
@@ -155,7 +164,7 @@ def instances() -> list[tuple[str, str]]:
         if data.get("proof_route") not in SMT_ROUTES:
             continue
         for item in data.get("evidence") or []:
-            for found in INSTANCE_RE.findall(item.get("checker_command", "")):
+            for found in evidence_instance_paths(item):
                 if found not in seen:
                     seen.add(found)
                     out.append((data["id"], found))
@@ -202,9 +211,9 @@ def probe_failures(probe: dict[str, Any] | None) -> list[str]:
     """The negative control, and the one guard whose failure is good news.
 
     A check that only ever confirms `certified=1` cannot show it would notice
-    `certified=0`. `neg-no-integer-square-is-minus-one.smt2` is the
-    discriminating case: really unsatisfiable, so a verdict-only checker passes
-    it, and really uncertified, so this one must be able to see the difference.
+    `certified=0`. The `x*x = 2` fixture is the discriminating case: really
+    unsatisfiable, so a verdict-only checker passes it, and really uncertified,
+    so this one must be able to see the difference.
     """
     if probe is None:
         return [
@@ -221,12 +230,12 @@ def probe_failures(probe: dict[str, Any] | None) -> list[str]:
     if probe["certified"] == "1":
         return [
             f"{PROBE} now reports kind={probe['kind']} certified=1. This is GOOD "
-            "NEWS and an action, not a defect: this sentence has become "
-            "certifiable, so F:no-integer-square-is-minus-one can be closed on "
-            "the SMT route with certified evidence. Do that, then repoint this "
-            "control at another uncertified instance -- it must not be left "
-            "pointing at a case that no longer discriminates. This has happened "
-            "before and the procedure worked: see the module note on the barber"
+            "NEWS and an action, not a defect: this fixture has become "
+            "certifiable. Extend the relevant evidence route to any matching "
+            "open facts, then repoint this control at another genuinely "
+            "uncertified instance -- it must not be left pointing at a case "
+            "that no longer discriminates. See the module note for both prior "
+            "successful control transitions"
         ]
     return []
 

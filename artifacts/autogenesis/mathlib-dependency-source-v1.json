@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-external-theorem-dependency-source",
+  "manifest_sha256": "25dd39ea7efe95308acbcf741bfd8cb4494d74e3877def733a90ec61d31be66f",
+  "statement_source_manifest_sha256": "8fdafd50b9598b4aeb7573e960f061040cbd1234609db1655b27128c7b4a4ddb",
+  "candidate_set_sha256": "3b4cd0e02466c26560dbbb0552db8aba442de4d6df52e13b1486ad61b75b0dc3",
+  "source": {
+    "repository": "https://github.com/leanprover-community/mathlib4",
+    "commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "tag": "v4.30.0",
+    "lean_version": "4.30.0"
+  },
+  "extractor": {
+    "path": "scripts/lean/autogenesis_mathlib_dependency_inventory.lean",
+    "sha256": "b43c383c3a1d99c37450dfee05114094764458725a23621b02e9963b34a2c7ad",
+    "command": "cd <mathlib-checkout> && lake env lean <axeyum-checkout>/scripts/lean/autogenesis_mathlib_dependency_inventory.lean",
+    "reads": "theorem values inside an evaluation-only source process",
+    "emits": [
+      "declaration name",
+      "defining module",
+      "sorted direct theorem dependency names"
+    ],
+    "forbidden_output": [
+      "theorem value",
+      "proof term",
+      "tactic trace",
+      "source location"
+    ]
+  },
+  "external_artifact": {
+    "storage_root": "/nas3/data/axeyum/autogenesis/sources",
+    "file": "mathlib-v4.30.0-nat-int-theorem-dependencies-v1.ndjson",
+    "sha256": "dcaed0c85525d24c9e14bb67df5c0de1784af83fcb83e5968796132fe2b00e87",
+    "bytes": 2417444,
+    "records": 9729,
+    "mode": "0444",
+    "content": "names-and-direct-theorem-edges-only-ndjson"
+  },
+  "component_policy": {
+    "population": "the 240 committed statement-only candidates",
+    "edge": "dependent theorem to a directly used theorem when both names are candidates",
+    "component": "weakly connected component of the induced directed graph",
+    "split_rule": "assign a whole component to exactly one future split",
+    "family_rule": "component integrity overrides theme and module quotas",
+    "cycle_rule": "reject a cycle rather than silently condense it",
+    "non_claim": "dependency metadata does not reveal an Axeyum route, outcome, proof plan, or construction"
+  },
+  "isolation_policy": {
+    "allowed_consumers": "offline component derivation and leakage audit",
+    "forbidden_consumers": "proposers, proof search, route selection, and episode workers",
+    "durable_projection": "candidate names, direct candidate edges, and component membership only"
+  }
+}

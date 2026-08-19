@@ -25,7 +25,7 @@ the fix detection-only rather than also attempting the renumber (below).
 
 Considered the non-sequential-numbering alternative (date-stamped or
 hash-suffixed IDs). Rejected for THIS task: 477 files, an index generator,
-hundreds of cross-references (`ADR-0483` appears as prose in ~50 files
+hundreds of cross-references (`ADR-0512` appears as prose in ~50 files
 including `.rs` doc comments), and it does not remove the need for a detector
 during the multi-week migration window anyway. The brief itself says not to
 start it without the detector landed first.

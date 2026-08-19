@@ -1,6 +1,6 @@
 //! The **lattice** over `ℚ`: `Rat.max` and `Rat.min`, defined on the
 //! representation, and the three order laws each of them satisfies
-//! (ADR-0490, phase R5).
+//! (ADR-0519, phase R5).
 //!
 //! ## The obstacle a reader expects, and why it is not there
 //!

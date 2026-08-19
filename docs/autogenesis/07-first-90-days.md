@@ -38,8 +38,9 @@ smallest reusable blocker and retry; do not broaden the programme silently.
 - **S0.2** Select candidate B -> A chains from Nat/Int whose statements and
   dependencies are independently reviewed.
 - **S0.3** Require at least one negative statement-strength mutation per fact.
-- **S0.4** Measure B and A independently through current routes; A must depend on
-  B semantically, not merely through authored metadata.
+- **S0.4** Measure B through its intended route, then measure the identical A
+  target before and after B through one fixed policy and budget; A must depend
+  on B in checked evidence, not merely through authored metadata.
 - **S0.5** Choose one primary chain and one fallback before implementing the
   orchestrator.
 - **S0.6** Write the ADR for episode identity, evidence bundle, and transaction
@@ -108,15 +109,17 @@ and no caller-authored label can upgrade its assurance.
 B closes automatically and reproducibly. This is Phase 1 completion, not yet
 Autogenesis-1.
 
-## Sprint 4 — Nursery and scheduler
+## Sprint 4 — Counterfactual snapshot and scheduler
 
 ### Tasks
 
-- **S4.1** Author the first 100 connected nursery facts across several Nat/Int
-  topics, with one-writer-per-topic ownership.
-- **S4.2** Validate cycles, dangling dependencies, formal statements, provenance,
-  and epistemic status.
-- **S4.3** Freeze train/dev and held-out dependency components.
+- **S4.1** Materialize the existing proof-derived kernel chains as candidate
+  curricula; do not duplicate their retained proofs into the runnable snapshot.
+- **S4.2** Define a counterfactual overlay that withholds B, A, and their proof
+  terms and retained evidence while leaving the authoritative ledger unchanged.
+  After B is accepted, expose only its episode-local declaration; never reveal
+  the original B fact or theorem as a shortcut.
+- **S4.3** Freeze the primary chain, fallback, mutations, and pre-B snapshot.
 - **S4.4** Implement deterministic scoring from readiness, route feasibility,
   cost, unlock count, diversity, and gate coupling.
 - **S4.5** Ensure an accepted transition, not a mere solver result, triggers
@@ -125,8 +128,10 @@ Autogenesis-1.
 
 ### Exit
 
-The scheduler produces a deterministic ranked queue with enough connected open
-work to exercise admission-triggered retry.
+The scheduler produces a deterministic ranked queue over a content-identified
+pre-B snapshot, and the snapshot cannot retrieve the retained B or A proof. A
+larger nursery is subsequent evaluation infrastructure, not a prerequisite to
+the first two-step closure.
 
 ## Sprint 5 — Two-step compounding
 
@@ -137,7 +142,8 @@ work to exercise admission-triggered retry.
 - **S5.3** Derive that A is newly ready and schedule it without human override.
 - **S5.4** Make B available through the admitted library/plan context.
 - **S5.5** Solve, check, admit, and record A.
-- **S5.6** Replay A against the pre-B snapshot and retain the expected failure.
+- **S5.6** Replay the identical A target against the pre-B snapshot under the
+  same policy and budget, and retain the expected no-credit result.
 - **S5.7** Repeat the entire sequence from a clean checkout.
 - **S5.8** Audit intervention logs, trusted-base delta, and byte determinism.
 

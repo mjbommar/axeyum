@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-**ADR-0483 phase R4 has landed: the `Real` axiom package is modelled by the
+**ADR-0512 phase R4 has landed: the `Real` axiom package is modelled by the
 CONSTRUCTED reals, and ADR-0456's "`Int` is not ℝ" caveat is discharged
 (`WIP`, agent-r4-model, 2026-08-18).** `build_creal_model_of_arith` admits one
 theorem per law,
@@ -29,7 +29,7 @@ the obligation still reads `Eq CReal …` while the proof proves
 `build_creal_model_of_arith` return `DeclarationValueMismatch` and the example
 exit 101.
 
-**9 of 22 is now measured three independent ways.** ADR-0483 Measurement 2
+**9 of 22 is now measured three independent ways.** ADR-0512 Measurement 2
 counted `Eq` in the axiom types; R3's η-expansion mutation isolated the same
 nine as binder-type mismatches; this model reports `restated_over_equiv` from
 whether the rewrite fired, and the nine names agree exactly.
@@ -38,4 +38,4 @@ Detail moved to [`../notes/59-r4-model.md`](../notes/59-r4-model.md).
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-18 | (pending) | ADR-0483 phase R4: `build_creal_model_of_arith` — the `Real` axiom package modelled by the **constructed** reals. 22/22 witnesses axiom-free, 9/22 restated over `CReal.Equiv`, 7/7 discrimination witnesses, exit status depending on all of it (`creal_model_witness`). Four mutation kills; ADR-0456's "`Int` is not ℝ" caveat discharged. |
+| 2026-08-18 | (pending) | ADR-0512 phase R4: `build_creal_model_of_arith` — the `Real` axiom package modelled by the **constructed** reals. 22/22 witnesses axiom-free, 9/22 restated over `CReal.Equiv`, 7/7 discrimination witnesses, exit status depending on all of it (`creal_model_witness`). Four mutation kills; ADR-0456's "`Int` is not ℝ" caveat discharged. |

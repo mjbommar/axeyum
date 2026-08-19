@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-checked-theorem-receipt-policy",
+  "state": "preregistered-no-receipt-evaluation-or-ledger-credit",
+  "policy_version": "nat-fib-add-two-checked-theorem-receipt-v1",
+  "candidate": {
+    "manifest_path": "artifacts/autogenesis/mathlib-nat-fib-iterate-recurrence-result-v3.json",
+    "manifest_sha256": "f5c4d2f5dac3536f0cb1f0e7f4c92d8658128e041cc630a99362565d4deb6ad5",
+    "observation_file_sha256": "4a95d6a7eb01d7bf5114ffe1c1b42af5b244f94749296113ef6fcaf9e9e36295",
+    "observation_sha256": "920ef21dffc17402180725f940220e26a02db02cdf7ff636779d9cdfe6680969",
+    "goal_sha256": "5433b34c4a138d615c488e4c7dfbee5dac8dc253e14680e114f40a55cf5eb16d",
+    "proof_sha256": "b5965831fd4654e708b03bd3145f9124f02fc57aaa04bc16ded8287b6cee50f2",
+    "theorem_content_sha256": "ad53b80748ad1d3f0a0958277774e36a621ce25f5f1441b6882085349886537a"
+  },
+  "tooling": {
+    "commit": "3ad394bb6f24b5e46dba9d1cedb30a54369008cc",
+    "driver_path": "crates/axeyum-lean-import/examples/nat_fib_iterate_recurrence.rs",
+    "driver_sha256": "aee93b854357cb64155ed03865046b6f0b5beb8ded065d905ef14693b7ff02ff",
+    "receipt_path": "crates/axeyum-lean-import/src/checked_theorem_receipt.rs",
+    "receipt_sha256": "e0fd5c8bec1198953d69ca37672fce4d1d230f6d73f006fc4dc2a1eafdbc6f7c"
+  },
+  "operation": {
+    "id": "checked-candidate-fixed-plan-receipt-v1",
+    "fresh_imports": 2,
+    "fixed_plan_reconstructions": 2,
+    "search_invocations": 0,
+    "target_theorem_submissions": 2,
+    "max_receipt_invocations": 1,
+    "max_retries": 0,
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": []
+  },
+  "authority": {
+    "receipt_invocations_so_far": 0,
+    "semantic_theorem_receipts_so_far": 0,
+    "evaluation_credit_so_far": 0,
+    "ledger_writes_so_far": 0
+  },
+  "limitations": "This authorizes one fixed-plan two-kernel receipt replay. It does not authorize search, fact admission, evaluation credit, or a ledger write."
+}

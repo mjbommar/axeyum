@@ -408,7 +408,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    (no new prelude axiom; audit shows no sorryAx). Strict/multi-clause disjunctions \
                    decline. CARRIER, since 2026-08-18: the shipped front door \
                    (prove_unsat_to_lean_module, fragments Lra/DisjunctiveLra/Sos) reconstructs over the \
-                   CONSTRUCTED reals (CReal, ADR-0483) rather than the axiomatized Real package, so a \
+                   CONSTRUCTED reals (CReal, ADR-0512) rather than the axiomatized Real package, so a \
                    refutation rests on ZERO carrier axioms — measured through the front door itself by \
                    the front_door_carrier example, whose exit status depends on the finding: footprint \
                    15/22/10 of which 12/17/8 are carrier over Real, against 3/5/2 of which 0/0/0 over \

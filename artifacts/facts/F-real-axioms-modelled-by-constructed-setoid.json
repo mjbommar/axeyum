@@ -70,7 +70,7 @@
   ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "axeyum-lean-kernel creal + creal_model modules (ADR-0483 phases R2 and R4; agent-creal-*, agent-r4-model lanes)",
+    "established_by": "axeyum-lean-kernel creal + creal_model modules (ADR-0512 phases R2 and R4; agent-creal-*, agent-r4-model lanes)",
     "source": "hand-built from the constructed rationals; Bishop's regular-sequence construction"
   },
   "notes": "WHAT THIS DOES NOT SAY. It does not retire the 30 Real axioms, and `nat_axiom_inventory` still reports real: axiom=30. Satisfiable by a constructed object is not the same as unnecessary: 57 files name the Real symbols, 13 are rewrite-required consumers, LraReconstructCtx and the ordered-ring telescope touch all 30 fields across 158 accesses, and the axiom ledger is 30 of 30 real. Retiring them is a migration, not a deletion. What it DOES discharge is ADR-0456's caveat that the only model was Int -- 'Int is not R' was the honest limit of that relative-consistency result and no longer applies. Nor is Eq CReal on offer as real equality; it is CReal.Equiv, and the nine restated laws say so in their own statements."

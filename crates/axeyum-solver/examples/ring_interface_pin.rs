@@ -4,7 +4,7 @@
 //! ## Why
 //!
 //! `real: axiom=30` is this repository's entire remaining trusted surface, and
-//! [ADR-0480](../../../docs/research/09-decisions/adr-0480-the-trusted-surface-is-measured-as-reached-not-only-declared.md)
+//! [ADR-0509](../../../docs/research/09-decisions/adr-0509-the-trusted-surface-is-measured-as-reached-not-only-declared.md)
 //! records why the package is retained anyway: it is the *specification* — 30
 //! kernel-checked declarations whose canonical types the axiom ledger pins by
 //! SHA-256 — and the *negative control* for every axiom-freedom measurement

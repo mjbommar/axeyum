@@ -65,7 +65,7 @@ directory dies with `input file … must be contained in root directory`.
 
 ## The finding: 122 declarations no Lean had ever seen
 
-> **Correction, appended by lane `creal-lean-divergence` (ADR-0488).** It is
+> **Correction, appended by lane `creal-lean-divergence` (ADR-0517).** It is
 > Lean's **elaborator** that refuses these, not its kernel. Replayed through
 > `Environment.addDeclCore` from our `lean4export` NDJSON, Lean 4.30.0's own
 > kernel accepts the **whole** carrier — 470 of 470, in 1.4 s
@@ -150,7 +150,7 @@ does.
 
 - **The split is not the default.** Making it so means every one of the 17
   real-Lean suites acquires an `.olean` build step, and retires the project's
-  strongest artefact — "here is one file, run `lean` on it". ADR-0482 says to
+  strongest artefact — "here is one file, run `lean` on it". ADR-0511 says to
   take that decision when a consumer needs it, not before.
 - **`CReal.Equiv.not_zero_one` and `CReal.not_le_one_zero` are rejected by
   Lean.** Until they are fixed the whole-environment root set is unavailable.

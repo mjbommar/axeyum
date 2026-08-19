@@ -400,6 +400,62 @@ enum Verdict {
     SatWith(i128),
 }
 
+/// Source-bound certificate that one single-variable integer quadratic equality
+/// has negative discriminant and therefore no real (hence no integer) root.
+///
+/// The checker re-collects the polynomial from the original assertion and
+/// recomputes the discriminant; producer-local term or symbol identifiers are
+/// not carried.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IntQuadraticNegativeDiscriminantCertificate {
+    coefficients: [i128; 3],
+    discriminant: i128,
+}
+
+/// Derive the narrow negative-discriminant certificate from the exact source
+/// query. All other shapes decline.
+#[must_use]
+pub fn int_quadratic_negative_discriminant_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<IntQuadraticNegativeDiscriminantCertificate> {
+    let [assertion] = assertions else {
+        return None;
+    };
+    let (_var, Cmp::Eq, mut poly) = match_poly_constraint(arena, *assertion)? else {
+        return None;
+    };
+    if poly.degree() != 2 || !poly.coeffs_in_guard() {
+        return None;
+    }
+    if poly.c2() < 0 {
+        poly = poly.neg()?;
+    }
+    let [c, b, a] = <[i128; 3]>::try_from(poly.coeffs.as_slice()).ok()?;
+    if a <= 0 {
+        return None;
+    }
+    let discriminant = b.checked_mul(b)?.checked_sub(4i128.checked_mul(a)?.checked_mul(c)?)?;
+    if discriminant >= 0 {
+        return None;
+    }
+    Some(IntQuadraticNegativeDiscriminantCertificate {
+        coefficients: [c, b, a],
+        discriminant,
+    })
+}
+
+/// Independently bind a carried certificate back to the original query.
+#[must_use]
+pub fn check_int_quadratic_negative_discriminant_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+    certificate: &IntQuadraticNegativeDiscriminantCertificate,
+) -> bool {
+    int_quadratic_negative_discriminant_refutation(arena, assertions)
+        .is_some_and(|expected| expected == *certificate)
+}
+
 /// Exact case analysis for the degree-`≤ 2` constraint `f(x) ⋈ 0` (see the
 /// module docs). Returns `None` to **decline** (any case we cannot make
 /// airtight, e.g. an overflow in the witness search).
@@ -727,7 +783,56 @@ fn collect(arena: &TermArena, t: TermId) -> Option<Poly> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Poly, ceil_div, floor_div, isqrt};
+    use axeyum_ir::TermArena;
+
+    use super::{
+        Poly, ceil_div, check_int_quadratic_negative_discriminant_refutation, floor_div,
+        int_quadratic_negative_discriminant_refutation, isqrt,
+    };
+
+    #[test]
+    fn negative_discriminant_certificate_is_source_bound() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let xx = arena.int_mul(x, x).unwrap();
+        let minus_one = arena.int_const(-1);
+        let impossible = arena.eq(xx, minus_one).unwrap();
+        let certificate =
+            int_quadratic_negative_discriminant_refutation(&arena, &[impossible]).unwrap();
+        assert!(check_int_quadratic_negative_discriminant_refutation(
+            &arena,
+            &[impossible],
+            &certificate
+        ));
+
+        let one = arena.int_const(1);
+        let satisfiable = arena.eq(xx, one).unwrap();
+        assert!(!check_int_quadratic_negative_discriminant_refutation(
+            &arena,
+            &[satisfiable],
+            &certificate
+        ));
+        assert!(!check_int_quadratic_negative_discriminant_refutation(
+            &arena,
+            &[impossible, impossible],
+            &certificate
+        ));
+
+        let mut changed_discriminant = certificate.clone();
+        changed_discriminant.discriminant -= 1;
+        assert!(!check_int_quadratic_negative_discriminant_refutation(
+            &arena,
+            &[impossible],
+            &changed_discriminant
+        ));
+        let mut changed_coefficients = certificate.clone();
+        changed_coefficients.coefficients[0] += 1;
+        assert!(!check_int_quadratic_negative_discriminant_refutation(
+            &arena,
+            &[impossible],
+            &changed_coefficients
+        ));
+    }
 
     #[test]
     fn isqrt_perfect_and_nonperfect() {

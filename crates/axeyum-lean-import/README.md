@@ -15,6 +15,18 @@ cargo test -p axeyum-lean-import
 cargo run -p axeyum-lean-import --example lean4export_import -- export.ndjson
 ```
 
+Autogenesis statement inputs use the stronger proof-isolated adapter boundary:
+
+```sh
+cargo run -p axeyum-lean-import --example statement_adapter_import -- \
+  statement.ndjson Axeyum.Autogenesis.Statement.target
+```
+
+The target must be a transparent `definition : Prop := statement`. The entire
+stream is rejected if it contains an axiom, theorem, opaque declaration, or
+quotient primitive. Success publishes the definition value as a checked goal;
+it does not add a proof of that goal.
+
 Import success means the selected translated declarations were admitted; it is
 not a claim of complete Lean compatibility or producer-stream authenticity.
 The example also accepts `-` for standard input and prints an inventory; it does

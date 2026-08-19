@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-**ADR-0487: `CReal.inv` is BUILT, and `x⁻¹` denotes one real rather than one
+**ADR-0516: `CReal.inv` is BUILT, and `x⁻¹` denotes one real rather than one
 per modulus (`WIP`, agent-creal-inv, 2026-08-18).**
 `CReal.inv : (x : CReal) → (k : Nat) → PosBound x k → CReal` — a function may
 *take* a `Prop` and return a `Type`, it may only not *branch* on one, so the

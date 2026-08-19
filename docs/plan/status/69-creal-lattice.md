@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-**ADR-0490: `CReal.max`, `CReal.min` and `CReal.abs` are BUILT, and they cost
+**ADR-0519: `CReal.max`, `CReal.min` and `CReal.abs` are BUILT, and they cost
 no index shift (`WIP`, agent-creal-order, 2026-08-19).**
 `max` looks like it needs a decision, and ℝ has none — but it does not have to
 be *derived* from one. `Rat.le a b` **is** `Int.le (num a·den b) (num b·den a)`,

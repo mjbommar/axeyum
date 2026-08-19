@@ -8,7 +8,7 @@
 //! `add_le_add` — and never touches a numerator, a denominator, or a
 //! cross-multiplication. That is deliberate, and it is the first dividend of
 //! `super::laws` having closed all 22: a lemma proved this way is a theorem of
-//! *ordered groups*, so when ADR-0483's `CReal` needs the same reasoning one
+//! *ordered groups*, so when ADR-0512's `CReal` needs the same reasoning one
 //! level up it can be transcribed rather than re-derived, and when ADR-0457's
 //! telescope is instantiated at a setoid carrier these are exactly the shapes
 //! that have to be re-stated over `Equiv`.
@@ -21,7 +21,7 @@
 //!
 //! ## `|a| ≤ b` is a pair, not an operator
 //!
-//! ADR-0483 states every closeness bound as `−b ≤ a ∧ a ≤ b` rather than
+//! ADR-0512 states every closeness bound as `−b ≤ a ∧ a ≤ b` rather than
 //! introducing `Rat.abs`. [`Rat.bounds_add`](super::RatPrelude::bounds_add) is
 //! the only fact about that encoding the real construction needs — the triangle
 //! inequality, in the form "two bounded quantities have a bounded sum" — and it
@@ -483,7 +483,7 @@ fn declare_subtraction(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelEr
 }
 
 /// The triangle inequality and the two one-sided facts about the `|a| ≤ b`
-/// encoding ADR-0483 uses.
+/// encoding ADR-0512 uses.
 ///
 /// `bounds_add : −p ≤ u → u ≤ p → −q ≤ v → v ≤ q → −(p+q) ≤ u+v ∧ u+v ≤ p+q`.
 /// The upper half is `add_le_add` outright; the lower half is `add_le_add` on
@@ -636,7 +636,7 @@ fn declare_bounds(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> 
 /// rather than about the group: same-denominator additivity, and
 /// nonnegativity.
 ///
-/// `natDivSucc_add` is what makes ADR-0483's bookkeeping close — Bishop's
+/// `natDivSucc_add` is what makes ADR-0512's bookkeeping close — Bishop's
 /// estimate produces `1/(n+1) + 1/(j+1) + 2/(j+1) + 2/(j+1) + 1/(j+1) + 1/(n+1)`
 /// and the Archimedean lemma consumes `2/(n+1) + 6/(j+1)`, so the six terms have
 /// to fuse in two groups.

@@ -42,7 +42,7 @@ fn creal_prelude_builds() {
     }
 }
 
-/// **ADR-0483's headline claim, measured.** A Bishop setoid over `ℚ` costs zero
+/// **ADR-0512's headline claim, measured.** A Bishop setoid over `ℚ` costs zero
 /// trusted declarations: no `Quot.sound`, no `funext`, no `propext`, no
 /// classical axiom, nothing.
 #[test]
@@ -221,7 +221,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
     }
 }
 
-/// The three setoid laws say what ADR-0483 says they say. An empty footprint on
+/// The three setoid laws say what ADR-0512 says they say. An empty footprint on
 /// a theorem stating something weaker is this repository's standing failure
 /// mode, so the rendered types are asserted verbatim.
 #[test]
@@ -281,7 +281,7 @@ fn the_setoid_laws_have_the_statements_adr_0468_specifies() {
     );
     // The three order laws. Unlike the additive ones these are the `Real`
     // package's statements VERBATIM — none of them mentions `Eq`, so there is
-    // no equality to replace by `Equiv` (ADR-0483, Measurement 2).
+    // no equality to replace by `Equiv` (ADR-0512, Measurement 2).
     assert_eq!(
         rendered(&mut kernel, p.le_refl),
         "((x0 : CReal) -> CReal.le x0 x0)"
@@ -411,7 +411,7 @@ fn the_setoid_laws_have_the_statements_adr_0468_specifies() {
          CReal.le (CReal.mul x0 x1) (CReal.mul x0 x2))))))"
     );
     // The fifth congruence obligation — not one of the 22, and the R4
-    // prerequisite ADR-0483 calls the setoid's real tax.
+    // prerequisite ADR-0512 calls the setoid's real tax.
     assert_eq!(
         rendered(&mut kernel, p.mul_congr),
         "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
@@ -536,7 +536,7 @@ fn the_product_discrimination_route_cannot_refute_mul_one_one_one() {
     );
 }
 
-/// **`CReal.lt` is the strict order ADR-0483 asks for, not a negation.**
+/// **`CReal.lt` is the strict order ADR-0512 asks for, not a negation.**
 ///
 /// The definition is asserted verbatim because the two rejected shapes differ
 /// from it only in the body: `Not (le y x)` would render as a `Not`, and
@@ -1187,7 +1187,7 @@ fn positivity_is_closed_under_multiplication() {
 /// makes it exist.** Statements asserted verbatim, because a theorem named
 /// `mul_inv_cancel` saying something weaker would pass a footprint check.
 ///
-/// Read `CReal.inv`'s type as the whole ADR-0481 argument in one line: the
+/// Read `CReal.inv`'s type as the whole ADR-0510 argument in one line: the
 /// `Nat` is explicit and the `PosBound` is a hypothesis over it, so nothing is
 /// ever eliminated out of a `Prop` into `Type` — which is precisely what
 /// `Apart x zero` (an `Or`) would demand.
@@ -1408,7 +1408,7 @@ fn the_inverse_route_cannot_prove_the_one_token_mutations() {
     );
 }
 
-/// The lattice laws say what ADR-0490 says they say — **rendered types,
+/// The lattice laws say what ADR-0519 says they say — **rendered types,
 /// verbatim**. An empty axiom footprint on a theorem named `max_le` that says
 /// something weaker would pass every other check in this file.
 #[test]

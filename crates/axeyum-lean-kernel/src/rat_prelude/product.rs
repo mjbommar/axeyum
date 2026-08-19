@@ -24,7 +24,7 @@
 //!    sequence's zeroth sample is a *rational*, its numerator is an *integer*,
 //!    and `Int.natAbs` of that is the ℕ the sampling index is scaled by.
 //!    Bishop, and Mathlib after him, reach this bound by extracting a modulus
-//!    from an existential `CauSeq`; with the fixed modulus of ADR-0483 there is
+//!    from an existential `CauSeq`; with the fixed modulus of ADR-0512 there is
 //!    nothing to extract — regularity at `n = 0` gives `|x_m| ≤ |x_0| + 2`
 //!    outright, and the only genuinely missing piece was the ℕ-valued `K`.
 //! 3. **`natDivSucc` under multiplication.**

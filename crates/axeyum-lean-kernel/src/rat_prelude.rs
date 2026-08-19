@@ -333,13 +333,13 @@ pub struct RatPrelude {
     /// `b < a`, and only then is there a positive quantity to bound.
     pub lt_of_not_le: NameId,
 
-    // --- the Archimedean property (ADR-0483 phase R1) -------------------------
+    // --- the Archimedean property (ADR-0512 phase R1) -------------------------
     /// `Rat.natDivSucc : Nat → Nat → Rat` — the rational `k/(j+1)`, as a single
     /// `Rat.normalize` whose denominator is positive by construction.
     ///
     /// One definition serves the regularity bound (`k = 1`), the setoid
     /// closeness bound (`k = 2`) and the Archimedean bound (`k = 6`) of
-    /// ADR-0483's real construction, and `Rat.abs` is never needed because
+    /// ADR-0512's real construction, and `Rat.abs` is never needed because
     /// `|a| ≤ b` is written as the pair `−b ≤ a ∧ a ≤ b`.
     pub nat_div_succ: NameId,
     /// `Rat.int_le_or_lt : ∀ (x y : Int), Or (Int.le x y) (Int.lt y x)`.
@@ -368,13 +368,13 @@ pub struct RatPrelude {
     /// `Rat.le_of_le_add_natDivSucc : ∀ (a b : Rat) (k : Nat),
     /// (∀ (j : Nat), Rat.le a (Rat.add b (Rat.natDivSucc k j))) → Rat.le a b`.
     ///
-    /// **The Archimedean property of `ℚ`.** ADR-0483 identifies this as the one
+    /// **The Archimedean property of `ℚ`.** ADR-0512 identifies this as the one
     /// genuinely new rational lemma the Bishop-setoid construction of `ℝ` needs:
     /// transitivity of `CReal.Equiv` only reaches `|x_n − z_n| ≤ 2/n + 6/j` for
     /// every `j`, and this is what turns that into `≤ 2/n`.
     pub le_of_le_add_nat_div_succ: NameId,
 
-    // --- the ordered-group toolkit (ADR-0483 phase R1) ------------------------
+    // --- the ordered-group toolkit (ADR-0512 phase R1) ------------------------
     /// `Rat.zero_add : ∀ a, Rat.add Rat.zero a = a`.
     pub zero_add: NameId,
     /// `Rat.neg_add_cancel : ∀ a, Rat.add (Rat.neg a) a = Rat.zero`.
@@ -410,7 +410,7 @@ pub struct RatPrelude {
     /// Rat.le (neg q) v → Rat.le v q →
     /// And (Rat.le (neg (p+q)) (u+v)) (Rat.le (u+v) (p+q))`.
     ///
-    /// The triangle inequality in ADR-0483's encoding, where `|a| ≤ b` is the
+    /// The triangle inequality in ADR-0512's encoding, where `|a| ≤ b` is the
     /// **pair** `−b ≤ a ∧ a ≤ b` and `Rat.abs` never exists.
     pub bounds_add: NameId,
     /// `Rat.natDivSucc_add : ∀ (a b j : Nat),
@@ -450,7 +450,7 @@ pub struct RatPrelude {
     /// Rat.le Rat.zero (Rat.add a b)`.
     pub add_nonneg: NameId,
 
-    // --- the multiplicative toolkit (ADR-0483 phase R2, `CReal.mul`) ----------
+    // --- the multiplicative toolkit (ADR-0512 phase R2, `CReal.mul`) ----------
     /// `Rat.mul_neg : ∀ a b, Rat.mul a (Rat.neg b) = Rat.neg (Rat.mul a b)`.
     pub mul_neg: NameId,
     /// `Rat.neg_mul : ∀ a b, Rat.mul (Rat.neg a) b = Rat.neg (Rat.mul a b)`.
@@ -546,7 +546,7 @@ pub struct RatPrelude {
     /// `Rat.int_neg_natAbs_le : ∀ (x : Int),
     /// Int.le (Int.neg (Int.ofNat (Int.natAbs x))) x`.
     pub int_neg_nat_abs_le: NameId,
-    // --- the lattice (ADR-0490 phase R5) --------------------------------------
+    // --- the lattice (ADR-0519 phase R5) --------------------------------------
     /// `Rat.max : Rat → Rat → Rat` — defined **on the representation**, by
     /// `Int.rec` on the sign of `num b · den a − num a · den b`, so no `Prop`
     /// is eliminated into `Type` and `Rat.le_or_lt` is never consulted.
@@ -604,7 +604,7 @@ pub struct RatPrelude {
     /// `Int.natAbs` of that is the `ℕ` `CReal.mul`'s sampling index is scaled
     /// by. A development over an *existential* modulus (Bishop's own, and
     /// Mathlib's `CauSeq`) has to extract that number; the fixed modulus of
-    /// ADR-0483 computes it.
+    /// ADR-0512 computes it.
     pub bounds_num: NameId,
 }
 

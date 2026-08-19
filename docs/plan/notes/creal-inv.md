@@ -1,10 +1,10 @@
 # Notes: creal-inv
 
 Detail kept out of [`../status/65-creal-inv.md`](../status/65-creal-inv.md) so
-the lane block stays inside the per-lane ceiling (ADR-0478). The decision is
-[ADR-0487](../../research/09-decisions/adr-0487-the-real-inverse-is-well-defined-by-uniqueness-not-by-estimate.md);
+the lane block stays inside the per-lane ceiling (ADR-0507). The decision is
+[ADR-0516](../../research/09-decisions/adr-0516-the-real-inverse-is-well-defined-by-uniqueness-not-by-estimate.md);
 its predecessor, which fixed the *shape* without building it, is
-[ADR-0481](../../research/09-decisions/adr-0481-the-real-inverse-is-partial-and-its-modulus-is-data.md)
+[ADR-0510](../../research/09-decisions/adr-0510-the-real-inverse-is-partial-and-its-modulus-is-data.md)
 and [`creal-field.md`](creal-field.md).
 
 ## The costing was wrong in the cheap direction, and here is why

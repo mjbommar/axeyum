@@ -1,7 +1,7 @@
 # Lane notes: agent-theorem-opacity — `theorem` vs `def`, measured
 
-The decision is [ADR-0489](../../research/09-decisions/adr-0489-proofs-stay-spelled-theorem-and-the-def-option-is-a-measuring-instrument.md);
-the finding it acts on is [ADR-0488](../../research/09-decisions/adr-0488-lean-has-two-checkers-and-the-kernel-is-the-one-we-target.md).
+The decision is [ADR-0518](../../research/09-decisions/adr-0518-proofs-stay-spelled-theorem-and-the-def-option-is-a-measuring-instrument.md);
+the finding it acts on is [ADR-0517](../../research/09-decisions/adr-0517-lean-has-two-checkers-and-the-kernel-is-the-one-we-target.md).
 This file is the working record: every number, the frame it was taken in, and
 the claims that turned out wrong.
 
@@ -28,7 +28,7 @@ cargo run -p axeyum-solver --features full --example proof_keyword_cost -- \
 
 ## Elaboration cost — the reference frame first
 
-Lean 4.30.0 `d024af099ca4bf2c86f649261ebf59565dc8c622` (the pin, ADR-0485),
+Lean 4.30.0 `d024af099ca4bf2c86f649261ebf59565dc8c622` (the pin, ADR-0514),
 resolved via `scripts/check-lean-gate.sh --print-toolchain`. 16-core host, load
 average 8–11 throughout because other lanes were building. Three runs per
 module. The spread is large — `thm/FrontDoor` ran 13.5 / 8.8 / 9.3 s — so this
@@ -43,7 +43,7 @@ frame supports the DIRECTION and the rough factor and nothing finer.
 | `thm/AxeyumCarrier` | 17.26 | 22.14 | 15.68 | **17.26** | **4 refused** |
 | `def/AxeyumCarrier` | 29.20 | 27.54 | 34.77 | **29.20** | accepted |
 
-Factors: front door 1.60x, shared half 1.36x, whole carrier 1.69x. ADR-0488 said
+Factors: front door 1.60x, shared half 1.36x, whole carrier 1.69x. ADR-0517 said
 "roughly doubles"; at carrier scale this frame says 1.7x, and its 14.1 -> 27.9 s
 pair is within the noise of 17.3 -> 29.2.
 
@@ -56,10 +56,10 @@ shorter than `theorem`:
 | shared half (reached union) | 1,300,891 B | 1,300,043 B | −848 | 212 |
 | whole carrier, 470 decls | 2,541,928 B | 2,540,492 B | −1,436 | 359 |
 
-2,541,928 B is ADR-0488's carrier figure to the byte, which is the check that
+2,541,928 B is ADR-0517's carrier figure to the byte, which is the check that
 the default path did not move.
 
-The four carrier refusals re-measured, unchanged from ADR-0488:
+The four carrier refusals re-measured, unchanged from ADR-0517:
 `CReal.Equiv.not_zero_one` (line 795), `CReal.not_le_one_zero` (831), and
 `CReal.not_equiv_mul_one_one_zero` (885) / `CReal.no_total_inverse` (899) as
 `unknown constant` cascades.
@@ -84,7 +84,7 @@ suites red:
 
 | suite | why |
 | --- | --- |
-| `real_lean_wellfounded_elaborator_divergence` | its control renders the `gcd` module and requires Lean to REFUSE it. Under a flipped default the module is already `def`, Lean accepts, and the suite dies saying *"Lean's ELABORATOR now accepts a reduction through a `theorem` … this suite is stale: re-measure the residue and update the ADR."* **That is the worst outcome in this whole measurement**: flipping the default does not just break a test, it makes the suite that pins ADR-0488's divergence report that Lean fixed it. |
+| `real_lean_wellfounded_elaborator_divergence` | its control renders the `gcd` module and requires Lean to REFUSE it. Under a flipped default the module is already `def`, Lean accepts, and the suite dies saying *"Lean's ELABORATOR now accepts a reduction through a `theorem` … this suite is stale: re-measure the residue and update the ADR."* **That is the worst outcome in this whole measurement**: flipping the default does not just break a test, it makes the suite that pins ADR-0517's divergence report that Lean fixed it. |
 | `diophantine_lean_reconstruct` | the golden body pin: −272 B = 4 B x 68 environment theorem lines. |
 
 Warm-to-warm the gate goes **9m04s -> 9m57s (+9.7%)**. (The first flipped run
@@ -131,15 +131,15 @@ the nonzero `running 7 tests` count, not the absence of `^error`.
 
 ## Claims that turned out wrong
 
-* **ADR-0488, "it changes every artefact the repository ships, including the
+* **ADR-0517, "it changes every artefact the repository ships, including the
   single-file front door that 18 real-Lean suites read."** True of the bytes,
   misleading about the blast radius. Those suites assert on the module's ROOT
   theorem, and the option leaves the root alone; they are indifferent to it. The
   suites that would actually break are the ones asserting an ENVIRONMENT
   theorem's spelling.
-* **ADR-0488's implied benefit.** The residue is real but it is entirely outside
+* **ADR-0517's implied benefit.** The residue is real but it is entirely outside
   the shipped surface: `thm/FrontDoor` and `thm/AxeyumShared` both elaborate
-  clean today. The switch rescues only the whole-carrier module, which ADR-0482
+  clean today. The switch rescues only the whole-carrier module, which ADR-0511
   does not ship and which Lean's kernel already accepts.
 * **"elaboration roughly doubles."** 1.36–1.69x in this frame, not 2x.
 * The brief's "466+ real-Lean checks" and "`lean_crosscheck` 77 of 77" were both

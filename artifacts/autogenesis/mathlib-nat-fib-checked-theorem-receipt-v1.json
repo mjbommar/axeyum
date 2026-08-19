@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-checked-theorem-receipt",
+  "state": "semantic-theorem-receipt-issued-no-evaluation-or-ledger-credit",
+  "tooling_commit": "3ad394bb6f24b5e46dba9d1cedb30a54369008cc",
+  "frozen_policy": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-checked-theorem-receipt-policy-v1.json",
+    "sha256": "915facafef657ead263317a812f349097541b27b8397d90df592cddf9002cb03"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/checked-theorem-receipts/3ad394bb6-nat-fib-add-two-r080-v1",
+    "file": "observation.json",
+    "bytes": 2905,
+    "mode": "0444",
+    "file_sha256": "83aca8948119b7be571324a6581ac4691d9b8e3ba463184db381e74b36a21284",
+    "observation_sha256": "28f313c405614fa9b9de47d76216e01669754c9f84e397ecc8845a551115182f"
+  },
+  "result": {
+    "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+    "receipt_sha256": "395f6e80e6addbc69cca8ad560b312dadc31d623fe05f6b1603b5fa523622329",
+    "fresh_imports": 2,
+    "fixed_plan_reconstructions": 2,
+    "search_invocations": 0,
+    "target_theorem_submissions": 2,
+    "receipt_reissued_exactly": true,
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [],
+    "semantic_theorem_receipts_issued": 1,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-fib-checked-theorem-receipt.py",
+  "limitations": "The candidate now has a replayed semantic theorem receipt but the fact remains open until a separately registered crash-safe admission succeeds."
+}

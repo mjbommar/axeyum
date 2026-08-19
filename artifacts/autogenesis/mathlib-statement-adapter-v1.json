@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-statement-adapter",
+  "state": "independent-kernel-goal-admitted-proof-free",
+  "source_fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+  "source_statement_sha256": "2482f23d163bb946b92ac456667645047254faa3f575809e45609154b98b5dd7",
+  "adapter_source": {
+    "path": "scripts/lean/autogenesis_statement_adapter_factorial.lean",
+    "sha256": "a91b5d8fe513d088328f14b5a1a6b11d5c5d0e031e5360cce8b3924d2d8dd6f1",
+    "target_definition": "Axeyum.Autogenesis.Statement.natAscFactorialZero",
+    "encoding": "transparent-definition-of-prop",
+    "proof_declarations_allowed": false
+  },
+  "toolchain": {
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_version": "3.1.0",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf"
+  },
+  "external_artifact": {
+    "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-ascfactorial-zero-statement-adapter-v1.ndjson",
+    "sha256": "6aed5b73c80e039900027020cc088c7db67c6ae518c7d031584f3e4cb6e2e685",
+    "bytes": 52474,
+    "records": 920,
+    "mode": "0444"
+  },
+  "independent_import": {
+    "goal_sha256": "87e37902bb8b3958514c5a6831b28ebff2824c8a30fb45601ff47736ee3853d7",
+    "target_content_sha256": "a492e9e2f4b4386d8341eb891a3932298226d74a0472c08cf7f5ae32efa7dabe",
+    "direct_dependencies": 5,
+    "admitted_declarations": 55,
+    "axioms": 0
+  },
+  "reproduction": {
+    "host_profile": "s5 pinned Mathlib v4.30.0 checkout",
+    "export": "copy the tracked adapter source to the pinned Mathlib root as AxeyumAutogenesisStatementAdapter.lean; lake env lean -o .lake/build/lib/lean/AxeyumAutogenesisStatementAdapter.olean -i .lake/build/lib/lean/AxeyumAutogenesisStatementAdapter.ilean AxeyumAutogenesisStatementAdapter.lean; lake env lean4export AxeyumAutogenesisStatementAdapter -- Axeyum.Autogenesis.Statement.natAscFactorialZero",
+    "check": "python3 scripts/check-autogenesis-statement-adapter.py"
+  },
+  "limitations": "This adapts one train proposition into a checked goal. It does not prove the goal, register a producer operation, establish the fact, or demonstrate coverage of other Mathlib statement shapes."
+}

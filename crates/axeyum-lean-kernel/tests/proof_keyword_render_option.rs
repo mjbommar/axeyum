@@ -1,7 +1,7 @@
 //! `Kernel::set_render_proofs_as_def` moves the keyword that opens an
-//! environment theorem, and nothing else (ADR-0489).
+//! environment theorem, and nothing else (ADR-0518).
 //!
-//! Lean has two checkers and they disagree about a proof's opacity (ADR-0488):
+//! Lean has two checkers and they disagree about a proof's opacity (ADR-0517):
 //! its kernel unfolds anything carrying a value, its elaborator will not unfold
 //! a `theorem` while reducing. The render option exists so the second one can be
 //! given a module it accepts. What makes the option safe is that it is a
