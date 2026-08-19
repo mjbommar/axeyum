@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `ebdfc678d` | Reconstructed the product-discriminant phase on every exact affine autocorrelation fibre and showed that nonquadratic fibres are substantial, moving the dyadic target to cancellation across shift/inverse-difference parameters. |
 | 2026-08-19 | `125b2131e` | Computed every integral discriminant residue modulo eight by fraction-free elimination, reconstructed its exact coefficient ANF, and proved its full-support coefficient is always odd, ruling out a global bounded-degree phase shortcut. |
 | 2026-08-19 | `c43e7bb68` | Extended the Swan sign to the universal identity `mu(f)=(-1)^degree chi_8(Disc(F))`, including squareful zeros, and checked its exact four-phase cyclotomic Fourier expansion. |
 | 2026-08-19 | `11e781a03` | Exposed the native odd-generator factors as checked truncated binary Witt blocks and projected every simultaneous coset onto all order-two characters, showing the failed translation witness is not confined to a tiny real sector. |
@@ -494,7 +495,16 @@ sum, but the unrestricted phase is provably not low degree: its full-support
 multilinear coefficient is odd in every degree because the exact constant-one
 squarefree population is odd.  Thus the next rank theorem must act after
 restriction to the affine inverse fibres, or cancellation must be retained
-across convolution orders.  The multi-minute endpoint sweep is now an explicit
+across convolution orders.  Exact restriction does not yield a uniform
+quadratic phase either.  At `(ell,k,d)=(9,11,8)`, all `18,884` exact
+shift/inverse-difference sets are checked affine, but `2,297` nonquadratic
+fibres contain `61,264` of `130,048` points and reach support degree seven.
+Their signed correlation is `-202` versus `8,622` after fibrewise absolute
+values, while the full off-diagonal total is `-68`.  The remaining dyadic
+cancellation is therefore cross-fibre in this witness: the next bounded task
+is to aggregate the shift and inverse-difference parameters in Witt blocks
+before applying an absolute-value inequality.  The multi-minute endpoint
+sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
 the bounded `ell<=7` controls and the earlier `ell<=9` results remain
 uncredited finite evidence.
