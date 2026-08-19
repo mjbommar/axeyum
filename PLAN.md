@@ -163,6 +163,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `bd7b55bff` | Extracted 9,729 proof-isolated Mathlib Nat/Int statements externally and selected 240 outcome-blind source candidates across twelve families without vendoring bulk exports. |
 | 2026-08-18 | `30e7e6ec3` | Projected 95 direct Mathlib candidate dependencies into 146 whole leakage components without exposing proof terms or freezing evaluation splits. |
 | 2026-08-18 | `f4dc0d4f1` | Registered and cleanly exercised the exact axiom-free authoritative B operation, whose durable event made A newly ready. |
+| 2026-08-18 | `4b129601c` | Extended the exact NTT/CRT endpoint oracle through `ell=22`, added an a-priori CRT uniqueness guard, reduced peak memory, and isolated the family-norm cancellation factor that the universal proof must recover. |
 | 2026-08-18 | `6aff45e82` | Added accepted ADR-0481 and a canonical, mutation-checked certificate-spec fact for the dual-replayed degree-1-through-400 result without inventing finite-field SMT or kernel support. |
 | 2026-08-18 | `30a004188` | Audited the tempting Hsu half-coefficient survey claim against the explicit bound and the 2023 Gao follow-up; neither supplies positivity at the exact fixed-`GF(2)` endpoint. |
 | 2026-08-18 | `fd1e8793b` | Added an exact finite principal-unit Fourier oracle using two NTT primes and CRT, verified the sufficient endpoint-discrepancy candidate through `ell=18`, and kept the candidate explicitly outside the theorem and fact ledger. |
@@ -353,10 +354,16 @@ theorem at that exact fixed-field half-degree boundary. The exact integral
 Hayes-class recurrence has now been specialized and independently matched to
 direct counts through degree 20; its error has varying sign, so the remaining
 target is aggregate cancellation rather than a termwise sign argument.
-`fd1e8793b` adds an exact two-prime NTT/CRT oracle for that aggregate.  It
-identifies the sufficient candidate lemma
+`fd1e8793b` adds an exact two-prime NTT/CRT oracle for that aggregate, and
+`4b129601c` scales its fail-closed control range through `ell=22`. It identifies
+the sufficient candidate lemma
 `abs(N_n(1)-2^(n-ell)) <= 2^ell` at `n=2 ell+1, 2 ell+2` and verifies it only
-through `ell=18`; the result is a finite proof target, not universal credit.
+through `ell=22`; the result is a finite proof target, not universal credit.
+The same increment derives the exact family-norm degree
+`(ell-2)2^ell+2`, showing that character-by-character Weil bounds necessarily
+lose a factor asymptotic to `ell`; the missing proof must establish aggregate
+family cancellation. An optimized exact `ell=22` replay on s7 matched every
+control in 8m27s with 2.38 GB peak RSS and exit 0.
 
 The portable boundary is complete for bounded witnesses. `98f2d953f` adds
 canonical JSON, a dense-coefficient second checker, and a standalone dual-check
