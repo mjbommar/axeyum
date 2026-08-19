@@ -160,9 +160,9 @@ evidence and unrelated temporary projects were untouched.
 |---|---|---|
 | 2026-08-19 | `77209a5ee` | Added exact fourth moments/cumulants, checked the conditional implication and low control, retained level-23 evidence, and recorded open facts. |
 | 2026-08-19 | `068e0fbff` | Added the exact resource-bounded fourth-moment conductor filtration, quotient-projection controls, public diagnostic, and literature boundary refresh. |
-| 2026-08-19 | `pending` | Corrected the fourth-moment ledger contract from an impossible irreducible mean to the exact Mangoldt-weighted population used by the CAS and conditional proof. |
-| 2026-08-19 | `pending` | Added bounded exact Hayes prime-power inversion, exposing and invariant-checking the native identity-class irreducible count without an external CAS. |
-| 2026-08-19 | `pending` | Reduced every odd endpoint exactly to `N_(2ell+1)(1)>1`, with a bounded divisor certificate and full-inversion controls; closed `f -> x f+1` as an even-degree bridge. |
+| 2026-08-19 | `fd9b3633d` | Corrected the fourth-moment ledger contract from an impossible irreducible mean to the exact Mangoldt-weighted population used by the CAS and conditional proof. |
+| 2026-08-19 | `448be3674` | Added bounded exact Hayes prime-power inversion, exposing and invariant-checking the native identity-class irreducible count without an external CAS. |
+| 2026-08-19 | `7cba6d63f` | Reduced every odd endpoint exactly to `N_(2ell+1)(1)>1`, with a bounded divisor certificate and full-inversion controls; closed `f -> x f+1` as an even-degree bridge. |
 | 2026-08-18 | `cf998788b` | Automated the exact authoritative B-then-A chain; two isolated fixed-budget runs matched all 56 retained artifact bytes and passed Autogenesis-1. |
 | 2026-08-18 | `2d65f19d8` | Froze the leakage-safe nursery contract and the Autogenesis-1 longitudinal partition; readiness remains explicitly false with zero evaluation facts and nine blockers. |
 | 2026-08-18 | `bd7b55bff` | Extracted 9,729 proof-isolated Mathlib Nat/Int statements externally and selected 240 outcome-blind source candidates across twelve families without vendoring bulk exports. |

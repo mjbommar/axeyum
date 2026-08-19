@@ -20,6 +20,6 @@ closed negatively.  Full definitions, proofs, controls, and literature record:
 
 | 2026-08-19 | `77209a5ee` | Added exact fourth moments/cumulants, checked the conditional implication and low control, retained level-23 evidence, and recorded open facts. |
 | 2026-08-19 | `068e0fbff` | Added the exact resource-bounded fourth-moment conductor filtration, quotient-projection controls, public diagnostic, and literature boundary refresh. |
-| 2026-08-19 | `pending` | Corrected the fourth-moment ledger contract from an impossible irreducible mean to the exact Mangoldt-weighted population used by the CAS and conditional proof. |
-| 2026-08-19 | `pending` | Added bounded exact Hayes prime-power inversion, exposing and invariant-checking the native identity-class irreducible count without an external CAS. |
-| 2026-08-19 | `pending` | Reduced every odd endpoint exactly to `N_(2ell+1)(1)>1`, with a bounded divisor certificate and full-inversion controls; closed `f -> x f+1` as an even-degree bridge. |
+| 2026-08-19 | `fd9b3633d` | Corrected the fourth-moment ledger contract from an impossible irreducible mean to the exact Mangoldt-weighted population used by the CAS and conditional proof. |
+| 2026-08-19 | `448be3674` | Added bounded exact Hayes prime-power inversion, exposing and invariant-checking the native identity-class irreducible count without an external CAS. |
+| 2026-08-19 | `7cba6d63f` | Reduced every odd endpoint exactly to `N_(2ell+1)(1)>1`, with a bounded divisor certificate and full-inversion controls; closed `f -> x f+1` as an even-degree bridge. |
