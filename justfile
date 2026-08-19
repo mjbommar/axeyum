@@ -88,6 +88,9 @@ autogenesis-nursery:
     python3 -m unittest scripts.tests.test_check_autogenesis_semantic_abstraction_census
     python3 scripts/check-autogenesis-semantic-abstraction-census.py
     cargo test -p axeyum-lean-import --test semantic_function_contract
+    cargo test -p axeyum-lean-import --example semantic_contract_target_census
+    python3 -m unittest scripts.tests.test_check_autogenesis_semantic_contract_target_census
+    python3 scripts/check-autogenesis-semantic-contract-target-census.py
 
 # The bulk source is external and optional on CI. The first checker reports
 # verified/unavailable without conflating them; the committed 240-row view is

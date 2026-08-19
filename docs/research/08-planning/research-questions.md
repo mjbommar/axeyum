@@ -839,6 +839,13 @@ Out of scope:
     an independently checked source-specialization witness with a complete
     dependency footprint before concrete fact credit. See
     [ADR-0488](../09-decisions/adr-0488-semantic-abstractions-are-discharged-local-contracts.md).
+- [x] Is any real pointwise Mathlib target ready for a direct transparent
+      equation contract in its existing proof-free slice?
+  - Answer (2026-08-19): no; all 50 bindings omit at least one nonrecursive
+    constant named by the source body. Residualize those constants as exact
+    ordered local parameters and check source specialization before selecting a
+    theorem target. See
+    [ADR-0489](../09-decisions/adr-0489-contract-bodies-are-residualized-before-real-target-selection.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?

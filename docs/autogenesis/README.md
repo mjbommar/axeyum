@@ -131,6 +131,7 @@ compounding, not automation theatre.
 | [Semantic abstraction debt census](32-semantic-abstraction-census.md) | Which exact definition identities and checked contract shapes separate type-safe generalization from fair proof search? |
 | [First discharged function contract](33-discharged-function-contract-control.md) | Can a local behavior premise be proved generically, discharged by the exact source definition, and remain axiom-free under circularity controls? |
 | [Source-bound function-contract receipt](34-semantic-function-contract-receipt.md) | Can both kernels, the exact source, local contract, witness, specialized proof, and dependency closures become one replayable fail-closed object? |
+| [Real contract target census](35-real-contract-target-census.md) | Is any pointwise Mathlib binding ready for a direct equation contract, and what representation capability must come first? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -297,6 +298,13 @@ literal generic-proof/source/witness application, binds complete dependency
 closures, and rejects identity, binder, proof, and circularity mutations. The
 next turn selects and preregisters one real train/development target by joining
 bottom-up definition cost with top-down proof demand.
+
+The [real-target census](35-real-contract-target-census.md) declines that
+selection: 0/50 pointwise bindings can state their direct transparent equation
+in the current proof-free slice because every body names an omitted constant.
+ADR-0489 therefore inserts checked contract-body residualization before target
+selection. The axiom-free `Int.gcd`/omitted-`Nat.gcd` row is the first mechanism
+control, not an authorized theorem attempt.
 
 ## Phase summary
 
