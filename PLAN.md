@@ -355,6 +355,21 @@ shows no isolated bad conductor through `ell=16`; pursue a nested
 martingale/large-sieve estimate rather than a one-level bound.  Full record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
+The sparse-construction audit is closed negatively.  All 400 committed
+witnesses are weight 1, 3, or 5, with the exact 1/227/172 distribution already
+enforced by the finite-range gate.  An all-degree shaped trinomial-or-
+pentanomial construction would imply the *Handbook of Finite Fields*
+Conjecture 2.2.5, while the published `2b+c` pentanomial family neither proves
+irreducibility for all parameters nor meets the half-tail inequality.  Do not
+replace the Hayes obligation with extrapolation from the sparse artifacts.
+
+The cyclotomic curve identity also implies unconditionally that the identity
+class Mangoldt population is positive in every degree:
+`#C_ell(GF(2^n))=2^ell N_n(1)+1`, while the `2^ell` places over infinity are
+already rational.  This narrows but does not close the theorem, because the
+positive population may consist only of proper prime powers.  The live bound
+must still prove new degree-`n` mass after the checked proper-power subtraction.
+
 **Claim-dashboard gate, finding-8 re-measurement, and PLAN.md returned under its
 ceiling** (`WIP`, ledger-integrity, 2026-08-16). Three defects behind a dashboard
 reporting 38 claims against an actual 104; finding 8 re-measured as remediated

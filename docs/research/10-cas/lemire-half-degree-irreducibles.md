@@ -180,6 +180,43 @@ lemma.
   uniform bound for all of these Witt characters nor cancellation after they
   are aggregated in `T_(j,n)`.
 
+### Why the sparse witnesses are not a construction theorem
+
+Every committed Axeyum witness through degree 400 is much sparser than the
+conjecture asks: apart from the degree-one polynomial, there are 227
+trinomials and 172 pentanomials.  This population is not inferred from prose.
+`scripts/check-gf2-lemire-range.py` pins the exact distribution from the five
+shard manifests, while the packed and independently implemented dense
+checkers verify the underlying irreducibility certificates and half-degree
+tail condition.
+
+That pattern cannot be extrapolated to all degrees.  The *Handbook of Finite
+Fields*, Conjecture 2.2.5, explicitly conjectures that every binary degree has
+an irreducible trinomial or, when none exists, an irreducible pentanomial.  It
+also describes constructions as rare and the surrounding work as largely
+empirical or conjectural.  A universal shaped trinomial-or-pentanomial theorem
+would imply this published conjecture and is therefore not an available
+shortcut for the weaker dense-tail problem here.  See Mullen and Panario,
+eds., [*Handbook of Finite Fields*](https://archive.ymsc.tsinghua.edu.cn/pacm_download/672/12637-dingjt-p2.pdf),
+Remarks 2.2.3--2.2.4 and Conjecture 2.2.5.
+
+Special pentanomial families do not fill the gap.  Banegas, Custodio, and
+Panario study
+
+```text
+x^(2b+c) + x^(b+c) + x^b + x^c + 1,   b>c>0,
+```
+
+but enumerate the irreducible members and leave their irreducibility
+conditions open.  Moreover, the tail exponent `b+c` is strictly larger than
+half of the degree `2b+c`, so this orientation is not Lemire-shaped; its
+reciprocal has a tail term of exponent `2b`, which also exceeds half.  See
+[*A new class of irreducible pentanomials for polynomial based multipliers in
+binary fields*](https://arxiv.org/abs/1806.00432), especially the contribution
+statement and the open problem following its enumeration table.  The sparse
+route is therefore closed unless a genuinely new all-degree construction is
+proved; the live obligation remains the cancellation-preserving Hayes bound.
+
 There is also no reduction of the family size to the odd power traces. In
 characteristic two, Newton's identities make the even power traces Frobenius
 squares of earlier traces, but they do **not** recover the even elementary
@@ -321,6 +358,29 @@ C_(t^ell)(lambda) = t,
 ```
 
 because `C_(t^(ell+1))(X)/C_(t^ell)(X)=C_(t^ell)(X)+t` in characteristic two.
+
+The same identity gives a small unconditional gain that should not be confused
+with the conjecture.  Since
+
+```text
+N_n(1) = 2^(n-ell) + Delta_(ell,n),
+```
+
+the curve trace rewrites exactly as
+
+```text
+#C_ell(GF(2^n)) = 2^ell N_n(1) + 1.                 (point-population identity)
+```
+
+The `2^ell` places above infinity are already rational over `GF(2)`, hence over
+every `GF(2^n)`.  Therefore `2^ell N_n(1)+1 >= 2^ell`, and integrality gives
+`N_n(1)>=1` for every positive `ell,n`.  In words: the identity Hayes class
+always has positive Mangoldt mass.  This still does **not** prove a degree-`n`
+irreducible.  `N_n(1)` counts prime powers, so all of that mass could in
+principle come from primes of proper degree dividing `n`.  The remaining
+theorem is precisely that the mass exceeds the proper-prime-power contribution
+at the two half-degree endpoints.  Any paper using this observation must retain
+that subtraction rather than relabel Mangoldt positivity as prime positivity.
 
 This compression does not by itself prove the conjecture.  Applying ordinary
 Hasse--Weil to the curve trace gives only
