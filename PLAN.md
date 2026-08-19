@@ -198,6 +198,8 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `pending` | `scripts/cargo-serialized.sh`: heavy cargo now takes an flock and a memory ceiling, because "serialize" was prose and prose does not hold a lock (two dev boxes downed, one agent session OOM-killed). **`MemoryMax` alone does not bite** — it *is* applied (`memory.max` = 67108864) and a 400 MB allocation still succeeds by swapping, on a box whose 7 G of swap is 6 G full. With `MemorySwapMax=0` the same allocation is SIGKILLed by the cgroup (137), host untouched. `--self-check` proves it per host and discriminates: `AXEYUM_CARGO_SWAP=1G` flips it to `SURVIVED`, exit 1. |
 | 2026-08-18 | `pending` | `local-ci.sh`, the declared authoritative gate for `main`, cannot run on any fleet host and never has (`cargo nextest` 101, `rustup run 1.88.0` 1, on s4/s5/s7). Now refuses to start rather than limp, `--record` leaves a tracked per-(sha,host) JSON, and `provision-fleet-host.sh` installs the prerequisites (`1.88.0` needs `--profile minimal`, else rustup fails on `miri`/`cranelift` inherited from the nightly profile). The record carries per-step TEST COUNTS and marks a step that exited 0 having run zero tests as `vacuous`. |
 | 2026-08-18 | (pending) | `gen-adr-index.py --check-remote`: cross-checkout ADR-number collision detector, wired into `just check` and `check.sh`; found a second live collision (0468-0470) beyond the one already fixed today (471-474) |
+| 2026-08-18 | (pending) | `lean_pp::split_module_banner` + `tests/support/lean_golden.rs`: golden pins cover the module BODY, banner pinned once as committed text in `module_banner_pin`. |
+| 2026-08-18 | (pending) | `scripts/check-lean-golden-pins.sh` (+ controls): the golden-module gate, membership DISCOVERED not listed; wired into `just check`, `check.sh`, and diff-scoped `hooks/pre-push`. |
 | 2026-08-18 | `pending` | **ADR-0479: ℂ is constructed over the constructed ℝ at zero trusted declarations, and ℂ's absence of an order becomes a theorem.** `Complex` is `mk : CReal → CReal → Complex` with `Complex.Equiv` componentwise — no quotient at either level, so `Quot.sound` is never needed. Every ℂ law reduces by δι to two `CReal.Equiv` obligations that are *algebraic*, so they are **decided, not hand-derived**: `complex/ring.rs` normalizes a `CReal` expression to a sorted multiset of signed monomials with opposite pairs cancelled and emits the `Equiv` proof, declaring nothing (every function returns a proof term, in `shifted_bound_le`'s style), so the `CReal` namespace and the trusted surface are untouched by construction. `add` and `mul` are the same commutative monoid, so the reassociation machinery is `rsum_perm`/`iprod_perm` written once against an `Op` tag, one level up and over a *defined* equality — the transcription ADR-0483 predicted. Landed with `conj`, `normSq`, `mul_conj` (`z·z̄ = ‖z‖²`, the law that needs the cancellation pass) and `normSq_nonneg` into `CReal`'s existing nonneg cone. **The finding that is not a construction:** `Complex.no_compatible_order : ∀ le lt, le_refl → lt_irrefl → lt_of_le_of_lt → add_le_add → le_congr → sq_nonneg → zero_lt_one → False`, proved directly with no classical step, so the 13 order laws are refuted rather than skipped. |
 | 2026-08-18 | `590e2ff8c` | **ADR-0483 phase R2 completes: all 22 ordered-ring laws hold over the constructed ℝ.** `mul_assoc`, `left_distrib` and `mul_le_mul_of_nonneg_left` land, plus `mul_congr` — the fifth congruence obligation and the R4 prerequisite. The four were one problem: each compares two products whose *sampling indices differ*, so `CReal.mul`'s exact estimate is unavailable and the naive bound is `C/(n+1)` for a `C > 2`. Two new pieces make that enough. `CReal.Equiv.of_bounded` — **`Equiv` only needs the difference to be `O(1/n)`; the constant is free** — is `Equiv.trans`'s argument with one term deleted, closing on `Rat.le_of_le_add_natDivSucc`, whose numerator is a `Nat` *parameter* so a symbolic `K` is as good as a literal; and `Rat.nat_index_compose` says **Bishop's sampling indices are closed under composition** (the additive shift `2n+1` is the `c = 1` case), so every nested index reads back at `n` through one `natDivSucc_le_scaled`. `mul_le_mul_of_nonneg_left` needed no estimate at all, exactly as costed — it is `left_distrib` + `mul_nonneg` + `mul_congr`. **22 of 22**, 58 declarations, trusted surface still 0, and the count is now read out of the kernel: `CRealPrelude::ordered_ring_laws` must name 22 *distinct* footprint-empty theorems matching `RatPrelude::ring_laws` position by position, asserted by the example's exit status and three tests, verified by deleting `mul_assoc`. |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
@@ -380,16 +382,15 @@ unfold a `theorem` while reducing; its kernel does. Re-spell every `theorem` in
 the *same emitted file* as `def` — nothing else changed — and the elaborator
 accepts it: the `not_zero_one` module (695,655 B) in 5.0 s and the **whole
 carrier** (2,541,928 B) in 27.9 s, against 4 refusals as emitted.
-`Nat.gcd` is `WellFounded.fix` over the *definition* `Nat.lt_well_founded` with
-its descent justified by the *theorem* `Nat.mod_lt`, so `gcd 0 3` (base case)
-is accepted and every recursive `gcd` is refused, while `Nat.mod/div/sub` and a
-bare `WellFounded.fix` reduce fine. Not the sharing pass (hand-inlined:
-identical refusal), not a budget (`maxRecDepth 1000000`, `maxHeartbeats 0`,
-`smartUnfolding false` move nothing; `diagnostics` shows it give up, not run
-out). `internal exception #3` is the command abort after the term error.
+`Nat.gcd`'s descent is justified by the *theorem* `Nat.mod_lt`, so `gcd 0 3`
+(base case) is accepted and every recursive `gcd` refused, while `Nat.mod/div/
+sub` and a bare `WellFounded.fix` reduce fine. Not the sharing pass (hand-
+inlined: identical refusal), not a budget (`maxRecDepth 1000000`,
+`maxHeartbeats 0`, `smartUnfolding false` move nothing). `internal exception #3`
+is the command abort after the term error.
 
 **The coverage hole is closed.** Emission was reachability-driven, so Lean had
-only ever seen 343 of the carrier. `real_lean_creal_carrier_kernel_replay`
+only ever seen the reachable slice (343 of 465 when ADR-0482's lane measured it). `real_lean_creal_carrier_kernel_replay`
 exports the complete environment with no filter and requires Lean's reported
 constant count to **equal** the count read out of our kernel, so "accepted"
 cannot mean "accepted a subset". `real_lean_wellfounded_elaborator_divergence`
@@ -1247,6 +1248,34 @@ and `./scripts/check.sh` are RED on this branch right now**, on the new
 `adr-remote-collisions` step, for a real and correctly-reported reason. Detail
 and full demo transcripts in
 [`../notes/agent-adr-numbering.md`](docs/plan/notes/agent-adr-numbering.md).
+
+**The module banner is out of the golden pins, and the golden suites have a
+gate** (`WIP`, agent-golden-pins, 2026-08-18). Three commits in four days
+changed the fixed banner every rendered Lean module opens with, re-pinned only
+the golden that sat in a gate, and shipped the same delta red onto the rest
+(`0fc7cc357`; `b760fd6ae` +863; `46724faec` +777). Two things were wrong and
+both are fixed:
+
+1. **the pins covered the banner.** `axeyum_lean_kernel::split_module_banner`
+   plus `tests/support/lean_golden.rs` pin the module **body**; the helper still
+   refuses a source that does not open with this kernel's banner byte for byte.
+   The banner has one pin of its own, as committed text
+   (`axeyum-lean-kernel --test module_banner_pin`, blessed by the same
+   `AXEYUM_BLESS_LEAN_FIXTURES=1` as the 17 module fixtures). A header change
+   now fails one named thing and its failure is a header diff.
+2. **nothing ran the suites.** `scripts/check-lean-golden-pins.sh` **discovers**
+   membership (a suite is in the gate exactly when it calls
+   `assert_golden_module`) and refuses a hand-rolled whole-module `(len, fnv1a)`
+   pin, so a new golden cannot be added outside the gate. Wired into `just
+   check` and `scripts/check.sh` (both, keeping `check-aggregate-scope` clean)
+   and diff-scoped into `hooks/pre-push` on `axeyum-lean-kernel/src/**` — the
+   origin of all three recurrences.
+
+Membership measured, not guessed: **five** suites, the four that failed plus
+`diophantine_lean_reconstruct`. The four candidates in the brief's regex are all
+false positives (`specs.len() == 720`, `== 640`, corpus population `226`,
+`outer_bindings.len() == 318`) — element counts, not module bytes. Detail and
+the full measurement table: [`../notes/agent-golden-pins.md`](docs/plan/notes/agent-golden-pins.md).
 
 **ADR-0479: ℂ is built, it is free, and its missing order is REFUTED rather than
 omitted (`WIP`, agent-complex-foundation, 2026-08-18).** `Complex` — a
