@@ -47,7 +47,9 @@ denominators.  A second native route classifies reduced rational collisions
 and proves the explicit bound `E_inv<=2^(2d+o(d))`; a symbolic Hölder ledger
 shows this closes the small/small Type-II region beyond total interval
 exponent `r/2`, but not the full decomposition.  The source dependency table
-and exact exponent ledger are now complete.  They
+and exact exponent ledger are now complete.  Dedicated CAS reports replay the
+full integer ranges and binary replacements in Bagshaw Type-I Cases 1 and 2;
+both retain a genuine saving wherever their ranges are nonempty.  They also
 show that direct substitution of the proved binary wild-Kloosterman maximum
 loses all uniform saving in Bagshaw's Type-I Case 5.  Exact variable mapping
 also shows that Case 5 is empty here because every Lemire cutoff has
@@ -62,6 +64,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `9c891a0a6` | Completed replayable Bagshaw Type-I Case-1 and Case-2 ledgers with exact integer domains, binary completion exponents, and independently enumerated optimizer controls. |
 | 2026-08-19 | `2a21ca519` | Proved inverse-additive energy stabilizes for `ell>=3d`, classified the rational collision fibres to obtain `E_inv<=2^(2d+o(d))`, and added an exact energy-to-Type-II exponent ledger. |
 | 2026-08-19 | `d33c43e5e` | Scoped the binary Bagshaw Case-5 obstruction to its actual domain, proved it is empty for every Lemire cutoff, and checked that Hsu's older half-coefficient shorthand does not close the exact endpoint. |
 | 2026-08-19 | `eef2032e5` | Completed the source-level Bagshaw dependency audit and added exact non-credit-bearing exponent ledgers that isolate the binary Type-I Case-5 obstruction and the uncovered endpoint interval range. |
