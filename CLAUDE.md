@@ -671,6 +671,33 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   that it ran. (`nat_axiom_inventory` now covers `nat`/`logic` and the full
   trusted surface — `Axiom` alone is not it, since `Opaque` has no proof body and
   `Quotient` admits `Quot.sound`.)
+- **`Real` and `CReal` are different things and one is a substring of the
+  other.** `CReal` is the CONSTRUCTED reals — a Bishop setoid over the
+  constructed rationals, trusted surface 0 (ADR-0512). `Real` is the
+  AXIOMATIZED ordered-field package, and it is the repository's only nonzero
+  row: `real: axiom=30`. Every other prelude — `logic`, `nat`, `integer`, `rat`,
+  `creal`, `complex`, `string` — measures 0.
+
+  A `contains("Real.")` test matches `CReal.` too, and that has already been hit
+  and worked around locally (`examples/front_door_carrier.rs:169` decides the
+  carrier from the carrier DECLARATION for exactly this reason). Decide which
+  package you mean by its declaration, never by a substring. ADR-0522 renames it
+  `AxReal` — the convention `lean_pp.rs` already uses for `AxNat`, where our
+  computational naturals are renamed so they cannot collide with Lean's builtin
+  `Nat` — and then retires it.
+
+  **Declared is not reached, and both numbers are published** (ADR-0509). The 30
+  are declared; no shipped route reaches them — `Lra`, `DisjunctiveLra`, `Sos`
+  and `IntFarkas` all reconstruct over constructed carriers. So "we have 30
+  axioms" and "our proofs rest on 30 axioms" are both wrong: the first ignores
+  that nothing reaches them, the second is simply false. Quote the pair.
+
+  The count is not a dial. `Real`'s carrier is opaque, so nothing over it is
+  definable and every operation and law must be assumed — **30 is the floor for
+  an axiomatized ordered field**, not a choice. The negative control every
+  axiom-freedom measurement is read against is now one assumed law over a
+  CONSTRUCTED carrier (ADR-0515), which is stronger, because that axiom is
+  provably redundant and the 30 are only relatively consistent.
 - **You cannot read the kernel's theorem inventory from source text.**
   Declarations go through a `.theorem(name, …)` helper taking an interned
   `NameId` field, so grepping `.theorem("…")` returns **zero** matches and
