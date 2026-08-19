@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-18 | `5490b8dff` | Measured all 138 train/development dispatch contracts: every row declined before execution on unsupported `lean4-surface`, with held-out and proof outcomes untouched. |
 | 2026-08-18 | `c9717b3bc` | Froze 214 Mathlib facts into a preregistered 78/60/76 evaluation split with zero dependency, source-group, family, proof-shape, mutation, or longitudinal leakage. |
 | 2026-08-18 | `cf998788b` | Automated the exact authoritative B-then-A chain; two isolated fixed-budget runs matched all 56 retained artifact bytes and passed Autogenesis-1. |
 | 2026-08-18 | `2d65f19d8` | Froze the leakage-safe nursery contract and the Autogenesis-1 longitudinal partition; readiness remains explicitly false with zero evaluation facts and nine blockers. |
@@ -231,11 +232,17 @@ source-review-group, family, family-scoped proof-shape, mutation, and
 longitudinal leakage. A global broad-shape rule was rejected because it
 collapses the full population into one component.
 
-**Next:** define the fixed-budget episode and decline-record schema, then run a
-small train/development baseline while held-out remains untouched. Select the
-first proof-planning or kernel capability acquisition from measured decline
-concentration, not theorem familiarity. Do not expose Mathlib proof bodies to
-search or treat external proof status as Axeyum construction.
+**The first capability census found a population-wide input seam.** Commit
+`5490b8dff` inspected all 138 train/development contracts and no held-out facts,
+proofs, or target outcomes. All 138 declined before execution because no
+authoritative operation accepts `lean4-surface`; zero producer invocations and
+zero executor budget distinguish this from proof-search failure.
+
+**Next:** build one proof-isolated statement adapter from pinned Mathlib surface
+syntax to the independent kernel goal form. Bind source and toolchain identity,
+export only declaration types, and reject proof-bearing or type-altered inputs.
+Only after that bridge passes negative controls should fixed-budget episodes
+measure induction, retrieval, reconstruction, and checker seams.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
