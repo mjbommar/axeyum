@@ -148,8 +148,15 @@ parameter `h_0/w_0=f(f+h)`, and finally by common valuation reduces the pinned
 absolute totals from `33,680` to `16,972`, `3,956`, and `388`, before the
 signed total `-68`.  The tempting valuation bound `2^(d+1)` is already false
 at the even `(9,12,8)` row (`672>512`), so the next theorem must use
-cross-valuation/Witt orthogonality or a larger loss-aware layer envelope and
-immediately feed it into the endpoint ledger.  The multi-minute endpoint
+cross-valuation/Witt orthogonality.  The stronger coefficient-one
+valuationwise square-root scale also drifts above target, while the connected
+candidate `abs(offdiag)^2<=2^(k+d+1)` survives the endpoint matrix through
+`ell=9` and the selected tail through `ell=11`.  Its exact arithmetic checker
+shows that a proof would imply `E<=2^k` at both endpoints; the factor two is
+necessary already at `(6,9,5)`.  This remains an unproved local lemma and
+still does not control the complementary signed cross-order block.  The next
+bounded experiment is one connected signed Witt spectrum, followed by its
+commutator rank and exact-conductor decomposition.  The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
 the bounded `ell<=7` controls and the earlier `ell<=9` results remain
@@ -160,6 +167,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `4527543a4` | Exposed the connected off-diagonal square-root target, pinned the necessary factor-two boundary, and checked that the conjectural bound would imply the desired endpoint energy scale without claiming the remaining cross-order theorem. |
 | 2026-08-19 | `a226f25ef` | Aggregated exact dyadic autocorrelation fibres by shift/inverse pair, the checked Artin--Schreier product parameter, and valuation; exposed the large finite cancellation while refuting the simplest valuation envelope. |
 | 2026-08-19 | `ebdfc678d` | Reconstructed the product-discriminant phase on every exact affine autocorrelation fibre and showed that nonquadratic fibres are substantial, moving the dyadic target to cancellation across shift/inverse-difference parameters. |
 | 2026-08-19 | `125b2131e` | Computed every integral discriminant residue modulo eight by fraction-free elimination, reconstructed its exact coefficient ANF, and proved its full-support coefficient is always odd, ruling out a global bounded-degree phase shortcut. |
