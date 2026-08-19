@@ -561,6 +561,25 @@ pub struct ClassPopulationDistribution {
     pub counts: Vec<u128>,
 }
 
+/// Exact Möbius sums in every principal-unit class.
+///
+/// `values[e]` is the signed sum of the polynomial Möbius function over all
+/// degree-`degree` monic polynomials whose leading-coefficient class is `e`.
+/// The stable mixed-radix class order is the same as for
+/// [`ClassPopulationDistribution`], so coordinate zero is the identity.
+///
+/// This is a diagnostic for parity-breaking decompositions.  It does not
+/// assert cancellation beyond the admitted finite degree.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ClassMobiusDistribution {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Polynomial degree.
+    pub degree: usize,
+    /// Exact signed Möbius sum in every class.
+    pub values: Vec<i128>,
+}
+
 /// Exact removal of proper prime powers from one identity-class population.
 ///
 /// The checked identity is
@@ -1582,6 +1601,96 @@ pub fn class_population_distribution(
     class_population_distribution_admitted(ell, degree)
 }
 
+/// Compute exact signed Möbius sums in every principal-unit class.
+///
+/// In character coordinates this computes the coefficient of `z^degree` in
+/// `A_chi(z)^(-1)` by the exact recurrence
+///
+/// ```text
+/// M_0(chi)=1,
+/// M_n(chi)=-sum_(1<=d<=n) A_d(chi) M_(n-d)(chi).
+/// ```
+///
+/// Two modular transforms are reconstructed as signed integers.  The method
+/// checks the coarse absolute bound `2^degree` for every class and the global
+/// Euler-product identity `sum_e M_1(e)=-2`, `sum_e M_degree(e)=0` for
+/// `degree>1`.
+///
+/// # Errors
+///
+/// Returns a typed resource decline before allocation, rejects parameters
+/// outside the signed CRT domain, and reports failed transform, bound, or
+/// conservation invariants.
+pub fn class_mobius_distribution(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<ClassMobiusDistribution, HayesError> {
+    admit_any_positive_degree(ell, degree, limits)?;
+    let magnitude_bound = 1_u128
+        .checked_shl(u32::try_from(degree).map_err(|_| {
+            HayesError::InvalidParameter("degree does not fit the shift domain".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("degree exceeds the exact i128 count domain".to_owned())
+        })?;
+    let crt_modulus = u128::from(PRIME_ONE) * u128::from(PRIME_TWO);
+    let signed_width = magnitude_bound.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("signed Möbius uniqueness bound overflow".to_owned())
+    })?;
+    if signed_width >= crt_modulus || crt_modulus > i128::MAX as u128 {
+        return Err(HayesError::InvalidParameter(format!(
+            "signed Möbius values bounded by 2^{degree} do not fit uniquely below the CRT modulus"
+        )));
+    }
+
+    let first = class_mobius_residue(ell, degree, PRIME_ONE)?;
+    let second = class_mobius_residue(ell, degree, PRIME_TWO)?;
+    if first.len() != second.len() {
+        return Err(HayesError::Invariant(
+            "class-Möbius residue tables have different lengths".to_owned(),
+        ));
+    }
+    let half_modulus = crt_modulus / 2;
+    let mut values = Vec::with_capacity(first.len());
+    let mut recovered_total = 0_i128;
+    for (first_residue, second_residue) in first.into_iter().zip(second) {
+        let unsigned = crt(first_residue, PRIME_ONE, second_residue, PRIME_TWO)?;
+        let value = if unsigned <= half_modulus {
+            i128::try_from(unsigned).map_err(|_| {
+                HayesError::Invariant("positive Möbius CRT value exceeds i128".to_owned())
+            })?
+        } else {
+            i128::try_from(unsigned).map_err(|_| {
+                HayesError::Invariant("negative Möbius CRT residue exceeds i128".to_owned())
+            })? - i128::try_from(crt_modulus)
+                .map_err(|_| HayesError::Invariant("Möbius CRT modulus exceeds i128".to_owned()))?
+        };
+        if value.unsigned_abs() > magnitude_bound {
+            return Err(HayesError::Invariant(format!(
+                "recovered class Möbius magnitude {} exceeds 2^{degree}",
+                value.unsigned_abs()
+            )));
+        }
+        recovered_total = recovered_total.checked_add(value).ok_or_else(|| {
+            HayesError::InvalidParameter("class-Möbius total exceeds i128".to_owned())
+        })?;
+        values.push(value);
+    }
+    let expected_total = if degree == 1 { -2 } else { 0 };
+    if recovered_total != expected_total {
+        return Err(HayesError::Invariant(format!(
+            "class Möbius sums total {recovered_total}, expected {expected_total}"
+        )));
+    }
+
+    Ok(ClassMobiusDistribution {
+        ell,
+        degree,
+        values,
+    })
+}
+
 /// Certify the exact proper-prime-power reduction at `n = 2 ell + 1`.
 ///
 /// This operation is structural: it enumerates divisors and checks the
@@ -2280,6 +2389,96 @@ fn class_population_residue(
     Ok(character_values)
 }
 
+fn class_mobius_residue(ell: usize, target: usize, modulus: u64) -> Result<Vec<u64>, HayesError> {
+    let (mut character_values, dimensions) =
+        character_mobius_coefficients_residue(ell, target, modulus)?;
+    invert_group_coordinates(&mut character_values, &dimensions)?;
+    group_transform(&mut character_values, &dimensions, modulus);
+    let inverse_order = mod_pow(character_values.len() as u64, modulus - 2, modulus);
+    for value in &mut character_values {
+        *value = multiply_mod(*value, inverse_order, modulus);
+    }
+    Ok(character_values)
+}
+
+fn character_mobius_coefficients_residue(
+    ell: usize,
+    target: usize,
+    modulus: u64,
+) -> Result<(Vec<u64>, Vec<usize>), HayesError> {
+    let factors = principal_unit_factors(ell);
+    let odd_degrees = factors
+        .iter()
+        .map(|factor| factor.odd_degree)
+        .collect::<Vec<_>>();
+    let dimensions = factors
+        .iter()
+        .map(|factor| factor.order)
+        .collect::<Vec<_>>();
+    let size = 1_usize << ell;
+    let mut unit_to_index = BTreeMap::new();
+    for index in 0..size {
+        let mut quotient = index;
+        let mut value = 1_u64;
+        for (&odd, &dimension) in odd_degrees.iter().zip(&dimensions) {
+            let exponent = quotient % dimension;
+            quotient /= dimension;
+            let generator = 1 | (1_u64 << odd);
+            for _ in 0..exponent {
+                value = unit_multiply(value, generator, ell);
+            }
+        }
+        if unit_to_index.insert(value, index).is_some() {
+            return Err(HayesError::Invariant(format!(
+                "ell={ell}: principal-unit decomposition is not injective"
+            )));
+        }
+    }
+    if unit_to_index.len() != size {
+        return Err(HayesError::Invariant(format!(
+            "ell={ell}: principal-unit decomposition is incomplete"
+        )));
+    }
+
+    let mut class_sums = vec![vec![0_u64; size]; ell];
+    class_sums[0][0] = 1;
+    group_transform(&mut class_sums[0], &dimensions, modulus);
+    for (degree, class_sum) in class_sums.iter_mut().enumerate().skip(1) {
+        for tail in 0..(1_u64 << degree) {
+            let unit = 1 | (tail << 1);
+            class_sum[unit_to_index[&unit]] = 1;
+        }
+        group_transform(class_sum, &dimensions, modulus);
+    }
+    let powers_of_two = (0..=target)
+        .map(|degree| mod_pow(2, degree as u64, modulus))
+        .collect::<Vec<_>>();
+
+    let mut mobius = vec![vec![0_u64; size]; target + 1];
+    mobius[0].fill(1);
+    for degree in 1..=target {
+        for character in 0..size {
+            let mut value = 0_u64;
+            for class_degree in 1..=degree {
+                let class_sum = if class_degree < ell {
+                    class_sums[class_degree][character]
+                } else if character == 0 {
+                    powers_of_two[class_degree]
+                } else {
+                    0
+                };
+                value = subtract_mod(
+                    value,
+                    multiply_mod(class_sum, mobius[degree - class_degree][character], modulus),
+                    modulus,
+                );
+            }
+            mobius[degree][character] = value;
+        }
+    }
+    Ok((mobius.swap_remove(target), dimensions))
+}
+
 fn invert_group_coordinates(values: &mut [u64], dimensions: &[usize]) -> Result<(), HayesError> {
     let mut inverted = vec![0_u64; values.len()];
     for (index, value) in values.iter().enumerate() {
@@ -2564,6 +2763,26 @@ fn subtract_mod(left: u64, right: u64, modulus: u64) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn principal_unit_index_map(ell: usize) -> BTreeMap<u64, usize> {
+        let factors = principal_unit_factors(ell);
+        let mut map = BTreeMap::new();
+        for index in 0..1_usize << ell {
+            let mut quotient = index;
+            let mut unit = 1_u64;
+            for factor in &factors {
+                let exponent = quotient % factor.order;
+                quotient /= factor.order;
+                let generator = 1 | (1_u64 << factor.odd_degree);
+                for _ in 0..exponent {
+                    unit = unit_multiply(unit, generator, ell);
+                }
+            }
+            assert_eq!(quotient, 0);
+            assert!(map.insert(unit, index).is_none());
+        }
+        map
+    }
 
     fn unit_inverse(unit: u64, ell: usize) -> u64 {
         let mut inverse = 1_u64;
@@ -3096,6 +3315,99 @@ mod tests {
             .map(|count| count.abs_diff(1_024).pow(2))
             .sum::<u128>();
         assert_eq!(even_squared_deviation, 1_861_136);
+    }
+
+    #[test]
+    fn class_mobius_distribution_matches_independent_factorization() {
+        let limits = HayesLimits::default();
+        for ell in 1_usize..=5 {
+            let unit_to_index = principal_unit_index_map(ell);
+            for degree in 1_usize..=8 {
+                let report = class_mobius_distribution(ell, degree, limits).unwrap();
+                let mut direct = vec![0_i128; 1_usize << ell];
+                for lower in 0_u64..1_u64 << degree {
+                    let polynomial = (1_u64 << degree) | lower;
+                    let coefficients = (0..=degree)
+                        .map(|index| i128::from((polynomial >> index) & 1))
+                        .collect::<Vec<_>>();
+                    let factors = crate::gfp::factor_berlekamp(&coefficients, 2).unwrap();
+                    let mobius = if factors.iter().any(|(_, multiplicity)| *multiplicity != 1) {
+                        0
+                    } else if factors.len().is_multiple_of(2) {
+                        1
+                    } else {
+                        -1
+                    };
+                    let mut unit = 1_u64;
+                    for prefix_degree in 1..=ell.min(degree) {
+                        if polynomial >> (degree - prefix_degree) & 1 != 0 {
+                            unit |= 1_u64 << prefix_degree;
+                        }
+                    }
+                    direct[unit_to_index[&unit]] += mobius;
+                }
+                assert_eq!(report.values, direct, "ell={ell}, degree={degree}");
+                assert_eq!(
+                    report.values.iter().sum::<i128>(),
+                    if degree == 1 { -2 } else { 0 }
+                );
+            }
+        }
+
+        let odd_endpoint = class_mobius_distribution(8, 17, limits).unwrap();
+        assert_eq!(odd_endpoint.values[0], -22);
+        assert_eq!(
+            odd_endpoint
+                .values
+                .iter()
+                .map(|value| value.unsigned_abs())
+                .max(),
+            Some(48)
+        );
+        assert_eq!(
+            odd_endpoint
+                .values
+                .iter()
+                .map(|value| value * value)
+                .sum::<i128>(),
+            85_072
+        );
+    }
+
+    #[test]
+    fn class_mobius_distribution_declines_invalid_or_ambiguous_inputs() {
+        let limits = HayesLimits::default();
+        assert!(matches!(
+            class_mobius_distribution(0, 3, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            class_mobius_distribution(3, 0, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        let degree_limited = HayesLimits {
+            max_degree: 7,
+            ..limits
+        };
+        assert_eq!(
+            class_mobius_distribution(3, 8, degree_limited),
+            Err(HayesError::ResourceLimit {
+                resource: "degree",
+                requested: 8,
+                limit: 7,
+            })
+        );
+        assert!(matches!(
+            class_mobius_distribution(
+                3,
+                60,
+                HayesLimits {
+                    max_degree: 60,
+                    ..limits
+                }
+            ),
+            Err(HayesError::InvalidParameter(_))
+        ));
     }
 
     #[test]

@@ -496,6 +496,49 @@ that estimate at `q=2`: its bound
 this specialization.  See [A note on exponential-Möbius sums over
 `F_q[t]`](https://arxiv.org/abs/1711.08729), Theorem 1.
 
+### Exact classwise Möbius diagnostic
+
+The parity-breaking quantity can now be inspected without factoring the full
+interval.  If `A_chi(z)` is the class generating polynomial in a Hayes
+character, define
+
+```text
+M_chi(z)=A_chi(z)^(-1)=sum_(d>=0) M_d(chi) z^d.
+```
+
+Its coefficients satisfy the exact recurrence
+
+```text
+M_0(chi)=1,
+M_n(chi)=-sum_(1<=d<=n) A_d(chi) M_(n-d)(chi).
+```
+
+Inverse Fourier transformation makes `M_n(e)` the signed sum of the
+polynomial Möbius function in class `e`.  The new bounded operation
+`axeyum_cas::gf2_hayes::class_mobius_distribution` computes this table with
+two NTT primes, signed CRT reconstruction, the pointwise bound `|M_n(e)|<=2^n`,
+and the global Euler-product controls
+
+```text
+sum_e M_1(e)=-2,
+sum_e M_n(e)=0  (n>1).
+```
+
+An algebraically separate Berlekamp-factorization test checks every class for
+`1<=ell<=5` and `1<=n<=8`.  At `(ell,n)=(8,17)` the identity value is `-22`,
+the largest class magnitude is `48`, and the squared `L^2` norm is `85072`.
+These are finite diagnostics, not a Möbius cancellation theorem.
+
+This also sharpens the boundary on the new Kloosterman result.  The
+stationary-phase bound controls the **unweighted** distribution of one product
+of intervals.  A Vaughan identity introduces Möbius-derived weights, and an
+unweighted pointwise multiplicity estimate does not bound an arbitrary
+weighted bilinear form.  A valid completion must either prove a weighted
+binary bilinear estimate, exploit the special Möbius recurrence above, or
+retain cancellation across the orders of the centered logarithm.  Merely
+inserting the unweighted Kloosterman number into an odd-characteristic Vaughan
+proof would be invalid.
+
 ### Exact Type-II product energy
 
 The first bilinear quantity beyond the pointwise sieve has a closed form.  In

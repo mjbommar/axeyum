@@ -104,6 +104,8 @@ and invalid/resource-limited calls decline before a transform allocation.
   than a proof dependency.
 - Axeyum gains a native pointwise Type-II bound stronger than the previously
   recorded energy alone.
-- The remaining paper obligation is narrower: insert this pointwise bound into
-  a valid fixed-order prime decomposition, or prove a separate endpoint
-  estimate.  No universal Lemire fact is credited by this ADR.
+- The remaining paper obligation is narrower but still weighted: a valid
+  fixed-order prime decomposition needs a Möbius-weighted bilinear estimate;
+  this unweighted pointwise bound cannot simply replace it.  The alternative
+  is a separate aggregate endpoint estimate.  No universal Lemire fact is
+  credited by this ADR.
