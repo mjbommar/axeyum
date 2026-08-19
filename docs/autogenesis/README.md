@@ -120,6 +120,7 @@ compounding, not automation theatre.
 | [First nursery fact admission](21-first-mathlib-nursery-admission.md) | Did the registered operation durably establish its frozen train fact through the ordinary crash-safe ledger protocol? |
 | [Reflexivity coverage census](22-mathlib-reflexivity-coverage.md) | Where do all train/development rows stop under the current proof-isolated adapter and bounded reflexivity grammar? |
 | [Factorial-zero family registration](23-factorial-zero-family-registration.md) | Can one checked operation family cover a second frozen fact without broadening admission authority beyond exact source-bound rows? |
+| [Factorial-zero family admission](24-factorial-zero-family-admission.md) | Did the second exact family member survive ordinary selection, crash recovery, settled replay, and clean-room reproduction? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

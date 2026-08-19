@@ -81,6 +81,7 @@ step autogenesis-statement-reflexivity-tests python3 -m unittest scripts.tests.t
 step autogenesis-statement-reflexivity python3 scripts/check-autogenesis-statement-reflexivity.py
 step autogenesis-statement-reflexivity-admission-tests python3 -m unittest scripts.tests.test_check_autogenesis_statement_reflexivity_admission
 step autogenesis-statement-reflexivity-admission python3 scripts/check-autogenesis-statement-reflexivity-admission.py
+step autogenesis-factorial-zero-admission python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-factorial-zero-admission-v1.json
 step autogenesis-reflexivity-coverage-rust cargo test -p axeyum-lean-import --example statement_reflexivity_coverage
 step autogenesis-reflexivity-coverage-input-tests python3 -m unittest scripts.tests.test_create_autogenesis_reflexivity_coverage_input
 step autogenesis-reflexivity-coverage-tests python3 -m unittest scripts.tests.test_check_autogenesis_reflexivity_coverage

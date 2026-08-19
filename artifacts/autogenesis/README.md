@@ -95,6 +95,16 @@ shared authority shortcut:
 python3 scripts/check-autogenesis-factorial-zero-family.py
 ```
 
+`mathlib-factorial-zero-admission-v1.json` binds the second family member's
+clean-commit execution, crash-recovered ledger transition, complete external
+archive, and detached-worktree replay. It uses the same generic admission
+verifier as the first member but supplies its own canonical result manifest:
+
+```sh
+python3 scripts/check-autogenesis-statement-reflexivity-admission.py \
+  --manifest artifacts/autogenesis/mathlib-factorial-zero-admission-v1.json
+```
+
 `mathlib-statement-source-v1.json` binds the external statement-only Mathlib
 v4.30.0 inventory. Bulk NDJSON stays on `/nas3`; Git retains the extractor,
 source identity, selection policy, and small derived candidate view. Neither an

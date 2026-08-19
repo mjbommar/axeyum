@@ -2,12 +2,12 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Census: 114 adapter / 15 producer / 7 kernel / 2 admissible
-(`54d57ddc1`; [evidence](../../autogenesis/README.md)).
+**Status:** factorial-zero operation reused; 2/2 family facts durably admitted
+(`86cb7d274`; [evidence](../../autogenesis/README.md)).
 
-**Next:** reusable factorial-zero admission; specify a proof-free type slice.
-Held-out stays sealed.
+**Next:** specify and prototype a proof-free type slice for the 114 adapter
+rejections. Held-out stays sealed.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-19 | `54d57ddc1` | Coverage bound |
+| 2026-08-19 | `86cb7d274` | Factorial family reused |

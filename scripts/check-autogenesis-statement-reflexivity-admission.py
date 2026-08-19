@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import importlib.util
 import json
@@ -296,8 +297,8 @@ def validate_objects(
         raise AdmissionResultError("admission result semantics changed")
 
 
-def validate() -> dict[str, Any]:
-    manifest = load(MANIFEST)
+def validate(manifest_path: pathlib.Path = MANIFEST) -> dict[str, Any]:
+    manifest = load(manifest_path)
     if (
         manifest.get("schema_version") != 1
         or manifest.get("kind")
@@ -348,8 +349,20 @@ def validate() -> dict[str, Any]:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", type=pathlib.Path, default=MANIFEST)
+    args = parser.parse_args()
     try:
-        manifest = validate()
+        manifest_path = args.manifest.resolve()
+        expected_root = (ROOT / "artifacts/autogenesis").resolve()
+        if (
+            manifest_path.parent != expected_root
+            or manifest_path.suffix != ".json"
+        ):
+            raise AdmissionResultError(
+                "result manifest must be one canonical autogenesis artifact"
+            )
+        manifest = validate(manifest_path)
         identities = manifest["identities"]
         print(
             "AUTOGENESIS_STATEMENT_REFLEXIVITY_ADMISSION_OK|"
