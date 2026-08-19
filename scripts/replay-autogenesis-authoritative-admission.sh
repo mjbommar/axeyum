@@ -70,7 +70,13 @@ python3 scripts/create-autogenesis-readiness-delta.py \
   --frontier-after "$retained/frontier-after.json" \
   --verify "$retained/readiness.json" >/dev/null
 
-scratch=$(mktemp -d /tmp/axeyum-authoritative-replay.XXXXXX)
+scratch_parent=${AXEYUM_AUTOGENESIS_REPLAY_SCRATCH_ROOT:-/tmp}
+scratch_parent=$(realpath "$scratch_parent")
+[ -d "$scratch_parent" ] && [ -w "$scratch_parent" ] || {
+  echo "AUTOGENESIS_AUTHORITATIVE_REPLAY_ERROR|scratch root must be an existing writable directory" >&2
+  exit 1
+}
+scratch=$(mktemp -d "$scratch_parent/axeyum-authoritative-replay.XXXXXX")
 checkout="$scratch/checkout"
 fresh="$scratch/fresh"
 mkdir -p "$fresh"
@@ -79,7 +85,7 @@ cleanup() {
     git -C "$source_root" worktree remove --force "$checkout" >/dev/null 2>&1 || true
   fi
   case "$scratch" in
-    /tmp/axeyum-authoritative-replay.*) rm -rf "$scratch" ;;
+    "$scratch_parent"/axeyum-authoritative-replay.*) rm -rf "$scratch" ;;
   esac
 }
 trap cleanup EXIT
