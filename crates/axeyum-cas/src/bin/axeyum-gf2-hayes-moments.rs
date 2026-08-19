@@ -1,6 +1,8 @@
 //! Exact second-moment diagnostic for the Lemire/Hayes conductor families.
 
-use axeyum_cas::gf2_hayes::{HayesLimits, exact_conductor_second_moment};
+use axeyum_cas::gf2_hayes::{
+    HayesLimits, exact_conductor_second_moment, identity_class_fourier_variance,
+};
 
 const DEFAULT_ELL: usize = 12;
 const MAX_ELL: usize = 16;
@@ -36,8 +38,13 @@ fn run() -> Result<(), String> {
             candidate &= moment.proves_square_root_layer_bound();
             rows.push(format!("{}:{}", level, moment.value));
         }
+        let variance = identity_class_fourier_variance(ell, degree, limits)
+            .map_err(|error| error.to_string())?;
         println!(
-            "GF2_HAYES_MOMENTS|status=PASS|ell={ell}|degree={degree}|exact=two_ntt_primes_plus_crt|all_second_moments_meet_cauchy_threshold={candidate}|moments={}",
+            "GF2_HAYES_MOMENTS|status=PASS|ell={ell}|degree={degree}|exact=two_ntt_primes_plus_crt|all_second_moments_meet_cauchy_threshold={candidate}|uniform_mean={}|total_squared_deviation={}|full_family_parseval_proves_identity_positive={}|moments={}",
+            variance.uniform_mean,
+            variance.total_squared_deviation,
+            variance.proves_identity_class_positive(),
             rows.join(",")
         );
     }

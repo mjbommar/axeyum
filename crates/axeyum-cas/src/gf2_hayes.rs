@@ -365,6 +365,43 @@ impl ExactConductorSecondMoment {
     }
 }
 
+/// Exact full-family Parseval diagnostic for one Hayes coefficient level.
+///
+/// If `N_e(degree)` is the Mangoldt population of the principal-unit class
+/// `e` and `mu = 2^(degree-ell)`, then `total_squared_deviation` is
+///
+/// ```text
+/// sum_e (N_e(degree) - mu)^2
+///   = 2^(-ell) sum_(chi != 1) |S_chi(degree)|^2.
+/// ```
+///
+/// In particular, the identity class is nonempty whenever the total squared
+/// deviation is strictly smaller than `mu^2`.  This sufficient condition is
+/// deliberately reported separately from the exact value: failure of the
+/// condition is not a counterexample to identity-class positivity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IdentityClassFourierVariance {
+    /// Number of prescribed leading zero coefficients.
+    pub ell: usize,
+    /// Extension degree `n`.
+    pub degree: usize,
+    /// Uniform class mean `2^(degree-ell)`.
+    pub uniform_mean: u128,
+    /// `sum_e (N_e(degree) - uniform_mean)^2` over all `2^ell` classes.
+    pub total_squared_deviation: u128,
+}
+
+impl IdentityClassFourierVariance {
+    /// Whether the exact Parseval value forces the identity class positive.
+    #[must_use]
+    pub fn proves_identity_class_positive(self) -> bool {
+        let Some(mean_squared) = self.uniform_mean.checked_mul(self.uniform_mean) else {
+            return false;
+        };
+        self.total_squared_deviation < mean_squared
+    }
+}
+
 /// Return the exact cyclic structure used by the finite Fourier transform.
 ///
 /// # Errors
@@ -793,6 +830,64 @@ pub fn exact_conductor_second_moment(
         level,
         degree,
         value: exact,
+    })
+}
+
+/// Compute the exact full-family squared deviation from uniformity.
+///
+/// The nontrivial character group is partitioned by exact conductor.  This
+/// routine sums those exact second moments and divides by the principal-unit
+/// group order using Parseval.  Exact divisibility is checked rather than
+/// assumed.
+///
+/// # Errors
+///
+/// Returns any typed admission or CRT error from the conductor moments, an
+/// overflow error outside the exact `u128` result domain, or an invariant error
+/// if the reconstructed Fourier energy is not divisible by `2^ell`.
+pub fn identity_class_fourier_variance(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<IdentityClassFourierVariance, HayesError> {
+    admit(ell, degree, limits)?;
+    let shift = u32::try_from(ell).map_err(|_| {
+        HayesError::InvalidParameter("ell exceeds the exact u128 shift domain".to_owned())
+    })?;
+    let group_order = 1_u128.checked_shl(shift).ok_or_else(|| {
+        HayesError::InvalidParameter("ell exceeds the exact u128 shift domain".to_owned())
+    })?;
+    let mean_shift = degree.checked_sub(ell).ok_or_else(|| {
+        HayesError::Invariant("admission accepted degree smaller than ell".to_owned())
+    })?;
+    let mean_shift = u32::try_from(mean_shift).map_err(|_| {
+        HayesError::InvalidParameter("degree-ell exceeds the exact u128 shift domain".to_owned())
+    })?;
+    let uniform_mean = 1_u128.checked_shl(mean_shift).ok_or_else(|| {
+        HayesError::InvalidParameter("degree-ell exceeds the exact u128 shift domain".to_owned())
+    })?;
+
+    let mut fourier_energy = 0_u128;
+    for level in 1..=ell {
+        fourier_energy = fourier_energy
+            .checked_add(exact_conductor_second_moment(level, degree, limits)?.value)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "full-family Fourier energy exceeds the exact u128 result domain".to_owned(),
+                )
+            })?;
+    }
+    if !fourier_energy.is_multiple_of(group_order) {
+        return Err(HayesError::Invariant(
+            "full-family Fourier energy is not divisible by the group order".to_owned(),
+        ));
+    }
+
+    Ok(IdentityClassFourierVariance {
+        ell,
+        degree,
+        uniform_mean,
+        total_squared_deviation: fourier_energy / group_order,
     })
 }
 
@@ -1299,6 +1394,20 @@ mod tests {
                     .to_owned()
             ))
         );
+    }
+
+    #[test]
+    fn full_family_parseval_diagnostic_is_exact_and_fail_closed() {
+        let limits = HayesLimits::default();
+        let odd = identity_class_fourier_variance(8, 17, limits).unwrap();
+        assert_eq!(odd.uniform_mean, 512);
+        assert_eq!(odd.total_squared_deviation, 693_360);
+        assert!(!odd.proves_identity_class_positive());
+
+        let even = identity_class_fourier_variance(8, 18, limits).unwrap();
+        assert_eq!(even.uniform_mean, 1_024);
+        assert_eq!(even.total_squared_deviation, 1_861_136);
+        assert!(!even.proves_identity_class_positive());
     }
 
     #[test]

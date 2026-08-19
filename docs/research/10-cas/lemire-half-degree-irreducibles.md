@@ -674,6 +674,31 @@ cannot be the missing theorem. A successful estimate must aggregate levels
 differently, exploit more endpoint structure, or allow a rigorously controlled
 larger constant; unweighted Cauchy--Schwarz cannot establish those refinements.
 
+Nor does applying Parseval only after combining every conductor level rescue
+the unweighted argument.  The reusable CAS operation now computes exactly
+
+```text
+V_(ell,n) = sum_e (N_n(e)-2^(n-ell))^2
+          = 2^(-ell) sum_(chi != 1) abs(S_chi(n))^2
+```
+
+by summing the exact-conductor energies, checking divisibility by `2^ell`, and
+returning a fail-closed sufficient test `V_(ell,n)<2^(2(n-ell))`.  At the two
+`ell=8` endpoints it gives
+
+```text
+(n, uniform mean, V_(8,n)) = (17, 512, 693360),
+                              (18, 1024, 1861136).
+```
+
+Both values exceed the square of the uniform mean, so the raw full-family
+Parseval/Cauchy estimate cannot even force the identity Mangoldt population to
+be positive at these controls.  This does not say that the population is zero,
+and it does not refute a weighted or cancellation-preserving moment argument;
+it records exactly where the unweighted sufficient inequality fails.  The
+Rust two-prime/CRT calculation and the independent integer group-ring checker
+agree on both integers.
+
 The exact algebra is no longer trapped in that executable. ADR-0482 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
 identity-class populations, endpoint discrepancies, conductor layers, and the

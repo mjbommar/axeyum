@@ -236,6 +236,18 @@ def exact_conductor_second_moment(level: int, degree: int) -> int:
     return current_energy - previous_energy
 
 
+def identity_class_fourier_variance(ell: int, degree: int) -> tuple[int, int]:
+    """Return the uniform mean and full squared deviation via Parseval."""
+    energy = sum(
+        exact_conductor_second_moment(level, degree)
+        for level in range(1, ell + 1)
+    )
+    group_order = 1 << ell
+    if energy % group_order:
+        fail("full-family Fourier energy is not divisible by the group order")
+    return 1 << (degree - ell), energy // group_order
+
+
 def translation_paired_conductor_level(degree: int) -> int:
     """Return 2^v_2(degree), the layer paired by alpha -> alpha + 1."""
     if degree <= 0:
@@ -381,6 +393,20 @@ def main() -> None:
     cauchy_bound = 1 << (8 - 1 + 17)
     if moment <= cauchy_bound:
         fail("second-moment falsifier no longer exceeds the Cauchy bound")
+    variance_controls = []
+    for degree, expected_mean, expected_deviation in (
+        (17, 512, 693_360),
+        (18, 1_024, 1_861_136),
+    ):
+        mean, deviation = identity_class_fourier_variance(8, degree)
+        if (mean, deviation) != (expected_mean, expected_deviation):
+            fail(
+                f"ell=8 degree={degree} Parseval diagnostic differs: "
+                f"{mean}, {deviation}"
+            )
+        if deviation < mean * mean:
+            fail("full-family Parseval unexpectedly proves identity positivity")
+        variance_controls.append(f"{degree}:{mean}:{deviation}")
     _, level_five = mangoldt_class_distribution(5, 45)
     _, level_four = mangoldt_class_distribution(4, 45)
     normalized_layer = 2 * level_five[0] - level_four[0]
@@ -444,6 +470,8 @@ def main() -> None:
         f"counts={','.join(str(value) for value in observed)}|"
         f"level8_degree17_second_moment={moment}|"
         "generic_cauchy_route=false|"
+        f"full_family_parseval_controls={','.join(variance_controls)}|"
+        "full_family_parseval_route=false|"
         f"level5_degree45_normalized_layer={normalized_layer}|"
         "constant_one_layer_target=false|"
         "centered_endpoint_log=PASS|"
