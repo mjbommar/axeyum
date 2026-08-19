@@ -652,7 +652,7 @@ The source dependency audit is:
 | Lemma 3.14 | fourth inverse-additive energy | 2023 Lemma 5.3 is arbitrary-characteristic; the remaining divisor and congruence argument is characteristic-free | reprove with explicit constants or a special `x^r` estimate |
 | Lemmas 4.1--4.2 | Hölder/Cauchy--Schwarz bilinear bounds | characteristic-free once inverse energy is supplied | reusable |
 | Vaughan reduction | splits into Type I and Type II | formal convolution is characteristic-free | retain, but audit every resulting range |
-| Theorem 2.3 proof, Type-I Cases 1, 2, and 5 | completion/incomplete Kloosterman input | inherits the odd-only square-root bound | does not survive unchanged with the present binary maximum |
+| Theorem 2.3 proof, Type-I Cases 1, 2, and 5 | completion/incomplete Kloosterman input | inherits the odd-only square-root bound | a full binary port does not survive unchanged; Case 5 is outside the Lemire cutoff domain |
 | Theorem 2.3 proof, balanced Cases 3--4 and Type II | inverse energy and Hölder | plausibly characteristic-free | reusable after an explicit energy reproof |
 
 Here is the decisive Type-I calculation.  For effective modulus degree `r0`,
@@ -676,6 +676,20 @@ fraction of one bit for some degrees, but never `delta n`.  This is a precise
 failure of the proposed port, not evidence against Bagshaw's odd-
 characteristic theorem.
 
+That obstruction must not be over-applied.  Case 5 itself assumes `n<=r0`.
+For the Lemire bridge, the cumulative cutoff is always strictly larger than
+the original modulus degree:
+
+```text
+N=k+1=n0-d+1 > ell+1 >= r0       (1<=d<ell).
+```
+
+Consequently Case 5 is empty at every Lemire endpoint.  It prevents citing a
+verbatim all-range binary version of Bagshaw's theorem, but it is **not** an
+additional endpoint obligation.  In the remaining Type-I cases, inserting the
+binary exponent still gives a power saving in the restricted `N>r0` domain;
+the endpoint calibration below is therefore the relevant bottleneck.
+
 There is a second, endpoint-facing ledger.  Put `r=ell+1`, let the endpoint
 degree be `n0`, and set `k=n0-d`.  Since
 `H_k=C_(k+1)-2C_k+C_(k-1)`, the largest cumulative cutoff is `N=k+1`.
@@ -696,6 +710,28 @@ operations `binary_type_one_case_five_exponent` and
 `endpoint_inverse_mobius_exponent_calibration` replay both ledgers with exact
 integer numerators over denominators six and 48, respectively, while
 deliberately granting no theorem credit.
+
+An older literature phrase needs similar care.  Gao--Howell--Panario (1999)
+say that Hsu proved existence with the lower or upper "half" of the
+coefficients prescribed, and a 2006 AIM problem list says the `deg g<=n/2`
+case is proved.  The exact Hsu inequality, reproduced as Theorem I.4 by Car,
+has a square-root error multiplied by the number `k` of prescribed leading
+coefficients.  With no congruence modulus, its lower bound has the shape
+
+```text
+n pi(n;k,R)
+  >= 2^(n-k) - (1-2^(-k))(k+3) 2^(n/2).
+```
+
+Car's improved corollary still has error `(k+1)2^(n/2)`.  At the Lemire
+boundary, `k=(n-1)/2` for odd `n` and `k=n/2-1` for even `n`; neither lower
+bound is positive for the unbounded degrees at issue.  Garefalakis's later
+summary correctly describes the effective range as roughly
+`n/2-log_2(n)`.  Thus "half" in the survey sentence is asymptotic shorthand,
+not a published proof of the exact endpoint.  See Hsu,
+[*The Distribution of Irreducible Polynomials in GF(q)[t]*](https://doi.org/10.1006/jnth.1996.0139),
+and Car's explicit restatement in
+[*Distribution des polynomes irreductibles dans F_q[T]*](https://www.impan.pl/shop/publication/transaction/download/product/110720?download.pdf).
 
 For `F=x^(ell+1)` over `GF(2)`, Bagshaw's set of invertible polynomials with
 `deg h<d+1` is exactly `V_d`.  Therefore his fourth-order inverse energy is

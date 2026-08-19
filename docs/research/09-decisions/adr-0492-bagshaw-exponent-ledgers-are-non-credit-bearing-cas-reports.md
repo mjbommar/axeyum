@@ -48,6 +48,11 @@ At `(n,r0)=(300,320)` its exponent is `306.5`, exceeding trivial by `6.5`.
 Residue-class rounding can yield a constant one-sixth saving, but not a
 uniform power saving.
 
+This is a boundary on a full binary port, not a Lemire endpoint blocker.
+Bagshaw's Case 5 assumes `n<=r0`, whereas every Lemire cumulative cutoff in
+the second report satisfies `N>ell+1>=r0`.  The endpoint report exposes this
+domain separation explicitly.
+
 For `ell=300`, the zero-epsilon endpoint calibration first lies strictly below
 `2^ell` at `d=283` for degree 601 and at `d=284` for degree 602.  At the prior
 odd boundary, `N=320` and `15N/16=300` exactly, so strict closure fails.  Unit
@@ -66,10 +71,10 @@ tests pin these transitions and reject invalid parameter domains.
 
 ## Consequences
 
-- The failed direct port is localized to a precise Vaughan range rather than
-  described as a vague characteristic-two issue.
+- The failed full-range port is localized to a precise Vaughan range, and
+  that range is explicitly marked empty for the Lemire endpoint cutoffs.
 - The large-`d` tail that a future binary inverse-Möbius theorem could cover is
   distinguished from the linear-sized uncovered range.
-- The next analytic obligation must improve the Type-I treatment, preserve
-  cancellation across `d`, or use the Berlekamp/Artin--Schreier structure; the
-  existing wild-Kloosterman maximum cannot be substituted unchanged.
+- The Lemire-specific analytic obligation is the linear-sized low/medium-`d`
+  block.  It must preserve cancellation across `d` or use the
+  Berlekamp/Artin--Schreier structure; Case 5 is not added to that obligation.

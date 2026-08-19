@@ -393,6 +393,11 @@ pub struct EndpointInverseMobiusExponentCalibrationReport {
     pub exact_mobius_degree: usize,
     /// Largest cumulative cutoff needed by `H_k=C_(k+1)-2C_k+C_(k-1)`.
     pub cumulative_cutoff: usize,
+    /// Whether the cutoff exceeds the modulus degree `ell+1`.
+    ///
+    /// This is always true at the two Lemire endpoints.  Bagshaw's Type-I
+    /// Case 5 requires `N<=r0<=ell+1`, so it is empty for these reports.
+    pub cumulative_cutoff_exceeds_modulus: bool,
     /// Numerator `45N` for `15N/16`, over denominator 48.
     pub fifteen_sixteenths_exponent_48ths: u128,
     /// Numerator `32N+12r` for `2N/3+r/4`, over denominator 48.
@@ -1489,6 +1494,7 @@ pub fn endpoint_inverse_mobius_exponent_calibration(
         interval_degree,
         exact_mobius_degree,
         cumulative_cutoff,
+        cumulative_cutoff_exceeds_modulus: cumulative_cutoff > modulus_degree,
         fifteen_sixteenths_exponent_48ths,
         mixed_exponent_48ths,
         bound_exponent_48ths,
@@ -3849,6 +3855,7 @@ mod tests {
 
         let odd_boundary =
             endpoint_inverse_mobius_exponent_calibration(ell, odd, first_odd - 1).unwrap();
+        assert!(odd_boundary.cumulative_cutoff_exceeds_modulus);
         assert_eq!(odd_boundary.cumulative_cutoff, 320);
         assert_eq!(odd_boundary.fifteen_sixteenths_exponent_48ths, 14_400);
         assert_eq!(odd_boundary.deficit_48ths, 0);
@@ -3857,6 +3864,16 @@ mod tests {
         assert_eq!(odd_first.cumulative_cutoff, 319);
         assert_eq!(odd_first.deficit_48ths, 45);
         assert!(odd_first.strict_pointwise_closure);
+
+        for endpoint in [odd, even] {
+            for degree in 1..ell {
+                assert!(
+                    endpoint_inverse_mobius_exponent_calibration(ell, endpoint, degree)
+                        .unwrap()
+                        .cumulative_cutoff_exceeds_modulus
+                );
+            }
+        }
 
         assert!(matches!(
             endpoint_inverse_mobius_exponent_calibration(ell, odd - 1, 1),

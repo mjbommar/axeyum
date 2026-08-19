@@ -45,11 +45,13 @@ energy is now a separate native diagnostic with a direct collision oracle;
 fleet rows through level 21 suggest, but do not prove, a no-wrap regime.  The
 source dependency table and exact exponent ledger are now complete.  They
 show that direct substitution of the proved binary wild-Kloosterman maximum
-loses all uniform saving in Bagshaw's Type-I Case 5, while even the published
+loses all uniform saving in Bagshaw's Type-I Case 5.  Exact variable mapping
+also shows that Case 5 is empty here because every Lemire cutoff has
+`N>ell+1>=r0`.  The actual endpoint gap is that even the published
 zero-epsilon exponent pair would pointwise cover only the tail
-`d>(14/15)ell+O(1)`.  The next step is therefore a replacement estimate on
-the uncovered Type-I/low-`d` range, not a verbatim Bagshaw port or more
-normalization guesswork.
+`d>(14/15)ell+O(1)`.  The next step is therefore a cancellation-preserving
+estimate for the low/medium-`d` block, not a verbatim all-range Bagshaw port
+or more normalization guesswork.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
