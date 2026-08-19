@@ -1286,8 +1286,9 @@ pub struct BinaryBerlekampInversePhaseReport {
 ///
 /// On the squarefree locus this compares three equivalent signs: direct
 /// factorization, the Stickelberger--Swan integral discriminant modulo eight,
-/// and the Arf invariant of the second trace form.  Squareful inputs retain
-/// Möbius value zero and do not receive an Arf sign.
+/// and the Arf invariant of the second trace form.  The Kronecker character
+/// of the discriminant also encodes squareful inputs as Möbius value zero;
+/// those inputs still do not receive an Arf sign.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BinarySecondTraceArfReport {
     /// Packed monic binary polynomial.
@@ -1298,6 +1299,12 @@ pub struct BinarySecondTraceArfReport {
     pub mobius: i8,
     /// Integral-lift discriminant modulo eight on the squarefree locus.
     pub integral_discriminant_mod_eight: Option<u8>,
+    /// Whether the integral discriminant is odd, checked independently by
+    /// the binary derivative gcd.
+    pub integral_discriminant_is_odd: bool,
+    /// Kronecker character `(2/Disc(F))` in `{-1,0,1}`.  The value is zero
+    /// for an even discriminant, so it includes the squareful Möbius zero.
+    pub kronecker_two_discriminant: i8,
     /// Dimension of the nondegenerate second-trace space: the whole algebra
     /// in even degree and its trace-zero subspace in odd degree.
     pub trace_form_dimension: usize,
@@ -1311,6 +1318,28 @@ pub struct BinarySecondTraceArfReport {
     pub arf_degree_correction: u8,
     /// Common Berlekamp/Swan phase bit on the squarefree locus.
     pub sign_phase: Option<u8>,
+}
+
+/// Exact four-term additive Fourier expansion of the real character modulo
+/// eight.
+///
+/// Coefficients are in the basis `1,zeta_8,zeta_8^2,zeta_8^3`, using
+/// `zeta_8^4=-1`.  The Gauss identity is
+///
+/// ```text
+/// sum_(a=1,3,5,7) (2/a) zeta_8^(aD)
+///   = 2 (2/D) (zeta_8-zeta_8^3).
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryDyadicCharacterFourierReport {
+    /// Input residue modulo eight.
+    pub residue: u8,
+    /// Kronecker character `(2/residue)`.
+    pub kronecker_two: i8,
+    /// Exact left-hand side in the cyclotomic basis.
+    pub gauss_sum_basis: [i8; 4],
+    /// Exact right-hand side in the same basis.
+    pub expected_basis: [i8; 4],
 }
 
 impl BinaryBerlekampInversePhaseReport {
@@ -4875,8 +4904,62 @@ fn binary_integral_discriminant_mod_eight(
     }
 }
 
-/// Compare factorization, Stickelberger--Swan, and second-trace Arf signs for
-/// one monic constant-one binary polynomial.
+fn binary_formal_derivative(polynomial: u64, degree: usize) -> u64 {
+    (1..=degree)
+        .filter(|exponent| !exponent.is_multiple_of(2))
+        .filter(|exponent| polynomial >> exponent & 1 != 0)
+        .fold(0_u64, |derivative, exponent| {
+            derivative | (1_u64 << (exponent - 1))
+        })
+}
+
+const fn kronecker_two_mod_eight(residue: u8) -> i8 {
+    match residue % 8 {
+        1 | 7 => 1,
+        3 | 5 => -1,
+        _ => 0,
+    }
+}
+
+/// Expand the real dyadic character as four exact additive phases in
+/// `Z[zeta_8]`.
+///
+/// # Errors
+///
+/// Returns an invariant failure only if the exact cyclotomic Gauss identity
+/// fails internally.
+pub fn binary_dyadic_character_fourier_report(
+    residue: u8,
+) -> Result<BinaryDyadicCharacterFourierReport, HayesError> {
+    let residue = residue % 8;
+    let kronecker_two = kronecker_two_mod_eight(residue);
+    let mut gauss_sum_basis = [0_i8; 4];
+    for (multiplier, coefficient) in [(1_u8, 1_i8), (3, -1), (5, -1), (7, 1)] {
+        let exponent = usize::from((multiplier * residue) % 8);
+        let (basis, sign) = if exponent < 4 {
+            (exponent, 1)
+        } else {
+            (exponent - 4, -1)
+        };
+        gauss_sum_basis[basis] += sign * coefficient;
+    }
+    let expected_basis = [0, 2 * kronecker_two, 0, -2 * kronecker_two];
+    if gauss_sum_basis != expected_basis {
+        return Err(HayesError::Invariant(
+            "dyadic character Fourier identity failed".to_owned(),
+        ));
+    }
+    Ok(BinaryDyadicCharacterFourierReport {
+        residue,
+        kronecker_two,
+        gauss_sum_basis,
+        expected_basis,
+    })
+}
+
+/// Compare factorization, the dyadic discriminant character,
+/// Stickelberger--Swan, and second-trace Arf signs for one monic constant-one
+/// binary polynomial.
 ///
 /// # Errors
 ///
@@ -4897,9 +4980,23 @@ pub fn binary_second_trace_arf_report(
         ));
     }
     let mobius = binary_polynomial_mobius_from_bits(polynomial, degree)?;
-    let discriminant = (mobius != 0)
+    let derivative = binary_formal_derivative(polynomial, degree);
+    let integral_discriminant_is_odd = polynomial_gcd_packed(polynomial, derivative) == 1;
+    if integral_discriminant_is_odd != (mobius != 0) {
+        return Err(HayesError::Invariant(
+            "discriminant parity and factorization disagree on squarefreeness".to_owned(),
+        ));
+    }
+    let discriminant = integral_discriminant_is_odd
         .then(|| binary_integral_discriminant_mod_eight(polynomial, degree))
         .transpose()?;
+    let kronecker_two_discriminant = discriminant.map_or(0, kronecker_two_mod_eight);
+    let degree_sign = if degree.is_multiple_of(2) { 1 } else { -1 };
+    if degree_sign * kronecker_two_discriminant != mobius {
+        return Err(HayesError::Invariant(
+            "dyadic discriminant character and polynomial Mobius value disagree".to_owned(),
+        ));
+    }
     let basis = binary_second_trace_space_basis(polynomial, degree)?;
     let dimension = basis.len();
     let polar_rows = basis
@@ -4951,6 +5048,8 @@ pub fn binary_second_trace_arf_report(
         degree,
         mobius,
         integral_discriminant_mod_eight: discriminant,
+        integral_discriminant_is_odd,
+        kronecker_two_discriminant,
         trace_form_dimension: dimension,
         polar_rank,
         radical_dimension: dimension - polar_rank,
@@ -9310,29 +9409,50 @@ mod tests {
 
     #[test]
     fn second_trace_arf_and_swan_signs_match_binary_factorization() {
+        for residue in 0_u8..8 {
+            let fourier = binary_dyadic_character_fourier_report(residue).unwrap();
+            assert_eq!(fourier.residue, residue);
+            assert_eq!(fourier.gauss_sum_basis, fourier.expected_basis);
+            assert_eq!(
+                fourier.kronecker_two,
+                match residue {
+                    1 | 7 => 1,
+                    3 | 5 => -1,
+                    _ => 0,
+                }
+            );
+        }
         assert!(binary_second_trace_arf_report(1, 0).is_err());
         assert!(binary_second_trace_arf_report(0b10, 1).is_err());
         let quadratic = binary_second_trace_arf_report(0b111, 2).unwrap();
         assert_eq!(quadratic.mobius, -1);
         assert_eq!(quadratic.integral_discriminant_mod_eight, Some(5));
+        assert!(quadratic.integral_discriminant_is_odd);
+        assert_eq!(quadratic.kronecker_two_discriminant, -1);
         assert_eq!(quadratic.arf_invariant, Some(1));
         assert_eq!(quadratic.arf_degree_correction, 0);
         assert_eq!(quadratic.sign_phase, Some(1));
         let irreducible_cubic = binary_second_trace_arf_report(0b1011, 3).unwrap();
         assert_eq!(irreducible_cubic.mobius, -1);
         assert_eq!(irreducible_cubic.integral_discriminant_mod_eight, Some(1));
+        assert!(irreducible_cubic.integral_discriminant_is_odd);
+        assert_eq!(irreducible_cubic.kronecker_two_discriminant, 1);
         assert_eq!(irreducible_cubic.arf_invariant, Some(1));
         assert_eq!(irreducible_cubic.arf_degree_correction, 1);
         assert_eq!(irreducible_cubic.sign_phase, Some(0));
         let reducible_cubic = binary_second_trace_arf_report(0b1001, 3).unwrap();
         assert_eq!(reducible_cubic.mobius, 1);
         assert_eq!(reducible_cubic.integral_discriminant_mod_eight, Some(5));
+        assert!(reducible_cubic.integral_discriminant_is_odd);
+        assert_eq!(reducible_cubic.kronecker_two_discriminant, -1);
         assert_eq!(reducible_cubic.arf_invariant, Some(0));
         assert_eq!(reducible_cubic.arf_degree_correction, 1);
         assert_eq!(reducible_cubic.sign_phase, Some(1));
         let squareful = binary_second_trace_arf_report(0b101, 2).unwrap();
         assert_eq!(squareful.mobius, 0);
         assert_eq!(squareful.integral_discriminant_mod_eight, None);
+        assert!(!squareful.integral_discriminant_is_odd);
+        assert_eq!(squareful.kronecker_two_discriminant, 0);
         assert_eq!(squareful.arf_invariant, None);
         assert_eq!(squareful.sign_phase, None);
         for degree in 1..=10 {
@@ -9350,10 +9470,14 @@ mod tests {
                     }
                 );
                 if report.mobius == 0 {
+                    assert!(!report.integral_discriminant_is_odd);
+                    assert_eq!(report.kronecker_two_discriminant, 0);
                     assert_eq!(report.integral_discriminant_mod_eight, None);
                     assert_eq!(report.arf_invariant, None);
                     assert_eq!(report.sign_phase, None);
                 } else {
+                    assert!(report.integral_discriminant_is_odd);
+                    assert_eq!(report.kronecker_two_discriminant.unsigned_abs(), 1);
                     assert!(matches!(
                         report.integral_discriminant_mod_eight,
                         Some(1 | 5)

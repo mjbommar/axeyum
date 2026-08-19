@@ -1264,7 +1264,45 @@ determinant modulo eight.  It rejects unless factorization, `(Swan sign)`, and
 polynomial through degree ten, while squareful inputs remain explicitly
 weight zero and receive no Arf sign.
 
-This is a better representation of the live sign, but not yet its estimate.
+The discriminant coordinate actually extends the sign formula through those
+zero weights.  Define the real primitive character modulo eight by
+
+```text
+chi_8(D)= 0               if D is even,
+          1               if D=1 or 7 mod 8,
+         -1               if D=3 or 5 mod 8.
+```
+
+Reduction of the integral discriminant is the binary discriminant, so it is
+even exactly when `f` is squareful.  Combining this parity fact with Swan on
+the odd locus gives the universal identity
+
+```text
+mu(f)=(-1)^k chi_8(Disc(F))                             (dyadic Mobius)
+```
+
+for every monic binary `f`, with no separate squarefree indicator.  The CAS
+checks discriminant parity by the packed derivative gcd independently of
+Berlekamp factorization and rejects unless `(dyadic Mobius)` agrees for every
+input through degree ten.
+
+Moreover, if `zeta_8` is a primitive eighth root, the exact Gauss identity
+
+```text
+sum_(a=1,3,5,7) chi_8(a) zeta_8^(aD)
+  = 2 chi_8(D) (zeta_8-zeta_8^3)                       (dyadic Fourier)
+```
+
+rewrites the whole Möbius weight as four additive discriminant phases modulo
+eight.  `binary_dyadic_character_fourier_report` checks all eight residues in
+the integral basis `1,zeta_8,zeta_8^2,zeta_8^3`.  This is the promised
+Artin--Schreier--Witt entry point: a joint fibre sum no longer needs an
+external squarefreeness gate.  What remains is a uniform cancellation theorem
+for these four modulo-eight discriminant phases after the inverse-coset
+constraints are imposed.
+
+The Arf coordinate is a better representation of the live squarefree sign,
+but not yet its estimate.
 For each squarefree `f` the adjusted second-trace space is nondegenerate by
 construction, so its full polar rank merely evaluates the normalized Gauss
 sum back to `mu(f)`.  A saving requires a rank theorem for the **joint**
