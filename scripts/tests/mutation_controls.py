@@ -899,7 +899,18 @@ class Unittest:
 
     def build(self, work: Path, targets: list[str]) -> tuple[bool, str]:
         for target in targets:
-            code, out = _capture([sys.executable, "-m", "py_compile", str(work / target)], work)
+            # A subject need not be Python: `check-kernel-suites.sh` is a shell
+            # gate whose controls are a `unittest` module that shells out to it.
+            # `py_compile` on a shell script reports `SyntaxError` and every
+            # mutation scores DID NOT BUILD -- a whole suite unmeasurable for a
+            # reason that has nothing to do with the mutation. `bash -n` is the
+            # same check on the other side of the boundary: parse, do not run.
+            if target.endswith(".sh"):
+                code, out = _capture(["bash", "-n", str(work / target)], work)
+            elif target.endswith(".py"):
+                code, out = _capture([sys.executable, "-m", "py_compile", str(work / target)], work)
+            else:
+                continue
             if code != 0:
                 return (False, _tail(out))
         # Importing the test module loads the subject without running a test,
@@ -1186,6 +1197,66 @@ SUITES["mutation-controls"] = (
     _SELF_TABLE.SUBJECT,
     _SELF_TABLE.CONTROLS,
     _SELF_TABLE.MUTATIONS,
+)
+
+
+# --------------------------------------------------------------------------
+# `kernel-suite-partition` -- the push-time / real-Lean split of the kernel's
+# integration suites.  Its guards are what make the split safe: a real-Lean
+# suite that no gate owns must fail HERE, because the alternative is a suite the
+# hook stopped running and nothing else picked up.
+# --------------------------------------------------------------------------
+
+SUITES["kernel-suite-partition"] = (
+    "scripts/check-kernel-suites.sh",
+    "scripts.tests.test_check_kernel_suites",
+    [
+        (
+            "discovery found (nearly) nothing",
+            'if [ "$all_count" -lt 2 ]; then',
+            "if false; then",
+        ),
+        (
+            "the real-Lean gate's table is unreadable",
+            'if [ "$gate_count" -eq 0 ] && [ "$lean_count" -gt 0 ]; then',
+            "if false; then",
+        ),
+        (
+            "a real-Lean suite no gate owns",
+            "  if ! printf '%s\\n' \"$gate_suites\" | grep -qxF \"$suite\"; then",
+            "  if false; then",
+        ),
+        (
+            "the gate names a suite that no longer exists",
+            '  if [ ! -f "$TESTS_DIR/$suite.rs" ]; then',
+            "  if false; then",
+        ),
+        (
+            "the gate names a suite that needs no Lean (both halves)",
+            "  if ! printf '%s\\n' \"$lean_suites\" | grep -qxF \"$suite\"; then",
+            "  if false; then",
+        ),
+        (
+            "a suite that resolves its own `lean` instead of the probe",
+            '  grep -qF "$PROBE_MARKER" "$file" && continue',
+            "  continue",
+        ),
+        (
+            "a split with nothing left to run at push time",
+            'if [ "$push_count" -eq 0 ]; then',
+            "if false; then",
+        ),
+        (
+            "a suite that ran ZERO tests",
+            '  if [ "$ran" -lt 1 ]; then',
+            "  if false; then",
+        ),
+        (
+            "the run itself was red",
+            'if [ "$status" -ne 0 ]; then\n  printf \'%s\\n\' "$out" | tail -60 >&2',
+            'if false; then\n  printf \'%s\\n\' "$out" | tail -60 >&2',
+        ),
+    ],
 )
 
 
