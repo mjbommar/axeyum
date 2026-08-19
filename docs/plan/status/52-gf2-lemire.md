@@ -36,16 +36,21 @@ Five single-threaded jobs on s1/s4/s5/s6/s7 produced 400/400 found receipts with
 no exhaustion or candidate limit. `d308c7bc1` admits and gates every child:
 227 trinomials, 172 pentanomials, degree-one `x`, 38,679 candidates total, and a
 maximum of 870 at degree 349. This establishes the finite range `1..=400` under
-both implemented checkers, not the universal theorem.
+both implemented checkers, not the universal theorem. `6aff45e82` records that
+bounded proposition in the fact ledger using the accepted ADR-0481
+`certificate-spec` language. Its canonical proposition is bound to the range
+checker and has mutation controls; it creates no finite-field SMT, CAS-identity,
+or kernel surface and gives the universal conjecture no credit.
 
 **Next.** Prove a genuinely positive aggregate bound for the identity
 principal-unit class at degrees `2 ell+1` and `2 ell+2` (where `ell` is the
 number of prescribed zero coefficients), or find a universal construction.
-Then reconstruct reciprocity and the central lemma through the kernel and fact
-ledger before claiming a universal proof.
+Then reconstruct reciprocity and the central lemma through the kernel before
+promoting the finite ledger fact or claiming a universal proof.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-18 | `6aff45e82` | Added accepted ADR-0481 and a canonical, mutation-checked certificate-spec fact for the dual-replayed degree-1-through-400 result without inventing finite-field SMT or kernel support. |
 | 2026-08-18 | `30a004188` | Audited the tempting Hsu half-coefficient survey claim against the explicit bound and the 2023 Gao follow-up; neither supplies positivity at the exact fixed-`GF(2)` endpoint. |
 | 2026-08-18 | `fd1e8793b` | Added an exact finite principal-unit Fourier oracle using two NTT primes and CRT, verified the sufficient endpoint-discrepancy candidate through `ell=18`, and kept the candidate explicitly outside the theorem and fact ledger. |
 | 2026-08-18 | `d32ebbdb1` | Corrected the half-boundary parameterization, derived the exact integral Hayes recurrence, and gated its identity-class counts against an independent direct Rabin enumeration through degree 20. |
