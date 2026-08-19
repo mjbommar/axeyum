@@ -763,6 +763,33 @@ operations `binary_type_one_case_one_exponent`,
 integer numerators over their stated denominators while deliberately granting
 no theorem credit.
 
+The coarse maximum above is now backed by a source-case table rather than
+standing in for one.  For each endpoint, `endpoint_vaughan_range_table`
+enumerates every convolution order `1<=d<ell`; each order then enumerates
+every effective modulus `1<=r0<=ell+1`, every Type-I split
+`0<=u<=floor(2r0/3)`, and every symmetry-reduced Type-II split
+
+```text
+r0/3 < v <= min(N-r0/3,N/2).
+```
+
+The table records the direct small-modulus line, Type-I Cases 1--3, and all
+three Type-II cases with exact numerators over denominator sixteen.  An
+unassigned split fails construction.  Because `N>ell+1>=r0`, Type-I Cases 4
+and 5 are empty throughout the endpoint table rather than silently omitted.
+
+At `ell=300`, all seven relevant rows are nonempty.  The complete tables for
+degrees 601 and 602 recover the same first strict zero-loss transition as the
+coarse calibration: `d=283` and `d=284`, respectively.  At odd `d=282`,
+`N=320` and the worst exponent is exactly `15N/16=300`, so the deficit is
+zero.  At the next order `N=319`, Type-I Case 3 is worst with exponent
+`4785/16`, leaving only `15/16` of one bit.  This small margin does **not**
+absorb the explicit divisor-envelope `o(r)`, a positive epsilon, constants,
+or the convolution weight `d`.  The exhaustive table closes the range-audit
+gap, but it deliberately remains a non-credit-bearing pointwise diagnostic;
+the proof frontier is still cancellation across the signed Möbius
+convolution.
+
 An older literature phrase needs similar care.  Gao--Howell--Panario (1999)
 say that Hsu proved existence with the lower or upper "half" of the
 coefficients prescribed, and a 2006 AIM problem list says the `deg g<=n/2`

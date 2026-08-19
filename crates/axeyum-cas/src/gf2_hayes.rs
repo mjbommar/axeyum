@@ -703,6 +703,164 @@ pub struct EndpointInverseMobiusExponentCalibrationReport {
     pub strict_pointwise_closure: bool,
 }
 
+/// One source-level Vaughan range in the endpoint Möbius audit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum EndpointVaughanCase {
+    /// Direct arithmetic-progression bound when `16r0<7N`.
+    SmallEffectiveModulus,
+    /// Type-I Case 1: long inner interval, binary complete-sum replacement.
+    TypeOneCaseOne,
+    /// Type-I Case 2: energy/completion max-min range.
+    TypeOneCaseTwo,
+    /// Type-I Case 3: balanced `k=2` bilinear-energy range.
+    TypeOneCaseThree,
+    /// Type-I Case 4: short inner interval and smaller outer variable.
+    TypeOneCaseFour,
+    /// Type-I Case 5: short inner interval and larger outer variable.
+    TypeOneCaseFive,
+    /// Type-II Case 1: both variables between one third and one modulus.
+    TypeTwoCaseOne,
+    /// Type-II Case 2: one variable at least one modulus.
+    TypeTwoCaseTwo,
+    /// Type-II Case 3: both variables at least one modulus.
+    TypeTwoCaseThree,
+}
+
+impl EndpointVaughanCase {
+    const ALL: [Self; 9] = [
+        Self::SmallEffectiveModulus,
+        Self::TypeOneCaseOne,
+        Self::TypeOneCaseTwo,
+        Self::TypeOneCaseThree,
+        Self::TypeOneCaseFour,
+        Self::TypeOneCaseFive,
+        Self::TypeTwoCaseOne,
+        Self::TypeTwoCaseTwo,
+        Self::TypeTwoCaseThree,
+    ];
+}
+
+/// Aggregate coverage and worst main exponent for one Vaughan range.
+///
+/// Exponents are exact numerators over denominator sixteen.  They omit the
+/// explicit subexponential divisor envelope and the caller's eventual
+/// epsilon/constants reserve; the report is a range audit, not endpoint
+/// theorem credit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EndpointVaughanCaseRow {
+    /// Source case represented by this row.
+    pub case: EndpointVaughanCase,
+    /// Number of effective-modulus/variable samples assigned to this case.
+    pub sample_count: u128,
+    /// Largest main exponent numerator over denominator sixteen, if nonempty.
+    pub worst_bound_sixteenths: Option<u128>,
+    /// Effective modulus degree attaining the recorded worst value.
+    pub worst_effective_modulus_degree: Option<usize>,
+    /// Vaughan variable `u` or `v` attaining the recorded worst value.
+    pub worst_split_degree: Option<usize>,
+}
+
+/// Exhaustive endpoint Vaughan range table for one convolution order.
+///
+/// The report covers all `1<=r0<=ell+1`, Type-I splits
+/// `0<=u<=floor(2r0/3)`, and the symmetry-reduced Type-II splits
+/// `r0/3<v<=min(N-r0/3,N/2)`.  The identity frequency `r0=0` is deliberately
+/// separate from Vaughan's coprime-frequency proof.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EndpointVaughanRangeReport {
+    /// Principal-unit level `ell`.
+    pub ell: usize,
+    /// Endpoint degree `2ell+1` or `2ell+2`.
+    pub endpoint_degree: usize,
+    /// Convolution interval degree `d`.
+    pub interval_degree: usize,
+    /// Cumulative Möbius cutoff `N=endpoint_degree-d+1`.
+    pub cumulative_cutoff: usize,
+    /// Original modulus degree `r=ell+1`.
+    pub modulus_degree: usize,
+    /// One row for each source case, including empty rows.
+    pub rows: Vec<EndpointVaughanCaseRow>,
+    /// Worst case after all effective moduli and splits are enumerated.
+    pub worst_case: EndpointVaughanCase,
+    /// Worst main exponent numerator over denominator sixteen.
+    pub worst_bound_sixteenths: u128,
+    /// Lemire target exponent numerator `16ell`.
+    pub target_exponent_sixteenths: u128,
+    /// `target-bound` over denominator sixteen.
+    pub deficit_sixteenths: i128,
+}
+
+impl EndpointVaughanRangeReport {
+    /// A successful report has assigned every enumerated split; uncovered
+    /// splits fail construction instead of producing a partial table.
+    #[must_use]
+    pub const fn all_ranges_covered(&self) -> bool {
+        true
+    }
+
+    /// Whether endpoint inequalities make Type-I Cases 4 and 5 empty.
+    #[must_use]
+    pub fn short_inner_type_one_cases_empty(&self) -> bool {
+        self.rows.iter().all(|row| {
+            !matches!(
+                row.case,
+                EndpointVaughanCase::TypeOneCaseFour | EndpointVaughanCase::TypeOneCaseFive
+            ) || row.sample_count == 0
+        })
+    }
+
+    /// The table records main exponents only; explicit subexponential,
+    /// epsilon, constants, and convolution-weight losses remain separate.
+    #[must_use]
+    pub const fn suppressed_losses_remain(&self) -> bool {
+        true
+    }
+
+    /// Whether the zero-loss pointwise main exponent is below `2^ell`.
+    #[must_use]
+    pub const fn strict_pointwise_main_term_closure(&self) -> bool {
+        self.deficit_sixteenths > 0
+    }
+}
+
+/// End-to-end Vaughan range table across every endpoint convolution order.
+///
+/// Entries are ordered by increasing interval degree `1<=d<ell`.  As with
+/// [`EndpointVaughanRangeReport`], the table contains exact main exponents but
+/// deliberately does not absorb subexponential, epsilon, constant, or
+/// convolution-weight losses.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EndpointVaughanTableReport {
+    /// Principal-unit level `ell`.
+    pub ell: usize,
+    /// Endpoint degree `2ell+1` or `2ell+2`.
+    pub endpoint_degree: usize,
+    /// One exhaustive range report for every `1<=d<ell`.
+    pub convolution_orders: Vec<EndpointVaughanRangeReport>,
+    /// First `d` with a strict zero-loss pointwise main-exponent saving.
+    pub first_strict_pointwise_degree: Option<usize>,
+}
+
+impl EndpointVaughanTableReport {
+    /// Whether every endpoint convolution order is represented.
+    #[must_use]
+    pub fn all_convolution_orders_present(&self) -> bool {
+        self.convolution_orders.len() == self.ell.saturating_sub(1)
+            && self
+                .convolution_orders
+                .iter()
+                .enumerate()
+                .all(|(index, report)| report.interval_degree == index + 1)
+    }
+
+    /// The table remains a zero-loss pointwise calibration, not endpoint
+    /// theorem credit.
+    #[must_use]
+    pub const fn suppressed_losses_remain(&self) -> bool {
+        true
+    }
+}
+
 /// Uniform wild-Kloosterman bound for the binary principal-unit group.
 ///
 /// Put `R = GF(2)[x]/(x^(ell+1))`, let `psi` read the coefficient of
@@ -2420,6 +2578,346 @@ pub fn endpoint_inverse_mobius_exponent_calibration(
         target_exponent_48ths,
         deficit_48ths,
         strict_pointwise_closure: deficit_48ths > 0,
+    })
+}
+
+struct EndpointVaughanAccumulator {
+    rows: BTreeMap<EndpointVaughanCase, EndpointVaughanCaseRow>,
+}
+
+impl EndpointVaughanAccumulator {
+    fn new() -> Self {
+        Self {
+            rows: EndpointVaughanCase::ALL
+                .into_iter()
+                .map(|case| {
+                    (
+                        case,
+                        EndpointVaughanCaseRow {
+                            case,
+                            sample_count: 0,
+                            worst_bound_sixteenths: None,
+                            worst_effective_modulus_degree: None,
+                            worst_split_degree: None,
+                        },
+                    )
+                })
+                .collect(),
+        }
+    }
+
+    fn record(
+        &mut self,
+        case: EndpointVaughanCase,
+        bound: u128,
+        effective_modulus_degree: usize,
+        split_degree: Option<usize>,
+    ) -> Result<(), HayesError> {
+        let row = self.rows.get_mut(&case).ok_or_else(|| {
+            HayesError::Invariant("Vaughan case missing from row table".to_owned())
+        })?;
+        row.sample_count = row
+            .sample_count
+            .checked_add(1)
+            .ok_or_else(|| HayesError::InvalidParameter("Vaughan row count overflow".to_owned()))?;
+        if row
+            .worst_bound_sixteenths
+            .is_none_or(|current| bound > current)
+        {
+            row.worst_bound_sixteenths = Some(bound);
+            row.worst_effective_modulus_degree = Some(effective_modulus_degree);
+            row.worst_split_degree = split_degree;
+        }
+        Ok(())
+    }
+
+    fn into_rows(mut self) -> Result<Vec<EndpointVaughanCaseRow>, HayesError> {
+        EndpointVaughanCase::ALL
+            .into_iter()
+            .map(|case| {
+                self.rows.remove(&case).ok_or_else(|| {
+                    HayesError::Invariant("Vaughan row disappeared after enumeration".to_owned())
+                })
+            })
+            .collect()
+    }
+}
+
+fn endpoint_type_one_case_bound(
+    cutoff: usize,
+    effective_modulus_degree: usize,
+    split: usize,
+    kappa: usize,
+) -> Result<(EndpointVaughanCase, u128), HayesError> {
+    let inner = cutoff
+        .checked_sub(split)
+        .ok_or_else(|| HayesError::Invariant("Type-I split exceeds cutoff".to_owned()))?;
+    let n = u128::try_from(cutoff)
+        .map_err(|_| HayesError::InvalidParameter("Type-I cutoff exceeds u128".to_owned()))?;
+    let r0 = u128::try_from(effective_modulus_degree).map_err(|_| {
+        HayesError::InvalidParameter("Type-I effective modulus exceeds u128".to_owned())
+    })?;
+    let u = u128::try_from(split)
+        .map_err(|_| HayesError::InvalidParameter("Type-I split exceeds u128".to_owned()))?;
+    let kappa = u128::try_from(kappa)
+        .map_err(|_| HayesError::InvalidParameter("Type-I kappa exceeds u128".to_owned()))?;
+    if inner >= effective_modulus_degree {
+        let bound = n
+            .checked_sub(r0)
+            .and_then(|value| value.checked_add(kappa))
+            .and_then(|value| value.checked_mul(16))
+            .ok_or_else(|| HayesError::InvalidParameter("Case-1 exponent overflow".to_owned()))?;
+        return Ok((EndpointVaughanCase::TypeOneCaseOne, bound));
+    }
+    let inner = u128::try_from(inner)
+        .map_err(|_| HayesError::InvalidParameter("Type-I inner exceeds u128".to_owned()))?;
+    if u.checked_mul(3).is_some_and(|value| value <= r0) {
+        if inner.checked_mul(3).is_none_or(|value| value < r0) {
+            return Err(HayesError::Invariant(
+                "Type-I Case 2 violates its lower inner endpoint".to_owned(),
+            ));
+        }
+        let energy = n
+            .checked_mul(3)
+            .and_then(|value| value.checked_add(r0))
+            .and_then(|value| value.checked_sub(u))
+            .and_then(|value| value.checked_mul(4))
+            .ok_or_else(|| HayesError::InvalidParameter("Case-2 energy overflow".to_owned()))?;
+        let completion = u
+            .checked_add(kappa)
+            .and_then(|value| value.checked_mul(16))
+            .ok_or_else(|| HayesError::InvalidParameter("Case-2 completion overflow".to_owned()))?;
+        return Ok((EndpointVaughanCase::TypeOneCaseTwo, energy.min(completion)));
+    }
+    if inner.checked_mul(3).is_some_and(|value| value >= r0) {
+        return n
+            .checked_mul(15)
+            .map(|bound| (EndpointVaughanCase::TypeOneCaseThree, bound))
+            .ok_or_else(|| HayesError::InvalidParameter("Case-3 exponent overflow".to_owned()));
+    }
+    Err(HayesError::Invariant(
+        "Lemire endpoint unexpectedly reaches Type-I Case 4 or 5".to_owned(),
+    ))
+}
+
+fn enumerate_endpoint_type_one(
+    cutoff: usize,
+    effective_modulus_degree: usize,
+    accumulator: &mut EndpointVaughanAccumulator,
+) -> Result<(), HayesError> {
+    let kappa = binary_complete_kloosterman_exponent(effective_modulus_degree)?;
+    let maximum_split = effective_modulus_degree - effective_modulus_degree.div_ceil(3);
+    for split in 0..=maximum_split {
+        let (case, bound) =
+            endpoint_type_one_case_bound(cutoff, effective_modulus_degree, split, kappa)?;
+        accumulator.record(case, bound, effective_modulus_degree, Some(split))?;
+    }
+    Ok(())
+}
+
+fn endpoint_type_two_case_bound(
+    cutoff: usize,
+    effective_modulus_degree: usize,
+    split: usize,
+) -> Result<Option<(EndpointVaughanCase, u128)>, HayesError> {
+    let inner = cutoff - split;
+    let n = u128::try_from(cutoff)
+        .map_err(|_| HayesError::InvalidParameter("Type-II cutoff exceeds u128".to_owned()))?;
+    let r0 = u128::try_from(effective_modulus_degree).map_err(|_| {
+        HayesError::InvalidParameter("Type-II effective modulus exceeds u128".to_owned())
+    })?;
+    let v = u128::try_from(split)
+        .map_err(|_| HayesError::InvalidParameter("Type-II split exceeds u128".to_owned()))?;
+    let inner_u128 = u128::try_from(inner)
+        .map_err(|_| HayesError::InvalidParameter("Type-II inner exceeds u128".to_owned()))?;
+    let above_one_third = v.checked_mul(3).is_some_and(|value| value > r0);
+    let upper_left = v.checked_mul(3).and_then(|value| value.checked_add(r0));
+    let upper_right = n.checked_mul(3);
+    if !above_one_third
+        || upper_left
+            .zip(upper_right)
+            .is_none_or(|(left, right)| left > right)
+    {
+        return Ok(None);
+    }
+    if v > inner_u128 {
+        return Ok(None);
+    }
+    if v <= r0 && inner_u128 <= r0 {
+        return n
+            .checked_mul(15)
+            .map(|bound| Some((EndpointVaughanCase::TypeTwoCaseOne, bound)))
+            .ok_or_else(|| HayesError::InvalidParameter("Type-II Case-1 overflow".to_owned()));
+    }
+    if v <= r0 && inner_u128 >= r0 {
+        let bound = n
+            .checked_mul(16)
+            .and_then(|value| v.checked_mul(2).and_then(|term| value.checked_sub(term)))
+            .and_then(|value| r0.checked_mul(2).and_then(|term| value.checked_sub(term)))
+            .ok_or_else(|| HayesError::InvalidParameter("Type-II Case-2 overflow".to_owned()))?;
+        return Ok(Some((EndpointVaughanCase::TypeTwoCaseTwo, bound)));
+    }
+    if v >= r0 && inner_u128 >= r0 {
+        let bound = n
+            .checked_mul(16)
+            .and_then(|value| r0.checked_mul(4).and_then(|term| value.checked_sub(term)))
+            .ok_or_else(|| HayesError::InvalidParameter("Type-II Case-3 overflow".to_owned()))?;
+        return Ok(Some((EndpointVaughanCase::TypeTwoCaseThree, bound)));
+    }
+    Err(HayesError::Invariant(
+        "symmetry-reduced Type-II split is uncovered".to_owned(),
+    ))
+}
+
+fn enumerate_endpoint_type_two(
+    cutoff: usize,
+    effective_modulus_degree: usize,
+    accumulator: &mut EndpointVaughanAccumulator,
+) -> Result<(), HayesError> {
+    for split in 0..=cutoff {
+        if let Some((case, bound)) =
+            endpoint_type_two_case_bound(cutoff, effective_modulus_degree, split)?
+        {
+            accumulator.record(case, bound, effective_modulus_degree, Some(split))?;
+        }
+    }
+    Ok(())
+}
+
+fn enumerate_endpoint_vaughan_rows(
+    cutoff: usize,
+    modulus_degree: usize,
+) -> Result<Vec<EndpointVaughanCaseRow>, HayesError> {
+    let n = u128::try_from(cutoff)
+        .map_err(|_| HayesError::InvalidParameter("Vaughan cutoff exceeds u128".to_owned()))?;
+    let mut accumulator = EndpointVaughanAccumulator::new();
+    for effective_modulus_degree in 1..=modulus_degree {
+        let r0 = u128::try_from(effective_modulus_degree).map_err(|_| {
+            HayesError::InvalidParameter("effective modulus exceeds u128".to_owned())
+        })?;
+        let small = r0.checked_mul(16).zip(n.checked_mul(7)).ok_or_else(|| {
+            HayesError::InvalidParameter("small-modulus threshold overflow".to_owned())
+        })?;
+        if small.0 < small.1 {
+            let bound = r0
+                .checked_mul(16)
+                .and_then(|value| n.checked_mul(8).and_then(|term| value.checked_add(term)))
+                .ok_or_else(|| {
+                    HayesError::InvalidParameter("small-modulus exponent overflow".to_owned())
+                })?;
+            accumulator.record(
+                EndpointVaughanCase::SmallEffectiveModulus,
+                bound,
+                effective_modulus_degree,
+                None,
+            )?;
+        } else {
+            enumerate_endpoint_type_one(cutoff, effective_modulus_degree, &mut accumulator)?;
+            enumerate_endpoint_type_two(cutoff, effective_modulus_degree, &mut accumulator)?;
+        }
+    }
+    accumulator.into_rows()
+}
+
+/// Enumerate the complete source-level Vaughan range table for one Lemire
+/// endpoint convolution order.
+///
+/// Main exponents use Bagshaw's characteristic-free energy lines, the
+/// internally proved wrapped binary energy input, and the binary complete-sum
+/// replacement.  They intentionally omit the explicit subexponential energy
+/// envelope, epsilon/constants, and polynomial convolution weights.
+///
+/// # Errors
+///
+/// Rejects invalid endpoint parameters, a caller degree limit, an uncovered
+/// Vaughan split, or checked-arithmetic overflow.
+pub fn endpoint_vaughan_range_report(
+    ell: usize,
+    endpoint_degree: usize,
+    interval_degree: usize,
+    limits: HayesLimits,
+) -> Result<EndpointVaughanRangeReport, HayesError> {
+    let calibration =
+        endpoint_inverse_mobius_exponent_calibration(ell, endpoint_degree, interval_degree)?;
+    let modulus_degree = ell
+        .checked_add(1)
+        .ok_or_else(|| HayesError::InvalidParameter("Vaughan modulus overflow".to_owned()))?;
+    check_limit("degree", modulus_degree, limits.max_degree)?;
+    let cumulative_cutoff = calibration.cumulative_cutoff;
+    if cumulative_cutoff <= modulus_degree {
+        return Err(HayesError::Invariant(
+            "Lemire endpoint cutoff does not exceed its modulus".to_owned(),
+        ));
+    }
+    let rows = enumerate_endpoint_vaughan_rows(cumulative_cutoff, modulus_degree)?;
+    let worst_row = rows
+        .iter()
+        .filter_map(|row| row.worst_bound_sixteenths.map(|bound| (row, bound)))
+        .max_by(|(left_row, left_bound), (right_row, right_bound)| {
+            left_bound
+                .cmp(right_bound)
+                .then_with(|| right_row.case.cmp(&left_row.case))
+        })
+        .ok_or_else(|| HayesError::Invariant("Vaughan table has no samples".to_owned()))?;
+    let worst_case = worst_row.0.case;
+    let worst_bound_sixteenths = worst_row.1;
+    let target_exponent_sixteenths = u128::try_from(ell)
+        .ok()
+        .and_then(|value| value.checked_mul(16))
+        .ok_or_else(|| HayesError::InvalidParameter("Vaughan target overflow".to_owned()))?;
+    let deficit_sixteenths = checked_exponent_deficit(
+        target_exponent_sixteenths,
+        worst_bound_sixteenths,
+        "endpoint Vaughan",
+    )?;
+    Ok(EndpointVaughanRangeReport {
+        ell,
+        endpoint_degree,
+        interval_degree,
+        cumulative_cutoff,
+        modulus_degree,
+        rows,
+        worst_case,
+        worst_bound_sixteenths,
+        target_exponent_sixteenths,
+        deficit_sixteenths,
+    })
+}
+
+/// Enumerate every convolution order in one Lemire endpoint Vaughan audit.
+///
+/// # Errors
+///
+/// Rejects invalid endpoint parameters, a caller degree limit, any uncovered
+/// source range, or checked-arithmetic overflow.
+pub fn endpoint_vaughan_range_table(
+    ell: usize,
+    endpoint_degree: usize,
+    limits: HayesLimits,
+) -> Result<EndpointVaughanTableReport, HayesError> {
+    if ell < 2 {
+        return Err(HayesError::InvalidParameter(
+            "endpoint Vaughan table requires ell>=2".to_owned(),
+        ));
+    }
+    let mut convolution_orders = Vec::with_capacity(ell - 1);
+    for interval_degree in 1..ell {
+        convolution_orders.push(endpoint_vaughan_range_report(
+            ell,
+            endpoint_degree,
+            interval_degree,
+            limits,
+        )?);
+    }
+    let first_strict_pointwise_degree = convolution_orders
+        .iter()
+        .find(|report| report.strict_pointwise_main_term_closure())
+        .map(|report| report.interval_degree);
+    Ok(EndpointVaughanTableReport {
+        ell,
+        endpoint_degree,
+        convolution_orders,
+        first_strict_pointwise_degree,
     })
 }
 
@@ -5122,6 +5620,79 @@ mod tests {
             endpoint_inverse_mobius_exponent_calibration(ell, odd - 1, 1),
             Err(HayesError::InvalidParameter(_))
         ));
+    }
+
+    #[test]
+    fn endpoint_vaughan_table_covers_every_split_and_pins_the_same_transition() {
+        let limits = HayesLimits {
+            max_degree: 400,
+            ..HayesLimits::default()
+        };
+        let ell = 300;
+        let odd = 2 * ell + 1;
+        let even = odd + 1;
+        let odd_boundary = endpoint_vaughan_range_report(ell, odd, 282, limits).unwrap();
+        assert!(odd_boundary.all_ranges_covered());
+        assert!(odd_boundary.short_inner_type_one_cases_empty());
+        assert_eq!(odd_boundary.cumulative_cutoff, 320);
+        assert_eq!(odd_boundary.worst_bound_sixteenths, 4_800);
+        assert_eq!(odd_boundary.deficit_sixteenths, 0);
+        assert!(!odd_boundary.strict_pointwise_main_term_closure());
+
+        let odd_first = endpoint_vaughan_range_report(ell, odd, 283, limits).unwrap();
+        let even_first = endpoint_vaughan_range_report(ell, even, 284, limits).unwrap();
+        for report in [&odd_first, &even_first] {
+            assert!(report.all_ranges_covered());
+            assert!(report.short_inner_type_one_cases_empty());
+            assert_eq!(report.cumulative_cutoff, 319);
+            assert_eq!(report.worst_case, EndpointVaughanCase::TypeOneCaseThree);
+            assert_eq!(report.worst_bound_sixteenths, 4_785);
+            assert_eq!(report.deficit_sixteenths, 15);
+            assert!(report.strict_pointwise_main_term_closure());
+            assert!(report.suppressed_losses_remain());
+            for required in [
+                EndpointVaughanCase::SmallEffectiveModulus,
+                EndpointVaughanCase::TypeOneCaseOne,
+                EndpointVaughanCase::TypeOneCaseTwo,
+                EndpointVaughanCase::TypeOneCaseThree,
+                EndpointVaughanCase::TypeTwoCaseOne,
+                EndpointVaughanCase::TypeTwoCaseTwo,
+                EndpointVaughanCase::TypeTwoCaseThree,
+            ] {
+                assert!(
+                    report
+                        .rows
+                        .iter()
+                        .find(|row| row.case == required)
+                        .unwrap()
+                        .sample_count
+                        > 0
+                );
+            }
+            for empty in [
+                EndpointVaughanCase::TypeOneCaseFour,
+                EndpointVaughanCase::TypeOneCaseFive,
+            ] {
+                assert_eq!(
+                    report
+                        .rows
+                        .iter()
+                        .find(|row| row.case == empty)
+                        .unwrap()
+                        .sample_count,
+                    0
+                );
+            }
+        }
+
+        let odd_table = endpoint_vaughan_range_table(ell, odd, limits).unwrap();
+        let even_table = endpoint_vaughan_range_table(ell, even, limits).unwrap();
+        assert!(odd_table.all_convolution_orders_present());
+        assert!(even_table.all_convolution_orders_present());
+        assert_eq!(odd_table.first_strict_pointwise_degree, Some(283));
+        assert_eq!(even_table.first_strict_pointwise_degree, Some(284));
+        assert!(odd_table.suppressed_losses_remain());
+        assert!(even_table.suppressed_losses_remain());
     }
 
     #[test]
