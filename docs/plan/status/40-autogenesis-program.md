@@ -2,12 +2,13 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** typed slicing landed; held-out sealed.
+**Status:** slice receipt landed; held-out sealed.
 
-**Next:** bind receipt; rerun train/dev census.
+**Next:** checked train/dev slice replay.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `5e5141dba` | Slice receipt |
 | 2026-08-19 | `903c22423` | Typed slice |
 | 2026-08-19 | `5403ce1a0` | Root export |
 | 2026-08-19 | `b03ca1884` | Slice ADR |
