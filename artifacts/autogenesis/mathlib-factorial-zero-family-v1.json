@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-factorial-zero-family",
+  "state": "two-target-proof-isolated-reflexivity-checked",
+  "source": {
+    "path": "scripts/lean/autogenesis_statement_adapter_factorial_zero_family.lean",
+    "sha256": "410ee35fe7201676e6455737d1b8862ea7c98c7c9560d6a8dc73d0336a7213ce",
+    "proof_declarations_allowed": false
+  },
+  "population": {
+    "partition": "train",
+    "members": 2,
+    "held_out_inspected": false,
+    "proof_bodies_requested": false
+  },
+  "members": [
+    {
+      "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+      "operation_id": "authoritative-mathlib-statement-reflexivity-v1",
+      "authoritative_adapter_manifest": "artifacts/autogenesis/mathlib-statement-adapter-v1.json",
+      "reflexivity_manifest": "artifacts/autogenesis/mathlib-statement-reflexivity-v1.json",
+      "family_target_definition": "Axeyum.Autogenesis.Statement.FactorialZero.natAscFactorialZero",
+      "family_external_artifact": {
+        "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-factorial-zero-family-v1/asc.ndjson",
+        "sha256": "f7f669e256eef929d36574426b729ee8f11ef508b8d842be9bb4b424d89ee540",
+        "bytes": 52525,
+        "records": 921,
+        "mode": "0444"
+      },
+      "goal_sha256": "87e37902bb8b3958514c5a6831b28ebff2824c8a30fb45601ff47736ee3853d7",
+      "proof_sha256": "16600053e2afaa0d4d0bfa559fbac367bfeb41b860912f10c236cdcb82e08b53",
+      "target_content_sha256": "a0f8cb3576baf8cec13cddf5f62f4ea522d169b8a4ae155885580f5c2952f4fb",
+      "admitted_declarations": 55
+    },
+    {
+      "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+      "operation_id": "authoritative-mathlib-nat-descfactorial-zero-reflexivity-v1",
+      "authoritative_adapter_manifest": "artifacts/autogenesis/mathlib-descfactorial-zero-statement-adapter-v1.json",
+      "reflexivity_manifest": "artifacts/autogenesis/mathlib-descfactorial-zero-reflexivity-v1.json",
+      "family_target_definition": "Axeyum.Autogenesis.Statement.FactorialZero.natDescFactorialZero",
+      "family_external_artifact": {
+        "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-factorial-zero-family-v1/desc.ndjson",
+        "sha256": "72e1f212f04576caf28bef07d2f291dc9e35444fd6a6757e621ca9c854d2e567",
+        "bytes": 55344,
+        "records": 974,
+        "mode": "0444"
+      },
+      "goal_sha256": "84c2cb6ba48868786799c28aef4104a845cf9d238ff6786285645562570c5d23",
+      "proof_sha256": "15725b2125daf99a7f779d218f36de67fe85dc42eaae4e1db23f55e5b628856a",
+      "target_content_sha256": "c92518c5aa5532a7583223937b8f355f1ea36187c2c5e399a9ee5b4932a03493",
+      "admitted_declarations": 59
+    }
+  ],
+  "reproduction": "python3 scripts/check-autogenesis-factorial-zero-family.py",
+  "limitations": "This is a two-member train family, not a generic surface-language authority. Each member remains exact-bound to its own fact, target, immutable stream, checked identities, and registered operation."
+}

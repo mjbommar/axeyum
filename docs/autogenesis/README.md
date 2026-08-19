@@ -119,6 +119,7 @@ compounding, not automation theatre.
 | [Authoritative reflexivity registration](20-authoritative-reflexivity-operation.md) | Can that candidate route become one exact machine-selectable operation without yet changing the ledger? |
 | [First nursery fact admission](21-first-mathlib-nursery-admission.md) | Did the registered operation durably establish its frozen train fact through the ordinary crash-safe ledger protocol? |
 | [Reflexivity coverage census](22-mathlib-reflexivity-coverage.md) | Where do all train/development rows stop under the current proof-isolated adapter and bounded reflexivity grammar? |
+| [Factorial-zero family registration](23-factorial-zero-family-registration.md) | Can one checked operation family cover a second frozen fact without broadening admission authority beyond exact source-bound rows? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

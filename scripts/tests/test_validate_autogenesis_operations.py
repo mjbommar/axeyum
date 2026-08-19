@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_four_authoritative_operations(self) -> None:
+    def test_committed_registry_has_one_fixture_and_five_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 5)
+        self.assertEqual(len(self.registry["operations"]), 6)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
@@ -61,6 +61,15 @@ class OperationRegistryTests(unittest.TestCase):
         )
         self.assertEqual(
             reflexivity["executor"]["driver"],
+            "axeyum-lean-import/statement-reflexivity-v1",
+        )
+        desc_reflexivity = self.registry["operations"][5]
+        self.assertEqual(
+            desc_reflexivity["applicability"]["fact_ids"],
+            ["F:ml430-nat-descfactorial-zero-966b01df"],
+        )
+        self.assertEqual(
+            desc_reflexivity["executor"]["driver"],
             "axeyum-lean-import/statement-reflexivity-v1",
         )
 

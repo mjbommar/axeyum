@@ -82,7 +82,7 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
     }
     reflexivity_manifests = [
         load(path)
-        for path in sorted(STATEMENT_ADAPTERS.glob("*-statement-reflexivity-v1.json"))
+        for path in sorted(STATEMENT_ADAPTERS.glob("*reflexivity-v1.json"))
     ]
     checked_candidate_fact_ids = {
         manifest["source_fact_id"]

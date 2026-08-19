@@ -84,6 +84,17 @@ evidence with zero ledger writes:
 python3 scripts/check-autogenesis-reflexivity-coverage.py
 ```
 
+`mathlib-factorial-zero-family-v1.json` binds the first reusable proof-free
+adapter family. Both frozen train propositions are exported from one source and
+checked in isolated fresh kernels, while each authoritative registry row stays
+exact to one fact and immutable stream. The checker requires the external
+objects and rejects held-out access, proof-body access, family expansion, or a
+shared authority shortcut:
+
+```sh
+python3 scripts/check-autogenesis-factorial-zero-family.py
+```
+
 `mathlib-statement-source-v1.json` binds the external statement-only Mathlib
 v4.30.0 inventory. Bulk NDJSON stays on `/nas3`; Git retains the extractor,
 source identity, selection policy, and small derived candidate view. Neither an

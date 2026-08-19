@@ -80,6 +80,8 @@ autogenesis-nursery:
     python3 -m unittest scripts.tests.test_create_autogenesis_reflexivity_coverage_input
     python3 -m unittest scripts.tests.test_check_autogenesis_reflexivity_coverage
     python3 scripts/check-autogenesis-reflexivity-coverage.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
+    python3 scripts/check-autogenesis-factorial-zero-family.py
 
 # The bulk source is external and optional on CI. The first checker reports
 # verified/unavailable without conflating them; the committed 240-row view is

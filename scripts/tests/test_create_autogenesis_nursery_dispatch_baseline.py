@@ -46,15 +46,21 @@ class DispatchBaselineTests(unittest.TestCase):
 
     def test_current_population_separates_admitted_row_from_pre_execution_declines(self) -> None:
         result = MODULE.build(self.nursery, self.registry, self.facts)
-        self.assertEqual(result["coverage"]["eligible_for_dispatch"], 0)
+        self.assertEqual(result["coverage"]["eligible_for_dispatch"], 1)
         self.assertEqual(
             result["coverage"]["decline_reasons"],
             {
-                "no-exact-authoritative-operation": 137,
+                "no-exact-authoritative-operation": 136,
             },
         )
         self.assertEqual(result["coverage"]["already_established"], 1)
         self.assertEqual(result["budget"]["executor_invocations"], 0)
+
+        fact_id = "F:ml430-nat-descfactorial-zero-966b01df"
+        row = next(row for row in result["rows"] if row["fact_id"] == fact_id)
+        self.assertEqual(row["outcome"], "eligible-for-dispatch")
+        self.assertTrue(row["statement_adapter_ready"])
+        self.assertTrue(row["reflexivity_candidate_checked"])
 
     def test_matching_authoritative_operation_is_dispatchable(self) -> None:
         fact = {"id": "F:x", "formal": {"language": "lean4-surface", "fragment": "Nat"}}
