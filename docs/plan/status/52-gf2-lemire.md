@@ -35,8 +35,10 @@ squares `512^2` and `1024^2`; an independent integer group-ring checker agrees.
 Thus raw unweighted variance cannot force positivity at these controls.
 `8649aa085` adds the missing bounded inverse-Fourier distribution API: the
 actual maximum class errors are only `155` and `290`, and every class is
-positive.  The live analytic distinction is therefore `L^infinity` versus raw
-`L^2`, suggesting a class-sensitive higher-moment or hypercontractive estimate.
+positive.  A distribution-only native runner now exposes the exact bounded
+`L^infinity` diagnostic independently of the heavier moment runner.  The live
+analytic distinction is therefore `L^infinity` versus raw `L^2`, suggesting a
+class-sensitive higher-moment or hypercontractive estimate.
 Global supersingularity is not that estimate: Gorodetsky proves this exact
 cyclotomic curve nonsupersingular for every `ell>=4`.  Hsu's known bound retains
 a logarithmic loss, and sparse-polynomial conjectures plus standard
@@ -52,6 +54,7 @@ derivations, literature audits, provenance, and rejected routes remain in
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `7f73d02cd` | Added a bounded native distribution-only runner for exact per-class minima, maxima, maximum deviations, and positivity, keeping finite evidence distinct from the missing uniform theorem. |
 | 2026-08-19 | `8649aa085` | Added exact bounded inverse-Fourier class distributions, matched Parseval and an independent group-ring implementation, and isolated the surviving class-sensitive `L^infinity` problem. |
 | 2026-08-19 | `5ddfe3984` | Added an exact full-family Parseval diagnostic, dual-checked both `ell=8` endpoints, and showed that raw total variance cannot supply the missing positivity estimate. |
 | 2026-08-19 | `f02916fa9` | Proved translation pairing for level `2^v_2(n)`, bounded all but the top `ceil(log_2 ell)+2` levels by ordinary Weil, retained the bounded one-level runner, and extended the exact native endpoint diagnostic to `ell=24`. |
