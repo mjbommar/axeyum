@@ -17,13 +17,17 @@
   },
   "composition_probe": {
     "tool": "crates/axeyum-lean-import/examples/nat_prelude_composition_probe.rs",
-    "tool_sha256": "b58cfe53f91bb231042bc464a23a117263e5c756f514d9bd45c6f476c2612fce",
-    "observation": "/nas3/data/axeyum/autogenesis/probes/1afe65473-fib-coprime-prelude-composition-v1/observation.json",
-    "observation_sha256": "d551b2ecc4150b950bcc15451433be0a6d6b0097d2471dfc5332e252d6181307",
+    "tool_sha256": "898acfaf6563c7fea21b916341792cb15c8a5c9f82c0fc1b2a2de34198b2fd21",
+    "observation": "/nas3/data/axeyum/autogenesis/probes/d1eb38a13-fib-coprime-prelude-compatibility-v2/observation.json",
+    "observation_sha256": "64f6b89a52071a13cb002be9cad88676fb92a0f45afb02e983e3cdaefdb6a302",
     "outcome": "rejected",
     "first_conflict": "True",
     "imported_declarations": 261,
-    "imported_theorems": 52
+    "imported_theorems": 52,
+    "native_declarations": 198,
+    "exact_overlaps": 7,
+    "alpha_type_compatible_content_mismatches": 18,
+    "unresolved_type_overlaps": 18
   },
   "proof_plan": {
     "induction_binder": "n",

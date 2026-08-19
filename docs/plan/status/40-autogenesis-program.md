@@ -2,10 +2,11 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Fib coprimality plan frozen; native/imported prelude composition is the measured blocker.
+**Status:** Fib prelude compatibility separates exact identity from alpha-stable type shape; direct graft remains unauthorized.
 
-**Next:** reuse compatible imported prelude declarations and transactionally add the seven missing native lemmas.
+**Next:** add a binder-info-insensitive kernel-type compatibility check and recheck the r082 overlaps before proof transport.
 
 <!-- plan-section: landed-changes -->
 
 | 2026-08-19 | `1afe65473` | Native/imported Nat prelude composition probe |
+| 2026-08-19 | `d1eb38a13` | Alpha-stable cross-kernel expression identity |

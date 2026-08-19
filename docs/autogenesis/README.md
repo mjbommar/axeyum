@@ -150,6 +150,7 @@ compounding, not automation theatre.
 | [Fibonacci recurrence admission](51-nat-fib-add-two-admission.md) | Did crash-safe admission make the checked recurrence durable and reproduce its real child-readiness delta? |
 | [Fibonacci child qualification](52-nat-fib-child-qualification.md) | Which newly ready child aligns strategic leverage with the measured term boundary? |
 | [Fibonacci coprimality premise plan](53-nat-fib-coprime-premise-plan.md) | Which bounded proof shape applies, and what exact composition seam blocks its execution? |
+| [Alpha-stable prelude compatibility](54-alpha-stable-prelude-compatibility.md) | Which imported/native overlaps are exact, alpha-type compatible, or still unresolved before checked reuse? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

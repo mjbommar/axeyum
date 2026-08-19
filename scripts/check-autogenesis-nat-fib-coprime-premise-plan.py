@@ -64,6 +64,18 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or observation["source"]["theorems_before"] != probe["imported_theorems"]
         or observation["result"]["outcome"] != probe["outcome"]
         or observation["result"]["conflicting_name"] != probe["first_conflict"]
+        or observation["source"]["native_declarations"]
+        != probe["native_declarations"]
+        or len(observation["source"]["exact_overlap_names"])
+        != probe["exact_overlaps"]
+        or len(
+            observation["source"][
+                "alpha_type_compatible_content_mismatched_names"
+            ]
+        )
+        != probe["alpha_type_compatible_content_mismatches"]
+        or len(observation["source"]["type_mismatched_overlaps"])
+        != probe["unresolved_type_overlaps"]
         or any(presence[name] for name in required)
         or not presence["Nat.rec"]
         or manifest["proof_plan"]["required_present_in_import"] != []
