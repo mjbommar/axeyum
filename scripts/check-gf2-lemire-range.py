@@ -10,6 +10,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SHARDS = ROOT / "artifacts/gf2/lemire/range-1-400/shards"
+FACT = ROOT / "artifacts/facts/F-gf2-lemire-half-degree-through-400.json"
+EXPECTED_STATEMENT = {
+    "field_order": 2,
+    "format": "axeyum-gf2-half-degree-range-statement",
+    "irreducible": True,
+    "max_degree": 400,
+    "min_degree": 1,
+    "monic": True,
+    "tail_degree_bound": "floor(n/2)",
+    "version": 1,
+}
 EXPECTED = (
     ("shard-1-80", 1, 80, "axeyum-gf2-search@6e1372073/binary=fcd47dd883b3/host=s1"),
     ("shard-81-160", 81, 160, "axeyum-gf2-search@6e1372073/host=s4"),
@@ -24,6 +35,28 @@ def fail(message: str) -> None:
 
 
 def check(shards: Path) -> None:
+    try:
+        fact = json.loads(FACT.read_text(encoding="utf-8"))
+        statement_json = fact["formal"]["statement"]
+        statement = json.loads(statement_json)
+    except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+        fail(f"{FACT}: {error}")
+    if fact.get("id") != "F:gf2-lemire-half-degree-through-400":
+        fail("finite-range fact identity differs")
+    if fact.get("epistemic_status") != "computed":
+        fail("finite-range fact must remain computed")
+    if fact.get("proof_route") != "search-certificate":
+        fail("finite-range fact must remain on the search-certificate route")
+    if fact.get("formal", {}).get("language") != "certificate-spec":
+        fail("finite-range fact formal language differs")
+    canonical_statement_json = json.dumps(
+        statement, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    )
+    if statement_json != canonical_statement_json:
+        fail("finite-range fact formal statement is not canonical")
+    if statement != EXPECTED_STATEMENT:
+        fail("finite-range fact formal statement differs")
+
     observed_names = sorted(path.name for path in shards.iterdir() if path.is_dir())
     expected_names = sorted(name for name, _, _, _ in EXPECTED)
     if observed_names != expected_names:

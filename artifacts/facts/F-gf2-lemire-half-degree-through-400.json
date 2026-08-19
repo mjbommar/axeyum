@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-lemire-half-degree-through-400",
+  "title": "Half-degree irreducible binary polynomials exist through degree 400",
+  "statement": "For every integer n with 1 <= n <= 400, there exists a monic irreducible polynomial f in GF(2)[x] of degree n such that deg(f - x^n) <= floor(n/2). This is a finite statement only; it does not assert the conjecture for n > 400.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"field_order\":2,\"format\":\"axeyum-gf2-half-degree-range-statement\",\"irreducible\":true,\"max_degree\":400,\"min_degree\":1,\"monic\":true,\"tail_degree_bound\":\"floor(n/2)\",\"version\":1}",
+    "fragment": "bounded-gf2-polynomial-existence",
+    "free_symbols": [
+      "n",
+      "f"
+    ]
+  },
+  "epistemic_status": "computed",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "search-certificate",
+  "axiom_footprint": [
+    "gf2-polynomial-semantics-v1",
+    "rabin-finite-field-irreducibility-criterion",
+    "finite-inclusive-range-1-through-400"
+  ],
+  "evidence": [
+    {
+      "id": "gf2-lemire-dual-checked-range-1-400",
+      "kind": "witness-replay",
+      "supports": "exactly one monic irreducible half-degree witness for every degree in the inclusive range 1 through 400, with the formal certificate-spec object bound to the range checker",
+      "check_status": "checked",
+      "checkers": [
+        "check-gf2-lemire-range.py exact statement, shard, degree-population, status, policy, producer, and measurement checks",
+        "gf2::check_irreducible_certificate bit-packed Frobenius and Bezout identity replay",
+        "gf2_independent::check_irreducible_certificate_independent dense-coefficient replay sharing neither polynomial representation nor arithmetic with the primary checker"
+      ],
+      "checker_command": "./scripts/check-gf2-lemire-range.sh",
+      "checker_seconds": 30,
+      "artifact": "artifacts/gf2/lemire/range-1-400/README.md",
+      "notes": "Fleet completion supplies no credit. The range checker requires the exact 400-row population, and each referenced child is content-bound and replayed by both algebraically separate checkers. The sparse search policy found 227 trinomials, 172 pentanomials, and degree-one x after 38,679 candidates; those are measurements, not assumptions of the proposition. The universal conjecture is deliberately absent from this fact."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "gf2-lemire lane: deterministic untrusted fleet search plus exact population checking and two independent irreducibility certificate checkers",
+    "source": "Daniel Lemire's conjecture, restricted to the independently checked finite interval 1 through 400",
+    "prior_art": "Daniel Lemire and Owen Kaser, Strongly universal string hashing is fast, The Computer Journal 57(11), 2014, Section 4.1 and footnote 4, https://arxiv.org/abs/1202.4961"
+  },
+  "notes": "The status is computed rather than proved because this is a finite witness family on the search-certificate route, not a kernel theorem or a universal CAS identity. The external status refers only to this bounded proposition, which the committed witnesses independently re-establish."
+}
