@@ -147,6 +147,22 @@ lemma.
   the signed logarithm used here, but it confirms that its cross-order
   cancellation cannot be discarded: [The size of wild Kloosterman sums in
   number fields and function fields](https://arxiv.org/abs/2209.02170).
+- The local Kloosterman estimate does not itself bound the layer needed here.
+  Sawin's Corollary 1.4 controls a fixed moment of local Gauss sums (and hence
+  root numbers).  In contrast, `T_(j,n)` is the first moment, over **every**
+  primitive character at that conductor, of the `n`th power sum of all roots
+  of its `L`-polynomial.  At `n` near `2j` that trace depends on the complete
+  coefficient vector, not only the functional-equation root number.  Turning
+  it into one of Sawin's Kloosterman sums would therefore drop data and is not
+  a valid reduction.
+- Ma and Xing improve the Hasse--Weil estimate for an ordinary
+  Artin--Schreier curve by relating it to the minimum distance of a code:
+  [The Hasse--Weil bound for Artin--Schreier curves](https://arxiv.org/abs/2105.04370).
+  The exact conductor family here contains higher binary Witt-character data,
+  not just ordinary additive characters, and their paper determines the
+  relevant code distance only in its low-order case.  It supplies neither a
+  uniform bound for all of these Witt characters nor cancellation after they
+  are aggregated in `T_(j,n)`.
 
 There is also no reduction of the family size to the odd power traces. In
 characteristic two, Newton's identities make the even power traces Frobenius
@@ -241,6 +257,67 @@ sum of the *family norm* `D_ell`, not a better degree count for the individual
 character polynomials. Exact symbolic group determinants for `ell <= 3` agree
 with the factors printed in Gao--Kuttner--Wang; this is a reformulation, not a
 new estimate.
+
+### Geometric compression of the family norm
+
+The family norm is also the zeta numerator of one explicit curve.  Let
+`K_ell` be the binary Carlitz cyclotomic function field of conductor
+`t^(ell+1)`.  Its Galois group is
+
+```text
+(GF(2)[t]/t^(ell+1))^* = E_ell,
+```
+
+and all of its characters are even because `GF(2)^*` is trivial.  The standard
+Dirichlet polynomial of every nontrivial character therefore contains the
+factor `1-z`.  The leading-coefficient Euler series used above has one extra
+Euler factor: reciprocity sends the prime `x` to the unit `1`, so that prime
+contributes `(1-z)^(-1)`.  Hence the polynomial called `P_chi` above is exactly
+the reduced standard factor `L(z,chi)/(1-z)`.
+
+Artin factorization now gives an exact identity, not an estimate.  The place at
+infinity splits into `2^ell` rational places in `K_ell`; cancelling those
+factors against the `2^ell-1` nontrivial even-character factors gives
+
+```text
+Z_(K_ell)(z) = D_ell(z) / ((1-z)(1-2z)).
+```
+
+This is the specialization to `q=2` of the cyclotomic zeta factorization in
+Rosen, *Number Theory in Function Fields*, Proposition 16.7, together with the
+standard Artin factorization in Chapter 9.  In particular, if `C_ell` is the
+smooth projective curve of `K_ell`, then
+
+```text
+genus(C_ell) = ((ell-2) 2^ell + 2) / 2
+             = (ell-2) 2^(ell-1) + 1,
+
+#C_ell(GF(2^n)) = 2^n + 1 + 2^ell Delta_(ell,n).    (curve trace)
+```
+
+The sign and every factor follow by taking `n[z^n] log` of the zeta identity.
+For example, `ell=2`, `n=5`, and `Delta_(2,5)=-2` give 25 points on the
+resulting genus-one curve.  A primitive Carlitz `t^(ell+1)`-torsion generator
+`lambda` also supplies the affine equation
+
+```text
+C_(t^ell)(lambda) = t,
+```
+
+because `C_(t^(ell+1))(X)/C_(t^ell)(X)=C_(t^ell)(X)+t` in characteristic two.
+
+This compression does not by itself prove the conjecture.  Applying ordinary
+Hasse--Weil to the curve trace gives only
+
+```text
+abs(Delta_(ell,n))
+ <= (ell - 2 + 2^(1-ell)) 2^(n/2),
+```
+
+which is precisely the asymptotic factor `ell` already exposed by the
+characterwise calculation.  A useful geometric proof must exploit additional
+structure of this one wildly ramified cyclotomic tower, rather than cite the
+generic curve bound.
 
 There is a sharper endpoint-specific form of the same obligation. Work in the
 rational group algebra, put
@@ -388,7 +465,15 @@ and the build/resource log SHA-256 is
 The bounded `axeyum-gf2-hayes-endpoint` binary now retains the exact runner:
 it computes only the requested level, rejects `ell>24`, and keeps this
 high-memory diagnostic outside default gates.  An algebraically separate C++
-replay was started independently; its result is recorded only after it exits.
+replay on s1 independently returned the same two integers and exited 0 in
+1h25m20s with 14,423,180 KiB peak RSS.  Its source, binary, stdout, and
+resource-log SHA-256 values are, respectively,
+`1ef725facfb88ed25cd6aeebae0356f3cc3fe9809a5b43073b817954d1fddf44`,
+`a4335500d8a85f7a539989ae149d92ac522af1726745bfd5dc7191d272670ec3`,
+`b0cc7fcf433da1c330ed358e446bb45182d040b6f8b0b1549a3e249e95bfa102`, and
+`46c4eae671984fba38542ed00d291193483189d04888ba703d215d74f4d5bffa`.
+This raises only the dual-implementation finite diagnostic; it does not prove
+the candidate inequality at any uncomputed level.
 
 ### A weaker conductor-local lemma would also suffice
 
