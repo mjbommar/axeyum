@@ -1437,6 +1437,20 @@ pub struct BinaryDyadicAutocorrelationFibreWitness {
     pub signed_correlation: i128,
 }
 
+/// Aggregate product-discriminant correlation at one common `x`-adic
+/// valuation of the shift and inverse difference.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryDyadicValuationCorrelation {
+    /// Common positive valuation.
+    pub valuation: usize,
+    /// Number of normalized parameters `h_0/w_0` in this layer.
+    pub normalized_parameter_count: usize,
+    /// Sum of absolute normalized-parameter correlations in this layer.
+    pub parameterwise_absolute_correlation: u128,
+    /// Signed correlation after combining the complete layer.
+    pub signed_correlation: i128,
+}
+
 /// Exact restricted `Z/8` product-discriminant phases on all affine
 /// Artin--Schreier fibres contributing to one annihilator energy.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1464,6 +1478,22 @@ pub struct BinaryDyadicAutocorrelationFibreReport {
     pub nonquadratic_signed_correlation: i128,
     /// Sum of absolute fibre correlations on the nonquadratic fibres.
     pub nonquadratic_absolute_correlation: u128,
+    /// Sum of absolute correlations before combining any exact fibres.
+    pub fibrewise_absolute_correlation: u128,
+    /// Number of exact `(shift,inverse difference)` parameter pairs after
+    /// combining the high-coefficient input cosets.
+    pub shift_inverse_pair_count: usize,
+    /// Absolute correlation after that first parameter aggregation.
+    pub shift_inverse_pairwise_absolute_correlation: u128,
+    /// Number of normalized Artin--Schreier parameters `(valuation,h_0/w_0)`,
+    /// where `h_0/w_0=f(f+h)` in the corresponding truncated quotient.
+    pub normalized_parameter_count: usize,
+    /// Absolute correlation after grouping by the normalized parameters.
+    pub normalized_parameterwise_absolute_correlation: u128,
+    /// Absolute correlation after grouping only by common `x`-adic valuation.
+    pub valuationwise_absolute_correlation: u128,
+    /// Exact signed and intermediate absolute values at each valuation.
+    pub valuation_correlations: Vec<BinaryDyadicValuationCorrelation>,
     /// Fibres attaining their full affine dimension as ANF support degree.
     pub full_degree_fibre_count: usize,
     /// Largest restricted ANF support degree.
@@ -6561,18 +6591,182 @@ pub fn binary_berlekamp_order_two_projection_report(
     })
 }
 
+#[derive(Default)]
+struct BinaryDyadicParameterSums {
+    shift_inverse: BTreeMap<(usize, u64), i128>,
+    normalized: BTreeMap<(usize, u64), i128>,
+    valuation: BTreeMap<usize, i128>,
+}
+
+struct BinaryDyadicFibrePhase {
+    dimension: usize,
+    maxima: (Option<usize>, Option<usize>, Option<usize>),
+    support_degree: usize,
+    signed_correlation: i128,
+}
+
+fn binary_dyadic_fibre_phase(
+    shift: usize,
+    members: &[usize],
+    residues: &[u8],
+) -> Result<BinaryDyadicFibrePhase, HayesError> {
+    let coordinates = affine_binary_coordinates(members)?;
+    let dimension = coordinates.len().ilog2() as usize;
+    let origin = members[0];
+    let mut truth_table = vec![0_u8; members.len()];
+    let mut signed_correlation = 0_i128;
+    for member in members.iter().copied() {
+        let coordinate = coordinates[&(member ^ origin)];
+        let phase = (residues[member] * residues[member ^ shift]) % 8;
+        truth_table[coordinate] = phase;
+        signed_correlation += i128::from(kronecker_two_mod_eight(phase));
+    }
+    let coefficients = mod_eight_anf_coefficients(&truth_table, dimension)?;
+    let maxima = mod_eight_anf_maxima(&coefficients);
+    let support_degree = [maxima.0, maxima.1, maxima.2]
+        .into_iter()
+        .flatten()
+        .max()
+        .unwrap_or(0);
+    Ok(BinaryDyadicFibrePhase {
+        dimension,
+        maxima,
+        support_degree,
+        signed_correlation,
+    })
+}
+
+#[derive(Clone, Copy)]
+struct BinaryDyadicFibreKey {
+    shift: usize,
+    input_coset: usize,
+    inverse_difference: u64,
+}
+
+fn record_binary_dyadic_fibre_statistics(
+    key: BinaryDyadicFibreKey,
+    population: usize,
+    phase: &BinaryDyadicFibrePhase,
+    report: &mut BinaryDyadicAutocorrelationFibreReport,
+) -> Result<(), HayesError> {
+    let population = u128::try_from(population)
+        .map_err(|_| HayesError::InvalidParameter("dyadic fibre size exceeds u128".to_owned()))?;
+    report.fibre_count += 1;
+    report.total_fibre_points = report
+        .total_fibre_points
+        .checked_add(population)
+        .ok_or_else(|| HayesError::InvalidParameter("dyadic fibre total overflow".to_owned()))?;
+    report.max_fibre_dimension = report.max_fibre_dimension.max(phase.dimension);
+    report.at_most_quadratic_fibre_count += usize::from(phase.support_degree <= 2);
+    if phase.support_degree > 2 {
+        report.nonquadratic_fibre_points = report
+            .nonquadratic_fibre_points
+            .checked_add(population)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("nonquadratic fibre total overflow".to_owned())
+            })?;
+        report.nonquadratic_signed_correlation = report
+            .nonquadratic_signed_correlation
+            .checked_add(phase.signed_correlation)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("nonquadratic signed overflow".to_owned())
+            })?;
+        report.nonquadratic_absolute_correlation = report
+            .nonquadratic_absolute_correlation
+            .checked_add(phase.signed_correlation.unsigned_abs())
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("nonquadratic absolute overflow".to_owned())
+            })?;
+    }
+    report.full_degree_fibre_count += usize::from(phase.support_degree == phase.dimension);
+    report.fibrewise_absolute_correlation = report
+        .fibrewise_absolute_correlation
+        .checked_add(phase.signed_correlation.unsigned_abs())
+        .ok_or_else(|| HayesError::InvalidParameter("fibrewise correlation overflow".to_owned()))?;
+    if phase.support_degree > report.max_phase_support_degree || report.worst_fibre.is_none() {
+        report.max_phase_support_degree = phase.support_degree;
+        report.worst_fibre = Some(BinaryDyadicAutocorrelationFibreWitness {
+            shift: key.shift,
+            input_coset: key.input_coset,
+            inverse_difference: key.inverse_difference,
+            fibre_dimension: phase.dimension,
+            max_odd_support_degree: phase.maxima.0,
+            max_twice_odd_support_degree: phase.maxima.1,
+            max_four_support_degree: phase.maxima.2,
+            signed_correlation: phase.signed_correlation,
+        });
+    }
+    Ok(())
+}
+
+fn record_binary_dyadic_parameter_sum(
+    key: BinaryDyadicFibreKey,
+    ell: usize,
+    representative: usize,
+    signed_correlation: i128,
+    sums: &mut BinaryDyadicParameterSums,
+) -> Result<(), HayesError> {
+    let pair_entry = sums
+        .shift_inverse
+        .entry((key.shift, key.inverse_difference))
+        .or_default();
+    *pair_entry = pair_entry.checked_add(signed_correlation).ok_or_else(|| {
+        HayesError::InvalidParameter("shift/inverse correlation overflow".to_owned())
+    })?;
+    let shift = u64::try_from(key.shift)
+        .map_err(|_| HayesError::InvalidParameter("dyadic shift exceeds u64".to_owned()))?;
+    let shift_polynomial = shift << 1;
+    let valuation = shift_polynomial.trailing_zeros() as usize;
+    if key.inverse_difference == 0
+        || key.inverse_difference.trailing_zeros() as usize != valuation
+        || valuation > ell
+    {
+        return Err(HayesError::Invariant(
+            "shift and inverse difference have different valuations".to_owned(),
+        ));
+    }
+    let quotient_ell = ell - valuation;
+    let parameter = unit_multiply(
+        shift_polynomial >> valuation,
+        principal_unit_inverse(key.inverse_difference >> valuation, quotient_ell),
+        quotient_ell,
+    );
+    let representative = u64::try_from(representative).map_err(|_| {
+        HayesError::InvalidParameter("dyadic fibre representative exceeds u64".to_owned())
+    })?;
+    let quotient_mask = (1_u64 << (quotient_ell + 1)) - 1;
+    let left = (1 | (representative << 1)) & quotient_mask;
+    let right = (1 | ((representative ^ shift) << 1)) & quotient_mask;
+    if parameter != unit_multiply(left, right, quotient_ell) {
+        return Err(HayesError::Invariant(
+            "normalized dyadic parameter is not the Artin--Schreier product f(f+h)".to_owned(),
+        ));
+    }
+    let parameter_entry = sums.normalized.entry((valuation, parameter)).or_default();
+    *parameter_entry = parameter_entry
+        .checked_add(signed_correlation)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("normalized parameter correlation overflow".to_owned())
+        })?;
+    let valuation_entry = sums.valuation.entry(valuation).or_default();
+    *valuation_entry = valuation_entry
+        .checked_add(signed_correlation)
+        .ok_or_else(|| HayesError::InvalidParameter("valuation correlation overflow".to_owned()))?;
+    Ok(())
+}
+
 fn accumulate_binary_dyadic_shift_fibres(
     shift: usize,
     domain: &BinaryBerlekampPhaseDomain,
-    interval_degree: usize,
     residues: &[u8],
     inverses: &[u64],
     report: &mut BinaryDyadicAutocorrelationFibreReport,
+    parameter_sums: &mut BinaryDyadicParameterSums,
 ) -> Result<i128, HayesError> {
     let mut fibres = BTreeMap::<(usize, u64), Vec<usize>>::new();
     for middle in 0..domain.input_count {
         let inverse_difference = inverses[middle] ^ inverses[middle ^ shift];
-        if inverse_difference >> (interval_degree + 1) == 0 {
+        if inverse_difference >> (report.interval_degree + 1) == 0 {
             fibres
                 .entry((middle / domain.coset_size, inverse_difference))
                 .or_default()
@@ -6581,83 +6775,75 @@ fn accumulate_binary_dyadic_shift_fibres(
     }
     let mut shift_correlation = 0_i128;
     for ((input_coset, inverse_difference), members) in fibres {
-        let coordinates = affine_binary_coordinates(&members)?;
-        let fibre_dimension = coordinates.len().ilog2() as usize;
-        let origin = members[0];
-        let mut truth_table = vec![0_u8; members.len()];
-        let mut signed_correlation = 0_i128;
-        for member in members.iter().copied() {
-            let coordinate = coordinates[&(member ^ origin)];
-            let phase = (residues[member] * residues[member ^ shift]) % 8;
-            truth_table[coordinate] = phase;
-            signed_correlation += i128::from(kronecker_two_mod_eight(phase));
-        }
-        let coefficients = mod_eight_anf_coefficients(&truth_table, fibre_dimension)?;
-        let maxima = mod_eight_anf_maxima(&coefficients);
-        let phase_degree = [maxima.0, maxima.1, maxima.2]
-            .into_iter()
-            .flatten()
-            .max()
-            .unwrap_or(0);
-        report.fibre_count += 1;
-        report.total_fibre_points = report
-            .total_fibre_points
-            .checked_add(u128::try_from(members.len()).map_err(|_| {
-                HayesError::InvalidParameter("dyadic fibre size exceeds u128".to_owned())
-            })?)
-            .ok_or_else(|| {
-                HayesError::InvalidParameter("dyadic fibre total overflow".to_owned())
-            })?;
-        report.max_fibre_dimension = report.max_fibre_dimension.max(fibre_dimension);
-        report.at_most_quadratic_fibre_count += usize::from(phase_degree <= 2);
-        if phase_degree > 2 {
-            let population = u128::try_from(members.len()).map_err(|_| {
-                HayesError::InvalidParameter("nonquadratic fibre size exceeds u128".to_owned())
-            })?;
-            report.nonquadratic_fibre_points = report
-                .nonquadratic_fibre_points
-                .checked_add(population)
-                .ok_or_else(|| {
-                    HayesError::InvalidParameter("nonquadratic fibre total overflow".to_owned())
-                })?;
-            report.nonquadratic_signed_correlation = report
-                .nonquadratic_signed_correlation
-                .checked_add(signed_correlation)
-                .ok_or_else(|| {
-                    HayesError::InvalidParameter(
-                        "nonquadratic signed correlation overflow".to_owned(),
-                    )
-                })?;
-            report.nonquadratic_absolute_correlation = report
-                .nonquadratic_absolute_correlation
-                .checked_add(signed_correlation.unsigned_abs())
-                .ok_or_else(|| {
-                    HayesError::InvalidParameter(
-                        "nonquadratic absolute correlation overflow".to_owned(),
-                    )
-                })?;
-        }
-        report.full_degree_fibre_count += usize::from(phase_degree == fibre_dimension);
+        let phase = binary_dyadic_fibre_phase(shift, &members, residues)?;
+        let key = BinaryDyadicFibreKey {
+            shift,
+            input_coset,
+            inverse_difference,
+        };
+        record_binary_dyadic_fibre_statistics(key, members.len(), &phase, report)?;
+        record_binary_dyadic_parameter_sum(
+            key,
+            report.ell,
+            members[0],
+            phase.signed_correlation,
+            parameter_sums,
+        )?;
         shift_correlation = shift_correlation
-            .checked_add(signed_correlation)
+            .checked_add(phase.signed_correlation)
             .ok_or_else(|| {
                 HayesError::InvalidParameter("dyadic shift correlation overflow".to_owned())
             })?;
-        if phase_degree > report.max_phase_support_degree || report.worst_fibre.is_none() {
-            report.max_phase_support_degree = phase_degree;
-            report.worst_fibre = Some(BinaryDyadicAutocorrelationFibreWitness {
-                shift,
-                input_coset,
-                inverse_difference,
-                fibre_dimension,
-                max_odd_support_degree: maxima.0,
-                max_twice_odd_support_degree: maxima.1,
-                max_four_support_degree: maxima.2,
-                signed_correlation,
-            });
-        }
     }
     Ok(shift_correlation)
+}
+
+fn signed_map_absolute_sum<K: Ord>(values: &BTreeMap<K, i128>) -> Result<u128, HayesError> {
+    values.values().try_fold(0_u128, |sum, value| {
+        sum.checked_add(value.unsigned_abs()).ok_or_else(|| {
+            HayesError::InvalidParameter("dyadic parameter absolute sum overflow".to_owned())
+        })
+    })
+}
+
+fn finalize_binary_dyadic_parameter_sums(
+    report: &mut BinaryDyadicAutocorrelationFibreReport,
+    sums: &BinaryDyadicParameterSums,
+) -> Result<(), HayesError> {
+    report.shift_inverse_pair_count = sums.shift_inverse.len();
+    report.shift_inverse_pairwise_absolute_correlation =
+        signed_map_absolute_sum(&sums.shift_inverse)?;
+    report.normalized_parameter_count = sums.normalized.len();
+    report.normalized_parameterwise_absolute_correlation =
+        signed_map_absolute_sum(&sums.normalized)?;
+    report.valuationwise_absolute_correlation = signed_map_absolute_sum(&sums.valuation)?;
+    report.valuation_correlations = sums
+        .valuation
+        .iter()
+        .map(|(&valuation, &signed_correlation)| {
+            let layer = sums
+                .normalized
+                .iter()
+                .filter(|((candidate, _), _)| *candidate == valuation)
+                .map(|(_, value)| *value)
+                .collect::<Vec<_>>();
+            let parameterwise_absolute_correlation =
+                layer.iter().try_fold(0_u128, |sum, value| {
+                    sum.checked_add(value.unsigned_abs()).ok_or_else(|| {
+                        HayesError::InvalidParameter(
+                            "valuation parameter absolute sum overflow".to_owned(),
+                        )
+                    })
+                })?;
+            Ok(BinaryDyadicValuationCorrelation {
+                valuation,
+                normalized_parameter_count: layer.len(),
+                parameterwise_absolute_correlation,
+                signed_correlation,
+            })
+        })
+        .collect::<Result<Vec<_>, HayesError>>()?;
+    Ok(())
 }
 
 /// Restrict the dyadic product-discriminant phase to every exact affine
@@ -6731,19 +6917,27 @@ pub fn binary_dyadic_autocorrelation_fibre_report(
         nonquadratic_fibre_points: 0,
         nonquadratic_signed_correlation: 0,
         nonquadratic_absolute_correlation: 0,
+        fibrewise_absolute_correlation: 0,
+        shift_inverse_pair_count: 0,
+        shift_inverse_pairwise_absolute_correlation: 0,
+        normalized_parameter_count: 0,
+        normalized_parameterwise_absolute_correlation: 0,
+        valuationwise_absolute_correlation: 0,
+        valuation_correlations: Vec::new(),
         full_degree_fibre_count: 0,
         max_phase_support_degree: 0,
         off_diagonal_signed_correlation: 0,
         worst_fibre: None,
     };
+    let mut parameter_sums = BinaryDyadicParameterSums::default();
     for shift in 1..shift_count {
         let shift_correlation = accumulate_binary_dyadic_shift_fibres(
             shift,
             &domain,
-            interval_degree,
             &residues,
             &inverses,
             &mut report,
+            &mut parameter_sums,
         )?;
         if shift_correlation != expected.shift_correlations[shift].signed_correlation {
             return Err(HayesError::Invariant(
@@ -6762,6 +6956,7 @@ pub fn binary_dyadic_autocorrelation_fibre_report(
             "dyadic fibres miss the total off-diagonal correlation".to_owned(),
         ));
     }
+    finalize_binary_dyadic_parameter_sums(&mut report, &parameter_sums)?;
     Ok(report)
 }
 
@@ -10165,6 +10360,34 @@ mod tests {
         assert_eq!(report.nonquadratic_fibre_points, 61_264);
         assert_eq!(report.nonquadratic_signed_correlation, -202);
         assert_eq!(report.nonquadratic_absolute_correlation, 8_622);
+        assert_eq!(report.fibrewise_absolute_correlation, 33_680);
+        assert_eq!(report.shift_inverse_pair_count, 4_721);
+        assert_eq!(report.shift_inverse_pairwise_absolute_correlation, 16_972);
+        assert_eq!(report.normalized_parameter_count, 214);
+        assert_eq!(report.normalized_parameterwise_absolute_correlation, 3_956);
+        assert_eq!(report.valuationwise_absolute_correlation, 388);
+        assert_eq!(
+            report
+                .valuation_correlations
+                .iter()
+                .map(|row| (
+                    row.valuation,
+                    row.normalized_parameter_count,
+                    row.parameterwise_absolute_correlation,
+                    row.signed_correlation,
+                ))
+                .collect::<Vec<_>>(),
+            vec![
+                (1, 128, 2_286, 70),
+                (2, 60, 998, 90),
+                (3, 12, 330, -30),
+                (4, 7, 258, -138),
+                (5, 3, 30, -6),
+                (6, 2, 38, -38),
+                (7, 1, 16, -16),
+                (8, 1, 0, 0),
+            ]
+        );
         assert_eq!(report.full_degree_fibre_count, 5_540);
         assert_eq!(report.max_phase_support_degree, 7);
         assert_eq!(report.off_diagonal_signed_correlation, -68);
@@ -10183,6 +10406,34 @@ mod tests {
         );
         assert!(
             binary_dyadic_autocorrelation_fibre_report(9, 11, 0, HayesLimits::default()).is_err()
+        );
+    }
+
+    #[test]
+    #[ignore = "extended finite diagnostic; select one row with AXEYUM_DYADIC_PROBE_ELL/D/OFFSET"]
+    fn dyadic_parameter_aggregation_extended_probe() {
+        let parse = |name: &str| {
+            std::env::var(name)
+                .unwrap_or_else(|_| panic!("missing {name}"))
+                .parse::<usize>()
+                .unwrap_or_else(|_| panic!("invalid {name}"))
+        };
+        let ell = parse("AXEYUM_DYADIC_PROBE_ELL");
+        let d = parse("AXEYUM_DYADIC_PROBE_D");
+        let offset = parse("AXEYUM_DYADIC_PROBE_OFFSET");
+        assert!(matches!(offset, 1 | 2));
+        let degree = 2 * ell + offset - d;
+        let report =
+            binary_dyadic_autocorrelation_fibre_report(ell, degree, d, HayesLimits::default())
+                .unwrap();
+        eprintln!(
+            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} pair_abs={} normalized_abs={} valuation_abs={} layers={:?}",
+            report.off_diagonal_signed_correlation,
+            report.fibrewise_absolute_correlation,
+            report.shift_inverse_pairwise_absolute_correlation,
+            report.normalized_parameterwise_absolute_correlation,
+            report.valuationwise_absolute_correlation,
+            report.valuation_correlations,
         );
     }
 

@@ -1352,6 +1352,36 @@ the shift/inverse-difference parameters (preferably in Witt blocks) before
 taking absolute values, rather than bounding every exact affine fibre
 separately.
 
+That aggregation is now exact.  Write
+
+```text
+h=x^v h_0,     w=f^(-1)+(f+h)^(-1)=x^v w_0.
+```
+
+Every contributing pair has the same valuation on `h` and `w`, and in the
+quotient modulo `x^(ell+1-v)` its normalized parameter is
+
+```text
+h_0 w_0^(-1)=f(f+h).                                  (product parameter)
+```
+
+The extended fibre report checks this identity independently on a
+representative of every exact fibre, then combines correlations successively
+over input cosets with fixed `(h,w)`, over all `(h,w)` with fixed
+`(v,h_0/w_0)`, and finally over the complete valuation layer.  At
+`(ell,k,d)=(9,11,8)`, the absolute totals fall from `33,680` fibrewise to
+`16,972`, `3,956`, and `388` at those three aggregation levels, before the
+complete signed total `-68`.  The selected odd and even endpoint rows through
+`ell=9` show the same qualitative collapse.
+
+This does not yet supply a uniform estimate.  In particular, the initially
+tempting bound `valuationwise absolute <=2^(d+1)` is already false: the value
+is `672>512` at `(ell,k,d)=(9,12,8)`.  The live algebraic target is therefore
+a bound for the sum of the complete valuation layers, possibly after Witt or
+conductor orthogonality, using the family of equations
+`f^2+h f=a mod x^(ell+1-v)`.  The intermediate absolute sums remain
+uncredited finite diagnostics.
+
 The Arf coordinate is a better representation of the live squarefree sign,
 but not yet its estimate.
 For each squarefree `f` the adjusted second-trace space is nondegenerate by
