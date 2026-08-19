@@ -65,5 +65,51 @@ class NatFibIterateRecurrenceResultTests(unittest.TestCase):
         )
 
 
+class NatFibIterateRecurrenceV2ResultTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.manifest = MODULE.load(MODULE.MANIFEST_V2)
+        archive = cls.manifest["observation_archive"]
+        cls.observation = MODULE.load(Path(archive["root"]) / archive["file"])
+
+    def reject(self, mutate, message):
+        observation = copy.deepcopy(self.observation)
+        mutate(observation)
+        unsigned = dict(observation)
+        unsigned.pop("observation_sha256", None)
+        observation["observation_sha256"] = MODULE.canonical_digest(unsigned)
+        with self.assertRaisesRegex(MODULE.IterateRecurrenceResultError, message):
+            MODULE.validate_observation_v2(observation)
+
+    def test_exact_v2_negative_result_is_accepted(self):
+        MODULE.validate_observation_v2(self.observation)
+
+    def test_v2_retry_is_rejected(self):
+        self.reject(
+            lambda value: value["execution"].__setitem__("producer_retries", 1),
+            "v2 negative execution",
+        )
+
+    def test_v2_fake_acceptance_is_rejected(self):
+        self.reject(
+            lambda value: value["execution"].__setitem__("kernel_accepted", True),
+            "v2 negative execution",
+        )
+
+    def test_v2_target_bearing_control_is_rejected(self):
+        self.reject(
+            lambda value: value["preexecution_controls"].__setitem__(
+                "target_submissions", 1
+            ),
+            "v2 preexecution controls",
+        )
+
+    def test_v2_credit_is_rejected(self):
+        self.reject(
+            lambda value: value["authority"].__setitem__("evaluation_credit", 1),
+            "v2 observation authority",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
