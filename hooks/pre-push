@@ -232,8 +232,22 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   # half-measure — a soundness hole reachable only through a rewrite/strings/bv
   # unit test would still slip. ("full sweep catches what per-commit --test
   # misses", enforced workspace-wide at the push boundary.)
-  gated_test "workspace unit sweep" \
-    cargo test --workspace --lib --quiet
+  # THE WORKSPACE UNIT SWEEP MOVED OUT on 2026-08-19. It ran `cargo test
+  # --workspace --lib` on every Rust push: 218 s uncontended at its last honest
+  # measurement, and **2,699 s** in a real push once `axeyum-lean-kernel`'s lib
+  # tests grew (CReal, its inverse, the lattice, and Complex all landed in that
+  # crate in a day; a dozen of its tests now exceed 60 s each). It was also
+  # DOUBLE-CHARGED: the kernel step below ran `-p axeyum-lean-kernel` wholesale,
+  # which includes the same `--lib` tests.
+  #
+  # It exists because a P0 wrong-unsat lived in `axeyum-rewrite`, not in the
+  # solver, so a `-p axeyum-solver` sweep would not have caught it. That coverage
+  # is NOT lost: `cargo nextest run --profile local --workspace --all-features`
+  # in `scripts/local-ci.sh` is a strict superset, and
+  # `scripts/check-local-ci-freshness.sh` is ENFORCING in `just check` and
+  # `scripts/check.sh` — a battery record that is stale, failing, vacuous or
+  # unreadable reds the aggregate gate. The battery moved from every-push to
+  # must-have-run-recently, which is the cadence it was always worth.
 
   # ...and the step above runs on DEFAULT features, under which `axeyum-solver`
   # compiles **23** of its **968** unit tests (measured 2026-08-01): everything
@@ -298,41 +312,26 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
     step_seconds "kernel suite partition" ./scripts/check-kernel-suites.sh --list
   fi
 
-  # The CAPABILITY RATCHET. It exists because a 17-point `nia_unsat` frontier
-  # regression once shipped and needed an 829-commit bisect to find; it is the
-  # only gate that notices we got WEAKER without getting WRONG. It was not in
-  # this hook at all until 2026-08-04, and CLAUDE.md's documented invocation of
-  # it omitted `--features full` — `tests/progress_frontier.rs:75` is
-  # `#![cfg(feature = "full")]`, so the form agents were told to run compiled an
-  # empty binary and exited 0. `--test-threads=1`: the frontier counts decided
-  # files under a wall-clock budget, so parallel load makes it report false
-  # REGRESSIONs (task #40).
+  # THE CAPABILITY FRONTIER RATCHET MOVED OUT on 2026-08-19, to
+  # `scripts/local-ci.sh`, where it runs serialized with `--test-threads=1`.
   #
-  # SCOPED TO THE DIFF, 2026-08-18. It is 216s of a ~900s hook (24%), and it ran
-  # on pushes touching only docs and the kernel — which cannot move a solver
-  # frontier. Worse, it is the one step whose ANSWER depends on machine load:
-  # CLAUDE.md records the same commit on the same box scoring 35 (load 34), 39
-  # (load 5.4) and 40 (idle), and this repository routinely runs several lanes at
-  # once, so an unscoped run is both the slowest step and the least trustworthy
-  # one. The suite marks such runs NOT COMPARABLE itself.
+  # It exists because a 17-point `nia_unsat` regression once shipped and needed
+  # an 829-commit bisect: it is the only gate that notices we got WEAKER without
+  # getting WRONG. That is worth keeping, and it is kept — but not here.
   #
-  # The filter is deliberately the SAME breadth as the evidence suite's below,
-  # and for the same reason: the 2026-08-04 drift came from `dl_online.rs`, a
-  # file whose name has nothing to do with the thing it broke. Any change under a
-  # crate that can move a decision runs it.
-  if [ -n "$(git diff --name-only "$PREPUSH_BASE" "$PREPUSH_TIP" -- \
-      'crates/axeyum-solver/src/**' \
-      'crates/axeyum-rewrite/src/**' \
-      'crates/axeyum-cnf/src/**' \
-      'crates/axeyum-bv/src/**' \
-      'crates/axeyum-aig/src/**' | head -1)" ]; then
-    echo "pre-push: decision-path source changed — capability frontier ratchet" >&2
-    gated_test "capability frontier ratchet" \
-      cargo test -p axeyum-solver --test progress_frontier --features full --quiet \
-      -- --test-threads=1
-  else
-    echo "pre-push: no decision-path source changed — frontier ratchet SKIPPED" >&2
-  fi
+  # Moving it makes it STRONGER, which is the only reason it was allowed to
+  # move. It measures the largest N decided within a fixed WALL-CLOCK budget, so
+  # contention does not slow it down, it corrupts it: CLAUDE.md records the same
+  # commit on the same box scoring 35 (load 34), 39 (load 5.4) and 40 (idle).
+  # Each family calibrates the machine and marks a run NOT COMPARABLE or
+  # ADVISORY ONLY when the frame moved. In this hook, with several lanes on the
+  # box, it was **200 s of a 545 s baseline** spent mostly being advisory —
+  # paying full price for a verdict it then declined to enforce.
+  #
+  # `scripts/check-local-ci-freshness.sh` is ENFORCING in `just check` and
+  # `scripts/check.sh`, so a battery record that is stale, failing, vacuous or
+  # unreadable reds the aggregate gate. The ratchet did not become optional; it
+  # became something that must have run recently.
 
   # The ALWAYS-ON integration slice: four cheap `tests/*.rs` suites (measured
   # 2026-08-04: 0.00s + 0.01s + 0.00s + 0.82s warm) that no fast gate ran.
