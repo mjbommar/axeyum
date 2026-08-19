@@ -803,7 +803,7 @@ intersection interpretation but does not prove this envelope; see
 [Higher moments of arithmetic functions in short intervals: a geometric
 perspective](https://arxiv.org/abs/1604.02067).
 
-The exact algebra is no longer trapped in that executable. ADR-0482 extracts a
+The exact algebra is no longer trapped in that executable. ADR-0486 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
 identity-class populations, endpoint discrepancies, conductor layers, and the
 conditional sufficient-bound arithmetic. Every transform admits `ell`, degree,

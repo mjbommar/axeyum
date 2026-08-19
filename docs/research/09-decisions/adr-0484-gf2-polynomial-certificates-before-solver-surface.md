@@ -1,4 +1,4 @@
-# ADR-0480: Bit-packed GF(2) polynomial certificates precede any solver surface
+# ADR-0484: Bit-packed GF(2) polynomial certificates precede any solver surface
 
 Status: accepted
 Date: 2026-08-18

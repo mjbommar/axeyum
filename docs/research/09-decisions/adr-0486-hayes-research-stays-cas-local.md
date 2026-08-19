@@ -1,4 +1,4 @@
-# ADR-0482: Hayes class research stays in bounded CAS APIs, not SMT
+# ADR-0486: Hayes class research stays in bounded CAS APIs, not SMT
 
 Status: accepted
 Date: 2026-08-18
@@ -6,7 +6,7 @@ Index-summary: Extract bounded principal-unit, Hayes endpoint, conductor-layer, 
 
 ## Context
 
-ADR-0480 established bit-packed `GF(2)[x]` values and portable Rabin
+ADR-0484 established bit-packed `GF(2)[x]` values and portable Rabin
 certificates before any finite-field solver surface. The Lemire investigation
 subsequently isolated a different workload: exact type-II Hayes class counts,
 finite Fourier transforms over principal units, exact-conductor decomposition,

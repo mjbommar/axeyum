@@ -1,4 +1,4 @@
-# ADR-0481: Checker-native finite facts use versioned certificate specifications
+# ADR-0485: Checker-native finite facts use versioned certificate specifications
 
 Status: accepted
 Date: 2026-08-18
@@ -8,7 +8,7 @@ Index-summary: Admit versioned JSON certificate-spec propositions to the fact le
 
 The dual-checked Lemire range through degree 400 is a settled finite
 proposition, but the fact ledger cannot state it honestly. `smtlib2` and
-`axeyum-ir` would imply a finite-field solver surface that ADR-0480 explicitly
+`axeyum-ir` would imply a finite-field solver surface that ADR-0484 explicitly
 defers. `lean4` would imply a kernel vocabulary and term that do not exist.
 `cas-term` is explicitly the HyperTerm summation language; broadening it by
 accident would make existing dispatch and route claims ambiguous.
