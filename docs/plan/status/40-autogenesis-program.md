@@ -2,10 +2,10 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Fib coprimality child qualified from both strategic and term evidence.
+**Status:** Fib coprimality plan frozen; native/imported prelude composition is the measured blocker.
 
-**Next:** freeze a bounded gcd-coprimality induction plan with exact premise accounting.
+**Next:** reuse compatible imported prelude declarations and transactionally add the seven missing native lemmas.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-19 | `3dac4f57b` | Fib child relation probe and qualification |
+| 2026-08-19 | `1afe65473` | Native/imported Nat prelude composition probe |

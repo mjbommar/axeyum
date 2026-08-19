@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
+  "state": "proof-plan-frozen-execution-blocked-on-native-prelude-composition",
+  "target": {
+    "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+    "source_name": "Nat.fib_coprime_fib_succ",
+    "goal": "forall n, gcd (fib n) (fib (n + 1)) = 1",
+    "sole_admitted_theorem_premise": "F:ml430-nat-fib-add-two-b86e0c82"
+  },
+  "source": {
+    "stream": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/streams/r082.ndjson",
+    "stream_sha256": "6afa79d79481403d3e3273ea3eea26b4d1194762f9bd623ec019f8e821323cfd",
+    "partition": "train",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "composition_probe": {
+    "tool": "crates/axeyum-lean-import/examples/nat_prelude_composition_probe.rs",
+    "tool_sha256": "b58cfe53f91bb231042bc464a23a117263e5c756f514d9bd45c6f476c2612fce",
+    "observation": "/nas3/data/axeyum/autogenesis/probes/1afe65473-fib-coprime-prelude-composition-v1/observation.json",
+    "observation_sha256": "d551b2ecc4150b950bcc15451433be0a6d6b0097d2471dfc5332e252d6181307",
+    "outcome": "rejected",
+    "first_conflict": "True",
+    "imported_declarations": 261,
+    "imported_theorems": 52
+  },
+  "proof_plan": {
+    "induction_binder": "n",
+    "base": "reduce fib 0 and fib 1, then apply Nat.gcd_zero_left",
+    "step": [
+      "rewrite fib (n + 2) with the admitted Nat.fib_add_two theorem",
+      "let d = gcd (fib (n + 1)) (fib n + fib (n + 1))",
+      "obtain d divides fib (n + 1) and d divides the sum from gcd divisibility",
+      "derive d divides fib n by additive divisibility cancellation and add commutativity",
+      "derive d divides gcd (fib n) (fib (n + 1))",
+      "transport the induction hypothesis to obtain d divides 1",
+      "conclude d = 1 with Nat.eq_one_of_dvd_one"
+    ],
+    "required_native_declarations": [
+      "Nat.add_comm",
+      "Nat.dvd_add_iff_right",
+      "Nat.dvd_gcd",
+      "Nat.eq_one_of_dvd_one",
+      "Nat.gcd_dvd_left",
+      "Nat.gcd_dvd_right",
+      "Nat.gcd_zero_left"
+    ],
+    "required_present_in_import": [],
+    "already_present_in_import": ["Nat.rec"]
+  },
+  "next_capability_sequence": [
+    "bind existing imported logic and Nat declarations to reusable prelude handles",
+    "compare overlapping declaration identities and fail closed on semantic mismatch",
+    "construct only missing native theorems transactionally over the reused base",
+    "replay the seven-lemma surface before any coprimality target submission"
+  ],
+  "authority": {
+    "partitions_inspected": ["train"],
+    "held_out_inspected": false,
+    "proof_bodies_displayed": false,
+    "proof_search_invocations": 0,
+    "kernel_submissions": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
+  "limitations": "This freezes a proof plan and measures its composition blocker. It does not graft the native prelude, submit the target theorem, inspect held-out data, or establish the fact."
+}

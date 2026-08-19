@@ -584,3 +584,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0505](adr-0505-fibonacci-admission-consumes-only-the-checked-semantic-receipt.md) | Register one exact crash-safe admission route for the checked Nat.fib_add_two receipt | accepted |
 | [0506](adr-0506-fibonacci-recurrence-admission-must-measure-real-child-readiness.md) | Admit Nat.fib_add_two and reproduce its non-leaf readiness delta exactly | accepted |
 | [0507](adr-0507-fibonacci-coprimality-precedes-monotonicity.md) | Select Fibonacci coprimality by downstream leverage and measured relation shape | accepted |
+| [0508](adr-0508-native-prelude-composition-precedes-fibonacci-coprimality-search.md) | Compose native theorems into imported kernels before coprimality search | accepted |

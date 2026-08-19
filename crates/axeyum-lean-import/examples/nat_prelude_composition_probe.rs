@@ -18,10 +18,15 @@ fn main() {
 }
 
 fn run() -> Result<(), String> {
-    let path = std::env::args_os()
-        .nth(1)
+    let mut arguments = std::env::args_os().skip(1);
+    let path = arguments
+        .next()
         .map(PathBuf::from)
-        .ok_or("usage: nat_prelude_composition_probe <stream.ndjson>")?;
+        .ok_or("usage: nat_prelude_composition_probe <stream.ndjson> [output.json]")?;
+    let output_path = arguments.next().map(PathBuf::from);
+    if arguments.next().is_some() {
+        return Err("unexpected trailing argument".to_owned());
+    }
     let stream = fs::read(path).map_err(|error| error.to_string())?;
     let completed = import_ndjson(Cursor::new(&stream), ImportLimits::default())
         .map_err(|error| format!("source import failed: {error:?}"))?;
@@ -71,30 +76,31 @@ fn run() -> Result<(), String> {
             })
         }
     };
-    println!(
-        "{}",
-        serde_json::to_string(&json!({
-            "schema_version": 1,
-            "kind": "axeyum-native-nat-prelude-import-composition-probe",
-            "source": {
-                "stream_sha256": hex_sha256(&stream),
-                "lean_version": report.lean_version,
-                "lean_githash": report.lean_githash,
-                "axioms": report.axioms,
-                "declarations_before": declarations_before,
-                "theorems_before": theorems_before,
-                "required_declarations_present": required,
-            },
-            "result": result,
-            "authority": {
-                "proof_bodies_displayed": false,
-                "proof_search_invocations": 0,
-                "kernel_submissions": 0,
-                "ledger_writes": 0,
-            },
-        }))
-        .map_err(|error| error.to_string())?
-    );
+    let rendered = serde_json::to_string(&json!({
+        "schema_version": 1,
+        "kind": "axeyum-native-nat-prelude-import-composition-probe",
+        "source": {
+            "stream_sha256": hex_sha256(&stream),
+            "lean_version": report.lean_version,
+            "lean_githash": report.lean_githash,
+            "axioms": report.axioms,
+            "declarations_before": declarations_before,
+            "theorems_before": theorems_before,
+            "required_declarations_present": required,
+        },
+        "result": result,
+        "authority": {
+            "proof_bodies_displayed": false,
+            "proof_search_invocations": 0,
+            "kernel_submissions": 0,
+            "ledger_writes": 0,
+        },
+    }))
+    .map_err(|error| error.to_string())?;
+    if let Some(output_path) = output_path {
+        fs::write(output_path, format!("{rendered}\n")).map_err(|error| error.to_string())?;
+    }
+    println!("{rendered}");
     Ok(())
 }
 
