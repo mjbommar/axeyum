@@ -133,6 +133,7 @@ compounding, not automation theatre.
 | [Source-bound function-contract receipt](34-semantic-function-contract-receipt.md) | Can both kernels, the exact source, local contract, witness, specialized proof, and dependency closures become one replayable fail-closed object? |
 | [Real contract target census](35-real-contract-target-census.md) | Is any pointwise Mathlib binding ready for a direct equation contract, and what representation capability must come first? |
 | [First exact contract-body residualization](36-int-gcd-contract-residualization.md) | Can the omitted `Nat.gcd` dependency become a checked local binder, and what trust evidence still blocks a real receipt? |
+| [First bounded source-delta trace](37-int-gcd-source-delta.md) | Can the exact source body be exposed by one recorded definition unfold while residual functions remain opaque? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -313,6 +314,14 @@ specializes exactly. Its source witness is axiom-free but reaches 52 theorems
 transitively despite reporting zero direct theorem dependencies. ADR-0490
 strengthens receipt independence to the complete closure. The next turn must
 produce a bounded one-step source-delta trace rather than whitelist that closure.
+
+That [bounded source trace](37-int-gcd-source-delta.md) now passes against the
+same exact `Int.gcd` declaration. It consults `Int.gcd` only, leaves `Nat.gcd`
+opaque, and binds a proof-free template containing neither function constant.
+ADR-0491 accepts the structural trace mechanism without weakening ADR-0490.
+The next turn must replace the receipt's theorem-valued source witness with
+this independently replayed trace; the current result grants no contract or
+ledger credit.
 
 ## Phase summary
 

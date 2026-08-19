@@ -853,6 +853,13 @@ Out of scope:
     direct but 52 transitive theorem dependencies. Receipt authority uses the
     complete declaration closure. See
     [ADR-0490](../09-decisions/adr-0490-contract-witness-independence-uses-the-complete-theorem-closure.md).
+- [x] Can source contract discharge record only the selected definition unfold
+      while leaving residual body constants opaque?
+  - Answer (2026-08-19): yes, as a structural mechanism rather than a theorem
+    witness. The exact `Int.gcd` step consults only `Int.gcd`, leaves `Nat.gcd`
+    opaque, and binds a generalized template containing neither function
+    constant. Receipt integration remains open. See
+    [ADR-0491](../09-decisions/adr-0491-source-contract-discharge-uses-a-selected-structural-delta-step.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?
