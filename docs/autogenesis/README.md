@@ -138,6 +138,7 @@ compounding, not automation theatre.
 | [Preregistered contract-to-theorem bridge](39-int-gcd-contract-theorem-control-selection.md) | Which bounded theorem control should consume the receipt before real evaluation, and which dependency chain lies beyond it? |
 | [First contract-backed theorem receipt](40-int-gcd-contract-theorem-control-result.md) | Did the frozen bridge close the source-contract-to-theorem seam, and what remains before evaluation credit? |
 | [Fibonacci/GCD premise sequence](41-nat-fib-gcd-premise-selection.md) | Which strategic premise and bottom-up foothold maximize compounding without skipping the first missing capability? |
+| [First bounded Fibonacci recurrence result](42-nat-fib-iterate-recurrence-result.md) | Did the one-shot iterator-recurrence plan establish `Nat.fib_add_two`, and which exact capability boundary failed? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
