@@ -68,7 +68,7 @@
 //! Lean is optional locally and mandatory under `AXEYUM_REQUIRE_LEAN=1`, like
 //! the other cross-checks in this crate.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use axeyum_lean_kernel::{
@@ -199,11 +199,35 @@ fn theorems_as_defs(source: &str) -> String {
     rewritten
 }
 
+/// A scratch directory for the artefacts this suite hands to `lean`.
+///
+/// **Not** `std::env::temp_dir()`. `/tmp` on the development host is a 62 GB
+/// **tmpfs** — RAM — which CLAUDE.md records as a standing contributor to the
+/// OOM kills that have ended sessions on this box. A suite that exports the
+/// whole checked environment is precisely the one that grows, so it writes
+/// where the rest of the repository's scratch goes (`/data0`, as
+/// `scripts/lane-snapshot.sh` does). `AXEYUM_SCRATCH_DIR` overrides it, and a
+/// host without `/data0` falls back to the temporary directory rather than
+/// failing — the fallback is the old behaviour, not a new hazard.
+fn scratch_directory(tag: &str) -> PathBuf {
+    let name = format!("axeyum_{tag}_{}", std::process::id());
+    let roots = [
+        std::env::var_os("AXEYUM_SCRATCH_DIR").map(PathBuf::from),
+        Some(PathBuf::from("/data0")),
+        Some(std::env::temp_dir()),
+    ];
+    for root in roots.into_iter().flatten() {
+        let directory = root.join(&name);
+        if std::fs::create_dir_all(&directory).is_ok() {
+            return directory;
+        }
+    }
+    panic!("no writable scratch root for {tag}");
+}
+
 /// Run `lean` over one rendered module and return `(accepted, output)`.
 fn elaborate(lean: &Path, source: &str, stem: &str) -> (bool, String) {
-    let directory =
-        std::env::temp_dir().join(format!("axeyum_wf_divergence_{}", std::process::id()));
-    std::fs::create_dir_all(&directory).expect("create module directory");
+    let directory = scratch_directory("wf_divergence");
     let file = directory.join(format!("{stem}.lean"));
     std::fs::write(&file, source).expect("write module");
     let output = Command::new(lean)
@@ -226,9 +250,7 @@ fn replay(lean: &Path, stream: &str, stem: &str) -> (bool, String) {
         .join("../../scripts/lean/replay-lean4export.lean")
         .canonicalize()
         .expect("the replay script must exist");
-    let directory =
-        std::env::temp_dir().join(format!("axeyum_wf_divergence_{}", std::process::id()));
-    std::fs::create_dir_all(&directory).expect("create replay directory");
+    let directory = scratch_directory("wf_divergence");
     let file = directory.join(format!("{stem}.ndjson"));
     std::fs::write(&file, stream).expect("write replay stream");
     let output = Command::new(lean)

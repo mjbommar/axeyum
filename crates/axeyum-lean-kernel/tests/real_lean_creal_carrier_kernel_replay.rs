@@ -59,7 +59,7 @@
 //! ~1.4 s for 470 declarations, which is why the whole carrier is affordable
 //! here and a 7 MB elaborated module is not.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use axeyum_lean_kernel::{Kernel, Lean4ExportMetadata, build_creal_prelude};
@@ -77,15 +77,39 @@ const CARRIER_MARKER: &str = "AXEYUM-CREAL-CARRIER";
 /// here so the suite fails if the export stops carrying them.
 const ELABORATOR_RESIDUE: [&str; 2] = ["not_zero_one", "not_le_one_zero"];
 
+/// A scratch directory for the artefacts this suite hands to `lean`.
+///
+/// **Not** `std::env::temp_dir()`. `/tmp` on the development host is a 62 GB
+/// **tmpfs** — RAM — which CLAUDE.md records as a standing contributor to the
+/// OOM kills that have ended sessions on this box. A suite that exports the
+/// whole checked environment is precisely the one that grows, so it writes
+/// where the rest of the repository's scratch goes (`/data0`, as
+/// `scripts/lane-snapshot.sh` does). `AXEYUM_SCRATCH_DIR` overrides it, and a
+/// host without `/data0` falls back to the temporary directory rather than
+/// failing — the fallback is the old behaviour, not a new hazard.
+fn scratch_directory(tag: &str) -> PathBuf {
+    let name = format!("axeyum_{tag}_{}", std::process::id());
+    let roots = [
+        std::env::var_os("AXEYUM_SCRATCH_DIR").map(PathBuf::from),
+        Some(PathBuf::from("/data0")),
+        Some(std::env::temp_dir()),
+    ];
+    for root in roots.into_iter().flatten() {
+        let directory = root.join(&name);
+        if std::fs::create_dir_all(&directory).is_ok() {
+            return directory;
+        }
+    }
+    panic!("no writable scratch root for {tag}");
+}
+
 /// Replay one NDJSON stream through Lean's own kernel.
 fn replay(lean: &Path, stream: &str, stem: &str) -> (bool, String) {
     let script = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../scripts/lean/replay-lean4export.lean")
         .canonicalize()
         .expect("the replay script must exist");
-    let directory =
-        std::env::temp_dir().join(format!("axeyum_creal_replay_{}", std::process::id()));
-    std::fs::create_dir_all(&directory).expect("create replay directory");
+    let directory = scratch_directory("creal_replay");
     let file = directory.join(format!("{stem}.ndjson"));
     std::fs::write(&file, stream).expect("write replay stream");
     let output = Command::new(lean)
