@@ -505,51 +505,56 @@ the principal-unit group
 E_ell=(1+x GF(2)[x])/(x^(ell+1))
 ```
 
-put `V_d={1+a_1x+...+a_dx^d}` for `1<=d<ell`, and let `r_d(e)` count ordered
-pairs `(a,b) in V_d^2` with `ab=e`.  Then
+put `V_d={1+a_1x+...+a_dx^d}` for `1<=d<ell`.  For `a<=b`, let `r_(a,b)(e)`
+count ordered pairs in `V_a x V_b` with product `e`.  Then
 
 ```text
-sum_e r_d(e)^2 = (d+2) 2^(2d-1),                  2d<=ell,
-sum_e r_d(e)^2 = 2^(4d-ell)+(ell-d)2^(2d-1),      2d>ell.       (product energy)
+sum_e r_(a,b)(e)^2 = (a+2)2^(a+b-1),                    a+b<=ell,
+sum_e r_(a,b)(e)^2 = 2^(2a+2b-ell)+(ell-b)2^(a+b-1),    a+b>ell. (mixed energy)
 ```
+
+The equal-degree product energy is the specialization `a=b=d`.
 
 Here is an elementary count.  Reduce an ordered pair `(A,C)` by its monic
 constant-one gcd and write `(A,C)=(ga,gc)`, with `(a,c)=1` and
-`s=max(deg a,deg c)`.  There is one reduced ratio of height zero and exactly
+`s=max(deg a,deg c)`, where `A,C in V_a`.  There is one reduced ratio of
+height zero and exactly
 `2^(2s-1)` reduced ordered ratios of each height `s>=1`; this follows at once
 by uniquely gcd-reducing the `2^(2s)` pairs of height at most `s`.  A fixed
-reduced ratio has `2^(d-s)` possible common factors `g`.
+reduced ratio has `2^(a-s)` possible common factors `g`.
 
 For that ratio the congruence `aB=cD mod x^(ell+1)` has exactly
 
 ```text
-2^max(d-s,2d-ell)
+2^max(b-s,2b-ell)
 ```
 
-solutions `(B,D) in V_d^2`.  To see this, write
+solutions `(B,D) in V_b^2`.  To see this, write
 `aB+cD=x^(ell+1)H`.  At `H=0` the solutions are `(B,D)=(ck,ak)`.  If
-`deg H<=s+d-ell-1`, division modulo whichever of `a,c` has degree `s`
-gives a particular solution of degree at most `d`; a homogeneous solution
+`deg H<=s+b-ell-1`, division modulo whichever of `a,c` has degree `s`
+gives a particular solution of degree at most `b`; a homogeneous solution
 then fixes both constant terms.  Every `H` in that range occurs, and two
 solutions for the same `H` differ by one of the preceding syzygies.  Summing
-over `s` gives the displayed cases.  At `2d=ell` they agree.
+over `s` gives the displayed cases.  At `a+b=ell` they agree.
 
 Finite-group Parseval therefore also gives the exact nonprincipal fourth
 moment
 
 ```text
-sum_(chi != 1) |sum_(a in V_d) chi(a)|^4
-  = 2^ell sum_e r_d(e)^2 - 2^(4d).
+sum_(chi != 1) |sum_(u in V_a) chi(u)|^2 |sum_(v in V_b) chi(v)|^2
+  = 2^ell sum_e r_(a,b)(e)^2 - 2^(2a+2b).
 ```
 
-`axeyum_cas::gf2_hayes::principal_unit_product_energy` evaluates these
-identities with exact bignums and explicit admission limits.  Independent
-product-table tests check every `2<=ell<=8`.  This is genuine Type-II
-information, but it is not the selected Mangoldt fourth moment: expanding the
-centered logarithm couples different degrees and requires cancellation among
-connected character quadruples.  Hölder applied to the displayed energy only
-recovers a polynomial multiple of `2^(n/2)` at the endpoint, so it does not
-by itself make the main term strictly positive.
+`axeyum_cas::gf2_hayes::principal_unit_mixed_product_energy` evaluates the
+mixed identities with exact bignums and explicit admission limits;
+`principal_unit_product_energy` is its equal-degree wrapper.  Independent
+product-table tests check every ordered degree pair for `2<=ell<=8`.  This is
+genuine Type-II information, but it is not the selected Mangoldt fourth
+moment: expanding the centered logarithm couples different degrees and
+requires cancellation among connected character quadruples.  Hölder applied
+to the displayed energies only recovers a polynomial multiple of `2^(n/2)`
+at the endpoint, so it does not by itself make the main term strictly
+positive.
 
 Supersingularity does not provide that extra structure beyond the first few
 levels.  Gorodetsky identifies the same curve through the completed

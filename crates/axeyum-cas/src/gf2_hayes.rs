@@ -282,6 +282,40 @@ pub struct PrincipalUnitProductEnergyReport {
     pub ordinary_product_regime: bool,
 }
 
+/// Exact mixed multiplicative energy of two bounded principal-unit intervals.
+///
+/// Put `V_a = {1 + a_1 x + ... + a_a x^a}` and define `V_b` similarly.  If
+/// `r(e)` counts ordered pairs `(u,v) in V_a x V_b` with `uv=e`, then
+/// `pair_product_energy` is `sum_e r(e)^2`.  The mixed Fourier numerator is
+/// the integral identity
+///
+/// ```text
+/// sum_(chi != 1) |sum_(u in V_a) chi(u)|^2 |sum_(v in V_b) chi(v)|^2
+///   = 2^ell pair_product_energy - |V_a|^2 |V_b|^2.
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrincipalUnitMixedProductEnergyReport {
+    /// Principal-unit truncation level.
+    pub ell: usize,
+    /// Degree of the first interval supplied by the caller.
+    pub left_degree: usize,
+    /// Degree of the second interval supplied by the caller.
+    pub right_degree: usize,
+    /// Number of elements in the first interval.
+    pub left_set_size: BigUint,
+    /// Number of elements in the second interval.
+    pub right_set_size: BigUint,
+    /// Number of ordered pairs in `V_a x V_b`.
+    pub ordered_pair_count: BigUint,
+    /// Exact collision count `sum_e r(e)^2`.
+    pub pair_product_energy: BigUint,
+    /// Exact nonprincipal mixed Fourier-moment numerator.
+    pub centered_fourier_mixed_moment_numerator: BigUint,
+    /// Whether products have degree at most the truncation level, so modular
+    /// collisions are ordinary polynomial equalities.
+    pub ordinary_product_regime: bool,
+}
+
 /// Explicit assumption whose arithmetic consequences Axeyum can check.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConductorBoundAssumption {
@@ -943,6 +977,98 @@ pub fn principal_unit_structure(
     })
 }
 
+/// Compute the exact mixed product-collision energy of `V_a V_b` in `E_ell`.
+///
+/// Write `a=min(left_degree,right_degree)` and
+/// `b=max(left_degree,right_degree)`.  Gcd reduction of the two `V_a`
+/// factors gives
+///
+/// ```text
+/// #{(u,v,w,y) in V_a x V_b x V_a x V_b : uv=wy}
+///   = (a+2) 2^(a+b-1),                              a+b<=ell,
+///   = 2^(2a+2b-ell) + (ell-b) 2^(a+b-1),            a+b>ell.
+/// ```
+///
+/// At `a+b=ell` the expressions agree.  The returned Fourier numerator is
+/// the mixed finite-group Parseval identity documented on
+/// [`PrincipalUnitMixedProductEnergyReport`].
+///
+/// # Errors
+///
+/// Rejects `ell=0`, a zero interval degree, an interval degree at least
+/// `ell`, host-width overflow, or a caller limit before constructing any
+/// large table.
+pub fn principal_unit_mixed_product_energy(
+    ell: usize,
+    left_degree: usize,
+    right_degree: usize,
+    limits: HayesLimits,
+) -> Result<PrincipalUnitMixedProductEnergyReport, HayesError> {
+    if left_degree == 0 || right_degree == 0 {
+        return Err(HayesError::InvalidParameter(
+            "principal-unit mixed product energy requires positive degrees".to_owned(),
+        ));
+    }
+    if left_degree >= ell || right_degree >= ell {
+        return Err(HayesError::InvalidParameter(
+            "principal-unit mixed product energy requires degrees smaller than ell".to_owned(),
+        ));
+    }
+    check_limit("degree", left_degree, limits.max_degree)?;
+    check_limit("degree", right_degree, limits.max_degree)?;
+    let structure = principal_unit_structure(ell, limits)?;
+    let (a, b) = if left_degree <= right_degree {
+        (left_degree, right_degree)
+    } else {
+        (right_degree, left_degree)
+    };
+    let degree_sum = a.checked_add(b).ok_or_else(|| {
+        HayesError::InvalidParameter("mixed product-energy degree overflow".to_owned())
+    })?;
+    let centered_exponent = degree_sum.checked_sub(1).ok_or_else(|| {
+        HayesError::InvalidParameter("mixed product-energy exponent underflow".to_owned())
+    })?;
+
+    let left_set_size = BigUint::from(1_u8) << left_degree;
+    let right_set_size = BigUint::from(1_u8) << right_degree;
+    let ordered_pair_count = BigUint::from(1_u8) << degree_sum;
+    let ordinary_product_regime = degree_sum <= ell;
+    let pair_product_energy = if ordinary_product_regime {
+        BigUint::from(a + 2) << centered_exponent
+    } else {
+        let uniform_exponent = degree_sum
+            .checked_mul(2)
+            .and_then(|value| value.checked_sub(ell))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "mixed uniform product-energy exponent overflow".to_owned(),
+                )
+            })?;
+        (BigUint::from(1_u8) << uniform_exponent) + (BigUint::from(ell - b) << centered_exponent)
+    };
+    let group_order = BigUint::from(structure.group_order);
+    let all_character_moment = &group_order * &pair_product_energy;
+    let principal_moment = left_set_size.pow(2) * right_set_size.pow(2);
+    if all_character_moment < principal_moment {
+        return Err(HayesError::Invariant(
+            "mixed product-energy Parseval numerator is negative".to_owned(),
+        ));
+    }
+    let centered_fourier_mixed_moment_numerator = all_character_moment - principal_moment;
+
+    Ok(PrincipalUnitMixedProductEnergyReport {
+        ell,
+        left_degree,
+        right_degree,
+        left_set_size,
+        right_set_size,
+        ordered_pair_count,
+        pair_product_energy,
+        centered_fourier_mixed_moment_numerator,
+        ordinary_product_regime,
+    })
+}
+
 /// Compute the exact product-collision energy of `V_d` inside `E_ell`.
 ///
 /// For `1 <= d < ell`, unique reduction of a pair `(a,c)` by its polynomial
@@ -978,59 +1104,16 @@ pub fn principal_unit_product_energy(
     degree: usize,
     limits: HayesLimits,
 ) -> Result<PrincipalUnitProductEnergyReport, HayesError> {
-    if degree == 0 {
-        return Err(HayesError::InvalidParameter(
-            "principal-unit product energy requires positive degree".to_owned(),
-        ));
-    }
-    if degree >= ell {
-        return Err(HayesError::InvalidParameter(
-            "principal-unit product energy requires degree smaller than ell".to_owned(),
-        ));
-    }
-    check_limit("degree", degree, limits.max_degree)?;
-    let structure = principal_unit_structure(ell, limits)?;
-    let twice_degree = degree
-        .checked_mul(2)
-        .ok_or_else(|| HayesError::InvalidParameter("product-energy degree overflow".to_owned()))?;
-    let four_times_degree = degree
-        .checked_mul(4)
-        .ok_or_else(|| HayesError::InvalidParameter("product-energy degree overflow".to_owned()))?;
-    let centered_exponent = twice_degree.checked_sub(1).ok_or_else(|| {
-        HayesError::InvalidParameter("product-energy exponent underflow".to_owned())
-    })?;
-
-    let set_size = BigUint::from(1_u8) << degree;
-    let ordered_pair_count = BigUint::from(1_u8) << twice_degree;
-    let ordinary_product_regime = twice_degree <= ell;
-    let pair_product_energy = if ordinary_product_regime {
-        BigUint::from(degree + 2) << centered_exponent
-    } else {
-        let uniform_exponent = four_times_degree.checked_sub(ell).ok_or_else(|| {
-            HayesError::InvalidParameter("uniform product-energy exponent underflow".to_owned())
-        })?;
-        (BigUint::from(1_u8) << uniform_exponent)
-            + (BigUint::from(ell - degree) << centered_exponent)
-    };
-    let group_order = BigUint::from(structure.group_order);
-    let all_character_fourth_moment = &group_order * &pair_product_energy;
-    let principal_fourth_moment = set_size.pow(4);
-    if all_character_fourth_moment < principal_fourth_moment {
-        return Err(HayesError::Invariant(
-            "product-energy Parseval numerator is negative".to_owned(),
-        ));
-    }
-    let centered_fourier_fourth_moment_numerator =
-        all_character_fourth_moment - principal_fourth_moment;
+    let mixed = principal_unit_mixed_product_energy(ell, degree, degree, limits)?;
 
     Ok(PrincipalUnitProductEnergyReport {
         ell,
         degree,
-        set_size,
-        ordered_pair_count,
-        pair_product_energy,
-        centered_fourier_fourth_moment_numerator,
-        ordinary_product_regime,
+        set_size: mixed.left_set_size,
+        ordered_pair_count: mixed.ordered_pair_count,
+        pair_product_energy: mixed.pair_product_energy,
+        centered_fourier_fourth_moment_numerator: mixed.centered_fourier_mixed_moment_numerator,
+        ordinary_product_regime: mixed.ordinary_product_regime,
     })
 }
 
@@ -2435,6 +2518,62 @@ mod tests {
     }
 
     #[test]
+    fn principal_unit_mixed_product_energy_matches_direct_collisions() {
+        let limits = HayesLimits::default();
+        for ell in 2..=8 {
+            for left_degree in 1..ell {
+                for right_degree in 1..ell {
+                    let report =
+                        principal_unit_mixed_product_energy(ell, left_degree, right_degree, limits)
+                            .unwrap();
+                    let mut products = BTreeMap::<u64, u128>::new();
+                    for left_tail in 0..(1_u64 << left_degree) {
+                        let left = 1 | (left_tail << 1);
+                        for right_tail in 0..(1_u64 << right_degree) {
+                            let right = 1 | (right_tail << 1);
+                            *products.entry(unit_multiply(left, right, ell)).or_default() += 1;
+                        }
+                    }
+                    let direct = products
+                        .values()
+                        .map(|multiplicity| multiplicity * multiplicity)
+                        .sum::<u128>();
+                    assert_eq!(report.pair_product_energy, BigUint::from(direct));
+                    assert_eq!(report.left_set_size, BigUint::from(1_u8) << left_degree);
+                    assert_eq!(report.right_set_size, BigUint::from(1_u8) << right_degree);
+                    assert_eq!(
+                        report.ordered_pair_count,
+                        BigUint::from(1_u8) << (left_degree + right_degree)
+                    );
+                    assert_eq!(
+                        report.ordinary_product_regime,
+                        left_degree + right_degree <= ell
+                    );
+                }
+            }
+        }
+
+        let ordinary = principal_unit_mixed_product_energy(14, 4, 7, limits).unwrap();
+        assert_eq!(ordinary.pair_product_energy, BigUint::from(6_144_u32));
+        let projected = principal_unit_mixed_product_energy(14, 6, 9, limits).unwrap();
+        assert_eq!(projected.pair_product_energy, BigUint::from(147_456_u32));
+        assert_eq!(
+            projected.centered_fourier_mixed_moment_numerator,
+            BigUint::from(1_342_177_280_u64)
+        );
+        assert_eq!(
+            projected,
+            principal_unit_mixed_product_energy(14, 9, 6, limits)
+                .map(|mut swapped| {
+                    std::mem::swap(&mut swapped.left_degree, &mut swapped.right_degree);
+                    std::mem::swap(&mut swapped.left_set_size, &mut swapped.right_set_size);
+                    swapped
+                })
+                .unwrap()
+        );
+    }
+
+    #[test]
     fn principal_unit_product_energy_matches_direct_collisions() {
         let limits = HayesLimits::default();
         for ell in 2..=8 {
@@ -2471,6 +2610,14 @@ mod tests {
     #[test]
     fn principal_unit_product_energy_declines_invalid_or_limited_inputs() {
         let limits = HayesLimits::default();
+        assert!(matches!(
+            principal_unit_mixed_product_energy(4, 0, 1, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            principal_unit_mixed_product_energy(4, 1, 4, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
         assert!(matches!(
             principal_unit_product_energy(0, 1, limits),
             Err(HayesError::InvalidParameter(_))
