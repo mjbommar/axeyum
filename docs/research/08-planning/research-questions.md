@@ -797,6 +797,16 @@ Out of scope:
     admitted content digest so dependency mutations propagate without changing
     the dependent declaration's own content identity. See
     [ADR-0350](../09-decisions/adr-0350-canonical-lean-declaration-identity.md).
+- [x] How may a proof-isolated statement adapter exclude proof-bearing
+      implementation bodies without changing the exact source proposition?
+  - Answer (2026-08-19): reconstruct a fresh proof-free kernel and generalize
+    eligible non-`Prop` constants into explicit parameters identified by
+    declaration content plus universe instance. A generalized proof receives no
+    concrete-fact credit until a separate checker applies the exact source
+    constants and checks definitional equality to the frozen source goal.
+    Proposition-valued parameters, quotient participation, and missing required
+    computation fail closed. See
+    [ADR-0484](../09-decisions/adr-0484-proof-free-type-slices-are-generalized-and-exactly-specialized.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?
