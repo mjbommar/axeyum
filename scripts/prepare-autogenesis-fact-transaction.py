@@ -319,7 +319,7 @@ def build_authoritative_transaction(
         }
         result_description = "fresh-import axiom-free reflexivity proof"
         replay_description = (
-            "the proof-isolated statement artifact through a fresh importer and "
+            "proof-isolated statement artifact through a fresh importer and "
             "requires the exact kernel-checked proof and dependency-free result"
         )
     else:
