@@ -2,10 +2,10 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Fib recurrence admitted and clean-replayed; two children ready.
+**Status:** Fib coprimality child qualified from both strategic and term evidence.
 
-**Next:** qualify the coprime and monotonicity children; select by downstream leverage and reusable blocker.
+**Next:** freeze a bounded gcd-coprimality induction plan with exact premise accounting.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-19 | `d637d83f7` | Fib recurrence admission |
+| 2026-08-19 | `3dac4f57b` | Fib child relation probe and qualification |
