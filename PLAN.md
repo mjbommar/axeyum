@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `31b862946` | Added the exact closed-form principal-unit product energy and Fourier fourth moment, with direct native collision-table controls and an explicit boundary against the still-open Mangoldt moment. |
 | 2026-08-19 | `5fac62cbb` | Added the bounded exact half-interval Möbius identity, pinned its first positive-composite parity counterexample with native Berlekamp factorization, and ruled out Porritt's explicit bound at `q=2`. |
 | 2026-08-19 | `77209a5ee` | Added exact fourth moments/cumulants, checked the conditional implication and low control, retained level-23 evidence, and recorded open facts. |
 | 2026-08-19 | `068e0fbff` | Added the exact resource-bounded fourth-moment conductor filtration, quotient-projection controls, public diagnostic, and literature boundary refresh. |
@@ -339,7 +340,9 @@ checked through degree 400.  Bounded native CAS operations now cover Hayes
 populations, moments/conductor filtration, and exact prime-power inversion.
 At odd endpoints they certify `N_(2ell+1)(1)=1+(2ell+1)I_(2ell+1)(1)`; hence
 only the strict analytic bound `N_(2ell+1)(1)>1` remains there.  Even endpoints
-still require the checked general proper-power subtraction.
+still require the checked general proper-power subtraction.  The CAS now also
+has a proved closed form for the principal-unit interval's exact product
+energy and nonprincipal Fourier fourth moment.
 
 **Next:** prove a uniform endpoint discrepancy bound, encode it as replayable
 evidence, then write the paper.  The selected sufficient fourth-moment bound is
@@ -347,7 +350,9 @@ experimentally true for `6<=ell<=23` but remains an open fact; curve positivity
 alone is non-strict.  The exact half-level Möbius sieve now has a native
 positive-composite counterexample, so the elementary divisor-density route
 requires genuine Type-II/bilinear cancellation.  Sparse and elementary
-degree-raising shortcuts have also been closed negatively.  Full definitions,
+degree-raising shortcuts have also been closed negatively.  The new product
+energy is genuine Type-II input, but it does not control the connected
+cross-degree terms in the required Mangoldt fourth moment.  Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
