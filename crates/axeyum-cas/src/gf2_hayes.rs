@@ -346,6 +346,68 @@ pub struct PrincipalUnitInverseAdditiveEnergyReport {
     pub maximum_walsh_amplitude: u128,
 }
 
+/// Exact exponent ledger for Bagshaw's Type-I Case 5 after inserting the
+/// proved binary wild-Kloosterman bound.
+///
+/// All exponents are measured in sixths.  If `n` is the Möbius cutoff,
+/// `r0` the effective modulus degree, and
+/// `kappa=r0-ceil((r0-1)/3)`, the worst off-diagonal term has exponent
+/// `2n/3+kappa/2=(4n+3kappa)/6`.  The trivial exponent is `n`.
+/// This report checks only exponent arithmetic; it does not assert that the
+/// surrounding odd-characteristic Vaughan proof has been ported.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryTypeOneCaseFiveExponentReport {
+    /// Degree cutoff in the Möbius sum.
+    pub mobius_degree_cutoff: usize,
+    /// Degree of `F/(a,F)` in Bagshaw's notation.
+    pub effective_modulus_degree: usize,
+    /// Proved complete binary Kloosterman exponent `kappa`.
+    pub complete_kloosterman_exponent: usize,
+    /// Numerator of the worst Type-I bound over denominator six.
+    pub bound_exponent_sixths: u128,
+    /// Numerator of the trivial exponent over denominator six.
+    pub trivial_exponent_sixths: u128,
+    /// `trivial-bound`, in sixths; a positive value is a saving.
+    pub deficit_sixths: i128,
+    /// Whether the inserted binary exponent gives any strict saving.
+    pub strict_saving: bool,
+}
+
+/// Zero-epsilon endpoint calibration for the published inverse-Möbius
+/// exponents, expressed over a common denominator 48.
+///
+/// For cumulative cutoff `N`, Bagshaw's published odd-characteristic bound
+/// has exponent maximum `max(15N/16, 2N/3+r/4)`.  The report compares that
+/// formal exponent with the Lemire target `ell`.  It is deliberately named a
+/// calibration: the published theorem does not apply at `q=2`, and constants
+/// and epsilon losses are omitted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EndpointInverseMobiusExponentCalibrationReport {
+    /// Principal-unit level.
+    pub ell: usize,
+    /// Endpoint polynomial degree, `2ell+1` or `2ell+2`.
+    pub endpoint_degree: usize,
+    /// Convolution interval degree `d`.
+    pub interval_degree: usize,
+    /// Exact-degree Möbius index `k=endpoint_degree-d`.
+    pub exact_mobius_degree: usize,
+    /// Largest cumulative cutoff needed by `H_k=C_(k+1)-2C_k+C_(k-1)`.
+    pub cumulative_cutoff: usize,
+    /// Numerator `45N` for `15N/16`, over denominator 48.
+    pub fifteen_sixteenths_exponent_48ths: u128,
+    /// Numerator `32N+12r` for `2N/3+r/4`, over denominator 48.
+    pub mixed_exponent_48ths: u128,
+    /// Larger calibrated exponent numerator, over denominator 48.
+    pub bound_exponent_48ths: u128,
+    /// Lemire target exponent numerator `48ell`.
+    pub target_exponent_48ths: u128,
+    /// `target-bound`, in forty-eighths; positive means pointwise closure.
+    pub deficit_48ths: i128,
+    /// Whether the zero-epsilon pointwise calibration lies strictly below
+    /// `2^ell` before constants and the sum over `d` are restored.
+    pub strict_pointwise_closure: bool,
+}
+
 /// Uniform wild-Kloosterman bound for the binary principal-unit group.
 ///
 /// Put `R = GF(2)[x]/(x^(ell+1))`, let `psi` read the coefficient of
@@ -1285,6 +1347,154 @@ pub fn principal_unit_inverse_additive_energy(
         additive_energy,
         fourth_walsh_moment,
         maximum_walsh_amplitude,
+    })
+}
+
+/// Check the Type-I Case-5 exponent obtained from the binary complete-sum
+/// estimate.
+///
+/// The case being audited has `n<=r0`.  A non-positive deficit proves that
+/// this direct substitution supplies no strict power saving at that point.
+///
+/// # Errors
+///
+/// Rejects zero degrees, `n>r0`, or checked-arithmetic overflow.
+pub fn binary_type_one_case_five_exponent(
+    mobius_degree_cutoff: usize,
+    effective_modulus_degree: usize,
+) -> Result<BinaryTypeOneCaseFiveExponentReport, HayesError> {
+    if mobius_degree_cutoff == 0
+        || effective_modulus_degree == 0
+        || mobius_degree_cutoff > effective_modulus_degree
+    {
+        return Err(HayesError::InvalidParameter(format!(
+            "Type-I Case 5 requires 1<=n<=r0, got n={mobius_degree_cutoff}, r0={effective_modulus_degree}"
+        )));
+    }
+    let stationary_precision = effective_modulus_degree
+        .checked_sub(1)
+        .ok_or_else(|| HayesError::Invariant("positive modulus lost one degree".to_owned()))?
+        .div_ceil(3);
+    let complete_kloosterman_exponent = effective_modulus_degree
+        .checked_sub(stationary_precision)
+        .ok_or_else(|| {
+            HayesError::Invariant(
+                "stationary precision exceeds effective modulus degree".to_owned(),
+            )
+        })?;
+    let n = u128::try_from(mobius_degree_cutoff).map_err(|_| {
+        HayesError::InvalidParameter("Möbius degree cutoff does not fit u128".to_owned())
+    })?;
+    let kappa = u128::try_from(complete_kloosterman_exponent).map_err(|_| {
+        HayesError::InvalidParameter("Kloosterman exponent does not fit u128".to_owned())
+    })?;
+    let bound_exponent_sixths = n
+        .checked_mul(4)
+        .and_then(|value| {
+            kappa
+                .checked_mul(3)
+                .and_then(|term| value.checked_add(term))
+        })
+        .ok_or_else(|| HayesError::InvalidParameter("Type-I exponent overflow".to_owned()))?;
+    let trivial_exponent_sixths = n.checked_mul(6).ok_or_else(|| {
+        HayesError::InvalidParameter("Type-I trivial exponent overflow".to_owned())
+    })?;
+    let deficit_sixths = i128::try_from(trivial_exponent_sixths)
+        .and_then(|target| i128::try_from(bound_exponent_sixths).map(|bound| target - bound))
+        .map_err(|_| HayesError::InvalidParameter("Type-I deficit does not fit i128".to_owned()))?;
+    Ok(BinaryTypeOneCaseFiveExponentReport {
+        mobius_degree_cutoff,
+        effective_modulus_degree,
+        complete_kloosterman_exponent,
+        bound_exponent_sixths,
+        trivial_exponent_sixths,
+        deficit_sixths,
+        strict_saving: deficit_sixths > 0,
+    })
+}
+
+/// Calibrate one Lemire convolution order against Bagshaw's published
+/// zero-epsilon exponent pair.
+///
+/// This arithmetic report grants no characteristic-two theorem credit.  It
+/// identifies which interval degrees would remain uncovered even if the
+/// published odd-characteristic exponents were independently reproved over
+/// `GF(2)` with no epsilon or constant loss.
+///
+/// # Errors
+///
+/// Rejects `ell<2`, a non-endpoint degree, `d=0`, `d>=ell`, or arithmetic
+/// overflow.
+pub fn endpoint_inverse_mobius_exponent_calibration(
+    ell: usize,
+    endpoint_degree: usize,
+    interval_degree: usize,
+) -> Result<EndpointInverseMobiusExponentCalibrationReport, HayesError> {
+    if ell < 2 || interval_degree == 0 || interval_degree >= ell {
+        return Err(HayesError::InvalidParameter(format!(
+            "endpoint calibration requires ell>=2 and 1<=d<ell, got ell={ell}, d={interval_degree}"
+        )));
+    }
+    let odd_endpoint = ell
+        .checked_mul(2)
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| HayesError::InvalidParameter("odd endpoint degree overflow".to_owned()))?;
+    let even_endpoint = odd_endpoint
+        .checked_add(1)
+        .ok_or_else(|| HayesError::InvalidParameter("even endpoint degree overflow".to_owned()))?;
+    if endpoint_degree != odd_endpoint && endpoint_degree != even_endpoint {
+        return Err(HayesError::InvalidParameter(format!(
+            "endpoint degree must be {odd_endpoint} or {even_endpoint}, got {endpoint_degree}"
+        )));
+    }
+    let exact_mobius_degree = endpoint_degree
+        .checked_sub(interval_degree)
+        .ok_or_else(|| HayesError::Invariant("interval degree exceeds endpoint".to_owned()))?;
+    let cumulative_cutoff = exact_mobius_degree.checked_add(1).ok_or_else(|| {
+        HayesError::InvalidParameter("cumulative Möbius cutoff overflow".to_owned())
+    })?;
+    let modulus_degree = ell
+        .checked_add(1)
+        .ok_or_else(|| HayesError::InvalidParameter("modulus degree overflow".to_owned()))?;
+    let n = u128::try_from(cumulative_cutoff).map_err(|_| {
+        HayesError::InvalidParameter("cumulative cutoff does not fit u128".to_owned())
+    })?;
+    let r = u128::try_from(modulus_degree)
+        .map_err(|_| HayesError::InvalidParameter("modulus degree does not fit u128".to_owned()))?;
+    let target = u128::try_from(ell)
+        .map_err(|_| HayesError::InvalidParameter("ell does not fit u128".to_owned()))?;
+    let fifteen_sixteenths_exponent_48ths = n.checked_mul(45).ok_or_else(|| {
+        HayesError::InvalidParameter("15/16 calibration exponent overflow".to_owned())
+    })?;
+    let mixed_exponent_48ths = n
+        .checked_mul(32)
+        .and_then(|value| r.checked_mul(12).and_then(|term| value.checked_add(term)))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("mixed calibration exponent overflow".to_owned())
+        })?;
+    let bound_exponent_48ths = fifteen_sixteenths_exponent_48ths.max(mixed_exponent_48ths);
+    let target_exponent_48ths = target.checked_mul(48).ok_or_else(|| {
+        HayesError::InvalidParameter("endpoint target exponent overflow".to_owned())
+    })?;
+    let deficit_48ths = i128::try_from(target_exponent_48ths)
+        .and_then(|target| i128::try_from(bound_exponent_48ths).map(|bound| target - bound))
+        .map_err(|_| {
+            HayesError::InvalidParameter(
+                "endpoint calibration deficit does not fit i128".to_owned(),
+            )
+        })?;
+    Ok(EndpointInverseMobiusExponentCalibrationReport {
+        ell,
+        endpoint_degree,
+        interval_degree,
+        exact_mobius_degree,
+        cumulative_cutoff,
+        fifteen_sixteenths_exponent_48ths,
+        mixed_exponent_48ths,
+        bound_exponent_48ths,
+        target_exponent_48ths,
+        deficit_48ths,
+        strict_pointwise_closure: deficit_48ths > 0,
     })
 }
 
@@ -3584,6 +3794,74 @@ mod tests {
                 limit: 128,
             })
         );
+    }
+
+    #[test]
+    fn binary_type_one_case_five_ledger_exposes_the_missing_saving() {
+        let equal = binary_type_one_case_five_exponent(300, 300).unwrap();
+        assert_eq!(equal.complete_kloosterman_exponent, 200);
+        assert_eq!(equal.bound_exponent_sixths, 1_800);
+        assert_eq!(equal.trivial_exponent_sixths, 1_800);
+        assert_eq!(equal.deficit_sixths, 0);
+        assert!(!equal.strict_saving);
+
+        let worse = binary_type_one_case_five_exponent(300, 320).unwrap();
+        assert_eq!(worse.complete_kloosterman_exponent, 213);
+        assert_eq!(worse.deficit_sixths, -39);
+        assert!(!worse.strict_saving);
+
+        // A residue-class rounding accident can save one sixth at n=302,
+        // r0=302, but it is not a uniform power saving.
+        let rounded = binary_type_one_case_five_exponent(302, 302).unwrap();
+        assert_eq!(rounded.deficit_sixths, 1);
+        assert!(rounded.strict_saving);
+        assert!(matches!(
+            binary_type_one_case_five_exponent(0, 1),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            binary_type_one_case_five_exponent(3, 2),
+            Err(HayesError::InvalidParameter(_))
+        ));
+    }
+
+    #[test]
+    fn endpoint_inverse_mobius_calibration_pins_the_uncovered_interval() {
+        let ell = 300;
+        let odd = 2 * ell + 1;
+        let even = odd + 1;
+        let first_odd = (1..ell)
+            .find(|degree| {
+                endpoint_inverse_mobius_exponent_calibration(ell, odd, *degree)
+                    .unwrap()
+                    .strict_pointwise_closure
+            })
+            .unwrap();
+        let first_even = (1..ell)
+            .find(|degree| {
+                endpoint_inverse_mobius_exponent_calibration(ell, even, *degree)
+                    .unwrap()
+                    .strict_pointwise_closure
+            })
+            .unwrap();
+        assert_eq!(first_odd, 283);
+        assert_eq!(first_even, 284);
+
+        let odd_boundary =
+            endpoint_inverse_mobius_exponent_calibration(ell, odd, first_odd - 1).unwrap();
+        assert_eq!(odd_boundary.cumulative_cutoff, 320);
+        assert_eq!(odd_boundary.fifteen_sixteenths_exponent_48ths, 14_400);
+        assert_eq!(odd_boundary.deficit_48ths, 0);
+        assert!(!odd_boundary.strict_pointwise_closure);
+        let odd_first = endpoint_inverse_mobius_exponent_calibration(ell, odd, first_odd).unwrap();
+        assert_eq!(odd_first.cumulative_cutoff, 319);
+        assert_eq!(odd_first.deficit_48ths, 45);
+        assert!(odd_first.strict_pointwise_closure);
+
+        assert!(matches!(
+            endpoint_inverse_mobius_exponent_calibration(ell, odd - 1, 1),
+            Err(HayesError::InvalidParameter(_))
+        ));
     }
 
     #[test]

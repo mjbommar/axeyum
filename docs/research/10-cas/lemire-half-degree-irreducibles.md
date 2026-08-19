@@ -641,6 +641,62 @@ upper endpoint in Case 3, and an undefined `t_1` there).  They do not by
 themselves refute the theorem, but they make independent exponent derivation
 mandatory for this project.
 
+The source dependency audit is:
+
+| 2024 result | role | characteristic status | binary action |
+|---|---|---|---|
+| Lemma 3.9 | additive orthogonality | characteristic-free | reuse directly |
+| Lemma 3.10 | complete Kloosterman square-root bound | imports 2023 Lemma A.13, explicitly odd `q` | replace only by the proved binary wild bound |
+| Lemmas 3.11--3.12 | incomplete completion and coprimality removal | algebraic steps are characteristic-free, but inherit Lemma 3.10 | recompute with the binary exponent |
+| Lemma 3.13 | general inverse energy | external fixed-`k` estimate | unnecessary for the `k=2` balanced range if Lemma 3.14 is reproved |
+| Lemma 3.14 | fourth inverse-additive energy | 2023 Lemma 5.3 is arbitrary-characteristic; the remaining divisor and congruence argument is characteristic-free | reprove with explicit constants or a special `x^r` estimate |
+| Lemmas 4.1--4.2 | Hölder/Cauchy--Schwarz bilinear bounds | characteristic-free once inverse energy is supplied | reusable |
+| Vaughan reduction | splits into Type I and Type II | formal convolution is characteristic-free | retain, but audit every resulting range |
+| Theorem 2.3 proof, Type-I Cases 1, 2, and 5 | completion/incomplete Kloosterman input | inherits the odd-only square-root bound | does not survive unchanged with the present binary maximum |
+| Theorem 2.3 proof, balanced Cases 3--4 and Type II | inverse energy and Hölder | plausibly characteristic-free | reusable after an explicit energy reproof |
+
+Here is the decisive Type-I calculation.  For effective modulus degree `r0`,
+Axeyum proves the complete binary exponent
+
+```text
+kappa(r0)=r0-ceil((r0-1)/3).
+```
+
+In Case 5, `n<=r0`, `2n/3<=u<=2r0/3`, and the completion argument gives the
+worst off-diagonal exponent
+
+```text
+2n/3+kappa(r0)/2.
+```
+
+At `n=r0=300`, this is exactly `300`; at `(n,r0)=(300,320)` it is `306.5`.
+Thus the direct binary substitution has no uniform power saving in this
+nonempty Vaughan range.  Congruence-class rounding can save a constant
+fraction of one bit for some degrees, but never `delta n`.  This is a precise
+failure of the proposed port, not evidence against Bagshaw's odd-
+characteristic theorem.
+
+There is a second, endpoint-facing ledger.  Put `r=ell+1`, let the endpoint
+degree be `n0`, and set `k=n0-d`.  Since
+`H_k=C_(k+1)-2C_k+C_(k-1)`, the largest cumulative cutoff is `N=k+1`.
+Even pretending that Bagshaw's published exponent pair were available over
+`GF(2)` with zero epsilon and unit constant, pointwise Fourier control would
+require
+
+```text
+max(15N/16, 2N/3+r/4) < ell.
+```
+
+The first term is limiting.  At `ell=300`, strict pointwise closure begins
+only at `d=283` for degree 601 and `d=284` for degree 602.  In general this is
+only the large-`d` tail near `d>(14/15)ell+O(1)`; the linear-sized range below
+it remains uncovered.  Moreover, a fixed positive margin is still needed to
+absorb epsilon, constants, and the polynomial convolution weights.  The CAS
+operations `binary_type_one_case_five_exponent` and
+`endpoint_inverse_mobius_exponent_calibration` replay both ledgers with exact
+integer numerators over denominators six and 48, respectively, while
+deliberately granting no theorem credit.
+
 For `F=x^(ell+1)` over `GF(2)`, Bagshaw's set of invertible polynomials with
 `deg h<d+1` is exactly `V_d`.  Therefore his fourth-order inverse energy is
 

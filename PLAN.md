@@ -386,8 +386,13 @@ The source-level characteristic audit isolates the reusable Hölder/energy
 core from the odd-characteristic complete-sum input.  Exact inverse-additive
 energy is now a separate native diagnostic with a direct collision oracle;
 fleet rows through level 21 suggest, but do not prove, a no-wrap regime.  The
-next step is a proved piecewise energy estimate and a full interval-degree
-exponent ledger, not more normalization guesswork.
+source dependency table and exact exponent ledger are now complete.  They
+show that direct substitution of the proved binary wild-Kloosterman maximum
+loses all uniform saving in Bagshaw's Type-I Case 5, while even the published
+zero-epsilon exponent pair would pointwise cover only the tail
+`d>(14/15)ell+O(1)`.  The next step is therefore a replacement estimate on
+the uncovered Type-I/low-`d` range, not a verbatim Bagshaw port or more
+normalization guesswork.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
