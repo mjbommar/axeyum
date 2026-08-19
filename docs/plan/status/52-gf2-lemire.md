@@ -47,6 +47,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `3c3be779a` | Added the exact inverse-additive Möbius Walsh spectrum, annihilator reconstruction, and frequencywise direct controls for the reciprocal-polynomial and ramified-`x` bridge. |
 | 2026-08-19 | `c021db86a` | Added a direct Berlekamp-factorization oracle for every endpoint convolution term through level 5, with mutation controls for inverse-class and interval-weight errors. |
 | 2026-08-19 | `53eeeda49` | Reduced the endpoint discrepancy to one exact signed Möbius-convolution sum, added a one-table native reconstruction with endpoint controls, and exposed the remaining uniform bound as an uncredited ledger obligation. |
 | 2026-08-19 | `0e9bacef9` | Added exact signed classwise polynomial-Mobius distributions with dual-modulus reconstruction, independent Berlekamp-factorization controls, and an explicit boundary against unproved weighted cancellation. |
