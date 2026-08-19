@@ -5,12 +5,13 @@
 //!
 //! Every other real-Lean cross-check in this repository is *reachability
 //! driven*: it renders the closure of one refutation and hands Lean that. So
-//! Lean only ever saw the declarations some query happened to cite. Measured
-//! 2026-08-18 on `build_creal_prelude`, a refutation over the constructed reals
-//! reaches 343 of the carrier's declarations — **122 had never been handed to
-//! any Lean**, and the first time anything pointed Lean at them (a shared
-//! prelude module rooted at the whole environment, ADR-0482) two of them were
-//! refused.
+//! Lean only ever saw the declarations some query happened to cite. Measured on
+//! 2026-08-18 by the lane that split the module (ADR-0482), a refutation over
+//! the constructed reals reached 343 of the carrier's 465 declarations —
+//! **122 had never been handed to any Lean**, and the first time anything
+//! pointed Lean at them two of them were refused. The carrier is 470 today; the
+//! count this suite asserts is read out of the kernel at run time, never
+//! transcribed.
 //!
 //! A cross-check that only ever sees the reachable slice cannot find that
 //! class. This suite removes the reachability filter: the export is over the
@@ -67,6 +68,10 @@ use axeyum_lean_kernel::{Kernel, Lean4ExportMetadata, build_creal_prelude};
 mod lean_probe;
 
 const TAG: &str = "creal-carrier-kernel-replay";
+
+/// Printed with both counts, so a fact can pin the carrier size by value
+/// instead of a document transcribing it.
+const CARRIER_MARKER: &str = "AXEYUM-CREAL-CARRIER";
 
 /// The two theorems Lean's elaborator refuses and its kernel accepts. Named
 /// here so the suite fails if the export stops carrying them.
@@ -192,6 +197,9 @@ fn the_real_lean_kernel_accepts_every_declaration_of_the_constructed_real_carrie
          A replay that admits a SUBSET is exactly the reachability hole this suite \
          exists to close:\n{report}"
     );
+    // Printed so the number is READ OUT of the run rather than transcribed into
+    // a document: `artifacts/facts/` pins this line by value.
+    println!("{CARRIER_MARKER} declared={declared} lean_kernel_constants={held}");
 
     // The negative control, aimed at the declaration the source route refuses.
     // Anything weaker would leave "Lean accepted the carrier" consistent with

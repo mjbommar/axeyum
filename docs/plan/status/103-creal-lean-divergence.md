@@ -18,16 +18,15 @@ unfold a `theorem` while reducing; its kernel does. Re-spell every `theorem` in
 the *same emitted file* as `def` — nothing else changed — and the elaborator
 accepts it: the `not_zero_one` module (695,655 B) in 5.0 s and the **whole
 carrier** (2,541,928 B) in 27.9 s, against 4 refusals as emitted.
-`Nat.gcd` is `WellFounded.fix` over the *definition* `Nat.lt_well_founded` with
-its descent justified by the *theorem* `Nat.mod_lt`, so `gcd 0 3` (base case)
-is accepted and every recursive `gcd` is refused, while `Nat.mod/div/sub` and a
-bare `WellFounded.fix` reduce fine. Not the sharing pass (hand-inlined:
-identical refusal), not a budget (`maxRecDepth 1000000`, `maxHeartbeats 0`,
-`smartUnfolding false` move nothing; `diagnostics` shows it give up, not run
-out). `internal exception #3` is the command abort after the term error.
+`Nat.gcd`'s descent is justified by the *theorem* `Nat.mod_lt`, so `gcd 0 3`
+(base case) is accepted and every recursive `gcd` refused, while `Nat.mod/div/
+sub` and a bare `WellFounded.fix` reduce fine. Not the sharing pass (hand-
+inlined: identical refusal), not a budget (`maxRecDepth 1000000`,
+`maxHeartbeats 0`, `smartUnfolding false` move nothing). `internal exception #3`
+is the command abort after the term error.
 
 **The coverage hole is closed.** Emission was reachability-driven, so Lean had
-only ever seen 343 of the carrier. `real_lean_creal_carrier_kernel_replay`
+only ever seen the reachable slice (343 of 465 when ADR-0482's lane measured it). `real_lean_creal_carrier_kernel_replay`
 exports the complete environment with no filter and requires Lean's reported
 constant count to **equal** the count read out of our kernel, so "accepted"
 cannot mean "accepted a subset". `real_lean_wellfounded_elaborator_divergence`

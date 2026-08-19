@@ -136,9 +136,10 @@ cd "$(dirname "$0")/.." || exit 2
 # `real_lean_creal_carrier_kernel_replay` adds TWO and is the first check that
 # hands Lean the WHOLE carrier -- all 470 declarations of `build_creal_prelude`,
 # with no reachability filter. Every other suite renders the closure of one
-# refutation, so Lean had only ever seen the 343 declarations some query cited;
-# the other 122 had never been handed to any Lean, and the first time anything
-# pointed Lean at them two were refused (ADR-0482). It replays through
+# refutation, so Lean had only ever seen the declarations some query cited (343
+# of 465 when ADR-0482's lane measured it); the other 122 had never been handed
+# to any Lean, and the first time anything pointed Lean at them two were
+# refused. It replays through
 # `Environment.addDeclCore` -- Lean's KERNEL -- which accepts all 470 in 1.4 s,
 # and its exit status depends on Lean's reported constant count EQUALLING the
 # count read out of our kernel, so "accepted" cannot mean "accepted a subset".

@@ -25,8 +25,10 @@ AxeyumCarrier.lean:881: error: (kernel) unknown constant …           (cascade)
 ```
 
 The in-tree kernel admits all four. It had gone unnoticed because emission is
-**reachability driven**: a refutation reaches 343 of the carrier's declarations,
-so the other 122 had never been handed to any Lean at all.
+**reachability driven**: a refutation reaches only part of the carrier — 343 of
+465 when that lane measured it — so the remaining 122 had never been handed to
+any Lean at all. (This lane did not re-measure the reached count; it measured
+the carrier, which is **470** today.)
 
 Three explanations were possible and they are distinguishable:
 
@@ -161,8 +163,8 @@ soundness: the kernel already accepts everything.
 ## Consequences
 
 - The headline claim gets **stronger and better covered**, not weaker: what
-  official Lean accepts went from 343 reachability-selected declarations to all
-  470, and the checker is Lean's kernel rather than its elaborator.
+  official Lean accepts went from a reachability-selected slice to **all 470**,
+  and the checker is Lean's kernel rather than its elaborator.
 - "Lean rejected our output" must always be qualified by *which Lean*. A
   refusal from `lean Module.lean` is an elaborator refusal until a kernel
   replay says otherwise, and a suite that does not say which entry point ran is

@@ -131,7 +131,7 @@ mechanism to one token per line.
 
 | claim | measured |
 | --- | --- |
-| "465 declarations", "122 of 465" | **470** on 2026-08-18 (`crates/axeyum-lean-kernel/src/creal/inverse.rs` had landed since); the example's own doc comment says 445/280/165, a third figure |
+| "465 declarations", "122 of 465" | the carrier is **470** on 2026-08-18 (`crates/axeyum-lean-kernel/src/creal/inverse.rs` had landed since); `examples/shared_prelude_module.rs`'s own doc comment says 445/280/165, a third figure. I did not re-measure the *reached* count, so 343/122 is repeated on the previous lane's authority |
 | "Lean's kernel rejects them" | Lean's **elaborator** rejects them; Lean's kernel accepts all 470, in 1.4 s |
 | "reproduces with sharing off, 7,187,035 B" | reproduces, yes — but with sharing ON the whole carrier is **2,541,928 B**, so the 7 MB figure is the sharing-off control and not the artefact |
 | "`internal exception #3` is not a diagnosis" | correct, and it is not even a distinct failure |
@@ -139,11 +139,15 @@ mechanism to one token per line.
 
 ## Mutation checks
 
-See the status file; recorded below once run.
+The two suites are separate integration-test binaries and each holds exactly
+one `#[test]`, so a mutation confined to one file can only kill one test; what
+is worth checking is that each mutation kills it *for the named reason* rather
+than being absorbed.
 
 | mutation | tests that died |
 | --- | --- |
-| MUTATION-TABLE | |
+| **M1** carrier replay: drop the LAST theorem record from the replayed stream. Lean still accepts it and `not_zero_one` is still present, so only the count moves. | PENDING — the host cargo lock was held by other lanes for the last hour of this session |
+| **M2** divergence: make `theorems_as_defs` a no-op, so row 3 elaborates the unmodified module. | PENDING — same |
 
 ## Left undone
 
