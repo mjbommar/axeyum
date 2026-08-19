@@ -1299,6 +1299,9 @@ pub struct BinarySecondTraceArfReport {
     pub mobius: i8,
     /// Integral-lift discriminant modulo eight on the squarefree locus.
     pub integral_discriminant_mod_eight: Option<u8>,
+    /// Integral-lift discriminant modulo eight on every input, computed by
+    /// fraction-free integer elimination.
+    pub integral_discriminant_residue_mod_eight: u8,
     /// Whether the integral discriminant is odd, checked independently by
     /// the binary derivative gcd.
     pub integral_discriminant_is_odd: bool,
@@ -1340,6 +1343,42 @@ pub struct BinaryDyadicCharacterFourierReport {
     pub gauss_sum_basis: [i8; 4],
     /// Exact right-hand side in the same basis.
     pub expected_basis: [i8; 4],
+}
+
+/// Coefficient counts at one support degree in the multilinear discriminant
+/// polynomial modulo eight.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryDiscriminantAnfDegreeRow {
+    /// Number of coefficient variables in the monomial.
+    pub support_degree: usize,
+    /// Coefficients congruent to `1,3,5,7 mod 8`.
+    pub odd_coefficient_count: usize,
+    /// Coefficients congruent to `2 or 6 mod 8`.
+    pub twice_odd_coefficient_count: usize,
+    /// Coefficients congruent to `4 mod 8`.
+    pub four_coefficient_count: usize,
+}
+
+/// Exact algebraic normal form of the integral binary discriminant phase
+/// modulo eight, summarized by support degree and 2-adic valuation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryDiscriminantAnfReport {
+    /// Degree of the monic constant-one polynomial family.
+    pub polynomial_degree: usize,
+    /// Free coefficient count, exactly `polynomial_degree-1`.
+    pub variable_count: usize,
+    /// Number of multilinear coefficients, exactly `2^variable_count`.
+    pub coefficient_count: usize,
+    /// Coefficient modulo eight of the monomial containing every free bit.
+    pub full_support_coefficient_mod_eight: u8,
+    /// Largest support degree carrying an odd coefficient.
+    pub max_odd_support_degree: Option<usize>,
+    /// Largest support degree carrying a coefficient twice an odd number.
+    pub max_twice_odd_support_degree: Option<usize>,
+    /// Largest support degree carrying coefficient four.
+    pub max_four_support_degree: Option<usize>,
+    /// Exact coefficient counts by monomial support degree.
+    pub rows: Vec<BinaryDiscriminantAnfDegreeRow>,
 }
 
 impl BinaryBerlekampInversePhaseReport {
@@ -4858,6 +4897,88 @@ fn determinant_mod_eight(mut matrix: Vec<Vec<u8>>) -> Result<u8, HayesError> {
     Ok(determinant)
 }
 
+fn integer_determinant_bareiss(mut matrix: Vec<Vec<BigInt>>) -> Result<BigInt, HayesError> {
+    let dimension = matrix.len();
+    if dimension == 0 {
+        return Ok(BigInt::from(1));
+    }
+    let zero = BigInt::from(0);
+    let mut sign = BigInt::from(1);
+    let mut previous = BigInt::from(1);
+    for column in 0..dimension.saturating_sub(1) {
+        let Some(pivot) = (column..dimension).find(|&row| matrix[row][column] != zero) else {
+            return Ok(zero);
+        };
+        if pivot != column {
+            matrix.swap(pivot, column);
+            sign = -sign;
+        }
+        let pivot_value = matrix[column][column].clone();
+        for row in column + 1..dimension {
+            for entry in column + 1..dimension {
+                let numerator = &pivot_value * &matrix[row][entry]
+                    - &matrix[row][column] * &matrix[column][entry];
+                let quotient = &numerator / &previous;
+                if &quotient * &previous != numerator {
+                    return Err(HayesError::Invariant(
+                        "Bareiss resultant division is not exact".to_owned(),
+                    ));
+                }
+                matrix[row][entry] = quotient;
+            }
+        }
+        previous = pivot_value;
+    }
+    Ok(sign * &matrix[dimension - 1][dimension - 1])
+}
+
+fn binary_integral_discriminant_residue_mod_eight(
+    polynomial: u64,
+    degree: usize,
+) -> Result<u8, HayesError> {
+    if degree <= 1 {
+        return Ok(1);
+    }
+    let derivative_degree = degree - 1;
+    let size = degree + derivative_degree;
+    let polynomial_descending = (0..=degree)
+        .rev()
+        .map(|index| BigInt::from((polynomial >> index) & 1))
+        .collect::<Vec<_>>();
+    let derivative_descending = (0..=derivative_degree)
+        .rev()
+        .map(|index| {
+            let source = index + 1;
+            if (polynomial >> source) & 1 != 0 {
+                BigInt::from(source)
+            } else {
+                BigInt::from(0)
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut matrix = vec![vec![BigInt::from(0); size]; size];
+    for shift in 0..derivative_degree {
+        matrix[shift][shift..shift + polynomial_descending.len()]
+            .clone_from_slice(&polynomial_descending);
+    }
+    for shift in 0..degree {
+        let row = derivative_degree + shift;
+        matrix[row][shift..shift + derivative_descending.len()]
+            .clone_from_slice(&derivative_descending);
+    }
+    let mut discriminant = integer_determinant_bareiss(matrix)?;
+    if !(degree * (degree - 1) / 2).is_multiple_of(2) {
+        discriminant = -discriminant;
+    }
+    let modulus = BigInt::from(8);
+    let mut residue = discriminant % &modulus;
+    if residue < BigInt::from(0) {
+        residue += &modulus;
+    }
+    u8::try_from(residue)
+        .map_err(|_| HayesError::Invariant("integral discriminant residue exceeds u8".to_owned()))
+}
+
 fn binary_integral_discriminant_mod_eight(
     polynomial: u64,
     degree: usize,
@@ -4957,6 +5078,164 @@ pub fn binary_dyadic_character_fourier_report(
     })
 }
 
+/// Recover the exact multilinear coefficient polynomial for the integral
+/// discriminant modulo eight.
+///
+/// The free bits are the coefficients of `x^1,...,x^(degree-1)`.  An in-place
+/// subset Möbius transform converts the discriminant truth table to its unique
+/// multilinear algebraic normal form over `Z/8`; the inverse subset transform
+/// must reconstruct every input before the valuation summary is returned.
+///
+/// # Errors
+///
+/// Rejects an unsupported degree or a truth table exceeding the caller's
+/// explicit degree/table limits, and propagates an exact discriminant failure.
+pub fn binary_discriminant_anf_report(
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<BinaryDiscriminantAnfReport, HayesError> {
+    if degree == 0 || degree >= u64::BITS as usize {
+        return Err(HayesError::InvalidParameter(
+            "discriminant ANF requires 1<=degree<64".to_owned(),
+        ));
+    }
+    check_limit("degree", degree, limits.max_degree)?;
+    let variable_count = degree - 1;
+    let coefficient_count = 1_usize
+        .checked_shl(u32::try_from(variable_count).map_err(|_| {
+            HayesError::InvalidParameter("discriminant ANF rank exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| HayesError::InvalidParameter("discriminant ANF size overflow".to_owned()))?;
+    check_limit(
+        "discriminant_anf_cells",
+        coefficient_count,
+        limits.max_table_cells,
+    )?;
+    let mut coefficients = Vec::with_capacity(coefficient_count);
+    for middle in 0..coefficient_count {
+        let middle_u64 = u64::try_from(middle).map_err(|_| {
+            HayesError::InvalidParameter("discriminant ANF index exceeds u64".to_owned())
+        })?;
+        let polynomial = (1_u64 << degree) | (middle_u64 << 1) | 1;
+        coefficients.push(binary_integral_discriminant_residue_mod_eight(
+            polynomial, degree,
+        )?);
+    }
+    let truth_table = coefficients.clone();
+    for bit in 0..variable_count {
+        for mask in 0..coefficient_count {
+            if mask >> bit & 1 != 0 {
+                coefficients[mask] = (coefficients[mask] + 8 - coefficients[mask ^ (1 << bit)]) % 8;
+            }
+        }
+    }
+    let mut reconstructed = coefficients.clone();
+    for bit in 0..variable_count {
+        for mask in 0..coefficient_count {
+            if mask >> bit & 1 != 0 {
+                reconstructed[mask] = (reconstructed[mask] + reconstructed[mask ^ (1 << bit)]) % 8;
+            }
+        }
+    }
+    if reconstructed != truth_table {
+        return Err(HayesError::Invariant(
+            "discriminant ANF does not reconstruct its truth table".to_owned(),
+        ));
+    }
+    let full_support_coefficient_mod_eight = coefficients[coefficient_count - 1];
+    let squarefree_count = binary_constant_one_squarefree_count(degree)?;
+    if full_support_coefficient_mod_eight % 2 != u8::from(squarefree_count % 2 != 0)
+        || full_support_coefficient_mod_eight.is_multiple_of(2)
+    {
+        return Err(HayesError::Invariant(
+            "top discriminant ANF coefficient misses squarefree-count parity".to_owned(),
+        ));
+    }
+    let mut rows = (0..=variable_count)
+        .map(|support_degree| BinaryDiscriminantAnfDegreeRow {
+            support_degree,
+            odd_coefficient_count: 0,
+            twice_odd_coefficient_count: 0,
+            four_coefficient_count: 0,
+        })
+        .collect::<Vec<_>>();
+    for (mask, coefficient) in coefficients.into_iter().enumerate() {
+        let support_degree = mask.count_ones() as usize;
+        let row = &mut rows[support_degree];
+        match coefficient {
+            1 | 3 | 5 | 7 => row.odd_coefficient_count += 1,
+            2 | 6 => row.twice_odd_coefficient_count += 1,
+            4 => row.four_coefficient_count += 1,
+            0 => {}
+            _ => unreachable!("coefficient reduced modulo eight"),
+        }
+    }
+    let maximum = |select: fn(&BinaryDiscriminantAnfDegreeRow) -> usize| {
+        rows.iter()
+            .rev()
+            .find(|row| select(row) != 0)
+            .map(|row| row.support_degree)
+    };
+    Ok(BinaryDiscriminantAnfReport {
+        polynomial_degree: degree,
+        variable_count,
+        coefficient_count,
+        full_support_coefficient_mod_eight,
+        max_odd_support_degree: maximum(|row| row.odd_coefficient_count),
+        max_twice_odd_support_degree: maximum(|row| row.twice_odd_coefficient_count),
+        max_four_support_degree: maximum(|row| row.four_coefficient_count),
+        rows,
+    })
+}
+
+struct BinaryDyadicDiscriminantData {
+    squarefree_residue: Option<u8>,
+    residue: u8,
+    is_odd: bool,
+    kronecker_two: i8,
+}
+
+fn binary_dyadic_discriminant_data(
+    polynomial: u64,
+    degree: usize,
+    mobius: i8,
+) -> Result<BinaryDyadicDiscriminantData, HayesError> {
+    let derivative = binary_formal_derivative(polynomial, degree);
+    let is_odd = polynomial_gcd_packed(polynomial, derivative) == 1;
+    if is_odd != (mobius != 0) {
+        return Err(HayesError::Invariant(
+            "discriminant parity and factorization disagree on squarefreeness".to_owned(),
+        ));
+    }
+    let residue = binary_integral_discriminant_residue_mod_eight(polynomial, degree)?;
+    if residue % 2 != u8::from(is_odd) {
+        return Err(HayesError::Invariant(
+            "integer discriminant residue and binary derivative gcd disagree".to_owned(),
+        ));
+    }
+    let squarefree_residue = is_odd
+        .then(|| binary_integral_discriminant_mod_eight(polynomial, degree))
+        .transpose()?;
+    if squarefree_residue.is_some_and(|fast| fast != residue) {
+        return Err(HayesError::Invariant(
+            "modular and fraction-free discriminants disagree modulo eight".to_owned(),
+        ));
+    }
+    let kronecker_two = kronecker_two_mod_eight(residue);
+    let degree_sign = if degree.is_multiple_of(2) { 1 } else { -1 };
+    if degree_sign * kronecker_two != mobius {
+        return Err(HayesError::Invariant(
+            "dyadic discriminant character and polynomial Mobius value disagree".to_owned(),
+        ));
+    }
+    Ok(BinaryDyadicDiscriminantData {
+        squarefree_residue,
+        residue,
+        is_odd,
+        kronecker_two,
+    })
+}
+
 /// Compare factorization, the dyadic discriminant character,
 /// Stickelberger--Swan, and second-trace Arf signs for one monic constant-one
 /// binary polynomial.
@@ -4980,23 +5259,7 @@ pub fn binary_second_trace_arf_report(
         ));
     }
     let mobius = binary_polynomial_mobius_from_bits(polynomial, degree)?;
-    let derivative = binary_formal_derivative(polynomial, degree);
-    let integral_discriminant_is_odd = polynomial_gcd_packed(polynomial, derivative) == 1;
-    if integral_discriminant_is_odd != (mobius != 0) {
-        return Err(HayesError::Invariant(
-            "discriminant parity and factorization disagree on squarefreeness".to_owned(),
-        ));
-    }
-    let discriminant = integral_discriminant_is_odd
-        .then(|| binary_integral_discriminant_mod_eight(polynomial, degree))
-        .transpose()?;
-    let kronecker_two_discriminant = discriminant.map_or(0, kronecker_two_mod_eight);
-    let degree_sign = if degree.is_multiple_of(2) { 1 } else { -1 };
-    if degree_sign * kronecker_two_discriminant != mobius {
-        return Err(HayesError::Invariant(
-            "dyadic discriminant character and polynomial Mobius value disagree".to_owned(),
-        ));
-    }
+    let dyadic = binary_dyadic_discriminant_data(polynomial, degree, mobius)?;
     let basis = binary_second_trace_space_basis(polynomial, degree)?;
     let dimension = basis.len();
     let polar_rows = basis
@@ -5016,7 +5279,7 @@ pub fn binary_second_trace_arf_report(
     let (arf_invariant, sign_phase) = if mobius == 0 {
         (None, None)
     } else {
-        let discriminant = discriminant.ok_or_else(|| {
+        let discriminant = dyadic.squarefree_residue.ok_or_else(|| {
             HayesError::Invariant("squarefree polynomial has no discriminant phase".to_owned())
         })?;
         if !matches!(discriminant, 1 | 5) || polar_rank != dimension {
@@ -5047,9 +5310,10 @@ pub fn binary_second_trace_arf_report(
         polynomial,
         degree,
         mobius,
-        integral_discriminant_mod_eight: discriminant,
-        integral_discriminant_is_odd,
-        kronecker_two_discriminant,
+        integral_discriminant_mod_eight: dyadic.squarefree_residue,
+        integral_discriminant_residue_mod_eight: dyadic.residue,
+        integral_discriminant_is_odd: dyadic.is_odd,
+        kronecker_two_discriminant: dyadic.kronecker_two,
         trace_form_dimension: dimension,
         polar_rank,
         radical_dimension: dimension - polar_rank,
@@ -9427,6 +9691,7 @@ mod tests {
         let quadratic = binary_second_trace_arf_report(0b111, 2).unwrap();
         assert_eq!(quadratic.mobius, -1);
         assert_eq!(quadratic.integral_discriminant_mod_eight, Some(5));
+        assert_eq!(quadratic.integral_discriminant_residue_mod_eight, 5);
         assert!(quadratic.integral_discriminant_is_odd);
         assert_eq!(quadratic.kronecker_two_discriminant, -1);
         assert_eq!(quadratic.arf_invariant, Some(1));
@@ -9435,6 +9700,7 @@ mod tests {
         let irreducible_cubic = binary_second_trace_arf_report(0b1011, 3).unwrap();
         assert_eq!(irreducible_cubic.mobius, -1);
         assert_eq!(irreducible_cubic.integral_discriminant_mod_eight, Some(1));
+        assert_eq!(irreducible_cubic.integral_discriminant_residue_mod_eight, 1);
         assert!(irreducible_cubic.integral_discriminant_is_odd);
         assert_eq!(irreducible_cubic.kronecker_two_discriminant, 1);
         assert_eq!(irreducible_cubic.arf_invariant, Some(1));
@@ -9443,6 +9709,7 @@ mod tests {
         let reducible_cubic = binary_second_trace_arf_report(0b1001, 3).unwrap();
         assert_eq!(reducible_cubic.mobius, 1);
         assert_eq!(reducible_cubic.integral_discriminant_mod_eight, Some(5));
+        assert_eq!(reducible_cubic.integral_discriminant_residue_mod_eight, 5);
         assert!(reducible_cubic.integral_discriminant_is_odd);
         assert_eq!(reducible_cubic.kronecker_two_discriminant, -1);
         assert_eq!(reducible_cubic.arf_invariant, Some(0));
@@ -9451,6 +9718,7 @@ mod tests {
         let squareful = binary_second_trace_arf_report(0b101, 2).unwrap();
         assert_eq!(squareful.mobius, 0);
         assert_eq!(squareful.integral_discriminant_mod_eight, None);
+        assert_eq!(squareful.integral_discriminant_residue_mod_eight, 4);
         assert!(!squareful.integral_discriminant_is_odd);
         assert_eq!(squareful.kronecker_two_discriminant, 0);
         assert_eq!(squareful.arf_invariant, None);
@@ -9470,12 +9738,21 @@ mod tests {
                     }
                 );
                 if report.mobius == 0 {
+                    assert!(
+                        report
+                            .integral_discriminant_residue_mod_eight
+                            .is_multiple_of(2)
+                    );
                     assert!(!report.integral_discriminant_is_odd);
                     assert_eq!(report.kronecker_two_discriminant, 0);
                     assert_eq!(report.integral_discriminant_mod_eight, None);
                     assert_eq!(report.arf_invariant, None);
                     assert_eq!(report.sign_phase, None);
                 } else {
+                    assert_eq!(
+                        report.integral_discriminant_mod_eight,
+                        Some(report.integral_discriminant_residue_mod_eight)
+                    );
                     assert!(report.integral_discriminant_is_odd);
                     assert_eq!(report.kronecker_two_discriminant.unsigned_abs(), 1);
                     assert!(matches!(
@@ -9491,6 +9768,34 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn discriminant_mod_eight_anf_reconstructs_every_coefficient_cube() {
+        let limits = HayesLimits::default();
+        assert!(binary_discriminant_anf_report(0, limits).is_err());
+        for degree in 1..=10 {
+            let report = binary_discriminant_anf_report(degree, limits).unwrap();
+            assert_eq!(report.polynomial_degree, degree);
+            assert_eq!(report.variable_count, degree - 1);
+            assert_eq!(report.coefficient_count, 1 << (degree - 1));
+            assert!(!report.full_support_coefficient_mod_eight.is_multiple_of(2));
+            assert_eq!(report.max_odd_support_degree, Some(degree - 1));
+        }
+        assert!(matches!(
+            binary_discriminant_anf_report(
+                10,
+                HayesLimits {
+                    max_table_cells: 100,
+                    ..limits
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "discriminant_anf_cells",
+                requested: 512,
+                limit: 100,
+            })
+        ));
     }
 
     #[test]

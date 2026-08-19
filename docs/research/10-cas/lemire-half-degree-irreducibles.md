@@ -1282,9 +1282,13 @@ mu(f)=(-1)^k chi_8(Disc(F))                             (dyadic Mobius)
 ```
 
 for every monic binary `f`, with no separate squarefree indicator.  The CAS
-checks discriminant parity by the packed derivative gcd independently of
-Berlekamp factorization and rejects unless `(dyadic Mobius)` agrees for every
-input through degree ten.
+computes the integral discriminant residue for **every** input by fraction-free
+integer Bareiss elimination, checks its parity by the packed derivative gcd
+independently of Berlekamp factorization, and rejects unless `(dyadic Mobius)`
+agrees for every input through degree ten.  On odd residues a separate fast
+unit-pivot determinant modulo eight must match the fraction-free result.  The
+even residues are therefore available to the individual Fourier phases, not
+merely collapsed to an inferred zero.
 
 Moreover, if `zeta_8` is a primitive eighth root, the exact Gauss identity
 
@@ -1300,6 +1304,26 @@ Artin--Schreier--Witt entry point: a joint fibre sum no longer needs an
 external squarefreeness gate.  What remains is a uniform cancellation theorem
 for these four modulo-eight discriminant phases after the inverse-coset
 constraints are imposed.
+
+The raw discriminant phase is not globally low degree in the binary
+coefficient bits.  `binary_discriminant_anf_report` evaluates every integral
+discriminant residue, applies the exact subset Möbius transform over `Z/8`,
+and reconstructs the complete truth table.  More decisively, the coefficient
+of the monomial containing all `k-1` free bits is always odd.  Modulo two that
+coefficient is the XOR of discriminant parity over the whole cube, hence the
+parity of the exact squarefree population
+
+```text
+(2^k-(-1)^k)/3,
+```
+
+which is odd.  Thus `Disc(F) mod 8` has maximal multilinear support degree
+`k-1` for every `k`, not merely in the exhaustive controls through degree
+ten.  A generic bounded-degree polynomial-phase estimate on the full
+coefficient cube cannot close the problem.  Any dyadic stationary-phase
+saving must appear only **after restriction** to the affine
+Artin--Schreier/inverse-coset system, or after preserving cancellation across
+the convolution orders.
 
 The Arf coordinate is a better representation of the live squarefree sign,
 but not yet its estimate.
