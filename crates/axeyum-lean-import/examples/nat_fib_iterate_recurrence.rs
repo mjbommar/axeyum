@@ -8,7 +8,9 @@ use std::path::PathBuf;
 use axeyum_lean_import::{
     ImportLimits, canonical_declaration_sha256, canonical_expression_sha256, import_ndjson,
 };
-use axeyum_lean_kernel::{BinderInfo, Declaration, ExprId, ExprNode, Kernel, LevelId, NameId};
+use axeyum_lean_kernel::{
+    BinderInfo, Declaration, ExprId, ExprNode, Kernel, KernelError, LevelId, NameId,
+};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -64,12 +66,10 @@ fn run() -> Result<(), String> {
     {
         return Err("source authority changed".to_owned());
     }
-    let target = exact_name(&kernel, TARGET)?;
-    let goal = match kernel.environment().get(target) {
-        Some(Declaration::Definition { uparams, value, .. }) if uparams.is_empty() => *value,
-        _ => return Err("target is not a monomorphic statement definition".to_owned()),
-    };
     let shape = inspect_fib_shape(&mut kernel)?;
+    if arguments.composition_control {
+        return run_composition_control(&mut kernel, &shape);
+    }
     if arguments.preflight {
         let (_, helper_goal) = iterator_successor_helper(&mut kernel, &shape)?;
         let helper_schema_sha256 = canonical_expression_sha256(&kernel, helper_goal)?;
@@ -78,6 +78,11 @@ fn run() -> Result<(), String> {
         );
         return Ok(());
     }
+    let target = exact_name(&kernel, TARGET)?;
+    let goal = match kernel.environment().get(target) {
+        Some(Declaration::Definition { uparams, value, .. }) if uparams.is_empty() => *value,
+        _ => return Err("target is not a monomorphic statement definition".to_owned()),
+    };
     let output_path = arguments
         .output
         .as_ref()
@@ -157,6 +162,152 @@ fn run() -> Result<(), String> {
         "AUTOGENESIS_NAT_FIB_ITERATE_RECURRENCE_OK|{digest}|fact={TARGET_FACT}|plan={}|submissions={}|axioms=0|theorem_dependencies=0|receipts=0|evaluation=0|held_out=0|ledger_writes=0",
         search.plan_rank, search.submissions
     );
+    Ok(())
+}
+
+fn run_composition_control(kernel: &mut Kernel, shape: &FibShape) -> Result<(), String> {
+    let recursor = exact_name(kernel, "Eq.rec")?;
+    let recursor_type = kernel
+        .environment()
+        .get(recursor)
+        .ok_or("Eq.rec disappeared")?
+        .ty();
+    println!("Eq.rec : {}", kernel.render_lean(recursor_type));
+    let a_id = u64::MAX - 86_001;
+    let b_id = u64::MAX - 86_002;
+    let c_id = u64::MAX - 86_003;
+    let first_id = u64::MAX - 86_004;
+    let second_id = u64::MAX - 86_005;
+    let a = kernel.fvar(a_id);
+    let b = kernel.fvar(b_id);
+    let c = kernel.fvar(c_id);
+    let first_type = equality(kernel, shape.nat, a, b)?;
+    let second_type = equality(kernel, shape.nat, b, c)?;
+    let first = kernel.fvar(first_id);
+    let second = kernel.fvar(second_id);
+    let transitivity = equality_trans(kernel, shape.nat, a, b, c, first, second)?;
+    let transitivity = close_lam(kernel, second_id, "hbc", second_type, transitivity);
+    let transitivity = close_lam(kernel, first_id, "hab", first_type, transitivity);
+    let transitivity = close_lam(kernel, c_id, "c", shape.nat, transitivity);
+    let transitivity = close_lam(kernel, b_id, "b", shape.nat, transitivity);
+    let transitivity = close_lam(kernel, a_id, "a", shape.nat, transitivity);
+    let transitivity_goal = generic_transitivity_goal(kernel, shape)?;
+    println!("transitivity proof: {}", kernel.render_lean(transitivity));
+    require_inferred_type(
+        kernel,
+        transitivity,
+        transitivity_goal,
+        "equality transitivity",
+    )?;
+
+    let right_id = u64::MAX - 87_001;
+    let proof_id = u64::MAX - 87_002;
+    let right = kernel.fvar(right_id);
+    let proof_type = equality(kernel, shape.nat, a, right)?;
+    let proof = kernel.fvar(proof_id);
+    let successor_a = kernel.app(shape.successor, a);
+    let successor_right = kernel.app(shape.successor, right);
+    let congruence = congr_arg(
+        kernel,
+        shape.nat,
+        shape.nat,
+        shape.successor,
+        a,
+        right,
+        proof,
+    )?;
+    let congruence = close_lam(kernel, proof_id, "h", proof_type, congruence);
+    let congruence = close_lam(kernel, right_id, "b", shape.nat, congruence);
+    let congruence = close_lam(kernel, a_id, "a", shape.nat, congruence);
+    let congruence_goal = {
+        let result = equality(kernel, shape.nat, successor_a, successor_right)?;
+        let result = close_pi(kernel, proof_id, "h", proof_type, result);
+        let result = close_pi(kernel, right_id, "b", shape.nat, result);
+        close_pi(kernel, a_id, "a", shape.nat, result)
+    };
+    require_inferred_type(kernel, congruence, congruence_goal, "successor congruence")?;
+
+    let transitivity_name = nested_name(kernel, &["Axeyum", "Control", "EqTrans"]);
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: transitivity_name,
+            uparams: vec![],
+            ty: transitivity_goal,
+            value: transitivity,
+        })
+        .map_err(|error| format!("transitivity control rejected: {error:?}"))?;
+    let congruence_name = nested_name(kernel, &["Axeyum", "Control", "SuccCongr"]);
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: congruence_name,
+            uparams: vec![],
+            ty: congruence_goal,
+            value: congruence,
+        })
+        .map_err(|error| format!("congruence control rejected: {error:?}"))?;
+    for theorem in [transitivity_name, congruence_name] {
+        if !kernel.axiom_footprint(theorem).is_empty()
+            || !kernel.theorem_dependencies(theorem).is_empty()
+        {
+            return Err("composition control dependency audit failed".to_owned());
+        }
+    }
+    println!(
+        "AUTOGENESIS_EQREC_COMPOSITION_CONTROL_OK|eq_rec={}|trans={}|congr={}|target_submissions=0|target_outcomes=0|axioms=0|theorem_dependencies=0",
+        canonical_expression_sha256(kernel, recursor_type)?,
+        canonical_declaration_sha256(kernel, transitivity_name)?,
+        canonical_declaration_sha256(kernel, congruence_name)?,
+    );
+    Ok(())
+}
+
+fn generic_transitivity_goal(kernel: &mut Kernel, shape: &FibShape) -> Result<ExprId, String> {
+    let a_id = u64::MAX - 86_001;
+    let b_id = u64::MAX - 86_002;
+    let c_id = u64::MAX - 86_003;
+    let first_id = u64::MAX - 86_004;
+    let second_id = u64::MAX - 86_005;
+    let a = kernel.fvar(a_id);
+    let b = kernel.fvar(b_id);
+    let c = kernel.fvar(c_id);
+    let first_type = equality(kernel, shape.nat, a, b)?;
+    let second_type = equality(kernel, shape.nat, b, c)?;
+    let result = equality(kernel, shape.nat, a, c)?;
+    let result = close_pi(kernel, second_id, "hbc", second_type, result);
+    let result = close_pi(kernel, first_id, "hab", first_type, result);
+    let result = close_pi(kernel, c_id, "c", shape.nat, result);
+    let result = close_pi(kernel, b_id, "b", shape.nat, result);
+    Ok(close_pi(kernel, a_id, "a", shape.nat, result))
+}
+
+fn require_inferred_type(
+    kernel: &mut Kernel,
+    proof: ExprId,
+    expected: ExprId,
+    label: &str,
+) -> Result<(), String> {
+    let inferred = kernel.infer(proof).map_err(|error| match error {
+        KernelError::TypeMismatch {
+            expected: wanted,
+            got,
+        } => format!(
+            "{label} inference failed: expected {}; got {}; theorem goal {}",
+            kernel.render_lean(wanted),
+            kernel.render_lean(got),
+            kernel.render_lean(expected)
+        ),
+        other => format!(
+            "{label} inference failed: {other:?}; theorem goal {}",
+            kernel.render_lean(expected)
+        ),
+    })?;
+    if !kernel.def_eq(inferred, expected) {
+        return Err(format!(
+            "{label} type mismatch; expected {}; inferred {}",
+            kernel.render_lean(expected),
+            kernel.render_lean(inferred)
+        ));
+    }
     Ok(())
 }
 
@@ -407,8 +558,12 @@ fn congr_arg(
     let motive = close_lam(kernel, equality_id, "h", premise, result);
     let motive = close_lam(kernel, right_id, "b", domain, motive);
     let reflexivity = equality_refl(kernel, codomain, function_left)?;
-    let zero = kernel.level_zero();
-    let mut rec = kernel.const_(exact_name(kernel, "Eq.rec")?, vec![zero, zero]);
+    let carrier_level = sort_level(kernel, domain)?;
+    let motive_level = kernel.level_zero();
+    let mut rec = kernel.const_(
+        exact_name(kernel, "Eq.rec")?,
+        vec![motive_level, carrier_level],
+    );
     for argument in [domain, left, motive, reflexivity, right, proof] {
         rec = kernel.app(rec, argument);
     }
@@ -432,8 +587,12 @@ fn equality_trans(
     let premise = equality(kernel, ty, middle, variable)?;
     let motive = close_lam(kernel, equality_id, "h", premise, result);
     let motive = close_lam(kernel, right_id, "c", ty, motive);
-    let zero = kernel.level_zero();
-    let mut rec = kernel.const_(exact_name(kernel, "Eq.rec")?, vec![zero, zero]);
+    let carrier_level = sort_level(kernel, ty)?;
+    let motive_level = kernel.level_zero();
+    let mut rec = kernel.const_(
+        exact_name(kernel, "Eq.rec")?,
+        vec![motive_level, carrier_level],
+    );
     for argument in [ty, middle, motive, first, right, second] {
         rec = kernel.app(rec, argument);
     }
@@ -550,12 +709,14 @@ struct Arguments {
     stream: PathBuf,
     output: Option<PathBuf>,
     preflight: bool,
+    composition_control: bool,
 }
 
 fn parse_arguments() -> Result<Arguments, String> {
     let mut stream = None;
     let mut output = None;
     let mut preflight = false;
+    let mut composition_control = false;
     let mut arguments = env::args().skip(1);
     while let Some(flag) = arguments.next() {
         if flag == "--preflight" {
@@ -563,6 +724,13 @@ fn parse_arguments() -> Result<Arguments, String> {
                 return Err("duplicate --preflight".to_owned());
             }
             preflight = true;
+            continue;
+        }
+        if flag == "--composition-control" {
+            if composition_control {
+                return Err("duplicate --composition-control".to_owned());
+            }
+            composition_control = true;
             continue;
         }
         let value = arguments
@@ -577,10 +745,14 @@ fn parse_arguments() -> Result<Arguments, String> {
             return Err(format!("duplicate {flag}"));
         }
     }
+    if preflight && composition_control {
+        return Err("preflight modes are mutually exclusive".to_owned());
+    }
     Ok(Arguments {
         stream: stream.ok_or("missing --stream")?,
         output,
         preflight,
+        composition_control,
     })
 }
 
@@ -598,4 +770,67 @@ fn hex_sha256(bytes: &[u8]) -> String {
         write!(output, "{byte:02x}").expect("writing to String cannot fail");
     }
     output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axeyum_lean_kernel::build_logic_prelude;
+
+    #[test]
+    fn eq_rec_universes_are_motive_then_carrier() {
+        let mut kernel = Kernel::new();
+        let logic = build_logic_prelude(&mut kernel).expect("logic prelude builds");
+        let nat = kernel.const_(logic.nat, vec![]);
+        let carrier_level = sort_level(&mut kernel, nat).expect("Nat inhabits a sort");
+        let motive_level = kernel.level_zero();
+
+        let correct = kernel.const_(logic.eq_rec, vec![motive_level, carrier_level]);
+        let correct_at_nat = kernel.app(correct, nat);
+        kernel
+            .infer(correct_at_nat)
+            .expect("Eq.rec.{0,1} accepts a Type carrier");
+
+        let reversed = kernel.const_(logic.eq_rec, vec![carrier_level, motive_level]);
+        let reversed_at_nat = kernel.app(reversed, nat);
+        let error = kernel
+            .infer(reversed_at_nat)
+            .expect_err("Eq.rec.{1,0} requires a Prop carrier");
+        assert!(matches!(error, KernelError::TypeMismatch { .. }));
+    }
+
+    #[test]
+    fn local_nat_equality_transitivity_is_inferred_without_dependencies() {
+        let mut kernel = Kernel::new();
+        let logic = build_logic_prelude(&mut kernel).expect("logic prelude builds");
+        let nat = kernel.const_(logic.nat, vec![]);
+        let a_id = u64::MAX - 90_001;
+        let b_id = u64::MAX - 90_002;
+        let c_id = u64::MAX - 90_003;
+        let first_id = u64::MAX - 90_004;
+        let second_id = u64::MAX - 90_005;
+        let a = kernel.fvar(a_id);
+        let b = kernel.fvar(b_id);
+        let c = kernel.fvar(c_id);
+        let first_type = equality(&mut kernel, nat, a, b).expect("first equality");
+        let second_type = equality(&mut kernel, nat, b, c).expect("second equality");
+        let first = kernel.fvar(first_id);
+        let second = kernel.fvar(second_id);
+        let proof = equality_trans(&mut kernel, nat, a, b, c, first, second)
+            .expect("transitivity term builds");
+        let proof = close_lam(&mut kernel, second_id, "hbc", second_type, proof);
+        let proof = close_lam(&mut kernel, first_id, "hab", first_type, proof);
+        let proof = close_lam(&mut kernel, c_id, "c", nat, proof);
+        let proof = close_lam(&mut kernel, b_id, "b", nat, proof);
+        let proof = close_lam(&mut kernel, a_id, "a", nat, proof);
+        let inferred = kernel.infer(proof).expect("transitivity proof infers");
+
+        let result = equality(&mut kernel, nat, a, c).expect("result equality");
+        let goal = close_pi(&mut kernel, second_id, "hbc", second_type, result);
+        let goal = close_pi(&mut kernel, first_id, "hab", first_type, goal);
+        let goal = close_pi(&mut kernel, c_id, "c", nat, goal);
+        let goal = close_pi(&mut kernel, b_id, "b", nat, goal);
+        let goal = close_pi(&mut kernel, a_id, "a", nat, goal);
+        assert!(kernel.def_eq(inferred, goal));
+    }
 }
