@@ -588,3 +588,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0513](adr-0513-test-local-witt-cylinder-concentration.md) | Measure exact local fourth-over-second concentration on every conductor cylinder before proposing a Carleson bound | accepted |
 | [0514](adr-0514-replace-constant-cylinder-ceiling-with-linear-target.md) | Refute the provisional constant-eight cylinder ceiling and retain the sufficient linear Carleson target | accepted |
 | [0515](adr-0515-prioritize-the-aggregate-connected-cumulant-bound.md) | Target root kurtosis at most four so every convolution order cancels before any absolute value | accepted |
+| [0516](adr-0516-reject-the-naive-many-block-fomenko-projection.md) | Prove that projecting every binary Witt block to its first slot has kernel order `2^floor(ell/2)`, so the fixed-coordinate Fomenko mechanism does not scale with the Lemire conductor | accepted |

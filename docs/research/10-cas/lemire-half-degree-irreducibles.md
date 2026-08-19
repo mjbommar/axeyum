@@ -110,7 +110,11 @@ lemma.
   [restatement](https://eudml.org/doc/207235), as well as
   [Irreducible polynomials with consecutive zero
   coefficients](https://users.math.uoc.gr/~tgaref/content/static/publications/paper-ffa-final.pdf),
-  Corollary 1.
+  Corollary 1.  The paper's dedicated consecutive-zero result does not evade
+  this loss: Corollary 2 requires `q^(n+l-2m) >= q m^4` for a zero block
+  `l<=i<m`.  Lemire's block has `m=n` and `l=floor(n/2)`, making the exponent
+  `l-n<0`; the sufficient condition therefore fails before constants are
+  considered.
 - The 2003 AIM workshop notes contain an even more tempting unsupported
   remark: for `m=n`, Gao's relaxed `x^m+g` problem is said to be proved with
   `deg g <= n/2`.  The note gives no theorem, author, or reference for that
@@ -2430,6 +2434,27 @@ The CAS reconstructs both sides independently at every level and rejects a
 nonbinary fibre.  Thus the live analytic lemma is an `L2` estimate for binary
 Witt-refinement imbalances.  Generic martingale inequalities do not provide
 it; an arithmetic pairing or relative Artin--Schreier estimate still must.
+
+The most direct generalization of Fomenko's fixed-coordinate character map is
+now closed before any expensive `L`-factor enumeration.  The native cyclic
+decomposition has one 2-typical Witt block for every odd `m<=ell`.  Reducing
+each block coordinate modulo two is a surjective homomorphism
+
+```text
+E_ell -> GF(2)^ceil(ell/2),
+```
+
+but its kernel has dimension `floor(ell/2)` and order
+`2^floor(ell/2)`.  `binary_witt_first_slot_projection_report` reconciles the
+source, image, and kernel orders from the checked block decomposition; an
+exhaustive small-level control independently verifies every fibre and every
+homomorphism pair through `ell=8`.  Fomenko's useful kernel is small because
+the number of prescribed coordinates is fixed.  Selecting the first active
+coordinate from every growing Witt block instead leaves an exponentially
+large unresolved family, so ordinary characterwise Weil bounds inside those
+fibres reproduce the endpoint loss.  A different quotient could still work
+if it brings new cross-block orthogonality, but the naive many-block map is not
+that quotient (ADR-0516).
 
 Existing geometric
 higher-moment work of Hast and Matei treats fixed polynomial degree as the

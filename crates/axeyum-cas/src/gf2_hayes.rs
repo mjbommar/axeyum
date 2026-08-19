@@ -1788,6 +1788,38 @@ pub struct BinaryPrincipalUnitWittReport {
     pub blocks: Vec<BinaryWittBlockCoordinate>,
 }
 
+/// Exact size ledger for the projection onto the first slot of every binary
+/// 2-typical Witt block.
+///
+/// On a block `Z/2^L`, the first-slot map is reduction modulo two.  Taking
+/// the product over all odd block indices gives a surjection
+///
+/// ```text
+/// E_ell -> GF(2)^ceil(ell/2).
+/// ```
+///
+/// This is the direct many-block analogue of the low-coordinate character
+/// maps used for a fixed number of prescribed coefficients.  The report keeps
+/// its exponentially growing kernel explicit; it is a structural ledger, not
+/// a character-sum estimate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryWittFirstSlotProjectionReport {
+    /// Principal-unit truncation level.
+    pub ell: usize,
+    /// Odd degrees indexing the target coordinates.
+    pub first_slot_degrees: Vec<usize>,
+    /// Lengths of the corresponding truncated Witt blocks.
+    pub block_lengths: Vec<usize>,
+    /// Order of the source principal-unit group, `2^ell`.
+    pub source_order: usize,
+    /// Order of the first-slot image, `2^ceil(ell/2)`.
+    pub image_order: usize,
+    /// Order of every fibre, `2^floor(ell/2)`.
+    pub kernel_order: usize,
+    /// Binary dimension of the kernel, `floor(ell/2)`.
+    pub kernel_dimension: usize,
+}
+
 /// Projection of simultaneous Möbius cosets onto one order-two character.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BinaryOrderTwoCharacterProjection {
@@ -2910,6 +2942,75 @@ pub fn binary_principal_unit_witt_report(
         unit,
         mixed_radix_index,
         blocks,
+    })
+}
+
+/// Compute the exact source, image, and kernel sizes of the projection onto
+/// the first binary slot of every 2-typical Witt block.
+///
+/// Each cyclic factor has power-of-two order `2^L`.  Reduction of its
+/// coordinate modulo two is a surjective homomorphism to `GF(2)`, with kernel
+/// order `2^(L-1)`.  The product map therefore has one target bit for every
+/// odd degree at most `ell` and kernel dimension
+/// `sum(L-1)=ell-ceil(ell/2)=floor(ell/2)`.
+///
+/// # Errors
+///
+/// Rejects an invalid or over-limit truncation and fails closed if the native
+/// factorization does not have the required power-of-two block structure or
+/// if the independently accumulated source/image/kernel orders disagree.
+pub fn binary_witt_first_slot_projection_report(
+    ell: usize,
+    limits: HayesLimits,
+) -> Result<BinaryWittFirstSlotProjectionReport, HayesError> {
+    let structure = principal_unit_structure(ell, limits)?;
+    let mut first_slot_degrees = Vec::with_capacity(structure.factors.len());
+    let mut block_lengths = Vec::with_capacity(structure.factors.len());
+    let mut image_order = 1_usize;
+    let mut kernel_order = 1_usize;
+    let mut kernel_dimension = 0_usize;
+
+    for factor in &structure.factors {
+        if !factor.order.is_power_of_two() || factor.order < 2 {
+            return Err(HayesError::Invariant(
+                "first-slot projection requires nontrivial binary Witt blocks".to_owned(),
+            ));
+        }
+        let length = factor.order.trailing_zeros() as usize;
+        first_slot_degrees.push(factor.odd_degree);
+        block_lengths.push(length);
+        image_order = image_order.checked_mul(2).ok_or_else(|| {
+            HayesError::InvalidParameter("first-slot image order overflow".to_owned())
+        })?;
+        kernel_order = kernel_order.checked_mul(factor.order / 2).ok_or_else(|| {
+            HayesError::InvalidParameter("first-slot kernel order overflow".to_owned())
+        })?;
+        kernel_dimension = kernel_dimension.checked_add(length - 1).ok_or_else(|| {
+            HayesError::InvalidParameter("first-slot kernel dimension overflow".to_owned())
+        })?;
+    }
+
+    let kernel_shift = u32::try_from(kernel_dimension).map_err(|_| {
+        HayesError::InvalidParameter("first-slot kernel dimension exceeds u32".to_owned())
+    })?;
+    if image_order.checked_mul(kernel_order) != Some(structure.group_order)
+        || first_slot_degrees.len() != ell.div_ceil(2)
+        || kernel_dimension != ell / 2
+        || kernel_order != 1_usize.checked_shl(kernel_shift).unwrap_or(0)
+    {
+        return Err(HayesError::Invariant(
+            "first-slot source/image/kernel ledger is inconsistent".to_owned(),
+        ));
+    }
+
+    Ok(BinaryWittFirstSlotProjectionReport {
+        ell,
+        first_slot_degrees,
+        block_lengths,
+        source_order: structure.group_order,
+        image_order,
+        kernel_order,
+        kernel_dimension,
     })
 }
 
@@ -11380,6 +11481,47 @@ mod tests {
         assert_eq!(frobenius_slot.blocks[0].coordinate, 4);
         assert_eq!(frobenius_slot.blocks[0].active_slot_degrees, vec![4]);
         assert_eq!(frobenius_slot.blocks[0].highest_active_slot, Some(4));
+    }
+
+    #[test]
+    fn witt_first_slot_projection_has_the_exact_growing_kernel() {
+        let limits = HayesLimits::default();
+        assert!(binary_witt_first_slot_projection_report(0, limits).is_err());
+        for ell in 1_usize..=8 {
+            let report = binary_witt_first_slot_projection_report(ell, limits).unwrap();
+            assert_eq!(
+                report.first_slot_degrees,
+                (1..=ell).step_by(2).collect::<Vec<_>>()
+            );
+            assert_eq!(report.source_order, 1 << ell);
+            assert_eq!(report.image_order, 1 << ell.div_ceil(2));
+            assert_eq!(report.kernel_order, 1 << (ell / 2));
+            assert_eq!(report.kernel_dimension, ell / 2);
+            assert_eq!(report.block_lengths.iter().sum::<usize>(), ell);
+
+            let factors = principal_unit_factors(ell);
+            let project = |mut index: usize| {
+                let mut mask = 0_usize;
+                for (block, factor) in factors.iter().enumerate() {
+                    let coordinate = index % factor.order;
+                    index /= factor.order;
+                    mask |= (coordinate & 1) << block;
+                }
+                assert_eq!(index, 0);
+                mask
+            };
+            let mut fibre_sizes = vec![0_usize; report.image_order];
+            for index in 0..report.source_order {
+                fibre_sizes[project(index)] += 1;
+            }
+            assert!(fibre_sizes.iter().all(|&size| size == report.kernel_order));
+            for left in 0..report.source_order {
+                for right in 0..report.source_order {
+                    let sum = add_mixed_radix_indices(left, right, &factors).unwrap();
+                    assert_eq!(project(sum), project(left) ^ project(right));
+                }
+            }
+        }
     }
 
     #[test]
