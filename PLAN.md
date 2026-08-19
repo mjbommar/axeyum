@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `d33c43e5e` | Scoped the binary Bagshaw Case-5 obstruction to its actual domain, proved it is empty for every Lemire cutoff, and checked that Hsu's older half-coefficient shorthand does not close the exact endpoint. |
 | 2026-08-19 | `eef2032e5` | Completed the source-level Bagshaw dependency audit and added exact non-credit-bearing exponent ledgers that isolate the binary Type-I Case-5 obstruction and the uncovered endpoint interval range. |
 | 2026-08-19 | `e0398d06a` | Added exact inverse-additive interval energy and Walsh fourth moments with independent collision controls, a characteristic-two source audit, and an explicit boundary against finite no-wrap inference. |
 | 2026-08-19 | `329e842c6` | Recorded the exact inverse-additive Fourier and reciprocal-polynomial bridge in the canonical research note and lane status. |
