@@ -203,7 +203,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | (pending) | `gen-adr-index.py --check-remote`: cross-checkout ADR-number collision detector, wired into `just check` and `check.sh`; found a second live collision (0468-0470) beyond the one already fixed today (471-474) |
 | 2026-08-18 | (pending) | `lean_pp::split_module_banner` + `tests/support/lean_golden.rs`: golden pins cover the module BODY, banner pinned once as committed text in `module_banner_pin`. |
 | 2026-08-18 | (pending) | `scripts/check-lean-golden-pins.sh` (+ controls): the golden-module gate, membership DISCOVERED not listed; wired into `just check`, `check.sh`, and diff-scoped `hooks/pre-push`. |
-| 2026-08-18 | (pending) | `mutation_controls.py`: a mutation check can no longer report a result it did not measure. `DID NOT BUILD` / `DID NOT RUN` / `AMBIGUOUS ANCHOR` / `INCONSISTENT` are distinct from `killed N` and `SURVIVED` and are counted separately; build probe, two independent kill counts, baseline test count, verified restore, and a `cargo` runner for the route the defect was reported on. `self-demo` demonstrates all four outcomes live; `mutation-controls` mutation-checks the harness (24 guards, 31 controls, 24/24 killed after 3 real survivors were fixed). Found and repaired two dead controls in `lra-hypothesis-binding` (53/53). Wired into both `just check` and `check.sh`. |
+| 2026-08-18 | (pending) | `mutation_controls.py`: a mutation check can no longer report a result it did not measure. `DID NOT BUILD` / `DID NOT RUN` / `AMBIGUOUS ANCHOR` / `INCONSISTENT` are distinct from `killed N` and `SURVIVED` and are counted separately; build probe, two independent kill counts, baseline test count, verified restore, and a `cargo` runner for the route the defect was reported on. `self-demo` demonstrates all four outcomes live; `mutation-controls` mutation-checks the harness (24 guards, 31 controls, 24/24 killed after 3 real survivors were fixed). Found and repaired two dead controls in `lra-hypothesis-binding` (53/53), and one mutation in `lean-axiom-ledger` that was scored as a kill while running **zero** tests, so that control is 10 guards and not the 11 recorded. Wired into both `just check` and `check.sh`. |
 | 2026-08-18 | `pending` | **ADR-0479: ℂ is constructed over the constructed ℝ at zero trusted declarations, and ℂ's absence of an order becomes a theorem.** `Complex` is `mk : CReal → CReal → Complex` with `Complex.Equiv` componentwise — no quotient at either level, so `Quot.sound` is never needed. Every ℂ law reduces by δι to two `CReal.Equiv` obligations that are *algebraic*, so they are **decided, not hand-derived**: `complex/ring.rs` normalizes a `CReal` expression to a sorted multiset of signed monomials with opposite pairs cancelled and emits the `Equiv` proof, declaring nothing (every function returns a proof term, in `shifted_bound_le`'s style), so the `CReal` namespace and the trusted surface are untouched by construction. `add` and `mul` are the same commutative monoid, so the reassociation machinery is `rsum_perm`/`iprod_perm` written once against an `Op` tag, one level up and over a *defined* equality — the transcription ADR-0483 predicted. Landed with `conj`, `normSq`, `mul_conj` (`z·z̄ = ‖z‖²`, the law that needs the cancellation pass) and `normSq_nonneg` into `CReal`'s existing nonneg cone. **The finding that is not a construction:** `Complex.no_compatible_order : ∀ le lt, le_refl → lt_irrefl → lt_of_le_of_lt → add_le_add → le_congr → sq_nonneg → zero_lt_one → False`, proved directly with no classical step, so the 13 order laws are refuted rather than skipped. |
 | 2026-08-18 | `590e2ff8c` | **ADR-0483 phase R2 completes: all 22 ordered-ring laws hold over the constructed ℝ.** `mul_assoc`, `left_distrib` and `mul_le_mul_of_nonneg_left` land, plus `mul_congr` — the fifth congruence obligation and the R4 prerequisite. The four were one problem: each compares two products whose *sampling indices differ*, so `CReal.mul`'s exact estimate is unavailable and the naive bound is `C/(n+1)` for a `C > 2`. Two new pieces make that enough. `CReal.Equiv.of_bounded` — **`Equiv` only needs the difference to be `O(1/n)`; the constant is free** — is `Equiv.trans`'s argument with one term deleted, closing on `Rat.le_of_le_add_natDivSucc`, whose numerator is a `Nat` *parameter* so a symbolic `K` is as good as a literal; and `Rat.nat_index_compose` says **Bishop's sampling indices are closed under composition** (the additive shift `2n+1` is the `c = 1` case), so every nested index reads back at `n` through one `natDivSucc_le_scaled`. `mul_le_mul_of_nonneg_left` needed no estimate at all, exactly as costed — it is `left_distrib` + `mul_nonneg` + `mul_congr`. **22 of 22**, 58 declarations, trusted surface still 0, and the count is now read out of the kernel: `CRealPrelude::ordered_ring_laws` must name 22 *distinct* footprint-empty theorems matching `RatPrelude::ring_laws` position by position, asserted by the example's exit status and three tests, verified by deleting `mul_assoc`. |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
@@ -1338,25 +1338,26 @@ that executed zero tests — the `#![cfg(feature = "full")]` trap. Both push in 
 unsafe direction, and every "exactly one test died" in this repository rests on
 the mutant having been built and run.
 
-Outcomes are now a closed set of which only `killed N` and `SURVIVED` are
-measurements; `DID NOT BUILD`, `DID NOT RUN`, `NOT APPLIED`, `AMBIGUOUS ANCHOR`
-and `INCONSISTENT` fail the run in a **separately counted** bucket, because "the
-guard is not tested" and "the harness could not tell" have different fixes. A
-build probe runs before any test count is believed; the two independent kill
-counts (headers, summary) must agree with each other and with the exit status;
+Only `killed N` and `SURVIVED` are now measurements; `DID NOT BUILD`, `DID NOT
+RUN`, `NOT APPLIED`, `AMBIGUOUS ANCHOR` and `INCONSISTENT` fail the run in a
+**separately counted** bucket — "not tested" and "could not tell" have different
+fixes. A build probe runs before any test count is believed; the two independent
+kill counts (headers, summary) must agree with each other and the exit status;
 collection size must match the baseline. A `cargo` runner covers the route the
-defect was found on.
+defect was reported on.
 
-`mutation_controls.py self-demo` produces one of each of the four outcomes from a
-real mutation and fails unless the harness names all four; it is wired into both
-`just check` and `check.sh`. The harness is mutation-checked against itself
-(`mutation-controls`, 24 guards / 31 controls): first run **21 killed, 3
-SURVIVED**, all three real, now **24/24**.
+`self-demo` produces one of each of the four outcomes from a real mutation and
+fails unless the harness names all four; wired into `just check` and `check.sh`.
+The harness is mutation-checked against itself (24 guards / 31 controls): first
+run **21 killed, 3 SURVIVED**, all three real; now **24/24**.
 
-The new ambiguous-anchor check found **two dead controls** in
-`lra-hypothesis-binding` — one mutating the same copy another control already
-drove — plus one genuinely uncovered guard in `bind_structural`, left for the
-lane that owns it.
+Two findings in existing suites. The ambiguous-anchor check found **two dead
+controls** in `lra-hypothesis-binding` (one mutating the same copy another
+control already drove); repaired, 53/53. And `lean-axiom-ledger` — the control
+over the axiom ledger, i.e. the axiom-freedom claim — was recorded as *11 guards,
+no survivors* when it is **10**: its eleventh mutation sabotages the fixture, so
+the suite ran **zero** tests and the old classifier read the non-zero exit as a
+death. Removed with the reasoning in place; 10/10.
 
 Detail: [`../notes/agent-mutation-harness.md`](docs/plan/notes/agent-mutation-harness.md).
 

@@ -316,14 +316,25 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
                 "if not isinstance(committed, dict):",
                 "if False:",
             ),
-            # Not independently isolable: without the flag `measure()` fails
+            # REMOVED 2026-08-18. This one was listed with the note "not
+            # independently isolable: without the flag `measure()` fails
             # cross-check and the whole suite dies at setUpClass. Listed so the
-            # control records that, rather than leaving it untested-looking.
-            (
-                "--include-constructed on the coverage command",
-                ' -- --include-constructed"',
-                '"',
-            ),
+            # control records that, rather than leaving it untested-looking."
+            # It did not record that -- it recorded a KILL. Deleting the flag
+            # sabotages the FIXTURE, so the run reported `Ran 0 tests` with an
+            # error on `setUpClass`, and the old classifier read a non-zero exit
+            # as a death: this suite's "11 guards, no survivors" was 10 measured
+            # and one never run, in the control guarding the project's headline
+            # trust number. The four-outcome harness now calls it
+            # `DID NOT RUN` -- which is the truth, and a permanently unmeasurable
+            # entry is worse than an absent one, so it is gone rather than red.
+            #
+            # It is not a guard deletion and no test module can make it one: every
+            # test here depends on the fixture the flag builds. If the flag is to
+            # be falsifiable it needs an assertion about the COMMAND, in a class
+            # with no `setUpClass` -- and even then the surviving `Ran N` would
+            # differ from the baseline. That is work for the lane that owns
+            # `gen-lean-axiom-ledger.py`.
         ],
     ),
     "lra-hypothesis-binding": (

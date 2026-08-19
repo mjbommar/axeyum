@@ -186,6 +186,35 @@ This is the `102-attestation-gap` lane's checker and its control module, so it i
 left for that lane rather than edited from here; registering the mutation without
 a control would simply red their gate.
 
+## A mutation counted as a kill that never ran, in the headline-trust control
+
+`lean-axiom-ledger` is the mutation control over the Lean axiom ledger — the
+SHA-256 binding of every prelude axiom type, i.e. the evidence for this project's
+axiom-freedom claim. It was recorded as **11 guards, no survivors**. It is 10.
+
+Its eleventh entry deleted ` -- --include-constructed` from the coverage command,
+and carried the note *"not independently isolable: without the flag `measure()`
+fails cross-check and the whole suite dies at setUpClass. Listed so the control
+records that, rather than leaving it untested-looking."* The control did not
+record that. Deleting the flag sabotages the **fixture**, so the run printed
+`Ran 0 tests` with an error on `setUpClass`, and the old classifier read the
+non-zero exit as a death:
+
+```
+  --include-constructed on the coverage command DID NOT RUN — the suite built and then executed zero tests
+```
+
+That is the new harness on the same entry. It is not a guard deletion and no test
+module can make it one — every test in that module depends on the fixture the
+flag builds, and even a `setUpClass`-free assertion about the command string
+would leave the mutant's `Ran N` different from the baseline's. Removed rather
+than left permanently red; the reasoning is in the table where the entry was.
+With it gone the suite is **10 of 10 killed**.
+
+Two claims elsewhere in the repository now say 11 and are the owning lane's to
+correct: `PLAN.md`'s generated row and
+`docs/plan/status/101-expect-axioms.md` (*"81 s, 11"*).
+
 ## Also measured, not caused here
 
 - `adr-index`'s baseline is red on this checkout:
