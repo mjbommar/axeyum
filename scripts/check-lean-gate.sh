@@ -151,7 +151,23 @@ cd "$(dirname "$0")/.." || exit 2
 # a statement about module size, and the SAME gcd module with every `theorem`
 # re-spelled `def`, which Lean accepts and which isolates the mechanism to one
 # token per line. Twenty suites now.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-218}"
+#
+# Raised 218 -> 219 on 2026-08-19 by lane `agent-prepush-scope`:
+# `real_lean_string_monoid_crosscheck` adds ONE, and it was not in this table at
+# all -- it landed on 2026-08-17 and only `hooks/pre-push`'s wholesale
+# `cargo test -p axeyum-lean-kernel` ever ran it, which counts nothing, enforces
+# no pin and cannot tell a skip from a pass. It also printed its marker as
+# `AXEYUM-LEAN-CHECKED|string-monoid|1|...`, which this script's parser
+# (`AXEYUM-LEAN-CHECKED <tag> checked=<n>`) reads as zero, so listing it without
+# fixing that would have failed with `0-lean-checks`; it now calls
+# `lean_probe::report_checked`. The check is Lean's own `#print axioms` on an
+# exported string-monoid theorem: every opaque word present, and nothing from the
+# string prelude -- `append` was a `Declaration::Axiom` until 2026-08-17, and an
+# axiom is exactly what an external checker accepts vacuously. Twenty-one suites
+# now. Found by `scripts/check-kernel-suites.sh`, which asserts that every
+# `crates/axeyum-lean-kernel/tests/*.rs` is in exactly one of {runs at push time,
+# owned by this gate}.
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-219}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
 # Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s
@@ -208,6 +224,7 @@ axeyum-lean-kernel||real_lean_string_literal_crosscheck
 axeyum-lean-kernel||real_lean_local_let_zeta_crosscheck
 axeyum-lean-kernel||real_lean_structure_eta_recursor_crosscheck
 axeyum-lean-kernel||real_lean_structure_eta_crosscheck
+axeyum-lean-kernel||real_lean_string_monoid_crosscheck
 axeyum-lean-kernel||real_lean_compact_share_crosscheck
 axeyum-lean-kernel||real_lean_shared_prelude_crosscheck
 axeyum-lean-kernel||real_lean_kernel_replay

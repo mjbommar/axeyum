@@ -190,10 +190,32 @@ while IFS= read -r file; do
 done < <(grep -lE 'AXEYUM_LEAN_BIN|Command::new\("lean"\)|elan' "$TESTS_DIR"/*.rs 2>/dev/null |
   LC_ALL=C sort)
 
+# --------------------------------------------------------------------------
+# Refusal: a real-Lean suite that reports its check count by hand.
+#
+# `scripts/check-lean-gate.sh` parses exactly `AXEYUM-LEAN-CHECKED <tag>
+# checked=<n>` and sums it against a floor, so a marker line in any other shape
+# reads as ZERO -- the suite is listed, runs, invokes Lean, and contributes
+# nothing to the number the gate enforces. `real_lean_string_monoid_crosscheck`
+# printed `AXEYUM-LEAN-CHECKED|string-monoid|1|...` from 2026-08-17 until this
+# guard was written, so listing it there without noticing would have swapped one
+# silent hole for another. `lean_probe::report_checked` emits the parsed shape
+# AND refuses a zero count.
+# --------------------------------------------------------------------------
+while IFS= read -r file; do
+  [ -n "$file" ] || continue
+  grep -q 'report_checked' "$file" && continue
+  echo "check-kernel-suites: FAILED -- $file writes the CHECKED_MARKER line itself instead" \
+       "of calling \`lean_probe::report_checked\`. $LEAN_GATE parses one exact shape" \
+       "(\`AXEYUM-LEAN-CHECKED <tag> checked=<n>\`); anything else sums as zero, so the" \
+       "suite's Lean invocations would never reach its floor." >&2
+  rc=1
+done < <(grep -lF 'CHECKED_MARKER' "$TESTS_DIR"/*.rs 2>/dev/null | LC_ALL=C sort)
+
 # Everything deferred and nothing run is not a split, it is a deletion.
 if [ "$push_count" -eq 0 ]; then
   echo "check-kernel-suites: FAILED -- every one of the $all_count suites was classified as" \
-       "real-Lean, so this step would run NOTHING at push time. `axiom_footprint` and the" \
+       "real-Lean, so this step would run NOTHING at push time. \`axiom_footprint\` and the" \
        "other trusted-surface assertions are exactly what must not be deferred to a gate" \
        "that needs a toolchain." >&2
   rc=1

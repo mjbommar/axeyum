@@ -163,6 +163,20 @@ class KernelSuitePartitionControls(unittest.TestCase):
         self.assertIn("sneaky_lean", got.stderr)
         self.assertIn("resolves a `lean` binary of its own", got.stderr)
 
+    def test_rejects_a_hand_written_checked_marker(self) -> None:
+        """The real-Lean gate parses one shape; anything else sums as zero."""
+        self.healthy()
+        self.suite(
+            "real_lean_hand_counted",
+            lean=True,
+            body='fn r() { println!("{}|tag|1|done", lean_probe::CHECKED_MARKER); }\n',
+        )
+        self.gate("real_lean_kernel_replay", "real_lean_hand_counted")
+        got = self.run_gate()
+        self.assertEqual(got.returncode, 1, got.stdout + got.stderr)
+        self.assertIn("real_lean_hand_counted", got.stderr)
+        self.assertIn("report_checked", got.stderr)
+
     def test_rejects_a_tree_it_discovered_nothing_in(self) -> None:
         """A gate that discovers nothing must fail, not pass."""
         self.suite("axiom_footprint")
@@ -187,6 +201,13 @@ class KernelSuitePartitionControls(unittest.TestCase):
         got = self.run_gate()
         self.assertEqual(got.returncode, 1, got.stdout + got.stderr)
         self.assertIn("run NOTHING at push time", got.stderr)
+        # Named, and named VERBATIM. This message carried `axiom_footprint` in
+        # unescaped backticks inside a double-quoted `echo`, so the shell ran it
+        # as a command and substituted the empty output -- the CLAUDE.md
+        # commit-message trap, in a gate's own explanation of itself. Asserting
+        # the identifier is what notices; asserting the sentence around it does
+        # not.
+        self.assertIn("axiom_footprint", got.stderr)
 
     def test_rejects_an_inert_suite(self) -> None:
         """`cargo test` exits 0 on an empty binary; the count is the evidence."""

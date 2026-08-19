@@ -1242,6 +1242,11 @@ SUITES["kernel-suite-partition"] = (
             "  continue",
         ),
         (
+            "a real-Lean suite that hand-writes its check count",
+            "  grep -q 'report_checked' \"$file\" && continue",
+            "  continue",
+        ),
+        (
             "a split with nothing left to run at push time",
             'if [ "$push_count" -eq 0 ]; then',
             "if false; then",

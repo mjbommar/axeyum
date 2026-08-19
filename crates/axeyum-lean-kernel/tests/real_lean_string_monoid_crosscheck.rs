@@ -205,8 +205,11 @@ fn string_monoid_module_checks_in_real_lean_with_no_prelude_axioms() {
          declaration) is being trusted rather than checked:\n{stdout}"
     );
     let _ = std::fs::remove_dir_all(&directory);
-    println!(
-        "{}|string-monoid|1|lean accepted, axiom report free of string-prelude rows",
-        lean_probe::CHECKED_MARKER
-    );
+    // `report_checked`, not a hand-written marker line. This suite printed
+    // `AXEYUM-LEAN-CHECKED|string-monoid|1|...` -- pipe-separated -- and
+    // `scripts/check-lean-gate.sh` parses `AXEYUM-LEAN-CHECKED <tag> checked=<n>`,
+    // so the count was unreadable to the only thing that reads it. Combined with
+    // the suite's absence from that gate's table, one real-Lean check ran on
+    // every push, uncounted, and reached no floor.
+    lean_probe::report_checked("string-monoid", 1);
 }
