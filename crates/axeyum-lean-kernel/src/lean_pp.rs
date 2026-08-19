@@ -385,6 +385,50 @@ impl Kernel {
         )
     }
 
+    /// Whether [`Declaration::Theorem`] renders with the `def` keyword rather
+    /// than `theorem` (ADR-0489). Off unless [`Self::set_render_proofs_as_def`]
+    /// turned it on.
+    #[must_use]
+    pub const fn render_proofs_as_def(&self) -> bool {
+        self.render_proofs_as_def
+    }
+
+    /// Render every environment [`Declaration::Theorem`] with the `def` keyword.
+    ///
+    /// **This changes only the keyword.** No term, no type, no binder, no share
+    /// name and no module banner moves; the emitted bytes differ from the
+    /// default rendering exactly by the prefix of the lines that open a theorem.
+    /// The module's *root* `theorem <name> : <goal> := <proof>` is deliberately
+    /// NOT affected — nothing reduces through the root, so re-spelling it would
+    /// cost honesty and buy nothing.
+    ///
+    /// # Why the option exists
+    ///
+    /// Lean has two checkers and they disagree about a proof's opacity
+    /// (ADR-0488). Lean's *kernel* unfolds anything carrying a value and accepts
+    /// the whole constructed-real carrier; Lean's *elaborator* refuses to unfold
+    /// a `theorem` while reducing, so a declaration whose type-checking must
+    /// compute through `Nat.gcd` — whose Euclidean descent is justified by the
+    /// theorem `Nat.mod_lt` — is refused from `.lean` source. Spelling proofs as
+    /// `def` removes that opacity and the elaborator accepts them too.
+    ///
+    /// It is off by default because a `def` is a weaker statement about the
+    /// artefact than a `theorem` is, and because it costs elaboration time; the
+    /// numbers and the recommendation are in ADR-0489.
+    pub fn set_render_proofs_as_def(&mut self, render_as_def: bool) {
+        self.render_proofs_as_def = render_as_def;
+    }
+
+    /// The keyword that opens an environment theorem: `theorem`, or `def` under
+    /// [`Self::set_render_proofs_as_def`].
+    const fn proof_keyword(&self) -> &'static str {
+        if self.render_proofs_as_def {
+            "def"
+        } else {
+            "theorem"
+        }
+    }
+
     /// Render a [`Declaration`] as a Lean 4 top-level command. The directly-emittable
     /// kinds (`axiom`/`def`/`theorem`/`opaque`) render verbatim; an
     /// `Inductive`/`Constructor`/`Recursor` renders as a comment, since Lean
@@ -417,7 +461,8 @@ impl Kernel {
                 ty,
                 value,
             } => format!(
-                "theorem {}{} : {} :=\n  {}",
+                "{} {}{} : {} :=\n  {}",
+                self.proof_keyword(),
                 self.render_name(*name),
                 self.render_uparams(uparams),
                 self.render_lean(*ty),
@@ -1190,7 +1235,7 @@ impl Kernel {
                 let kw = if matches!(decl, Declaration::Opaque { .. }) {
                     "opaque"
                 } else {
-                    "theorem"
+                    self.proof_keyword()
                 };
                 let _ = write!(
                     out,

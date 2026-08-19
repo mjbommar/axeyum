@@ -330,6 +330,10 @@ pub struct Kernel {
     string_literal_cache: Option<(u64, tc::StringLiteralTable)>,
     /// One-way guard set after transient tables are released for serialization.
     export_only: bool,
+    /// Render `Declaration::Theorem` with the `def` keyword instead of
+    /// `theorem` (ADR-0489). **Off by default**: it changes nothing this
+    /// repository ships. See [`Kernel::set_render_proofs_as_def`].
+    render_proofs_as_def: bool,
 
     /// The global declaration environment (ADR-0036, slice 3). Declarations are
     /// admitted only through the type-checked [`Kernel::add_declaration`] gate.
@@ -398,6 +402,12 @@ impl Kernel {
             export_only,
             env,
             prelude_packages,
+            // Deliberately not a pristineness condition: it is a RENDERING
+            // preference, not kernel content, and nothing about it makes a
+            // prelude template unsafe to restore. `prelude_cache::try_restore`
+            // carries it across the restore rather than letting a template
+            // clone silently clear it.
+            render_proofs_as_def: _,
         } = self;
         names.is_empty()
             && name_intern.is_empty()

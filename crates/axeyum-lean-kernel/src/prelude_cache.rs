@@ -159,6 +159,18 @@ fn template(key: PreludeKey) -> Option<&'static Kernel> {
 /// build failed. In every such case the caller must take its ordinary build
 /// path, which reproduces the same result (including the same error).
 pub(crate) fn try_restore(kernel: &mut Kernel, key: PreludeKey) -> Option<PreludeValue> {
+    // A template is a whole-kernel snapshot, so assigning one over `kernel`
+    // would reset every field — including the caller's rendering preference,
+    // which is not kernel content and which a cache hit must not change. Carry
+    // it across explicitly; a silently-cleared flag would make a measurement
+    // run render the default bytes while believing it rendered the other.
+    let render_proofs_as_def = kernel.render_proofs_as_def();
+    let restored = try_restore_inner(kernel, key);
+    kernel.set_render_proofs_as_def(render_proofs_as_def);
+    restored
+}
+
+fn try_restore_inner(kernel: &mut Kernel, key: PreludeKey) -> Option<PreludeValue> {
     if !enabled() || !kernel.is_pristine() {
         MISSES.fetch_add(1, Ordering::Relaxed);
         return None;
