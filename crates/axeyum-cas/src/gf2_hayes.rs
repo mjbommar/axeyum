@@ -1472,6 +1472,21 @@ pub struct BinaryConnectedWittConductorSpectrum {
     pub zero_status_disagreement_count: usize,
 }
 
+/// One primitive additive modulo-eight phase in the connected Witt spectrum.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryConnectedWittAdditivePhaseSpectrum {
+    /// Odd multiplier `1,3,5,7` in `zeta_8^(multiplier*residue)`.
+    pub multiplier: u8,
+    /// Number of transform values nonzero modulo the first native prime.
+    pub prime_one_nonzero_count: usize,
+    /// Number of transform values nonzero modulo the second native prime.
+    pub prime_two_nonzero_count: usize,
+    /// Characters on which the two modular zero tests disagree.
+    pub zero_status_disagreement_count: usize,
+    /// Modular support classified by exact principal-unit conductor.
+    pub conductor_spectra: Vec<BinaryConnectedWittConductorSpectrum>,
+}
+
 /// One connected signed spectrum after embedding every normalized valuation
 /// layer into the common truncated 2-typical Witt group.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1492,6 +1507,11 @@ pub struct BinaryConnectedWittSpectrumReport {
     pub spectral_second_moment: BigUint,
     /// Exact spectral fourth moment from the group autocorrelation identity.
     pub spectral_fourth_moment: BigUint,
+    /// Total product-discriminant phase populations at residues `0..=7`.
+    pub phase_residue_totals: [u128; 8],
+    /// Primitive additive phase spectra whose Gauss combination reconstructs
+    /// the signed dyadic spectrum character by character.
+    pub additive_phase_spectra: Vec<BinaryConnectedWittAdditivePhaseSpectrum>,
     /// Modular spectrum rows in stable conductor order.
     pub conductor_spectra: Vec<BinaryConnectedWittConductorSpectrum>,
 }
@@ -6695,6 +6715,7 @@ pub fn binary_berlekamp_order_two_projection_report(
 struct BinaryDyadicParameterSums {
     shift_inverse: BTreeMap<(usize, u64), i128>,
     normalized: BTreeMap<(usize, u64), i128>,
+    normalized_residues: BTreeMap<(usize, u64), [u128; 8]>,
     valuation: BTreeMap<usize, i128>,
 }
 
@@ -6703,6 +6724,7 @@ struct BinaryDyadicFibrePhase {
     maxima: (Option<usize>, Option<usize>, Option<usize>),
     support_degree: usize,
     signed_correlation: i128,
+    residue_counts: [u128; 8],
 }
 
 fn binary_dyadic_fibre_phase(
@@ -6715,11 +6737,13 @@ fn binary_dyadic_fibre_phase(
     let origin = members[0];
     let mut truth_table = vec![0_u8; members.len()];
     let mut signed_correlation = 0_i128;
+    let mut residue_counts = [0_u128; 8];
     for member in members.iter().copied() {
         let coordinate = coordinates[&(member ^ origin)];
         let phase = (residues[member] * residues[member ^ shift]) % 8;
         truth_table[coordinate] = phase;
         signed_correlation += i128::from(kronecker_two_mod_eight(phase));
+        residue_counts[usize::from(phase)] += 1;
     }
     let coefficients = mod_eight_anf_coefficients(&truth_table, dimension)?;
     let maxima = mod_eight_anf_maxima(&coefficients);
@@ -6733,6 +6757,7 @@ fn binary_dyadic_fibre_phase(
         maxima,
         support_degree,
         signed_correlation,
+        residue_counts,
     })
 }
 
@@ -6803,16 +6828,18 @@ fn record_binary_dyadic_parameter_sum(
     key: BinaryDyadicFibreKey,
     ell: usize,
     representative: usize,
-    signed_correlation: i128,
+    phase: &BinaryDyadicFibrePhase,
     sums: &mut BinaryDyadicParameterSums,
 ) -> Result<(), HayesError> {
     let pair_entry = sums
         .shift_inverse
         .entry((key.shift, key.inverse_difference))
         .or_default();
-    *pair_entry = pair_entry.checked_add(signed_correlation).ok_or_else(|| {
-        HayesError::InvalidParameter("shift/inverse correlation overflow".to_owned())
-    })?;
+    *pair_entry = pair_entry
+        .checked_add(phase.signed_correlation)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("shift/inverse correlation overflow".to_owned())
+        })?;
     let shift = u64::try_from(key.shift)
         .map_err(|_| HayesError::InvalidParameter("dyadic shift exceeds u64".to_owned()))?;
     let shift_polynomial = shift << 1;
@@ -6844,13 +6871,22 @@ fn record_binary_dyadic_parameter_sum(
     }
     let parameter_entry = sums.normalized.entry((valuation, parameter)).or_default();
     *parameter_entry = parameter_entry
-        .checked_add(signed_correlation)
+        .checked_add(phase.signed_correlation)
         .ok_or_else(|| {
             HayesError::InvalidParameter("normalized parameter correlation overflow".to_owned())
         })?;
+    let residue_entry = sums
+        .normalized_residues
+        .entry((valuation, parameter))
+        .or_default();
+    for (target, source) in residue_entry.iter_mut().zip(phase.residue_counts) {
+        *target = target.checked_add(source).ok_or_else(|| {
+            HayesError::InvalidParameter("normalized phase population overflow".to_owned())
+        })?;
+    }
     let valuation_entry = sums.valuation.entry(valuation).or_default();
     *valuation_entry = valuation_entry
-        .checked_add(signed_correlation)
+        .checked_add(phase.signed_correlation)
         .ok_or_else(|| HayesError::InvalidParameter("valuation correlation overflow".to_owned()))?;
     Ok(())
 }
@@ -6882,13 +6918,7 @@ fn accumulate_binary_dyadic_shift_fibres(
             inverse_difference,
         };
         record_binary_dyadic_fibre_statistics(key, members.len(), &phase, report)?;
-        record_binary_dyadic_parameter_sum(
-            key,
-            report.ell,
-            members[0],
-            phase.signed_correlation,
-            parameter_sums,
-        )?;
+        record_binary_dyadic_parameter_sum(key, report.ell, members[0], &phase, parameter_sums)?;
         shift_correlation = shift_correlation
             .checked_add(phase.signed_correlation)
             .ok_or_else(|| {
@@ -6956,6 +6986,8 @@ fn empty_binary_connected_witt_spectrum(ell: usize) -> BinaryConnectedWittSpectr
         spatial_second_moment: BigUint::from(0_u8),
         spectral_second_moment: BigUint::from(0_u8),
         spectral_fourth_moment: BigUint::from(0_u8),
+        phase_residue_totals: [0; 8],
+        additive_phase_spectra: Vec::new(),
         conductor_spectra: Vec::new(),
     }
 }
@@ -7060,6 +7092,149 @@ fn mixed_radix_character_conductor(
     Ok(conductor)
 }
 
+fn connected_witt_conductor_spectra(
+    target: &PrincipalUnitStructure,
+    prime_one: &[u64],
+    prime_two: &[u64],
+) -> Result<Vec<BinaryConnectedWittConductorSpectrum>, HayesError> {
+    let mut rows = BTreeMap::<Option<usize>, [usize; 5]>::new();
+    for character in 0..target.group_order {
+        let conductor = mixed_radix_character_conductor(character, &target.factors)?;
+        let first_nonzero = prime_one[character] != 0;
+        let second_nonzero = prime_two[character] != 0;
+        let row = rows.entry(conductor).or_default();
+        row[0] += 1;
+        row[1] += usize::from(first_nonzero);
+        row[2] += usize::from(second_nonzero);
+        row[3] += usize::from(first_nonzero && second_nonzero);
+        row[4] += usize::from(first_nonzero != second_nonzero);
+    }
+    Ok(rows
+        .into_iter()
+        .map(
+            |(exact_conductor, counts)| BinaryConnectedWittConductorSpectrum {
+                exact_conductor,
+                character_count: counts[0],
+                prime_one_nonzero_count: counts[1],
+                prime_two_nonzero_count: counts[2],
+                jointly_nonzero_count: counts[3],
+                zero_status_disagreement_count: counts[4],
+            },
+        )
+        .collect())
+}
+
+fn connected_witt_phase_transform(
+    phase_spatial: &[[u128; 8]],
+    target: &PrincipalUnitStructure,
+    multiplier: u8,
+    modulus: u64,
+) -> Result<Vec<u64>, HayesError> {
+    let root = mod_pow(PRIMITIVE_ROOT, (modulus - 1) / 8, modulus);
+    let mut values = Vec::with_capacity(phase_spatial.len());
+    for residues in phase_spatial {
+        let mut value = 0_u64;
+        for (residue, count) in residues.iter().copied().enumerate() {
+            let exponent = (usize::from(multiplier) * residue) % 8;
+            let count = u64::try_from(count % u128::from(modulus)).map_err(|_| {
+                HayesError::Invariant("phase population residue exceeds u64".to_owned())
+            })?;
+            value = add_mod(
+                value,
+                multiply_mod(count, mod_pow(root, exponent as u64, modulus), modulus),
+                modulus,
+            );
+        }
+        values.push(value);
+    }
+    let dimensions = target
+        .factors
+        .iter()
+        .map(|factor| factor.order)
+        .collect::<Vec<_>>();
+    group_transform(&mut values, &dimensions, modulus);
+    Ok(values)
+}
+
+fn check_connected_witt_gauss_identity(
+    signed: &[u64],
+    phases: &[Vec<u64>],
+    modulus: u64,
+) -> Result<(), HayesError> {
+    let root = mod_pow(PRIMITIVE_ROOT, (modulus - 1) / 8, modulus);
+    let factor = multiply_mod(
+        2,
+        subtract_mod(root, mod_pow(root, 3, modulus), modulus),
+        modulus,
+    );
+    for character in 0..signed.len() {
+        let left = subtract_mod(
+            add_mod(phases[0][character], phases[3][character], modulus),
+            add_mod(phases[1][character], phases[2][character], modulus),
+            modulus,
+        );
+        let right = multiply_mod(factor, signed[character], modulus);
+        if left != right {
+            return Err(HayesError::Invariant(
+                "connected Witt phase spectra violate the dyadic Gauss identity".to_owned(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn connected_witt_additive_phase_spectra(
+    phase_spatial: &[[u128; 8]],
+    target: &PrincipalUnitStructure,
+    signed_prime_one: &[u64],
+    signed_prime_two: &[u64],
+) -> Result<Vec<BinaryConnectedWittAdditivePhaseSpectrum>, HayesError> {
+    let multipliers = [1_u8, 3, 5, 7];
+    let mut prime_one = Vec::with_capacity(4);
+    let mut prime_two = Vec::with_capacity(4);
+    for multiplier in multipliers {
+        prime_one.push(connected_witt_phase_transform(
+            phase_spatial,
+            target,
+            multiplier,
+            PRIME_ONE,
+        )?);
+        prime_two.push(connected_witt_phase_transform(
+            phase_spatial,
+            target,
+            multiplier,
+            PRIME_TWO,
+        )?);
+    }
+    check_connected_witt_gauss_identity(signed_prime_one, &prime_one, PRIME_ONE)?;
+    check_connected_witt_gauss_identity(signed_prime_two, &prime_two, PRIME_TWO)?;
+    multipliers
+        .into_iter()
+        .enumerate()
+        .map(|(index, multiplier)| {
+            let conductor_spectra =
+                connected_witt_conductor_spectra(target, &prime_one[index], &prime_two[index])?;
+            Ok(BinaryConnectedWittAdditivePhaseSpectrum {
+                multiplier,
+                prime_one_nonzero_count: prime_one[index]
+                    .iter()
+                    .filter(|value| **value != 0)
+                    .count(),
+                prime_two_nonzero_count: prime_two[index]
+                    .iter()
+                    .filter(|value| **value != 0)
+                    .count(),
+                zero_status_disagreement_count: prime_one[index]
+                    .iter()
+                    .zip(&prime_two[index])
+                    .filter(|(first, second)| (**first == 0) != (**second == 0))
+                    .count(),
+                conductor_spectra,
+            })
+        })
+        .collect()
+}
+
 #[allow(clippy::too_many_lines)]
 fn binary_connected_witt_spectrum(
     ell: usize,
@@ -7091,6 +7266,7 @@ fn binary_connected_witt_spectrum(
     }
 
     let mut spatial = vec![0_i128; target.group_order];
+    let mut phase_spatial = vec![[0_u128; 8]; target.group_order];
     for (&(valuation, parameter), &signed_correlation) in &sums.normalized {
         let source_ell = ell - valuation;
         let embedded_index = if source_ell == 0 {
@@ -7112,6 +7288,30 @@ fn binary_connected_witt_spectrum(
             .ok_or_else(|| {
                 HayesError::InvalidParameter("connected Witt class overflow".to_owned())
             })?;
+        let residues = sums
+            .normalized_residues
+            .get(&(valuation, parameter))
+            .ok_or_else(|| {
+                HayesError::Invariant("normalized parameter has no phase populations".to_owned())
+            })?;
+        for (target_count, source_count) in phase_spatial[embedded_index].iter_mut().zip(residues) {
+            *target_count = target_count.checked_add(*source_count).ok_or_else(|| {
+                HayesError::InvalidParameter("connected Witt phase population overflow".to_owned())
+            })?;
+        }
+    }
+    let dyadic_values = [0_i8, 1, 0, -1, 0, -1, 0, 1];
+    for (signed, residues) in spatial.iter().zip(&phase_spatial) {
+        let reconstructed = residues
+            .iter()
+            .enumerate()
+            .map(|(residue, count)| BigInt::from(*count) * BigInt::from(dyadic_values[residue]))
+            .sum::<BigInt>();
+        if reconstructed != BigInt::from(*signed) {
+            return Err(HayesError::Invariant(
+                "connected Witt residue populations miss the signed class".to_owned(),
+            ));
+        }
     }
     let signed_total = spatial.iter().try_fold(0_i128, |sum, value| {
         sum.checked_add(*value)
@@ -7168,31 +7368,17 @@ fn binary_connected_witt_spectrum(
     };
     let prime_one = modular_spectrum(PRIME_ONE)?;
     let prime_two = modular_spectrum(PRIME_TWO)?;
-    let mut rows = BTreeMap::<Option<usize>, [usize; 5]>::new();
-    for character in 0..target.group_order {
-        let conductor = mixed_radix_character_conductor(character, &target.factors)?;
-        let first_nonzero = prime_one[character] != 0;
-        let second_nonzero = prime_two[character] != 0;
-        let row = rows.entry(conductor).or_default();
-        row[0] += 1;
-        row[1] += usize::from(first_nonzero);
-        row[2] += usize::from(second_nonzero);
-        row[3] += usize::from(first_nonzero && second_nonzero);
-        row[4] += usize::from(first_nonzero != second_nonzero);
+    let conductor_spectra = connected_witt_conductor_spectra(&target, &prime_one, &prime_two)?;
+    let additive_phase_spectra =
+        connected_witt_additive_phase_spectra(&phase_spatial, &target, &prime_one, &prime_two)?;
+    let mut phase_residue_totals = [0_u128; 8];
+    for residues in &phase_spatial {
+        for (total, count) in phase_residue_totals.iter_mut().zip(residues) {
+            *total = total.checked_add(*count).ok_or_else(|| {
+                HayesError::InvalidParameter("connected phase total overflow".to_owned())
+            })?;
+        }
     }
-    let conductor_spectra = rows
-        .into_iter()
-        .map(
-            |(exact_conductor, counts)| BinaryConnectedWittConductorSpectrum {
-                exact_conductor,
-                character_count: counts[0],
-                prime_one_nonzero_count: counts[1],
-                prime_two_nonzero_count: counts[2],
-                jointly_nonzero_count: counts[3],
-                zero_status_disagreement_count: counts[4],
-            },
-        )
-        .collect::<Vec<_>>();
 
     Ok(BinaryConnectedWittSpectrumReport {
         ell,
@@ -7203,6 +7389,8 @@ fn binary_connected_witt_spectrum(
         spatial_second_moment,
         spectral_second_moment,
         spectral_fourth_moment,
+        phase_residue_totals,
+        additive_phase_spectra,
         conductor_spectra,
     })
 }
@@ -10765,6 +10953,20 @@ mod tests {
     }
 
     #[test]
+    fn connected_witt_gauss_reconstruction_detects_a_phase_mutation() {
+        for modulus in [PRIME_ONE, PRIME_TWO] {
+            let root = mod_pow(PRIMITIVE_ROOT, (modulus - 1) / 8, modulus);
+            let mut phases = [1_u64, 3, 5, 7]
+                .into_iter()
+                .map(|exponent| vec![mod_pow(root, exponent, modulus)])
+                .collect::<Vec<_>>();
+            assert!(check_connected_witt_gauss_identity(&[1], &phases, modulus).is_ok());
+            phases[0][0] = add_mod(phases[0][0], 1, modulus);
+            assert!(check_connected_witt_gauss_identity(&[1], &phases, modulus).is_err());
+        }
+    }
+
+    #[test]
     fn discriminant_mod_eight_anf_reconstructs_every_coefficient_cube() {
         let limits = HayesLimits::default();
         assert!(binary_discriminant_anf_report(0, limits).is_err());
@@ -10792,6 +10994,55 @@ mod tests {
         ));
     }
 
+    fn assert_pinned_connected_witt_spectrum(report: &BinaryDyadicAutocorrelationFibreReport) {
+        let spectrum = &report.connected_witt_spectrum;
+        assert_eq!(spectrum.ell, 9);
+        assert_eq!(spectrum.normalized_parameter_count, 214);
+        assert_eq!(spectrum.embedded_support_count, 184);
+        assert_eq!(spectrum.signed_total, -68);
+        assert_eq!(spectrum.embedded_absolute_sum, 3_776);
+        assert_eq!(spectrum.spatial_second_moment, BigUint::from(126_568_u32));
+        assert_eq!(
+            spectrum.spectral_second_moment,
+            BigUint::from(64_802_816_u32)
+        );
+        assert_eq!(
+            spectrum.spectral_fourth_moment,
+            BigUint::from(20_409_844_301_824_u64)
+        );
+        assert_eq!(
+            spectrum.phase_residue_totals,
+            [52_596, 28_796, 0, 0, 19_792, 28_864, 0, 0]
+        );
+        assert_eq!(
+            spectrum
+                .additive_phase_spectra
+                .iter()
+                .map(|row| (
+                    row.multiplier,
+                    row.prime_one_nonzero_count,
+                    row.prime_two_nonzero_count,
+                    row.zero_status_disagreement_count,
+                ))
+                .collect::<Vec<_>>(),
+            vec![
+                (1, 512, 512, 0),
+                (3, 512, 512, 0),
+                (5, 512, 512, 0),
+                (7, 512, 512, 0)
+            ]
+        );
+        assert_eq!(spectrum.conductor_spectra.len(), 10);
+        for (level, row) in spectrum.conductor_spectra.iter().enumerate() {
+            assert_eq!(row.exact_conductor, (level != 0).then_some(level));
+            assert_eq!(row.character_count, 1_usize << level.saturating_sub(1));
+            assert_eq!(row.prime_one_nonzero_count, row.character_count);
+            assert_eq!(row.prime_two_nonzero_count, row.character_count);
+            assert_eq!(row.jointly_nonzero_count, row.character_count);
+            assert_eq!(row.zero_status_disagreement_count, 0);
+        }
+    }
+
     #[test]
     fn dyadic_product_discriminants_reconstruct_affine_shift_fibres() {
         let report =
@@ -10810,40 +11061,7 @@ mod tests {
         assert_eq!(report.normalized_parameter_count, 214);
         assert_eq!(report.normalized_parameterwise_absolute_correlation, 3_956);
         assert_eq!(report.valuationwise_absolute_correlation, 388);
-        assert_eq!(report.connected_witt_spectrum.ell, 9);
-        assert_eq!(
-            report.connected_witt_spectrum.normalized_parameter_count,
-            214
-        );
-        assert_eq!(report.connected_witt_spectrum.embedded_support_count, 184);
-        assert_eq!(report.connected_witt_spectrum.signed_total, -68);
-        assert_eq!(report.connected_witt_spectrum.embedded_absolute_sum, 3_776);
-        assert_eq!(
-            report.connected_witt_spectrum.spatial_second_moment,
-            BigUint::from(126_568_u32)
-        );
-        assert_eq!(
-            report.connected_witt_spectrum.spectral_second_moment,
-            BigUint::from(64_802_816_u32)
-        );
-        assert_eq!(
-            report.connected_witt_spectrum.spectral_fourth_moment,
-            BigUint::from(20_409_844_301_824_u64)
-        );
-        assert_eq!(report.connected_witt_spectrum.conductor_spectra.len(), 10);
-        for (level, row) in report
-            .connected_witt_spectrum
-            .conductor_spectra
-            .iter()
-            .enumerate()
-        {
-            assert_eq!(row.exact_conductor, (level != 0).then_some(level));
-            assert_eq!(row.character_count, 1_usize << level.saturating_sub(1));
-            assert_eq!(row.prime_one_nonzero_count, row.character_count);
-            assert_eq!(row.prime_two_nonzero_count, row.character_count);
-            assert_eq!(row.jointly_nonzero_count, row.character_count);
-            assert_eq!(row.zero_status_disagreement_count, 0);
-        }
+        assert_pinned_connected_witt_spectrum(&report);
         assert_eq!(
             report
                 .valuation_correlations
@@ -10905,7 +11123,7 @@ mod tests {
             binary_dyadic_autocorrelation_fibre_report(ell, degree, d, HayesLimits::default())
                 .unwrap();
         eprintln!(
-            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} pair_abs={} normalized_abs={} valuation_abs={} witt_support={} witt_abs={} witt_m2={} witt_fourier_m2={} witt_fourier_m4={} witt_conductors={:?} layers={:?}",
+            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} pair_abs={} normalized_abs={} valuation_abs={} witt_support={} witt_abs={} witt_m2={} witt_fourier_m2={} witt_fourier_m4={} phase_residues={:?} additive_phases={:?} witt_conductors={:?} layers={:?}",
             report.off_diagonal_signed_correlation,
             report.fibrewise_absolute_correlation,
             report.shift_inverse_pairwise_absolute_correlation,
@@ -10916,6 +11134,8 @@ mod tests {
             report.connected_witt_spectrum.spatial_second_moment,
             report.connected_witt_spectrum.spectral_second_moment,
             report.connected_witt_spectrum.spectral_fourth_moment,
+            report.connected_witt_spectrum.phase_residue_totals,
+            report.connected_witt_spectrum.additive_phase_spectra,
             report.connected_witt_spectrum.conductor_spectra,
             report.valuation_correlations,
         );

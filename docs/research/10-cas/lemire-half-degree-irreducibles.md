@@ -1425,14 +1425,27 @@ spectral second moment is `64802816`, and the spectral fourth moment is
 native transform primes, in exact-conductor populations `1,1,2,4,...,256`.
 Since a zero cyclotomic transform would reduce to zero, this proves full
 support for the finite witness.  It rules out sparse support or blanket
-imprimitive-character vanishing as the explanation.  The next diagnostic is
-therefore not another support count.  The primary characteristic-two
-Heisenberg template makes a necessary boundary explicit: its symplectic form
+imprimitive-character vanishing as the explanation.
+
+The CAS now retains the complete product-discriminant residue histogram
+modulo eight at every embedded class rather than collapsing it immediately to
+the real sign.  In the pinned row the total histogram is
+`[52596,28796,0,0,19792,28864,0,0]`.  It transforms each of the four primitive
+phases `zeta_8^(j r)`, `j=1,3,5,7`, separately and verifies their dyadic Gauss
+combination against the signed spectrum character by character.  A one-entry
+mutation is rejected.  All `512` transforms are nonzero modulo both native
+primes for **each** primitive phase.  Thus passing to an individual additive
+modulo-eight phase does not reveal sparse or imprimitive support either.
+
+The next diagnostic is therefore not another support count.  The primary
+characteristic-two Heisenberg template makes a necessary boundary explicit:
+its symplectic form
 is the antisymmetrization of a checked group-law cocycle, not a formal second
 difference of an arbitrary Fourier spectrum.  The integer-valued connected
-Witt function has no such cocycle yet.  Before assigning a commutator rank,
-the CAS must retain the modulo-eight phase and affine-fibre variables, propose
-a central extension, and verify associativity and its commutator identity.
+Witt function and its four phase-resolved lifts have no such cocycle yet.
+Before assigning a commutator rank, the CAS must also retain the affine-fibre
+variables, propose a central extension, and verify associativity and its
+commutator identity.
 None of these finite moments proves the connected candidate.
 
 The Arf coordinate is a better representation of the live squarefree sign,
