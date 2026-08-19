@@ -17,6 +17,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 FACTS = ROOT / "artifacts/facts"
 REGISTRY_SCRIPT = ROOT / "scripts/validate-autogenesis-operations.py"
 EXECUTOR_SCRIPT = ROOT / "scripts/execute-autogenesis-operation.py"
+CHECKED_THEOREM_RECEIPT_CHECKER = (
+    ROOT / "scripts/check-autogenesis-nat-fib-checked-theorem-receipt.py"
+)
 
 
 class FactOperationError(RuntimeError):
@@ -184,6 +187,43 @@ def check_fact(
                 "max_constructed_nodes": executor["max_constructed_nodes"],
             }
         )
+    elif executor["driver"] == "axeyum-lean-import/checked-theorem-receipt-v1":
+        receipt_checker = load_module(
+            "checked_theorem_receipt_for_fact_operation",
+            CHECKED_THEOREM_RECEIPT_CHECKER,
+        )
+        try:
+            manifest = receipt_checker.validate()
+        except receipt_checker.FibReceiptError as error:
+            raise FactOperationError(f"checked-theorem receipt failed: {error}") from error
+        archive = manifest["observation_archive"]
+        archived = json.loads(
+            (pathlib.Path(archive["root"]) / archive["file"]).read_text()
+        )
+        expected_binding.update(
+            {
+                "receipt_manifest": executor["receipt_manifest"],
+                "receipt_manifest_sha256": digest(manifest),
+                "receipt_sha256": archived["semantic_theorem_receipt"][
+                    "receipt_sha256"
+                ],
+                "observation_sha256": archived["observation_sha256"],
+                "source_artifact_sha256": archived["source"]["stream_sha256"],
+                "formal_statement_sha256": byte_digest(
+                    fact["formal"]["statement"].encode()
+                ),
+                "target_definition": executor["target_definition"],
+                "goal_sha256": archived["semantic_theorem_receipt"]["theorem"][
+                    "type_sha256"
+                ],
+                "proof_sha256": archived["semantic_theorem_receipt"]["theorem"][
+                    "proof_sha256"
+                ],
+                "target_content_sha256": archived["semantic_theorem_receipt"][
+                    "theorem"
+                ]["content_sha256"],
+            }
+        )
     else:
         raise FactOperationError("fact operation uses an unsupported driver")
     if binding != expected_binding:
@@ -249,6 +289,34 @@ def check_fact(
             "retained_answer_dependencies": [],
             "target_dependency": False,
             "ledger_writes": 0,
+        }
+    elif executor["driver"] == "axeyum-lean-import/checked-theorem-receipt-v1":
+        receipt = archived["semantic_theorem_receipt"]
+        authority = receipt["authority"]
+        theorem = receipt["theorem"]
+        assurance = archived["assurance"]
+        expected_observation = {
+            "verdict": "proved",
+            "evidence_label": executor["expected_evidence_label"],
+            "receipt_sha256": receipt["receipt_sha256"],
+            "observation_sha256": archived["observation_sha256"],
+            "source_artifact_sha256": authority["source_artifact_sha256"],
+            "goal_sha256": theorem["type_sha256"],
+            "proof_sha256": theorem["proof_sha256"],
+            "target_content_sha256": theorem["content_sha256"],
+            "fresh_imports": assurance["fresh_imports"],
+            "fixed_plan_reconstructions": assurance[
+                "fixed_plan_reconstructions"
+            ],
+            "search_invocations": assurance["search_invocations"],
+            "target_theorem_submissions": assurance[
+                "target_theorem_submissions"
+            ],
+            "axiom_footprint": receipt["axiom_footprint"],
+            "retained_answer_dependencies": receipt["diagnostic_dependencies"][
+                "direct_theorems"
+            ],
+            "ledger_writes": manifest["result"]["ledger_writes"],
         }
     else:
         premise_candidate = (

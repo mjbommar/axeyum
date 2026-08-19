@@ -20,12 +20,14 @@ execution = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(execution)
 
 REFLEXIVITY_FACT = "F:ml430-nat-ascfactorial-zero-fd183202"
+FIB_FACT = "F:ml430-nat-fib-add-two-b86e0c82"
 
 
 def settle_reflexivity_fact(facts):
-    target = copy.deepcopy(facts[REFLEXIVITY_FACT])
-    target["epistemic_status"] = "proved"
-    facts[REFLEXIVITY_FACT] = target
+    for fact_id in (REFLEXIVITY_FACT, FIB_FACT):
+        target = copy.deepcopy(facts[fact_id])
+        target["epistemic_status"] = "proved"
+        facts[fact_id] = target
 
 
 class OperationExecutionTests(unittest.TestCase):
@@ -380,6 +382,7 @@ class OperationExecutionTests(unittest.TestCase):
             "frontier_for_reflexivity_execution_test", execution.FRONTIER_SCRIPT
         )
         facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
         target = copy.deepcopy(facts[REFLEXIVITY_FACT])
         target["epistemic_status"] = "open"
         target["evidence"] = []
@@ -417,6 +420,44 @@ class OperationExecutionTests(unittest.TestCase):
                 operation=operation,
                 registry=registry,
                 git_commit="f" * 40,
+                observation=changed,
+            )
+
+    def test_checked_theorem_receipt_binds_archive_source_and_proof(self) -> None:
+        frontier_module = execution.load_module(
+            "frontier_for_checked_theorem_execution_test", execution.FRONTIER_SCRIPT
+        )
+        facts = frontier_module.load()
+        frontier = frontier_module.build_machine_frontier(facts)
+        fact, operation, registry = execution.selected_inputs(frontier, facts)
+        self.assertEqual(fact["id"], FIB_FACT)
+        observation = execution.expected_checked_theorem_receipt_observation(
+            operation, fact
+        )
+        receipt = execution.build_receipt(
+            frontier=frontier,
+            fact=fact,
+            operation=operation,
+            registry=registry,
+            git_commit="1" * 40,
+            observation=observation,
+        )
+        self.assertEqual(
+            receipt["identity"]["receipt_sha256"], observation["receipt_sha256"]
+        )
+        self.assertEqual(
+            receipt["identity"]["source_artifact_sha256"],
+            observation["source_artifact_sha256"],
+        )
+        changed = copy.deepcopy(observation)
+        changed["fresh_imports"] = 1
+        with self.assertRaisesRegex(execution.ExecutionError, "required source-bound"):
+            execution.build_receipt(
+                frontier=frontier,
+                fact=fact,
+                operation=operation,
+                registry=registry,
+                git_commit="1" * 40,
                 observation=changed,
             )
 

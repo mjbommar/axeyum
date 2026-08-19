@@ -34,6 +34,9 @@ READINESS_SCRIPT = ROOT / "scripts/create-autogenesis-readiness-delta.py"
 STATEMENT_REFLEXIVITY_CHECKER = (
     ROOT / "scripts/check-autogenesis-statement-reflexivity.py"
 )
+CHECKED_THEOREM_RECEIPT_CHECKER = (
+    ROOT / "scripts/check-autogenesis-nat-fib-checked-theorem-receipt.py"
+)
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 EVIDENCE_RE = re.compile(
     r"^;\s*evidence\s+kind=(\S+)\s+certified=(\S+)\s+"
@@ -113,6 +116,77 @@ def expected_statement_reflexivity_observation(
         "target_dependency": False,
         "ledger_writes": 0,
     }
+
+
+def checked_theorem_receipt_contract(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    executor = operation["executor"]
+    checker = load_module(
+        "checked_theorem_receipt_checker_for_execution",
+        CHECKED_THEOREM_RECEIPT_CHECKER,
+    )
+    try:
+        manifest = checker.validate()
+    except checker.FibReceiptError as error:
+        raise ExecutionError(f"checked-theorem receipt failed: {error}") from error
+    if ROOT / executor["receipt_manifest"] != checker.MANIFEST:
+        raise ExecutionError("checked-theorem receipt manifest path changed")
+    archive = manifest["observation_archive"]
+    observation = json.loads(
+        (pathlib.Path(archive["root"]) / archive["file"]).read_text()
+    )
+    receipt = observation["semantic_theorem_receipt"]
+    authority = receipt["authority"]
+    if (
+        manifest["result"]["fact_id"] != fact.get("id")
+        or authority["fact_id"] != fact.get("id")
+        or authority["target_definition"] != executor["target_definition"]
+        or receipt["receipt_sha256"] != executor["receipt_sha256"]
+    ):
+        raise ExecutionError("checked-theorem receipt source contract is inconsistent")
+    return manifest, observation
+
+
+def expected_checked_theorem_receipt_observation(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> dict[str, Any]:
+    manifest, observation = checked_theorem_receipt_contract(operation, fact)
+    receipt = observation["semantic_theorem_receipt"]
+    authority = receipt["authority"]
+    theorem = receipt["theorem"]
+    assurance = observation["assurance"]
+    return {
+        "verdict": "proved",
+        "evidence_label": operation["executor"]["expected_evidence_label"],
+        "receipt_sha256": receipt["receipt_sha256"],
+        "observation_sha256": observation["observation_sha256"],
+        "source_artifact_sha256": authority["source_artifact_sha256"],
+        "goal_sha256": theorem["type_sha256"],
+        "proof_sha256": theorem["proof_sha256"],
+        "target_content_sha256": theorem["content_sha256"],
+        "fresh_imports": assurance["fresh_imports"],
+        "fixed_plan_reconstructions": assurance["fixed_plan_reconstructions"],
+        "search_invocations": assurance["search_invocations"],
+        "target_theorem_submissions": assurance["target_theorem_submissions"],
+        "axiom_footprint": receipt["axiom_footprint"],
+        "retained_answer_dependencies": receipt["diagnostic_dependencies"][
+            "direct_theorems"
+        ],
+        "ledger_writes": manifest["result"]["ledger_writes"],
+    }
+
+
+def run_checked_theorem_receipt_registered(
+    operation: dict[str, Any],
+) -> dict[str, Any]:
+    frontier_module = load_module(
+        "frontier_for_checked_theorem_receipt_execution", FRONTIER_SCRIPT
+    )
+    fact = frontier_module.load().get(operation["executor"]["input_fact_id"])
+    if not isinstance(fact, dict):
+        raise ExecutionError("checked-theorem receipt input fact is absent")
+    return expected_checked_theorem_receipt_observation(operation, fact)
 
 
 def run_statement_reflexivity_registered(
@@ -980,6 +1054,10 @@ def run_registered(
         if trigger is not None:
             raise ExecutionError("statement-reflexivity operation rejects a trigger")
         return run_statement_reflexivity_registered(operation)
+    if driver == "axeyum-lean-import/checked-theorem-receipt-v1":
+        if trigger is not None:
+            raise ExecutionError("checked-theorem receipt operation rejects a trigger")
+        return run_checked_theorem_receipt_registered(operation)
     raise ExecutionError(f"unsupported execution driver {driver!r}")
 
 
@@ -1081,6 +1159,27 @@ def build_receipt(
             "target_definition": executor["target_definition"],
             "max_binders": executor["max_binders"],
             "max_constructed_nodes": executor["max_constructed_nodes"],
+        }
+    elif executor["driver"] == "axeyum-lean-import/checked-theorem-receipt-v1":
+        manifest, archived = checked_theorem_receipt_contract(operation, fact)
+        expected_observation = expected_checked_theorem_receipt_observation(
+            operation, fact
+        )
+        input_identity = {
+            "formal_statement_sha256": byte_digest(
+                fact["formal"]["statement"].encode()
+            ),
+            "receipt_manifest_sha256": digest(manifest),
+            "receipt_sha256": archived["semantic_theorem_receipt"][
+                "receipt_sha256"
+            ],
+            "observation_sha256": archived["observation_sha256"],
+            "source_artifact_sha256": archived["source"]["stream_sha256"],
+        }
+        request_input = {
+            "receipt_manifest": executor["receipt_manifest"],
+            "target_definition": executor["target_definition"],
+            "receipt_sha256": executor["receipt_sha256"],
         }
     else:
         raise ExecutionError(f"unsupported execution driver {executor['driver']!r}")

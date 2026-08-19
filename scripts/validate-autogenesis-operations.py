@@ -21,6 +21,7 @@ EXECUTION_DRIVERS = {
     "axeyum-lean-kernel/nat-zero-add-induction-v1",
     "axeyum-lean-kernel/nat-mul-one-episode-apply-v1",
     "axeyum-lean-import/statement-reflexivity-v1",
+    "axeyum-lean-import/checked-theorem-receipt-v1",
 }
 ADMISSION_CONTRACTS = {
     ("proved", "kernel-lean", "kernel-term", "must-be-empty"),
@@ -136,6 +137,12 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "max_binders",
             "max_constructed_nodes",
         }
+    elif driver == "axeyum-lean-import/checked-theorem-receipt-v1":
+        expected = common | {
+            "receipt_manifest",
+            "target_definition",
+            "receipt_sha256",
+        }
     else:
         expected = common
     exact_keys(value, expected, label)
@@ -175,7 +182,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             raise RegistryError(f"{label}.denied_theorems exceeds the exact A scope")
         if value["premise_budget"] != 2 or value["budget"] != 1:
             raise RegistryError(f"{label} requires premise budget 2 and apply budget 1")
-    else:
+    elif driver == "axeyum-lean-import/statement-reflexivity-v1":
         adapter_path = repository_file(
             value["statement_adapter_manifest"],
             f"{label}.statement_adapter_manifest",
@@ -219,6 +226,38 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             != adapter.get("source_statement_sha256")
         ):
             raise RegistryError(f"{label} statement identity disagrees with its fact")
+    else:
+        manifest_path = repository_file(
+            value["receipt_manifest"], f"{label}.receipt_manifest", root
+        )
+        if manifest_path.parent != (root / "artifacts/autogenesis").resolve():
+            raise RegistryError(f"{label}.receipt_manifest must be canonical")
+        manifest = json.loads(manifest_path.read_text())
+        result = manifest.get("result") or {}
+        archive = manifest.get("observation_archive") or {}
+        if (
+            manifest.get("kind")
+            != "axeyum-autogenesis-mathlib-nat-fib-checked-theorem-receipt"
+            or manifest.get("state")
+            != "semantic-theorem-receipt-issued-no-evaluation-or-ledger-credit"
+            or result.get("fact_id") != value["input_fact_id"]
+            or result.get("receipt_sha256") != value["receipt_sha256"]
+            or result.get("axiom_footprint") != []
+            or result.get("direct_theorem_dependencies") != []
+            or result.get("fresh_imports") != 2
+            or result.get("fixed_plan_reconstructions") != 2
+            or result.get("search_invocations") != 0
+            or result.get("ledger_writes") != 0
+            or not isinstance(archive.get("observation_sha256"), str)
+        ):
+            raise RegistryError(f"{label} checked-theorem receipt contract disagrees")
+        if (
+            value["input_fact_id"] != "F:ml430-nat-fib-add-two-b86e0c82"
+            or value["target_definition"] != "Axeyum.Autogenesis.Coverage.r080"
+            or value["receipt_sha256"]
+            != "395f6e80e6addbc69cca8ad560b312dadc31d623fe05f6b1603b5fa523622329"
+        ):
+            raise RegistryError(f"{label} exceeds the exact checked-theorem receipt scope")
     timeout = value["timeout_seconds"]
     if type(timeout) is not int or not 1 <= timeout <= 900:
         raise RegistryError(f"{label}.timeout_seconds must be an integer in 1..900")
@@ -370,6 +409,17 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                         f"{label}.executor driver is inconsistent with applicability/admission"
                     )
             elif executor["driver"] == "axeyum-lean-import/statement-reflexivity-v1":
+                if (
+                    applicability["formal_languages"] != ["lean4-surface"]
+                    or applicability["fragments"] != ["Nat"]
+                    or admission["proof_route"] != "kernel-lean"
+                    or admission["evidence_kind"] != "kernel-term"
+                    or admission["axiom_footprint"] != []
+                ):
+                    raise RegistryError(
+                        f"{label}.executor driver is inconsistent with applicability/admission"
+                    )
+            elif executor["driver"] == "axeyum-lean-import/checked-theorem-receipt-v1":
                 if (
                     applicability["formal_languages"] != ["lean4-surface"]
                     or applicability["fragments"] != ["Nat"]

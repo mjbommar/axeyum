@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_five_authoritative_operations(self) -> None:
+    def test_committed_registry_has_one_fixture_and_six_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 6)
+        self.assertEqual(len(self.registry["operations"]), 7)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
@@ -71,6 +71,15 @@ class OperationRegistryTests(unittest.TestCase):
         self.assertEqual(
             desc_reflexivity["executor"]["driver"],
             "axeyum-lean-import/statement-reflexivity-v1",
+        )
+        fib = self.registry["operations"][6]
+        self.assertEqual(
+            fib["applicability"]["fact_ids"],
+            ["F:ml430-nat-fib-add-two-b86e0c82"],
+        )
+        self.assertEqual(
+            fib["executor"]["driver"],
+            "axeyum-lean-import/checked-theorem-receipt-v1",
         )
 
     def test_duplicate_operation_id_is_rejected(self) -> None:
@@ -169,6 +178,20 @@ class OperationRegistryTests(unittest.TestCase):
         mutated["operations"][0]["admission"]["axiom_footprint"] = ["invented"]
         with self.assertRaisesRegex(registry_module.RegistryError, "violates"):
             registry_module.validate_registry(mutated, ROOT)
+
+    def test_checked_theorem_receipt_driver_is_exactly_manifest_bound(self) -> None:
+        for field, value in (
+            ("target_definition", "Axeyum.Wrong"),
+            ("receipt_sha256", "0" * 64),
+        ):
+            with self.subTest(field=field):
+                mutated = copy.deepcopy(self.registry)
+                mutated["operations"][6]["executor"][field] = value
+                with self.assertRaisesRegex(
+                    registry_module.RegistryError,
+                    "receipt contract disagrees|exceeds the exact",
+                ):
+                    registry_module.validate_registry(mutated, ROOT)
 
 
 if __name__ == "__main__":

@@ -13,12 +13,14 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 REFLEXIVITY_FACT = "F:ml430-nat-ascfactorial-zero-fd183202"
+FIB_FACT = "F:ml430-nat-fib-add-two-b86e0c82"
 
 
 def settle_reflexivity_fact(facts):
-    target = copy.deepcopy(facts[REFLEXIVITY_FACT])
-    target["epistemic_status"] = "proved"
-    facts[REFLEXIVITY_FACT] = target
+    for fact_id in (REFLEXIVITY_FACT, FIB_FACT):
+        target = copy.deepcopy(facts[fact_id])
+        target["epistemic_status"] = "proved"
+        facts[fact_id] = target
 
 
 class FactTransactionTests(unittest.TestCase):
@@ -359,6 +361,7 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
             "frontier_for_reflexivity_transaction_test", executor.FRONTIER_SCRIPT
         )
         facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
         target = copy.deepcopy(facts[REFLEXIVITY_FACT])
         target["epistemic_status"] = "open"
         target["evidence"] = []
@@ -395,6 +398,48 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
         )
         checker = MODULE.load_module(
             "fact_checker_for_reflexivity_transaction_test",
+            MODULE.FACT_OPERATION_SCRIPT,
+        )
+        checked = checker.check_fact(after, lambda _operation: observation)
+        self.assertEqual(checked["operation_id"], operation["id"])
+
+    def test_checked_theorem_receipt_delta_retains_source_and_proof_identities(self):
+        executor = MODULE.load_module(
+            "executor_for_checked_theorem_transaction_test", MODULE.EXECUTOR_SCRIPT
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_checked_theorem_transaction_test", executor.FRONTIER_SCRIPT
+        )
+        facts = frontier_module.load()
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
+        self.assertEqual(before["id"], FIB_FACT)
+        observation = executor.expected_checked_theorem_receipt_observation(
+            operation, before
+        )
+        execution_receipt = executor.build_receipt(
+            frontier=frontier,
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="2" * 40,
+            observation=observation,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution_receipt,
+            operation=operation,
+            registry=registry,
+        )
+        after = transaction["authoritative_write"]["after_fact"]
+        binding = after["evidence"][0]["checker_operation"]
+        self.assertEqual(binding["receipt_sha256"], observation["receipt_sha256"])
+        self.assertEqual(
+            binding["source_artifact_sha256"],
+            observation["source_artifact_sha256"],
+        )
+        checker = MODULE.load_module(
+            "fact_checker_for_checked_theorem_transaction_test",
             MODULE.FACT_OPERATION_SCRIPT,
         )
         checked = checker.check_fact(after, lambda _operation: observation)
