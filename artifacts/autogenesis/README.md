@@ -106,6 +106,17 @@ receipts remain in the immutable external observation:
 python3 scripts/check-autogenesis-checked-type-slice-replay.py
 ```
 
+`mathlib-auto-param-binder-replay-v1.json` binds the separately versioned
+extension that closes the ten typed declines without changing the historical
+route. It requires 128 exact v1 receipts and ten v2 receipts whose normalized
+constructor/recursor identities, dependency identities, source `autoParam`
+identity, and rewrite counts match the immutable observation. All 138 rows are
+proof-free goal boundaries; no source theorem or ledger transition is claimed:
+
+```sh
+python3 scripts/check-autogenesis-auto-param-binder-replay.py
+```
+
 `mathlib-factorial-zero-admission-v1.json` binds the second family member's
 clean-commit execution, crash-recovered ledger transition, complete external
 archive, and detached-worktree replay. It uses the same generic admission

@@ -2,13 +2,13 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** `autoParam` transport settled; held-out sealed.
+**Status:** slices 138/138; held-out sealed.
 
-**Next:** implement checked type-only normalization.
+**Next:** measure bounded producer yield across train/development.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-19 | `3fe8efe31` | `autoParam` ADR |
+| 2026-08-19 | `2f2fe9b0c` | Checked `autoParam` binders |
 | 2026-08-19 | `6c000b1ef` | Checked slice replay |
 | 2026-08-19 | `5e5141dba` | Slice receipt |
 | 2026-08-19 | `903c22423` | Typed slice |

@@ -90,6 +90,8 @@ step autogenesis-type-slice-feasibility-tests python3 -m unittest scripts.tests.
 step autogenesis-type-slice-feasibility python3 scripts/check-autogenesis-type-slice-feasibility.py
 step autogenesis-checked-type-slice-replay-tests python3 -m unittest scripts.tests.test_check_autogenesis_checked_type_slice_replay
 step autogenesis-checked-type-slice-replay python3 scripts/check-autogenesis-checked-type-slice-replay.py
+step autogenesis-auto-param-binder-replay-tests python3 -m unittest scripts.tests.test_check_autogenesis_auto_param_binder_replay
+step autogenesis-auto-param-binder-replay python3 scripts/check-autogenesis-auto-param-binder-replay.py
 step autogenesis-factorial-zero-family-tests python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
 step autogenesis-factorial-zero-family python3 scripts/check-autogenesis-factorial-zero-family.py
 step autogenesis-mathlib-source-tests python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source

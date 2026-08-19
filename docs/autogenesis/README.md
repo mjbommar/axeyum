@@ -126,6 +126,7 @@ compounding, not automation theatre.
 | [Checked typed generalization](27-checked-typed-generalization.md) | Can exact constant instances become a dependent proposition telescope that specializes back to the source? |
 | [Type-slice receipt foundation](28-type-slice-receipt-foundation.md) | Which identities and checks must one durable proof-free slice receipt bind? |
 | [Checked Mathlib type-slice replay](29-checked-type-slice-replay.md) | How many frozen train/development statements survive the complete semantic slice boundary, and why do the rest decline? |
+| [Checked `autoParam` binder replay](30-auto-param-binder-replay.md) | Can the ten metadata-contaminated closures be normalized under a narrow kernel-checked contract? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -251,12 +252,16 @@ parameter abstraction is implemented.
 
 The next two increments add [checked dependent generalization](27-checked-typed-generalization.md)
 and a [content-addressed slice receipt](28-type-slice-receipt-foundation.md).
-The resulting [checked Mathlib replay](29-checked-type-slice-replay.md) now
-admits proof-free producer boundaries for 128 of the 138 unsealed statements.
-The remaining ten decline because the exact atomic closure of `Semiring`,
-`Preorder`, or `Monoid` crosses theorem dependencies through serialized
-`autoParam` metadata. That is the next narrow capability gap; it is not grounds
-to weaken atomic transport, open held-out, or claim any theorem proved.
+The resulting [checked Mathlib replay](29-checked-type-slice-replay.md) first
+admitted proof-free producer boundaries for 128 of the 138 unsealed statements.
+A type-only normalization control left the same ten declines, locating the
+remaining contamination in recursor-rule binder annotations. The separately
+versioned [checked `autoParam` binder replay](30-auto-param-binder-replay.md)
+now admits all 138 after the source kernel validates the exact elaborator
+metadata definition and checks every normalized declaration and rule by
+definitional equality. This closes the goal boundary, not the proofs: the next
+increment measures bounded producer yield and structured declines over
+train/development while held-out remains sealed.
 
 ## Phase summary
 

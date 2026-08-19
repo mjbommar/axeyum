@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-auto-param-binder-replay",
+  "state": "checked-slice-replay-no-proof-or-ledger-credit",
+  "tooling_commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+  "tooling_files": [
+    {
+      "path": "crates/axeyum-lean-import/examples/type_slice_replay.rs",
+      "sha256": "11903495f0ddb0836a9a444c313b72fc42382a9358477efe19f69c22ce02db48"
+    },
+    {
+      "path": "crates/axeyum-lean-import/src/type_slice.rs",
+      "sha256": "176c25cb2f4634e75625720423f657dd9f31e5a5a096db5848482691aaabd841"
+    },
+    {
+      "path": "crates/axeyum-lean-import/src/type_slice_receipt.rs",
+      "sha256": "8aae423cf828f8470ebda9170e271128733a6b925ee54aa5022a3c55546efb05"
+    },
+    {
+      "path": "crates/axeyum-lean-kernel/src/lean_export.rs",
+      "sha256": "8f52f9c65052dd1a82bd21d5c41267e368b58e4c3399d39f9379d18daea5d99d"
+    }
+  ],
+  "source_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1",
+    "mapping_sha256": "4596d178d574b90b8bd17801719ff485a1fa588fd52f1ae1b4b3b3b47654239b",
+    "lean_version": "4.30.0",
+    "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "partitions": [
+      "development",
+      "train"
+    ]
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/type-slice/2f2fe9b0c-mathlib-v4.30.0-auto-param-binders-v3",
+    "file": "observation.json",
+    "bytes": 2151767,
+    "mode": "0444",
+    "file_sha256": "969b53a44ed31166b94c611af406ab46c07f5be2b7e1aa9a5ceff1aac78dc5c5",
+    "observation_sha256": "49c36e75fcaedef1f76ee1b99268903cc2a10192a549c8b835acf4e1c1f181ec"
+  },
+  "population": {
+    "train_development": 138,
+    "held_out_inspected": false,
+    "proof_producers_executed": false,
+    "proof_bodies_requested": false,
+    "ledger_writes": 0
+  },
+  "coverage": {
+    "accepted_receipts": 138,
+    "declined_selection": 0,
+    "exact_v1_receipts": 128,
+    "normalized_v2_receipts": 10,
+    "abstractions": 152,
+    "rewritten_occurrences": 164,
+    "normalized_artifacts": [
+      "r014.ndjson",
+      "r057.ndjson",
+      "r058.ndjson",
+      "r064.ndjson",
+      "r065.ndjson",
+      "r081.ndjson",
+      "r088.ndjson",
+      "r090.ndjson",
+      "r124.ndjson",
+      "r128.ndjson"
+    ]
+  },
+  "reproduction": "cargo run -p axeyum-lean-import --example type_slice_replay -- --auto-param-binders-v3 --archive /nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1 --mapping /nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/mapping.json --output observation.json",
+  "verification": "python3 scripts/check-autogenesis-auto-param-binder-replay.py",
+  "limitations": "The result closes the proof-free goal boundary for the frozen train/development population only. It proves no source theorem, runs no proof producer, reads no held-out row, and changes no fact-ledger status. The normalization contract is qualified to Lean 4.30.0 and must be revalidated for another export format or toolchain."
+}
