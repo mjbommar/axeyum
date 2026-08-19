@@ -615,6 +615,60 @@ for `2<=ell<=5`.  The remaining applicability issue is now analytic rather
 than representational: here `k>ell+1`, whereas several external interval
 estimates use different degree/modulus ranges.
 
+### Source-level characteristic audit and inverse-additive energy
+
+The arXiv source, rather than PDF text extraction, confirms the exact inverse
+notation and dependency boundary in Christian Bagshaw,
+[*Bilinear Kloosterman sums in function fields and the distribution of
+irreducible polynomials*](https://arxiv.org/abs/2401.10399):
+
+- the paper globally fixes odd `q`, so none of its final theorems may simply
+  be specialized to `q=2`;
+- Lemmas 4.1 and 4.2 use Hölder, Cauchy--Schwarz, inversion, and additive
+  orthogonality, with no visible odd-characteristic step;
+- Lemma 3.14's energy proof invokes Lemma 5.3 of Bagshaw's
+  [2023 paper](https://arxiv.org/abs/2304.05014), whose initial-interval proof
+  is stated for arbitrary prime powers, followed by divisor counting and
+  orthogonality; but
+- the Type-I estimates in the proof of Theorem 2.3 invoke the complete
+  Kloosterman bound from the 2023 paper's Lemma A.13, which explicitly assumes
+  odd `q`.
+
+This identifies a plausible reproof boundary, not an automatic extension of
+the published theorem.  The 2024 source also contains apparent transcription
+defects in the proof of Theorem 2.3 (an extra `n` in one exponent, a missing
+upper endpoint in Case 3, and an undefined `t_1` there).  They do not by
+themselves refute the theorem, but they make independent exponent derivation
+mandatory for this project.
+
+For `F=x^(ell+1)` over `GF(2)`, Bagshaw's set of invertible polynomials with
+`deg h<d+1` is exactly `V_d`.  Therefore his fourth-order inverse energy is
+
+```text
+E_inv(ell,d)
+  = #{(a,b,c,f) in (V_d^(-1))^4 : a+b=c+f mod x^(ell+1)}.
+```
+
+This is **not** the multiplicative collision energy `#{ab=cf}` already in the
+CAS.  The new bounded operation
+`principal_unit_inverse_additive_energy` computes `E_inv` from the fourth
+moment of the additive Walsh spectrum and requires exact Parseval division by
+`2^ell`.  A separate pair-sum collision table agrees for all `2<=ell<=9` and
+all `1<=d<ell`; the level-eight row is
+
+```text
+d:       1    2    3    4     5      6       7
+E_inv:   8   40  176  928  7424  77824  1114112.
+```
+
+Fleet probes on `s1,s4,s5,s6,s7` computed complete rows for `ell=17,...,21`.
+They suggest that fixed-`d` values stabilize in a no-wrap regime near
+`ell>=3d` (the first six observed stable values are
+`8,40,176,760,3128,12520`).  This is conjecture-selection data only.  The
+analytic task is to prove an adequate piecewise energy bound, insert it into
+the characteristic-free Hölder calculation, and recompute the exponent for
+every interval-degree range.
+
 Berlekamp's characteristic-two analogue of Pellet's formula is the natural
 next structural input: for squarefree polynomials it expresses the Möbius
 sign through an additive character of the Berlekamp discriminant.  Carmon's

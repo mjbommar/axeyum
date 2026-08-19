@@ -39,8 +39,12 @@ weight-dropping mutations independently of the transform reconstruction.  The
 exact additive-Fourier bridge is now native: a checked Walsh spectrum recovers
 every inverse-interval fibre, while a direct factorization oracle validates
 the reciprocal-polynomial and ramified-`x` identity frequency by frequency.
-The next step is the characteristic-two dependency and exponent audit, not
-more normalization guesswork.
+The source-level characteristic audit isolates the reusable Hölder/energy
+core from the odd-characteristic complete-sum input.  Exact inverse-additive
+energy is now a separate native diagnostic with a direct collision oracle;
+fleet rows through level 21 suggest, but do not prove, a no-wrap regime.  The
+next step is a proved piecewise energy estimate and a full interval-degree
+exponent ledger, not more normalization guesswork.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.

@@ -322,6 +322,30 @@ pub struct PrincipalUnitMixedProductEnergyReport {
     pub ordinary_product_regime: bool,
 }
 
+/// Exact additive energy of an inverted principal-unit interval.
+///
+/// Put `V_d={1+a_1 x+...+a_d x^d}` and let `A=V_d^(-1)` in the additive
+/// group `x GF(2)[x]/(x^(ell+1))`.  The energy counts ordered quadruples
+/// `(a,b,c,f)` in `A^4` satisfying `a+b=c+f`.  In Bagshaw's notation for
+/// the modulus `x^(ell+1)`, this is `E^inv_(F,2)(d+1)`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrincipalUnitInverseAdditiveEnergyReport {
+    /// Principal-unit truncation level.
+    pub ell: usize,
+    /// Largest nonconstant degree in `V_d`.
+    pub interval_degree: usize,
+    /// Polynomial cutoff in `deg h < cutoff`, exactly `interval_degree+1`.
+    pub polynomial_degree_cutoff: usize,
+    /// Number of inverted interval elements, exactly `2^interval_degree`.
+    pub set_size: BigUint,
+    /// Exact additive quadruple count.
+    pub additive_energy: BigUint,
+    /// Exact fourth moment of the unnormalized additive Walsh spectrum.
+    pub fourth_walsh_moment: BigUint,
+    /// Largest absolute Walsh coefficient.
+    pub maximum_walsh_amplitude: u128,
+}
+
 /// Uniform wild-Kloosterman bound for the binary principal-unit group.
 ///
 /// Put `R = GF(2)[x]/(x^(ell+1))`, let `psi` read the coefficient of
@@ -1184,6 +1208,83 @@ pub fn principal_unit_kloosterman_bound(
         max_contributing_cosets: BigUint::from(1_u8) << contributing_exponent,
         max_abs_kloosterman_sum: BigUint::from(1_u8) << kloosterman_exponent,
         max_abs_top_product_deviation: BigUint::from(1_u8) << deviation_exponent,
+    })
+}
+
+/// Compute the exact additive energy of `V_d^(-1)` modulo `x^(ell+1)`.
+///
+/// The inverse interval is embedded in the additive coefficient group by
+/// deleting its constant coefficient.  An integral Walsh transform gives
+///
+/// ```text
+/// sum_a |sum_(u in V_d) (-1)^<a,u^(-1)-1>|^4
+///   = 2^ell E_add(V_d^(-1)).
+/// ```
+///
+/// This is the exact `q=2`, prime-power-modulus diagnostic required by the
+/// characteristic-free Hölder step in bilinear inverse-sum arguments.  It is
+/// not the multiplicative product energy returned by
+/// [`principal_unit_product_energy`].
+///
+/// # Errors
+///
+/// Rejects a zero interval degree, a degree at least `ell`, a caller resource
+/// limit, or a failed inversion, transform, or Parseval invariant.
+pub fn principal_unit_inverse_additive_energy(
+    ell: usize,
+    interval_degree: usize,
+    limits: HayesLimits,
+) -> Result<PrincipalUnitInverseAdditiveEnergyReport, HayesError> {
+    if interval_degree == 0 || interval_degree >= ell {
+        return Err(HayesError::InvalidParameter(format!(
+            "inverse-additive energy requires 1<=degree<ell, got degree={interval_degree}, ell={ell}"
+        )));
+    }
+    admit_any_positive_degree(ell, interval_degree, limits)?;
+    let group_order = 1_usize << ell;
+    let mut indicator = vec![0_i128; group_order];
+    for tail in 0..1_u64 << interval_degree {
+        let unit = 1 | (tail << 1);
+        let inverse = principal_unit_inverse(unit, ell);
+        let packed = usize::try_from(inverse >> 1).map_err(|_| {
+            HayesError::InvalidParameter("packed inverse unit does not fit usize".to_owned())
+        })?;
+        if packed >= group_order || indicator[packed] != 0 {
+            return Err(HayesError::Invariant(
+                "inverse interval is not embedded injectively in additive coordinates".to_owned(),
+            ));
+        }
+        indicator[packed] = 1;
+    }
+    checked_walsh_transform(&mut indicator)?;
+    let maximum_walsh_amplitude = indicator
+        .iter()
+        .map(|value| value.unsigned_abs())
+        .max()
+        .ok_or_else(|| HayesError::Invariant("inverse Walsh spectrum is empty".to_owned()))?;
+    let fourth_walsh_moment = indicator.iter().fold(BigUint::from(0_u8), |sum, value| {
+        let magnitude = BigUint::from(value.unsigned_abs());
+        sum + magnitude.pow(4)
+    });
+    let group_order_big = BigUint::from(group_order);
+    if &fourth_walsh_moment % &group_order_big != BigUint::from(0_u8) {
+        return Err(HayesError::Invariant(
+            "inverse Walsh fourth moment is not divisible by the group order".to_owned(),
+        ));
+    }
+    let additive_energy = &fourth_walsh_moment / &group_order_big;
+    let set_size = BigUint::from(1_u8) << interval_degree;
+    let polynomial_degree_cutoff = interval_degree.checked_add(1).ok_or_else(|| {
+        HayesError::InvalidParameter("inverse-energy polynomial cutoff overflow".to_owned())
+    })?;
+    Ok(PrincipalUnitInverseAdditiveEnergyReport {
+        ell,
+        interval_degree,
+        polynomial_degree_cutoff,
+        set_size,
+        additive_energy,
+        fourth_walsh_moment,
+        maximum_walsh_amplitude,
     })
 }
 
@@ -3404,6 +3505,84 @@ mod tests {
                     swapped
                 })
                 .unwrap()
+        );
+    }
+
+    #[test]
+    fn principal_unit_inverse_additive_energy_matches_direct_collisions() {
+        let limits = HayesLimits::default();
+        for ell in 2_usize..=9 {
+            for degree in 1_usize..ell {
+                let report = principal_unit_inverse_additive_energy(ell, degree, limits).unwrap();
+                let inverses = (0..1_u64 << degree)
+                    .map(|tail| principal_unit_inverse(1 | (tail << 1), ell) >> 1)
+                    .collect::<Vec<_>>();
+                let mut pair_sums = vec![0_u128; 1_usize << ell];
+                for left in &inverses {
+                    for right in &inverses {
+                        pair_sums[usize::try_from(left ^ right).unwrap()] += 1;
+                    }
+                }
+                let direct = pair_sums
+                    .into_iter()
+                    .map(|multiplicity| multiplicity * multiplicity)
+                    .sum::<u128>();
+                assert_eq!(report.additive_energy, BigUint::from(direct));
+                assert_eq!(report.polynomial_degree_cutoff, degree + 1);
+                assert_eq!(
+                    report.fourth_walsh_moment,
+                    (BigUint::from(1_u8) << ell) * &report.additive_energy
+                );
+            }
+        }
+
+        let row = (1_usize..8)
+            .map(|degree| {
+                principal_unit_inverse_additive_energy(8, degree, limits)
+                    .unwrap()
+                    .additive_energy
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            row,
+            [8_u64, 40, 176, 928, 7_424, 77_824, 1_114_112]
+                .into_iter()
+                .map(BigUint::from)
+                .collect::<Vec<_>>()
+        );
+        assert_ne!(
+            principal_unit_inverse_additive_energy(8, 4, limits)
+                .unwrap()
+                .additive_energy,
+            principal_unit_product_energy(8, 4, limits)
+                .unwrap()
+                .pair_product_energy
+        );
+    }
+
+    #[test]
+    fn principal_unit_inverse_additive_energy_declines_invalid_inputs() {
+        let limits = HayesLimits::default();
+        for degree in [0, 4] {
+            assert!(matches!(
+                principal_unit_inverse_additive_energy(4, degree, limits),
+                Err(HayesError::InvalidParameter(_))
+            ));
+        }
+        assert_eq!(
+            principal_unit_inverse_additive_energy(
+                8,
+                4,
+                HayesLimits {
+                    max_group_order: 128,
+                    ..limits
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "group_order",
+                requested: 256,
+                limit: 128,
+            })
         );
     }
 
