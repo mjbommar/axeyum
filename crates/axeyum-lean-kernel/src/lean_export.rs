@@ -127,6 +127,20 @@ pub enum ExportError {
         /// The field whose value does not fit.
         field: &'static str,
     },
+    /// A root-selected export was requested without any roots.
+    EmptyRoots,
+    /// A root-selected export named no declaration in the checked environment.
+    MissingRoot {
+        /// The rendered root name when one is available in this kernel's name arena.
+        name: String,
+    },
+    /// A selected declaration references a constant absent from the environment.
+    MissingDependency {
+        /// The selected declaration containing the reference.
+        declaration: String,
+        /// The referenced but undeclared constant.
+        dependency: String,
+    },
 }
 
 impl fmt::Display for ExportError {
@@ -153,6 +167,17 @@ impl fmt::Display for ExportError {
                 write!(f, "declaration dependency cycle: {names:?}")
             }
             Self::CountOutOfRange { field } => write!(f, "{field} exceeds the wire format's range"),
+            Self::EmptyRoots => write!(f, "root-selected export requires at least one root"),
+            Self::MissingRoot { name } => {
+                write!(f, "root-selected export has no declaration named {name}")
+            }
+            Self::MissingDependency {
+                declaration,
+                dependency,
+            } => write!(
+                f,
+                "{declaration}: referenced constant {dependency} is absent from the environment"
+            ),
         }
     }
 }
@@ -252,6 +277,39 @@ impl Kernel {
         })
     }
 
+    /// Render only the checked declaration closure of `roots` as an official
+    /// `lean4export` NDJSON 3.1.0 stream.
+    ///
+    /// Reachability follows every selected declaration's type, value, and
+    /// recursor reduction rules. Inductive families and the quotient package
+    /// remain atomic emission units, so selecting one member retains the whole
+    /// checked package. Unrelated declarations are absent from the stream and
+    /// therefore unavailable to its consumer.
+    ///
+    /// This is an environmental isolation primitive, not a proof-dependency
+    /// eraser: if a selected definition's body references a theorem or axiom,
+    /// that trusted declaration is selected too.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ExportError::EmptyRoots`] for an empty root set,
+    /// [`ExportError::MissingRoot`] for a name absent from the environment, or
+    /// any ordinary export error from the selected closure.
+    pub fn render_lean4export_ndjson_roots(
+        &self,
+        metadata: &Lean4ExportMetadata,
+        roots: &[NameId],
+    ) -> Result<String, ExportError> {
+        let mut buffer = Vec::new();
+        self.write_lean4export_ndjson_roots(&mut buffer, metadata, roots)?;
+        String::from_utf8(buffer).map_err(|error| {
+            ExportError::Io(io::Error::new(
+                io::ErrorKind::InvalidData,
+                error.to_string(),
+            ))
+        })
+    }
+
     /// Stream the complete checked environment as official `lean4export`
     /// NDJSON 3.1.0 without accumulating it beside the checked arenas.
     ///
@@ -268,6 +326,36 @@ impl Kernel {
         metadata: &Lean4ExportMetadata,
     ) -> Result<(), ExportError> {
         let order = self.order_units(self.export_units()?)?;
+        self.write_ordered_units(writer, metadata, &order)
+    }
+
+    /// Stream only the checked declaration closure of `roots` in official
+    /// `lean4export` NDJSON 3.1.0 form.
+    ///
+    /// Output is byte-for-byte identical to
+    /// [`Self::render_lean4export_ndjson_roots`].
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed [`ExportError`] for an invalid root set, write failure,
+    /// or unsupported construct in the selected closure.
+    pub fn write_lean4export_ndjson_roots<W: io::Write + ?Sized>(
+        &self,
+        writer: &mut W,
+        metadata: &Lean4ExportMetadata,
+        roots: &[NameId],
+    ) -> Result<(), ExportError> {
+        let units = self.select_root_units(self.export_units()?, roots)?;
+        let order = self.order_units(units)?;
+        self.write_ordered_units(writer, metadata, &order)
+    }
+
+    fn write_ordered_units<W: io::Write + ?Sized>(
+        &self,
+        writer: &mut W,
+        metadata: &Lean4ExportMetadata,
+        order: &[Unit],
+    ) -> Result<(), ExportError> {
         let mut emitter = Emitter {
             kernel: self,
             writer,
@@ -280,9 +368,54 @@ impl Kernel {
         };
         emitter.metadata(metadata)?;
         for unit in order {
-            emitter.unit(&unit)?;
+            emitter.unit(unit)?;
         }
         Ok(())
+    }
+
+    /// Retain exactly the atomic units reachable from `roots`.
+    fn select_root_units(
+        &self,
+        units: Vec<Unit>,
+        roots: &[NameId],
+    ) -> Result<Vec<Unit>, ExportError> {
+        if roots.is_empty() {
+            return Err(ExportError::EmptyRoots);
+        }
+        let mut owner: BTreeMap<NameId, usize> = BTreeMap::new();
+        for (index, unit) in units.iter().enumerate() {
+            for member in unit.members() {
+                owner.insert(member, index);
+            }
+        }
+        let mut selected = BTreeSet::new();
+        let mut work = Vec::new();
+        for &root in roots {
+            let Some(&index) = owner.get(&root) else {
+                return Err(ExportError::MissingRoot {
+                    name: self.display_name(root).to_string(),
+                });
+            };
+            if selected.insert(index) {
+                work.push(index);
+            }
+        }
+        while let Some(index) = work.pop() {
+            for member in units[index].members() {
+                for dependency in self.member_constants(member) {
+                    if let Some(&dependency_index) = owner.get(&dependency)
+                        && selected.insert(dependency_index)
+                    {
+                        work.push(dependency_index);
+                    }
+                }
+            }
+        }
+        Ok(units
+            .into_iter()
+            .enumerate()
+            .filter_map(|(index, unit)| selected.contains(&index).then_some(unit))
+            .collect())
     }
 
     /// Partition the environment into atomic emission units, failing closed on
@@ -443,20 +576,24 @@ impl Kernel {
         let dependencies: Vec<Vec<usize>> = units
             .iter()
             .enumerate()
-            .map(|(index, unit)| {
+            .map(|(index, unit)| -> Result<Vec<usize>, ExportError> {
                 let mut referenced = BTreeSet::new();
                 for member in unit.members() {
                     for constant in self.member_constants(member) {
-                        if let Some(&other) = owner.get(&constant)
-                            && other != index
-                        {
+                        let Some(&other) = owner.get(&constant) else {
+                            return Err(ExportError::MissingDependency {
+                                declaration: self.display_name(member).to_string(),
+                                dependency: self.display_name(constant).to_string(),
+                            });
+                        };
+                        if other != index {
                             referenced.insert(other);
                         }
                     }
                 }
-                referenced.into_iter().collect()
+                Ok(referenced.into_iter().collect())
             })
-            .collect();
+            .collect::<Result<_, _>>()?;
 
         let mut marks = vec![Mark::Unvisited; units.len()];
         let mut order = Vec::with_capacity(units.len());
@@ -1151,7 +1288,7 @@ fn json_string(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{ExportError, Lean4ExportMetadata};
-    use crate::{Declaration, Kernel, Lit, QuotKind, build_logic_prelude};
+    use crate::{Declaration, Kernel, Lit, QuotKind, ReducibilityHint, build_logic_prelude};
 
     /// The environment states below cannot be reached through the trusted
     /// admission gates — a free variable, a string literal, a stray recursor and
@@ -1176,6 +1313,107 @@ mod tests {
         let stream = export(&kernel).expect("the logic prelude must export");
         assert!(stream.lines().count() > 20);
         assert!(stream.starts_with("{\"meta\":{\"exporter\":{\"name\":\"lean4export\""));
+    }
+
+    #[test]
+    fn a_root_export_keeps_dependencies_and_excludes_unrelated_declarations() {
+        let mut kernel = kernel_with_logic();
+        let anonymous = kernel.anon();
+        let dependency = kernel.name_str(anonymous, "axeyum.export.selected_dependency");
+        let unrelated = kernel.name_str(anonymous, "axeyum.export.unrelated");
+        let target = kernel.name_str(anonymous, "axeyum.export.selected_target");
+        let prop = kernel.sort_zero();
+        kernel
+            .add_declaration(Declaration::Axiom {
+                name: dependency,
+                uparams: Vec::new(),
+                ty: prop,
+            })
+            .expect("a proposition constant is admissible");
+        kernel
+            .add_declaration(Declaration::Axiom {
+                name: unrelated,
+                uparams: Vec::new(),
+                ty: prop,
+            })
+            .expect("the unrelated proposition constant is admissible");
+        let value = kernel.const_(dependency, Vec::new());
+        kernel
+            .add_declaration(Declaration::Definition {
+                name: target,
+                uparams: Vec::new(),
+                ty: prop,
+                value,
+                hint: ReducibilityHint::Regular(0),
+            })
+            .expect("the selected target is admissible");
+
+        let stream = kernel
+            .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[target])
+            .expect("the selected closure must export");
+        assert!(stream.contains("selected_target"), "{stream}");
+        assert!(stream.contains("selected_dependency"), "{stream}");
+        assert!(!stream.contains("unrelated"), "{stream}");
+    }
+
+    #[test]
+    fn a_root_export_keeps_an_inductive_unit_atomic() {
+        let mut kernel = Kernel::new();
+        let logic = build_logic_prelude(&mut kernel).expect("logic prelude must build");
+        let stream = kernel
+            .render_lean4export_ndjson_roots(
+                &Lean4ExportMetadata::axeyum("4.30.0"),
+                &[logic.true_intro],
+            )
+            .expect("a constructor root must export its complete family");
+        assert_eq!(stream.matches("\"inductive\"").count(), 1, "{stream}");
+        assert!(stream.contains("\"str\":\"True\""), "{stream}");
+        assert!(stream.contains("\"str\":\"intro\""), "{stream}");
+        assert!(stream.contains("\"str\":\"rec\""), "{stream}");
+        assert!(!stream.contains("\"str\":\"False\""), "{stream}");
+    }
+
+    #[test]
+    fn a_root_export_rejects_empty_and_missing_roots() {
+        let mut kernel = kernel_with_logic();
+        assert!(matches!(
+            kernel.render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[],),
+            Err(ExportError::EmptyRoots)
+        ));
+        let anonymous = kernel.anon();
+        let missing = kernel.name_str(anonymous, "axeyum.export.missing");
+        assert!(matches!(
+            kernel.render_lean4export_ndjson_roots(
+                &Lean4ExportMetadata::axeyum("4.30.0"),
+                &[missing],
+            ),
+            Err(ExportError::MissingRoot { .. })
+        ));
+    }
+
+    #[test]
+    fn root_order_and_duplicates_do_not_change_output() {
+        let kernel = kernel_with_logic();
+        let logic_names: Vec<_> = kernel
+            .environment()
+            .iter()
+            .filter_map(|(&name, declaration)| {
+                matches!(declaration, Declaration::Inductive { .. }).then_some(name)
+            })
+            .take(2)
+            .collect();
+        assert_eq!(logic_names.len(), 2);
+        let metadata = Lean4ExportMetadata::axeyum("4.30.0");
+        let first = kernel
+            .render_lean4export_ndjson_roots(&metadata, &logic_names)
+            .expect("two roots must export");
+        let second = kernel
+            .render_lean4export_ndjson_roots(
+                &metadata,
+                &[logic_names[1], logic_names[0], logic_names[1]],
+            )
+            .expect("root order and duplicates must be irrelevant");
+        assert_eq!(first, second);
     }
 
     #[test]
@@ -1287,6 +1525,25 @@ mod tests {
         assert!(matches!(
             export(&kernel),
             Err(ExportError::DependencyCycle { .. })
+        ));
+    }
+
+    #[test]
+    fn a_missing_selected_dependency_is_a_typed_export_error() {
+        let mut kernel = kernel_with_logic();
+        let anonymous = kernel.anon();
+        let root = kernel.name_str(anonymous, "axeyum.export.missing_dependency.root");
+        let missing = kernel.name_str(anonymous, "axeyum.export.missing_dependency.absent");
+        let ty = kernel.const_(missing, Vec::new());
+        kernel.env.insert_unchecked(Declaration::Axiom {
+            name: root,
+            uparams: Vec::new(),
+            ty,
+        });
+        assert!(matches!(
+            kernel
+                .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[root],),
+            Err(ExportError::MissingDependency { .. })
         ));
     }
 }

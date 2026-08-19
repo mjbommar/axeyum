@@ -236,6 +236,14 @@ generalized proposition in a fresh kernel, reject proposition-valued
 abstractions, bind universe-instantiated type identities, and check an exact
 specialization back to the source proposition before any fact receives credit.
 
+The first implementation increment now supplies that future route's
+[fresh-kernel transport](26-root-selected-fresh-kernel-foundation.md). The
+canonical kernel writer emits an atomic root dependency closure, and the
+ordinary importer re-admits it into a fresh environment with unrelated
+declarations absent. This is intentionally not yet a type slicer: selected
+definition bodies still retain their full dependencies until ADR-0484's typed
+parameter abstraction is implemented.
+
 ## Phase summary
 
 | Phase | Future state | Decisive exit |
