@@ -248,6 +248,43 @@ def identity_class_fourier_variance(ell: int, degree: int) -> tuple[int, int]:
     return 1 << (degree - ell), energy // group_order
 
 
+def fourth_moment_conductor_filtration(
+    ell: int, degree: int
+) -> tuple[int, int, tuple[int, ...]]:
+    """Project D^2 by polynomial truncation and return exact Fourier layers.
+
+    This deliberately does not use the Rust mixed-radix coordinate map.  The
+    independently enumerated principal-unit representatives are truncated as
+    coefficient bitsets and looked up in a freshly constructed quotient group.
+    """
+    group, distribution = mangoldt_class_distribution(ell, degree)
+    mean = 1 << (degree - ell)
+    squared = [
+        (population - mean) ** 2 for population in distribution
+    ]
+    second_moment = sum(squared)
+    fourth_moment = sum(value * value for value in squared)
+    previous = second_moment * second_moment
+    exact_layers: list[int] = []
+    for level in range(1, ell + 1):
+        quotient = PrincipalUnitGroup.construct(level)
+        quotient_index = {
+            element: index for index, element in enumerate(quotient.elements)
+        }
+        buckets = [0] * len(quotient.elements)
+        mask = (1 << (level + 1)) - 1
+        for element, value in zip(group.elements, squared, strict=True):
+            buckets[quotient_index[element & mask]] += value
+        cumulative = (1 << level) * sum(value * value for value in buckets)
+        if cumulative < previous:
+            fail(f"fourth-moment Fourier energy decreases at level {level}")
+        exact_layers.append(cumulative - previous)
+        previous = cumulative
+    if previous != (1 << ell) * fourth_moment:
+        fail("fourth-moment filtration does not recover 2^ell M_4")
+    return second_moment, fourth_moment, tuple(exact_layers)
+
+
 def translation_paired_conductor_level(degree: int) -> int:
     """Return 2^v_2(degree), the layer paired by alpha -> alpha + 1."""
     if degree <= 0:
@@ -395,6 +432,7 @@ def main() -> None:
         fail("second-moment falsifier no longer exceeds the Cauchy bound")
     variance_controls = []
     fourth_moment_controls = []
+    fourth_filtration_controls = []
     _, low_even_distribution = mangoldt_class_distribution(5, 12)
     low_even_mean = 1 << (12 - 5)
     low_even_fourth_moment = sum(
@@ -455,6 +493,40 @@ def main() -> None:
         )
         fourth_moment_controls.append(
             f"{degree}:{fourth_moment}:{fourth_cumulant_numerator}"
+        )
+        filtration_second, filtration_fourth, exact_layers = (
+            fourth_moment_conductor_filtration(8, degree)
+        )
+        expected_layers = {
+            17: (
+                0,
+                15_904_236_544,
+                39_316_443_392,
+                9_589_782_016,
+                27_393_511_424,
+                134_382_961_664,
+                280_918_622_208,
+                406_280_052_736,
+            ),
+            18: (
+                45_168_150_784,
+                44_340_037_632,
+                188_109_840_896,
+                208_663_687_168,
+                1_005_923_738_624,
+                1_113_833_144_320,
+                3_490_103_330_816,
+                4_301_103_038_464,
+            ),
+        }[degree]
+        if (filtration_second, filtration_fourth, exact_layers) != (
+            deviation,
+            fourth_moment,
+            expected_layers,
+        ):
+            fail(f"ell=8 degree={degree} fourth-moment filtration differs")
+        fourth_filtration_controls.append(
+            f"{degree}:{','.join(str(value) for value in exact_layers)}"
         )
     _, level_five = mangoldt_class_distribution(5, 45)
     _, level_four = mangoldt_class_distribution(4, 45)
@@ -522,6 +594,7 @@ def main() -> None:
         f"full_family_parseval_controls={','.join(variance_controls)}|"
         "full_family_parseval_route=false|"
         f"fourth_moment_controls={','.join(fourth_moment_controls)}|"
+        f"fourth_filtration_controls={';'.join(fourth_filtration_controls)}|"
         f"fourth_moment_low_control=5:12:{low_even_fourth_moment}:false|"
         "fourth_moment_candidate=OPEN|"
         f"level5_degree45_normalized_layer={normalized_layer}|"

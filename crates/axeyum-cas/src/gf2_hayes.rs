@@ -464,6 +464,50 @@ pub struct ClassPopulationDistribution {
     pub counts: Vec<u128>,
 }
 
+/// Fourier energy contributed by one exact conductor to the squared class
+/// discrepancy.
+///
+/// For `D_e = N_e - mu`, put `f_e = D_e^2`.  Characters of `E_ell` that
+/// factor through `E_level` form a nested filtration.  The cumulative field is
+/// the exact unnormalised Fourier energy of `f` on that subspace; subtracting
+/// the preceding cumulative value gives the energy of characters of exact
+/// conductor `level + 1`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SquaredDeviationConductorLevel {
+    /// Principal-unit truncation level.
+    pub level: usize,
+    /// `sum_(chi factoring through E_level) |sum_e D_e^2 chi(e)|^2`.
+    pub cumulative_fourier_energy: BigUint,
+    /// Difference from the cumulative energy at `level - 1`.
+    pub exact_fourier_energy: BigUint,
+}
+
+/// Exact conductor filtration of the fourth central moment.
+///
+/// The two endpoint identities checked by this object are
+///
+/// ```text
+/// C_0   = M_2^2,
+/// C_ell = 2^ell M_4,
+/// ```
+///
+/// where `C_j` is the cumulative Fourier energy through conductor level `j`.
+/// This exposes where the connected fourth moment lives without introducing
+/// complex or floating-point character values.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FourthMomentConductorDecomposition {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Extension degree.
+    pub degree: usize,
+    /// `M_2 = sum_e D_e^2`.
+    pub second_moment: BigUint,
+    /// `M_4 = sum_e D_e^4`.
+    pub fourth_moment: BigUint,
+    /// Exact-conductor levels in increasing order.
+    pub levels: Vec<SquaredDeviationConductorLevel>,
+}
+
 impl ClassPopulationDistribution {
     /// Largest admitted exponent for an exact central absolute power sum.
     ///
@@ -596,6 +640,115 @@ impl ClassPopulationDistribution {
         let fourth = self.central_absolute_power_sum(4)?;
         let group_order = BigUint::from(self.counts.len());
         Ok(BigInt::from(group_order * fourth) - BigInt::from(BigUint::from(3_u8) * second.pow(2)))
+    }
+
+    /// Decompose the Fourier energy of the squared discrepancies by conductor.
+    ///
+    /// If `pi_j: E_ell -> E_j` is truncation and
+    /// `B_j(b) = sum_(pi_j(e)=b) D_e^2`, finite-group Parseval gives
+    ///
+    /// ```text
+    /// C_j = 2^j sum_(b in E_j) B_j(b)^2.
+    /// ```
+    ///
+    /// Consequently no roots of unity or numerical Fourier arithmetic are
+    /// needed.  The method checks monotonicity of the nested Fourier spaces and
+    /// both endpoint identities exactly.
+    ///
+    /// `max_projection_cells` is an explicit work limit for the `ell * 2^ell`
+    /// class-to-quotient projections.  It is checked before bucket allocation.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed resource decline when the requested projection work is
+    /// too large, a parameter error for a malformed distribution, or an
+    /// invariant error if Parseval or conductor nesting fails.
+    pub fn fourth_moment_conductor_decomposition(
+        &self,
+        max_projection_cells: usize,
+    ) -> Result<FourthMomentConductorDecomposition, HayesError> {
+        let expected_classes = 1_usize
+            .checked_shl(u32::try_from(self.ell).map_err(|_| {
+                HayesError::InvalidParameter("ell exceeds the host shift domain".to_owned())
+            })?)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("ell exceeds the host shift domain".to_owned())
+            })?;
+        if self.counts.len() != expected_classes {
+            return Err(HayesError::InvalidParameter(format!(
+                "class distribution has {} entries, expected 2^{}={expected_classes}",
+                self.counts.len(),
+                self.ell
+            )));
+        }
+        let projection_cells = self
+            .ell
+            .checked_mul(expected_classes)
+            .ok_or_else(|| HayesError::InvalidParameter("projection work overflow".to_owned()))?;
+        check_limit(
+            "fourth_moment_projection_cells",
+            projection_cells,
+            max_projection_cells,
+        )?;
+
+        let mean = self.uniform_mean().ok_or_else(|| {
+            HayesError::InvalidParameter("class distribution has no exact uniform mean".to_owned())
+        })?;
+        let squared_deviations = self
+            .counts
+            .iter()
+            .map(|count| BigUint::from(count.abs_diff(mean)).pow(2))
+            .collect::<Vec<_>>();
+        let second_moment = squared_deviations.iter().cloned().sum::<BigUint>();
+        let fourth_moment = squared_deviations
+            .iter()
+            .map(|value| value.pow(2))
+            .sum::<BigUint>();
+        let full_factors = principal_unit_factors(self.ell);
+        let mut previous = second_moment.pow(2);
+        let mut levels = Vec::with_capacity(self.ell);
+
+        for level in 1..=self.ell {
+            let quotient_factors = principal_unit_factors(level);
+            let quotient_order = 1_usize << level;
+            let mut buckets = vec![BigUint::from(0_u8); quotient_order];
+            for (index, value) in squared_deviations.iter().enumerate() {
+                let quotient_index =
+                    project_mixed_radix_index(index, &full_factors, &quotient_factors)?;
+                buckets[quotient_index] += value;
+            }
+            let cumulative = BigUint::from(quotient_order)
+                * buckets
+                    .into_iter()
+                    .map(|bucket| bucket.pow(2))
+                    .sum::<BigUint>();
+            if cumulative < previous {
+                return Err(HayesError::Invariant(format!(
+                    "squared-discrepancy Fourier energy decreases at level {level}"
+                )));
+            }
+            let exact = &cumulative - &previous;
+            levels.push(SquaredDeviationConductorLevel {
+                level,
+                cumulative_fourier_energy: cumulative.clone(),
+                exact_fourier_energy: exact,
+            });
+            previous = cumulative;
+        }
+
+        let expected_full = BigUint::from(expected_classes) * &fourth_moment;
+        if previous != expected_full {
+            return Err(HayesError::Invariant(
+                "full squared-discrepancy Fourier energy does not equal 2^ell M_4".to_owned(),
+            ));
+        }
+        Ok(FourthMomentConductorDecomposition {
+            ell: self.ell,
+            degree: self.degree,
+            second_moment,
+            fourth_moment,
+            levels,
+        })
     }
 
     /// Whether every class has positive Mangoldt population.
@@ -1302,6 +1455,42 @@ fn principal_unit_factors(ell: usize) -> Vec<PrincipalUnitFactor> {
         .collect()
 }
 
+fn project_mixed_radix_index(
+    index: usize,
+    full_factors: &[PrincipalUnitFactor],
+    quotient_factors: &[PrincipalUnitFactor],
+) -> Result<usize, HayesError> {
+    let mut quotient = index;
+    let mut quotient_index = 0_usize;
+    let mut quotient_stride = 1_usize;
+    let mut quotient_factor_index = 0_usize;
+    for factor in full_factors {
+        let coordinate = quotient % factor.order;
+        quotient /= factor.order;
+        if let Some(quotient_factor) = quotient_factors.get(quotient_factor_index)
+            && quotient_factor.odd_degree == factor.odd_degree
+        {
+            quotient_index = quotient_index
+                .checked_add((coordinate % quotient_factor.order) * quotient_stride)
+                .ok_or_else(|| {
+                    HayesError::Invariant("projected class index overflow".to_owned())
+                })?;
+            quotient_stride = quotient_stride
+                .checked_mul(quotient_factor.order)
+                .ok_or_else(|| {
+                    HayesError::Invariant("projected class stride overflow".to_owned())
+                })?;
+            quotient_factor_index += 1;
+        }
+    }
+    if quotient != 0 || quotient_factor_index != quotient_factors.len() {
+        return Err(HayesError::Invariant(
+            "principal-unit coordinate projection is incomplete".to_owned(),
+        ));
+    }
+    Ok(quotient_index)
+}
+
 fn identity_class_residue(ell: usize, target: usize, modulus: u64) -> Result<u64, HayesError> {
     let (character_values, _) = character_power_sums_residue(ell, target, modulus)?;
     let sum = character_values.iter().fold(0_u64, |accumulator, value| {
@@ -1913,6 +2102,93 @@ mod tests {
             .map(|count| count.abs_diff(1_024).pow(2))
             .sum::<u128>();
         assert_eq!(even_squared_deviation, 1_861_136);
+    }
+
+    #[test]
+    fn squared_discrepancy_fourier_energy_filters_by_exact_conductor() {
+        let distribution = class_population_distribution(8, 17, HayesLimits::default()).unwrap();
+        let decomposition = distribution
+            .fourth_moment_conductor_decomposition(8 * 256)
+            .unwrap();
+        assert_eq!(decomposition.second_moment, BigUint::from(693_360_u32));
+        assert_eq!(
+            decomposition.fourth_moment,
+            BigUint::from(5_447_397_264_u64)
+        );
+        assert_eq!(decomposition.levels.len(), 8);
+        assert_eq!(
+            decomposition
+                .levels
+                .iter()
+                .map(|level| level.exact_fourier_energy.clone())
+                .collect::<Vec<_>>(),
+            [
+                0_u64,
+                15_904_236_544,
+                39_316_443_392,
+                9_589_782_016,
+                27_393_511_424,
+                134_382_961_664,
+                280_918_622_208,
+                406_280_052_736,
+            ]
+            .into_iter()
+            .map(BigUint::from)
+            .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            decomposition
+                .levels
+                .last()
+                .unwrap()
+                .cumulative_fourier_energy,
+            (BigUint::from(1_u8) << 8) * &decomposition.fourth_moment
+        );
+        assert_eq!(
+            decomposition
+                .levels
+                .iter()
+                .map(|level| level.exact_fourier_energy.clone())
+                .sum::<BigUint>()
+                + decomposition.second_moment.pow(2),
+            (BigUint::from(1_u8) << 8) * decomposition.fourth_moment
+        );
+    }
+
+    #[test]
+    fn mixed_radix_projection_agrees_with_fresh_lower_distributions() {
+        let limits = HayesLimits::default();
+        let full = class_population_distribution(8, 17, limits).unwrap();
+        let full_factors = principal_unit_factors(8);
+        for level in 1..8 {
+            let quotient_factors = principal_unit_factors(level);
+            let mut projected = vec![0_u128; 1 << level];
+            for (index, count) in full.counts.iter().enumerate() {
+                let quotient_index =
+                    project_mixed_radix_index(index, &full_factors, &quotient_factors).unwrap();
+                projected[quotient_index] += count;
+            }
+            assert_eq!(
+                projected,
+                class_population_distribution(level, 17, limits)
+                    .unwrap()
+                    .counts,
+                "projection to E_{level} disagrees with a fresh transform"
+            );
+        }
+    }
+
+    #[test]
+    fn fourth_moment_filtration_declines_before_projection() {
+        let distribution = class_population_distribution(8, 17, HayesLimits::default()).unwrap();
+        assert_eq!(
+            distribution.fourth_moment_conductor_decomposition(8 * 256 - 1),
+            Err(HayesError::ResourceLimit {
+                resource: "fourth_moment_projection_cells",
+                requested: 8 * 256,
+                limit: 8 * 256 - 1,
+            })
+        );
     }
 
     #[test]

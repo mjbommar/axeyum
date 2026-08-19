@@ -30,7 +30,8 @@ Keep this research surface in `axeyum-cas` and extract a bounded
 2. exact identity-class populations reconstructed from two modular transforms
    with checked CRT uniqueness;
 3. exact full-class inverse-Fourier distributions, bounded central absolute
-   power sums, and signed fourth-cumulant numerators;
+   power sums, signed fourth-cumulant numerators, and a resource-bounded exact
+   conductor filtration of the squared-discrepancy Fourier energy;
 4. endpoint discrepancies and exact-conductor layers with a checked
    telescoping identity; and
 5. exact bignum verification that explicitly supplied conductor or fourth-
@@ -58,6 +59,13 @@ sufficient-bound implications, the level-5 failure of the experimental moment
 envelope, malformed inputs, and pre-allocation resource decline. The Python
 checker independently reproduces the level-5 failure, the level-8 moments,
 both arithmetic implications, and the conductor-bound negative controls.
+
+The fourth-moment filtration additionally checks `C_0=M_2^2`,
+`C_ell=2^ell M_4`, and nonnegative exact-level differences. Its mixed-radix
+projection is controlled level by level against independently recomputed lower
+Hayes distributions. The separate integer group-ring checker projects explicit
+unit-polynomial representatives and reproduces both level-8 energy vectors;
+the public CLI is exercised by the GF(2) artifact gate.
 
 All-target, all-feature `axeyum-cas` Clippy passes with warnings denied. The
 full Lemire range gate exercises the Rust and Python arithmetic implications,

@@ -4,7 +4,8 @@
 
 **WIP** (`gf2-lemire`, 2026-08-19).  Axeyum has dual-checked the non-strict
 statement through degree 400 and has bounded CAS APIs for the Hayes recurrence,
-exact class distributions, central moments, and signed fourth cumulants.  ADRs
+exact class distributions, central moments, signed fourth cumulants, and the
+exact conductor filtration of squared-discrepancy Fourier energy.  ADRs
 0484--0486 keep this CAS-local; the missing estimate is analytic.
 
 The selected sufficient obligation is
@@ -15,9 +16,12 @@ independently, but the premise is open.  It fails at the retained low control
 Both the lemma and universal conjecture have empty-evidence ledger facts.
 
 **Next:** prove a polynomial-times-`2^(3ell)` connected-cumulant bound, then
-reconstruct reciprocity and the central lemma.  Full record:
+reconstruct reciprocity and the central lemma.  The new filtration identity
+shows no isolated bad conductor through `ell=16`; pursue a nested
+martingale/large-sieve estimate rather than a one-level bound.  Full record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
 | 2026-08-19 | `77209a5ee` | Added exact fourth moments/cumulants, checked the conditional implication and low control, retained level-23 evidence, and recorded open facts. |
+| 2026-08-19 | `pending` | Added the exact resource-bounded fourth-moment conductor filtration, quotient-projection controls, public diagnostic, and literature boundary refresh. |

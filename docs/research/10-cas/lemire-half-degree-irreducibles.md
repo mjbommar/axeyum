@@ -69,6 +69,20 @@ lemma.
   intervals in the large-field regime, not the required fixed field
   `q = 2`: [Prime polynomials in short intervals and in arithmetic
   progressions](https://arxiv.org/abs/1302.0625).
+- Gorodetsky's fixed-field large-degree theorem reaches intervals described as
+  being as small as the square-root scale, but its explicit error is
+
+  ```text
+  max|alpha| q^(n/2-h-1) exp(O_q(n log log n / log n)).
+  ```
+
+  For `alpha=Lambda`, `q=2`, and the exact Lemire endpoints
+  `h=floor(n/2)`, the remaining subexponential factor is not `o(1)` and cannot
+  force the normalized mean to be positive.  The paper's usable asymptotic
+  hypothesis has `limsup h/n>1/2`, which supplies a linear exponential margin;
+  the equality case here does not.  See [Mean values of arithmetic functions
+  in short intervals and in arithmetic progressions in the large-degree
+  limit](https://arxiv.org/abs/1810.00483), Theorems 1.1 and 1.3.
 - Pollack's prescribed-coefficient results do not reach this fixed-field
   half-degree boundary: his theorem permits fewer than
   `(1-epsilon) sqrt(n)` arbitrary coefficients, not a linear half of them.
@@ -124,9 +138,11 @@ lemma.
   positivity here. With `ell = ceil(n/2) - 1`, `q = 2`, and the identity type-II
   class, the main term and the published absolute error are of the same
   exponential order; the coefficient multiplying the error is too large.
-- Gao's 2023 follow-up obtains existence with *roughly* half the coefficients
-  prescribed, including positions near the middle, but does not state the exact
-  all-degree fixed-`GF(2)` endpoint needed here: [New Estimates and Existence
+- Gao's 2023 follow-up advertises existence with *roughly* half the
+  coefficients prescribed, including positions near the middle.  Its published
+  abstract does not claim the exact all-degree fixed-`GF(2)` endpoint needed
+  here, so it cannot be used as that theorem without checking the full
+  hypotheses and numerical inequalities: [New Estimates and Existence
   Results About Irreducible Polynomials and Self-Reciprocal Irreducible
   Polynomials with Prescribed Coefficients Over a Finite
   Field](https://doi.org/10.1007/s44007-023-00062-1).
@@ -792,6 +808,64 @@ the result/resource log SHA-256 is
 `7f00ba5223b689bfa965cb12372109335bc8677b6904f2102d3586c8f76b0e8c`.
 This is bounded evidence for selecting the lemma, not evidence for its
 universal quantifier.
+
+The conductor filtration of the fourth moment is now exact as well.  Let
+`pi_j:E_ell->E_j` be coefficient truncation, put `f_e=D_e^2`, and define
+
+```text
+B_j(b) = sum_(pi_j(e)=b) f_e,
+C_j    = 2^j sum_(b in E_j) B_j(b)^2.
+```
+
+Finite-group Parseval gives
+
+```text
+C_0 = M_2^2,                 C_ell = 2^ell M_4.
+```
+
+If `b0,b1` are the two children of a class at adjacent levels, then direct
+expansion gives the nonnegative Haar increment
+
+```text
+C_j-C_(j-1) = 2^(j-1) sum_b (B_j(b0)-B_j(b1))^2.  (filtration identity)
+```
+
+Thus, if `E_j=C_j-C_(j-1)`, the connected numerator has the exact form
+
+```text
+K_4 = sum_(j=1)^ell E_j - 2 M_2^2.
+```
+
+`fourth_moment_conductor_decomposition` computes these integers without
+complex roots of unity: it projects the stable mixed-radix class coordinates,
+uses integer quotient buckets, and checks monotonicity plus both endpoint
+Parseval identities.  The projection is independently controlled by comparing
+every quotient through `E_7` against a fresh lower-level Hayes transform; the
+separate Python recurrence also truncates explicit unit-polynomial bitsets and
+reproduces every `ell=8` energy.  An explicit `ell*2^ell` work limit is checked
+before bucket allocation, and
+`axeyum-gf2-hayes-fourth-filtration` exposes the result.
+
+The finite diagnostic does not reveal one exceptional conductor that can be
+discarded.  At the odd `ell=16` endpoint, the last two exact energies are
+
+```text
+E_15 = 7,545,122,766,345,789,505,536,
+E_16 = 14,760,487,533,964,220,694,528;
+```
+
+at the even endpoint they are
+
+```text
+E_15 = 30,738,353,465,097,337,700,352,
+E_16 = 58,344,656,012,839,640,629,248.
+```
+
+The broadly geometric growth observed through `ell=16` makes a nested
+martingale/large-sieve estimate more plausible than a one-level cancellation
+lemma, but it is not such an estimate.  In particular, positivity of every
+`E_j` does not prove the cancellation against `2 M_2^2` in `K_4`; the required
+polynomial-times-`2^(4ell)` bound for their total remains open.
 
 This formulation identifies what a proof must control.  Parseval handles the
 three paired character quadruples; the new obstruction is the connected

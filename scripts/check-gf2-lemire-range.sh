@@ -37,6 +37,7 @@ cargo run --quiet -p axeyum-cas --bin axeyum-gf2-hayes-endpoints -- 12
 cargo run --quiet -p axeyum-cas --bin axeyum-gf2-hayes-endpoints -- \
   8 --conductor-layers
 cargo run --quiet -p axeyum-cas --bin axeyum-gf2-hayes-moments -- 8
+cargo run --quiet -p axeyum-cas --bin axeyum-gf2-hayes-fourth-filtration -- 8
 cargo run --quiet -p axeyum-cas --bin axeyum-gf2-check -- \
   artifacts/gf2/lemire/degree-400.json
 
