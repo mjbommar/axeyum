@@ -44,6 +44,7 @@ mod contract_residualization;
 mod identity;
 mod semantic_contract_receipt;
 mod source_delta_trace;
+mod trace_contract_receipt;
 mod type_slice;
 mod type_slice_receipt;
 
@@ -62,6 +63,11 @@ pub use semantic_contract_receipt::{
 };
 pub use source_delta_trace::{
     CheckedSourceDeltaStep, SourceDeltaStepError, build_source_delta_step, verify_source_delta_step,
+};
+pub use trace_contract_receipt::{
+    TRACE_BACKED_SOURCE_CONTRACT_RECEIPT_VERSION, TraceBackedSourceContractReceipt,
+    TraceBackedSourceContractReceiptError, TraceContractInstanceReceipt,
+    issue_trace_backed_source_contract_receipt, verify_trace_backed_source_contract_receipt,
 };
 pub use type_slice::{
     ConstantInstance, GeneralizedBinder, GeneralizedGoal, TypeSliceError,
