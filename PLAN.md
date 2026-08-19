@@ -163,6 +163,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `bd7b55bff` | Extracted 9,729 proof-isolated Mathlib Nat/Int statements externally and selected 240 outcome-blind source candidates across twelve families without vendoring bulk exports. |
 | 2026-08-18 | `30e7e6ec3` | Projected 95 direct Mathlib candidate dependencies into 146 whole leakage components without exposing proof terms or freezing evaluation splits. |
 | 2026-08-18 | `7179e03d9` | Outcome-blind review retained 202 candidates and grouped twelve family-wide statement mutations into 120 indivisible future evaluation units. |
+| 2026-08-18 | `30ee0885f` | Materialized 214 proof-free Mathlib source/mutation propositions as open `lean4-surface` facts; exact Lean accepted every type and the machine frontier refused all without operations. |
 | 2026-08-18 | `f4dc0d4f1` | Registered and cleanly exercised the exact axiom-free authoritative B operation, whose durable event made A newly ready. |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
@@ -218,11 +219,17 @@ internal surfaces, and adds one statement-strength mutation per family. The 214
 future evaluation statements form 120 whole dependency/mutation groups; no
 partition or expected outcome is assigned.
 
-**Next:** label proof-shape risks from statement structure and convert the
-pretty-printed sources into reviewed Axeyum fact statements, then freeze whole
-groups into train/development/held-out membership. Do not expose proof bodies to
-search, treat Mathlib proof as Axeyum construction, or begin proof-plan work
-before fixed-budget nursery episodes identify the dominant seam.
+**The reviewed population is now in the ledger, honestly open.** Commit
+`30ee0885f` materializes 202 external-source propositions and twelve mutations
+as `lean4-surface` facts. Exact Lean/Mathlib v4.30 accepts all 214 proof-free
+axiom types; every evidence array remains empty and the frontier refuses every
+row because no registered operation exists.
+
+**Next:** preregister a feasible split over whole dependency/mutation groups,
+families, and family-scoped proof-template risks, then freeze train/development/
+held-out membership. Do not expose proof bodies to search, treat Mathlib proof
+as Axeyum construction, or begin proof-plan work before fixed-budget nursery
+episodes identify the dominant seam.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
