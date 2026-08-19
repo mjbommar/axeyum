@@ -146,6 +146,7 @@ compounding, not automation theatre.
 | [Fibonacci recurrence v3 selection](47-nat-fib-recurrence-v3-selection.md) | Which exact stage evidence and unchanged ceiling authorize one complete repaired target execution? |
 | [Fibonacci recurrence v3 result](48-nat-fib-recurrence-v3-result.md) | Did the complete repaired operation construct the first real Fibonacci-path candidate, and what authority still remains? |
 | [Fibonacci checked-theorem receipt selection](49-nat-fib-checked-theorem-receipt-selection.md) | How can the non-reflexive candidate receive an exact two-kernel receipt without rerunning search or granting ledger credit? |
+| [Fibonacci checked-theorem receipt result](50-nat-fib-checked-theorem-receipt-result.md) | Did two fresh kernels reissue one exact receipt, and which admission boundary still keeps the fact open? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
