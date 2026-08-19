@@ -832,6 +832,13 @@ Out of scope:
     separately; grant no ledger or operation authority; and do not inspect
     held-out or add adaptive routing. See
     [ADR-0487](../09-decisions/adr-0487-first-type-slice-producer-census-is-fixed-reflexivity-only.md).
+- [x] How may generalized definition behavior enter proof search without
+      becoming a global axiom or importing upstream proof closure?
+  - Answer (2026-08-19): key contracts by exact declaration content, type, and
+    universes; expose them only as local generalized-goal premises; and require
+    an independently checked source-specialization witness with a complete
+    dependency footprint before concrete fact credit. See
+    [ADR-0488](../09-decisions/adr-0488-semantic-abstractions-are-discharged-local-contracts.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?

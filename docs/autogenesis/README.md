@@ -128,6 +128,7 @@ compounding, not automation theatre.
 | [Checked Mathlib type-slice replay](29-checked-type-slice-replay.md) | How many frozen train/development statements survive the complete semantic slice boundary, and why do the rest decline? |
 | [Checked `autoParam` binder replay](30-auto-param-binder-replay.md) | Can the ten metadata-contaminated closures be normalized under a narrow kernel-checked contract? |
 | [First complete producer census](31-first-type-slice-producer-census.md) | What does one preregistered proof grammar establish across all checked slices, and which gap should drive the next turn? |
+| [Semantic abstraction debt census](32-semantic-abstraction-census.md) | Which exact definition identities and checked contract shapes separate type-safe generalization from fair proof search? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -271,6 +272,15 @@ abstractions preserve types but intentionally omit behavior. The next flywheel
 turn therefore has two controlled lanes: develop proof plans against the 22
 unsolved exact goals, and add kernel-discharged semantic contracts before
 treating the 114 abstracted goals as a fair proof-search curriculum.
+
+The [semantic abstraction census](32-semantic-abstraction-census.md) now
+resolves those 152 bindings into 32 exact definition identities and three
+checked-type contract shapes. Printed names are insufficient keys, and the
+large transitive theorem closure is mostly indirect. ADR-0488 therefore makes
+contracts exact-identity-bound local obligations with independently checked
+source-specialization witnesses. The next bottom-up increment prototypes one
+pointwise function contract; proof planning on the exact 24 remains an
+independent top-down lane.
 
 ## Phase summary
 

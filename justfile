@@ -85,6 +85,8 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-type-slice-feasibility.py
     python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
     python3 scripts/check-autogenesis-factorial-zero-family.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_semantic_abstraction_census
+    python3 scripts/check-autogenesis-semantic-abstraction-census.py
 
 # The bulk source is external and optional on CI. The first checker reports
 # verified/unavailable without conflating them; the committed 240-row view is
