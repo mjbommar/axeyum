@@ -158,7 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
-| 2026-08-19 | `efe7f0b70` | Semantic debt census |
+| 2026-08-19 | `b13e3ea9a` | Function contract control |
 | 2026-08-19 | `6c000b1ef` | Checked slice replay |
 | 2026-08-19 | `5e5141dba` | Slice receipt |
 | 2026-08-19 | `903c22423` | Typed slice |
@@ -189,9 +189,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Status:** semantic debt: 32 identities; held-out sealed.
+**Status:** function contract control axiom-free.
 
-**Next:** prototype discharged function contracts.
+**Next:** bind exact-source contract receipts.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

@@ -129,6 +129,7 @@ compounding, not automation theatre.
 | [Checked `autoParam` binder replay](30-auto-param-binder-replay.md) | Can the ten metadata-contaminated closures be normalized under a narrow kernel-checked contract? |
 | [First complete producer census](31-first-type-slice-producer-census.md) | What does one preregistered proof grammar establish across all checked slices, and which gap should drive the next turn? |
 | [Semantic abstraction debt census](32-semantic-abstraction-census.md) | Which exact definition identities and checked contract shapes separate type-safe generalization from fair proof search? |
+| [First discharged function contract](33-discharged-function-contract-control.md) | Can a local behavior premise be proved generically, discharged by the exact source definition, and remain axiom-free under circularity controls? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -281,6 +282,13 @@ contracts exact-identity-bound local obligations with independently checked
 source-specialization witnesses. The next bottom-up increment prototypes one
 pointwise function contract; proof planning on the exact 24 remains an
 independent top-down lane.
+
+That [first function-contract control](33-discharged-function-contract-control.md)
+now passes end to end on a synthetic transparent identity function. The generic
+proof and exact source witness are separately axiom-free; same-typed definition
+substitution fails, and circular answer use remains visible in the footprint.
+The next boundary is a durable exact-identity receipt before any real Mathlib
+slice or ledger row can consume the mechanism.
 
 ## Phase summary
 
