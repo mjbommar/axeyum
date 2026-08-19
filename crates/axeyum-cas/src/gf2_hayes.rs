@@ -2325,6 +2325,14 @@ pub struct PopulationRefinementTriangleReport {
     pub candidate_target_numerator: BigUint,
     /// Actual maximum leaf discrepancy, independently computed.
     pub actual_maximum_absolute_deviation: u128,
+    /// `sum_j 2^(j-1) |H_j(1)|` along the identity-class path only.
+    pub identity_path_triangle_numerator: BigUint,
+    /// First level in the connected logarithmic top-conductor window.
+    pub connected_top_first_level: usize,
+    /// Signed sum `sum_(j>=first) 2^(j-1) H_j(1)`.
+    pub connected_top_signed_numerator: BigInt,
+    /// Candidate connected bound `2^(2ell-2)`.
+    pub connected_top_candidate_numerator: BigUint,
 }
 
 /// Symbolic endpoint implication of the proposed square-root-fibre envelope.
@@ -2359,6 +2367,35 @@ pub struct PopulationRefinementHybridImplication {
     pub square_root_fibre_triangle_numerator: BigUint,
     /// Required numerator `2^(2ell)`.
     pub candidate_target_numerator: BigUint,
+}
+
+/// Symbolic implication from one connected top-conductor trace bound.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PopulationRefinementConnectedTopImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// One of the two Lemire endpoint degrees.
+    pub degree: usize,
+    /// First level in the connected top-conductor window.
+    pub first_top_level: usize,
+    /// Number of levels retained inside the connected trace.
+    pub top_level_count: usize,
+    /// Proved low-conductor contribution from individual Weil estimates.
+    pub low_weil_triangle_numerator: BigUint,
+    /// Assumed connected top-trace bound `2^(2ell-2)`.
+    pub connected_top_assumption_numerator: BigUint,
+    /// Required Haar numerator `2^(2ell)`.
+    pub candidate_target_numerator: BigUint,
+}
+
+impl PopulationRefinementConnectedTopImplication {
+    /// Whether the proved low part and assumed connected top part close the
+    /// exact endpoint triangle.
+    #[must_use]
+    pub fn proves_candidate_discrepancy_bound(&self) -> bool {
+        &self.low_weil_triangle_numerator + &self.connected_top_assumption_numerator
+            <= self.candidate_target_numerator
+    }
 }
 
 impl PopulationRefinementHybridImplication {
@@ -2399,6 +2436,13 @@ impl PopulationRefinementTriangleReport {
             BigUint::from(row.maximum_sibling_difference)
                 <= ((BigUint::from(3_u8) * BigUint::from(row.level)) << exponent)
         })
+    }
+
+    /// Whether the exact finite connected top trace satisfies
+    /// `abs(trace) <= 2^(2ell-2)`.
+    #[must_use]
+    pub fn satisfies_connected_top_candidate(&self) -> bool {
+        self.connected_top_signed_numerator.magnitude() <= &self.connected_top_candidate_numerator
     }
 }
 
@@ -2512,6 +2556,68 @@ pub fn population_refinement_hybrid_implication(
     Err(HayesError::Invariant(
         "full square-root-fibre envelope did not close the endpoint".to_owned(),
     ))
+}
+
+/// Combine the proved low-conductor Weil bounds with one connected signed
+/// top-conductor trace assumption.
+///
+/// Put `L=ceil(log2(ell))+1` and `a=ell-L`.  The low levels `j<a` are bounded
+/// individually by `(j-1)2^ceil(degree/2)`.  The sole remaining assumption is
+///
+/// ```text
+/// |sum_(j=a)^ell 2^(j-1) H_j(1)| <= 2^(2ell-2).
+/// ```
+///
+/// The connected sum is exactly
+///
+/// ```text
+/// 2^ell N_ell(1) - 2^(a-1) N_(a-1)(1),
+/// ```
+///
+/// so no absolute value is taken between its conductor levels.  For every
+/// `ell>=200` the proved low part is less than half the target and the assumed
+/// connected part is one quarter of it.
+///
+/// # Errors
+///
+/// Rejects `ell<4`, a non-endpoint degree, or host-width overflow.
+pub fn population_refinement_connected_top_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<PopulationRefinementConnectedTopImplication, HayesError> {
+    let doubled = ell.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("connected refinement ell overflow".to_owned())
+    })?;
+    if ell < 4 || !matches!(degree.checked_sub(doubled), Some(1 | 2)) {
+        return Err(HayesError::InvalidParameter(
+            "connected refinement implication requires ell>=4 and degree=2ell+1 or 2ell+2"
+                .to_owned(),
+        ));
+    }
+    let ceil_log = ell.ilog2() as usize + usize::from(!ell.is_power_of_two());
+    let top_level_count = ceil_log + 2;
+    let first_top_level = ell.checked_sub(ceil_log + 1).ok_or_else(|| {
+        HayesError::InvalidParameter("connected refinement window underflow".to_owned())
+    })?;
+    if first_top_level == 0 {
+        return Err(HayesError::InvalidParameter(
+            "connected refinement window reaches level zero".to_owned(),
+        ));
+    }
+    let weil_scale = BigUint::from(1_u8) << degree.div_ceil(2);
+    let mut low_weil_triangle_numerator = BigUint::from(0_u8);
+    for level in 1..first_top_level {
+        low_weil_triangle_numerator += (BigUint::from(level - 1) * &weil_scale) << (level - 1);
+    }
+    Ok(PopulationRefinementConnectedTopImplication {
+        ell,
+        degree,
+        first_top_level,
+        top_level_count,
+        low_weil_triangle_numerator,
+        connected_top_assumption_numerator: BigUint::from(1_u8) << (doubled - 2),
+        candidate_target_numerator: BigUint::from(1_u8) << doubled,
+    })
 }
 
 impl FourthMomentConductorDecomposition {
@@ -2911,6 +3017,11 @@ impl ClassPopulationDistribution {
         &self,
         max_projection_cells: usize,
     ) -> Result<PopulationRefinementTriangleReport, HayesError> {
+        if self.ell == 0 {
+            return Err(HayesError::InvalidParameter(
+                "population refinement requires ell>=1".to_owned(),
+            ));
+        }
         let ell_shift = u32::try_from(self.ell)
             .map_err(|_| HayesError::InvalidParameter("refinement ell exceeds u32".to_owned()))?;
         let expected_classes = 1_usize.checked_shl(ell_shift).ok_or_else(|| {
@@ -2944,6 +3055,10 @@ impl ClassPopulationDistribution {
         let full_factors = principal_unit_factors(self.ell);
         let mut reconstruction = vec![BigInt::from(total); expected_classes];
         let mut triangle_numerator = BigUint::from(0_u8);
+        let mut identity_path_triangle_numerator = BigUint::from(0_u8);
+        let ceil_log = self.ell.ilog2() as usize + usize::from(!self.ell.is_power_of_two());
+        let connected_top_first_level = self.ell.saturating_sub(ceil_log + 1).max(1);
+        let mut connected_top_signed_numerator = BigInt::from(0_u8);
         let mut levels = Vec::with_capacity(self.ell);
 
         for level in 1..=self.ell {
@@ -2953,6 +3068,12 @@ impl ClassPopulationDistribution {
             let weight = BigUint::from(1_u8) << (level - 1);
             triangle_numerator += BigUint::from(step.report.maximum_sibling_difference) * &weight;
             let signed_weight = BigInt::from(weight);
+            let identity_difference = &step.signed_child_differences[0];
+            identity_path_triangle_numerator +=
+                identity_difference.magnitude() * signed_weight.magnitude();
+            if level >= connected_top_first_level {
+                connected_top_signed_numerator += identity_difference * &signed_weight;
+            }
             for (index, reconstructed) in reconstruction.iter_mut().enumerate() {
                 let child = project_mixed_radix_index(index, &full_factors, &level_factors)?;
                 *reconstructed += &step.signed_child_differences[child] * &signed_weight;
@@ -2960,29 +3081,22 @@ impl ClassPopulationDistribution {
             levels.push(step.report);
         }
 
-        let group_order = BigInt::from(expected_classes);
-        for (index, (reconstructed, count)) in reconstruction
-            .iter()
-            .zip(self.counts.iter().copied())
-            .enumerate()
-        {
-            if reconstructed != &(BigInt::from(count) * &group_order) {
-                return Err(HayesError::Invariant(format!(
-                    "population Haar expansion does not reconstruct class {index}"
-                )));
-            }
-        }
-        let actual_maximum_absolute_deviation = self
-            .counts
-            .iter()
-            .map(|count| count.abs_diff(mean))
-            .max()
-            .unwrap_or(0);
-        if BigUint::from(actual_maximum_absolute_deviation) * BigUint::from(expected_classes)
-            > triangle_numerator
-        {
+        let actual_maximum_absolute_deviation = validate_population_refinement_reconstruction(
+            &reconstruction,
+            &self.counts,
+            expected_classes,
+            mean,
+            &triangle_numerator,
+        )?;
+        let direct_connected_top = connected_top_direct_trace(
+            &self.counts,
+            &full_factors,
+            self.ell,
+            connected_top_first_level,
+        )?;
+        if connected_top_signed_numerator != direct_connected_top {
             return Err(HayesError::Invariant(
-                "population Haar triangle does not dominate the actual discrepancy".to_owned(),
+                "connected top refinement sum does not telescope".to_owned(),
             ));
         }
 
@@ -2993,6 +3107,10 @@ impl ClassPopulationDistribution {
             triangle_numerator,
             candidate_target_numerator: BigUint::from(1_u8) << (2 * self.ell),
             actual_maximum_absolute_deviation,
+            identity_path_triangle_numerator,
+            connected_top_first_level,
+            connected_top_signed_numerator,
+            connected_top_candidate_numerator: BigUint::from(1_u8) << (2 * self.ell - 2),
         })
     }
 
@@ -9677,6 +9795,64 @@ struct RawPopulationRefinementStep {
     signed_child_differences: Vec<BigInt>,
 }
 
+fn validate_population_refinement_reconstruction(
+    reconstruction: &[BigInt],
+    counts: &[u128],
+    expected_classes: usize,
+    mean: u128,
+    triangle_numerator: &BigUint,
+) -> Result<u128, HayesError> {
+    let group_order = BigInt::from(expected_classes);
+    for (index, (reconstructed, count)) in reconstruction
+        .iter()
+        .zip(counts.iter().copied())
+        .enumerate()
+    {
+        if reconstructed != &(BigInt::from(count) * &group_order) {
+            return Err(HayesError::Invariant(format!(
+                "population Haar expansion does not reconstruct class {index}"
+            )));
+        }
+    }
+    let maximum = counts
+        .iter()
+        .map(|count| count.abs_diff(mean))
+        .max()
+        .unwrap_or(0);
+    let scaled_maximum = BigUint::from(maximum) * BigUint::from(expected_classes);
+    if &scaled_maximum > triangle_numerator {
+        return Err(HayesError::Invariant(
+            "population Haar triangle does not dominate the actual discrepancy".to_owned(),
+        ));
+    }
+    Ok(maximum)
+}
+
+fn connected_top_direct_trace(
+    counts: &[u128],
+    full_factors: &[PrincipalUnitFactor],
+    ell: usize,
+    first_top_level: usize,
+) -> Result<BigInt, HayesError> {
+    let coarse_level = first_top_level - 1;
+    let coarse_factors = principal_unit_factors(coarse_level);
+    let mut coarse_identity_population = 0_u128;
+    for (index, count) in counts.iter().copied().enumerate() {
+        if project_mixed_radix_index(index, full_factors, &coarse_factors)? == 0 {
+            coarse_identity_population =
+                coarse_identity_population
+                    .checked_add(count)
+                    .ok_or_else(|| {
+                        HayesError::InvalidParameter(
+                            "connected coarse identity population overflow".to_owned(),
+                        )
+                    })?;
+        }
+    }
+    Ok((BigInt::from(counts[0]) << ell)
+        - (BigInt::from(coarse_identity_population) << coarse_level))
+}
+
 fn raw_population_refinement_step(
     counts: &[u128],
     full_factors: &[PrincipalUnitFactor],
@@ -11932,8 +12108,11 @@ mod tests {
         );
         assert!(!low_failure.proves_candidate_discrepancy_bound());
 
-        let expected = [(25_usize, 8_213_504_u128), (26_usize, 14_542_848_u128)];
-        for (degree, triangle) in expected {
+        let expected = [
+            (25_usize, 8_213_504_u128, 2_168_832_u128, 1_400_832_i128),
+            (26_usize, 14_542_848_u128, 2_653_184_u128, 1_339_392_i128),
+        ];
+        for (degree, triangle, identity_triangle, connected_top) in expected {
             let distribution =
                 class_population_distribution(12, degree, HayesLimits::default()).unwrap();
             let report = distribution
@@ -11941,6 +12120,16 @@ mod tests {
                 .unwrap();
             assert_eq!(report.levels.len(), 12);
             assert_eq!(report.triangle_numerator, BigUint::from(triangle));
+            assert_eq!(
+                report.identity_path_triangle_numerator,
+                BigUint::from(identity_triangle)
+            );
+            assert_eq!(report.connected_top_first_level, 7);
+            assert_eq!(
+                report.connected_top_signed_numerator,
+                BigInt::from(connected_top)
+            );
+            assert!(report.satisfies_connected_top_candidate());
             assert_eq!(
                 report.candidate_target_numerator,
                 BigUint::from(16_777_216_u128)
@@ -11973,10 +12162,16 @@ mod tests {
                 let report = population_refinement_hybrid_implication(ell, degree).unwrap();
                 assert!(report.first_square_root_fibre_level >= first);
                 assert!(report.square_root_fibre_level_count <= ell + 1 - first);
+                let connected =
+                    population_refinement_connected_top_implication(ell, degree).unwrap();
+                assert_eq!(connected.first_top_level, first - 1);
+                assert_eq!(connected.top_level_count, ell + 2 - first);
+                assert!(connected.proves_candidate_discrepancy_bound());
             }
         }
         assert!(population_refinement_envelope_implication(12, 24).is_err());
         assert!(population_refinement_hybrid_implication(12, 24).is_err());
+        assert!(population_refinement_connected_top_implication(12, 24).is_err());
         assert!(matches!(
             class_population_distribution(12, 25, HayesLimits::default())
                 .unwrap()

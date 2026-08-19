@@ -2535,8 +2535,62 @@ with `2^(2-ell)<1/(4ell)`).  The odd
 endpoint is no larger.  The native
 `population_refinement_hybrid_implication` performs the exact integer
 optimization: at `ell=200`, only the nine levels `192<=j<=200` require (RF).
-Thus the live uniform theorem is now (RF) in a logarithmic top-conductor
-window, not across the whole filtration.
+Thus (RF) is needed only in a logarithmic top-conductor window, not across the
+whole filtration.
+
+There is a weaker and better-connected target.  Lemire needs only the identity
+class, and along its path the weighted increments telescope.  Put
+
+```text
+L = ceil(log2 ell)+1,
+a = ell-L.
+```
+
+Then
+
+```text
+sum_(j=a)^ell 2^(j-1) H_j(1)
+  = 2^ell N_ell(1) - 2^(a-1) N_(a-1)(1).              (CT)
+```
+
+Fourier identity (HF) also shows that (CT) is one signed Mangoldt trace over
+all characters of conductor level at least `a`.  No absolute value has been
+taken between those levels.  The selected analytic target is now simply
+
+```text
+abs(2^ell N_ell(1) - 2^(a-1) N_(a-1)(1))
+  <= 2^(2ell-2).                                       (CRT)
+```
+
+The individual Weil estimate (W) below `a` contributes, after normalization
+by `2^(2ell)`, at most
+
+```text
+(ell-L-3)/2^L + 2^(2-ell) < 1/2
+```
+
+for every `ell>=200`, because `2^L>=2ell`.  Bound (CRT) contributes one
+quarter, so their sum is strictly below the endpoint target with reserve.  At
+`ell=200`, this connected trace contains the ten levels `191<=j<=200`.
+Compared with summing individual Weil bounds on those levels, (CRT) needs only
+a polynomial conductor saving; the per-level (RF) estimate demands an
+exponential family gain and is therefore a stronger fallback.
+
+`population_refinement_connected_top_implication` checks the arithmetic
+implication exactly.  The finite population report also computes the identity
+path, reconstructs (CT) independently from the fine and coarse populations,
+and tests (CRT).  At level 12 the odd and even connected traces are
+`1,400,832` and `1,339,392`, both below `4,194,304`.  These finite values do
+not prove (CRT).  Fresh exact fleet runs at both endpoints for every
+`16<=ell<=20` also pass.  At `ell=20`, the traces are `2,381,365,248` and
+`-6,237,356,032` against `274,877,906,944`, ratios about `0.0087` and `0.0227`.
+The executable SHA-256 is
+`ea8780c3914b139ad7dffbc9a9b69336120219782f72b88962fb6f58e2a90687`;
+the five logs and their hashes are recorded on `s1,s4,s5,s6,s7` under
+`/tmp/axeyum-gf2-hayes-refinement-connected-{16,17,18,19,20}.log`.  This is
+still finite evidence only.  A relative characteristic-two Witt/Heisenberg
+theorem should now target the single trace (CT), preserving cross-conductor
+cancellation.
 
 Exact fleet runs at both endpoints for every `16<=ell<=20` satisfy the Haar
 triangle and (RF).  At `ell=20`, the odd and even triangle numerators are
@@ -2555,8 +2609,10 @@ Mangoldt population in a quotient cylinder and only then compares its two
 children.  Analytically, (RF) asks for square-root cancellation in the
 residual fibre dimension `n-j`, with a linear conductor loss.  A relative
 Artin--Schreier--Witt or fixed-long-cycle estimate at exactly that scale would
-finish the proof.  Until such an estimate is derived, this remains a parallel
-local route beside the aggregate connected-cumulant bound, not theorem credit.
+finish the proof, but the connected target (CRT) is weaker and preserves
+cross-conductor cancellation.  Until one of these estimates is derived, this
+remains a parallel local route beside the aggregate connected-cumulant bound,
+not theorem credit.
 
 The most direct generalization of Fomenko's fixed-coordinate character map is
 now closed before any expensive `L`-factor enumeration.  The native cyclic

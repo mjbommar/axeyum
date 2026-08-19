@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-connected-top-refinement-bound",
+  "title": "Connected top-conductor bound for the binary Hayes identity class",
+  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, put L=ceil(log_2 ell)+1 and a=ell-L, and let N_j(1) be the degree-n Mangoldt population in the identity class of the level-j binary Hayes quotient. Then the absolute value of 2^ell N_ell(1) - 2^(a-1) N_(a-1)(1) is at most 2^(2 ell - 2).",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"abs(2^ell*N_ell(1)-2^(a-1)*N_(a-1)(1)) <= 2^(2*ell-2)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"ell_min\":200,\"field_order\":2,\"format\":\"axeyum-gf2-hayes-connected-top-refinement-bound\",\"parameters\":{\"L\":\"ceil(log2(ell))+1\",\"a\":\"ell-L\"},\"version\":1}",
+    "fragment": "none",
+    "free_symbols": ["ell", "n", "a"]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; connected identity-path refinement of the binary Hayes class distribution"
+  },
+  "notes": "This is one uniform analytic obligation, not a finite computation result. The left side is exactly the signed sum of all weighted Haar increments from level a through ell and, equivalently, the degree-n Mangoldt trace over the union of those exact-conductor character families. The CAS checks this telescoping identity independently from the fine and coarse populations. The standard individual Weil estimate proves that all lower levels contribute less than 2^(2 ell - 1); therefore this quarter-scale connected bound implies the required endpoint discrepancy with reserve for every ell>=200. At ell=200 the connected window is j=191,...,200. Both endpoint traces satisfy the candidate in exact fleet runs for every 16<=ell<=20; at ell=20 their absolute candidate-normalized ratios are approximately 0.0087 and 0.0227. Finite survival is not theorem evidence. No proof operation is registered."
+}
