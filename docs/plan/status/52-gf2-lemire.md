@@ -12,12 +12,16 @@ still require the checked general proper-power subtraction.
 **Next:** prove a uniform endpoint discrepancy bound, encode it as replayable
 evidence, then write the paper.  The selected sufficient fourth-moment bound is
 experimentally true for `6<=ell<=23` but remains an open fact; curve positivity
-alone is non-strict.  Sparse and elementary degree-raising shortcuts have been
-closed negatively.  Full definitions, proofs, controls, and literature record:
+alone is non-strict.  The exact half-level Möbius sieve now has a native
+positive-composite counterexample, so the elementary divisor-density route
+requires genuine Type-II/bilinear cancellation.  Sparse and elementary
+degree-raising shortcuts have also been closed negatively.  Full definitions,
+proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `5fac62cbb` | Added the bounded exact half-interval Möbius identity, pinned its first positive-composite parity counterexample with native Berlekamp factorization, and ruled out Porritt's explicit bound at `q=2`. |
 | 2026-08-19 | `77209a5ee` | Added exact fourth moments/cumulants, checked the conditional implication and low control, retained level-23 evidence, and recorded open facts. |
 | 2026-08-19 | `068e0fbff` | Added the exact resource-bounded fourth-moment conductor filtration, quotient-projection controls, public diagnostic, and literature boundary refresh. |
 | 2026-08-19 | `fd9b3633d` | Corrected the fourth-moment ledger contract from an impossible irreducible mean to the exact Mangoldt-weighted population used by the CAS and conditional proof. |
