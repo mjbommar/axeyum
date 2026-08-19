@@ -20,6 +20,10 @@ theorem at that exact fixed-field half-degree boundary. The exact integral
 Hayes-class recurrence has now been specialized and independently matched to
 direct counts through degree 20; its error has varying sign, so the remaining
 target is aggregate cancellation rather than a termwise sign argument.
+`fd1e8793b` adds an exact two-prime NTT/CRT oracle for that aggregate.  It
+identifies the sufficient candidate lemma
+`abs(N_n(1)-2^(n-ell)) <= 2^ell` at `n=2 ell+1, 2 ell+2` and verifies it only
+through `ell=18`; the result is a finite proof target, not universal credit.
 
 The portable boundary is complete for bounded witnesses. `98f2d953f` adds
 canonical JSON, a dense-coefficient second checker, and a standalone dual-check
@@ -43,6 +47,7 @@ ledger before claiming a universal proof.
 <!-- plan-section: landed-changes -->
 
 | 2026-08-18 | `30a004188` | Audited the tempting Hsu half-coefficient survey claim against the explicit bound and the 2023 Gao follow-up; neither supplies positivity at the exact fixed-`GF(2)` endpoint. |
+| 2026-08-18 | `fd1e8793b` | Added an exact finite principal-unit Fourier oracle using two NTT primes and CRT, verified the sufficient endpoint-discrepancy candidate through `ell=18`, and kept the candidate explicitly outside the theorem and fact ledger. |
 | 2026-08-18 | `d32ebbdb1` | Corrected the half-boundary parameterization, derived the exact integral Hayes recurrence, and gated its identity-class counts against an independent direct Rabin enumeration through degree 20. |
 | 2026-08-18 | `6e1372073` `d308c7bc1` | Added deterministic content-bound search shards; five hosts produced and the repository admitted 400/400 dual-checked degrees, with finite-range credit explicitly separated from the universal conjecture. |
 | 2026-08-18 | `98f2d953f` `b678ec7e6` `3718aab11` | Added canonical bounded artifacts, an algebraically separate dense checker, standalone producer/checker CLIs, and the dual-gated degree-400 witness; completion does not claim the universal theorem. |
