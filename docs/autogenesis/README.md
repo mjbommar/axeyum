@@ -132,6 +132,7 @@ compounding, not automation theatre.
 | [First discharged function contract](33-discharged-function-contract-control.md) | Can a local behavior premise be proved generically, discharged by the exact source definition, and remain axiom-free under circularity controls? |
 | [Source-bound function-contract receipt](34-semantic-function-contract-receipt.md) | Can both kernels, the exact source, local contract, witness, specialized proof, and dependency closures become one replayable fail-closed object? |
 | [Real contract target census](35-real-contract-target-census.md) | Is any pointwise Mathlib binding ready for a direct equation contract, and what representation capability must come first? |
+| [First exact contract-body residualization](36-int-gcd-contract-residualization.md) | Can the omitted `Nat.gcd` dependency become a checked local binder, and what trust evidence still blocks a real receipt? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -305,6 +306,13 @@ in the current proof-free slice because every body names an omitted constant.
 ADR-0489 therefore inserts checked contract-body residualization before target
 selection. The axiom-free `Int.gcd`/omitted-`Nat.gcd` row is the first mechanism
 control, not an authorized theorem attempt.
+
+That [first exact residualization](36-int-gcd-contract-residualization.md) now
+passes: the `Int.gcd` equation becomes a two-function local contract and
+specializes exactly. Its source witness is axiom-free but reaches 52 theorems
+transitively despite reporting zero direct theorem dependencies. ADR-0490
+strengthens receipt independence to the complete closure. The next turn must
+produce a bounded one-step source-delta trace rather than whitelist that closure.
 
 ## Phase summary
 

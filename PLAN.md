@@ -158,7 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
-| 2026-08-19 | `fb87e18cb` | Contract target census |
+| 2026-08-19 | `7cbd8548d` | Int.gcd residualization |
 | 2026-08-19 | `6c000b1ef` | Checked slice replay |
 | 2026-08-19 | `5e5141dba` | Slice receipt |
 | 2026-08-19 | `903c22423` | Typed slice |
@@ -189,9 +189,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Status:** direct contracts blocked 50/50 by body closure.
+**Status:** Int.gcd residualizes; 52 theorem closure blocks receipt.
 
-**Next:** residualize omitted contract-body constants.
+**Next:** check one-step source-delta traces.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

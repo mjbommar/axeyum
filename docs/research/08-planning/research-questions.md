@@ -846,6 +846,13 @@ Out of scope:
     ordered local parameters and check source specialization before selecting a
     theorem target. See
     [ADR-0489](../09-decisions/adr-0489-contract-bodies-are-residualized-before-real-target-selection.md).
+- [x] May a source contract witness claim theorem independence from direct
+      theorem dependencies alone?
+  - Answer (2026-08-19): no. A theorem hidden behind one transparent definition
+    defeats the direct inventory, and the exact `Int.gcd` witness has zero
+    direct but 52 transitive theorem dependencies. Receipt authority uses the
+    complete declaration closure. See
+    [ADR-0490](../09-decisions/adr-0490-contract-witness-independence-uses-the-complete-theorem-closure.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?

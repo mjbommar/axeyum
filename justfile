@@ -91,6 +91,10 @@ autogenesis-nursery:
     cargo test -p axeyum-lean-import --example semantic_contract_target_census
     python3 -m unittest scripts.tests.test_check_autogenesis_semantic_contract_target_census
     python3 scripts/check-autogenesis-semantic-contract-target-census.py
+    cargo test -p axeyum-lean-import --test contract_residualization
+    cargo test -p axeyum-lean-import --example int_gcd_contract_residualization
+    python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_residualization
+    python3 scripts/check-autogenesis-int-gcd-contract-residualization.py
 
 # The bulk source is external and optional on CI. The first checker reports
 # verified/unavailable without conflating them; the committed 240-row view is
