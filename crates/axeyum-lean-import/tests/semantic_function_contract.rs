@@ -444,3 +444,89 @@ fn circular_source_answer_is_visible_in_the_axiom_footprint() {
         Err(SemanticFunctionContractReceiptError::WitnessNotIndependent)
     ));
 }
+
+#[test]
+fn theorem_hidden_behind_a_definition_is_not_an_independent_witness() {
+    let (mut independent, independent_generic) = proof_kernel();
+    let mut fixture = fixture();
+    let generic = name(&mut fixture.kernel, &["Generated", "use_id_contract"]);
+    fixture
+        .kernel
+        .add_declaration(Declaration::Theorem {
+            name: generic,
+            uparams: vec![],
+            ty: fixture.generalized_type,
+            value: fixture.generalized_proof,
+        })
+        .expect("source kernel admits the exact generic mirror");
+    let (contract_type, valid_proof) =
+        source_contract(&mut fixture.kernel, &fixture.logic, fixture.source_id);
+    let upstream = name(&mut fixture.kernel, &["Upstream", "hidden_answer"]);
+    fixture
+        .kernel
+        .add_declaration(Declaration::Theorem {
+            name: upstream,
+            uparams: vec![],
+            ty: contract_type,
+            value: valid_proof,
+        })
+        .expect("the upstream control theorem is valid");
+    let helper = name(&mut fixture.kernel, &["Upstream", "answer_wrapper"]);
+    let upstream_term = fixture.kernel.const_(upstream, vec![]);
+    fixture
+        .kernel
+        .add_declaration(Declaration::Definition {
+            name: helper,
+            uparams: vec![],
+            ty: contract_type,
+            value: upstream_term,
+            hint: ReducibilityHint::Regular(0),
+        })
+        .expect("the control definition hides the theorem one edge away");
+    let contaminated = name(&mut fixture.kernel, &["Generated", "indirect_witness"]);
+    let helper_term = fixture.kernel.const_(helper, vec![]);
+    fixture
+        .kernel
+        .add_declaration(Declaration::Theorem {
+            name: contaminated,
+            uparams: vec![],
+            ty: contract_type,
+            value: helper_term,
+        })
+        .expect("direct-only auditing would accept this witness");
+    assert!(fixture.kernel.theorem_dependencies(contaminated).is_empty());
+    assert!(
+        fixture
+            .kernel
+            .declaration_dependency_closure(contaminated)
+            .contains(&upstream)
+    );
+    let generic_term = fixture.kernel.const_(generic, vec![]);
+    let source_term = fixture.kernel.const_(fixture.source_id, vec![]);
+    let applied = fixture.kernel.app(generic_term, source_term);
+    let contaminated_term = fixture.kernel.const_(contaminated, vec![]);
+    let applied = fixture.kernel.app(applied, contaminated_term);
+    let concrete = name(&mut fixture.kernel, &["Generated", "indirect_result"]);
+    fixture
+        .kernel
+        .add_declaration(Declaration::Theorem {
+            name: concrete,
+            uparams: vec![],
+            ty: contract_type,
+            value: applied,
+        })
+        .expect("the assurance gate, not typing, rejects this path");
+    assert!(matches!(
+        issue_semantic_function_contract_receipt(
+            &mut independent,
+            independent_generic,
+            &mut fixture.kernel,
+            fixture.source_id,
+            generic,
+            contaminated,
+            concrete,
+            "synthetic-pointwise-function-contract-v1",
+        ),
+        Err(SemanticFunctionContractReceiptError::WitnessNotIndependent)
+    ));
+}

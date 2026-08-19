@@ -40,11 +40,16 @@ use axeyum_lean_kernel::{
 };
 use serde_json::{Map, Value};
 
+mod contract_residualization;
 mod identity;
 mod semantic_contract_receipt;
 mod type_slice;
 mod type_slice_receipt;
 
+pub use contract_residualization::{
+    ResidualizedFunctionContract, ResidualizedFunctionContractError,
+    residualize_function_contract_body,
+};
 pub use identity::{
     AxiomIdentity, DeclarationDependencyIdentity, DeclarationIdentity, DeclarationKind,
     canonical_declaration_sha256, canonical_expression_sha256, canonical_level_sha256,

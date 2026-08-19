@@ -286,7 +286,7 @@ pub fn issue_semantic_function_contract_receipt(
         return Err(SemanticFunctionContractReceiptError::GenericMirrorMismatch);
     }
     if !proof_kernel.axiom_footprint(proof_generic).is_empty()
-        || !proof_kernel.theorem_dependencies(proof_generic).is_empty()
+        || !transitive_theorem_dependencies(proof_kernel, proof_generic).is_empty()
     {
         return Err(SemanticFunctionContractReceiptError::GenericProofNotIndependent);
     }
@@ -313,9 +313,7 @@ pub fn issue_semantic_function_contract_receipt(
         return Err(SemanticFunctionContractReceiptError::WitnessTypeMismatch);
     }
     if !source_kernel.axiom_footprint(source_witness).is_empty()
-        || !source_kernel
-            .theorem_dependencies(source_witness)
-            .is_empty()
+        || !transitive_theorem_dependencies(source_kernel, source_witness).is_empty()
     {
         return Err(SemanticFunctionContractReceiptError::WitnessNotIndependent);
     }
@@ -344,7 +342,7 @@ pub fn issue_semantic_function_contract_receipt(
     }
     let theorem_dependencies = rendered_names(
         source_kernel,
-        &source_kernel.theorem_dependencies(concrete_theorem),
+        &transitive_theorem_dependencies(source_kernel, concrete_theorem),
     );
     let mut expected_theorems = vec![
         source_kernel.display_name(source_generic).to_string(),
@@ -462,6 +460,19 @@ fn dependency_receipts(
                 kind: declaration_kind(declaration).to_owned(),
                 content_sha256: declaration_hash(kernel, name)?,
             })
+        })
+        .collect()
+}
+
+fn transitive_theorem_dependencies(kernel: &Kernel, root: NameId) -> Vec<NameId> {
+    kernel
+        .declaration_dependency_closure(root)
+        .into_iter()
+        .filter(|&name| {
+            matches!(
+                kernel.environment().get(name),
+                Some(Declaration::Theorem { .. })
+            )
         })
         .collect()
 }
