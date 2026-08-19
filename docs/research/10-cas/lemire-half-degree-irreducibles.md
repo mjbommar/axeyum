@@ -208,6 +208,56 @@ character polynomials. Exact symbolic group determinants for `ell <= 3` agree
 with the factors printed in Gao--Kuttner--Wang; this is a reformulation, not a
 new estimate.
 
+There is a sharper endpoint-specific form of the same obligation. Work in the
+rational group algebra, put
+
+```text
+U   = 2^(-ell) S_ell,
+B_d = A_d - 2^d U                 (0 <= d < ell),
+B(z)= sum_(0 <= d < ell) B_d z^d.
+```
+
+Here `U` and `1-U` are orthogonal idempotents, `B_0=1-U`, and `U B_d=0`.
+The exact uniformity `A_d=2^d U` for `d>=ell` therefore splits the full
+series without approximation:
+
+```text
+A(z) = U/(1-2z) + B(z),
+z A'(z)/A(z) = 2z U/(1-2z) + z B'(z)/B(z).
+```
+
+Writing `C(z)=sum_(1<=d<ell) B_d z^d` in the complementary algebra, whose
+identity is `1-U`, gives the exact centered logarithm
+
+```text
+Delta_(ell,n)
+ = n [1,z^n] log((1-U)+C(z))
+ = n sum_(k>=1) (-1)^(k+1)/k [1,z^n] C(z)^k.       (centered log)
+```
+
+Since `deg C <= ell-1`, every term with
+`k < ceil(n/(ell-1))` is identically zero.  In particular, at both Lemire
+endpoints the expansion begins at order at least three: neither a one-row nor
+a two-row correlation contributes.  Expanding one centered product also has
+an integral counting interpretation.  For a composition
+`d_1+...+d_k=n` with every `1<=d_i<ell`,
+
+```text
+[1] B_(d_1)...B_(d_k)
+ = #{(f_1,...,f_k): f_i monic, deg f_i=d_i,
+                     <f_1...f_k>=1} - 2^(n-ell).
+```
+
+Thus the missing estimate can equivalently be phrased as cancellation among
+connected factor-tuple correlations of order at least three.  This removes
+the already-refuted conductor-by-conductor triangle decomposition from the
+formula, but it is not by itself a bound: absolute estimates for the displayed
+tuple counts can still lose the whole main term.  The independent integer
+group-ring checker evaluates the centered logarithm with exact rational
+coefficients for both endpoints through `ell=5`, verifies the structural
+support cutoff before class arithmetic, and matches the recurrence
+discrepancies.  It provides a new exact attack surface, not universal credit.
+
 A tempting shape-preserving induction also fails. If `f=x^n+q`, then `f^2+x`
 has degree `2n` and tail degree at most `n`, but it is reducible for every
 shaped irreducible in an exhaustive degree-2-through-12 test. The related

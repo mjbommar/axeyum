@@ -9,6 +9,7 @@ separate bit-polynomial Rabin test for the target short intervals.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from fractions import Fraction
 
 
 EXPECTED = (1, 1, 1, 2, 3, 2, 4, 7, 4, 12, 6, 19, 20, 28, 33, 59, 49, 101)
@@ -235,6 +236,70 @@ def exact_conductor_second_moment(level: int, degree: int) -> int:
     return current_energy - previous_energy
 
 
+def centered_log_discrepancy(ell: int, degree: int) -> tuple[int, int]:
+    """Recover Delta from the nonuniform logarithm, with exact rationals.
+
+    If U is the uniform idempotent and B_d=A_d-2^d U, then the nonuniform
+    factor is (1-U)+C(z), where C(z)=sum_{1<=d<ell} B_d z^d.  Hence
+
+        Delta_(ell,n) = n [1,z^n] sum_{k>=1} (-1)^(k+1) C(z)^k/k.
+
+    The maximum z-degree of C is ell-1, so all orders below
+    ceil(n/(ell-1)) vanish before any class arithmetic is performed.
+    """
+    if ell < 2:
+        fail("centered logarithm requires ell >= 2")
+    group = PrincipalUnitGroup.construct(ell)
+    size = len(group.elements)
+    uniform_denominator = 1 << ell
+    centered = [[Fraction(0) for _ in range(size)] for _ in range(degree + 1)]
+    for row_degree in range(1, ell):
+        class_sum = monic_class_sum(group, row_degree)
+        uniform = Fraction(1 << row_degree, uniform_denominator)
+        centered[row_degree] = [Fraction(value) - uniform for value in class_sum]
+
+    def series_product(
+        left: list[list[Fraction]], right: list[list[Fraction]]
+    ) -> list[list[Fraction]]:
+        result = [
+            [Fraction(0) for _ in range(size)] for _ in range(degree + 1)
+        ]
+        for left_degree, left_row in enumerate(left):
+            if left_degree > degree or not any(left_row):
+                continue
+            retained_right = right[: degree - left_degree + 1]
+            for right_degree, right_row in enumerate(retained_right):
+                if not any(right_row):
+                    continue
+                product = group.convolution(left_row, right_row)
+                target = result[left_degree + right_degree]
+                result[left_degree + right_degree] = [
+                    old + value for old, value in zip(target, product, strict=True)
+                ]
+        return result
+
+    minimum_order = (degree + ell - 2) // (ell - 1)
+    power = centered
+    discrepancy = Fraction(0)
+    for order in range(1, degree + 1):
+        coefficient = power[degree][group.identity]
+        if order < minimum_order and coefficient:
+            fail(
+                f"ell={ell} degree={degree}: centered order {order} "
+                "appears below its degree support"
+            )
+        sign = 1 if order % 2 else -1
+        discrepancy += sign * Fraction(degree, order) * coefficient
+        if order != degree:
+            power = series_product(power, centered)
+    if discrepancy.denominator != 1:
+        fail(
+            f"ell={ell} degree={degree}: centered discrepancy is nonintegral "
+            f"({discrepancy})"
+        )
+    return discrepancy.numerator, minimum_order
+
+
 def main() -> None:
     observed: list[int] = []
     for degree in range(3, 21):
@@ -262,13 +327,36 @@ def main() -> None:
         fail(f"level-5 degree-45 normalized layer differs: {normalized_layer}")
     if normalized_layer * normalized_layer <= 1 << 45:
         fail("constant-one layer target is no longer refuted")
+    centered_controls: list[str] = []
+    for ell in range(2, 6):
+        for degree in (2 * ell + 1, 2 * ell + 2):
+            group, distribution = mangoldt_class_distribution(ell, degree)
+            expected = distribution[group.identity] - (1 << (degree - ell))
+            observed_discrepancy, minimum_order = centered_log_discrepancy(
+                ell, degree
+            )
+            if observed_discrepancy != expected:
+                fail(
+                    f"ell={ell} degree={degree}: centered={observed_discrepancy} "
+                    f"recurrence={expected}"
+                )
+            if minimum_order < 3:
+                fail(
+                    f"ell={ell} degree={degree}: endpoint logarithm has order "
+                    f"{minimum_order}, expected at least three"
+                )
+            centered_controls.append(
+                f"{ell}:{degree}:{observed_discrepancy}:{minimum_order}"
+            )
     print(
         "GF2_HAYES|status=PASS|degrees=3..20|"
         f"counts={','.join(str(value) for value in observed)}|"
         f"level8_degree17_second_moment={moment}|"
         "generic_cauchy_route=false|"
         f"level5_degree45_normalized_layer={normalized_layer}|"
-        "constant_one_layer_target=false"
+        "constant_one_layer_target=false|"
+        "centered_endpoint_log=PASS|"
+        f"centered_controls={','.join(centered_controls)}"
     )
 
 
