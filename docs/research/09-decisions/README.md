@@ -573,3 +573,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0498](adr-0498-measure-the-combined-berlekamp-inverse-phase.md) | Add a bounded exact stationary-fibre ledger for the characteristic-two Berlekamp-discriminant plus inverse-additive phase | accepted |
 | [0499](adr-0499-average-berlekamp-shift-energy-over-annihilators.md) | Replace per-frequency Berlekamp diagnostics by an exact signed simultaneous-coset energy and feed candidate bounds into the endpoint ledger | accepted |
 | [0500](adr-0500-classify-inverse-shift-support-by-truncated-artin-schreier-kernels.md) | Reduce every inverse-coset shift collision to an affine binary Artin--Schreier equation and prove its exact kernel dimension | accepted |
+| [0501](adr-0501-single-translation-defects-do-not-prove-berlekamp-fibre-cancellation.md) | Measure exact sign-reversing defects in every simultaneous coset and reject a one-translation proof of the local square-root bound | accepted |

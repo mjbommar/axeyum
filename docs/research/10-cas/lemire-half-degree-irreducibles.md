@@ -1211,6 +1211,28 @@ collision-classification gap, but deliberately does not infer cancellation
 of `mu(f)mu(f+h)` on a nonempty affine fibre.  That Berlekamp-sign estimate is
 still the live local theorem.
 
+A direct sign-reversing involution does explain some, but not all, of that
+cancellation.  For one simultaneous bucket define `w(m)` on the low
+coefficient cube to be its Möbius sign, or zero outside the bucket.  Every
+nonzero translation `t` gives the exact triangle bound
+
+```text
+abs(sum_m w(m)) <= D_t,
+D_t=(1/2) sum_m abs(w(m)+w(m+t)).                  (translation defect)
+```
+
+`binary_berlekamp_involution_defect_report` minimizes `D_t` over every
+nonzero `t` separately in every enumerated bucket.  At the odd row
+`(ell,k,d)=(9,11,8)`, no one of the eight occupied buckets has an exact
+sign-reversing translation.  Worse, the bucket maximizing the defect ratio
+has population `88`, signed magnitude `6`, and minimum defect `54`, so
+`54^2>2d*88`.  The desired signed inequality still holds there---the relevant
+worst signed square is only `225<=16*85`---but it cannot be proved by replacing
+the signed magnitude with the best **single-translation** defect.  This is a
+finite counterexample to that proposed proof mechanism, not to the local
+square-root conjecture.  Any involutive argument must combine translations or
+use cancellation inside the defect terms.
+
 This also sharpens the boundary on the new Kloosterman result.  The
 stationary-phase bound controls the **unweighted** distribution of one product
 of intervals.  A Vaughan identity introduces Möbius-derived weights, and an

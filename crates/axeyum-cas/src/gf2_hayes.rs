@@ -1372,6 +1372,54 @@ pub struct BinaryBerlekampAnnihilatorEnergyReport {
     pub shift_correlations: Vec<BinaryBerlekampShiftCorrelation>,
 }
 
+/// Exact finite diagnostic for sign-reversing translations inside the
+/// simultaneous input/inverse cosets.
+///
+/// For one bucket write `w(m)` for its value in `{-1,0,1}` on the low
+/// coefficient cube.  Every nonzero translation `t` gives the rigorous
+/// triangle bound
+///
+/// ```text
+/// abs(sum_m w(m))
+///   <= (1/2) sum_m abs(w(m)+w(m+t)).
+/// ```
+///
+/// This report minimizes the right-hand side separately in every finite
+/// bucket.  It diagnoses a possible involution proof; it does not extrapolate
+/// the observed minima to unenumerated degrees.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryBerlekampInvolutionDefectReport {
+    /// Principal-unit modulus is `x^(ell+1)`.
+    pub ell: usize,
+    /// Degree of the monic constant-one polynomials.
+    pub degree: usize,
+    /// Dimension of the low-coefficient and inverse-interval cubes.
+    pub interval_degree: usize,
+    /// Number of nonempty simultaneous cosets.
+    pub occupied_bucket_count: usize,
+    /// Buckets whose exact signed sum is zero.
+    pub zero_signed_bucket_count: usize,
+    /// Buckets admitting a translation with zero defect.
+    pub exactly_sign_reversed_bucket_count: usize,
+    /// Buckets where the best translation triangle bound is exact.
+    pub exact_triangle_bucket_count: usize,
+    /// Input-coset witness maximizing `minimum_defect^2/population`.
+    pub worst_input_coset: usize,
+    /// Inverse-coset witness maximizing `minimum_defect^2/population`.
+    pub worst_inverse_coset: usize,
+    /// Best nonzero translation for the witness bucket.
+    pub worst_bucket_translation: usize,
+    /// Exact signed magnitude in the witness bucket.
+    pub worst_bucket_signed_magnitude: u128,
+    /// Minimum translation defect in the witness bucket.
+    pub worst_bucket_minimum_defect: u128,
+    /// Squarefree population in the witness bucket.
+    pub worst_bucket_population: u128,
+    /// Whether every enumerated minimum satisfies
+    /// `minimum_defect^2<=2d*population`.
+    pub finite_defect_candidate_holds: bool,
+}
+
 impl BinaryBerlekampAnnihilatorEnergyReport {
     /// Whether the Berlekamp signs strictly reduce simultaneous-coset energy.
     #[must_use]
@@ -4784,6 +4832,178 @@ fn summarize_binary_berlekamp_cosets(
     })
 }
 
+struct BinaryBerlekampInvolutionMinima {
+    bucket_keys: Vec<(usize, usize)>,
+    minimum_defects: Vec<u128>,
+    best_translations: Vec<usize>,
+}
+
+fn binary_berlekamp_involution_minima(
+    domain: &BinaryBerlekampPhaseDomain,
+    enumeration: &BinaryBerlekampCosetEnumeration,
+) -> Result<BinaryBerlekampInvolutionMinima, HayesError> {
+    let bucket_keys = enumeration.buckets.keys().copied().collect::<Vec<_>>();
+    let bucket_indices = bucket_keys
+        .iter()
+        .enumerate()
+        .map(|(index, &key)| (key, index))
+        .collect::<BTreeMap<_, _>>();
+    let mut buckets_by_input = vec![Vec::<usize>::new(); domain.input_count / domain.coset_size];
+    for (index, &(input_coset, _)) in bucket_keys.iter().enumerate() {
+        buckets_by_input[input_coset].push(index);
+    }
+    let mut minimum_defects = vec![u128::MAX; bucket_keys.len()];
+    let mut best_translations = vec![0_usize; bucket_keys.len()];
+    for (input_coset, bucket_group) in buckets_by_input.iter().enumerate() {
+        let offset = input_coset * domain.coset_size;
+        for translation in 1..domain.coset_size {
+            let mut defects = BTreeMap::<usize, u128>::new();
+            for left in 0..domain.coset_size {
+                let right = left ^ translation;
+                if left >= right {
+                    continue;
+                }
+                let left_index = offset + left;
+                let right_index = offset + right;
+                let left_mobius = enumeration.mobius_values[left_index];
+                let right_mobius = enumeration.mobius_values[right_index];
+                if left_mobius == 0 && right_mobius == 0 {
+                    continue;
+                }
+                let left_inverse = enumeration.inverse_cosets[left_index];
+                let right_inverse = enumeration.inverse_cosets[right_index];
+                if left_mobius != 0 && right_mobius != 0 && left_inverse == right_inverse {
+                    let bucket = *bucket_indices
+                        .get(&(input_coset, left_inverse))
+                        .ok_or_else(|| {
+                            HayesError::Invariant(
+                                "Berlekamp involution pair has no bucket".to_owned(),
+                            )
+                        })?;
+                    let contribution = u128::from(
+                        (i16::from(left_mobius) + i16::from(right_mobius)).unsigned_abs(),
+                    );
+                    let entry = defects.entry(bucket).or_insert(0);
+                    *entry = entry.checked_add(contribution).ok_or_else(|| {
+                        HayesError::InvalidParameter(
+                            "Berlekamp involution defect overflow".to_owned(),
+                        )
+                    })?;
+                } else {
+                    for (mobius, inverse) in
+                        [(left_mobius, left_inverse), (right_mobius, right_inverse)]
+                    {
+                        if mobius == 0 {
+                            continue;
+                        }
+                        let bucket =
+                            *bucket_indices.get(&(input_coset, inverse)).ok_or_else(|| {
+                                HayesError::Invariant(
+                                    "Berlekamp involution boundary has no bucket".to_owned(),
+                                )
+                            })?;
+                        let entry = defects.entry(bucket).or_insert(0);
+                        *entry = entry.checked_add(1).ok_or_else(|| {
+                            HayesError::InvalidParameter(
+                                "Berlekamp involution defect overflow".to_owned(),
+                            )
+                        })?;
+                    }
+                }
+            }
+            for &bucket in bucket_group {
+                let defect = defects.get(&bucket).copied().unwrap_or(0);
+                if defect < minimum_defects[bucket] {
+                    minimum_defects[bucket] = defect;
+                    best_translations[bucket] = translation;
+                }
+            }
+        }
+    }
+    Ok(BinaryBerlekampInvolutionMinima {
+        bucket_keys,
+        minimum_defects,
+        best_translations,
+    })
+}
+
+/// Minimize exact sign-reversing-translation defects in every simultaneous
+/// input/inverse coset.
+///
+/// The result is a bounded finite diagnostic for a possible involution lemma,
+/// not universal theorem evidence.
+///
+/// # Errors
+///
+/// Returns the same domain, factorization, and resource-limit failures as
+/// [`binary_berlekamp_annihilator_energy_report`].
+pub fn binary_berlekamp_involution_defect_report(
+    ell: usize,
+    degree: usize,
+    interval_degree: usize,
+    limits: HayesLimits,
+) -> Result<BinaryBerlekampInvolutionDefectReport, HayesError> {
+    if interval_degree == 0 || interval_degree >= ell {
+        return Err(HayesError::InvalidParameter(format!(
+            "Berlekamp involution interval degree must satisfy 1<=d<ell, got d={interval_degree}, ell={ell}"
+        )));
+    }
+    let domain = admit_binary_berlekamp_phase_domain(ell, degree, 0, interval_degree, limits)?;
+    let enumeration = enumerate_binary_berlekamp_cosets(&domain, degree, ell, interval_degree)?;
+    let minima = binary_berlekamp_involution_minima(&domain, &enumeration)?;
+
+    let mut zero_signed_bucket_count = 0_usize;
+    let mut exactly_sign_reversed_bucket_count = 0_usize;
+    let mut exact_triangle_bucket_count = 0_usize;
+    let mut finite_defect_candidate_holds = true;
+    let mut worst = (0_usize, 0_usize, 0_usize, 0_u128, 0_u128, 1_u128);
+    for (index, &(input_coset, inverse_coset)) in minima.bucket_keys.iter().enumerate() {
+        let &(signed, population) = enumeration
+            .buckets
+            .get(&(input_coset, inverse_coset))
+            .ok_or_else(|| HayesError::Invariant("Berlekamp bucket disappeared".to_owned()))?;
+        let signed_magnitude = signed.unsigned_abs();
+        let defect = minima.minimum_defects[index];
+        if signed_magnitude > defect {
+            return Err(HayesError::Invariant(
+                "Berlekamp involution triangle bound misses the signed bucket".to_owned(),
+            ));
+        }
+        zero_signed_bucket_count += usize::from(signed_magnitude == 0);
+        exactly_sign_reversed_bucket_count += usize::from(defect == 0);
+        exact_triangle_bucket_count += usize::from(defect == signed_magnitude);
+        let defect_square = BigUint::from(defect).pow(2);
+        let candidate_bound = BigUint::from(2 * interval_degree) * population;
+        finite_defect_candidate_holds &= defect_square <= candidate_bound;
+        if &defect_square * worst.5 > BigUint::from(worst.4).pow(2) * population {
+            worst = (
+                input_coset,
+                inverse_coset,
+                minima.best_translations[index],
+                signed_magnitude,
+                defect,
+                population,
+            );
+        }
+    }
+    Ok(BinaryBerlekampInvolutionDefectReport {
+        ell,
+        degree,
+        interval_degree,
+        occupied_bucket_count: minima.bucket_keys.len(),
+        zero_signed_bucket_count,
+        exactly_sign_reversed_bucket_count,
+        exact_triangle_bucket_count,
+        worst_input_coset: worst.0,
+        worst_inverse_coset: worst.1,
+        worst_bucket_translation: worst.2,
+        worst_bucket_signed_magnitude: worst.3,
+        worst_bucket_minimum_defect: worst.4,
+        worst_bucket_population: worst.5,
+        finite_defect_candidate_holds,
+    })
+}
+
 /// Enumerate the combined Berlekamp-discriminant and inverse-additive phase.
 ///
 /// The domain consists of every monic constant-one binary polynomial `f` of
@@ -8139,18 +8359,59 @@ mod tests {
         let report =
             binary_berlekamp_annihilator_energy_report(ell, k, d, d, HayesLimits::default())
                 .unwrap();
+        let involution =
+            binary_berlekamp_involution_defect_report(ell, k, d, HayesLimits::default()).unwrap();
         let global_bound = BigUint::from(1_u8) << k;
         let local_bound = BigUint::from(2 * d) * report.worst_bucket_population;
         eprintln!(
-            "ell={ell} endpoint={endpoint} d={d} k={k} energy={} global_bound={} worst_square={} worst_population={} local_bound={}",
+            "ell={ell} endpoint={endpoint} d={d} k={k} energy={} global_bound={} worst_square={} worst_population={} local_bound={} exact_involutions={}/{} exact_triangles={} defect_candidate={} defect_signed={} worst_defect={} defect_population={} defect_translation={}",
             report.signed_coset_energy,
             global_bound,
             report.worst_bucket_signed_square,
             report.worst_bucket_population,
-            local_bound
+            local_bound,
+            involution.exactly_sign_reversed_bucket_count,
+            involution.occupied_bucket_count,
+            involution.exact_triangle_bucket_count,
+            involution.finite_defect_candidate_holds,
+            involution.worst_bucket_signed_magnitude,
+            involution.worst_bucket_minimum_defect,
+            involution.worst_bucket_population,
+            involution.worst_bucket_translation
         );
         assert!(report.signed_coset_energy <= global_bound);
         assert!(report.worst_bucket_signed_square <= local_bound);
+    }
+
+    #[test]
+    fn berlekamp_bucket_translations_give_checked_triangle_bounds() {
+        let report =
+            binary_berlekamp_involution_defect_report(8, 12, 5, HayesLimits::default()).unwrap();
+        assert_eq!(report.ell, 8);
+        assert_eq!(report.degree, 12);
+        assert_eq!(report.interval_degree, 5);
+        assert_eq!(report.occupied_bucket_count, 471);
+        assert_eq!(report.zero_signed_bucket_count, 95);
+        assert_eq!(report.exactly_sign_reversed_bucket_count, 62);
+        assert_eq!(report.exact_triangle_bucket_count, 393);
+        assert_eq!(report.worst_input_coset, 62);
+        assert_eq!(report.worst_inverse_coset, 3);
+        assert_eq!(report.worst_bucket_translation, 1);
+        assert_eq!(report.worst_bucket_signed_magnitude, 6);
+        assert_eq!(report.worst_bucket_minimum_defect, 6);
+        assert_eq!(report.worst_bucket_population, 6);
+        assert!(report.finite_defect_candidate_holds);
+
+        let failure =
+            binary_berlekamp_involution_defect_report(9, 11, 8, HayesLimits::default()).unwrap();
+        assert_eq!(failure.occupied_bucket_count, 8);
+        assert_eq!(failure.exactly_sign_reversed_bucket_count, 0);
+        assert_eq!(failure.exact_triangle_bucket_count, 0);
+        assert_eq!(failure.worst_bucket_translation, 104);
+        assert_eq!(failure.worst_bucket_signed_magnitude, 6);
+        assert_eq!(failure.worst_bucket_minimum_defect, 54);
+        assert_eq!(failure.worst_bucket_population, 88);
+        assert!(!failure.finite_defect_candidate_holds);
     }
 
     #[test]
