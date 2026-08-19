@@ -126,8 +126,13 @@ Baseline: **24 passed, 0 failed.**
 
 ## Numbers
 
-- `-p axeyum-lean-kernel --lib`, filter `creal`: **35 passed, 0 failed**
-  (2,194 s wall under three concurrent lanes; the work is ~60 s of kernel).
+- `-p axeyum-lean-kernel --lib`: **370 → 375 passed, 0 failed** (2,463 s wall
+  under three concurrent lanes; the kernel work is ~60 s). Filtered to `creal`:
+  35 passed.
+- **Stable** clippy (`--workspace --all-targets --all-features -D warnings`)
+  and `RUSTDOCFLAGS="-D warnings" cargo doc`: both clean, run from a
+  `lane-snapshot` tree with a cold target dir so nothing was skipped on mtime.
+- `validate-facts.py`: 125 facts, 0 errors.
 - `CReal` declarations: **71 → 76**. `Rat` gains 2.
 - `nat_axiom_inventory --include-constructed`: `creal` and `rat` both
   `axiom=0 opaque=0 quotient=0 total_trusted=0`, **unchanged**.
