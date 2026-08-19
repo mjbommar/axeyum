@@ -327,6 +327,31 @@ run cargo nextest run --profile local --workspace --all-features --no-fail-fast 
 # nextest does not run doctests.
 run cargo test --workspace --all-features --doc || rc=$?
 
+# THE CAPABILITY FRONTIER RATCHET, SERIALIZED. It moved here from
+# `hooks/pre-push` on 2026-08-19, and moving it makes it stronger rather than
+# weaker -- which is the only reason it was allowed to move.
+#
+# It measures "the largest N decided within a fixed WALL-CLOCK budget", so it is
+# the one gate contention actively corrupts. Each family calibrates the machine
+# before and after its sweep and marks a run NOT COMPARABLE (ratchet not
+# enforced) or ADVISORY ONLY (do not raise a baseline from it) when the frame
+# moved. In the pre-push hook, with eight lanes on the box, it cost **200 s of
+# the 545 s baseline** and spent most of that being advisory -- paying full price
+# for a verdict it then declined to enforce. The nextest sweep above would do the
+# same thing, since `profile.local` is `default-filter = 'all()'` and runs it in
+# parallel with everything else.
+#
+# So it runs HERE, after that sweep, with `--test-threads=1`, which is what
+# `just frontier` does and what makes the numbers comparable. Read the
+# `reference frame [family]: ...` line before believing a REGRESSION or
+# committing a PROGRESS.
+#
+# It exists because a 17-point `nia_unsat` regression once shipped and needed an
+# 829-commit bisect: it is the only gate that notices we got WEAKER without
+# getting WRONG.
+run cargo test -p axeyum-solver --test progress_frontier --features full \
+    -- --test-threads=1 || rc=$?
+
 if [ "$WITH_MOMENT" = 1 ]; then
   # The order-255 certified-moment proofs (~15 min each) are #[ignore]d.
   run cargo test -p axeyum-cas --lib -- --ignored || rc=$?
