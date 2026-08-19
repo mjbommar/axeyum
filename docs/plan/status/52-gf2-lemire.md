@@ -201,6 +201,20 @@ local bound itself remains unproved and receives no theorem credit.
 The exact local statement is now an explicit conjectured fact-ledger
 obligation, with no proof route or evidence, so Autogenesis can dispatch the
 actual frontier without mistaking the bounded report for a certificate.
+The primary aggregate target is now the equivalent connected inequality
+`K_4<=M_2^2`, or root ratio `R_0<=4`.  Unlike a cellwise estimate, it retains
+all signed convolution-order cancellation.  Both endpoints satisfy it through
+`ell=21` and the completed odd `ell=22` row does as well; these are uncredited
+finite diagnostics.  The exact implication yields
+`M_4<=64 ell^4 2^(3ell)` and closes the same degree-400 handoff.  A conjectured
+fact exposes this aggregate obligation to Autogenesis without a proof route.
+The first conductor proof decomposition is now exact and mutation-checked.
+The naive geometric bound on every layer fails at conductor one for even
+`ell=20`; buffering all levels below `ceil(ell/2)` and applying the geometric
+bound above it survives both `ell=20` endpoints, and the two allowances sum
+exactly to the required `3 M_2^2`.  It fails at the small `ell=8` control but
+holds at `ell=12`, so its ledger statement starts only at `ell=200`.  This buffered split is a separate
+conjectured fact and remains the live uniform lemma.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
