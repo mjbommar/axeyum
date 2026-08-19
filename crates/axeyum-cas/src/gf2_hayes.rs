@@ -1289,6 +1289,119 @@ impl BinaryBerlekampInversePhaseReport {
     }
 }
 
+/// Exact annihilator-average of the combined Berlekamp/inverse shift energy.
+///
+/// Input cosets fix coefficients above `shift_dimension`; inverse cosets fix
+/// inverse coefficients above `interval_degree`.  If `b_(C,D)` is the signed
+/// Möbius sum in one simultaneous coset, `signed_coset_energy` is
+/// `sum_(C,D)b_(C,D)^2`.  Additive orthogonality identifies this with the
+/// average of [`BinaryBerlekampInversePhaseReport::shift_subspace_energy`]
+/// over the annihilator of `W_interval_degree`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryBerlekampShiftCorrelation {
+    /// Packed shift in coefficients `x^1..=x^shift_dimension`.
+    pub shift: usize,
+    /// `x`-adic valuation of the actual shift polynomial; `None` for zero.
+    pub valuation: Option<usize>,
+    /// Number of ordered squarefree pairs surviving the inverse-coset test.
+    pub supported_pairs: u128,
+    /// Signed sum of `mu(f)mu(f+h)` over those pairs.
+    pub signed_correlation: i128,
+}
+
+/// Exact annihilator-average of the combined Berlekamp/inverse shift energy.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryBerlekampAnnihilatorEnergyReport {
+    /// Principal-unit modulus is `x^(ell+1)`.
+    pub ell: usize,
+    /// Degree of the monic constant-one polynomials.
+    pub degree: usize,
+    /// Annihilator consists of frequencies whose first this-many bits vanish.
+    pub interval_degree: usize,
+    /// Number of low polynomial coefficients toggled by the shift subspace.
+    pub shift_dimension: usize,
+    /// Total number `2^(degree-1)` of monic constant-one inputs.
+    pub input_count: u128,
+    /// Number `2^(ell-interval_degree)` of annihilator frequencies.
+    pub annihilator_frequency_count: u128,
+    /// Number of nonempty simultaneous input/inverse cosets.
+    pub occupied_coset_count: usize,
+    /// Input-coset index attaining the largest ratio `b_(C,D)^2/population`.
+    pub worst_input_coset: usize,
+    /// Inverse-coset index attaining the largest ratio.
+    pub worst_inverse_coset: usize,
+    /// Signed square in the worst ratio.
+    pub worst_bucket_signed_square: BigUint,
+    /// Squarefree population in the worst ratio.
+    pub worst_bucket_population: u128,
+    /// Exact signed sum with inverse residue in `V_interval_degree`.
+    pub inverse_interval_phase_sum: i128,
+    /// `sum_(C,D)b_(C,D)^2`, retaining Möbius/Berlekamp cancellation.
+    pub signed_coset_energy: BigUint,
+    /// Same collision count after replacing every Möbius weight by its support.
+    pub unsigned_collision_count: BigUint,
+    /// Exact number `(2^degree-(-1)^degree)/3` of squarefree inputs.
+    pub diagonal_squarefree_count: u128,
+    /// Sum of all nonzero-shift signed correlations.
+    pub off_diagonal_signed_correlation: i128,
+    /// Sum of shift energies over all annihilator frequencies.
+    pub averaged_shift_energy: BigUint,
+    /// Cauchy bound for `inverse_interval_phase_sum^2`.
+    pub fibre_cauchy_square_bound: BigUint,
+    /// Exact correlations for every packed low-coefficient shift.
+    pub shift_correlations: Vec<BinaryBerlekampShiftCorrelation>,
+}
+
+impl BinaryBerlekampAnnihilatorEnergyReport {
+    /// Whether the Berlekamp signs strictly reduce simultaneous-coset energy.
+    #[must_use]
+    pub fn has_signed_collision_cancellation(&self) -> bool {
+        self.signed_coset_energy < self.unsigned_collision_count
+    }
+}
+
+/// Conditional exponent ledger for one endpoint convolution term using the
+/// annihilator-averaged Berlekamp shift energy.
+///
+/// Every exponent is an exact numerator over denominator thirty-two.  The two
+/// energy inputs are numerators over denominator sixteen for degrees `k` and
+/// `k-1`, where `k=endpoint_degree-interval_degree`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryBerlekampAggregateExponentLedger {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree `n`.
+    pub endpoint_degree: usize,
+    /// Convolution order `d`.
+    pub interval_degree: usize,
+    /// Shift-subspace dimension `s`.
+    pub shift_dimension: usize,
+    /// Exact-degree index `k=n-d`.
+    pub mobius_degree: usize,
+    /// Assumed exponent numerator over sixteen for `E_(s,d)(k)`.
+    pub energy_exponent_sixteenths: u128,
+    /// Assumed exponent numerator over sixteen for `E_(s,d)(k-1)`.
+    pub previous_energy_exponent_sixteenths: u128,
+    /// Cauchy exponent for the `B_k` fibre, over thirty-two.
+    pub phase_bound_thirty_seconds: u128,
+    /// Cauchy exponent for the `B_(k-1)` fibre, over thirty-two.
+    pub previous_phase_bound_thirty_seconds: u128,
+    /// Bound for the weighted `d(H_k)` term after `H_k=B_k-B_(k-1)`.
+    pub weighted_term_bound_thirty_seconds: u128,
+    /// Target exponent `ell`, over thirty-two.
+    pub target_thirty_seconds: u128,
+    /// `target-weighted_term_bound`, over thirty-two.
+    pub deficit_thirty_seconds: i128,
+}
+
+impl BinaryBerlekampAggregateExponentLedger {
+    /// Whether the conditional pointwise term has a strict binary saving.
+    #[must_use]
+    pub const fn closes_strictly(&self) -> bool {
+        self.deficit_thirty_seconds > 0
+    }
+}
+
 impl InverseAdditiveMobiusSpectrum {
     /// Recover `sum_(u in V_d) M_degree(u^(-1))` by additive orthogonality.
     ///
@@ -4396,6 +4509,178 @@ fn summarize_binary_berlekamp_phase_cosets(
     Ok(summary)
 }
 
+fn binary_berlekamp_shift_correlations(
+    mobius: &[i8],
+    inverse_cosets: &[usize],
+    shift_dimension: usize,
+    limits: HayesLimits,
+) -> Result<Vec<BinaryBerlekampShiftCorrelation>, HayesError> {
+    if mobius.len() != inverse_cosets.len() {
+        return Err(HayesError::Invariant(
+            "Berlekamp shift arrays have different lengths".to_owned(),
+        ));
+    }
+    let shift_count = 1_usize
+        .checked_shl(u32::try_from(shift_dimension).map_err(|_| {
+            HayesError::InvalidParameter("Berlekamp correlation shift exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Berlekamp correlation shift overflow".to_owned())
+        })?;
+    let work = mobius.len().checked_mul(shift_count).ok_or_else(|| {
+        HayesError::InvalidParameter("Berlekamp correlation work overflow".to_owned())
+    })?;
+    check_limit("berlekamp_correlation_cells", work, limits.max_table_cells)?;
+    let mut correlations = Vec::with_capacity(shift_count);
+    for shift in 0..shift_count {
+        let mut supported_pairs = 0_u128;
+        let mut signed_correlation = 0_i128;
+        for index in 0..mobius.len() {
+            let other = index ^ shift;
+            let left = mobius[index];
+            let right = mobius[other];
+            if left == 0 || right == 0 || inverse_cosets[index] != inverse_cosets[other] {
+                continue;
+            }
+            supported_pairs = supported_pairs.checked_add(1).ok_or_else(|| {
+                HayesError::InvalidParameter("Berlekamp supported-pair overflow".to_owned())
+            })?;
+            signed_correlation = signed_correlation
+                .checked_add(i128::from(left) * i128::from(right))
+                .ok_or_else(|| {
+                    HayesError::InvalidParameter("Berlekamp correlation overflow".to_owned())
+                })?;
+        }
+        correlations.push(BinaryBerlekampShiftCorrelation {
+            shift,
+            valuation: (shift != 0).then(|| shift.trailing_zeros() as usize + 1),
+            supported_pairs,
+            signed_correlation,
+        });
+    }
+    Ok(correlations)
+}
+
+fn check_binary_berlekamp_shift_totals(
+    correlations: &[BinaryBerlekampShiftCorrelation],
+    signed_coset_energy: &BigUint,
+    unsigned_collision_count: &BigUint,
+) -> Result<(), HayesError> {
+    let signed_total = correlations.iter().try_fold(0_i128, |sum, correlation| {
+        sum.checked_add(correlation.signed_correlation)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Berlekamp correlation total overflow".to_owned())
+            })
+    })?;
+    let unsigned_total = correlations.iter().try_fold(0_u128, |sum, correlation| {
+        sum.checked_add(correlation.supported_pairs)
+            .ok_or_else(|| HayesError::InvalidParameter("Berlekamp pair total overflow".to_owned()))
+    })?;
+    if BigInt::from(signed_total) != BigInt::from(signed_coset_energy.clone())
+        || BigUint::from(unsigned_total) != *unsigned_collision_count
+    {
+        return Err(HayesError::Invariant(
+            "Berlekamp shift correlations do not recover coset energies".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+type BinaryBerlekampCosetBuckets = BTreeMap<(usize, usize), (i128, u128)>;
+
+struct BinaryBerlekampCosetEnumeration {
+    buckets: BinaryBerlekampCosetBuckets,
+    mobius_values: Vec<i8>,
+    inverse_cosets: Vec<usize>,
+    inverse_interval_phase_sum: i128,
+}
+
+fn enumerate_binary_berlekamp_cosets(
+    domain: &BinaryBerlekampPhaseDomain,
+    degree: usize,
+    ell: usize,
+    interval_degree: usize,
+) -> Result<BinaryBerlekampCosetEnumeration, HayesError> {
+    let mut buckets = BinaryBerlekampCosetBuckets::new();
+    let mut mobius_values = vec![0_i8; domain.input_count];
+    let mut inverse_cosets = vec![0_usize; domain.input_count];
+    let mut inverse_interval_phase_sum = 0_i128;
+    for middle in 0..domain.input_count {
+        let middle_u64 = u64::try_from(middle).map_err(|_| {
+            HayesError::InvalidParameter("Berlekamp polynomial index exceeds u64".to_owned())
+        })?;
+        let polynomial = (1_u64 << degree) | (middle_u64 << 1) | 1;
+        let mobius = binary_polynomial_mobius_from_bits(polynomial, degree)?;
+        if mobius == 0 {
+            continue;
+        }
+        let packed_inverse = principal_unit_inverse(polynomial & domain.residue_mask, ell) >> 1;
+        let inverse_coset = usize::try_from(packed_inverse).map_err(|_| {
+            HayesError::InvalidParameter("packed inverse coset exceeds usize".to_owned())
+        })? >> interval_degree;
+        mobius_values[middle] = mobius;
+        inverse_cosets[middle] = inverse_coset;
+        let entry = buckets
+            .entry((middle / domain.coset_size, inverse_coset))
+            .or_insert((0, 0));
+        entry.0 = entry
+            .0
+            .checked_add(i128::from(mobius))
+            .ok_or_else(|| HayesError::InvalidParameter("coset Mobius sum overflow".to_owned()))?;
+        entry.1 = entry
+            .1
+            .checked_add(1)
+            .ok_or_else(|| HayesError::InvalidParameter("coset population overflow".to_owned()))?;
+        if inverse_coset == 0 {
+            inverse_interval_phase_sum = inverse_interval_phase_sum
+                .checked_add(i128::from(mobius))
+                .ok_or_else(|| {
+                    HayesError::InvalidParameter("inverse-interval phase sum overflow".to_owned())
+                })?;
+        }
+    }
+    Ok(BinaryBerlekampCosetEnumeration {
+        buckets,
+        mobius_values,
+        inverse_cosets,
+        inverse_interval_phase_sum,
+    })
+}
+
+struct BinaryBerlekampCosetSummary {
+    signed_energy: BigUint,
+    unsigned_collisions: BigUint,
+    worst_bucket: (usize, usize, BigUint, u128),
+}
+
+fn summarize_binary_berlekamp_cosets(
+    buckets: &BinaryBerlekampCosetBuckets,
+) -> Result<BinaryBerlekampCosetSummary, HayesError> {
+    let mut signed_energy = BigUint::from(0_u8);
+    let mut unsigned_collisions = BigUint::from(0_u8);
+    let mut worst_bucket = (0_usize, 0_usize, BigUint::from(0_u8), 1_u128);
+    for (&(input_coset, inverse_coset), &(signed, population)) in buckets {
+        let signed_square = BigUint::from(signed.unsigned_abs()).pow(2);
+        signed_energy += &signed_square;
+        unsigned_collisions += BigUint::from(population).pow(2);
+        if &signed_square * BigUint::from(worst_bucket.3)
+            > &worst_bucket.2 * BigUint::from(population)
+        {
+            worst_bucket = (input_coset, inverse_coset, signed_square, population);
+        }
+    }
+    if signed_energy > unsigned_collisions {
+        return Err(HayesError::Invariant(
+            "signed Berlekamp coset energy exceeds unsigned collisions".to_owned(),
+        ));
+    }
+    Ok(BinaryBerlekampCosetSummary {
+        signed_energy,
+        unsigned_collisions,
+        worst_bucket,
+    })
+}
+
 /// Enumerate the combined Berlekamp-discriminant and inverse-additive phase.
 ///
 /// The domain consists of every monic constant-one binary polynomial `f` of
@@ -4508,6 +4793,258 @@ pub fn binary_berlekamp_inverse_phase_report(
         shift_subspace_energy: summary.shift_subspace_energy,
         cauchy_square_bound,
         trivial_square_bound,
+    })
+}
+
+/// Count monic constant-one squarefree binary polynomials of exact degree.
+///
+/// There are `2^(k-1)` monic squarefree binary polynomials of degree `k>=2`.
+/// Those divisible by `x` are exactly `xg` with `g` monic, constant one, and
+/// squarefree of degree `k-1`.  With the degree-one seed this gives
+///
+/// ```text
+/// Q_k = 2^(k-1)-Q_(k-1) = (2^k-(-1)^k)/3.
+/// ```
+///
+/// # Errors
+///
+/// Rejects degree zero or a degree outside the exact `u128` shift domain.
+pub fn binary_constant_one_squarefree_count(degree: usize) -> Result<u128, HayesError> {
+    if degree == 0 {
+        return Err(HayesError::InvalidParameter(
+            "squarefree degree must be positive".to_owned(),
+        ));
+    }
+    let power = 1_u128
+        .checked_shl(u32::try_from(degree).map_err(|_| {
+            HayesError::InvalidParameter("squarefree degree shift exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| HayesError::InvalidParameter("squarefree degree exceeds u128".to_owned()))?;
+    let numerator = if degree.is_multiple_of(2) {
+        power - 1
+    } else {
+        power + 1
+    };
+    if !numerator.is_multiple_of(3) {
+        return Err(HayesError::Invariant(
+            "constant-one squarefree formula is not integral".to_owned(),
+        ));
+    }
+    Ok(numerator / 3)
+}
+
+/// Average the combined Berlekamp/inverse stationary energy over one
+/// annihilator without enumerating its frequencies separately.
+///
+/// Let `H=W_shift_dimension` act on the free low coefficients of `f`, and let
+/// `A=W_interval_degree^perp`.  Orthogonality gives the exact identity
+///
+/// ```text
+/// sum_(a in A) E_H(a;k)
+///   = |A| sum_(C,D) (sum_(f in C, f^(-1) in D) mu(f))^2,
+/// ```
+///
+/// where `C` ranges over input cosets modulo `H` and `D` over inverse cosets
+/// modulo `W_interval_degree`.  Applying Cauchy first inside shift cosets and
+/// then across `A` yields
+///
+/// ```text
+/// (sum_(f: f^(-1) in V_interval_degree) mu(f))^2
+///   <= 2^(degree-1-shift_dimension) signed_coset_energy.
+/// ```
+///
+/// This retains the Möbius/Berlekamp signs inside every simultaneous coset;
+/// `unsigned_collision_count` exposes the loss from dropping them.
+///
+/// # Errors
+///
+/// Returns the same bounded-enumeration failures as
+/// [`binary_berlekamp_inverse_phase_report`], rejects an invalid annihilator
+/// degree, and checks the resulting exact Cauchy inequality.
+pub fn binary_berlekamp_annihilator_energy_report(
+    ell: usize,
+    degree: usize,
+    interval_degree: usize,
+    shift_dimension: usize,
+    limits: HayesLimits,
+) -> Result<BinaryBerlekampAnnihilatorEnergyReport, HayesError> {
+    if interval_degree == 0 || interval_degree >= ell {
+        return Err(HayesError::InvalidParameter(format!(
+            "annihilator interval degree must satisfy 1<=d<ell, got d={interval_degree}, ell={ell}"
+        )));
+    }
+    let domain = admit_binary_berlekamp_phase_domain(ell, degree, 0, shift_dimension, limits)?;
+    let input_count = domain.input_count;
+    let enumeration = enumerate_binary_berlekamp_cosets(&domain, degree, ell, interval_degree)?;
+    let summary = summarize_binary_berlekamp_cosets(&enumeration.buckets)?;
+    let shift_correlations = binary_berlekamp_shift_correlations(
+        &enumeration.mobius_values,
+        &enumeration.inverse_cosets,
+        shift_dimension,
+        limits,
+    )?;
+    check_binary_berlekamp_shift_totals(
+        &shift_correlations,
+        &summary.signed_energy,
+        &summary.unsigned_collisions,
+    )?;
+    let diagonal_squarefree_count = binary_constant_one_squarefree_count(degree)?;
+    let diagonal = shift_correlations
+        .first()
+        .ok_or_else(|| HayesError::Invariant("Berlekamp shift table has no diagonal".to_owned()))?;
+    if diagonal.shift != 0
+        || diagonal.supported_pairs != diagonal_squarefree_count
+        || diagonal.signed_correlation
+            != i128::try_from(diagonal_squarefree_count).map_err(|_| {
+                HayesError::InvalidParameter("squarefree diagonal exceeds i128".to_owned())
+            })?
+    {
+        return Err(HayesError::Invariant(
+            "Berlekamp zero shift disagrees with the squarefree formula".to_owned(),
+        ));
+    }
+    let off_diagonal_signed_correlation =
+        shift_correlations
+            .iter()
+            .skip(1)
+            .try_fold(0_i128, |sum, entry| {
+                sum.checked_add(entry.signed_correlation).ok_or_else(|| {
+                    HayesError::InvalidParameter("off-diagonal correlation overflow".to_owned())
+                })
+            })?;
+    let annihilator_frequency_count = 1_u128 << (ell - interval_degree);
+    let averaged_shift_energy = BigUint::from(annihilator_frequency_count) * &summary.signed_energy;
+    let coset_count = BigUint::from(1_u8) << (degree - 1 - shift_dimension);
+    let fibre_cauchy_square_bound = coset_count * &summary.signed_energy;
+    let exact_magnitude = BigUint::from(enumeration.inverse_interval_phase_sum.unsigned_abs());
+    if &exact_magnitude * &exact_magnitude > fibre_cauchy_square_bound {
+        return Err(HayesError::Invariant(
+            "annihilator-energy Cauchy bound misses the exact fibre".to_owned(),
+        ));
+    }
+    Ok(BinaryBerlekampAnnihilatorEnergyReport {
+        ell,
+        degree,
+        interval_degree,
+        shift_dimension,
+        input_count: u128::try_from(input_count).map_err(|_| {
+            HayesError::InvalidParameter("Berlekamp input count exceeds u128".to_owned())
+        })?,
+        annihilator_frequency_count,
+        occupied_coset_count: enumeration.buckets.len(),
+        worst_input_coset: summary.worst_bucket.0,
+        worst_inverse_coset: summary.worst_bucket.1,
+        worst_bucket_signed_square: summary.worst_bucket.2,
+        worst_bucket_population: summary.worst_bucket.3,
+        inverse_interval_phase_sum: enumeration.inverse_interval_phase_sum,
+        signed_coset_energy: summary.signed_energy,
+        unsigned_collision_count: summary.unsigned_collisions,
+        diagonal_squarefree_count,
+        off_diagonal_signed_correlation,
+        averaged_shift_energy,
+        fibre_cauchy_square_bound,
+        shift_correlations,
+    })
+}
+
+/// Propagate candidate simultaneous-coset energy exponents into one exact
+/// endpoint Möbius-convolution term.
+///
+/// If `E_(s,d)(k)<=2^e`, the annihilator-average identity and Cauchy give
+///
+/// ```text
+/// |sum_(f^(-1) in V_d) mu(f)|
+///   <= 2^((k-1-s+e)/2).
+/// ```
+///
+/// The endpoint term uses `H_k=B_k-B_(k-1)`.  The ledger therefore takes the
+/// larger of the two phase exponents, charges one bit for their sum, and
+/// charges `ceil(log2(d))` bits for the convolution weight.  It remains
+/// conditional on the supplied energy exponents.
+///
+/// # Errors
+///
+/// Rejects parameters outside the endpoint convolution domain and checked
+/// arithmetic overflows.
+pub fn binary_berlekamp_aggregate_exponent_ledger(
+    ell: usize,
+    endpoint_degree: usize,
+    interval_degree: usize,
+    shift_dimension: usize,
+    energy_exponent_sixteenths: u128,
+    previous_energy_exponent_sixteenths: u128,
+) -> Result<BinaryBerlekampAggregateExponentLedger, HayesError> {
+    if ell == 0 || interval_degree == 0 || interval_degree >= ell {
+        return Err(HayesError::InvalidParameter(
+            "Berlekamp aggregate ledger requires ell>0 and 1<=d<ell".to_owned(),
+        ));
+    }
+    let mobius_degree = endpoint_degree
+        .checked_sub(interval_degree)
+        .filter(|&degree| degree >= 2)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter(
+                "endpoint degree must leave Mobius degree at least two".to_owned(),
+            )
+        })?;
+    if shift_dimension > mobius_degree - 2 {
+        return Err(HayesError::InvalidParameter(format!(
+            "shift dimension {shift_dimension} leaves no free coefficients at degree {}",
+            mobius_degree - 1
+        )));
+    }
+    let phase_bound_thirty_seconds = u128::try_from(mobius_degree - 1 - shift_dimension)
+        .ok()
+        .and_then(|value| value.checked_mul(16))
+        .and_then(|value| value.checked_add(energy_exponent_sixteenths))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Berlekamp phase exponent overflow".to_owned())
+        })?;
+    let previous_phase_bound_thirty_seconds = u128::try_from(mobius_degree - 2 - shift_dimension)
+        .ok()
+        .and_then(|value| value.checked_mul(16))
+        .and_then(|value| value.checked_add(previous_energy_exponent_sixteenths))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("previous Berlekamp phase exponent overflow".to_owned())
+        })?;
+    let convolution_weight_bits = if interval_degree == 1 {
+        0
+    } else {
+        usize::BITS as usize - (interval_degree - 1).leading_zeros() as usize
+    };
+    let weighted_term_bound_thirty_seconds = phase_bound_thirty_seconds
+        .max(previous_phase_bound_thirty_seconds)
+        .checked_add(32)
+        .and_then(|value| {
+            u128::try_from(convolution_weight_bits)
+                .ok()
+                .and_then(|bits| bits.checked_mul(32))
+                .and_then(|weight| value.checked_add(weight))
+        })
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("weighted Berlekamp exponent overflow".to_owned())
+        })?;
+    let target_thirty_seconds = u128::try_from(ell)
+        .ok()
+        .and_then(|value| value.checked_mul(32))
+        .ok_or_else(|| HayesError::InvalidParameter("Berlekamp target overflow".to_owned()))?;
+    Ok(BinaryBerlekampAggregateExponentLedger {
+        ell,
+        endpoint_degree,
+        interval_degree,
+        shift_dimension,
+        mobius_degree,
+        energy_exponent_sixteenths,
+        previous_energy_exponent_sixteenths,
+        phase_bound_thirty_seconds,
+        previous_phase_bound_thirty_seconds,
+        weighted_term_bound_thirty_seconds,
+        target_thirty_seconds,
+        deficit_thirty_seconds: checked_exponent_deficit(
+            target_thirty_seconds,
+            weighted_term_bound_thirty_seconds,
+            "Berlekamp aggregate",
+        )?,
     })
 }
 
@@ -7381,6 +7918,179 @@ mod tests {
                 limit: 100,
             })
         );
+    }
+
+    #[test]
+    fn berlekamp_annihilator_energy_is_the_exact_frequency_average() {
+        let limits = HayesLimits::default();
+        let ell = 4;
+        let degree = 9;
+        let interval_degree = 3;
+        let shift_dimension = 3;
+        let report = binary_berlekamp_annihilator_energy_report(
+            ell,
+            degree,
+            interval_degree,
+            shift_dimension,
+            limits,
+        )
+        .unwrap();
+        assert_eq!(report.input_count, 256);
+        assert_eq!(report.annihilator_frequency_count, 2);
+        assert_eq!(report.occupied_coset_count, 62);
+        assert_eq!(report.inverse_interval_phase_sum, 0);
+        assert_eq!(report.signed_coset_energy, BigUint::from(179_u16));
+        assert_eq!(report.unsigned_collision_count, BigUint::from(599_u16));
+        assert_eq!(report.diagonal_squarefree_count, 171);
+        assert_eq!(report.off_diagonal_signed_correlation, 8);
+        assert_eq!(report.averaged_shift_energy, BigUint::from(358_u16));
+        assert_eq!(report.fibre_cauchy_square_bound, BigUint::from(5_728_u16));
+        let mut direct_phase_sum = 0_i128;
+        let mut direct_energy = BigUint::from(0_u8);
+        for frequency in (0..1 << ell).step_by(1 << interval_degree) {
+            let phase = binary_berlekamp_inverse_phase_report(
+                ell,
+                degree,
+                frequency,
+                shift_dimension,
+                limits,
+            )
+            .unwrap();
+            direct_phase_sum += phase.phase_sum;
+            direct_energy += BigUint::from(phase.shift_subspace_energy);
+        }
+        assert_eq!(
+            direct_phase_sum,
+            i128::try_from(report.annihilator_frequency_count).unwrap()
+                * report.inverse_interval_phase_sum
+        );
+        assert_eq!(direct_energy, report.averaged_shift_energy);
+        assert!(report.has_signed_collision_cancellation());
+
+        for probe_ell in 2_usize..=9 {
+            for endpoint in [2 * probe_ell + 1, 2 * probe_ell + 2] {
+                for d in 1..probe_ell {
+                    let k = endpoint - d;
+                    let candidate =
+                        binary_berlekamp_annihilator_energy_report(probe_ell, k, d, d, limits)
+                            .unwrap();
+                    let random_scale = BigUint::from(1_u8) << k;
+                    assert!(
+                        candidate.signed_coset_energy <= random_scale,
+                        "ell={probe_ell}, endpoint={endpoint}, d={d}, energy={}",
+                        candidate.signed_coset_energy
+                    );
+                    assert!(
+                        candidate.worst_bucket_signed_square
+                            <= BigUint::from(2 * d) * candidate.worst_bucket_population,
+                        "local ell={probe_ell}, endpoint={endpoint}, d={d}, square={}, population={}",
+                        candidate.worst_bucket_signed_square,
+                        candidate.worst_bucket_population
+                    );
+                }
+            }
+        }
+        let constant_one_failure =
+            binary_berlekamp_annihilator_energy_report(6, 9, 5, 5, limits).unwrap();
+        assert_eq!(
+            constant_one_failure.signed_coset_energy,
+            BigUint::from(309_u16)
+        );
+        assert_eq!(
+            constant_one_failure.shift_correlations[0],
+            BinaryBerlekampShiftCorrelation {
+                shift: 0,
+                valuation: None,
+                supported_pairs: 171,
+                signed_correlation: 171,
+            }
+        );
+        assert_eq!(constant_one_failure.off_diagonal_signed_correlation, 138);
+        assert!(constant_one_failure.signed_coset_energy > BigUint::from(1_u8) << 8);
+        assert!(constant_one_failure.signed_coset_energy <= BigUint::from(1_u8) << 9);
+    }
+
+    #[test]
+    fn constant_one_squarefree_count_satisfies_its_exact_recurrence() {
+        assert!(binary_constant_one_squarefree_count(0).is_err());
+        assert_eq!(binary_constant_one_squarefree_count(1).unwrap(), 1);
+        for degree in 2..=63 {
+            let current = binary_constant_one_squarefree_count(degree).unwrap();
+            let previous = binary_constant_one_squarefree_count(degree - 1).unwrap();
+            assert_eq!(current + previous, 1_u128 << (degree - 1));
+        }
+    }
+
+    #[test]
+    fn berlekamp_random_scale_energy_would_move_the_endpoint_tail() {
+        let ell = 300;
+        let odd = 2 * ell + 1;
+        let even = odd + 1;
+        let first = |endpoint| {
+            (1..ell).find(|&d| {
+                let k = endpoint - d;
+                binary_berlekamp_aggregate_exponent_ledger(
+                    ell,
+                    endpoint,
+                    d,
+                    d,
+                    u128::try_from(16 * k).unwrap(),
+                    u128::try_from(16 * (k - 1)).unwrap(),
+                )
+                .unwrap()
+                .closes_strictly()
+            })
+        };
+        assert_eq!(first(odd), Some(207));
+        assert_eq!(first(even), Some(208));
+
+        let boundary = binary_berlekamp_aggregate_exponent_ledger(
+            ell,
+            odd,
+            206,
+            206,
+            16 * (odd - 206) as u128,
+            16 * (odd - 207) as u128,
+        )
+        .unwrap();
+        assert_eq!(boundary.deficit_thirty_seconds, -16);
+        let first_strict = binary_berlekamp_aggregate_exponent_ledger(
+            ell,
+            odd,
+            207,
+            207,
+            16 * (odd - 207) as u128,
+            16 * (odd - 208) as u128,
+        )
+        .unwrap();
+        assert_eq!(first_strict.deficit_thirty_seconds, 32);
+
+        // The more local target b_(C,D)^2 <= 2d * #bucket implies
+        // E(k) <= 2d Q_k < d 2^k.  Its polynomial loss moves the same
+        // pointwise tail only slightly, and is a plausible character-sum
+        // lemma rather than a bare global-energy conjecture.
+        let first_from_local_square_root = |endpoint| {
+            (1..ell).find(|&d| {
+                let k = endpoint - d;
+                let loss_bits = if d == 1 {
+                    0
+                } else {
+                    usize::BITS as usize - (d - 1).leading_zeros() as usize
+                };
+                binary_berlekamp_aggregate_exponent_ledger(
+                    ell,
+                    endpoint,
+                    d,
+                    d,
+                    16 * (k + loss_bits) as u128,
+                    16 * (k - 1 + loss_bits) as u128,
+                )
+                .unwrap()
+                .closes_strictly()
+            })
+        };
+        assert_eq!(first_from_local_square_root(odd), Some(210));
+        assert_eq!(first_from_local_square_root(even), Some(210));
     }
 
     #[test]

@@ -571,3 +571,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0496](adr-0496-regroup-mobius-orders-by-annihilator-depth.md) | Preserve cross-order cancellation by low-bit Fourier annihilator depth and charge a buffered tail against the exact odd-endpoint margin | accepted |
 | [0497](adr-0497-use-the-exact-binary-divisor-envelope-in-vaughan-ledgers.md) | Replace the crude subexponential divisor factor by an exact finite-degree optimizer and carry it through every endpoint energy row | accepted |
 | [0498](adr-0498-measure-the-combined-berlekamp-inverse-phase.md) | Add a bounded exact stationary-fibre ledger for the characteristic-two Berlekamp-discriminant plus inverse-additive phase | accepted |
+| [0499](adr-0499-average-berlekamp-shift-energy-over-annihilators.md) | Replace per-frequency Berlekamp diagnostics by an exact signed simultaneous-coset energy and feed candidate bounds into the endpoint ledger | accepted |

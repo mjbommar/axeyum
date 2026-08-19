@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-berlekamp-simultaneous-coset-square-root-bound",
+  "title": "Binary Berlekamp simultaneous-coset square-root bound",
+  "statement": "For every integer ell >= 2, n equal to 2 ell + 1 or 2 ell + 2, and 1 <= d < ell, put k=n-d. In every simultaneous coset of monic constant-one degree-k binary polynomials obtained by fixing coefficients above degree d and inverse coefficients above degree d modulo x^(ell+1), the square of the polynomial-Mobius sum is at most 2d times the squarefree population of the coset.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"b_(C,D)^2 <= 2*d*population_(C,D)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-berlekamp-simultaneous-coset-square-root-bound\",\"interval\":\"1<=d<ell\",\"mobius_degree\":\"k=n-d\",\"modulus\":\"x^(ell+1)\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "ell",
+      "n",
+      "d",
+      "k",
+      "C",
+      "D"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; exact shift-correlation decomposition of the Berlekamp-inverse annihilator energy"
+  },
+  "notes": "The bounded operation binary_berlekamp_annihilator_energy_report checks this inequality in both endpoint windows through ell=9 and reports the worst fibre ratio, but finite enumeration is not evidence for the universal statement. Summing the conjectured local inequality and using the proved exact diagonal Q_k=(2^k-(-1)^k)/3 yields the conditional global energy bound E<=2d Q_k<d 2^k. The exact aggregate exponent ledger then gives strict weighted-term bounds from d=210 for both ell=300 endpoints. This remains only a tail input and does not control the complementary low block or prove Lemire's theorem."
+}

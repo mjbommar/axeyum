@@ -1101,6 +1101,84 @@ is now a uniform bound for `E_H(a;k)` on the annihilator frequencies and
 low/medium degree block that survives the explicit Vaughan tail, with an
 exponent that closes the aggregate budget.
 
+The frequency average has a sharper exact form.  Let `H=W_s` act on the low
+free coefficients, let `A=W_d^perp`, and partition the degree-`k` monic
+constant-one polynomials simultaneously by an input coset `C` modulo `H` and
+an inverse coset `D` modulo `W_d`.  With
+
+```text
+b_(C,D)=sum_(f in C, f^(-1) in D) mu(f),
+```
+
+orthogonality before absolute values gives
+
+```text
+sum_(a in A) E_H(a;k)=|A| sum_(C,D)b_(C,D)^2.          (AE)
+```
+
+Consequently,
+
+```text
+(sum_(f: f^(-1) in V_d) mu(f))^2
+  <= 2^(k-1-s) sum_(C,D)b_(C,D)^2.                     (CB)
+```
+
+`binary_berlekamp_annihilator_energy_report` computes both the signed energy
+in `(AE)` and the larger unsigned simultaneous-collision count.  At
+`(ell,k,d,s)=(4,9,3,3)` they are respectively `179` and `599`; the independent
+frequency sum is exactly `2*179`.  Thus this regroup retains substantial
+Berlekamp cancellation.
+
+There is also an exact shift decomposition
+
+```text
+sum_(C,D)b_(C,D)^2
+ = sum_(h in W_s) sum_f mu(f)mu(f+h)
+     1_(f^(-1)+(f+h)^(-1) in W_d).                    (shift energy)
+```
+
+Its diagonal is completely elementary.  If `Q_k` counts the monic,
+constant-one, squarefree binary polynomials of degree `k`, then
+
+```text
+Q_k=2^(k-1)-Q_(k-1)=(2^k-(-1)^k)/3.
+```
+
+The recurrence removes from all monic squarefree degree-`k` polynomials the
+ones `xg`, where `g` is constant-one squarefree of degree `k-1`.  In the
+counterexample below the diagonal is `Q_9=171` and all nonzero shifts sum to
+`138`; the obstruction is therefore an off-diagonal correlation problem.
+
+The first clean conjectural scale is not constant-one.  The proposed bound
+
+```text
+sum_(C,D)b_(C,D)^2 <= 2^(k-1)
+```
+
+already fails at `(ell,k,d,s)=(6,9,5,5)`, where the left side is `309>256`.
+The relaxed candidate `2^k` survives both endpoint windows through `ell=9`,
+but remains an unproved Autogenesis fact with no evidence.  The conditional
+operation `binary_berlekamp_aggregate_exponent_ledger` immediately feeds any
+candidate exponent through `(CB)`, `H_k=B_k-B_(k-1)`, and the weight `d`.  At
+`ell=300`, the `2^k` candidate would first make the odd and even weighted
+terms strict at `d=207` and `d=208`, respectively.  This is a real improvement
+over the ideal Vaughan transition near 283, but it still leaves a linear
+low-degree block and therefore is not the missing endpoint theorem.
+
+A more structured surviving finite target is the fibrewise estimate
+
+```text
+b_(C,D)^2 <= 2d #(C,D).
+```
+
+It holds in the same endpoint controls through `ell=9`, but is not proved.
+If established, summing over the buckets and using the exact formula for
+`Q_k` would give `E<=2d Q_k<d 2^k`.  The aggregate ledger then first becomes
+strict at `d=210` for both endpoints when `ell=300`.  This is almost the same
+tail as the bare `2^k` conjecture, while isolating a local square-root
+character-sum lemma that may be attacked fibre by fibre.  It still cannot
+close the linear complementary block on its own.
+
 This also sharpens the boundary on the new Kloosterman result.  The
 stationary-phase bound controls the **unweighted** distribution of one product
 of intervals.  A Vaughan identity introduces Möbius-derived weights, and an

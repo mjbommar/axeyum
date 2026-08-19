@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-berlekamp-annihilator-energy-bound",
+  "title": "Binary Berlekamp-inverse annihilator energy bound",
+  "statement": "For every integer ell >= 2, n equal to 2 ell + 1 or 2 ell + 2, and 1 <= d < ell, put k=n-d. Partition the monic constant-one binary polynomials of degree k into simultaneous cosets according to their coefficients above degree d and the coefficients of their inverses modulo x^(ell+1) above degree d. If b_(C,D) is the polynomial-Mobius sum in one simultaneous coset, then the sum of b_(C,D)^2 over all cosets is at most 2^k.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"sum_(C,D) b_(C,D)^2 <= 2^k\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-berlekamp-annihilator-energy-bound\",\"interval\":\"1<=d<ell\",\"mobius_degree\":\"k=n-d\",\"modulus\":\"x^(ell+1)\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "ell",
+      "n",
+      "d",
+      "k"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; annihilator-averaged combined Berlekamp-discriminant and inverse-additive phase"
+  },
+  "notes": "The exact operation binary_berlekamp_annihilator_energy_report proves the finite orthogonality and shift-correlation identities and checks both endpoint windows through ell=9, but finite enumeration is not evidence for the quantified statement. The stronger constant-one version with right side 2^(k-1) is refuted at (ell,k,d)=(6,9,5): the exact signed energy is 309, comprising the proved squarefree diagonal Q_9=171 and off-diagonal contribution 138. The same controls also satisfy the local target b_(C,D)^2 <= 2d #bucket; if proved, it implies E<d 2^k and strict weighted-term bounds from d=210 at both ell=300 endpoints. The displayed sharper 2^k bound would start at d=207 and d=208. Both remain partial tail inputs, not proofs of the full endpoint Mobius-convolution bound, so the universal Lemire fact does not depend on this conjectured fact."
+}
