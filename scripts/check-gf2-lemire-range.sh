@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 
 python3 scripts/check-gf2-lemire-range.py
 python3 scripts/check-gf2-hayes-recurrence.py
+cargo run --quiet -p axeyum-cas --bin axeyum-gf2-hayes-endpoints -- 12
 cargo run --quiet -p axeyum-cas --bin axeyum-gf2-check -- \
   artifacts/gf2/lemire/degree-400.json
 

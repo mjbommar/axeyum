@@ -70,8 +70,10 @@ lemma.
   `q = 2`: [Prime polynomials in short intervals and in arithmetic
   progressions](https://arxiv.org/abs/1302.0625).
 - Pollack's prescribed-coefficient results do not reach this fixed-field
-  half-degree boundary: [Irreducible polynomials with several prescribed
-  coefficients](https://arxiv.org/abs/1601.06867).
+  half-degree boundary: his theorem permits fewer than
+  `(1-epsilon) sqrt(n)` arbitrary coefficients, not a linear half of them.
+  See [Irreducible polynomials with several prescribed
+  coefficients](https://pollack.uga.edu/prescribed.pdf).
 - A sentence in Gao, Howell, and Panario's 1999 survey says that Hsu's theorem
   permits the lower or higher "half" of the coefficients to be fixed. The
   explicit bound is not an endpoint existence theorem for fixed `q = 2`.
@@ -159,6 +161,51 @@ properly weighted nontrivial contribution in the identity class at degrees
 `2 ell + 1` and `2 ell + 2`, or replace it with a construction. Any claimed
 bound must be checked for strict positivity, not merely asymptotic main-term
 dominance.
+
+### A sufficient endpoint discrepancy lemma
+
+Let `N_n(1)` be `[1] Lambda_n`, equivalently the number of elements of
+`GF(2^n)` whose characteristic polynomial has identity type-II class, and put
+
+```text
+Delta_(ell,n) = N_n(1) - 2^(n-ell).
+```
+
+Exact transform computations expose a substantially sharper possible central
+lemma than a character-by-character estimate:
+
+```text
+abs(Delta_(ell,2 ell+1)) <= 2^ell,
+abs(Delta_(ell,2 ell+2)) <= 2^ell.                 (candidate)
+```
+
+This inequality would be sufficient, together with a finite check.  Hayes
+Möbius inversion writes `n I_n(1)` as `N_n(1)` minus signed proper-divisor
+terms.  Discarding signs and summing over all relevant root classes bounds
+those terms by `sum_(k|n,k>=2) 2^(n/k)`.  At the odd endpoint the proposed
+lemma leaves at least `2^ell`; at the even endpoint it leaves at least
+`3*2^ell`, of which the `k=2` term consumes at most `2^(ell+1)`.  Elementary
+geometric bounds make the remaining divisor contribution smaller for all
+sufficiently large `n`, and the committed range through 400 can cover the
+finite remainder.  Thus proving this one uniform discrepancy inequality would
+complete the missing positivity step without needing favorable signs for the
+individual characters.
+
+`axeyum-gf2-hayes-endpoints` evaluates the group-ring recurrence after an exact
+Fourier transform of the finite principal-unit group.  It uses two NTT primes,
+CRT reconstruction, and the a priori bound `N_n(1) <= 2^n`; no floating-point
+rounding is involved.  Through `ell = 18` (endpoint degrees 37 and 38), the
+candidate bound holds.  The endpoint discrepancies for `ell = 13..18` are
+
+```text
+ell:                 13    14    15    16     17    18
+Delta odd:         -345  -896   340  2744  -1988   928
+Delta even:         980   645 -1832   660   6587  9592
+```
+
+This is finite evidence and a proof target, not a theorem.  In particular, the
+checker deliberately reports the bound as a `candidate` observation and the
+fact ledger must not grant universal credit for it.
 
 ## Axeyum boundary and evidence ladder
 
