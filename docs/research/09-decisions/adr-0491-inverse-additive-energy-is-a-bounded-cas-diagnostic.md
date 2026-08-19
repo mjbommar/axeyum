@@ -54,7 +54,10 @@ resource exhaustion decline explicitly.
 
 Distributed finite probes on `s1`, `s4`, `s5`, `s6`, and `s7` covered levels
 17 through 21.  They suggest a stable no-wrap regime for fixed `d` once the
-modulus is sufficiently deep, but this observation is not theorem evidence.
+modulus is sufficiently deep.  ADR-0493 subsequently proves exact
+stabilization for `ell>=3d`, supplies an independent rational-function CAS
+route, and derives an explicit `2^(2d+o(d))` bound.  The finite observations
+in this ADR remain only the evidence that selected that theorem.
 
 ## Alternatives
 
@@ -64,9 +67,9 @@ modulus is sufficiently deep, but this observation is not theorem evidence.
 - Cite Bagshaw's 2024 energy lemma directly at `q=2`: rejected because that
   paper globally fixes odd `q`; any characteristic-two use must reprove the
   relevant dependency chain.
-- Promote the fleet pattern to a closed form: rejected because bounded rows do
-  not establish a quantified formula or even prove the exact stabilization
-  threshold.
+- Promote the fleet pattern without a proof: rejected.  The later promotion in
+  ADR-0493 rests instead on clearing denominators, a degree bound, and a
+  rational-collision classification.
 
 ## Consequences
 
@@ -76,3 +79,5 @@ modulus is sufficiently deep, but this observation is not theorem evidence.
   sums remain visibly separate.
 - The operation can falsify proposed piecewise energy formulae before they are
   used in the Lemire proof, while contributing no universal theorem credit.
+- ADR-0493 refines this boundary: the Walsh table remains bounded, while the
+  no-wrap stabilization and divisor envelope are uniform source-level lemmas.

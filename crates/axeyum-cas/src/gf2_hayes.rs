@@ -346,6 +346,113 @@ pub struct PrincipalUnitInverseAdditiveEnergyReport {
     pub maximum_walsh_amplitude: u128,
 }
 
+/// Exact inverse-additive energy after the modulus can no longer wrap.
+///
+/// For `A,B,C,D in V_d`, clearing the odd denominators gives
+///
+/// ```text
+/// A^(-1)+B^(-1) = C^(-1)+D^(-1)  (mod x^(ell+1))
+/// iff
+/// (A+B)CD = (C+D)AB               (mod x^(ell+1)).
+/// ```
+///
+/// Both cross-products have degree at most `3d`.  Hence the congruence is an
+/// ordinary polynomial equality for every `ell>=3d`.  This report computes
+/// that stable value without allocating the ambient group of size `2^ell`:
+/// it buckets ordered pairs by the reduced fraction `(A+B)/(AB)`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrincipalUnitInverseAdditiveNoWrapReport {
+    /// Largest nonconstant degree in `V_d`.
+    pub interval_degree: usize,
+    /// First principal-unit level at which congruence is equality, `3d`.
+    pub minimum_stable_ell: usize,
+    /// Number of ordered pairs `(A,B)`, exactly `2^(2d)`.
+    pub ordered_pair_count: BigUint,
+    /// Number of distinct reduced rational functions `(A+B)/(AB)`.
+    pub reduced_fraction_count: usize,
+    /// Largest multiplicity of one reduced rational function.
+    pub maximum_fraction_multiplicity: u128,
+    /// Stable additive energy for every `ell>=3d`.
+    pub additive_energy: BigUint,
+}
+
+/// Explicit divisor bound for the stabilized inverse-additive energy.
+///
+/// A collision class with reduced denominator `q` has multiplicity at most
+/// the ternary polynomial-divisor function `tau_3(q)`, and `deg q<=2d`.
+/// Splitting irreducible factors at `split_degree=R` gives
+///
+/// ```text
+/// tau_3(q) <= (2d+1)^(2^(R+2)) * 3^(floor(2d/(R+1))).
+/// ```
+///
+/// Taking `R=floor(log2(d)/2)` (and at least one) makes the extra base-two
+/// exponent `o(d)`, so `E_inv<=2^(2d+o(d))` whenever `ell>=3d`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrincipalUnitInverseAdditiveNoWrapBoundReport {
+    /// Largest nonconstant degree in `V_d`.
+    pub interval_degree: usize,
+    /// First stable principal-unit level, `3d`.
+    pub minimum_stable_ell: usize,
+    /// Factor-degree split `R` used in the explicit divisor estimate.
+    pub split_degree: usize,
+    /// Explicit upper bound for every collision-class multiplicity.
+    pub maximum_multiplicity_bound: BigUint,
+    /// Explicit energy bound `2^(2d) * maximum_multiplicity_bound`.
+    pub additive_energy_bound: BigUint,
+}
+
+impl PrincipalUnitInverseAdditiveNoWrapBoundReport {
+    /// Smallest integer `e` with `additive_energy_bound<=2^e`.
+    #[must_use]
+    pub fn ceiling_energy_exponent(&self) -> Option<usize> {
+        let bits = usize::try_from(self.additive_energy_bound.bits()).ok()?;
+        if bits == 0 {
+            return Some(0);
+        }
+        let floor = bits - 1;
+        if self.additive_energy_bound == (BigUint::from(1_u8) << floor) {
+            Some(floor)
+        } else {
+            Some(bits)
+        }
+    }
+}
+
+/// Exact exponent substitution in Bagshaw's characteristic-free `k=2`
+/// bilinear-energy lemma.
+///
+/// If interval cardinalities have base-two exponents `m,n`, the modulus has
+/// degree `r`, and `E_2(m)<=2^em`, `E_2(n)<=2^en`, the lemma gives
+///
+/// ```text
+/// log2 |W| <= m+n + (em+en+r-4m-4n)/8.
+/// ```
+///
+/// Energy exponents are supplied over a caller-selected common denominator
+/// `D`; the returned bilinear exponent and target are exact numerators over
+/// `8D`.  This checks exponent arithmetic only, not the analytic hypotheses
+/// or suppressed constants.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryBilinearEnergyExponentReport {
+    /// Base-two logarithm of the left interval cardinality.
+    pub left_interval_exponent: usize,
+    /// Base-two logarithm of the right interval cardinality.
+    pub right_interval_exponent: usize,
+    /// Modulus degree `r`.
+    pub modulus_degree: usize,
+    /// Common denominator `D` of the two supplied energy exponents.
+    pub energy_exponent_denominator: usize,
+    /// Bound exponent numerator over denominator `8D`.
+    pub bound_exponent_numerator: u128,
+    /// Target exponent numerator over denominator `8D`.
+    pub target_exponent_numerator: u128,
+    /// `target-bound` over denominator `8D`.
+    pub deficit_numerator: i128,
+    /// Whether the energy substitution is strictly below the target exponent.
+    pub strict_saving: bool,
+}
+
 /// Exact exponent ledger for Bagshaw's Type-I Case 5 after inserting the
 /// proved binary wild-Kloosterman bound.
 ///
@@ -1352,6 +1459,232 @@ pub fn principal_unit_inverse_additive_energy(
         additive_energy,
         fourth_walsh_moment,
         maximum_walsh_amplitude,
+    })
+}
+
+/// Compute the stable inverse-additive energy by exact rational reduction.
+///
+/// This is an algebraically independent route from
+/// [`principal_unit_inverse_additive_energy`].  It never constructs truncated
+/// inverses or a Walsh transform.  Instead, for every ordered pair in
+/// `V_d^2`, it reduces `(A+B)/(AB)` by the binary-polynomial gcd and counts
+/// equal reduced fractions.  The resulting sum of squared multiplicities is
+/// the inverse-additive energy for every `ell>=3d`.
+///
+/// # Errors
+///
+/// Rejects `d=0`, a packed-polynomial degree beyond the `u64` representation,
+/// a caller degree/pair-count limit, or a failed exact polynomial division.
+pub fn principal_unit_inverse_additive_energy_no_wrap(
+    interval_degree: usize,
+    limits: HayesLimits,
+) -> Result<PrincipalUnitInverseAdditiveNoWrapReport, HayesError> {
+    if interval_degree == 0 {
+        return Err(HayesError::InvalidParameter(
+            "no-wrap inverse-additive energy requires a positive degree".to_owned(),
+        ));
+    }
+    check_limit("degree", interval_degree, limits.max_degree)?;
+    if interval_degree > 31 {
+        return Err(HayesError::InvalidParameter(format!(
+            "no-wrap packed polynomial degree {interval_degree} exceeds 31"
+        )));
+    }
+    let pair_exponent = interval_degree.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("no-wrap pair-count exponent overflow".to_owned())
+    })?;
+    let pair_count = 1_usize
+        .checked_shl(u32::try_from(pair_exponent).map_err(|_| {
+            HayesError::InvalidParameter("no-wrap pair-count shift overflow".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("no-wrap pair count exceeds the host width".to_owned())
+        })?;
+    check_limit("table_cells", pair_count, limits.max_table_cells)?;
+    let minimum_stable_ell = interval_degree
+        .checked_mul(3)
+        .ok_or_else(|| HayesError::InvalidParameter("no-wrap degree bound overflow".to_owned()))?;
+
+    let set_size = 1_u64 << interval_degree;
+    let mut fractions = BTreeMap::<(u64, u64), u128>::new();
+    for left_tail in 0..set_size {
+        let left = 1 | (left_tail << 1);
+        for right_tail in 0..set_size {
+            let right = 1 | (right_tail << 1);
+            let numerator = left ^ right;
+            let denominator = polynomial_multiply_packed(left, right);
+            let common = polynomial_gcd_packed(numerator, denominator);
+            let reduced_numerator = polynomial_exact_divide_packed(numerator, common)?;
+            let reduced_denominator = polynomial_exact_divide_packed(denominator, common)?;
+            *fractions
+                .entry((reduced_numerator, reduced_denominator))
+                .or_default() += 1;
+        }
+    }
+    let maximum_fraction_multiplicity = fractions.values().copied().max().ok_or_else(|| {
+        HayesError::Invariant("no-wrap rational-function table is empty".to_owned())
+    })?;
+    let additive_energy = fractions.values().fold(BigUint::from(0_u8), |sum, count| {
+        sum + BigUint::from(*count).pow(2)
+    });
+    Ok(PrincipalUnitInverseAdditiveNoWrapReport {
+        interval_degree,
+        minimum_stable_ell,
+        ordered_pair_count: BigUint::from(1_u8) << pair_exponent,
+        reduced_fraction_count: fractions.len(),
+        maximum_fraction_multiplicity,
+        additive_energy,
+    })
+}
+
+/// Prove an explicit `2^(2d+o(d))` upper bound in the no-wrap regime.
+///
+/// Write `A=ga` and `B=gb` with `(a,b)=1`, and put `h=(g,a+b)`.  Exact
+/// reduction gives
+///
+/// ```text
+/// (A+B)/(AB) = ((a+b)/h) / ((g/h)ab).
+/// ```
+///
+/// For a fixed reduced fraction `p/q`, choosing a preimage therefore chooses
+/// an ordered factorization `q=cab`; after that, `h=(a+b)/p` and `g=hc` are
+/// forced.  The collision multiplicity is at most `tau_3(q)`.  Moreover,
+/// `deg q<=2d` because `deg g+max(deg a,deg b)<=d`.
+///
+/// To bound `tau_3`, split irreducible factors at degree `R`.  There are fewer
+/// than `2^(R+1)` low-degree irreducibles, and each has at most
+/// `(2d+1)^2` exponent allocations among three factors.  The high-degree
+/// factors have total multiplicity at most `floor(2d/(R+1))`, and
+/// `binomial(e+2,2)<=3^e`.  Multiplying this maximum multiplicity by the
+/// `2^(2d)` ordered pairs proves the returned energy bound.
+///
+/// # Errors
+///
+/// Rejects `d=0`, a caller degree limit, or checked-arithmetic overflow.
+pub fn principal_unit_inverse_additive_energy_no_wrap_bound(
+    interval_degree: usize,
+    limits: HayesLimits,
+) -> Result<PrincipalUnitInverseAdditiveNoWrapBoundReport, HayesError> {
+    if interval_degree == 0 {
+        return Err(HayesError::InvalidParameter(
+            "no-wrap inverse-energy bound requires a positive degree".to_owned(),
+        ));
+    }
+    check_limit("degree", interval_degree, limits.max_degree)?;
+    let twice_degree = interval_degree.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("no-wrap divisor degree overflow".to_owned())
+    })?;
+    let minimum_stable_ell = interval_degree
+        .checked_mul(3)
+        .ok_or_else(|| HayesError::InvalidParameter("no-wrap stable level overflow".to_owned()))?;
+    let floor_log_two = usize::BITS as usize - 1 - interval_degree.leading_zeros() as usize;
+    let split_degree = (floor_log_two / 2).max(1);
+    let low_allocation_exponent = 1_usize
+        .checked_shl(u32::try_from(split_degree + 2).map_err(|_| {
+            HayesError::InvalidParameter("low-factor exponent shift overflow".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("low-factor exponent exceeds host width".to_owned())
+        })?;
+    let low_allocation_exponent = u32::try_from(low_allocation_exponent).map_err(|_| {
+        HayesError::InvalidParameter("low-factor exponent exceeds BigUint::pow".to_owned())
+    })?;
+    let high_factor_count = twice_degree / (split_degree + 1);
+    let high_factor_count = u32::try_from(high_factor_count).map_err(|_| {
+        HayesError::InvalidParameter("high-factor exponent exceeds BigUint::pow".to_owned())
+    })?;
+    let base = twice_degree.checked_add(1).ok_or_else(|| {
+        HayesError::InvalidParameter("low-factor allocation base overflow".to_owned())
+    })?;
+    let maximum_multiplicity_bound = BigUint::from(base).pow(low_allocation_exponent)
+        * BigUint::from(3_u8).pow(high_factor_count);
+    let additive_energy_bound = &maximum_multiplicity_bound << twice_degree;
+    Ok(PrincipalUnitInverseAdditiveNoWrapBoundReport {
+        interval_degree,
+        minimum_stable_ell,
+        split_degree,
+        maximum_multiplicity_bound,
+        additive_energy_bound,
+    })
+}
+
+/// Substitute arbitrary rational energy exponents into the `k=2` bilinear
+/// Hölder bound and compare the result with an integer target exponent.
+///
+/// # Errors
+///
+/// Rejects a zero denominator or checked-arithmetic overflow.
+pub fn binary_bilinear_energy_exponent(
+    left_interval_exponent: usize,
+    right_interval_exponent: usize,
+    modulus_degree: usize,
+    left_energy_exponent_numerator: usize,
+    right_energy_exponent_numerator: usize,
+    energy_exponent_denominator: usize,
+    target_exponent: usize,
+) -> Result<BinaryBilinearEnergyExponentReport, HayesError> {
+    if energy_exponent_denominator == 0 {
+        return Err(HayesError::InvalidParameter(
+            "energy exponent denominator must be positive".to_owned(),
+        ));
+    }
+    let left = u128::try_from(left_interval_exponent).map_err(|_| {
+        HayesError::InvalidParameter("left interval exponent exceeds u128".to_owned())
+    })?;
+    let right = u128::try_from(right_interval_exponent).map_err(|_| {
+        HayesError::InvalidParameter("right interval exponent exceeds u128".to_owned())
+    })?;
+    let modulus = u128::try_from(modulus_degree)
+        .map_err(|_| HayesError::InvalidParameter("modulus degree exceeds u128".to_owned()))?;
+    let denominator = u128::try_from(energy_exponent_denominator).map_err(|_| {
+        HayesError::InvalidParameter("energy exponent denominator exceeds u128".to_owned())
+    })?;
+    let energy_sum = u128::try_from(left_energy_exponent_numerator)
+        .ok()
+        .and_then(|value| {
+            u128::try_from(right_energy_exponent_numerator)
+                .ok()
+                .and_then(|right_value| value.checked_add(right_value))
+        })
+        .ok_or_else(|| HayesError::InvalidParameter("energy exponent sum overflow".to_owned()))?;
+    // Over denominator 8D, the two interval main terms and the `-4m-4n`
+    // normalization combine to `D(4m+4n+r)`.
+    let normalized = left
+        .checked_add(right)
+        .and_then(|sum| sum.checked_mul(4))
+        .and_then(|sum| sum.checked_add(modulus))
+        .and_then(|sum| sum.checked_mul(denominator))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("bilinear normalized exponent overflow".to_owned())
+        })?;
+    let bound_exponent_numerator = normalized.checked_add(energy_sum).ok_or_else(|| {
+        HayesError::InvalidParameter("bilinear bound exponent overflow".to_owned())
+    })?;
+    let target_exponent_numerator = u128::try_from(target_exponent)
+        .ok()
+        .and_then(|target| target.checked_mul(8))
+        .and_then(|target| target.checked_mul(denominator))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("bilinear target exponent overflow".to_owned())
+        })?;
+    let deficit_numerator = if target_exponent_numerator >= bound_exponent_numerator {
+        i128::try_from(target_exponent_numerator - bound_exponent_numerator).map_err(|_| {
+            HayesError::InvalidParameter("bilinear exponent deficit exceeds i128".to_owned())
+        })?
+    } else {
+        -i128::try_from(bound_exponent_numerator - target_exponent_numerator).map_err(|_| {
+            HayesError::InvalidParameter("bilinear exponent deficit exceeds i128".to_owned())
+        })?
+    };
+    Ok(BinaryBilinearEnergyExponentReport {
+        left_interval_exponent,
+        right_interval_exponent,
+        modulus_degree,
+        energy_exponent_denominator,
+        bound_exponent_numerator,
+        target_exponent_numerator,
+        deficit_numerator,
+        strict_saving: deficit_numerator > 0,
     })
 }
 
@@ -3310,6 +3643,63 @@ fn unit_multiply(mut left: u64, right: u64, ell: usize) -> u64 {
     product & mask
 }
 
+fn polynomial_multiply_packed(mut left: u64, right: u64) -> u64 {
+    let mut product = 0_u64;
+    while left != 0 {
+        let degree = left.trailing_zeros();
+        left &= left - 1;
+        product ^= right << degree;
+    }
+    product
+}
+
+fn polynomial_remainder_packed(mut dividend: u64, divisor: u64) -> u64 {
+    debug_assert_ne!(divisor, 0);
+    let divisor_degree = divisor.ilog2();
+    while dividend != 0 {
+        let dividend_degree = dividend.ilog2();
+        if dividend_degree < divisor_degree {
+            break;
+        }
+        dividend ^= divisor << (dividend_degree - divisor_degree);
+    }
+    dividend
+}
+
+fn polynomial_gcd_packed(mut left: u64, mut right: u64) -> u64 {
+    while right != 0 {
+        let remainder = polynomial_remainder_packed(left, right);
+        left = right;
+        right = remainder;
+    }
+    left
+}
+
+fn polynomial_exact_divide_packed(mut dividend: u64, divisor: u64) -> Result<u64, HayesError> {
+    if divisor == 0 {
+        return Err(HayesError::Invariant(
+            "binary polynomial exact division by zero".to_owned(),
+        ));
+    }
+    let divisor_degree = divisor.ilog2();
+    let mut quotient = 0_u64;
+    while dividend != 0 {
+        let dividend_degree = dividend.ilog2();
+        if dividend_degree < divisor_degree {
+            break;
+        }
+        let shift = dividend_degree - divisor_degree;
+        quotient |= 1_u64 << shift;
+        dividend ^= divisor << shift;
+    }
+    if dividend != 0 {
+        return Err(HayesError::Invariant(
+            "binary polynomial division left a nonzero remainder".to_owned(),
+        ));
+    }
+    Ok(quotient)
+}
+
 fn group_transform(values: &mut [u64], dimensions: &[usize], modulus: u64) {
     let mut stride = 1;
     for &dimension in dimensions {
@@ -3774,6 +4164,116 @@ mod tests {
                 .unwrap()
                 .pair_product_energy
         );
+    }
+
+    #[test]
+    fn inverse_additive_energy_stabilizes_when_the_modulus_cannot_wrap() {
+        let limits = HayesLimits::default();
+        let expected = [8_u64, 40, 176, 760, 3_128, 12_520];
+        for (offset, expected_energy) in expected.into_iter().enumerate() {
+            let degree = offset + 1;
+            let stable = principal_unit_inverse_additive_energy_no_wrap(degree, limits).unwrap();
+            assert_eq!(stable.minimum_stable_ell, 3 * degree);
+            assert_eq!(
+                stable.ordered_pair_count,
+                BigUint::from(1_u8) << (2 * degree)
+            );
+            assert_eq!(stable.additive_energy, BigUint::from(expected_energy));
+            for ell in [3 * degree, 3 * degree + 1] {
+                let modular = principal_unit_inverse_additive_energy(ell, degree, limits).unwrap();
+                assert_eq!(modular.additive_energy, stable.additive_energy);
+            }
+        }
+
+        // Below the proved threshold the congruence can identify fractions
+        // whose cross-products differ by a nonzero multiple of x^(ell+1).
+        let wrapped = principal_unit_inverse_additive_energy(8, 4, limits).unwrap();
+        let stable = principal_unit_inverse_additive_energy_no_wrap(4, limits).unwrap();
+        assert_eq!(wrapped.additive_energy, BigUint::from(928_u16));
+        assert_eq!(stable.additive_energy, BigUint::from(760_u16));
+    }
+
+    #[test]
+    fn no_wrap_fraction_reduction_is_canonical_and_bounded() {
+        let limits = HayesLimits::default();
+        let report = principal_unit_inverse_additive_energy_no_wrap(3, limits).unwrap();
+        assert_eq!(report.reduced_fraction_count, 29);
+        assert_eq!(report.maximum_fraction_multiplicity, 8);
+        assert!(matches!(
+            principal_unit_inverse_additive_energy_no_wrap(0, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert_eq!(
+            principal_unit_inverse_additive_energy_no_wrap(
+                4,
+                HayesLimits {
+                    max_table_cells: 255,
+                    ..limits
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "table_cells",
+                requested: 256,
+                limit: 255,
+            })
+        );
+    }
+
+    #[test]
+    fn no_wrap_divisor_bound_dominates_exact_collision_classes() {
+        let limits = HayesLimits::default();
+        for degree in 1..=7 {
+            let exact = principal_unit_inverse_additive_energy_no_wrap(degree, limits).unwrap();
+            let bound =
+                principal_unit_inverse_additive_energy_no_wrap_bound(degree, limits).unwrap();
+            assert_eq!(bound.minimum_stable_ell, 3 * degree);
+            assert!(
+                BigUint::from(exact.maximum_fraction_multiplicity)
+                    <= bound.maximum_multiplicity_bound
+            );
+            assert!(exact.additive_energy <= bound.additive_energy_bound);
+        }
+        assert!(matches!(
+            principal_unit_inverse_additive_energy_no_wrap_bound(0, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert_eq!(
+            principal_unit_inverse_additive_energy_no_wrap_bound(
+                4,
+                HayesLimits {
+                    max_degree: 3,
+                    ..limits
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "degree",
+                requested: 4,
+                limit: 3,
+            })
+        );
+    }
+
+    #[test]
+    fn bilinear_energy_ledger_exposes_the_exact_type_two_margin() {
+        // With optimal no-wrap energy exponents em=en=2d at r=3d,
+        // Bagshaw's k=2 Hölder lemma saves d/8 from the trivial 2d bound.
+        let saving = binary_bilinear_energy_exponent(100, 100, 300, 200, 200, 1, 200).unwrap();
+        assert_eq!(saving.bound_exponent_numerator, 1_500);
+        assert_eq!(saving.target_exponent_numerator, 1_600);
+        assert_eq!(saving.deficit_numerator, 100);
+        assert!(saving.strict_saving);
+
+        // At total interval size r/2, the same energy scale merely reaches
+        // the trivial exponent and supplies no strict saving.
+        let boundary = binary_bilinear_energy_exponent(100, 100, 400, 200, 200, 1, 200).unwrap();
+        assert_eq!(boundary.bound_exponent_numerator, 1_600);
+        assert_eq!(boundary.deficit_numerator, 0);
+        assert!(!boundary.strict_saving);
+
+        assert!(matches!(
+            binary_bilinear_energy_exponent(1, 1, 3, 2, 2, 0, 2),
+            Err(HayesError::InvalidParameter(_))
+        ));
     }
 
     #[test]

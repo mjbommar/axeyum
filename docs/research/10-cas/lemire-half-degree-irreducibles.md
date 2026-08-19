@@ -754,12 +754,70 @@ E_inv:   8   40  176  928  7424  77824  1114112.
 ```
 
 Fleet probes on `s1,s4,s5,s6,s7` computed complete rows for `ell=17,...,21`.
-They suggest that fixed-`d` values stabilize in a no-wrap regime near
-`ell>=3d` (the first six observed stable values are
-`8,40,176,760,3128,12520`).  This is conjecture-selection data only.  The
-analytic task is to prove an adequate piecewise energy bound, insert it into
-the characteristic-free Hölder calculation, and recompute the exponent for
-every interval-degree range.
+They suggested that fixed-`d` values stabilize near `ell>=3d`; this part is now
+a theorem rather than an extrapolation.  Clearing denominators gives
+
+```text
+A^(-1)+B^(-1) = C^(-1)+D^(-1) mod x^(ell+1)
+iff
+(A+B)CD = (C+D)AB mod x^(ell+1).
+```
+
+Both sides have degree at most `3d`.  When `ell>=3d`, congruence is therefore
+ordinary equality in `GF(2)[x]`, and the energy is independent of `ell`.
+
+The equality also has a divisor classification.  Write `A=ga`, `B=gb` with
+`(a,b)=1`, and put `h=(g,a+b)`.  The canonically reduced fraction is
+
+```text
+(A+B)/(AB) = ((a+b)/h) / ((g/h)ab).
+```
+
+For a fixed reduced fraction `p/q`, any preimage selects an ordered
+factorization `q=cab`; then `h=(a+b)/p` and `g=hc` are forced.  Also
+`deg q<=2d`.  Thus every fibre has size at most the ternary polynomial divisor
+function `tau_3(q)`.  If irreducible factors are split at degree
+`R=floor(log_2(d)/2)`, the elementary estimates
+
+```text
+# {irreducibles of degree <=R} < 2^(R+1),
+Omega_(>R)(q) <= floor(2d/(R+1)),
+binomial(e+2,2) <= 3^e
+```
+
+give the explicit uniform envelope
+
+```text
+E_inv(ell,d)
+ <= 2^(2d) (2d+1)^(2^(R+2)) 3^floor(2d/(R+1))
+ = 2^(2d+o(d)),                         ell>=3d.       (NW)
+```
+
+The operation `principal_unit_inverse_additive_energy_no_wrap` computes the
+stable value independently by reduced-rational-function buckets.  It gives
+the first six exact values `8,40,176,760,3128,12520` and agrees with the
+Walsh route at `ell=3d` and `3d+1`; `(ell,d)=(8,4)` remains below the theorem's
+range and has the different wrapped value `928`.  The companion operation
+`principal_unit_inverse_additive_energy_no_wrap_bound` replays the explicit
+divisor envelope.
+
+Feeding a general energy exponent back into Bagshaw's characteristic-free
+`k=2` bilinear lemma gives, in base-two exponents,
+
+```text
+w = m+n + (e_m+e_n+r-4m-4n)/8.
+```
+
+With `(NW)` on both intervals this is
+`3(m+n)/4+r/8+o(m+n)`, which is nontrivial precisely beyond the boundary
+`m+n=r/2+o(r)`.  The no-wrap hypotheses also require
+`3 max(m,n)<=r`, so this closes a genuine small/small Type-II region near
+balanced thirds but not the whole endpoint decomposition.  The exact
+`binary_bilinear_energy_exponent` report accepts arbitrary rational energy
+exponents and returns the deficit from a requested target; it prevents a
+sharper energy theorem from being pursued without checking its endpoint
+effect.  The remaining analytic task is the wrapped range and the cancellation
+across the complete Möbius convolution.
 
 Berlekamp's characteristic-two analogue of Pellet's formula is the natural
 next structural input: for squarefree polynomials it expresses the Möbius

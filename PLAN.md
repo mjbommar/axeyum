@@ -387,8 +387,12 @@ the reciprocal-polynomial and ramified-`x` identity frequency by frequency.
 The source-level characteristic audit isolates the reusable Hölder/energy
 core from the odd-characteristic complete-sum input.  Exact inverse-additive
 energy is now a separate native diagnostic with a direct collision oracle;
-fleet rows through level 21 suggest, but do not prove, a no-wrap regime.  The
-source dependency table and exact exponent ledger are now complete.  They
+the fleet-suggested no-wrap regime is now proved for `ell>=3d` by clearing
+denominators.  A second native route classifies reduced rational collisions
+and proves the explicit bound `E_inv<=2^(2d+o(d))`; a symbolic Hölder ledger
+shows this closes the small/small Type-II region beyond total interval
+exponent `r/2`, but not the full decomposition.  The source dependency table
+and exact exponent ledger are now complete.  They
 show that direct substitution of the proved binary wild-Kloosterman maximum
 loses all uniform saving in Bagshaw's Type-I Case 5.  Exact variable mapping
 also shows that Case 5 is empty here because every Lemire cutoff has
