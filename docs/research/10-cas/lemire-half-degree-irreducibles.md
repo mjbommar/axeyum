@@ -561,6 +561,60 @@ test also requires the corpus to detect both replacing `u^(-1)` by `u` and
 omitting the factor `d`; it therefore controls the termwise map rather than
 only its final sum.
 
+### Exact inverse-additive Fourier bridge
+
+Write `J_ell=x GF(2)[x]/(x^(ell+1))`, identify its additive characters with
+packed coefficient vectors `a`, and put
+
+```text
+H_k(a)=sum_(e in E_ell) M_k(e)(-1)^<a,e^(-1)-1>.
+```
+
+The annihilator of `W_d={a_1x+...+a_dx^d}` consists exactly of the packed
+frequencies whose first `d` bits vanish.  Additive orthogonality therefore
+gives the normalization required by (MC):
+
+```text
+sum_(u in V_d) M_k(u^(-1))
+  = 2^(d-ell) sum_(a in W_d^perp) H_k(a).                    (AF)
+```
+
+`inverse_additive_mobius_spectrum` constructs `H_k` by putting the exact
+classwise Möbius table into additive coordinates after unit inversion and
+applying a checked integral Walsh transform.  It requires inversion to be a
+permutation and checks Parseval with unbounded integers.  Orthogonality
+reconstructs every endpoint convolution fibre through `ell=9`; an independent
+factorization-and-direct-character-sum oracle matches every frequency for
+`2<=ell<=5` in the endpoint degree window.
+
+The reciprocal and ramified-`x` bookkeeping can also be stated without an
+informal change of variables.  For an ordinary monic polynomial `h` with
+`h(0)=1`, define
+
+```text
+B_m(a)=sum_(deg h=m, h monic, h(0)=1)
+         mu(h)(-1)^<a,h^(-1)-1>,
+```
+
+where inversion is modulo `x^(ell+1)`.  Split a monic degree-`k` polynomial
+`f` according to its `x`-adic valuation.  Terms divisible by `x^2` have
+Möbius value zero; if `f=xg` with `g(0)=1`, then `mu(f)=-mu(g)` and the
+reciprocal leading-coefficient unit of `f` is the reciprocal of `g`.
+Reversal is a factorization-preserving bijection on monic constant-one
+polynomials.  Hence, exactly,
+
+```text
+H_k(a)=B_k(a)-B_(k-1)(a).                                  (RT)
+```
+
+Combining (AF) and (RT) expresses every term of (MC) as a normalized sum of
+the conventional Möbius-weighted inverse-additive phase over ordinary unit
+polynomials, with the exact-degree difference and the ramified `x` factor
+visible.  Direct Berlekamp factorization checks (RT) frequency-by-frequency
+for `2<=ell<=5`.  The remaining applicability issue is now analytic rather
+than representational: here `k>ell+1`, whereas several external interval
+estimates use different degree/modulus ranges.
+
 Berlekamp's characteristic-two analogue of Pellet's formula is the natural
 next structural input: for squarefree polynomials it expresses the Möbius
 sign through an additive character of the Berlekamp discriminant.  Carmon's

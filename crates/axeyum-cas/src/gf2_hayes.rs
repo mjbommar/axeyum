@@ -586,6 +586,64 @@ pub struct ClassMobiusDistribution {
     pub values: Vec<i128>,
 }
 
+/// Additive Fourier spectrum of classwise Möbius sums after unit inversion.
+///
+/// Coordinate `a` stores
+///
+/// ```text
+/// H_degree(a)=sum_(e in E_ell) M_degree(e)
+///                 (-1)^<a,e^(-1)-1>,
+/// ```
+///
+/// where the coefficients of `e^(-1)-1` in degrees `1..=ell` are packed
+/// low-degree first.  This is a finite diagnostic; it makes no universal
+/// cancellation claim.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InverseAdditiveMobiusSpectrum {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Polynomial degree.
+    pub degree: usize,
+    /// Exact signed Walsh coefficients in packed additive-frequency order.
+    pub values: Vec<i128>,
+}
+
+impl InverseAdditiveMobiusSpectrum {
+    /// Recover `sum_(u in V_d) M_degree(u^(-1))` by additive orthogonality.
+    ///
+    /// # Errors
+    ///
+    /// Rejects `d=0` and `d>=ell`, and reports a failed exact divisibility
+    /// invariant.
+    pub fn inverse_interval_fibre_sum(&self, d: usize) -> Result<i128, HayesError> {
+        if d == 0 || d >= self.ell {
+            return Err(HayesError::InvalidParameter(format!(
+                "inverse interval degree must satisfy 1<=d<ell, got d={d}, ell={}",
+                self.ell
+            )));
+        }
+        let stride = 1_usize << d;
+        let denominator = 1_i128 << (self.ell - d);
+        let frequency_sum = self
+            .values
+            .iter()
+            .step_by(stride)
+            .try_fold(0_i128, |sum, value| {
+                sum.checked_add(*value).ok_or_else(|| {
+                    HayesError::InvalidParameter(
+                        "inverse-additive annihilator sum exceeds i128".to_owned(),
+                    )
+                })
+            })?;
+        if frequency_sum % denominator != 0 {
+            return Err(HayesError::Invariant(format!(
+                "inverse-additive annihilator sum {frequency_sum} is not divisible by {denominator}"
+            )));
+        }
+        Ok(frequency_sum / denominator)
+    }
+}
+
 /// One exact low-degree term in the identity-class Möbius convolution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MobiusConvolutionTerm {
@@ -1720,6 +1778,95 @@ pub fn class_mobius_distribution(
         ell,
         degree,
         values,
+    })
+}
+
+/// Compute the additive Fourier spectrum of Möbius sums after unit inversion.
+///
+/// This is the exact Fourier bridge used by the Lemire endpoint reduction.
+/// If `W_d` is the additive coefficient subspace in degrees `1..=d`, then
+/// orthogonality gives
+///
+/// ```text
+/// sum_(u in V_d) M_degree(u^(-1))
+///   = 2^(d-ell) sum_(a in W_d^perp) H_degree(a).
+/// ```
+///
+/// The operation checks that inversion is a permutation and verifies Walsh
+/// Parseval exactly with unbounded integers.  It proves only the finite
+/// requested identity, not a bound uniform in `ell`.
+///
+/// # Errors
+///
+/// Returns the same typed admission and reconstruction failures as
+/// [`class_mobius_distribution`], or an invariant error if the unit indexing,
+/// checked Walsh transform, or Parseval identity fails.
+pub fn inverse_additive_mobius_spectrum(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<InverseAdditiveMobiusSpectrum, HayesError> {
+    let distribution = class_mobius_distribution(ell, degree, limits)?;
+    let factors = principal_unit_factors(ell);
+    let mut additive_values = vec![0_i128; distribution.values.len()];
+    let mut occupied = vec![false; distribution.values.len()];
+    for (index, value) in distribution.values.iter().copied().enumerate() {
+        let mut quotient = index;
+        let mut unit = 1_u64;
+        for factor in &factors {
+            let exponent = quotient % factor.order;
+            quotient /= factor.order;
+            let generator = 1 | (1_u64 << factor.odd_degree);
+            for _ in 0..exponent {
+                unit = unit_multiply(unit, generator, ell);
+            }
+        }
+        if quotient != 0 {
+            return Err(HayesError::Invariant(format!(
+                "ell={ell}: mixed-radix unit index leaves a quotient"
+            )));
+        }
+        let inverse = principal_unit_inverse(unit, ell);
+        let packed = usize::try_from(inverse >> 1).map_err(|_| {
+            HayesError::InvalidParameter("packed inverse unit does not fit usize".to_owned())
+        })?;
+        if packed >= additive_values.len() || occupied[packed] {
+            return Err(HayesError::Invariant(format!(
+                "ell={ell}: unit inversion is not a permutation of additive coordinates"
+            )));
+        }
+        occupied[packed] = true;
+        additive_values[packed] = value;
+    }
+    if occupied.iter().any(|entry| !entry) {
+        return Err(HayesError::Invariant(format!(
+            "ell={ell}: unit inversion misses an additive coordinate"
+        )));
+    }
+
+    let source_energy = additive_values
+        .iter()
+        .fold(BigUint::from(0_u8), |sum, value| {
+            let magnitude = BigUint::from(value.unsigned_abs());
+            sum + &magnitude * &magnitude
+        });
+    checked_walsh_transform(&mut additive_values)?;
+    let spectrum_energy = additive_values
+        .iter()
+        .fold(BigUint::from(0_u8), |sum, value| {
+            let magnitude = BigUint::from(value.unsigned_abs());
+            sum + &magnitude * &magnitude
+        });
+    let expected_energy = BigUint::from(additive_values.len()) * source_energy;
+    if spectrum_energy != expected_energy {
+        return Err(HayesError::Invariant(
+            "inverse-additive Mobius spectrum fails Walsh Parseval".to_owned(),
+        ));
+    }
+    Ok(InverseAdditiveMobiusSpectrum {
+        ell,
+        degree,
+        values: additive_values,
     })
 }
 
@@ -2939,6 +3086,33 @@ fn multiply_mod(left: u64, right: u64, modulus: u64) -> u64 {
     }
 }
 
+fn checked_walsh_transform(values: &mut [i128]) -> Result<(), HayesError> {
+    if !values.len().is_power_of_two() {
+        return Err(HayesError::Invariant(
+            "Walsh transform length is not a power of two".to_owned(),
+        ));
+    }
+    let mut width = 1;
+    while width < values.len() {
+        for start in (0..values.len()).step_by(width * 2) {
+            for offset in 0..width {
+                let left = values[start + offset];
+                let right = values[start + width + offset];
+                values[start + offset] = left.checked_add(right).ok_or_else(|| {
+                    HayesError::InvalidParameter("Walsh sum exceeds i128".to_owned())
+                })?;
+                values[start + width + offset] = left.checked_sub(right).ok_or_else(|| {
+                    HayesError::InvalidParameter("Walsh difference exceeds i128".to_owned())
+                })?;
+            }
+        }
+        width = width.checked_mul(2).ok_or_else(|| {
+            HayesError::InvalidParameter("Walsh transform width overflow".to_owned())
+        })?;
+    }
+    Ok(())
+}
+
 fn add_mod(left: u64, right: u64, modulus: u64) -> u64 {
     let sum = left + right;
     if sum >= modulus { sum - modulus } else { sum }
@@ -3012,6 +3186,33 @@ mod tests {
             direct[unit_to_index[&unit]] += mobius;
         }
         direct
+    }
+
+    fn direct_unit_polynomial_inverse_spectrum(ell: usize, degree: usize) -> Vec<i128> {
+        let mut spectrum = vec![0_i128; 1_usize << ell];
+        for middle in 0_u64..1_u64 << degree.saturating_sub(1) {
+            let polynomial = (1_u64 << degree) | (middle << 1) | 1;
+            let coefficients = (0..=degree)
+                .map(|index| i128::from((polynomial >> index) & 1))
+                .collect::<Vec<_>>();
+            let factors = crate::gfp::factor_berlekamp(&coefficients, 2).unwrap();
+            let mobius = if factors.iter().any(|(_, multiplicity)| *multiplicity != 1) {
+                0
+            } else if factors.len().is_multiple_of(2) {
+                1
+            } else {
+                -1
+            };
+            let mask = (1_u64 << (ell + 1)) - 1;
+            let residue = polynomial & mask;
+            let packed_inverse = principal_unit_inverse(residue, ell) >> 1;
+            for (frequency, coefficient) in spectrum.iter_mut().enumerate() {
+                let parity = (packed_inverse & frequency as u64).count_ones() % 2;
+                let sign = if parity == 0 { 1 } else { -1 };
+                *coefficient += sign * mobius;
+            }
+        }
+        spectrum
     }
 
     const EXPECTED: &[(i128, i128)] = &[
@@ -3603,6 +3804,75 @@ mod tests {
                     ..limits
                 }
             ),
+            Err(HayesError::InvalidParameter(_))
+        ));
+    }
+
+    #[test]
+    fn inverse_additive_mobius_spectrum_matches_direct_factorization() {
+        let limits = HayesLimits::default();
+        for ell in 2_usize..=5 {
+            let unit_to_index = principal_unit_index_map(ell);
+            for degree in ell + 2..=2 * ell + 1 {
+                let report = inverse_additive_mobius_spectrum(ell, degree, limits).unwrap();
+                let direct_mobius = direct_class_mobius_distribution(ell, degree);
+                let mut direct_spectrum = vec![0_i128; 1_usize << ell];
+                for (frequency, coefficient) in direct_spectrum.iter_mut().enumerate() {
+                    for (&unit, &class_index) in &unit_to_index {
+                        let packed_inverse = unit_inverse(unit, ell) >> 1;
+                        let parity = (packed_inverse & frequency as u64).count_ones() % 2;
+                        let sign = if parity == 0 { 1 } else { -1 };
+                        *coefficient += sign * direct_mobius[class_index];
+                    }
+                }
+                assert_eq!(report.values, direct_spectrum, "ell={ell}, degree={degree}");
+
+                let current = direct_unit_polynomial_inverse_spectrum(ell, degree);
+                let previous = direct_unit_polynomial_inverse_spectrum(ell, degree - 1);
+                let reciprocal_difference = current
+                    .into_iter()
+                    .zip(previous)
+                    .map(|(left, right)| left - right)
+                    .collect::<Vec<_>>();
+                assert_eq!(
+                    report.values, reciprocal_difference,
+                    "reciprocal/T split: ell={ell}, degree={degree}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn inverse_additive_orthogonality_recovers_convolution_fibres() {
+        let limits = HayesLimits::default();
+        for ell in 2_usize..=9 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let convolution = identity_class_mobius_convolution(ell, degree, limits).unwrap();
+                for term in convolution.terms {
+                    let spectrum = inverse_additive_mobius_spectrum(
+                        ell,
+                        degree - term.interval_degree,
+                        limits,
+                    )
+                    .unwrap();
+                    let fibre = spectrum
+                        .inverse_interval_fibre_sum(term.interval_degree)
+                        .unwrap();
+                    assert_eq!(
+                        i128::try_from(term.interval_degree).unwrap() * fibre,
+                        term.value
+                    );
+                }
+            }
+        }
+
+        let report = inverse_additive_mobius_spectrum(4, 9, limits).unwrap();
+        assert!(matches!(
+            report.inverse_interval_fibre_sum(0),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            report.inverse_interval_fibre_sum(4),
             Err(HayesError::InvalidParameter(_))
         ));
     }

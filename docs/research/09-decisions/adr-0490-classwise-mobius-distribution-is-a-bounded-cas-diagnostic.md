@@ -49,6 +49,13 @@ Compute all required Möbius rows once per NTT modulus, reconstruct every
 signed summand by CRT, and require their sum to equal the independently
 computed identity-class discrepancy.
 
+Expose `inverse_additive_mobius_spectrum` as the exact finite Fourier bridge.
+It maps the class table through unit inversion into additive coefficient
+coordinates, applies a checked integral Walsh transform, and recovers inverse
+interval fibres by summing annihilator frequencies with the exact
+`2^(d-ell)` normalization.  Keep this CAS-local and finite; it is not a new IR
+operator or a claim of asymptotic cancellation.
+
 ## Evidence
 
 Every recovered coordinate is checked against `|M_n(e)|<=2^n`.  Summing the
@@ -71,6 +78,13 @@ The same factorization oracle independently checks every convolution term at
 both endpoints for `2<=ell<=5`.  Mutation controls require at least one case
 to reject omission of the interval-degree weight and at least one to reject
 replacement of the inverse class by the original class.
+
+The inverse-additive spectrum is checked against direct Berlekamp
+factorization and direct character summation for `2<=ell<=5`.  The same oracle
+checks frequency-by-frequency the reciprocal/ramified-factor identity
+`H_k=B_k-B_(k-1)`, and the Fourier annihilator formula reconstructs every
+endpoint fibre through `ell=9`.  Exact Walsh Parseval is an additional runtime
+invariant.
 
 ## Alternatives
 

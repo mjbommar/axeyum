@@ -375,7 +375,12 @@ Möbius-convolution sum; the CAS reconstructs it from a single recurrence table
 and the ledger exposes its still-unproved uniform endpoint bound without
 granting finite experiments theorem credit.  A direct small-degree
 factorization oracle now checks each convolution term and detects inverse- and
-weight-dropping mutations independently of the transform reconstruction.
+weight-dropping mutations independently of the transform reconstruction.  The
+exact additive-Fourier bridge is now native: a checked Walsh spectrum recovers
+every inverse-interval fibre, while a direct factorization oracle validates
+the reciprocal-polynomial and ramified-`x` identity frequency by frequency.
+The next step is the characteristic-two dependency and exponent audit, not
+more normalization guesswork.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
