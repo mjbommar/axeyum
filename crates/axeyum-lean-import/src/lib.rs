@@ -43,6 +43,7 @@ use serde_json::{Map, Value};
 mod contract_residualization;
 mod identity;
 mod semantic_contract_receipt;
+mod source_delta_trace;
 mod type_slice;
 mod type_slice_receipt;
 
@@ -58,6 +59,9 @@ pub use semantic_contract_receipt::{
     SEMANTIC_FUNCTION_CONTRACT_RECEIPT_VERSION, SemanticContractDependencyReceipt,
     SemanticFunctionContractReceipt, SemanticFunctionContractReceiptError,
     issue_semantic_function_contract_receipt, verify_semantic_function_contract_receipt,
+};
+pub use source_delta_trace::{
+    CheckedSourceDeltaStep, SourceDeltaStepError, build_source_delta_step, verify_source_delta_step,
 };
 pub use type_slice::{
     ConstantInstance, GeneralizedBinder, GeneralizedGoal, TypeSliceError,
