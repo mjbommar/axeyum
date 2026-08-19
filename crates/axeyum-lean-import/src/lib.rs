@@ -61,7 +61,8 @@ pub use contract_residualization::{
 };
 pub use identity::{
     AxiomIdentity, DeclarationDependencyIdentity, DeclarationIdentity, DeclarationKind,
-    canonical_declaration_sha256, canonical_expression_sha256, canonical_level_sha256,
+    canonical_alpha_expression_sha256, canonical_declaration_sha256, canonical_expression_sha256,
+    canonical_level_sha256,
 };
 pub use semantic_contract_receipt::{
     SEMANTIC_FUNCTION_CONTRACT_RECEIPT_VERSION, SemanticContractDependencyReceipt,
