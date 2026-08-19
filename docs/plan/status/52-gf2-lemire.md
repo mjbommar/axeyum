@@ -86,7 +86,7 @@ fact or claiming a universal proof.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-18 | pending | Added exact conductor-family second moments, refuted generic Cauchy at `(8,17)`, and pinned the direct `(5,45)` counterexample to the otherwise sufficient constant-one layer target. |
+| 2026-08-18 | `a48c57824` | Added exact conductor-family second moments, refuted generic Cauchy at `(8,17)`, and pinned the direct `(5,45)` counterexample to the otherwise sufficient constant-one layer target. |
 
 | 2026-08-18 | `1ff1ca6b7` | Extracted bounded reusable Hayes/principal-unit/conductor CAS APIs, dual-checked the conditional sufficient-bound arithmetic, retained the missing cancellation lemma as an explicit obligation, and independently reproduced `ell=23`. |
 | 2026-08-18 | `4b129601c` | Extended the exact NTT/CRT endpoint oracle through `ell=22`, added an a-priori CRT uniqueness guard, reduced peak memory, and isolated the family-norm cancellation factor that the universal proof must recover. |
