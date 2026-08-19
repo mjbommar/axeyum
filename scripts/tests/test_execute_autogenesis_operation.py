@@ -19,7 +19,7 @@ assert SPEC is not None and SPEC.loader is not None
 execution = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(execution)
 
-REFLEXIVITY_FACT = "F:ml430-nat-ascfactorial-zero-fd183202"
+REFLEXIVITY_FACT = "F:ml430-nat-descfactorial-zero-966b01df"
 FIB_FACT = "F:ml430-nat-fib-add-two-b86e0c82"
 
 
@@ -409,7 +409,7 @@ class OperationExecutionTests(unittest.TestCase):
         )
         self.assertEqual(
             receipt["request"]["reflexivity_manifest"],
-            "artifacts/autogenesis/mathlib-statement-reflexivity-v1.json",
+            "artifacts/autogenesis/mathlib-descfactorial-zero-reflexivity-v1.json",
         )
         changed = copy.deepcopy(observation)
         changed["proof_sha256"] = "0" * 64

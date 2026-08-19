@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the first durable Mathlib statement-reflexivity admission."""
+"""Verify a durable Mathlib kernel admission and its isolated clean replay."""
 
 from __future__ import annotations
 
@@ -301,8 +301,10 @@ def validate(manifest_path: pathlib.Path = MANIFEST) -> dict[str, Any]:
     manifest = load(manifest_path)
     if (
         manifest.get("schema_version") != 1
-        or manifest.get("kind")
-        != "axeyum-autogenesis-mathlib-statement-reflexivity-admission"
+        or manifest.get("kind") not in {
+            "axeyum-autogenesis-mathlib-statement-reflexivity-admission",
+            "axeyum-autogenesis-mathlib-checked-theorem-receipt-admission",
+        }
         or manifest.get("state")
         != "durably-admitted-archived-and-clean-replayed"
     ):
@@ -364,13 +366,19 @@ def main() -> int:
             )
         manifest = validate(manifest_path)
         identities = manifest["identities"]
+        prefix = (
+            "AUTOGENESIS_STATEMENT_REFLEXIVITY_ADMISSION_OK"
+            if manifest["kind"]
+            == "axeyum-autogenesis-mathlib-statement-reflexivity-admission"
+            else "AUTOGENESIS_CHECKED_THEOREM_RECEIPT_ADMISSION_OK"
+        )
         print(
-            "AUTOGENESIS_STATEMENT_REFLEXIVITY_ADMISSION_OK|"
+            f"{prefix}|"
             f"fact={manifest['fact_id']}|execution={identities['execution_sha256']}|"
             f"transaction={identities['transaction_sha256']}|"
             f"event={identities['admission_event_sha256']}|"
             f"replay={manifest['clean_replay']['replay_sha256']}|"
-            "writes=1|newly_ready=0"
+            f"writes=1|newly_ready={len(manifest['result']['newly_ready'])}"
         )
         return 0
     except (

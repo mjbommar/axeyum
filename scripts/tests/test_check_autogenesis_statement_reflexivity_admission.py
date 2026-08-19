@@ -204,6 +204,19 @@ class StatementReflexivityAdmissionResultTests(unittest.TestCase):
         manifest, objects, current = self.inputs()
         MODULE.validate_objects(manifest, objects, current)
 
+    def test_non_leaf_readiness_delta_is_accepted_exactly(self):
+        manifest, objects, current = self.inputs()
+        children = ["F:child-a", "F:child-b"]
+        readiness = objects["readiness.json"]
+        readiness["newly_ready"] = children
+        readiness.pop("readiness_delta_sha256")
+        addressed(readiness, "readiness_delta_sha256")
+        manifest["identities"]["readiness_delta_sha256"] = readiness[
+            "readiness_delta_sha256"
+        ]
+        manifest["result"]["newly_ready"] = children
+        MODULE.validate_objects(manifest, objects, current)
+
     def test_rehashed_event_mutation_is_rejected(self):
         manifest, objects, current = self.inputs()
         objects["admission-event.json"]["publication"]["git_published"] = True

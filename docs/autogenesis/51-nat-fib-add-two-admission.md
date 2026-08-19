@@ -42,9 +42,26 @@ Three facts directly depend on this recurrence, but exactly two are newly ready:
 `F:ml430-int-fib-natcast-d5886be4`. This distinction is derived from the
 frontier, not inferred from adjacency.
 
-## Remaining control
+## Clean replay
 
-The admission is committed and archived, but clean isolated replay is still
-pending. The generic replay tool now compares the fresh and retained readiness
-deltas instead of assuming every admitted fact is a leaf. Final archive credit
-requires that replay to reproduce both newly ready children exactly.
+Commit `d637d83f77dbfa43c98eee4ab0ad78d235099006` reproduced the full episode in a
+detached clean worktree without reusing the retained execution or transaction.
+The fresh execution, transaction, event, and readiness identities are
+`81237509d79fd68ff9a0e5db70fbae371297de2a949e25b3acb469dcec1e85a8`,
+`b07389f222865b83fd8094df7e8bd0f5847e1940205e314c005701065050773f`,
+`422bf41b0c90003981d1591bd9471deddad51e374d3d1b1655c62233caf26082`,
+and `3cb9e4b4ed48c2ede6b7ba80654ea3615224ea469edd45ea3da36ff7bd8afdf8`.
+The replay reproduced both newly ready children exactly and has semantic digest
+`20228305152c6bf8475bd157e6a0d0fe21fe22663b9115ed69ce5b7eab85a7a3`.
+
+The read-only replay archive is
+`/nas3/data/axeyum/autogenesis/replays/d637d83f7-nat-fib-add-two-v1/`.
+
+## Reproduction
+
+```sh
+python3 scripts/check-autogenesis-statement-reflexivity-admission.py \
+  --manifest artifacts/autogenesis/mathlib-nat-fib-add-two-admission-v1.json
+python3 scripts/check-autogenesis-fact-operation.py \
+  --fact artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json
+```
