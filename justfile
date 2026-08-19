@@ -39,7 +39,23 @@ axiom-freedom:
     cargo run --release -q -p axeyum-solver --features full --example ring_interface_pin -- --require-identical
     cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --require-empty
     cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts aggregate-scope test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions local-ci-freshness
+# ORDERING NOTE, 2026-08-19: `just` aborts the whole chain at the FIRST failing
+# dependency, so a gate that is red for real stretches of time silently prevents
+# every gate after it from running. Measured today: `aggregate-scope` was #18 of
+# 41 and red — inherited from main, which shipped 32 steps recorded in neither
+# `check.sh` nor the justfile — so `just check` died there and **23 gates never
+# ran**, including `test`, `frontier`, `lean-gate` and `doc`. `./scripts/check.sh`
+# does not abort (it accumulates `fail=1`), which made the no-`just` FALLBACK the
+# more complete gate.
+#
+# So the three gates whose red state is expected and slow to clear go LAST:
+# `aggregate-scope` (until main's 32 steps are recorded on both sides),
+# `adr-remote-collisions` (red whenever another checkout has claimed a number),
+# and `local-ci-freshness` (red when the battery record is >48 h old). This does
+# not hide any of them — the chain still fails — it stops them hiding everything
+# else. Note the earlier claim that `adr-remote-collisions` was already last was
+# wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness
 
 fmt:
     cargo fmt --all --check
