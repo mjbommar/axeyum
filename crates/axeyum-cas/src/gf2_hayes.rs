@@ -1452,6 +1452,101 @@ pub struct BinaryBerlekampInvolutionDefectReport {
     pub finite_defect_candidate_holds: bool,
 }
 
+/// One truncated 2-typical Witt block of a binary principal unit.
+///
+/// The block indexed by odd `m` is `W_L(GF(2))`, hence its additive group is
+/// cyclic of order `2^L`.  `coordinate` is the exponent of `1+x^m`; its
+/// binary digits are the Witt slots at degrees `m,2m,4m,...`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryWittBlockCoordinate {
+    /// Odd block index `m`.
+    pub odd_degree: usize,
+    /// Number of admitted 2-typical slots.
+    pub length: usize,
+    /// Coordinate in `Z/2^length`.
+    pub coordinate: usize,
+    /// Active slot degrees `m*2^j`, in increasing order.
+    pub active_slot_degrees: Vec<usize>,
+    /// Highest active slot degree, absent for the zero block coordinate.
+    pub highest_active_slot: Option<usize>,
+}
+
+/// Checked conversion of one binary principal unit to truncated 2-typical
+/// Witt blocks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryPrincipalUnitWittReport {
+    /// Truncation level modulo `x^(ell+1)`.
+    pub ell: usize,
+    /// Packed constant-one principal unit.
+    pub unit: u64,
+    /// Stable mixed-radix index used by the native transforms.
+    pub mixed_radix_index: usize,
+    /// Odd-indexed 2-typical blocks.
+    pub blocks: Vec<BinaryWittBlockCoordinate>,
+}
+
+/// Projection of simultaneous Möbius cosets onto one order-two character.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryOrderTwoCharacterProjection {
+    /// Bit mask selecting the odd Witt blocks on which the character is real
+    /// and nontrivial.
+    pub character_mask: usize,
+    /// Exact conductor, the largest selected odd block index; absent for the
+    /// trivial character.
+    pub exact_conductor: Option<usize>,
+    /// `sum_(C,D) (sum_(f in C,D) mu(f) chi(f))^2`.
+    pub signed_coset_energy: BigUint,
+    /// Largest signed square attained by an occupied simultaneous coset.
+    pub worst_bucket_signed_square: BigUint,
+    /// Squarefree population of that witness coset.
+    pub worst_bucket_population: u128,
+}
+
+/// Aggregate order-two projection energy at one exact conductor.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryOrderTwoConductorEnergy {
+    /// Exact conductor; absent only for the trivial character.
+    pub exact_conductor: Option<usize>,
+    /// Number of characters in this row.
+    pub character_count: usize,
+    /// Sum of their simultaneous-coset energies.
+    pub projected_energy: BigUint,
+}
+
+/// Exact exceptional-real-character diagnostic for the simultaneous
+/// input/inverse cosets.
+///
+/// Every order-two character of the principal-unit group is a sign on the
+/// parity of selected odd Witt-block coordinates.  The report retains every
+/// such projection and checks Parseval on the quotient by squares exactly.
+/// It is a bounded diagnostic, not a uniform cancellation theorem.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryBerlekampOrderTwoProjectionReport {
+    /// Principal-unit modulus is `x^(ell+1)`.
+    pub ell: usize,
+    /// Degree of the monic constant-one polynomials.
+    pub degree: usize,
+    /// Dimension of the inverse interval.
+    pub interval_degree: usize,
+    /// Dimension of the low-coefficient shift cube.
+    pub shift_dimension: usize,
+    /// Odd Witt block indices, in character-mask bit order.
+    pub odd_block_degrees: Vec<usize>,
+    /// Number of order-two characters.
+    pub character_count: usize,
+    /// Number of occupied simultaneous cosets.
+    pub occupied_bucket_count: usize,
+    /// One row for every order-two character, trivial row first.
+    pub projections: Vec<BinaryOrderTwoCharacterProjection>,
+    /// The same projected energies grouped by exact conductor.
+    pub conductor_energies: Vec<BinaryOrderTwoConductorEnergy>,
+    /// Sum of all order-two projected energies.
+    pub total_projected_energy: BigUint,
+    /// Energy after splitting every simultaneous coset by the parities of all
+    /// Witt-block coordinates.
+    pub witt_parity_fibre_energy: BigUint,
+}
+
 impl BinaryBerlekampAnnihilatorEnergyReport {
     /// Whether the Berlekamp signs strictly reduce simultaneous-coset energy.
     #[must_use]
@@ -2056,6 +2151,127 @@ pub fn principal_unit_structure(
         ell,
         group_order,
         factors,
+    })
+}
+
+fn principal_unit_from_mixed_radix_index(
+    mut index: usize,
+    factors: &[PrincipalUnitFactor],
+    ell: usize,
+) -> Result<u64, HayesError> {
+    let mut unit = 1_u64;
+    for factor in factors {
+        let mut coordinate = index % factor.order;
+        index /= factor.order;
+        let mut power = 1 | (1_u64 << factor.odd_degree);
+        while coordinate != 0 {
+            if coordinate & 1 != 0 {
+                unit = unit_multiply(unit, power, ell);
+            }
+            coordinate >>= 1;
+            if coordinate != 0 {
+                power = unit_multiply(power, power, ell);
+            }
+        }
+    }
+    if index != 0 {
+        return Err(HayesError::InvalidParameter(
+            "principal-unit mixed-radix index is out of range".to_owned(),
+        ));
+    }
+    Ok(unit)
+}
+
+fn principal_unit_index_table(
+    ell: usize,
+    limits: HayesLimits,
+) -> Result<(Vec<PrincipalUnitFactor>, BTreeMap<u64, usize>), HayesError> {
+    let structure = principal_unit_structure(ell, limits)?;
+    let work = structure
+        .group_order
+        .checked_mul(ell.max(1))
+        .ok_or_else(|| HayesError::InvalidParameter("Witt conversion work overflow".to_owned()))?;
+    check_limit("witt_conversion_cells", work, limits.max_table_cells)?;
+    let mut unit_to_index = BTreeMap::new();
+    for index in 0..structure.group_order {
+        let unit = principal_unit_from_mixed_radix_index(index, &structure.factors, ell)?;
+        if unit_to_index.insert(unit, index).is_some() {
+            return Err(HayesError::Invariant(
+                "2-typical Witt coordinates are not injective".to_owned(),
+            ));
+        }
+    }
+    if unit_to_index.len() != structure.group_order {
+        return Err(HayesError::Invariant(
+            "2-typical Witt coordinates are incomplete".to_owned(),
+        ));
+    }
+    Ok((structure.factors, unit_to_index))
+}
+
+/// Convert a packed binary principal unit to its truncated 2-typical Witt
+/// blocks and reconstruct it as an invariant check.
+///
+/// # Errors
+///
+/// Rejects a non-unit, bits beyond the truncation, or a request exceeding the
+/// explicit group/table limits.
+pub fn binary_principal_unit_witt_report(
+    unit: u64,
+    ell: usize,
+    limits: HayesLimits,
+) -> Result<BinaryPrincipalUnitWittReport, HayesError> {
+    if ell == 0 || ell > 63 {
+        return Err(HayesError::InvalidParameter(
+            "Witt conversion requires 1<=ell<=63".to_owned(),
+        ));
+    }
+    check_limit("ell", ell, limits.max_ell)?;
+    let mask = if ell == 63 {
+        u64::MAX
+    } else {
+        (1_u64 << (ell + 1)) - 1
+    };
+    if unit & 1 == 0 || unit & !mask != 0 {
+        return Err(HayesError::InvalidParameter(
+            "Witt conversion requires a packed constant-one truncated unit".to_owned(),
+        ));
+    }
+    let (factors, unit_to_index) = principal_unit_index_table(ell, limits)?;
+    let mixed_radix_index = *unit_to_index.get(&unit).ok_or_else(|| {
+        HayesError::Invariant("principal unit has no 2-typical Witt coordinates".to_owned())
+    })?;
+    let mut quotient = mixed_radix_index;
+    let mut blocks = Vec::with_capacity(factors.len());
+    for factor in &factors {
+        let coordinate = quotient % factor.order;
+        quotient /= factor.order;
+        let length = factor.order.trailing_zeros() as usize;
+        let active_slot_degrees = (0..length)
+            .filter(|&slot| coordinate >> slot & 1 != 0)
+            .map(|slot| factor.odd_degree << slot)
+            .collect::<Vec<_>>();
+        let highest_active_slot = active_slot_degrees.last().copied();
+        blocks.push(BinaryWittBlockCoordinate {
+            odd_degree: factor.odd_degree,
+            length,
+            coordinate,
+            active_slot_degrees,
+            highest_active_slot,
+        });
+    }
+    if quotient != 0
+        || principal_unit_from_mixed_radix_index(mixed_radix_index, &factors, ell)? != unit
+    {
+        return Err(HayesError::Invariant(
+            "2-typical Witt coordinate roundtrip failed".to_owned(),
+        ));
+    }
+    Ok(BinaryPrincipalUnitWittReport {
+        ell,
+        unit,
+        mixed_radix_index,
+        blocks,
     })
 }
 
@@ -5582,6 +5798,255 @@ pub fn binary_berlekamp_annihilator_energy_report(
     })
 }
 
+fn binary_berlekamp_witt_parity_classes(
+    domain: &BinaryBerlekampPhaseDomain,
+    degree: usize,
+    factors: &[PrincipalUnitFactor],
+    unit_to_index: &BTreeMap<u64, usize>,
+) -> Result<Vec<usize>, HayesError> {
+    let mut parity_classes = vec![0_usize; domain.input_count];
+    for (middle, parity_class) in parity_classes.iter_mut().enumerate() {
+        let middle_u64 = u64::try_from(middle).map_err(|_| {
+            HayesError::InvalidParameter("Berlekamp Witt index exceeds u64".to_owned())
+        })?;
+        let polynomial = (1_u64 << degree) | (middle_u64 << 1) | 1;
+        let residue = polynomial & domain.residue_mask;
+        let mut quotient = *unit_to_index.get(&residue).ok_or_else(|| {
+            HayesError::Invariant("Berlekamp residue has no Witt coordinate".to_owned())
+        })?;
+        for (block, factor) in factors.iter().enumerate() {
+            let coordinate = quotient % factor.order;
+            quotient /= factor.order;
+            *parity_class |= (coordinate & 1) << block;
+        }
+        if quotient != 0 {
+            return Err(HayesError::Invariant(
+                "Berlekamp Witt parity decoding is incomplete".to_owned(),
+            ));
+        }
+    }
+    Ok(parity_classes)
+}
+
+fn binary_order_two_character_projections(
+    domain: &BinaryBerlekampPhaseDomain,
+    enumeration: &BinaryBerlekampCosetEnumeration,
+    parity_classes: &[usize],
+    factors: &[PrincipalUnitFactor],
+    character_count: usize,
+) -> Result<(Vec<BinaryOrderTwoCharacterProjection>, BigUint), HayesError> {
+    let mut projections = Vec::with_capacity(character_count);
+    let mut total_energy = BigUint::from(0_u8);
+    for character_mask in 0..character_count {
+        let mut signed_buckets = BTreeMap::<(usize, usize), i128>::new();
+        for (middle, &parity_class) in parity_classes.iter().enumerate() {
+            let mobius = enumeration.mobius_values[middle];
+            if mobius == 0 {
+                continue;
+            }
+            let sign = if (parity_class & character_mask).count_ones() % 2 == 0 {
+                1
+            } else {
+                -1
+            };
+            let key = (
+                middle / domain.coset_size,
+                enumeration.inverse_cosets[middle],
+            );
+            let entry = signed_buckets.entry(key).or_default();
+            *entry = entry
+                .checked_add(sign * i128::from(mobius))
+                .ok_or_else(|| {
+                    HayesError::InvalidParameter("order-two bucket sum overflow".to_owned())
+                })?;
+        }
+        let (energy, worst_square, worst_population) =
+            binary_order_two_bucket_summary(&signed_buckets, &enumeration.buckets)?;
+        let exact_conductor = factors
+            .iter()
+            .enumerate()
+            .filter(|(block, _)| character_mask >> block & 1 != 0)
+            .map(|(_, factor)| factor.odd_degree)
+            .max();
+        total_energy += &energy;
+        projections.push(BinaryOrderTwoCharacterProjection {
+            character_mask,
+            exact_conductor,
+            signed_coset_energy: energy,
+            worst_bucket_signed_square: worst_square,
+            worst_bucket_population: worst_population,
+        });
+    }
+    Ok((projections, total_energy))
+}
+
+fn binary_order_two_bucket_summary(
+    signed_buckets: &BTreeMap<(usize, usize), i128>,
+    populations: &BinaryBerlekampCosetBuckets,
+) -> Result<(BigUint, BigUint, u128), HayesError> {
+    let mut energy = BigUint::from(0_u8);
+    let mut worst_square = BigUint::from(0_u8);
+    let mut worst_population = 1_u128;
+    for (key, signed) in signed_buckets {
+        let magnitude = BigUint::from(signed.unsigned_abs());
+        let square = &magnitude * &magnitude;
+        energy += &square;
+        let population = populations
+            .get(key)
+            .ok_or_else(|| HayesError::Invariant("order-two bucket disappeared".to_owned()))?
+            .1;
+        if &square * BigUint::from(worst_population) > &worst_square * BigUint::from(population) {
+            worst_square = square;
+            worst_population = population;
+        }
+    }
+    Ok((energy, worst_square, worst_population))
+}
+
+fn binary_witt_parity_fibre_energy(
+    domain: &BinaryBerlekampPhaseDomain,
+    enumeration: &BinaryBerlekampCosetEnumeration,
+    parity_classes: &[usize],
+) -> Result<BigUint, HayesError> {
+    let mut fibres = BTreeMap::<(usize, usize, usize), i128>::new();
+    for (middle, &parity_class) in parity_classes.iter().enumerate() {
+        let mobius = enumeration.mobius_values[middle];
+        if mobius == 0 {
+            continue;
+        }
+        let key = (
+            middle / domain.coset_size,
+            enumeration.inverse_cosets[middle],
+            parity_class,
+        );
+        let entry = fibres.entry(key).or_default();
+        *entry = entry.checked_add(i128::from(mobius)).ok_or_else(|| {
+            HayesError::InvalidParameter("Witt parity fibre sum overflow".to_owned())
+        })?;
+    }
+    Ok(fibres
+        .into_values()
+        .map(|signed| BigUint::from(signed.unsigned_abs()).pow(2))
+        .sum())
+}
+
+fn binary_order_two_conductor_energies(
+    projections: &[BinaryOrderTwoCharacterProjection],
+) -> Vec<BinaryOrderTwoConductorEnergy> {
+    let mut totals = BTreeMap::<Option<usize>, (usize, BigUint)>::new();
+    for projection in projections {
+        let entry = totals
+            .entry(projection.exact_conductor)
+            .or_insert_with(|| (0, BigUint::from(0_u8)));
+        entry.0 += 1;
+        entry.1 += &projection.signed_coset_energy;
+    }
+    totals
+        .into_iter()
+        .map(|(exact_conductor, (character_count, projected_energy))| {
+            BinaryOrderTwoConductorEnergy {
+                exact_conductor,
+                character_count,
+                projected_energy,
+            }
+        })
+        .collect()
+}
+
+/// Project every simultaneous input/inverse coset onto all order-two
+/// principal-unit characters, grouped by the odd 2-typical Witt blocks.
+///
+/// The character selected by `mask` evaluates on a unit with block
+/// coordinates `e_m` as `(-1)^(sum_(m in mask) e_m)`.  Its exact conductor is
+/// therefore the largest selected odd block index.  The final invariant is
+/// Parseval on the parity quotient of the Witt coordinates:
+///
+/// ```text
+/// sum_chi sum_(C,D) |sum_f mu(f) chi(f)|^2
+///   = #characters * sum_(C,D,p) |sum_(f: parity(f)=p) mu(f)|^2.
+/// ```
+///
+/// # Errors
+///
+/// Returns the bounded-enumeration errors of the annihilator report and a
+/// typed resource decline before constructing the character table.
+pub fn binary_berlekamp_order_two_projection_report(
+    ell: usize,
+    degree: usize,
+    interval_degree: usize,
+    shift_dimension: usize,
+    limits: HayesLimits,
+) -> Result<BinaryBerlekampOrderTwoProjectionReport, HayesError> {
+    if interval_degree == 0 || interval_degree >= ell {
+        return Err(HayesError::InvalidParameter(format!(
+            "order-two projection interval must satisfy 1<=d<ell, got d={interval_degree}, ell={ell}"
+        )));
+    }
+    let domain = admit_binary_berlekamp_phase_domain(ell, degree, 0, shift_dimension, limits)?;
+    let enumeration = enumerate_binary_berlekamp_cosets(&domain, degree, ell, interval_degree)?;
+    let baseline = summarize_binary_berlekamp_cosets(&enumeration.buckets)?;
+    let (factors, unit_to_index) = principal_unit_index_table(ell, limits)?;
+    let block_count = factors.len();
+    let character_count = 1_usize
+        .checked_shl(u32::try_from(block_count).map_err(|_| {
+            HayesError::InvalidParameter("order-two character rank exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("order-two character count overflow".to_owned())
+        })?;
+    let character_work = domain
+        .input_count
+        .checked_mul(character_count)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("order-two projection work overflow".to_owned())
+        })?;
+    check_limit(
+        "berlekamp_order_two_projection_cells",
+        character_work,
+        limits.max_table_cells,
+    )?;
+
+    let parity_classes =
+        binary_berlekamp_witt_parity_classes(&domain, degree, &factors, &unit_to_index)?;
+    let (projections, total_projected_energy) = binary_order_two_character_projections(
+        &domain,
+        &enumeration,
+        &parity_classes,
+        &factors,
+        character_count,
+    )?;
+    if projections
+        .first()
+        .is_none_or(|row| row.signed_coset_energy != baseline.signed_energy)
+    {
+        return Err(HayesError::Invariant(
+            "trivial order-two projection misses the signed coset energy".to_owned(),
+        ));
+    }
+
+    let witt_parity_fibre_energy =
+        binary_witt_parity_fibre_energy(&domain, &enumeration, &parity_classes)?;
+    if total_projected_energy != BigUint::from(character_count) * &witt_parity_fibre_energy {
+        return Err(HayesError::Invariant(
+            "order-two Witt quotient Parseval identity failed".to_owned(),
+        ));
+    }
+    let conductor_energies = binary_order_two_conductor_energies(&projections);
+    Ok(BinaryBerlekampOrderTwoProjectionReport {
+        ell,
+        degree,
+        interval_degree,
+        shift_dimension,
+        odd_block_degrees: factors.iter().map(|factor| factor.odd_degree).collect(),
+        character_count,
+        occupied_bucket_count: enumeration.buckets.len(),
+        projections,
+        conductor_energies,
+        total_projected_energy,
+        witt_parity_fibre_energy,
+    })
+}
+
 /// Propagate candidate simultaneous-coset energy exponents into one exact
 /// endpoint Möbius-convolution term.
 ///
@@ -8648,6 +9113,126 @@ mod tests {
         assert_eq!(constant_one_failure.off_diagonal_signed_correlation, 138);
         assert!(constant_one_failure.signed_coset_energy > BigUint::from(1_u8) << 8);
         assert!(constant_one_failure.signed_coset_energy <= BigUint::from(1_u8) << 9);
+    }
+
+    #[test]
+    fn binary_witt_coordinate_roundtrip_is_exact() {
+        let limits = HayesLimits::default();
+        assert!(binary_principal_unit_witt_report(1, 0, limits).is_err());
+        assert!(binary_principal_unit_witt_report(2, 3, limits).is_err());
+        assert!(binary_principal_unit_witt_report(1 << 5 | 1, 3, limits).is_err());
+        for ell in 1_usize..=5 {
+            for unit_tail in 0_u64..1_u64 << ell {
+                let unit = 1 | (unit_tail << 1);
+                let report = binary_principal_unit_witt_report(unit, ell, limits).unwrap();
+                assert_eq!(report.unit, unit);
+                assert_eq!(report.blocks.len(), ell.div_ceil(2));
+                for block in &report.blocks {
+                    assert_eq!(
+                        block.active_slot_degrees.len(),
+                        block.coordinate.count_ones() as usize
+                    );
+                    assert_eq!(
+                        block.highest_active_slot,
+                        block.active_slot_degrees.last().copied()
+                    );
+                    assert!(block.active_slot_degrees.iter().all(|&slot| slot <= ell));
+                }
+            }
+        }
+        let frobenius_slot = binary_principal_unit_witt_report(1 | (1 << 4), 5, limits).unwrap();
+        assert_eq!(frobenius_slot.blocks[0].coordinate, 4);
+        assert_eq!(frobenius_slot.blocks[0].active_slot_degrees, vec![4]);
+        assert_eq!(frobenius_slot.blocks[0].highest_active_slot, Some(4));
+    }
+
+    #[test]
+    fn binary_order_two_projection_parseval_is_exact() {
+        let limits = HayesLimits::default();
+        let failing_translation_bucket =
+            binary_berlekamp_order_two_projection_report(9, 11, 8, 8, limits).unwrap();
+        assert_eq!(
+            failing_translation_bucket.odd_block_degrees,
+            vec![1, 3, 5, 7, 9]
+        );
+        assert_eq!(failing_translation_bucket.character_count, 32);
+        assert_eq!(failing_translation_bucket.occupied_bucket_count, 8);
+        assert_eq!(
+            failing_translation_bucket.projections[0].exact_conductor,
+            None
+        );
+        assert_eq!(
+            failing_translation_bucket.projections[0].signed_coset_energy,
+            BigUint::from(615_u16)
+        );
+        let largest = failing_translation_bucket
+            .projections
+            .iter()
+            .max_by_key(|row| &row.signed_coset_energy)
+            .unwrap();
+        assert_eq!(largest.character_mask, 16);
+        assert_eq!(largest.exact_conductor, Some(9));
+        assert_eq!(largest.signed_coset_energy, BigUint::from(1_719_u16));
+        assert_eq!(
+            failing_translation_bucket.conductor_energies,
+            vec![
+                BinaryOrderTwoConductorEnergy {
+                    exact_conductor: None,
+                    character_count: 1,
+                    projected_energy: BigUint::from(615_u16),
+                },
+                BinaryOrderTwoConductorEnergy {
+                    exact_conductor: Some(1),
+                    character_count: 1,
+                    projected_energy: BigUint::from(475_u16),
+                },
+                BinaryOrderTwoConductorEnergy {
+                    exact_conductor: Some(3),
+                    character_count: 2,
+                    projected_energy: BigUint::from(1_106_u16),
+                },
+                BinaryOrderTwoConductorEnergy {
+                    exact_conductor: Some(5),
+                    character_count: 4,
+                    projected_energy: BigUint::from(2_020_u16),
+                },
+                BinaryOrderTwoConductorEnergy {
+                    exact_conductor: Some(7),
+                    character_count: 8,
+                    projected_energy: BigUint::from(5_528_u16),
+                },
+                BinaryOrderTwoConductorEnergy {
+                    exact_conductor: Some(9),
+                    character_count: 16,
+                    projected_energy: BigUint::from(11_088_u16),
+                },
+            ]
+        );
+        assert_eq!(
+            failing_translation_bucket.total_projected_energy,
+            BigUint::from(20_832_u16)
+        );
+        assert_eq!(
+            failing_translation_bucket.witt_parity_fibre_energy,
+            BigUint::from(651_u16)
+        );
+        assert!(matches!(
+            binary_berlekamp_order_two_projection_report(9, 11, 0, 8, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            binary_berlekamp_order_two_projection_report(
+                9,
+                11,
+                8,
+                8,
+                HayesLimits {
+                    max_table_cells: 12_000,
+                    ..limits
+                },
+            ),
+            Err(HayesError::ResourceLimit { .. })
+        ));
     }
 
     #[test]

@@ -1272,6 +1272,53 @@ sum back to `mu(f)`.  A saving requires a rank theorem for the **joint**
 exceptional-plus-generic decomposition; the per-polynomial Arf rank alone
 cannot be inserted into the endpoint ledger.
 
+The principal-unit coordinates are now explicit as well.  For every odd
+`m<=ell`, the generator `1+x^m` has order `2^L`, where `L` is the number of
+slots `m,2m,4m,...<=ell`, and
+
+```text
+(1+x^m)^(2^j)=1+x^(m 2^j).                         (Witt block)
+```
+
+Thus the mixed-radix factors already used by the native Hayes transform are
+exactly the additive groups of the truncated 2-typical blocks
+`W_L(GF(2))=Z/2^L`; this is the finite coordinate decomposition used by
+[Katz](https://web.math.princeton.edu/~nmk/wittchar31.pdf), without importing
+his large-field equidistribution theorem.  The operation
+`binary_principal_unit_witt_report` converts ordinary coefficient bits to
+these blocks, records every active slot and the highest active slot, and
+checks reconstruction.  Exhaustive controls cover every unit through level
+five.
+
+Every order-two principal-unit character is a parity sign on a subset of the
+odd block coordinates.  Its exact conductor is the largest selected odd
+block index.  `binary_berlekamp_order_two_projection_report` evaluates every
+such sign inside every simultaneous input/inverse coset and checks Parseval on
+the quotient by squares:
+
+```text
+sum_chi sum_(C,D) |sum_f mu(f) chi(f)|^2
+ = #chi sum_(C,D,p) |sum_(f: Witt parity p) mu(f)|^2.       (real Parseval)
+```
+
+The failed single-translation witness does not collapse to one or two real
+modes.  At `(ell,k,d)=(9,11,8)`, the 32 order-two characters have exact-
+conductor average energies
+
+```text
+conductor       trivial   1    3    5    7    9
+average energy      615 475  553  505  691  693.
+```
+
+The largest individual mode is mask `16` at conductor nine with energy
+`1719`, while the complete identity is `20832=32*651`.  The mass is spread
+across the Witt product rather than confined to a stable tiny exceptional
+sector in this witness.  This is finite negative evidence against simply
+removing a few real characters, not a theorem about all fibres.  A viable
+local proof must instead tensor cancellation across several blocks, prove a
+joint Arf/Witt rank statement, or preserve cancellation in the weighted
+cross-order convolution.
+
 Fresh release probes on isolated fleet checkouts tested the selected tail
 orders `ceil(2ell/3)<=d<ell` at both endpoints for `ell=10,11,12`.  All twenty
 rows retained the conjectural global `E<=2^k` and local
