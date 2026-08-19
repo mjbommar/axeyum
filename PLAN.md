@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `9c146dcc9` | Combined exact-conductor Fourier inversion with the proved individual Weil bound, reducing the open square-root-fibre estimate from every level to only `ceil(log2 ell)+1` top conductor levels. |
 | 2026-08-19 | `039d905a6` | Reconstructed every endpoint population from raw binary Witt sibling imbalances, added an exact sufficient Haar triangle, and isolated a buffered square-root-fibre bound that closes both symbolic endpoint ledgers. |
 | 2026-08-19 | `b24120651` | Proved the naive first-slot projection across all binary Witt blocks has kernel order `2^floor(ell/2)`, rejecting a direct growing-conductor Fomenko generalization before expensive `L`-factor work. |
 | 2026-08-19 | `07ed9bb8d` | Rejected direct magic-square gcd matrices for the full connected character tuple, then added an exact local Witt-cylinder concentration ledger whose root and singleton boundaries independently recover the fourth/second moments. |
@@ -608,7 +609,15 @@ endpoint from `ell=15`.  Its sharper coefficient-two predecessor is explicitly
 refuted at `(ell,n,j)=(19,40,4)`.  The coefficient-three statement is a new
 conjectured Autogenesis fact, not theorem credit; proving it by relative
 Artin--Schreier--Witt or long-cycle geometry would finish the endpoint without
-the fourth moment.
+the fourth moment.  Exact Fourier inversion and the standard individual Weil
+bound now discharge every level below `ell-ceil(log2 ell)`.  A proved hybrid
+Haar calculation reduces the conjectured square-root-fibre estimate to only
+the logarithmic top-conductor window; at the degree-400 handoff this is the
+nine levels `192<=j<=200`.  Gorodetsky--Kovaleva's high-conductor theorem and
+appendix bound do not supply the remaining family gain: the former restricts
+primes only for one special power-sum character, and the latter is an
+individual-character estimate that loses `2^(j/2)` after exact-conductor
+Fourier inversion.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
