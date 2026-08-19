@@ -1402,6 +1402,39 @@ both Lemire endpoints, because `k+d` is the endpoint degree and the exact
 diagonal is `(2^k-(-1)^k)/3`.  It still would not by itself control the
 complementary signed cross-order convolution block.
 
+All valuation layers now also live in one checked Witt system.  If a
+normalized parameter belongs to `E_(ell-v)`, then on each odd 2-typical block
+the CAS embeds its coordinate by the blockwise Verschiebung
+
+```text
+c mod 2^L  |->  2^(M-L)c mod 2^M,
+```
+
+where `2^L` and `2^M` are the source and target block orders.  Exhaustive
+controls through target level six prove that the product map is injective and
+additive.  The signed parameter function is combined in `E_ell` **before**
+any absolute value or Fourier transform.  Exact spatial and spectral second
+moments and the exact spectral fourth moment are then computed; modular NTT
+support is grouped by the general (not merely order-two) character conductor.
+
+At `(ell,k,d)=(9,11,8)`, the `214` normalized parameters occupy `184` common
+Witt classes.  Their absolute mass drops from `3956` to `3776`, while the
+signed total remains `-68`.  The spatial second moment is `126568`, the
+spectral second moment is `64802816`, and the spectral fourth moment is
+`20409844301824`.  Every one of the `512` characters is nonzero modulo both
+native transform primes, in exact-conductor populations `1,1,2,4,...,256`.
+Since a zero cyclotomic transform would reduce to zero, this proves full
+support for the finite witness.  It rules out sparse support or blanket
+imprimitive-character vanishing as the explanation.  The next diagnostic is
+therefore not another support count.  The primary characteristic-two
+Heisenberg template makes a necessary boundary explicit: its symplectic form
+is the antisymmetrization of a checked group-law cocycle, not a formal second
+difference of an arbitrary Fourier spectrum.  The integer-valued connected
+Witt function has no such cocycle yet.  Before assigning a commutator rank,
+the CAS must retain the modulo-eight phase and affine-fibre variables, propose
+a central extension, and verify associativity and its commutator identity.
+None of these finite moments proves the connected candidate.
+
 The Arf coordinate is a better representation of the live squarefree sign,
 but not yet its estimate.
 For each squarefree `f` the adjusted second-trace space is nondegenerate by

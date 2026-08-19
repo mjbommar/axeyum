@@ -5,7 +5,7 @@
 //! operations compute exact integral class counts using two modular transforms
 //! and CRT, with explicit admission limits and residue checks.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::sync::{Mutex, OnceLock};
 
@@ -1451,6 +1451,51 @@ pub struct BinaryDyadicValuationCorrelation {
     pub signed_correlation: i128,
 }
 
+/// Modular support of the connected Witt spectrum at one exact conductor.
+///
+/// The two prime columns describe exact transforms over the corresponding
+/// finite fields.  They are a finite diagnostic of complex character support,
+/// not a proof that simultaneous modular vanishing is cyclotomic vanishing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryConnectedWittConductorSpectrum {
+    /// Exact principal-unit character conductor; absent for the trivial row.
+    pub exact_conductor: Option<usize>,
+    /// Characters in this conductor row.
+    pub character_count: usize,
+    /// Nonzero transform values modulo `998244353`.
+    pub prime_one_nonzero_count: usize,
+    /// Nonzero transform values modulo `1004535809`.
+    pub prime_two_nonzero_count: usize,
+    /// Characters nonzero in both modular transforms.
+    pub jointly_nonzero_count: usize,
+    /// Characters on which the two modular zero tests disagree.
+    pub zero_status_disagreement_count: usize,
+}
+
+/// One connected signed spectrum after embedding every normalized valuation
+/// layer into the common truncated 2-typical Witt group.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryConnectedWittSpectrumReport {
+    /// Principal-unit level of the common target group.
+    pub ell: usize,
+    /// Number of signed normalized `(valuation,parameter)` inputs.
+    pub normalized_parameter_count: usize,
+    /// Occupied target Witt classes after blockwise Verschiebung embedding.
+    pub embedded_support_count: usize,
+    /// Signed sum of the embedded function, equal to the off-diagonal energy.
+    pub signed_total: i128,
+    /// Sum of absolute embedded class values.
+    pub embedded_absolute_sum: u128,
+    /// Exact spatial second moment of the embedded signed function.
+    pub spatial_second_moment: BigUint,
+    /// Exact spectral second moment, including the principal character.
+    pub spectral_second_moment: BigUint,
+    /// Exact spectral fourth moment from the group autocorrelation identity.
+    pub spectral_fourth_moment: BigUint,
+    /// Modular spectrum rows in stable conductor order.
+    pub conductor_spectra: Vec<BinaryConnectedWittConductorSpectrum>,
+}
+
 /// Exact restricted `Z/8` product-discriminant phases on all affine
 /// Artin--Schreier fibres contributing to one annihilator energy.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1494,6 +1539,8 @@ pub struct BinaryDyadicAutocorrelationFibreReport {
     pub valuationwise_absolute_correlation: u128,
     /// Exact signed and intermediate absolute values at each valuation.
     pub valuation_correlations: Vec<BinaryDyadicValuationCorrelation>,
+    /// Connected signed Witt embedding and spectrum before absolute values.
+    pub connected_witt_spectrum: BinaryConnectedWittSpectrumReport,
     /// Fibres attaining their full affine dimension as ANF support degree.
     pub full_degree_fibre_count: usize,
     /// Largest restricted ANF support degree.
@@ -6899,6 +6946,267 @@ fn finalize_binary_dyadic_parameter_sums(
     Ok(())
 }
 
+fn empty_binary_connected_witt_spectrum(ell: usize) -> BinaryConnectedWittSpectrumReport {
+    BinaryConnectedWittSpectrumReport {
+        ell,
+        normalized_parameter_count: 0,
+        embedded_support_count: 0,
+        signed_total: 0,
+        embedded_absolute_sum: 0,
+        spatial_second_moment: BigUint::from(0_u8),
+        spectral_second_moment: BigUint::from(0_u8),
+        spectral_fourth_moment: BigUint::from(0_u8),
+        conductor_spectra: Vec::new(),
+    }
+}
+
+fn verschiebung_embed_mixed_radix_index(
+    mut source_index: usize,
+    source_factors: &[PrincipalUnitFactor],
+    target_factors: &[PrincipalUnitFactor],
+) -> Result<usize, HayesError> {
+    let mut source_factor_index = 0_usize;
+    let mut target_index = 0_usize;
+    let mut target_stride = 1_usize;
+    for target in target_factors {
+        let embedded_coordinate = if let Some(source) = source_factors.get(source_factor_index)
+            && source.odd_degree == target.odd_degree
+        {
+            if !target.order.is_multiple_of(source.order) {
+                return Err(HayesError::Invariant(
+                    "target Witt block order is not a multiple of the source order".to_owned(),
+                ));
+            }
+            let coordinate = source_index % source.order;
+            source_index /= source.order;
+            source_factor_index += 1;
+            coordinate * (target.order / source.order)
+        } else {
+            0
+        };
+        target_index = target_index
+            .checked_add(embedded_coordinate * target_stride)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Witt embedding index overflow".to_owned())
+            })?;
+        target_stride = target_stride.checked_mul(target.order).ok_or_else(|| {
+            HayesError::InvalidParameter("Witt embedding stride overflow".to_owned())
+        })?;
+    }
+    if source_index != 0 || source_factor_index != source_factors.len() {
+        return Err(HayesError::Invariant(
+            "Witt Verschiebung embedding did not consume the source coordinates".to_owned(),
+        ));
+    }
+    Ok(target_index)
+}
+
+fn add_mixed_radix_indices(
+    mut left: usize,
+    mut right: usize,
+    factors: &[PrincipalUnitFactor],
+) -> Result<usize, HayesError> {
+    let mut result = 0_usize;
+    let mut stride = 1_usize;
+    for factor in factors {
+        let coordinate = ((left % factor.order) + (right % factor.order)) % factor.order;
+        left /= factor.order;
+        right /= factor.order;
+        result = result
+            .checked_add(coordinate * stride)
+            .ok_or_else(|| HayesError::InvalidParameter("Witt sum index overflow".to_owned()))?;
+        stride = stride
+            .checked_mul(factor.order)
+            .ok_or_else(|| HayesError::InvalidParameter("Witt sum stride overflow".to_owned()))?;
+    }
+    if left != 0 || right != 0 {
+        return Err(HayesError::Invariant(
+            "Witt mixed-radix addition left unused coordinates".to_owned(),
+        ));
+    }
+    Ok(result)
+}
+
+fn mixed_radix_character_conductor(
+    mut character: usize,
+    factors: &[PrincipalUnitFactor],
+) -> Result<Option<usize>, HayesError> {
+    let mut conductor = None;
+    for factor in factors {
+        let coordinate = character % factor.order;
+        character /= factor.order;
+        if coordinate != 0 {
+            let length = factor.order.trailing_zeros() as usize;
+            let valuation = coordinate.trailing_zeros() as usize;
+            let slot = length.checked_sub(valuation + 1).ok_or_else(|| {
+                HayesError::Invariant("Witt character valuation exceeds block length".to_owned())
+            })?;
+            let degree = factor
+                .odd_degree
+                .checked_shl(u32::try_from(slot).map_err(|_| {
+                    HayesError::InvalidParameter("Witt conductor slot exceeds u32".to_owned())
+                })?)
+                .ok_or_else(|| {
+                    HayesError::InvalidParameter("Witt conductor overflow".to_owned())
+                })?;
+            conductor = Some(conductor.map_or(degree, |current: usize| current.max(degree)));
+        }
+    }
+    if character != 0 {
+        return Err(HayesError::Invariant(
+            "Witt conductor left unused character coordinates".to_owned(),
+        ));
+    }
+    Ok(conductor)
+}
+
+#[allow(clippy::too_many_lines)]
+fn binary_connected_witt_spectrum(
+    ell: usize,
+    sums: &BinaryDyadicParameterSums,
+    limits: HayesLimits,
+) -> Result<BinaryConnectedWittSpectrumReport, HayesError> {
+    let target = principal_unit_structure(ell, limits)?;
+    let moment_work = target
+        .group_order
+        .checked_mul(target.group_order)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("connected Witt moment work overflow".to_owned())
+        })?;
+    check_limit(
+        "connected_witt_moment_cells",
+        moment_work,
+        limits.max_table_cells,
+    )?;
+
+    let mut source_levels = BTreeSet::new();
+    for &(valuation, _) in sums.normalized.keys() {
+        source_levels.insert(ell - valuation);
+    }
+    let mut source_tables = BTreeMap::new();
+    for source_ell in source_levels {
+        if source_ell != 0 {
+            source_tables.insert(source_ell, principal_unit_index_table(source_ell, limits)?);
+        }
+    }
+
+    let mut spatial = vec![0_i128; target.group_order];
+    for (&(valuation, parameter), &signed_correlation) in &sums.normalized {
+        let source_ell = ell - valuation;
+        let embedded_index = if source_ell == 0 {
+            if parameter != 1 {
+                return Err(HayesError::Invariant(
+                    "level-zero normalized Witt parameter is not the identity".to_owned(),
+                ));
+            }
+            0
+        } else {
+            let (source_factors, source_indices) = &source_tables[&source_ell];
+            let source_index = *source_indices.get(&parameter).ok_or_else(|| {
+                HayesError::Invariant("normalized parameter has no source Witt index".to_owned())
+            })?;
+            verschiebung_embed_mixed_radix_index(source_index, source_factors, &target.factors)?
+        };
+        spatial[embedded_index] = spatial[embedded_index]
+            .checked_add(signed_correlation)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("connected Witt class overflow".to_owned())
+            })?;
+    }
+    let signed_total = spatial.iter().try_fold(0_i128, |sum, value| {
+        sum.checked_add(*value)
+            .ok_or_else(|| HayesError::InvalidParameter("connected Witt total overflow".to_owned()))
+    })?;
+    let expected_total = sums.valuation.values().try_fold(0_i128, |sum, value| {
+        sum.checked_add(*value)
+            .ok_or_else(|| HayesError::InvalidParameter("valuation total overflow".to_owned()))
+    })?;
+    if signed_total != expected_total {
+        return Err(HayesError::Invariant(
+            "connected Witt embedding changed the signed off-diagonal total".to_owned(),
+        ));
+    }
+    let embedded_absolute_sum = spatial.iter().try_fold(0_u128, |sum, value| {
+        sum.checked_add(value.unsigned_abs()).ok_or_else(|| {
+            HayesError::InvalidParameter("connected Witt absolute sum overflow".to_owned())
+        })
+    })?;
+    let spatial_second_moment = spatial
+        .iter()
+        .map(|value| BigUint::from(value.unsigned_abs()).pow(2))
+        .sum::<BigUint>();
+    let spectral_second_moment = BigUint::from(target.group_order) * &spatial_second_moment;
+
+    let mut autocorrelation_square_sum = BigUint::from(0_u8);
+    for shift in 0..target.group_order {
+        let mut correlation = BigInt::from(0_i8);
+        for (index, value) in spatial.iter().enumerate() {
+            let shifted = add_mixed_radix_indices(index, shift, &target.factors)?;
+            correlation += BigInt::from(*value) * BigInt::from(spatial[shifted]);
+        }
+        autocorrelation_square_sum += correlation.magnitude().pow(2);
+    }
+    let spectral_fourth_moment = BigUint::from(target.group_order) * autocorrelation_square_sum;
+
+    let modular_spectrum = |modulus: u64| {
+        let modulus_i128 = i128::from(modulus);
+        let mut values = spatial
+            .iter()
+            .map(|value| {
+                u64::try_from(value.rem_euclid(modulus_i128)).map_err(|_| {
+                    HayesError::Invariant("signed modular residue exceeds u64".to_owned())
+                })
+            })
+            .collect::<Result<Vec<_>, HayesError>>()?;
+        let dimensions = target
+            .factors
+            .iter()
+            .map(|factor| factor.order)
+            .collect::<Vec<_>>();
+        group_transform(&mut values, &dimensions, modulus);
+        Ok::<Vec<u64>, HayesError>(values)
+    };
+    let prime_one = modular_spectrum(PRIME_ONE)?;
+    let prime_two = modular_spectrum(PRIME_TWO)?;
+    let mut rows = BTreeMap::<Option<usize>, [usize; 5]>::new();
+    for character in 0..target.group_order {
+        let conductor = mixed_radix_character_conductor(character, &target.factors)?;
+        let first_nonzero = prime_one[character] != 0;
+        let second_nonzero = prime_two[character] != 0;
+        let row = rows.entry(conductor).or_default();
+        row[0] += 1;
+        row[1] += usize::from(first_nonzero);
+        row[2] += usize::from(second_nonzero);
+        row[3] += usize::from(first_nonzero && second_nonzero);
+        row[4] += usize::from(first_nonzero != second_nonzero);
+    }
+    let conductor_spectra = rows
+        .into_iter()
+        .map(
+            |(exact_conductor, counts)| BinaryConnectedWittConductorSpectrum {
+                exact_conductor,
+                character_count: counts[0],
+                prime_one_nonzero_count: counts[1],
+                prime_two_nonzero_count: counts[2],
+                jointly_nonzero_count: counts[3],
+                zero_status_disagreement_count: counts[4],
+            },
+        )
+        .collect::<Vec<_>>();
+
+    Ok(BinaryConnectedWittSpectrumReport {
+        ell,
+        normalized_parameter_count: sums.normalized.len(),
+        embedded_support_count: spatial.iter().filter(|value| **value != 0).count(),
+        signed_total,
+        embedded_absolute_sum,
+        spatial_second_moment,
+        spectral_second_moment,
+        spectral_fourth_moment,
+        conductor_spectra,
+    })
+}
+
 /// Restrict the dyadic product-discriminant phase to every exact affine
 /// inverse-difference fibre in the nonzero-shift autocorrelation.
 ///
@@ -6977,6 +7285,7 @@ pub fn binary_dyadic_autocorrelation_fibre_report(
         normalized_parameterwise_absolute_correlation: 0,
         valuationwise_absolute_correlation: 0,
         valuation_correlations: Vec::new(),
+        connected_witt_spectrum: empty_binary_connected_witt_spectrum(ell),
         full_degree_fibre_count: 0,
         max_phase_support_degree: 0,
         off_diagonal_signed_correlation: 0,
@@ -7010,6 +7319,7 @@ pub fn binary_dyadic_autocorrelation_fibre_report(
         ));
     }
     finalize_binary_dyadic_parameter_sums(&mut report, &parameter_sums)?;
+    report.connected_witt_spectrum = binary_connected_witt_spectrum(ell, &parameter_sums, limits)?;
     Ok(report)
 }
 
@@ -10145,6 +10455,55 @@ mod tests {
     }
 
     #[test]
+    fn blockwise_verschiebung_embedding_is_an_injective_homomorphism() {
+        for target_ell in 1_usize..=6 {
+            let target_factors = principal_unit_factors(target_ell);
+            let target_order = 1_usize << target_ell;
+            let mut conductor_counts = BTreeMap::<Option<usize>, usize>::new();
+            for character in 0..target_order {
+                *conductor_counts
+                    .entry(mixed_radix_character_conductor(character, &target_factors).unwrap())
+                    .or_default() += 1;
+            }
+            assert_eq!(conductor_counts[&None], 1);
+            for level in 1..=target_ell {
+                assert_eq!(conductor_counts[&Some(level)], 1 << (level - 1));
+            }
+            for source_ell in 0..=target_ell {
+                let source_factors = principal_unit_factors(source_ell);
+                let source_order = 1_usize << source_ell;
+                let embedded = (0..source_order)
+                    .map(|index| {
+                        verschiebung_embed_mixed_radix_index(
+                            index,
+                            &source_factors,
+                            &target_factors,
+                        )
+                        .unwrap()
+                    })
+                    .collect::<Vec<_>>();
+                let mut seen = BTreeMap::new();
+                for (source, target) in embedded.iter().copied().enumerate() {
+                    assert!(seen.insert(target, source).is_none());
+                }
+                for left in 0..source_order {
+                    for right in 0..source_order {
+                        let source_sum =
+                            add_mixed_radix_indices(left, right, &source_factors).unwrap();
+                        let target_sum = add_mixed_radix_indices(
+                            embedded[left],
+                            embedded[right],
+                            &target_factors,
+                        )
+                        .unwrap();
+                        assert_eq!(embedded[source_sum], target_sum);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn binary_order_two_projection_parseval_is_exact() {
         let limits = HayesLimits::default();
         let failing_translation_bucket =
@@ -10451,6 +10810,40 @@ mod tests {
         assert_eq!(report.normalized_parameter_count, 214);
         assert_eq!(report.normalized_parameterwise_absolute_correlation, 3_956);
         assert_eq!(report.valuationwise_absolute_correlation, 388);
+        assert_eq!(report.connected_witt_spectrum.ell, 9);
+        assert_eq!(
+            report.connected_witt_spectrum.normalized_parameter_count,
+            214
+        );
+        assert_eq!(report.connected_witt_spectrum.embedded_support_count, 184);
+        assert_eq!(report.connected_witt_spectrum.signed_total, -68);
+        assert_eq!(report.connected_witt_spectrum.embedded_absolute_sum, 3_776);
+        assert_eq!(
+            report.connected_witt_spectrum.spatial_second_moment,
+            BigUint::from(126_568_u32)
+        );
+        assert_eq!(
+            report.connected_witt_spectrum.spectral_second_moment,
+            BigUint::from(64_802_816_u32)
+        );
+        assert_eq!(
+            report.connected_witt_spectrum.spectral_fourth_moment,
+            BigUint::from(20_409_844_301_824_u64)
+        );
+        assert_eq!(report.connected_witt_spectrum.conductor_spectra.len(), 10);
+        for (level, row) in report
+            .connected_witt_spectrum
+            .conductor_spectra
+            .iter()
+            .enumerate()
+        {
+            assert_eq!(row.exact_conductor, (level != 0).then_some(level));
+            assert_eq!(row.character_count, 1_usize << level.saturating_sub(1));
+            assert_eq!(row.prime_one_nonzero_count, row.character_count);
+            assert_eq!(row.prime_two_nonzero_count, row.character_count);
+            assert_eq!(row.jointly_nonzero_count, row.character_count);
+            assert_eq!(row.zero_status_disagreement_count, 0);
+        }
         assert_eq!(
             report
                 .valuation_correlations
@@ -10512,12 +10905,18 @@ mod tests {
             binary_dyadic_autocorrelation_fibre_report(ell, degree, d, HayesLimits::default())
                 .unwrap();
         eprintln!(
-            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} pair_abs={} normalized_abs={} valuation_abs={} layers={:?}",
+            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} pair_abs={} normalized_abs={} valuation_abs={} witt_support={} witt_abs={} witt_m2={} witt_fourier_m2={} witt_fourier_m4={} witt_conductors={:?} layers={:?}",
             report.off_diagonal_signed_correlation,
             report.fibrewise_absolute_correlation,
             report.shift_inverse_pairwise_absolute_correlation,
             report.normalized_parameterwise_absolute_correlation,
             report.valuationwise_absolute_correlation,
+            report.connected_witt_spectrum.embedded_support_count,
+            report.connected_witt_spectrum.embedded_absolute_sum,
+            report.connected_witt_spectrum.spatial_second_moment,
+            report.connected_witt_spectrum.spectral_second_moment,
+            report.connected_witt_spectrum.spectral_fourth_moment,
+            report.connected_witt_spectrum.conductor_spectra,
             report.valuation_correlations,
         );
     }
