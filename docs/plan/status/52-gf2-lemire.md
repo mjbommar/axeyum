@@ -88,13 +88,25 @@ oscillating pairs, and returns the exact van-der-Corput/Cauchy bound.  At the
 pinned `(ell,k,s)=(4,9,4)` control every frequency improves on the trivial
 bound, but this remains finite evidence.  The next theorem obligation is a
 uniform shift-fibre energy bound on the annihilator frequencies and residual
-degree block, immediately substituted into the aggregate budget.
+degree block, immediately substituted into the aggregate budget.  Additive
+orthogonality now converts the entire annihilator average into one exact
+signed simultaneous input/inverse-coset energy.  Its shift decomposition has
+the proved diagonal `(2^k-(-1)^k)/3`; the stronger `2^(k-1)` energy target is
+refuted by exact energy `309=171+138`, so the obstruction is genuinely
+off-diagonal.  Two explicitly uncredited targets survive both endpoints
+through `ell=9`: global energy at most `2^k`, and the local square-root bound
+`b_(C,D)^2<=2d #bucket`.  Exact ledgers show that they would start the
+`ell=300` pointwise tail at `d=207/208` and `d=210`, respectively, but neither
+controls the complementary signed convolution block.  Proving the local
+two-sided fibre estimate or finding its first counterexample is the current
+bounded task; finite controls remain non-evidence.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `43da1d4c1` | Averaged the combined Berlekamp/inverse shift energy exactly over annihilators, proved its squarefree diagonal, refuted the constant-one scale, and exposed global and fibrewise conjectural targets with exact endpoint ledgers. |
 | 2026-08-19 | `e587bb854` | Added an exact Berlekamp-plus-inverse stationary-fibre and Cauchy ledger for the residual aggregate, checked the squarefree phase boundary, and pointed the universal Autogenesis fact at the live Möbius-convolution obligation. |
 | 2026-08-19 | `381748943` | Replaced the crude binary divisor factor by an exact finite-degree optimizer, carried the proved wrapped-energy ceiling through every endpoint Vaughan row, and showed the former ideal tail is not yet rigorous. |
 | 2026-08-19 | `85e9ba5cd` | Regrouped the signed Möbius convolution exactly by Fourier annihilator depth, added the odd-endpoint buffered-tail margin ledger, and isolated the weighted summation-by-parts obligation. |
