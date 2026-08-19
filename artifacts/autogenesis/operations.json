@@ -172,9 +172,6 @@
     {
       "id": "authoritative-mathlib-statement-reflexivity-v1",
       "scope": "authoritative",
-      "reviewed_gate_mentions": [
-        "check-autogenesis-factorial-zero-family.py"
-      ],
       "applicability": {
         "fact_ids": ["F:ml430-nat-ascfactorial-zero-fd183202"],
         "formal_languages": ["lean4-surface"],

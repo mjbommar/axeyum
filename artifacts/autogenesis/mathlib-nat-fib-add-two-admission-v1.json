@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-checked-theorem-receipt-admission",
+  "state": "durably-admitted-archived-and-clean-replayed",
+  "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+  "operation_id": "authoritative-mathlib-nat-fib-add-two-receipt-v1",
+  "registration_commit": "11c700a9b92536655bd3d0f1cc99810f4d257c32",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/11c700a9b-mathlib-nat-fib-add-two-v1",
+  "external_index_sha256": "dbbf9a161242b139676f06d6ac04c4b3f2d0adfc99dfee2584298d65e3f025e1",
+  "source_bundle_sha256": "00bc8c5bdc08f83b903dede6d57d1cd7fae18c39a4316cedfc228722e1e23aa9",
+  "identities": {
+    "frontier_before_sha256": "15a60980c1badc99163c5e47b6c84e87526264668983e6139de1c1595f6cdbf6",
+    "execution_sha256": "d55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85",
+    "transaction_sha256": "b37e368a87cdf8dd497c835afd3d92df131e5f16d54289d79d03a10fa677fe3e",
+    "admission_event_sha256": "1a868c6ab73c220c5c965859e81512b2a6bb569d9cc8ae2b97d7e4bb00972587",
+    "frontier_after_sha256": "34b1c5e8e4e94dbda448927b4eaf493ac39350481e64e6713e29f2c42411881a",
+    "readiness_delta_sha256": "88c71e198f8656ce77d45c975bb5f7670ab124ad05571eb7b26b101b681b4ec3",
+    "before_fact_sha256": "ecbfa7315905cfdadb5a93b37f1d663eac9c02b639ba4fa34dd4074e02fff669",
+    "after_fact_sha256": "c97590bb20e6ad6bfd881e68a1f1a414dccefd89a07ee31d06b0209ea6486c9e"
+  },
+  "external_files": {
+    "frontier-before.json": "8cc4d213ae239f900822552144cbf97d4bcf7ce8c9085fe6131b764fa0c1f533",
+    "execution.json": "0b38b2e23088ce999b8d92eb323f23c58583cf59aaea7fa72c168b4d07ed2d57",
+    "transaction.json": "003705fefbeef4fd70f33dfc75adf674863fad17d9f51bf6e94a159ccf499a5d",
+    "admission-event.json": "b04b9fe18afcf6a0f77fd3cf800a9bb698613624d800692f17c9fda758662d1e",
+    "frontier-after.json": "0eba32e9c34cdbceac29534ecdab354668e4b2574157ae38aa26a803a79f30a5",
+    "readiness.json": "d1df898de71f3b2fbd665a422cf3ba64c898612a366ba22c11f8e96481a6f1d1",
+    "before-fact.json": "d51fc715b0c2f90fafb6b412de89cd05c9584c060d228242ad8942072aac3cf0",
+    "after-fact.json": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [
+      "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+      "F:ml430-nat-fib-le-fib-succ-d1ef4a3d"
+    ],
+    "axiom_footprint": [],
+    "theorem_dependencies": [],
+    "target_dependency": null
+  },
+  "clean_replay": {
+    "source_commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+    "external_root": "/nas3/data/axeyum/autogenesis/replays/d637d83f7-nat-fib-add-two-v1",
+    "external_index_sha256": "0b71a13362dfd5f4fb1588314256b1bced63bf4e117dc1a4d4c21013f94d17c8",
+    "replay_file_sha256": "a70720768605be30a3891c813341ab769898b3e3c0e00ab0f3dcc297775d373d",
+    "replay_sha256": "20228305152c6bf8475bd157e6a0d0fe21fe22663b9115ed69ce5b7eab85a7a3",
+    "fresh_execution_sha256": "81237509d79fd68ff9a0e5db70fbae371297de2a949e25b3acb469dcec1e85a8",
+    "fresh_transaction_sha256": "b07389f222865b83fd8094df7e8bd0f5847e1940205e314c005701065050773f",
+    "fresh_event_sha256": "422bf41b0c90003981d1591bd9471deddad51e374d3d1b1655c62233caf26082",
+    "fresh_readiness_delta_sha256": "3cb9e4b4ed48c2ede6b7ba80654ea3615224ea469edd45ea3da36ff7bd8afdf8"
+  },
+  "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-nat-fib-add-two-admission-v1.json",
+  "limitations": "This admits one exact train theorem from its immutable two-fresh-kernel receipt. It does not credit held-out evaluation, generalize the proof grammar, or prove either newly ready child."
+}

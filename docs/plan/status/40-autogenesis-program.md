@@ -2,10 +2,10 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Fib recurrence admitted; clean replay pending.
+**Status:** Fib recurrence admitted and clean-replayed; two children ready.
 
-**Next:** clean-replay the non-leaf admission, then select one newly ready child.
+**Next:** qualify the coprime and monotonicity children; select by downstream leverage and reusable blocker.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-19 | `11c700a9b` | Fib admission operation |
+| 2026-08-19 | `d637d83f7` | Fib recurrence admission |
