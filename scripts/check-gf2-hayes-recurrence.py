@@ -236,6 +236,40 @@ def exact_conductor_second_moment(level: int, degree: int) -> int:
     return current_energy - previous_energy
 
 
+def translation_paired_conductor_level(degree: int) -> int:
+    """Return 2^v_2(degree), the layer paired by alpha -> alpha + 1."""
+    if degree <= 0:
+        fail("translation pairing requires positive degree")
+    return degree & -degree
+
+
+def low_conductor_weil_split(ell: int) -> tuple[int, int, int, int]:
+    """Independently check the endpoint low-conductor triangle budget."""
+    if ell < 2:
+        fail("low-conductor splitting requires ell at least two")
+    unresolved_top_levels = min(ell, (ell - 1).bit_length() + 2)
+    cutoff = ell - unresolved_top_levels
+    layer_sum = 0 if cutoff < 2 else (cutoff - 2) * (1 << cutoff) + 2
+    scaled_bound = 2 * layer_sum
+    half_budget = 1 << (ell - 1)
+    if scaled_bound > half_budget:
+        fail(
+            f"ell={ell}: low-conductor bound {scaled_bound} exceeds "
+            f"half-budget {half_budget}"
+        )
+    return cutoff, unresolved_top_levels, scaled_bound, half_budget
+
+
+def cumulative_discrepancy(level: int, degree: int) -> int:
+    """Return 2^level Delta_(level,degree) from the integer recurrence."""
+    if level == 0:
+        return 0
+    group, distribution = mangoldt_class_distribution(level, degree)
+    return (1 << level) * (
+        distribution[group.identity] - (1 << (degree - level))
+    )
+
+
 def centered_log_discrepancy(
     ell: int, degree: int
 ) -> tuple[int, int, tuple[Fraction, ...]]:
@@ -319,6 +353,28 @@ def main() -> None:
 
     if tuple(observed) != EXPECTED:
         fail(f"count vector differs: {observed}")
+    translation_controls: list[str] = []
+    for degree in range(3, 21):
+        ell = (degree + 1) // 2 - 1
+        paired_level = translation_paired_conductor_level(degree)
+        if paired_level > ell:
+            continue
+        layer = cumulative_discrepancy(
+            paired_level, degree
+        ) - cumulative_discrepancy(paired_level - 1, degree)
+        if layer != 0:
+            fail(
+                f"degree={degree}: translation-paired layer "
+                f"{paired_level} is {layer}, expected zero"
+            )
+        translation_controls.append(f"{degree}:{paired_level}")
+    for ell in range(2, 4_001):
+        cutoff, unresolved, _, _ = low_conductor_weil_split(ell)
+        if cutoff + unresolved != ell:
+            fail(f"ell={ell}: low/top conductor partition does not recover ell")
+    low_split_control = low_conductor_weil_split(199)
+    if low_split_control[:2] != (189, 10):
+        fail(f"ell=199 low-conductor split differs: {low_split_control}")
     moment = exact_conductor_second_moment(8, 17)
     if moment != 86_200_320:
         fail(f"level-8 degree-17 second moment differs: {moment}")
@@ -391,6 +447,10 @@ def main() -> None:
         f"level5_degree45_normalized_layer={normalized_layer}|"
         "constant_one_layer_target=false|"
         "centered_endpoint_log=PASS|"
+        "translation_pairing=PASS|"
+        "low_conductor_weil_split=PASS|"
+        "ell199_low_cutoff=189|ell199_unresolved_top_levels=10|"
+        f"translation_controls={','.join(translation_controls)}|"
         f"centered_controls={','.join(centered_controls)}|"
         "centered_order_triangle_route=false|"
         f"ell5_degree12_order_abs_sum={order_triangle_bound}|"

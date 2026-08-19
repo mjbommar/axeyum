@@ -111,6 +111,107 @@ pub struct ConductorLayer {
     pub value: i128,
 }
 
+/// Unconditional endpoint budget supplied by the ordinary Weil bound away
+/// from the highest conductor levels.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LowConductorWeilSplit {
+    /// Number of prescribed zero coefficients.
+    pub ell: usize,
+    /// Levels `1..=cutoff` covered by the ordinary characterwise bound.
+    pub cutoff: usize,
+    /// Number of highest levels left for a cancellation-preserving argument.
+    pub unresolved_top_levels: usize,
+    /// Upper bound for the covered levels after division by `2^ell`.
+    pub scaled_discrepancy_bound: BigUint,
+    /// Half of the candidate endpoint budget, `2^(ell-1)`.
+    pub half_candidate_budget: BigUint,
+}
+
+/// Exact-conductor level annihilated by translation `alpha -> alpha + 1`.
+///
+/// Let `j = 2^v_2(degree)`, the least nonzero binary place of `degree`.
+/// If the first `j-1` characteristic coefficients of `alpha` vanish, Lucas'
+/// theorem gives
+///
+/// ```text
+/// binomial(degree, i) = 0  (mod 2),  1 <= i < j,
+/// binomial(degree, j) = 1  (mod 2).
+/// ```
+///
+/// Substitution `x -> x+1` therefore preserves those first `j-1` zeroes and
+/// toggles coefficient `j`.  Translation is an involution of `GF(2^degree)`,
+/// so the two coefficient fibres have equal size and `T_(j,degree)=0`.
+/// `degree = 0` has no such level.
+#[must_use]
+pub const fn translation_paired_conductor_level(degree: usize) -> Option<usize> {
+    if degree == 0 {
+        None
+    } else {
+        Some(1_usize << degree.trailing_zeros())
+    }
+}
+
+/// Split the endpoint conductor sum into an unconditionally controlled low
+/// part and only logarithmically many unresolved highest levels.
+///
+/// At either endpoint `n in {2 ell+1, 2 ell+2}`, the `2^(j-1)` characters of
+/// exact level `j` have `L`-degree at most `j-1`.  The Riemann hypothesis for
+/// function-field Dirichlet `L`-functions therefore gives
+///
+/// ```text
+/// |T_(j,n)| <= (j-1) 2^(j-1) 2^(n/2)
+///            <= (j-1) 2^(j-1+ell+1).
+/// ```
+///
+/// After the conductor telescope is divided by `2^ell`, levels through `J`
+/// contribute at most
+///
+/// ```text
+/// 2 sum_(j=2)^J (j-1)2^(j-1)
+///   = 2 ((J-2)2^J + 2).
+/// ```
+///
+/// Taking the unresolved top width to be `ceil(log2 ell)+2` makes this no
+/// larger than `2^(ell-1)`.  This is an unconditional reduction, not a bound
+/// on the remaining top levels.
+///
+/// # Errors
+///
+/// Returns a typed parameter error when `ell` is smaller than two or an exact
+/// shift cannot be represented by the host.
+pub fn low_conductor_weil_split(ell: usize) -> Result<LowConductorWeilSplit, HayesError> {
+    if ell < 2 {
+        return Err(HayesError::InvalidParameter(
+            "low-conductor splitting requires ell at least two".to_owned(),
+        ));
+    }
+    let ceil_log_two = usize::BITS as usize - (ell - 1).leading_zeros() as usize;
+    let unresolved_top_levels = ceil_log_two
+        .checked_add(2)
+        .ok_or_else(|| HayesError::InvalidParameter("top-level width overflow".to_owned()))?
+        .min(ell);
+    let cutoff = ell - unresolved_top_levels;
+    let layer_sum = if cutoff < 2 {
+        BigUint::from(0_u8)
+    } else {
+        (BigUint::from(cutoff - 2) << cutoff) + BigUint::from(2_u8)
+    };
+    let scaled_discrepancy_bound = BigUint::from(2_u8) * layer_sum;
+    let half_candidate_budget = BigUint::from(1_u8) << (ell - 1);
+    if scaled_discrepancy_bound > half_candidate_budget {
+        return Err(HayesError::Invariant(
+            "low-conductor Weil split exceeds its half-budget".to_owned(),
+        ));
+    }
+    Ok(LowConductorWeilSplit {
+        ell,
+        cutoff,
+        unresolved_top_levels,
+        scaled_discrepancy_bound,
+        half_candidate_budget,
+    })
+}
+
 impl ConductorLayer {
     /// Whether this observed layer satisfies the constant-one square-root target.
     ///
@@ -637,6 +738,14 @@ pub fn conductor_layers(
             "conductor layers do not telescope to the cumulative discrepancy".to_owned(),
         ));
     }
+    if let Some(paired_level) = translation_paired_conductor_level(degree)
+        && paired_level <= ell
+        && layers[paired_level - 1].value != 0
+    {
+        return Err(HayesError::Invariant(format!(
+            "translation-paired conductor layer {paired_level} is nonzero"
+        )));
+    }
     Ok(layers)
 }
 
@@ -1134,6 +1243,45 @@ mod tests {
                 .all(|layer| layer.satisfies_square_root_bound(17))
         );
         assert!(!ConductorLayer { level: 0, value: 0 }.satisfies_square_root_bound(17));
+    }
+
+    #[test]
+    fn translation_pairs_the_lowest_binary_conductor_level() {
+        assert_eq!(translation_paired_conductor_level(0), None);
+        assert_eq!(translation_paired_conductor_level(25), Some(1));
+        assert_eq!(translation_paired_conductor_level(26), Some(2));
+        assert_eq!(translation_paired_conductor_level(12), Some(4));
+        assert_eq!(translation_paired_conductor_level(24), Some(8));
+
+        let limits = HayesLimits::default();
+        for degree in 3_usize..=20 {
+            let ell = degree.div_ceil(2) - 1;
+            let paired_level = translation_paired_conductor_level(degree).unwrap();
+            if paired_level <= ell {
+                let layers = conductor_layers(ell, degree, limits).unwrap();
+                assert_eq!(layers[paired_level - 1].value, 0, "degree={degree}");
+            }
+        }
+    }
+
+    #[test]
+    fn ordinary_weil_leaves_only_logarithmically_many_top_levels() {
+        assert!(low_conductor_weil_split(1).is_err());
+        let control = low_conductor_weil_split(199).unwrap();
+        assert_eq!(control.cutoff, 189);
+        assert_eq!(control.unresolved_top_levels, 10);
+        assert_eq!(
+            control.scaled_discrepancy_bound,
+            BigUint::from(2_u8) * ((BigUint::from(187_u16) << 189) + BigUint::from(2_u8))
+        );
+        assert!(control.scaled_discrepancy_bound <= control.half_candidate_budget);
+
+        for ell in 2..=4_000 {
+            let split = low_conductor_weil_split(ell).unwrap();
+            assert!(split.unresolved_top_levels <= ell);
+            assert_eq!(split.cutoff + split.unresolved_top_levels, ell);
+            assert!(split.scaled_discrepancy_bound <= split.half_candidate_budget);
+        }
     }
 
     #[test]

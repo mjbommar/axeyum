@@ -2,7 +2,7 @@
 
 use axeyum_cas::gf2_hayes::{
     ConductorBoundAssumption, SquareRootLayerBoundAssumption, check_conductor_bound_sufficiency,
-    check_square_root_layer_bound_sufficiency,
+    check_square_root_layer_bound_sufficiency, low_conductor_weil_split,
 };
 
 fn main() {
@@ -23,6 +23,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         assumption.finite_max_degree,
         report.first_odd_degree,
         report.first_even_degree
+    );
+
+    let low_split = low_conductor_weil_split(199)?;
+    println!(
+        "GF2_HAYES_LOW_CONDUCTOR_WEIL|status=PASS|ell={}|controlled_levels=1..{}|unresolved_top_levels={}|scaled_bound={}|half_candidate_budget={}",
+        low_split.ell,
+        low_split.cutoff,
+        low_split.unresolved_top_levels,
+        low_split.scaled_discrepancy_bound,
+        low_split.half_candidate_budget,
     );
 
     let square_root = SquareRootLayerBoundAssumption::default();

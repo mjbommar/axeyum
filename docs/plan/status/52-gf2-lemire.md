@@ -75,6 +75,29 @@ bounded separately: at `(ell,n)=(5,12)` the orderwise absolute sum is
 full signed logarithm intact, not introduce a second triangle inequality over
 factor order.
 
+The latest increment removes two more false exits and narrows the live one.
+The social-post strict inequality is not the paper's theorem (it already fails
+in degree 2), while the paper's non-strict endpoint is not supplied by the
+informal "half" wording in the 1999 survey or 2003 AIM notes: detailed Hsu
+restatements retain the logarithmic loss.  Standard Artin--Schreier composition
+also cannot provide a shaped doubling induction: even base degree forces the
+trace obstruction and odd base degree creates a forbidden `x^(2n-1)` term.
+On the positive side, translation `alpha -> alpha+1` annihilates the exact
+conductor level `2^v_2(n)` by Lucas' theorem, and the ordinary Weil bound now
+controls every level except the highest `ceil(log_2 ell)+2` within half of the
+candidate discrepancy budget.  At the finite boundary `ell=199`, only levels
+190 through 199 remain.  Both statements are enforced by the reusable bounded
+Rust API and an algebraically separate integer group-ring checker; the split
+is checked through `ell=4000` without being mislabeled as the missing top-level
+cancellation theorem.
+
+The exact native diagnostic has also advanced to `ell=24`: a one-level Axeyum
+run on s4 returned `Delta_(24,49)=1651` and `Delta_(24,50)=4787` in 25m41.54s
+including a clean release build, at 10,311,424 KiB peak RSS.  The repository
+now contains the explicitly bounded `axeyum-gf2-hayes-endpoint` runner used for
+that high-memory calculation; it rejects levels above 24 and is excluded from
+default gates.  This is one more finite observation, not universal credit.
+
 The portable boundary is complete for bounded witnesses. `98f2d953f` adds
 canonical JSON, a dense-coefficient second checker, and a standalone dual-check
 CLI; `b678ec7e6` adds the fail-closed producer. `3718aab11` commits and gates the
@@ -92,14 +115,17 @@ bounded proposition in the fact ledger using the accepted ADR-0481
 checker and has mutation controls; it creates no finite-field SMT, CAS-identity,
 or kernel surface and gives the universal conjecture no credit.
 
-**Next.** Prove a genuinely positive bound for the *full* identity-class
-discrepancy at degrees `2 ell+1` and `2 ell+2` (where `ell` is the number of
-prescribed zero coefficients), with cancellation between conductor levels
-kept intact, or find a universal construction. Then reconstruct reciprocity
-and the central lemma through the kernel before promoting the finite ledger
-fact or claiming a universal proof.
+**Next.** Prove cancellation for the highest `ceil(log_2 ell)+2` exact
+conductor levels at degrees `2 ell+1` and `2 ell+2`, with their signed sum kept
+intact, or find a universal construction.  Ordinary characterwise Weil,
+unweighted second moments, sparse-polynomial conjectures, and
+Artin--Schreier doubling are now explicitly excluded routes.  Then reconstruct
+reciprocity and the central lemma through the kernel before promoting the
+finite ledger fact or claiming a universal proof.
 
 <!-- plan-section: landed-changes -->
+
+| 2026-08-19 | pending | Proved translation pairing for level `2^v_2(n)`, bounded all but the top `ceil(log_2 ell)+2` levels by ordinary Weil, retained the bounded one-level runner, and extended the exact native endpoint diagnostic to `ell=24`. |
 
 | 2026-08-18 | `01cc5dfdf` | Pinned the exact centered-order cancellation vector and refuted a second triangle route: its absolute sum is `145632` where the full endpoint discrepancy is `32`. |
 | 2026-08-18 | `f247587c6` | Derived the exact centered endpoint logarithm, proved its linear and quadratic orders vanish structurally, and independently checked the resulting connected-correlation expansion. |
