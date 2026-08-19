@@ -541,6 +541,77 @@ pub struct CRealPrelude {
     /// `k = 1` at `32n+31`; nothing in [`Self::inv`]'s type says the results
     /// agree, and this does. [`Self::inv_congr`] at `y := x`.
     pub inv_index_irrelevant: NameId,
+
+    // --- the lattice (ADR-0490 phase R5) --------------------------------------
+    /// `CReal.max : CReal → CReal → CReal` — **pointwise, at the same index**.
+    ///
+    /// The first operation since [`Self::neg`] that costs no index shift:
+    /// `Rat.max` is one-Lipschitz jointly in both arguments
+    /// ([`Rat.sub_max_le`](crate::RatPrelude::sub_max_le)), so it does not
+    /// degrade the modulus. The decision that `max` looks like it needs is
+    /// taken on the **representation**, inside `Rat.max`, never on `CReal`.
+    pub max: NameId,
+    /// `CReal.min : CReal → CReal → CReal` — the same, through `Rat.min`.
+    pub min: NameId,
+    /// `CReal.abs : CReal → CReal` — `max x (neg x)`, so it introduces no new
+    /// sequence and no new regularity obligation.
+    ///
+    /// This is the `|·|` ADR-0483 deliberately did without: the module writes
+    /// `|r| ≤ q` as the pair `−q ≤ r ∧ r ≤ q` and needs no operator for it.
+    /// `abs` exists for the statements that quantify over the magnitude
+    /// itself, and it is one-sided throughout —
+    /// `Equiv (abs x) x ∨ Equiv (abs x) (neg x)` is a decision on the sign of a
+    /// real and is **not** available.
+    pub abs: NameId,
+    /// `CReal.le_max_left : ∀ x y, le x (max x y)`.
+    pub le_max_left: NameId,
+    /// `CReal.le_max_right : ∀ x y, le y (max x y)`.
+    pub le_max_right: NameId,
+    /// `CReal.max_le : ∀ x y z, le x z → le y z → le (max x y) z` — the
+    /// universal property of the join, and the only lattice law that needs a
+    /// case split (one `Rat.max_cases` per index).
+    pub max_le: NameId,
+    /// `CReal.min_le_left : ∀ x y, le (min x y) x`.
+    pub min_le_left: NameId,
+    /// `CReal.min_le_right : ∀ x y, le (min x y) y`.
+    pub min_le_right: NameId,
+    /// `CReal.le_min : ∀ x y z, le z x → le z y → le z (min x y)`.
+    pub le_min: NameId,
+    /// `CReal.max_congr : ∀ x x' y y', Equiv x x' → Equiv y y' →
+    /// Equiv (max x y) (max x' y')`.
+    pub max_congr: NameId,
+    /// `CReal.min_congr` — the same for the meet.
+    pub min_congr: NameId,
+    /// `CReal.abs_congr : ∀ x y, Equiv x y → Equiv (abs x) (abs y)` —
+    /// [`Self::max_congr`] with [`Self::neg_congr`] in its second slot.
+    pub abs_congr: NameId,
+    /// `CReal.le_abs_self : ∀ x, le x (abs x)`.
+    pub le_abs_self: NameId,
+    /// `CReal.neg_le_abs : ∀ x, le (neg x) (abs x)`.
+    pub neg_le_abs: NameId,
+    /// `CReal.abs_le : ∀ x z, le x z → le (neg x) z → le (abs x) z` —
+    /// [`Self::max_le`] verbatim, and the form every estimate consumes.
+    pub abs_le: NameId,
+    /// `CReal.abs_nonneg : ∀ x, le zero (abs x)` — the one lattice fact that is
+    /// not a rearrangement of the others; it rests on
+    /// [`Rat.zero_le_max_neg`](crate::RatPrelude::zero_le_max_neg), the only
+    /// consumer of `Rat.le_total` in the development.
+    pub abs_nonneg: NameId,
+    /// `CReal.not_le_zero_neg_one : Not (le zero (neg one))`.
+    ///
+    /// A **discrimination**, not a lattice law: it mentions no lattice
+    /// operation and exists so [`Self::not_equiv_abs_neg_one`] has something to
+    /// contradict. From `add_le_add`, `add_comm`, `add_zero`, `add_neg`,
+    /// `le_congr` and `not_le_one_zero` alone.
+    pub not_le_zero_neg_one: NameId,
+    /// `CReal.not_equiv_abs_neg_one : Not (Equiv (abs (neg one)) (neg one))` —
+    /// **`abs` is not the identity function.**
+    ///
+    /// Every other theorem about `abs` here holds, footprint-free and with its
+    /// statement verbatim, of `abs x := x`. This one does not, and it is
+    /// derived from [`Self::abs_nonneg`] and the theorem above rather than by
+    /// computing on a representative.
+    pub not_equiv_abs_neg_one: NameId,
 }
 
 impl CRealPrelude {
@@ -671,6 +742,24 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_inv_cancel: kernel.name_str(creal, "mul_inv_cancel"),
         inv_congr: kernel.name_str(creal, "inv_congr"),
         inv_index_irrelevant: kernel.name_str(creal, "inv_index_irrelevant"),
+        max: kernel.name_str(creal, "max"),
+        min: kernel.name_str(creal, "min"),
+        abs: kernel.name_str(creal, "abs"),
+        le_max_left: kernel.name_str(creal, "le_max_left"),
+        le_max_right: kernel.name_str(creal, "le_max_right"),
+        max_le: kernel.name_str(creal, "max_le"),
+        min_le_left: kernel.name_str(creal, "min_le_left"),
+        min_le_right: kernel.name_str(creal, "min_le_right"),
+        le_min: kernel.name_str(creal, "le_min"),
+        max_congr: kernel.name_str(creal, "max_congr"),
+        min_congr: kernel.name_str(creal, "min_congr"),
+        abs_congr: kernel.name_str(creal, "abs_congr"),
+        le_abs_self: kernel.name_str(creal, "le_abs_self"),
+        neg_le_abs: kernel.name_str(creal, "neg_le_abs"),
+        abs_le: kernel.name_str(creal, "abs_le"),
+        abs_nonneg: kernel.name_str(creal, "abs_nonneg"),
+        not_le_zero_neg_one: kernel.name_str(creal, "not_le_zero_neg_one"),
+        not_equiv_abs_neg_one: kernel.name_str(creal, "not_equiv_abs_neg_one"),
     }
 }
 
@@ -736,7 +825,8 @@ pub(crate) fn build_creal_prelude_uncached(
         declare_strict_order(&mut d, prelude)?;
         product::declare_product(&mut d, prelude)?;
         field::declare_field(&mut d, prelude)?;
-        inverse::declare_inverse(&mut d, prelude)
+        inverse::declare_inverse(&mut d, prelude)?;
+        lattice::declare_lattice(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -1651,6 +1741,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 
 mod field;
 mod inverse;
+mod lattice;
 mod product;
 
 #[cfg(test)]

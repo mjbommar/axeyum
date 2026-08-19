@@ -5,7 +5,7 @@ use crate::{Declaration, Kernel};
 
 /// A built `CReal` kernel, as a **clone of one template**.
 ///
-/// The full development is now 76 declarations over the constructed ℚ and takes
+/// The full development is now 94 declarations over the constructed ℚ and takes
 /// tens of seconds to type-check; seventeen tests each building it from scratch
 /// dominated this crate's test time. The argument for cloning is
 /// [`prelude_cache`](crate::prelude_cache)'s, verbatim: prelude construction is
@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 76] = [
+    let expected: [(&str, crate::NameId, &str); 94] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -160,6 +160,32 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.inv_index_irrelevant",
             p.inv_index_irrelevant,
+            "theorem",
+        ),
+        ("CReal.max", p.max, "def"),
+        ("CReal.min", p.min, "def"),
+        ("CReal.abs", p.abs, "def"),
+        ("CReal.le_max_left", p.le_max_left, "theorem"),
+        ("CReal.le_max_right", p.le_max_right, "theorem"),
+        ("CReal.max_le", p.max_le, "theorem"),
+        ("CReal.min_le_left", p.min_le_left, "theorem"),
+        ("CReal.min_le_right", p.min_le_right, "theorem"),
+        ("CReal.le_min", p.le_min, "theorem"),
+        ("CReal.max_congr", p.max_congr, "theorem"),
+        ("CReal.min_congr", p.min_congr, "theorem"),
+        ("CReal.abs_congr", p.abs_congr, "theorem"),
+        ("CReal.le_abs_self", p.le_abs_self, "theorem"),
+        ("CReal.neg_le_abs", p.neg_le_abs, "theorem"),
+        ("CReal.abs_le", p.abs_le, "theorem"),
+        ("CReal.abs_nonneg", p.abs_nonneg, "theorem"),
+        (
+            "CReal.not_le_zero_neg_one",
+            p.not_le_zero_neg_one,
+            "theorem",
+        ),
+        (
+            "CReal.not_equiv_abs_neg_one",
+            p.not_equiv_abs_neg_one,
             "theorem",
         ),
     ];
@@ -1380,4 +1406,357 @@ fn the_inverse_route_cannot_prove_the_one_token_mutations() {
         refused.is_err(),
         "the kernel accepted `x⁻¹ ≈ x`, which is FALSE at x = 1 + 1"
     );
+}
+
+/// The lattice laws say what ADR-0490 says they say — **rendered types,
+/// verbatim**. An empty axiom footprint on a theorem named `max_le` that says
+/// something weaker would pass every other check in this file.
+#[test]
+fn the_lattice_laws_have_the_statements_adr_0490_specifies() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    // The three operations are total functions on ℝ — `max` and `min` binary,
+    // `abs` unary. No side condition, so nothing here can be vacuous by an
+    // uninhabited guard; what it CAN be is degenerate, which the two
+    // discriminations below rule out.
+    assert_eq!(
+        rendered(&mut kernel, p.max),
+        "((x0 : CReal) -> ((x1 : CReal) -> CReal))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.min),
+        "((x0 : CReal) -> ((x1 : CReal) -> CReal))"
+    );
+    assert_eq!(rendered(&mut kernel, p.abs), "((x0 : CReal) -> CReal)");
+
+    assert_eq!(
+        rendered(&mut kernel, p.le_max_left),
+        "((x0 : CReal) -> ((x1 : CReal) -> CReal.le x0 (CReal.max x0 x1)))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.le_max_right),
+        "((x0 : CReal) -> ((x1 : CReal) -> CReal.le x1 (CReal.max x0 x1)))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.max_le),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.le x0 x2) -> \
+         ((x4 : CReal.le x1 x2) -> CReal.le (CReal.max x0 x1) x2)))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.min_le_left),
+        "((x0 : CReal) -> ((x1 : CReal) -> CReal.le (CReal.min x0 x1) x0))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.min_le_right),
+        "((x0 : CReal) -> ((x1 : CReal) -> CReal.le (CReal.min x0 x1) x1))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.le_min),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.le x2 x0) -> \
+         ((x4 : CReal.le x2 x1) -> CReal.le x2 (CReal.min x0 x1))))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.max_congr),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
+         ((x4 : CReal.Equiv x0 x1) -> ((x5 : CReal.Equiv x2 x3) -> \
+         CReal.Equiv (CReal.max x0 x2) (CReal.max x1 x3)))))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.min_congr),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> \
+         ((x4 : CReal.Equiv x0 x1) -> ((x5 : CReal.Equiv x2 x3) -> \
+         CReal.Equiv (CReal.min x0 x2) (CReal.min x1 x3)))))))"
+    );
+    // `abs` is stated through `CReal.abs`, not through the `max x (neg x)` it
+    // unfolds to — otherwise these would be `max` laws wearing another name.
+    assert_eq!(
+        rendered(&mut kernel, p.le_abs_self),
+        "((x0 : CReal) -> CReal.le x0 (CReal.abs x0))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.neg_le_abs),
+        "((x0 : CReal) -> CReal.le (CReal.neg x0) (CReal.abs x0))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.abs_le),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.le x0 x1) -> \
+         ((x3 : CReal.le (CReal.neg x0) x1) -> CReal.le (CReal.abs x0) x1))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.abs_nonneg),
+        "((x0 : CReal) -> CReal.le CReal.zero (CReal.abs x0))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.abs_congr),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.Equiv x0 x1) -> \
+         CReal.Equiv (CReal.abs x0) (CReal.abs x1))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.not_le_zero_neg_one),
+        "Not (CReal.le CReal.zero (CReal.neg CReal.one))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.not_equiv_abs_neg_one),
+        "Not (CReal.Equiv (CReal.abs (CReal.neg CReal.one)) (CReal.neg CReal.one))"
+    );
+}
+
+/// **The lattice is not degenerate, and `abs` is not the identity.**
+///
+/// Nothing in this module carries a side condition, so no statement here is
+/// vacuous for want of an inhabited guard — the failure mode is the other one:
+/// a degenerate operation satisfying every law. `max x y := x` satisfies
+/// `le_max_left` by reflexivity; `abs x := x` satisfies `le_abs_self`,
+/// `neg_le_abs` and `abs_le`. Both are ruled out **through the kernel**, from
+/// the laws alone:
+///
+/// - `Equiv (max x x) x` — the join is idempotent, by antisymmetry;
+/// - `Equiv (max zero one) one` **and** `¬ Equiv (max zero one) zero` — so
+///   `max` is not the left projection;
+/// - `¬ Equiv (abs (neg one)) (neg one)`, already a kernel theorem, is
+///   **consumed** here rather than merely named.
+#[test]
+fn the_lattice_is_not_degenerate_and_abs_is_not_the_identity() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+    let zero = d.kernel().const_(p.zero, vec![]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    // `∀ x, Equiv (max x x) x`, by antisymmetry — needs BOTH directions, so a
+    // `max` that ignored one argument would still pass but a `max` that
+    // returned a constant would not.
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let combined = d.const_app(p.max, &[x, x]);
+        let up = d.lemma(p.le_max_left, &[x, x]);
+        let reflexive = d.lemma(p.le_refl, &[x]);
+        let down = d.lemma(p.max_le, &[x, x, x, reflexive, reflexive]);
+        let body = d.lemma(p.equiv_of_le_le, &[combined, x, down, up]);
+        let value = d.lam_fv(x_fv, carrier, body);
+        let ty = {
+            let claim = d.const_app(p.equiv, &[combined, x]);
+            d.pi_fv(x_fv, carrier, claim)
+        };
+        let name = d.kernel().name_str(anon, "Check.max_idempotent");
+        let admitted = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            admitted.is_ok(),
+            "the kernel refused `max x x ≈ x`, which is antisymmetry over \
+             le_max_left and max_le: {admitted:?}"
+        );
+    }
+
+    // `¬ Equiv (max zero one) zero` — `max` is not the left projection. If it
+    // were, `one ≤ max zero one ≈ zero` would refute not_le_one_zero.
+    {
+        let combined = d.const_app(p.max, &[zero, one]);
+        let hypothesis = d.const_app(p.equiv, &[combined, zero]);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let dominated = d.lemma(p.le_max_right, &[zero, one]);
+        let collapsed = d.lemma(p.le_of_equiv, &[combined, zero, h]);
+        let absurd = d.lemma(p.le_trans, &[one, combined, zero, dominated, collapsed]);
+        let refuted = d.lemma(p.not_le_one_zero, &[]);
+        let contradiction = d.apply(refuted, &[absurd]);
+        let value = d.lam_fv(h_fv, hypothesis, contradiction);
+        let ty = d.not(hypothesis);
+        let name = d
+            .kernel()
+            .name_str(anon, "Check.max_is_not_the_left_projection");
+        let admitted = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            admitted.is_ok(),
+            "the kernel refused `max 0 1 ≉ 0`, so every lattice law here would \
+             hold of the left projection: {admitted:?}"
+        );
+    }
+
+    // `¬ Equiv (min zero one) one` — and `min` is not the right projection.
+    {
+        let combined = d.const_app(p.min, &[zero, one]);
+        let hypothesis = d.const_app(p.equiv, &[combined, one]);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let dominated = d.lemma(p.min_le_left, &[zero, one]);
+        let reversed = d.lemma(p.equiv_symm, &[combined, one, h]);
+        let lifted = d.lemma(p.le_of_equiv, &[one, combined, reversed]);
+        let absurd = d.lemma(p.le_trans, &[one, combined, zero, lifted, dominated]);
+        let refuted = d.lemma(p.not_le_one_zero, &[]);
+        let contradiction = d.apply(refuted, &[absurd]);
+        let value = d.lam_fv(h_fv, hypothesis, contradiction);
+        let ty = d.not(hypothesis);
+        let name = d
+            .kernel()
+            .name_str(anon, "Check.min_is_not_the_right_projection");
+        let admitted = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            admitted.is_ok(),
+            "the kernel refused `min 0 1 ≉ 1`: {admitted:?}"
+        );
+    }
+
+    // `abs` is not the identity: `not_equiv_abs_neg_one` is CONSUMED, so a
+    // deleted or weakened version of it fails here and not only in the
+    // inventory.
+    {
+        let negative = d.const_app(p.neg, &[one]);
+        let magnitude = d.const_app(p.abs, &[negative]);
+        let claim = d.const_app(p.equiv, &[magnitude, negative]);
+        let refuted = d.lemma(p.not_equiv_abs_neg_one, &[]);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let contradiction = d.apply(refuted, &[h]);
+        let false_ty = d.false_ty();
+        let value = d.lam_fv(h_fv, claim, contradiction);
+        let ty = d.arrow(claim, false_ty);
+        let name = d.kernel().name_str(anon, "Check.abs_is_not_the_identity");
+        let admitted = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            admitted.is_ok(),
+            "the kernel refused `|−1| ≉ −1`, so `abs x := x` would satisfy \
+             everything else proved about abs: {admitted:?}"
+        );
+    }
+}
+
+/// The negative controls for the lattice: **the same proof terms, pointed at
+/// statements one token away, are REFUSED.**
+///
+/// Without these, the verbatim-statement test above pins a shape rather than a
+/// fact — a kernel whose conversion checker accepted anything would make every
+/// assertion in this file pass.
+#[test]
+fn the_lattice_route_cannot_prove_the_one_token_mutations() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+    let one = d.kernel().const_(p.one, vec![]);
+    let zero = d.kernel().const_(p.zero, vec![]);
+
+    // `max x y ≤ x`, from `le_max_left` — the direction reversed. FALSE at
+    // x = 0, y = 1.
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let combined = d.const_app(p.max, &[x, y]);
+        let claim = d.const_app(p.le, &[combined, x]);
+        let value = {
+            let instance = d.lemma(p.le_max_left, &[x, y]);
+            let with_y = d.lam_fv(y_fv, carrier, instance);
+            d.lam_fv(x_fv, carrier, with_y)
+        };
+        let ty = {
+            let with_y = d.pi_fv(y_fv, carrier, claim);
+            d.pi_fv(x_fv, carrier, with_y)
+        };
+        let name = d.kernel().name_str(anon, "Check.max_is_below_its_argument");
+        let refused = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            refused.is_err(),
+            "the kernel accepted `max x y ≤ x`, which is FALSE at x = 0, y = 1"
+        );
+    }
+
+    // `|x| ≤ 0`, from `abs_nonneg` — the order reversed. FALSE at x = 1.
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let magnitude = d.const_app(p.abs, &[x]);
+        let claim = d.const_app(p.le, &[magnitude, zero]);
+        let value = {
+            let instance = d.lemma(p.abs_nonneg, &[x]);
+            d.lam_fv(x_fv, carrier, instance)
+        };
+        let ty = d.pi_fv(x_fv, carrier, claim);
+        let name = d.kernel().name_str(anon, "Check.abs_is_nonpositive");
+        let refused = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            refused.is_err(),
+            "the kernel accepted `|x| ≤ 0`, which is FALSE at x = 1"
+        );
+    }
+
+    // `¬ (|1| ≈ 1)` — `not_equiv_abs_neg_one`'s own script with `neg one`
+    // replaced by `one`. The statement is FALSE (`|1| ≈ 1` holds), so the
+    // discrimination above must NOT generalize.
+    {
+        let magnitude = d.const_app(p.abs, &[one]);
+        let hypothesis = d.const_app(p.equiv, &[magnitude, one]);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let nonneg = d.lemma(p.abs_nonneg, &[one]);
+        let reflexive = d.lemma(p.equiv_refl, &[zero]);
+        let absurd = d.lemma(
+            p.le_congr,
+            &[zero, zero, magnitude, one, reflexive, h, nonneg],
+        );
+        let refuted = d.lemma(p.not_le_zero_neg_one, &[]);
+        let contradiction = d.apply(refuted, &[absurd]);
+        let value = d.lam_fv(h_fv, hypothesis, contradiction);
+        let ty = d.not(hypothesis);
+        let name = d.kernel().name_str(anon, "Check.abs_one_is_not_one");
+        let refused = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            refused.is_err(),
+            "the kernel accepted `|1| ≉ 1`, which is FALSE — so the abs \
+             discrimination would be proving nothing about the sign"
+        );
+    }
 }

@@ -278,6 +278,24 @@ fn main() {
         ("CReal.mul_inv_cancel", p.mul_inv_cancel),
         ("CReal.inv_congr", p.inv_congr),
         ("CReal.inv_index_irrelevant", p.inv_index_irrelevant),
+        ("CReal.max", p.max),
+        ("CReal.min", p.min),
+        ("CReal.abs", p.abs),
+        ("CReal.le_max_left", p.le_max_left),
+        ("CReal.le_max_right", p.le_max_right),
+        ("CReal.max_le", p.max_le),
+        ("CReal.min_le_left", p.min_le_left),
+        ("CReal.min_le_right", p.min_le_right),
+        ("CReal.le_min", p.le_min),
+        ("CReal.max_congr", p.max_congr),
+        ("CReal.min_congr", p.min_congr),
+        ("CReal.abs_congr", p.abs_congr),
+        ("CReal.le_abs_self", p.le_abs_self),
+        ("CReal.neg_le_abs", p.neg_le_abs),
+        ("CReal.abs_le", p.abs_le),
+        ("CReal.abs_nonneg", p.abs_nonneg),
+        ("CReal.not_le_zero_neg_one", p.not_le_zero_neg_one),
+        ("CReal.not_equiv_abs_neg_one", p.not_equiv_abs_neg_one),
     ];
 
     // (8): the headline count itself, read out of the kernel. Every one of the
@@ -385,6 +403,19 @@ fn main() {
         kernel.environment().get(p.no_total_inverse),
         Some(Declaration::Theorem { .. })
     );
+
+    // (10): the lattice is not degenerate. `le_max_left`, `le_abs_self`,
+    // `neg_le_abs` and `abs_le` all hold — footprint-free, statements verbatim
+    // — of `max x y := x` and of `abs x := x`. `not_equiv_abs_neg_one` is the
+    // one declaration that refuses the identity, and `not_le_zero_neg_one` is
+    // what it consumes.
+    let lattice_discriminates = matches!(
+        kernel.environment().get(p.not_equiv_abs_neg_one),
+        Some(Declaration::Theorem { .. })
+    ) && matches!(
+        kernel.environment().get(p.not_le_zero_neg_one),
+        Some(Declaration::Theorem { .. })
+    );
     if !inhabited {
         eprintln!(
             "FAIL: CReal.ofRat is not a checked definition, so CReal.Regular has no \
@@ -451,6 +482,15 @@ fn main() {
         );
         failed = true;
     }
+    if !lattice_discriminates {
+        eprintln!(
+            "FAIL: CReal.not_equiv_abs_neg_one / CReal.not_le_zero_neg_one are not \
+             both checked theorems, so nothing refuses `abs x := x`. le_abs_self, \
+             neg_le_abs and abs_le all hold — with empty footprints and their \
+             statements verbatim — of the identity function."
+        );
+        failed = true;
+    }
     if !laws_distinct {
         eprintln!(
             "FAIL: CRealPrelude::ordered_ring_laws does not name 22 DISTINCT \
@@ -497,7 +537,8 @@ fn main() {
          lt inhabited = {strictly_inhabited}, lt irreflexive = {strictly_irreflexive}, \
          mul agrees with Rat.mul on ℚ = {multiplicative}, mul discriminates = \
          {mul_discriminates}, Apart separates a pair = {apart_inhabited}, no total \
-         inverse exists = {inverse_refuted}; all 22 ordered-ring laws proved = \
+         inverse exists = {inverse_refuted}, abs is not the identity = \
+         {lattice_discriminates}; all 22 ordered-ring laws proved = \
          {all_laws}",
         admitted.len(),
         trusted.len(),

@@ -57,6 +57,7 @@ mod core;
 mod defs;
 mod field;
 pub(crate) mod group;
+pub(crate) mod lattice;
 mod laws;
 mod model;
 pub(crate) mod ops;
@@ -545,6 +546,54 @@ pub struct RatPrelude {
     /// `Rat.int_neg_natAbs_le : ∀ (x : Int),
     /// Int.le (Int.neg (Int.ofNat (Int.natAbs x))) x`.
     pub int_neg_nat_abs_le: NameId,
+    // --- the lattice (ADR-0490 phase R5) --------------------------------------
+    /// `Rat.max : Rat → Rat → Rat` — defined **on the representation**, by
+    /// `Int.rec` on the sign of `num b · den a − num a · den b`, so no `Prop`
+    /// is eliminated into `Type` and `Rat.le_or_lt` is never consulted.
+    pub max: NameId,
+    /// `Rat.min : Rat → Rat → Rat` — the same dispatch with the branches
+    /// swapped.
+    pub min: NameId,
+    /// `Rat.max_cases : ∀ (a b : Rat) (P : Rat → Prop),
+    /// (Rat.le a b → P b) → (Rat.le b a → P a) → P (Rat.max a b)`.
+    ///
+    /// The **only** case split in `rat_prelude::lattice`: every law below is one
+    /// application of it with `P` instantiated. It eliminates into `Prop`, so
+    /// it is not a decision procedure and gives nothing `Rat.le_or_lt` does not
+    /// already give.
+    pub max_cases: NameId,
+    /// `Rat.min_cases : ∀ (a b : Rat) (P : Rat → Prop),
+    /// (Rat.le a b → P a) → (Rat.le b a → P b) → P (Rat.min a b)`.
+    pub min_cases: NameId,
+    /// `Rat.le_max_left : ∀ a b, Rat.le a (Rat.max a b)`.
+    pub le_max_left: NameId,
+    /// `Rat.le_max_right : ∀ a b, Rat.le b (Rat.max a b)`.
+    pub le_max_right: NameId,
+    /// `Rat.max_le : ∀ a b c, Rat.le a c → Rat.le b c → Rat.le (Rat.max a b) c`.
+    pub max_le: NameId,
+    /// `Rat.min_le_left : ∀ a b, Rat.le (Rat.min a b) a`.
+    pub min_le_left: NameId,
+    /// `Rat.min_le_right : ∀ a b, Rat.le (Rat.min a b) b`.
+    pub min_le_right: NameId,
+    /// `Rat.le_min : ∀ a b c, Rat.le c a → Rat.le c b → Rat.le c (Rat.min a b)`.
+    pub le_min: NameId,
+    /// `Rat.le_of_sub_le : ∀ u v q, Rat.le (Rat.sub u v) q → Rat.le u (Rat.add v q)`.
+    pub le_of_sub_le: NameId,
+    /// `Rat.sub_le_of_le : ∀ u v q, Rat.le u (Rat.add v q) → Rat.le (Rat.sub u v) q`.
+    pub sub_le_of_le: NameId,
+    /// `Rat.sub_max_le : ∀ a b c e q, Rat.le (Rat.sub a c) q →
+    /// Rat.le (Rat.sub b e) q → Rat.le (Rat.sub (Rat.max a b) (Rat.max c e)) q`
+    /// — `max` is **one-Lipschitz**, which is exactly what makes `CReal.max`
+    /// regular with no index shift.
+    pub sub_max_le: NameId,
+    /// `Rat.sub_min_le : ∀ a b c e q, Rat.le (Rat.sub a c) q →
+    /// Rat.le (Rat.sub b e) q → Rat.le (Rat.sub (Rat.min a b) (Rat.min c e)) q`.
+    pub sub_min_le: NameId,
+    /// `Rat.zero_le_max_neg : ∀ a, Rat.le Rat.zero (Rat.max a (Rat.neg a))` —
+    /// the one `ℚ` fact `CReal.abs_nonneg` needs, and the only consumer of
+    /// [`Self::le_total`] in the lattice.
+    pub zero_le_max_neg: NameId,
+
     /// `Rat.bounds_num : ∀ q,
     /// And (Rat.le (neg (natDivSucc (natAbs (num q)) 0)) q)
     ///     (Rat.le q (natDivSucc (natAbs (num q)) 0))`.
@@ -714,6 +763,21 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         int_le_nat_abs: child(kernel, "int_le_natAbs"),
         int_neg_nat_abs_le: child(kernel, "int_neg_natAbs_le"),
         bounds_num: child(kernel, "bounds_num"),
+        max: child(kernel, "max"),
+        min: child(kernel, "min"),
+        max_cases: child(kernel, "max_cases"),
+        min_cases: child(kernel, "min_cases"),
+        le_max_left: child(kernel, "le_max_left"),
+        le_max_right: child(kernel, "le_max_right"),
+        max_le: child(kernel, "max_le"),
+        min_le_left: child(kernel, "min_le_left"),
+        min_le_right: child(kernel, "min_le_right"),
+        le_min: child(kernel, "le_min"),
+        le_of_sub_le: child(kernel, "le_of_sub_le"),
+        sub_le_of_le: child(kernel, "sub_le_of_le"),
+        sub_max_le: child(kernel, "sub_max_le"),
+        sub_min_le: child(kernel, "sub_min_le"),
+        zero_le_max_neg: child(kernel, "zero_le_max_neg"),
     }
 }
 
@@ -752,6 +816,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         group::declare_group_laws(&mut d, prelude)?;
         product::declare_product_laws(&mut d, prelude)?;
         field::declare_field_laws(&mut d, prelude)?;
+        lattice::declare_lattice(&mut d, prelude)?;
         Ok(())
     })();
     match built {

@@ -1,6 +1,7 @@
 //! Tests for the rational prelude.
 
 use super::{RatPrelude, build_rat_prelude};
+use crate::expr::ExprId;
 use crate::{Declaration, Kernel};
 
 fn built() -> (Kernel, RatPrelude) {
@@ -69,6 +70,21 @@ fn every_named_declaration_exists() {
         ("natDivSucc_pos", p.nat_div_succ_pos),
         ("inv_natDivSucc", p.inv_nat_div_succ),
         ("nat_index_symm", p.nat_index_symm),
+        ("max", p.max),
+        ("min", p.min),
+        ("max_cases", p.max_cases),
+        ("min_cases", p.min_cases),
+        ("le_max_left", p.le_max_left),
+        ("le_max_right", p.le_max_right),
+        ("max_le", p.max_le),
+        ("min_le_left", p.min_le_left),
+        ("min_le_right", p.min_le_right),
+        ("le_min", p.le_min),
+        ("le_of_sub_le", p.le_of_sub_le),
+        ("sub_le_of_le", p.sub_le_of_le),
+        ("sub_max_le", p.sub_max_le),
+        ("sub_min_le", p.sub_min_le),
+        ("zero_le_max_neg", p.zero_le_max_neg),
     ];
     for (label, name) in expected {
         assert!(
@@ -785,4 +801,194 @@ fn the_inverse_index_toolkit_cannot_prove_the_off_by_one_statements() {
         refused.is_err(),
         "the kernel accepted `(a+1)·b + a = (b+1)·a + a`, which is FALSE at a = 0, b = 1"
     );
+}
+
+/// **The rational lattice computes**, and it is the *representation* that
+/// decides.
+///
+/// The lattice laws are all one-sided consequences of `max_cases`, and every
+/// one of them would hold, footprint-free, of a `max` that always returned its
+/// first argument. This does not: it reduces `Rat.max` and `Rat.min` at four
+/// concrete pairs by `Eq.refl` — including a pair whose gap lands in the
+/// `Int.negSucc` branch, which is the branch no law exercises directly.
+#[test]
+fn the_rational_lattice_computes_on_both_branches() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    // (label, a, b, negate_a, expected)
+    let cases: [(&str, u32, u32, bool, bool); 4] = [
+        // 3 vs 1 — the gap is `ofNat 2`, so `max = b`… no: `max a b` returns
+        // `b` when `a ≤ b`, and `3 ≤ 1` is false, so the gap is `negSucc` and
+        // `max` returns `a`.
+        ("three_one", 3, 1, false, true),
+        ("one_three", 1, 3, false, false),
+        // −1 vs 1 — the `negSucc` sample on the ARGUMENT rather than the gap.
+        ("neg_one_one", 1, 1, true, false),
+        ("two_two", 2, 2, false, false),
+    ];
+    for (label, av, bv, negate_a, max_is_a) in cases {
+        let raw_a = literal(&mut d, av);
+        let a = if negate_a {
+            crate::rat_prelude::ops::rneg(&mut d, raw_a)
+        } else {
+            raw_a
+        };
+        let b = literal(&mut d, bv);
+        let joined = d.const_app(p.max, &[a, b]);
+        let met = d.const_app(p.min, &[a, b]);
+        let (max_expected, min_expected) = if max_is_a { (a, b) } else { (b, a) };
+
+        let stmt = crate::rat_prelude::ops::req(&mut d, joined, max_expected);
+        let proof = crate::rat_prelude::ops::rrefl(&mut d, joined);
+        let name = d.kernel().name_str(anon, format!("Check.max_{label}"));
+        d.declare_theorem(name, stmt, proof)
+            .unwrap_or_else(|e| panic!("Rat.max did not reduce for {label}: {e:?}"));
+
+        let stmt = crate::rat_prelude::ops::req(&mut d, met, min_expected);
+        let proof = crate::rat_prelude::ops::rrefl(&mut d, met);
+        let name = d.kernel().name_str(anon, format!("Check.min_{label}"));
+        d.declare_theorem(name, stmt, proof)
+            .unwrap_or_else(|e| panic!("Rat.min did not reduce for {label}: {e:?}"));
+    }
+}
+
+/// The negative control for [`the_rational_lattice_computes_on_both_branches`]:
+/// the same `Eq.refl` route, pointed at the **other** argument.
+///
+/// `max 3 1` is `3`; asking it to be `1` must be REFUSED, or the reductions
+/// above measure nothing.
+#[test]
+fn the_rational_lattice_reduction_check_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let zero_index = d.num(0);
+    let three = d.num(3);
+    let one = d.num(1);
+    let a = d.const_app(p.nat_div_succ, &[three, zero_index]);
+    let b = d.const_app(p.nat_div_succ, &[one, zero_index]);
+
+    let joined = d.const_app(p.max, &[a, b]);
+    let stmt = crate::rat_prelude::ops::req(&mut d, joined, b);
+    let proof = crate::rat_prelude::ops::rrefl(&mut d, joined);
+    let name = d.kernel().name_str(anon, "Check.max_is_the_smaller");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `Rat.max 3 1 = 1`, so the lattice reduction check \
+         proves nothing"
+    );
+
+    let met = d.const_app(p.min, &[a, b]);
+    let stmt = crate::rat_prelude::ops::req(&mut d, met, a);
+    let proof = crate::rat_prelude::ops::rrefl(&mut d, met);
+    let name = d.kernel().name_str(anon, "Check.min_is_the_larger");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `Rat.min 3 1 = 3`"
+    );
+}
+
+/// The lattice's **case-analysis principle** and its one-Lipschitz estimate,
+/// stated verbatim.
+///
+/// `max_cases` is the whole module: six of the nine lattice theorems are one
+/// application of it. Its statement is asserted here because an `Or`-shaped
+/// weakening of it (`Or (le a b) (le b a) → …`) would still let every law
+/// through while quietly assuming a decision procedure at the use site.
+#[test]
+fn the_lattice_case_principle_has_the_statement_adr_0490_specifies() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        rendered(&mut kernel, p.max),
+        "((x0 : Rat) -> ((x1 : Rat) -> Rat))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.max_cases),
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : ((x2 : Rat) -> Prop)) -> \
+         ((x3 : ((x3 : Rat.le x0 x1) -> x2 x1)) -> \
+         ((x4 : ((x4 : Rat.le x1 x0) -> x2 x0)) -> x2 (Rat.max x0 x1))))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.min_cases),
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : ((x2 : Rat) -> Prop)) -> \
+         ((x3 : ((x3 : Rat.le x0 x1) -> x2 x0)) -> \
+         ((x4 : ((x4 : Rat.le x1 x0) -> x2 x1)) -> x2 (Rat.min x0 x1))))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.sub_max_le),
+        "((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> ((x4 : Rat) -> \
+         ((x5 : Rat.le (Rat.sub x0 x2) x4) -> ((x6 : Rat.le (Rat.sub x1 x3) x4) -> \
+         Rat.le (Rat.sub (Rat.max x0 x1) (Rat.max x2 x3)) x4)))))))"
+    );
+    assert_eq!(
+        rendered(&mut kernel, p.zero_le_max_neg),
+        "((x0 : Rat) -> Rat.le Rat.zero (Rat.max x0 (Rat.neg x0)))"
+    );
+}
+
+/// Every lattice declaration is a **checked** definition or theorem with an
+/// empty axiom footprint, read out of the kernel.
+#[test]
+fn the_rational_lattice_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("max", p.max),
+        ("min", p.min),
+        ("max_cases", p.max_cases),
+        ("min_cases", p.min_cases),
+        ("le_max_left", p.le_max_left),
+        ("le_max_right", p.le_max_right),
+        ("max_le", p.max_le),
+        ("min_le_left", p.min_le_left),
+        ("min_le_right", p.min_le_right),
+        ("le_min", p.le_min),
+        ("le_of_sub_le", p.le_of_sub_le),
+        ("sub_le_of_le", p.sub_le_of_le),
+        ("sub_max_le", p.sub_max_le),
+        ("sub_min_le", p.sub_min_le),
+        ("zero_le_max_neg", p.zero_le_max_neg),
+    ];
+    for (label, name) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        assert!(
+            !matches!(
+                declaration,
+                Declaration::Axiom { .. } | Declaration::Opaque { .. }
+            ),
+            "Rat.{label} is asserted, not derived"
+        );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
 }
