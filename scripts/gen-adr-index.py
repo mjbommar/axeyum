@@ -382,6 +382,12 @@ def check_remote(remote_ref: str, max_staleness_hours: float, require_fresh: boo
     return 0
 
 
+# Numbers duplicated before this check existed, on both sides of every branch.
+# Not licence for a third: `--check` fails on any duplicate outside this set,
+# and fails again if one of these is repaired without being removed here.
+GRANDFATHERED_DUPLICATES = {"0166", "0167"}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -452,6 +458,47 @@ def main() -> int:
         f"curated_summaries={sum(adr['curated'] == 'yes' for adr in adrs)}|"
         f"duplicate_numbers={','.join(duplicates) if duplicates else 'none'}"
     )
+
+    # A DUPLICATE NUMBER NOW FAILS `--check`. Until 2026-08-19 it did not: the
+    # field above was printed and the exit status was 0 regardless, so
+    # `duplicate_numbers=0166,0167,0455` and `duplicate_numbers=none` were
+    # indistinguishable to any gate. Demonstrated by planting a second
+    # `adr-0455-*` file: `--check` printed the duplicate and exited 0.
+    #
+    # That is why a collision created after a merge went unnoticed until someone
+    # read the output by eye. `--check-remote` is the pre-merge detector and it
+    # is structurally blind here: it flags a number only when EACH side has a
+    # file the other lacks, and after a merge the local tree holds both, so
+    # local-only is non-empty and remote-only is empty. The two checks are not
+    # redundant and neither subsumes the other.
+    #
+    # `0166` and `0167` are grandfathered because they predate this check on
+    # both sides of every branch; they are not licence for a third. The set is a
+    # RATCHET in both directions -- fixing one must also fail, so the allowlist
+    # can only shrink deliberately rather than drifting.
+    unexpected = sorted(set(duplicates) - GRANDFATHERED_DUPLICATES)
+    repaired = sorted(GRANDFATHERED_DUPLICATES - set(duplicates))
+    if unexpected:
+        print(
+            "ADR_INDEX_ERROR|duplicate ADR number(s) "
+            f"{','.join(unexpected)}: two decisions claim the same number. "
+            "ADR numbers are a shared append point across checkouts -- three "
+            "collisions happened in one day on 2026-08-18/19 -- so renumber the "
+            "one that has NOT been published on the shared trunk, and check "
+            "`git ls-tree -r --name-only origin/main docs/research/09-decisions/` "
+            "for a free number rather than taking the local maximum",
+            file=sys.stderr,
+        )
+        return 1
+    if repaired:
+        print(
+            "ADR_INDEX_ERROR|grandfathered duplicate(s) "
+            f"{','.join(repaired)} are no longer duplicated. That is a repair: "
+            "remove them from GRANDFATHERED_DUPLICATES so the allowlist shrinks "
+            "with the defect instead of outliving it",
+            file=sys.stderr,
+        )
+        return 1
     return 0
 
 
