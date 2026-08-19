@@ -189,6 +189,54 @@ The Lean row is the one that shapes scheduling. Two of the three roadmap strands
 are Lean-bound, so before this baseline existed they both serialised onto the
 single host that had a `lean` binary.
 
+## Where build output goes, and why the root disk keeps filling
+
+Measured 2026-08-19 on s4, with eight lanes active:
+
+```
+/dev/sda2   915G  789G   81G  91%  /          <- the root disk, nearly full
+/dev/sdb1   7.3T  620G  6.3T   9%  /data0     <- the disk with the room
+tmpfs        62G  9.4G   53G  16%  /tmp       <- RAM, not disk
+```
+
+The single largest consumer is the shared checkout's own `target/` at **404 GB**,
+of which `target/debug/deps` is **335 GB across 18,333 files**. That is not a
+leak: it is every feature permutation eight lanes have built, and it is mostly
+debug info — the largest artefact, `libaxeyum_solver-*.rlib` at 318 MB, is
+**80% `.debug*` sections** (135 MB of 169 MB).
+
+Three rules follow, and two of them were already half-adopted:
+
+- **Per-lane build output belongs on /data0.**
+  `scripts/lane-snapshot.sh --target` already returns
+  `/data0/axeyum/target/$AXEYUM_AGENT` and lanes that use it cost the root disk
+  nothing. `hooks/pre-push` builds in `/data0/axeyum/prepush`. As of
+  2026-08-19 `scripts/local-ci.sh` defaults to `/data0/axeyum/local-ci-target`
+  rather than `~/.cache` (its previous dir was a further 32 GB on root), with
+  `$HOME` still the fallback on a host with no `/data0`.
+- **Scratch belongs on /data0, never `/tmp`.** `/tmp` here is a **62 GB tmpfs —
+  RAM** — and CLAUDE.md records it as a standing contributor to the OOM kills
+  that have taken out sessions on this box.
+- **The shared worktree's `target/` has no policy, and that is the 404 GB.**
+  Every lane building in the checkout writes there. Relocating it via
+  `.cargo/config.toml` (`build.target-dir`) plus `[profile.dev] debug =
+  "line-tables-only"` would move it to the disk with room and cut roughly the
+  80% that is debug info.
+
+  **That change is disruptive and must be scheduled, not slipped in.** Cargo
+  bakes absolute paths into its fingerprints, so changing `build.target-dir`
+  invalidates the entire 404 GB cache and forces a cold rebuild of a
+  236k-line workspace for every lane at once — the same mechanism that made the
+  pre-push hook rebuild from scratch on every push while its worktree came from
+  `mktemp -d`. Do it when no `cargo`/`rustc` is running, not while eight lanes
+  are mid-build.
+
+**What is safe to reclaim while builds are running:** nothing inside
+`axeyum/target`. Deleting `deps/` or `incremental/` under a live build corrupts
+the in-flight job. `~/.cache/axeyum-local-ci-target` is safe **only when
+`local-ci.sh` is idle**, which is checkable — no `nextest`/`local-ci` process —
+and after 2026-08-19 it is no longer written to at all.
+
 ## Verification
 
 Provisioning is not the claim; the probe is. The script ends with a verification

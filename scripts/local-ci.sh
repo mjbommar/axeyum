@@ -61,6 +61,16 @@ esac; done
 
 # Isolated target dir: full --all-features build (incl. linked libz3) must not
 # poison the agent worktrees' incremental caches.
+# On /data0, not under $HOME. Measured 2026-08-19: the root filesystem was at
+# **91% (81 GB free of 915 GB)** with `axeyum/target` alone at 404 GB and this
+# script's own isolated dir a further 32 GB, while /data0 sat at 9% with 6.3 TB
+# free. `scripts/lane-snapshot.sh --target` already puts per-lane target dirs
+# under /data0/axeyum/target; this brings the heaviest single consumer that was
+# still on the root disk in line with that convention. `$HOME` remains the
+# fallback for a host with no /data0, so nothing breaks off this fleet.
+if [ -z "${AXEYUM_LOCAL_CI_TARGET:-}" ] && [ -d /data0 ] && [ -w /data0 ]; then
+  AXEYUM_LOCAL_CI_TARGET=/data0/axeyum/local-ci-target
+fi
 export CARGO_TARGET_DIR="${AXEYUM_LOCAL_CI_TARGET:-$HOME/.cache/axeyum-local-ci-target}"
 # Tests don't need debuginfo; saves disk + link time.
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0
