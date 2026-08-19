@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-iterate-recurrence-result",
+  "state": "candidate-checked-no-receipt-evaluation-or-ledger-credit",
+  "tooling_commit": "a0ee2a4c90dd97c1260cd7b29f5a30c7aaa9ea3e",
+  "tooling_file": {
+    "path": "crates/axeyum-lean-import/examples/nat_fib_iterate_recurrence.rs",
+    "sha256": "a85d65da6c1aa106a1022fc23499035fd89bef3b44a69085473f0586edd6e3d8"
+  },
+  "frozen_policy": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-iterate-recurrence-policy-v3.json",
+    "sha256": "0f9402fe45e7aeccfc2dd5153a0652000bc58ee00e81140fcd97d013a49ee8c0"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/iterate-recurrence/a0ee2a4c9-nat-fib-add-two-r080-v3",
+    "file": "observation.json",
+    "bytes": 2018,
+    "mode": "0444",
+    "file_sha256": "4a95d6a7eb01d7bf5114ffe1c1b42af5b244f94749296113ef6fcaf9e9e36295",
+    "observation_sha256": "920ef21dffc17402180725f940220e26a02db02cdf7ff636779d9cdfe6680969"
+  },
+  "result": {
+    "target": "Nat.fib_add_two",
+    "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+    "operation": "bounded-iterate-recurrence-v3",
+    "accepted_plan_rank": 2,
+    "kernel_submissions": 2,
+    "executor_invocations": 1,
+    "retries": 0,
+    "kernel_accepted": true,
+    "proof_sha256": "b5965831fd4654e708b03bd3145f9124f02fc57aaa04bc16ded8287b6cee50f2",
+    "theorem_content_sha256": "ad53b80748ad1d3f0a0958277774e36a621ce25f5f1441b6882085349886537a",
+    "axiom_footprint": [],
+    "theorem_dependencies": [],
+    "semantic_theorem_receipts_issued": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-fib-recurrence-v3-result.py",
+  "limitations": "This is an independently accepted candidate, not an admitted fact. A semantic theorem receipt and separate ledger transaction remain required."
+}

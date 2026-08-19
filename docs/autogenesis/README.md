@@ -144,6 +144,7 @@ compounding, not automation theatre.
 | [Corrected Fibonacci recurrence v2 result](45-nat-fib-recurrence-v2-result.md) | Did the corrected one-shot plan establish `Nat.fib_add_two`, and which target-specific stage must be localized next? |
 | [Fibonacci recurrence stage control](46-nat-fib-recurrence-stage-control.md) | Which explicit equality bridge closes the v2 mismatch, and do all closed stages match without target submission? |
 | [Fibonacci recurrence v3 selection](47-nat-fib-recurrence-v3-selection.md) | Which exact stage evidence and unchanged ceiling authorize one complete repaired target execution? |
+| [Fibonacci recurrence v3 result](48-nat-fib-recurrence-v3-result.md) | Did the complete repaired operation construct the first real Fibonacci-path candidate, and what authority still remains? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
