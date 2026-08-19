@@ -1,30 +1,64 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-nat-fib-add-two-b86e0c82",
-  "title": "Mathlib v4.30 source proposition Nat.fib_add_two",
-  "statement": "The proposition declared as `Nat.fib_add_two` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {n : ℕ}, Nat.fib (n + 2) = Nat.fib n + Nat.fib (n + 1)",
-    "fragment": "Nat"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:d55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+      "checker_operation": {
+        "execution_sha256": "d55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85",
+        "formal_statement_sha256": "d02d345e47fd89371e0929cde30b602d0105750679d230d9675546e468d6a1ab",
+        "frontier_sha256": "15a60980c1badc99163c5e47b6c84e87526264668983e6139de1c1595f6cdbf6",
+        "goal_sha256": "5433b34c4a138d615c488e4c7dfbee5dac8dc253e14680e114f40a55cf5eb16d",
+        "id": "authoritative-mathlib-nat-fib-add-two-receipt-v1",
+        "observation_sha256": "28f313c405614fa9b9de47d76216e01669754c9f84e397ecc8845a551115182f",
+        "operation_sha256": "f71712381c32aafe50dbe824859859aa5ce29d17ee0cc3909e349d5f8f69ad7c",
+        "proof_sha256": "b5965831fd4654e708b03bd3145f9124f02fc57aaa04bc16ded8287b6cee50f2",
+        "receipt_manifest": "artifacts/autogenesis/mathlib-nat-fib-checked-theorem-receipt-v1.json",
+        "receipt_manifest_sha256": "67a31ed8a43fe8a46bf9b10cb8c773b619b9da4afea0d37e9fab75a0e419df31",
+        "receipt_sha256": "395f6e80e6addbc69cca8ad560b312dadc31d623fe05f6b1603b5fa523622329",
+        "registry_sha256_at_execution": "26ac24aa6a7f7f1a3806845e795cd169cfc5f70719bfde1b24f29ae0a6c47386",
+        "source_artifact_sha256": "00578e949d71154cf5d9e79005b2a1c8f7fe73d9885ae96b0dd5cb6744c30501",
+        "target_content_sha256": "ad53b80748ad1d3f0a0958277774e36a621ce25f5f1441b6882085349886537a",
+        "target_definition": "Axeyum.Autogenesis.Coverage.r080"
+      },
+      "checkers": [
+        "bounded-iterate-recurrence-v3",
+        "axeyum-lean-import/checked-semantic-theorem-receipt-v1",
+        "axeyum-lean-import/checked-theorem-receipt-v1"
+      ],
+      "id": "autogenesis-operation-d55dac246e5d4ffc",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable source-bound semantic theorem receipt and requires its exact two-fresh-kernel proof, zero assumptions, and zero direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Nat.fib_add_two` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "language": "lean4-surface",
+    "statement": "\u2200 {n : \u2115}, Nat.fib (n + 2) = Nat.fib n + Nat.fib (n + 1)"
+  },
+  "id": "F:ml430-nat-fib-add-two-b86e0c82",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-nat-fib-add-two-receipt-v1`; execution receipt `d55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85` produced a two-fresh-kernel axiom-free semantic theorem receipt, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.fib_add_two` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution f0fb2c6f374ba6255e9acdd63582e10db41b8ba094fb97149df667acdfc0030b",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Nat.fib_add_two`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Nat.fib_add_two` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Nat.fib_add_two` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Nat.fib_add_two"
 }

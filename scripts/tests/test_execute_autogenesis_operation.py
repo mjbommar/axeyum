@@ -428,6 +428,12 @@ class OperationExecutionTests(unittest.TestCase):
             "frontier_for_checked_theorem_execution_test", execution.FRONTIER_SCRIPT
         )
         facts = frontier_module.load()
+        target = copy.deepcopy(facts[FIB_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[FIB_FACT] = target
         frontier = frontier_module.build_machine_frontier(facts)
         fact, operation, registry = execution.selected_inputs(frontier, facts)
         self.assertEqual(fact["id"], FIB_FACT)

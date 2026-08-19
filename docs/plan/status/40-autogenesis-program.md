@@ -2,14 +2,10 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Fib receipt issued.
+**Status:** Fib recurrence admitted; clean replay pending.
 
-**Next:** register Fib admission.
+**Next:** clean-replay the non-leaf admission, then select one newly ready child.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-19 | `1676557d5` | Fib equality bridge |
-| 2026-08-19 | `a0ee2a4c9` | Fib v3 tooling |
-| 2026-08-19 | `c5afd7223` | Fib v3 policy |
-| 2026-08-19 | `3ad394bb6` | Checked receipt tooling |
-| 2026-08-19 | `67124af8e` | Fib receipt policy |
+| 2026-08-19 | `11c700a9b` | Fib admission operation |

@@ -213,7 +213,10 @@ checks = {
     "selected_before": fresh["frontier-before.json"]["selection"]["selected_fact_id"] == fact_id,
     "admitted_event": fresh_event["event_type"] == "fact-admitted",
     "removed_from_ready": fresh["readiness.json"]["frontier_change"]["no_longer_ready"] == [fact_id],
-    "honest_leaf_unlock": fresh["readiness.json"]["newly_ready"] == [],
+    # Retain the historical key for archived v1 report compatibility.  The
+    # semantic check now covers both leaves and non-leaves: the fresh episode
+    # must reproduce the retained readiness delta exactly.
+    "honest_leaf_unlock": fresh["readiness.json"]["newly_ready"] == retained["readiness.json"]["newly_ready"],
     "one_authoritative_write": fresh["readiness.json"]["authoritative_ledger_writes"] == 1,
     "zero_fixture_writes": fresh["readiness.json"]["fixture_writes"] == 0,
 }

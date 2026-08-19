@@ -411,6 +411,12 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
             "frontier_for_checked_theorem_transaction_test", executor.FRONTIER_SCRIPT
         )
         facts = frontier_module.load()
+        target = copy.deepcopy(facts[FIB_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[FIB_FACT] = target
         frontier = frontier_module.build_machine_frontier(facts)
         before, operation, registry = executor.selected_inputs(frontier, facts)
         self.assertEqual(before["id"], FIB_FACT)
