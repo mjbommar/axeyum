@@ -186,6 +186,8 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `b91b6dac5` | The four ordered-field lemmas ℝ's inverse is written in — `sub_mul`, `mul_inv_sub_one`, `inv_sub_inv`, `inv_le_of_pos_le` — from `mul_inv_cancel` and the 22 alone, so each transcribes one level up. |
 | 2026-08-18 | `6375d7746` | **ℚ is a FIELD.** `Rat.mul_inv_cancel : 0 < q → q·q⁻¹ = 1`, axiom-free: the one proof here about the representation, since `Rat.inv q` is stuck until `num q` is in constructor form. The `negSucc` branch needs no lemma — `Int.lt Int.zero (negSucc m)` **ι-reduces to `False`**. Guard: `Rat.inv (2/1)` REDUCES to `1/2`; the identical script pointed at `= 2/1` is REFUSED. |
 | 2026-08-18 | `baf81fd66` | ℝ gets **Bishop apartness**, verbatim rather than encoded — `CReal.lt` already carries the separation as a rational gap. Four laws, `not_equiv_of_apart` ONE-WAY (its converse is Markov's principle), and `CReal.no_total_inverse`. |
+| 2026-08-18 | `57af69142` | **`CReal.inv` is built**, with `mul_inv_cancel`, `inv_congr` and `inv_index_irrelevant`, all footprint-free and accepted on FIRST submission. Index `(C+1)n + C`, `C+1 = (4k+4)(k+2)`, read back *two* ways so `natDivSucc` still need not be antitone. Non-vacuity is admitted **through the kernel** (`PosBound one 0`), and `∀h, ¬(1⁻¹ ≈ 0)` follows from `mul_inv_cancel` alone, so the operation is neither vacuous nor the zero function. Negative controls: `x·x⁻¹ ≈ 0` and `x⁻¹ ≈ x` both REFUSED. |
+| 2026-08-18 | `facde4243` | The two ℕ/ℚ lemmas the index arithmetic is written in. `Rat.inv_natDivSucc : (1/(m+1))⁻¹ = (m+1)/1` — the only place the *value* of an inverse is computed, and needed because every bound over ℝ is one `natDivSucc` with a `Nat` numerator. `Rat.nat_index_symm : (a+1)b + a = (b+1)a + b` — **Bishop's sampling index is symmetric in shift and argument**, which is how a bound read at a product index comes back to the *shift* rather than to `n`. |
 | 2026-08-18 | 570b5c738 | **The interface as a telescope, and it is the same over ℤ.** `ring_interface_telescope` + `examples/ring_interface_pin.rs`, 30 of 30 byte-identical. Also repaired a test `61906c585` swept in broken, and the finding behind it: a `NameId` is an INDEX, so a signature read against another *populated* kernel resolves silently to `Nat.le`, `Nat.beq_refl`, … rather than failing. |
 | 2026-08-18 | 9ab8d7977 | **The negative control at one axiom instead of thirty.** `build_control_carrier`, three mutations, one test dead each. |
 | 2026-08-18 | 6c08c906f | **ADR-0486** + `F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers`. |
@@ -948,6 +950,20 @@ the **same** `Prop`, so the modulus always exists and can never be extracted.
 **`CReal.inv` itself is NOT built**; design fixed and cost measured in
 [`../notes/creal-field.md`](docs/plan/notes/creal-field.md), which is also where the
 next task is.
+
+**ADR-0487: `CReal.inv` is BUILT, and `x⁻¹` denotes one real rather than one
+per modulus (`WIP`, agent-creal-inv, 2026-08-18).**
+`CReal.inv : (x : CReal) → (k : Nat) → PosBound x k → CReal` — a function may
+*take* a `Prop` and return a `Type`, it may only not *branch* on one, so the
+**modulus** is the thing that must be data and the proof is only a proof. With
+it `mul_inv_cancel` (`x · x⁻¹ ≈ 1` on the positive branch), `inv_congr` — which
+quantifies over **two independent moduli**, because two callers with different
+`k` for the same `x` build different sequences — and `inv_index_irrelevant`.
+Congruence is *uniqueness of inverses in a commutative monoid*, not a second
+estimate. **76 `CReal` declarations, trusted surface still 0**; `nat_index_symm`
+is the fifth time `Rat.natDivSucc` has been kept off the antitone path. Design,
+measurements and what is deliberately absent (the negative branch, `abs`,
+cotransitivity): [`../notes/creal-inv.md`](docs/plan/notes/creal-inv.md).
 
 **Both of ADR-0480's reasons for keeping the 30 axioms are discharged in
 principle; the rows have not moved (`WIP`, agent-shrink-control, 2026-08-18).**
