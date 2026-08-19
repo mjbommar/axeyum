@@ -10,17 +10,20 @@ authority to dispatch or admit an authoritative ledger fact. Run
 `python3 scripts/validate-autogenesis-operations.py` after changing it.
 
 `nursery-v1.json` is the leakage-controlled population manifest introduced by
-ADR-0478. Its initial two entries are only the frozen Autogenesis-1 longitudinal
+ADR-0478. Its first two entries remain the frozen Autogenesis-1 longitudinal
 regression; they never count toward train, development, held-out, or autonomous
-yield. Validate the manifest and print its current readiness gaps with:
+yield. The additional 214 entries are frozen by
+`mathlib-nursery-split-policy-v1.json` and regenerated with:
 
 ```sh
-python3 scripts/check-autogenesis-nursery.py
+python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
+python3 scripts/check-autogenesis-nursery.py --require-ready
 ```
 
-Use `--require-ready` only for a Phase 3 evaluation run. It intentionally fails
-while the manifest is `foundation-only`; ordinary repository gates require an
-accurate report, not a premature green population.
+The split policy fixes family membership before target outcomes, and the checker
+rejects dependency-component, source-review-group, family, family-scoped
+proof-shape, mutation, or longitudinal leakage. Route hypotheses grant no
+dispatch or admission authority.
 
 `mathlib-statement-source-v1.json` binds the external statement-only Mathlib
 v4.30.0 inventory. Bulk NDJSON stays on `/nas3`; Git retains the extractor,

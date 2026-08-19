@@ -68,7 +68,9 @@ step fact-depends python3 scripts/check-fact-depends-derived.py --quiet
 step autogenesis-chain-catalog-tests python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
 step autogenesis-chain-catalog python3 scripts/create-autogenesis-chain-catalog.py --check
 step autogenesis-nursery-tests python3 -m unittest scripts.tests.test_check_autogenesis_nursery
+step autogenesis-mathlib-nursery-split-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_nursery_split
 step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
+step autogenesis-mathlib-nursery-split python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
 step autogenesis-mathlib-source-tests python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source
 step autogenesis-mathlib-source python3 scripts/check-autogenesis-mathlib-source.py
 step autogenesis-mathlib-candidate-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_candidates

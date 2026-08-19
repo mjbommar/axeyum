@@ -70,6 +70,7 @@ def validate_policy(policy: Any) -> dict[str, Any]:
         "admission_dependency_authority": "proof-derived-kernel-dependency",
         "family_leakage": "no-family-may-cross-evaluation-partitions",
         "proof_shape_leakage": "no-proof-shape-may-cross-evaluation-partitions",
+        "source_group_leakage": "no-source-review-group-may-cross-evaluation-partitions",
         "split_component_authority": "declared-dependency-weak-component",
         "split_freeze": "before-target-outcomes",
         "split_leakage": "no-declared-component-may-cross-evaluation-partitions",
@@ -117,6 +118,7 @@ def validate_entries(
             raise NurseryError(f"{fact_id}: invalid provenance class")
         require_string(entry.get("family"), f"{fact_id}.family")
         require_string(entry.get("proof_shape"), f"{fact_id}.proof_shape")
+        require_string(entry.get("source_group"), f"{fact_id}.source_group")
         routes = entry.get("route_hypotheses")
         if (
             not isinstance(routes, list)
@@ -150,9 +152,10 @@ def validate_entries(
             if (
                 entry["partition"] != target["partition"]
                 or entry["family"] != target["family"]
+                or entry["source_group"] != target["source_group"]
             ):
                 raise NurseryError(
-                    f"{entry['fact_id']}: mutation must stay with its target partition and family"
+                    f"{entry['fact_id']}: mutation must stay with its target partition, family, and source group"
                 )
     return entries
 
@@ -235,10 +238,12 @@ def build_report(
     component_partitions: dict[str, set[str]] = defaultdict(set)
     family_partitions: dict[str, set[str]] = defaultdict(set)
     shape_partitions: dict[str, set[str]] = defaultdict(set)
+    source_group_partitions: dict[str, set[str]] = defaultdict(set)
     for entry in evaluation:
         component_partitions[by_fact[entry["fact_id"]]].add(entry["partition"])
         family_partitions[entry["family"]].add(entry["partition"])
         shape_partitions[entry["proof_shape"]].add(entry["partition"])
+        source_group_partitions[entry["source_group"]].add(entry["partition"])
     leaks = sorted(
         component_id
         for component_id, partitions in component_partitions.items()
@@ -256,6 +261,11 @@ def build_report(
     )
     if shape_leaks:
         raise NurseryError("proof shape crosses evaluation partitions")
+    source_group_leaks = sorted(
+        group for group, partitions in source_group_partitions.items() if len(partitions) > 1
+    )
+    if source_group_leaks:
+        raise NurseryError("source review group crosses evaluation partitions")
     longitudinal_ids = sorted(
         entry["fact_id"] for entry in entries if entry["partition"] == "longitudinal"
     )
@@ -326,6 +336,7 @@ def build_report(
             "component_split_leaks": leaks,
             "family_split_leaks": family_leaks,
             "proof_shape_split_leaks": shape_leaks,
+            "source_group_split_leaks": source_group_leaks,
             "evaluation_longitudinal_component_overlap": evaluation_longitudinal_overlap,
             "answer_access_values": sorted({entry["answer_access"] for entry in entries}),
             "admission_edges_require_proof_derivation": True,

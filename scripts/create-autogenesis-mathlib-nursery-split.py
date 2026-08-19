@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""Freeze the reviewed Mathlib facts into a preregistered leakage-safe nursery."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import pathlib
+import sys
+from collections import Counter
+from typing import Any
+
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+CATALOG = ROOT / "artifacts/autogenesis/mathlib-nat-int-fact-catalog-v1.json"
+POLICY = ROOT / "artifacts/autogenesis/mathlib-nursery-split-policy-v1.json"
+NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
+
+
+class SplitError(RuntimeError):
+    """The preregistered split cannot be reproduced exactly."""
+
+
+def canonical_json(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def digest(value: Any) -> str:
+    return hashlib.sha256(canonical_json(value).encode()).hexdigest()
+
+
+def load(path: pathlib.Path) -> dict[str, Any]:
+    value = json.loads(path.read_text())
+    if not isinstance(value, dict):
+        raise SplitError(f"{path.relative_to(ROOT)} is not an object")
+    return value
+
+
+def build(catalog: dict[str, Any], split_policy: dict[str, Any]) -> dict[str, Any]:
+    if catalog.get("state") != "open-facts-no-splits-no-outcomes":
+        raise SplitError("fact catalog state is invalid")
+    unsigned = dict(catalog)
+    claimed = unsigned.pop("catalog_sha256", None)
+    if not isinstance(claimed, str) or digest(unsigned) != claimed:
+        raise SplitError("fact catalog digest is invalid")
+    if split_policy.get("state") != "preregistered-before-target-outcomes":
+        raise SplitError("split policy is not preregistered")
+    family_partitions = split_policy.get("family_partitions")
+    route_hypotheses = split_policy.get("route_hypotheses")
+    if not isinstance(family_partitions, dict) or not isinstance(route_hypotheses, dict):
+        raise SplitError("split policy mappings are invalid")
+    rows = catalog.get("facts")
+    if not isinstance(rows, list) or len(rows) != 214:
+        raise SplitError("fact catalog must contain the reviewed 214-row population")
+    families = {row.get("family") for row in rows}
+    if families != set(family_partitions) or families != set(route_hypotheses):
+        raise SplitError("split policy does not cover the catalog families exactly")
+
+    entries = [
+        {
+            "fact_id": "F:nat-zero-add",
+            "partition": "longitudinal",
+            "provenance_class": "project-constructed",
+            "family": "nat-bootstrap",
+            "proof_shape": "kernel-induction",
+            "source_group": "autogenesis-1",
+            "route_hypotheses": ["kernel-induction"],
+            "mutation_of": None,
+            "answer_access": "withheld-during-episode",
+        },
+        {
+            "fact_id": "F:nat-mul-one",
+            "partition": "longitudinal",
+            "provenance_class": "project-constructed",
+            "family": "nat-bootstrap",
+            "proof_shape": "kernel-theorem-application",
+            "source_group": "autogenesis-1",
+            "route_hypotheses": ["kernel-library-application"],
+            "mutation_of": None,
+            "answer_access": "withheld-during-episode",
+        },
+    ]
+    for row in sorted(rows, key=lambda item: item["fact_id"]):
+        family = row["family"]
+        routes = route_hypotheses[family]
+        if routes != sorted(set(routes)):
+            raise SplitError(f"route hypotheses for {family} are not sorted and unique")
+        generated = row["kind"] == "generated-mutation"
+        entries.append(
+            {
+                "fact_id": row["fact_id"],
+                "partition": family_partitions[family],
+                "provenance_class": "generated-mutation" if generated else "external-transcribed",
+                "family": family,
+                "proof_shape": f"{family}:{row['statement_shape']}",
+                "source_group": row["dependency_component_id"],
+                "route_hypotheses": routes,
+                "mutation_of": row.get("mutation_of_fact_id"),
+                "answer_access": "unavailable" if generated else "withheld-during-episode",
+            }
+        )
+    counts = Counter(entry["partition"] for entry in entries[2:])
+    if counts != {"train": 78, "development": 60, "held-out": 76}:
+        raise SplitError(f"preregistered partition counts changed: {dict(counts)}")
+    return {
+        "schema_version": 1,
+        "kind": "axeyum-autogenesis-nursery",
+        "state": "frozen-evaluation",
+        "policy": {
+            "admission_dependency_authority": "proof-derived-kernel-dependency",
+            "evaluation_fact_count": {"maximum": 300, "minimum": 100},
+            "minimum_declared_dependency_depth": 2,
+            "minimum_held_out_components": 1,
+            "minimum_provenance_classes": 2,
+            "minimum_route_hypothesis_families": 2,
+            "minimum_statement_mutations": 1,
+            "family_leakage": "no-family-may-cross-evaluation-partitions",
+            "proof_shape_leakage": "no-proof-shape-may-cross-evaluation-partitions",
+            "source_group_leakage": "no-source-review-group-may-cross-evaluation-partitions",
+            "required_evaluation_partitions": ["train", "development", "held-out"],
+            "split_component_authority": "declared-dependency-weak-component",
+            "split_freeze": "before-target-outcomes",
+            "split_leakage": "no-declared-component-may-cross-evaluation-partitions",
+        },
+        "entries": entries,
+        "longitudinal_result": "artifacts/autogenesis/autogenesis-1-result.json",
+        "split_policy": "artifacts/autogenesis/mathlib-nursery-split-policy-v1.json",
+        "split_policy_sha256": digest(split_policy),
+        "source_catalog_sha256": catalog["catalog_sha256"],
+        "notes": "Autogenesis-1 remains a disjoint longitudinal regression. The 214 Mathlib statements are frozen before target outcomes; source groups, families, family-scoped proof shapes, mutations, and declared dependency components cannot cross evaluation partitions.",
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
+    try:
+        expected = build(load(CATALOG), load(POLICY))
+        rendered = json.dumps(expected, indent=2, ensure_ascii=False) + "\n"
+        if args.check:
+            if not NURSERY.exists() or NURSERY.read_text() != rendered:
+                raise SplitError("nursery-v1.json is stale; regenerate without --check")
+        else:
+            NURSERY.write_text(rendered)
+        print(
+            "AUTOGENESIS_MATHLIB_NURSERY_SPLIT_OK|"
+            f"{digest(expected)}|evaluation={len(expected['entries']) - 2}|"
+            "train=78|development=60|held-out=76"
+        )
+    except (OSError, json.JSONDecodeError, KeyError, SplitError) as error:
+        print(f"autogenesis-mathlib-nursery-split: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

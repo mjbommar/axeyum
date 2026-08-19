@@ -32,6 +32,7 @@ def entry(
         "provenance_class": provenance,
         "family": "family",
         "proof_shape": "shape",
+        "source_group": fact_id,
         "route_hypotheses": routes or ["kernel"],
         "mutation_of": mutation_of,
         "answer_access": "withheld-during-episode",
@@ -40,7 +41,12 @@ def entry(
 
 class NurseryTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.nursery = json.loads(MODULE.NURSERY.read_text())
+        repository = json.loads(MODULE.NURSERY.read_text())
+        self.nursery = copy.deepcopy(repository)
+        self.nursery["state"] = "foundation-only"
+        self.nursery["entries"] = [
+            row for row in repository["entries"] if row["partition"] == "longitudinal"
+        ]
         self.result = {"verdict": "autogenesis-1-passed"}
         self.facts = {
             "F:nat-zero-add": fact("F:nat-zero-add"),
@@ -96,6 +102,17 @@ class NurseryTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.NurseryError, "proof shape crosses"):
             MODULE.build_report(self.nursery, self.facts, self.result)
 
+    def test_source_review_group_leakage_fails_closed(self) -> None:
+        self.facts.update({"F:train": fact("F:train"), "F:held": fact("F:held")})
+        train = entry("F:train", "train")
+        held = entry("F:held", "held-out")
+        train["family"], held["family"] = "train-family", "held-family"
+        train["proof_shape"], held["proof_shape"] = "train-shape", "held-shape"
+        train["source_group"] = held["source_group"] = "review-group"
+        self.nursery["entries"].extend([train, held])
+        with self.assertRaisesRegex(MODULE.NurseryError, "source review group crosses"):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
     def test_mutation_must_reference_a_nursery_entry(self) -> None:
         self.facts["F:mutation"] = fact("F:mutation")
         self.nursery["entries"].append(
@@ -113,8 +130,9 @@ class NurseryTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.NurseryError, "provenance and mutation_of"):
             MODULE.build_report(self.nursery, self.facts, self.result)
         self.nursery["entries"][-1]["provenance_class"] = "generated-mutation"
+        self.nursery["entries"][-1]["source_group"] = self.nursery["entries"][-2]["source_group"]
         self.nursery["entries"][-1]["partition"] = "held-out"
-        with self.assertRaisesRegex(MODULE.NurseryError, "target partition and family"):
+        with self.assertRaisesRegex(MODULE.NurseryError, "target partition, family, and source group"):
             MODULE.build_report(self.nursery, self.facts, self.result)
 
     def test_policy_floor_mutation_is_rejected(self) -> None:
@@ -143,6 +161,7 @@ class NurseryTests(unittest.TestCase):
         mutation["mutation_of"] = "F:e-0"
         mutation["family"] = self.nursery["entries"][2]["family"]
         mutation["proof_shape"] = self.nursery["entries"][2]["proof_shape"]
+        mutation["source_group"] = self.nursery["entries"][2]["source_group"]
         self.nursery["state"] = "frozen-evaluation"
 
         report = MODULE.build_report(self.nursery, self.facts, self.result)

@@ -112,6 +112,7 @@ compounding, not automation theatre.
 | [Mathlib dependency-component result](13-mathlib-dependency-components-result.md) | Which statement candidates must remain together so direct proof dependencies cannot leak across evaluation splits? |
 | [Mathlib outcome-blind review result](14-mathlib-outcome-blind-review-result.md) | Which candidates survive statement review, and how are mutation controls grouped before any outcome or split exists? |
 | [Mathlib open-fact catalog result](15-mathlib-open-fact-catalog-result.md) | Can the reviewed statements become honest Axeyum ledger propositions without importing proofs or claiming construction? |
+| [Mathlib frozen nursery split](16-mathlib-frozen-nursery-split-result.md) | Can all reviewed propositions be preregistered into useful evaluation partitions without dependency, source-group, family, proof-template, mutation, or longitudinal leakage? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -204,15 +205,18 @@ all 56 retained artifact bytes matched. The small committed
 external receipts; the detailed audit is in the
 [Autogenesis-1 result](10-autogenesis-1-result.md).
 
-The first post-result increment is a deliberately red nursery baseline. ADR-0478
+The first post-result increment was a deliberately red nursery baseline. ADR-0478
 reserves the successful chain as a longitudinal regression, separates authored
 split dependencies from proof-derived admission authority, and prohibits
 dependency components, theorem families, proof shapes, or mutations from
 crossing evaluation partitions. The executable
-[`nursery-v1.json`](../../artifacts/autogenesis/nursery-v1.json) currently has
-zero evaluation facts and nine named readiness blockers. That finding is the
-point: the existing ledger cannot be relabelled into a credible held-out Phase 3
-population. See the [nursery foundation result](11-nursery-foundation-result.md).
+[`nursery-v1.json`](../../artifacts/autogenesis/nursery-v1.json) now freezes 214
+proof-free Mathlib propositions: 78 train, 60 development, and 76 held-out. The
+checker reports ready with zero blockers and zero leakage. The earlier red
+finding remains important: the original ledger could not be relabelled into a
+credible held-out population. See the [nursery foundation
+result](11-nursery-foundation-result.md) and [frozen split
+result](16-mathlib-frozen-nursery-split-result.md).
 
 ## Phase summary
 

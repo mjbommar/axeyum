@@ -60,11 +60,11 @@ autogenesis-operations:
     python3 scripts/validate-autogenesis-operations.py
     python3 -m unittest scripts.tests.test_validate_autogenesis_operations
 
-# Validate the leakage-safe population contract. This reports ready=false until
-# the 100--300-fact evaluation nursery is actually frozen; experiments add
-# --require-ready, while the repository gate preserves honest partial state.
+# Validate and exactly regenerate the frozen leakage-safe population contract.
 autogenesis-nursery:
     python3 -m unittest scripts.tests.test_check_autogenesis_nursery
+    python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_nursery_split
+    python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
     python3 scripts/check-autogenesis-nursery.py
 
 # The bulk source is external and optional on CI. The first checker reports

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-nursery",
-  "state": "foundation-only",
+  "state": "frozen-evaluation",
   "policy": {
     "admission_dependency_authority": "proof-derived-kernel-dependency",
     "evaluation_fact_count": {
@@ -15,6 +15,7 @@
     "minimum_statement_mutations": 1,
     "family_leakage": "no-family-may-cross-evaluation-partitions",
     "proof_shape_leakage": "no-proof-shape-may-cross-evaluation-partitions",
+    "source_group_leakage": "no-source-review-group-may-cross-evaluation-partitions",
     "required_evaluation_partitions": [
       "train",
       "development",
@@ -31,6 +32,7 @@
       "provenance_class": "project-constructed",
       "family": "nat-bootstrap",
       "proof_shape": "kernel-induction",
+      "source_group": "autogenesis-1",
       "route_hypotheses": [
         "kernel-induction"
       ],
@@ -43,13 +45,3013 @@
       "provenance_class": "project-constructed",
       "family": "nat-bootstrap",
       "proof_shape": "kernel-theorem-application",
+      "source_group": "autogenesis-1",
       "route_hypotheses": [
         "kernel-library-application"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-fcf7017e9257db89",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-ef8adf35bc935542",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-gcd",
+      "proof_shape": "integer-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-bef809d855cc57c1",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-gcd",
+      "proof_shape": "integer-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-bef809d855cc57c1",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-add-181b6a2c",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-11abc97c89380ee4",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-add-one-33f1b748",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-b064fa21f15a772b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-add-two-739358dd",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-b064fa21f15a772b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-dvd-ffb3c5c1",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-292800e4421fa31a",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-b064fa21f15a772b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-eq-zero-8193c7cb",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:biconditional",
+      "source_group": "mathlib-v4.30.0-bc8c8765b9355652",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-gcd-3a8bfdec",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-natcast-d5886be4",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-b064fa21f15a772b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-neg-b4021d37",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-of-nonneg-438018c5",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-cd344903f04530b2",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-of-odd-66560495",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-349664929d4b20cf",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-two-mul-0e70f3dd",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-11abc97c89380ee4",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-f72b51f6b6106a61",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-two-mul-add-two-0ba4a948",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-11abc97c89380ee4",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-gcd-div-5e01872f",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-gcd",
+      "proof_shape": "integer-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-4c725f39100b926a",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-gcd",
+      "proof_shape": "integer-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-29d8a4807856ddb4",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-gcd",
+      "proof_shape": "integer-gcd:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-bef809d855cc57c1",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-gcd",
+      "proof_shape": "integer-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-fbe0b99ece942a46",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-gcd",
+      "proof_shape": "integer-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-bc196822165c7f58",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-gcd-fib-73bdafc2",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-gcd-greatest-5b31c5fe",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-gcd",
+      "proof_shape": "integer-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-84ffc18b86745c93",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-mod-modeq-6bec7847",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-6e1b2f332b43a55c",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-add-left-6e17c69a",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-comm-1e4bcc07",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:biconditional",
+      "source_group": "mathlib-v4.30.0-346e912c62f2c876",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:biconditional",
+      "source_group": "mathlib-v4.30.0-346e912c62f2c876",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-neg-d6ff57b6",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:biconditional",
+      "source_group": "mathlib-v4.30.0-7131d99a953dc330",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-be80f6203158797b",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-of-dvd-b9c41fce",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-8a9b388391142d26",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-221b47afb20afd1a",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-of-mul-right-c92b7bf0",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-221b47afb20afd1a",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-one-01d9de39",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-7ea970a1a23d9dcd",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-refl-30e15520",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-sub-3148f130",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-346e912c62f2c876",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-symm-984a6e67",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-346e912c62f2c876",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modeq-trans-6d7863e0",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-346e912c62f2c876",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-77595c4fe0b2aedf",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-ne-zero-of-gcd-f71f00df",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-gcd",
+      "proof_shape": "integer-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-f1ef809f7abb9158",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-int-neg-modeq-neg-30d98479",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:biconditional",
+      "source_group": "mathlib-v4.30.0-af1fb231b4a4420a",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
+      "partition": "train",
+      "provenance_class": "generated-mutation",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:biconditional",
+      "source_group": "mathlib-v4.30.0-4ae13ae945c61591",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": "F:ml430-nat-fib-eq-zero-61879073",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-mutation-2086302b3a338591b3179871",
+      "partition": "held-out",
+      "provenance_class": "generated-mutation",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": "F:ml430-nat-sqrt-le-self-1ed5eb85",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-mutation-48fe130e2b8eadb6f626b66f",
+      "partition": "train",
+      "provenance_class": "generated-mutation",
+      "family": "integer-gcd",
+      "proof_shape": "integer-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-f1ef809f7abb9158",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": "F:ml430-int-ne-zero-of-gcd-f71f00df",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-mutation-5179f333b8333ecff8adc223",
+      "partition": "development",
+      "provenance_class": "generated-mutation",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-f5e0081ba0d3ce13",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": "F:ml430-nat-prime-pred-pos-4e67ac4c",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-mutation-7afa5ec620720a1501bf349d",
+      "partition": "train",
+      "provenance_class": "generated-mutation",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
+      "partition": "development",
+      "provenance_class": "generated-mutation",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-72882823816e8782",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": "F:ml430-nat-lor-comm-2666d7ef",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-mutation-aabb80b1f89f0c5847364692",
+      "partition": "train",
+      "provenance_class": "generated-mutation",
+      "family": "integer-fibonacci",
+      "proof_shape": "integer-fibonacci:biconditional",
+      "source_group": "mathlib-v4.30.0-bc8c8765b9355652",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": "F:ml430-int-fib-eq-zero-8193c7cb",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
+      "partition": "train",
+      "provenance_class": "generated-mutation",
+      "family": "integer-modular-equivalence",
+      "proof_shape": "integer-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-346e912c62f2c876",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": "F:ml430-int-modeq-symm-984a6e67",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+      "partition": "held-out",
+      "provenance_class": "generated-mutation",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-429ffadfbb38d5ea",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-mutation-c86940b52af8159ca9b381d6",
+      "partition": "development",
+      "provenance_class": "generated-mutation",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-f1259356540dba68",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": "F:ml430-nat-modeq-symm-0a3d4d18",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-mutation-e8583599cfae2d40cefae3f0",
+      "partition": "held-out",
+      "provenance_class": "generated-mutation",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-bf20046ab52424dd",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": "F:ml430-nat-log-le-self-da387172",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+      "partition": "held-out",
+      "provenance_class": "generated-mutation",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-6f230047ce83981a",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": "F:ml430-nat-choose-self-25bb9fb8",
+      "answer_access": "unavailable"
+    },
+    {
+      "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-6fc2be2d83334e77",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-d2b3ae01ee9a9ed0",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-2552fe053a3976ed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:higher-order-property",
+      "source_group": "mathlib-v4.30.0-72882823816e8782",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-bitwise-comm-1a273bae",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:higher-order-property",
+      "source_group": "mathlib-v4.30.0-72882823816e8782",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-bitwise-swap-7175e90e",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:higher-order-property",
+      "source_group": "mathlib-v4.30.0-72882823816e8782",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-21034a8981d599dd",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-le-add-9c463139",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-03318a97f5d9c067",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-le-choose-907b5042",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-03318a97f5d9c067",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-le-succ-62ae968b",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-03318a97f5d9c067",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-mono-a1af9c18",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:higher-order-property",
+      "source_group": "mathlib-v4.30.0-03318a97f5d9c067",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-ne-zero-49c3d3cb",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-784b337733caaefb",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-one-right-7eda8e39",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-772791fcb89127a3",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-6f230047ce83981a",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-21034a8981d599dd",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-be1c3ada4fef6ea6",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-symm-add-e4b68161",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-52448fed5f91002d",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-52448fed5f91002d",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-772791fcb89127a3",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-9556aecf1bb98439",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-clog-antitone-left-44a87771",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:higher-order-property",
+      "source_group": "mathlib-v4.30.0-0e70ff905b4e67d7",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-clog-mono-right-8d87a410",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-67733b1101973f6f",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-clog-monotone-48fe50c6",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:higher-order-property",
+      "source_group": "mathlib-v4.30.0-67733b1101973f6f",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-clog-one-left-b496af12",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-1f0eac984fc2e8b7",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-clog-one-right-1ce3d52f",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-c851a7fdd6dacbde",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-clog-pos-00852cb8",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-7a0f0e674194da44",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-clog-zero-left-1c61a5bf",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-32d9b36c9de57a64",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-clog-zero-right-d42d47b1",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-04b5992203855fc2",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-add-self-left-5e93448c",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:biconditional",
+      "source_group": "mathlib-v4.30.0-dad675b054e7a82a",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:biconditional",
+      "source_group": "mathlib-v4.30.0-0948bc81df7acdcc",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:biconditional",
+      "source_group": "mathlib-v4.30.0-c4d6980fa7b38432",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-odd-of-left-ed80ab44",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-odd-of-right-8dc1decc",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-of-dvd-18fcd09f",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-39256e2968b0e1d2",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-of-dvd-6f652673",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-eb36cbc0baee7f2c",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-39256e2968b0e1d2",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-39256e2968b0e1d2",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-14fb60aba4988f41",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-of-lt-prime-1978a919",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-7c36b21bbb3a5dae",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-one-left-iff-45945e80",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:biconditional",
+      "source_group": "mathlib-v4.30.0-c42a5cca06e73e07",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:biconditional",
+      "source_group": "mathlib-v4.30.0-0f5b970407bcc279",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-7c36b21bbb3a5dae",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-primes-5769049f",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:biconditional",
+      "source_group": "mathlib-v4.30.0-3e9e176afeb222f8",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-self-add-left-51351fa1",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:biconditional",
+      "source_group": "mathlib-v4.30.0-a5e2f0f0fb66e795",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-self-add-right-966e5434",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:biconditional",
+      "source_group": "mathlib-v4.30.0-0948bc81df7acdcc",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:higher-order-property",
+      "source_group": "mathlib-v4.30.0-0a92c5444156fa80",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-two-left-1b47e7c4",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:biconditional",
+      "source_group": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-two-right-7c5a1850",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:biconditional",
+      "source_group": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-f752f40b1b7067eb",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-8d01187efd126f0b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-f495858cd421b817",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-6d39b59d22fd3649",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-96996505b088b81a",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-36db9e2cb36c31b5",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-3c41a84178f748e7",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-3b9de7b385a5a0cb",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-85cf153fd2a3d00a",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-0f4a2909bae26f91",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-22ed23121a880dda",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-even-xor-78a39432",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:biconditional",
+      "source_group": "mathlib-v4.30.0-b413bfcde9767d29",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "integer-gcd",
+      "proof_shape": "integer-gcd:existential-witness",
+      "source_group": "mathlib-v4.30.0-bfc4303ba1ab035e",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-exists-mul-self-e73ca9fa",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:existential-witness",
+      "source_group": "mathlib-v4.30.0-a39a4e278c870ecd",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-b92098ec339263f0",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-841c7d52cf03e6e4",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-factorial-le-d0f4a912",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-2f841ec7bfb62e80",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-61d815b2edf793ed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-b064fa21f15a772b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:higher-order-property",
+      "source_group": "mathlib-v4.30.0-e7e80bd79f8762e6",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-b064fa21f15a772b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-dvd-f80f3de1",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-eq-zero-61879073",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:biconditional",
+      "source_group": "mathlib-v4.30.0-4ae13ae945c61591",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-gcd-d1d98407",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-b064fa21f15a772b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-lt-fib-3582b881",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:biconditional",
+      "source_group": "mathlib-v4.30.0-e7e80bd79f8762e6",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-mono-cc6afe09",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:higher-order-property",
+      "source_group": "mathlib-v4.30.0-b064fa21f15a772b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-pos-9e67bd8e",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:biconditional",
+      "source_group": "mathlib-v4.30.0-d22c0fd2eb74e7fd",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-strictmonoon-905810a9",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:higher-order-property",
+      "source_group": "mathlib-v4.30.0-e7e80bd79f8762e6",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-b064fa21f15a772b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-77912b67b18f2e18",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-land-assoc-ad4775b8",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-6a419a1a14546a55",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-land-bit-b9ab7475",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-6a419a1a14546a55",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-land-comm-7e6ad72e",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-72882823816e8782",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-ldiff-bit-6be49bb8",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-6a419a1a14546a55",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-le-fib-add-one-5284f0bf",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-14a4bdea3716db7b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-le-fib-self-0cbccb4d",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-fibonacci",
+      "proof_shape": "natural-fibonacci:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-14a4bdea3716db7b",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-le-sqrt-e6996680",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:biconditional",
+      "source_group": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-le-sqrt-of-eq-mul-503c5afe",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-le-three-of-sqrt-eq-one-0c48a868",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-09459741d0b79459",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-antitone-left-20d1326c",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:higher-order-property",
+      "source_group": "mathlib-v4.30.0-9da63bd4e59d00f6",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-le-clog-ac8ab2d4",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-bf20046ab52424dd",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-le-self-da387172",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-bf20046ab52424dd",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-lt-self-529f89fa",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-bf20046ab52424dd",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-mono-right-b8939fee",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-7d1d4a6a6f597955",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-monotone-52fad774",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:higher-order-property",
+      "source_group": "mathlib-v4.30.0-7d1d4a6a6f597955",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-of-lt-89eaf42e",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-d48a520ede3cd1e8",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-one-left-73efc119",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-f9d5f5029ac8431f",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-one-right-282332ef",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-fc2d188b8c710774",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-zero-left-9ec8541e",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-754b540be332facb",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-zero-right-8ea186db",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-bf20046ab52424dd",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-log2-eq-log-two-28085932",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-logarithm",
+      "proof_shape": "natural-logarithm:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-bf20046ab52424dd",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-lor-assoc-82c4d0fd",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-6a419a1a14546a55",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-lor-bit-a2f98c7c",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-6a419a1a14546a55",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-lor-comm-2666d7ef",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-72882823816e8782",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-lt-of-testbit-72f64ab8",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-28d465b4d0fa4c90",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-lt-succ-sqrt-39389df2",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-lt-xor-cases-c43a1e85",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-50d3735f1a086e77",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-mod-lcm-ee6bdd41",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-c0029d24c3bb7a7f",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-mod-modeq-436e4c10",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-ce4e3e890bcf8f1c",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-c2635744801654c7",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-add-left-e83f0700",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-c2635744801654c7",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-add-right-8e2ca0cc",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-c2635744801654c7",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-add-right-cancel-e871facf",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-c2635744801654c7",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-comm-24b71e7a",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:biconditional",
+      "source_group": "mathlib-v4.30.0-f1259356540dba68",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-dvd-iff-8f130450",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:biconditional",
+      "source_group": "mathlib-v4.30.0-f1259356540dba68",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-gcd-eq-5167ff4f",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-f1259356540dba68",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-of-dvd-d75cc374",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-f1259356540dba68",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-of-mul-left-88d20bca",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-d4e21b6b7acdcecb",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-of-mul-right-43078e1c",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-d4e21b6b7acdcecb",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-one-516d46e8",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-08ee032d9058b06c",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-c2635744801654c7",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-f1259356540dba68",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-f1259356540dba68",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-modular-equivalence",
+      "proof_shape": "natural-modular-equivalence:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-2bd246da70511653",
+      "route_hypotheses": [
+        "kernel-library-application",
+        "modular-arithmetic-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-multichoose-one-b210386a",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-3149d7f9cd050cac",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-multichoose-one-right-7755072d",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-3149d7f9cd050cac",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-multichoose-zero-right-6ef827c8",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-binomial",
+      "proof_shape": "natural-binomial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-3149d7f9cd050cac",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-gcd",
+      "proof_shape": "natural-gcd:negated-proposition",
+      "source_group": "mathlib-v4.30.0-429ffadfbb38d5ea",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-ec11d4735cad89fd",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-one-ascfactorial-8bacb017",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-4f7f93a429b7752d",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:biconditional",
+      "source_group": "mathlib-v4.30.0-7c36b21bbb3a5dae",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-3e9e176afeb222f8",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-dvd-of-dvd-pow-e76f834a",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-7f777cc1a0316e33",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-even-iff-d068ec82",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:biconditional",
+      "source_group": "mathlib-v4.30.0-e4a351263398fa5d",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-7f2909c7d58a9007",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-c3c6c5f60ad0b6b5",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-35005e802231af21",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-pred-pos-4e67ac4c",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-f5e0081ba0d3ce13",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-self-le-factorial-cfdffc69",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-sqrt-eq-79ae8eae",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-a39a4e278c870ecd",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-sqrt-eq-c036815b",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-3625c080cb3916be",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-sqrt-eq-zero-53666a3b",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:biconditional",
+      "source_group": "mathlib-v4.30.0-09459741d0b79459",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-sqrt-le-7918582b",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-sqrt-le-self-1ed5eb85",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-sqrt-le-sqrt-6e2bfc47",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-sqrt-lt-4909537f",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:biconditional",
+      "source_group": "mathlib-v4.30.0-09459741d0b79459",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-sqrt-lt-self-ff7a155a",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-09459741d0b79459",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-sqrt-pos-f75e5114",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:biconditional",
+      "source_group": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-sqrt-succ-le-succ-sqrt-6b041183",
+      "partition": "held-out",
+      "provenance_class": "external-transcribed",
+      "family": "natural-square-root",
+      "proof_shape": "natural-square-root:unconditional-relation",
+      "source_group": "mathlib-v4.30.0-09459741d0b79459",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-succ-pred-prime-4feb123f",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-primes",
+      "proof_shape": "natural-primes:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-5d1003a0d2494aec",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-testbit-eq-inth-ffa07392",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-68252a7d4d8c1329",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-a88e55a985ea72d4",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-06206e0a59d7c3da",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-testbit-lor-7644e067",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-11da32849191a5ae",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
+      "partition": "train",
+      "provenance_class": "external-transcribed",
+      "family": "natural-factorial",
+      "proof_shape": "natural-factorial:unconditional-equality",
+      "source_group": "mathlib-v4.30.0-d666bed9b70442ab",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "mutation_of": null,
+      "answer_access": "withheld-during-episode"
+    },
+    {
+      "fact_id": "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1",
+      "partition": "development",
+      "provenance_class": "external-transcribed",
+      "family": "natural-bitwise",
+      "proof_shape": "natural-bitwise:conditional-proposition",
+      "source_group": "mathlib-v4.30.0-3c547df4c5be18f3",
+      "route_hypotheses": [
+        "bitvector-lowering-hypothesis",
+        "kernel-recursion"
       ],
       "mutation_of": null,
       "answer_access": "withheld-during-episode"
     }
   ],
   "longitudinal_result": "artifacts/autogenesis/autogenesis-1-result.json",
-  "notes": "The two entries freeze Autogenesis-1 as a regression and are excluded from train, development, and held-out yield. Evaluation authoring has not started; readiness must remain false until the policy floors are met."
+  "split_policy": "artifacts/autogenesis/mathlib-nursery-split-policy-v1.json",
+  "split_policy_sha256": "6bcee21f6456be1e11c60815bf65d4651d5505ecef81da7bd2d38210d1f9314c",
+  "source_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
+  "notes": "Autogenesis-1 remains a disjoint longitudinal regression. The 214 Mathlib statements are frozen before target outcomes; source groups, families, family-scoped proof shapes, mutations, and declared dependency components cannot cross evaluation partitions."
 }

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nursery-split-policy",
+  "state": "preregistered-before-target-outcomes",
+  "authority": {
+    "catalog": "artifacts/autogenesis/mathlib-nat-int-fact-catalog-v1.json",
+    "partition_unit": "whole-family-with-source-review-groups-indivisible",
+    "proof_shape": "family-scoped-statement-shape",
+    "outcome_access": "no-axeyum-target-outcome-or-mathlib-proof-consulted"
+  },
+  "family_partitions": {
+    "integer-fibonacci": "train",
+    "integer-gcd": "train",
+    "integer-modular-equivalence": "train",
+    "natural-binomial": "held-out",
+    "natural-bitwise": "development",
+    "natural-factorial": "train",
+    "natural-fibonacci": "train",
+    "natural-gcd": "held-out",
+    "natural-logarithm": "held-out",
+    "natural-modular-equivalence": "development",
+    "natural-primes": "development",
+    "natural-square-root": "held-out"
+  },
+  "route_hypotheses": {
+    "integer-fibonacci": ["kernel-induction", "recursive-function-reconstruction"],
+    "integer-gcd": ["divisibility-library-application", "kernel-induction"],
+    "integer-modular-equivalence": ["kernel-library-application", "modular-arithmetic-reconstruction"],
+    "natural-binomial": ["kernel-induction", "recursive-function-reconstruction"],
+    "natural-bitwise": ["bitvector-lowering-hypothesis", "kernel-recursion"],
+    "natural-factorial": ["kernel-induction", "recursive-function-reconstruction"],
+    "natural-fibonacci": ["kernel-induction", "recursive-function-reconstruction"],
+    "natural-gcd": ["divisibility-library-application", "kernel-induction"],
+    "natural-logarithm": ["kernel-induction", "recursive-function-reconstruction"],
+    "natural-modular-equivalence": ["kernel-library-application", "modular-arithmetic-reconstruction"],
+    "natural-primes": ["divisibility-library-application", "kernel-induction"],
+    "natural-square-root": ["kernel-induction", "recursive-function-reconstruction"]
+  },
+  "rejected_split_keys": [
+    {
+      "key": "global-broad-statement-shape",
+      "reason": "joining dependency components, families, and broad statement shapes collapses all 214 facts into one component; equality or implication alone is not a reusable proof template across unrelated theorem families"
+    }
+  ],
+  "notes": "The family assignment was fixed from statement-only families and graph structure before any Axeyum nursery episode. Route hypotheses are descriptive and grant no dispatch, evidence, or admission authority."
+}
