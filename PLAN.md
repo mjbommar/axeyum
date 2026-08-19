@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | (pending) | `artifacts/local-ci-runs/57af69142-s4.json`: first all-pass authoritative-gate record (5/5 steps, 7561+179 tests, 6656 s); `check-local-ci-freshness` flipped from `--report-only` to ENFORCING in `scripts/check.sh` and `justfile`. |
 | 2026-08-18 | `4b5613e26` | `check-fact-derived-numbers.py`: every number a fact asserts about its own `axiom_footprint` re-derived from the array. Fixes `F:schedule-critical-chain-infeasible` (prose 30 vs array 26, plus an obsolete facade paragraph found by re-measuring: `Lra`/62 lines, not a 21-line shim) and the example's stale module doc. 52 of 3,243 prose numbers bound, denominator printed every run; 7 guards, each deletion kills exactly 1 test; wired into both `just check` (`facts`) and `check.sh` so `check-aggregate-scope.sh` records no new divergence. |
 | 2026-08-18 | `24578036f` | `gen-lean-axiom-ledger.py`: coverage command gains `--include-constructed` (on `--release`, 12x faster), `EXPECTED_PRELUDES` gains `rat`/`creal`/`complex`, and measurement drift is reported per prelude **with its direction** — REGRESSION / IMPROVEMENT / COVERAGE LOST / ADDED / RESHAPED, each with the re-pin command. Ledger now pins 8 groups by value (was 6); 39 tests (was 24); 11-mutation control registered in `mutation_controls.py`, no survivors. Already wired in both `check.sh` and `just check`, so no new gate divergence. |
 | 2026-08-18 | `7646b2c04` | `reject_self_refuting_module` at `gate_module_content` — the one boundary every route's module crosses; the Python predicate widened from one shape to the property and run over EVERY class; DECLINED pinned two-sided in its own manifest; the shadowed attested-path copy deleted after the mutation control that used to kill a test reported SURVIVED. 6 mutations, 0 survivors; 9 Rust unit tests, each with its discriminating twin. |
@@ -440,6 +441,39 @@ this checker); no automated mutation-testing harness (done by hand this
 session, documented in notes).
 
 Detail: [`../notes/104-local-ci-freshness.md`](docs/plan/notes/104-local-ci-freshness.md).
+
+**`scripts/local-ci.sh --record` PASSED at `57af69142`, and
+`check-local-ci-freshness` is now ENFORCING at both call sites** (`DONE`,
+local-ci-run-2, 2026-08-19). Record: `artifacts/local-ci-runs/57af69142-s4.json`
+— 5/5 steps `pass`, rc=0, 6656 s wall. Steps: fmt 4 s · stable clippy
+`-D warnings` 29 s · MSRV 1.88 check 15 s · `cargo nextest --profile local
+--workspace --all-features` **7561 tests run, 7561 passed** (87 slow, 32
+skipped) in 6588 s · doctests **179 passed** in 20 s. Zero `FAIL [` lines in
+the run log, cross-checked against the record rather than read off the exit
+code. The four golden-pin failures in the first record (`a6ee37c6a`, FAIL
+rc=100) were genuinely fixed by `31442bd5d`; nothing else regressed, and the
+suite grew 7511 → 7561 tests in between.
+
+**The `tests: -1` bug is confirmed fixed by measurement, not by reading the
+patch**: the old record recorded `-1` for the 7511-test sweep (nextest indents
+its `Summary` five spaces, the pattern was `^`-anchored), so the vacuous-step
+guard could not fire on the one step it exists for. This record reads 7561.
+
+**Flipped to enforcing** in `scripts/check.sh` and the `justfile`'s
+`local-ci-freshness` recipe (plus the checker's own header, which still
+described itself as report-only). Then proved the enforcing call site's exit
+status depends on the finding, through `just`, not just through the control
+suite: empty record dir → rc=1 `NO_RECORD`; a copy of this record with
+`finished_utc` backdated 5 days → rc=1 `STALE: 120h`; the nextest step
+rewritten to `vacuous` → rc=1 naming that step. All 9 controls green.
+
+**Standing cost this imposes on every lane:** the sweep is ~110 min behind one
+box-wide lock and the budget is 48h, so roughly one lane per day must run
+`scripts/local-ci.sh --record` and commit the record. It needs `setsid` — a
+foreground shell caps at 10 min and an ordinary background job was killed at
+59 m 59.9 s with no record written (the recorder only writes at the end).
+
+Detail: [`../notes/105-local-ci-run-2.md`](docs/plan/notes/105-local-ci-run-2.md).
 
 **Programme specified; implementation not authorized** (`WIP`,
 autogenesis-program, 2026-08-18). If selected, execute only Phase 0 in the
