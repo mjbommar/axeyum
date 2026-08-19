@@ -86,6 +86,15 @@ step capability-routes-controls python3 -m unittest scripts.tests.test_check_cap
 # 51 that need no cargo found 6 that no longer even import. Ratchet, not a wall.
 step control-tests-reachable python3 scripts/check-control-tests-reachable.py
 step control-tests-reachable-controls python3 -m unittest scripts.tests.test_check_control_tests_reachable
+# The mutation harness itself. Every "exactly one test died" in this repository
+# rests on the mutant having been BUILT and RUN, and until 2026-08-18 nothing
+# checked either: a mutation that broke compilation, and a suite that executed
+# zero tests, both arrived as "not clean" and were scored as coverage. The four
+# outcomes are now distinct, and `self-demo` produces one of each from a real
+# mutation -- so a harness that cannot tell them apart fails here rather than
+# reporting a number nobody measured.
+step mutation-harness-controls python3 -m unittest scripts.tests.test_mutation_controls
+step mutation-harness-four-outcomes python3 scripts/tests/mutation_controls.py self-demo
 step adopted-controls scripts/check-adopted-controls.sh
 # The trusted base, derived rather than eyeballed: the forward call-graph closure
 # from every non-test caller of `Environment::insert_unchecked`. 5,129 function

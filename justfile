@@ -112,6 +112,15 @@ facts:
     # control modules were executed by nothing, and 6 of them no longer import.
     python3 -m unittest scripts.tests.test_check_control_tests_reachable
     python3 scripts/check-control-tests-reachable.py
+    # The mutation harness itself. Every "exactly one test died" in this repository
+    # rests on the mutant having been BUILT and RUN, and until 2026-08-18 nothing
+    # checked either: a mutation that broke compilation, and a suite that executed
+    # zero tests, both arrived as "not clean" and were scored as coverage. The four
+    # outcomes are now distinct, and `self-demo` produces one of each from a real
+    # mutation -- so a harness that cannot tell them apart fails here rather than
+    # reporting a number nobody measured.
+    python3 -m unittest scripts.tests.test_mutation_controls
+    python3 scripts/tests/mutation_controls.py self-demo
     # 44 controls that were already written and already correct, but which no
     # gate ran. 257 tests, ~31s. The seven not adopted are listed in the script.
     scripts/check-adopted-controls.sh
