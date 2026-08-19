@@ -147,6 +147,10 @@ compounding, not automation theatre.
 | [Fibonacci recurrence v3 result](48-nat-fib-recurrence-v3-result.md) | Did the complete repaired operation construct the first real Fibonacci-path candidate, and what authority still remains? |
 | [Fibonacci checked-theorem receipt selection](49-nat-fib-checked-theorem-receipt-selection.md) | How can the non-reflexive candidate receive an exact two-kernel receipt without rerunning search or granting ledger credit? |
 | [Fibonacci checked-theorem receipt result](50-nat-fib-checked-theorem-receipt-result.md) | Did two fresh kernels reissue one exact receipt, and which admission boundary still keeps the fact open? |
+| [Fibonacci recurrence admission](51-nat-fib-add-two-admission.md) | Did crash-safe admission make the checked recurrence durable and reproduce its real child-readiness delta? |
+| [Fibonacci child qualification](52-nat-fib-child-qualification.md) | Which newly ready child aligns strategic leverage with the measured term boundary? |
+| [Fibonacci coprimality premise plan](53-nat-fib-coprime-premise-plan.md) | Which bounded proof shape applies, and what exact composition seam blocks its execution? |
+| [Alpha-stable prelude compatibility](54-alpha-stable-prelude-compatibility.md) | Which imported/native overlaps are exact, alpha-type compatible, or still unresolved before checked reuse? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

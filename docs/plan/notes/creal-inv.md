@@ -1,7 +1,7 @@
 # Notes: creal-inv
 
 Detail kept out of [`../status/65-creal-inv.md`](../status/65-creal-inv.md) so
-the lane block stays inside the per-lane ceiling (ADR-0507). The decision is
+the lane block stays inside the per-lane ceiling (ADR-0520). The decision is
 [ADR-0516](../../research/09-decisions/adr-0516-the-real-inverse-is-well-defined-by-uniqueness-not-by-estimate.md);
 its predecessor, which fixed the *shape* without building it, is
 [ADR-0510](../../research/09-decisions/adr-0510-the-real-inverse-is-partial-and-its-modulus-is-data.md)

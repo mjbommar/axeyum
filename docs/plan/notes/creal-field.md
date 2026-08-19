@@ -1,7 +1,7 @@
 # Notes: creal-field
 
 Detail kept out of [`../status/65-creal-field.md`](../status/65-creal-field.md)
-so the lane block stays inside the per-lane ceiling (ADR-0507). The decision
+so the lane block stays inside the per-lane ceiling (ADR-0520). The decision
 itself is
 [ADR-0510](../../research/09-decisions/adr-0510-the-real-inverse-is-partial-and-its-modulus-is-data.md).
 
@@ -148,7 +148,7 @@ same one `pos_bound_of_lt` records.
   (`|a| − |b| ≤ |a − b|`, in the `−b ≤ a ∧ a ≤ b` encoding), after which
   `CReal.abs` is pointwise and its regularity is immediate. ~500 lines.
 - **No `sqrt`, no completeness, no supremum.** Each is its own ADR. ℂ's `abs`
-  needs `sqrt` needs completeness, so ADR-0508's gap is untouched by this lane.
+  needs `sqrt` needs completeness, so ADR-0521's gap is untouched by this lane.
 - **No Markov's principle in any disguise.** `¬(x ≈ 0) → x # 0` is not proved,
   not assumed, not used — and `not_equiv_of_apart` is stated one-way so that a
   later reader cannot mistake the available direction for an equivalence.

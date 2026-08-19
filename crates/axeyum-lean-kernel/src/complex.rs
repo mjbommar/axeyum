@@ -2,8 +2,8 @@
 //! **zero** trusted declarations, and with the ordered-ring laws deliberately
 //! absent — refuted, not merely omitted.
 //!
-//! This is ADR-0508
-//! (`docs/research/09-decisions/adr-0508-complex-is-a-pair-setoid-over-creal-and-carries-no-order.md`),
+//! This is ADR-0521
+//! (`docs/research/09-decisions/adr-0521-complex-is-a-pair-setoid-over-creal-and-carries-no-order.md`),
 //! and it continues ADR-0512 one layer up. `CReal` is a Bishop setoid of regular ℚ-sequences whose
 //! equality is `CReal.Equiv`, a `Prop`-valued *definition* rather than `Eq`;
 //! `Complex` inherits exactly that discipline:

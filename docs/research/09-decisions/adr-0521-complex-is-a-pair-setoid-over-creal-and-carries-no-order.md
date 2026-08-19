@@ -1,4 +1,4 @@
-# ADR-0508: ℂ is a pair setoid over `CReal`, and its missing order is refuted rather than omitted
+# ADR-0521: ℂ is a pair setoid over `CReal`, and its missing order is refuted rather than omitted
 
 Status: accepted
 Date: 2026-08-18

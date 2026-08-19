@@ -9,7 +9,7 @@ Index-summary: ℚ becomes a **field** (`Rat.mul_inv_cancel`, axiom-free — `Ra
 [ADR-0512](adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md) built
 ℝ as a Bishop setoid of regular ℚ-sequences at **zero** trusted declarations and
 closed all 22 ordered-commutative-**ring** laws over it;
-[ADR-0508](adr-0508-complex-is-a-pair-setoid-over-creal-and-carries-no-order.md)
+[ADR-0521](adr-0521-complex-is-a-pair-setoid-over-creal-and-carries-no-order.md)
 did the same for ℂ. What neither has is any *field* structure: no multiplicative
 inverse, no division, no `abs`, no `sqrt`, no completeness.
 
@@ -91,7 +91,7 @@ the inverse cannot be defined over.
 ### 3. The partiality is two theorems, not a scoping note
 
 - **`CReal.no_total_inverse : ∀ (f : CReal → CReal), ¬ ∀ x, x · f x ≈ 1`.**
-  Evaluate at `zero`. This is the field analogue of ADR-0508's
+  Evaluate at `zero`. This is the field analogue of ADR-0521's
   `Complex.no_compatible_order`: the missing structure is missing as a proved
   obstruction, so "the inverse is partial" cannot quietly become "the inverse is
   not built yet".
@@ -144,7 +144,7 @@ the modulus explicit, and that signature is the one the construction will use.
   constructively and it costs two full estimates of `le_add_of_nonneg`'s size,
   because the third point has to be compared at an index computed from the gap.
 - **No `sqrt`, no completeness, no supremum.** Each is its own ADR. Note that
-  ℂ's `abs` needs `sqrt` needs completeness, so ADR-0508's gap does not close
+  ℂ's `abs` needs `sqrt` needs completeness, so ADR-0521's gap does not close
   here.
 - **No Markov's principle**, in any disguise. `¬(x ≈ 0) → x # 0` is not proved,
   not assumed, and not used.

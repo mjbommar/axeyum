@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-child-qualification",
+  "state": "relation-boundary-measured-child-selected-no-proof-credit",
+  "tooling_commit": "3dac4f57b11ec19bae23c300a78839b6e4ac48c8",
+  "tooling": {
+    "path": "crates/axeyum-lean-import/examples/relation_goal_probe.rs",
+    "sha256": "afe7f20e7e3dd7ee657a3e190e1066a6486a754c37a4712e829ac95e91b1cd43"
+  },
+  "source": {
+    "coverage_root": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1",
+    "producer_census": "/nas3/data/axeyum/autogenesis/producer-census/10ab370a9-mathlib-v4.30.0-reflexivity-v1/observation.json",
+    "producer_census_sha256": "849cdcb67f0428b17db811d27fead774c099777bff8996b5ef8d952def18dd54",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/probes/3dac4f57b-fib-child-relation-v1",
+    "index_sha256": "3a839232baa147cea04df2fdb93009882b9b42a369cb726822484ad2ea072cad",
+    "files": {
+      "r082.json": "b98588ef84c8f8c684d9b8b81e3fe7b54c5cc856c1a5dfcc16797b7a916b667e",
+      "r086.json": "751ec5dd4ba8638f242af0b91bdf4678de576cdbd00454752b0f80c1e4416fee"
+    }
+  },
+  "candidates": [
+    {
+      "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+      "source_name": "Nat.fib_coprime_fib_succ",
+      "artifact_file": "r082.ndjson",
+      "target_definition": "Axeyum.Autogenesis.Coverage.r082",
+      "stream_sha256": "6afa79d79481403d3e3273ea3eea26b4d1194762f9bd623ec019f8e821323cfd",
+      "type_slice_receipt_sha256": "1031a33bd301dba68bc9162466db4788686d8aca6e6d4180c29898e262cacb36",
+      "slice_abstractions": ["Nat.Coprime"],
+      "slice_retained": 43,
+      "prior_producer_outcome": "producer-decline:terminal-not-constant-headed-equality",
+      "original_head": "Nat.Coprime",
+      "whnf_head": "Eq",
+      "direct_unlocks": ["F:ml430-nat-gcd-fib-add-self-5a92d5e3"]
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+      "source_name": "Nat.fib_le_fib_succ",
+      "artifact_file": "r086.ndjson",
+      "target_definition": "Axeyum.Autogenesis.Coverage.r086",
+      "stream_sha256": "5965b5dcf1dfbeb15895318f45419931a553ea2aa6c93775287fb38b07dbbfd9",
+      "type_slice_receipt_sha256": "5e2bd5e76034ac8517cc32ac13201d7cadfa1229bcc35348b920e6aeb60c7074",
+      "slice_abstractions": [],
+      "slice_retained": 52,
+      "prior_producer_outcome": "producer-decline:terminal-not-exact-equality",
+      "original_head": "LE.le",
+      "whnf_head": "Nat.le",
+      "direct_unlocks": ["F:ml430-nat-fib-mono-cc6afe09"]
+    }
+  ],
+  "selection": {
+    "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+    "source_name": "Nat.fib_coprime_fib_succ",
+    "top_down_reason": "continues the preregistered Nat.fib_gcd premise chain",
+    "bottom_up_reason": "the full proof-isolated source reduces Nat.Coprime to an Eq goal compatible with existing equality composition",
+    "next_boundary": "construct a bounded gcd-coprimality induction plan using the admitted Nat.fib_add_two receipt as the sole theorem premise"
+  },
+  "authority": {
+    "partitions_inspected": ["train"],
+    "held_out_inspected": false,
+    "proof_bodies_inspected": false,
+    "proof_search_invocations": 0,
+    "kernel_submissions": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-fib-child-qualification.py",
+  "limitations": "This selects a next capability target from two newly ready train facts. It does not construct a proof, register an admission operation, inspect upstream proof bodies or held-out rows, or change either child fact."
+}

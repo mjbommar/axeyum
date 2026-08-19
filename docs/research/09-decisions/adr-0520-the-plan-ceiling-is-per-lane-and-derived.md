@@ -1,4 +1,4 @@
-# ADR-0507: The PLAN.md ceiling is per-lane and derived, not one number every lane shares
+# ADR-0520: The PLAN.md ceiling is per-lane and derived, not one number every lane shares
 
 Status: accepted
 Index-summary: `check-plan-authority.py`'s flat 52,000-byte ceiling was a shared budget over per-lane files, so no single edit caused the failure and no single edit repaired it — it stood 3.4x over for days. The bound is now a per-lane cap (3,000 bytes, violations named by lane), a total for the genuinely shared `docs/plan/global/`, and an overall ceiling DERIVED from the two, so adding a lane cannot red the gate by itself.

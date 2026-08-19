@@ -13,6 +13,7 @@ type Hash = [u8; 32];
 const NAME_DOMAIN: &str = "axeyum.lean.name.v1";
 const LEVEL_DOMAIN: &str = "axeyum.lean.level.v1";
 const EXPR_DOMAIN: &str = "axeyum.lean.expr.v1";
+const ALPHA_EXPR_DOMAIN: &str = "axeyum.lean.expr.alpha.v1";
 const DECL_DOMAIN: &str = "axeyum.lean.declaration.v1";
 const DEPENDENCY_DOMAIN: &str = "axeyum.lean.direct-dependencies.v1";
 
@@ -74,6 +75,25 @@ impl DeclarationKind {
 /// Returns a diagnostic if the expression DAG cannot be hashed completely.
 pub fn canonical_expression_sha256(kernel: &Kernel, expression: ExprId) -> Result<String, String> {
     let digest = IdentityBuilder::new(kernel).expression_digest(expression)?;
+    Ok(hex(&digest))
+}
+
+/// Arena-independent SHA-256 identity that ignores cosmetic binder names.
+///
+/// Unlike [`canonical_expression_sha256`], this is suitable for comparing
+/// expressions from independently constructed kernels for alpha equivalence.
+/// Constant names, binder information, universe-parameter incidence/order, and
+/// every other structural field remain identity-bearing; universe-parameter
+/// spelling is normalized by first structural occurrence.
+///
+/// # Errors
+///
+/// Returns a diagnostic if the expression DAG cannot be hashed completely.
+pub fn canonical_alpha_expression_sha256(
+    kernel: &Kernel,
+    expression: ExprId,
+) -> Result<String, String> {
+    let digest = IdentityBuilder::new_alpha(kernel).expression_digest(expression)?;
     Ok(hex(&digest))
 }
 
@@ -203,6 +223,8 @@ struct IdentityBuilder<'kernel> {
     name_cache: Vec<Option<Hash>>,
     level_cache: Vec<Option<Hash>>,
     expression_cache: Vec<Option<Hash>>,
+    include_binder_names: bool,
+    alpha_level_params: BTreeMap<NameId, u64>,
 }
 
 impl<'kernel> IdentityBuilder<'kernel> {
@@ -212,6 +234,19 @@ impl<'kernel> IdentityBuilder<'kernel> {
             name_cache: Vec::new(),
             level_cache: Vec::new(),
             expression_cache: Vec::new(),
+            include_binder_names: true,
+            alpha_level_params: BTreeMap::new(),
+        }
+    }
+
+    fn new_alpha(kernel: &'kernel Kernel) -> Self {
+        Self {
+            kernel,
+            name_cache: Vec::new(),
+            level_cache: Vec::new(),
+            expression_cache: Vec::new(),
+            include_binder_names: false,
+            alpha_level_params: BTreeMap::new(),
         }
     }
 
@@ -256,8 +291,14 @@ impl<'kernel> IdentityBuilder<'kernel> {
             }
             LevelNode::Param(name) => {
                 hasher.put_u8(4);
-                let name = self.name_digest(name);
-                hasher.put_hash(name);
+                if self.include_binder_names {
+                    let name = self.name_digest(name);
+                    hasher.put_hash(name);
+                } else {
+                    let next = self.alpha_level_params.len() as u64;
+                    let index = *self.alpha_level_params.entry(name).or_insert(next);
+                    hasher.put_u64(index);
+                }
             }
         }
         let digest = hasher.finish();
@@ -291,7 +332,12 @@ impl<'kernel> IdentityBuilder<'kernel> {
     }
 
     fn hash_expression_node(&mut self, node: ExprNode) -> Result<Hash, String> {
-        let mut hasher = CanonicalHasher::new(EXPR_DOMAIN);
+        let domain = if self.include_binder_names {
+            EXPR_DOMAIN
+        } else {
+            ALPHA_EXPR_DOMAIN
+        };
+        let mut hasher = CanonicalHasher::new(domain);
         match node {
             ExprNode::BVar(index) => {
                 hasher.put_u8(0);
@@ -330,24 +376,30 @@ impl<'kernel> IdentityBuilder<'kernel> {
             }
             ExprNode::Lam(name, ty, body, binder_info) => {
                 hasher.put_u8(6);
-                let name = self.name_digest(name);
-                hasher.put_hash(name);
+                if self.include_binder_names {
+                    let name = self.name_digest(name);
+                    hasher.put_hash(name);
+                }
                 hasher.put_hash(self.cached_expression(ty)?);
                 hasher.put_hash(self.cached_expression(body)?);
                 hasher.put_u8(binder_info_tag(binder_info));
             }
             ExprNode::Pi(name, ty, body, binder_info) => {
                 hasher.put_u8(7);
-                let name = self.name_digest(name);
-                hasher.put_hash(name);
+                if self.include_binder_names {
+                    let name = self.name_digest(name);
+                    hasher.put_hash(name);
+                }
                 hasher.put_hash(self.cached_expression(ty)?);
                 hasher.put_hash(self.cached_expression(body)?);
                 hasher.put_u8(binder_info_tag(binder_info));
             }
             ExprNode::Let(name, ty, value, body) => {
                 hasher.put_u8(8);
-                let name = self.name_digest(name);
-                hasher.put_hash(name);
+                if self.include_binder_names {
+                    let name = self.name_digest(name);
+                    hasher.put_hash(name);
+                }
                 hasher.put_hash(self.cached_expression(ty)?);
                 hasher.put_hash(self.cached_expression(value)?);
                 hasher.put_hash(self.cached_expression(body)?);
@@ -671,6 +723,60 @@ fn hex(bytes: &Hash) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn alpha_expression_identity_ignores_only_binder_names() {
+        let mut kernel = Kernel::new();
+        let root = kernel.anon();
+        let left_name = kernel.name_str(root, "left");
+        let right_name = kernel.name_str(root, "right");
+        let prop = kernel.sort_zero();
+        let body = kernel.bvar(0);
+        let left = kernel.pi(left_name, prop, body, BinderInfo::Default);
+        let renamed = kernel.pi(right_name, prop, body, BinderInfo::Default);
+        let implicit = kernel.pi(right_name, prop, body, BinderInfo::Implicit);
+
+        assert_ne!(
+            canonical_expression_sha256(&kernel, left).unwrap(),
+            canonical_expression_sha256(&kernel, renamed).unwrap()
+        );
+        assert_eq!(
+            canonical_alpha_expression_sha256(&kernel, left).unwrap(),
+            canonical_alpha_expression_sha256(&kernel, renamed).unwrap()
+        );
+        assert_ne!(
+            canonical_alpha_expression_sha256(&kernel, left).unwrap(),
+            canonical_alpha_expression_sha256(&kernel, implicit).unwrap()
+        );
+
+        let u = kernel.name_str(root, "u");
+        let v = kernel.name_str(root, "v");
+        let first_level = kernel.level_param(u);
+        let second_level = kernel.level_param(v);
+        let sort_u = kernel.sort(first_level);
+        let sort_v = kernel.sort(second_level);
+        assert_ne!(
+            canonical_expression_sha256(&kernel, sort_u).unwrap(),
+            canonical_expression_sha256(&kernel, sort_v).unwrap()
+        );
+        assert_eq!(
+            canonical_alpha_expression_sha256(&kernel, sort_u).unwrap(),
+            canonical_alpha_expression_sha256(&kernel, sort_v).unwrap()
+        );
+
+        let left_lam = kernel.lam(left_name, prop, body, BinderInfo::Default);
+        let renamed_lam = kernel.lam(right_name, prop, body, BinderInfo::Default);
+        assert_eq!(
+            canonical_alpha_expression_sha256(&kernel, left_lam).unwrap(),
+            canonical_alpha_expression_sha256(&kernel, renamed_lam).unwrap()
+        );
+        let left_let = kernel.let_(left_name, prop, prop, body);
+        let renamed_let = kernel.let_(right_name, prop, prop, body);
+        assert_eq!(
+            canonical_alpha_expression_sha256(&kernel, left_let).unwrap(),
+            canonical_alpha_expression_sha256(&kernel, renamed_let).unwrap()
+        );
+    }
 
     #[test]
     fn quotient_identity_is_sensitive_to_kind_type_and_dependencies() {
