@@ -29,11 +29,13 @@ Keep this research surface in `axeyum-cas` and extract a bounded
    `(1+x GF(2)[x])/(x^(ell+1))`;
 2. exact identity-class populations reconstructed from two modular transforms
    with checked CRT uniqueness;
-3. endpoint discrepancies and exact-conductor layers with a checked
+3. exact full-class inverse-Fourier distributions, bounded central absolute
+   power sums, and signed fourth-cumulant numerators;
+4. endpoint discrepancies and exact-conductor layers with a checked
    telescoping identity; and
-4. exact bignum verification that an explicitly supplied conductor estimate,
-   together with the separately certified finite range, implies the required
-   endpoint and proper-divisor inequalities.
+5. exact bignum verification that explicitly supplied conductor or fourth-
+   moment estimates, together with the separately certified finite range,
+   imply the required endpoint and proper-divisor inequalities.
 
 Every expensive entry point takes explicit limits on `ell`, degree, group
 order, and retained table cells and declines before allocation. The diagnostic
@@ -50,10 +52,12 @@ and a demonstrated solver consumer.
 
 The refactored endpoint CLI reproduces every committed discrepancy through the
 default gate range and the conductor layers telescope exactly. Unit tests pin
-the `ell=8` principal-unit factorization, endpoint values, layer values, exact
-sufficient-bound implication, two invalid-bound controls, malformed inputs,
-and pre-allocation resource decline. The Python checker independently reaches
-the same threshold and rejects the same weak and uncovered thresholds.
+the `ell=8` principal-unit factorization, endpoint values, layer values, full
+class distribution, Parseval identity, fourth moment and cumulant, exact
+sufficient-bound implications, the level-5 failure of the experimental moment
+envelope, malformed inputs, and pre-allocation resource decline. The Python
+checker independently reproduces the level-5 failure, the level-8 moments,
+both arithmetic implications, and the conductor-bound negative controls.
 
 All-target, all-feature `axeyum-cas` Clippy passes with warnings denied. The
 full Lemire range gate exercises the Rust and Python arithmetic implications,
@@ -80,6 +84,9 @@ and every degree-1-through-400 witness checker.
   than copying a one-off transform implementation.
 - Exact finite evidence and a conditional arithmetic theorem remain sharply
   separated from the missing universal cancellation lemma.
+- The universal conjecture and the selected fourth-moment obligation have
+  explicit empty-evidence fact-ledger entries; neither is registered as an
+  executable Autogenesis operation while no universal checker exists.
 - Autogenesis can eventually register these CAS operations without confusing
   their output with a solver verdict or kernel theorem.
 - No default dependency, native backend, SMT logic, or public IR operator is

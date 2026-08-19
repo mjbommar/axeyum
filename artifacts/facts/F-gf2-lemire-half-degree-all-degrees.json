@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-lemire-half-degree-all-degrees",
+  "title": "Lemire half-degree irreducible binary polynomial conjecture",
+  "statement": "For every integer n >= 1, there exists a monic irreducible polynomial f in GF(2)[x] of degree n such that deg(f - x^n) <= floor(n/2).",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"field_order\":2,\"format\":\"axeyum-gf2-half-degree-universal-statement\",\"irreducible\":true,\"min_degree\":1,\"monic\":true,\"tail_degree_bound\":\"floor(n/2)\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "n",
+      "f"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "open",
+  "depends_on": [
+    "F:gf2-lemire-half-degree-through-400",
+    "F:gf2-hayes-fourth-moment-endpoint-bound"
+  ],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "not established in this ledger",
+    "source": "Daniel Lemire and Owen Kaser, Strongly universal string hashing is fast, The Computer Journal 57(11), 2014, Section 4.1 and footnote 4, https://arxiv.org/abs/1202.4961"
+  },
+  "notes": "The dependencies record the currently selected sufficient proof route, not a claim that the open fourth-moment statement is logically necessary. Axeyum has established the finite interval 1 through 400. Its exact arithmetic checker also verifies that the stated fourth-moment bound for both endpoint degrees at every ell >= 200 would force a positive population in every Hayes class and therefore settle all remaining degrees by reciprocity. The fourth-moment premise itself remains unproved, so this fact has no evidence and remains conjectured."
+}

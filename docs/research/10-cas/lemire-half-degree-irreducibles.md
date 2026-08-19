@@ -733,6 +733,76 @@ class is positive.  Its bounded output is experimental evidence for choosing
 the missing lemma; positivity in any finite range is not substituted for that
 lemma.
 
+The full distribution exposes a stronger, and apparently more structured,
+route than the raw variance.  Put `D_e=N_n(e)-2^(n-ell)` and
+
+```text
+M_r(ell,n) = sum_e |D_e|^r.
+```
+
+The CAS now returns the exact power sums for every caller-selected
+`1<=r<=64`; the research runner records `r=2,4,6,8`.  It also records the
+signed connected fourth-moment numerator
+
+```text
+K_4(ell,n) = 2^ell M_4(ell,n) - 3 M_2(ell,n)^2.   (fourth cumulant)
+```
+
+This separates the three Gaussian/Wick pairings from the genuinely connected
+four-character correlations without floating-point normalization.  The finite
+data become increasingly close to the pairing term rather than merely having a
+small maximum.  For example, at `(ell,n)=(20,41)` and `(20,42)`, the exact
+fourth moments are respectively
+
+```text
+4,499,025,619,307,287,799,932
+18,063,544,808,537,013,332,672.
+```
+
+Both satisfy the deliberately simple experimental envelope
+
+```text
+M_4(ell,n) <= 64 ell^2 2^(3 ell).                (fourth-moment candidate)
+```
+
+The envelope is not a tautology: the exact even endpoint at `ell=5` has
+`M_4=73,638,400`, exceeding its candidate bound `52,428,800`.  It holds at
+both endpoints for every `6<=ell<=23` completed by the exact scan.  It is
+mathematically sufficient if proved uniformly: since
+`max_e |D_e|^4 <= M_4`, the envelope implies `max_e |D_e|<=2^ell` once
+`64 ell^2<=2^ell` (from `ell=14` onward).  The exact arithmetic checker uses
+the already certified degrees `1..=400`, starts the symbolic handoff at
+`ell=200`, and verifies both proper-divisor margins; it reports the first
+symbolic degrees as 401 and 402.  This checks the implication only.  The
+fourth-moment candidate, or a comparable polynomial-times-`2^(3ell)` bound,
+is now the missing theorem.
+
+The high-memory level-23 scan gives
+
+```text
+M_4(23,47) = 3,119,070,106,577,995,866,919,000,
+M_4(23,48) = 12,529,587,969,155,357,316,866,560.
+```
+
+Both are below `64*23^2*2^69`, and each is also below `2^92`, so the exact
+fourth moment itself proves the finite `max_e |D_e|<=2^23` target.  The s6 run
+exited 0 in 12m20.22s with 5,026,456 KiB peak RSS.  The executable SHA-256 is
+`4e4745384abae683f9b021bbbedc79f807ce9f294d379ceef3848418152eeed7` and
+the result/resource log SHA-256 is
+`7f00ba5223b689bfa965cb12372109335bc8677b6904f2102d3586c8f76b0e8c`.
+This is bounded evidence for selecting the lemma, not evidence for its
+universal quantifier.
+
+This formulation identifies what a proof must control.  Parseval handles the
+three paired character quadruples; the new obstruction is the connected
+off-diagonal quadruple sum represented by `K_4`.  Existing geometric
+higher-moment work of Hast and Matei treats fixed polynomial degree as the
+field size tends to infinity, whereas this problem fixes the field at two and
+moves both degree and conductor.  It therefore motivates the complete-
+intersection interpretation but does not prove this envelope; see
+[Higher moments of arithmetic functions in short intervals: a geometric
+perspective](https://arxiv.org/abs/1604.02067).
+
 The exact algebra is no longer trapped in that executable. ADR-0482 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
 identity-class populations, endpoint discrepancies, conductor layers, and the

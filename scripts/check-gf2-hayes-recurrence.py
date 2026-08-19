@@ -394,6 +394,17 @@ def main() -> None:
     if moment <= cauchy_bound:
         fail("second-moment falsifier no longer exceeds the Cauchy bound")
     variance_controls = []
+    fourth_moment_controls = []
+    _, low_even_distribution = mangoldt_class_distribution(5, 12)
+    low_even_mean = 1 << (12 - 5)
+    low_even_fourth_moment = sum(
+        (value - low_even_mean) ** 4 for value in low_even_distribution
+    )
+    low_even_candidate_bound = 64 * 5**2 * 2 ** (3 * 5)
+    if low_even_fourth_moment != 73_638_400:
+        fail(f"ell=5 degree=12 fourth moment differs: {low_even_fourth_moment}")
+    if low_even_fourth_moment <= low_even_candidate_bound:
+        fail("ell=5 degree=12 no longer refutes the fourth-moment candidate")
     for degree, expected_mean, expected_deviation in (
         (17, 512, 693_360),
         (18, 1_024, 1_861_136),
@@ -416,8 +427,34 @@ def main() -> None:
             )
         if min(distribution) <= 0:
             fail("ell=8 endpoint unexpectedly contains an empty Mangoldt class")
+        fourth_moment = sum((value - mean) ** 4 for value in distribution)
+        expected_fourth_moment = {
+            17: 5_447_397_264,
+            18: 54_144_813_200,
+        }[degree]
+        if fourth_moment != expected_fourth_moment:
+            fail(
+                f"ell=8 degree={degree} fourth moment differs: "
+                f"{fourth_moment}"
+            )
+        fourth_cumulant_numerator = 256 * fourth_moment - 3 * deviation**2
+        expected_cumulant = {
+            17: -47_710_569_216,
+            18: 3_469_590_547_712,
+        }[degree]
+        if fourth_cumulant_numerator != expected_cumulant:
+            fail(
+                f"ell=8 degree={degree} fourth cumulant differs: "
+                f"{fourth_cumulant_numerator}"
+            )
+        fourth_moment_candidate_bound = 64 * 8**2 * 2 ** (3 * 8)
+        if fourth_moment > fourth_moment_candidate_bound:
+            fail("ell=8 endpoint refutes the fourth-moment candidate")
         variance_controls.append(
             f"{degree}:{mean}:{deviation}:{maximum_deviation}"
+        )
+        fourth_moment_controls.append(
+            f"{degree}:{fourth_moment}:{fourth_cumulant_numerator}"
         )
     _, level_five = mangoldt_class_distribution(5, 45)
     _, level_four = mangoldt_class_distribution(4, 45)
@@ -484,6 +521,9 @@ def main() -> None:
         "generic_cauchy_route=false|"
         f"full_family_parseval_controls={','.join(variance_controls)}|"
         "full_family_parseval_route=false|"
+        f"fourth_moment_controls={','.join(fourth_moment_controls)}|"
+        f"fourth_moment_low_control=5:12:{low_even_fourth_moment}:false|"
+        "fourth_moment_candidate=OPEN|"
         f"level5_degree45_normalized_layer={normalized_layer}|"
         "constant_one_layer_target=false|"
         "centered_endpoint_log=PASS|"

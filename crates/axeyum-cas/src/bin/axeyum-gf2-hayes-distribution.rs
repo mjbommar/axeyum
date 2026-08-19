@@ -48,8 +48,30 @@ fn run() -> Result<(), String> {
             .copied()
             .max()
             .ok_or_else(|| "class distribution is empty".to_owned())?;
+        let central_absolute_power_sums = [2_u32, 4, 6, 8]
+            .into_iter()
+            .map(|power| {
+                distribution
+                    .central_absolute_power_sum(power)
+                    .map(|value| format!("{power}:{value}"))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| error.to_string())?
+            .join(",");
+        let fourth_moment_candidate_bound = distribution
+            .fourth_moment_candidate_bound()
+            .map_err(|error| error.to_string())?;
+        let fourth_moment_candidate_holds = distribution
+            .satisfies_fourth_moment_candidate()
+            .map_err(|error| error.to_string())?;
+        let fourth_moment_proves_candidate_discrepancy_bound = distribution
+            .fourth_moment_proves_candidate_discrepancy_bound()
+            .map_err(|error| error.to_string())?;
+        let fourth_cumulant_numerator = distribution
+            .fourth_cumulant_numerator()
+            .map_err(|error| error.to_string())?;
         println!(
-            "GF2_HAYES_DISTRIBUTION|status=PASS|ell={ell}|degree={degree}|exact=two_ntt_primes_plus_crt|classes={}|uniform_mean={mean}|minimum={minimum}|maximum={maximum}|maximum_absolute_deviation={maximum_deviation}|all_classes_positive={}",
+            "GF2_HAYES_DISTRIBUTION|status=PASS|ell={ell}|degree={degree}|exact=two_ntt_primes_plus_crt|classes={}|uniform_mean={mean}|minimum={minimum}|maximum={maximum}|maximum_absolute_deviation={maximum_deviation}|all_classes_positive={}|central_absolute_power_sums={central_absolute_power_sums}|fourth_cumulant_numerator={fourth_cumulant_numerator}|fourth_moment_candidate_bound={fourth_moment_candidate_bound}|fourth_moment_candidate_holds={fourth_moment_candidate_holds}|fourth_moment_proves_candidate_discrepancy_bound={fourth_moment_proves_candidate_discrepancy_bound}",
             distribution.counts.len(),
             distribution.all_classes_positive(),
         );

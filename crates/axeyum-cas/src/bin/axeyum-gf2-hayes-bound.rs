@@ -1,7 +1,8 @@
 //! Exact arithmetic checker for the Lemire/Hayes sufficient conductor bound.
 
 use axeyum_cas::gf2_hayes::{
-    ConductorBoundAssumption, SquareRootLayerBoundAssumption, check_conductor_bound_sufficiency,
+    ConductorBoundAssumption, FourthMomentBoundAssumption, SquareRootLayerBoundAssumption,
+    check_conductor_bound_sufficiency, check_fourth_moment_bound_sufficiency,
     check_square_root_layer_bound_sufficiency, low_conductor_weil_split,
 };
 
@@ -23,6 +24,18 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         assumption.finite_max_degree,
         report.first_odd_degree,
         report.first_even_degree
+    );
+
+    let fourth_moment = FourthMomentBoundAssumption::default();
+    let fourth_moment_report = check_fourth_moment_bound_sufficiency(fourth_moment)?;
+    println!(
+        "GF2_HAYES_FOURTH_MOMENT_SUFFICIENT_RUST|status=PASS|implication=checked|assumption_status=OPEN|moment_bound={}*ell^{}*2^(3ell)|ell>={}|endpoint_abs_discrepancy_le_2powell=true|proper_divisor_margin=true|finite_remainder_degrees=1..{}|first_symbolic_degrees={},{}",
+        fourth_moment.constant,
+        fourth_moment.power,
+        fourth_moment.threshold,
+        fourth_moment.finite_max_degree,
+        fourth_moment_report.first_odd_degree,
+        fourth_moment_report.first_even_degree,
     );
 
     let low_split = low_conductor_weil_split(199)?;

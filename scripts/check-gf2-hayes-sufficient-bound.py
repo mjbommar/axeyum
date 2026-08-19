@@ -15,6 +15,9 @@ import argparse
 DEFAULT_CONSTANT = 8
 DEFAULT_POWER = 12
 DEFAULT_THRESHOLD = 194
+FOURTH_MOMENT_CONSTANT = 64
+FOURTH_MOMENT_POWER = 2
+FOURTH_MOMENT_THRESHOLD = 200
 
 
 def fail(message: str) -> None:
@@ -91,6 +94,38 @@ def main() -> None:
         "endpoint_abs_discrepancy_le_2powell=true|"
         "proper_divisor_margin=true|"
         "finite_remainder_degrees=1..400"
+    )
+
+    # Independently check the newer fourth-moment implication.  The assumed
+    # endpoint estimate is M_4 <= C*ell^a*2^(3ell).  Since
+    # max |Delta_e|^4 <= M_4, it gives max |Delta_e| <= 2^ell whenever
+    # C*ell^a <= 2^ell.  This is an implication check, not a proof of M_4.
+    fm_constant = FOURTH_MOMENT_CONSTANT
+    fm_power = FOURTH_MOMENT_POWER
+    fm_threshold = FOURTH_MOMENT_THRESHOLD
+    if 2 * fm_threshold > 400:
+        fail("fourth-moment finite remainder exceeds degree 400")
+    if fm_constant * fm_threshold**fm_power > 1 << fm_threshold:
+        fail("fourth-moment envelope does not imply the discrepancy bound")
+    if (fm_threshold + 1) ** fm_power > 2 * fm_threshold**fm_power:
+        fail("fourth-moment induction ratio is not monotone")
+
+    fm_odd_degree = 2 * fm_threshold + 1
+    fm_even_degree = 2 * fm_threshold + 2
+    if fm_odd_degree**6 >= 1 << (fm_odd_degree - 3):
+        fail("fourth-moment odd proper-divisor margin does not hold")
+    if fm_even_degree**6 >= 1 << (fm_even_degree - 6):
+        fail("fourth-moment even proper-divisor margin does not hold")
+    if (fm_odd_degree + 2) ** 6 >= 4 * fm_odd_degree**6:
+        fail("fourth-moment proper-divisor induction ratio is not monotone")
+
+    print(
+        "GF2_HAYES_FOURTH_MOMENT_SUFFICIENT|status=PASS|"
+        "implication=checked|assumption_status=OPEN|"
+        f"moment_bound={fm_constant}*ell^{fm_power}*2^(3ell)|"
+        f"ell>={fm_threshold}|endpoint_abs_discrepancy_le_2powell=true|"
+        "proper_divisor_margin=true|finite_remainder_degrees=1..400|"
+        f"first_symbolic_degrees={fm_odd_degree},{fm_even_degree}"
     )
 
 

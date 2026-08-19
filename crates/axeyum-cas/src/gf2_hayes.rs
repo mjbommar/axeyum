@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use num_bigint::BigUint;
+use num_bigint::{BigInt, BigUint};
 use serde::{Deserialize, Serialize};
 
 const PRIME_ONE: u64 = 998_244_353;
@@ -291,6 +291,52 @@ pub struct SufficientBoundReport {
     pub first_even_degree: usize,
 }
 
+/// A polynomial-times-`2^(3 ell)` fourth-moment endpoint estimate.
+///
+/// The mathematical assumption is
+///
+/// ```text
+/// sum_e |N_n(e) - 2^(n-ell)|^4
+///     <= constant * ell^power * 2^(3 ell)
+/// ```
+///
+/// at `n in {2 ell + 1, 2 ell + 2}` from `threshold` onward.  Axeyum checks
+/// only the arithmetic consequence of that assumption.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FourthMomentBoundAssumption {
+    /// Polynomial prefactor constant.
+    pub constant: usize,
+    /// Polynomial exponent on `ell`.
+    pub power: usize,
+    /// First `ell` at which the estimate is assumed.
+    pub threshold: usize,
+    /// Largest degree covered by separate finite certificates.
+    pub finite_max_degree: usize,
+}
+
+impl Default for FourthMomentBoundAssumption {
+    fn default() -> Self {
+        Self {
+            constant: 64,
+            power: 2,
+            threshold: 200,
+            finite_max_degree: 400,
+        }
+    }
+}
+
+/// Checked arithmetic implication from a fourth-moment estimate to endpoint
+/// irreducible positivity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FourthMomentBoundReport {
+    /// Assumption checked by the exact arithmetic route.
+    pub assumption: FourthMomentBoundAssumption,
+    /// First odd endpoint degree discharged by the symbolic estimate.
+    pub first_odd_degree: usize,
+    /// First even endpoint degree discharged by the symbolic estimate.
+    pub first_even_degree: usize,
+}
+
 /// A constant-one square-root bound on every exact-conductor family.
 ///
 /// The mathematical assumption is
@@ -419,6 +465,13 @@ pub struct ClassPopulationDistribution {
 }
 
 impl ClassPopulationDistribution {
+    /// Largest admitted exponent for an exact central absolute power sum.
+    ///
+    /// The distribution itself already has `2^ell` entries.  Bounding the
+    /// exponent prevents an otherwise tiny input from constructing
+    /// arbitrarily large intermediate bignums after that expensive transform.
+    pub const MAX_CENTRAL_POWER: u32 = 64;
+
     /// Uniform population mean `2^(degree-ell)`.
     #[must_use]
     pub fn uniform_mean(&self) -> Option<u128> {
@@ -431,6 +484,118 @@ impl ClassPopulationDistribution {
     pub fn maximum_absolute_deviation(&self) -> Option<u128> {
         let mean = self.uniform_mean()?;
         self.counts.iter().map(|count| count.abs_diff(mean)).max()
+    }
+
+    /// Exact `sum_e |N_e - mu|^power` over all classes.
+    ///
+    /// Even powers are the central moments used by the higher-moment route to
+    /// an `L^infinity` estimate.  Odd powers are retained as absolute moments,
+    /// so the result is always nonnegative and has one unambiguous meaning.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`HayesError::InvalidParameter`] unless `power` is in
+    /// `1..=MAX_CENTRAL_POWER`, or if this distribution has no exact uniform
+    /// mean.
+    pub fn central_absolute_power_sum(&self, power: u32) -> Result<BigUint, HayesError> {
+        if !(1..=Self::MAX_CENTRAL_POWER).contains(&power) {
+            return Err(HayesError::InvalidParameter(format!(
+                "central absolute power must be in 1..={}, got {power}",
+                Self::MAX_CENTRAL_POWER
+            )));
+        }
+        let mean = self.uniform_mean().ok_or_else(|| {
+            HayesError::InvalidParameter("class distribution has no exact uniform mean".to_owned())
+        })?;
+        Ok(self
+            .counts
+            .iter()
+            .map(|count| BigUint::from(count.abs_diff(mean)).pow(power))
+            .sum())
+    }
+
+    /// Experimental endpoint envelope `64 ell^2 2^(3 ell)` for the fourth
+    /// central moment.
+    ///
+    /// This is deliberately an observed candidate, not a theorem.  The method
+    /// rejects non-endpoint degrees so a caller cannot silently generalize the
+    /// finite diagnostic beyond `n in {2 ell + 1, 2 ell + 2}`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`HayesError::InvalidParameter`] outside the two Lemire
+    /// endpoints or if an exponent calculation cannot be represented.
+    pub fn fourth_moment_candidate_bound(&self) -> Result<BigUint, HayesError> {
+        let odd = self
+            .ell
+            .checked_mul(2)
+            .and_then(|value| value.checked_add(1));
+        let even = self
+            .ell
+            .checked_mul(2)
+            .and_then(|value| value.checked_add(2));
+        if Some(self.degree) != odd && Some(self.degree) != even {
+            return Err(HayesError::InvalidParameter(format!(
+                "fourth-moment candidate is endpoint-only: ell={}, degree={}",
+                self.ell, self.degree
+            )));
+        }
+        let exponent = self.ell.checked_mul(3).ok_or_else(|| {
+            HayesError::InvalidParameter("fourth-moment exponent overflow".to_owned())
+        })?;
+        Ok((BigUint::from(64_u8) * BigUint::from(self.ell).pow(2)) << exponent)
+    }
+
+    /// Whether this exact endpoint distribution meets the experimental
+    /// fourth-moment envelope.
+    ///
+    /// # Errors
+    ///
+    /// Returns any parameter error from [`Self::fourth_moment_candidate_bound`]
+    /// or [`Self::central_absolute_power_sum`].
+    pub fn satisfies_fourth_moment_candidate(&self) -> Result<bool, HayesError> {
+        Ok(self.central_absolute_power_sum(4)? <= self.fourth_moment_candidate_bound()?)
+    }
+
+    /// Whether the exact fourth moment alone forces every class discrepancy
+    /// to be at most `2^ell`.
+    ///
+    /// This uses `max_e |N_e-mu|^4 <= sum_e |N_e-mu|^4`.  It certifies only
+    /// the supplied finite distribution; it does not extrapolate the observed
+    /// fourth-moment envelope.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed parameter error if the exact moment or shift cannot be
+    /// represented.
+    pub fn fourth_moment_proves_candidate_discrepancy_bound(&self) -> Result<bool, HayesError> {
+        let exponent = self.ell.checked_mul(4).ok_or_else(|| {
+            HayesError::InvalidParameter("fourth-moment threshold overflow".to_owned())
+        })?;
+        Ok(self.central_absolute_power_sum(4)? <= (BigUint::from(1_u8) << exponent))
+    }
+
+    /// Signed numerator of the centered fourth cumulant.
+    ///
+    /// With `G=2^ell`, `M_2=sum_e D_e^2`, and `M_4=sum_e D_e^4`, this returns
+    ///
+    /// ```text
+    /// G M_4 - 3 M_2^2.
+    /// ```
+    ///
+    /// Dividing by `G^2` gives the usual fourth cumulant of a uniformly chosen
+    /// class discrepancy.  Keeping the integer numerator makes the Gaussian
+    /// pairing cancellation exact and rounding-free.
+    ///
+    /// # Errors
+    ///
+    /// Returns any typed error from the exact second or fourth central power
+    /// sums.
+    pub fn fourth_cumulant_numerator(&self) -> Result<BigInt, HayesError> {
+        let second = self.central_absolute_power_sum(2)?;
+        let fourth = self.central_absolute_power_sum(4)?;
+        let group_order = BigUint::from(self.counts.len());
+        Ok(BigInt::from(group_order * fourth) - BigInt::from(BigUint::from(3_u8) * second.pow(2)))
     }
 
     /// Whether every class has positive Mangoldt population.
@@ -566,6 +731,89 @@ pub fn check_conductor_bound_sufficiency(
         ));
     }
     Ok(SufficientBoundReport {
+        assumption,
+        first_odd_degree,
+        first_even_degree,
+    })
+}
+
+/// Check that a fourth central-moment estimate would finish the endpoint proof.
+///
+/// The norm inequality `max |Delta_e|^4 <= sum |Delta_e|^4` first reduces the
+/// assumed envelope to `|Delta_e| <= 2^ell`.  The remaining exact checks are
+/// the finite-range handoff and the proper-divisor margins in Hayes Möbius
+/// inversion.  This function does not prove the fourth-moment estimate.
+///
+/// # Errors
+///
+/// Returns an error for a malformed assumption, a finite-range gap, or a
+/// failed exact seed or monotonicity inequality.
+pub fn check_fourth_moment_bound_sufficiency(
+    assumption: FourthMomentBoundAssumption,
+) -> Result<FourthMomentBoundReport, HayesError> {
+    let FourthMomentBoundAssumption {
+        constant,
+        power,
+        threshold,
+        finite_max_degree,
+    } = assumption;
+    if constant == 0 || threshold < 3 {
+        return Err(HayesError::InvalidParameter(
+            "constant must be positive and threshold must be at least three".to_owned(),
+        ));
+    }
+    let power = u32::try_from(power).map_err(|_| {
+        HayesError::InvalidParameter("power does not fit the exact exponent domain".to_owned())
+    })?;
+    let twice_threshold = threshold.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("threshold degree calculation overflow".to_owned())
+    })?;
+    if twice_threshold > finite_max_degree {
+        return Err(HayesError::InvalidParameter(
+            "finite remainder exceeds the checked degree range".to_owned(),
+        ));
+    }
+
+    let polynomial = BigUint::from(constant) * BigUint::from(threshold).pow(power);
+    if polynomial > (BigUint::from(1_u8) << threshold) {
+        return Err(HayesError::Invariant(
+            "fourth-moment envelope does not imply the discrepancy bound at the threshold"
+                .to_owned(),
+        ));
+    }
+    if BigUint::from(threshold + 1).pow(power)
+        > BigUint::from(2_u8) * BigUint::from(threshold).pow(power)
+    {
+        return Err(HayesError::Invariant(
+            "fourth-moment envelope induction ratio is not monotone".to_owned(),
+        ));
+    }
+
+    let first_odd_degree = twice_threshold.checked_add(1).ok_or_else(|| {
+        HayesError::InvalidParameter("odd endpoint degree calculation overflow".to_owned())
+    })?;
+    let first_even_degree = twice_threshold.checked_add(2).ok_or_else(|| {
+        HayesError::InvalidParameter("even endpoint degree calculation overflow".to_owned())
+    })?;
+    if BigUint::from(first_odd_degree).pow(6) >= (BigUint::from(1_u8) << (first_odd_degree - 3)) {
+        return Err(HayesError::Invariant(
+            "odd proper-divisor margin does not hold".to_owned(),
+        ));
+    }
+    if BigUint::from(first_even_degree).pow(6) >= (BigUint::from(1_u8) << (first_even_degree - 6)) {
+        return Err(HayesError::Invariant(
+            "even proper-divisor margin does not hold".to_owned(),
+        ));
+    }
+    if BigUint::from(first_odd_degree + 2).pow(6)
+        >= BigUint::from(4_u8) * BigUint::from(first_odd_degree).pow(6)
+    {
+        return Err(HayesError::Invariant(
+            "proper-divisor induction ratio is not monotone".to_owned(),
+        ));
+    }
+
+    Ok(FourthMomentBoundReport {
         assumption,
         first_odd_degree,
         first_even_degree,
@@ -1439,6 +1687,25 @@ mod tests {
     }
 
     #[test]
+    fn fourth_moment_bound_implication_is_exact() {
+        let report =
+            check_fourth_moment_bound_sufficiency(FourthMomentBoundAssumption::default()).unwrap();
+        assert_eq!(report.first_odd_degree, 401);
+        assert_eq!(report.first_even_degree, 402);
+
+        let weak_threshold = FourthMomentBoundAssumption {
+            threshold: 13,
+            ..FourthMomentBoundAssumption::default()
+        };
+        assert!(check_fourth_moment_bound_sufficiency(weak_threshold).is_err());
+        let unchecked_remainder = FourthMomentBoundAssumption {
+            threshold: 201,
+            ..FourthMomentBoundAssumption::default()
+        };
+        assert!(check_fourth_moment_bound_sufficiency(unchecked_remainder).is_err());
+    }
+
+    #[test]
     fn square_root_layer_bound_implication_is_exact() {
         let report =
             check_square_root_layer_bound_sufficiency(SquareRootLayerBoundAssumption::default())
@@ -1564,6 +1831,13 @@ mod tests {
     #[test]
     fn full_class_distribution_recovers_l_infinity_controls() {
         let limits = HayesLimits::default();
+        let low_even = class_population_distribution(5, 12, limits).unwrap();
+        assert_eq!(
+            low_even.central_absolute_power_sum(4).unwrap(),
+            BigUint::from(73_638_400_u32)
+        );
+        assert!(!low_even.satisfies_fourth_moment_candidate().unwrap());
+
         let odd = class_population_distribution(8, 17, limits).unwrap();
         assert_eq!(odd.counts.len(), 256);
         assert_eq!(odd.counts[0], identity_class_count(8, 17, limits).unwrap());
@@ -1576,12 +1850,63 @@ mod tests {
             .map(|count| count.abs_diff(512).pow(2))
             .sum::<u128>();
         assert_eq!(odd_squared_deviation, 693_360);
+        assert_eq!(
+            odd.central_absolute_power_sum(2).unwrap(),
+            BigUint::from(693_360_u32)
+        );
+        assert_eq!(
+            odd.central_absolute_power_sum(4).unwrap(),
+            BigUint::from(5_447_397_264_u64)
+        );
+        assert_eq!(
+            odd.fourth_cumulant_numerator().unwrap(),
+            BigInt::from(-47_710_569_216_i64)
+        );
+        assert_eq!(
+            odd.central_absolute_power_sum(0),
+            Err(HayesError::InvalidParameter(
+                "central absolute power must be in 1..=64, got 0".to_owned()
+            ))
+        );
+        assert_eq!(
+            odd.central_absolute_power_sum(65),
+            Err(HayesError::InvalidParameter(
+                "central absolute power must be in 1..=64, got 65".to_owned()
+            ))
+        );
+        assert!(odd.satisfies_fourth_moment_candidate().unwrap());
+        assert!(
+            !odd.fourth_moment_proves_candidate_discrepancy_bound()
+                .unwrap()
+        );
+        let mut non_endpoint = odd.clone();
+        non_endpoint.degree = 16;
+        assert_eq!(
+            non_endpoint.fourth_moment_candidate_bound(),
+            Err(HayesError::InvalidParameter(
+                "fourth-moment candidate is endpoint-only: ell=8, degree=16".to_owned()
+            ))
+        );
 
         let even = class_population_distribution(8, 18, limits).unwrap();
         assert_eq!(even.counts[0], identity_class_count(8, 18, limits).unwrap());
         assert_eq!(even.uniform_mean(), Some(1_024));
         assert_eq!(even.maximum_absolute_deviation(), Some(290));
         assert!(even.all_classes_positive());
+        assert!(even.satisfies_fourth_moment_candidate().unwrap());
+        assert_eq!(
+            even.central_absolute_power_sum(4).unwrap(),
+            BigUint::from(54_144_813_200_u64)
+        );
+        assert_eq!(
+            even.fourth_cumulant_numerator().unwrap(),
+            BigInt::from(3_469_590_547_712_i64)
+        );
+        assert!(
+            !even
+                .fourth_moment_proves_candidate_discrepancy_bound()
+                .unwrap()
+        );
         let even_squared_deviation = even
             .counts
             .iter()
