@@ -16,7 +16,7 @@
   "external_status": "open",
   "depends_on": [
     "F:gf2-lemire-half-degree-through-400",
-    "F:gf2-hayes-fourth-moment-endpoint-bound"
+    "F:gf2-hayes-mobius-convolution-endpoint-bound"
   ],
   "proof_route": "none",
   "evidence": [],
@@ -25,5 +25,5 @@
     "established_by": "not established in this ledger",
     "source": "Daniel Lemire and Owen Kaser, Strongly universal string hashing is fast, The Computer Journal 57(11), 2014, Section 4.1 and footnote 4, https://arxiv.org/abs/1202.4961"
   },
-  "notes": "The dependencies record the currently selected sufficient proof route, not a claim that the open fourth-moment statement is logically necessary. Axeyum has established the finite interval 1 through 400. Its exact arithmetic checker also verifies that the stated fourth-moment bound for both endpoint degrees at every ell >= 200 would force a positive population in every Hayes class and therefore settle all remaining degrees by reciprocity. The fourth-moment premise itself remains unproved, so this fact has no evidence and remains conjectured."
+  "notes": "The dependencies record the currently selected sufficient proof route, not a claim that the endpoint Möbius-convolution statement is logically necessary. Axeyum has established the finite interval 1 through 400. The exact endpoint reductions, proper-power subtraction, and reciprocity show that the stated signed Möbius-convolution bound for both endpoint degrees at every ell >= 200 would settle all remaining degrees. That aggregate cancellation premise remains unproved, so this fact has no evidence and remains conjectured."
 }

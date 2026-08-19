@@ -1062,6 +1062,45 @@ theorem that closes (MC): [The autocorrelation of the Möbius function and
 Chowla's conjecture for the rational function field in characteristic
 2](https://arxiv.org/abs/1409.3694), Section 2.
 
+The original LaTeX source makes the exact boundary explicit:
+
+```text
+mu(f)=(-1)^deg(f) chi_2(Berl(f))
+```
+
+only when `f` is squarefree.  Over `GF(2)`, `chi_2(z)=(-1)^z`; on squareful
+inputs the Möbius weight is zero and the rational Berlekamp discriminant is
+undefined.  Accordingly, the bounded native operation
+`binary_berlekamp_inverse_phase_report` evaluates the actual combined weight
+
+```text
+w_a(f)=mu(f)(-1)^<a,f^(-1)-1>
+```
+
+by native factorization rather than inventing a phase on the squareful locus.
+For the subspace `H` toggling the first `s` free coefficients, it computes
+
+```text
+E_H(a;k)
+ = sum_coset (sum_(f in coset) w_a(f))^2
+ = sum_(h in H) sum_f w_a(f)w_a(f+h)
+```
+
+and checks the exact Cauchy ledger
+
+```text
+B_k(a)^2 <= 2^(k-1-s) E_H(a;k).
+```
+
+At `(ell,k,a,s)=(4,9,12,4)`, the square bound is `3920`, versus the
+trivial `29241`; every one of the sixteen frequencies at `(ell,k,s)=(4,9,4)`
+improves strictly.  The direct phase also checks
+`B_k(a)-B_(k-1)(a)=H_k(a)` against the independently reconstructed spectrum.
+These are non-credit finite stationary-fibre diagnostics.  The missing result
+is now a uniform bound for `E_H(a;k)` on the annihilator frequencies and
+low/medium degree block that survives the explicit Vaughan tail, with an
+exponent that closes the aggregate budget.
+
 This also sharpens the boundary on the new Kloosterman result.  The
 stationary-phase bound controls the **unweighted** distribution of one product
 of intervals.  A Vaughan identity introduces Möbius-derived weights, and an

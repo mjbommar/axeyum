@@ -1238,6 +1238,57 @@ pub struct InverseAdditiveMobiusSpectrum {
     pub values: Vec<i128>,
 }
 
+/// Exact finite stationary-fibre diagnostic for the binary
+/// Berlekamp/inverse phase.
+///
+/// For monic constant-one polynomials `f` of the requested degree, put
+///
+/// ```text
+/// w_a(f)=mu(f)(-1)^<a,f^(-1)-1>.
+/// ```
+///
+/// On the squarefree locus, Berlekamp's characteristic-two Pellet formula
+/// identifies `mu(f)` with the additive Berlekamp-discriminant phase (up to
+/// the fixed degree sign).  Squareful inputs have weight zero.  The shift
+/// subspace toggles the first `shift_dimension` free coefficients of `f`.
+/// The same/opposite counts and their difference give the exact derivative
+/// correlation over that subspace; no asymptotic cancellation is asserted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BinaryBerlekampInversePhaseReport {
+    /// Principal-unit modulus is `x^(ell+1)`.
+    pub ell: usize,
+    /// Degree of the monic constant-one polynomials.
+    pub degree: usize,
+    /// Packed additive frequency, low coefficient first.
+    pub frequency: usize,
+    /// Number of low free coefficients toggled by the shift subspace.
+    pub shift_dimension: usize,
+    /// Total number `2^(degree-1)` of monic constant-one inputs.
+    pub input_count: u128,
+    /// Number of squarefree inputs, equivalently nonzero phase weights.
+    pub squarefree_count: u128,
+    /// Exact combined phase sum `B_degree(frequency)`.
+    pub phase_sum: i128,
+    /// Ordered nonzero pairs in one shift coset having the same phase sign.
+    pub stationary_same_sign_pairs: u128,
+    /// Ordered nonzero pairs in one shift coset having opposite phase signs.
+    pub oscillating_opposite_sign_pairs: u128,
+    /// Exact nonnegative shift-subspace correlation energy.
+    pub shift_subspace_energy: u128,
+    /// Cauchy upper bound for `phase_sum^2`: number of cosets times energy.
+    pub cauchy_square_bound: u128,
+    /// Trivial upper bound `squarefree_count^2` for `phase_sum^2`.
+    pub trivial_square_bound: u128,
+}
+
+impl BinaryBerlekampInversePhaseReport {
+    /// Whether this shift-subspace Cauchy step improves on the trivial bound.
+    #[must_use]
+    pub const fn improves_trivial_bound(&self) -> bool {
+        self.cauchy_square_bound < self.trivial_square_bound
+    }
+}
+
 impl InverseAdditiveMobiusSpectrum {
     /// Recover `sum_(u in V_d) M_degree(u^(-1))` by additive orthogonality.
     ///
@@ -4203,6 +4254,263 @@ pub fn inverse_additive_mobius_spectrum(
     })
 }
 
+fn binary_polynomial_mobius_from_bits(polynomial: u64, degree: usize) -> Result<i8, HayesError> {
+    let coefficients = (0..=degree)
+        .map(|index| i128::from((polynomial >> index) & 1))
+        .collect::<Vec<_>>();
+    let factors = crate::gfp::factor_berlekamp(&coefficients, 2).ok_or_else(|| {
+        HayesError::Invariant("binary Berlekamp factorization declined".to_owned())
+    })?;
+    if factors.iter().any(|(_, multiplicity)| *multiplicity != 1) {
+        Ok(0)
+    } else if factors.len().is_multiple_of(2) {
+        Ok(1)
+    } else {
+        Ok(-1)
+    }
+}
+
+struct BinaryBerlekampPhaseDomain {
+    input_count: usize,
+    coset_size: usize,
+    residue_mask: u64,
+    frequency: u64,
+}
+
+fn admit_binary_berlekamp_phase_domain(
+    ell: usize,
+    degree: usize,
+    frequency: usize,
+    shift_dimension: usize,
+    limits: HayesLimits,
+) -> Result<BinaryBerlekampPhaseDomain, HayesError> {
+    admit_any_positive_degree(ell, degree, limits)?;
+    if degree >= u64::BITS as usize || ell >= u64::BITS as usize {
+        return Err(HayesError::InvalidParameter(
+            "Berlekamp phase diagnostic requires ell,degree<64".to_owned(),
+        ));
+    }
+    let free_coefficients = degree - 1;
+    if shift_dimension > free_coefficients {
+        return Err(HayesError::InvalidParameter(format!(
+            "shift dimension {shift_dimension} exceeds {free_coefficients} free coefficients"
+        )));
+    }
+    let frequency_count = 1_usize
+        .checked_shl(u32::try_from(ell).map_err(|_| {
+            HayesError::InvalidParameter("Berlekamp frequency shift exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| HayesError::InvalidParameter("Berlekamp frequency overflow".to_owned()))?;
+    if frequency >= frequency_count {
+        return Err(HayesError::InvalidParameter(format!(
+            "frequency {frequency} is outside 0..{frequency_count}"
+        )));
+    }
+    let input_count = 1_usize
+        .checked_shl(u32::try_from(free_coefficients).map_err(|_| {
+            HayesError::InvalidParameter("Berlekamp enumeration shift exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| HayesError::InvalidParameter("Berlekamp enumeration overflow".to_owned()))?;
+    let factor_work = degree
+        .checked_add(1)
+        .and_then(|value| value.checked_mul(value))
+        .and_then(|value| value.checked_mul(input_count))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Berlekamp work estimate overflow".to_owned())
+        })?;
+    check_limit("berlekamp_phase_cells", factor_work, limits.max_table_cells)?;
+    let coset_size = 1_usize
+        .checked_shl(u32::try_from(shift_dimension).map_err(|_| {
+            HayesError::InvalidParameter("Berlekamp coset shift exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| HayesError::InvalidParameter("Berlekamp coset size overflow".to_owned()))?;
+    Ok(BinaryBerlekampPhaseDomain {
+        input_count,
+        coset_size,
+        residue_mask: if ell + 1 == u64::BITS as usize {
+            u64::MAX
+        } else {
+            (1_u64 << (ell + 1)) - 1
+        },
+        frequency: u64::try_from(frequency).map_err(|_| {
+            HayesError::InvalidParameter("Berlekamp frequency exceeds u64".to_owned())
+        })?,
+    })
+}
+
+struct BinaryBerlekampPhaseSummary {
+    positive: u128,
+    negative: u128,
+    stationary_same_sign_pairs: u128,
+    oscillating_opposite_sign_pairs: u128,
+    shift_subspace_energy: u128,
+}
+
+fn summarize_binary_berlekamp_phase_cosets(
+    positive_by_coset: Vec<u128>,
+    negative_by_coset: Vec<u128>,
+) -> Result<BinaryBerlekampPhaseSummary, HayesError> {
+    let mut summary = BinaryBerlekampPhaseSummary {
+        positive: 0,
+        negative: 0,
+        stationary_same_sign_pairs: 0,
+        oscillating_opposite_sign_pairs: 0,
+        shift_subspace_energy: 0,
+    };
+    for (positive, negative) in positive_by_coset.into_iter().zip(negative_by_coset) {
+        summary.positive = summary.positive.checked_add(positive).ok_or_else(|| {
+            HayesError::InvalidParameter("Berlekamp positive count overflow".to_owned())
+        })?;
+        summary.negative = summary.negative.checked_add(negative).ok_or_else(|| {
+            HayesError::InvalidParameter("Berlekamp negative count overflow".to_owned())
+        })?;
+        summary.stationary_same_sign_pairs = summary
+            .stationary_same_sign_pairs
+            .checked_add(positive * positive + negative * negative)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Berlekamp stationary-pair count overflow".to_owned())
+            })?;
+        summary.oscillating_opposite_sign_pairs = summary
+            .oscillating_opposite_sign_pairs
+            .checked_add(2 * positive * negative)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Berlekamp oscillating-pair count overflow".to_owned())
+            })?;
+        let imbalance = positive.abs_diff(negative);
+        summary.shift_subspace_energy = summary
+            .shift_subspace_energy
+            .checked_add(imbalance * imbalance)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Berlekamp shift energy overflow".to_owned())
+            })?;
+    }
+    if summary
+        .stationary_same_sign_pairs
+        .checked_sub(summary.oscillating_opposite_sign_pairs)
+        != Some(summary.shift_subspace_energy)
+    {
+        return Err(HayesError::Invariant(
+            "Berlekamp stationary-pair counts do not recover shift energy".to_owned(),
+        ));
+    }
+    Ok(summary)
+}
+
+/// Enumerate the combined Berlekamp-discriminant and inverse-additive phase.
+///
+/// The domain consists of every monic constant-one binary polynomial `f` of
+/// degree `degree`.  For each shift coset obtained by fixing coefficients
+/// above `x^shift_dimension`, the operation counts positive and negative
+/// squarefree phase weights.  Summing the squared coset imbalances gives
+///
+/// ```text
+/// sum_coset (sum_(f in coset) w_a(f))^2
+///   = sum_(h in H) sum_f w_a(f) w_a(f+h),
+/// ```
+///
+/// the exact stationary-fibre energy for the low-coefficient shift subspace
+/// `H`.  Cauchy then bounds the square of the complete phase sum by the
+/// number of cosets times that energy.  This is a bounded diagnostic for a
+/// possible van-der-Corput/Berlekamp lemma, not theorem credit.
+///
+/// # Errors
+///
+/// Rejects parameters outside the explicit Hayes limits or the packed `u64`
+/// representation, charges the full factorization enumeration against
+/// `max_table_cells`, and reports factorization/arithmetic invariant failures.
+pub fn binary_berlekamp_inverse_phase_report(
+    ell: usize,
+    degree: usize,
+    frequency: usize,
+    shift_dimension: usize,
+    limits: HayesLimits,
+) -> Result<BinaryBerlekampInversePhaseReport, HayesError> {
+    let domain =
+        admit_binary_berlekamp_phase_domain(ell, degree, frequency, shift_dimension, limits)?;
+    let coset_count = domain.input_count / domain.coset_size;
+    let mut positive_by_coset = vec![0_u128; coset_count];
+    let mut negative_by_coset = vec![0_u128; coset_count];
+    for middle in 0..domain.input_count {
+        let middle_u64 = u64::try_from(middle).map_err(|_| {
+            HayesError::InvalidParameter("Berlekamp polynomial index exceeds u64".to_owned())
+        })?;
+        let polynomial = (1_u64 << degree) | (middle_u64 << 1) | 1;
+        let mobius = binary_polynomial_mobius_from_bits(polynomial, degree)?;
+        if mobius == 0 {
+            continue;
+        }
+        let residue = polynomial & domain.residue_mask;
+        let packed_inverse = principal_unit_inverse(residue, ell) >> 1;
+        let character = if (packed_inverse & domain.frequency)
+            .count_ones()
+            .is_multiple_of(2)
+        {
+            1_i8
+        } else {
+            -1_i8
+        };
+        let coset = middle / domain.coset_size;
+        if mobius * character > 0 {
+            positive_by_coset[coset] += 1;
+        } else {
+            negative_by_coset[coset] += 1;
+        }
+    }
+    let summary = summarize_binary_berlekamp_phase_cosets(positive_by_coset, negative_by_coset)?;
+    let phase_sum = i128::try_from(summary.positive)
+        .ok()
+        .and_then(|value| {
+            i128::try_from(summary.negative)
+                .ok()
+                .and_then(|negative| value.checked_sub(negative))
+        })
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Berlekamp phase sum exceeds i128".to_owned())
+        })?;
+    let squarefree_count = summary
+        .positive
+        .checked_add(summary.negative)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Berlekamp squarefree count overflow".to_owned())
+        })?;
+    let cauchy_square_bound = u128::try_from(coset_count)
+        .ok()
+        .and_then(|count| count.checked_mul(summary.shift_subspace_energy))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Berlekamp Cauchy bound overflow".to_owned())
+        })?;
+    let trivial_square_bound = squarefree_count
+        .checked_mul(squarefree_count)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Berlekamp trivial bound overflow".to_owned())
+        })?;
+    if phase_sum
+        .unsigned_abs()
+        .checked_mul(phase_sum.unsigned_abs())
+        .is_none_or(|square| square > cauchy_square_bound)
+    {
+        return Err(HayesError::Invariant(
+            "Berlekamp shift Cauchy bound does not dominate the phase sum".to_owned(),
+        ));
+    }
+    Ok(BinaryBerlekampInversePhaseReport {
+        ell,
+        degree,
+        frequency,
+        shift_dimension,
+        input_count: u128::try_from(domain.input_count).map_err(|_| {
+            HayesError::InvalidParameter("Berlekamp input count exceeds u128".to_owned())
+        })?,
+        squarefree_count,
+        phase_sum,
+        stationary_same_sign_pairs: summary.stationary_same_sign_pairs,
+        oscillating_opposite_sign_pairs: summary.oscillating_opposite_sign_pairs,
+        shift_subspace_energy: summary.shift_subspace_energy,
+        cauchy_square_bound,
+        trivial_square_bound,
+    })
+}
+
 fn inverse_mobius_fourier_weight(interval_degree: usize) -> Result<i128, HayesError> {
     i128::try_from(interval_degree)
         .ok()
@@ -7002,6 +7310,77 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn berlekamp_inverse_phase_reports_exact_shift_fibres() {
+        let limits = HayesLimits::default();
+        let ell = 4;
+        let degree = 9;
+        let frequency = 12;
+        let no_shift =
+            binary_berlekamp_inverse_phase_report(ell, degree, frequency, 0, limits).unwrap();
+        let middle_shift =
+            binary_berlekamp_inverse_phase_report(ell, degree, frequency, 4, limits).unwrap();
+        let full_shift =
+            binary_berlekamp_inverse_phase_report(ell, degree, frequency, degree - 1, limits)
+                .unwrap();
+        assert_eq!(no_shift.input_count, 256);
+        assert_eq!(no_shift.squarefree_count, 171);
+        assert_eq!(no_shift.phase_sum, -19);
+        assert_eq!(no_shift.shift_subspace_energy, 171);
+        assert_eq!(no_shift.cauchy_square_bound, 43_776);
+        assert_eq!(middle_shift.stationary_same_sign_pairs, 1_041);
+        assert_eq!(middle_shift.oscillating_opposite_sign_pairs, 796);
+        assert_eq!(middle_shift.shift_subspace_energy, 245);
+        assert_eq!(middle_shift.cauchy_square_bound, 3_920);
+        assert_eq!(full_shift.shift_subspace_energy, 361);
+        assert_eq!(full_shift.cauchy_square_bound, 361);
+        assert_eq!(full_shift.phase_sum.unsigned_abs().pow(2), 361);
+        assert!(!no_shift.improves_trivial_bound());
+        assert!(middle_shift.improves_trivial_bound());
+        assert!(full_shift.improves_trivial_bound());
+        for candidate_frequency in 0..1 << ell {
+            assert!(
+                binary_berlekamp_inverse_phase_report(ell, degree, candidate_frequency, 4, limits,)
+                    .unwrap()
+                    .improves_trivial_bound(),
+                "frequency={candidate_frequency}"
+            );
+        }
+
+        let current =
+            binary_berlekamp_inverse_phase_report(ell, degree, frequency, degree - 1, limits)
+                .unwrap();
+        let previous =
+            binary_berlekamp_inverse_phase_report(ell, degree - 1, frequency, degree - 2, limits)
+                .unwrap();
+        let spectrum = inverse_additive_mobius_spectrum(ell, degree, limits).unwrap();
+        assert_eq!(
+            current.phase_sum - previous.phase_sum,
+            spectrum.values[frequency]
+        );
+
+        assert!(matches!(
+            binary_berlekamp_inverse_phase_report(ell, degree, 1 << ell, 1, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            binary_berlekamp_inverse_phase_report(ell, degree, 0, degree, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        let starved = HayesLimits {
+            max_table_cells: 100,
+            ..limits
+        };
+        assert_eq!(
+            binary_berlekamp_inverse_phase_report(ell, degree, frequency, 4, starved),
+            Err(HayesError::ResourceLimit {
+                resource: "table_cells",
+                requested: 224,
+                limit: 100,
+            })
+        );
     }
 
     #[test]
