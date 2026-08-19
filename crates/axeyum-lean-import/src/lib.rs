@@ -144,6 +144,142 @@ pub struct CompletedImport {
     report: ImportReport,
 }
 
+/// One proof-isolated proposition imported as the value of a transparent
+/// `definition : Prop`.
+///
+/// Unlike importing an axiom or theorem, this publishes the proposition as a
+/// goal expression without adding a proof of that proposition to the checked
+/// environment. Construction is available only through
+/// [`import_statement_ndjson`], which rejects every axiom, theorem, opaque, and
+/// quotient declaration in the delivered stream.
+#[derive(Debug)]
+pub struct CompletedStatementImport {
+    kernel: Kernel,
+    report: ImportReport,
+    target_name: NameId,
+    goal: ExprId,
+}
+
+impl CompletedStatementImport {
+    /// Borrow the independently checked environment containing the goal's
+    /// definition dependencies but no trusted or proof-bearing declaration.
+    #[must_use]
+    pub fn kernel(&self) -> &Kernel {
+        &self.kernel
+    }
+
+    /// The checked proposition to hand to an untrusted proof producer.
+    #[must_use]
+    pub fn goal(&self) -> ExprId {
+        self.goal
+    }
+
+    /// The target definition name in this import's kernel arena.
+    #[must_use]
+    pub fn target_name(&self) -> NameId {
+        self.target_name
+    }
+
+    /// The completed import inventory and canonical declaration identities.
+    #[must_use]
+    pub fn report(&self) -> &ImportReport {
+        &self.report
+    }
+}
+
+/// A stream failed the stronger proof-isolated statement-adapter contract.
+#[derive(Debug)]
+pub enum StatementImportError {
+    /// The ordinary fail-closed wire import failed.
+    Import(ImportError),
+    /// The exact target declaration was absent or repeated.
+    TargetCardinality {
+        /// Exact requested rendered declaration name.
+        target: String,
+        /// Number of matching declarations.
+        observed: usize,
+    },
+    /// The target was not a transparent definition with no universe parameters.
+    TargetNotDefinition {
+        /// Exact requested rendered declaration name.
+        target: String,
+        /// Observed declaration kind.
+        kind: DeclarationKind,
+    },
+    /// The target definition is universe-polymorphic; v1 goal receipts require
+    /// one closed proposition identity.
+    TargetUniverseParameters {
+        /// Exact requested rendered declaration name.
+        target: String,
+        /// Number of universe parameters on the target.
+        observed: usize,
+    },
+    /// A proof-bearing or trusted declaration entered the statement stream.
+    TrustedDeclaration {
+        /// Exact rendered declaration name.
+        name: String,
+        /// Rejected declaration kind.
+        kind: DeclarationKind,
+    },
+    /// The target definition's value is not independently checked to inhabit
+    /// `Prop`.
+    GoalNotProp {
+        /// Exact requested rendered declaration name.
+        target: String,
+    },
+}
+
+impl fmt::Display for StatementImportError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Import(error) => write!(f, "statement wire import failed: {error}"),
+            Self::TargetCardinality { target, observed } => {
+                write!(
+                    f,
+                    "statement target {target:?} occurs {observed} times; expected one"
+                )
+            }
+            Self::TargetNotDefinition { target, kind } => {
+                write!(
+                    f,
+                    "statement target {target:?} is {kind:?}, not a definition"
+                )
+            }
+            Self::TargetUniverseParameters { target, observed } => write!(
+                f,
+                "statement target {target:?} has {observed} universe parameters; expected none"
+            ),
+            Self::TrustedDeclaration { name, kind } => {
+                write!(
+                    f,
+                    "statement stream contains trusted declaration {name:?} ({kind:?})"
+                )
+            }
+            Self::GoalNotProp { target } => {
+                write!(
+                    f,
+                    "statement target {target:?} does not contain a Prop-valued goal"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for StatementImportError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Import(error) => Some(error),
+            _ => None,
+        }
+    }
+}
+
+impl From<ImportError> for StatementImportError {
+    fn from(error: ImportError) -> Self {
+        Self::Import(error)
+    }
+}
+
 impl CompletedImport {
     /// Borrow the independently checked completed environment.
     #[must_use]
@@ -1534,6 +1670,98 @@ pub fn import_ndjson<R: BufRead>(
     let mut kernel = Kernel::new();
     let report = import_into_staging_kernel(reader, &mut kernel, limits)?;
     Ok(CompletedImport { kernel, report })
+}
+
+/// Import one proof-free statement stream and publish its checked target
+/// proposition as a goal.
+///
+/// The target must be the sole declaration with `target`'s rendered name, must
+/// be a non-universe-polymorphic transparent definition, and its definition
+/// value must independently infer to `Prop`. The entire stream is rejected if
+/// it contains an axiom, theorem, opaque declaration, or quotient primitive;
+/// this prevents a statement adapter from smuggling either the target answer
+/// or an unrelated trusted assumption into the producer environment.
+///
+/// # Errors
+///
+/// Returns [`StatementImportError`] for any ordinary wire/import failure or
+/// violation of the stronger proof-isolation contract.
+pub fn import_statement_ndjson<R: BufRead>(
+    reader: R,
+    limits: ImportLimits,
+    target: &str,
+) -> Result<CompletedStatementImport, StatementImportError> {
+    let completed = import_ndjson(reader, limits)?;
+    let (mut kernel, report) = completed.into_parts();
+
+    for identity in &report.declaration_identities {
+        if matches!(
+            identity.kind,
+            DeclarationKind::Axiom
+                | DeclarationKind::Theorem
+                | DeclarationKind::Opaque
+                | DeclarationKind::Quotient
+        ) {
+            return Err(StatementImportError::TrustedDeclaration {
+                name: identity.name.clone(),
+                kind: identity.kind,
+            });
+        }
+    }
+
+    let matches: Vec<_> = kernel
+        .environment()
+        .iter()
+        .filter(|(name, _)| kernel.display_name(**name).to_string() == target)
+        .map(|(name, declaration)| (*name, declaration.clone()))
+        .collect();
+    if matches.len() != 1 {
+        return Err(StatementImportError::TargetCardinality {
+            target: target.to_owned(),
+            observed: matches.len(),
+        });
+    }
+    let (target_name, declaration) = &matches[0];
+    let Declaration::Definition { uparams, value, .. } = declaration else {
+        let kind = report
+            .declaration_identities
+            .iter()
+            .find(|identity| identity.name == target)
+            .map(|identity| identity.kind)
+            .ok_or_else(|| StatementImportError::TargetCardinality {
+                target: target.to_owned(),
+                observed: 0,
+            })?;
+        return Err(StatementImportError::TargetNotDefinition {
+            target: target.to_owned(),
+            kind,
+        });
+    };
+    if !uparams.is_empty() {
+        return Err(StatementImportError::TargetUniverseParameters {
+            target: target.to_owned(),
+            observed: uparams.len(),
+        });
+    }
+    let goal = *value;
+    let inferred = kernel
+        .infer(goal)
+        .map_err(|_| StatementImportError::GoalNotProp {
+            target: target.to_owned(),
+        })?;
+    let zero = kernel.level_zero();
+    let prop = kernel.sort(zero);
+    if !kernel.def_eq(inferred, prop) {
+        return Err(StatementImportError::GoalNotProp {
+            target: target.to_owned(),
+        });
+    }
+    Ok(CompletedStatementImport {
+        kernel,
+        report,
+        target_name: *target_name,
+        goal,
+    })
 }
 
 /// Read and translate one stream, recording every **kernel decline** instead of

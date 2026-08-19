@@ -5,12 +5,14 @@ Date: 2026-08-18
 ## Result
 
 The first post-freeze census inspected all 138 train and development contracts
-and deliberately inspected none of the 76 held-out contracts. Zero facts were
-eligible for authoritative dispatch. All 138 declined before execution for the
-same typed reason:
+and deliberately inspected none of the 76 held-out contracts. Zero facts are
+eligible for authoritative dispatch. The initial census had all 138 decline on
+surface syntax. After the first statement-adapter increment, the same frozen
+population separates into:
 
 ```text
-unsupported-formal-language:lean4-surface
+unsupported-formal-language:lean4-surface                 137
+statement-adapter-ready:no-authoritative-producer           1
 ```
 
 No producer ran, no executor budget was consumed, no proof body or target
@@ -23,8 +25,9 @@ is
 “Axeyum failed to prove 138 theorems” would be false. The theorem statements
 have only crossed the proof-free Mathlib syntax/type boundary. Current
 authoritative operations accept exact preregistered facts in `lean4` kernel
-form or `smtlib2`; none accepts the catalog's `lean4-surface` goal language.
-The machine therefore has no typed goal to give a producer.
+form or `smtlib2`. One proposition now has an independently checked kernel goal,
+but it deliberately remains non-dispatchable until a producer and checker are
+registered. The remaining 137 have no typed goal to give a producer.
 
 This changes the immediate sequence. Building induction search, library
 retrieval, or tactic planning first would produce machinery with no legitimate

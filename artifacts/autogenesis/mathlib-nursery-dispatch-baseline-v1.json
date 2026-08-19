@@ -11,7 +11,10 @@
     ],
     "held_out_inspected": false,
     "proof_bodies_accessed": false,
-    "target_outcomes_accessed": false
+    "target_outcomes_accessed": false,
+    "statement_adapter_fact_ids": [
+      "F:ml430-nat-ascfactorial-zero-fd183202"
+    ]
   },
   "budget": {
     "candidate_inspection_limit": 138,
@@ -23,7 +26,8 @@
     "eligible_for_dispatch": 0,
     "declined_before_execution": 138,
     "decline_reasons": {
-      "unsupported-formal-language:lean4-surface": 138
+      "statement-adapter-ready:no-authoritative-producer": 1,
+      "unsupported-formal-language:lean4-surface": 137
     },
     "families": {
       "integer-fibonacci": {
@@ -39,7 +43,8 @@
         "unsupported-formal-language:lean4-surface": 19
       },
       "natural-factorial": {
-        "unsupported-formal-language:lean4-surface": 15
+        "statement-adapter-ready:no-authoritative-producer": 1,
+        "unsupported-formal-language:lean4-surface": 14
       },
       "natural-fibonacci": {
         "unsupported-formal-language:lean4-surface": 16
@@ -62,7 +67,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
@@ -73,7 +79,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
@@ -84,7 +91,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
@@ -95,7 +103,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-add-181b6a2c",
@@ -106,7 +115,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-add-one-33f1b748",
@@ -117,7 +127,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-add-two-739358dd",
@@ -128,7 +139,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-dvd-ffb3c5c1",
@@ -139,7 +151,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
@@ -150,7 +163,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-eq-zero-8193c7cb",
@@ -161,7 +175,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-gcd-3a8bfdec",
@@ -172,7 +187,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-natcast-d5886be4",
@@ -183,7 +199,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-neg-b4021d37",
@@ -194,7 +211,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-of-nonneg-438018c5",
@@ -205,7 +223,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-of-odd-66560495",
@@ -216,7 +235,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-two-mul-0e70f3dd",
@@ -227,7 +247,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
@@ -238,7 +259,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-fib-two-mul-add-two-0ba4a948",
@@ -249,7 +271,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-gcd-div-5e01872f",
@@ -260,7 +283,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
@@ -271,7 +295,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
@@ -282,7 +307,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
@@ -293,7 +319,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
@@ -304,7 +331,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-gcd-fib-73bdafc2",
@@ -315,7 +343,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-gcd-greatest-5b31c5fe",
@@ -326,7 +355,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-mod-modeq-6bec7847",
@@ -337,7 +367,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-add-left-6e17c69a",
@@ -348,7 +379,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-add-left-cancel-062ad5fe",
@@ -359,7 +391,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-comm-1e4bcc07",
@@ -370,7 +403,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
@@ -381,7 +415,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-neg-d6ff57b6",
@@ -392,7 +427,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
@@ -403,7 +439,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-of-dvd-b9c41fce",
@@ -414,7 +451,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-of-mul-left-c4ccd51e",
@@ -425,7 +463,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-of-mul-right-c92b7bf0",
@@ -436,7 +475,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-one-01d9de39",
@@ -447,7 +487,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-refl-30e15520",
@@ -458,7 +499,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-sub-3148f130",
@@ -469,7 +511,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-symm-984a6e67",
@@ -480,7 +523,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modeq-trans-6d7863e0",
@@ -491,7 +535,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
@@ -502,7 +547,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-ne-zero-of-gcd-f71f00df",
@@ -513,7 +559,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-int-neg-modeq-neg-30d98479",
@@ -524,7 +571,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
@@ -535,7 +583,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-mutation-48fe130e2b8eadb6f626b66f",
@@ -546,7 +595,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-mutation-5179f333b8333ecff8adc223",
@@ -557,7 +607,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-mutation-7afa5ec620720a1501bf349d",
@@ -568,7 +619,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
@@ -579,7 +631,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-mutation-aabb80b1f89f0c5847364692",
@@ -590,7 +643,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
@@ -601,7 +655,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-mutation-c86940b52af8159ca9b381d6",
@@ -612,7 +667,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
@@ -623,7 +679,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
@@ -634,7 +691,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
@@ -643,9 +701,10 @@
       "formal_language": "lean4-surface",
       "fragment": "Nat",
       "outcome": "declined-before-execution",
-      "decline_reason": "unsupported-formal-language:lean4-surface",
+      "decline_reason": "statement-adapter-ready:no-authoritative-producer",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": true
     },
     {
       "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",
@@ -656,7 +715,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-bitwise-comm-1a273bae",
@@ -667,7 +727,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-bitwise-swap-7175e90e",
@@ -678,7 +739,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-coprime-odd-of-left-ed80ab44",
@@ -689,7 +751,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-coprime-odd-of-right-8dc1decc",
@@ -700,7 +763,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-coprime-of-dvd-6f652673",
@@ -711,7 +775,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
@@ -722,7 +787,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-coprime-of-lt-prime-1978a919",
@@ -733,7 +799,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
@@ -744,7 +811,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-coprime-primes-5769049f",
@@ -755,7 +823,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-coprime-two-left-1b47e7c4",
@@ -766,7 +835,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-coprime-two-right-7c5a1850",
@@ -777,7 +847,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
@@ -788,7 +859,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
@@ -799,7 +871,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
@@ -810,7 +883,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
@@ -821,7 +895,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
@@ -832,7 +907,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
@@ -843,7 +919,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-even-xor-78a39432",
@@ -854,7 +931,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e",
@@ -865,7 +943,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-factorial-dvd-factorial-e9d14845",
@@ -876,7 +955,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-factorial-le-d0f4a912",
@@ -887,7 +967,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
@@ -898,7 +979,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
@@ -909,7 +991,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
@@ -920,7 +1003,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
@@ -931,7 +1015,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
@@ -942,7 +1027,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
@@ -953,7 +1039,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
@@ -964,7 +1051,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fib-dvd-f80f3de1",
@@ -975,7 +1063,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fib-eq-zero-61879073",
@@ -986,7 +1075,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fib-gcd-d1d98407",
@@ -997,7 +1087,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
@@ -1008,7 +1099,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fib-lt-fib-3582b881",
@@ -1019,7 +1111,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fib-mono-cc6afe09",
@@ -1030,7 +1123,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fib-pos-9e67bd8e",
@@ -1041,7 +1135,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-fib-strictmonoon-905810a9",
@@ -1052,7 +1147,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
@@ -1063,7 +1159,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-land-assoc-ad4775b8",
@@ -1074,7 +1171,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-land-bit-b9ab7475",
@@ -1085,7 +1183,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-land-comm-7e6ad72e",
@@ -1096,7 +1195,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-ldiff-bit-6be49bb8",
@@ -1107,7 +1207,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-le-fib-add-one-5284f0bf",
@@ -1118,7 +1219,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-le-fib-self-0cbccb4d",
@@ -1129,7 +1231,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-lor-assoc-82c4d0fd",
@@ -1140,7 +1243,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-lor-bit-a2f98c7c",
@@ -1151,7 +1255,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-lor-comm-2666d7ef",
@@ -1162,7 +1267,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-lt-of-testbit-72f64ab8",
@@ -1173,7 +1279,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-lt-xor-cases-c43a1e85",
@@ -1184,7 +1291,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-mod-lcm-ee6bdd41",
@@ -1195,7 +1303,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-mod-modeq-436e4c10",
@@ -1206,7 +1315,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
@@ -1217,7 +1327,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-add-left-e83f0700",
@@ -1228,7 +1339,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-add-right-8e2ca0cc",
@@ -1239,7 +1351,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-add-right-cancel-e871facf",
@@ -1250,7 +1363,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-comm-24b71e7a",
@@ -1261,7 +1375,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-dvd-iff-8f130450",
@@ -1272,7 +1387,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-gcd-eq-5167ff4f",
@@ -1283,7 +1399,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-of-dvd-d75cc374",
@@ -1294,7 +1411,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-of-mul-left-88d20bca",
@@ -1305,7 +1423,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-of-mul-right-43078e1c",
@@ -1316,7 +1435,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-one-516d46e8",
@@ -1327,7 +1447,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
@@ -1338,7 +1459,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
@@ -1349,7 +1471,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
@@ -1360,7 +1483,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
@@ -1371,7 +1495,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
@@ -1382,7 +1507,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-one-ascfactorial-8bacb017",
@@ -1393,7 +1519,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
@@ -1404,7 +1531,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439",
@@ -1415,7 +1543,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-prime-dvd-of-dvd-pow-e76f834a",
@@ -1426,7 +1555,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-prime-even-iff-d068ec82",
@@ -1437,7 +1567,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786",
@@ -1448,7 +1579,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
@@ -1459,7 +1591,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
@@ -1470,7 +1603,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-prime-pred-pos-4e67ac4c",
@@ -1481,7 +1615,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-self-le-factorial-cfdffc69",
@@ -1492,7 +1627,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-succ-pred-prime-4feb123f",
@@ -1503,7 +1639,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-testbit-eq-inth-ffa07392",
@@ -1514,7 +1651,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
@@ -1525,7 +1663,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
@@ -1536,7 +1675,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-testbit-lor-7644e067",
@@ -1547,7 +1687,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
@@ -1558,7 +1699,8 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     },
     {
       "fact_id": "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1",
@@ -1569,9 +1711,10 @@
       "outcome": "declined-before-execution",
       "decline_reason": "unsupported-formal-language:lean4-surface",
       "registered_operation_ids": [],
-      "executor_budget_consumed": 0
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false
     }
   ],
   "interpretation": "This is a dispatch-contract census, not a proof episode or theorem outcome. A pre-execution decline consumes no producer budget and earns no proof credit.",
-  "baseline_sha256": "327fa2191054c71ad826593f38e050e5fdaa55768490942fde5d884b7d294fbd"
+  "baseline_sha256": "dce35a757261a833e3039e5dfd1caf047613ac29ff840851d4367288c1bf328d"
 }

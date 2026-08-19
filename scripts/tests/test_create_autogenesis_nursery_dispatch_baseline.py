@@ -25,12 +25,15 @@ class DispatchBaselineTests(unittest.TestCase):
         self.assertEqual({row["partition"] for row in result["rows"]}, {"train", "development"})
         self.assertEqual(result["coverage"]["candidates"], 138)
 
-    def test_current_population_declines_before_execution_on_surface_language(self) -> None:
+    def test_current_population_separates_adapter_ready_from_unsupported(self) -> None:
         result = MODULE.build(self.nursery, self.registry, self.facts)
         self.assertEqual(result["coverage"]["eligible_for_dispatch"], 0)
         self.assertEqual(
             result["coverage"]["decline_reasons"],
-            {"unsupported-formal-language:lean4-surface": 138},
+            {
+                "statement-adapter-ready:no-authoritative-producer": 1,
+                "unsupported-formal-language:lean4-surface": 137,
+            },
         )
         self.assertEqual(result["budget"]["executor_invocations"], 0)
 
@@ -45,6 +48,13 @@ class DispatchBaselineTests(unittest.TestCase):
             },
         }
         self.assertEqual(MODULE.classify(fact, [operation]), ("dispatchable", ["op"]))
+
+    def test_adapter_readiness_does_not_claim_dispatch(self) -> None:
+        fact = {"id": "F:x", "formal": {"language": "lean4-surface", "fragment": "Nat"}}
+        self.assertEqual(
+            MODULE.classify(fact, [], {"F:x"}),
+            ("statement-adapter-ready:no-authoritative-producer", []),
+        )
 
     def test_population_drift_fails_closed(self) -> None:
         nursery = copy.deepcopy(self.nursery)

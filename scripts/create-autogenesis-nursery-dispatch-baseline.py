@@ -17,6 +17,7 @@ NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
 OPERATIONS = ROOT / "artifacts/autogenesis/operations.json"
 FACTS = ROOT / "artifacts/facts"
 OUTPUT = ROOT / "artifacts/autogenesis/mathlib-nursery-dispatch-baseline-v1.json"
+STATEMENT_ADAPTERS = ROOT / "artifacts/autogenesis"
 PARTITIONS = {"train", "development"}
 
 
@@ -39,7 +40,9 @@ def load(path: pathlib.Path) -> dict[str, Any]:
     return value
 
 
-def classify(fact: dict[str, Any], operations: list[dict[str, Any]]) -> tuple[str, list[str]]:
+def classify(
+    fact: dict[str, Any], operations: list[dict[str, Any]], adapted_fact_ids: set[str] | None = None
+) -> tuple[str, list[str]]:
     language = fact["formal"]["language"]
     fragment = fact["formal"]["fragment"]
     exact_fact = [op for op in operations if fact["id"] in op["applicability"]["fact_ids"]]
@@ -50,6 +53,8 @@ def classify(fact: dict[str, Any], operations: list[dict[str, Any]]) -> tuple[st
     ]
     if exact:
         return "dispatchable", sorted(op["id"] for op in exact)
+    if fact["id"] in (adapted_fact_ids or set()):
+        return "statement-adapter-ready:no-authoritative-producer", []
     if not any(language in op["applicability"]["formal_languages"] for op in operations):
         return f"unsupported-formal-language:{language}", []
     if exact_fact:
@@ -61,6 +66,15 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
     if nursery.get("state") != "frozen-evaluation":
         raise BaselineError("nursery is not frozen")
     operations = [op for op in registry.get("operations", []) if op.get("scope") == "authoritative"]
+    adapter_manifests = [
+        load(path)
+        for path in sorted(STATEMENT_ADAPTERS.glob("*-statement-adapter-v1.json"))
+    ]
+    adapted_fact_ids = {
+        manifest["source_fact_id"]
+        for manifest in adapter_manifests
+        if manifest.get("state") == "independent-kernel-goal-admitted-proof-free"
+    }
     entries = [row for row in nursery.get("entries", []) if row.get("partition") in PARTITIONS]
     if len(entries) != 138:
         raise BaselineError(f"expected 138 train/development entries, found {len(entries)}")
@@ -74,7 +88,7 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
         fact = facts.get(entry["fact_id"])
         if fact is None:
             raise BaselineError(f"missing fact {entry['fact_id']}")
-        reason, operation_ids = classify(fact, operations)
+        reason, operation_ids = classify(fact, operations, adapted_fact_ids)
         outcome = "eligible-for-dispatch" if reason == "dispatchable" else "declined-before-execution"
         reasons[reason] += 1
         by_family[entry["family"]][reason] += 1
@@ -88,6 +102,7 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
             "decline_reason": None if reason == "dispatchable" else reason,
             "registered_operation_ids": operation_ids,
             "executor_budget_consumed": 0,
+            "statement_adapter_ready": entry["fact_id"] in adapted_fact_ids,
         })
     result: dict[str, Any] = {
         "schema_version": 1,
@@ -100,6 +115,7 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
             "held_out_inspected": False,
             "proof_bodies_accessed": False,
             "target_outcomes_accessed": False,
+            "statement_adapter_fact_ids": sorted(adapted_fact_ids & {row["fact_id"] for row in entries}),
         },
         "budget": {
             "candidate_inspection_limit": 138,

@@ -37,6 +37,16 @@ A row declined before execution is not a proof attempt and consumes zero
 producer budget. The distinction prevents missing adapters from being reported
 as solver failures.
 
+`mathlib-statement-adapter-v1.json` binds the first proof-isolated surface-to-
+kernel goal. Its target proposition is encoded as a transparent `Prop`
+definition, never an axiom or theorem. The checker rehashes the immutable
+external export, independently imports it, rejects any trusted/proof-bearing
+declaration, and pins the resulting goal identity:
+
+```sh
+python3 scripts/check-autogenesis-statement-adapter.py
+```
+
 `mathlib-statement-source-v1.json` binds the external statement-only Mathlib
 v4.30.0 inventory. Bulk NDJSON stays on `/nas3`; Git retains the extractor,
 source identity, selection policy, and small derived candidate view. Neither an
