@@ -72,6 +72,22 @@ lemma.
 - Pollack's prescribed-coefficient results do not reach this fixed-field
   half-degree boundary: [Irreducible polynomials with several prescribed
   coefficients](https://arxiv.org/abs/1601.06867).
+- A sentence in Gao, Howell, and Panario's 1999 survey says that Hsu's theorem
+  permits the lower or higher "half" of the coefficients to be fixed. The
+  explicit bound is not an endpoint existence theorem for fixed `q = 2`.
+  Car's restatement of Hsu gives, for `k` prescribed leading coefficients and
+  no trailing congruence,
+
+  ```text
+  n I(n; k) >= q^(n-k) - (1-q^(-k))(k+3)q^(n/2).
+  ```
+
+  At `k = ceil(n/2)-1` this lower bound is negative for all sufficiently large
+  `n` when `q = 2`. Thus the survey's informal "half" must not be cited as a
+  proof of this conjecture. See Hsu,
+  [The Distribution of Irreducible Polynomials in
+  F_q[t]](https://doi.org/10.1006/jnth.1996.0139), and Car's explicit
+  [restatement](https://eudml.org/doc/207235).
 - Gao, Kuttner, and Wang's exact Hayes-class formulas reach the relevant
   parameter boundary and are the best current attack surface:
   [Counting irreducible polynomials with prescribed coefficients over a finite
@@ -80,6 +96,12 @@ lemma.
   positivity here. With `ell = ceil(n/2) - 1`, `q = 2`, and the identity type-II
   class, the main term and the published absolute error are of the same
   exponential order; the coefficient multiplying the error is too large.
+- Gao's 2023 follow-up obtains existence with *roughly* half the coefficients
+  prescribed, including positions near the middle, but does not state the exact
+  all-degree fixed-`GF(2)` endpoint needed here: [New Estimates and Existence
+  Results About Irreducible Polynomials and Self-Reciprocal Irreducible
+  Polynomials with Prescribed Coefficients Over a Finite
+  Field](https://doi.org/10.1007/s44007-023-00062-1).
 
 ### Exact integral specialization
 
