@@ -158,6 +158,8 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `07ed9bb8d` | Rejected direct magic-square gcd matrices for the full connected character tuple, then added an exact local Witt-cylinder concentration ledger whose root and singleton boundaries independently recover the fourth/second moments. |
+| 2026-08-19 | `1a75298ea` | Expanded every endpoint discrepancy by convolution order, subtracted all three Wick pairings cellwise, and exactly reconstructed the connected fourth cumulant as the signed symmetric order tensor required for gcd stratification. |
 | 2026-08-19 | `1b4d42d60` | Applied the exact primitive modulo-eight autocorrelation criterion to every affine fibre, found zero generalized-bent fibres in the pinned obstruction, and pivoted from fibrewise Heisenberg rank to connected fourth-cumulant/gcd strata. |
 | 2026-08-19 | `8e3ec9324` | Rejected positive four-phase complementarity by exact integer autocorrelation, pinned the large off-identity mass, and preserved the indefinite Gauss combination as the only viable phase-level input. |
 | 2026-08-19 | `09d70c7f5` | Retained the full modulo-eight phase in the connected Witt object, reconstructed the signed spectrum by a mutation-checked four-phase Gauss identity, and showed every primitive additive phase still has full Fourier support in the pinned witness. |
@@ -544,7 +546,20 @@ autocorrelation test now supplies that stopping result: zero of `18,884`
 original affine fibres are generalized bent in the pinned row, despite
 `16,587` having at-most-quadratic ANF.  The simple fibrewise Gauss/Heisenberg
 route is therefore closed, and connected fourth-cumulant/gcd stratification is
-the active bounded task.
+the active bounded task.  The class discrepancy is now decomposed exactly into
+all convolution-order vectors, with the three Wick pairings subtracted in
+every symmetric fourth-order tensor cell.  Multiplicity-weighted cells
+reconstruct the direct cumulant.  At `(ell,n)=(9,19)`, individual connected
+cells are over thirty times larger than their signed total, confirming that
+gcd strata must be recombined across orders before absolute values.
+The primary-source audit then closed a direct magic-square implementation:
+those gcd matrices parametrize a two-sided product equation from one character
+and its conjugate, whereas the connected remainder has four characters subject
+only to one product constraint after its pairing diagonals are removed.  The
+whole-cumulant route is now the exact conductor martingale.  A new local
+Witt-cylinder ledger measures its exact fourth-over-second concentration; the
+pinned odd row has root ratio about `2.813` and worst local ratio below `5.92`,
+making a uniform ceiling of eight the current fleet-tested Carleson target.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
