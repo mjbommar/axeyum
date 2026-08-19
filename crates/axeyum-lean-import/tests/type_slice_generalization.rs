@@ -8,8 +8,8 @@ use axeyum_lean_import::{
     select_definition_abstractions_v1, verify_generalized_specialization,
 };
 use axeyum_lean_kernel::{
-    Declaration, ExprId, Kernel, Lean4ExportMetadata, LogicPrelude, NameId, ReducibilityHint,
-    build_logic_prelude,
+    BinderInfo, Declaration, ExprId, Kernel, Lean4ExportMetadata, LogicPrelude, NameId,
+    ReducibilityHint, build_logic_prelude,
 };
 use sha2::{Digest, Sha256};
 
@@ -533,4 +533,109 @@ fn hex_sha256(bytes: &[u8]) -> String {
             write!(output, "{byte:02x}").expect("writing to String cannot fail");
             output
         })
+}
+
+#[test]
+fn checked_auto_param_type_normalization_reimports_without_tactic_authority() {
+    let mut kernel = Kernel::new();
+    build_logic_prelude(&mut kernel).expect("logic prelude must build");
+    let anonymous = kernel.anon();
+    let lean = kernel.name_str(anonymous, "Lean");
+    let syntax = kernel.name_str(lean, "Syntax");
+    let tactic = kernel.name_str(anonymous, "testTactic");
+    let auto_param = kernel.name_str(anonymous, "autoParam");
+    let helper = kernel.name_str(anonymous, "AutoParamHelper");
+    let universe = kernel.name_str(anonymous, "u");
+    let alpha = kernel.name_str(anonymous, "alpha");
+    let tactic_binder = kernel.name_str(anonymous, "tactic");
+    let value_binder = kernel.name_str(anonymous, "p");
+    let zero = kernel.level_zero();
+    let one = kernel.level_succ(zero);
+    let sort_one = kernel.sort(one);
+    kernel
+        .add_declaration(Declaration::Axiom {
+            name: syntax,
+            uparams: vec![],
+            ty: sort_one,
+        })
+        .expect("Lean.Syntax control must admit");
+    let syntax_const = kernel.const_(syntax, vec![]);
+    kernel
+        .add_declaration(Declaration::Axiom {
+            name: tactic,
+            uparams: vec![],
+            ty: syntax_const,
+        })
+        .expect("tactic control must admit");
+    let u = kernel.level_param(universe);
+    let sort_u = kernel.sort(u);
+    let auto_result_sort = kernel.sort(u);
+    let auto_type_inner = kernel.pi(
+        tactic_binder,
+        syntax_const,
+        auto_result_sort,
+        BinderInfo::Default,
+    );
+    let auto_type = kernel.pi(alpha, sort_u, auto_type_inner, BinderInfo::Default);
+    let auto_result = kernel.bvar(1);
+    let auto_value_inner = kernel.lam(
+        tactic_binder,
+        syntax_const,
+        auto_result,
+        BinderInfo::Default,
+    );
+    let auto_value = kernel.lam(alpha, sort_u, auto_value_inner, BinderInfo::Default);
+    kernel
+        .add_declaration(Declaration::Definition {
+            name: auto_param,
+            uparams: vec![universe],
+            ty: auto_type,
+            value: auto_value,
+            hint: ReducibilityHint::Abbrev,
+        })
+        .expect("canonical autoParam must admit");
+    let auto = kernel.const_(auto_param, vec![one]);
+    let prop = kernel.sort_zero();
+    let with_type = kernel.app(auto, prop);
+    let tactic_const = kernel.const_(tactic, vec![]);
+    let annotated = kernel.app(with_type, tactic_const);
+    let helper_type = kernel.pi(value_binder, annotated, prop, BinderInfo::Default);
+    let helper_body = kernel.bvar(0);
+    let helper_value = kernel.lam(value_binder, prop, helper_body, BinderInfo::Default);
+    kernel
+        .add_declaration(Declaration::Definition {
+            name: helper,
+            uparams: vec![],
+            ty: helper_type,
+            value: helper_value,
+            hint: ReducibilityHint::Regular(0),
+        })
+        .expect("source helper must admit by delta reduction");
+
+    let (stream, report) = kernel
+        .render_lean4export_ndjson_roots_checked_auto_param_types(
+            &Lean4ExportMetadata::axeyum("4.30.0"),
+            &[helper],
+        )
+        .expect("checked normalized root must export");
+    assert_eq!(report.normalized_declarations, ["AutoParamHelper"]);
+    let completed = import_ndjson(Cursor::new(stream), ImportLimits::default())
+        .expect("ordinary importer must independently admit the normalized root");
+    assert_eq!(completed.report().admitted_declarations, 1);
+    assert!(completed.report().axioms.is_empty());
+    let (fresh, _) = completed.into_parts();
+    assert!(
+        fresh
+            .environment()
+            .get(find_name(&fresh, "AutoParamHelper"))
+            .is_some()
+    );
+    for excluded in ["autoParam", "Lean.Syntax", "testTactic"] {
+        assert!(
+            fresh
+                .environment()
+                .iter()
+                .all(|(&name, _)| fresh.display_name(name).to_string() != excluded)
+        );
+    }
 }

@@ -3,7 +3,9 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use axeyum_lean_kernel::{Declaration, ExprId, ExprNode, Kernel, NameId};
+use axeyum_lean_kernel::{
+    AutoParamTypeNormalizationReport, Declaration, ExprId, ExprNode, Kernel, NameId,
+};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -15,6 +17,32 @@ use crate::{
 
 /// Receipt schema emitted by [`issue_type_slice_receipt`].
 pub const TYPE_SLICE_RECEIPT_VERSION: &str = "axeyum-proof-free-type-slice-receipt-v1";
+/// Receipt schema for ADR-0485 checked type-only `autoParam` transport.
+pub const NORMALIZED_TYPE_SLICE_RECEIPT_VERSION: &str = "axeyum-proof-free-type-slice-receipt-v2";
+
+/// One source declaration and its independently admitted normalized identity.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeSliceNormalizedDeclarationReceipt {
+    /// Exact rendered declaration name.
+    pub name: String,
+    /// Canonical complete source declaration identity.
+    pub source_content_sha256: String,
+    /// Canonical complete normalized fresh declaration identity.
+    pub normalized_content_sha256: String,
+    /// Canonical normalized direct-dependency binding identity.
+    pub normalized_dependency_sha256: String,
+}
+
+/// Checked type-only normalization bound into a v2 slice receipt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeSliceTransportNormalizationReceipt {
+    /// Canonical source declaration identity of Lean 4.30's `autoParam` abbrev.
+    pub auto_param_source_content_sha256: String,
+    /// Unique saturated annotations rewritten across selected declaration types.
+    pub rewritten_occurrences: usize,
+    /// Every changed declaration, sorted by rendered name.
+    pub declarations: Vec<TypeSliceNormalizedDeclarationReceipt>,
+}
 
 /// Source stream and exact target identity bound by a type-slice receipt.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,6 +116,8 @@ pub struct TypeSliceReceipt {
     pub abstractions: Vec<TypeSliceAbstractionReceipt>,
     /// Complete canonically ordered fresh producer environment.
     pub retained: Vec<TypeSliceRetainedReceipt>,
+    /// Present only for the v2 checked type-only transport route.
+    pub transport_normalization: Option<TypeSliceTransportNormalizationReceipt>,
     /// True only after the kernel accepted exact specialization.
     pub specialization_verified: bool,
     /// SHA-256 of the canonical compact receipt payload excluding this field.
@@ -161,6 +191,32 @@ impl TypeSliceReceipt {
             "retained": retained,
             "specialization_verified": self.specialization_verified,
         });
+        if let Some(normalization) = &self.transport_normalization {
+            let declarations: Vec<_> = normalization
+                .declarations
+                .iter()
+                .map(|declaration| {
+                    json!({
+                        "name": declaration.name,
+                        "source_content_sha256": declaration.source_content_sha256,
+                        "normalized_content_sha256": declaration.normalized_content_sha256,
+                        "normalized_dependency_sha256": declaration.normalized_dependency_sha256,
+                    })
+                })
+                .collect();
+            value
+                .as_object_mut()
+                .expect("receipt JSON root is an object")
+                .insert(
+                    "transport_normalization".to_owned(),
+                    json!({
+                        "kind": "checked-auto-param-type-only-v1",
+                        "auto_param_source_content_sha256": normalization.auto_param_source_content_sha256,
+                        "rewritten_occurrences": normalization.rewritten_occurrences,
+                        "declarations": declarations,
+                    }),
+                );
+        }
         if include_digest {
             value
                 .as_object_mut()
@@ -218,6 +274,12 @@ pub enum TypeSliceReceiptError {
         /// Stable declaration kind.
         kind: DeclarationKind,
     },
+    /// A supplied checked normalization report was empty or internally
+    /// inconsistent with the source and fresh identity manifests.
+    NormalizationIdentity {
+        /// Stable diagnostic.
+        reason: String,
+    },
     /// Expanded occurrence counting exceeded `u64`.
     OccurrenceOverflow,
     /// Canonical identity construction failed.
@@ -264,6 +326,9 @@ impl fmt::Display for TypeSliceReceiptError {
             Self::TrustedFreshDeclaration { name, kind } => {
                 write!(f, "fresh environment retained trusted {kind:?} {name}")
             }
+            Self::NormalizationIdentity { reason } => {
+                write!(f, "transport normalization identity failed: {reason}")
+            }
             Self::OccurrenceOverflow => write!(f, "source occurrence count overflowed u64"),
             Self::Identity(error) => write!(f, "canonical identity failed: {error}"),
             Self::Slice(error) => write!(f, "type-slice check failed: {error}"),
@@ -301,6 +366,66 @@ pub fn issue_type_slice_receipt(
     source_arguments: &[ExprId],
     fresh: &CompletedStatementImport,
     policy_version: &str,
+) -> Result<TypeSliceReceipt, TypeSliceReceiptError> {
+    issue_type_slice_receipt_internal(
+        source_kernel,
+        source_report,
+        source_stream_sha256,
+        source_target,
+        source_goal,
+        generalized,
+        source_arguments,
+        fresh,
+        policy_version,
+        None,
+    )
+}
+
+/// Issue a v2 receipt that additionally binds one checked type-only
+/// `autoParam` normalization report to source and fresh declaration identities.
+///
+/// # Errors
+///
+/// Returns the v1 receipt errors or [`TypeSliceReceiptError::NormalizationIdentity`].
+#[allow(clippy::too_many_arguments)]
+pub fn issue_type_slice_receipt_with_auto_param_normalization(
+    source_kernel: &mut Kernel,
+    source_report: &ImportReport,
+    source_stream_sha256: &str,
+    source_target: NameId,
+    source_goal: ExprId,
+    generalized: &GeneralizedGoal,
+    source_arguments: &[ExprId],
+    fresh: &CompletedStatementImport,
+    policy_version: &str,
+    normalization: &AutoParamTypeNormalizationReport,
+) -> Result<TypeSliceReceipt, TypeSliceReceiptError> {
+    issue_type_slice_receipt_internal(
+        source_kernel,
+        source_report,
+        source_stream_sha256,
+        source_target,
+        source_goal,
+        generalized,
+        source_arguments,
+        fresh,
+        policy_version,
+        Some(normalization),
+    )
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn issue_type_slice_receipt_internal(
+    source_kernel: &mut Kernel,
+    source_report: &ImportReport,
+    source_stream_sha256: &str,
+    source_target: NameId,
+    source_goal: ExprId,
+    generalized: &GeneralizedGoal,
+    source_arguments: &[ExprId],
+    fresh: &CompletedStatementImport,
+    policy_version: &str,
+    normalization: Option<&AutoParamTypeNormalizationReport>,
 ) -> Result<TypeSliceReceipt, TypeSliceReceiptError> {
     if policy_version.is_empty() {
         return Err(TypeSliceReceiptError::EmptyPolicy);
@@ -465,8 +590,113 @@ pub fn issue_type_slice_receipt(
         });
     }
 
+    let transport_normalization = if let Some(normalization) = normalization {
+        if normalization.rewritten_occurrences == 0
+            || normalization.normalized_declarations.is_empty()
+            || !normalization
+                .normalized_declarations
+                .windows(2)
+                .all(|pair| pair[0] < pair[1])
+        {
+            return Err(TypeSliceReceiptError::NormalizationIdentity {
+                reason: "normalization report is empty, duplicated, or unordered".to_owned(),
+            });
+        }
+        let auto_param_name = source_kernel
+            .environment()
+            .iter()
+            .find_map(|(&name, _)| {
+                (source_kernel.display_name(name).to_string() == "autoParam").then_some(name)
+            })
+            .ok_or_else(|| TypeSliceReceiptError::NormalizationIdentity {
+                reason: "source autoParam declaration is absent".to_owned(),
+            })?;
+        let auto_param_matches: Vec<_> = source_report
+            .declaration_identities
+            .iter()
+            .filter(|identity| identity.name == "autoParam")
+            .collect();
+        if auto_param_matches.len() != 1 {
+            return Err(TypeSliceReceiptError::NormalizationIdentity {
+                reason: format!(
+                    "source autoParam identity cardinality is {}",
+                    auto_param_matches.len()
+                ),
+            });
+        }
+        let auto_param_source_content_sha256 =
+            canonical_declaration_sha256(source_kernel, auto_param_name)
+                .map_err(TypeSliceReceiptError::Identity)?;
+        if auto_param_source_content_sha256 != auto_param_matches[0].content_sha256 {
+            return Err(TypeSliceReceiptError::NormalizationIdentity {
+                reason: "source autoParam content identity changed".to_owned(),
+            });
+        }
+        let mut declarations = Vec::with_capacity(normalization.normalized_declarations.len());
+        for name in &normalization.normalized_declarations {
+            let source_name = source_kernel
+                .environment()
+                .iter()
+                .find_map(|(&candidate, _)| {
+                    (source_kernel.display_name(candidate).to_string() == *name)
+                        .then_some(candidate)
+                })
+                .ok_or_else(|| TypeSliceReceiptError::NormalizationIdentity {
+                    reason: format!("normalized source declaration {name} is absent"),
+                })?;
+            let source_matches: Vec<_> = source_report
+                .declaration_identities
+                .iter()
+                .filter(|identity| identity.name == *name)
+                .collect();
+            let fresh_matches: Vec<_> = fresh
+                .report()
+                .declaration_identities
+                .iter()
+                .filter(|identity| identity.name == *name)
+                .collect();
+            if source_matches.len() != 1 || fresh_matches.len() != 1 {
+                return Err(TypeSliceReceiptError::NormalizationIdentity {
+                    reason: format!(
+                        "normalized declaration {name} has source/fresh cardinality {}/{}",
+                        source_matches.len(),
+                        fresh_matches.len()
+                    ),
+                });
+            }
+            let source_content_sha256 = canonical_declaration_sha256(source_kernel, source_name)
+                .map_err(TypeSliceReceiptError::Identity)?;
+            if source_content_sha256 != source_matches[0].content_sha256
+                || source_content_sha256 == fresh_matches[0].content_sha256
+            {
+                return Err(TypeSliceReceiptError::NormalizationIdentity {
+                    reason: format!(
+                        "normalized declaration identity did not change exactly: {name}"
+                    ),
+                });
+            }
+            declarations.push(TypeSliceNormalizedDeclarationReceipt {
+                name: name.clone(),
+                source_content_sha256,
+                normalized_content_sha256: fresh_matches[0].content_sha256.clone(),
+                normalized_dependency_sha256: fresh_matches[0].dependency_sha256.clone(),
+            });
+        }
+        Some(TypeSliceTransportNormalizationReceipt {
+            auto_param_source_content_sha256,
+            rewritten_occurrences: normalization.rewritten_occurrences,
+            declarations,
+        })
+    } else {
+        None
+    };
+
     let mut receipt = TypeSliceReceipt {
-        schema_version: TYPE_SLICE_RECEIPT_VERSION,
+        schema_version: if transport_normalization.is_some() {
+            NORMALIZED_TYPE_SLICE_RECEIPT_VERSION
+        } else {
+            TYPE_SLICE_RECEIPT_VERSION
+        },
         policy_version: policy_version.to_owned(),
         source: TypeSliceSourceReceipt {
             stream_sha256: source_stream_sha256.to_owned(),
@@ -483,6 +713,7 @@ pub fn issue_type_slice_receipt(
         fresh_target_content_sha256: fresh_target_matches[0].content_sha256.clone(),
         abstractions,
         retained,
+        transport_normalization,
         specialization_verified: true,
         receipt_sha256: String::new(),
     };

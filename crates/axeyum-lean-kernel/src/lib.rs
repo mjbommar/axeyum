@@ -79,7 +79,9 @@ pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use inductive::InductiveFamilySpec;
 pub use int_prelude::{IntPrelude, build_int_prelude};
-pub use lean_export::{EXPORT_FORMAT_VERSION, ExportError, Lean4ExportMetadata};
+pub use lean_export::{
+    AutoParamTypeNormalizationReport, EXPORT_FORMAT_VERSION, ExportError, Lean4ExportMetadata,
+};
 pub use level::{LevelId, LevelNode};
 pub use name::{NameId, NameNode};
 pub use nat_prelude::{NatDev, NatOps, NatPrelude, NatState, build_nat_prelude};

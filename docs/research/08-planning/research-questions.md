@@ -816,6 +816,14 @@ Out of scope:
     package. Values, partial applications, other annotations, and arbitrary
     delta reduction remain exact. See
     [ADR-0485](../09-decisions/adr-0485-auto-param-erasure-is-checked-type-only-normalization.md).
+- [x] Does type-only `autoParam` erasure remove the trusted closure from
+      generated structure recursors, and if not, what is the narrow extension?
+  - Answer (2026-08-19): no. Lean copies the annotation into recursor-rule
+    lambda domains. Normalize only those binder domains, check each complete
+    source and normalized rule definitionally equal, share the normalized rule
+    between dependency selection and emission, and independently admit the
+    atomic package. Direct value occurrences remain exact. See
+    [ADR-0486](../09-decisions/adr-0486-auto-param-normalization-includes-checked-recursor-binder-domains.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?

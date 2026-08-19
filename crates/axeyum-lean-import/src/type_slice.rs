@@ -230,6 +230,13 @@ impl std::error::Error for TypeSliceError {}
 
 type InstanceKey = (NameId, Vec<LevelId>);
 
+#[derive(Clone, Copy)]
+enum ClosureNormalization {
+    Exact,
+    AutoParamTypes,
+    AutoParamBinders,
+}
+
 /// Conservatively select each ordinary definition instance whose complete
 /// implementation closure contains a trusted declaration and is reachable from
 /// a proposition or another selected instance's type, in dependency-first
@@ -251,6 +258,40 @@ pub fn select_definition_abstractions_v1(
     kernel: &mut Kernel,
     goal: ExprId,
 ) -> Result<Vec<ConstantInstance>, TypeSliceError> {
+    select_definition_abstractions(kernel, goal, ClosureNormalization::Exact)
+}
+
+/// Apply v1 selection after checked type-only normalization of canonical
+/// `autoParam` annotations in every retained atomic closure.
+///
+/// # Errors
+///
+/// Returns the v1 selection errors or a typed root-normalization diagnostic.
+pub fn select_definition_abstractions_auto_param_v2(
+    kernel: &mut Kernel,
+    goal: ExprId,
+) -> Result<Vec<ConstantInstance>, TypeSliceError> {
+    select_definition_abstractions(kernel, goal, ClosureNormalization::AutoParamTypes)
+}
+
+/// Apply v1 selection after checked normalization of canonical `autoParam`
+/// annotations in declaration types and recursor-rule binder domains.
+///
+/// # Errors
+///
+/// Returns the v1 selection errors or a typed binder-normalization diagnostic.
+pub fn select_definition_abstractions_auto_param_binders_v3(
+    kernel: &mut Kernel,
+    goal: ExprId,
+) -> Result<Vec<ConstantInstance>, TypeSliceError> {
+    select_definition_abstractions(kernel, goal, ClosureNormalization::AutoParamBinders)
+}
+
+fn select_definition_abstractions(
+    kernel: &mut Kernel,
+    goal: ExprId,
+    normalization: ClosureNormalization,
+) -> Result<Vec<ConstantInstance>, TypeSliceError> {
     ensure_closed(kernel, goal, "source goal")?;
     ensure_prop(kernel, goal, "source goal")?;
     let mut states = BTreeMap::new();
@@ -262,6 +303,7 @@ pub fn select_definition_abstractions_v1(
         &mut states,
         &mut trusted_closure_by_name,
         &mut ordered,
+        normalization,
     )?;
     Ok(ordered
         .into_iter()
@@ -279,6 +321,7 @@ fn select_from_expression(
     states: &mut BTreeMap<InstanceKey, u8>,
     trusted_closure_by_name: &mut BTreeMap<NameId, Option<(NameId, &'static str)>>,
     ordered: &mut Vec<InstanceKey>,
+    normalization: ClosureNormalization,
 ) -> Result<(), TypeSliceError> {
     match kernel.expr_node(expression).clone() {
         ExprNode::Const(name, levels) => {
@@ -289,10 +332,16 @@ fn select_from_expression(
                 states,
                 trusted_closure_by_name,
                 ordered,
+                normalization,
             )?;
         }
         ExprNode::Proj(type_name, _, structure) => {
-            let kind = declaration_selection_kind(kernel, type_name, trusted_closure_by_name)?;
+            let kind = declaration_selection_kind(
+                kernel,
+                type_name,
+                trusted_closure_by_name,
+                normalization,
+            )?;
             match kind {
                 SelectionKind::Definition => {
                     return Err(TypeSliceError::DefinitionProjectionType {
@@ -307,18 +356,46 @@ fn select_from_expression(
                 }
                 SelectionKind::Retain => {}
             }
-            select_from_expression(kernel, structure, states, trusted_closure_by_name, ordered)?;
+            select_from_expression(
+                kernel,
+                structure,
+                states,
+                trusted_closure_by_name,
+                ordered,
+                normalization,
+            )?;
         }
         ExprNode::App(function, argument)
         | ExprNode::Lam(_, function, argument, _)
         | ExprNode::Pi(_, function, argument, _) => {
-            select_from_expression(kernel, function, states, trusted_closure_by_name, ordered)?;
-            select_from_expression(kernel, argument, states, trusted_closure_by_name, ordered)?;
+            select_from_expression(
+                kernel,
+                function,
+                states,
+                trusted_closure_by_name,
+                ordered,
+                normalization,
+            )?;
+            select_from_expression(
+                kernel,
+                argument,
+                states,
+                trusted_closure_by_name,
+                ordered,
+                normalization,
+            )?;
         }
         ExprNode::Let(_, ty, value, body) => {
-            select_from_expression(kernel, ty, states, trusted_closure_by_name, ordered)?;
-            select_from_expression(kernel, value, states, trusted_closure_by_name, ordered)?;
-            select_from_expression(kernel, body, states, trusted_closure_by_name, ordered)?;
+            for child in [ty, value, body] {
+                select_from_expression(
+                    kernel,
+                    child,
+                    states,
+                    trusted_closure_by_name,
+                    ordered,
+                    normalization,
+                )?;
+            }
         }
         ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Sort(_) | ExprNode::Lit(_) => {}
     }
@@ -332,8 +409,9 @@ fn select_constant_instance(
     states: &mut BTreeMap<InstanceKey, u8>,
     trusted_closure_by_name: &mut BTreeMap<NameId, Option<(NameId, &'static str)>>,
     ordered: &mut Vec<InstanceKey>,
+    normalization: ClosureNormalization,
 ) -> Result<(), TypeSliceError> {
-    match declaration_selection_kind(kernel, name, trusted_closure_by_name)? {
+    match declaration_selection_kind(kernel, name, trusted_closure_by_name, normalization)? {
         SelectionKind::Retain => Ok(()),
         SelectionKind::Trusted(kind) => Err(TypeSliceError::TrustedTypeDependency {
             name: kernel.display_name(name).to_string(),
@@ -358,7 +436,14 @@ fn select_constant_instance(
                     stage: "selection constant type inference",
                     source,
                 })?;
-            select_from_expression(kernel, ty, states, trusted_closure_by_name, ordered)?;
+            select_from_expression(
+                kernel,
+                ty,
+                states,
+                trusted_closure_by_name,
+                ordered,
+                normalization,
+            )?;
             states.insert(key.clone(), 2);
             ordered.push(key);
             Ok(())
@@ -374,9 +459,10 @@ enum SelectionKind {
 }
 
 fn declaration_selection_kind(
-    kernel: &Kernel,
+    kernel: &mut Kernel,
     name: NameId,
     trusted_closure_by_name: &mut BTreeMap<NameId, Option<(NameId, &'static str)>>,
+    normalization: ClosureNormalization,
 ) -> Result<SelectionKind, TypeSliceError> {
     let Some(declaration) = kernel.environment().get(name) else {
         return Err(TypeSliceError::MissingTypeDependency {
@@ -385,7 +471,9 @@ fn declaration_selection_kind(
     };
     Ok(match declaration {
         Declaration::Definition { .. } => {
-            if trusted_atomic_dependency(kernel, name, trusted_closure_by_name)?.is_some() {
+            if trusted_atomic_dependency(kernel, name, trusted_closure_by_name, normalization)?
+                .is_some()
+            {
                 SelectionKind::Definition
             } else {
                 SelectionKind::Retain
@@ -399,7 +487,7 @@ fn declaration_selection_kind(
         | Declaration::Constructor { .. }
         | Declaration::Recursor { .. } => {
             if let Some((dependency, kind)) =
-                trusted_atomic_dependency(kernel, name, trusted_closure_by_name)?
+                trusted_atomic_dependency(kernel, name, trusted_closure_by_name, normalization)?
             {
                 return Err(TypeSliceError::TrustedRetainedClosure {
                     declaration: kernel.display_name(name).to_string(),
@@ -413,20 +501,27 @@ fn declaration_selection_kind(
 }
 
 fn trusted_atomic_dependency(
-    kernel: &Kernel,
+    kernel: &mut Kernel,
     name: NameId,
     cache: &mut BTreeMap<NameId, Option<(NameId, &'static str)>>,
+    normalization: ClosureNormalization,
 ) -> Result<Option<(NameId, &'static str)>, TypeSliceError> {
     if let Some(result) = cache.get(&name) {
         return Ok(*result);
     }
-    let closure =
-        kernel
-            .root_declaration_closure(&[name])
-            .map_err(|error| TypeSliceError::RootClosure {
-                name: kernel.display_name(name).to_string(),
-                reason: error.to_string(),
-            })?;
+    let closure = match normalization {
+        ClosureNormalization::Exact => kernel.root_declaration_closure(&[name]),
+        ClosureNormalization::AutoParamTypes => kernel
+            .root_declaration_closure_checked_auto_param_types(&[name])
+            .map(|(closure, _)| closure),
+        ClosureNormalization::AutoParamBinders => kernel
+            .root_declaration_closure_checked_auto_param_binders(&[name])
+            .map(|(closure, _)| closure),
+    }
+    .map_err(|error| TypeSliceError::RootClosure {
+        name: kernel.display_name(name).to_string(),
+        reason: error.to_string(),
+    })?;
     let result = closure.into_iter().find_map(|dependency| {
         let kind = match kernel.environment().get(dependency) {
             Some(Declaration::Axiom { .. }) => "axiom",

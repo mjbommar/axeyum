@@ -8,13 +8,17 @@ use std::path::{Path, PathBuf};
 
 use axeyum_lean_import::{
     ImportLimits, generalize_goal_constants, import_ndjson, import_statement_ndjson,
-    issue_type_slice_receipt, select_definition_abstractions_v1,
+    issue_type_slice_receipt, issue_type_slice_receipt_with_auto_param_normalization,
+    select_definition_abstractions_auto_param_binders_v3,
+    select_definition_abstractions_auto_param_v2, select_definition_abstractions_v1,
 };
 use axeyum_lean_kernel::{Declaration, Kernel, Lean4ExportMetadata, NameId, ReducibilityHint};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 
-const POLICY_VERSION: &str = "contaminated-definition-boundary-v1";
+const POLICY_V1: &str = "contaminated-definition-boundary-v1";
+const POLICY_AUTO_PARAM_V2: &str = "contaminated-definition-boundary-auto-param-v2";
+const POLICY_AUTO_PARAM_BINDERS_V3: &str = "contaminated-definition-boundary-auto-param-binders-v3";
 const FRESH_TARGET: &str = "Axeyum.Autogenesis.TypeSliceReplay.goal";
 
 #[derive(Debug)]
@@ -43,6 +47,18 @@ fn run() -> Result<(Option<PathBuf>, String), String> {
     let archive = required_path(&arguments, "--archive")?;
     let mapping_path = required_path(&arguments, "--mapping")?;
     let output = arguments.get("--output").map(PathBuf::from);
+    let auto_param_v2 = arguments.contains_key("--auto-param-v2");
+    let auto_param_binders_v3 = arguments.contains_key("--auto-param-binders-v3");
+    if auto_param_v2 && auto_param_binders_v3 {
+        return Err("autoParam replay policies are mutually exclusive".to_owned());
+    }
+    let policy_version = if auto_param_binders_v3 {
+        POLICY_AUTO_PARAM_BINDERS_V3
+    } else if auto_param_v2 {
+        POLICY_AUTO_PARAM_V2
+    } else {
+        POLICY_V1
+    };
     let mapping_bytes = fs::read(&mapping_path)
         .map_err(|error| format!("cannot read {}: {error}", mapping_path.display()))?;
     let mapping: Value = serde_json::from_slice(&mapping_bytes)
@@ -69,7 +85,14 @@ fn run() -> Result<(Option<PathBuf>, String), String> {
             )
         })?;
         let stream_sha256 = hex_sha256(&stream);
-        let result = replay_row(&stream, &stream_sha256, target);
+        let result = replay_row(
+            &stream,
+            &stream_sha256,
+            target,
+            auto_param_v2,
+            auto_param_binders_v3,
+            policy_version,
+        );
         let (outcome, detail) = match result {
             Ok(receipt) => ("accepted-receipt".to_owned(), json!({ "receipt": receipt })),
             Err(decline) => {
@@ -105,7 +128,8 @@ fn run() -> Result<(Option<PathBuf>, String), String> {
         }
     }
 
-    let (observation, digest) = build_observation(&output_rows, outcomes, &mapping_bytes)?;
+    let (observation, digest) =
+        build_observation(&output_rows, outcomes, &mapping_bytes, policy_version)?;
     if let Some(path) = &output {
         let mut rendered = serde_json::to_string_pretty(&observation)
             .map_err(|error| format!("cannot render observation: {error}"))?;
@@ -120,6 +144,7 @@ fn build_observation(
     output_rows: &[Value],
     outcomes: BTreeMap<String, u64>,
     mapping_bytes: &[u8],
+    policy_version: &str,
 ) -> Result<(Value, String), String> {
     let coverage: Map<String, Value> = outcomes
         .into_iter()
@@ -129,7 +154,7 @@ fn build_observation(
         "schema_version": 1,
         "kind": "axeyum-autogenesis-checked-type-slice-replay",
         "state": "checked-slice-replay-no-proof-or-ledger-credit",
-        "policy_version": POLICY_VERSION,
+        "policy_version": policy_version,
         "authority": {
             "partitions_inspected": ["development", "train"],
             "held_out_inspected": false,
@@ -156,7 +181,15 @@ fn build_observation(
     Ok((observation, digest))
 }
 
-fn replay_row(stream: &[u8], stream_sha256: &str, target: &str) -> Result<Value, Decline> {
+#[allow(clippy::too_many_lines)]
+fn replay_row(
+    stream: &[u8],
+    stream_sha256: &str,
+    target: &str,
+    auto_param_v2: bool,
+    auto_param_binders_v3: bool,
+    policy_version: &str,
+) -> Result<Value, Decline> {
     let completed = at(
         "source-import",
         import_ndjson(Cursor::new(stream), ImportLimits::default()),
@@ -174,7 +207,13 @@ fn replay_row(stream: &[u8], stream_sha256: &str, target: &str) -> Result<Value,
     };
     let abstractions = at(
         "selection",
-        select_definition_abstractions_v1(&mut kernel, source_goal),
+        if auto_param_binders_v3 {
+            select_definition_abstractions_auto_param_binders_v3(&mut kernel, source_goal)
+        } else if auto_param_v2 {
+            select_definition_abstractions_auto_param_v2(&mut kernel, source_goal)
+        } else {
+            select_definition_abstractions_v1(&mut kernel, source_goal)
+        },
     )?;
     let generalized = at(
         "generalization",
@@ -202,13 +241,35 @@ fn replay_row(stream: &[u8], stream_sha256: &str, target: &str) -> Result<Value,
             hint: ReducibilityHint::Regular(0),
         }),
     )?;
-    let fresh_stream = at(
-        "root-export",
-        kernel.render_lean4export_ndjson_roots(
-            &Lean4ExportMetadata::axeyum(report.lean_version.clone()),
-            &[fresh_target],
-        ),
-    )?;
+    let metadata = Lean4ExportMetadata::axeyum(report.lean_version.clone());
+    let (fresh_stream, normalization) = if auto_param_binders_v3 {
+        at(
+            "root-export",
+            kernel.render_lean4export_ndjson_roots_checked_auto_param_binders(
+                &metadata,
+                &[fresh_target],
+            ),
+        )?
+    } else if auto_param_v2 {
+        at(
+            "root-export",
+            kernel.render_lean4export_ndjson_roots_checked_auto_param_types(
+                &metadata,
+                &[fresh_target],
+            ),
+        )?
+    } else {
+        (
+            at(
+                "root-export",
+                kernel.render_lean4export_ndjson_roots(&metadata, &[fresh_target]),
+            )?,
+            axeyum_lean_kernel::AutoParamTypeNormalizationReport {
+                normalized_declarations: Vec::new(),
+                rewritten_occurrences: 0,
+            },
+        )
+    };
     let fresh = at(
         "fresh-import",
         import_statement_ndjson(
@@ -217,20 +278,38 @@ fn replay_row(stream: &[u8], stream_sha256: &str, target: &str) -> Result<Value,
             FRESH_TARGET,
         ),
     )?;
-    let receipt = at(
-        "receipt",
-        issue_type_slice_receipt(
-            &mut kernel,
-            &report,
-            stream_sha256,
-            target_name,
-            source_goal,
-            &generalized,
-            &arguments,
-            &fresh,
-            POLICY_VERSION,
-        ),
-    )?;
+    let receipt = if normalization.rewritten_occurrences == 0 {
+        at(
+            "receipt",
+            issue_type_slice_receipt(
+                &mut kernel,
+                &report,
+                stream_sha256,
+                target_name,
+                source_goal,
+                &generalized,
+                &arguments,
+                &fresh,
+                policy_version,
+            ),
+        )?
+    } else {
+        at(
+            "receipt",
+            issue_type_slice_receipt_with_auto_param_normalization(
+                &mut kernel,
+                &report,
+                stream_sha256,
+                target_name,
+                source_goal,
+                &generalized,
+                &arguments,
+                &fresh,
+                policy_version,
+                &normalization,
+            ),
+        )?
+    };
     let rendered = at("receipt-json", receipt.to_pretty_json())?;
     at("receipt-json", serde_json::from_str(&rendered))
 }
@@ -314,6 +393,12 @@ fn parse_arguments() -> Result<BTreeMap<String, String>, String> {
     let mut parsed = BTreeMap::new();
     let mut arguments = env::args().skip(1);
     while let Some(flag) = arguments.next() {
+        if matches!(flag.as_str(), "--auto-param-v2" | "--auto-param-binders-v3") {
+            if parsed.insert(flag.clone(), "true".to_owned()).is_some() {
+                return Err(format!("{flag} was supplied more than once"));
+            }
+            continue;
+        }
         if !matches!(flag.as_str(), "--archive" | "--mapping" | "--output") {
             return Err(format!("unknown argument {flag}"));
         }

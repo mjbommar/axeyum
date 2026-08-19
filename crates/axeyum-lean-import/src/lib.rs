@@ -50,13 +50,15 @@ pub use identity::{
 };
 pub use type_slice::{
     ConstantInstance, GeneralizedBinder, GeneralizedGoal, TypeSliceError,
-    generalize_goal_constants, select_definition_abstractions_v1,
+    generalize_goal_constants, select_definition_abstractions_auto_param_binders_v3,
+    select_definition_abstractions_auto_param_v2, select_definition_abstractions_v1,
     verify_generalized_specialization,
 };
 pub use type_slice_receipt::{
-    TYPE_SLICE_RECEIPT_VERSION, TypeSliceAbstractionReceipt, TypeSliceReceipt,
-    TypeSliceReceiptError, TypeSliceRetainedReceipt, TypeSliceSourceReceipt,
-    issue_type_slice_receipt,
+    NORMALIZED_TYPE_SLICE_RECEIPT_VERSION, TYPE_SLICE_RECEIPT_VERSION, TypeSliceAbstractionReceipt,
+    TypeSliceNormalizedDeclarationReceipt, TypeSliceReceipt, TypeSliceReceiptError,
+    TypeSliceRetainedReceipt, TypeSliceSourceReceipt, TypeSliceTransportNormalizationReceipt,
+    issue_type_slice_receipt, issue_type_slice_receipt_with_auto_param_normalization,
 };
 
 use identity::build_identity_manifest;
