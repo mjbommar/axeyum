@@ -73,6 +73,17 @@ file indexes and content-addressed chains, and replays the settled operation:
 python3 scripts/check-autogenesis-statement-reflexivity-admission.py
 ```
 
+`mathlib-reflexivity-coverage-v1.json` binds the first sealed bottom-up
+train/development census. Each of 138 mapped definitions has an isolated
+proof-free export, so one contaminated dependency closure cannot hide another
+row's adapter or kernel outcome. The external archive also retains the rejected
+combined-stream probe and two byte-identical observations. This is diagnostic
+evidence with zero ledger writes:
+
+```sh
+python3 scripts/check-autogenesis-reflexivity-coverage.py
+```
+
 `mathlib-statement-source-v1.json` binds the external statement-only Mathlib
 v4.30.0 inventory. Bulk NDJSON stays on `/nas3`; Git retains the extractor,
 source identity, selection policy, and small derived candidate view. Neither an

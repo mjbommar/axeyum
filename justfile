@@ -76,6 +76,10 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-statement-reflexivity.py
     python3 -m unittest scripts.tests.test_check_autogenesis_statement_reflexivity_admission
     python3 scripts/check-autogenesis-statement-reflexivity-admission.py
+    cargo test -p axeyum-lean-import --example statement_reflexivity_coverage
+    python3 -m unittest scripts.tests.test_create_autogenesis_reflexivity_coverage_input
+    python3 -m unittest scripts.tests.test_check_autogenesis_reflexivity_coverage
+    python3 scripts/check-autogenesis-reflexivity-coverage.py
 
 # The bulk source is external and optional on CI. The first checker reports
 # verified/unavailable without conflating them; the committed 240-row view is

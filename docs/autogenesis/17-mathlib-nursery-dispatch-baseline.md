@@ -13,8 +13,9 @@ row from the unsupported population.
 The exact source-bound operation is now registered. The current census is:
 
 ```text
-eligible-for-dispatch                                        1
+already-established                                          1
 no-exact-authoritative-operation                           137
+eligible-for-dispatch                                        0
 ```
 
 The census itself still runs no producer, consumes no executor budget, accesses
@@ -43,11 +44,13 @@ input path from the nursery. The narrow bridge must come first:
    changed proposition, proof-bearing export, or unsupported construct is
    rejected.
 
-All five steps are complete for one train row. Authoritative execution and
-durable admission remain separate events.
+All five steps, authoritative execution, durable admission, and clean replay
+are complete for one train row. The subsequent
+[reflexivity census](22-mathlib-reflexivity-coverage.md) measures the reusable
+grammar without redispatching that established row.
 
-Only then can fixed-budget proof episodes distinguish missing lemmas, search
-limits, reconstruction gaps, and checker failures.
+Fixed-budget proof episodes can now distinguish adapter, producer, kernel, and
+assurance boundaries instead of calling every non-dispatch a proof failure.
 
 ## Why this is still flywheel progress
 

@@ -118,6 +118,7 @@ compounding, not automation theatre.
 | [First checked reflexivity candidate](19-first-checked-reflexivity-candidate.md) | Can a bounded generic producer construct a fresh proof from that goal and survive independent kernel and dependency checks without receiving ledger credit? |
 | [Authoritative reflexivity registration](20-authoritative-reflexivity-operation.md) | Can that candidate route become one exact machine-selectable operation without yet changing the ledger? |
 | [First nursery fact admission](21-first-mathlib-nursery-admission.md) | Did the registered operation durably establish its frozen train fact through the ordinary crash-safe ledger protocol? |
+| [Reflexivity coverage census](22-mathlib-reflexivity-coverage.md) | Where do all train/development rows stop under the current proof-isolated adapter and bounded reflexivity grammar? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

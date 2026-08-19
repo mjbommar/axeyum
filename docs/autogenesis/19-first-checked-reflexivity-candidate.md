@@ -54,19 +54,17 @@ At this result boundary the dispatch census reported
 registration increment preserves this manifest unchanged and moves the row to
 `eligible-for-dispatch`; neither state by itself grants proof credit.
 
-## Next arrow
+## Subsequent arrow
 
-Register an exact source-bound operation whose executor reimports the pinned
-statement artifact, runs this fixed-budget producer, and emits a transaction
-proposal. Then apply the existing durable admission protocol, recheck the
-post-state from a clean checkout, and only then flip the fact or count an
-autonomous theorem. Registration must preserve the current external artifact,
-goal, proof, operation budget, and dependency identities.
+The exact source-bound operation was subsequently registered, durably admitted,
+and cleanly replayed before the fact received proof credit. Registration
+preserved the external artifact, goal, proof, operation budget, and dependency
+identities recorded here.
 
-After that single-row admission works, broaden bottom-up across definitional
-equalities and top-down across one additional statement shape, while keeping
-held-out rows inaccessible and measuring decline reasons separately from proof
-failures.
+The [sealed coverage census](22-mathlib-reflexivity-coverage.md) then broadened
+bottom-up across all train/development rows and found a second dependency-free
+candidate in the same family. Held-out rows remain inaccessible, and adapter,
+producer, kernel, and assurance outcomes are reported separately.
 
 ## Reproduction
 
