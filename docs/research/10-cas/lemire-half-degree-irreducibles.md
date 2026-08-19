@@ -615,6 +615,43 @@ for `2<=ell<=5`.  The remaining applicability issue is now analytic rather
 than representational: here `k>ell+1`, whereas several external interval
 estimates use different degree/modulus ranges.
 
+There is an exact way to retain cancellation across those convolution orders.
+For a packed additive frequency `a`, let `v(a)` be the number of its vanishing
+low bits, capped at `ell` for `a=0`.  Then `a` belongs to `W_d^perp` exactly
+when `d<=v(a)`, so (MC) and (AF) regroup as
+
+```text
+2^ell Delta_(ell,n)
+  = sum_a sum_(1<=d<=v(a),d<ell) d 2^d H_(n-d)(a).          (RG)
+```
+
+This nesting is an **annihilator depth**, not the multiplicative exact-
+conductor filtration used elsewhere in this note.  The two notions cross-cut
+each other, so a one-parameter "regroup by conductor" would discard the very
+membership information needed in (RG).  The native operation
+`inverse_mobius_fourier_regroup` combines every eligible `d` frequencywise,
+then groups by exact annihilator depth.  It checks each order against the
+original convolution term and the final numerator against `2^ell Delta`.
+Both endpoints pass through `ell=8`; separate cellwise, orderwise, and
+layerwise absolute numerators make the retained cancellation measurable
+without turning it into an asymptotic claim.
+
+Substituting `H_k=B_k-B_(k-1)` and summing by parts gives, for fixed depth
+`v>=1`,
+
+```text
+sum_(d=1)^v d 2^d H_(n-d)
+  = 2 B_(n-1)
+    + sum_(d=2)^v (d+1)2^(d-1) B_(n-d)
+    - v 2^v B_(n-v-1).                                    (SBP)
+```
+
+Thus summation by parts is exact, but it does not manufacture a saving: it
+requires a new bound for the weighted `B` combination, including its boundary
+term, after aggregation over the annihilator-depth layers.  That is now the
+precise low/medium-block lemma rather than an ambiguous appeal to conductor
+cancellation.
+
 ### Source-level characteristic audit and inverse-additive energy
 
 The arXiv source, rather than PDF text extraction, confirms the exact inverse
@@ -789,6 +826,25 @@ or the convolution weight `d`.  The exhaustive table closes the range-audit
 gap, but it deliberately remains a non-credit-bearing pointwise diagnostic;
 the proof frontier is still cancellation across the signed Möbius
 convolution.
+
+Restoring even the elementary suppressed losses moves the usable tail much
+farther.  The operation `odd_endpoint_vaughan_tail_budget` adds a caller-
+selected analytic reserve, restores `ceil(log2 d)` for the convolution weight,
+rounds each term upward, and charges their sum against the exact odd-endpoint
+absolute budget `2^(ell+1)-2`.  At `ell=300` with zero analytic reserve, the
+tail beginning at `d=292` already costs exactly `2^301` and therefore exceeds
+the budget by two.  Beginning at `d=293` costs `2^300` and leaves the
+low/medium block the exact residual budget
+
+```text
+2^301-2^300-2.
+```
+
+This is still optimistic because the zero reserve has not paid the explicit
+divisor envelope, epsilon, or constants.  The reserve is an exposed proof
+input, not an erased term.  The result is nevertheless a useful target: any
+aggregate argument can now state exactly which complementary block it must
+control and how much budget remains.
 
 An older literature phrase needs similar care.  Gao--Howell--Panario (1999)
 say that Hsu proved existence with the lower or upper "half" of the

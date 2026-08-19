@@ -861,6 +861,58 @@ impl EndpointVaughanTableReport {
     }
 }
 
+/// One pointwise tail bound after restoring a loss reserve and the factor `d`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OddEndpointVaughanTailOrder {
+    /// Convolution interval degree `d`.
+    pub interval_degree: usize,
+    /// Exhaustive Vaughan main exponent numerator over denominator sixteen.
+    pub main_bound_sixteenths: u128,
+    /// Caller-selected reserve numerator over denominator sixteen.
+    pub loss_reserve_sixteenths: u128,
+    /// `ceil(log2(d))`, used to restore the convolution weight.
+    pub convolution_weight_ceiling_bits: usize,
+    /// Integer ceiling of the resulting base-two exponent.
+    pub total_ceiling_bits: usize,
+    /// Conservative power-of-two absolute bound for this order.
+    pub absolute_bound: BigUint,
+}
+
+/// Margin ledger for a buffered large-`d` tail at the odd Lemire endpoint.
+///
+/// The endpoint identity is `N_(2ell+1)(1)=1+(2ell+1)I_(2ell+1)(1)`.  Hence
+/// an absolute discrepancy at most `2^(ell+1)-2` proves positivity.  After
+/// charging the selected tail pointwise, `residual_low_block_budget` is the
+/// exact absolute budget that a cancellation-preserving argument must meet on
+/// the complementary block.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OddEndpointVaughanTailBudgetReport {
+    /// Principal-unit level `ell`.
+    pub ell: usize,
+    /// Odd endpoint degree `2ell+1`.
+    pub endpoint_degree: usize,
+    /// First interval degree charged pointwise.
+    pub tail_start_degree: usize,
+    /// Uniform caller reserve added to every main exponent, in sixteenths.
+    pub loss_reserve_sixteenths: u128,
+    /// Pointwise rows for `tail_start_degree<=d<ell`.
+    pub tail_orders: Vec<OddEndpointVaughanTailOrder>,
+    /// Largest integer absolute discrepancy sufficient for odd positivity.
+    pub endpoint_absolute_budget: BigUint,
+    /// Sum of the conservative pointwise tail bounds.
+    pub tail_absolute_bound: BigUint,
+    /// Budget left for the absolute value of the low/medium signed block.
+    pub residual_low_block_budget: Option<BigUint>,
+}
+
+impl OddEndpointVaughanTailBudgetReport {
+    /// Whether the pointwise tail leaves any nonnegative residual budget.
+    #[must_use]
+    pub fn tail_fits_endpoint_budget(&self) -> bool {
+        self.residual_low_block_budget.is_some()
+    }
+}
+
 /// Uniform wild-Kloosterman bound for the binary principal-unit group.
 ///
 /// Put `R = GF(2)[x]/(x^(ell+1))`, let `psi` read the coefficient of
@@ -1181,6 +1233,53 @@ impl InverseAdditiveMobiusSpectrum {
         }
         Ok(frequency_sum / denominator)
     }
+}
+
+/// One exact low-bit-annihilator layer in the order-regrouped Fourier sum.
+///
+/// `annihilator_depth=v` means that the first `v` packed Fourier bits vanish,
+/// while bit `v` is nonzero; the zero frequency is assigned depth `ell`.
+/// This is the nesting relevant to `W_d^perp`.  It is not, by itself, the
+/// multiplicative exact-conductor filtration used elsewhere in this module.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InverseMobiusFourierLayer {
+    /// Largest interval degree `d` for which this frequency lies in
+    /// `W_d^perp`.
+    pub annihilator_depth: usize,
+    /// Number of packed frequencies in the layer.
+    pub frequency_count: u128,
+    /// Signed numerator after summing every eligible convolution order.
+    pub weighted_numerator: i128,
+}
+
+/// Exact Fourier regrouping of the signed endpoint Möbius convolution.
+///
+/// The common denominator is `2^ell`.  Thus `regrouped_numerator` divided by
+/// `denominator` is exactly the identity-class discrepancy.  The three
+/// absolute numerators expose, without claiming a uniform bound, how much
+/// cancellation is lost by taking absolute values cellwise, orderwise, or
+/// after regrouping by annihilator depth.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InverseMobiusFourierRegroupReport {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint or other target degree.
+    pub degree: usize,
+    /// Common Fourier normalization denominator `2^ell`.
+    pub denominator: u128,
+    /// Layers in increasing annihilator depth `0..=ell`.
+    pub layers: Vec<InverseMobiusFourierLayer>,
+    /// Exact signed numerator after every layer is combined.
+    pub regrouped_numerator: i128,
+    /// Exact normalized identity-class discrepancy.
+    pub discrepancy: i128,
+    /// Sum of absolute numerators before either `d` or frequency is combined.
+    pub cellwise_absolute_numerator: u128,
+    /// Sum of absolute numerators after frequencies are combined for each `d`.
+    pub orderwise_absolute_numerator: u128,
+    /// Sum of absolute numerators after all eligible `d` are combined in each
+    /// annihilator-depth layer.
+    pub layerwise_absolute_numerator: u128,
 }
 
 /// One exact low-degree term in the identity-class Möbius convolution.
@@ -2921,6 +3020,94 @@ pub fn endpoint_vaughan_range_table(
     })
 }
 
+fn convolution_weight_ceiling_bits(interval_degree: usize) -> usize {
+    if interval_degree <= 1 {
+        0
+    } else {
+        usize::BITS as usize - (interval_degree - 1).leading_zeros() as usize
+    }
+}
+
+/// Charge a buffered large-`d` tail against the exact odd-endpoint budget.
+///
+/// The caller reserve is an exponent numerator over denominator sixteen.  It
+/// is where a future application must place the explicit energy envelope,
+/// epsilon, and constants.  This report restores `ceil(log2(d))` itself and
+/// rounds each pointwise bound upward before summing, so its residual budget
+/// is conservative once that reserve has been justified.
+///
+/// # Errors
+///
+/// Rejects `ell<2`, a tail start outside `1<=d<ell`, caller limits, or checked
+/// arithmetic overflow inherited from the exhaustive Vaughan table.
+pub fn odd_endpoint_vaughan_tail_budget(
+    ell: usize,
+    tail_start_degree: usize,
+    loss_reserve_sixteenths: u128,
+    limits: HayesLimits,
+) -> Result<OddEndpointVaughanTailBudgetReport, HayesError> {
+    if ell < 2 || tail_start_degree == 0 || tail_start_degree >= ell {
+        return Err(HayesError::InvalidParameter(format!(
+            "odd endpoint tail requires ell>=2 and 1<=start<ell, got ell={ell}, start={tail_start_degree}"
+        )));
+    }
+    let endpoint_degree = ell
+        .checked_mul(2)
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| HayesError::InvalidParameter("odd endpoint degree overflow".to_owned()))?;
+    let table = endpoint_vaughan_range_table(ell, endpoint_degree, limits)?;
+    let mut tail_orders = Vec::with_capacity(ell - tail_start_degree);
+    let mut tail_absolute_bound = BigUint::from(0_u8);
+    for report in table
+        .convolution_orders
+        .into_iter()
+        .skip(tail_start_degree - 1)
+    {
+        let convolution_weight_ceiling_bits =
+            convolution_weight_ceiling_bits(report.interval_degree);
+        let weight_sixteenths = u128::try_from(convolution_weight_ceiling_bits)
+            .ok()
+            .and_then(|value| value.checked_mul(16))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("tail convolution weight overflow".to_owned())
+            })?;
+        let total_sixteenths = report
+            .worst_bound_sixteenths
+            .checked_add(loss_reserve_sixteenths)
+            .and_then(|value| value.checked_add(weight_sixteenths))
+            .ok_or_else(|| HayesError::InvalidParameter("tail exponent overflow".to_owned()))?;
+        let total_ceiling_bits = usize::try_from(total_sixteenths.div_ceil(16))
+            .map_err(|_| HayesError::InvalidParameter("tail exponent exceeds usize".to_owned()))?;
+        let absolute_bound = BigUint::from(1_u8) << total_ceiling_bits;
+        tail_absolute_bound += &absolute_bound;
+        tail_orders.push(OddEndpointVaughanTailOrder {
+            interval_degree: report.interval_degree,
+            main_bound_sixteenths: report.worst_bound_sixteenths,
+            loss_reserve_sixteenths,
+            convolution_weight_ceiling_bits,
+            total_ceiling_bits,
+            absolute_bound,
+        });
+    }
+    let uniform_mean = BigUint::from(1_u8)
+        << ell.checked_add(1).ok_or_else(|| {
+            HayesError::InvalidParameter("odd endpoint uniform exponent overflow".to_owned())
+        })?;
+    let endpoint_absolute_budget = uniform_mean - BigUint::from(2_u8);
+    let residual_low_block_budget = (tail_absolute_bound <= endpoint_absolute_budget)
+        .then(|| &endpoint_absolute_budget - &tail_absolute_bound);
+    Ok(OddEndpointVaughanTailBudgetReport {
+        ell,
+        endpoint_degree,
+        tail_start_degree,
+        loss_reserve_sixteenths,
+        tail_orders,
+        endpoint_absolute_budget,
+        tail_absolute_bound,
+        residual_low_block_budget,
+    })
+}
+
 /// Compute the exact mixed product-collision energy of `V_a V_b` in `E_ell`.
 ///
 /// Write `a=min(left_degree,right_degree)` and
@@ -3601,6 +3788,187 @@ pub fn inverse_additive_mobius_spectrum(
         ell,
         degree,
         values: additive_values,
+    })
+}
+
+fn inverse_mobius_fourier_weight(interval_degree: usize) -> Result<i128, HayesError> {
+    i128::try_from(interval_degree)
+        .ok()
+        .and_then(|degree| {
+            degree.checked_mul(1_i128.checked_shl(u32::try_from(interval_degree).ok()?)?)
+        })
+        .ok_or_else(|| HayesError::InvalidParameter("Fourier regroup weight overflow".to_owned()))
+}
+
+fn accumulate_inverse_mobius_fourier_order(
+    spectrum: &InverseAdditiveMobiusSpectrum,
+    interval_degree: usize,
+    frequency_numerators: &mut [i128],
+) -> Result<(i128, u128), HayesError> {
+    let stride = 1_usize
+        .checked_shl(u32::try_from(interval_degree).map_err(|_| {
+            HayesError::InvalidParameter("Fourier regroup stride exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Fourier regroup stride overflow".to_owned())
+        })?;
+    let weight = inverse_mobius_fourier_weight(interval_degree)?;
+    let mut order_numerator = 0_i128;
+    let mut cellwise_absolute = 0_u128;
+    for index in (0..spectrum.values.len()).step_by(stride) {
+        let contribution = spectrum.values[index].checked_mul(weight).ok_or_else(|| {
+            HayesError::InvalidParameter("Fourier cell contribution overflow".to_owned())
+        })?;
+        frequency_numerators[index] = frequency_numerators[index]
+            .checked_add(contribution)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Fourier frequency numerator overflow".to_owned())
+            })?;
+        order_numerator = order_numerator.checked_add(contribution).ok_or_else(|| {
+            HayesError::InvalidParameter("Fourier order numerator overflow".to_owned())
+        })?;
+        cellwise_absolute = cellwise_absolute
+            .checked_add(contribution.unsigned_abs())
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Fourier cellwise absolute sum overflow".to_owned())
+            })?;
+    }
+    Ok((order_numerator, cellwise_absolute))
+}
+
+fn inverse_mobius_fourier_layers(
+    ell: usize,
+    frequency_numerators: &[i128],
+) -> Result<Vec<InverseMobiusFourierLayer>, HayesError> {
+    let mut layers = (0..=ell)
+        .map(|annihilator_depth| InverseMobiusFourierLayer {
+            annihilator_depth,
+            frequency_count: 0,
+            weighted_numerator: 0,
+        })
+        .collect::<Vec<_>>();
+    for (frequency, numerator) in frequency_numerators.iter().copied().enumerate() {
+        let depth = if frequency == 0 {
+            ell
+        } else {
+            usize::try_from(frequency.trailing_zeros())
+                .unwrap_or(ell)
+                .min(ell)
+        };
+        let layer = &mut layers[depth];
+        layer.frequency_count = layer.frequency_count.checked_add(1).ok_or_else(|| {
+            HayesError::InvalidParameter("Fourier layer population overflow".to_owned())
+        })?;
+        layer.weighted_numerator =
+            layer
+                .weighted_numerator
+                .checked_add(numerator)
+                .ok_or_else(|| {
+                    HayesError::InvalidParameter("Fourier layer numerator overflow".to_owned())
+                })?;
+    }
+    Ok(layers)
+}
+
+/// Regroup the exact signed Möbius convolution across Fourier frequencies.
+///
+/// If `v(a)` is the number of vanishing low bits of packed frequency `a`,
+/// additive orthogonality gives the checked identity
+///
+/// ```text
+/// 2^ell Delta_(ell,n)
+///   = sum_a sum_(1<=d<=v(a), d<ell) d 2^d H_(n-d)(a).
+/// ```
+///
+/// The returned layers combine all eligible `d` before taking an absolute
+/// value.  They are finite diagnostics and make no uniform cancellation
+/// claim.
+///
+/// # Errors
+///
+/// Returns a typed resource/representation decline from the exact spectra,
+/// rejects the convolution domain, and fails if either the orderwise Fourier
+/// bridge or the final regrouped identity does not reconstruct exactly.
+pub fn inverse_mobius_fourier_regroup(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<InverseMobiusFourierRegroupReport, HayesError> {
+    let convolution = identity_class_mobius_convolution(ell, degree, limits)?;
+    let denominator = 1_u128
+        .checked_shl(u32::try_from(ell).map_err(|_| {
+            HayesError::InvalidParameter("Fourier denominator shift exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| HayesError::InvalidParameter("Fourier denominator overflow".to_owned()))?;
+    let denominator_i128 = i128::try_from(denominator)
+        .map_err(|_| HayesError::InvalidParameter("Fourier denominator exceeds i128".to_owned()))?;
+    let frequency_count = usize::try_from(denominator).map_err(|_| {
+        HayesError::InvalidParameter("Fourier frequency count exceeds usize".to_owned())
+    })?;
+    let mut frequency_numerators = vec![0_i128; frequency_count];
+    let mut cellwise_absolute_numerator = 0_u128;
+    let mut orderwise_absolute_numerator = 0_u128;
+    for term in &convolution.terms {
+        let spectrum =
+            inverse_additive_mobius_spectrum(ell, degree - term.interval_degree, limits)?;
+        let (order_numerator, cellwise_absolute) = accumulate_inverse_mobius_fourier_order(
+            &spectrum,
+            term.interval_degree,
+            &mut frequency_numerators,
+        )?;
+        let expected = term.value.checked_mul(denominator_i128).ok_or_else(|| {
+            HayesError::InvalidParameter("expected Fourier order numerator overflow".to_owned())
+        })?;
+        if order_numerator != expected {
+            return Err(HayesError::Invariant(format!(
+                "Fourier regroup order d={} gives {order_numerator}, expected {expected}",
+                term.interval_degree
+            )));
+        }
+        cellwise_absolute_numerator = cellwise_absolute_numerator
+            .checked_add(cellwise_absolute)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Fourier cellwise total overflow".to_owned())
+            })?;
+        orderwise_absolute_numerator = orderwise_absolute_numerator
+            .checked_add(order_numerator.unsigned_abs())
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Fourier orderwise total overflow".to_owned())
+            })?;
+    }
+    let layers = inverse_mobius_fourier_layers(ell, &frequency_numerators)?;
+    let regrouped_numerator = layers.iter().try_fold(0_i128, |sum, layer| {
+        sum.checked_add(layer.weighted_numerator).ok_or_else(|| {
+            HayesError::InvalidParameter("Fourier regrouped numerator overflow".to_owned())
+        })
+    })?;
+    let expected = convolution
+        .discrepancy
+        .checked_mul(denominator_i128)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("expected regrouped numerator overflow".to_owned())
+        })?;
+    if regrouped_numerator != expected {
+        return Err(HayesError::Invariant(format!(
+            "Fourier regroup gives {regrouped_numerator}, expected {expected}"
+        )));
+    }
+    let layerwise_absolute_numerator = layers.iter().try_fold(0_u128, |sum, layer| {
+        sum.checked_add(layer.weighted_numerator.unsigned_abs())
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Fourier layerwise total overflow".to_owned())
+            })
+    })?;
+    Ok(InverseMobiusFourierRegroupReport {
+        ell,
+        degree,
+        denominator,
+        layers,
+        regrouped_numerator,
+        discrepancy: convolution.discrepancy,
+        cellwise_absolute_numerator,
+        orderwise_absolute_numerator,
+        layerwise_absolute_numerator,
     })
 }
 
@@ -5693,6 +6061,17 @@ mod tests {
         assert_eq!(even_table.first_strict_pointwise_degree, Some(284));
         assert!(odd_table.suppressed_losses_remain());
         assert!(even_table.suppressed_losses_remain());
+
+        let unbuffered = odd_endpoint_vaughan_tail_budget(ell, 292, 0, limits).unwrap();
+        assert_eq!(unbuffered.tail_absolute_bound, BigUint::from(1_u8) << 301);
+        assert!(!unbuffered.tail_fits_endpoint_budget());
+        let buffered = odd_endpoint_vaughan_tail_budget(ell, 293, 0, limits).unwrap();
+        assert_eq!(buffered.tail_absolute_bound, BigUint::from(1_u8) << 300);
+        assert!(buffered.tail_fits_endpoint_budget());
+        assert_eq!(
+            buffered.residual_low_block_budget,
+            Some((BigUint::from(1_u8) << 301) - (BigUint::from(1_u8) << 300) - 2_u8)
+        );
     }
 
     #[test]
@@ -6163,6 +6542,40 @@ mod tests {
             report.inverse_interval_fibre_sum(4),
             Err(HayesError::InvalidParameter(_))
         ));
+    }
+
+    #[test]
+    fn inverse_mobius_fourier_regroup_preserves_cross_order_cancellation() {
+        let limits = HayesLimits::default();
+        for ell in 2_usize..=8 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report = inverse_mobius_fourier_regroup(ell, degree, limits).unwrap();
+                let denominator = 1_u128 << ell;
+                assert_eq!(report.denominator, denominator);
+                assert_eq!(report.layers.len(), ell + 1);
+                assert_eq!(
+                    report
+                        .layers
+                        .iter()
+                        .map(|layer| layer.frequency_count)
+                        .sum::<u128>(),
+                    denominator
+                );
+                for layer in &report.layers[..ell] {
+                    assert_eq!(
+                        layer.frequency_count,
+                        1_u128 << (ell - layer.annihilator_depth - 1)
+                    );
+                }
+                assert_eq!(report.layers[ell].frequency_count, 1);
+                assert_eq!(
+                    report.regrouped_numerator,
+                    report.discrepancy * i128::try_from(denominator).unwrap()
+                );
+                assert!(report.cellwise_absolute_numerator >= report.orderwise_absolute_numerator);
+                assert!(report.cellwise_absolute_numerator >= report.layerwise_absolute_numerator);
+            }
+        }
     }
 
     #[test]
