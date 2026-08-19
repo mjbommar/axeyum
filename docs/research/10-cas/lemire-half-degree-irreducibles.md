@@ -162,6 +162,42 @@ properly weighted nontrivial contribution in the identity class at degrees
 bound must be checked for strict positivity, not merely asymptotic main-term
 dominance.
 
+There is an exact way to see why the ordinary Weil estimate stops here. For a
+nontrivial character `chi` of `E_ell`, put
+
+```text
+P_chi(z) = sum_(0 <= d < ell) (sum_(f monic, deg f=d) chi(<f>)) z^d
+D_ell(z) = product_(chi != 1) P_chi(z).
+```
+
+The group determinant theorem and the preceding Fourier decomposition give
+
+```text
+Delta_(ell,n) = 2^(-ell) n [z^n] log D_ell(z).
+```
+
+Characters whose exact conductor is `x^(j+2)` contribute `2^j` polynomials of
+degree `j`, for `1 <= j < ell`; one further nontrivial character has constant
+`P_chi`. Consequently
+
+```text
+deg D_ell = sum_(j=1)^(ell-1) j 2^j = (ell-2) 2^ell + 2.
+```
+
+Thus bounding every reciprocal root separately, even at its sharp Weil
+absolute value `sqrt(2)`, necessarily loses a factor asymptotic to `ell` at the
+endpoint. A proof of the candidate lemma must use cancellation in the power
+sum of the *family norm* `D_ell`, not a better degree count for the individual
+character polynomials. Exact symbolic group determinants for `ell <= 3` agree
+with the factors printed in Gao--Kuttner--Wang; this is a reformulation, not a
+new estimate.
+
+A tempting shape-preserving induction also fails. If `f=x^n+q`, then `f^2+x`
+has degree `2n` and tail degree at most `n`, but it is reducible for every
+shaped irreducible in an exhaustive degree-2-through-12 test. The related
+transforms `x f^2+1`, `f^2+f+x`, and `f^2+x f+1` fail the same falsification
+range. None is used as a construction lemma.
+
 ### A sufficient endpoint discrepancy lemma
 
 Let `N_n(1)` be `[1] Lambda_n`, equivalently the number of elements of
@@ -194,13 +230,13 @@ individual characters.
 `axeyum-gf2-hayes-endpoints` evaluates the group-ring recurrence after an exact
 Fourier transform of the finite principal-unit group.  It uses two NTT primes,
 CRT reconstruction, and the a priori bound `N_n(1) <= 2^n`; no floating-point
-rounding is involved.  Through `ell = 18` (endpoint degrees 37 and 38), the
-candidate bound holds.  The endpoint discrepancies for `ell = 13..18` are
+rounding is involved. Through `ell = 22` (endpoint degrees 45 and 46), the
+candidate bound holds. The endpoint discrepancies for `ell = 13..22` are
 
 ```text
-ell:                 13    14    15    16     17    18
-Delta odd:         -345  -896   340  2744  -1988   928
-Delta even:         980   645 -1832   660   6587  9592
+ell:                 13    14    15    16     17    18      19    20      21     22
+Delta odd:         -345  -896   340  2744  -1988   928    4074  3115  -20938  -7582
+Delta even:         980   645 -1832   660   6587  9592  -13496 -4509   25007  28402
 ```
 
 This is finite evidence and a proof target, not a theorem.  In particular, the

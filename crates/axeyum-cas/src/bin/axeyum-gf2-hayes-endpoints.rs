@@ -11,7 +11,7 @@ const PRIME_ONE: u64 = 998_244_353;
 const PRIME_TWO: u64 = 1_004_535_809;
 const PRIMITIVE_ROOT: u64 = 3;
 const DEFAULT_MAX_ELL: usize = 12;
-const MAX_ELL: usize = 18;
+const MAX_ELL: usize = 22;
 
 const EXPECTED: &[(i64, i64)] = &[
     (0, 0),
@@ -26,6 +26,16 @@ const EXPECTED: &[(i64, i64)] = &[
     (53, 63),
     (206, -352),
     (359, 335),
+    (-345, 980),
+    (-896, 645),
+    (340, -1832),
+    (2744, 660),
+    (-1988, 6587),
+    (928, 9592),
+    (4074, -13496),
+    (3115, -4509),
+    (-20938, 25007),
+    (-7582, 28402),
 ];
 
 fn main() {
@@ -55,8 +65,14 @@ fn run() -> Result<(), String> {
         for (slot, degree) in [2 * ell + 1, 2 * ell + 2].into_iter().enumerate() {
             let first = endpoint_residue(ell, degree, PRIME_ONE)?;
             let second = endpoint_residue(ell, degree, PRIME_TWO)?;
-            let exact = crt(first, PRIME_ONE, second, PRIME_TWO)?;
             let upper_bound = 1_u128 << degree;
+            let crt_modulus = u128::from(PRIME_ONE) * u128::from(PRIME_TWO);
+            if upper_bound >= crt_modulus {
+                return Err(format!(
+                    "ell={ell} degree={degree}: 2^{degree} does not fit uniquely below the CRT modulus"
+                ));
+            }
+            let exact = crt(first, PRIME_ONE, second, PRIME_TWO)?;
             if exact > upper_bound {
                 return Err(format!(
                     "ell={ell} degree={degree}: recovered count {exact} exceeds 2^{degree}"
@@ -130,33 +146,40 @@ fn endpoint_residue(ell: usize, target: usize, modulus: u64) -> Result<u64, Stri
         ));
     }
 
-    let mut class_sums = vec![vec![0_u64; size]; target + 1];
+    // Only the exceptional degrees below `ell` need full transformed rows.
+    // At every later degree the class population is uniform, whose transform
+    // is `2^degree` at the trivial character and zero everywhere else.
+    let mut class_sums = vec![vec![0_u64; size]; ell];
     class_sums[0][0] = 1;
     group_transform(&mut class_sums[0], &dimensions, modulus);
     for (degree, class_sum) in class_sums.iter_mut().enumerate().skip(1) {
-        if degree >= ell {
-            class_sum[0] = mod_pow(2, degree as u64, modulus);
-        } else {
-            for tail in 0..(1_u64 << degree) {
-                let unit = 1 | (tail << 1);
-                class_sum[unit_to_index[&unit]] = 1;
-            }
-            group_transform(class_sum, &dimensions, modulus);
+        for tail in 0..(1_u64 << degree) {
+            let unit = 1 | (tail << 1);
+            class_sum[unit_to_index[&unit]] = 1;
         }
+        group_transform(class_sum, &dimensions, modulus);
     }
+    let powers_of_two = (0..=target)
+        .map(|degree| mod_pow(2, degree as u64, modulus))
+        .collect::<Vec<_>>();
 
     let mut mangoldt = vec![vec![0_u64; size]; target + 1];
     for degree in 1..=target {
         for character in 0..size {
-            let mut value = multiply_mod(
-                degree as u64 % modulus,
-                class_sums[degree][character],
-                modulus,
-            );
-            for earlier in 1..degree {
+            let class_sum = |class_degree: usize| {
+                if class_degree < ell {
+                    class_sums[class_degree][character]
+                } else if character == 0 {
+                    powers_of_two[class_degree]
+                } else {
+                    0
+                }
+            };
+            let mut value = multiply_mod(degree as u64 % modulus, class_sum(degree), modulus);
+            for (earlier, earlier_values) in mangoldt.iter().enumerate().take(degree).skip(1) {
                 let correction = multiply_mod(
-                    mangoldt[earlier][character],
-                    class_sums[degree - earlier][character],
+                    earlier_values[character],
+                    class_sum(degree - earlier),
                     modulus,
                 );
                 value = subtract_mod(value, correction, modulus);
