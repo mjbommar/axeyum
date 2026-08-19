@@ -569,3 +569,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0494](adr-0494-wrapped-binary-inverse-energy-needs-an-explicit-valuation-ledger.md) | Reprove the fourth inverse-energy bound for the binary prime-power modulus with explicit valuation, lift, divisor, and loss accounting | accepted |
 | [0495](adr-0495-exhaust-the-endpoint-vaughan-table-before-regrouping.md) | Enumerate every endpoint convolution order and Vaughan source range while keeping suppressed analytic losses explicit | accepted |
 | [0496](adr-0496-regroup-mobius-orders-by-annihilator-depth.md) | Preserve cross-order cancellation by low-bit Fourier annihilator depth and charge a buffered tail against the exact odd-endpoint margin | accepted |
+| [0497](adr-0497-use-the-exact-binary-divisor-envelope-in-vaughan-ledgers.md) | Replace the crude subexponential divisor factor by an exact finite-degree optimizer and carry it through every endpoint energy row | accepted |

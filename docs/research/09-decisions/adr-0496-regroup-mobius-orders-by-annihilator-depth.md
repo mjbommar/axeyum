@@ -78,8 +78,10 @@ bound for either.
 
 - The CAS now represents the exact aggregate structure needed by the next
   proof attempt, rather than only independent convolution orders.
-- The analytic-loss reserve remains deliberately unfilled until an explicit
-  divisor-envelope/constants calculation justifies it.
+- ADR-0497 now charges the exact finite inverse-energy divisor envelope in a
+  parallel tail column.  The remaining reserve is only for analytic
+  Vaughan-weight loss and constants, and the `ell=300` explicit-energy tail
+  does not fit.
 - The remaining theorem obligation is a bound for the annihilator-depth-
   aggregated weighted `B` combination on the low/medium block.  Multiplicative
   conductor or Berlekamp rank may refine that two-parameter problem, but cannot

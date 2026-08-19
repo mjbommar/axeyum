@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::sync::{Mutex, OnceLock};
 
 use num_bigint::{BigInt, BigUint};
 use serde::{Deserialize, Serialize};
@@ -437,8 +438,6 @@ pub struct BinaryPrimePowerInverseEnergyStratum {
     pub lift_choice_exponent: usize,
     /// Degree bound for the nonzero polynomial being factored.
     pub factor_polynomial_degree_bound: usize,
-    /// Low/high irreducible-factor split used in the divisor envelope.
-    pub divisor_split_degree: usize,
     /// Explicit upper bound for the number of ordered factorizations.
     pub factorization_count_bound: BigUint,
     /// Exact number of ordered interval pairs in this valuation stratum.
@@ -742,10 +741,10 @@ impl EndpointVaughanCase {
 
 /// Aggregate coverage and worst main exponent for one Vaughan range.
 ///
-/// Exponents are exact numerators over denominator sixteen.  They omit the
-/// explicit subexponential divisor envelope and the caller's eventual
-/// epsilon/constants reserve; the report is a range audit, not endpoint
-/// theorem credit.
+/// Exponents are exact numerators over denominator sixteen.  Each row retains
+/// both the ideal source exponent and a second exponent using Axeyum's proved
+/// finite wrapped-energy envelope.  The remaining analytic/Vaughan-weight
+/// reserve and constants are still separate, so this is not theorem credit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EndpointVaughanCaseRow {
     /// Source case represented by this row.
@@ -758,6 +757,13 @@ pub struct EndpointVaughanCaseRow {
     pub worst_effective_modulus_degree: Option<usize>,
     /// Vaughan variable `u` or `v` attaining the recorded worst value.
     pub worst_split_degree: Option<usize>,
+    /// Largest exponent after replacing every `k=2` ideal energy exponent by
+    /// the ceiling of Axeyum's explicit wrapped binary energy envelope.
+    pub worst_explicit_energy_bound_sixteenths: Option<u128>,
+    /// Effective modulus attaining the explicit-energy worst value.
+    pub worst_explicit_energy_effective_modulus_degree: Option<usize>,
+    /// Vaughan split attaining the explicit-energy worst value.
+    pub worst_explicit_energy_split_degree: Option<usize>,
 }
 
 /// Exhaustive endpoint Vaughan range table for one convolution order.
@@ -788,6 +794,11 @@ pub struct EndpointVaughanRangeReport {
     pub target_exponent_sixteenths: u128,
     /// `target-bound` over denominator sixteen.
     pub deficit_sixteenths: i128,
+    /// Worst bound after inserting the proved finite divisor envelope in
+    /// every inverse-energy input, still before analytic/Vaughan-weight loss.
+    pub worst_explicit_energy_bound_sixteenths: u128,
+    /// `target-explicit_energy_bound` over denominator sixteen.
+    pub explicit_energy_deficit_sixteenths: i128,
 }
 
 impl EndpointVaughanRangeReport {
@@ -809,11 +820,20 @@ impl EndpointVaughanRangeReport {
         })
     }
 
-    /// The table records main exponents only; explicit subexponential,
-    /// epsilon, constants, and convolution-weight losses remain separate.
+    /// The ideal column suppresses the energy envelope, while both columns
+    /// still leave analytic/Vaughan-weight constants and convolution weights
+    /// separate.
     #[must_use]
     pub const fn suppressed_losses_remain(&self) -> bool {
         true
+    }
+
+    /// Whether the proved wrapped inverse-energy envelope, including its
+    /// finite divisor factor, is below the pointwise target before the
+    /// separate analytic/Vaughan-weight reserve is charged.
+    #[must_use]
+    pub const fn strict_pointwise_explicit_energy_closure(&self) -> bool {
+        self.explicit_energy_deficit_sixteenths > 0
     }
 
     /// Whether the zero-loss pointwise main exponent is below `2^ell`.
@@ -826,9 +846,9 @@ impl EndpointVaughanRangeReport {
 /// End-to-end Vaughan range table across every endpoint convolution order.
 ///
 /// Entries are ordered by increasing interval degree `1<=d<ell`.  As with
-/// [`EndpointVaughanRangeReport`], the table contains exact main exponents but
-/// deliberately does not absorb subexponential, epsilon, constant, or
-/// convolution-weight losses.
+/// [`EndpointVaughanRangeReport`], the table contains both ideal and explicit-
+/// energy exponents but deliberately does not absorb the remaining analytic,
+/// constant, or convolution-weight losses.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EndpointVaughanTableReport {
     /// Principal-unit level `ell`.
@@ -839,6 +859,9 @@ pub struct EndpointVaughanTableReport {
     pub convolution_orders: Vec<EndpointVaughanRangeReport>,
     /// First `d` with a strict zero-loss pointwise main-exponent saving.
     pub first_strict_pointwise_degree: Option<usize>,
+    /// First `d` whose pointwise exponent remains strict after inserting the
+    /// explicit wrapped inverse-energy envelope.
+    pub first_strict_explicit_energy_degree: Option<usize>,
 }
 
 impl EndpointVaughanTableReport {
@@ -853,8 +876,8 @@ impl EndpointVaughanTableReport {
                 .all(|(index, report)| report.interval_degree == index + 1)
     }
 
-    /// The table remains a zero-loss pointwise calibration, not endpoint
-    /// theorem credit.
+    /// Even the explicit-energy column leaves analytic/Vaughan-weight losses
+    /// separate, so the table is not endpoint theorem credit.
     #[must_use]
     pub const fn suppressed_losses_remain(&self) -> bool {
         true
@@ -868,6 +891,9 @@ pub struct OddEndpointVaughanTailOrder {
     pub interval_degree: usize,
     /// Exhaustive Vaughan main exponent numerator over denominator sixteen.
     pub main_bound_sixteenths: u128,
+    /// Main exponent after inserting the exact finite divisor envelope in
+    /// every wrapped inverse-energy input.
+    pub explicit_energy_bound_sixteenths: u128,
     /// Caller-selected reserve numerator over denominator sixteen.
     pub loss_reserve_sixteenths: u128,
     /// `ceil(log2(d))`, used to restore the convolution weight.
@@ -876,6 +902,8 @@ pub struct OddEndpointVaughanTailOrder {
     pub total_ceiling_bits: usize,
     /// Conservative power-of-two absolute bound for this order.
     pub absolute_bound: BigUint,
+    /// Conservative bound obtained from the explicit-energy exponent.
+    pub explicit_energy_absolute_bound: BigUint,
 }
 
 /// Margin ledger for a buffered large-`d` tail at the odd Lemire endpoint.
@@ -901,8 +929,12 @@ pub struct OddEndpointVaughanTailBudgetReport {
     pub endpoint_absolute_budget: BigUint,
     /// Sum of the conservative pointwise tail bounds.
     pub tail_absolute_bound: BigUint,
+    /// Tail bound after inserting the explicit inverse-energy envelope.
+    pub explicit_energy_tail_absolute_bound: BigUint,
     /// Budget left for the absolute value of the low/medium signed block.
     pub residual_low_block_budget: Option<BigUint>,
+    /// Residual budget after charging the explicit-energy tail.
+    pub explicit_energy_residual_low_block_budget: Option<BigUint>,
 }
 
 impl OddEndpointVaughanTailBudgetReport {
@@ -910,6 +942,13 @@ impl OddEndpointVaughanTailBudgetReport {
     #[must_use]
     pub fn tail_fits_endpoint_budget(&self) -> bool {
         self.residual_low_block_budget.is_some()
+    }
+
+    /// Whether the explicit-energy pointwise tail fits before the separate
+    /// analytic/Vaughan-weight reserve has been justified.
+    #[must_use]
+    pub fn explicit_energy_tail_fits_endpoint_budget(&self) -> bool {
+        self.explicit_energy_residual_low_block_budget.is_some()
     }
 }
 
@@ -2048,28 +2087,142 @@ pub fn principal_unit_inverse_additive_energy_no_wrap_bound(
     })
 }
 
-fn binary_polynomial_divisor_envelope(degree: usize) -> Result<(usize, BigUint), HayesError> {
-    if degree == 0 {
-        return Ok((0, BigUint::from(1_u8)));
+fn binary_irreducible_counts_through(degree: usize) -> Result<Vec<BigUint>, HayesError> {
+    let mut counts = vec![BigUint::from(0_u8); degree + 1];
+    for current in 1..=degree {
+        let mut numerator = BigUint::from(1_u8) << current;
+        for (divisor, count) in counts.iter().enumerate().take(current).skip(1) {
+            if current.is_multiple_of(divisor) {
+                numerator -= BigUint::from(divisor) * count;
+            }
+        }
+        let divisor = BigUint::from(current);
+        if &numerator % &divisor != BigUint::from(0_u8) {
+            return Err(HayesError::Invariant(
+                "binary irreducible-count recurrence is not integral".to_owned(),
+            ));
+        }
+        counts[current] = numerator / divisor;
     }
-    let floor_log_two = usize::BITS as usize - 1 - degree.leading_zeros() as usize;
-    let split_degree = (floor_log_two / 2).max(1);
-    let low_factor_count = 1_usize
-        .checked_shl(u32::try_from(split_degree + 1).map_err(|_| {
-            HayesError::InvalidParameter("divisor low-factor shift overflow".to_owned())
-        })?)
-        .ok_or_else(|| {
-            HayesError::InvalidParameter("divisor low-factor count exceeds host width".to_owned())
-        })?;
-    let low_factor_count = u32::try_from(low_factor_count).map_err(|_| {
-        HayesError::InvalidParameter("divisor low-factor count exceeds BigUint::pow".to_owned())
+    Ok(counts)
+}
+
+fn balanced_factor_exponent_product(
+    total_exponent: usize,
+    factors: usize,
+) -> Result<BigUint, HayesError> {
+    debug_assert!(factors > 0 && factors <= total_exponent);
+    let quotient = total_exponent / factors;
+    let remainder = total_exponent % factors;
+    let high_exponent = u32::try_from(remainder).map_err(|_| {
+        HayesError::InvalidParameter("balanced divisor exponent exceeds u32".to_owned())
     })?;
-    let high_factor_count = degree / (split_degree + 1);
-    let base = degree
-        .checked_add(1)
-        .ok_or_else(|| HayesError::InvalidParameter("divisor-envelope base overflow".to_owned()))?;
-    let low = BigUint::from(base).pow(low_factor_count);
-    Ok((split_degree, low << high_factor_count))
+    let low_exponent = u32::try_from(factors - remainder).map_err(|_| {
+        HayesError::InvalidParameter("balanced divisor exponent exceeds u32".to_owned())
+    })?;
+    Ok(BigUint::from(quotient + 2).pow(high_exponent)
+        * BigUint::from(quotient + 1).pow(low_exponent))
+}
+
+/// Exact maximum of the monic-divisor count over nonzero binary polynomials
+/// of degree at most `degree`.
+///
+/// If `Q=prod_P P^e_P`, then `tau(Q)=prod_P(e_P+1)`.  For each irreducible
+/// degree `j`, the recurrence `2^j=sum_(d|j)d I_d` supplies the exact number
+/// `I_j` of available factors.  At fixed total exponent and factor count the
+/// product is maximized by balanced exponents, after which a degree-knapsack
+/// combines the independent `j`-blocks.  Thus this is an exact optimization,
+/// not an asymptotic divisor estimate.
+fn compute_binary_polynomial_divisor_envelopes(degree: usize) -> Result<Vec<BigUint>, HayesError> {
+    let irreducible_counts = binary_irreducible_counts_through(degree)?;
+    let mut maximum_by_degree = vec![None::<BigUint>; degree + 1];
+    maximum_by_degree[0] = Some(BigUint::from(1_u8));
+    for (factor_degree, irreducible_count) in irreducible_counts
+        .iter()
+        .enumerate()
+        .take(degree + 1)
+        .skip(1)
+    {
+        let maximum_total_exponent = degree / factor_degree;
+        let cap = BigUint::from(maximum_total_exponent);
+        let available = if irreducible_count >= &cap {
+            maximum_total_exponent
+        } else {
+            usize::try_from(irreducible_count.clone()).map_err(|_| {
+                HayesError::InvalidParameter("irreducible count exceeds usize".to_owned())
+            })?
+        };
+        let mut local = vec![BigUint::from(0_u8); maximum_total_exponent + 1];
+        local[0] = BigUint::from(1_u8);
+        for (total_exponent, maximum) in local.iter_mut().enumerate().skip(1) {
+            for factors in 1..=available.min(total_exponent) {
+                let candidate = balanced_factor_exponent_product(total_exponent, factors)?;
+                if candidate > *maximum {
+                    *maximum = candidate;
+                }
+            }
+        }
+        let previous = maximum_by_degree;
+        maximum_by_degree = vec![None::<BigUint>; degree + 1];
+        for (used, current) in previous.into_iter().enumerate() {
+            let Some(current) = current else {
+                continue;
+            };
+            for (total_exponent, local_bound) in local.iter().enumerate() {
+                let added = factor_degree.checked_mul(total_exponent).ok_or_else(|| {
+                    HayesError::InvalidParameter("divisor knapsack degree overflow".to_owned())
+                })?;
+                let Some(target) = used.checked_add(added).filter(|&value| value <= degree) else {
+                    continue;
+                };
+                let candidate = &current * local_bound;
+                if maximum_by_degree[target]
+                    .as_ref()
+                    .is_none_or(|best| candidate > *best)
+                {
+                    maximum_by_degree[target] = Some(candidate);
+                }
+            }
+        }
+    }
+    let mut prefix_maximum = Vec::with_capacity(degree + 1);
+    let mut maximum = BigUint::from(0_u8);
+    for value in maximum_by_degree {
+        if let Some(value) = value {
+            maximum = maximum.max(value);
+        }
+        prefix_maximum.push(maximum.clone());
+    }
+    if prefix_maximum.first() != Some(&BigUint::from(1_u8)) {
+        return Err(HayesError::Invariant(
+            "divisor knapsack lost its zero state".to_owned(),
+        ));
+    }
+    Ok(prefix_maximum)
+}
+
+static BINARY_POLYNOMIAL_DIVISOR_ENVELOPES: OnceLock<Mutex<Vec<BigUint>>> = OnceLock::new();
+
+fn binary_polynomial_divisor_envelope(degree: usize) -> Result<BigUint, HayesError> {
+    let cache =
+        BINARY_POLYNOMIAL_DIVISOR_ENVELOPES.get_or_init(|| Mutex::new(vec![BigUint::from(1_u8)]));
+    {
+        let values = cache.lock().map_err(|_| {
+            HayesError::Invariant("binary divisor-envelope cache is poisoned".to_owned())
+        })?;
+        if let Some(value) = values.get(degree) {
+            return Ok(value.clone());
+        }
+    }
+    let computed = compute_binary_polynomial_divisor_envelopes(degree)?;
+    let value = computed[degree].clone();
+    let mut values = cache.lock().map_err(|_| {
+        HayesError::Invariant("binary divisor-envelope cache is poisoned".to_owned())
+    })?;
+    if computed.len() > values.len() {
+        *values = computed;
+    }
+    Ok(value)
 }
 
 /// Prove an explicit inverse-additive-energy bound for the wrapped binary
@@ -2148,7 +2301,14 @@ pub fn binary_prime_power_inverse_additive_energy_bound(
         let factor_polynomial_degree_bound = factor_degree.checked_mul(2).ok_or_else(|| {
             HayesError::InvalidParameter("factor polynomial degree overflow".to_owned())
         })?;
-        let (divisor_split_degree, factorization_count_bound) =
+        let divisor_cells = factor_polynomial_degree_bound
+            .checked_add(1)
+            .and_then(|value| value.checked_mul(value))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("divisor-envelope work estimate overflow".to_owned())
+            })?;
+        check_limit("table_cells", divisor_cells, limits.max_table_cells)?;
+        let factorization_count_bound =
             binary_polynomial_divisor_envelope(factor_polynomial_degree_bound)?;
         let pair_exponent = twice_cutoff
             .checked_sub(valuation)
@@ -2163,7 +2323,6 @@ pub fn binary_prime_power_inverse_additive_energy_bound(
             approximation_degree,
             lift_choice_exponent,
             factor_polynomial_degree_bound,
-            divisor_split_degree,
             factorization_count_bound,
             ordered_pair_count,
             energy_contribution_bound,
@@ -2698,6 +2857,9 @@ impl EndpointVaughanAccumulator {
                             worst_bound_sixteenths: None,
                             worst_effective_modulus_degree: None,
                             worst_split_degree: None,
+                            worst_explicit_energy_bound_sixteenths: None,
+                            worst_explicit_energy_effective_modulus_degree: None,
+                            worst_explicit_energy_split_degree: None,
                         },
                     )
                 })
@@ -2709,6 +2871,7 @@ impl EndpointVaughanAccumulator {
         &mut self,
         case: EndpointVaughanCase,
         bound: u128,
+        explicit_energy_bound: u128,
         effective_modulus_degree: usize,
         split_degree: Option<usize>,
     ) -> Result<(), HayesError> {
@@ -2727,6 +2890,14 @@ impl EndpointVaughanAccumulator {
             row.worst_effective_modulus_degree = Some(effective_modulus_degree);
             row.worst_split_degree = split_degree;
         }
+        if row
+            .worst_explicit_energy_bound_sixteenths
+            .is_none_or(|current| explicit_energy_bound > current)
+        {
+            row.worst_explicit_energy_bound_sixteenths = Some(explicit_energy_bound);
+            row.worst_explicit_energy_effective_modulus_degree = Some(effective_modulus_degree);
+            row.worst_explicit_energy_split_degree = split_degree;
+        }
         Ok(())
     }
 
@@ -2742,12 +2913,39 @@ impl EndpointVaughanAccumulator {
     }
 }
 
+fn endpoint_explicit_energy_ceiling(
+    effective_modulus_degree: usize,
+    bagshaw_degree_cutoff: usize,
+    limits: HayesLimits,
+    cache: &mut BTreeMap<(usize, usize), usize>,
+) -> Result<usize, HayesError> {
+    if bagshaw_degree_cutoff == 0 {
+        return Ok(0);
+    }
+    let key = (effective_modulus_degree, bagshaw_degree_cutoff);
+    if let Some(&exponent) = cache.get(&key) {
+        return Ok(exponent);
+    }
+    let report = binary_prime_power_inverse_additive_energy_bound(
+        effective_modulus_degree,
+        bagshaw_degree_cutoff,
+        limits,
+    )?;
+    let exponent = report.ceiling_energy_exponent().ok_or_else(|| {
+        HayesError::InvalidParameter("endpoint energy ceiling exceeds usize".to_owned())
+    })?;
+    cache.insert(key, exponent);
+    Ok(exponent)
+}
+
 fn endpoint_type_one_case_bound(
     cutoff: usize,
     effective_modulus_degree: usize,
     split: usize,
     kappa: usize,
-) -> Result<(EndpointVaughanCase, u128), HayesError> {
+    limits: HayesLimits,
+    energy_cache: &mut BTreeMap<(usize, usize), usize>,
+) -> Result<(EndpointVaughanCase, u128, u128), HayesError> {
     let inner = cutoff
         .checked_sub(split)
         .ok_or_else(|| HayesError::Invariant("Type-I split exceeds cutoff".to_owned()))?;
@@ -2766,7 +2964,7 @@ fn endpoint_type_one_case_bound(
             .and_then(|value| value.checked_add(kappa))
             .and_then(|value| value.checked_mul(16))
             .ok_or_else(|| HayesError::InvalidParameter("Case-1 exponent overflow".to_owned()))?;
-        return Ok((EndpointVaughanCase::TypeOneCaseOne, bound));
+        return Ok((EndpointVaughanCase::TypeOneCaseOne, bound, bound));
     }
     let inner = u128::try_from(inner)
         .map_err(|_| HayesError::InvalidParameter("Type-I inner exceeds u128".to_owned()))?;
@@ -2786,13 +2984,61 @@ fn endpoint_type_one_case_bound(
             .checked_add(kappa)
             .and_then(|value| value.checked_mul(16))
             .ok_or_else(|| HayesError::InvalidParameter("Case-2 completion overflow".to_owned()))?;
-        return Ok((EndpointVaughanCase::TypeOneCaseTwo, energy.min(completion)));
+        let explicit_energy_exponent = u128::try_from(endpoint_explicit_energy_ceiling(
+            effective_modulus_degree,
+            split,
+            limits,
+            energy_cache,
+        )?)
+        .map_err(|_| {
+            HayesError::InvalidParameter("Case-2 energy ceiling exceeds u128".to_owned())
+        })?;
+        let explicit_energy = n
+            .checked_mul(3)
+            .and_then(|value| u.checked_mul(3).and_then(|term| value.checked_sub(term)))
+            .and_then(|value| value.checked_add(r0))
+            .and_then(|value| value.checked_add(explicit_energy_exponent))
+            .and_then(|value| value.checked_mul(4))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Case-2 explicit energy overflow".to_owned())
+            })?;
+        return Ok((
+            EndpointVaughanCase::TypeOneCaseTwo,
+            energy.min(completion),
+            explicit_energy.min(completion),
+        ));
     }
     if inner.checked_mul(3).is_some_and(|value| value >= r0) {
-        return n
+        let left_energy = u128::try_from(endpoint_explicit_energy_ceiling(
+            effective_modulus_degree,
+            split,
+            limits,
+            energy_cache,
+        )?)
+        .map_err(|_| HayesError::InvalidParameter("Case-3 left energy exceeds u128".to_owned()))?;
+        let right_energy = u128::try_from(endpoint_explicit_energy_ceiling(
+            effective_modulus_degree,
+            cutoff - split,
+            limits,
+            energy_cache,
+        )?)
+        .map_err(|_| HayesError::InvalidParameter("Case-3 right energy exceeds u128".to_owned()))?;
+        let bound = n
             .checked_mul(15)
-            .map(|bound| (EndpointVaughanCase::TypeOneCaseThree, bound))
-            .ok_or_else(|| HayesError::InvalidParameter("Case-3 exponent overflow".to_owned()));
+            .ok_or_else(|| HayesError::InvalidParameter("Case-3 exponent overflow".to_owned()))?;
+        let explicit = n
+            .checked_mul(8)
+            .and_then(|value| {
+                left_energy
+                    .checked_add(right_energy)
+                    .and_then(|energy| energy.checked_add(r0))
+                    .and_then(|energy| energy.checked_mul(2))
+                    .and_then(|energy| value.checked_add(energy))
+            })
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Case-3 explicit energy overflow".to_owned())
+            })?;
+        return Ok((EndpointVaughanCase::TypeOneCaseThree, bound, explicit));
     }
     Err(HayesError::Invariant(
         "Lemire endpoint unexpectedly reaches Type-I Case 4 or 5".to_owned(),
@@ -2803,13 +3049,27 @@ fn enumerate_endpoint_type_one(
     cutoff: usize,
     effective_modulus_degree: usize,
     accumulator: &mut EndpointVaughanAccumulator,
+    limits: HayesLimits,
+    energy_cache: &mut BTreeMap<(usize, usize), usize>,
 ) -> Result<(), HayesError> {
     let kappa = binary_complete_kloosterman_exponent(effective_modulus_degree)?;
     let maximum_split = effective_modulus_degree - effective_modulus_degree.div_ceil(3);
     for split in 0..=maximum_split {
-        let (case, bound) =
-            endpoint_type_one_case_bound(cutoff, effective_modulus_degree, split, kappa)?;
-        accumulator.record(case, bound, effective_modulus_degree, Some(split))?;
+        let (case, bound, explicit_energy_bound) = endpoint_type_one_case_bound(
+            cutoff,
+            effective_modulus_degree,
+            split,
+            kappa,
+            limits,
+            energy_cache,
+        )?;
+        accumulator.record(
+            case,
+            bound,
+            explicit_energy_bound,
+            effective_modulus_degree,
+            Some(split),
+        )?;
     }
     Ok(())
 }
@@ -2818,7 +3078,9 @@ fn endpoint_type_two_case_bound(
     cutoff: usize,
     effective_modulus_degree: usize,
     split: usize,
-) -> Result<Option<(EndpointVaughanCase, u128)>, HayesError> {
+    limits: HayesLimits,
+    energy_cache: &mut BTreeMap<(usize, usize), usize>,
+) -> Result<Option<(EndpointVaughanCase, u128, u128)>, HayesError> {
     let inner = cutoff - split;
     let n = u128::try_from(cutoff)
         .map_err(|_| HayesError::InvalidParameter("Type-II cutoff exceeds u128".to_owned()))?;
@@ -2843,10 +3105,40 @@ fn endpoint_type_two_case_bound(
         return Ok(None);
     }
     if v <= r0 && inner_u128 <= r0 {
-        return n
+        let left_energy = u128::try_from(endpoint_explicit_energy_ceiling(
+            effective_modulus_degree,
+            split,
+            limits,
+            energy_cache,
+        )?)
+        .map_err(|_| {
+            HayesError::InvalidParameter("Type-II Case-1 left energy exceeds u128".to_owned())
+        })?;
+        let right_energy = u128::try_from(endpoint_explicit_energy_ceiling(
+            effective_modulus_degree,
+            inner,
+            limits,
+            energy_cache,
+        )?)
+        .map_err(|_| {
+            HayesError::InvalidParameter("Type-II Case-1 right energy exceeds u128".to_owned())
+        })?;
+        let bound = n
             .checked_mul(15)
-            .map(|bound| Some((EndpointVaughanCase::TypeTwoCaseOne, bound)))
-            .ok_or_else(|| HayesError::InvalidParameter("Type-II Case-1 overflow".to_owned()));
+            .ok_or_else(|| HayesError::InvalidParameter("Type-II Case-1 overflow".to_owned()))?;
+        let explicit = n
+            .checked_mul(8)
+            .and_then(|value| {
+                left_energy
+                    .checked_add(right_energy)
+                    .and_then(|energy| energy.checked_add(r0))
+                    .and_then(|energy| energy.checked_mul(2))
+                    .and_then(|energy| value.checked_add(energy))
+            })
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Type-II Case-1 explicit energy overflow".to_owned())
+            })?;
+        return Ok(Some((EndpointVaughanCase::TypeTwoCaseOne, bound, explicit)));
     }
     if v <= r0 && inner_u128 >= r0 {
         let bound = n
@@ -2854,14 +3146,34 @@ fn endpoint_type_two_case_bound(
             .and_then(|value| v.checked_mul(2).and_then(|term| value.checked_sub(term)))
             .and_then(|value| r0.checked_mul(2).and_then(|term| value.checked_sub(term)))
             .ok_or_else(|| HayesError::InvalidParameter("Type-II Case-2 overflow".to_owned()))?;
-        return Ok(Some((EndpointVaughanCase::TypeTwoCaseTwo, bound)));
+        let energy = u128::try_from(endpoint_explicit_energy_ceiling(
+            effective_modulus_degree,
+            split,
+            limits,
+            energy_cache,
+        )?)
+        .map_err(|_| {
+            HayesError::InvalidParameter("Type-II Case-2 energy exceeds u128".to_owned())
+        })?;
+        let explicit = n
+            .checked_sub(v)
+            .and_then(|value| value.checked_mul(16))
+            .and_then(|value| {
+                energy
+                    .checked_mul(4)
+                    .and_then(|term| value.checked_add(term))
+            })
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Type-II Case-2 explicit energy overflow".to_owned())
+            })?;
+        return Ok(Some((EndpointVaughanCase::TypeTwoCaseTwo, bound, explicit)));
     }
     if v >= r0 && inner_u128 >= r0 {
         let bound = n
             .checked_mul(16)
             .and_then(|value| r0.checked_mul(4).and_then(|term| value.checked_sub(term)))
             .ok_or_else(|| HayesError::InvalidParameter("Type-II Case-3 overflow".to_owned()))?;
-        return Ok(Some((EndpointVaughanCase::TypeTwoCaseThree, bound)));
+        return Ok(Some((EndpointVaughanCase::TypeTwoCaseThree, bound, bound)));
     }
     Err(HayesError::Invariant(
         "symmetry-reduced Type-II split is uncovered".to_owned(),
@@ -2872,12 +3184,24 @@ fn enumerate_endpoint_type_two(
     cutoff: usize,
     effective_modulus_degree: usize,
     accumulator: &mut EndpointVaughanAccumulator,
+    limits: HayesLimits,
+    energy_cache: &mut BTreeMap<(usize, usize), usize>,
 ) -> Result<(), HayesError> {
     for split in 0..=cutoff {
-        if let Some((case, bound)) =
-            endpoint_type_two_case_bound(cutoff, effective_modulus_degree, split)?
-        {
-            accumulator.record(case, bound, effective_modulus_degree, Some(split))?;
+        if let Some((case, bound, explicit_energy_bound)) = endpoint_type_two_case_bound(
+            cutoff,
+            effective_modulus_degree,
+            split,
+            limits,
+            energy_cache,
+        )? {
+            accumulator.record(
+                case,
+                bound,
+                explicit_energy_bound,
+                effective_modulus_degree,
+                Some(split),
+            )?;
         }
     }
     Ok(())
@@ -2886,7 +3210,23 @@ fn enumerate_endpoint_type_two(
 fn enumerate_endpoint_vaughan_rows(
     cutoff: usize,
     modulus_degree: usize,
+    limits: HayesLimits,
+    energy_cache: &mut BTreeMap<(usize, usize), usize>,
 ) -> Result<Vec<EndpointVaughanCaseRow>, HayesError> {
+    let maximum_factor_polynomial_degree = modulus_degree
+        .checked_mul(4)
+        .and_then(|value| value.checked_sub(4))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("endpoint divisor-envelope degree overflow".to_owned())
+        })?;
+    let divisor_cells = maximum_factor_polynomial_degree
+        .checked_add(1)
+        .and_then(|value| value.checked_mul(value))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("endpoint divisor-envelope work overflow".to_owned())
+        })?;
+    check_limit("table_cells", divisor_cells, limits.max_table_cells)?;
+    let _ = binary_polynomial_divisor_envelope(maximum_factor_polynomial_degree)?;
     let n = u128::try_from(cutoff)
         .map_err(|_| HayesError::InvalidParameter("Vaughan cutoff exceeds u128".to_owned()))?;
     let mut accumulator = EndpointVaughanAccumulator::new();
@@ -2907,12 +3247,25 @@ fn enumerate_endpoint_vaughan_rows(
             accumulator.record(
                 EndpointVaughanCase::SmallEffectiveModulus,
                 bound,
+                bound,
                 effective_modulus_degree,
                 None,
             )?;
         } else {
-            enumerate_endpoint_type_one(cutoff, effective_modulus_degree, &mut accumulator)?;
-            enumerate_endpoint_type_two(cutoff, effective_modulus_degree, &mut accumulator)?;
+            enumerate_endpoint_type_one(
+                cutoff,
+                effective_modulus_degree,
+                &mut accumulator,
+                limits,
+                energy_cache,
+            )?;
+            enumerate_endpoint_type_two(
+                cutoff,
+                effective_modulus_degree,
+                &mut accumulator,
+                limits,
+                energy_cache,
+            )?;
         }
     }
     accumulator.into_rows()
@@ -2921,10 +3274,11 @@ fn enumerate_endpoint_vaughan_rows(
 /// Enumerate the complete source-level Vaughan range table for one Lemire
 /// endpoint convolution order.
 ///
-/// Main exponents use Bagshaw's characteristic-free energy lines, the
-/// internally proved wrapped binary energy input, and the binary complete-sum
-/// replacement.  They intentionally omit the explicit subexponential energy
-/// envelope, epsilon/constants, and polynomial convolution weights.
+/// The ideal column uses Bagshaw's characteristic-free energy lines.  The
+/// explicit column replaces every `k=2` line by the ceiling of Axeyum's proved
+/// wrapped binary energy bound, including its exact finite divisor envelope.
+/// Both use the binary complete-sum replacement and leave the remaining
+/// analytic/Vaughan-weight constants and polynomial convolution weights out.
 ///
 /// # Errors
 ///
@@ -2935,6 +3289,23 @@ pub fn endpoint_vaughan_range_report(
     endpoint_degree: usize,
     interval_degree: usize,
     limits: HayesLimits,
+) -> Result<EndpointVaughanRangeReport, HayesError> {
+    let mut energy_cache = BTreeMap::new();
+    endpoint_vaughan_range_report_with_energy_cache(
+        ell,
+        endpoint_degree,
+        interval_degree,
+        limits,
+        &mut energy_cache,
+    )
+}
+
+fn endpoint_vaughan_range_report_with_energy_cache(
+    ell: usize,
+    endpoint_degree: usize,
+    interval_degree: usize,
+    limits: HayesLimits,
+    energy_cache: &mut BTreeMap<(usize, usize), usize>,
 ) -> Result<EndpointVaughanRangeReport, HayesError> {
     let calibration =
         endpoint_inverse_mobius_exponent_calibration(ell, endpoint_degree, interval_degree)?;
@@ -2948,7 +3319,8 @@ pub fn endpoint_vaughan_range_report(
             "Lemire endpoint cutoff does not exceed its modulus".to_owned(),
         ));
     }
-    let rows = enumerate_endpoint_vaughan_rows(cumulative_cutoff, modulus_degree)?;
+    let rows =
+        enumerate_endpoint_vaughan_rows(cumulative_cutoff, modulus_degree, limits, energy_cache)?;
     let worst_row = rows
         .iter()
         .filter_map(|row| row.worst_bound_sixteenths.map(|bound| (row, bound)))
@@ -2969,6 +3341,16 @@ pub fn endpoint_vaughan_range_report(
         worst_bound_sixteenths,
         "endpoint Vaughan",
     )?;
+    let worst_explicit_energy_bound_sixteenths = rows
+        .iter()
+        .filter_map(|row| row.worst_explicit_energy_bound_sixteenths)
+        .max()
+        .ok_or_else(|| HayesError::Invariant("Vaughan explicit table has no samples".to_owned()))?;
+    let explicit_energy_deficit_sixteenths = checked_exponent_deficit(
+        target_exponent_sixteenths,
+        worst_explicit_energy_bound_sixteenths,
+        "endpoint explicit-energy Vaughan",
+    )?;
     Ok(EndpointVaughanRangeReport {
         ell,
         endpoint_degree,
@@ -2980,6 +3362,8 @@ pub fn endpoint_vaughan_range_report(
         worst_bound_sixteenths,
         target_exponent_sixteenths,
         deficit_sixteenths,
+        worst_explicit_energy_bound_sixteenths,
+        explicit_energy_deficit_sixteenths,
     })
 }
 
@@ -3000,23 +3384,30 @@ pub fn endpoint_vaughan_range_table(
         ));
     }
     let mut convolution_orders = Vec::with_capacity(ell - 1);
+    let mut energy_cache = BTreeMap::new();
     for interval_degree in 1..ell {
-        convolution_orders.push(endpoint_vaughan_range_report(
+        convolution_orders.push(endpoint_vaughan_range_report_with_energy_cache(
             ell,
             endpoint_degree,
             interval_degree,
             limits,
+            &mut energy_cache,
         )?);
     }
     let first_strict_pointwise_degree = convolution_orders
         .iter()
         .find(|report| report.strict_pointwise_main_term_closure())
         .map(|report| report.interval_degree);
+    let first_strict_explicit_energy_degree = convolution_orders
+        .iter()
+        .find(|report| report.strict_pointwise_explicit_energy_closure())
+        .map(|report| report.interval_degree);
     Ok(EndpointVaughanTableReport {
         ell,
         endpoint_degree,
         convolution_orders,
         first_strict_pointwise_degree,
+        first_strict_explicit_energy_degree,
     })
 }
 
@@ -3031,10 +3422,10 @@ fn convolution_weight_ceiling_bits(interval_degree: usize) -> usize {
 /// Charge a buffered large-`d` tail against the exact odd-endpoint budget.
 ///
 /// The caller reserve is an exponent numerator over denominator sixteen.  It
-/// is where a future application must place the explicit energy envelope,
-/// epsilon, and constants.  This report restores `ceil(log2(d))` itself and
-/// rounds each pointwise bound upward before summing, so its residual budget
-/// is conservative once that reserve has been justified.
+/// is where a future application must place the remaining analytic
+/// Vaughan-weight loss and constants.  The report separately charges both
+/// the ideal source exponent and Axeyum's explicit energy envelope, restores
+/// `ceil(log2(d))`, and rounds each pointwise bound upward before summing.
 ///
 /// # Errors
 ///
@@ -3058,6 +3449,7 @@ pub fn odd_endpoint_vaughan_tail_budget(
     let table = endpoint_vaughan_range_table(ell, endpoint_degree, limits)?;
     let mut tail_orders = Vec::with_capacity(ell - tail_start_degree);
     let mut tail_absolute_bound = BigUint::from(0_u8);
+    let mut explicit_energy_tail_absolute_bound = BigUint::from(0_u8);
     for report in table
         .convolution_orders
         .into_iter()
@@ -3079,14 +3471,29 @@ pub fn odd_endpoint_vaughan_tail_budget(
         let total_ceiling_bits = usize::try_from(total_sixteenths.div_ceil(16))
             .map_err(|_| HayesError::InvalidParameter("tail exponent exceeds usize".to_owned()))?;
         let absolute_bound = BigUint::from(1_u8) << total_ceiling_bits;
+        let explicit_total_sixteenths = report
+            .worst_explicit_energy_bound_sixteenths
+            .checked_add(loss_reserve_sixteenths)
+            .and_then(|value| value.checked_add(weight_sixteenths))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("explicit-energy tail exponent overflow".to_owned())
+            })?;
+        let explicit_total_ceiling_bits = usize::try_from(explicit_total_sixteenths.div_ceil(16))
+            .map_err(|_| {
+            HayesError::InvalidParameter("explicit-energy tail exponent exceeds usize".to_owned())
+        })?;
+        let explicit_energy_absolute_bound = BigUint::from(1_u8) << explicit_total_ceiling_bits;
         tail_absolute_bound += &absolute_bound;
+        explicit_energy_tail_absolute_bound += &explicit_energy_absolute_bound;
         tail_orders.push(OddEndpointVaughanTailOrder {
             interval_degree: report.interval_degree,
             main_bound_sixteenths: report.worst_bound_sixteenths,
+            explicit_energy_bound_sixteenths: report.worst_explicit_energy_bound_sixteenths,
             loss_reserve_sixteenths,
             convolution_weight_ceiling_bits,
             total_ceiling_bits,
             absolute_bound,
+            explicit_energy_absolute_bound,
         });
     }
     let uniform_mean = BigUint::from(1_u8)
@@ -3096,6 +3503,9 @@ pub fn odd_endpoint_vaughan_tail_budget(
     let endpoint_absolute_budget = uniform_mean - BigUint::from(2_u8);
     let residual_low_block_budget = (tail_absolute_bound <= endpoint_absolute_budget)
         .then(|| &endpoint_absolute_budget - &tail_absolute_bound);
+    let explicit_energy_residual_low_block_budget = (explicit_energy_tail_absolute_bound
+        <= endpoint_absolute_budget)
+        .then(|| &endpoint_absolute_budget - &explicit_energy_tail_absolute_bound);
     Ok(OddEndpointVaughanTailBudgetReport {
         ell,
         endpoint_degree,
@@ -3104,7 +3514,9 @@ pub fn odd_endpoint_vaughan_tail_budget(
         tail_orders,
         endpoint_absolute_budget,
         tail_absolute_bound,
+        explicit_energy_tail_absolute_bound,
         residual_low_block_budget,
+        explicit_energy_residual_low_block_budget,
     })
 }
 
@@ -5743,6 +6155,47 @@ mod tests {
             binary_prime_power_inverse_additive_energy_bound(5, 6, limits),
             Err(HayesError::InvalidParameter(_))
         ));
+        assert!(matches!(
+            binary_prime_power_inverse_additive_energy_bound(
+                5,
+                5,
+                HayesLimits {
+                    max_table_cells: 1,
+                    ..limits
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "table_cells",
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn exact_binary_divisor_envelope_matches_direct_factorization() {
+        let mut direct_maximum = BigUint::from(1_u8);
+        assert_eq!(
+            binary_polynomial_divisor_envelope(0).unwrap(),
+            direct_maximum
+        );
+        for degree in 1_usize..=10 {
+            for lower in 0_u64..1_u64 << degree {
+                let polynomial = (1_u64 << degree) | lower;
+                let coefficients = (0..=degree)
+                    .map(|index| i128::from((polynomial >> index) & 1))
+                    .collect::<Vec<_>>();
+                let factors = crate::gfp::factor_berlekamp(&coefficients, 2).unwrap();
+                let divisors = factors.iter().fold(BigUint::from(1_u8), |product, term| {
+                    product * BigUint::from(term.1 + 1)
+                });
+                direct_maximum = direct_maximum.max(divisors);
+            }
+            assert_eq!(
+                binary_polynomial_divisor_envelope(degree).unwrap(),
+                direct_maximum,
+                "degree={degree}"
+            );
+        }
     }
 
     #[test]
@@ -5990,6 +6443,38 @@ mod tests {
         ));
     }
 
+    fn assert_explicit_endpoint_energy_columns(
+        boundary: &EndpointVaughanRangeReport,
+        odd_first: &EndpointVaughanRangeReport,
+        even_first: &EndpointVaughanRangeReport,
+        odd_table: &EndpointVaughanTableReport,
+        even_table: &EndpointVaughanTableReport,
+    ) {
+        assert_eq!(boundary.worst_explicit_energy_bound_sixteenths, 5_176);
+        assert_eq!(boundary.explicit_energy_deficit_sixteenths, -376);
+        for report in [odd_first, even_first] {
+            assert_eq!(report.worst_explicit_energy_bound_sixteenths, 5_160);
+            assert_eq!(report.explicit_energy_deficit_sixteenths, -360);
+        }
+        assert_eq!(odd_table.first_strict_explicit_energy_degree, None);
+        assert_eq!(even_table.first_strict_explicit_energy_degree, None);
+        let odd_last = odd_table.convolution_orders.last().unwrap();
+        assert_eq!(odd_last.interval_degree, 299);
+        assert_eq!(odd_last.worst_explicit_energy_bound_sixteenths, 4_906);
+        assert_eq!(odd_last.explicit_energy_deficit_sixteenths, -106);
+        let row = odd_last
+            .rows
+            .iter()
+            .max_by_key(|row| row.worst_explicit_energy_bound_sixteenths)
+            .unwrap();
+        assert_eq!(row.case, EndpointVaughanCase::TypeTwoCaseOne);
+        assert_eq!(
+            row.worst_explicit_energy_effective_modulus_degree,
+            Some(152)
+        );
+        assert_eq!(row.worst_explicit_energy_split_degree, Some(151));
+    }
+
     #[test]
     fn endpoint_vaughan_table_covers_every_split_and_pins_the_same_transition() {
         let limits = HayesLimits {
@@ -6059,15 +6544,25 @@ mod tests {
         assert!(even_table.all_convolution_orders_present());
         assert_eq!(odd_table.first_strict_pointwise_degree, Some(283));
         assert_eq!(even_table.first_strict_pointwise_degree, Some(284));
+        assert_explicit_endpoint_energy_columns(
+            &odd_boundary,
+            &odd_first,
+            &even_first,
+            &odd_table,
+            &even_table,
+        );
         assert!(odd_table.suppressed_losses_remain());
         assert!(even_table.suppressed_losses_remain());
 
         let unbuffered = odd_endpoint_vaughan_tail_budget(ell, 292, 0, limits).unwrap();
         assert_eq!(unbuffered.tail_absolute_bound, BigUint::from(1_u8) << 301);
         assert!(!unbuffered.tail_fits_endpoint_budget());
+        assert!(!unbuffered.explicit_energy_tail_fits_endpoint_budget());
         let buffered = odd_endpoint_vaughan_tail_budget(ell, 293, 0, limits).unwrap();
         assert_eq!(buffered.tail_absolute_bound, BigUint::from(1_u8) << 300);
         assert!(buffered.tail_fits_endpoint_budget());
+        assert!(!buffered.explicit_energy_tail_fits_endpoint_budget());
+        assert!(buffered.explicit_energy_tail_absolute_bound > buffered.endpoint_absolute_budget);
         assert_eq!(
             buffered.residual_low_block_budget,
             Some((BigUint::from(1_u8) << 301) - (BigUint::from(1_u8) << 300) - 2_u8)

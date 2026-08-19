@@ -815,17 +815,21 @@ three Type-II cases with exact numerators over denominator sixteen.  An
 unassigned split fails construction.  Because `N>ell+1>=r0`, Type-I Cases 4
 and 5 are empty throughout the endpoint table rather than silently omitted.
 
-At `ell=300`, all seven relevant rows are nonempty.  The complete tables for
+At `ell=300`, all seven relevant rows are nonempty.  The ideal columns for
 degrees 601 and 602 recover the same first strict zero-loss transition as the
 coarse calibration: `d=283` and `d=284`, respectively.  At odd `d=282`,
 `N=320` and the worst exponent is exactly `15N/16=300`, so the deficit is
 zero.  At the next order `N=319`, Type-I Case 3 is worst with exponent
 `4785/16`, leaving only `15/16` of one bit.  This small margin does **not**
-absorb the explicit divisor-envelope `o(r)`, a positive epsilon, constants,
-or the convolution weight `d`.  The exhaustive table closes the range-audit
-gap, but it deliberately remains a non-credit-bearing pointwise diagnostic;
-the proof frontier is still cancellation across the signed Möbius
-convolution.
+absorb a positive epsilon, constants, or the convolution weight `d`.
+
+The table now also substitutes the proved finite wrapped-energy envelope into
+every energy-using Type-I and Type-II row.  This second column is substantially
+more honest: at `ell=300` it has no strict pointwise order at all.  Even the
+last odd order `d=299` has exponent `4906/16>300`; its worst row is balanced
+Type II at effective modulus `152` and split `151`.  Thus the exhaustive table
+closes the range-audit gap but remains non-credit-bearing; the proof frontier
+is still cancellation across the signed Möbius convolution.
 
 Restoring even the elementary suppressed losses moves the usable tail much
 farther.  The operation `odd_endpoint_vaughan_tail_budget` adds a caller-
@@ -840,9 +844,11 @@ low/medium block the exact residual budget
 2^301-2^300-2.
 ```
 
-This is still optimistic because the zero reserve has not paid the explicit
-divisor envelope, epsilon, or constants.  The reserve is an exposed proof
-input, not an erased term.  The result is nevertheless a useful target: any
+This is the **ideal-energy** column only.  The parallel explicit-energy tail
+does not fit the endpoint budget at either start.  Its zero reserve has paid
+the exact finite energy divisor envelope, but not the remaining analytic
+Vaughan-weight loss or constants.  The reserve is an exposed proof input, not
+an erased term.  The ideal result is nevertheless a useful target: any
 aggregate argument can now state exactly which complementary block it must
 control and how much budget remains.
 
@@ -978,15 +984,25 @@ L=max(0,k+m-r,2m-k-2).
 The right side cannot vanish: if `h=v_x(u)`, its summands have valuations
 `2h` and at least `r+s+h`, which differ because `h<r-s`.  Each solution thus
 injects into an ordered factorization of a nonzero polynomial of degree at
-most `D=2 max(k,r-k+m-2)`.  Splitting irreducibles at
-`R=max(1,floor(log_2(D)/2))` gives the fully explicit envelope
+most `D=2 max(k,r-k+m-2)`.
+
+The implementation now computes the **exact maximum** divisor count at every
+finite `D`.  If `I_j` is the number of binary irreducibles of degree `j`, then
 
 ```text
-tau(P) <= (D+1)^(2^(R+1)) 2^floor(D/(R+1)).
+2^j = sum_(d|j) d I_d,
+tau(P)=product_Q(e_Q+1),
+sum_Q e_Q deg(Q) <= D.
 ```
 
+For fixed `j`, total exponent, and number of used irreducibles, the product is
+maximal when the positive exponents are balanced.  A deterministic degree
+knapsack combines these sharp per-`j` choices and returns
+`max_(deg P<=D) tau(P)`.  Direct Berlekamp factorization of every monic binary
+polynomial through degree ten agrees with the optimizer.
+
 `binary_prime_power_inverse_additive_energy_bound` sums the exact stratum
-populations times these lift and divisor bounds, then adds the exact diagonal
+populations times these lift and exact divisor bounds, then adds the diagonal
 energy `|U_m|^2`.  Since `D=O(r)`, the divisor exponent is `o(r)`.  The strata
 with `k=ceil((r+m)/2)` have
 `L=max(0,ceil((3m-r)/2))`; the remaining strata contribute at most exponent
@@ -1026,7 +1042,13 @@ effect.  It is a conditional arithmetic tool: inserting the ideal exponent
 `binary_bilinear_explicit_prime_power_energy_exponent` operation instead uses
 the ceiling exponent of `(WE)`'s explicit `BigUint` envelope and adds a
 caller-selected rational analytic-loss reserve.  At the small wrapped boundary
-`(r,m)=(9,3)`, that honest finite report does not close the target.  The
+`(r,m)=(9,3)`, that honest finite report does not close the target.  The full
+Vaughan table now carries this same explicit ceiling beside every ideal row.
+At `ell=300` the exact divisor optimizer improves the prior crude substitution
+by more than eighty bits, but balanced Type II still exceeds the pointwise
+target.  A non-credit last-order probe becomes strict by `12/16` at
+`ell=1000`; this is finite evidence of sublinear loss, not a monotonicity
+proof.  The
 remaining analytic task is cancellation across the complete signed Möbius
 convolution, not the wrapped energy lemma itself.
 
