@@ -41,8 +41,19 @@ already rational.  This narrows but does not close the theorem, because the
 positive population may consist only of proper prime powers.  The live bound
 must still prove new degree-`n` mass after the checked proper-power subtraction.
 
+The proper-power subtraction is now a public bounded CAS operation rather than
+only a paper recurrence or a symbolic margin check.
+`identity_class_irreducible_count` recursively inverts the exact Hayes
+populations on every divisor, evaluates class powers in the native
+principal-unit coordinates, checks all subtraction/divisibility/reconstruction
+invariants, and reports Mangoldt mass, proper-power mass, and the unweighted
+irreducible count separately.  It reproduces the direct-Rabin degree-3-through-20
+sequence.  No SMT encoding or external CAS is used; the remaining gap is the
+all-degree positivity lemma, not finite algebra machinery.
+
 <!-- plan-section: landed-changes -->
 
 | 2026-08-19 | `77209a5ee` | Added exact fourth moments/cumulants, checked the conditional implication and low control, retained level-23 evidence, and recorded open facts. |
 | 2026-08-19 | `068e0fbff` | Added the exact resource-bounded fourth-moment conductor filtration, quotient-projection controls, public diagnostic, and literature boundary refresh. |
 | 2026-08-19 | `pending` | Corrected the fourth-moment ledger contract from an impossible irreducible mean to the exact Mangoldt-weighted population used by the CAS and conditional proof. |
+| 2026-08-19 | `pending` | Added bounded exact Hayes prime-power inversion, exposing and invariant-checking the native identity-class irreducible count without an external CAS. |

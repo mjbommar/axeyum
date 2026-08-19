@@ -469,6 +469,39 @@ pub struct ClassPopulationDistribution {
     pub counts: Vec<u128>,
 }
 
+/// Exact removal of proper prime powers from one identity-class population.
+///
+/// The checked identity is
+///
+/// ```text
+/// mangoldt_population
+///   = proper_prime_power_population + degree * irreducible_count.
+/// ```
+///
+/// Thus `irreducible_count != 0` is an exact finite certificate that the
+/// identity Hayes class contains a monic irreducible of the requested degree.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IdentityClassIrreducibleReport {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Target polynomial degree.
+    pub degree: usize,
+    /// Exact identity-class Mangoldt population `N_degree(1)`.
+    pub mangoldt_population: u128,
+    /// Weighted contribution from powers of irreducibles of proper degree.
+    pub proper_prime_power_population: u128,
+    /// Number of monic irreducibles of `degree` in the identity class.
+    pub irreducible_count: u128,
+}
+
+impl IdentityClassIrreducibleReport {
+    /// Whether the exact subtraction proves a degree-`degree` irreducible.
+    #[must_use]
+    pub const fn proves_irreducible_exists(self) -> bool {
+        self.irreducible_count != 0
+    }
+}
+
 /// Fourier energy contributed by one exact conductor to the squared class
 /// discrepancy.
 ///
@@ -1163,6 +1196,127 @@ pub fn class_population_distribution(
     limits: HayesLimits,
 ) -> Result<ClassPopulationDistribution, HayesError> {
     admit(ell, degree, limits)?;
+    class_population_distribution_admitted(ell, degree)
+}
+
+/// Remove every proper-prime-power contribution from the identity Hayes class.
+///
+/// This is exact finite-group Möbius inversion.  For every divisor `d` of the
+/// target degree and every class `e`, it checks
+///
+/// ```text
+/// N_d(e) = sum_(r | d) r * sum_(a^(d/r) = e) I_r(a),
+/// ```
+///
+/// where `N_d` is the Mangoldt population and `I_r(a)` counts degree-`r`
+/// monic irreducibles in class `a`.  All class powers are evaluated directly
+/// in the mixed-radix principal-unit coordinates.  Search is not involved.
+///
+/// # Errors
+///
+/// Returns a typed resource decline before each transform, rejects zero or
+/// out-of-range parameters, and fails closed if a population subtraction is
+/// negative, is not divisible by its degree, or does not reconstruct exactly.
+pub fn identity_class_irreducible_count(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<IdentityClassIrreducibleReport, HayesError> {
+    admit_any_positive_degree(ell, degree, limits)?;
+    let factors = principal_unit_factors(ell);
+    let divisors = positive_divisors(degree);
+    let mut irreducibles = BTreeMap::<usize, Vec<u128>>::new();
+    let mut target_mangoldt = 0_u128;
+    let mut target_proper = 0_u128;
+    let mut target_irreducible = 0_u128;
+
+    for current_degree in divisors {
+        admit_any_positive_degree(ell, current_degree, limits)?;
+        let population = class_population_distribution_admitted(ell, current_degree)?;
+        let mut proper = vec![0_u128; population.counts.len()];
+        for (&prime_degree, counts) in irreducibles.range(..current_degree) {
+            if !current_degree.is_multiple_of(prime_degree) {
+                continue;
+            }
+            let exponent = current_degree / prime_degree;
+            for (class_index, count) in counts.iter().copied().enumerate() {
+                if count == 0 {
+                    continue;
+                }
+                let powered = power_mixed_radix_index(class_index, exponent, &factors)?;
+                let weighted = count.checked_mul(prime_degree as u128).ok_or_else(|| {
+                    HayesError::InvalidParameter(
+                        "proper-prime-power contribution exceeds u128".to_owned(),
+                    )
+                })?;
+                proper[powered] = proper[powered].checked_add(weighted).ok_or_else(|| {
+                    HayesError::InvalidParameter(
+                        "proper-prime-power population exceeds u128".to_owned(),
+                    )
+                })?;
+            }
+        }
+
+        let divisor = current_degree as u128;
+        let mut current_irreducibles = Vec::with_capacity(population.counts.len());
+        for (class_index, (mangoldt, proper_power)) in population
+            .counts
+            .iter()
+            .copied()
+            .zip(proper.iter().copied())
+            .enumerate()
+        {
+            let weighted_new = mangoldt.checked_sub(proper_power).ok_or_else(|| {
+                HayesError::Invariant(format!(
+                    "degree {current_degree}, class {class_index}: proper prime powers exceed the Mangoldt population"
+                ))
+            })?;
+            if !weighted_new.is_multiple_of(divisor) {
+                return Err(HayesError::Invariant(format!(
+                    "degree {current_degree}, class {class_index}: new-prime population is not divisible by the degree"
+                )));
+            }
+            let count = weighted_new / divisor;
+            let reconstructed = proper_power
+                .checked_add(count.checked_mul(divisor).ok_or_else(|| {
+                    HayesError::InvalidParameter(
+                        "irreducible reconstruction exceeds u128".to_owned(),
+                    )
+                })?)
+                .ok_or_else(|| {
+                    HayesError::InvalidParameter(
+                        "irreducible reconstruction exceeds u128".to_owned(),
+                    )
+                })?;
+            if reconstructed != mangoldt {
+                return Err(HayesError::Invariant(format!(
+                    "degree {current_degree}, class {class_index}: irreducible reconstruction failed"
+                )));
+            }
+            current_irreducibles.push(count);
+        }
+
+        if current_degree == degree {
+            target_mangoldt = population.counts[0];
+            target_proper = proper[0];
+            target_irreducible = current_irreducibles[0];
+        }
+        irreducibles.insert(current_degree, current_irreducibles);
+    }
+
+    Ok(IdentityClassIrreducibleReport {
+        ell,
+        degree,
+        mangoldt_population: target_mangoldt,
+        proper_prime_power_population: target_proper,
+        irreducible_count: target_irreducible,
+    })
+}
+
+fn class_population_distribution_admitted(
+    ell: usize,
+    degree: usize,
+) -> Result<ClassPopulationDistribution, HayesError> {
     let shift = u32::try_from(degree).map_err(|_| {
         HayesError::InvalidParameter("degree does not fit the shift domain".to_owned())
     })?;
@@ -1404,15 +1558,28 @@ pub fn identity_class_fourier_variance(
 }
 
 fn admit(ell: usize, degree: usize, limits: HayesLimits) -> Result<(), HayesError> {
+    if degree < ell {
+        return Err(HayesError::InvalidParameter(format!(
+            "degree {degree} is smaller than ell {ell}"
+        )));
+    }
+    admit_any_positive_degree(ell, degree, limits)
+}
+
+fn admit_any_positive_degree(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<(), HayesError> {
     if ell == 0 {
         return Err(HayesError::InvalidParameter(
             "ell must be positive".to_owned(),
         ));
     }
-    if degree < ell {
-        return Err(HayesError::InvalidParameter(format!(
-            "degree {degree} is smaller than ell {ell}"
-        )));
+    if degree == 0 {
+        return Err(HayesError::InvalidParameter(
+            "degree must be positive".to_owned(),
+        ));
     }
     check_limit("ell", ell, limits.max_ell)?;
     check_limit("degree", degree, limits.max_degree)?;
@@ -1494,6 +1661,57 @@ fn project_mixed_radix_index(
         ));
     }
     Ok(quotient_index)
+}
+
+fn power_mixed_radix_index(
+    index: usize,
+    exponent: usize,
+    factors: &[PrincipalUnitFactor],
+) -> Result<usize, HayesError> {
+    let mut quotient = index;
+    let mut powered_index = 0_usize;
+    let mut stride = 1_usize;
+    for factor in factors {
+        let coordinate = quotient % factor.order;
+        quotient /= factor.order;
+        let powered_coordinate = coordinate
+            .checked_mul(exponent)
+            .ok_or_else(|| HayesError::InvalidParameter("class-power overflow".to_owned()))?
+            % factor.order;
+        powered_index = powered_index
+            .checked_add(powered_coordinate.checked_mul(stride).ok_or_else(|| {
+                HayesError::InvalidParameter("class-power index overflow".to_owned())
+            })?)
+            .ok_or_else(|| HayesError::InvalidParameter("class-power index overflow".to_owned()))?;
+        stride = stride.checked_mul(factor.order).ok_or_else(|| {
+            HayesError::InvalidParameter("class-power stride overflow".to_owned())
+        })?;
+    }
+    if quotient != 0 {
+        return Err(HayesError::Invariant(
+            "class-power input escaped the mixed-radix domain".to_owned(),
+        ));
+    }
+    Ok(powered_index)
+}
+
+fn positive_divisors(value: usize) -> Vec<usize> {
+    let mut low = Vec::new();
+    let mut high = Vec::new();
+    let mut divisor = 1_usize;
+    while divisor <= value / divisor {
+        if value.is_multiple_of(divisor) {
+            low.push(divisor);
+            let paired = value / divisor;
+            if paired != divisor {
+                high.push(paired);
+            }
+        }
+        divisor += 1;
+    }
+    high.reverse();
+    low.extend(high);
+    low
 }
 
 fn identity_class_residue(ell: usize, target: usize, modulus: u64) -> Result<u64, HayesError> {
@@ -2107,6 +2325,54 @@ mod tests {
             .map(|count| count.abs_diff(1_024).pow(2))
             .sum::<u128>();
         assert_eq!(even_squared_deviation, 1_861_136);
+    }
+
+    #[test]
+    fn identity_class_irreducible_count_removes_prime_powers_exactly() {
+        let expected = [
+            1_u128, 1, 1, 2, 3, 2, 4, 7, 4, 12, 6, 19, 20, 28, 33, 59, 49, 101,
+        ];
+        for (degree, expected_count) in (3..=20).zip(expected) {
+            let ell = (degree - 1) / 2;
+            let report =
+                identity_class_irreducible_count(ell, degree, HayesLimits::default()).unwrap();
+            assert_eq!(report.ell, ell);
+            assert_eq!(report.degree, degree);
+            assert_eq!(report.irreducible_count, expected_count);
+            assert!(report.proves_irreducible_exists());
+            assert_eq!(
+                report.mangoldt_population,
+                report.proper_prime_power_population + degree as u128 * expected_count
+            );
+        }
+
+        let even = identity_class_irreducible_count(5, 12, HayesLimits::default()).unwrap();
+        assert!(even.proper_prime_power_population != 0);
+        assert_eq!(even.irreducible_count, 12);
+    }
+
+    #[test]
+    fn identity_class_irreducible_count_declines_before_work() {
+        assert!(matches!(
+            identity_class_irreducible_count(0, 9, HayesLimits::default()),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            identity_class_irreducible_count(4, 0, HayesLimits::default()),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        let limits = HayesLimits {
+            max_table_cells: 100,
+            ..HayesLimits::default()
+        };
+        assert_eq!(
+            identity_class_irreducible_count(4, 9, limits),
+            Err(HayesError::ResourceLimit {
+                resource: "table_cells",
+                requested: 224,
+                limit: 100,
+            })
+        );
     }
 
     #[test]

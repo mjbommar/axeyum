@@ -161,6 +161,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-19 | `77209a5ee` | Added exact fourth moments/cumulants, checked the conditional implication and low control, retained level-23 evidence, and recorded open facts. |
 | 2026-08-19 | `068e0fbff` | Added the exact resource-bounded fourth-moment conductor filtration, quotient-projection controls, public diagnostic, and literature boundary refresh. |
 | 2026-08-19 | `pending` | Corrected the fourth-moment ledger contract from an impossible irreducible mean to the exact Mangoldt-weighted population used by the CAS and conditional proof. |
+| 2026-08-19 | `pending` | Added bounded exact Hayes prime-power inversion, exposing and invariant-checking the native identity-class irreducible count without an external CAS. |
 | 2026-08-18 | `cf998788b` | Automated the exact authoritative B-then-A chain; two isolated fixed-budget runs matched all 56 retained artifact bytes and passed Autogenesis-1. |
 | 2026-08-18 | `2d65f19d8` | Froze the leakage-safe nursery contract and the Autogenesis-1 longitudinal partition; readiness remains explicitly false with zero evaluation facts and nine blockers. |
 | 2026-08-18 | `bd7b55bff` | Extracted 9,729 proof-isolated Mathlib Nat/Int statements externally and selected 240 outcome-blind source candidates across twelve families without vendoring bulk exports. |
@@ -369,6 +370,16 @@ class Mangoldt population is positive in every degree:
 already rational.  This narrows but does not close the theorem, because the
 positive population may consist only of proper prime powers.  The live bound
 must still prove new degree-`n` mass after the checked proper-power subtraction.
+
+The proper-power subtraction is now a public bounded CAS operation rather than
+only a paper recurrence or a symbolic margin check.
+`identity_class_irreducible_count` recursively inverts the exact Hayes
+populations on every divisor, evaluates class powers in the native
+principal-unit coordinates, checks all subtraction/divisibility/reconstruction
+invariants, and reports Mangoldt mass, proper-power mass, and the unweighted
+irreducible count separately.  It reproduces the direct-Rabin degree-3-through-20
+sequence.  No SMT encoding or external CAS is used; the remaining gap is the
+all-degree positivity lemma, not finite algebra machinery.
 
 **Claim-dashboard gate, finding-8 re-measurement, and PLAN.md returned under its
 ceiling** (`WIP`, ledger-integrity, 2026-08-16). Three defects behind a dashboard

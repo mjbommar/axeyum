@@ -263,6 +263,18 @@ subtracting the proper-divisor terms and dividing by `n`. This is an exact,
 integer-only version of the Hayes-class formula and a useful falsifier for any
 proposed cancellation lemma. It is not yet a positivity proof.
 
+The bounded native implementation is now
+`axeyum_cas::gf2_hayes::identity_class_irreducible_count`.  It computes the
+Mangoldt distribution for every divisor of the target, raises classes in the
+mixed-radix principal-unit coordinates, subtracts every weighted proper prime
+power, checks nonnegativity and divisibility by the target degree, and then
+reconstructs the original population exactly.  Its public report keeps all
+three quantities separate.  Regressions recover the independent direct-Rabin
+counts below and exercise malformed-input and pre-allocation resource declines.
+This closes the CAS implementation gap between population and prime count; it
+does not supply the analytic inequality needed to make the final count positive
+in all degrees.
+
 Here `ell` counts prescribed zero coefficients. The conjecture's boundary is
 therefore degree `2 ell + 1` in the odd case and `2 ell + 2` in the even case.
 An independent implementation of the recurrence and direct Rabin enumeration
@@ -394,6 +406,11 @@ which is precisely the asymptotic factor `ell` already exposed by the
 characterwise calculation.  A useful geometric proof must exploit additional
 structure of this one wildly ramified cyclotomic tower, rather than cite the
 generic curve bound.
+
+Nor can positivity be amplified by a uniform power-of-two divisibility claim.
+The exact native counts already give `N_9(1)=2^(9-4)+5=37`, so the endpoint
+population can be odd.  Any new-point argument must provide a genuine lower
+bound or cancellation estimate, not infer one from `N_n(1)>=1` and divisibility.
 
 Supersingularity does not provide that extra structure beyond the first few
 levels.  Gorodetsky identifies the same curve through the completed
