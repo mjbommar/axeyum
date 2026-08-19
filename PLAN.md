@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `381748943` | Replaced the crude binary divisor factor by an exact finite-degree optimizer, carried the proved wrapped-energy ceiling through every endpoint Vaughan row, and showed the former ideal tail is not yet rigorous. |
 | 2026-08-19 | `85e9ba5cd` | Regrouped the signed Möbius convolution exactly by Fourier annihilator depth, added the odd-endpoint buffered-tail margin ledger, and isolated the weighted summation-by-parts obligation. |
 | 2026-08-19 | `0cf536a9d` | Added exhaustive endpoint Vaughan tables across every convolution order and source split, confirming the pointwise transition while retaining all suppressed-loss and non-credit boundaries. |
 | 2026-08-19 | `b4c13c14e` | Proved the wrapped `q=2,F=x^r` inverse-energy envelope by exact valuation, lift, and divisor ledgers; corrected the no-wrap strictness and added loss-aware bilinear substitution. |
@@ -416,17 +417,20 @@ zero-epsilon exponent pair would pointwise cover only the tail
 convolution order, effective modulus, and Type-I/Type-II split; Cases 4 and 5
 are empty and all seven relevant rows occur.  At `ell=300` it confirms the
 same first strict degrees `283` and `284`, with only a `15/16`-bit initial
-margin before the explicit divisor envelope, epsilon/constants, and factor
-`d`.  The margin-aware odd ledger now restores `d`, sums the tail, and leaves
-the analytic-loss reserve explicit: at `ell=300`, zero reserve fails from
-`d=292` but fits from `d=293`, leaving low/medium budget
-`2^301-2^300-2`.  The exact cross-order Fourier regroup is also native.  It
-shows that the relevant nesting is low-bit annihilator depth, not
-multiplicative conductor alone, and verifies the regrouped identity at both
-endpoints through `ell=8`.  Summation by parts reduces the next proof step to
-a weighted `B` combination plus its boundary term on these annihilator
-layers.  Proving that aggregate bound, with the explicit energy loss filled
-into the reserve, is now the precise blocker.
+margin before finite energy loss, epsilon/constants, and factor `d`.  The CAS
+now computes the exact maximum binary polynomial divisor count at each finite
+degree and carries the resulting proved energy ceiling through every
+energy-using Vaughan row.  Direct factorization through degree ten checks the
+optimizer.  This honest column has no strict pointwise order at `ell=300`;
+even `d=299` is `106/16` bits above target.  Consequently the margin-aware
+odd ledger's zero-reserve tail from `d=293` fits only in the ideal-energy
+column, not the proved explicit one.  The exact cross-order Fourier regroup is
+also native.  It shows that the relevant nesting is low-bit annihilator depth,
+not multiplicative conductor alone, and verifies the regrouped identity at
+both endpoints through `ell=8`.  Summation by parts reduces the next proof
+step to a weighted `B` combination plus its boundary term on these annihilator
+layers.  Proving that aggregate bound, together with a buffered explicit tail,
+is now the precise blocker.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
