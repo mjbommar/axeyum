@@ -42,13 +42,20 @@ use serde_json::{Map, Value};
 
 mod identity;
 mod type_slice;
+mod type_slice_receipt;
 
 pub use identity::{
     AxiomIdentity, DeclarationDependencyIdentity, DeclarationIdentity, DeclarationKind,
+    canonical_declaration_sha256, canonical_expression_sha256, canonical_level_sha256,
 };
 pub use type_slice::{
     ConstantInstance, GeneralizedBinder, GeneralizedGoal, TypeSliceError,
     generalize_goal_constants, verify_generalized_specialization,
+};
+pub use type_slice_receipt::{
+    TYPE_SLICE_RECEIPT_VERSION, TypeSliceAbstractionReceipt, TypeSliceReceipt,
+    TypeSliceReceiptError, TypeSliceRetainedReceipt, TypeSliceSourceReceipt,
+    issue_type_slice_receipt,
 };
 
 use identity::build_identity_manifest;

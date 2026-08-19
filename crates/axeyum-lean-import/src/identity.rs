@@ -38,6 +38,21 @@ pub enum DeclarationKind {
 }
 
 impl DeclarationKind {
+    /// Stable lowercase receipt label.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Axiom => "axiom",
+            Self::Definition => "definition",
+            Self::Theorem => "theorem",
+            Self::Opaque => "opaque",
+            Self::Inductive => "inductive",
+            Self::Constructor => "constructor",
+            Self::Recursor => "recursor",
+            Self::Quotient => "quotient",
+        }
+    }
+
     const fn tag(self) -> u8 {
         match self {
             Self::Axiom => 0,
@@ -50,6 +65,38 @@ impl DeclarationKind {
             Self::Quotient => 7,
         }
     }
+}
+
+/// Canonical arena-independent SHA-256 identity for one kernel expression.
+///
+/// # Errors
+///
+/// Returns a diagnostic if the expression DAG cannot be hashed completely.
+pub fn canonical_expression_sha256(kernel: &Kernel, expression: ExprId) -> Result<String, String> {
+    let digest = IdentityBuilder::new(kernel).expression_digest(expression)?;
+    Ok(hex(&digest))
+}
+
+/// Canonical structural SHA-256 identity for one admitted declaration.
+///
+/// # Errors
+///
+/// Returns a diagnostic if `name` is absent or its checked content cannot be
+/// hashed completely.
+pub fn canonical_declaration_sha256(kernel: &Kernel, name: NameId) -> Result<String, String> {
+    let declaration = kernel
+        .environment()
+        .get(name)
+        .ok_or_else(|| format!("missing declaration {}", kernel.display_name(name)))?;
+    let digest = IdentityBuilder::new(kernel).declaration_digest(declaration)?;
+    Ok(hex(&digest))
+}
+
+/// Canonical arena-independent SHA-256 identity for one universe level.
+#[must_use]
+pub fn canonical_level_sha256(kernel: &Kernel, level: LevelId) -> String {
+    let digest = IdentityBuilder::new(kernel).level_digest(level);
+    hex(&digest)
 }
 
 /// TL0.4-compatible identity for one imported axiom.

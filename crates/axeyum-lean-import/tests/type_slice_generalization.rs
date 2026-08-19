@@ -3,13 +3,15 @@
 use std::io::Cursor;
 
 use axeyum_lean_import::{
-    ConstantInstance, ImportLimits, TypeSliceError, generalize_goal_constants,
-    import_statement_ndjson, verify_generalized_specialization,
+    ConstantInstance, ImportLimits, TypeSliceError, TypeSliceReceiptError,
+    generalize_goal_constants, import_ndjson, import_statement_ndjson, issue_type_slice_receipt,
+    verify_generalized_specialization,
 };
 use axeyum_lean_kernel::{
     Declaration, ExprId, Kernel, Lean4ExportMetadata, LogicPrelude, NameId, ReducibilityHint,
     build_logic_prelude,
 };
+use sha2::{Digest, Sha256};
 
 const TARGET: &str = "Axeyum.Autogenesis.TypeSlice.target";
 
@@ -292,4 +294,183 @@ fn generalized_target_transports_to_a_fresh_kernel_without_source_axioms() {
     assert!(completed.report().axioms.is_empty());
     assert!(!completed.kernel().has_fvars(completed.goal()));
     assert!(!completed.kernel().has_loose_bvars(completed.goal()));
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn receipt_binds_source_abstractions_fresh_environment_and_specialization() {
+    let mut fixture = fixture();
+    let source_target = nested_name(&mut fixture.kernel, &["Source", "target"]);
+    let prop = fixture.kernel.sort_zero();
+    fixture
+        .kernel
+        .add_declaration(Declaration::Definition {
+            name: source_target,
+            uparams: vec![],
+            ty: prop,
+            value: fixture.goal,
+            hint: ReducibilityHint::Regular(0),
+        })
+        .expect("source statement definition must check");
+    let source_stream = fixture
+        .kernel
+        .render_lean4export_ndjson(&Lean4ExportMetadata::axeyum("4.30.0"))
+        .expect("source environment must export");
+    let source_digest = hex_sha256(source_stream.as_bytes());
+    let source = import_ndjson(Cursor::new(source_stream), ImportLimits::default())
+        .expect("source stream must independently import");
+    let (mut source_kernel, source_report) = source.into_parts();
+    let source_target = find_name(&source_kernel, "Source.target");
+    let carrier = find_name(&source_kernel, "Source.Carrier");
+    let value = find_name(&source_kernel, "Source.value");
+    let Declaration::Definition {
+        value: source_goal, ..
+    } = source_kernel
+        .environment()
+        .get(source_target)
+        .expect("source target must exist")
+        .clone()
+    else {
+        panic!("source target must remain a definition");
+    };
+    let carrier_binding = instance(&mut source_kernel, carrier, "Alpha");
+    let value_binding = instance(&mut source_kernel, value, "x");
+    let generalized = generalize_goal_constants(
+        &mut source_kernel,
+        source_goal,
+        &[carrier_binding, value_binding],
+    )
+    .expect("source constants must generalize");
+    let carrier_argument = source_kernel.const_(carrier, vec![]);
+    let value_argument = source_kernel.const_(value, vec![]);
+
+    let fresh_target = nested_name(
+        &mut source_kernel,
+        &["Axeyum", "Autogenesis", "TypeSlice", "target"],
+    );
+    let prop = source_kernel.sort_zero();
+    source_kernel
+        .add_declaration(Declaration::Definition {
+            name: fresh_target,
+            uparams: vec![],
+            ty: prop,
+            value: generalized.goal,
+            hint: ReducibilityHint::Regular(0),
+        })
+        .expect("generalized statement definition must check");
+    let fresh_stream = source_kernel
+        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[fresh_target])
+        .expect("generalized root must export");
+    let fresh = import_statement_ndjson(Cursor::new(fresh_stream), ImportLimits::default(), TARGET)
+        .expect("generalized statement must enter a fresh proof-free kernel");
+
+    let receipt = issue_type_slice_receipt(
+        &mut source_kernel,
+        &source_report,
+        &source_digest,
+        source_target,
+        source_goal,
+        &generalized,
+        &[carrier_argument, value_argument],
+        &fresh,
+        "explicit-test-policy-v1",
+    )
+    .expect("all checked bindings must issue a receipt");
+    assert_eq!(receipt.abstractions.len(), 2);
+    assert_eq!(receipt.abstractions[0].source_occurrences, 2);
+    assert_eq!(receipt.abstractions[1].source_occurrences, 2);
+    assert!(receipt.specialization_verified);
+    assert_eq!(receipt.receipt_sha256.len(), 64);
+    assert!(receipt.has_valid_digest());
+    assert!(receipt.retained.iter().all(|declaration| {
+        declaration.name != "Source.Carrier" && declaration.name != "Source.value"
+    }));
+    let rendered = receipt.to_pretty_json().expect("receipt JSON must render");
+    assert!(rendered.contains(&receipt.receipt_sha256));
+    let mut mutated = receipt.clone();
+    mutated.policy_version.push_str("-mutated");
+    assert!(!mutated.has_valid_digest());
+
+    let wrong = source_kernel.const_(carrier, vec![]);
+    let error = issue_type_slice_receipt(
+        &mut source_kernel,
+        &source_report,
+        &source_digest,
+        source_target,
+        source_goal,
+        &generalized,
+        &[wrong, wrong],
+        &fresh,
+        "explicit-test-policy-v1",
+    )
+    .expect_err("non-bound exact arguments must not issue a receipt");
+    assert!(matches!(
+        error,
+        TypeSliceReceiptError::ArgumentNotExactSourceConstant { index: 1 }
+    ));
+
+    let mut forged_report = source_report.clone();
+    let forged_target = forged_report
+        .declaration_identities
+        .iter_mut()
+        .find(|identity| identity.name == "Source.target")
+        .expect("source target identity must exist");
+    let replacement = if forged_target.content_sha256.starts_with('0') {
+        "1"
+    } else {
+        "0"
+    };
+    forged_target.content_sha256.replace_range(..1, replacement);
+    let error = issue_type_slice_receipt(
+        &mut source_kernel,
+        &forged_report,
+        &source_digest,
+        source_target,
+        source_goal,
+        &generalized,
+        &[carrier_argument, value_argument],
+        &fresh,
+        "explicit-test-policy-v1",
+    )
+    .expect_err("a forged source manifest must not issue a receipt");
+    assert!(matches!(
+        error,
+        TypeSliceReceiptError::SourceContentIdentityMismatch { .. }
+    ));
+
+    let error = issue_type_slice_receipt(
+        &mut source_kernel,
+        &source_report,
+        &source_digest,
+        source_target,
+        generalized.goal,
+        &generalized,
+        &[carrier_argument, value_argument],
+        &fresh,
+        "explicit-test-policy-v1",
+    )
+    .expect_err("a goal detached from the exact source target must not issue a receipt");
+    assert!(matches!(
+        error,
+        TypeSliceReceiptError::SourceGoalNotTargetValue
+    ));
+}
+
+fn find_name(kernel: &Kernel, rendered: &str) -> NameId {
+    kernel
+        .environment()
+        .iter()
+        .find_map(|(&name, _)| (kernel.display_name(name).to_string() == rendered).then_some(name))
+        .expect("test declaration must exist")
+}
+
+fn hex_sha256(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+
+    Sha256::digest(bytes)
+        .iter()
+        .fold(String::with_capacity(64), |mut output, byte| {
+            write!(output, "{byte:02x}").expect("writing to String cannot fail");
+            output
+        })
 }
