@@ -163,6 +163,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `bd7b55bff` | Extracted 9,729 proof-isolated Mathlib Nat/Int statements externally and selected 240 outcome-blind source candidates across twelve families without vendoring bulk exports. |
 | 2026-08-18 | `30e7e6ec3` | Projected 95 direct Mathlib candidate dependencies into 146 whole leakage components without exposing proof terms or freezing evaluation splits. |
 | 2026-08-18 | `f4dc0d4f1` | Registered and cleanly exercised the exact axiom-free authoritative B operation, whose durable event made A newly ready. |
+| 2026-08-18 | `1ff1ca6b7` | Extracted bounded reusable Hayes/principal-unit/conductor CAS APIs, dual-checked the conditional sufficient-bound arithmetic, retained the missing cancellation lemma as an explicit obligation, and independently reproduced `ell=23`. |
 | 2026-08-18 | `4b129601c` | Extended the exact NTT/CRT endpoint oracle through `ell=22`, added an a-priori CRT uniqueness guard, reduced peak memory, and isolated the family-norm cancellation factor that the universal proof must recover. |
 | 2026-08-18 | `6aff45e82` | Added accepted ADR-0481 and a canonical, mutation-checked certificate-spec fact for the dual-replayed degree-1-through-400 result without inventing finite-field SMT or kernel support. |
 | 2026-08-18 | `30a004188` | Audited the tempting Hsu half-coefficient survey claim against the explicit bound and the 2023 Gao follow-up; neither supplies positivity at the exact fixed-`GF(2)` endpoint. |
@@ -364,6 +365,21 @@ The same increment derives the exact family-norm degree
 lose a factor asymptotic to `ell`; the missing proof must establish aggregate
 family cancellation. An optimized exact `ell=22` replay on s7 matched every
 control in 8m27s with 2.38 GB peak RSS and exit 0.
+
+`1ff1ca6b7` closes the machinery gap exposed by that experiment. Accepted
+ADR-0482 extracts a public, bounded `axeyum_cas::gf2_hayes` API for the
+principal-unit cyclic decomposition, exact identity-class populations,
+endpoint discrepancies, conductor layers, and exact bignum checking of the
+conditional sufficient-bound implication. The transform now admits `ell`,
+degree, group-order, and retained-table-cell limits before allocation. A Rust
+checker and algebraically separate Python checker both prove that the explicit
+target `8 j^12 2^((n+j)/2)` would finish the endpoint argument from `ell=194`,
+with the certified degree-400 range covering the remainder; neither checker
+claims that target itself. No SMT or finite-field IR surface was added because
+there is no solver/model/proof consumer for the missing analytic family bound.
+Independent C++ and refactored Rust transforms agree at `ell=23` on endpoint
+discrepancies `57574` and `-88336`; the Rust replay completed in 20m23s with
+4.96 GB peak RSS and exit 0.
 
 The portable boundary is complete for bounded witnesses. `98f2d953f` adds
 canonical JSON, a dense-coefficient second checker, and a standalone dual-check
