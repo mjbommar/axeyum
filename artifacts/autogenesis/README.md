@@ -95,6 +95,17 @@ shared authority shortcut:
 python3 scripts/check-autogenesis-factorial-zero-family.py
 ```
 
+`mathlib-checked-type-slice-replay-v1.json` binds the first semantic
+train/development type-slice census. Its 128 accepted receipts each identify
+the exact source stream, generalized goal, abstractions, retained environment,
+fresh-kernel target, and successful exact specialization. Ten rows remain
+typed declines; no proof producer ran and no ledger credit changed. Bulk
+receipts remain in the immutable external observation:
+
+```sh
+python3 scripts/check-autogenesis-checked-type-slice-replay.py
+```
+
 `mathlib-factorial-zero-admission-v1.json` binds the second family member's
 clean-commit execution, crash-recovered ledger transition, complete external
 archive, and detached-worktree replay. It uses the same generic admission

@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-checked-type-slice-replay",
+  "state": "checked-slice-replay-no-proof-or-ledger-credit",
+  "tooling_commit": "6c000b1ef9f50278707429d051b5f2f8803d338d",
+  "tooling_files": [
+    {
+      "path": "crates/axeyum-lean-import/examples/type_slice_replay.rs",
+      "sha256": "b36f72b2708047d4f3578db21dbeb5911de0d3b6a0190789437de7ad25dc2679"
+    },
+    {
+      "path": "crates/axeyum-lean-import/src/type_slice.rs",
+      "sha256": "28400ddb8481384cb4eedff585b8b9042f9cb3e9b533f6289d3c1c91f15087a0"
+    },
+    {
+      "path": "crates/axeyum-lean-import/src/type_slice_receipt.rs",
+      "sha256": "57997ff8a550b7329d584afb0f70cc92e51b6efa7f9f121918fa672fefd1f0c0"
+    },
+    {
+      "path": "crates/axeyum-lean-kernel/src/lean_export.rs",
+      "sha256": "b10aa53aa0928afb5a77efe3719c74eac6807263be27e29bedb15c382eb8745f"
+    },
+    {
+      "path": "crates/axeyum-lean-kernel/src/lean_pp.rs",
+      "sha256": "4b6e957f89e59f0d047a6d7fd312252404379c7de15fa953f4832b94c9cecf94"
+    }
+  ],
+  "source_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1",
+    "mapping_sha256": "4596d178d574b90b8bd17801719ff485a1fa588fd52f1ae1b4b3b3b47654239b",
+    "lean_version": "4.30.0",
+    "partitions": [
+      "development",
+      "train"
+    ]
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/type-slice/6c000b1ef-mathlib-v4.30.0-checked-replay-v1",
+    "file": "observation.json",
+    "bytes": 1870404,
+    "mode": "0444",
+    "file_sha256": "ba684bfe5663a27f62fb12d5e7d436fad5f2323f5b03d4ad8478e44aa4b5c07b",
+    "observation_sha256": "4c41833a5fa656fc7f38bf392e1dca0eb3dc47bb9ff010c411111af6c6bd4a36"
+  },
+  "population": {
+    "train_development": 138,
+    "held_out_inspected": false,
+    "proof_producers_executed": false,
+    "proof_bodies_requested": false,
+    "ledger_writes": 0
+  },
+  "coverage": {
+    "accepted_receipts": 128,
+    "declined_selection": 10,
+    "accepted_with_abstractions": 104,
+    "accepted_without_abstractions": 24,
+    "abstractions": 129,
+    "max_abstractions_per_target": 3,
+    "declined_artifacts": [
+      "r014.ndjson",
+      "r057.ndjson",
+      "r058.ndjson",
+      "r064.ndjson",
+      "r065.ndjson",
+      "r081.ndjson",
+      "r088.ndjson",
+      "r090.ndjson",
+      "r124.ndjson",
+      "r128.ndjson"
+    ]
+  },
+  "reproduction": "cargo run -p axeyum-lean-import --example type_slice_replay -- --archive /nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1 --mapping /nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/mapping.json --output observation.json",
+  "verification": "python3 scripts/check-autogenesis-checked-type-slice-replay.py",
+  "limitations": "Each accepted receipt proves only that the generalized statement boundary was independently imported and exactly specializes back to its source statement. No proof producer ran, no source fact was proved, held-out remained sealed, and no fact-ledger row changed. The ten declines preserve the exact trusted closure rather than sanitizing autoParam metadata without a settled design."
+}

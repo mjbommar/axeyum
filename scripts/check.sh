@@ -88,6 +88,8 @@ step autogenesis-reflexivity-coverage-tests python3 -m unittest scripts.tests.te
 step autogenesis-reflexivity-coverage python3 scripts/check-autogenesis-reflexivity-coverage.py
 step autogenesis-type-slice-feasibility-tests python3 -m unittest scripts.tests.test_analyze_autogenesis_type_slices scripts.tests.test_check_autogenesis_type_slice_feasibility
 step autogenesis-type-slice-feasibility python3 scripts/check-autogenesis-type-slice-feasibility.py
+step autogenesis-checked-type-slice-replay-tests python3 -m unittest scripts.tests.test_check_autogenesis_checked_type_slice_replay
+step autogenesis-checked-type-slice-replay python3 scripts/check-autogenesis-checked-type-slice-replay.py
 step autogenesis-factorial-zero-family-tests python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
 step autogenesis-factorial-zero-family python3 scripts/check-autogenesis-factorial-zero-family.py
 step autogenesis-mathlib-source-tests python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source

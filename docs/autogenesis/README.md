@@ -121,6 +121,11 @@ compounding, not automation theatre.
 | [Reflexivity coverage census](22-mathlib-reflexivity-coverage.md) | Where do all train/development rows stop under the current proof-isolated adapter and bounded reflexivity grammar? |
 | [Factorial-zero family registration](23-factorial-zero-family-registration.md) | Can one checked operation family cover a second frozen fact without broadening admission authority beyond exact source-bound rows? |
 | [Factorial-zero family admission](24-factorial-zero-family-admission.md) | Did the second exact family member survive ordinary selection, crash recovery, settled replay, and clean-room reproduction? |
+| [Type-slice feasibility](25-type-slice-feasibility.md) | Are trusted dependencies in the statement-facing type boundary or only in implementation closure? |
+| [Fresh-kernel transport](26-root-selected-fresh-kernel-foundation.md) | Can one atomic root closure be exported and independently admitted without unrelated declarations? |
+| [Checked typed generalization](27-checked-typed-generalization.md) | Can exact constant instances become a dependent proposition telescope that specializes back to the source? |
+| [Type-slice receipt foundation](28-type-slice-receipt-foundation.md) | Which identities and checks must one durable proof-free slice receipt bind? |
+| [Checked Mathlib type-slice replay](29-checked-type-slice-replay.md) | How many frozen train/development statements survive the complete semantic slice boundary, and why do the rest decline? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -243,6 +248,15 @@ ordinary importer re-admits it into a fresh environment with unrelated
 declarations absent. This is intentionally not yet a type slicer: selected
 definition bodies still retain their full dependencies until ADR-0484's typed
 parameter abstraction is implemented.
+
+The next two increments add [checked dependent generalization](27-checked-typed-generalization.md)
+and a [content-addressed slice receipt](28-type-slice-receipt-foundation.md).
+The resulting [checked Mathlib replay](29-checked-type-slice-replay.md) now
+admits proof-free producer boundaries for 128 of the 138 unsealed statements.
+The remaining ten decline because the exact atomic closure of `Semiring`,
+`Preorder`, or `Monoid` crosses theorem dependencies through serialized
+`autoParam` metadata. That is the next narrow capability gap; it is not grounds
+to weaken atomic transport, open held-out, or claim any theorem proved.
 
 ## Phase summary
 
