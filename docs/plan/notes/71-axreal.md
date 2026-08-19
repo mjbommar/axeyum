@@ -69,6 +69,38 @@ Both fixes are two-sided or exhaustive rather than looser: the test now also
 asserts `!source.contains("axiom AxReal : Sort")`, and the predicate still fails
 on a module carrying no ordered-field hypothesis at all.
 
+## What the rename BROKE, and what did not notice
+
+Six evidence rows across three settled facts are `grep -E` patterns anchored on
+an example's stdout, and the rename moved that stdout:
+
+| fact | row | anchored on |
+|---|---|---|
+| `F:farkas-refutation-over-constructed-reals` | `creal-equality-slot-costs-nothing` | ``the `Real` route declares 18 AXIOMS`` |
+| | `the-real-comparison-is-not-vacuous` | `over Real  : closed False …` × 5 |
+| `F:real-axioms-modelled-by-constructed-setoid` | `creal-model-add_comm` | `^law\s+Real[.]add_comm\s+CReal[.]add_comm` |
+| | `creal-model-mul_comm` | same shape |
+| `F:shipped-front-door-refutes-over-constructed-reals` | `front-door-emits-the-constructed-carrier` | `carrier Real (AXIOMATIZED)` count = 0 |
+| | `the-real-control-is-not-vacuous` | `over Real  : footprint …` × 3 |
+| | `the-verdict-lines-and-the-exit-status` | `the Real control is non-vacuous` |
+
+`validate-facts.py` reported **340 facts, 0 errors** throughout: it checks the
+ledger's *structure and semantics* and never executes a `checker_command`. The
+gate that does is `scripts/check-fact-evidence-replay.sh`, which is in
+`scripts/check.sh` and was not in this lane's brief. Nothing in the fact schema
+ties a pattern to the program whose output it reads, so **a rename in the code
+silently rots the evidence for a `proved` fact and the fact ledger's own
+validator says nothing**. That is worth a mechanism, not just a fix.
+
+Note the shape of `front-door-emits-the-constructed-carrier`: it asserts
+`carrier Real (AXIOMATIZED)` occurs **0 times**. After the rename it still read
+0 — for the new reason that the string cannot occur at all. A count-of-zero
+assertion survives a rename by going vacuous, which is the one direction that
+does not announce itself.
+
+All eighteen evidence rows on the four affected facts were re-run after the fix;
+every one exits 0.
+
 ## The ledger: a rename is not a retirement
 
 `gen-lean-axiom-ledger.py` keys rows on `(prelude, name)`, so the rename is a

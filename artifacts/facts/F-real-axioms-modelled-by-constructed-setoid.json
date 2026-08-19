@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "id": "F:real-axioms-modelled-by-constructed-setoid",
-  "title": "The 30 Real axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations",
-  "statement": "Let CReal be the type of regular Cauchy sequences of rationals over the kernel's CONSTRUCTED rationals -- a one-constructor carrier with no quotient -- and let CReal.Equiv be the defined relation x ~ y iff |x_n - y_n| <= 2/(n+1) for every n. Then interpreting the Real package's eight carrier/operation symbols at CReal and its equality at CReal.Equiv makes all 22 ordered-commutative-ring laws PROVABLE, each by a theorem whose axiom footprint is empty. Thirteen of the 22 are the Real statements verbatim; the other nine mention Eq and are restated over CReal.Equiv, because Eq CReal is not equality of real numbers.",
+  "title": "The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations",
+  "statement": "Let CReal be the type of regular Cauchy sequences of rationals over the kernel's CONSTRUCTED rationals -- a one-constructor carrier with no quotient -- and let CReal.Equiv be the defined relation x ~ y iff |x_n - y_n| <= 2/(n+1) for every n. Then interpreting the AxReal package's eight carrier/operation symbols at CReal and its equality at CReal.Equiv makes all 22 ordered-commutative-ring laws PROVABLE, each by a theorem whose axiom footprint is empty. Thirteen of the 22 are the AxReal statements verbatim; the other nine mention Eq and are restated over CReal.Equiv, because Eq CReal is not equality of real numbers.",
   "formal": {
     "language": "lean4",
-    "statement": "For each law L of the Real package, Real.CRealModel.L : interpret(type of Real.L) := CReal.L, where interpret substitutes the eight CReal symbols for the Real ones and rewrites the partial application (Eq Real) to CReal.Equiv. The obligation is COMPUTED from the axiom as it stands in the environment, so a changed axiom changes the obligation.",
+    "statement": "For each law L of the AxReal package, AxReal.CRealModel.L : interpret(type of AxReal.L) := CReal.L, where interpret substitutes the eight CReal symbols for the AxReal ones and rewrites the partial application (Eq AxReal) to CReal.Equiv. The obligation is COMPUTED from the axiom as it stands in the environment, so a changed axiom changes the obligation.",
     "fragment": "Real",
     "free_symbols": [
       "CReal",
@@ -32,17 +32,17 @@
     {
       "id": "creal-model-add_comm",
       "kind": "kernel-term",
-      "supports": "The additive-commutativity law of the Real package is modelled by CReal.add_comm, with an empty axiom footprint.",
+      "supports": "The additive-commutativity law of the AxReal package is modelled by CReal.add_comm, with an empty axiom footprint.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^law[[:space:]]+Real[.]add_comm[[:space:]]+CReal[.]add_comm[[:space:]]+\\[\\][[:space:]]'",
-      "notes": "Anchored on the Real law name, the CReal witness name AND the empty footprint column, so a rename, a swapped pairing, or a witness that grew a dependency on a trusted declaration all fail. Verified to fail when the subject is mangled."
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^law[[:space:]]+AxReal[.]add_comm[[:space:]]+CReal[.]add_comm[[:space:]]+\\[\\][[:space:]]'",
+      "notes": "Anchored on the AxReal law name, the CReal witness name AND the empty footprint column, so a rename, a swapped pairing, or a witness that grew a dependency on a trusted declaration all fail. Verified to fail when the subject is mangled."
     },
     {
       "id": "creal-model-mul_comm",
       "kind": "kernel-term",
       "supports": "A multiplicative law is modelled too -- multiplication is the half that needed a canonical bound derived from regularity.",
       "check_status": "checked",
-      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^law[[:space:]]+Real[.]mul_comm[[:space:]]+CReal[.]mul_comm[[:space:]]+\\[\\][[:space:]]'",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^law[[:space:]]+AxReal[.]mul_comm[[:space:]]+CReal[.]mul_comm[[:space:]]+\\[\\][[:space:]]'",
       "notes": "Second law from the other half of the ring structure, so the pair cannot both pass on additive-only work."
     },
     {
@@ -73,5 +73,5 @@
     "established_by": "axeyum-lean-kernel creal + creal_model modules (ADR-0512 phases R2 and R4; agent-creal-*, agent-r4-model lanes)",
     "source": "hand-built from the constructed rationals; Bishop's regular-sequence construction"
   },
-  "notes": "WHAT THIS DOES NOT SAY. It does not retire the 30 Real axioms, and `nat_axiom_inventory` still reports real: axiom=30. Satisfiable by a constructed object is not the same as unnecessary: 57 files name the Real symbols, 13 are rewrite-required consumers, LraReconstructCtx and the ordered-ring telescope touch all 30 fields across 158 accesses, and the axiom ledger is 30 of 30 real. Retiring them is a migration, not a deletion. What it DOES discharge is ADR-0456's caveat that the only model was Int -- 'Int is not R' was the honest limit of that relative-consistency result and no longer applies. Nor is Eq CReal on offer as real equality; it is CReal.Equiv, and the nine restated laws say so in their own statements."
+  "notes": "WHAT THIS DOES NOT SAY. It does not retire the 30 AxReal axioms, and `nat_axiom_inventory` still reports real: axiom=30. Satisfiable by a constructed object is not the same as unnecessary: 57 files name the AxReal symbols, 13 are rewrite-required consumers, LraReconstructCtx and the ordered-ring telescope touch all 30 fields across 158 accesses, and the axiom ledger is 30 of 30 real. Retiring them is a migration, not a deletion. What it DOES discharge is ADR-0456's caveat that the only model was Int -- 'Int is not R' was the honest limit of that relative-consistency result and no longer applies. Nor is Eq CReal on offer as real equality; it is CReal.Equiv, and the nine restated laws say so in their own statements."
 }
