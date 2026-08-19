@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-statement-reflexivity",
+  "state": "candidate-checked-not-admitted",
+  "source_fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+  "statement_adapter": "artifacts/autogenesis/mathlib-statement-adapter-v1.json",
+  "operation": {
+    "implementation": "crates/axeyum-lean-import/examples/statement_reflexivity_operation.rs",
+    "target_definition": "Axeyum.Autogenesis.Statement.natAscFactorialZero",
+    "goal_sha256": "87e37902bb8b3958514c5a6831b28ebff2824c8a30fb45601ff47736ee3853d7",
+    "proof_sha256": "16600053e2afaa0d4d0bfa559fbac367bfeb41b860912f10c236cdcb82e08b53",
+    "target_content_sha256": "a492e9e2f4b4386d8341eb891a3932298226d74a0472c08cf7f5ae32efa7dabe",
+    "binders": 1,
+    "constructed_nodes": 4,
+    "max_binders": 8,
+    "max_constructed_nodes": 16,
+    "admitted_declarations": 55,
+    "axioms": 0,
+    "theorem_dependencies": 0,
+    "target_dependency": false,
+    "ledger_writes": 0
+  },
+  "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity.py",
+  "limitations": "The candidate is independently kernel-checked but is not a registered authoritative operation, a durable admission transaction, or proof credit. The source fact remains open."
+}

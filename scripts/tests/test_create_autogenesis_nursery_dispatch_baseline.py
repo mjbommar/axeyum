@@ -25,13 +25,13 @@ class DispatchBaselineTests(unittest.TestCase):
         self.assertEqual({row["partition"] for row in result["rows"]}, {"train", "development"})
         self.assertEqual(result["coverage"]["candidates"], 138)
 
-    def test_current_population_separates_adapter_ready_from_unsupported(self) -> None:
+    def test_current_population_separates_checked_candidate_from_unsupported(self) -> None:
         result = MODULE.build(self.nursery, self.registry, self.facts)
         self.assertEqual(result["coverage"]["eligible_for_dispatch"], 0)
         self.assertEqual(
             result["coverage"]["decline_reasons"],
             {
-                "statement-adapter-ready:no-authoritative-producer": 1,
+                "reflexivity-candidate-checked:not-registered-or-admitted": 1,
                 "unsupported-formal-language:lean4-surface": 137,
             },
         )
@@ -54,6 +54,13 @@ class DispatchBaselineTests(unittest.TestCase):
         self.assertEqual(
             MODULE.classify(fact, [], {"F:x"}),
             ("statement-adapter-ready:no-authoritative-producer", []),
+        )
+
+    def test_checked_candidate_does_not_claim_dispatch_or_admission(self) -> None:
+        fact = {"id": "F:x", "formal": {"language": "lean4-surface", "fragment": "Nat"}}
+        self.assertEqual(
+            MODULE.classify(fact, [], {"F:x"}, {"F:x"}),
+            ("reflexivity-candidate-checked:not-registered-or-admitted", []),
         )
 
     def test_population_drift_fails_closed(self) -> None:

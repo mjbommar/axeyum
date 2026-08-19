@@ -41,7 +41,10 @@ def load(path: pathlib.Path) -> dict[str, Any]:
 
 
 def classify(
-    fact: dict[str, Any], operations: list[dict[str, Any]], adapted_fact_ids: set[str] | None = None
+    fact: dict[str, Any],
+    operations: list[dict[str, Any]],
+    adapted_fact_ids: set[str] | None = None,
+    checked_candidate_fact_ids: set[str] | None = None,
 ) -> tuple[str, list[str]]:
     language = fact["formal"]["language"]
     fragment = fact["formal"]["fragment"]
@@ -53,6 +56,8 @@ def classify(
     ]
     if exact:
         return "dispatchable", sorted(op["id"] for op in exact)
+    if fact["id"] in (checked_candidate_fact_ids or set()):
+        return "reflexivity-candidate-checked:not-registered-or-admitted", []
     if fact["id"] in (adapted_fact_ids or set()):
         return "statement-adapter-ready:no-authoritative-producer", []
     if not any(language in op["applicability"]["formal_languages"] for op in operations):
@@ -75,6 +80,17 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
         for manifest in adapter_manifests
         if manifest.get("state") == "independent-kernel-goal-admitted-proof-free"
     }
+    reflexivity_manifests = [
+        load(path)
+        for path in sorted(STATEMENT_ADAPTERS.glob("*-statement-reflexivity-v1.json"))
+    ]
+    checked_candidate_fact_ids = {
+        manifest["source_fact_id"]
+        for manifest in reflexivity_manifests
+        if manifest.get("state") == "candidate-checked-not-admitted"
+    }
+    if not checked_candidate_fact_ids <= adapted_fact_ids:
+        raise BaselineError("checked reflexivity candidate lacks a statement adapter")
     entries = [row for row in nursery.get("entries", []) if row.get("partition") in PARTITIONS]
     if len(entries) != 138:
         raise BaselineError(f"expected 138 train/development entries, found {len(entries)}")
@@ -88,7 +104,9 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
         fact = facts.get(entry["fact_id"])
         if fact is None:
             raise BaselineError(f"missing fact {entry['fact_id']}")
-        reason, operation_ids = classify(fact, operations, adapted_fact_ids)
+        reason, operation_ids = classify(
+            fact, operations, adapted_fact_ids, checked_candidate_fact_ids
+        )
         outcome = "eligible-for-dispatch" if reason == "dispatchable" else "declined-before-execution"
         reasons[reason] += 1
         by_family[entry["family"]][reason] += 1
@@ -103,6 +121,7 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
             "registered_operation_ids": operation_ids,
             "executor_budget_consumed": 0,
             "statement_adapter_ready": entry["fact_id"] in adapted_fact_ids,
+            "reflexivity_candidate_checked": entry["fact_id"] in checked_candidate_fact_ids,
         })
     result: dict[str, Any] = {
         "schema_version": 1,
@@ -116,6 +135,9 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
             "proof_bodies_accessed": False,
             "target_outcomes_accessed": False,
             "statement_adapter_fact_ids": sorted(adapted_fact_ids & {row["fact_id"] for row in entries}),
+            "checked_reflexivity_candidate_fact_ids": sorted(
+                checked_candidate_fact_ids & {row["fact_id"] for row in entries}
+            ),
         },
         "budget": {
             "candidate_inspection_limit": 138,

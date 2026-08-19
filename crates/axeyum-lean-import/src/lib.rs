@@ -185,6 +185,14 @@ impl CompletedStatementImport {
     pub fn report(&self) -> &ImportReport {
         &self.report
     }
+
+    /// Transfer the checked kernel, matching report, target name, and goal to a
+    /// bounded producer/checker operation. All handles belong to the returned
+    /// kernel and must not be mixed with another import.
+    #[must_use]
+    pub fn into_parts(self) -> (Kernel, ImportReport, NameId, ExprId) {
+        (self.kernel, self.report, self.target_name, self.goal)
+    }
 }
 
 /// A stream failed the stronger proof-isolated statement-adapter contract.

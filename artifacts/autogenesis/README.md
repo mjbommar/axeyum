@@ -47,6 +47,16 @@ declaration, and pins the resulting goal identity:
 python3 scripts/check-autogenesis-statement-adapter.py
 ```
 
+`mathlib-statement-reflexivity-v1.json` binds the first proof candidate built
+from that checked goal. The untrusted proposer recognizes only a bounded Pi
+telescope ending in exact equality; the independent kernel, dependency audit,
+and receipt checker decide whether its `Eq.refl` term is acceptable. The
+artifact deliberately records zero ledger writes and leaves the fact open:
+
+```sh
+python3 scripts/check-autogenesis-statement-reflexivity.py
+```
+
 `mathlib-statement-source-v1.json` binds the external statement-only Mathlib
 v4.30.0 inventory. Bulk NDJSON stays on `/nas3`; Git retains the extractor,
 source identity, selection policy, and small derived candidate view. Neither an

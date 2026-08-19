@@ -115,6 +115,7 @@ compounding, not automation theatre.
 | [Mathlib frozen nursery split](16-mathlib-frozen-nursery-split-result.md) | Can all reviewed propositions be preregistered into useful evaluation partitions without dependency, source-group, family, proof-template, mutation, or longitudinal leakage? |
 | [Nursery dispatch baseline](17-mathlib-nursery-dispatch-baseline.md) | What prevents the frozen train/development population from entering a current authoritative operation? |
 | [First statement adapter](18-first-proof-isolated-statement-adapter.md) | Can an official Mathlib surface proposition become an independently checked goal without importing its proof or installing it as an assumption? |
+| [First checked reflexivity candidate](19-first-checked-reflexivity-candidate.md) | Can a bounded generic producer construct a fresh proof from that goal and survive independent kernel and dependency checks without receiving ledger credit? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
