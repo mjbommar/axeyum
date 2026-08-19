@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-connected-fourth-cumulant-bound",
+  "title": "Connected fourth-cumulant domination at the binary Hayes endpoints",
+  "statement": "Let ell >= 200 and n be 2 ell + 1 or 2 ell + 2. For D_e=N_n(e)-2^(n-ell), M_2=sum_e D_e^2, and M_4=sum_e D_e^4 over invertible classes modulo x^(ell+1), one has 2^ell M_4 - 3 M_2^2 <= M_2^2.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"2^ell*M_4-3*M_2^2 <= M_2^2\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-connected-fourth-cumulant-bound\",\"level_min\":200,\"modulus\":\"x^(ell+1)\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": ["ell", "n", "e"]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:gf2-hayes-connected-conductor-geometric-split"
+  ],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; connected convolution-order cumulant and conductor-filtration diagnostics"
+  },
+  "notes": "This is an open aggregate cancellation obligation, not a promoted finite computation. It is equivalent to the root Witt-cylinder ratio R_0<=4 and preserves all signed cancellation across convolution orders. Both endpoint parities satisfy it through ell=21 and the odd endpoint satisfies it at ell=22; these bounded observations are not evidence for the quantified statement. Combined with the proved second-moment envelope, it implies M_4<=64 ell^4 2^(3 ell), and the exact implication ledger closes endpoint positivity after the independent finite degree-400 handoff. No Autogenesis operation is registered because no checker can establish the statement universally."
+}

@@ -40,8 +40,10 @@ fn run() -> Result<(), String> {
             .collect::<Vec<_>>()
             .join(",");
         println!(
-            "GF2_HAYES_FOURTH_FILTRATION|status=PASS|ell={ell}|degree={degree}|second_moment={}|fourth_moment={}|exact_conductor_energy={exact_energy}",
-            decomposition.second_moment, decomposition.fourth_moment
+            "GF2_HAYES_FOURTH_FILTRATION|status=PASS|ell={ell}|degree={degree}|connected_geometric_split={}|second_moment={}|fourth_moment={}|exact_conductor_energy={exact_energy}",
+            decomposition.satisfies_connected_geometric_split(),
+            decomposition.second_moment,
+            decomposition.fourth_moment
         );
     }
     Ok(())

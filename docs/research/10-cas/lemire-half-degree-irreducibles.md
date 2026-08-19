@@ -2378,6 +2378,46 @@ envelope closes degrees from `401` and `402`, after the finite certificates
 through degree `400`.  The implication is algebraic; the uniform linear local
 ceiling remains the new theorem obligation.
 
+The aggregate root is substantially more stable than the worst local
+cylinder.  Since
+
+```text
+R_0 = 2^ell M_4/M_2^2 = 3 + K_4/M_2^2,
+```
+
+the candidate `R_0<=4` is exactly the signed connected statement
+`K_4<=M_2^2`; it takes the full convolution-order sum before comparison and
+therefore addresses the cross-order obstruction directly.  Both endpoints
+satisfy it through `ell=21`, and the odd endpoint does at `ell=22`.  The four
+root ratios at `ell=20,21` lie between `2.998` and `3.004`, even though the
+worst local ratios exceed `10.6`.  If proved, the second-moment envelope gives
+`M_4<=64 ell^4 2^(3ell)`, which the exact endpoint ledger verifies is
+sufficient after the degree-400 handoff.  This finite pattern is not a proof.
+
+Parseval gives an equivalent conductor form.  If `E_j` is the exact Fourier
+energy of `D_e^2` at conductor level `j`, the obligation is
+
+```text
+sum_(j=1)^ell E_j <= 3 M_2^2.
+```
+
+At `ell=12`, the top normalized layers are approximately
+`1.05, 0.58, 0.27, 0.13`.  The literal all-level estimate
+`E_j <= (3/2) 2^(j-ell) M_2^2` is false at conductor one for the even
+`ell=20` endpoint, although that layer is negligible.  Put
+`h=ceil(ell/2)`.  The corrected proof target is
+
+```text
+sum_(j<h) E_j <= (3/2) 2^(h-ell) M_2^2,
+E_j             <= (3/2) 2^(j-ell) M_2^2  for j>=h.
+```
+
+The geometric tail plus the buffered low block sums to exactly at most
+`3 M_2^2`.  The split fails at the small `ell=8` control, holds at `ell=12`,
+and both `ell=20` endpoints satisfy it in exact arithmetic.  Its fact is
+explicitly asymptotic from `ell>=200`; it remains a machine-visible
+conjectured sublemma, not a uniform derivation.
+
 Existing geometric
 higher-moment work of Hast and Matei treats fixed polynomial degree as the
 field size tends to infinity, whereas this problem fixes the field at two and

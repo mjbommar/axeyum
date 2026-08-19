@@ -1103,6 +1103,39 @@ pub struct WittCylinderLinearBoundReport {
     pub derived_fourth_moment: FourthMomentBoundReport,
 }
 
+/// A unit-variance-square upper bound on the connected fourth cumulant.
+///
+/// The mathematical assumption is `2^ell M_4 - 3 M_2^2 <= M_2^2` at both
+/// Lemire endpoints.  Equivalently, the root concentration ratio is at most
+/// four.  Unlike a pointwise convolution-order estimate, this retains every
+/// signed cross-order cancellation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConnectedCumulantBoundAssumption {
+    /// First `ell` at which the connected estimate is assumed.
+    pub threshold: usize,
+    /// Largest degree covered by separate finite certificates.
+    pub finite_max_degree: usize,
+}
+
+impl Default for ConnectedCumulantBoundAssumption {
+    fn default() -> Self {
+        Self {
+            threshold: 200,
+            finite_max_degree: 400,
+        }
+    }
+}
+
+/// Checked implication from connected-cumulant domination to endpoint
+/// irreducible positivity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConnectedCumulantBoundReport {
+    /// Assumption checked by the exact arithmetic route.
+    pub assumption: ConnectedCumulantBoundAssumption,
+    /// Derived fourth-moment envelope checked by the endpoint route.
+    pub derived_fourth_moment: FourthMomentBoundReport,
+}
+
 /// A constant-one square-root bound on every exact-conductor family.
 ///
 /// The mathematical assumption is
@@ -2220,6 +2253,44 @@ pub struct FourthMomentConductorDecomposition {
     pub levels: Vec<SquaredDeviationConductorLevel>,
 }
 
+impl FourthMomentConductorDecomposition {
+    /// Test the buffered geometric conductor estimate implying `R_0<=4`.
+    ///
+    /// Put `h=ceil(ell/2)`.  The finite diagnostic checks
+    ///
+    /// ```text
+    /// sum_(j<h) E_j <= (3/2) 2^(h-ell) M_2^2,
+    /// E_j             <= (3/2) 2^(j-ell) M_2^2  (j>=h).
+    /// ```
+    ///
+    /// Summing the geometric tail and the buffered low block gives exactly
+    /// `sum_j E_j<=3 M_2^2`.  Finite success does not prove either inequality
+    /// uniformly.
+    #[must_use]
+    pub fn satisfies_connected_geometric_split(&self) -> bool {
+        let split = self.ell.div_ceil(2);
+        let second_square = self.second_moment.pow(2);
+        let three_second_square = BigUint::from(3_u8) * &second_square;
+        let low = self
+            .levels
+            .iter()
+            .filter(|level| level.level < split)
+            .fold(BigUint::from(0_u8), |sum, level| {
+                sum + &level.exact_fourier_energy
+            });
+        let low_shift = self.ell - split + 1;
+        if (low << low_shift) > three_second_square {
+            return false;
+        }
+        self.levels
+            .iter()
+            .filter(|level| level.level >= split)
+            .all(|level| {
+                (&level.exact_fourier_energy << (self.ell - level.level + 1)) <= three_second_square
+            })
+    }
+}
+
 /// Worst local `L2/L1` concentration on one Witt-cylinder level.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WittCylinderConcentrationLevel {
@@ -2278,6 +2349,19 @@ impl WittCylinderConcentrationReport {
             level.maximum_dominance_denominator != BigUint::from(0_u8)
                 && level.maximum_dominance_numerator
                     <= &ceiling * &level.maximum_dominance_denominator
+        })
+    }
+
+    /// Whether the measured root ratio is at most four.
+    ///
+    /// This is exactly the finite form of connected-cumulant domination; it
+    /// does not extrapolate the observation to unmeasured endpoints.
+    #[must_use]
+    pub fn root_ratio_at_most_four(&self) -> bool {
+        self.levels.first().is_some_and(|root| {
+            root.maximum_ratio_denominator != BigUint::from(0_u8)
+                && root.maximum_ratio_numerator
+                    <= BigUint::from(4_u8) * &root.maximum_ratio_denominator
         })
     }
 }
@@ -2414,6 +2498,20 @@ impl ClassPopulationDistribution {
         let fourth = self.central_absolute_power_sum(4)?;
         let group_order = BigUint::from(self.counts.len());
         Ok(BigInt::from(group_order * fourth) - BigInt::from(BigUint::from(3_u8) * second.pow(2)))
+    }
+
+    /// Whether the finite connected fourth cumulant is at most `M_2^2`.
+    ///
+    /// This is equivalent to `2^ell M_4 <= 4 M_2^2`, or root concentration
+    /// at most four.  It is a bounded diagnostic, not a uniform proof.
+    ///
+    /// # Errors
+    ///
+    /// Returns any typed error from the exact central moments.
+    pub fn connected_cumulant_at_most_second_moment_square(&self) -> Result<bool, HayesError> {
+        let second = self.central_absolute_power_sum(2)?;
+        let cumulant = self.fourth_cumulant_numerator()?;
+        Ok(cumulant <= BigInt::from(second.pow(2)))
     }
 
     /// Decompose the Fourier energy of the squared discrepancies by conductor.
@@ -4879,6 +4977,33 @@ pub fn check_witt_cylinder_linear_bound_sufficiency(
             finite_max_degree: assumption.finite_max_degree,
         })?;
     Ok(WittCylinderLinearBoundReport {
+        assumption,
+        derived_fourth_moment,
+    })
+}
+
+/// Check that connected fourth-cumulant domination finishes the endpoint proof.
+///
+/// The assumption gives `M_4 <= 4 M_2^2 / 2^ell`.  Combining it with the
+/// proved `M_2 <= ell^2 2^n` envelope yields
+/// `M_4 <= 64 ell^4 2^(3ell)` simultaneously for `n=2ell+1` and
+/// `n=2ell+2`.  This function checks only that arithmetic consequence.
+///
+/// # Errors
+///
+/// Returns an error when the finite handoff or any derived endpoint inequality
+/// fails.
+pub fn check_connected_cumulant_bound_sufficiency(
+    assumption: ConnectedCumulantBoundAssumption,
+) -> Result<ConnectedCumulantBoundReport, HayesError> {
+    let derived_fourth_moment =
+        check_fourth_moment_bound_sufficiency(FourthMomentBoundAssumption {
+            constant: 64,
+            power: 4,
+            threshold: assumption.threshold,
+            finite_max_degree: assumption.finite_max_degree,
+        })?;
+    Ok(ConnectedCumulantBoundReport {
         assumption,
         derived_fourth_moment,
     })
@@ -12379,8 +12504,20 @@ mod tests {
                 .map(|level| level.exact_fourier_energy.clone())
                 .sum::<BigUint>()
                 + decomposition.second_moment.pow(2),
-            (BigUint::from(1_u8) << 8) * decomposition.fourth_moment
+            (BigUint::from(1_u8) << 8) * &decomposition.fourth_moment
         );
+        assert!(!decomposition.satisfies_connected_geometric_split());
+
+        let positive_distribution =
+            class_population_distribution(12, 25, HayesLimits::default()).unwrap();
+        let positive = positive_distribution
+            .fourth_moment_conductor_decomposition(12 * (1 << 12))
+            .unwrap();
+        assert!(positive.satisfies_connected_geometric_split());
+        let mut falsified = positive.clone();
+        falsified.levels[7].exact_fourier_energy =
+            BigUint::from(3_u8) * falsified.second_moment.pow(2);
+        assert!(!falsified.satisfies_connected_geometric_split());
     }
 
     #[test]
@@ -12435,6 +12572,12 @@ mod tests {
         assert_eq!(last.descendant_count, 1);
         assert_eq!(last.maximum_ratio_numerator, last.maximum_ratio_denominator);
         assert!(report.satisfies_linear_ceiling());
+        assert!(report.root_ratio_at_most_four());
+        assert!(
+            distribution
+                .connected_cumulant_at_most_second_moment_square()
+                .unwrap()
+        );
         assert!(!report.satisfies_linear_dominance_ceiling());
         assert_eq!(
             report.levels[0].maximum_dominance_numerator,
@@ -12448,6 +12591,9 @@ mod tests {
         falsified.levels[0].maximum_ratio_numerator =
             BigUint::from(falsified.ell) * &falsified.levels[0].maximum_ratio_denominator + 1_u8;
         assert!(!falsified.satisfies_linear_ceiling());
+        falsified.levels[0].maximum_ratio_numerator =
+            BigUint::from(4_u8) * &falsified.levels[0].maximum_ratio_denominator + 1_u8;
+        assert!(!falsified.root_ratio_at_most_four());
         assert!(matches!(
             distribution.witt_cylinder_concentration(9 * 256 - 1),
             Err(HayesError::ResourceLimit {
@@ -12477,7 +12623,8 @@ mod tests {
             .witt_cylinder_concentration((ell + 1) * (1_usize << ell))
             .unwrap();
         eprintln!(
-            "ell={ell} degree={degree} linear={} dominance={} levels={:?}",
+            "ell={ell} degree={degree} root4={} linear={} dominance={} levels={:?}",
+            report.root_ratio_at_most_four(),
             report.satisfies_linear_ceiling(),
             report.satisfies_linear_dominance_ceiling(),
             report
@@ -12512,6 +12659,23 @@ mod tests {
             ..WittCylinderLinearBoundAssumption::default()
         };
         assert!(check_witt_cylinder_linear_bound_sufficiency(unchecked_remainder).is_err());
+    }
+
+    #[test]
+    fn connected_cumulant_target_closes_the_symbolic_endpoint_ledger() {
+        let report =
+            check_connected_cumulant_bound_sufficiency(ConnectedCumulantBoundAssumption::default())
+                .unwrap();
+        assert_eq!(report.derived_fourth_moment.assumption.constant, 64);
+        assert_eq!(report.derived_fourth_moment.assumption.power, 4);
+        assert_eq!(report.derived_fourth_moment.first_odd_degree, 401);
+        assert_eq!(report.derived_fourth_moment.first_even_degree, 402);
+
+        let unchecked_remainder = ConnectedCumulantBoundAssumption {
+            finite_max_degree: 399,
+            ..ConnectedCumulantBoundAssumption::default()
+        };
+        assert!(check_connected_cumulant_bound_sufficiency(unchecked_remainder).is_err());
     }
 
     #[test]

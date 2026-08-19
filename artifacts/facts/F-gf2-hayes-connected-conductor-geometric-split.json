@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-connected-conductor-geometric-split",
+  "title": "Buffered geometric conductor energy at the binary Hayes endpoints",
+  "statement": "Let ell >= 200, n be 2 ell + 1 or 2 ell + 2, h=ceil(ell/2), M_2=sum_e D_e^2, and E_j be the exact conductor-j Fourier energy of D_e^2. Then sum over j<h of E_j is at most (3/2) 2^(h-ell) M_2^2, and for every h<=j<=ell, E_j is at most (3/2) 2^(j-ell) M_2^2.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound_high\":\"E_j <= (3/2)*2^(j-ell)*M_2^2 for ceil(ell/2)<=j<=ell\",\"bound_low\":\"sum_(j<ceil(ell/2)) E_j <= (3/2)*2^(ceil(ell/2)-ell)*M_2^2\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-connected-conductor-geometric-split\",\"level_min\":200,\"version\":1}",
+    "fragment": "none",
+    "free_symbols": ["ell", "n", "j", "h"]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; exact conductor filtration of the squared endpoint discrepancies"
+  },
+  "notes": "This is a conjectural asymptotic proof decomposition, not theorem evidence. Its geometric high-conductor sum plus its buffered low block is exactly at most 3 M_2^2, hence implies the connected fourth-cumulant fact. The stronger all-level geometric statement is false at conductor one for the even ell=20 endpoint. The buffered split itself fails at the small ell=8 control, holds at ell=12, and survives both ell=20 endpoints in exact arithmetic; finite tests do not establish the quantified ell>=200 claim. No proof operation is registered."
+}
