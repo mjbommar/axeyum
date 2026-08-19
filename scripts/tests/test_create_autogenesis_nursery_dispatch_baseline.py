@@ -4,6 +4,7 @@ import copy
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest import mock
 
 
 SCRIPT = Path(__file__).parents[1] / "create-autogenesis-nursery-dispatch-baseline.py"
@@ -24,6 +25,24 @@ class DispatchBaselineTests(unittest.TestCase):
         self.assertFalse(result["authority"]["held_out_inspected"])
         self.assertEqual({row["partition"] for row in result["rows"]}, {"train", "development"})
         self.assertEqual(result["coverage"]["candidates"], 138)
+
+    def test_fact_loader_does_not_open_held_out_paths(self) -> None:
+        nursery = {
+            "entries": [
+                {"fact_id": "F:open", "partition": "train"},
+                {"fact_id": "F:sealed", "partition": "held-out"},
+            ]
+        }
+        opened = []
+
+        def load(path):
+            opened.append(path.name)
+            return {"id": "F:open"}
+
+        with mock.patch.object(MODULE, "load", side_effect=load):
+            facts = MODULE.load_selected_facts(nursery)
+        self.assertEqual(facts, {"F:open": {"id": "F:open"}})
+        self.assertEqual(opened, ["F-open.json"])
 
     def test_current_population_separates_admitted_row_from_pre_execution_declines(self) -> None:
         result = MODULE.build(self.nursery, self.registry, self.facts)

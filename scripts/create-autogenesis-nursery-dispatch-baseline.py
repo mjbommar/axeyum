@@ -171,8 +171,26 @@ def build(nursery: dict[str, Any], registry: dict[str, Any], facts: dict[str, di
     return result
 
 
+def load_selected_facts(nursery: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    fact_ids = sorted(
+        row["fact_id"]
+        for row in nursery.get("entries", [])
+        if row.get("partition") in PARTITIONS
+    )
+    facts = {}
+    for fact_id in fact_ids:
+        path = FACTS / (fact_id.replace("F:", "F-") + ".json")
+        fact = load(path)
+        if fact.get("id") != fact_id:
+            raise BaselineError(f"fact identity mismatch for {fact_id}")
+        facts[fact_id] = fact
+    return facts
+
+
 def load_facts() -> dict[str, dict[str, Any]]:
-    return {fact["id"]: fact for fact in (load(path) for path in sorted(FACTS.glob("*.json")))}
+    """Load only the unsealed population retained for unit-test compatibility."""
+    nursery = load(NURSERY)
+    return load_selected_facts(nursery)
 
 
 def main() -> int:
@@ -180,7 +198,8 @@ def main() -> int:
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     try:
-        expected = build(load(NURSERY), load(OPERATIONS), load_facts())
+        nursery = load(NURSERY)
+        expected = build(nursery, load(OPERATIONS), load_selected_facts(nursery))
         rendered = json.dumps(expected, indent=2, ensure_ascii=False) + "\n"
         if args.check:
             if not OUTPUT.exists() or OUTPUT.read_text() != rendered:
