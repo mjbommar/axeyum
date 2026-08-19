@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "F:ml430-mutation-48fe130e2b8eadb6f626b66f",
+  "title": "Outcome-blind mutation of Int.ne_zero_of_gcd",
+  "statement": "A `conclusion-strengthening` mutation of the pinned source proposition `Int.ne_zero_of_gcd`.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "∀ {x y : ℤ}, x.gcd y ≠ 0 → x ≠ 0 ∧ y ≠ 0",
+    "fragment": "Int"
+  },
+  "epistemic_status": "open",
+  "external_status": "unknown",
+  "depends_on": [],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "not established in this ledger",
+    "source": "outcome-blind `conclusion-strengthening` mutation of Int.ne_zero_of_gcd"
+  },
+  "notes": "Open generated mutation. No expected truth value, proof, witness, route, budget, or Axeyum outcome is recorded. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module. The nursery manifest, not depends_on, keeps this row in the same partition as its source."
+}

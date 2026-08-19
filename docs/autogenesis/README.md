@@ -111,6 +111,7 @@ compounding, not automation theatre.
 | [Mathlib statement-source result](12-mathlib-statement-source-result.md) | How can Mathlib supply versioned statement families without vendoring bulk exports or leaking proof answers? |
 | [Mathlib dependency-component result](13-mathlib-dependency-components-result.md) | Which statement candidates must remain together so direct proof dependencies cannot leak across evaluation splits? |
 | [Mathlib outcome-blind review result](14-mathlib-outcome-blind-review-result.md) | Which candidates survive statement review, and how are mutation controls grouped before any outcome or split exists? |
+| [Mathlib open-fact catalog result](15-mathlib-open-fact-catalog-result.md) | Can the reviewed statements become honest Axeyum ledger propositions without importing proofs or claiming construction? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

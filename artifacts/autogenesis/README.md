@@ -48,3 +48,14 @@ to each of the twelve families. The resulting 120 groups still have no split:
 ```sh
 python3 scripts/create-autogenesis-mathlib-nursery-review.py --check
 ```
+
+`mathlib-nat-int-fact-catalog-v1.json` maps the 202 reviewed sources and twelve
+mutations to 214 ordinary **open** fact-ledger rows. Source declarations remain
+external prior art; mutation truth values remain unknown. Their
+`lean4-surface` propositions were accepted as proof-free axiom types by the
+exact Mathlib v4.30 environment, which checks syntax and typing but proves
+nothing:
+
+```sh
+python3 scripts/create-autogenesis-mathlib-fact-catalog.py --check
+```

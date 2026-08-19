@@ -74,6 +74,7 @@ STATIC_SOURCES = (
     Path("scripts/create-autogenesis-mathlib-candidates.py"),
     Path("scripts/create-autogenesis-mathlib-dependency-components.py"),
     Path("scripts/create-autogenesis-mathlib-nursery-review.py"),
+    Path("scripts/create-autogenesis-mathlib-fact-catalog.py"),
     Path("scripts/lean/autogenesis_mathlib_statement_inventory.lean"),
     Path("scripts/lean/autogenesis_mathlib_dependency_inventory.lean"),
     Path("artifacts/autogenesis/mathlib-statement-source-v1.json"),
@@ -83,6 +84,7 @@ STATIC_SOURCES = (
     Path("artifacts/autogenesis/mathlib-nat-int-dependency-components-v1.json"),
     Path("artifacts/autogenesis/mathlib-nursery-review-policy-v1.json"),
     Path("artifacts/autogenesis/mathlib-nat-int-reviewed-nursery-v1.json"),
+    Path("artifacts/autogenesis/mathlib-nat-int-fact-catalog-v1.json"),
     Path("scripts/close-fact.py"),
     Path("scripts/gen-proof-gap-matrix.py"),
     Path("artifacts/ontology/fact.schema.json"),
@@ -195,11 +197,11 @@ SEAMS = (
     },
     {
         "id": "nursery-statement-source",
-        "state": "reviewed-source-groups",
-        "owner": "proof-isolated Mathlib review and mutation grouping",
-        "source": "scripts/create-autogenesis-mathlib-nursery-review.py",
-        "marker": "reviewed-groups-not-frozen-split",
-        "gap": "202 candidates and 12 outcome-blind mutations form 120 leakage groups; proof-shape labels, reviewed fact rows, frozen splits, route hypotheses, and Axeyum outcomes remain absent",
+        "state": "open-fact-catalog",
+        "owner": "proof-isolated Mathlib fact catalog",
+        "source": "scripts/create-autogenesis-mathlib-fact-catalog.py",
+        "marker": "open-facts-no-splits-no-outcomes",
+        "gap": "214 proof-free surface propositions are open fact-ledger rows; split feasibility, frozen partitions, route hypotheses, and all Axeyum outcomes remain absent",
     },
 )
 

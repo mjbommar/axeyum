@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "F:ml430-mutation-2086302b3a338591b3179871",
+  "title": "Outcome-blind mutation of Nat.sqrt_le_self",
+  "statement": "A `relation-strengthening` mutation of the pinned source proposition `Nat.sqrt_le_self`.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "∀ (n : ℕ), n.sqrt < n",
+    "fragment": "Nat"
+  },
+  "epistemic_status": "open",
+  "external_status": "unknown",
+  "depends_on": [],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "not established in this ledger",
+    "source": "outcome-blind `relation-strengthening` mutation of Nat.sqrt_le_self"
+  },
+  "notes": "Open generated mutation. No expected truth value, proof, witness, route, budget, or Axeyum outcome is recorded. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module. The nursery manifest, not depends_on, keeps this row in the same partition as its source."
+}

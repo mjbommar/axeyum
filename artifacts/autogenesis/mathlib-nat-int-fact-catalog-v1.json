@@ -1,0 +1,2542 @@
+{
+  "catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
+  "coverage": {
+    "external_sources": 202,
+    "facts": 214,
+    "families": 12,
+    "generated_mutations": 12,
+    "statement_shape_counts": {
+      "biconditional": 29,
+      "conditional-proposition": 79,
+      "existential-witness": 2,
+      "higher-order-property": 12,
+      "negated-proposition": 1,
+      "unconditional-equality": 56,
+      "unconditional-relation": 35
+    }
+  },
+  "dependency_components_sha256": "79e40b9ee1a6a57a2d511fd63dbb998d12fc325994fff069018162c54e8a5d4c",
+  "facts": [
+    {
+      "dependency_component_id": "mathlib-v4.30.0-fcf7017e9257db89",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.add_modEq_left",
+      "source_statement_sha256": "69d674134bec57c21509b34c81271e6b111f072e8f36de9a081155f103fa77f0",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-ef8adf35bc935542",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.add_modEq_right",
+      "source_statement_sha256": "392fcb17c2eed5a78243d07bb49bddc67072c4b229537946b432654829367bc9",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bef809d855cc57c1",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-gcd-eq-gcd-ab-63005aef"
+      ],
+      "fact_id": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
+      "family": "integer-gcd",
+      "kind": "external-source",
+      "source_name": "Int.dvd_of_dvd_mul_left_of_gcd_one",
+      "source_statement_sha256": "cd261f7d030e1b7877bcc036317641817d6ba6326191a827bf582a04f1f55221",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bef809d855cc57c1",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b"
+      ],
+      "fact_id": "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
+      "family": "integer-gcd",
+      "kind": "external-source",
+      "source_name": "Int.dvd_of_dvd_mul_right_of_gcd_one",
+      "source_statement_sha256": "8657941acb27d54c097d80e351f0a79702a8b8d10b97115e1ee145ea6f657f10",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-11abc97c89380ee4",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-fib-add-181b6a2c",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_add",
+      "source_statement_sha256": "51a6a61625f3e4681344cfebadfb51041af1035d31edb63a0c635208d1166ca2",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-fib-add-two-739358dd"
+      ],
+      "fact_id": "F:ml430-int-fib-add-one-33f1b748",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_add_one",
+      "source_statement_sha256": "d905dd49abd21b4456691ecf7b1120d04933c530de3e515a3fd5a0f3c8dd4da2",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-fib-natcast-d5886be4",
+        "F:ml430-nat-fib-add-two-b86e0c82"
+      ],
+      "fact_id": "F:ml430-int-fib-add-two-739358dd",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_add_two",
+      "source_statement_sha256": "8d73950b63516348e246f137ee9bd6cae88d59e3945e598cffa9864284a8409b",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-292800e4421fa31a",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-fib-dvd-ffb3c5c1",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_dvd",
+      "source_statement_sha256": "cf2527e56abffca07e18942978b0e87b7b85a3cd1952b5f9d292d51779d41324",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-fib-add-two-739358dd"
+      ],
+      "fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_eq_fib_add_two_sub_fib_add_one",
+      "source_statement_sha256": "4db1e3e40062ce4d129d63e3bada8c0cff0edb510acb054d788c0d504db8dd34",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bc8c8765b9355652",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-fib-eq-zero-8193c7cb",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_eq_zero",
+      "source_statement_sha256": "4a6350052e0084d786afbe9f7114f5e76f33e7b27dd70c465e855465626351e0",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-gcd-fib-73bdafc2"
+      ],
+      "fact_id": "F:ml430-int-fib-gcd-3a8bfdec",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_gcd",
+      "source_statement_sha256": "4fa4e8d8410d3ef90532b4258185d41d5ffa21477e3a94874030d205362483d1",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-fib-natcast-d5886be4",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_natCast",
+      "source_statement_sha256": "1594e608b7999bef8ca4b03bcfeec36a7189ab226246d108581ad9a46f69de28",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-fib-neg-b4021d37",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_neg",
+      "source_statement_sha256": "1e0f153de1e088174866d5b10db340668e624911c188fa865a49bc2e3ac3bbc6",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-cd344903f04530b2",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-fib-of-nonneg-438018c5",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_of_nonneg",
+      "source_statement_sha256": "98d93e536206aa25bf2260c876c5fd7ad9b3fcb7c767b7ebf9bd59efda336d45",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-349664929d4b20cf",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-fib-of-odd-66560495",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_of_odd",
+      "source_statement_sha256": "5ec7dcf61f82bdbd52661d9371ec1a95c274341598a133bcae4d522ebe4c1166",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-11abc97c89380ee4",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-fib-add-181b6a2c"
+      ],
+      "fact_id": "F:ml430-int-fib-two-mul-0e70f3dd",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_two_mul",
+      "source_statement_sha256": "5f6a115af0216c55082cb8f61fd9a0ebde40256a61e2fecabb47c094d6d8b81e",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f72b51f6b6106a61",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_two_mul_add_one_pos",
+      "source_statement_sha256": "616aca8adce2d1bbb75bbe9afe83ee1ec572a3baa360b8ee3b76be3dbf62ac0f",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-11abc97c89380ee4",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-fib-two-mul-0e70f3dd"
+      ],
+      "fact_id": "F:ml430-int-fib-two-mul-add-two-0ba4a948",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.fib_two_mul_add_two",
+      "source_statement_sha256": "7bd168b1cdc168ec7428dc66a6972e2b428820a41ed3802be4933f47893c779b",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4c725f39100b926a",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-gcd-div-5e01872f",
+      "family": "integer-gcd",
+      "kind": "external-source",
+      "source_name": "Int.gcd_div",
+      "source_statement_sha256": "f50f692e8676b64ea713df847ae4f18858a3b1d4b27e807f770cfcc38b19536f",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-29d8a4807856ddb4",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+      "family": "integer-gcd",
+      "kind": "external-source",
+      "source_name": "Int.gcd_div_gcd_div_gcd",
+      "source_statement_sha256": "2e8644b523c1a401d32cd4195d75556f73e02edc532e35b80db34492d72eaabf",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bef809d855cc57c1",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+      "family": "integer-gcd",
+      "kind": "external-source",
+      "source_name": "Int.gcd_eq_gcd_ab",
+      "source_statement_sha256": "6a9ac459a4ee5cc13c5b59a05b932d40e2fe36236320a01e26e8e3c71b531e7b",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-fbe0b99ece942a46",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+      "family": "integer-gcd",
+      "kind": "external-source",
+      "source_name": "Int.gcd_eq_one_of_gcd_mul_right_eq_one_left",
+      "source_statement_sha256": "2f66c42b62722cc4045b08adf7de5a5a2a0607ebd95120a2bdf3752e9d63122a",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bc196822165c7f58",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+      "family": "integer-gcd",
+      "kind": "external-source",
+      "source_name": "Int.gcd_eq_one_of_gcd_mul_right_eq_one_right",
+      "source_statement_sha256": "9d79ff5b7fdb9e5b57719a1e62e5176b283e5e039ecaf1b51d0b24476d6b34dd",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-fib-neg-b4021d37",
+        "F:ml430-nat-fib-gcd-d1d98407"
+      ],
+      "fact_id": "F:ml430-int-gcd-fib-73bdafc2",
+      "family": "integer-fibonacci",
+      "kind": "external-source",
+      "source_name": "Int.gcd_fib",
+      "source_statement_sha256": "c1cb52f71c2f43ec5677f630e02335f892309c571a775f4c9e867aa1fd5ee720",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-84ffc18b86745c93",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-gcd-greatest-5b31c5fe",
+      "family": "integer-gcd",
+      "kind": "external-source",
+      "source_name": "Int.gcd_greatest",
+      "source_statement_sha256": "98f1143c5f7cf9579ee7c7f4c67b7c77d2c58dfbd3d299dc7c1a16319e2c4278",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-6e1b2f332b43a55c",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-mod-modeq-6bec7847",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.mod_modEq",
+      "source_statement_sha256": "3e112f9d713853b072c9af7ec839479878e5db8afbd041d347d61f86d113040e",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-modeq-add-left-6e17c69a",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.ModEq.add_left",
+      "source_statement_sha256": "0be5c914920e2e18779e2ab62a5e44e5756f0254ba280c9f939be54520ff4f39",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.ModEq.add_left_cancel'",
+      "source_statement_sha256": "232b8c93f3b53f32a6fed71f9b81aa88951fd0aa2755967be3f66e11a3a737d0",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-modeq-symm-984a6e67"
+      ],
+      "fact_id": "F:ml430-int-modeq-comm-1e4bcc07",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.modEq_comm",
+      "source_statement_sha256": "fc8c080a952a6a0461359cdc97299c19b5dbdcb61465aa23c0e0bddf83b931b5",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-modeq-symm-984a6e67",
+        "F:ml430-int-modeq-trans-6d7863e0"
+      ],
+      "fact_id": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.ModEq.dvd_iff",
+      "source_statement_sha256": "c86d577f1ccc6e937d300ac4b21ebcc99942b6e08b1c6d920bc8bd0b3bc9097e",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-7131d99a953dc330",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-modeq-neg-d6ff57b6",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.modEq_neg",
+      "source_statement_sha256": "d8348122b631186900748b407a7217807e7786018d939185b63c30d054990808",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-be80f6203158797b",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.ModEq.neg",
+      "source_statement_sha256": "919d4d8aa758f6210bc2dfcc8f97e5ade16d6526ecf100ede7a1b01a39434007",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-8a9b388391142d26",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-modeq-of-dvd-b9c41fce",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.ModEq.of_dvd",
+      "source_statement_sha256": "c3f9b03e48f3ced273fea7535e8504c73d94c9886aad2205437cb4711ee6c024",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-221b47afb20afd1a",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.ModEq.of_mul_left",
+      "source_statement_sha256": "440c72a029ca2439e684224f458b5f585ea080cd23eb207973abd8fe6ca7ad56",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-221b47afb20afd1a",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-modeq-of-mul-left-c4ccd51e"
+      ],
+      "fact_id": "F:ml430-int-modeq-of-mul-right-c92b7bf0",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.ModEq.of_mul_right",
+      "source_statement_sha256": "ed78ec3789c6044ca34e6fdd662b0b8bbdc3fc9172c25fa21e32fdf4de7370a7",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-7ea970a1a23d9dcd",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-modeq-one-01d9de39",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.modEq_one",
+      "source_statement_sha256": "43bc62305ffe1a2138075adfd2f8c43348ffea86f69882cf4751821fcac7d728",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c281acadeeb7f3e4",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-modeq-refl-30e15520",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.ModEq.refl",
+      "source_statement_sha256": "5ef1cabc1b44e80e3f1f8be0cef1a5fe42e27736d5f1cc1c41091efda87cedab",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "direct_dependency_fact_ids": [
+        "F:ml430-int-modeq-symm-984a6e67"
+      ],
+      "fact_id": "F:ml430-int-modeq-sub-3148f130",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.modEq_sub",
+      "source_statement_sha256": "deb1606e1cbca18acd867681b6536774f4be916a7a5b7b0588aee56d222685a4",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-modeq-symm-984a6e67",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.ModEq.symm",
+      "source_statement_sha256": "6f22633eced9acc8bb496cc59ec39134b8ee68680d991b40121ca46829ce7d6d",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-modeq-trans-6d7863e0",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.ModEq.trans",
+      "source_statement_sha256": "33b42628e1980c850dee00b222191cbec52cf071bf77f567a8f5cebf659dfd3f",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-77595c4fe0b2aedf",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.modulus_modEq_zero",
+      "source_statement_sha256": "84e4bbddfdfd837c8de78c5605a26d94f5ebfc8f193c01737268f04b60f1a59b",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f1ef809f7abb9158",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-ne-zero-of-gcd-f71f00df",
+      "family": "integer-gcd",
+      "kind": "external-source",
+      "source_name": "Int.ne_zero_of_gcd",
+      "source_statement_sha256": "e5c31d5f3d886c92d98d9b67ed23ba3d16783476b41a7406d7c957bf52383c1b",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-af1fb231b4a4420a",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-int-neg-modeq-neg-30d98479",
+      "family": "integer-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Int.neg_modEq_neg",
+      "source_statement_sha256": "b03c85f42c288706c6028b99d043dab014d7d8983514e0d70b3daf27fdcb1328",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4ae13ae945c61591",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
+      "family": "natural-fibonacci",
+      "kind": "generated-mutation",
+      "mutation_class": "boundary-widening-biconditional",
+      "mutation_of_fact_id": "F:ml430-nat-fib-eq-zero-61879073",
+      "source_name": "Nat.fib_eq_zero",
+      "statement_shape": "biconditional"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-2086302b3a338591b3179871",
+      "family": "natural-square-root",
+      "kind": "generated-mutation",
+      "mutation_class": "relation-strengthening",
+      "mutation_of_fact_id": "F:ml430-nat-sqrt-le-self-1ed5eb85",
+      "source_name": "Nat.sqrt_le_self",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f1ef809f7abb9158",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-48fe130e2b8eadb6f626b66f",
+      "family": "integer-gcd",
+      "kind": "generated-mutation",
+      "mutation_class": "conclusion-strengthening",
+      "mutation_of_fact_id": "F:ml430-int-ne-zero-of-gcd-f71f00df",
+      "source_name": "Int.ne_zero_of_gcd",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f5e0081ba0d3ce13",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-5179f333b8333ecff8adc223",
+      "family": "natural-primes",
+      "kind": "generated-mutation",
+      "mutation_class": "bound-strengthening",
+      "mutation_of_fact_id": "F:ml430-nat-prime-pred-pos-4e67ac4c",
+      "source_name": "Nat.Prime.pred_pos",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-7afa5ec620720a1501bf349d",
+      "family": "natural-factorial",
+      "kind": "generated-mutation",
+      "mutation_class": "polarity-reversal",
+      "mutation_of_fact_id": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+      "source_name": "Nat.factorial_ne_zero",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
+      "family": "natural-bitwise",
+      "kind": "generated-mutation",
+      "mutation_class": "operator-substitution",
+      "mutation_of_fact_id": "F:ml430-nat-lor-comm-2666d7ef",
+      "source_name": "Nat.lor_comm",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bc8c8765b9355652",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-aabb80b1f89f0c5847364692",
+      "family": "integer-fibonacci",
+      "kind": "generated-mutation",
+      "mutation_class": "boundary-widening-biconditional",
+      "mutation_of_fact_id": "F:ml430-int-fib-eq-zero-8193c7cb",
+      "source_name": "Int.fib_eq_zero",
+      "statement_shape": "biconditional"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-346e912c62f2c876",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
+      "family": "integer-modular-equivalence",
+      "kind": "generated-mutation",
+      "mutation_class": "premise-removal",
+      "mutation_of_fact_id": "F:ml430-int-modeq-symm-984a6e67",
+      "source_name": "Int.ModEq.symm",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-429ffadfbb38d5ea",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+      "family": "natural-gcd",
+      "kind": "generated-mutation",
+      "mutation_class": "polarity-reversal",
+      "mutation_of_fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+      "source_name": "Nat.not_coprime_zero_zero",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-c86940b52af8159ca9b381d6",
+      "family": "natural-modular-equivalence",
+      "kind": "generated-mutation",
+      "mutation_class": "premise-removal",
+      "mutation_of_fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
+      "source_name": "Nat.ModEq.symm",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-e8583599cfae2d40cefae3f0",
+      "family": "natural-logarithm",
+      "kind": "generated-mutation",
+      "mutation_class": "relation-strengthening",
+      "mutation_of_fact_id": "F:ml430-nat-log-le-self-da387172",
+      "source_name": "Nat.log_le_self",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-6f230047ce83981a",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+      "family": "natural-binomial",
+      "kind": "generated-mutation",
+      "mutation_class": "boundary-value-substitution",
+      "mutation_of_fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+      "source_name": "Nat.choose_self",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-6fc2be2d83334e77",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.add_modEq_left",
+      "source_statement_sha256": "b9f57462c5e59311615e5c49b653c779c2ddd6a53fff8db07144b5abe06a4cf8",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-d2b3ae01ee9a9ed0",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.add_modEq_right",
+      "source_statement_sha256": "1149b9bee2dfd52c5ad5430c3b2d8354cbc1f3c7fc41ee90be034a2f38dabf98",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-2552fe053a3976ed",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.ascFactorial_zero",
+      "source_statement_sha256": "2482f23d163bb946b92ac456667645047254faa3f575809e45609154b98b5dd7",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.bitwise_bit'",
+      "source_statement_sha256": "dcedfd24f63af7ad5baa5b3f4d0ad68a53c23f8608eb8c3ca9858ba38a7dde7c",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-bitwise-swap-7175e90e"
+      ],
+      "fact_id": "F:ml430-nat-bitwise-comm-1a273bae",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.bitwise_comm",
+      "source_statement_sha256": "04e662d177ce8f56d74ec6981de168734e279336e0317166fd4175c9f5c372ce",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-bitwise-bit-4c4b28a8"
+      ],
+      "fact_id": "F:ml430-nat-bitwise-swap-7175e90e",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.bitwise_swap",
+      "source_statement_sha256": "631e69566d20c0d296d28cf309cf26fdc938445ab45c81aecb04e65e976cb22f",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-21034a8981d599dd",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_eq_zero_of_lt",
+      "source_statement_sha256": "3208dfa1bd5ef275aa4753067a117595cb69be553f082cddd1cc7be93efd7205",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-03318a97f5d9c067",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-choose-le-succ-62ae968b"
+      ],
+      "fact_id": "F:ml430-nat-choose-le-add-9c463139",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_le_add",
+      "source_statement_sha256": "c4511f5545b821ea7dedd546d7b795525245dc0e390ea6481738e47c3fd9f27b",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-03318a97f5d9c067",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-choose-le-add-9c463139"
+      ],
+      "fact_id": "F:ml430-nat-choose-le-choose-907b5042",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_le_choose",
+      "source_statement_sha256": "731fbd6914cde3f419f9efc463bb65308c030c3e46b211e368d9c4629d732b98",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-03318a97f5d9c067",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-choose-le-succ-62ae968b",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_le_succ",
+      "source_statement_sha256": "b3882db373fa8a29d7174f692e58d930e8f1a066b122022229b287485c4d87c7",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-03318a97f5d9c067",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-choose-le-choose-907b5042"
+      ],
+      "fact_id": "F:ml430-nat-choose-mono-a1af9c18",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_mono",
+      "source_statement_sha256": "3105aef9dd9372a7e1c083b22842598cf136e0cf66c15619d0d6a4504fc83ef7",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "explicit-lambda-binder"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-784b337733caaefb",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-choose-ne-zero-49c3d3cb",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_ne_zero",
+      "source_statement_sha256": "892430e47a8100139a0a6d178abfa8650fefd2f2fb812c2de4c6970c3ffbc50e",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-772791fcb89127a3",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-choose-zero-right-1ed2802a"
+      ],
+      "fact_id": "F:ml430-nat-choose-one-right-7eda8e39",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_one_right",
+      "source_statement_sha256": "faa425fb7c87d29a822609b0ed9f52badaaa93f3e7f8079d7525e2f33a0adfed",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-6f230047ce83981a",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_self",
+      "source_statement_sha256": "0dc53c60b46c3a825d6b1f2c049649796e2516bc00a5733727ddb542bde78518",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-21034a8981d599dd",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-choose-eq-zero-of-lt-92ebab29"
+      ],
+      "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_succ_self",
+      "source_statement_sha256": "413af15c29ba21a2da388126c0441830615b51a94b42a0c9ed50665d71d09a66",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-be1c3ada4fef6ea6",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_succ_succ",
+      "source_statement_sha256": "964a2ec92858b214640fd07997c1199a86e237bf4c4cd5af340718927a334080",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-52448fed5f91002d",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20"
+      ],
+      "fact_id": "F:ml430-nat-choose-symm-add-e4b68161",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_symm_add",
+      "source_statement_sha256": "833be8d874d7bc0527a2916feebd4ced78ec91224eeffa1467e5b7295431eb60",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-52448fed5f91002d",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_symm_of_eq_add",
+      "source_statement_sha256": "7b338a6088d72707024be8d6442e9badb776c243f08226c14f4d55e970b2abea",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-772791fcb89127a3",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_zero_right",
+      "source_statement_sha256": "971c61fdf61ab33f54a180bd0bd1f8cb3c17c279a45313335a7d86380bd1dc79",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-9556aecf1bb98439",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.choose_zero_succ",
+      "source_statement_sha256": "842023c902cde06d5efb3b062d2445db214461c6225c99179b3befcbba8e08a6",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-0e70ff905b4e67d7",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-clog-antitone-left-44a87771",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.clog_antitone_left",
+      "source_statement_sha256": "04c8e3f211c8b4bab4116e81b6eb79745d527e992ea9225faed1c1117b36910d",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "explicit-lambda-binder"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-67733b1101973f6f",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-clog-mono-right-8d87a410",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.clog_mono_right",
+      "source_statement_sha256": "0f8ef22dc142fbbc960692ba65d537917178046eb9834a063c63e537b4224869",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-67733b1101973f6f",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-clog-mono-right-8d87a410"
+      ],
+      "fact_id": "F:ml430-nat-clog-monotone-48fe50c6",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.clog_monotone",
+      "source_statement_sha256": "0cdc77a06ad4ac41ba7dbaa36630ae2f039c6bd4ba161817a3ddb9dfb78c02a6",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-1f0eac984fc2e8b7",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-clog-one-left-b496af12",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.clog_one_left",
+      "source_statement_sha256": "988800774c825953600d3170f54f0722f6390ff43aacda411bfbba9922d63902",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c851a7fdd6dacbde",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-clog-one-right-1ce3d52f",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.clog_one_right",
+      "source_statement_sha256": "49e241954ca796cce91bbed01f23a9890466a426f93997a70f7237ed57056832",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-7a0f0e674194da44",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-clog-pos-00852cb8",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.clog_pos",
+      "source_statement_sha256": "709a132cf6325eae176256930da15b17a3c0b6ae1fd3cdec0e395f8bb0f77dbf",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-32d9b36c9de57a64",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-clog-zero-left-1c61a5bf",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.clog_zero_left",
+      "source_statement_sha256": "60778639a697716662b7549e4aa9bf9d842c3f3278dba6e9b15d3328999df0e0",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-04b5992203855fc2",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-clog-zero-right-d42d47b1",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.clog_zero_right",
+      "source_statement_sha256": "fdf491f8ffbf5aa47b08ae69d44a94bda94257ec5b57199d3333d67f2324caf0",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-dad675b054e7a82a",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-add-self-left-5e93448c",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_add_self_left",
+      "source_statement_sha256": "9262b1fce6bf3ec0577285be56187d1fe6fe93c209548a5ae7b60cbf9af64425",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-0948bc81df7acdcc",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_add_self_right",
+      "source_statement_sha256": "9a26d89bbd1adfdf2ff84b0720885929dbfb8e6c2274bb49bc1493275020dcd7",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c4d6980fa7b38432",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_iff_isRelPrime",
+      "source_statement_sha256": "d824ab9193e8ad8629a2d9e0abb006527f4c539b63f624b08554b966e3ae2daf",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-coprime-two-left-1b47e7c4"
+      ],
+      "fact_id": "F:ml430-nat-coprime-odd-of-left-ed80ab44",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.Coprime.odd_of_left",
+      "source_statement_sha256": "44292a0dfc66e00938a481c3fd3fc25d1acb78205630fa74b3b77b2bf0be2591",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-coprime-two-right-7c5a1850"
+      ],
+      "fact_id": "F:ml430-nat-coprime-odd-of-right-8dc1decc",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.Coprime.odd_of_right",
+      "source_statement_sha256": "6807611575e9b8062a4a829f36ee2eebe7351e8824077a3213f8a408d0eec56d",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-39256e2968b0e1d2",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+        "F:ml430-nat-coprime-of-dvd-right-a640bd56"
+      ],
+      "fact_id": "F:ml430-nat-coprime-of-dvd-18fcd09f",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.Coprime.of_dvd",
+      "source_statement_sha256": "4d7f227ce4a83bd3ce975264f260e3efeade5946579ce81377ce2cf0a8629039",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-eb36cbc0baee7f2c",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-of-dvd-6f652673",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_of_dvd'",
+      "source_statement_sha256": "ff70b5270b7c2f275504eb9bb10736ab32a6989be75af27adf95548b03bedebf",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-39256e2968b0e1d2",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.Coprime.of_dvd_left",
+      "source_statement_sha256": "210f8a167422b3269c1b1123bf83f6774d89479752b3958a9841fd4ea18677ed",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-39256e2968b0e1d2",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.Coprime.of_dvd_right",
+      "source_statement_sha256": "2f6bf76f7afc61982654c51628e6af1ad5d7d80f8b9fe70e8ea035d59234d059",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-14fb60aba4988f41",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_of_lt_minFac",
+      "source_statement_sha256": "293ead84da651fc37f2f4d5ebfdf904e2ac882a7c6605526222789c2711bcf1d",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-7c36b21bbb3a5dae",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-coprime-or-dvd-of-prime-65f47114"
+      ],
+      "fact_id": "F:ml430-nat-coprime-of-lt-prime-1978a919",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_of_lt_prime",
+      "source_statement_sha256": "638ef5484c311832c96d5050ee0c8c546848cfd21ca09f4755c2f168fbde310c",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c42a5cca06e73e07",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-one-left-iff-45945e80",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_one_left_iff",
+      "source_statement_sha256": "60087e4697a0d67bfe2174f05a460f16bae5a3e4ec8df66e8e765540e898eb54",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-0f5b970407bcc279",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_one_right_iff",
+      "source_statement_sha256": "a038097cbcd87c580e9468d7a0f1c7836aaa10c801f6d9658038e6d373208cab",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-7c36b21bbb3a5dae",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-prime-dvd-iff-not-coprime-77854741"
+      ],
+      "fact_id": "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_or_dvd_of_prime",
+      "source_statement_sha256": "c2e9e27c84f1404e285dbb48e26342e0d5c42beb838a6412f3ead61ac6c7f900",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-3e9e176afeb222f8",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-primes-5769049f",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_primes",
+      "source_statement_sha256": "dd2be0709842c4e5412cedd161a6c1432ecdaa81b8d1779f70483f6d33eca1d1",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-a5e2f0f0fb66e795",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-self-add-left-51351fa1",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_self_add_left",
+      "source_statement_sha256": "a55a24ad6923c2f2bdaf6e0742fb038abeceb003d4479e37eae637faf6662778",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-0948bc81df7acdcc",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-coprime-add-self-right-c3ed0f45"
+      ],
+      "fact_id": "F:ml430-nat-coprime-self-add-right-966e5434",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_self_add_right",
+      "source_statement_sha256": "32108069079e3c83157c08b9bf299bbc8b2906f54d1ea9d2e2cc23548ffafbd6",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-0a92c5444156fa80",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.Coprime.symmetric",
+      "source_statement_sha256": "b0f8f2df6bdf2ec669e79029e5e93df5d7c7eb3eb5ae8cd3d8eb3849d42a566e",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-coprime-two-left-1b47e7c4",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_two_left",
+      "source_statement_sha256": "9168a29623aabb876208182b80f6a4f8790e0d5ada4ebc053b2a91bfee5b9843",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-68d94d6dd3f7fd84",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-coprime-two-left-1b47e7c4"
+      ],
+      "fact_id": "F:ml430-nat-coprime-two-right-7c5a1850",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.coprime_two_right",
+      "source_statement_sha256": "791d80c044c0104aacbe315be5c7c722a454f64c018f7cdd911de35a081a6be6",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f752f40b1b7067eb",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.descFactorial_le",
+      "source_statement_sha256": "f8c6aeb19db5f6c1f46ee76a8a1fbdc7e30597eec6088f674a8af99b3ff3db6d",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-8d01187efd126f0b",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.descFactorial_of_lt",
+      "source_statement_sha256": "a6a6362e0bf39fa2a5dfaebf57c895a6498e841fe97ec70500399209163864fa",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f495858cd421b817",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.descFactorial_one",
+      "source_statement_sha256": "90324b256e9e14905a4386da129c20ebec1d1a4c86a7c9e8638c2752829f1519",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-6d39b59d22fd3649",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.descFactorial_self",
+      "source_statement_sha256": "05da8ee70a8df8be9fa77024f7c86950c3234b3f4ff93cd9f1bd7cf75b2558c0",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-96996505b088b81a",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.descFactorial_zero",
+      "source_statement_sha256": "f87b91ee7d953a7188b5ca71e37c370d67a0c26ffba643bdcc6ae2a8c255983f",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-36db9e2cb36c31b5",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.div_dvd_div_left",
+      "source_statement_sha256": "6ecc5bde1aae84ea0b26c0c136fcd488204b5b19bde1361ee3b8e4f6be44dfeb",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-3c41a84178f748e7",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.dvd_lcm_of_dvd_left",
+      "source_statement_sha256": "f8de6430a7b71c41586fc28518659daf06ba207e60832f6fd1f07360259579ab",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-3b9de7b385a5a0cb",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.dvd_lcm_of_dvd_right",
+      "source_statement_sha256": "ac73c05e89d79243ef80bea5065badaf14f2780c5621a728c0d5f59fd125a903",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-85cf153fd2a3d00a",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.dvd_of_forall_prime_mul_dvd",
+      "source_statement_sha256": "d15e16b203fbefa6647fe733103494075ef768024113d267fe0a563155f1ec61",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-0f4a2909bae26f91",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.dvd_of_lcm_left_dvd",
+      "source_statement_sha256": "ca626fbab3edc039d6b267b7d5fe3431dfdedb411431b22c7c35dd5dfc7beb80",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-22ed23121a880dda",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.dvd_of_lcm_right_dvd",
+      "source_statement_sha256": "3a2f031c64afb5386ca51f24bde034579e0ce6911dc96f5bf8cec5ce86258527",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-b413bfcde9767d29",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-even-xor-78a39432",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.even_xor",
+      "source_statement_sha256": "3db17ab02519e206af28f9cdfea4dc85a845e73a27b30778511cf7397e47bdff",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bfc4303ba1ab035e",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e",
+      "family": "integer-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.exists_mul_mod_eq_gcd",
+      "source_statement_sha256": "e215946346c32c105956dc8e32e86aa7253b44f158ba2919b9ec824ab5bd6c3f",
+      "statement_shape": "existential-witness",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-a39a4e278c870ecd",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-sqrt-eq-79ae8eae"
+      ],
+      "fact_id": "F:ml430-nat-exists-mul-self-e73ca9fa",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.exists_mul_self",
+      "source_statement_sha256": "c8dd9a3609e44eee2453021f2535e21e4dc52114bdc9804254d1ab9214252a31",
+      "statement_shape": "existential-witness",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-b92098ec339263f0",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.factorial_dvd_ascFactorial",
+      "source_statement_sha256": "190f67db4ebe5d5b8d25d9b5ed2268ff5a2117c139ac52f794fdba0d53036750",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-841c7d52cf03e6e4",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.factorial_dvd_descFactorial",
+      "source_statement_sha256": "a589f06c1d12ac4c739f6b7e15dc76c016218029d3eb3d68a26b4d3155dbfb55",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.factorial_dvd_factorial",
+      "source_statement_sha256": "64365f121fe5202ca7dcd6f1fb73126a216d55e3448c81a35a76fddd8c475120",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+        "F:ml430-nat-factorial-pos-f1dd2405"
+      ],
+      "fact_id": "F:ml430-nat-factorial-le-d0f4a912",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.factorial_le",
+      "source_statement_sha256": "c4d105c4cc8cf1f6570f977b329f15328972bf00901d3c8273ff89142403ff9c",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-2f841ec7bfb62e80",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.factorial_lt_of_lt",
+      "source_statement_sha256": "600a0c117207985d718b1ea5782bbe1172113ac403b56d9b193c2781228537ca",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-factorial-pos-f1dd2405"
+      ],
+      "fact_id": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.factorial_ne_zero",
+      "source_statement_sha256": "b44c550c719ec1e49bd3f9921d8388c6df7848972ccd3925c9ce8236024e4f5d",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.factorial_pos",
+      "source_statement_sha256": "a9242b24773bae1cced48d3b31f6bc1b4b47c87d5a0e408f383bfa61fb8c839c",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-61d815b2edf793ed",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fastFib_eq",
+      "source_statement_sha256": "0093fda25113e8f8091b0dcff965de79739d5420072ad548324d15e79ca835cb",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fib_add_two",
+      "source_statement_sha256": "d02d345e47fd89371e0929cde30b602d0105750679d230d9675546e468d6a1ab",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-e7e80bd79f8762e6",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fib_add_two_strictMono",
+      "source_statement_sha256": "796887296be62d5021c19c85d8133ce6493cca834a9d27103e678b63f554c2f3",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "explicit-lambda-binder"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-fib-add-two-b86e0c82"
+      ],
+      "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fib_coprime_fib_succ",
+      "source_statement_sha256": "cea45c72eca1c183d9912cbe4f1d521ee6c1b2022320f90e9b42b9ae25df45b2",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-fib-gcd-d1d98407"
+      ],
+      "fact_id": "F:ml430-nat-fib-dvd-f80f3de1",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fib_dvd",
+      "source_statement_sha256": "78d60c44848c79a77f40f51156f1073ab122ae709715414053a203eecf3f6bf6",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4ae13ae945c61591",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-fib-eq-zero-61879073",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fib_eq_zero",
+      "source_statement_sha256": "41f5a653cb6fdb386509bb4a1c794e33871aafb7356c236a4b780e015acd9711",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-fd6092e3581cbf6c",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-fib-gcd-d1d98407",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fib_gcd",
+      "source_statement_sha256": "462bda6362ba8fbe244f081d82a2a56e52e9f6f200db1593197d6e8ba4fa6c79",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-fib-add-two-b86e0c82"
+      ],
+      "fact_id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fib_le_fib_succ",
+      "source_statement_sha256": "d379cd772436cb8ba39345a966dc1ae1a0b4e562062c8a64c96d8a8d702c8b03",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-e7e80bd79f8762e6",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-fib-strictmonoon-905810a9"
+      ],
+      "fact_id": "F:ml430-nat-fib-lt-fib-3582b881",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fib_lt_fib",
+      "source_statement_sha256": "d1e6c3b3e0b1adcbde11806715c8932bee4f04ab3caa798f75c28e08c61e39bb",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-fib-le-fib-succ-d1ef4a3d"
+      ],
+      "fact_id": "F:ml430-nat-fib-mono-cc6afe09",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fib_mono",
+      "source_statement_sha256": "34de7fbbaf1cb9166f7d04bd585c50d2b08ed22623e0f09488efa88dee4604b8",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-d22c0fd2eb74e7fd",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-fib-pos-9e67bd8e",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fib_pos",
+      "source_statement_sha256": "46eb380c2432e5817ddd3caa6f17e56cf646c44599e4ee1691fa0491fc3ca81a",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-e7e80bd79f8762e6",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-fib-add-two-strictmono-c1e86d4d"
+      ],
+      "fact_id": "F:ml430-nat-fib-strictmonoon-905810a9",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.fib_strictMonoOn",
+      "source_statement_sha256": "71f40d85462e31b8596d0b0bb36473aac2855507ca2806e598517fbb02ae603a",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-b064fa21f15a772b",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-fib-coprime-fib-succ-162fc738"
+      ],
+      "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.gcd_fib_add_self",
+      "source_statement_sha256": "50e8b2199101f876f48e246e4c64fe97c2a09af5a4e1c4dec38d933c332690f1",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-77912b67b18f2e18",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.gcd_greatest",
+      "source_statement_sha256": "32e839c2f88ae2e1b2ccb4d2f06da38154464b359e6043fcd10165f7b806ec34",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-land-bit-b9ab7475"
+      ],
+      "fact_id": "F:ml430-nat-land-assoc-ad4775b8",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.land_assoc",
+      "source_statement_sha256": "8592373ec2b1d3a4946b9b28715fba0ab22fcde34922f3c52a95f8ca86d9615c",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-land-bit-b9ab7475",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.land_bit",
+      "source_statement_sha256": "683cbaeedf0722c4b5f0bf2fe08afce1940f0c7ea1d9acff091e2ae56842b65a",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-bitwise-comm-1a273bae"
+      ],
+      "fact_id": "F:ml430-nat-land-comm-7e6ad72e",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.land_comm",
+      "source_statement_sha256": "f9c9c1ff9d0582ebf0b03eaa2b52e71243c34c6e2c972239e2c2d3e914c96de5",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-ldiff-bit-6be49bb8",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.ldiff_bit",
+      "source_statement_sha256": "1500070e7dae1635fe72b05dd8b08b6ab46465b5f5b40b2595063ce403d7801f",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-14a4bdea3716db7b",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-le-fib-self-0cbccb4d"
+      ],
+      "fact_id": "F:ml430-nat-le-fib-add-one-5284f0bf",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.le_fib_add_one",
+      "source_statement_sha256": "cf7182a8eea2537f2b28449d31092f774932447150e6e17eae03fb09ff5c756c",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-14a4bdea3716db7b",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-le-fib-self-0cbccb4d",
+      "family": "natural-fibonacci",
+      "kind": "external-source",
+      "source_name": "Nat.le_fib_self",
+      "source_statement_sha256": "53dcf97b72478c4c1e811f4d7f859e77203226485e96c3b2ec0f09bad7154abb",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-lt-succ-sqrt-39389df2",
+        "F:ml430-nat-sqrt-le-7918582b"
+      ],
+      "fact_id": "F:ml430-nat-le-sqrt-e6996680",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.le_sqrt",
+      "source_statement_sha256": "29e96dac842c23497b15d22415e46f3796cfe7915ccdfb813b820bee66bf8eca",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-le-sqrt-e6996680"
+      ],
+      "fact_id": "F:ml430-nat-le-sqrt-of-eq-mul-503c5afe",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.le_sqrt_of_eq_mul",
+      "source_statement_sha256": "8752c61f37b86061254057ecb4ab546ad9aa20991705e61035e3306b0160f46d",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-sqrt-lt-4909537f"
+      ],
+      "fact_id": "F:ml430-nat-le-three-of-sqrt-eq-one-0c48a868",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.le_three_of_sqrt_eq_one",
+      "source_statement_sha256": "a3f915229ce9d39a5f64af9f727cf161675e3f5f4931a564c0a9f96a7d981a59",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-9da63bd4e59d00f6",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-log-antitone-left-20d1326c",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log_antitone_left",
+      "source_statement_sha256": "ae6d33557300447315fc66bc19a4df6800aefdecaf2af095e44593a3f719adb2",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "explicit-lambda-binder"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-log-zero-right-8ea186db"
+      ],
+      "fact_id": "F:ml430-nat-log-le-clog-ac8ab2d4",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log_le_clog",
+      "source_statement_sha256": "29559341d674ca8c2d49bd22eaa7b82e13f7c656cfdd301dbc82f54c82051d71",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-log-lt-self-529f89fa",
+        "F:ml430-nat-log-zero-right-8ea186db"
+      ],
+      "fact_id": "F:ml430-nat-log-le-self-da387172",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log_le_self",
+      "source_statement_sha256": "5720b4d81b3f790d2d0babbded6c85ff6ae87912991d292f0381d1af348f9efe",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-log-lt-self-529f89fa",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log_lt_self",
+      "source_statement_sha256": "eb55a50b1aefee50a4bfa00dfc28603d058e1f1c660d8971aa9d625b13bd623f",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-7d1d4a6a6f597955",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-log-monotone-52fad774"
+      ],
+      "fact_id": "F:ml430-nat-log-mono-right-b8939fee",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log_mono_right",
+      "source_statement_sha256": "14ecddf1715dfb136641f4ec9db144c2ef569874a0f0b0748b41501ebdb07420",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-7d1d4a6a6f597955",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-log-monotone-52fad774",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log_monotone",
+      "source_statement_sha256": "fe57ee17d219ee2df6a7d52f844cac0f2b7cd58fc1d5698d135fce98754b9f0d",
+      "statement_shape": "higher-order-property",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-d48a520ede3cd1e8",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-log-of-lt-89eaf42e",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log_of_lt",
+      "source_statement_sha256": "edee65777db58a014c7afbc4513967143ca9c0e086c8f59606e85a659cbf01dc",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f9d5f5029ac8431f",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-log-one-left-73efc119",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log_one_left",
+      "source_statement_sha256": "99dae47a8944565e7f2859b4c45631640848ec5f50cf7918b91c249d03754d7f",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-fc2d188b8c710774",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-log-one-right-282332ef",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log_one_right",
+      "source_statement_sha256": "3051bde05779db8acbc58c0598dab38e892f6950339c891d0031f10aa723c399",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-754b540be332facb",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-log-zero-left-9ec8541e",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log_zero_left",
+      "source_statement_sha256": "8031fc7f1968358c0b986badeb060ca1f7408cf8c93d26f17d581e8bc18699cc",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-log-zero-right-8ea186db",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log_zero_right",
+      "source_statement_sha256": "b2d6456b26119c1c8f3c504d9c377bd25090dd58620d7ce25d0f4030214407e4",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-bf20046ab52424dd",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-log-zero-right-8ea186db"
+      ],
+      "fact_id": "F:ml430-nat-log2-eq-log-two-28085932",
+      "family": "natural-logarithm",
+      "kind": "external-source",
+      "source_name": "Nat.log2_eq_log_two",
+      "source_statement_sha256": "aece3455df9a32e5968865aa0db6db887a58a8f72849e8bb7af2171a9e758599",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-lor-bit-a2f98c7c"
+      ],
+      "fact_id": "F:ml430-nat-lor-assoc-82c4d0fd",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.lor_assoc",
+      "source_statement_sha256": "fd110f63da3c371ae8341de6ccde4381f74f3c774d271c261dc8f9e915c38501",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-6a419a1a14546a55",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-lor-bit-a2f98c7c",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.lor_bit",
+      "source_statement_sha256": "d5c0915b1e3f70c34264cc30315334b507b53f698774335a751efd11ac68f958",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-72882823816e8782",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-bitwise-comm-1a273bae"
+      ],
+      "fact_id": "F:ml430-nat-lor-comm-2666d7ef",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.lor_comm",
+      "source_statement_sha256": "ffaaeceb41a8f7767efc4e3b42b142f0b1662431e4aea778ff1889d1e3f293cf",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-28d465b4d0fa4c90",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-lt-of-testbit-72f64ab8",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.lt_of_testBit",
+      "source_statement_sha256": "aa1e10b32808ecf5caa659513aa85651105657f588546cd8e3b9b0e20dfc8899",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-lt-succ-sqrt-39389df2",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.lt_succ_sqrt",
+      "source_statement_sha256": "c5cb18616ee23755f3ac1936b6c342f3a68e8a22a9613ee905d81b8e0e432ead",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-50d3735f1a086e77",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-lt-xor-cases-c43a1e85",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.lt_xor_cases",
+      "source_statement_sha256": "d182b5155705b0710538a1f84e761ce6f12d35a5ff5c64b10e4d14b9cedaac95",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c0029d24c3bb7a7f",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-mod-lcm-ee6bdd41",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.mod_lcm",
+      "source_statement_sha256": "eccac5f72f7e9137d72ae2de9d633a3787a437db3c2595b5ac471f6d5854713d",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-ce4e3e890bcf8f1c",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-mod-modeq-436e4c10",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.mod_modEq",
+      "source_statement_sha256": "8ecbe1f6bbd9430d6f3cdcb24d602dd50c105aa23e14d33fff8a75fd9a465891",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.add_left_cancel'",
+      "source_statement_sha256": "54bad00558a3ede2ad3bf0fde15586f1a4fa7d424414b1c27e1ed061f8f35098",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-modeq-add-left-e83f0700",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.add_left",
+      "source_statement_sha256": "0a6e75bdc83ba166bb0241acd07b63f88810fffd175b026c615bc5e4ebfa1019",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-modeq-add-right-8e2ca0cc",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.add_right",
+      "source_statement_sha256": "32c21ad19ab5638a2d1cc50072081bfc6a064ee923f2dcc3297871d4951ff520",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-modeq-add-right-cancel-e871facf",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.add_right_cancel'",
+      "source_statement_sha256": "79e3966aa1e6f445e48711b64d3c58af75228ee7f82dff9fc290ba85171f7c7b",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-modeq-symm-0a3d4d18"
+      ],
+      "fact_id": "F:ml430-nat-modeq-comm-24b71e7a",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.comm",
+      "source_statement_sha256": "dc2839b0a5fb08366172b72d77517bce107da7d433e7758c43f7e7689d636267",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-modeq-of-dvd-d75cc374",
+        "F:ml430-nat-modeq-symm-0a3d4d18",
+        "F:ml430-nat-modeq-trans-ef9d1c46"
+      ],
+      "fact_id": "F:ml430-nat-modeq-dvd-iff-8f130450",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.dvd_iff",
+      "source_statement_sha256": "4ed3b34a8a5f446fef93378de7c02b4f19e730c0baa85f44d5c5d13230762afe",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-modeq-dvd-iff-8f130450"
+      ],
+      "fact_id": "F:ml430-nat-modeq-gcd-eq-5167ff4f",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.gcd_eq",
+      "source_statement_sha256": "f947643e153e04ab1deec8035cea36af76f4c60d02b702435adcc3c4356c7b4e",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-modeq-of-dvd-d75cc374",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.of_dvd",
+      "source_statement_sha256": "1b32e73362afa30e291590a9dcc143c1bee079f21bdf419b8481d30ebcf5378f",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-d4e21b6b7acdcecb",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-modeq-of-mul-left-88d20bca",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.of_mul_left",
+      "source_statement_sha256": "56e3a3656a2dce61307ae34a1034b14ff0019bca9f968d94ff014817fd2819bb",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-d4e21b6b7acdcecb",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-modeq-of-mul-left-88d20bca"
+      ],
+      "fact_id": "F:ml430-nat-modeq-of-mul-right-43078e1c",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.of_mul_right",
+      "source_statement_sha256": "683be26923c81453606703428b515ed2c0466b6b3d499df5eb56a30ce54a4f3c",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-08ee032d9058b06c",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-modeq-one-516d46e8",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.modEq_one",
+      "source_statement_sha256": "a4e148f71d28da9157e94dcaac8fa0d067ba3a6173864d48049048feb3747430",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c2635744801654c7",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.refl",
+      "source_statement_sha256": "4f4651967983245ec1833d383244e1f20116600ea6bb8fc89678ebcaed5da115",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.symm",
+      "source_statement_sha256": "0872bc3e5cbc38beea162ad0dc75a09f91d5c02662c3f04f8b79a1b52853bb6c",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f1259356540dba68",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.ModEq.trans",
+      "source_statement_sha256": "dbdaf7366eff1c69d1c00804ae35d333f2288900e138330253bb63b4a42bedeb",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-2bd246da70511653",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+      "family": "natural-modular-equivalence",
+      "kind": "external-source",
+      "source_name": "Nat.modulus_modEq_zero",
+      "source_statement_sha256": "26868f993ec21c92f8d8761418dce9fb613a0af4f1b380926f9716d99fd0a1da",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-3149d7f9cd050cac",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-multichoose-zero-right-6ef827c8"
+      ],
+      "fact_id": "F:ml430-nat-multichoose-one-b210386a",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.multichoose_one",
+      "source_statement_sha256": "466b9e80b8f2292595257b4e458e34edd0113ef9cc80dcbdc33970f6730500b3",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-3149d7f9cd050cac",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-multichoose-zero-right-6ef827c8"
+      ],
+      "fact_id": "F:ml430-nat-multichoose-one-right-7755072d",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.multichoose_one_right",
+      "source_statement_sha256": "a6b776f31c15eb9d9e77efb86e247fbd58e8af443783da2b72a0f1077562d996",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-3149d7f9cd050cac",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-multichoose-zero-right-6ef827c8",
+      "family": "natural-binomial",
+      "kind": "external-source",
+      "source_name": "Nat.multichoose_zero_right",
+      "source_statement_sha256": "e8b22c82d867f6d7d0b91fab0b2b1e8e9a676be1ca4277aaf8297eb84be5c875",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-429ffadfbb38d5ea",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+      "family": "natural-gcd",
+      "kind": "external-source",
+      "source_name": "Nat.not_coprime_zero_zero",
+      "source_statement_sha256": "f445f9cd397ff90423d8fe7b473a4cb5c5ba5e1e785f06f5d209a05461c22270",
+      "statement_shape": "negated-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-ec11d4735cad89fd",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.not_prime_of_dvd_of_ne",
+      "source_statement_sha256": "71132fb42df0a8944b5dede72fa398fd20f35a21c0b337120ec0bacfc06ff32c",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4f7f93a429b7752d",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-one-ascfactorial-8bacb017",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.one_ascFactorial",
+      "source_statement_sha256": "6e7c628af6d5606e03edd06d06798fa003c60b60a5735638289b2dc7910b18b0",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-7c36b21bbb3a5dae",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.Prime.dvd_iff_not_coprime",
+      "source_statement_sha256": "433812cec7c9eea97fd167557abcc38feb5a5193aa98ca8ae8a88e27418dea0f",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-3e9e176afeb222f8",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-coprime-primes-5769049f"
+      ],
+      "fact_id": "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.Prime.dvd_mul_of_dvd_ne",
+      "source_statement_sha256": "1c068edd6e696c41e4ae464e79e83058c79013bbfe233b06e5861c0133207a48",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-7f777cc1a0316e33",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-prime-dvd-of-dvd-pow-e76f834a",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.Prime.dvd_of_dvd_pow",
+      "source_statement_sha256": "8ed5cb3db510e56791427153e716c129e4fc38f874d81a7c4ae371ee229c9694",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-e4a351263398fa5d",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-prime-even-iff-d068ec82",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.Prime.even_iff",
+      "source_statement_sha256": "21a03b531276d6871f7c85057f01b6a35c234f2688fc21f8407f6caa223c96ab",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-7f2909c7d58a9007",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.Prime.five_le_of_ne_two_of_ne_three",
+      "source_statement_sha256": "c7cef4837b990a382680a4470ca440ec0a21f3c83caa656bd6bed65fcc12c7e8",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-c3c6c5f60ad0b6b5",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.Prime.not_dvd_mul",
+      "source_statement_sha256": "6793b08bb12dbc042a950f9ca8c12a34d7e9eeb303027068fd6395c91e1e4ed5",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-35005e802231af21",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.Prime.odd_of_ne_two",
+      "source_statement_sha256": "2130a857f03ea5662070e84f54c732cdf3a4b2342c8e6f4995c39524ca3ded3b",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-f5e0081ba0d3ce13",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-prime-pred-pos-4e67ac4c",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.Prime.pred_pos",
+      "source_statement_sha256": "d4796d3b3f7ab1cafb4b05d21b83362cd8990e40aac24dc32be4424fd8b2aeb0",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-factorial-pos-f1dd2405"
+      ],
+      "fact_id": "F:ml430-nat-self-le-factorial-cfdffc69",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.self_le_factorial",
+      "source_statement_sha256": "e544f18c217d9bfec7866d3bdb5dd5aa261c549f574162ffd8a4d8df5e501d84",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-a39a4e278c870ecd",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-sqrt-eq-79ae8eae",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.sqrt_eq",
+      "source_statement_sha256": "9c174af4f3963da07d2f20feb1dca22368ef5ed78fc81d00f7f908c6f364e1b7",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-3625c080cb3916be",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-sqrt-eq-c036815b",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.sqrt_eq'",
+      "source_statement_sha256": "e7856feafdee8e11ac4160cd3b753cd8db25ea64b4352676dadfde85e75979ed",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-sqrt-lt-4909537f"
+      ],
+      "fact_id": "F:ml430-nat-sqrt-eq-zero-53666a3b",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.sqrt_eq_zero",
+      "source_statement_sha256": "6120f10d44df2d79648a740ee4d9499e163f1bbc8a0c8e36a9fa0108933b09b7",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-sqrt-le-7918582b",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.sqrt_le",
+      "source_statement_sha256": "f951a095680fb5050d505253ee53c6e31c765c4ef5ab3ba1f4f4aa2a923778e5",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-sqrt-le-7918582b"
+      ],
+      "fact_id": "F:ml430-nat-sqrt-le-self-1ed5eb85",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.sqrt_le_self",
+      "source_statement_sha256": "b40dc03e5d4690f36117ce8abcbe90fc61caab2114433407d0d252e55aa61bc1",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-le-sqrt-e6996680",
+        "F:ml430-nat-sqrt-le-7918582b"
+      ],
+      "fact_id": "F:ml430-nat-sqrt-le-sqrt-6e2bfc47",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.sqrt_le_sqrt",
+      "source_statement_sha256": "81390c421787353e3451745e4f0671e5a2ed8e2745bd0dfb88767b2fa019192e",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-sqrt-lt-4909537f",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.sqrt_lt",
+      "source_statement_sha256": "04d4e8b32037af277b75822121b67d337cbe73f0a0c5953f9a633b5297889f78",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-sqrt-lt-4909537f"
+      ],
+      "fact_id": "F:ml430-nat-sqrt-lt-self-ff7a155a",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.sqrt_lt_self",
+      "source_statement_sha256": "f26fd1aa209dd14c6dd6535bcdd3da3664872dc8c4851f58414d5a87e38288c9",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-73522f76a61eb5b5",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-le-sqrt-e6996680"
+      ],
+      "fact_id": "F:ml430-nat-sqrt-pos-f75e5114",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.sqrt_pos",
+      "source_statement_sha256": "aed6e8ecbdbdaa71c5003144d9815571f2ce385f4182ad0d8cc442b9524098e0",
+      "statement_shape": "biconditional",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-09459741d0b79459",
+      "direct_dependency_fact_ids": [
+        "F:ml430-nat-sqrt-lt-4909537f"
+      ],
+      "fact_id": "F:ml430-nat-sqrt-succ-le-succ-sqrt-6b041183",
+      "family": "natural-square-root",
+      "kind": "external-source",
+      "source_name": "Nat.sqrt_succ_le_succ_sqrt",
+      "source_statement_sha256": "6943276ae043e5d86e26a6798fa097af6d4059e057ad1ff2e5ec22f057ef8906",
+      "statement_shape": "unconditional-relation",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-5d1003a0d2494aec",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-succ-pred-prime-4feb123f",
+      "family": "natural-primes",
+      "kind": "external-source",
+      "source_name": "Nat.succ_pred_prime",
+      "source_statement_sha256": "517fbe030eaa01e7897f9bb937aac816636be6970b5cd9fb0176878e9e210b71",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-68252a7d4d8c1329",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-testbit-eq-inth-ffa07392",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.testBit_eq_inth",
+      "source_statement_sha256": "1e07668d0e701664f319e1a6861cdca04f5ff0a31ac636458dae6d1534af0cd1",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-a88e55a985ea72d4",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.testBit_land",
+      "source_statement_sha256": "b16c3e10b9dca2ea6fa397107401277162402fad9fb625273783dd9fa7d4ed73",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-06206e0a59d7c3da",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.testBit_ldiff",
+      "source_statement_sha256": "6ee7a4d375f4dd8c3bdb6c08014f62736d08a9c7dc988cae9a26d80975b2170c",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-11da32849191a5ae",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-testbit-lor-7644e067",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.testBit_lor",
+      "source_statement_sha256": "6029f5afa4a86d374d7329813b211276e4a3186a875126d59784e867194a25aa",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-d666bed9b70442ab",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
+      "family": "natural-factorial",
+      "kind": "external-source",
+      "source_name": "Nat.zero_ascFactorial",
+      "source_statement_sha256": "65927d0e726c1dfb9e4c37303088496720a4616b9653d00b3f258bc4f3414dd1",
+      "statement_shape": "unconditional-equality",
+      "surface_normalization": "identity"
+    },
+    {
+      "dependency_component_id": "mathlib-v4.30.0-3c547df4c5be18f3",
+      "direct_dependency_fact_ids": [],
+      "fact_id": "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1",
+      "family": "natural-bitwise",
+      "kind": "external-source",
+      "source_name": "Nat.zero_of_testBit_eq_false",
+      "source_statement_sha256": "593524dd846089f72ae8fc8541ca929a383048ca41c0aa9796613f633b1402c9",
+      "statement_shape": "conditional-proposition",
+      "surface_normalization": "identity"
+    }
+  ],
+  "kind": "axeyum-autogenesis-mathlib-open-fact-catalog",
+  "limitations": [
+    "Lean surface propositions are not Axeyum kernel-core terms",
+    "real-Lean proposition acceptance is syntax/type evidence, not proof evidence",
+    "Mathlib declarations remain external prior art and every Axeyum fact remains open",
+    "direct source dependencies are curriculum metadata and do not grant admission credit",
+    "partitions and route hypotheses remain unassigned"
+  ],
+  "review_sha256": "cc673c2cdf73f5bca5b863aeefa5b59b10ee4fad85329d830e07429764325d88",
+  "schema_version": 1,
+  "source": {
+    "lean_version": "4.30.0",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "mathlib_tag": "v4.30.0"
+  },
+  "state": "open-facts-no-splits-no-outcomes",
+  "surface_validation": {
+    "bytes": 22670,
+    "command": "cd <mathlib-v4.30.0-checkout> && lake env lean <external_file>",
+    "expected_sha256": "a4f51828c0b70709aeef3429400d8fac90f80d5d3164bd8259b1b5fd1fd5995d",
+    "external_file": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-nursery-surface-v1.lean",
+    "generated_module_sha256": "a4f51828c0b70709aeef3429400d8fac90f80d5d3164bd8259b1b5fd1fd5995d",
+    "method": "declare every formal.statement as an axiom after import Mathlib; no theorem value or proof is read",
+    "mode": "0444",
+    "observed_result": "accepted-214-proof-free-axiom-types",
+    "statement_count": 214
+  }
+}

@@ -73,3 +73,6 @@ fact-ledger formal statements. Split assignment must then satisfy whole-group,
 family, proof-shape, mutation, and longitudinal controls without consulting
 episode outcomes. Only after those checks pass can the ordinary nursery
 readiness state change.
+
+The proof-free materialization is recorded in the
+[open-fact catalog result](15-mathlib-open-fact-catalog-result.md).
