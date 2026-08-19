@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-18 | `258f44584` | Constructed and independently checked the first proof-isolated Mathlib reflexivity candidate with fixed budgets, zero axiom/theorem/target dependencies, and zero ledger writes. |
 | 2026-08-18 | `161adde83` | Adapted one frozen Mathlib train proposition into a pinned independent-kernel goal with zero axioms/proof declarations and fail-closed proof/type mutation controls. |
 | 2026-08-18 | `5490b8dff` | Measured all 138 train/development dispatch contracts: every row declined before execution on unsupported `lean4-surface`, with held-out and proof outcomes untouched. |
 | 2026-08-18 | `c9717b3bc` | Froze 214 Mathlib facts into a preregistered 78/60/76 evaluation split with zero dependency, source-group, family, proof-shape, mutation, or longitudinal leakage. |
@@ -244,13 +245,22 @@ zero executor budget distinguish this from proof-search failure.
 definition, independently imports 55 declarations with zero trusted/proof-
 bearing rows, and pins the checked goal identity. The adapter rejects theorem,
 axiom, non-`Prop`, wrong-target, and changed-identity controls. Dispatch now
-separates one adapter-ready/no-producer row from 137 unsupported surface rows.
+separates one adapted row from 137 unsupported surface rows.
 
-**Next:** implement a bounded definitional-reflexivity producer against the
-adapter's checked goal, deny any use of the target definition as evidence, and
-independently check the candidate in the imported environment. Only after that
-operation produces an exact receipt should the fact be considered for ordinary
-admission and adapter coverage broaden beyond one statement.
+**That goal now has a fresh, independently checked proof candidate.** Commit
+`258f44584` adds a fixed-budget, untrusted Pi/equality proposer and checks its
+four-node `Eq.refl` term in the imported kernel. The resulting closure has zero
+axioms, zero prior theorems, and no dependency on the transparent target
+definition; unequal sides reach the proposer but fail at the kernel boundary.
+The source fact remains open with zero ledger writes, and dispatch reports the
+strictly intermediate state `reflexivity-candidate-checked:not-registered-or-admitted`.
+
+**Next:** register an exact source-bound operation that reproduces this pinned
+adapter/proposer/checker receipt, emits a durable admission proposal, and passes
+the existing clean-prestate/clean-poststate transaction replay before the fact
+receives proof credit. Then measure bottom-up coverage over other definitional
+equalities and add one top-down non-reflexive statement shape without exposing
+held-out rows or conflating pre-execution declines with proof failures.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
