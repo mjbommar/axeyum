@@ -44,3 +44,7 @@ telescope instantiations, two facts restated, a home for
 and the constructed control in must be a single change, or the published surface
 briefly *grows* to 31). Historical documents keep the old spelling on purpose.
 [Notes](../notes/71-axreal.md).
+
+<!-- plan-section: landed-changes -->
+
+| 2026-08-19 | `c26e492b1` | **The axiomatized reals are renamed `AxReal` (ADR-0522 step 1), and two green assertions were reading the wrong carrier.** `CReal` contains `Real`: a front-door test asserting `contains("Real.add_le_add")` was satisfied by `CReal.add_le_add`, and `infeasibility_farkas_lean`'s ordered-field-content scan by `CReal.le` — the latter is the checker command of a `proved` fact. Both fixed two-sided and re-derived. One string literal moves the whole 30-row package (stored name, not a render-time remap like `AxNat`). `gen-lean-axiom-ledger.py --accept-rename OLD=NEW` is new, because routing a rename through `--accept-population-change` would have published 30 retirements that never happened and dropped 30 classifications; 3 guards, each mutation-checked to kill exactly one test. Trusted surface unchanged and re-measured; kernel 393, solver 1223, controls non-vacuous. |
