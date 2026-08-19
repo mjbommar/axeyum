@@ -158,6 +158,8 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `8e3ec9324` | Rejected positive four-phase complementarity by exact integer autocorrelation, pinned the large off-identity mass, and preserved the indefinite Gauss combination as the only viable phase-level input. |
+| 2026-08-19 | `09d70c7f5` | Retained the full modulo-eight phase in the connected Witt object, reconstructed the signed spectrum by a mutation-checked four-phase Gauss identity, and showed every primitive additive phase still has full Fourier support in the pinned witness. |
 | 2026-08-19 | `84ea01df2` | Embedded every signed valuation layer into one checked Witt group before absolute values, computed exact spectral moments and conductor support, ruled out sparse/imprimitive support in the pinned witness, and recorded the missing cocycle boundary for a valid Heisenberg rank. |
 | 2026-08-19 | `4527543a4` | Exposed the connected off-diagonal square-root target, pinned the necessary factor-two boundary, and checked that the conjectural bound would imply the desired endpoint energy scale without claiming the remaining cross-order theorem. |
 | 2026-08-19 | `a226f25ef` | Aggregated exact dyadic autocorrelation fibres by shift/inverse pair, the checked Artin--Schreier product parameter, and valuation; exposed the large finite cancellation while refuting the simplest valuation envelope. |
@@ -523,11 +525,20 @@ Verschiebung is checked injective/additive, all valuation layers combine
 before absolute values, and exact second/fourth moments plus general-character
 conductors are replayable.  The pinned `214` parameters occupy `184` Witt
 classes and retain signed total `-68`, but all `512` characters are nonzero,
-closing sparse/imprimitive support as the mechanism.  A primary-source audit
-also shows that a Heisenberg rank requires an explicit central-extension
-cocycle; the integer spectrum alone does not define one.  The next bounded
-task is therefore a phase-resolved connected object retaining the modulo-eight
-and affine-fibre variables, followed by checked associativity/commutator tests.
+closing sparse/imprimitive support as the mechanism.  The full modulo-eight
+residue populations are now retained at every embedded class.  All four
+primitive additive-phase transforms reconstruct the signed spectrum through a
+mutation-checked Gauss identity, but each also has full support at both native
+primes in the pinned witness.  A primary-source audit shows that a Heisenberg
+rank still requires an explicit central-extension cocycle; neither the integer
+spectrum nor these phase lifts define one.  The next bounded task is therefore
+to retain the affine-fibre variables and test an explicit associative cocycle;
+the cheaper exact complementary-family stopping test already fails, with
+off-identity autocorrelation about `0.7735` of the identity and total square
+mass about `26.89` times the complementary value.  Positive spectral powers
+therefore erase essential indefinite Gauss cancellation.  If no natural
+joined-domain cocycle survives, pivot to the connected fourth-cumulant/gcd
+strata rather than computing more unrestricted spectra.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
