@@ -1307,6 +1307,26 @@ pub struct BinaryBerlekampShiftCorrelation {
     pub supported_pairs: u128,
     /// Signed sum of `mu(f)mu(f+h)` over those pairs.
     pub signed_correlation: i128,
+    /// Modulus degree after cancelling the common valuation of `h` and the
+    /// inverse difference; absent for the diagonal shift.
+    pub artin_schreier_modulus_degree: Option<usize>,
+    /// Dimension of the kernel of `z -> z^2+h z` in that quotient.
+    pub artin_schreier_kernel_dimension: Option<usize>,
+    /// Proved unsigned support ceiling from the Artin--Schreier fibres.
+    pub support_upper_bound: u128,
+}
+
+/// Kernel size of one binary truncated Artin--Schreier shift map.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryArtinSchreierKernelReport {
+    /// Quotient ring is `GF(2)[x]/x^modulus_degree`.
+    pub modulus_degree: usize,
+    /// Valuation of `h`; `None` means `h=0` in the quotient.
+    pub shift_valuation: Option<usize>,
+    /// Binary dimension of `ker(z -> z^2+h z)`.
+    pub kernel_dimension: usize,
+    /// Exact kernel size `2^kernel_dimension`.
+    pub kernel_size: u128,
 }
 
 /// Exact annihilator-average of the combined Berlekamp/inverse shift energy.
@@ -4509,9 +4529,56 @@ fn summarize_binary_berlekamp_phase_cosets(
     Ok(summary)
 }
 
+/// Classify the kernel of `z -> z^2+h z` in a truncated binary local ring.
+///
+/// Write `r=modulus_degree` and `v=ord_x(h)`.  Factoring the map as
+/// `z(z+h)` gives the exact dimension
+///
+/// ```text
+/// dim ker = v+1       when 2v<r,
+///           floor(r/2) when 2v>=r,
+/// ```
+///
+/// while `h=0 mod x^r` has the second value.  Thus every nonempty affine
+/// equation `f^2+h f=a mod x^r` has exactly the reported number of solutions.
+///
+/// # Errors
+///
+/// Rejects the zero ring and a kernel size outside the exact `u128` domain.
+pub fn binary_artin_schreier_kernel_report(
+    modulus_degree: usize,
+    shift_valuation: Option<usize>,
+) -> Result<BinaryArtinSchreierKernelReport, HayesError> {
+    if modulus_degree == 0 {
+        return Err(HayesError::InvalidParameter(
+            "Artin--Schreier modulus degree must be positive".to_owned(),
+        ));
+    }
+    let kernel_dimension = match shift_valuation.filter(|&value| value < modulus_degree) {
+        Some(valuation) if valuation < modulus_degree - valuation => valuation + 1,
+        Some(_) | None => modulus_degree / 2,
+    };
+    let kernel_size = 1_u128
+        .checked_shl(u32::try_from(kernel_dimension).map_err(|_| {
+            HayesError::InvalidParameter("Artin--Schreier kernel shift exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Artin--Schreier kernel exceeds u128".to_owned())
+        })?;
+    Ok(BinaryArtinSchreierKernelReport {
+        modulus_degree,
+        shift_valuation,
+        kernel_dimension,
+        kernel_size,
+    })
+}
+
 fn binary_berlekamp_shift_correlations(
     mobius: &[i8],
     inverse_cosets: &[usize],
+    ell: usize,
+    degree: usize,
+    interval_degree: usize,
     shift_dimension: usize,
     limits: HayesLimits,
 ) -> Result<Vec<BinaryBerlekampShiftCorrelation>, HayesError> {
@@ -4551,11 +4618,47 @@ fn binary_berlekamp_shift_correlations(
                     HayesError::InvalidParameter("Berlekamp correlation overflow".to_owned())
                 })?;
         }
+        let valuation = (shift != 0).then(|| shift.trailing_zeros() as usize + 1);
+        let artin_schreier = valuation
+            .map(|valuation| {
+                binary_artin_schreier_kernel_report(
+                    ell.checked_add(1)
+                        .and_then(|value| value.checked_sub(valuation))
+                        .ok_or_else(|| {
+                            HayesError::InvalidParameter(
+                                "Berlekamp Artin--Schreier modulus underflow".to_owned(),
+                            )
+                        })?,
+                    Some(valuation),
+                )
+            })
+            .transpose()?;
+        let support_upper_bound = if let Some(report) = artin_schreier {
+            let exponent = degree
+                .checked_add(interval_degree)
+                .and_then(|value| value.checked_sub(ell + 1))
+                .and_then(|value| value.checked_add(report.kernel_dimension));
+            exponent
+                .and_then(|value| u32::try_from(value).ok())
+                .and_then(|value| 1_u128.checked_shl(value))
+                .unwrap_or(mobius.len() as u128)
+                .min(mobius.len() as u128)
+        } else {
+            supported_pairs
+        };
+        if supported_pairs > support_upper_bound {
+            return Err(HayesError::Invariant(
+                "Berlekamp shift support exceeds its Artin--Schreier fibre bound".to_owned(),
+            ));
+        }
         correlations.push(BinaryBerlekampShiftCorrelation {
             shift,
-            valuation: (shift != 0).then(|| shift.trailing_zeros() as usize + 1),
+            valuation,
             supported_pairs,
             signed_correlation,
+            artin_schreier_modulus_degree: artin_schreier.map(|report| report.modulus_degree),
+            artin_schreier_kernel_dimension: artin_schreier.map(|report| report.kernel_dimension),
+            support_upper_bound,
         });
     }
     Ok(correlations)
@@ -4880,6 +4983,9 @@ pub fn binary_berlekamp_annihilator_energy_report(
     let shift_correlations = binary_berlekamp_shift_correlations(
         &enumeration.mobius_values,
         &enumeration.inverse_cosets,
+        ell,
+        degree,
+        interval_degree,
         shift_dimension,
         limits,
     )?;
@@ -8003,6 +8109,9 @@ mod tests {
                 valuation: None,
                 supported_pairs: 171,
                 signed_correlation: 171,
+                artin_schreier_modulus_degree: None,
+                artin_schreier_kernel_dimension: None,
+                support_upper_bound: 171,
             }
         );
         assert_eq!(constant_one_failure.off_diagonal_signed_correlation, 138);
@@ -8018,6 +8127,26 @@ mod tests {
             let current = binary_constant_one_squarefree_count(degree).unwrap();
             let previous = binary_constant_one_squarefree_count(degree - 1).unwrap();
             assert_eq!(current + previous, 1_u128 << (degree - 1));
+        }
+    }
+
+    #[test]
+    fn truncated_artin_schreier_kernel_formula_is_exact() {
+        assert!(binary_artin_schreier_kernel_report(0, None).is_err());
+        for modulus_degree in 1_usize..=12 {
+            let mask = (1_u64 << modulus_degree) - 1;
+            for shift in 0_u64..=mask {
+                let valuation = (shift != 0).then(|| shift.trailing_zeros() as usize);
+                let report =
+                    binary_artin_schreier_kernel_report(modulus_degree, valuation).unwrap();
+                let direct = (0_u64..=mask)
+                    .filter(|&value| polynomial_multiply_packed(value, value ^ shift) & mask == 0)
+                    .count() as u128;
+                assert_eq!(
+                    direct, report.kernel_size,
+                    "r={modulus_degree}, h={shift:#b}, v={valuation:?}"
+                );
+            }
         }
     }
 

@@ -1179,6 +1179,38 @@ tail as the bare `2^k` conjecture, while isolating a local square-root
 character-sum lemma that may be attacked fibre by fibre.  It still cannot
 close the linear complementary block on its own.
 
+The **support** of those fibres is now classified exactly.  For a nonzero
+coefficient shift `h`, put
+
+```text
+w=f^(-1)+(f+h)^(-1)=h/(f(f+h)) mod x^(ell+1).
+```
+
+Then `ord_x(w)=ord_x(h)=v`.  After writing `h=x^v h_0` and `w=x^v w_0`
+and cancelling the common power of `x`, inverse-coset equality becomes
+
+```text
+f^2+h f=h_0 w_0^(-1) mod x^(ell+1-v).                 (AS)
+```
+
+This is affine linear over `GF(2)`.  In
+`R_r=GF(2)[x]/x^r`, the kernel of `z -> z^2+h z` has dimension
+
+```text
+kappa(r,v)=v+1          if 2v<r,
+             floor(r/2) if 2v>=r.                     (kernel)
+```
+
+Indeed, `z^2+h z=z(z+h)`.  In the first range the solutions are the two
+cosets `x^(r-v)R_r` and `h+x^(r-v)R_r`; in the second they are exactly
+`x^ceil(r/2)R_r`.  The operation
+`binary_artin_schreier_kernel_report` exposes this formula, exhaustively
+checks every truncated ring through `r=12`, and supplies every shift row with
+the resulting proved unsigned support ceiling.  This removes the nonlinear
+collision-classification gap, but deliberately does not infer cancellation
+of `mu(f)mu(f+h)` on a nonempty affine fibre.  That Berlekamp-sign estimate is
+still the live local theorem.
+
 This also sharpens the boundary on the new Kloosterman result.  The
 stationary-phase bound controls the **unweighted** distribution of one product
 of intervals.  A Vaughan identity introduces Möbius-derived weights, and an
