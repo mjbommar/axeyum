@@ -19,7 +19,12 @@
 #
 # Usage:
 #   scripts/lane-push.sh              # check, report the cost, push
-#   scripts/lane-push.sh --dry-run    # report only
+#   scripts/lane-push.sh --dry-run    # report only, and genuinely free
+#
+# NOTE `git push --dry-run` IS NOT FREE: it runs the pre-push hook. A `--dry-run`
+# started here purely as a test fixture for the concurrency guard below ran the
+# full battery for 46 minutes before anyone noticed, and blocked a real push the
+# whole time. This script's own `--dry-run` never invokes git push at all.
 #   scripts/lane-push.sh --force      # push even if another push is running
 #
 # Exit 75 (EX_TEMPFAIL) when it declines because another push holds the lock --
