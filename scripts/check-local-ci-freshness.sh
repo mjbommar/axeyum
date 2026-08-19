@@ -79,20 +79,27 @@
 #     is the limit case of staleness (infinitely old) and is treated the same
 #     way: it reds.
 #
-# WIRING (as of the commit that added this file): report-only in both
-# `scripts/check.sh` and `justfile`, NOT enforcing. The only record that exists
-# right now (`artifacts/local-ci-runs/a6ee37c6a-s4.json`) has `verdict: FAIL`
-# (4 nextest failures) -- so wiring this enforcing today would red the
-# aggregate gate for every lane, for a reason unrelated to almost anyone's
-# actual change, until someone both fixes those 4 tests AND burns a ~107-minute
-# lock-serialized run to produce a fresh PASS record. That is precisely "a gate
-# that is red from the day it lands is a gate people learn to ignore." Report
-# mode (`--report-only`) runs the exact same guards on every gate invocation
-# and prints the verdict, so its own logic is exercised continuously and the
-# moment a fresh, all-pass record lands the printed line flips from FAIL to
-# PASS -- which is the trigger to delete `--report-only` from both call sites
-# and make it enforcing. That is a one-line diff each, deliberately left
-# undone here.
+# WIRING: **ENFORCING** in both `scripts/check.sh` and `justfile` as of
+# 2026-08-19. It landed `--report-only` for one day for a stated, temporary
+# reason: the only record that existed (`a6ee37c6a-s4.json`) was `verdict:
+# FAIL` (4 golden-pin failures, fixed in 31442bd5d), and a gate that is red
+# from the day it lands is a gate people learn to ignore. Report mode ran the
+# identical guards meanwhile, so the printed line flipped to PASS the moment
+# `57af69142-s4.json` landed -- an all-pass record, 5/5 steps, 7561 nextest
+# tests + 179 doctests in 6656 s -- and both call sites dropped the flag.
+#
+# WHAT TO DO WHEN THIS REDS AND YOUR CHANGE LOOKS UNRELATED. Almost always
+# STALE: the newest applicable record has aged past the 48h budget. The fix is
+# to produce a new one, not to soften the gate --
+#
+#     scripts/local-ci.sh --record     # ~110 min, ONE lock across the whole box
+#     # then commit artifacts/local-ci-runs/<sha>-<host>.json
+#
+# It cannot be run in a 10-minute foreground shell and it does not survive an
+# ordinary background job; drive it under `setsid`, and read the RECORD
+# afterwards rather than the exit code. Do NOT re-add `--report-only`: the
+# whole point of this gate is that it can fail, and the only gate that knows
+# whether the authoritative sweep still passes is worth nothing if it cannot.
 #
 # Usage:
 #   scripts/check-local-ci-freshness.sh                 # enforcing: exit 1 on any FAIL reason

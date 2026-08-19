@@ -137,15 +137,19 @@ step local-ci-record-controls ./scripts/tests/test-local-ci-record.sh
 # Is the record itself still evidence of anything? A record can exist, be
 # green, and describe a sha nobody has built on top of in days, or a branch
 # that got rebased away, or a step array that disagrees with its own
-# top-level verdict. `--report-only`: the only record that exists as of this
-# commit (a6ee37c6a-s4.json) has `verdict: FAIL` (4 nextest failures), so
-# running this ENFORCING would red the aggregate gate for every lane over a
-# ~107-minute, lock-serialized run nobody has re-triggered yet -- exactly "a
-# gate that is red from the day it lands is a gate people learn to ignore."
-# Report mode runs the identical guards every time and prints the verdict, so
-# the flip from FAIL to PASS is visible the moment a fresh record lands; at
-# that point delete `--report-only` here and in the justfile's `check` recipe.
-step local-ci-freshness ./scripts/check-local-ci-freshness.sh --report-only
+# top-level verdict. ENFORCING as of 2026-08-19: it was `--report-only` while
+# the only record in existence (a6ee37c6a-s4.json) was `verdict: FAIL`, since
+# a gate that is red from the day it lands is a gate people learn to ignore.
+# `57af69142-s4.json` is an all-pass record (5/5 steps, 7561 nextest + 179
+# doctests, 6656 s) so the reason for report-only is gone.
+#
+# IF THIS REDS FOR YOU AND YOU CHANGED NOTHING RELEVANT, it is almost always
+# STALE, not broken: the newest record is >48h old, and the fix is to run
+# `scripts/local-ci.sh --record` (~110 min, one lock across the box) and
+# commit the record it leaves in `artifacts/local-ci-runs/`. Do NOT re-add
+# `--report-only` -- that turns the one gate that knows whether the
+# authoritative sweep still passes back into a gate that cannot fail.
+step local-ci-freshness ./scripts/check-local-ci-freshness.sh
 step local-ci-freshness-controls ./scripts/tests/test-check-local-ci-freshness.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh

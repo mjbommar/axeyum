@@ -218,14 +218,15 @@ gate-controls:
 # Is there a FRESH, PASSING, fully-measured `local-ci --record` for (an
 # ancestor of) HEAD? A green record proves nothing on its own -- see
 # scripts/check-local-ci-freshness.sh's header for what "fresh" means here and
-# why. REPORT-ONLY (always exits 0): the one record that exists as of this
-# commit is `verdict: FAIL` (a6ee37c6a-s4.json, 4 nextest failures), so
-# enforcing today would red this gate for every lane over an unrelated
-# ~107-minute lock-serialized run nobody has re-triggered. Delete
-# `--report-only` here (and in scripts/check.sh) once a fresh all-pass record
-# lands -- this step already prints that flip the moment it happens.
+# why. ENFORCING as of 2026-08-19 (it was `--report-only` only while the sole
+# record in existence, a6ee37c6a-s4.json, was `verdict: FAIL`; 57af69142-s4
+# is all-pass, 5/5 steps, 7561 nextest + 179 doctests).
+#
+# If this reds and your change is unrelated, it is almost certainly STALE:
+# run `scripts/local-ci.sh --record` (~110 min, one lock across the box) and
+# commit the record. Do not re-add `--report-only`.
 local-ci-freshness:
-    scripts/check-local-ci-freshness.sh --report-only
+    scripts/check-local-ci-freshness.sh
 
 # `frontier_*` is skipped here and run by `frontier` instead. Those ratchets
 # measure "the largest N decided within a fixed WALL-CLOCK budget", so running
