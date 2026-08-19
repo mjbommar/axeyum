@@ -657,6 +657,13 @@ depends on those finite runs: `principal_unit_kloosterman_bound` evaluates its
 proved closed form with exact bignums, and direct tests enumerate every
 frequency and the associated product tables through `ell=9`.
 
+The corresponding ledger object is
+`F:gf2-principal-unit-wild-kloosterman-bound`.  It deliberately remains open
+to Axeyum: the prose argument is a mathematical proof candidate, while the
+native report and exhaustive tests do not independently certify its universal
+stationary-phase step.  Autogenesis may therefore see the formal obligation
+without manufacturing theorem credit from a bounded computation.
+
 Supersingularity does not provide that extra structure beyond the first few
 levels.  Gorodetsky identifies the same curve through the completed
 short-interval-character factorization and proves that `C_ell` is not

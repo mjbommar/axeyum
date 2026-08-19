@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-principal-unit-wild-kloosterman-bound",
+  "title": "Binary principal-unit wild-Kloosterman amplitude bound",
+  "statement": "For every integer ell >= 2, put R = GF(2)[x]/(x^(ell+1)) and let psi(z) = (-1)^[x^ell]z. For every c in R, the sum K_2(c) over units u in R of psi(u^(-1)+cu) has absolute value at most 2^(ell+1-ceil(ell/3)).",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"abs(sum_(u in R^x) (-1)^([x^ell](u^(-1)+c*u))) <= 2^(ell+1-ceil(ell/3))\",\"field_order\":2,\"format\":\"axeyum-gf2-principal-unit-wild-kloosterman-bound\",\"level_min\":2,\"modulus\":\"x^(ell+1)\",\"quantified_frequency\":\"c in GF(2)[x]/(x^(ell+1))\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "ell",
+      "c"
+    ]
+  },
+  "epistemic_status": "open",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "not machine-established in this ledger",
+    "source": "Axeyum gf2-lemire lane stationary-phase argument"
+  },
+  "notes": "A specialized stationary-phase proof is recorded in docs/research/10-cas/lemire-half-degree-irreducibles.md and its closed-form arithmetic consequences are exposed by axeyum_cas::gf2_hayes::principal_unit_kloosterman_bound. Exhaustive direct tests through ell=9 are mutation controls, not a universal certificate. The fact remains open to Axeyum because no registered Autogenesis operation or kernel term independently checks the quantified stationary-phase argument. It is not a direct dependency of the all-degree Lemire fact: a cancellation-preserving prime decomposition is still missing."
+}
