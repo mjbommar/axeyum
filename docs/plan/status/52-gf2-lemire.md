@@ -46,7 +46,14 @@ the fleet-suggested no-wrap regime is now proved for `ell>=3d` by clearing
 denominators.  A second native route classifies reduced rational collisions
 and proves the explicit bound `E_inv<=2^(2d+o(d))`; a symbolic Hölder ledger
 shows this closes the small/small Type-II region beyond total interval
-exponent `r/2`, but not the full decomposition.  The source dependency table
+exponent `r/2`, but not the full decomposition.  The no-wrap modulus condition
+has been corrected to the strict inequality `3d<r`.  A new internal
+valuation/lift/divisor proof now supplies the wrapped binary prime-power energy
+bound
+`E_inv(x^r,m)<=2^(2m+o(r))+2^((7m-r)/2+o(r))` for every `m<=r`, including
+`3m=r`.  Its CAS report retains the full finite divisor envelope, and a
+loss-aware bilinear ledger shows that the small boundary does not close merely
+by erasing that envelope or epsilon reserve.  The source dependency table
 and exact exponent ledger are now complete.  Dedicated CAS reports replay the
 full integer ranges and binary replacements in Bagshaw Type-I Cases 1 and 2;
 both retain a genuine saving wherever their ranges are nonempty.  They also
@@ -64,6 +71,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `b4c13c14e` | Proved the wrapped `q=2,F=x^r` inverse-energy envelope by exact valuation, lift, and divisor ledgers; corrected the no-wrap strictness and added loss-aware bilinear substitution. |
 | 2026-08-19 | `9c891a0a6` | Completed replayable Bagshaw Type-I Case-1 and Case-2 ledgers with exact integer domains, binary completion exponents, and independently enumerated optimizer controls. |
 | 2026-08-19 | `2a21ca519` | Proved inverse-additive energy stabilizes for `ell>=3d`, classified the rational collision fibres to obtain `E_inv<=2^(2d+o(d))`, and added an exact energy-to-Type-II exponent ledger. |
 | 2026-08-19 | `d33c43e5e` | Scoped the binary Bagshaw Case-5 obstruction to its actual domain, proved it is empty for every Lemire cutoff, and checked that Hsu's older half-coefficient shorthand does not close the exact endpoint. |
