@@ -246,7 +246,16 @@ nine levels `192<=j<=200`.  Gorodetsky--Kovaleva's high-conductor theorem and
 appendix bound do not supply the remaining family gain: the former restricts
 primes only for one special power-sum character, and the latter is an
 individual-character estimate that loses `2^(j/2)` after exact-conductor
-Fourier inversion.
+Fourier inversion.  The selected target is now weaker still and respects the
+earlier cross-layer warning.  Along the identity path, the top
+`ceil(log2 ell)+2` weighted increments telescope to one signed relative trace
+`2^ell N_ell(1)-2^(a-1)N_(a-1)(1)`.  Bounding its absolute value by
+`2^(2ell-2)`, while using individual Weil below `a`, closes both endpoints
+with reserve for every `ell>=200`.  This asks for only a polynomial saving
+over the relative Weil trace and preserves cross-conductor cancellation.
+Exact fine/coarse reconstruction, the symbolic implication, and both fleet
+endpoints through `ell=20` pass; the statement remains a conjectured fact, not
+theorem credit.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
@@ -258,6 +267,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `7582fbf7b` | Telescoped the identity path into one signed relative top-conductor trace, added a quarter-scale connected endpoint budget, and retained all cross-conductor cancellation before absolute values. |
 | 2026-08-19 | `9c146dcc9` | Combined exact-conductor Fourier inversion with the proved individual Weil bound, reducing the open square-root-fibre estimate from every level to only `ceil(log2 ell)+1` top conductor levels. |
 | 2026-08-19 | `039d905a6` | Reconstructed every endpoint population from raw binary Witt sibling imbalances, added an exact sufficient Haar triangle, and isolated a buffered square-root-fibre bound that closes both symbolic endpoint ledgers. |
 | 2026-08-19 | `b24120651` | Proved the naive first-slot projection across all binary Witt blocks has kernel order `2^floor(ell/2)`, rejecting a direct growing-conductor Fomenko generalization before expensive `L`-factor work. |
