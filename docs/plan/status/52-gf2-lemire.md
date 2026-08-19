@@ -69,7 +69,11 @@ begins at order at least three.  A separate exact-rational group-ring route
 checks this centered logarithm at both endpoints through `ell=5` and agrees
 with the integral recurrence.  This is a cancellation-preserving reduction,
 not a bound: controlling those connected correlations remains the central
-mathematical obligation.
+mathematical obligation.  `01cc5dfdf` also pins why their orders cannot be
+bounded separately: at `(ell,n)=(5,12)` the orderwise absolute sum is
+`145632`, but the signed logarithm is `32`.  The surviving route must keep the
+full signed logarithm intact, not introduce a second triangle inequality over
+factor order.
 
 The portable boundary is complete for bounded witnesses. `98f2d953f` adds
 canonical JSON, a dense-coefficient second checker, and a standalone dual-check
@@ -97,6 +101,7 @@ fact or claiming a universal proof.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-18 | `01cc5dfdf` | Pinned the exact centered-order cancellation vector and refuted a second triangle route: its absolute sum is `145632` where the full endpoint discrepancy is `32`. |
 | 2026-08-18 | `f247587c6` | Derived the exact centered endpoint logarithm, proved its linear and quadratic orders vanish structurally, and independently checked the resulting connected-correlation expansion. |
 | 2026-08-18 | `a48c57824` | Added exact conductor-family second moments, refuted generic Cauchy at `(8,17)`, and pinned the direct `(5,45)` counterexample to the otherwise sufficient constant-one layer target. |
 
