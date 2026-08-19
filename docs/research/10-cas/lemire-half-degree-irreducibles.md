@@ -1325,6 +1325,33 @@ saving must appear only **after restriction** to the affine
 Artin--Schreier/inverse-coset system, or after preserving cancellation across
 the convolution orders.
 
+Restriction helps, but does not make every exact fibre quadratic.  For a
+nonzero shift `h`, multiplicativity of the Kronecker character gives the exact
+autocorrelation phase
+
+```text
+mu(f)mu(f+h)=chi_8(Disc(F) Disc(F+h)).                 (product phase)
+```
+
+`binary_dyadic_autocorrelation_fibre_report` groups the contributing pairs by
+fixed input coset, `h`, and **exact** inverse difference.  It reconstructs
+binary affine coordinates on each solution set, computes the `Z/8` ANF of the
+product phase, and rejects unless the dyadic character recovers every signed
+shift correlation and their off-diagonal total.
+
+At the failed `(ell,k,d)=(9,11,8)` translation row, all `18,884` nonempty
+exact sets are affine and contain `130,048` points in total.  Of these,
+`16,587` phases are at most quadratic, but the remaining `2,297` fibres contain
+`61,264` points and the maximum support degree is seven on a seven-dimensional
+fibre.  Thus a uniform fibrewise quadratic-Gauss-sum theorem is false, and the
+nonquadratic sector is not sparse.  Nevertheless its signed correlation is
+only `-202` while the sum of absolute fibre correlations is `8,622`; the full
+off-diagonal total is `-68`.  This is uncredited finite evidence for
+**cross-fibre** cancellation.  The next dyadic theorem must aggregate over
+the shift/inverse-difference parameters (preferably in Witt blocks) before
+taking absolute values, rather than bounding every exact affine fibre
+separately.
+
 The Arf coordinate is a better representation of the live squarefree sign,
 but not yet its estimate.
 For each squarefree `f` the adjusted second-trace space is nondegenerate by
