@@ -2,7 +2,7 @@
 
 Status: **foundation phases (0–7) landed**; active execution is ordered in the
 single root project tracker.
-Last updated: 2026-08-07
+Last updated: 2026-08-19
 
 > **Where the live plan is now.** This file is the *research/foundation* roadmap
 > (Phases 0–7 — the decidable finite-domain + arithmetic foundation, now built).
@@ -101,6 +101,29 @@ Last updated: 2026-08-07
 > ADR-0465 every count here is generated from the measurement and `--check` fails
 > on drift. Classification and discharge remain
 > open under TL3.2; inventory is not truth.
+> **2026-08-19 — the arithmetic tower is complete through ℂ and the ledger's one
+> remaining row is unreached.** `rat`, `creal` and `complex` join the axiom-free
+> set, so the derived measurement now reads `complex 0 · creal 0 · integer 0 ·
+> logic 0 · nat 0 · rat 0 · string 0 · real 30`, with `real` the sole nonzero.
+> ℝ is a Bishop setoid of regular ℚ-sequences whose equality is a DEFINED
+> relation rather than the kernel's `Eq` ([ADR-0512](../09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)),
+> which is what avoids `Quot.sound` (a Cauchy quotient needs it) and
+> `propext`+`funext` (Dedekind cuts need them); it carries the 22
+> ordered-commutative-ring laws, a partial inverse whose MODULUS is the data
+> ([ADR-0510](../09-decisions/adr-0510-the-real-inverse-is-partial-and-its-modulus-is-data.md)),
+> and a lattice. ℂ is pairs of those
+> ([ADR-0521](../09-decisions/adr-0521-complex-is-a-pair-setoid-over-creal-and-carries-no-order.md)),
+> and its missing order is a *theorem* rather than a scoping note.
+> Separately from the count: the shipped front door reconstructs over the
+> constructed reals, so **no shipped route reaches the 30**
+> ([ADR-0509](../09-decisions/adr-0509-the-trusted-surface-is-measured-as-reached-not-only-declared.md)
+> publishes *declared* and *reached* as two numbers). The package is retained
+> deliberately — it is the negative control every axiom-freedom measurement is
+> read against, and deleting it would leave no such measurement able to fail
+> ([ADR-0515](../09-decisions/adr-0515-a-negative-control-is-one-assumed-law-over-a-constructed-carrier.md)).
+> That control is now one assumed law over a constructed carrier, not thirty.
+> Those measurements were run by NO gate until 2026-08-19; four `--require-*`
+> steps now carry them and each was demonstrated to fail.
 > The first T6.0.3 four-seam seed is retained, while TL2.15 remains partial: a
 > [fixed-seed 768-case harness](../../../docs/plan/lean-kernel-seam-fuzz-seed-2026-07-21.md)
 > covers `Prop`/elimination, universes/inductives, proof-irrelevance/iota, and
