@@ -109,6 +109,8 @@ autogenesis-nursery:
     cargo test -p axeyum-lean-import --example int_gcd_contract_theorem_control
     python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_theorem_control
     python3 scripts/check-autogenesis-int-gcd-contract-theorem-control.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_nat_fib_gcd_premise_selection_policy
+    python3 scripts/check-autogenesis-nat-fib-gcd-premise-selection-policy.py
 
 # The bulk source is external and optional on CI. The first checker reports
 # verified/unavailable without conflating them; the committed 240-row view is

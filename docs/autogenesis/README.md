@@ -137,6 +137,7 @@ compounding, not automation theatre.
 | [First real trace-backed source-contract receipt](38-int-gcd-trace-contract-receipt.md) | Can exact residualization, specialization, delta evidence, and assumption freedom become one replayable real-source receipt without a witness theorem? |
 | [Preregistered contract-to-theorem bridge](39-int-gcd-contract-theorem-control-selection.md) | Which bounded theorem control should consume the receipt before real evaluation, and which dependency chain lies beyond it? |
 | [First contract-backed theorem receipt](40-int-gcd-contract-theorem-control-result.md) | Did the frozen bridge close the source-contract-to-theorem seam, and what remains before evaluation credit? |
+| [Fibonacci/GCD premise sequence](41-nat-fib-gcd-premise-selection.md) | Which strategic premise and bottom-up foothold maximize compounding without skipping the first missing capability? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -341,6 +342,12 @@ with the frozen two-binder, five-node grammar. This closes the mechanism seam
 but carries zero evaluation or ledger credit. `Int.gcd_fib` remains the real
 horizon target; its explicit upstream facts `Int.fib_neg` and `Nat.fib_gcd` are
 both still open.
+
+The [next sequence](41-nat-fib-gcd-premise-selection.md) selects
+`Nat.fib_gcd` over `Int.fib_neg`: it has the smaller checked boundary and
+unlocks both `Int.gcd_fib` and `Nat.fib_dvd`. Execution starts lower in the
+chain at zero-dependency `Nat.fib_add_two`, under a frozen two-plan iterator
+recurrence budget. No proof attempt has run under that policy.
 
 ## Phase summary
 

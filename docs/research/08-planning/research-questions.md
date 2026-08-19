@@ -881,6 +881,12 @@ Out of scope:
     axioms and zero direct theorem dependencies, and the receipt replays. The
     52 transitive source-closure theorems remain diagnostic only. See
     [ADR-0494](../09-decisions/adr-0494-contract-receipt-authority-and-theorem-dependency-diagnostics-remain-distinct.md).
+- [x] Which open premise should begin the real Fibonacci/GCD evaluation chain?
+  - Answer (2026-08-19): select `Nat.fib_gcd` strategically because it has a
+    smaller checked boundary and two direct unlocks, but begin bottom-up with
+    zero-dependency `Nat.fib_add_two`. Its missing capability is a bounded
+    iterator-recurrence proof plan, not another source-contract control. See
+    [ADR-0495](../09-decisions/adr-0495-fibonacci-gcd-progress-starts-at-the-iterator-recurrence-foothold.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?
