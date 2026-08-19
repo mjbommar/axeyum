@@ -2318,6 +2318,52 @@ signs and comparable size.  Cancellation is already substantial **between
 connected order cells**.  Gcd graphs must be classified inside this tensor
 and recombined with sign; summing absolute cell bounds cannot be the proof.
 
+A primary-source check prevents overextending that last sentence.  The gcd
+matrix in Gorodetsky's Section 4 parametrizes an actual two-sided product
+equation `f_1...f_r=g_1...g_s`, obtained by averaging powers of one
+multiplicative character and its conjugate.  In contrast, Fourier inversion of
+the spatial moment here gives
+
+```text
+sum_e D_e^4
+ = |E_ell|^(-3) sum_(chi_1 chi_2 chi_3 chi_4=1)
+     Dhat(chi_1)Dhat(chi_2)Dhat(chi_3)Dhat(chi_4).
+```
+
+These are four independently varying characters with one product constraint.
+The one-character/conjugate diagonals that admit the standard gcd matrix are
+pairing-like sectors, while `K_4` has already subtracted the three Wick
+pairings.  Therefore the magic-square construction cannot simply be attached
+to every connected tensor cell.  It remains available only after an exact
+two-sided-product reduction for a specified sector.  The next representation
+that still covers the **whole** cumulant is the existing exact-conductor
+martingale; its actionable target is a local Carleson/square-function estimate
+on every Witt cylinder.
+
+That local target is now measurable without floating point.  Put `f_e=D_e^2`
+and, for a level-`j` cylinder `b`, define
+
+```text
+R_j(b)=2^(ell-j) sum_(e below b) f_e^2
+       / (sum_(e below b) f_e)^2.
+```
+
+The numerator and denominator are retained as exact integers.  The excess
+over one is the normalized Haar square energy below `b`; at the root,
+`R_0=2^ell M_4/M_2^2`.  At `(ell,n)=(9,19)`, the root ratio is about `2.813`
+and the worst local ratio is the level-six value
+`7244949696/1224440064<5.92`; singleton cylinders return to one.  The
+provisional ceiling `R_j(b)<=8` is therefore a fleet diagnostic.  If proved
+uniformly, it combines with the already proved exact-conductor Weil envelope
+
+```text
+M_2 <= 2^(n-ell) sum_(j=2)^ell 2^(j-1)(j-1)^2
+```
+
+to give `M_4<=8 M_2^2/2^ell`, which has the required
+`poly(ell) 2^(3ell)` scale at both endpoints.  The implication is algebraic;
+the uniform local ceiling remains the new theorem obligation.
+
 Existing geometric
 higher-moment work of Hast and Matei treats fixed polynomial degree as the
 field size tends to infinity, whereas this problem fixes the field at two and

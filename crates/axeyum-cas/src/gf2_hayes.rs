@@ -2187,6 +2187,34 @@ pub struct FourthMomentConductorDecomposition {
     pub levels: Vec<SquaredDeviationConductorLevel>,
 }
 
+/// Worst local `L2/L1` concentration on one Witt-cylinder level.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WittCylinderConcentrationLevel {
+    /// Principal-unit truncation level defining the cylinders.
+    pub level: usize,
+    /// Number of cylinders, exactly `2^level`.
+    pub cylinder_count: usize,
+    /// Full classes below each cylinder, exactly `2^(ell-level)`.
+    pub descendant_count: usize,
+    /// Cylinder attaining the largest exact concentration ratio.
+    pub witness_cylinder: usize,
+    /// Numerator `descendant_count * sum_(e below b) D_e^4`.
+    pub maximum_ratio_numerator: BigUint,
+    /// Denominator `(sum_(e below b) D_e^2)^2`.
+    pub maximum_ratio_denominator: BigUint,
+}
+
+/// Local concentration ledger for squared discrepancies on every Witt cylinder.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WittCylinderConcentrationReport {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree.
+    pub degree: usize,
+    /// Levels `0..=ell` in increasing order.
+    pub levels: Vec<WittCylinderConcentrationLevel>,
+}
+
 impl ClassPopulationDistribution {
     /// Largest admitted exponent for an exact central absolute power sum.
     ///
@@ -2426,6 +2454,105 @@ impl ClassPopulationDistribution {
             degree: self.degree,
             second_moment,
             fourth_moment,
+            levels,
+        })
+    }
+
+    /// Measure local fourth-over-second concentration on every Witt cylinder.
+    ///
+    /// For `f_e=D_e^2` and a level-`j` cylinder `b`, this records the largest
+    /// exact ratio
+    ///
+    /// ```text
+    /// 2^(ell-j) sum_(e below b) f_e^2
+    /// --------------------------------.
+    ///       (sum_(e below b) f_e)^2
+    /// ```
+    ///
+    /// The ratio is one for a constant cylinder and its excess is the
+    /// normalized Haar square energy below that cylinder.  This finite ledger
+    /// does not assert a uniform Carleson bound.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed resource decline before projection or an invariant
+    /// error for a malformed class distribution.
+    pub fn witt_cylinder_concentration(
+        &self,
+        max_projection_cells: usize,
+    ) -> Result<WittCylinderConcentrationReport, HayesError> {
+        let expected_classes = 1_usize
+            .checked_shl(u32::try_from(self.ell).map_err(|_| {
+                HayesError::InvalidParameter("cylinder level exceeds u32".to_owned())
+            })?)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("cylinder class count overflow".to_owned())
+            })?;
+        if self.counts.len() != expected_classes {
+            return Err(HayesError::InvalidParameter(
+                "cylinder ledger received a malformed distribution".to_owned(),
+            ));
+        }
+        let work = self
+            .ell
+            .checked_add(1)
+            .and_then(|levels| levels.checked_mul(expected_classes))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("cylinder projection work overflow".to_owned())
+            })?;
+        check_limit("witt_cylinder_projection_cells", work, max_projection_cells)?;
+        let mean = self.uniform_mean().ok_or_else(|| {
+            HayesError::InvalidParameter("cylinder distribution has no uniform mean".to_owned())
+        })?;
+        let squared = self
+            .counts
+            .iter()
+            .map(|count| BigUint::from(count.abs_diff(mean)).pow(2))
+            .collect::<Vec<_>>();
+        let full_factors = principal_unit_factors(self.ell);
+        let mut levels = Vec::with_capacity(self.ell + 1);
+        for level in 0..=self.ell {
+            let cylinder_count = 1_usize << level;
+            let descendant_count = 1_usize << (self.ell - level);
+            let quotient_factors = principal_unit_factors(level);
+            let mut masses = vec![BigUint::from(0_u8); cylinder_count];
+            let mut square_masses = vec![BigUint::from(0_u8); cylinder_count];
+            for (index, value) in squared.iter().enumerate() {
+                let cylinder = if level == 0 {
+                    0
+                } else {
+                    project_mixed_radix_index(index, &full_factors, &quotient_factors)?
+                };
+                masses[cylinder] += value;
+                square_masses[cylinder] += value.pow(2);
+            }
+            let mut witness = 0_usize;
+            let mut maximum_numerator = BigUint::from(0_u8);
+            let mut maximum_denominator = BigUint::from(1_u8);
+            for cylinder in 0..cylinder_count {
+                if masses[cylinder] == BigUint::from(0_u8) {
+                    continue;
+                }
+                let numerator = BigUint::from(descendant_count) * &square_masses[cylinder];
+                let denominator = masses[cylinder].pow(2);
+                if &numerator * &maximum_denominator > &maximum_numerator * &denominator {
+                    witness = cylinder;
+                    maximum_numerator = numerator;
+                    maximum_denominator = denominator;
+                }
+            }
+            levels.push(WittCylinderConcentrationLevel {
+                level,
+                cylinder_count,
+                descendant_count,
+                witness_cylinder: witness,
+                maximum_ratio_numerator: maximum_numerator,
+                maximum_ratio_denominator: maximum_denominator,
+            });
+        }
+        Ok(WittCylinderConcentrationReport {
+            ell: self.ell,
+            degree: self.degree,
             levels,
         })
     }
@@ -12170,6 +12297,64 @@ mod tests {
                 requested: 8 * 256,
                 limit: 8 * 256 - 1,
             })
+        );
+    }
+
+    #[test]
+    fn witt_cylinder_concentration_matches_global_moments() {
+        let distribution = class_population_distribution(8, 17, HayesLimits::default()).unwrap();
+        let report = distribution.witt_cylinder_concentration(9 * 256).unwrap();
+        assert_eq!(report.levels.len(), 9);
+        let second = distribution.central_absolute_power_sum(2).unwrap();
+        let fourth = distribution.central_absolute_power_sum(4).unwrap();
+        assert_eq!(
+            report.levels[0].maximum_ratio_numerator,
+            BigUint::from(256_u16) * fourth
+        );
+        assert_eq!(report.levels[0].maximum_ratio_denominator, second.pow(2));
+        let last = &report.levels[8];
+        assert_eq!(last.descendant_count, 1);
+        assert_eq!(last.maximum_ratio_numerator, last.maximum_ratio_denominator);
+        assert!(matches!(
+            distribution.witt_cylinder_concentration(9 * 256 - 1),
+            Err(HayesError::ResourceLimit {
+                resource: "witt_cylinder_projection_cells",
+                requested: 2304,
+                limit: 2303,
+            })
+        ));
+    }
+
+    #[test]
+    #[ignore = "extended finite diagnostic; select ell/offset with AXEYUM_CYLINDER_ELL/OFFSET"]
+    fn witt_cylinder_concentration_extended_probe() {
+        let ell = std::env::var("AXEYUM_CYLINDER_ELL")
+            .expect("missing AXEYUM_CYLINDER_ELL")
+            .parse::<usize>()
+            .expect("invalid AXEYUM_CYLINDER_ELL");
+        let offset = std::env::var("AXEYUM_CYLINDER_OFFSET")
+            .expect("missing AXEYUM_CYLINDER_OFFSET")
+            .parse::<usize>()
+            .expect("invalid AXEYUM_CYLINDER_OFFSET");
+        assert!(matches!(offset, 1 | 2));
+        let degree = 2 * ell + offset;
+        let distribution =
+            class_population_distribution(ell, degree, HayesLimits::default()).unwrap();
+        let report = distribution
+            .witt_cylinder_concentration((ell + 1) * (1_usize << ell))
+            .unwrap();
+        eprintln!(
+            "ell={ell} degree={degree} levels={:?}",
+            report
+                .levels
+                .iter()
+                .map(|row| (
+                    row.level,
+                    row.witness_cylinder,
+                    row.maximum_ratio_numerator.clone(),
+                    row.maximum_ratio_denominator.clone(),
+                ))
+                .collect::<Vec<_>>()
         );
     }
 
