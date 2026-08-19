@@ -2225,6 +2225,8 @@ pub struct SquaredDeviationConductorLevel {
     pub cumulative_fourier_energy: BigUint,
     /// Difference from the cumulative energy at `level - 1`.
     pub exact_fourier_energy: BigUint,
+    /// Haar refinement energy before the factor `2^(level-1)`.
+    pub haar_difference_square_sum: BigUint,
 }
 
 /// Exact conductor filtration of the fourth central moment.
@@ -2590,20 +2592,25 @@ impl ClassPopulationDistribution {
                 buckets[quotient_index] += value;
             }
             let cumulative = BigUint::from(quotient_order)
-                * buckets
-                    .into_iter()
-                    .map(|bucket| bucket.pow(2))
-                    .sum::<BigUint>();
+                * buckets.iter().map(|bucket| bucket.pow(2)).sum::<BigUint>();
             if cumulative < previous {
                 return Err(HayesError::Invariant(format!(
                     "squared-discrepancy Fourier energy decreases at level {level}"
                 )));
             }
             let exact = &cumulative - &previous;
+            let haar_difference_square_sum =
+                witt_haar_difference_square_sum(level, &quotient_factors, buckets)?;
+            if (&haar_difference_square_sum << (level - 1)) != exact {
+                return Err(HayesError::Invariant(format!(
+                    "Haar refinement energy disagrees with conductor level {level}"
+                )));
+            }
             levels.push(SquaredDeviationConductorLevel {
                 level,
                 cumulative_fourier_energy: cumulative.clone(),
                 exact_fourier_energy: exact,
+                haar_difference_square_sum,
             });
             previous = cumulative;
         }
@@ -9230,6 +9237,39 @@ fn project_mixed_radix_index(
     Ok(quotient_index)
 }
 
+fn witt_haar_difference_square_sum(
+    level: usize,
+    quotient_factors: &[PrincipalUnitFactor],
+    buckets: Vec<BigUint>,
+) -> Result<BigUint, HayesError> {
+    let parent_factors = principal_unit_factors(level - 1);
+    let parent_order = 1_usize << (level - 1);
+    let mut parent_children = vec![Vec::with_capacity(2); parent_order];
+    for (child, mass) in buckets.into_iter().enumerate() {
+        let parent = if level == 1 {
+            0
+        } else {
+            project_mixed_radix_index(child, quotient_factors, &parent_factors)?
+        };
+        parent_children[parent].push(mass);
+    }
+    let mut square_sum = BigUint::from(0_u8);
+    for children in parent_children {
+        if children.len() != 2 {
+            return Err(HayesError::Invariant(format!(
+                "conductor level {level} does not split every Witt cylinder in two"
+            )));
+        }
+        let difference = if children[0] >= children[1] {
+            &children[0] - &children[1]
+        } else {
+            &children[1] - &children[0]
+        };
+        square_sum += difference.pow(2);
+    }
+    Ok(square_sum)
+}
+
 fn power_mixed_radix_index(
     index: usize,
     exponent: usize,
@@ -12489,6 +12529,9 @@ mod tests {
             .map(BigUint::from)
             .collect::<Vec<_>>()
         );
+        assert!(decomposition.levels.iter().all(|level| {
+            (&level.haar_difference_square_sum << (level.level - 1)) == level.exact_fourier_energy
+        }));
         assert_eq!(
             decomposition
                 .levels

@@ -2413,10 +2413,23 @@ E_j             <= (3/2) 2^(j-ell) M_2^2  for j>=h.
 ```
 
 The geometric tail plus the buffered low block sums to exactly at most
-`3 M_2^2`.  The split fails at the small `ell=8` control, holds at `ell=12`,
-and both `ell=20` endpoints satisfy it in exact arithmetic.  Its fact is
-explicitly asymptotic from `ell>=200`; it remains a machine-visible
-conjectured sublemma, not a uniform derivation.
+`3 M_2^2`.  The split fails at `ell=8` and both `ell=13` endpoints, but holds
+at `ell=12` and both endpoints for every `14<=ell<=20`.  Its fact is explicitly
+asymptotic from `ell>=200`; it remains a machine-visible conjectured sublemma,
+not a uniform derivation.
+
+The exact conductor energy has a concrete Haar form.  If a level-`j-1`
+cylinder `b` has two level-`j` children and `B_j(b,i)` is the sum of `D_e^2`
+below child `i`, direct expansion of `C_j-C_(j-1)` gives
+
+```text
+E_j = 2^(j-1) sum_b (B_j(b,0)-B_j(b,1))^2.
+```
+
+The CAS reconstructs both sides independently at every level and rejects a
+nonbinary fibre.  Thus the live analytic lemma is an `L2` estimate for binary
+Witt-refinement imbalances.  Generic martingale inequalities do not provide
+it; an arithmetic pairing or relative Artin--Schreier estimate still must.
 
 Existing geometric
 higher-moment work of Hast and Matei treats fixed polynomial degree as the
