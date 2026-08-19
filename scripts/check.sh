@@ -203,6 +203,14 @@ step golden-lean-pins ./scripts/check-lean-golden-pins.sh
 # it REJECTED them (a5975725f). This discovers the toolchain, sets
 # AXEYUM_REQUIRE_LEAN=1 so a missing binary FAILS, and prints how many Lean
 # invocations actually happened. AXEYUM_ALLOW_NO_LEAN=1 for a machine with none.
+# Every `crates/axeyum-lean-kernel/tests/*.rs` must be in EXACTLY ONE of {runs at
+# push time, owned by the real-Lean gate below}. `hooks/pre-push` ran that crate
+# wholesale, so its fifteen real-Lean suites ran twice on every push (2,396 s,
+# measured 2026-08-19); running only the non-Lean half is safe exactly while the
+# other half is provably owned, which is what this asserts. Membership is
+# discovered from the source, so a new suite cannot land outside both halves.
+step kernel-suite-partition-controls python3 -m unittest scripts.tests.test_check_kernel_suites
+step kernel-suite-partition ./scripts/check-kernel-suites.sh --list
 step lean-toolchain-policy ./scripts/tests/test-lean-toolchain-policy.sh
 step lean-gate ./scripts/check-lean-gate.sh
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc

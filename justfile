@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom aggregate-scope test frontier gate-liveness golden-lean-pins lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions local-ci-freshness
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom aggregate-scope test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions local-ci-freshness
 
 # THE AXIOM-FREEDOM MEASUREMENTS, which nothing ran until 2026-08-18.
 #
@@ -279,6 +279,18 @@ gate-liveness:
 # 2026-08-18 -- when it found all four of them red.
 golden-lean-pins:
     ./scripts/check-lean-golden-pins.sh
+
+# The kernel's suite partition: every `crates/axeyum-lean-kernel/tests/*.rs` must
+# be in EXACTLY ONE of {runs at push time, owned by `scripts/check-lean-gate.sh`}.
+# `hooks/pre-push` ran the crate wholesale, so the fifteen real-Lean suites ran
+# twice on every push -- 2,396 s of a ~900 s hook, measured 2026-08-19 -- and the
+# fix for that (run only the non-Lean half) is only safe while the other half is
+# provably owned. Membership is DISCOVERED from the source, never listed, so a
+# new suite cannot land outside both halves. `--list` asserts and prints the
+# split without building anything; the run itself belongs to the push gate.
+kernel-suite-partition:
+    python3 -m unittest scripts.tests.test_check_kernel_suites
+    ./scripts/check-kernel-suites.sh --list
 
 # The real-Lean gate: every suite that hands a generated module to an EXTERNAL
 # `lean` binary, with the toolchain RESOLVED FROM THE PIN in `lean-toolchain`

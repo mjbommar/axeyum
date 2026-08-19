@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `pending` | `scripts/check-kernel-suites.sh`: the kernel's push-time / real-Lean suite partition, discovered from the source and asserted total; `hooks/pre-push` repointed at the non-Lean half (2,296 s → 80 s warm). Found `real_lean_string_monoid_crosscheck` owned by nothing and mis-formatting its check count; floor 218 → 219. |
 | 2026-08-19 | `e3e105cd6` | The local-ci freshness gate is ENFORCING in both `check.sh` and `justfile`, on a `PASS` record (`57af69142-s4.json`, 6656 s, 7561 tests + 179 doctests, no vacuous/unreadable step). Landed report-only the day before because the only record was FAIL; that was the sole blocker. Flip re-tested through the real call site: NO_RECORD / STALE / STEP VACUOUS all red, unmodified green. |
 | 2026-08-19 | (pending) | `artifacts/local-ci-runs/57af69142-s4.json`: first all-pass authoritative-gate record (5/5 steps, 7561+179 tests, 6656 s); `check-local-ci-freshness` flipped from `--report-only` to ENFORCING in `scripts/check.sh` and `justfile`. |
 | 2026-08-19 | `4c7af898d` | **ℝ is a lattice.** 15 `Rat` + 18 `CReal` declarations, every one accepted on first submission, all footprint-free. The predicted obstacle — a four-way sign split over `|a| − |b| ≤ |a − b|` — never appears. Nothing here has a side condition, so the failure mode is a *degenerate operation*, not a vacuous guard: `max x y := x` satisfies `le_max_left` by reflexivity and `abs x := x` satisfies `le_abs_self`, `neg_le_abs` and `abs_le`. So `not_le_zero_neg_one` and `not_equiv_abs_neg_one` are proved from the laws alone, the witness's exit status depends on both, and `max x x ≈ x` / `max 0 1 ≉ 0` / `min 0 1 ≉ 1` are admitted **through the kernel**. One level down, `Rat.max`/`Rat.min` are checked to COMPUTE on both branches with the wrong answer REFUSED — the nine `ℚ` laws are all one-sided and would hold of a projection. Three one-token mutations refused. |
@@ -264,6 +265,40 @@ wording: exit 1 with three FAIL lines naming field and both numbers, exit 0 eith
 side of it.
 
 Detail moved to [`../notes/100-ledger-freshness.md`](docs/plan/notes/100-ledger-freshness.md).
+
+**The pre-push kernel step ran the real-Lean suites a second time; it no longer
+does (`DONE`, agent-prepush-scope, 2026-08-19).** `hooks/pre-push` ran
+`cargo test -p axeyum-lean-kernel` wholesale. Fifteen of that crate's 46
+integration suites hand modules to a real `lean` and `scripts/check-lean-gate.sh`
+already owns them — with a pin, a counted floor and a no-skip rule this step had
+none of. Measured warm on s4: **2,296 s → 80 s.**
+
+The deliverable is not the split but the assertion that it is total.
+`scripts/check-kernel-suites.sh` DISCOVERS membership (a suite is real-Lean
+exactly when it carries `#[path = "support/lean_probe.rs"]`, the same
+"membership is the act itself" shape as `check-lean-golden-pins.sh`) and fails if
+any `tests/*.rs` is in neither half — so removing duplication cannot silently
+create a suite nothing runs. A hand-written list of 31 names would have been a
+list someone forgets to extend, failing silently.
+
+**It found one on its first run.** `real_lean_string_monoid_crosscheck` (landed
+2026-08-17) invokes a real Lean and was in no gate's table; only the wholesale
+`cargo test` ever ran it. It also printed its count as
+`AXEYUM-LEAN-CHECKED|string-monoid|1|…` where the gate parses
+`AXEYUM-LEAN-CHECKED <tag> checked=<n>` — so it would have summed as zero.
+Both fixed; `CHECK_FLOOR` 218 → 219, verified `checked=1` against the pin.
+
+The step is now diff-scoped, and unlike the frontier ratchet's filter this scope
+is **derived**: the crate's `Cargo.toml` has one dependency (`num-bigint`) and
+nothing from this workspace, so no other crate can move these suites. The
+partition assertion runs on either branch — it is what makes the skip safe.
+
+10 guards, 10 controls, each deletion killing **exactly one** control. Needed one
+mutation-harness fix: `Unittest.build` ran `py_compile` on every subject, so a
+shell subject scored `DID NOT BUILD` on all ten — unmeasurable, in the harness
+built to tell that apart. Shell subjects now use `bash -n`.
+
+Detail in [`../notes/100-prepush-scope.md`](docs/plan/notes/100-prepush-scope.md).
 
 **The axiom ledger now pins all eight prelude groups by value and names the
 direction a number moved** (`WIP`, expect-axioms, 2026-08-18). The brief's

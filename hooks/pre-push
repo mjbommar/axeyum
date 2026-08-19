@@ -255,9 +255,48 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   # GATE ON ITS OWN"), and the warning was not enough on its own.
   #
   # This is the crate where the trusted surface is asserted, so a stale
-  # assertion here is a stale claim about axiom-freedom. ~1.4s warm.
-  gated_test "kernel suites (unit + integration)" \
-    cargo test -p axeyum-lean-kernel --quiet
+  # assertion here is a stale claim about axiom-freedom. That coverage is why
+  # the step exists and it is NOT being reduced.
+  #
+  # SPLIT, 2026-08-19, because it ran the crate WHOLESALE. Fifteen of the crate's
+  # 46 integration suites hand generated modules to a real `lean`, and
+  # `scripts/check-lean-gate.sh` already owns those -- with a toolchain pin, a
+  # counted floor and a no-skip rule, none of which this step had. So every push
+  # ran them twice, and the comment here said "~1.4s warm". Measured warm on s4
+  # 2026-08-19, in a snapshot tree whose target dir was already built:
+  #   BEFORE  cargo test -p axeyum-lean-kernel            2,296 s
+  #   AFTER   check-kernel-suites.sh --no-lib                80 s  (31 suites, 188 tests)
+  # for a hook that runs 722-1,176 s in total when healthy.
+  #
+  # `scripts/check-kernel-suites.sh` DISCOVERS which half a suite is in (it
+  # carries `#[path = "support/lean_probe.rs"]`, or it does not) and FAILS if any
+  # suite is in neither -- so removing the duplication cannot silently create a
+  # suite that nothing runs. It found one the first time it ran.
+  #
+  # `--no-lib`: the workspace unit sweep two steps above already runs this
+  # crate's unit tests, and several of them take over 60 s each.
+  #
+  # SCOPED TO THE DIFF, and unlike the frontier ratchet's filter this one is
+  # DERIVED rather than judged: `crates/axeyum-lean-kernel/Cargo.toml` has
+  # exactly one dependency, `num-bigint`, and nothing from this workspace. No
+  # change under another crate can move these suites. The manifests are in the
+  # filter for the lint/version surface, and the two gate scripts for their own
+  # sake. The partition assertion is cheap (no cargo) and runs EITHER WAY: it is
+  # what makes the skip safe, since it is the thing that notices a real-Lean
+  # suite dropping out of `check-lean-gate.sh`'s table.
+  if [ -n "$(git diff --name-only "$PREPUSH_BASE" "$PREPUSH_TIP" -- \
+      'crates/axeyum-lean-kernel/**' \
+      'scripts/check-kernel-suites.sh' \
+      'scripts/check-lean-gate.sh' \
+      'Cargo.toml' 'Cargo.lock' | head -1)" ]; then
+    echo "pre-push: Lean kernel changed — kernel suites (non-Lean integration)" >&2
+    step_seconds "kernel suites (non-Lean integration)" \
+      env MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh \
+      ./scripts/check-kernel-suites.sh --no-lib
+  else
+    echo "pre-push: no Lean kernel change — kernel suites SKIPPED (partition still asserted)" >&2
+    step_seconds "kernel suite partition" ./scripts/check-kernel-suites.sh --list
+  fi
 
   # The CAPABILITY RATCHET. It exists because a 17-point `nia_unsat` frontier
   # regression once shipped and needed an 829-commit bisect to find; it is the
