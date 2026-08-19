@@ -556,7 +556,7 @@ to the displayed energies only recovers a polynomial multiple of `2^(n/2)`
 at the endpoint, so it does not by itself make the main term strictly
 positive.
 
-### A plateaued top-interval spectrum (open induction)
+### A proved wild-Kloosterman amplitude bound
 
 The extremal mixed distribution has substantially more structure than its
 energy alone records.  For
@@ -575,18 +575,52 @@ W_ell(v) in {0, +2^(ell-k), -2^(ell-k)},
 #{v: W_ell(v)!=0}=2^(2k).                         (plateau candidate)
 ```
 
-This is not a consequence of Parseval alone.  Beginning at `ell=11`, the
-algebraic degree of `q_ell` is already three, and by `ell=12` its Walsh
-support is not an affine subspace.  Thus the familiar quadratic/partially
-bent classification does not prove the displayed formula.  The formal-series
-identity
+The exact three-valued support formula is stronger than the pointwise estimate
+needed below.  Beginning at `ell=11`, the algebraic degree of `q_ell` is
+already three, and by `ell=12` its Walsh support is not an affine subspace, so
+the familiar quadratic/partially bent classification does not prove it.
+
+The amplitude, however, has a short uniform proof.  Reverse the frequency
+coefficients and put
 
 ```text
-u^(-1) = product_(r>=0) u(x^(2^r))
+R=GF(2)[x]/(x^(ell+1)),
+psi(z)=(-1)^[x^ell]z.
 ```
 
-and the observed factor-four change from `ell` to `ell+3` suggest a direct
-Walsh recurrence, but that induction has not yet been proved.
+Then every Walsh coefficient is, up to sign, the binary wild Kloosterman sum
+
+```text
+K_2(c)=sum_(u in R^x) psi(u^(-1)+cu).
+```
+
+Write `m=ell+1`, `C=ceil(m/3)`, and `S=ceil((m-1)/3)=ceil(ell/3)`.
+In characteristic two, the first nonzero mixed terms in the second difference
+of `u^(-1)` are `z^2y+zy^2`; they have total degree three.  Since `3C>=m`,
+the phase is an affine additive character on each coset modulo `x^C`, so a
+coset contributes either zero or all `2^(m-C)` of its elements.
+
+If two contributing cosets first differ in degree `d<S`, choose a variation
+of degree `m-1-2d`, which is at least `C`.  The term `z^2y` then has the unique
+lowest valuation `m-1` and nonzero top coefficient, contradicting stationarity
+of both cosets.  Thus all contributing cosets agree modulo `x^S`; at most
+`2^(C-S)` contribute.  Therefore, uniformly in the frequency,
+
+```text
+|W_ell(v)|=|K_2(c(v))|
+  <=2^(C-S)2^(m-C)
+  =2^(ell+1-ceil(ell/3))
+  =2^(ell-floor((ell-1)/3)).                       (proved)
+```
+
+This is the stationary-phase scale in Sawin's wild-Kloosterman analysis
+(*J. Analyse Math.* 151 (2023), 303--341,
+doi:10.1007/s11854-023-0325-9), but the argument above is specialized and
+independent.  That distinction matters: at modulus `x^4` and frequency
+`c=1+x^2`, all eight phases vanish and `K_2(c)=8`, whereas the paper's later
+displayed equal-characteristic specialization of Theorem 1.1 would give
+`|K_2(c)|<=2^(5/2)`.  Axeyum uses only the directly proved bound above, which
+is attained in this control.
 
 The connection to the Type-II interval is exact.  Let `H=V_(ell-1)` and let
 `r(e)` count `(A,B) in H^2` with `AB=e`.  Changing variables to `y=A^(-1)`
@@ -598,26 +632,30 @@ explicit sign depending on the top coefficient of `e`,
 r(e)-2^(ell-2) = (+/-) W_ell(v(e))/4.
 ```
 
-The plateau candidate would consequently give the pointwise law
+The proved amplitude bound consequently gives the uniform pointwise estimate
 
 ```text
-r(e)-2^(ell-2) in {0, +/-2^(ell-k-2)}.
+|r(e)-2^(ell-2)| <= 2^(ell-k-2),
+k=floor((ell-1)/3).                                (proved)
 ```
 
-Its squared sum is exactly `2^(2ell-3)`, agreeing with the proved mixed-energy
-formula.  This supplies an exponential improvement for factor compositions
-containing two degree-`ell-1` intervals.  It does not yet cover the balanced
-degree pairs, so even a proof of the plateau candidate would be an input to a
-fixed-order Vaughan/Heath--Brown decomposition, not by itself a proof of the
-Lemire conjecture.
+The stronger finite plateau formula says when equality or zero occurs; its
+squared sum is exactly `2^(2ell-3)`, agreeing with the proved mixed-energy
+formula.  The uniform bound already supplies the exponential improvement for
+factor compositions containing two degree-`ell-1` intervals.  It does not yet
+cover the balanced degree pairs, so it is an input to a fixed-order
+Vaughan/Heath--Brown decomposition, not by itself a proof of the Lemire
+conjecture.
 
-The finite runs are deliberately separated from theorem credit.  A standalone
-exact Rust transform checks levels `1..=20` locally.  Fleet checks returned the
-same formula at levels `21..=26`; levels 21 and 22 ran on s4, 23 on s5, 24 on
-s6, and 25--26 on s7.  The largest run (`ell=26`) used 526,616 KiB peak RSS and
-40.23 seconds.  s1 was unavailable for this diagnostic because that host had
-no Rust compiler.  These runs select the induction target; they do not prove
-its universal quantifier.
+The finite runs remain evidence only for the stronger exact support formula.
+A standalone exact Rust transform checks levels `1..=20` locally.  Fleet
+checks returned the same formula at levels `21..=26`; levels 21 and 22 ran on
+s4, 23 on s5, 24 on s6, and 25--26 on s7.  The largest run (`ell=26`) used
+526,616 KiB peak RSS and 40.23 seconds.  s1 was unavailable for this diagnostic
+because that host had no Rust compiler.  The amplitude inequality no longer
+depends on those finite runs: `principal_unit_kloosterman_bound` evaluates its
+proved closed form with exact bignums, and direct tests enumerate every
+frequency and the associated product tables through `ell=9`.
 
 Supersingularity does not provide that extra structure beyond the first few
 levels.  Gorodetsky identifies the same curve through the completed

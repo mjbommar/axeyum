@@ -19,10 +19,13 @@ positive-composite counterexample, so the elementary divisor-density route
 requires genuine Type-II/bilinear cancellation.  Sparse and elementary
 degree-raising shortcuts have also been closed negatively.  The new mixed
 energies are genuine Type-II inputs, but they do not control the connected
-cross-degree terms in the required Mangoldt fourth moment.  A new exact
-finite diagnostic through `ell=26` isolates a plateaued Walsh-spectrum
-candidate for the extremal pair `V_(ell-1)^2`; its three-step induction and
-extension to balanced degree pairs remain open.  Full definitions,
+cross-degree terms in the required Mangoldt fourth moment.  The exact
+diagnostic through `ell=26` led to a uniform proved wild-Kloosterman amplitude
+bound for the extremal pair `V_(ell-1)^2`, now exposed as a bounded native CAS
+report.  The stronger exact plateau support formula remains finite evidence
+only, but is no longer a dependency.  Extending the pointwise saving to the
+balanced degree pairs in a valid fixed-order prime decomposition remains open.
+Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 

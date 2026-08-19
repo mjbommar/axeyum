@@ -316,6 +316,38 @@ pub struct PrincipalUnitMixedProductEnergyReport {
     pub ordinary_product_regime: bool,
 }
 
+/// Uniform wild-Kloosterman bound for the binary principal-unit group.
+///
+/// Put `R = GF(2)[x]/(x^(ell+1))`, let `psi` read the coefficient of
+/// `x^ell`, and for `c in R` define
+///
+/// ```text
+/// K_2(c) = sum_(u in R^x) psi(u^(-1) + c u).
+/// ```
+///
+/// Since the residue field is binary, `R^x = 1+xR`.  The report bounds every
+/// frequency `c`, including non-units; no finite transform is needed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrincipalUnitKloostermanBoundReport {
+    /// Principal-unit truncation level, so the local-ring modulus is `x^(ell+1)`.
+    pub ell: usize,
+    /// Local-ring modulus exponent, exactly `ell+1`.
+    pub modulus_exponent: usize,
+    /// Precision `ceil((ell+1)/3)` at which the phase is affine on cosets.
+    pub affine_coset_precision: usize,
+    /// Precision `ceil(ell/3)` modulo which all stationary cosets agree.
+    pub stationary_congruence_precision: usize,
+    /// Maximum number of contributing affine cosets, `2^(c-s)`.
+    pub max_contributing_cosets: BigUint,
+    /// Uniform bound `|K_2(c)| <= 2^(ell+1-ceil(ell/3))`.
+    pub max_abs_kloosterman_sum: BigUint,
+    /// Consequent bound for the centered multiplicity of `V_(ell-1)^2`.
+    ///
+    /// If `r(e)=#{(a,b) in V_(ell-1)^2:ab=e}`, then
+    /// `|r(e)-2^(ell-2)|` is at most this value.
+    pub max_abs_top_product_deviation: BigUint,
+}
+
 /// Explicit assumption whose arithmetic consequences Axeyum can check.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConductorBoundAssumption {
@@ -974,6 +1006,75 @@ pub fn principal_unit_structure(
         ell,
         group_order,
         factors,
+    })
+}
+
+/// Bound every binary wild Kloosterman sum at principal-unit level `ell`.
+///
+/// Write `m=ell+1`, `c=ceil(m/3)`, and `s=ceil((m-1)/3)`.  On a coset modulo
+/// `x^c`, the phase `u^-1 + z u` is an affine additive character: in
+/// characteristic two the first non-zero mixed term in the second difference
+/// of `u^-1` has total degree three, and `3c>=m`.  Hence each coset contributes
+/// either zero or its full size `2^(m-c)`.
+///
+/// If two cosets contribute and their representatives first differ in degree
+/// `d<s`, take a variation of degree `m-1-2d`.  The leading mixed term in the
+/// second difference is then the non-zero top coefficient of `z^2 y`; every
+/// other term has larger valuation.  This contradicts stationarity.  Thus all
+/// contributing cosets agree modulo `x^s`, so there are at most `2^(c-s)` of
+/// them and
+///
+/// ```text
+/// |K_2(z)| <= 2^(c-s) 2^(m-c) = 2^(m-s).
+/// ```
+///
+/// Orthogonality for `V_(ell-1)^2` gives
+/// `r(e)-2^(ell-2)=(+/-)K_2(z(e))/4`, yielding the final report field.
+///
+/// # Errors
+///
+/// Rejects `ell<2`, host-width overflow, or a caller limit before allocating
+/// any transform table.
+pub fn principal_unit_kloosterman_bound(
+    ell: usize,
+    limits: HayesLimits,
+) -> Result<PrincipalUnitKloostermanBoundReport, HayesError> {
+    if ell < 2 {
+        return Err(HayesError::InvalidParameter(
+            "principal-unit Kloosterman bounds require ell at least two".to_owned(),
+        ));
+    }
+    let _structure = principal_unit_structure(ell, limits)?;
+    let modulus_exponent = ell.checked_add(1).ok_or_else(|| {
+        HayesError::InvalidParameter("Kloosterman modulus exponent overflow".to_owned())
+    })?;
+    let affine_coset_precision = modulus_exponent.div_ceil(3);
+    let stationary_congruence_precision = ell.div_ceil(3);
+    let contributing_exponent = affine_coset_precision
+        .checked_sub(stationary_congruence_precision)
+        .ok_or_else(|| {
+            HayesError::Invariant(
+                "Kloosterman stationary precision exceeds affine precision".to_owned(),
+            )
+        })?;
+    let kloosterman_exponent = modulus_exponent
+        .checked_sub(stationary_congruence_precision)
+        .ok_or_else(|| {
+            HayesError::Invariant(
+                "Kloosterman stationary precision exceeds modulus exponent".to_owned(),
+            )
+        })?;
+    let deviation_exponent = kloosterman_exponent.checked_sub(2).ok_or_else(|| {
+        HayesError::Invariant("Kloosterman product-deviation exponent underflow".to_owned())
+    })?;
+    Ok(PrincipalUnitKloostermanBoundReport {
+        ell,
+        modulus_exponent,
+        affine_coset_precision,
+        stationary_congruence_precision,
+        max_contributing_cosets: BigUint::from(1_u8) << contributing_exponent,
+        max_abs_kloosterman_sum: BigUint::from(1_u8) << kloosterman_exponent,
+        max_abs_top_product_deviation: BigUint::from(1_u8) << deviation_exponent,
     })
 }
 
@@ -2464,6 +2565,17 @@ fn subtract_mod(left: u64, right: u64, modulus: u64) -> u64 {
 mod tests {
     use super::*;
 
+    fn unit_inverse(unit: u64, ell: usize) -> u64 {
+        let mut inverse = 1_u64;
+        for degree in 1..=ell {
+            let coefficient = (1..=degree).fold(0_u64, |parity, left| {
+                parity ^ (((unit >> left) & 1) & ((inverse >> (degree - left)) & 1))
+            });
+            inverse |= coefficient << degree;
+        }
+        inverse
+    }
+
     const EXPECTED: &[(i128, i128)] = &[
         (0, 0),
         (-2, 0),
@@ -2515,6 +2627,89 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn principal_unit_kloosterman_bound_matches_direct_sums_and_products() {
+        let limits = HayesLimits::default();
+        for ell in 2..=9 {
+            let report = principal_unit_kloosterman_bound(ell, limits).unwrap();
+            let direct_kloosterman_max = (0..(1_u64 << ell))
+                .map(|frequency| {
+                    (0..(1_u64 << ell))
+                        .map(|tail| {
+                            let unit = 1 | (tail << 1);
+                            let phase = (unit_inverse(unit, ell)
+                                ^ unit_multiply(frequency, unit, ell))
+                                >> ell
+                                & 1;
+                            if phase == 0 { 1_i64 } else { -1_i64 }
+                        })
+                        .sum::<i64>()
+                        .unsigned_abs()
+                })
+                .max()
+                .unwrap();
+            assert!(BigUint::from(direct_kloosterman_max) <= report.max_abs_kloosterman_sum);
+
+            let mut products = BTreeMap::<u64, u64>::new();
+            for left_tail in 0..(1_u64 << (ell - 1)) {
+                let left = 1 | (left_tail << 1);
+                for right_tail in 0..(1_u64 << (ell - 1)) {
+                    let right = 1 | (right_tail << 1);
+                    *products.entry(unit_multiply(left, right, ell)).or_default() += 1;
+                }
+            }
+            let mean = 1_u64 << (ell - 2);
+            let direct_deviation_max = (0..(1_u64 << ell))
+                .map(|tail| {
+                    products
+                        .get(&(1 | (tail << 1)))
+                        .copied()
+                        .unwrap_or(0)
+                        .abs_diff(mean)
+                })
+                .max()
+                .unwrap();
+            assert!(BigUint::from(direct_deviation_max) <= report.max_abs_top_product_deviation);
+        }
+
+        let level_three = principal_unit_kloosterman_bound(3, limits).unwrap();
+        assert_eq!(level_three.max_abs_kloosterman_sum, BigUint::from(8_u8));
+        assert_eq!(level_three.max_contributing_cosets, BigUint::from(2_u8));
+        assert_eq!(
+            level_three.max_abs_top_product_deviation,
+            BigUint::from(2_u8)
+        );
+        let modulus_x_four_frequency_one_plus_x_squared = (0..8_u64)
+            .map(|tail| {
+                let unit = 1 | (tail << 1);
+                let phase = (unit_inverse(unit, 3) ^ unit_multiply(0b0101, unit, 3)) >> 3 & 1;
+                if phase == 0 { 1_i64 } else { -1_i64 }
+            })
+            .sum::<i64>();
+        assert_eq!(modulus_x_four_frequency_one_plus_x_squared, 8);
+    }
+
+    #[test]
+    fn principal_unit_kloosterman_bound_declines_invalid_or_limited_inputs() {
+        let limits = HayesLimits::default();
+        assert!(matches!(
+            principal_unit_kloosterman_bound(1, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        let limited = HayesLimits {
+            max_ell: 4,
+            ..limits
+        };
+        assert!(matches!(
+            principal_unit_kloosterman_bound(5, limited),
+            Err(HayesError::ResourceLimit {
+                resource: "ell",
+                requested: 5,
+                limit: 4
+            })
+        ));
     }
 
     #[test]
