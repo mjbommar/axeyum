@@ -158,17 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
-| 2026-08-18 | `258f44584` | Constructed and independently checked the first proof-isolated Mathlib reflexivity candidate with fixed budgets, zero axiom/theorem/target dependencies, and zero ledger writes. |
-| 2026-08-18 | `161adde83` | Adapted one frozen Mathlib train proposition into a pinned independent-kernel goal with zero axioms/proof declarations and fail-closed proof/type mutation controls. |
-| 2026-08-18 | `5490b8dff` | Measured all 138 train/development dispatch contracts: every row declined before execution on unsupported `lean4-surface`, with held-out and proof outcomes untouched. |
-| 2026-08-18 | `c9717b3bc` | Froze 214 Mathlib facts into a preregistered 78/60/76 evaluation split with zero dependency, source-group, family, proof-shape, mutation, or longitudinal leakage. |
-| 2026-08-18 | `cf998788b` | Automated the exact authoritative B-then-A chain; two isolated fixed-budget runs matched all 56 retained artifact bytes and passed Autogenesis-1. |
-| 2026-08-18 | `2d65f19d8` | Froze the leakage-safe nursery contract and the Autogenesis-1 longitudinal partition; readiness remains explicitly false with zero evaluation facts and nine blockers. |
-| 2026-08-18 | `bd7b55bff` | Extracted 9,729 proof-isolated Mathlib Nat/Int statements externally and selected 240 outcome-blind source candidates across twelve families without vendoring bulk exports. |
-| 2026-08-18 | `30e7e6ec3` | Projected 95 direct Mathlib candidate dependencies into 146 whole leakage components without exposing proof terms or freezing evaluation splits. |
-| 2026-08-18 | `7179e03d9` | Outcome-blind review retained 202 candidates and grouped twelve family-wide statement mutations into 120 indivisible future evaluation units. |
-| 2026-08-18 | `30ee0885f` | Materialized 214 proof-free Mathlib source/mutation propositions as open `lean4-surface` facts; exact Lean accepted every type and the machine frontier refused all without operations. |
-| 2026-08-18 | `f4dc0d4f1` | Registered and cleanly exercised the exact axiom-free authoritative B operation, whose durable event made A newly ready. |
+| 2026-08-19 | `843188d33` | Admission replayed |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
 | 2026-08-17 | `d23a9d883` | `Nat.exists_prime_dvd` — every `m ≥ 2` has a prime divisor — admitted axiom-free in a new `nat_prelude::primes` module, with `Nat.le_of_dvd`, `Nat.two_le_succ_or_eq_one` and `Nat.least_divisor_search` beneath it (137 Nat theorems, up from 133). Recorded as `F:nat-exists-prime-dvd`, whose `kernel-term` checker pins the entire rendered type rather than the name — verified against the `1 ≤ p` weakening, which the kernel accepts and a name-only grep would not catch. |
 | 2026-08-17 | `8f8c12dce` | ℕ-induction wired into `solve` as the last rung of the quantified ladder (`unknown` → `unsat` only, on `original_assertions` because normalization + skolemization have erased the negated universal by that point). New `tests/nat_induction_adversarial.rs`: 22 adversarial shapes, hand-derived truths, measured on the route and through the front door, 0 violations. Fixed an index-out-of-bounds panic in `is_nonneg_guard` on one-argument guards. `nat_induction_corpus` re-measured (3 contradictions → 0) and its gate widened to the front-door column. Both suites mutation-verified. Blast radius: `--lib` 1159 unchanged, `corpus_regression` 152/0 DISAGREE unchanged, whole crate 285 suites / 3861 tests green, clippy and fmt clean. |
@@ -196,71 +186,11 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Autogenesis-1 is frozen; its initial red nursery baseline was informative.**
-Commit `2d65f19d8` reserves the exact B-to-A chain as a longitudinal regression
-and established nine readiness blockers. The then-current 110-fact ledger had
-only 23 direct proof-derived kernel edges across ten consequents; relabelling it
-would have leaked the known Nat component rather than measured generalization.
+**Status:** First nursery admission replayed (`843188d33`;
+[evidence](docs/autogenesis/README.md)).
 
-**Mathlib source harvesting is proof-isolated.** Commit `bd7b55bff` binds exact
-Mathlib/Lean/extractor identities, retains 9,729 statement-only Nat/Int rows
-externally, and commits 240 source candidates across twelve families. The
-extractor never emits theorem values, and the candidate selector reads no
-checkout, full export, proof, or Axeyum outcome. These rows are not nursery
-facts and do not change the nine-blocker readiness result.
-
-**Dependency leakage is now measured.** Commit `30e7e6ec3` derives 95 direct
-candidate-to-candidate proof edges from an evaluation-only Mathlib pass and
-groups all 240 candidates into 146 indivisible weak components. The durable
-projection contains names and edges only; its state remains explicitly
-`dependency-metadata-not-frozen-split`.
-
-**Statement review remains outcome-blind.** Commit `7179e03d9` retains 202
-evaluation-eligible candidates, reserves 23 calibrations, removes 15 aliases or
-internal surfaces, and adds one statement-strength mutation per family. The 214
-future evaluation statements form 120 whole dependency/mutation groups; no
-partition or expected outcome is assigned.
-
-**The reviewed population is now in the ledger, honestly open.** Commit
-`30ee0885f` materializes 202 external-source propositions and twelve mutations
-as `lean4-surface` facts. Exact Lean/Mathlib v4.30 accepts all 214 proof-free
-axiom types; every evidence array remains empty and the frontier refuses every
-row because no registered operation exists.
-
-**The evaluation nursery is frozen and leakage-controlled.** Commit
-`c9717b3bc` fixes all 214 facts before target outcomes: 78 train, 60 development,
-and 76 held-out. The checker reports zero blockers and rejects dependency,
-source-review-group, family, family-scoped proof-shape, mutation, and
-longitudinal leakage. A global broad-shape rule was rejected because it
-collapses the full population into one component.
-
-**The first capability census found a population-wide input seam.** Commit
-`5490b8dff` inspected all 138 train/development contracts and no held-out facts,
-proofs, or target outcomes. All 138 declined before execution because no
-authoritative operation accepts `lean4-surface`; zero producer invocations and
-zero executor budget distinguish this from proof-search failure.
-
-**One official surface proposition is now a proof-isolated kernel goal.** Commit
-`161adde83` encodes a frozen train statement as a transparent `Prop`
-definition, independently imports 55 declarations with zero trusted/proof-
-bearing rows, and pins the checked goal identity. The adapter rejects theorem,
-axiom, non-`Prop`, wrong-target, and changed-identity controls. Dispatch now
-separates one adapted row from 137 unsupported surface rows.
-
-**That goal now has a fresh, independently checked proof candidate.** Commit
-`258f44584` adds a fixed-budget, untrusted Pi/equality proposer and checks its
-four-node `Eq.refl` term in the imported kernel. The resulting closure has zero
-axioms, zero prior theorems, and no dependency on the transparent target
-definition; unequal sides reach the proposer but fail at the kernel boundary.
-The source fact remains open with zero ledger writes, and dispatch reports the
-strictly intermediate state `reflexivity-candidate-checked:not-registered-or-admitted`.
-
-**Next:** register an exact source-bound operation that reproduces this pinned
-adapter/proposer/checker receipt, emits a durable admission proposal, and passes
-the existing clean-prestate/clean-poststate transaction replay before the fact
-receives proof credit. Then measure bottom-up coverage over other definitional
-equalities and add one top-down non-reflexive statement shape without exposing
-held-out rows or conflating pre-execution declines with proof failures.
+**Next:** census reusable train/development reflexivity; then close a
+non-reflexive B-to-A chain using an Axeyum theorem. Held-out stays sealed.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
