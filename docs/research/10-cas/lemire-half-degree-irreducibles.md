@@ -556,6 +556,69 @@ to the displayed energies only recovers a polynomial multiple of `2^(n/2)`
 at the endpoint, so it does not by itself make the main term strictly
 positive.
 
+### A plateaued top-interval spectrum (open induction)
+
+The extremal mixed distribution has substantially more structure than its
+energy alone records.  For
+
+```text
+u=1+a_1x+...+a_ell x^ell
+```
+
+write `q_ell(a_1,...,a_ell)=[x^ell]u^(-1)` and let `W_ell` be the ordinary
+additive Walsh transform of `(-1)^q_ell` on `GF(2)^ell`.  Exact transforms
+through `ell=26` support the three-valued formula
+
+```text
+k=floor((ell-1)/3),
+W_ell(v) in {0, +2^(ell-k), -2^(ell-k)},
+#{v: W_ell(v)!=0}=2^(2k).                         (plateau candidate)
+```
+
+This is not a consequence of Parseval alone.  Beginning at `ell=11`, the
+algebraic degree of `q_ell` is already three, and by `ell=12` its Walsh
+support is not an affine subspace.  Thus the familiar quadratic/partially
+bent classification does not prove the displayed formula.  The formal-series
+identity
+
+```text
+u^(-1) = product_(r>=0) u(x^(2^r))
+```
+
+and the observed factor-four change from `ell` to `ell+3` suggest a direct
+Walsh recurrence, but that induction has not yet been proved.
+
+The connection to the Type-II interval is exact.  Let `H=V_(ell-1)` and let
+`r(e)` count `(A,B) in H^2` with `AB=e`.  Changing variables to `y=A^(-1)`
+turns the two membership conditions into `q_ell(y)=0` and one affine linear
+equation.  Orthogonality therefore gives, for a frequency `v(e)` and an
+explicit sign depending on the top coefficient of `e`,
+
+```text
+r(e)-2^(ell-2) = (+/-) W_ell(v(e))/4.
+```
+
+The plateau candidate would consequently give the pointwise law
+
+```text
+r(e)-2^(ell-2) in {0, +/-2^(ell-k-2)}.
+```
+
+Its squared sum is exactly `2^(2ell-3)`, agreeing with the proved mixed-energy
+formula.  This supplies an exponential improvement for factor compositions
+containing two degree-`ell-1` intervals.  It does not yet cover the balanced
+degree pairs, so even a proof of the plateau candidate would be an input to a
+fixed-order Vaughan/Heath--Brown decomposition, not by itself a proof of the
+Lemire conjecture.
+
+The finite runs are deliberately separated from theorem credit.  A standalone
+exact Rust transform checks levels `1..=20` locally.  Fleet checks returned the
+same formula at levels `21..=26`; levels 21 and 22 ran on s4, 23 on s5, 24 on
+s6, and 25--26 on s7.  The largest run (`ell=26`) used 526,616 KiB peak RSS and
+40.23 seconds.  s1 was unavailable for this diagnostic because that host had
+no Rust compiler.  These runs select the induction target; they do not prove
+its universal quantifier.
+
 Supersingularity does not provide that extra structure beyond the first few
 levels.  Gorodetsky identifies the same curve through the completed
 short-interval-character factorization and proves that `C_ell` is not
