@@ -212,8 +212,11 @@ The first conductor proof decomposition is now exact and mutation-checked.
 The naive geometric bound on every layer fails at conductor one for even
 `ell=20`; buffering all levels below `ceil(ell/2)` and applying the geometric
 bound above it survives both `ell=20` endpoints, and the two allowances sum
-exactly to the required `3 M_2^2`.  It fails at the small `ell=8` control but
-holds at `ell=12`, so its ledger statement starts only at `ell=200`.  This buffered split is a separate
+exactly to the required `3 M_2^2`.  It fails at `ell=8` and both `ell=13`
+endpoints, but holds at `ell=12` and both endpoints for every `14<=ell<=20`, so
+its ledger statement starts only at `ell=200`.  Every conductor energy now
+also reconstructs as `2^(j-1)` times an exact sum of squared binary-cylinder
+mass differences, isolating refinement imbalance as the analytic input.  This buffered split is a separate
 conjectured fact and remains the live uniform lemma.
 The multi-minute endpoint
 sweep is now an explicit
