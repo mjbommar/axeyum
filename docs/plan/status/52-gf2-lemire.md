@@ -19,12 +19,16 @@ positive-composite counterexample, so the elementary divisor-density route
 requires genuine Type-II/bilinear cancellation.  Sparse and elementary
 degree-raising shortcuts have also been closed negatively.  The new mixed
 energies are genuine Type-II inputs, but they do not control the connected
-cross-degree terms in the required Mangoldt fourth moment.  Full definitions,
+cross-degree terms in the required Mangoldt fourth moment.  A new exact
+finite diagnostic through `ell=26` isolates a plateaued Walsh-spectrum
+candidate for the extremal pair `V_(ell-1)^2`; its three-step induction and
+extension to balanced degree pairs remain open.  Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `afec92512` | Isolated the top inverse-coefficient plateau-spectrum candidate, its exact connection to `V_(ell-1)^2`, and dual local/fleet evidence through `ell=26` without granting theorem credit. |
 | 2026-08-19 | `0513b1a22` | Generalized the equal-degree product energy to every ordered interval-degree pair, proved the two closed-form regimes, and checked all mixed collision tables through `ell=8`. |
 | 2026-08-19 | `31b862946` | Added the exact closed-form principal-unit product energy and Fourier fourth moment, with direct native collision-table controls and an explicit boundary against the still-open Mangoldt moment. |
 | 2026-08-19 | `5fac62cbb` | Added the bounded exact half-interval Möbius identity, pinned its first positive-composite parity counterexample with native Berlekamp factorization, and ruled out Porritt's explicit bound at `q=2`. |
