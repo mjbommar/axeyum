@@ -65,6 +65,17 @@ directory dies with `input file … must be contained in root directory`.
 
 ## The finding: 122 declarations no Lean had ever seen
 
+> **Correction, appended by lane `creal-lean-divergence` (ADR-0488).** It is
+> Lean's **elaborator** that refuses these, not its kernel. Replayed through
+> `Environment.addDeclCore` from our `lean4export` NDJSON, Lean 4.30.0's own
+> kernel accepts the **whole** carrier — 470 of 470, in 1.4 s
+> (`real_lean_creal_carrier_kernel_replay`). The elaborator's reducer treats a
+> `theorem` as opaque; these proofs must compute through `Nat.gcd`, whose
+> descent rests on the theorem `Nat.mod_lt`. Re-spelling every `theorem` as
+> `def` in the same file makes the elaborator accept the whole carrier in
+> 27.9 s. Everything measured below stands — only *which Lean* changes, and
+> this lane's original text is left intact.
+
 The obvious root set for the shared half is "every declaration in the carrier
 context". **It emits a file Lean refuses.**
 

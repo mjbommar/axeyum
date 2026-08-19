@@ -1285,12 +1285,21 @@ impl Kernel {
     /// context" — is the wrong one. Measured 2026-08-18 on the constructed-real
     /// carrier: the context holds 445 declarations, a refutation reaches 280 of
     /// them, and two of the 165 it does not reach (`CReal.Equiv.not_zero_one`,
-    /// `CReal.not_le_one_zero`) are **rejected by Lean 4.30.0** although the
-    /// in-tree kernel admits them. Rooting a shared module at the whole
-    /// environment therefore produces a file Lean will not compile, for reasons
-    /// that have nothing to do with the refutations importing it. Intersecting
-    /// this answer with the carrier snapshot gives a root set that is both
-    /// shared and checkable.
+    /// `CReal.not_le_one_zero`) are **rejected by Lean 4.30.0's ELABORATOR**
+    /// although the in-tree kernel admits them. Rooting a shared module at the
+    /// whole environment therefore produces a file `lean Module.lean` will not
+    /// compile, for reasons that have nothing to do with the refutations
+    /// importing it. Intersecting this answer with the carrier snapshot gives a
+    /// root set that is both shared and checkable.
+    ///
+    /// **Elaborator, not kernel** — this said "Lean" until ADR-0488, and the
+    /// difference is the whole diagnosis. Lean's *kernel* accepts all four, and
+    /// the whole carrier with them (`real_lean_creal_carrier_kernel_replay`
+    /// replays 470 of 470 through `Environment.addDeclCore` in 1.4 s). The
+    /// elaborator's reducer treats a `theorem` as opaque, and these proofs must
+    /// compute through `Nat.gcd`, whose descent rests on the theorem
+    /// `Nat.mod_lt`; re-spelling every `theorem` as `def` in the same file makes
+    /// the elaborator accept it.
     #[must_use]
     pub fn declarations_reached(&self, roots: &[ExprId]) -> Vec<NameId> {
         self.reachable_decl_order(roots)

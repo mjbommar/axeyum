@@ -27,10 +27,19 @@
 //! # What splitting the module found
 //!
 //! The obvious root set for the shared half — every declaration in the carrier
-//! context — emits a file **Lean 4.30.0 refuses**. Two `CReal` theorems the
-//! in-tree kernel admits are rejected by Lean, and they had never been in an
-//! emitted module because no refutation reaches them. `reached_carrier` explains
-//! the measurement; ADR-0482 records the decision it forced.
+//! context — emits a file **Lean 4.30.0's ELABORATOR refuses**. Two `CReal`
+//! theorems the in-tree kernel admits are rejected, and they had never been in
+//! an emitted module because no refutation reaches them. `reached_carrier`
+//! explains the measurement; ADR-0482 records the decision it forced.
+//!
+//! **Which Lean matters, and this said the wrong one until ADR-0488.** Lean's
+//! *kernel* accepts all of them: replayed through `Environment.addDeclCore` from
+//! our `lean4export` NDJSON it admits the **whole** carrier, 470 of 470, in
+//! 1.4 s (`real_lean_creal_carrier_kernel_replay`). It is the *elaborator*,
+//! reading `.lean` source, that refuses — its reducer treats a `theorem` as
+//! opaque, and these proofs must compute through `Nat.gcd`, whose descent is
+//! justified by the theorem `Nat.mod_lt`. Re-spelling every `theorem` as `def`
+//! in the same file makes the elaborator accept the whole carrier.
 //!
 //! # What a third party has to do, stated rather than hidden
 //!
@@ -238,11 +247,17 @@ struct Split {
 /// context holds 445 declarations and a refutation reaches 280 of them; two of
 /// the 165 it does not reach (`CReal.Equiv.not_zero_one` and
 /// `CReal.not_le_one_zero`, and the two theorems citing the first) are
-/// **rejected by Lean 4.30.0** although the in-tree kernel admits them. Rooting
-/// the shared module at the whole environment therefore emits a file Lean will
-/// not compile, for reasons that have nothing to do with the refutations that
-/// import it — measured 2026-08-18 and reproduced with the sharing pass off, so
-/// it is not a rendering artefact.
+/// **rejected by Lean 4.30.0's ELABORATOR** although the in-tree kernel admits
+/// them. Rooting the shared module at the whole environment therefore emits a
+/// file `lean Module.lean` will not compile, for reasons that have nothing to do
+/// with the refutations that import it — measured 2026-08-18 and reproduced with
+/// the sharing pass off, so it is not a rendering artefact.
+///
+/// Not a kernel divergence either, which is what this said before ADR-0488:
+/// Lean's own kernel accepts every one of them, and the whole carrier with them.
+/// The elaborator's reducer does not unfold a `theorem`, and these four proofs
+/// have to compute through `Nat.gcd`, whose recursive step rests on the theorem
+/// `Nat.mod_lt`.
 ///
 /// So the shared module is rooted at the UNION of what this family of queries
 /// reaches. That keeps it emitted-once (the union is one set) and checkable.
