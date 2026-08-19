@@ -1382,6 +1382,26 @@ conductor orthogonality, using the family of equations
 `f^2+h f=a mod x^(ell+1-v)`.  The intermediate absolute sums remain
 uncredited finite diagnostics.
 
+The larger feasible matrix rules out a coefficient-one square-root estimate
+even after taking absolute values only at the valuation level.  At
+`(ell,k,d)=(10,13,9)` that absolute sum is `2502`, whose square is about
+`1.49*2^(k+d)`, while the fully combined off-diagonal correlation is only
+`-314`.  Thus the observed saving genuinely uses cancellation **between**
+valuation layers.  The connected candidate
+
+```text
+abs(off_diagonal correlation)^2 <= 2^(k+d+1)           (connected candidate)
+```
+
+survives every endpoint row through `ell=9` and the selected tail through
+`ell=10`.  The factor two is not cosmetic: the bound without it fails at
+`(ell,k,d)=(6,9,5)`, where the off-diagonal value is `138`.  The native energy
+report exposes and checks this finite candidate without granting it theorem
+credit.  If proved, it would imply the conjectural `E<=2^k` energy scale at
+both Lemire endpoints, because `k+d` is the endpoint degree and the exact
+diagonal is `(2^k-(-1)^k)/3`.  It still would not by itself control the
+complementary signed cross-order convolution block.
+
 The Arf coordinate is a better representation of the live squarefree sign,
 but not yet its estimate.
 For each squarefree `f` the adjusted second-trace space is nondegenerate by

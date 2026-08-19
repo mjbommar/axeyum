@@ -1709,6 +1709,59 @@ impl BinaryBerlekampAnnihilatorEnergyReport {
     pub fn has_signed_collision_cancellation(&self) -> bool {
         self.signed_coset_energy < self.unsigned_collision_count
     }
+
+    /// Experimental connected off-diagonal square bound
+    /// `2^(degree+shift_dimension+1)`.
+    ///
+    /// This is the square-root scale of the complete `(f,h)` family with a
+    /// factor two.  It is deliberately a finite diagnostic, not a proved
+    /// estimate for unenumerated degrees.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed parameter error if the exponent overflows.
+    pub fn connected_off_diagonal_candidate_bound(&self) -> Result<BigUint, HayesError> {
+        let exponent = self
+            .degree
+            .checked_add(self.shift_dimension)
+            .and_then(|value| value.checked_add(1))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "connected off-diagonal candidate exponent overflow".to_owned(),
+                )
+            })?;
+        Ok(BigUint::from(1_u8) << exponent)
+    }
+
+    /// Whether this finite row satisfies the experimental connected
+    /// off-diagonal square bound.
+    ///
+    /// # Errors
+    ///
+    /// Returns any error from [`Self::connected_off_diagonal_candidate_bound`].
+    pub fn satisfies_connected_off_diagonal_candidate(&self) -> Result<bool, HayesError> {
+        let magnitude = BigUint::from(self.off_diagonal_signed_correlation.unsigned_abs());
+        Ok(magnitude.pow(2) <= self.connected_off_diagonal_candidate_bound()?)
+    }
+
+    /// Whether the connected candidate alone would force
+    /// `signed_coset_energy<=2^degree` using the exact squarefree diagonal.
+    ///
+    /// This checks only the arithmetic implication.  Callers must separately
+    /// establish [`Self::satisfies_connected_off_diagonal_candidate`] or prove
+    /// its universal analogue.
+    ///
+    /// # Errors
+    ///
+    /// Returns any error from [`Self::connected_off_diagonal_candidate_bound`].
+    pub fn connected_candidate_implies_degree_scale_energy(&self) -> Result<bool, HayesError> {
+        let target = BigUint::from(1_u8) << self.degree;
+        let diagonal = BigUint::from(self.diagonal_squarefree_count);
+        if diagonal > target {
+            return Ok(false);
+        }
+        Ok(self.connected_off_diagonal_candidate_bound()? <= (target - diagonal).pow(2))
+    }
 }
 
 /// Conditional exponent ledger for one endpoint convolution term using the
@@ -9979,7 +10032,11 @@ mod tests {
         );
         assert_eq!(direct_energy, report.averaged_shift_energy);
         assert!(report.has_signed_collision_cancellation());
+    }
 
+    #[test]
+    fn connected_off_diagonal_candidate_has_exact_endpoint_ledger() {
+        let limits = HayesLimits::default();
         // Keep the ordinary gate bounded.  The extended ell<=9 research
         // sweep is replayed by the ignored environment-selected probe below.
         for probe_ell in 2_usize..=7 {
@@ -10001,6 +10058,18 @@ mod tests {
                         "local ell={probe_ell}, endpoint={endpoint}, d={d}, square={}, population={}",
                         candidate.worst_bucket_signed_square,
                         candidate.worst_bucket_population
+                    );
+                    assert!(
+                        candidate
+                            .satisfies_connected_off_diagonal_candidate()
+                            .unwrap(),
+                        "connected ell={probe_ell}, endpoint={endpoint}, d={d}, offdiag={}",
+                        candidate.off_diagonal_signed_correlation
+                    );
+                    assert!(
+                        candidate
+                            .connected_candidate_implies_degree_scale_energy()
+                            .unwrap()
                     );
                 }
             }
@@ -10024,6 +10093,22 @@ mod tests {
             }
         );
         assert_eq!(constant_one_failure.off_diagonal_signed_correlation, 138);
+        let constant_one_magnitude = BigUint::from(138_u16);
+        assert!(
+            constant_one_magnitude.pow(2)
+                > BigUint::from(1_u8)
+                    << (constant_one_failure.degree + constant_one_failure.shift_dimension)
+        );
+        assert!(
+            constant_one_failure
+                .satisfies_connected_off_diagonal_candidate()
+                .unwrap()
+        );
+        assert!(
+            constant_one_failure
+                .connected_candidate_implies_degree_scale_energy()
+                .unwrap()
+        );
         assert!(constant_one_failure.signed_coset_energy > BigUint::from(1_u8) << 8);
         assert!(constant_one_failure.signed_coset_energy <= BigUint::from(1_u8) << 9);
     }
@@ -10434,6 +10519,39 @@ mod tests {
             report.normalized_parameterwise_absolute_correlation,
             report.valuationwise_absolute_correlation,
             report.valuation_correlations,
+        );
+    }
+
+    #[test]
+    #[ignore = "extended finite diagnostic; select one row with AXEYUM_DYADIC_PROBE_ELL/D/OFFSET"]
+    fn valuation_layer_square_root_probe() {
+        let parse = |name: &str| {
+            std::env::var(name)
+                .unwrap_or_else(|_| panic!("missing {name}"))
+                .parse::<usize>()
+                .unwrap_or_else(|_| panic!("invalid {name}"))
+        };
+        let ell = parse("AXEYUM_DYADIC_PROBE_ELL");
+        let d = parse("AXEYUM_DYADIC_PROBE_D");
+        let offset = parse("AXEYUM_DYADIC_PROBE_OFFSET");
+        assert!(matches!(offset, 1 | 2));
+        let degree = 2 * ell + offset - d;
+        let report =
+            binary_berlekamp_annihilator_energy_report(ell, degree, d, d, HayesLimits::default())
+                .unwrap();
+        let mut layers = BTreeMap::<usize, i128>::new();
+        for row in &report.shift_correlations {
+            if let Some(valuation) = row.valuation {
+                *layers.entry(valuation).or_default() += row.signed_correlation;
+            }
+        }
+        let valuation_absolute = layers
+            .values()
+            .map(|value| value.unsigned_abs())
+            .sum::<u128>();
+        eprintln!(
+            "ell={ell} d={d} offset={offset} k={degree} offdiag={} valuation_abs={valuation_absolute} layers={layers:?}",
+            report.off_diagonal_signed_correlation,
         );
     }
 

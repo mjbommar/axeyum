@@ -67,10 +67,25 @@ cancellation than either fibrewise or normalized-parameterwise absolute
 values.  This is finite evidence for the representation only, not a uniform
 bound.
 
+A broader tail sweep makes the boundary sharper.  The coefficient-one
+valuationwise square-root estimate also fails and its excess grows: at
+`(ell,k,d)=(10,13,9)`, the valuationwise absolute sum is `2502`, so its square
+is about `1.49*2^(k+d)`.  The complete signed sum is only `-314` on that row.
+The surviving connected diagnostic is therefore
+
+```text
+abs(off_diagonal)^2 <= 2^(k+d+1),
+```
+
+which keeps all valuation layers combined.  It holds on every endpoint row
+through `ell=9` and the selected tail through `ell=10`; the smaller bound
+without the factor two fails at `(6,9,5)`, where the signed value is `138`.
+These remain finite tests, not evidence for the universal inequality.
+
 ## Consequences
 
-- The next local theorem should estimate whole valuation layers, or combine
-  them through Witt/conductor orthogonality, rather than estimate exact fibres.
+- The next local theorem must combine valuation layers through
+  Witt/conductor orthogonality rather than take their absolute values.
 - The normalized layer can be studied through the family
   `f^2+h f=a mod x^(ell+1-v)` with `a=h_0/w_0`.
 - A valid bound must be fed back into the endpoint ledger with its actual
