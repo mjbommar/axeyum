@@ -28,9 +28,9 @@
   },
   "coverage": {
     "candidates": 138,
-    "eligible_for_dispatch": 1,
+    "eligible_for_dispatch": 0,
     "declined_before_execution": 136,
-    "already_established": 1,
+    "already_established": 2,
     "decline_reasons": {
       "no-exact-authoritative-operation": 136
     },
@@ -980,7 +980,7 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "eligible-for-dispatch",
+      "outcome": "already-established",
       "decline_reason": null,
       "registered_operation_ids": [
         "authoritative-mathlib-nat-descfactorial-zero-reflexivity-v1"
@@ -1862,5 +1862,5 @@
     }
   ],
   "interpretation": "This is a dispatch-contract census, not a proof episode. A pre-execution decline consumes no producer budget and earns no proof credit; an already-established row is counted separately and is not redispatched.",
-  "baseline_sha256": "e6185fc7efbfba589f70012c8f1fa1fe1ae07ea8a833681433f77e9805c1dd13"
+  "baseline_sha256": "2104e7d46697e799f3a876dbb2c05f57f43a7ac04d881f24a319a0c481450c21"
 }

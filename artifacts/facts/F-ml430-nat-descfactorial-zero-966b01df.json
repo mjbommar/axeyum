@@ -1,30 +1,66 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-nat-descfactorial-zero-966b01df",
-  "title": "Mathlib v4.30 source proposition Nat.descFactorial_zero",
-  "statement": "The proposition declared as `Nat.descFactorial_zero` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ (n : ℕ), n.descFactorial 0 = 1",
-    "fragment": "Nat"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:3675df4623f421cfc4c92df7a3c4523c1f915f1e7d5830621cb96662d2b05d0b",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-nat-descfactorial-zero-966b01df.json",
+      "checker_operation": {
+        "execution_sha256": "3675df4623f421cfc4c92df7a3c4523c1f915f1e7d5830621cb96662d2b05d0b",
+        "external_artifact_sha256": "72e1f212f04576caf28bef07d2f291dc9e35444fd6a6757e621ca9c854d2e567",
+        "formal_statement_sha256": "f87b91ee7d953a7188b5ca71e37c370d67a0c26ffba643bdcc6ae2a8c255983f",
+        "frontier_sha256": "c86ae1d51b09ac8de45a45c29b11b732b20b72f4ce8f393784dc1c9ed955cbed",
+        "goal_sha256": "84c2cb6ba48868786799c28aef4104a845cf9d238ff6786285645562570c5d23",
+        "id": "authoritative-mathlib-nat-descfactorial-zero-reflexivity-v1",
+        "max_binders": 8,
+        "max_constructed_nodes": 16,
+        "operation_sha256": "9de04f91443ee18ac3bd603a2c6cdd2cb5618e415e2d7bccb4861d2b5b72cc5b",
+        "proof_sha256": "15725b2125daf99a7f779d218f36de67fe85dc42eaae4e1db23f55e5b628856a",
+        "reflexivity_manifest": "artifacts/autogenesis/mathlib-descfactorial-zero-reflexivity-v1.json",
+        "reflexivity_manifest_sha256": "e3285060d7357a047bb26aa7c674e794a73c148d82bc52cf6bcb161060b8e56c",
+        "registry_sha256_at_execution": "a7a4c54e7b1f694b9dc78269652af6d5f95fbe5178e550db231231b2d88f0a6a",
+        "statement_adapter_manifest": "artifacts/autogenesis/mathlib-descfactorial-zero-statement-adapter-v1.json",
+        "statement_adapter_manifest_sha256": "62cc96c9fcccc41a8ebd2e068e4531666386f728417861fc0837276271dad4b5",
+        "target_content_sha256": "c92518c5aa5532a7583223937b8f355f1ea36187c2c5e399a9ee5b4932a03493",
+        "target_definition": "Axeyum.Autogenesis.Statement.FactorialZero.natDescFactorialZero"
+      },
+      "checkers": [
+        "bounded-pi-equality-reflexivity-v1",
+        "axeyum-lean-import/statement-reflexivity-operation-v1",
+        "axeyum-lean-import/statement-reflexivity-v1"
+      ],
+      "id": "autogenesis-operation-3675df4623f421cf",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the proof-isolated statement artifact through a fresh importer and requires the exact kernel-checked proof and dependency-free result; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Nat.descFactorial_zero` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "language": "lean4-surface",
+    "statement": "\u2200 (n : \u2115), n.descFactorial 0 = 1"
+  },
+  "id": "F:ml430-nat-descfactorial-zero-966b01df",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-nat-descfactorial-zero-reflexivity-v1`; execution receipt `3675df4623f421cfc4c92df7a3c4523c1f915f1e7d5830621cb96662d2b05d0b` produced a fresh-import axiom-free reflexivity proof, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.descFactorial_zero` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution 0df6474434389aadbdd542a11d361ff85eb625a416c3c75861ea4c557316a97f",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Nat.descFactorial_zero`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Nat.descFactorial_zero` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Nat.descFactorial_zero` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Nat.descFactorial_zero"
 }
