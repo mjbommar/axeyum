@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `b03ca1884` | Type-slice contract accepted |
 | 2026-08-19 | `b1ea57332` | Type-slice feasibility frozen |
 | 2026-08-19 | `86cb7d274` | Factorial family reused |
 | 2026-08-17 | `67960fc1c` | D3 grouping refuted at the point of execution: arithmetic-as-a-directory grows the largest dependency cycle 58,215 → 103,514 lines. `analyze_solver_group_collapse.py` + mutation controls; no files moved. |
@@ -187,10 +188,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Status:** factorial 2/2; type slice clean 114/114; held-out sealed
-([result](docs/autogenesis/25-type-slice-feasibility.md)).
+**Status:** ADR-0484 accepted; held-out sealed.
 
-**Next:** ADR; fresh kernel; reject `Prop`; exact specialization.
+**Next:** build a fresh-kernel slice; reject `Prop`; check specialization.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
