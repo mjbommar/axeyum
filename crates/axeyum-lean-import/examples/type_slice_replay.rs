@@ -16,6 +16,10 @@ use axeyum_lean_kernel::{Declaration, Kernel, Lean4ExportMetadata, NameId, Reduc
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 
+mod statement_reflexivity_support;
+
+use statement_reflexivity_support::{MAX_BINDERS, MAX_CONSTRUCTED_NODES, propose_reflexivity};
+
 const POLICY_V1: &str = "contaminated-definition-boundary-v1";
 const POLICY_AUTO_PARAM_V2: &str = "contaminated-definition-boundary-auto-param-v2";
 const POLICY_AUTO_PARAM_BINDERS_V3: &str = "contaminated-definition-boundary-auto-param-binders-v3";
@@ -25,6 +29,13 @@ const FRESH_TARGET: &str = "Axeyum.Autogenesis.TypeSliceReplay.goal";
 struct Decline {
     stage: &'static str,
     reason: String,
+}
+
+#[derive(Debug)]
+struct ReplaySuccess {
+    receipt: Value,
+    proof_search: Option<Value>,
+    proof_outcome: Option<String>,
 }
 
 fn main() {
@@ -42,6 +53,7 @@ fn main() {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn run() -> Result<(Option<PathBuf>, String), String> {
     let arguments = parse_arguments()?;
     let archive = required_path(&arguments, "--archive")?;
@@ -49,6 +61,10 @@ fn run() -> Result<(Option<PathBuf>, String), String> {
     let output = arguments.get("--output").map(PathBuf::from);
     let auto_param_v2 = arguments.contains_key("--auto-param-v2");
     let auto_param_binders_v3 = arguments.contains_key("--auto-param-binders-v3");
+    let reflexivity_v1 = arguments.contains_key("--reflexivity-v1");
+    if reflexivity_v1 && !auto_param_binders_v3 {
+        return Err("--reflexivity-v1 requires --auto-param-binders-v3".to_owned());
+    }
     if auto_param_v2 && auto_param_binders_v3 {
         return Err("autoParam replay policies are mutually exclusive".to_owned());
     }
@@ -67,6 +83,7 @@ fn run() -> Result<(Option<PathBuf>, String), String> {
 
     let mut outcomes = BTreeMap::<String, u64>::new();
     let mut output_rows = Vec::with_capacity(rows.len());
+    let mut producer_invocations = 0_u64;
     for (index, row) in rows.iter().enumerate() {
         let artifact = required_string(row, "artifact_file")?;
         if Path::new(artifact)
@@ -92,9 +109,25 @@ fn run() -> Result<(Option<PathBuf>, String), String> {
             auto_param_v2,
             auto_param_binders_v3,
             policy_version,
+            reflexivity_v1,
         );
         let (outcome, detail) = match result {
-            Ok(receipt) => ("accepted-receipt".to_owned(), json!({ "receipt": receipt })),
+            Ok(success) => {
+                let mut detail = json!({ "receipt": success.receipt });
+                let outcome = if let (Some(search), Some(outcome)) =
+                    (success.proof_search, success.proof_outcome)
+                {
+                    producer_invocations += 1;
+                    detail
+                        .as_object_mut()
+                        .ok_or_else(|| "row detail is not an object".to_owned())?
+                        .insert("proof_search".to_owned(), search);
+                    outcome
+                } else {
+                    "accepted-receipt".to_owned()
+                };
+                (outcome, detail)
+            }
             Err(decline) => {
                 let outcome = format!("decline:{}", decline.stage);
                 (
@@ -128,8 +161,14 @@ fn run() -> Result<(Option<PathBuf>, String), String> {
         }
     }
 
-    let (observation, digest) =
-        build_observation(&output_rows, outcomes, &mapping_bytes, policy_version)?;
+    let (observation, digest) = build_observation(
+        &output_rows,
+        outcomes,
+        &mapping_bytes,
+        policy_version,
+        reflexivity_v1,
+        producer_invocations,
+    )?;
     if let Some(path) = &output {
         let mut rendered = serde_json::to_string_pretty(&observation)
             .map_err(|error| format!("cannot render observation: {error}"))?;
@@ -145,6 +184,8 @@ fn build_observation(
     outcomes: BTreeMap<String, u64>,
     mapping_bytes: &[u8],
     policy_version: &str,
+    reflexivity_v1: bool,
+    producer_invocations: u64,
 ) -> Result<(Value, String), String> {
     let coverage: Map<String, Value> = outcomes
         .into_iter()
@@ -168,6 +209,48 @@ fn build_observation(
         "rows": output_rows,
         "limitations": "A receipt admits only the generalized statement boundary. No proof producer ran, no source fact was proved, held-out remained sealed, and every decline remains uncredited.",
     });
+    if reflexivity_v1 {
+        let object = observation
+            .as_object_mut()
+            .ok_or_else(|| "observation is not an object".to_owned())?;
+        object.insert(
+            "kind".to_owned(),
+            json!("axeyum-autogenesis-type-slice-producer-census"),
+        );
+        object.insert(
+            "state".to_owned(),
+            json!("diagnostic-fixed-budget-no-ledger-credit"),
+        );
+        object.insert(
+            "producer_policy".to_owned(),
+            json!("type-slice-reflexivity-census-v1"),
+        );
+        object.insert(
+            "budget".to_owned(),
+            json!({
+                "producer": "bounded-pi-equality-reflexivity-v1",
+                "max_binders": MAX_BINDERS,
+                "max_constructed_nodes": MAX_CONSTRUCTED_NODES,
+                "producer_invocations": producer_invocations,
+                "retries": 0,
+            }),
+        );
+        object.insert(
+            "authority".to_owned(),
+            json!({
+                "partitions_inspected": ["development", "train"],
+                "held_out_inspected": false,
+                "proof_producers_executed": true,
+                "proof_bodies_requested": false,
+                "ledger_writes": 0,
+                "targets": output_rows.len(),
+            }),
+        );
+        object.insert(
+            "limitations".to_owned(),
+            json!("Every row is diagnostic under one fixed reflexivity grammar. No candidate is registered or admitted, held-out remains sealed, and no fact-ledger row changes."),
+        );
+    }
     let canonical = serde_json::to_vec(&observation)
         .map_err(|error| format!("cannot serialize observation: {error}"))?;
     let digest = hex_sha256(&canonical);
@@ -189,7 +272,8 @@ fn replay_row(
     auto_param_v2: bool,
     auto_param_binders_v3: bool,
     policy_version: &str,
-) -> Result<Value, Decline> {
+    reflexivity_v1: bool,
+) -> Result<ReplaySuccess, Decline> {
     let completed = at(
         "source-import",
         import_ndjson(Cursor::new(stream), ImportLimits::default()),
@@ -311,7 +395,108 @@ fn replay_row(
         )?
     };
     let rendered = at("receipt-json", receipt.to_pretty_json())?;
-    at("receipt-json", serde_json::from_str(&rendered))
+    let receipt = at("receipt-json", serde_json::from_str(&rendered))?;
+    let (proof_search, proof_outcome) = if reflexivity_v1 {
+        let (search, outcome) = run_reflexivity(fresh);
+        (Some(search), Some(outcome))
+    } else {
+        (None, None)
+    };
+    Ok(ReplaySuccess {
+        receipt,
+        proof_search,
+        proof_outcome,
+    })
+}
+
+fn producer_reason(detail: &str) -> &'static str {
+    if detail.starts_with("binder budget exceeded") {
+        "binder-budget-exceeded"
+    } else if detail == "terminal goal is not constant-headed equality" {
+        "terminal-not-constant-headed-equality"
+    } else if detail == "terminal goal is not an exact Eq application" {
+        "terminal-not-exact-equality"
+    } else if detail.starts_with("required declaration") {
+        "required-declaration-unavailable"
+    } else if detail.starts_with("construction budget exceeded") {
+        "construction-budget-exceeded"
+    } else {
+        "unclassified-producer-decline"
+    }
+}
+
+fn run_reflexivity(fresh: axeyum_lean_import::CompletedStatementImport) -> (Value, String) {
+    let (mut kernel, _report, target_name, goal) = fresh.into_parts();
+    let candidate = match propose_reflexivity(&mut kernel, goal) {
+        Ok(candidate) => candidate,
+        Err(detail) => {
+            let reason = producer_reason(&detail);
+            return (
+                json!({
+                    "producer": "bounded-pi-equality-reflexivity-v1",
+                    "outcome": "producer-decline",
+                    "reason": reason,
+                    "detail": detail,
+                    "max_binders": MAX_BINDERS,
+                    "max_constructed_nodes": MAX_CONSTRUCTED_NODES,
+                }),
+                format!("producer-decline:{reason}"),
+            );
+        }
+    };
+    let proof_sha256 = hex_sha256(kernel.render_lean(candidate.proof).as_bytes());
+    let candidate_name = nested_name(
+        &mut kernel,
+        &["Axeyum", "Autogenesis", "TypeSliceReplay", "candidate"],
+    );
+    if let Err(error) = kernel.add_declaration(Declaration::Theorem {
+        name: candidate_name,
+        uparams: vec![],
+        ty: goal,
+        value: candidate.proof,
+    }) {
+        return (
+            json!({
+                "producer": "bounded-pi-equality-reflexivity-v1",
+                "outcome": "kernel-rejection",
+                "reason": "candidate-typecheck-failed",
+                "detail": format!("{error:?}"),
+                "proof_sha256": proof_sha256,
+                "binders": candidate.binders,
+                "constructed_nodes": candidate.constructed_nodes,
+                "max_binders": MAX_BINDERS,
+                "max_constructed_nodes": MAX_CONSTRUCTED_NODES,
+            }),
+            "kernel-rejection:candidate-typecheck-failed".to_owned(),
+        );
+    }
+    let closure = kernel.declaration_dependency_closure(candidate_name);
+    let target_dependency = closure.contains(&target_name);
+    let axioms = kernel.axiom_footprint(candidate_name).len();
+    let theorem_dependencies = kernel.theorem_dependencies(candidate_name).len();
+    let (outcome, reason) = if target_dependency || axioms != 0 || theorem_dependencies != 0 {
+        ("assurance-rejection", Some("dependency-audit-failed"))
+    } else {
+        ("admissible-proof", None)
+    };
+    let search = json!({
+        "producer": "bounded-pi-equality-reflexivity-v1",
+        "outcome": outcome,
+        "reason": reason,
+        "proof_sha256": proof_sha256,
+        "binders": candidate.binders,
+        "constructed_nodes": candidate.constructed_nodes,
+        "max_binders": MAX_BINDERS,
+        "max_constructed_nodes": MAX_CONSTRUCTED_NODES,
+        "axioms": axioms,
+        "theorem_dependencies": theorem_dependencies,
+        "target_dependency": target_dependency,
+    });
+    let key = reason.map_or_else(
+        || outcome.to_owned(),
+        |reason| format!("{outcome}:{reason}"),
+    );
+    (search, key)
 }
 
 fn at<T, E: std::fmt::Debug>(stage: &'static str, result: Result<T, E>) -> Result<T, Decline> {
@@ -393,7 +578,10 @@ fn parse_arguments() -> Result<BTreeMap<String, String>, String> {
     let mut parsed = BTreeMap::new();
     let mut arguments = env::args().skip(1);
     while let Some(flag) = arguments.next() {
-        if matches!(flag.as_str(), "--auto-param-v2" | "--auto-param-binders-v3") {
+        if matches!(
+            flag.as_str(),
+            "--auto-param-v2" | "--auto-param-binders-v3" | "--reflexivity-v1"
+        ) {
             if parsed.insert(flag.clone(), "true".to_owned()).is_some() {
                 return Err(format!("{flag} was supplied more than once"));
             }
@@ -503,5 +691,62 @@ mod tests {
         let mut value = mapping();
         value["authority"]["target_outcomes_accessed"] = Value::Bool(true);
         assert!(validate_mapping(&value).is_err());
+    }
+
+    #[test]
+    fn default_observation_retains_the_historical_no_producer_contract() {
+        let (value, _) = build_observation(
+            &[],
+            BTreeMap::new(),
+            b"mapping",
+            POLICY_AUTO_PARAM_BINDERS_V3,
+            false,
+            0,
+        )
+        .expect("observation must render");
+        assert_eq!(
+            value["kind"],
+            "axeyum-autogenesis-checked-type-slice-replay"
+        );
+        assert_eq!(value["authority"]["proof_producers_executed"], false);
+        assert!(value.get("producer_policy").is_none());
+        assert!(value.get("budget").is_none());
+    }
+
+    #[test]
+    fn reflexivity_observation_binds_policy_budget_and_invocations() {
+        let (value, _) = build_observation(
+            &[],
+            BTreeMap::new(),
+            b"mapping",
+            POLICY_AUTO_PARAM_BINDERS_V3,
+            true,
+            138,
+        )
+        .expect("observation must render");
+        assert_eq!(
+            value["kind"],
+            "axeyum-autogenesis-type-slice-producer-census"
+        );
+        assert_eq!(value["producer_policy"], "type-slice-reflexivity-census-v1");
+        assert_eq!(value["budget"]["max_binders"], MAX_BINDERS);
+        assert_eq!(value["budget"]["producer_invocations"], 138);
+        assert_eq!(value["authority"]["proof_producers_executed"], true);
+    }
+
+    #[test]
+    fn producer_declines_have_stable_reasons() {
+        assert_eq!(
+            producer_reason("binder budget exceeded: maximum 8"),
+            "binder-budget-exceeded"
+        );
+        assert_eq!(
+            producer_reason("terminal goal is not an exact Eq application"),
+            "terminal-not-exact-equality"
+        );
+        assert_eq!(
+            producer_reason("terminal goal is not constant-headed equality"),
+            "terminal-not-constant-headed-equality"
+        );
     }
 }
