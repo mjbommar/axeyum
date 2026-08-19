@@ -24,6 +24,12 @@ both are fixed:
    and diff-scoped into `hooks/pre-push` on `axeyum-lean-kernel/src/**` — the
    origin of all three recurrences.
 
+Measured at `760befd16` in a clean lane snapshot: gate 6 suites / 33 tests, 35 s
+wall warm (0 s on a push that does not touch the kernel); every pin moved by
+exactly 2,122 bytes and nothing else; stable clippy, `fmt --check`,
+`rustdoc -D warnings` and `check-aggregate-scope` all clean; seven guards, each
+deleted in turn and each killing **exactly one** control.
+
 Membership measured, not guessed: **five** suites, the four that failed plus
 `diophantine_lean_reconstruct`. The four candidates in the brief's regex are all
 false positives (`specs.len() == 720`, `== 640`, corpus population `226`,

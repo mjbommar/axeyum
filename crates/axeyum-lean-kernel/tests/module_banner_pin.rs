@@ -207,6 +207,39 @@ fn a_foreign_or_mangled_header_is_refused() {
     assert!(axeyum_lean_kernel::split_module_banner(&format!("{tampered}body\n")).is_none());
 }
 
+/// The body pin must REJECT a wrong expectation.
+///
+/// Deleting the comparison inside [`lean_golden::assert_golden_module`] makes
+/// all twenty-five tests in the five golden suites pass — measured, not feared:
+/// an assertion's removal is invisible to the assertion. So the helper needs a
+/// control of its own, and this is it. Without it the central mechanism of this
+/// whole change would be the one thing nothing could catch.
+#[test]
+#[should_panic(expected = "PROOF BODY moved")]
+fn a_wrong_body_pin_is_rejected() {
+    let source = format!(
+        "{}theorem axeyum_refutation : False := body\n",
+        axeyum_lean_kernel::self_contained_module_banner()
+    );
+    lean_golden::assert_golden_module("control", &source, (1, 2));
+}
+
+/// ...and ACCEPT the right one, so the test above cannot be satisfied by a
+/// helper that panics unconditionally.
+#[test]
+fn the_right_body_pin_is_accepted() {
+    let body = "theorem axeyum_refutation : False := body\n";
+    let source = format!(
+        "{}{body}",
+        axeyum_lean_kernel::self_contained_module_banner()
+    );
+    lean_golden::assert_golden_module(
+        "control",
+        &source,
+        (body.len(), lean_golden::fnv1a64(body.as_bytes())),
+    );
+}
+
 /// The digest the golden pins use, pinned against a hand-computed vector so a
 /// changed constant cannot silently re-base every golden at once.
 #[test]

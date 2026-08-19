@@ -58,6 +58,11 @@ done < <(grep -rl "assert_golden_module" crates/*/tests/*.rs 2>/dev/null | LC_AL
 # place a header change is meant to be seen, so a green run without it would mean
 # the golden bodies were checked and the text under all of them was not.
 suites="${suites}axeyum-lean-kernel|module_banner_pin|"$'\n'
+# De-duplicated: `module_banner_pin` carries the helper's own controls
+# (`a_wrong_body_pin_is_rejected`), so discovery finds it too and it was listed
+# -- and RUN -- twice. Caught by reading the printed table rather than the exit
+# status, which was a cheerful green 7.
+suites=$(printf '%s' "$suites" | LC_ALL=C sort -u)$'\n'
 
 suite_count=$(printf '%s' "$suites" | grep -c .)
 if [ "$suite_count" -lt 2 ]; then
