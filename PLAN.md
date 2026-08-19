@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-18 | `c9717b3bc` | Froze 214 Mathlib facts into a preregistered 78/60/76 evaluation split with zero dependency, source-group, family, proof-shape, mutation, or longitudinal leakage. |
 | 2026-08-18 | `cf998788b` | Automated the exact authoritative B-then-A chain; two isolated fixed-budget runs matched all 56 retained artifact bytes and passed Autogenesis-1. |
 | 2026-08-18 | `2d65f19d8` | Froze the leakage-safe nursery contract and the Autogenesis-1 longitudinal partition; readiness remains explicitly false with zero evaluation facts and nine blockers. |
 | 2026-08-18 | `bd7b55bff` | Extracted 9,729 proof-isolated Mathlib Nat/Int statements externally and selected 240 outcome-blind source candidates across twelve families without vendoring bulk exports. |
@@ -192,13 +193,11 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Autogenesis-1 is frozen; the nursery is truthfully not ready.** Commit
-`2d65f19d8` reserves the exact B-to-A chain as a longitudinal regression and
-adds component-, family-, proof-shape-, and mutation-safe train/development/
-held-out rules. The executable baseline has zero evaluation facts and nine
-named blockers. This is intentional: the current 110-fact ledger has only 23
-direct proof-derived kernel edges across ten consequents, and relabelling it
-would leak the known Nat component rather than measure generalization.
+**Autogenesis-1 is frozen; its initial red nursery baseline was informative.**
+Commit `2d65f19d8` reserves the exact B-to-A chain as a longitudinal regression
+and established nine readiness blockers. The then-current 110-fact ledger had
+only 23 direct proof-derived kernel edges across ten consequents; relabelling it
+would have leaked the known Nat component rather than measured generalization.
 
 **Mathlib source harvesting is proof-isolated.** Commit `bd7b55bff` binds exact
 Mathlib/Lean/extractor identities, retains 9,729 statement-only Nat/Int rows
@@ -225,11 +224,18 @@ as `lean4-surface` facts. Exact Lean/Mathlib v4.30 accepts all 214 proof-free
 axiom types; every evidence array remains empty and the frontier refuses every
 row because no registered operation exists.
 
-**Next:** preregister a feasible split over whole dependency/mutation groups,
-families, and family-scoped proof-template risks, then freeze train/development/
-held-out membership. Do not expose proof bodies to search, treat Mathlib proof
-as Axeyum construction, or begin proof-plan work before fixed-budget nursery
-episodes identify the dominant seam.
+**The evaluation nursery is frozen and leakage-controlled.** Commit
+`c9717b3bc` fixes all 214 facts before target outcomes: 78 train, 60 development,
+and 76 held-out. The checker reports zero blockers and rejects dependency,
+source-review-group, family, family-scoped proof-shape, mutation, and
+longitudinal leakage. A global broad-shape rule was rejected because it
+collapses the full population into one component.
+
+**Next:** define the fixed-budget episode and decline-record schema, then run a
+small train/development baseline while held-out remains untouched. Select the
+first proof-planning or kernel capability acquisition from measured decline
+concentration, not theorem familiarity. Do not expose Mathlib proof bodies to
+search or treat external proof status as Axeyum construction.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
