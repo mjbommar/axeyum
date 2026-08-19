@@ -142,12 +142,24 @@ mechanism to one token per line.
 The two suites are separate integration-test binaries and each holds exactly
 one `#[test]`, so a mutation confined to one file can only kill one test; what
 is worth checking is that each mutation kills it *for the named reason* rather
-than being absorbed.
+than being absorbed. Both were also run against the *other* suite, which stayed
+green, so neither death is a build-wide effect. Baseline before mutating:
+`AXEYUM-CREAL-CARRIER declared=470 lean_kernel_constants=470`, `checked=2` and
+`checked=4`, both suites `ok`.
+
+**The first M1 attempt proved nothing and looked like it had.** The mutated code
+used `str::Lines::rposition`, which does not compile (`Lines` is not
+`ExactSizeIterator`), so `cargo test` emitted a compile error, the harness
+printed no `test result:` line at all, and the grep that was watching for a
+death found nothing to report — silence, in a slot where "the guard did not
+fire" and "the mutation never ran" look identical. This is the repository's
+signature defect one level down, in the mutation check itself: the re-run greps
+`^error` as well, and the result below is from that re-run.
 
 | mutation | tests that died |
 | --- | --- |
-| **M1** carrier replay: drop the LAST theorem record from the replayed stream. Lean still accepts it and `not_zero_one` is still present, so only the count moves. | PENDING — the host cargo lock was held by other lanes for the last hour of this session |
-| **M2** divergence: make `theorems_as_defs` a no-op, so row 3 elaborates the unmodified module. | PENDING — same |
+| **M1** carrier replay: drop the LAST theorem record from the replayed stream. Lean still accepts it and `not_zero_one` is still present, so only the count moves. | **1**, at `real_lean_creal_carrier_kernel_replay.rs:235`: *"Lean's kernel ended with 469 constants where this kernel holds 470. A replay that admits a SUBSET is exactly the reachability hole this suite exists to close."* Lean still ACCEPTED the stream and the name-coverage precondition still passed, so the count-equality guard fired alone — it is what distinguishes "accepted" from "accepted a subset". The divergence suite stayed green (2.64 s). |
+| **M2** divergence: make `theorems_as_defs` a no-op, so row 3 elaborates the unmodified module. | **1**, at `real_lean_wellfounded_elaborator_divergence.rs:331`: *"Lean's elaborator refused the module even with every proof spelled `def`, so the divergence is NOT the opacity of `theorem` and ADR-0488's account of it is wrong."* The carrier suite stayed green (115.00 s). |
 
 ## Left undone
 
