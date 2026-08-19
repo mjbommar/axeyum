@@ -113,6 +113,7 @@ compounding, not automation theatre.
 | [Mathlib outcome-blind review result](14-mathlib-outcome-blind-review-result.md) | Which candidates survive statement review, and how are mutation controls grouped before any outcome or split exists? |
 | [Mathlib open-fact catalog result](15-mathlib-open-fact-catalog-result.md) | Can the reviewed statements become honest Axeyum ledger propositions without importing proofs or claiming construction? |
 | [Mathlib frozen nursery split](16-mathlib-frozen-nursery-split-result.md) | Can all reviewed propositions be preregistered into useful evaluation partitions without dependency, source-group, family, proof-template, mutation, or longitudinal leakage? |
+| [Nursery dispatch baseline](17-mathlib-nursery-dispatch-baseline.md) | What prevents the frozen train/development population from entering a current authoritative operation? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

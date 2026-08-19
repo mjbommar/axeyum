@@ -25,6 +25,18 @@ rejects dependency-component, source-review-group, family, family-scoped
 proof-shape, mutation, or longitudinal leakage. Route hypotheses grant no
 dispatch or admission authority.
 
+`mathlib-nursery-dispatch-baseline-v1.json` is the first post-freeze capability
+census. It inspects only train and development contracts, never held-out facts,
+proof bodies, or target outcomes. Reproduce it with:
+
+```sh
+python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check
+```
+
+A row declined before execution is not a proof attempt and consumes zero
+producer budget. The distinction prevents missing adapters from being reported
+as solver failures.
+
 `mathlib-statement-source-v1.json` binds the external statement-only Mathlib
 v4.30.0 inventory. Bulk NDJSON stays on `/nas3`; Git retains the extractor,
 source identity, selection policy, and small derived candidate view. Neither an
