@@ -115,3 +115,15 @@ heuristic over prose and says so.
 4. **One guard in `check-lra-hypothesis-binding.py:1244` measurably SURVIVES**
    (`bind_structural`'s opaque-sort check). Needs a control in
    `102-attestation-gap`'s test module.
+
+## Open queue as of 2026-08-19
+
+3. **The shared worktree's `target/` is 404 GB on a root disk at 91%.** Fix is
+   `build.target-dir` onto /data0 plus `[profile.dev] debug =
+   "line-tables-only"` — 80% of the largest artefact is `.debug*`. Disruptive:
+   cargo bakes absolute paths, so it forces one cold rebuild of the whole
+   workspace. Schedule it for a window with no cargo running. Policy in
+   [`fleet-hosts.md`](../../contributor-guide/fleet-hosts.md).
+4. **No heavy-cargo suite is registered with the mutation harness** — its cargo
+   runner is proven on a 4-second crate and two ad-hoc probes, nothing under
+   `--features full`.

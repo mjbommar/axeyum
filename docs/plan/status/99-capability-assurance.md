@@ -3,30 +3,29 @@
 <!-- plan-section: lane-status -->
 
 **Open queue, in the order I intend to clear it** (`WIP`,
-capability-assurance, 2026-08-19). Detail per item in
-[the lane note](../notes/99-capability-assurance.md).
+capability-assurance, 2026-08-19). Two items cleared themselves while it stood,
+by the lanes that owned them — a queue listing resolved work is the same defect
+as stale prose, so they are struck rather than carried.
 
-1. **`hooks/pre-push` now runs real-Lean suites on every push.** It invokes
-   `cargo test -p axeyum-lean-kernel` wholesale, and that package gained
+1. **`hooks/pre-push` runs `cargo test -p axeyum-lean-kernel` WHOLESALE**
+   (line 260), and that package gained two real-Lean suites today —
    `real_lean_creal_carrier_kernel_replay` (~62 s) and
    `real_lean_wellfounded_elaborator_divergence` (~115 s, four Lean
-   invocations). `scripts/check-lean-gate.sh` already owns those. Every push in
-   the repository pays twice; the step was documented at 206-248 s.
-2. **`docs/plan/status/103-creal-lean-divergence.md` is 3,029 bytes**, over the
-   per-lane ceiling (ADR-0478). Its lane has finished, so
-   `scripts/archive-plan-status.py --apply` can take it once it is clean.
-3. **`PLAN.md` and `101-expect-axioms.md` publish 11 ledger guards where there
-   are 10.** The eleventh sabotaged its own fixture, printed `Ran 0 tests`, and
-   the old mutation classifier scored that as a kill — on the control over the
-   axiom ledger, i.e. the axiom-freedom claim. The count is wrong in a
-   generated view.
-Items 4-6 (an uncovered guard in the transcription binder, the 404 GB
-target-dir relocation, and registering a heavy-cargo suite with the mutation
-harness) are in [the lane note](../notes/99-capability-assurance.md).
+   invocations). `scripts/check-lean-gate.sh` already owns both. Every push in
+   the repository pays for them twice, on a step documented at 206-248 s and
+   measured at 2,396 s under contention. First, because it taxes every other
+   lane continuously.
+2. **One guard in `check-lra-hypothesis-binding.py:1244` measurably SURVIVES**
+   (`bind_structural`'s opaque-sort check). Needs a control in
+   `102-attestation-gap`'s test module; the mutation harness reports it rather
+   than the harness having been wrong.
+Items 3-4 (the 404 GB target-dir relocation, scheduled because it forces one
+cold rebuild; and registering a heavy-cargo suite with the mutation harness)
+are in [the lane note](../notes/99-capability-assurance.md).
 
-Cleared today: the axiom-freedom measurements are gated (nothing ran them),
-`local-ci` has a PASS record with its freshness gate enforcing, ADR numbers are
-checked against `origin/main`, and `lane-commit.sh` checks a pathspec both ways.
+Cleared by their owners since this list was written: `103-creal-lean-divergence.md`
+is under the ceiling (2,958 B), and `PLAN.md` now records the 11 -> 10 ledger
+guard-count correction rather than publishing the wrong number.
 
 <!-- plan-section: landed-changes -->
 
