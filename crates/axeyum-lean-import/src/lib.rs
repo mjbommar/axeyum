@@ -41,9 +41,14 @@ use axeyum_lean_kernel::{
 use serde_json::{Map, Value};
 
 mod identity;
+mod type_slice;
 
 pub use identity::{
     AxiomIdentity, DeclarationDependencyIdentity, DeclarationIdentity, DeclarationKind,
+};
+pub use type_slice::{
+    ConstantInstance, GeneralizedBinder, GeneralizedGoal, TypeSliceError,
+    generalize_goal_constants, verify_generalized_specialization,
 };
 
 use identity::build_identity_manifest;
