@@ -93,7 +93,10 @@ pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use inductive::InductiveFamilySpec;
 pub use int_prelude::{IntPrelude, build_int_prelude};
 pub use lean_export::{EXPORT_FORMAT_VERSION, ExportError, Lean4ExportMetadata};
-pub use lean_pp::LeanPreludeModule;
+pub use lean_pp::{
+    LeanPreludeModule, importing_module_banner, self_contained_module_banner,
+    shared_prelude_module_banner, split_module_banner,
+};
 pub use level::{LevelId, LevelNode};
 pub use name::{NameId, NameNode};
 pub use nat_prelude::{NatDev, NatOps, NatPrelude, NatState, build_nat_prelude};

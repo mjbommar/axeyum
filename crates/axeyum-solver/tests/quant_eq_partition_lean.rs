@@ -9,6 +9,12 @@ use axeyum_solver::{
     reconstruct_single_pivot_equality_partition_to_lean_module, scan_proof_fragment,
 };
 
+// The golden pin covers the module BODY; the shared banner is pinned once, in
+// `axeyum-lean-kernel --test module_banner_pin`. Header text under many pins is
+// what made this suite red three times -- see the helper's module note.
+#[path = "../../axeyum-lean-kernel/tests/support/lean_golden.rs"]
+mod lean_golden;
+
 const SDLX: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../corpus/public-curated/quantified/LIA/cvc5-regress-clean/",
@@ -41,11 +47,6 @@ fn sdlx_reconstructs_genuine_nested_quantifiers_and_routes() {
         &certificate,
     )
     .expect("sdlx reconstructs");
-    let fnv1a = source
-        .bytes()
-        .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
-            (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
-        });
     // Re-pinned 2026-08-15 (was `(51_989, 0x33c9_7d4b_0b70_5040)`): `0fc7cc357`
     // discharged five of the six remaining integer axioms (`integer: axiom=6 → 1`),
     // so the integer laws this refutation reaches are theorems whose proof terms are
@@ -59,21 +60,17 @@ fn sdlx_reconstructs_genuine_nested_quantifiers_and_routes() {
     // `scripts/check-lean-gate.sh`. Accepted; `#print axioms axeyum_refutation`
     // reports `[axeyum.reconstruct.dio.hyp._97]` — the query hypothesis alone, no
     // ledger axiom — and there is no `sorryAx`.
-    // RE-PINNED 2026-08-18, +1_640 bytes, and the delta is HEADER TEXT ONLY --
-    // no proof byte changed, which is why the same +1_640 lands on four
-    // unrelated modules. Two commits moved it, neither of them wrongly:
-    //   +863  `b760fd6ae` declares Lean's codegen constants
-    //         (`unsafe axiom lcErased/lcAny/lcVoid`); without them 21 of 77
-    //         crosscheck families died under Lean 4.34.0-rc1.
-    //   +777  `46724faec` adds `set_option maxRecDepth 65536`; a scope-shared
-    //         `let` chain is nested syntax and 2,897 bindings in one lemma blow
-    //         Lean 4.30.0's default of 512.
-    // Each re-pinned only the golden module that sits in a gate (the
-    // diophantine/Farkas ones) and not this suite, which sits in none -- the
-    // third time that exact pattern has shipped a red pin (see `6389e0194`,
-    // 2026-08-15). Caught by the FIRST completed run of `scripts/local-ci.sh`:
-    // `artifacts/local-ci-runs/a6ee37c6a-s4.json`.
-    assert_eq!((source.len(), fnv1a), (113_943, 0x2e7f_d282_0bb2_27ac));
+    // The +1_640 of HEADER text that made this pin red on 2026-08-18 -- `b760fd6ae`
+    // (+863, Lean's codegen constants) and `46724faec` (+777, `maxRecDepth`), the
+    // third recurrence of one mechanism -- can no longer reach it: the pin below
+    // covers the module BODY, and the banner is pinned once in
+    // `axeyum-lean-kernel --test module_banner_pin`. If this moves, PROOF text
+    // moved. See `crates/axeyum-lean-kernel/tests/support/lean_golden.rs`.
+    lean_golden::assert_golden_module(
+        "equality-partition",
+        &source,
+        (111_821, 0xadca_ca06_49f6_11e5),
+    );
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("eq_em"));
     assert!(!source.contains("sorryAx"));

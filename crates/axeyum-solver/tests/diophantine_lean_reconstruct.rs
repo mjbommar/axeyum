@@ -11,6 +11,12 @@ use axeyum_solver::{
     ProofFragment, prove_unsat_to_lean_module, reconstruct_diophantine_proof, scan_proof_fragment,
 };
 
+// The golden pin covers the module BODY; the shared banner is pinned once, in
+// `axeyum-lean-kernel --test module_banner_pin`. Header text under many pins is
+// what made this suite red three times -- see the helper's module note.
+#[path = "../../axeyum-lean-kernel/tests/support/lean_golden.rs"]
+mod lean_golden;
+
 /// `x + y = 0 ∧ x − y = 1` over `Int`: rational-feasible (`x = ½`) yet
 /// integer-infeasible (`2x = 1`). It reconstructs to a kernel-checked Lean `False`
 /// through the Diophantine fragment, with the exported module naming the
@@ -44,12 +50,6 @@ fn two_x_eq_one_reconstructs_to_false() {
         source.contains("axeyum_refutation"),
         "rendered module should name the axeyum_refutation theorem"
     );
-    let source_fnv = source
-        .as_bytes()
-        .iter()
-        .fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
-            (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3)
-        });
     // Moved 2026-08-17 by +863 bytes: the module header now declares Lean's
     // compiler-internal `lcErased`/`lcAny`/`lcVoid`. `prelude` mode omits
     // `Init.Prelude`, and Lean 4.34 runs codegen over Prop-valued inductives
@@ -65,10 +65,7 @@ fn two_x_eq_one_reconstructs_to_false() {
     // past Lean 4.30.0's default of 512. Again exactly the header text; no proof
     // bytes changed, and real Lean accepted this module on the same run
     // (`[lean ok] diophantine`, footprint = the four query axioms).
-    assert_eq!(
-        (source.len(), source_fnv),
-        (1_144_134, 0x0aaa_f5ec_077c_e817)
-    );
+    lean_golden::assert_golden_module("diophantine", &source, (1_142_012, 0xc3d7_4e54_f071_0274));
     assert_eq!(
         scan_proof_fragment(&arena, &[e1, e2]),
         ProofFragment::Diophantine

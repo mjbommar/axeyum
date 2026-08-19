@@ -267,6 +267,81 @@ enum BannerKind<'a> {
     Importing(&'a str),
 }
 
+/// The exact fixed preamble a **self-contained** module opens with — every byte
+/// [`Kernel::render_lean_module`] writes before the first declaration.
+///
+/// Public because the banner is *shared text under many pins*, and that is the
+/// shape of a recurring defect rather than a convenience. `b760fd6ae` (+863
+/// bytes, the codegen constants) and `46724faec` (+777 bytes, `maxRecDepth`)
+/// each added banner text and re-pinned only the golden module that happened to
+/// sit in a gate; the same +1,640 landed unannounced on four others and `main`
+/// was red for a day. That was the third recurrence.
+///
+/// With the banner nameable, a byte pin over a rendered module can pin the part
+/// the producer of a *proof* change actually owns — see [`split_module_banner`],
+/// which is what the golden suites assert against. The banner keeps its own pin,
+/// in one place, where a header diff is read and waved through deliberately.
+#[must_use]
+pub fn self_contained_module_banner() -> String {
+    let mut out = String::new();
+    Kernel::write_module_banner(&mut out, BannerKind::SelfContained);
+    out
+}
+
+/// The preamble of the **shared development** a family of query modules imports
+/// ([`Kernel::render_lean_prelude_module`]). See [`self_contained_module_banner`].
+#[must_use]
+pub fn shared_prelude_module_banner() -> String {
+    let mut out = String::new();
+    Kernel::write_module_banner(&mut out, BannerKind::SharedPrelude);
+    out
+}
+
+/// The preamble of a **query** module that `import`s `module`
+/// ([`Kernel::render_lean_module_compact_importing`]). It omits the
+/// compiler-internal constants, which the imported module already declares.
+/// See [`self_contained_module_banner`].
+#[must_use]
+pub fn importing_module_banner(module: &str) -> String {
+    let mut out = String::new();
+    Kernel::write_module_banner(&mut out, BannerKind::Importing(module));
+    out
+}
+
+/// Split a rendered Lean module into `(banner, body)`.
+///
+/// Returns `None` when `source` does not begin with a banner **this** kernel
+/// emits — a mangled, hand-edited, or foreign module is not silently accepted as
+/// a body-only pin, so the banner is still checked byte for byte on every use.
+///
+/// The shape is read from the source itself: an `import` line inside the
+/// preamble names the shared development, and the two unimported shapes are
+/// distinguished by trying each. Deliberately not a `starts_with("--")` scan or
+/// a search for the last banner line: those would let banner text drift into the
+/// "body" half and re-create the very coupling this exists to break.
+#[must_use]
+pub fn split_module_banner(source: &str) -> Option<(&str, &str)> {
+    // The `import` line is written inside the preamble, before any declaration,
+    // so a hit in the first handful of lines is the banner's own.
+    let imported = source
+        .lines()
+        .take(16)
+        .find_map(|line| line.strip_prefix("import "))
+        .map(str::trim);
+    let candidates = match imported {
+        Some(module) => vec![importing_module_banner(module)],
+        None => vec![
+            self_contained_module_banner(),
+            shared_prelude_module_banner(),
+        ],
+    };
+    candidates.iter().find_map(|banner| {
+        source
+            .strip_prefix(banner.as_str())
+            .map(|body| (&source[..banner.len()], body))
+    })
+}
+
 struct IoLeanModuleOutput<'a, W: std::io::Write + ?Sized> {
     writer: &'a mut W,
     error: Option<std::io::Error>,

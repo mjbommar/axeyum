@@ -177,6 +177,12 @@ step frontier cargo test -p axeyum-solver --test progress_frontier --features fu
 # ... ok"; the corpus `:status` sweep sat inert that way for 15 days. Compiles
 # but does not execute (`--list`), so it is cheap.
 step gate-liveness ./scripts/check-gate-liveness.sh
+# The golden-Lean-module gate: every suite that pins a rendered Lean module's
+# bytes, discovered from the source rather than listed, plus the banner pin that
+# is the one place a module-header change is meant to be seen. Four of these were
+# red on `main` for a day in 2026-08 because no pre-merge gate ran a `tests/*.rs`
+# integration target of theirs; see the script's header.
+step golden-lean-pins ./scripts/check-lean-golden-pins.sh
 # The real-Lean gate. Every suite that hands a generated module to an EXTERNAL
 # `lean` printed `ok` on a machine where Lean 4.30.0 was installed but not on
 # `PATH` (elan keeps toolchains under ~/.elan/toolchains/), so nothing outside

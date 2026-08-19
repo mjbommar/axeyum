@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions local-ci-freshness
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom aggregate-scope test frontier gate-liveness golden-lean-pins lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links adr-remote-collisions local-ci-freshness
 
 # THE AXIOM-FREEDOM MEASUREMENTS, which nothing ran until 2026-08-18.
 #
@@ -255,6 +255,20 @@ frontier:
 # executing, so it is cheap.
 gate-liveness:
     ./scripts/check-gate-liveness.sh
+
+# The golden-Lean-module gate. Every suite that pins a rendered module's bytes,
+# DISCOVERED rather than listed: membership is "calls
+# `lean_golden::assert_golden_module`", which is the same act as being a golden
+# pin, so a new golden cannot be added outside the gate. It also refuses a
+# hand-rolled whole-module `(len, fnv1a)` pin, which is how the banner got back
+# under the pins three times (`0fc7cc357`, `b760fd6ae`, `46724faec`).
+#
+# These are `tests/*.rs` integration targets and NOTHING ran them: `--lib` skips
+# integration targets, `hooks/pre-push` names six of the workspace's 465, and the
+# only sweep that covers them is local-ci, which had never completed until
+# 2026-08-18 -- when it found all four of them red.
+golden-lean-pins:
+    ./scripts/check-lean-golden-pins.sh
 
 # The real-Lean gate: every suite that hands a generated module to an EXTERNAL
 # `lean` binary, with the toolchain RESOLVED FROM THE PIN in `lean-toolchain`
