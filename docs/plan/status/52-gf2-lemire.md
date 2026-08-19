@@ -67,14 +67,23 @@ convolution order, effective modulus, and Type-I/Type-II split; Cases 4 and 5
 are empty and all seven relevant rows occur.  At `ell=300` it confirms the
 same first strict degrees `283` and `284`, with only a `15/16`-bit initial
 margin before the explicit divisor envelope, epsilon/constants, and factor
-`d`.  The next step is therefore a margin-aware, conductor-regrouped estimate
-for the low/medium-`d` block, not more pointwise exponent bookkeeping.
+`d`.  The margin-aware odd ledger now restores `d`, sums the tail, and leaves
+the analytic-loss reserve explicit: at `ell=300`, zero reserve fails from
+`d=292` but fits from `d=293`, leaving low/medium budget
+`2^301-2^300-2`.  The exact cross-order Fourier regroup is also native.  It
+shows that the relevant nesting is low-bit annihilator depth, not
+multiplicative conductor alone, and verifies the regrouped identity at both
+endpoints through `ell=8`.  Summation by parts reduces the next proof step to
+a weighted `B` combination plus its boundary term on these annihilator
+layers.  Proving that aggregate bound, with the explicit energy loss filled
+into the reserve, is now the precise blocker.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `85e9ba5cd` | Regrouped the signed Möbius convolution exactly by Fourier annihilator depth, added the odd-endpoint buffered-tail margin ledger, and isolated the weighted summation-by-parts obligation. |
 | 2026-08-19 | `0cf536a9d` | Added exhaustive endpoint Vaughan tables across every convolution order and source split, confirming the pointwise transition while retaining all suppressed-loss and non-credit boundaries. |
 | 2026-08-19 | `b4c13c14e` | Proved the wrapped `q=2,F=x^r` inverse-energy envelope by exact valuation, lift, and divisor ledgers; corrected the no-wrap strictness and added loss-aware bilinear substitution. |
 | 2026-08-19 | `9c891a0a6` | Completed replayable Bagshaw Type-I Case-1 and Case-2 ledgers with exact integer domains, binary completion exponents, and independently enumerated optimizer controls. |
