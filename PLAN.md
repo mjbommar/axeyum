@@ -120,6 +120,7 @@ now. Nothing was deleted.
 | 2026-08-19 | `pending` | `scripts/check-kernel-suites.sh`: the kernel's push-time / real-Lean suite partition, discovered from the source and asserted total; `hooks/pre-push` repointed at the non-Lean half (2,296 s → 80 s warm). Found `real_lean_string_monoid_crosscheck` owned by nothing and mis-formatting its check count; floor 218 → 219. |
 | 2026-08-19 | `e3e105cd6` | The local-ci freshness gate is ENFORCING in both `check.sh` and `justfile`, on a `PASS` record (`57af69142-s4.json`, 6656 s, 7561 tests + 179 doctests, no vacuous/unreadable step). Landed report-only the day before because the only record was FAIL; that was the sole blocker. Flip re-tested through the real call site: NO_RECORD / STALE / STEP VACUOUS all red, unmodified green. |
 | 2026-08-19 | (pending) | `artifacts/local-ci-runs/57af69142-s4.json`: first all-pass authoritative-gate record (5/5 steps, 7561+179 tests, 6656 s); `check-local-ci-freshness` flipped from `--report-only` to ENFORCING in `scripts/check.sh` and `justfile`. |
+| 2026-08-19 | `ae0676aec` | `docs/formalized-math-2026-08/` corrected against measurement: "system-proved theorems = zero" falsified (3 facts, re-derived, heavily qualified; C2 still zero); C1 landed 2026-08-14 and did **not** deliver `N x 149/day`, so the single-file-lock diagnosis is falsified by its own remedy; the rate metric retired as unmeasurable across preludes; ADR-0517/0518's two-checker finding and the 122-declaration coverage hole recorded, with the limitation stated at its true width (shipped artefact does not carry the whole carrier; 4 declarations kernel- but not elaborator-checkable). |
 | 2026-08-19 | `1afe65473` | Native/imported Nat prelude composition probe |
 | 2026-08-19 | `d1eb38a13` | Alpha-stable cross-kernel expression identity |
 | 2026-08-19 | `4c7af898d` | **ℝ is a lattice.** 15 `Rat` + 18 `CReal` declarations, every one accepted on first submission, all footprint-free. The predicted obstacle — a four-way sign split over `|a| − |b| ≤ |a − b|` — never appears. Nothing here has a side condition, so the failure mode is a *degenerate operation*, not a vacuous guard: `max x y := x` satisfies `le_max_left` by reflexivity and `abs x := x` satisfies `le_abs_self`, `neg_le_abs` and `abs_le`. So `not_le_zero_neg_one` and `not_equiv_abs_neg_one` are proved from the laws alone, the witness's exit status depends on both, and `max x x ≈ x` / `max 0 1 ≉ 0` / `min 0 1 ≉ 1` are admitted **through the kernel**. One level down, `Rat.max`/`Rat.min` are checked to COMPUTE on both branches with the wrong answer REFUSED — the nine `ℚ` laws are all one-sided and would hold of a projection. Three one-token mutations refused. |
@@ -502,6 +503,37 @@ Freshness of a record is not coverage by it. Owner: whoever owns `local-ci.sh`.
 gate and `check.sh` as the fallback that may lag it. G8 inverted that for the
 duration of the red-gate window. It is the repository's most contested file and
 outside this lane's paths.
+
+**The strand's headline claims were falsified in both directions and are now
+corrected in place, not rewritten** (`WIP`, doc-formalized, 2026-08-19).
+
+- **"Theorems the system proved without a human writing the proof: zero"** —
+  false since 2026-08-18. Three facts are `kernel-term` / `checked` / empty
+  footprint, and all three re-derive today (`check-autogenesis-fact-operation.py`
+  exits 0 on each). Two are `Eq.refl` from a blind producer (2 of 138 rows); the
+  third (`Nat.fib_add_two`) was built by a target-specific program and repaired
+  by hand across two failed runs, so it fails the autogenesis programme's own
+  autonomy bar. **C2 — solver refutation → library theorem — is still zero.**
+- **The 149/day rate**: the counter reads **139, unchanged**, on 2026-08-19 —
+  6.4/day over 5.16 days. But it counts one prelude and production moved off it
+  (Int: 57 derived, axiom-free). **No tool measures this project's theorem rate.**
+- **"Lean's own kernel accepted an axeyum development"** was true and narrower
+  than it read — reachability-filtered, 343 of 465. ADR-0517/0518 now live in
+  the strand: Lean's kernel takes all 470 carrier declarations, its elaborator
+  refuses four, our kernel is **not** the permissive one, and any decline census
+  must name which checker it ran.
+- **C1 (shard `nat_prelude`) is DONE and did not deliver.** 845 lines in eleven
+  modules, first splits 2026-08-14; five days of collision-free library produced
+  +33 theorems. `N x 149/day` is falsified by its own remedy.
+- Stale status blocks in `03`/`04` (13-of-40, population UNSTARTED, "import ℚ
+  and ℝ", "`#print axioms` run by hand") left visible with what falsified them.
+
+Measured, not cited: trusted surface `…/rat/string 0 · real 30`; front door
+1,304,276 / 1,330,091 / 1,442,247 B, zero carrier axioms, `Real` control
+non-vacuous; `check-lean-gate.sh` green at **21 suites, 66 tests, 473 checks**
+(floor 219) — **40 of 77 crosscheck families are attestations**, now in `03`
+because "473 modules read" is not "473 propositions proved".
+Detail: [`../notes/107-doc-formalized.md`](docs/plan/notes/107-doc-formalized.md).
 
 **Status:** Fib prelude compatibility separates exact identity from alpha-stable type shape; direct graft remains unauthorized.
 
