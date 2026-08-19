@@ -122,6 +122,7 @@ for a in "$@"; do case "$a" in
 esac; done
 
 RECORD_DIR="${AXEYUM_LOCAL_CI_RECORDS:-$REPO_ROOT/artifacts/local-ci-runs}"
+LOCAL_CI="${AXEYUM_LOCAL_CI:-$REPO_ROOT/scripts/local-ci.sh}"
 MAX_AGE_HOURS="${AXEYUM_LOCAL_CI_FRESHNESS_MAX_AGE_HOURS:-48}"
 
 g() { git -C "$REPO_ROOT" "$@"; }
@@ -164,7 +165,33 @@ print(verdict)
 print(len(bad))
 for b in bad:
     print(b)
+cmds = [s.get("cmd", "") for s in steps if isinstance(s, dict)]
+print(len(cmds))
+for c in cmds:
+    print(c)
 PY
+}
+
+# FRESHNESS IS NOT COVERAGE. A record can be recent, an ancestor and all-pass
+# while describing a run of a DIFFERENT, smaller gate, because `local-ci.sh`
+# gained a step after the record was written. Not hypothetical: the capability
+# frontier ratchet moved out of `hooks/pre-push` into `local-ci.sh` on
+# 2026-08-19 precisely so the battery would own it, and for the rest of that
+# day this gate printed `PASS -- fresh, ancestor, all-pass` over a FIVE-step
+# record in which the sixth step did not exist. It was enforcing a promise
+# about a run that had never made it.
+#
+# So compare the record's step commands against the `run <cmd>` lines
+# `local-ci.sh` executes now. A step the script runs and the record does not
+# cover reds this gate. The remedy is to re-run the battery, never to widen
+# the comparison.
+current_steps() {
+  # No script to compare against means no coverage claim can be made, so say
+  # nothing rather than silently reporting an empty step set as full coverage.
+  [ -r "$LOCAL_CI" ] || { echo "local-ci-freshness: WARN cannot read $LOCAL_CI -- coverage NOT checked" >&2; return 0; }
+  # `run <cmd> || rc=$?` in the script; the record stores only <cmd>. Strip the
+  # `||` tail and the line-continuation backslash so the two are comparable.
+  awk '/^run /{sub(/^run /,""); sub(/[[:space:]]*\|\|.*$/,""); sub(/[[:space:]]*\\$/,""); sub(/[[:space:]]+$/,""); if (length($0)) print}' "$LOCAL_CI"
 }
 
 shopt -s nullglob
@@ -260,6 +287,34 @@ else
         *) fail=1; reasons+=("STEP NON-PASS ($v): \`$cmd\`") ;;
       esac
     done
+  fi
+
+  # Guard: COVERAGE. Freshness is not coverage. A record can be recent, an
+  # ancestor and all-pass while describing a run of a smaller gate, because
+  # `local-ci.sh` gained a step after it was written. Measured 2026-08-19: the
+  # frontier ratchet moved out of `hooks/pre-push` into `local-ci.sh` at
+  # `69f2cffb8` precisely so the battery would own it, and for the rest of that
+  # day this gate printed `PASS -- fresh, ancestor, all-pass` over a FIVE-step
+  # record in which the sixth step did not exist. It was enforcing a promise
+  # about a run that had never made it.
+  #
+  # The remedy for a gap is to re-run the battery, never to widen this
+  # comparison. A step the record covers and the script no longer runs is NOT a
+  # failure -- that is a step legitimately retired between the run and now.
+  N_CMD_COUNT="${NEWEST_REC[$((5 + N_BAD_COUNT))]:-0}"
+  if [ "${N_CMD_COUNT:-0}" -gt 0 ] 2>/dev/null; then
+    covered="$(mktemp)"; wanted="$(mktemp)"
+    base=$((6 + N_BAD_COUNT))
+    for ((i = 0; i < N_CMD_COUNT; i++)); do
+      printf '%s\n' "${NEWEST_REC[$((base + i))]:-}"
+    done | LC_ALL=C sort -u > "$covered"
+    current_steps | LC_ALL=C sort -u > "$wanted"
+    while IFS= read -r missing; do
+      [ -n "$missing" ] || continue
+      reasons+=("UNCOVERED STEP: \`$missing\` is run by local-ci.sh and is not in this record -- the battery has gained a step since it ran; re-run it")
+      fail=1
+    done < <(LC_ALL=C comm -23 "$wanted" "$covered")
+    rm -f "$covered" "$wanted"
   fi
 
   # Guard: top-level verdict must independently say PASS too. A mismatch

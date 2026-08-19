@@ -121,6 +121,38 @@ case_ inconsistent-record 1 "INCONSISTENT RECORD"
 record PASS "$NOW" '[{"cmd":"cargo fmt --all --check","status":0,"tests":-1,"seconds":1,"verdict":"pass"},{"cmd":"cargo nextest run --profile local","status":0,"tests":7511,"seconds":6000,"verdict":"pass"}]'
 case_ clean-pass 0 "local-ci-freshness: PASS"
 
+# --- 8b. COVERAGE: a record that predates a step local-ci.sh now runs --------
+# Freshness is not coverage. This is the case that was live on 2026-08-19: the
+# frontier ratchet moved into `local-ci.sh` and the gate went on printing PASS
+# over a record written before it existed. Without this case the coverage guard
+# is unreachable — deleting it killed ZERO controls when it was added.
+FAKE_CI="$WORK/fake-local-ci.sh"
+cat > "$FAKE_CI" <<'FAKE'
+run cargo fmt --all --check || rc=$?
+run cargo nextest run --profile local || rc=$?
+run cargo test --new-step-added-later || rc=$?
+FAKE
+record PASS "$NOW" '[{"cmd":"cargo fmt --all --check","status":0,"tests":-1,"seconds":1,"verdict":"pass"},{"cmd":"cargo nextest run --profile local","status":0,"tests":7511,"seconds":6000,"verdict":"pass"}]'
+out="$(AXEYUM_LOCAL_CI_FRESHNESS_REPO="$REPO" AXEYUM_LOCAL_CI_RECORDS="$RECORDS" \
+      AXEYUM_LOCAL_CI="$FAKE_CI" bash "$SCRIPT" 2>&1)"; rc=$?
+if [ "$rc" = 1 ] && printf '%s' "$out" | grep -qF "UNCOVERED STEP: \`cargo test --new-step-added-later\`"; then
+  echo "ok   case:uncovered-step -> rc=1"
+else
+  echo "FAIL case:uncovered-step rc=$rc — output: $(printf '%s' "$out" | tr '\n' '|')"
+  fail=1
+fi
+
+# ...and the same record against a script whose steps it DOES cover must pass,
+# or the case above proves only that the gate can reject, not that it discriminates.
+cat > "$FAKE_CI" <<'FAKE'
+run cargo fmt --all --check || rc=$?
+run cargo nextest run --profile local || rc=$?
+FAKE
+out="$(AXEYUM_LOCAL_CI_FRESHNESS_REPO="$REPO" AXEYUM_LOCAL_CI_RECORDS="$RECORDS" \
+      AXEYUM_LOCAL_CI="$FAKE_CI" bash "$SCRIPT" 2>&1)"; rc=$?
+if [ "$rc" = 0 ]; then echo "ok   case:covered-step -> rc=0"
+else echo "FAIL case:covered-step rc=$rc — output: $(printf '%s' "$out" | tr '\n' '|')"; fail=1; fi
+
 # --- 9. --report-only must ALWAYS exit 0 even though the underlying verdict
 #        is FAIL, and the FAIL text must still print. This exercises a
 #        DIFFERENT piece of logic than cases 2-7 (the final
