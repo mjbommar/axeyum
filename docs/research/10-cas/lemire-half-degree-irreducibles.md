@@ -1437,6 +1437,31 @@ mutation is rejected.  All `512` transforms are nonzero modulo both native
 primes for **each** primitive phase.  Thus passing to an individual additive
 modulo-eight phase does not reveal sparse or imprimitive support either.
 
+Nor do the four primitive phases form a complementary family in the pinned
+witness.  Writing `u_r(a)=n_r(a)-n_(r+4)(a)` and
+`C(s)=sum_r sum_a u_r(a)u_r(a+s)`, the odd-residue Ramanujan identity gives
+
+```text
+sum_(j=1,3,5,7) T_j*T_j^* = 4 C.
+```
+
+The CAS computes this using integer autocorrelations only.  At
+`(ell,k,d)=(9,11,8)` it finds
+
+```text
+C(0)                = 13942624,
+max_(s != 0)|C(s)|  = 10785296,
+sum_s C(s)^2        = 5227607974543488.
+```
+
+The last value is about `26.89 C(0)^2`, rather than the complementary value
+`C(0)^2`.  Moreover `C(0)` is over one hundred times the signed spatial second
+moment `126568`.  Taking positive spectral powers across the four phases would
+therefore reintroduce a large squareful even-residue channel that their
+indefinite Gauss combination cancels.  The exact integers are pinned, and a
+two-point mutation turns an exactly complementary delta into a function with
+off-identity mass.
+
 The next diagnostic is therefore not another support count.  The primary
 characteristic-two Heisenberg template makes a necessary boundary explicit:
 its symplectic form

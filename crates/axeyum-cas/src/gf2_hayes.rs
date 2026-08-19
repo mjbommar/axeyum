@@ -1512,6 +1512,16 @@ pub struct BinaryConnectedWittSpectrumReport {
     /// Primitive additive phase spectra whose Gauss combination reconstructs
     /// the signed dyadic spectrum character by character.
     pub additive_phase_spectra: Vec<BinaryConnectedWittAdditivePhaseSpectrum>,
+    /// Complementary-family autocorrelation at the identity shift.
+    pub phase_complementarity_identity: BigUint,
+    /// Largest absolute complementary-family autocorrelation away from the
+    /// identity shift.
+    pub phase_complementarity_max_off_identity: BigUint,
+    /// Sum of squares of all complementary-family autocorrelations.
+    ///
+    /// The four primitive phases are complementary exactly when this equals
+    /// `phase_complementarity_identity^2`.
+    pub phase_complementarity_square_sum: BigUint,
     /// Modular spectrum rows in stable conductor order.
     pub conductor_spectra: Vec<BinaryConnectedWittConductorSpectrum>,
 }
@@ -6988,6 +6998,9 @@ fn empty_binary_connected_witt_spectrum(ell: usize) -> BinaryConnectedWittSpectr
         spectral_fourth_moment: BigUint::from(0_u8),
         phase_residue_totals: [0; 8],
         additive_phase_spectra: Vec::new(),
+        phase_complementarity_identity: BigUint::from(0_u8),
+        phase_complementarity_max_off_identity: BigUint::from(0_u8),
+        phase_complementarity_square_sum: BigUint::from(0_u8),
         conductor_spectra: Vec::new(),
     }
 }
@@ -7235,6 +7248,42 @@ fn connected_witt_additive_phase_spectra(
         .collect()
 }
 
+fn connected_witt_phase_complementarity(
+    phase_spatial: &[[u128; 8]],
+    target: &PrincipalUnitStructure,
+) -> Result<(BigUint, BigUint, BigUint), HayesError> {
+    let signed_channels = phase_spatial
+        .iter()
+        .map(|residues| {
+            std::array::from_fn::<BigInt, 4, _>(|residue| {
+                BigInt::from(residues[residue]) - BigInt::from(residues[residue + 4])
+            })
+        })
+        .collect::<Vec<_>>();
+    let mut identity = BigUint::from(0_u8);
+    let mut max_off_identity = BigUint::from(0_u8);
+    let mut square_sum = BigUint::from(0_u8);
+    for shift in 0..target.group_order {
+        let mut correlation = BigInt::from(0_i8);
+        for (index, channels) in signed_channels.iter().enumerate() {
+            let shifted = add_mixed_radix_indices(index, shift, &target.factors)?;
+            correlation += channels
+                .iter()
+                .zip(&signed_channels[shifted])
+                .map(|(left, right)| left * right)
+                .sum::<BigInt>();
+        }
+        let magnitude = correlation.magnitude();
+        if shift == 0 {
+            identity.clone_from(magnitude);
+        } else if magnitude > &max_off_identity {
+            max_off_identity.clone_from(magnitude);
+        }
+        square_sum += magnitude.pow(2);
+    }
+    Ok((identity, max_off_identity, square_sum))
+}
+
 #[allow(clippy::too_many_lines)]
 fn binary_connected_witt_spectrum(
     ell: usize,
@@ -7371,6 +7420,11 @@ fn binary_connected_witt_spectrum(
     let conductor_spectra = connected_witt_conductor_spectra(&target, &prime_one, &prime_two)?;
     let additive_phase_spectra =
         connected_witt_additive_phase_spectra(&phase_spatial, &target, &prime_one, &prime_two)?;
+    let (
+        phase_complementarity_identity,
+        phase_complementarity_max_off_identity,
+        phase_complementarity_square_sum,
+    ) = connected_witt_phase_complementarity(&phase_spatial, &target)?;
     let mut phase_residue_totals = [0_u128; 8];
     for residues in &phase_spatial {
         for (total, count) in phase_residue_totals.iter_mut().zip(residues) {
@@ -7391,6 +7445,9 @@ fn binary_connected_witt_spectrum(
         spectral_fourth_moment,
         phase_residue_totals,
         additive_phase_spectra,
+        phase_complementarity_identity,
+        phase_complementarity_max_off_identity,
+        phase_complementarity_square_sum,
         conductor_spectra,
     })
 }
@@ -11015,6 +11072,22 @@ mod tests {
             [52_596, 28_796, 0, 0, 19_792, 28_864, 0, 0]
         );
         assert_eq!(
+            spectrum.phase_complementarity_identity,
+            BigUint::from(13_942_624_u32)
+        );
+        assert_eq!(
+            spectrum.phase_complementarity_max_off_identity,
+            BigUint::from(10_785_296_u32)
+        );
+        assert_eq!(
+            spectrum.phase_complementarity_square_sum,
+            BigUint::from(5_227_607_974_543_488_u64)
+        );
+        assert_ne!(
+            spectrum.phase_complementarity_square_sum,
+            spectrum.phase_complementarity_identity.pow(2)
+        );
+        assert_eq!(
             spectrum
                 .additive_phase_spectra
                 .iter()
@@ -11041,6 +11114,24 @@ mod tests {
             assert_eq!(row.jointly_nonzero_count, row.character_count);
             assert_eq!(row.zero_status_disagreement_count, 0);
         }
+    }
+
+    #[test]
+    fn connected_witt_phase_complementarity_detects_off_identity_mass() {
+        let target = principal_unit_structure(2, HayesLimits::default()).unwrap();
+        let mut phases = vec![[0_u128; 8]; target.group_order];
+        phases[0][0] = 1;
+        let (identity, max_off, square_sum) =
+            connected_witt_phase_complementarity(&phases, &target).unwrap();
+        assert_eq!(identity, BigUint::from(1_u8));
+        assert_eq!(max_off, BigUint::from(0_u8));
+        assert_eq!(square_sum, identity.pow(2));
+
+        phases[1][0] = 1;
+        let (identity, max_off, square_sum) =
+            connected_witt_phase_complementarity(&phases, &target).unwrap();
+        assert!(max_off > BigUint::from(0_u8));
+        assert!(square_sum > identity.pow(2));
     }
 
     #[test]
@@ -11123,7 +11214,7 @@ mod tests {
             binary_dyadic_autocorrelation_fibre_report(ell, degree, d, HayesLimits::default())
                 .unwrap();
         eprintln!(
-            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} pair_abs={} normalized_abs={} valuation_abs={} witt_support={} witt_abs={} witt_m2={} witt_fourier_m2={} witt_fourier_m4={} phase_residues={:?} additive_phases={:?} witt_conductors={:?} layers={:?}",
+            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} pair_abs={} normalized_abs={} valuation_abs={} witt_support={} witt_abs={} witt_m2={} witt_fourier_m2={} witt_fourier_m4={} phase_residues={:?} phase_comp_identity={} phase_comp_max_off={} phase_comp_square_sum={} additive_phases={:?} witt_conductors={:?} layers={:?}",
             report.off_diagonal_signed_correlation,
             report.fibrewise_absolute_correlation,
             report.shift_inverse_pairwise_absolute_correlation,
@@ -11135,6 +11226,15 @@ mod tests {
             report.connected_witt_spectrum.spectral_second_moment,
             report.connected_witt_spectrum.spectral_fourth_moment,
             report.connected_witt_spectrum.phase_residue_totals,
+            report
+                .connected_witt_spectrum
+                .phase_complementarity_identity,
+            report
+                .connected_witt_spectrum
+                .phase_complementarity_max_off_identity,
+            report
+                .connected_witt_spectrum
+                .phase_complementarity_square_sum,
             report.connected_witt_spectrum.additive_phase_spectra,
             report.connected_witt_spectrum.conductor_spectra,
             report.valuation_correlations,
