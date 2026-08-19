@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `b24120651` | Proved the naive first-slot projection across all binary Witt blocks has kernel order `2^floor(ell/2)`, rejecting a direct growing-conductor Fomenko generalization before expensive `L`-factor work. |
 | 2026-08-19 | `07ed9bb8d` | Rejected direct magic-square gcd matrices for the full connected character tuple, then added an exact local Witt-cylinder concentration ledger whose root and singleton boundaries independently recover the fourth/second moments. |
 | 2026-08-19 | `1a75298ea` | Expanded every endpoint discrepancy by convolution order, subtracted all three Wick pairings cellwise, and exactly reconstructed the connected fourth cumulant as the signed symmetric order tensor required for gcd stratification. |
 | 2026-08-19 | `1b4d42d60` | Applied the exact primitive modulo-eight autocorrelation criterion to every affine fibre, found zero generalized-bent fibres in the pinned obstruction, and pivoted from fibrewise Heisenberg rank to connected fourth-cumulant/gcd strata. |
@@ -586,6 +587,15 @@ its ledger statement starts only at `ell=200`.  Every conductor energy now
 also reconstructs as `2^(j-1)` times an exact sum of squared binary-cylinder
 mass differences, isolating refinement imbalance as the analytic input.  This buffered split is a separate
 conjectured fact and remains the live uniform lemma.
+The first-slot generalization of Fomenko's fixed-coordinate map is now closed
+structurally: the checked Witt projection is surjective, but its kernel has
+dimension `floor(ell/2)` and order `2^floor(ell/2)`.  Exhaustive controls verify
+every fibre and homomorphism pair through `ell=8`.  Thus the naive quotient
+leaves an exponentially large character family and cannot supply Fomenko's
+small-kernel gain; the aggregate connected-cumulant/Witt-imbalance lemma
+remains the proof frontier.  Garefalakis's dedicated consecutive-zero theorem
+was also checked directly and fails Lemire's `m=n`, `l=floor(n/2)` endpoint in
+its stated sufficient condition.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
