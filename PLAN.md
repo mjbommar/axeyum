@@ -192,6 +192,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | 9ab8d7977 | **The negative control at one axiom instead of thirty.** `build_control_carrier`, three mutations, one test dead each. |
 | 2026-08-18 | 6c08c906f | **ADR-0486** + `F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers`. |
 | 2026-08-18 | `74946dd3b` | Split Lean module layout: `render_lean_prelude_module` / `render_lean_module_compact_importing` / `declarations_reached` / `lean_name`, `real_lean_shared_prelude_crosscheck` (4 real-Lean checks, 2 of them refusals), `examples/shared_prelude_module.rs --require-split`, gate floor 208 -> 212. 257x per query; found two `CReal` theorems Lean 4.30.0 rejects that the in-tree kernel admits. |
+| 2026-08-18 | `PENDING` | ADR-0489: proofs stay spelled `theorem`. `Kernel::set_render_proofs_as_def` built as a `Kernel` field, OFF by default, so nothing shipped moves; 7 guards in `tests/proof_keyword_render_option.rs` (no `lean` binary, 0.69 s, so `hooks/pre-push` is unaffected), mutation-checked 1/1/1/1/2; `examples/proof_keyword_cost.rs` renders the front door, the shared half and the whole carrier both ways and `--require-keyword-only` fails if the switch moves anything but the keyword. Measured: the shipped artefacts already elaborate clean under `theorem`; flipping the default costs 1.36-1.69x elaboration, +9.7% on the Lean gate, and makes `real_lean_wellfounded_elaborator_divergence` report that Lean CLOSED the divergence. |
 | 2026-08-18 | `c9223e4` | binding: the converse number says which side of the check the missing 245 rows are on — `undecomposable_spine=0` measured and gated, `represented` is a maximum matching rather than an overlap. |
 | 2026-08-18 | `b9d2f0a` | binding: the 4 `FiniteArrayExtensionality` rows were never content-free — the emitter collapsed each `(select a i)`; `attested` 9 → 5, `structural` 98 → 102 with 360 new matched term nodes. |
 | 2026-08-18 | `a25b18a` | binding: 66 rows were recording the weaker of two true statements — four verdicts become a partition with two-sided pins; `anchored` 10 → 73, `structural_anchored=66` new. |
@@ -1030,6 +1031,38 @@ reproduced with the sharing pass off, and `maxHeartbeats 0` does not move it.
 set is the reached union (343 of 465) instead.
 
 ADR-0482. Detail in [`../notes/67-prelude-module.md`](docs/plan/notes/67-prelude-module.md).
+
+**Do not flip the default: every `.lean` artefact this repository SHIPS already
+elaborates clean under `theorem`** (`DONE`, theorem-opacity, 2026-08-18).
+ADR-0488 measured that re-spelling proofs as `def` makes Lean's elaborator take
+the whole constructed-real carrier, and left the change untaken. Built as
+`Kernel::set_render_proofs_as_def` — a `Kernel` field, off by default — and
+measured on the pin (Lean 4.30.0 `d024af09`): the single-file front door
+(1,304,276 B) and the shared half (1,300,891 B) **both exit 0 today**, at 9.3 s
+and 9.7 s; under `def` they still exit 0, at 14.9 s and 13.2 s. Only the
+whole-carrier module gains — 4 refusals to none — and ADR-0482 does not ship it,
+while Lean's *kernel* already accepts it in 1.4 s. So the switch costs 1.36–1.69x
+elaboration and 212 lines of "this is a proof" to fix a refusal no shipped
+artefact suffers. `#print axioms` reads the same either way, so soundness is not
+in play; ADR-0458's honesty argument is what decides it. Decision:
+[ADR-0489](docs/research/09-decisions/adr-0489-proofs-stay-spelled-theorem-and-the-def-option-is-a-measuring-instrument.md);
+numbers: [notes](docs/plan/notes/68-theorem-opacity.md).
+
+**ADR-0488's blast-radius argument was narrower than stated.** "18 real-Lean
+suites read the single-file front door" — they assert on the module's ROOT
+theorem, which this option deliberately leaves alone, so they are indifferent to
+it. The option's boundaries are pinned by 7 tests, mutation-checked 1/1/1/1/2.
+
+**Nothing that ships moved.** The default path is byte-identical (the carrier
+renders at 2,541,928 B, ADR-0488's figure to the byte),
+`front_door_carrier --require-axiom-free` still reports
+`the module's axiom lines equal the kernel footprint: true`, and
+`scripts/check-lean-gate.sh` is **OK at 472 real-Lean checks** (floor 218),
+`lean_crosscheck` 77 of 77.
+
+**Next**: a structurally recursive `Nat.gcd`. It closes the same elaborator gap
+from the other end, with no keyword change and no elaboration cost, and it is
+now the preferred route to the residue ADR-0488 named.
 
 **66 instances were recording the weaker of two true statements, 4 more were
 recording nothing at all, and the converse number could not be read** (`WIP`,
