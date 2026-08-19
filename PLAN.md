@@ -123,6 +123,7 @@ now. Nothing was deleted.
 | 2026-08-19 | `1afe65473` | Native/imported Nat prelude composition probe |
 | 2026-08-19 | `d1eb38a13` | Alpha-stable cross-kernel expression identity |
 | 2026-08-19 | `4c7af898d` | **ℝ is a lattice.** 15 `Rat` + 18 `CReal` declarations, every one accepted on first submission, all footprint-free. The predicted obstacle — a four-way sign split over `|a| − |b| ≤ |a − b|` — never appears. Nothing here has a side condition, so the failure mode is a *degenerate operation*, not a vacuous guard: `max x y := x` satisfies `le_max_left` by reflexivity and `abs x := x` satisfies `le_abs_self`, `neg_le_abs` and `abs_le`. So `not_le_zero_neg_one` and `not_equiv_abs_neg_one` are proved from the laws alone, the witness's exit status depends on both, and `max x x ≈ x` / `max 0 1 ≉ 0` / `min 0 1 ≉ 1` are admitted **through the kernel**. One level down, `Rat.max`/`Rat.min` are checked to COMPUTE on both branches with the wrong answer REFUSED — the nine `ℚ` laws are all one-sided and would hold of a projection. Three one-token mutations refused. |
+| 2026-08-19 | `pending` | **The mathematics strand stops advising against work that is finished.** `02` gains a dated ℝ/ℂ status block, a `ℂ` row and a corrected `ℝ` row in the construction-order table, measured prelude counts, and a "not built" table with reused costings (cotransitivity ~400 lines, `apart_mul` ~300, completeness/`sqrt`/suprema uncosted, ℂ `abs` downstream of both). `05`'s D3 is re-ordered rather than deleted: it was a pre-flight check on a construction order that has since been walked, and is now a coverage measurement against Mathlib. `04` closes R4 and keeps the 30 `Real` axioms as the ADR-0509 negative control. `01`, `03`, `README` and `diary-real-keystone.md` corrected in place. |
 | 2026-08-18 | `4b5613e26` | `check-fact-derived-numbers.py`: every number a fact asserts about its own `axiom_footprint` re-derived from the array. Fixes `F:schedule-critical-chain-infeasible` (prose 30 vs array 26, plus an obsolete facade paragraph found by re-measuring: `Lra`/62 lines, not a 21-line shim) and the example's stale module doc. 52 of 3,243 prose numbers bound, denominator printed every run; 7 guards, each deletion kills exactly 1 test; wired into both `just check` (`facts`) and `check.sh` so `check-aggregate-scope.sh` records no new divergence. |
 | 2026-08-18 | `24578036f` | `gen-lean-axiom-ledger.py`: coverage command gains `--include-constructed` (on `--release`, 12x faster), `EXPECTED_PRELUDES` gains `rat`/`creal`/`complex`, and measurement drift is reported per prelude **with its direction** — REGRESSION / IMPROVEMENT / COVERAGE LOST / ADDED / RESHAPED, each with the re-pin command. Ledger now pins 8 groups by value (was 6); 39 tests (was 24); 11-mutation control registered in `mutation_controls.py`, no survivors. Already wired in both `check.sh` and `just check`, so no new gate divergence. |
 | 2026-08-18 | `7646b2c04` | `reject_self_refuting_module` at `gate_module_content` — the one boundary every route's module crosses; the Python predicate widened from one shape to the property and run over EVERY class; DECLINED pinned two-sided in its own manifest; the shadowed attested-path copy deleted after the mutation control that used to kill a test reported SURVIVED. 6 mutations, 0 survivors; 9 Rust unit tests, each with its discriminating twin. |
@@ -1106,6 +1107,31 @@ so it adds no sequence and no regularity obligation. **94 `CReal` declarations,
 trusted surface still 0**; `Rat.abs` still does not exist. Design, the measured
 mutation counts, and what is left undone with its cost:
 [`../notes/creal-lattice.md`](docs/plan/notes/creal-lattice.md).
+
+**`docs/mathematics-2026-08/` said "do not start ℝ"; ℝ and ℂ are built, and the
+strand now says so without losing the argument it used to make (`WIP`,
+agent-doc-mathematics, 2026-08-19).** Seven files corrected in place — old text
+struck through and left visible, new text dated and sourced to a command. The
+load-bearing numbers were re-measured, not copied: `nat_axiom_inventory
+--include-constructed` gives `complex 0 · creal 0 · integer 0 · logic 0 · nat 0
+· rat 0 · string 0 · real 30`; `creal_setoid_witness` 94 declarations;
+`complex_ring_witness` 39; `nat_theorem_inventory` **139** where the strand said
+106; `int_theorem_inventory` 57 derived / 0 asserted; 340 facts (120 settled),
+523 ADRs.
+
+Three corrections were not in the brief and came out of measuring. `04`'s
+trusted-surface table still carried `string 1` (retired 2026-08-17, ADR-0513),
+so its "total 31" is now 30 and all of it ℝ. `01`'s quoted `qf_rdl_difference`
+gate transcript still shows `[Real, Real.add, …]`; the shipped `Lra` route
+reconstructs over `CReal` and `front_door_carrier` measures 0 carrier axioms
+against 12/17/8 for the control. And `diary-real-keystone.md`'s conclusion — *"a
+Cauchy-sequence construction of ℝ … is inexpressible"* — is wrong by one word:
+the *quotient* is, the construction is not, which is exactly what ADR-0512
+exploited. Its two measurements were right and forced the design.
+
+`check-links.sh` green; `check-parity-docs.py` 19 errors, none in this strand
+(21 at lane start, lowered by another lane).
+[Notes](docs/plan/notes/doc-mathematics.md).
 
 **66 instances were recording the weaker of two true statements, 4 more were
 recording nothing at all, and the converse number could not be read** (`WIP`,

@@ -218,7 +218,33 @@ LEAN_CONTENT|family=15|tag=qf_rdl_difference|modules=1|theory=1|structural=0|rep
 
 — the ordered-field axioms plus the query's own hypotheses, no `sorryAx`. The
 theory-family ratchet moves 33 → 34 and the module floor 96 → 97, so the gain
-cannot silently regress. The precondition is separately guarded by
+cannot silently regress.
+
+> **The `Real` half of that transcript is gone, 2026-08-19.** `QF_RDL` still
+> routes through `ProofFragment::Lra` — the assertion in
+> `qf_rdl_difference_refutation_checks_in_real_lean` requires it — but that
+> fragment's carrier is no longer the axiomatized `Real` package. Since
+> ADR-0512 the shipped `prove_unsat_to_lean_module` reconstructs `Lra`,
+> `DisjunctiveLra` and `Sos` over the **constructed** `CReal`, so the axiom
+> line is the query's own hypotheses and nothing else. Measured today with
+> `cargo run -q -p axeyum-solver --features full --example front_door_carrier`:
+>
+> ```text
+>   --- strict-bound  x<0 and 0<=x
+>     over Real  : footprint 15 of which 12 are CARRIER axioms
+>     over CReal : footprint  3 of which  0 are CARRIER axioms  <== NONE
+>   --- three-row     x+y<=0, 1<=x, 1<=y
+>     over Real  : footprint 22 of which 17 are CARRIER axioms
+>     over CReal : footprint  5 of which  0 are CARRIER axioms  <== NONE
+>   --- sos-square    x*x<0
+>     over Real  : footprint 10 of which  8 are CARRIER axioms
+>     over CReal : footprint  2 of which  0 are CARRIER axioms  <== NONE
+> ```
+>
+> The `Real` column is kept as the non-vacuity control, not as a fallback: a
+> "zero carrier axioms" claim whose control also reports zero is measuring
+> nothing (ADR-0509). The trade is size — the `CReal` modules are 58× to 455×
+> larger, because the carrier is now spelled out rather than assumed. The precondition is separately guarded by
 `crates/axeyum-solver/tests/difference_logic_lean_content.rs`, including a
 control proving the attestation class is still reachable, so its assertion
 cannot pass by having stopped discriminating.

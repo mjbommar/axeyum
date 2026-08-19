@@ -60,6 +60,17 @@ A quotient carrier here has a quotient's shape and none of its content. So:
 > **A Cauchy-sequence construction of ℝ is not expensive in this kernel. It is
 > inexpressible.**
 
+> **Corrected 2026-08-19 — and the correction is one word wide.** The
+> *quotient* is inexpressible; the **construction** is not. ADR-0512 keeps the
+> regular ℚ-sequences and drops the quotient, carrying the equivalence as a
+> **defined relation** `CReal.Equiv` instead of the kernel's `Eq`. Nothing then
+> needs `Quot.sound`, and nothing needs `propext`/`funext` either, so the
+> paragraph below about Dedekind cuts is dodged by the same move. That is
+> `CReal`: 94 declarations, trusted surface **0**. This diary's two measurements
+> — no `Quot.sound`, no `propext`/`funext` — are what *forced* that design, so
+> they were not wrong; the inference from them to "inexpressible" was, because
+> it assumed the setoid had to be quotiented to be a carrier.
+
 The ℤ decision was right, for a stronger reason than the one recorded. I have
 corrected all three comments and pinned the measurement as a test
 (`the_quotient_package_has_no_soundness_primitive`), because the next lane will
@@ -223,3 +234,33 @@ worth having.** The model does not shrink `real: axiom=30` by one. It does
 eliminate the possibility that the 30 are contradictory, which is the failure
 mode that would have made every LRA certificate in this repository worthless
 without any gate noticing.
+
+## What happened next — appended 2026-08-19, not rewritten
+
+This diary is left as it was written. Both of its recommendations were followed,
+and the second one turned out not to exclude the first:
+
+- **"The route that actually eliminates the 30 is not constructing ℝ."**
+  Correct, and shipped: `generalize_over_ordered_ring` abstracts a Farkas
+  refutation over the 22 laws, and `F:ordered-ring-farkas-refutation` carries it.
+  The 30 are still declared — deliberately, as the negative control every
+  axiom-freedom claim here is measured against (ADR-0509) — but no shipped route
+  builds them.
+- **"Build ℚ when a `Real` axiom mentioning `inv`, `div`, a supremum or
+  Archimedean-ness is proposed."** ℚ was built 2026-08-16 for a different
+  reason, and it needed a step this diary could not have predicted: `Rat.inv`
+  already existed *as a definition with no law about it*, so the development had
+  22 ordered-**ring** laws and an operation named `inv`. `Rat.mul_inv_cancel`
+  (2026-08-18) is what made ℚ a field, and it was the real blocker on ℝ's
+  inverse.
+- **ℝ was constructed anyway**, ADR-0512, as the setoid above rather than the
+  quotient this diary priced — and then ℂ over it, ADR-0521, 39 declarations.
+  The Archimedean property this diary noted the `Real` package does not assume
+  is proved one level down, over ℚ (`Rat.le_of_le_add_natDivSucc`), and it has
+  exactly three consumers on the ℝ side: `CReal.Equiv.trans`,
+  `CReal.lt_irrefl` and `CReal.Equiv.of_bounded`.
+
+The controls in this diary are a snapshot: `nat` was 119 theorems then and is
+**139** now, `int` 51 derived / 1 asserted then and **57 / 0** now,
+`nat_axiom_inventory` read `integer 1, string 1` then and reads **0** for both
+now. Re-measure; do not quote.

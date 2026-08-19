@@ -77,6 +77,16 @@ among hypotheses.
 [`02`](02-the-library.md). ℤ is axiomatized. A theorem about integers, in a
 kernel where ℤ is three assumptions, inherits them.
 
+> **Overtaken 2026-08-16/19.** That was the binding reason at the time and it no
+> longer holds: `integer` is **0 trusted declarations, 57 derived**
+> (`--example int_theorem_inventory`), and the ladder now runs ℕ → ℤ → ℚ → ℝ → ℂ
+> with every one of those preludes at trusted surface 0. So a symbolic-integer
+> theorem no longer inherits postulates. The *other* two reasons in this section
+> — a finite problem is a formula, and hypothesis chains rather than hypothesis
+> subsets — were not about the library and are untouched by it. They are now the
+> whole of the answer, which makes this section's diagnosis sharper than when it
+> was written, not weaker.
+
 ## What would change it
 
 1. **The two named passes** (integer bound strictness, product abstraction).
@@ -84,8 +94,9 @@ kernel where ℤ is three assumptions, inherits them.
 2. **Lemma chaining, not just lemma selection.** Minimisation finds a sufficient
    subset; it cannot build a derivation. The colour-1 case is the concrete
    target and it is a genuinely new capability.
-3. **ℤ constructed rather than assumed**, so a symbolic-integer theorem does not
-   rest on postulates.
+3. ~~**ℤ constructed rather than assumed**~~ — **done 2026-08-16** (0 axioms),
+   and the constructed ladder now reaches ℂ. A symbolic-integer theorem no longer
+   rests on postulates; what it still lacks is the chaining in item 2.
 4. **A certificate for the result.** A symbolic theorem discharged with a
    re-checkable artifact is rung 3 and rung 4 at once — and nobody has
    demonstrated that in this problem space.
@@ -101,5 +112,7 @@ about the encoder, the solver and the checker — but they are the *floor* of wh
 this architecture is for, and the campaign showed the floor is solid.
 
 The ceiling is a theorem, and it is one library and two rewrite passes away
-rather than an engine away. That is a much better position than the register
+rather than an engine away. **The library arrived** (2026-08-16/19, ℕ → ℤ → ℚ →
+ℝ → ℂ, every prelude at trusted surface 0); the two rewrite passes are still the
+outstanding half. That is a much better position than the register
 described, and it was only discoverable by measuring the thing everyone assumed.
