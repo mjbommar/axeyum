@@ -1233,6 +1233,52 @@ finite counterexample to that proposed proof mechanism, not to the local
 square-root conjecture.  Any involutive argument must combine translations or
 use cancellation inside the defect terms.
 
+The squarefree sign now also has two independently checked algebraic
+coordinates.  For the monic `0/1` integral lift `F` of a squarefree degree-`k`
+binary polynomial, the
+[Stickelberger--Swan theorem](https://msp.org/pjm/1962/12-3/pjm-v12-n3-p27-p.pdf)
+gives
+
+```text
+Disc(F)=1 or 5 mod 8,
+mu(f)=(-1)^k (-1)^((Disc(F)-1)/4).                 (Swan sign)
+```
+
+For the étale algebra `E=GF(2)[x]/(f)`, let `T_2` be the second trace
+quadratic form: the second characteristic coefficient of multiplication by
+an element of `E`.  Use `T_2` on all of `E` in even degree and on the
+trace-zero subspace in odd degree.  Its polar form is nondegenerate, and the
+older second-trace comparison recorded by
+[Cassou-Noguès--Erez--Taylor](https://jtnb.centre-mersenne.org/item/JTNB_2000__12_2_597_0.pdf)
+gives
+
+```text
+(Disc(F)-1)/4 = Arf(T_2)+epsilon_k mod 2,
+epsilon_k=1 for k mod 8 in {3,4,5,6}, and 0 otherwise.       (Arf sign)
+```
+
+`binary_second_trace_arf_report` constructs the quotient algebra, the second
+trace form, its polar matrix, a symplectic basis, and the integral Sylvester
+determinant modulo eight.  It rejects unless factorization, `(Swan sign)`, and
+`(Arf sign)` agree.  Exhaustive controls cover every monic constant-one
+polynomial through degree ten, while squareful inputs remain explicitly
+weight zero and receive no Arf sign.
+
+This is a better representation of the live sign, but not yet its estimate.
+For each squarefree `f` the adjusted second-trace space is nondegenerate by
+construction, so its full polar rank merely evaluates the normalized Gauss
+sum back to `mu(f)`.  A saving requires a rank theorem for the **joint**
+`(f,y)` phase after imposing the Artin--Schreier fibre, or an explicit
+exceptional-plus-generic decomposition; the per-polynomial Arf rank alone
+cannot be inserted into the endpoint ledger.
+
+Fresh release probes on isolated fleet checkouts tested the selected tail
+orders `ceil(2ell/3)<=d<ell` at both endpoints for `ell=10,11,12`.  All twenty
+rows retained the conjectural global `E<=2^k` and local
+`b_(C,D)^2<=2d #_(C,D)` inequalities.  The one-translation defect surrogate
+failed on most of the same rows.  These are uncredited finite diagnostics,
+not an extension of the theorem range.
+
 This also sharpens the boundary on the new Kloosterman result.  The
 stationary-phase bound controls the **unweighted** distribution of one product
 of intervals.  A Vaughan identity introduces Möbius-derived weights, and an

@@ -1281,6 +1281,38 @@ pub struct BinaryBerlekampInversePhaseReport {
     pub trivial_square_bound: u128,
 }
 
+/// Exact characteristic-two Möbius-sign comparison for one binary
+/// polynomial.
+///
+/// On the squarefree locus this compares three equivalent signs: direct
+/// factorization, the Stickelberger--Swan integral discriminant modulo eight,
+/// and the Arf invariant of the second trace form.  Squareful inputs retain
+/// Möbius value zero and do not receive an Arf sign.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinarySecondTraceArfReport {
+    /// Packed monic binary polynomial.
+    pub polynomial: u64,
+    /// Polynomial degree.
+    pub degree: usize,
+    /// Exact polynomial Möbius value in `{-1,0,1}`.
+    pub mobius: i8,
+    /// Integral-lift discriminant modulo eight on the squarefree locus.
+    pub integral_discriminant_mod_eight: Option<u8>,
+    /// Dimension of the nondegenerate second-trace space: the whole algebra
+    /// in even degree and its trace-zero subspace in odd degree.
+    pub trace_form_dimension: usize,
+    /// Rank of the polar form on that space.
+    pub polar_rank: usize,
+    /// Radical dimension of the polar form.
+    pub radical_dimension: usize,
+    /// Arf invariant on the squarefree locus.
+    pub arf_invariant: Option<u8>,
+    /// Degree-class correction, one for degrees `3,4,5,6 mod 8`.
+    pub arf_degree_correction: u8,
+    /// Common Berlekamp/Swan phase bit on the squarefree locus.
+    pub sign_phase: Option<u8>,
+}
+
 impl BinaryBerlekampInversePhaseReport {
     /// Whether this shift-subspace Cauchy step improves on the trivial bound.
     #[must_use]
@@ -4432,6 +4464,283 @@ pub fn inverse_additive_mobius_spectrum(
         ell,
         degree,
         values: additive_values,
+    })
+}
+
+fn binary_quotient_multiply(left: u64, mut right: u64, modulus: u64, degree: usize) -> u64 {
+    let mask = (1_u64 << degree) - 1;
+    let reduction = modulus & mask;
+    let mut shifted = left & mask;
+    let mut product = 0_u64;
+    while right != 0 {
+        if right & 1 != 0 {
+            product ^= shifted;
+        }
+        right >>= 1;
+        let carry = (shifted >> (degree - 1)) & 1;
+        shifted = (shifted << 1) & mask;
+        if carry != 0 {
+            shifted ^= reduction;
+        }
+    }
+    product
+}
+
+fn binary_second_trace_value(element: u64, modulus: u64, degree: usize) -> u8 {
+    let columns = (0..degree)
+        .map(|column| binary_quotient_multiply(element, 1_u64 << column, modulus, degree))
+        .collect::<Vec<_>>();
+    let mut second_trace = 0_u8;
+    for left in 0..degree {
+        for right in left + 1..degree {
+            let diagonal = ((columns[left] >> left) & 1) * ((columns[right] >> right) & 1);
+            let cross = ((columns[right] >> left) & 1) * ((columns[left] >> right) & 1);
+            second_trace ^= u8::try_from(diagonal ^ cross).unwrap_or(0);
+        }
+    }
+    second_trace
+}
+
+fn binary_algebra_trace(element: u64, modulus: u64, degree: usize) -> u8 {
+    (0..degree).fold(0_u8, |trace, column| {
+        let product = binary_quotient_multiply(element, 1_u64 << column, modulus, degree);
+        trace ^ u8::try_from((product >> column) & 1).unwrap_or(0)
+    })
+}
+
+fn binary_matrix_rank(mut rows: Vec<u64>, dimension: usize) -> usize {
+    let mut rank = 0_usize;
+    for column in 0..dimension {
+        let Some(pivot) = (rank..rows.len()).find(|&row| (rows[row] >> column) & 1 != 0) else {
+            continue;
+        };
+        rows.swap(rank, pivot);
+        for row in 0..rows.len() {
+            if row != rank && (rows[row] >> column) & 1 != 0 {
+                rows[row] ^= rows[rank];
+            }
+        }
+        rank += 1;
+    }
+    rank
+}
+
+fn binary_second_trace_space_basis(modulus: u64, degree: usize) -> Result<Vec<u64>, HayesError> {
+    if degree.is_multiple_of(2) {
+        return Ok((0..degree).map(|index| 1_u64 << index).collect());
+    }
+    let trace_bits = (0..degree).fold(0_u64, |bits, index| {
+        bits | (u64::from(binary_algebra_trace(1_u64 << index, modulus, degree)) << index)
+    });
+    let pivot = usize::try_from(trace_bits.trailing_zeros())
+        .map_err(|_| HayesError::InvalidParameter("second-trace pivot exceeds usize".to_owned()))?;
+    if pivot >= degree {
+        return Err(HayesError::Invariant(
+            "odd-degree algebra trace is zero".to_owned(),
+        ));
+    }
+    Ok((0..degree)
+        .filter(|&index| index != pivot)
+        .map(|index| {
+            (1_u64 << index)
+                ^ if (trace_bits >> index) & 1 != 0 {
+                    1_u64 << pivot
+                } else {
+                    0
+                }
+        })
+        .collect())
+}
+
+fn binary_second_trace_polar(left: u64, right: u64, modulus: u64, degree: usize) -> u8 {
+    binary_second_trace_value(left, modulus, degree)
+        ^ binary_second_trace_value(right, modulus, degree)
+        ^ binary_second_trace_value(left ^ right, modulus, degree)
+}
+
+fn binary_second_trace_arf(
+    modulus: u64,
+    degree: usize,
+    mut basis: Vec<u64>,
+) -> Result<u8, HayesError> {
+    let mut arf = 0_u8;
+    while let Some(left) = basis.pop() {
+        let partner = basis
+            .iter()
+            .position(|&right| binary_second_trace_polar(left, right, modulus, degree) != 0)
+            .ok_or_else(|| HayesError::Invariant("second trace form has a radical".to_owned()))?;
+        let right = basis.swap_remove(partner);
+        arf ^= binary_second_trace_value(left, modulus, degree)
+            & binary_second_trace_value(right, modulus, degree);
+        for vector in &mut basis {
+            let pair_left = binary_second_trace_polar(*vector, left, modulus, degree);
+            let pair_right = binary_second_trace_polar(*vector, right, modulus, degree);
+            if pair_right != 0 {
+                *vector ^= left;
+            }
+            if pair_left != 0 {
+                *vector ^= right;
+            }
+        }
+    }
+    Ok(arf)
+}
+
+fn determinant_mod_eight(mut matrix: Vec<Vec<u8>>) -> Result<u8, HayesError> {
+    let dimension = matrix.len();
+    let mut determinant = 1_u8;
+    for column in 0..dimension {
+        let pivot = (column..dimension)
+            .find(|&row| matrix[row][column] % 2 == 1)
+            .ok_or_else(|| {
+                HayesError::Invariant("odd resultant matrix is singular mod 2".to_owned())
+            })?;
+        if pivot != column {
+            matrix.swap(pivot, column);
+            determinant = (8 - determinant) % 8;
+        }
+        let pivot_value = matrix[column][column] % 8;
+        determinant = (determinant * pivot_value) % 8;
+        let inverse = pivot_value;
+        let pivot_row = matrix[column].clone();
+        for row in matrix.iter_mut().skip(column + 1) {
+            let factor = (row[column] * inverse) % 8;
+            for (entry, value) in row.iter_mut().enumerate().skip(column) {
+                *value = (*value + 8 - (factor * pivot_row[entry]) % 8) % 8;
+            }
+        }
+    }
+    Ok(determinant)
+}
+
+fn binary_integral_discriminant_mod_eight(
+    polynomial: u64,
+    degree: usize,
+) -> Result<u8, HayesError> {
+    if degree <= 1 {
+        return Ok(1);
+    }
+    let derivative_degree = (1..=degree)
+        .rev()
+        .find(|&index| (polynomial >> index) & 1 != 0)
+        .map(|index| index - 1)
+        .ok_or_else(|| HayesError::Invariant("constant polynomial has no derivative".to_owned()))?;
+    let size = degree + derivative_degree;
+    let polynomial_descending = (0..=degree)
+        .rev()
+        .map(|index| u8::try_from((polynomial >> index) & 1).unwrap_or(0))
+        .collect::<Vec<_>>();
+    let derivative_descending = (0..=derivative_degree)
+        .rev()
+        .map(|index| {
+            let source = index + 1;
+            if (polynomial >> source) & 1 != 0 {
+                u8::try_from(source % 8).unwrap_or(0)
+            } else {
+                0
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut matrix = vec![vec![0_u8; size]; size];
+    for shift in 0..derivative_degree {
+        matrix[shift][shift..shift + polynomial_descending.len()]
+            .copy_from_slice(&polynomial_descending);
+    }
+    for shift in 0..degree {
+        let row = derivative_degree + shift;
+        matrix[row][shift..shift + derivative_descending.len()]
+            .copy_from_slice(&derivative_descending);
+    }
+    let resultant = determinant_mod_eight(matrix)?;
+    if (degree * (degree - 1) / 2).is_multiple_of(2) {
+        Ok(resultant)
+    } else {
+        Ok((8 - resultant) % 8)
+    }
+}
+
+/// Compare factorization, Stickelberger--Swan, and second-trace Arf signs for
+/// one monic constant-one binary polynomial.
+///
+/// # Errors
+///
+/// Rejects an invalid packed polynomial or degree and any disagreement among
+/// the three exact squarefree sign routes.
+pub fn binary_second_trace_arf_report(
+    polynomial: u64,
+    degree: usize,
+) -> Result<BinarySecondTraceArfReport, HayesError> {
+    if degree == 0 || degree >= u64::BITS as usize {
+        return Err(HayesError::InvalidParameter(
+            "second-trace report requires 1<=degree<64".to_owned(),
+        ));
+    }
+    if polynomial >> degree != 1 || polynomial & 1 == 0 {
+        return Err(HayesError::InvalidParameter(
+            "second-trace report requires a packed monic constant-one polynomial".to_owned(),
+        ));
+    }
+    let mobius = binary_polynomial_mobius_from_bits(polynomial, degree)?;
+    let discriminant = (mobius != 0)
+        .then(|| binary_integral_discriminant_mod_eight(polynomial, degree))
+        .transpose()?;
+    let basis = binary_second_trace_space_basis(polynomial, degree)?;
+    let dimension = basis.len();
+    let polar_rows = basis
+        .iter()
+        .map(|&left| {
+            basis
+                .iter()
+                .enumerate()
+                .fold(0_u64, |row, (index, &right)| {
+                    row | (u64::from(binary_second_trace_polar(left, right, polynomial, degree))
+                        << index)
+                })
+        })
+        .collect::<Vec<_>>();
+    let polar_rank = binary_matrix_rank(polar_rows, dimension);
+    let correction = u8::from(matches!(degree % 8, 3..=6));
+    let (arf_invariant, sign_phase) = if mobius == 0 {
+        (None, None)
+    } else {
+        let discriminant = discriminant.ok_or_else(|| {
+            HayesError::Invariant("squarefree polynomial has no discriminant phase".to_owned())
+        })?;
+        if !matches!(discriminant, 1 | 5) || polar_rank != dimension {
+            return Err(HayesError::Invariant(
+                "squarefree second-trace invariants have the wrong shape".to_owned(),
+            ));
+        }
+        let swan_phase = (discriminant - 1) / 4;
+        let arf = binary_second_trace_arf(polynomial, degree, basis)?;
+        if arf ^ correction != swan_phase {
+            return Err(HayesError::Invariant(
+                "Arf and Stickelberger--Swan phases disagree".to_owned(),
+            ));
+        }
+        let expected_mobius = if (degree + usize::from(swan_phase)).is_multiple_of(2) {
+            1
+        } else {
+            -1
+        };
+        if mobius != expected_mobius {
+            return Err(HayesError::Invariant(
+                "factorization and Stickelberger--Swan signs disagree".to_owned(),
+            ));
+        }
+        (Some(arf), Some(swan_phase))
+    };
+    Ok(BinarySecondTraceArfReport {
+        polynomial,
+        degree,
+        mobius,
+        integral_discriminant_mod_eight: discriminant,
+        trace_form_dimension: dimension,
+        polar_rank,
+        radical_dimension: dimension - polar_rank,
+        arf_invariant,
+        arf_degree_correction: correction,
+        sign_phase,
     })
 }
 
@@ -8412,6 +8721,67 @@ mod tests {
         assert_eq!(failure.worst_bucket_minimum_defect, 54);
         assert_eq!(failure.worst_bucket_population, 88);
         assert!(!failure.finite_defect_candidate_holds);
+    }
+
+    #[test]
+    fn second_trace_arf_and_swan_signs_match_binary_factorization() {
+        assert!(binary_second_trace_arf_report(1, 0).is_err());
+        assert!(binary_second_trace_arf_report(0b10, 1).is_err());
+        let quadratic = binary_second_trace_arf_report(0b111, 2).unwrap();
+        assert_eq!(quadratic.mobius, -1);
+        assert_eq!(quadratic.integral_discriminant_mod_eight, Some(5));
+        assert_eq!(quadratic.arf_invariant, Some(1));
+        assert_eq!(quadratic.arf_degree_correction, 0);
+        assert_eq!(quadratic.sign_phase, Some(1));
+        let irreducible_cubic = binary_second_trace_arf_report(0b1011, 3).unwrap();
+        assert_eq!(irreducible_cubic.mobius, -1);
+        assert_eq!(irreducible_cubic.integral_discriminant_mod_eight, Some(1));
+        assert_eq!(irreducible_cubic.arf_invariant, Some(1));
+        assert_eq!(irreducible_cubic.arf_degree_correction, 1);
+        assert_eq!(irreducible_cubic.sign_phase, Some(0));
+        let reducible_cubic = binary_second_trace_arf_report(0b1001, 3).unwrap();
+        assert_eq!(reducible_cubic.mobius, 1);
+        assert_eq!(reducible_cubic.integral_discriminant_mod_eight, Some(5));
+        assert_eq!(reducible_cubic.arf_invariant, Some(0));
+        assert_eq!(reducible_cubic.arf_degree_correction, 1);
+        assert_eq!(reducible_cubic.sign_phase, Some(1));
+        let squareful = binary_second_trace_arf_report(0b101, 2).unwrap();
+        assert_eq!(squareful.mobius, 0);
+        assert_eq!(squareful.integral_discriminant_mod_eight, None);
+        assert_eq!(squareful.arf_invariant, None);
+        assert_eq!(squareful.sign_phase, None);
+        for degree in 1..=10 {
+            for middle in 0..1_u64 << (degree - 1) {
+                let polynomial = (1_u64 << degree) | (middle << 1) | 1;
+                let report = binary_second_trace_arf_report(polynomial, degree).unwrap();
+                assert_eq!(report.polynomial, polynomial);
+                assert_eq!(report.degree, degree);
+                assert_eq!(
+                    report.trace_form_dimension,
+                    if degree.is_multiple_of(2) {
+                        degree
+                    } else {
+                        degree - 1
+                    }
+                );
+                if report.mobius == 0 {
+                    assert_eq!(report.integral_discriminant_mod_eight, None);
+                    assert_eq!(report.arf_invariant, None);
+                    assert_eq!(report.sign_phase, None);
+                } else {
+                    assert!(matches!(
+                        report.integral_discriminant_mod_eight,
+                        Some(1 | 5)
+                    ));
+                    assert_eq!(report.polar_rank, report.trace_form_dimension);
+                    assert_eq!(report.radical_dimension, 0);
+                    assert_eq!(
+                        report.arf_invariant.unwrap() ^ report.arf_degree_correction,
+                        report.sign_phase.unwrap()
+                    );
+                }
+            }
+        }
     }
 
     #[test]
