@@ -300,6 +300,11 @@ pub struct SufficientBoundReport {
 ///     <= constant * ell^power * 2^(3 ell)
 /// ```
 ///
+/// Here `N_n(e) = sum Lambda(F)` over degree-`n` monic polynomials in class
+/// `e`; it is the Mangoldt population, not the unweighted irreducible count.
+/// The later Hayes/Mobius step removes proper prime powers before concluding
+/// irreducible positivity.
+///
 /// at `n in {2 ell + 1, 2 ell + 2}` from `threshold` onward.  Axeyum checks
 /// only the arithmetic consequence of that assumption.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

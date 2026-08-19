@@ -8,6 +8,11 @@ exact class distributions, central moments, signed fourth cumulants, and the
 exact conductor filtration of squared-discrepancy Fourier energy.  ADRs
 0484--0486 keep this CAS-local; the missing estimate is analytic.
 
+The open fourth-moment fact now pins the quantity actually computed:
+`N_n(e)` is the degree-`n` Mangoldt population, not the unweighted
+irreducible count.  The existing checked Hayes/Mobius step is what removes
+proper prime powers before concluding irreducible positivity.
+
 The selected sufficient obligation is
 `M_4(ell,n) <= 64 ell^2 2^(3ell)` for `ell>=200` and
 `n in {2ell+1,2ell+2}`.  Its implication to the universal theorem is checked
@@ -24,4 +29,5 @@ martingale/large-sieve estimate rather than a one-level bound.  Full record:
 <!-- plan-section: landed-changes -->
 
 | 2026-08-19 | `77209a5ee` | Added exact fourth moments/cumulants, checked the conditional implication and low control, retained level-23 evidence, and recorded open facts. |
-| 2026-08-19 | `pending` | Added the exact resource-bounded fourth-moment conductor filtration, quotient-projection controls, public diagnostic, and literature boundary refresh. |
+| 2026-08-19 | `068e0fbff` | Added the exact resource-bounded fourth-moment conductor filtration, quotient-projection controls, public diagnostic, and literature boundary refresh. |
+| 2026-08-19 | `pending` | Corrected the fourth-moment ledger contract from an impossible irreducible mean to the exact Mangoldt-weighted population used by the CAS and conditional proof. |

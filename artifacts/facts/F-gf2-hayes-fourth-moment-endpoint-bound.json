@@ -2,10 +2,10 @@
   "schema_version": 1,
   "id": "F:gf2-hayes-fourth-moment-endpoint-bound",
   "title": "Endpoint Hayes-class fourth central moment bound",
-  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, and let N_n(e) count degree-n monic irreducible polynomials over GF(2) in the invertible residue class e modulo x^(ell+1). Then the sum over the 2^ell classes e of |N_n(e) - 2^(n-ell)|^4 is at most 64 ell^2 2^(3 ell).",
+  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, and let N_n(e) be the degree-n von Mangoldt population of the invertible residue class e modulo x^(ell+1): the sum of Lambda(F) over monic F in that class. Then the sum over the 2^ell classes e of |N_n(e) - 2^(n-ell)|^4 is at most 64 ell^2 2^(3 ell).",
   "formal": {
     "language": "certificate-spec",
-    "statement": "{\"bound\":\"sum_e abs(N_n(e)-2^(n-ell))^4 <= 64*ell^2*2^(3*ell)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-fourth-central-moment-conjecture\",\"level_min\":200,\"population\":\"degree-n monic irreducibles in each invertible residue class modulo x^(ell+1)\",\"version\":1}",
+    "statement": "{\"bound\":\"sum_e abs(N_n(e)-2^(n-ell))^4 <= 64*ell^2*2^(3*ell)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-fourth-central-moment-conjecture\",\"level_min\":200,\"population\":\"sum of the polynomial von Mangoldt function over degree-n monic polynomials in each invertible residue class modulo x^(ell+1)\",\"version\":1}",
     "fragment": "none",
     "free_symbols": [
       "ell",
@@ -23,5 +23,5 @@
     "established_by": "not established in this ledger",
     "source": "Axeyum gf2-lemire lane; proposed as a sufficient analytic cancellation target after exact endpoint-distribution experiments"
   },
-  "notes": "This is deliberately an open obligation, not a promoted finite computation. Exact Axeyum CAS values test the inequality only at bounded levels, and those observations provide no evidence for the quantified statement. The threshold 200 is chosen so the separately checked elementary implication combines this bound with the established degree-1-through-400 fact; it is not claimed to be sharp. No Autogenesis operation is registered because no checker can establish this universally."
+  "notes": "This is deliberately an open obligation, not a promoted finite computation. N_n(e) is Mangoldt-weighted; it is not the number of irreducible polynomials. The separately checked Hayes/Mobius step subtracts prime-power contributions before inferring irreducible positivity. Exact Axeyum CAS values test the inequality only at bounded levels, and those observations provide no evidence for the quantified statement. The threshold 200 is chosen so the arithmetic implication combines this bound with the established degree-1-through-400 fact; it is not claimed to be sharp. No Autogenesis operation is registered because no checker can establish this universally."
 }

@@ -753,6 +753,17 @@ The full distribution exposes a stronger, and apparently more structured,
 route than the raw variance.  Put `D_e=N_n(e)-2^(n-ell)` and
 
 ```text
+N_n(e) = sum_{F monic, deg F=n, <F>=e} Lambda(F).
+```
+
+Thus `N_n(e)` is the exact **Mangoldt population**, not the number of
+irreducibles.  The mean `2^(n-ell)` and every moment below use this weighted
+definition; irreducible positivity follows only after the separately checked
+proper-prime-power subtraction and division by `n`.
+
+Put
+
+```text
 M_r(ell,n) = sum_e |D_e|^r.
 ```
 
