@@ -867,6 +867,13 @@ Out of scope:
     selected delta step, and an empty source axiom footprint. It grants no
     downstream theorem or ledger credit. See
     [ADR-0492](../09-decisions/adr-0492-trace-backed-source-contract-receipts-precede-theorem-receipts.md).
+- [x] Which theorem should first consume the real `Int.gcd` source-contract
+      receipt?
+  - Answer (2026-08-19): preregister `Int.gcd_def` as a calibration-only bridge
+    with one fixed reflexivity construction and zero evaluation/ledger credit.
+    Keep `Int.gcd_fib` as the real horizon target; its named premises
+    `Int.fib_neg` and `Nat.fib_gcd` remain open. See
+    [ADR-0493](../09-decisions/adr-0493-calibration-closes-the-contract-to-theorem-seam-before-evaluation.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?
