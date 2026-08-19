@@ -407,6 +407,29 @@ characterwise calculation.  A useful geometric proof must exploit additional
 structure of this one wildly ramified cyclotomic tower, rather than cite the
 generic curve bound.
 
+There is, however, an exact simplification at every **odd** endpoint.  Put
+`n=2 ell+1`.  Every proper divisor `d` of `n` satisfies `d<=n/3<=ell`, and the
+exponent `n/d` is odd.  The Hayes group `E_ell` has order `2^ell`, so raising a
+class to the power `n/d` is an automorphism.  Hence a proper prime power can
+have identity class only when its underlying prime already has identity
+class.  For degree `d<=ell`, identity class forces the polynomial to be
+`x^d`; this is irreducible only for `d=1`.  Therefore the entire proper-power
+term is the single ramified power `x^n`, with weight one, and
+
+```text
+N_(2ell+1)(1) = 1 + (2ell+1) I_(2ell+1)(1).       (odd reduction)
+```
+
+Thus the odd half of the conjecture needs only the strict inequality
+`N_(2ell+1)(1)>1`, rather than a general proper-power estimate.  The bounded
+native operation `odd_endpoint_prime_power_reduction` records every proper
+divisor and checks the degree, parity, and principal-unit group-order
+invariants without performing a Fourier transform.  Through `ell=8`, its
+constant proper population is cross-checked against the full Hayes inversion.
+This is a genuine reduction of the missing theorem, not the missing strict
+inequality itself: the curve argument above gives only
+`N_(2ell+1)(1)>=1`.
+
 Nor can positivity be amplified by a uniform power-of-two divisibility claim.
 The exact native counts already give `N_9(1)=2^(9-4)+5=37`, so the endpoint
 population can be odd.  Any new-point argument must provide a genuine lower
@@ -505,6 +528,16 @@ Thus `y^2+y=alpha+a` is soluble in `GF(2^n)`, and Capell's criterion makes
 has degree at most `2 floor(n/2)=n-1`, so the composition violates the shaped
 bound.  Hence no choice of the binary shift `a` turns this familiar extension
 construction into a universal shaped doubling induction.
+
+Nor can an odd-degree witness be advanced one degree by `f -> x f+1`.  The
+map has exactly the desired shape: a degree-`2m-1` tail of degree at most
+`m-1` becomes a degree-`2m` tail of degree at most `m`.  But every irreducible
+binary `f` of degree greater than one has `f(1)=1`, since otherwise `x+1`
+divides it.  Consequently `(x f+1)(1)=0`, so the proposed even-degree output
+is always reducible.  The native Rabin checker also rejects this transform on
+all 199 odd-degree committed witnesses from degrees 3 through 399; the
+elementary root argument is the theorem, while the scan is only its mutation
+control.
 
 ### A sufficient endpoint discrepancy lemma
 

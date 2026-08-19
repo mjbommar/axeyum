@@ -36,7 +36,10 @@ Keep this research surface in `axeyum-cas` and extract a bounded
    telescoping identity; and
 5. exact bignum verification that explicitly supplied conductor or fourth-
    moment estimates, together with the separately certified finite range,
-   imply the required endpoint and proper-divisor inequalities.
+   imply the required endpoint and proper-divisor inequalities; and
+6. exact finite-group removal of proper prime powers, including a structural
+   odd-endpoint certificate that reduces `n=2ell+1` to
+   `N_n(1)=1+n I_n(1)` without a Fourier transform.
 
 Every expensive entry point takes explicit limits on `ell`, degree, group
 order, and retained table cells and declines before allocation. The diagnostic
@@ -66,6 +69,14 @@ projection is controlled level by level against independently recomputed lower
 Hayes distributions. The separate integer group-ring checker projects explicit
 unit-polynomial representatives and reproduces both level-8 energy vectors;
 the public CLI is exercised by the GF(2) artifact gate.
+
+The prime-power inversion reconstructs every class population after removing
+all lower-degree prime powers and fails on negative, indivisible, or
+non-reconstructing results.  At odd endpoints, a separate structural report
+enumerates every proper divisor, checks that its exponent is odd and its prime
+degree is at most `ell`, and records the unique surviving `x^n` contribution.
+Exact full inversion agrees with that constant-one population through
+`ell=8`, including composite endpoint degree 15.
 
 All-target, all-feature `axeyum-cas` Clippy passes with warnings denied. The
 full Lemire range gate exercises the Rust and Python arithmetic implications,

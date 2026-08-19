@@ -502,6 +502,58 @@ impl IdentityClassIrreducibleReport {
     }
 }
 
+/// One proper divisor in the odd-endpoint prime-power reduction.
+///
+/// If the target is `n = 2 ell + 1`, every exponent `n / prime_degree`
+/// below is odd.  It is therefore coprime to the order `2^ell` of the Hayes
+/// principal-unit group, so taking that power is an automorphism of the
+/// group.  A prime power can land in the identity class only when the prime
+/// itself is in the identity class.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OddEndpointProperDivisor {
+    /// Degree of the irreducible underlying the proper prime power.
+    pub prime_degree: usize,
+    /// Prime-power exponent `(2 ell + 1) / prime_degree`.
+    pub exponent: usize,
+}
+
+/// Structural certificate for the proper-prime-power term at an odd endpoint.
+///
+/// For `n = 2 ell + 1`, every proper divisor of `n` is at most `ell`: the
+/// quotient is an odd integer at least three.  In that degree range, the only
+/// monic irreducible in the identity class modulo `x^(ell+1)` is `x` itself.
+/// Combined with the odd-power automorphism above, this proves exactly
+///
+/// ```text
+/// N_n(1) = 1 + n I_n(1).
+/// ```
+///
+/// Consequently `N_n(1) > 1` is sufficient and necessary for an
+/// identity-class irreducible at the odd endpoint.  This report records every
+/// proper divisor so a consumer can replay the finite arithmetic rather than
+/// trusting a coarse bound on prime powers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OddEndpointPrimePowerReduction {
+    /// Number of prescribed leading zero coefficients.
+    pub ell: usize,
+    /// Odd endpoint degree `2 ell + 1`.
+    pub degree: usize,
+    /// Exact order `2^ell` of the principal-unit group.
+    pub group_order: usize,
+    /// Every proper divisor of `degree`, in increasing order.
+    pub proper_divisors: Vec<OddEndpointProperDivisor>,
+    /// Exact weighted proper-prime-power population, always one.
+    pub proper_prime_power_population: u128,
+}
+
+impl OddEndpointPrimePowerReduction {
+    /// Whether a supplied exact Mangoldt population proves a new prime.
+    #[must_use]
+    pub const fn population_proves_irreducible_exists(&self, population: u128) -> bool {
+        population > self.proper_prime_power_population
+    }
+}
+
 /// Fourier energy contributed by one exact conductor to the squared class
 /// discrepancy.
 ///
@@ -1197,6 +1249,74 @@ pub fn class_population_distribution(
 ) -> Result<ClassPopulationDistribution, HayesError> {
     admit(ell, degree, limits)?;
     class_population_distribution_admitted(ell, degree)
+}
+
+/// Certify the exact proper-prime-power reduction at `n = 2 ell + 1`.
+///
+/// This operation is structural: it enumerates divisors and checks the
+/// principal-unit group order, but performs no Fourier transform and allocates
+/// no class table.  The caller's `ell`, degree, and group-order limits are
+/// still enforced before the divisor scan.
+///
+/// # Errors
+///
+/// Rejects `ell = 0`, arithmetic outside the host representation, caller
+/// limits, or any violation of the odd-endpoint divisor invariants.
+pub fn odd_endpoint_prime_power_reduction(
+    ell: usize,
+    limits: HayesLimits,
+) -> Result<OddEndpointPrimePowerReduction, HayesError> {
+    if ell == 0 {
+        return Err(HayesError::InvalidParameter(
+            "ell must be positive".to_owned(),
+        ));
+    }
+    check_limit("ell", ell, limits.max_ell)?;
+    let degree = ell
+        .checked_mul(2)
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| HayesError::InvalidParameter("odd endpoint degree overflow".to_owned()))?;
+    check_limit("degree", degree, limits.max_degree)?;
+    let shift = u32::try_from(ell).map_err(|_| {
+        HayesError::InvalidParameter("ell exceeds the host shift domain".to_owned())
+    })?;
+    let group_order = 1_usize.checked_shl(shift).ok_or_else(|| {
+        HayesError::InvalidParameter("ell exceeds the host shift domain".to_owned())
+    })?;
+    check_limit("group_order", group_order, limits.max_group_order)?;
+
+    let mut proper_divisors = Vec::new();
+    for prime_degree in positive_divisors(degree) {
+        if prime_degree == degree {
+            continue;
+        }
+        let exponent = degree / prime_degree;
+        if prime_degree > ell || exponent < 3 || exponent.is_multiple_of(2) {
+            return Err(HayesError::Invariant(format!(
+                "odd endpoint divisor invariant failed: ell={ell}, degree={degree}, prime_degree={prime_degree}, exponent={exponent}"
+            )));
+        }
+        proper_divisors.push(OddEndpointProperDivisor {
+            prime_degree,
+            exponent,
+        });
+    }
+    if proper_divisors
+        .first()
+        .is_none_or(|term| term.prime_degree != 1 || term.exponent != degree)
+    {
+        return Err(HayesError::Invariant(
+            "odd endpoint divisor list does not begin with the ramified x-power".to_owned(),
+        ));
+    }
+
+    Ok(OddEndpointPrimePowerReduction {
+        ell,
+        degree,
+        group_order,
+        proper_divisors,
+        proper_prime_power_population: 1,
+    })
 }
 
 /// Remove every proper-prime-power contribution from the identity Hayes class.
@@ -2349,6 +2469,83 @@ mod tests {
         let even = identity_class_irreducible_count(5, 12, HayesLimits::default()).unwrap();
         assert!(even.proper_prime_power_population != 0);
         assert_eq!(even.irreducible_count, 12);
+    }
+
+    #[test]
+    fn odd_endpoint_reduction_leaves_only_the_ramified_x_power() {
+        for ell in 1..=8 {
+            let reduction =
+                odd_endpoint_prime_power_reduction(ell, HayesLimits::default()).unwrap();
+            assert_eq!(reduction.degree, 2 * ell + 1);
+            assert_eq!(reduction.group_order, 1 << ell);
+            assert_eq!(reduction.proper_prime_power_population, 1);
+            assert!(reduction.proper_divisors.iter().all(|term| {
+                term.prime_degree <= ell
+                    && term.exponent >= 3
+                    && term.exponent % 2 == 1
+                    && reduction.degree == term.prime_degree * term.exponent
+            }));
+
+            let exact =
+                identity_class_irreducible_count(ell, reduction.degree, HayesLimits::default())
+                    .unwrap();
+            assert_eq!(exact.proper_prime_power_population, 1);
+            assert_eq!(
+                reduction.population_proves_irreducible_exists(exact.mangoldt_population),
+                exact.proves_irreducible_exists()
+            );
+        }
+
+        let composite = odd_endpoint_prime_power_reduction(7, HayesLimits::default()).unwrap();
+        assert_eq!(
+            composite.proper_divisors,
+            vec![
+                OddEndpointProperDivisor {
+                    prime_degree: 1,
+                    exponent: 15,
+                },
+                OddEndpointProperDivisor {
+                    prime_degree: 3,
+                    exponent: 5,
+                },
+                OddEndpointProperDivisor {
+                    prime_degree: 5,
+                    exponent: 3,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn odd_endpoint_reduction_enforces_structural_limits() {
+        assert!(matches!(
+            odd_endpoint_prime_power_reduction(0, HayesLimits::default()),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        let degree_limited = HayesLimits {
+            max_degree: 16,
+            ..HayesLimits::default()
+        };
+        assert_eq!(
+            odd_endpoint_prime_power_reduction(8, degree_limited),
+            Err(HayesError::ResourceLimit {
+                resource: "degree",
+                requested: 17,
+                limit: 16,
+            })
+        );
+        let group_limited = HayesLimits {
+            max_group_order: 127,
+            ..HayesLimits::default()
+        };
+        assert_eq!(
+            odd_endpoint_prime_power_reduction(7, group_limited),
+            Err(HayesError::ResourceLimit {
+                resource: "group_order",
+                requested: 128,
+                limit: 127,
+            })
+        );
     }
 
     #[test]
