@@ -824,6 +824,14 @@ Out of scope:
     between dependency selection and emission, and independently admit the
     atomic package. Direct value occurrences remain exact. See
     [ADR-0486](../09-decisions/adr-0486-auto-param-normalization-includes-checked-recursor-binder-domains.md).
+- [x] Which proof producer and budget should define the first complete
+      train/development census after all checked type-slice boundaries exist?
+  - Answer (2026-08-19): run exactly ADR-0481's existing Pi-equality
+    reflexivity grammar once per row with its fixed eight-binder and
+    sixteen-node limits. Preserve producer, kernel, and assurance outcomes
+    separately; grant no ledger or operation authority; and do not inspect
+    held-out or add adaptive routing. See
+    [ADR-0487](../09-decisions/adr-0487-first-type-slice-producer-census-is-fixed-reflexivity-only.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?
