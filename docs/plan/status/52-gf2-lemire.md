@@ -227,6 +227,18 @@ small-kernel gain; the aggregate connected-cumulant/Witt-imbalance lemma
 remains the proof frontier.  Garefalakis's dedicated consecutive-zero theorem
 was also checked directly and fails Lemire's `m=n`, `l=floor(n/2)` endpoint in
 its stated sufficient condition.
+An exact first-moment alternative now reconstructs every Mangoldt class
+population from the signed sibling differences in the binary Witt quotient
+tree.  The weighted `L1` Haar triangle is sufficient for the `2^ell`
+discrepancy bound and passes both endpoints for every fleet-tested
+`16<=ell<=20`; the level-4 odd failure is pinned so this is not tautological.
+The buffered square-root-fibre target
+`H_j^*<=3j 2^ceil((n-j)/2)` implies the odd endpoint from `ell=13` and the even
+endpoint from `ell=15`.  Its sharper coefficient-two predecessor is explicitly
+refuted at `(ell,n,j)=(19,40,4)`.  The coefficient-three statement is a new
+conjectured Autogenesis fact, not theorem credit; proving it by relative
+Artin--Schreier--Witt or long-cycle geometry would finish the endpoint without
+the fourth moment.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
@@ -238,6 +250,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `039d905a6` | Reconstructed every endpoint population from raw binary Witt sibling imbalances, added an exact sufficient Haar triangle, and isolated a buffered square-root-fibre bound that closes both symbolic endpoint ledgers. |
 | 2026-08-19 | `b24120651` | Proved the naive first-slot projection across all binary Witt blocks has kernel order `2^floor(ell/2)`, rejecting a direct growing-conductor Fomenko generalization before expensive `L`-factor work. |
 | 2026-08-19 | `07ed9bb8d` | Rejected direct magic-square gcd matrices for the full connected character tuple, then added an exact local Witt-cylinder concentration ledger whose root and singleton boundaries independently recover the fourth/second moments. |
 | 2026-08-19 | `1a75298ea` | Expanded every endpoint discrepancy by convolution order, subtracted all three Wick pairings cellwise, and exactly reconstructed the connected fourth cumulant as the signed symmetric order tensor required for gcd stratification. |
