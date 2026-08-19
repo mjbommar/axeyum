@@ -557,9 +557,18 @@ those gcd matrices parametrize a two-sided product equation from one character
 and its conjugate, whereas the connected remainder has four characters subject
 only to one product constraint after its pairing diagonals are removed.  The
 whole-cumulant route is now the exact conductor martingale.  A new local
-Witt-cylinder ledger measures its exact fourth-over-second concentration; the
-pinned odd row has root ratio about `2.813` and worst local ratio below `5.92`,
-making a uniform ceiling of eight the current fleet-tested Carleson target.
+Witt-cylinder ledger measures its exact fourth-over-second concentration.  The
+provisional ceiling eight is refuted by the even `ell=12` and `ell=15` rows;
+the replacement linear ceiling `R_j(b)<=ell` survives both endpoint parities
+through `ell=19`.  A stronger max-to-average reduction is already refuted at
+the pinned `ell=8` root, so the proof must retain descendant distribution.  A
+checked implication turns the conjectural local bound into
+`M_4<=16 ell^5 2^(3ell)` and closes the
+symbolic endpoint ledger after the finite degree-400 handoff, but the uniform
+local bound itself remains unproved and receives no theorem credit.
+The exact local statement is now an explicit conjectured fact-ledger
+obligation, with no proof route or evidence, so Autogenesis can dispatch the
+actual frontier without mistaking the bounded report for a certificate.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
