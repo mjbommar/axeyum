@@ -17,7 +17,7 @@ use sha2::{Digest, Sha256};
 const TARGET: &str = "Axeyum.Autogenesis.Coverage.r080";
 const TARGET_FACT: &str = "F:ml430-nat-fib-add-two-b86e0c82";
 const STREAM_SHA256: &str = "00578e949d71154cf5d9e79005b2a1c8f7fe73d9885ae96b0dd5cb6744c30501";
-const POLICY_VERSION: &str = "nat-fib-iterate-recurrence-v2";
+const POLICY_VERSION: &str = "nat-fib-iterate-recurrence-v3";
 const MAX_PLAN_TEMPLATES: usize = 2;
 const MAX_KERNEL_SUBMISSIONS: usize = 2;
 
@@ -127,7 +127,7 @@ fn run() -> Result<(), String> {
             "goal_sha256": goal_sha256,
         },
         "search": {
-            "operation": "bounded-iterate-recurrence-v2",
+            "operation": "bounded-iterate-recurrence-v3",
             "plan_templates": MAX_PLAN_TEMPLATES,
             "accepted_plan_rank": search.plan_rank,
             "kernel_submissions": search.submissions,
