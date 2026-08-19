@@ -2,12 +2,13 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** fresh-kernel transport landed; held-out sealed.
+**Status:** typed slicing landed; held-out sealed.
 
-**Next:** typed abstraction and exact specialization.
+**Next:** bind receipt; rerun train/dev census.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `903c22423` | Typed slice |
 | 2026-08-19 | `5403ce1a0` | Root export |
 | 2026-08-19 | `b03ca1884` | Slice ADR |
 | 2026-08-19 | `b1ea57332` | Slice census |

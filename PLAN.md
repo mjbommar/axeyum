@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `903c22423` | Typed slice |
 | 2026-08-19 | `5403ce1a0` | Root export |
 | 2026-08-19 | `b03ca1884` | Slice ADR |
 | 2026-08-19 | `b1ea57332` | Slice census |
@@ -189,9 +190,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Status:** fresh-kernel transport landed; held-out sealed.
+**Status:** typed slicing landed; held-out sealed.
 
-**Next:** typed abstraction and exact specialization.
+**Next:** bind receipt; rerun train/dev census.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
