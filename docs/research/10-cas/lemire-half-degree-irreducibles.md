@@ -435,6 +435,67 @@ The exact native counts already give `N_9(1)=2^(9-4)+5=37`, so the endpoint
 population can be odd.  Any new-point argument must provide a genuine lower
 bound or cancellation estimate, not infer one from `N_n(1)>=1` and divisibility.
 
+### The exact half-level sieve hits the parity barrier
+
+There is an elementary identity which initially looks strong enough to prove
+existence, but it pinpoints rather than removes the sieve obstruction.  Put
+`m=floor(n/2)` and let
+
+```text
+S_n = {x^n + a_m x^m + ... + a_1 x + 1 : a_i in GF(2)}.
+```
+
+For every monic constant-one polynomial `D` of degree `d<=m`, triangular
+division at the leading coefficients shows that exactly `2^(m-d)` members of
+`S_n` are divisible by `D`.  If
+
+```text
+w_m(f) = sum_(D|f, deg D<=m) mu(D),
+```
+
+then, after omitting the ramified prime `x`, the polynomial Euler product is
+
+```text
+sum_(D monic, D(0)=1) mu(D) u^deg(D)
+  = product_(P != x) (1-u^deg(P))
+  = (1-2u)/(1-u)
+  = 1-u-u^2-u^3-....
+```
+
+Consequently the divisibility uniformity gives the exact universal identity
+
+```text
+sum_(f in S_n) w_m(f)
+  = 2^m - sum_(d=1)^m 2^(m-d)
+  = 1.                                             (half-level sieve)
+```
+
+A prime has weight one.  The tempting final claim that every composite has
+nonpositive weight is false, however.  Already at `n=10`, `m=5`,
+
+```text
+f=x^10+x^5+x^3+x^2+x+1
+  =(x+1)(x^2+x+1)^3(x^3+x+1)
+```
+
+has distinct factor degrees `1,2,3` and
+`w_5(f)=1-3+3=1`; the omitted three-factor divisor has degree six.  Native
+Berlekamp enumeration finds positive composite weights at every degree
+`10<=n<=30`, with maximum observed weight six by degree 30.  This is finite
+diagnostic evidence, not an asymptotic assertion.
+
+`axeyum_cas::gf2_hayes::half_interval_mobius_sieve_report` checks the aggregate
+identity with exact bignums, computes the truncated weight of a supplied
+distinct-factor-degree pattern, enforces caller limits, and pins the degree-10
+counterexample against Axeyum's own Berlekamp factorization.  Thus a proof via
+divisor weights needs a parity-breaking Type-II/bilinear estimate or an
+equivalent Hayes-character cancellation; exact Type-I divisibility alone is
+insufficient.  Porritt's explicit exponential--Möbius theorem does not supply
+that estimate at `q=2`: its bound
+`4 q^((3n+1)/4) (3 sqrt(3)/2)^n` exceeds even the full degree-`n` population in
+this specialization.  See [A note on exponential-Möbius sums over
+`F_q[t]`](https://arxiv.org/abs/1711.08729), Theorem 1.
+
 Supersingularity does not provide that extra structure beyond the first few
 levels.  Gorodetsky identifies the same curve through the completed
 short-interval-character factorization and proves that `C_ell` is not

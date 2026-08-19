@@ -546,6 +546,36 @@ pub struct OddEndpointPrimePowerReduction {
     pub proper_prime_power_population: u128,
 }
 
+/// Exact diagnostic for the lower-bound sieve at the Lemire half interval.
+///
+/// For `m = floor(degree/2)`, let `S` contain the monic constant-one binary
+/// polynomials `x^degree + a_m x^m + ... + a_1 x + 1`.  The report checks the
+/// identity
+///
+/// ```text
+/// sum_(f in S) sum_(D | f, deg D <= m) mu(D) = 1.
+/// ```
+///
+/// `candidate_weight` is the same truncated Möbius weight for one supplied
+/// multiset of *distinct-factor degrees*. Equal entries are allowed because
+/// different irreducible factors can have the same degree; multiplicities of
+/// one factor must be omitted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HalfIntervalMobiusSieveReport {
+    /// Degree of every polynomial in the interval.
+    pub degree: usize,
+    /// Truncation level `floor(degree/2)`.
+    pub cutoff: usize,
+    /// Number `2^cutoff` of polynomials in the interval.
+    pub interval_size: BigInt,
+    /// Exact aggregate truncated Möbius weight; always one when admitted.
+    pub total_weight: BigInt,
+    /// Distinct irreducible-factor degrees supplied by the caller.
+    pub distinct_factor_degrees: Vec<usize>,
+    /// Truncated Möbius weight of that factor-degree pattern.
+    pub candidate_weight: BigInt,
+}
+
 impl OddEndpointPrimePowerReduction {
     /// Whether a supplied exact Mangoldt population proves a new prime.
     #[must_use]
@@ -1316,6 +1346,93 @@ pub fn odd_endpoint_prime_power_reduction(
         group_order,
         proper_divisors,
         proper_prime_power_population: 1,
+    })
+}
+
+/// Check the exact half-interval truncated-Möbius identity and one factor pattern.
+///
+/// Every monic constant-one divisor `D` of degree `d <= m` divides exactly
+/// `2^(m-d)` members of the degree-`degree` half interval.  Removing the
+/// ramified prime `x` from the polynomial Euler product gives
+///
+/// ```text
+/// product_(P != x) (1-u^deg(P)) = (1-2u)/(1-u) = 1-u-u^2-...,
+/// ```
+///
+/// so the aggregate truncated weight is exactly one.  The caller-supplied
+/// factor degrees expose whether this otherwise tempting lower-bound weight is
+/// positive on a composite factorization pattern.
+///
+/// # Errors
+///
+/// Rejects degrees below two, caller limits, a zero factor degree, a
+/// distinct-factor degree sum larger than the polynomial degree, or an
+/// allocation-size overflow.
+pub fn half_interval_mobius_sieve_report(
+    degree: usize,
+    distinct_factor_degrees: &[usize],
+    limits: HayesLimits,
+) -> Result<HalfIntervalMobiusSieveReport, HayesError> {
+    if degree < 2 {
+        return Err(HayesError::InvalidParameter(
+            "half-interval sieve degree must be at least two".to_owned(),
+        ));
+    }
+    check_limit("degree", degree, limits.max_degree)?;
+    let cutoff = degree / 2;
+    check_limit("ell", cutoff, limits.max_ell)?;
+    if distinct_factor_degrees.contains(&0) {
+        return Err(HayesError::InvalidParameter(
+            "distinct irreducible-factor degrees must be positive".to_owned(),
+        ));
+    }
+    let factor_degree_sum = distinct_factor_degrees
+        .iter()
+        .try_fold(0_usize, |sum, &factor_degree| {
+            sum.checked_add(factor_degree)
+        })
+        .ok_or_else(|| HayesError::InvalidParameter("factor-degree sum overflow".to_owned()))?;
+    if factor_degree_sum > degree {
+        return Err(HayesError::InvalidParameter(format!(
+            "distinct factor degrees sum to {factor_degree_sum}, exceeding degree {degree}"
+        )));
+    }
+
+    // Coefficients through u^m of product_i (1-u^d_i), evaluated at u=1.
+    // Descending updates ensure that each supplied distinct factor is selected
+    // at most once even when several factors have the same degree.
+    let coefficient_count = cutoff.checked_add(1).ok_or_else(|| {
+        HayesError::InvalidParameter("Möbius coefficient count overflow".to_owned())
+    })?;
+    let mut coefficients = vec![BigInt::from(0_u8); coefficient_count];
+    coefficients[0] = BigInt::from(1_u8);
+    for &factor_degree in distinct_factor_degrees {
+        if factor_degree > cutoff {
+            continue;
+        }
+        for current_degree in (factor_degree..=cutoff).rev() {
+            let selected = coefficients[current_degree - factor_degree].clone();
+            coefficients[current_degree] -= selected;
+        }
+    }
+    let candidate_weight = coefficients.into_iter().sum::<BigInt>();
+
+    let interval_size = BigInt::from(1_u8) << cutoff;
+    let nonconstant_geometric_sum = &interval_size - BigInt::from(1_u8);
+    let total_weight = &interval_size - nonconstant_geometric_sum;
+    if total_weight != BigInt::from(1_u8) {
+        return Err(HayesError::Invariant(
+            "half-interval truncated Möbius identity did not reconstruct one".to_owned(),
+        ));
+    }
+
+    Ok(HalfIntervalMobiusSieveReport {
+        degree,
+        cutoff,
+        interval_size,
+        total_weight,
+        distinct_factor_degrees: distinct_factor_degrees.to_vec(),
+        candidate_weight,
     })
 }
 
@@ -2544,6 +2661,73 @@ mod tests {
                 resource: "group_order",
                 requested: 128,
                 limit: 127,
+            })
+        );
+    }
+
+    #[test]
+    fn half_interval_mobius_sieve_exposes_the_parity_barrier() {
+        let limits = HayesLimits {
+            max_ell: 24,
+            ..HayesLimits::default()
+        };
+        for degree in 2..=48 {
+            let report = half_interval_mobius_sieve_report(degree, &[], limits).unwrap();
+            assert_eq!(report.cutoff, degree / 2);
+            assert_eq!(report.interval_size, BigInt::from(1_u8) << (degree / 2));
+            assert_eq!(report.total_weight, BigInt::from(1_u8));
+        }
+
+        // x^10+x^5+x^3+x^2+x+1 has distinct irreducible factors of degrees
+        // 1, 2, and 3 (with multiplicities supplying the remaining degree).
+        // Its truncated weight is +1, so aggregate weight one is not a
+        // pointwise lower bound for the prime indicator.
+        let bits = 0x42f_u16;
+        let coefficients = (0..=10)
+            .map(|exponent| i128::from(u8::from(bits & (1 << exponent) != 0)))
+            .collect::<Vec<_>>();
+        let factors = crate::gfp::factor_berlekamp(&coefficients, 2).unwrap();
+        assert_eq!(
+            factors
+                .iter()
+                .map(|(factor, _multiplicity)| factor.len() - 1)
+                .collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
+        assert!(
+            factors
+                .iter()
+                .any(|(_factor, multiplicity)| *multiplicity > 1)
+        );
+        let counterexample = half_interval_mobius_sieve_report(10, &[1, 2, 3], limits).unwrap();
+        assert_eq!(counterexample.candidate_weight, BigInt::from(1_u8));
+    }
+
+    #[test]
+    fn half_interval_mobius_sieve_declines_malformed_inputs() {
+        let limits = HayesLimits::default();
+        assert!(matches!(
+            half_interval_mobius_sieve_report(1, &[], limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            half_interval_mobius_sieve_report(10, &[0], limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            half_interval_mobius_sieve_report(10, &[6, 5], limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        let degree_limited = HayesLimits {
+            max_degree: 9,
+            ..limits
+        };
+        assert_eq!(
+            half_interval_mobius_sieve_report(10, &[], degree_limited),
+            Err(HayesError::ResourceLimit {
+                resource: "degree",
+                requested: 10,
+                limit: 9,
             })
         );
     }
