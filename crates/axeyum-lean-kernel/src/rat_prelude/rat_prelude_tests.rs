@@ -200,7 +200,7 @@ fn rationals_model_the_real_axioms() {
         .collect();
     assert!(
         missed.is_empty(),
-        "these Real declarations have no ℚ interpretation: {missed:?}"
+        "these AxReal declarations have no ℚ interpretation: {missed:?}"
     );
 }
 

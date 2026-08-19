@@ -1,6 +1,6 @@
 //! Tests for the ordered-ring signature and the parameterized constructor.
 //!
-//! Three claims. (1) The `Real` package satisfies the interface this module
+//! Three claims. (1) The `AxReal` package satisfies the interface this module
 //! states independently of `build_arith_prelude`, and the numbers that fall out
 //! of the check — carrier universe 1, nine `Eq`-shaped laws — are *measured*.
 //! (2) Each of the five guards refuses on its own: every negative test below
@@ -8,7 +8,7 @@
 //! (3) The **constructed** reals are a carrier this route reconstructs over: the
 //! equality slot is adopted from `CRealPrelude` at a measured cost of zero new
 //! declarations, and the resulting Farkas refutation's Lean module mentions no
-//! `Real` declaration at all.
+//! `AxReal` declaration at all.
 
 use axeyum_ir::{Rational, TermArena, TermId};
 use axeyum_lean_kernel::{
@@ -24,7 +24,7 @@ use crate::reconstruct::arithmetic::ordered_ring::{
 };
 use crate::reconstruct::arithmetic::{LraReconstructCtx, reconstruct_lra_proof};
 
-/// A kernel with the `Real` package built, and the package as a signature.
+/// A kernel with the `AxReal` package built, and the package as a signature.
 fn real_signature() -> (Kernel, RingSignature) {
     let mut kernel = Kernel::new();
     let arith = build_arith_prelude(&mut kernel).expect("the real prelude builds");
@@ -43,7 +43,7 @@ fn baby_farkas() -> (TermArena, Vec<TermId>) {
     (arena, vec![upper, lower])
 }
 
-/// The `Real` package satisfies this module's independent statement of the
+/// The `AxReal` package satisfies this module's independent statement of the
 /// ordered-ring interface, and the two numbers the check reads out of the kernel
 /// are the ones ADR-0456 and ADR-0512 recorded.
 #[test]
@@ -51,24 +51,24 @@ fn the_real_package_satisfies_the_ring_interface() {
     let (mut kernel, sig) = real_signature();
     let report = sig
         .validate_in(&mut kernel)
-        .expect("the Real package is an ordered-ring signature");
+        .expect("the AxReal package is an ordered-ring signature");
 
     assert_eq!(
         report.carrier_level, 1,
-        "`Real : Type` is `Sort 1`; the reconstruction builds `Eq` at that level"
+        "`AxReal : Type` is `Sort 1`; the reconstruction builds `Eq` at that level"
     );
     assert_eq!(
         report.equality_laws,
         vec![
-            "Real.add_comm",
-            "Real.add_assoc",
-            "Real.add_zero",
-            "Real.add_neg",
-            "Real.mul_comm",
-            "Real.mul_assoc",
-            "Real.mul_one",
-            "Real.mul_zero",
-            "Real.left_distrib",
+            "AxReal.add_comm",
+            "AxReal.add_assoc",
+            "AxReal.add_zero",
+            "AxReal.add_neg",
+            "AxReal.mul_comm",
+            "AxReal.mul_assoc",
+            "AxReal.mul_one",
+            "AxReal.mul_zero",
+            "AxReal.left_distrib",
         ],
         "exactly nine of the 22 laws are stated with an equality -- the nine \
          `enable_setoid_equality` restates through the equality slot"
@@ -95,7 +95,7 @@ fn a_signature_entry_absent_from_the_environment_is_refused() {
     );
 }
 
-/// Guard 2. A "carrier" that is not a type is refused. `Real.zero` is declared,
+/// Guard 2. A "carrier" that is not a type is refused. `AxReal.zero` is declared,
 /// so guard 1 passes and this is the guard under test.
 #[test]
 fn a_carrier_that_is_not_a_type_is_refused() {
@@ -109,11 +109,11 @@ fn a_carrier_that_is_not_a_type_is_refused() {
 }
 
 /// Guard 3. An operation whose arity is wrong is refused even though every name
-/// is declared and every name is a genuine `Real` symbol.
+/// is declared and every name is a genuine `AxReal` symbol.
 #[test]
 fn an_operation_of_the_wrong_shape_is_refused() {
     let (mut kernel, mut sig) = real_signature();
-    // `Real.neg : Real → Real` in the slot that must be `Real → Real → Real`.
+    // `AxReal.neg : AxReal → AxReal` in the slot that must be `AxReal → AxReal → AxReal`.
     sig.add = sig.neg;
 
     let err = sig
@@ -121,7 +121,7 @@ fn an_operation_of_the_wrong_shape_is_refused() {
         .expect_err("a mis-shaped operation must be refused");
     let rendered = format!("{err:?}");
     assert!(
-        rendered.contains("R -> R -> R") && rendered.contains("Real.neg"),
+        rendered.contains("R -> R -> R") && rendered.contains("AxReal.neg"),
         "the refusal must name the symbol and the shape it failed, got: {rendered}"
     );
 }
@@ -130,7 +130,7 @@ fn an_operation_of_the_wrong_shape_is_refused() {
 #[test]
 fn a_law_that_is_not_a_proposition_is_refused() {
     let (mut kernel, mut sig) = real_signature();
-    // `Real.add : Real → Real → Real` inhabits `Sort 1`, not `Prop`.
+    // `AxReal.add : AxReal → AxReal → AxReal` inhabits `Sort 1`, not `Prop`.
     sig.le_refl = sig.add;
 
     let err = sig
@@ -138,7 +138,7 @@ fn a_law_that_is_not_a_proposition_is_refused() {
         .expect_err("a non-Prop law must be refused");
     let rendered = format!("{err:?}");
     assert!(
-        rendered.contains("do not state a proposition") && rendered.contains("Real.add"),
+        rendered.contains("do not state a proposition") && rendered.contains("AxReal.add"),
         "got: {rendered}"
     );
 }
@@ -165,7 +165,7 @@ fn claiming_a_defined_equality_while_the_laws_still_use_eq_is_refused() {
         "got: {rendered}"
     );
     assert!(
-        rendered.contains("Real.add_comm") && rendered.contains("Real.left_distrib"),
+        rendered.contains("AxReal.add_comm") && rendered.contains("AxReal.left_distrib"),
         "the refusal must name the offending laws, got: {rendered}"
     );
 }
@@ -190,7 +190,7 @@ fn the_parameterized_constructor_reproduces_the_default_route() {
 
     let (kernel, sig) = real_signature();
     let mut param_ctx = LraReconstructCtx::with_ring_signature(kernel, sig)
-        .expect("the Real package is an admissible signature");
+        .expect("the AxReal package is an admissible signature");
     let param_proof = reconstruct_lra_proof(&mut param_ctx, &arena, &assertions)
         .expect("baby-Farkas reconstructs over the supplied signature");
     let param_general =
@@ -228,7 +228,7 @@ fn the_parameterized_constructor_refuses_an_invalid_signature() {
 /// `try_new` is `new` without the panic, and agrees with it.
 #[test]
 fn try_new_agrees_with_new() {
-    let a = LraReconstructCtx::try_new().expect("the Real package builds");
+    let a = LraReconstructCtx::try_new().expect("the AxReal package builds");
     let b = LraReconstructCtx::new();
     assert_eq!(a.arith().declarations(), b.arith().declarations());
     assert_eq!(a.equality(), RingEquality::KernelEq);
@@ -245,13 +245,13 @@ fn try_new_agrees_with_new() {
 /// - the carrier is `Sort 1` — the *same* universe the reconstruction hard-wires
 ///   its `Eq`/`Eq.rec` applications at, so that hard-wiring is not an obstacle
 ///   for this carrier (it would be for any other level);
-/// - exactly the same nine laws are stated with `CReal.Equiv` as the `Real`
-///   package states with `Eq Real`, which is what makes the 39-binder setoid
+/// - exactly the same nine laws are stated with `CReal.Equiv` as the `AxReal`
+///   package states with `Eq AxReal`, which is what makes the 39-binder setoid
 ///   telescope the right shape to instantiate at.
 ///
 /// What this does *not* yet show is that a refutation reconstructs over it: the
 /// proof-term route still mints its equality slot by declaring axioms and
-/// restating the `Real` laws (`enable_setoid_equality`), and `CReal` needs those
+/// restating the `AxReal` laws (`enable_setoid_equality`), and `CReal` needs those
 /// slots *adopted* from `CRealPrelude` instead. That is the next slice, and this
 /// test is its precondition.
 #[test]
@@ -263,7 +263,7 @@ fn the_constructed_reals_satisfy_the_ring_signature() {
 
     assert_eq!(
         report.carrier_level, 1,
-        "`CReal : Type` is `Sort 1`, like `Real` -- the universe the reconstruction \
+        "`CReal : Type` is `Sort 1`, like `AxReal` -- the universe the reconstruction \
          builds `Eq` at"
     );
     assert_eq!(
@@ -279,7 +279,7 @@ fn the_constructed_reals_satisfy_the_ring_signature() {
             "CReal.mul_zero",
             "CReal.left_distrib",
         ],
-        "the same nine laws that the Real package states with `Eq` are the nine \
+        "the same nine laws that the AxReal package states with `Eq` are the nine \
          CReal states with `Equiv`"
     );
 }
@@ -307,7 +307,7 @@ fn the_constructed_reals_are_refused_when_the_signature_claims_kernel_eq() {
 
 /// The constructed reals as a [`RingSignature`] plus the [`EqualitySlot`] that
 /// `CRealPrelude` already proves, built entirely out of
-/// [`CRealPrelude`](axeyum_lean_kernel::CRealPrelude) — no `Real` package in
+/// [`CRealPrelude`](axeyum_lean_kernel::CRealPrelude) — no `AxReal` package in
 /// this kernel at all.
 fn creal_signature() -> (Kernel, RingSignature, EqualitySlot) {
     // Built ONCE per process and cloned, for the same reason and on the same
@@ -394,10 +394,10 @@ fn creal_ctx() -> (LraReconstructCtx, crate::reconstruct::SetoidAdoption) {
 
 /// **The measurement this slice exists for.** Filling the equality slot from
 /// `CRealPrelude` adds **zero** declarations to the kernel, against eighteen for
-/// the `Real` route that has to axiomatize it.
+/// the `AxReal` route that has to axiomatize it.
 ///
 /// Both numbers are read out of `Environment::len` before and after, not
-/// asserted. The `Real` figure is the control: without it, "adoption is free"
+/// asserted. The `AxReal` figure is the control: without it, "adoption is free"
 /// would be a claim about a number nothing else produces.
 #[test]
 fn adopting_the_slot_from_the_constructed_reals_declares_nothing() {
@@ -439,22 +439,22 @@ fn adopting_the_slot_from_the_constructed_reals_declares_nothing() {
         "the nine Eq-shaped ring laws come from the signature, not from the caller"
     );
 
-    // The control: the same slot over `Real`, which cannot prove any of it.
+    // The control: the same slot over `AxReal`, which cannot prove any of it.
     let mut real_ctx = LraReconstructCtx::new();
     let before = real_ctx.kernel().environment().len();
     real_ctx
         .enable_setoid_equality()
-        .expect("the Real route declares the slot");
+        .expect("the AxReal route declares the slot");
     let declared = real_ctx.kernel().environment().len() - before;
     assert_eq!(
         declared, 18,
-        "the Real route mints nine slot members plus nine restated laws as AXIOMS"
+        "the AxReal route mints nine slot members plus nine restated laws as AXIOMS"
     );
 }
 
 /// **The payoff.** A Farkas refutation reconstructs over the *constructed*
 /// reals, generalizes over the 39-binder setoid interface, and comes back to a
-/// closed `False` whose axiom footprint contains **no `Real` declaration and no
+/// closed `False` whose axiom footprint contains **no `AxReal` declaration and no
 /// `CReal` declaration** — only the query's own variable and hypothesis axioms.
 ///
 /// Every number below is read out of the kernel:
@@ -462,12 +462,12 @@ fn adopting_the_slot_from_the_constructed_reals_declares_nothing() {
 /// - the generalized theorem's footprint is empty (`generalize_over_ordered_ring`
 ///   refuses to return otherwise, so this is a redundant read, not the check);
 /// - the *instantiated* `False` — the one that mentions the carrier — has a
-///   footprint containing nothing from the `Real` package and nothing from the
+///   footprint containing nothing from the `AxReal` package and nothing from the
 ///   `CReal` development, because the construction has no trusted surface to
 ///   contribute;
 /// - the proof term mentions no kernel `Eq` constant at the carrier, which is
 ///   what made a defined equality admissible in the first place;
-/// - the rendered Lean module contains no `Real`.
+/// - the rendered Lean module contains no `AxReal`.
 #[test]
 fn a_farkas_refutation_reconstructs_over_the_constructed_reals() {
     let (arena, assertions) = baby_farkas();
@@ -486,12 +486,12 @@ fn a_farkas_refutation_reconstructs_over_the_constructed_reals() {
     assert_eq!(general.ring_binders, 39);
     assert!(general.footprint.is_empty());
 
-    // The instantiation at CReal is the closed `False`. This is where a `Real`
+    // The instantiation at CReal is the closed `False`. This is where an `AxReal`
     // dependency would show up if one had survived.
     let carrier_axioms: Vec<&String> = general
         .instantiated_footprint
         .iter()
-        .filter(|n| n.starts_with("Real") || n.starts_with("CReal"))
+        .filter(|n| n.starts_with("AxReal") || n.starts_with("CReal"))
         .collect();
     assert!(
         carrier_axioms.is_empty(),
@@ -507,8 +507,8 @@ fn a_farkas_refutation_reconstructs_over_the_constructed_reals() {
 
     let module = render_ordered_ring_module(&ctx, &general);
     assert!(
-        !module.contains("Real"),
-        "the emitted Lean module still names the Real package"
+        !module.contains("AxReal"),
+        "the emitted Lean module still names the AxReal package"
     );
 }
 
@@ -521,7 +521,7 @@ fn adopting_a_slot_over_the_kernels_own_eq_is_refused() {
 
     let err = real_ctx
         .adopt_setoid_equality(&slot)
-        .expect_err("the Real package's equality is `Eq`, not a declared relation");
+        .expect_err("the AxReal package's equality is `Eq`, not a declared relation");
     assert!(
         format!("{err:?}").contains("there is no slot to adopt"),
         "got: {err:?}"
@@ -624,7 +624,7 @@ fn int_signature() -> (Kernel, RingSignature) {
 /// `ℤ` satisfies the interface **at the kernel's own `Eq`** — the combination
 /// neither of the other two instances offers.
 ///
-/// `Real` has kernel equality and costs 30 axioms; `CReal` costs nothing and
+/// `AxReal` has kernel equality and costs 30 axioms; `CReal` costs nothing and
 /// has a *defined* equality. This is the third corner: nothing assumed, and the
 /// nine `Eq`-shaped laws really are stated with `Eq`, so a consumer that wants
 /// `Eq.rec` transport back does not have to go through the equality slot.
@@ -643,7 +643,7 @@ fn the_integers_satisfy_the_ring_signature_at_kernel_equality() {
 
     assert_eq!(
         report.carrier_level, 1,
-        "`Int : Type` is `Sort 1`, like `Real` and `CReal`"
+        "`Int : Type` is `Sort 1`, like `AxReal` and `CReal`"
     );
     assert_eq!(
         report.equality_laws,
@@ -658,15 +658,15 @@ fn the_integers_satisfy_the_ring_signature_at_kernel_equality() {
             "Int.mul_zero",
             "Int.left_distrib",
         ],
-        "the same nine laws the Real package states with `Eq`, stated with `Eq` here too"
+        "the same nine laws the AxReal package states with `Eq`, stated with `Eq` here too"
     );
 }
 
 /// **The number this instance exists for.** All 30 of the integer signature's
-/// declarations have an *empty* axiom footprint; all 30 of the `Real`
+/// declarations have an *empty* axiom footprint; all 30 of the `AxReal`
 /// package's do not.
 ///
-/// The `Real` column is the negative control in the same test: without it an
+/// The `AxReal` column is the negative control in the same test: without it an
 /// empty-footprint assertion would pass just as happily against a kernel where
 /// `axiom_footprint` had stopped reporting anything.
 #[test]
@@ -695,17 +695,17 @@ fn the_integer_signature_assumes_nothing_and_the_real_package_assumes_thirty() {
     assert_eq!(
         real_assumed.len(),
         30,
-        "the control: every one of the Real package's 30 declarations is its own assumption, \
+        "the control: every one of the AxReal package's 30 declarations is its own assumption, \
          so the measurement above is reading something real; got {real_assumed:?}"
     );
 }
 
 /// **The mapping is not taken on trust.** Field by field, the 30 names
 /// `From<IntPrelude>` picks are exactly the ones the kernel's own
-/// `build_int_model_of_arith` proved model the corresponding `Real`
+/// `build_int_model_of_arith` proved model the corresponding `AxReal`
 /// declaration.
 ///
-/// That model admits, for each `Real` law, a witness whose type is the
+/// That model admits, for each `AxReal` law, a witness whose type is the
 /// *computed* interpretation of the axiom and whose proof is the paired `Int`
 /// theorem — so the kernel refused it unless ℤ really satisfies that law. This
 /// test says the signature reads the same pairing. Without it a transposed
@@ -715,7 +715,7 @@ fn the_integer_signature_assumes_nothing_and_the_real_package_assumes_thirty() {
 #[test]
 fn the_integer_signature_is_the_kernel_checked_model_field_for_field() {
     let mut kernel = Kernel::new();
-    let model = build_int_model_of_arith(&mut kernel).expect("the Int model of Real builds");
+    let model = build_int_model_of_arith(&mut kernel).expect("the Int model of AxReal builds");
 
     let real_sig = RingSignature::from(model.arith);
     let int_sig = RingSignature::from(model.int);
@@ -754,7 +754,7 @@ fn the_integer_signature_is_the_kernel_checked_model_field_for_field() {
     assert!(
         mismatched.is_empty(),
         "the signature's Int name disagrees with the kernel-checked model \
-         (Real law, model's Int theorem, signature's pick): {mismatched:?}"
+         (AxReal law, model's Int theorem, signature's pick): {mismatched:?}"
     );
 }
 
@@ -765,7 +765,7 @@ fn the_integer_signature_is_the_kernel_checked_model_field_for_field() {
 ///
 /// The `CReal` payoff test above proves the same thing through the equality
 /// slot (39 binders, no `Eq` in the term). This one keeps `Eq` and still reaches
-/// zero, which is what makes the `Real` package replaceable in the consumers
+/// zero, which is what makes the `AxReal` package replaceable in the consumers
 /// that are not about ℝ.
 #[test]
 fn a_farkas_refutation_reconstructs_over_the_integers() {
@@ -783,7 +783,7 @@ fn a_farkas_refutation_reconstructs_over_the_integers() {
     let carrier_axioms: Vec<&String> = general
         .instantiated_footprint
         .iter()
-        .filter(|n| n.starts_with("Real") || n.starts_with("Int"))
+        .filter(|n| n.starts_with("AxReal") || n.starts_with("Int"))
         .collect();
     assert!(
         carrier_axioms.is_empty(),
@@ -798,7 +798,7 @@ fn a_farkas_refutation_reconstructs_over_the_integers() {
 
     let module = render_ordered_ring_module(&ctx, &general);
     assert!(
-        !module.contains("Real"),
-        "the emitted Lean module still names the Real package"
+        !module.contains("AxReal"),
+        "the emitted Lean module still names the AxReal package"
     );
 }

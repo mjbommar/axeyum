@@ -616,11 +616,11 @@ pub struct CRealPrelude {
 
 impl CRealPrelude {
     /// The 22 ordered-commutative-ring laws over `CReal`, in the **declaration
-    /// order of the `Real` package** — the same order
+    /// order of the `AxReal` package** — the same order
     /// [`RatPrelude::ring_laws`](crate::RatPrelude::ring_laws) uses, so the two
     /// lists line up entry by entry.
     ///
-    /// **Thirteen are the `Real` package's statements verbatim.** The other
+    /// **Thirteen are the `AxReal` package's statements verbatim.** The other
     /// nine — `add_comm`, `add_assoc`, `add_zero`, `add_neg`, `mul_comm`,
     /// `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib` — mention `Eq` in
     /// the axiomatized package and are stated here over
@@ -787,7 +787,7 @@ pub fn build_creal_prelude(kernel: &mut Kernel) -> Result<CRealPrelude, KernelEr
 /// This is the route that actually runs the trusted gate, and the one the
 /// template itself is built through (ADR-0464). The construction is the most
 /// expensive in this kernel by four orders of magnitude — measured 2026-08-18 at
-/// **44 s** in a debug build against 3.0 ms for `Real` — which is exactly why it
+/// **44 s** in a debug build against 3.0 ms for `AxReal` — which is exactly why it
 /// has a template.
 ///
 /// # Errors
@@ -2618,7 +2618,7 @@ fn declare_additive_laws(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 ///
 /// **These three restate verbatim**, which the additive laws did not: none of
 /// `le_refl`, `le_trans`, `add_le_add` mentions `Eq`, so there is no equality
-/// to replace by `Equiv` and the `Real` package's statement is the statement
+/// to replace by `Equiv` and the `AxReal` package's statement is the statement
 /// proved here. That is ADR-0512's Measurement 2, cashed.
 ///
 /// The order is *not* decidable and `le_total` is deliberately absent: it holds

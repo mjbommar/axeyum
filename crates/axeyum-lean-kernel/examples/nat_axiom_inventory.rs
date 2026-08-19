@@ -268,7 +268,7 @@ fn main() -> ExitCode {
     // ledger's committed counts (real=30, integer=1, string=1 as of 2026-08-15)
     // is a finding: it means the ledger binds less than it appears to.
     let mut real = Kernel::new();
-    let _ = build_arith_prelude(&mut real).expect("Real prelude must build");
+    let _ = build_arith_prelude(&mut real).expect("AxReal prelude must build");
     let real_rows = inventory("real", &real);
 
     let mut integer = Kernel::new();

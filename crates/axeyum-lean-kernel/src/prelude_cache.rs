@@ -39,12 +39,12 @@
 //! names, levels or expressions, no declarations, no registered packages, not
 //! finalized for export. A kernel carrying any prior content keeps the ordinary
 //! build path. This is why the check happens *before* the dependency build (a
-//! `Real` build interns `Logic` first, which would itself make the kernel
+//! `AxReal` build interns `Logic` first, which would itself make the kernel
 //! non-pristine).
 //!
 //! `CReal` — the constructed reals — is the slot this mechanism exists for
 //! rather than an afterthought: measured 2026-08-18 on a debug build, one
-//! `build_creal_prelude` costs **44 s** against `Real`'s 5.6 ms and `Logic`'s
+//! `build_creal_prelude` costs **44 s** against `AxReal`'s 5.6 ms and `Logic`'s
 //! 0.2 ms, and every consumer of the constructed carrier builds its own. It is
 //! also the largest template, so the reuse cost is a `Kernel` clone rather than
 //! the near-free clone the small preludes get; both numbers are reported by the

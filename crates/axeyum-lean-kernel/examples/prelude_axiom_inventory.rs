@@ -51,7 +51,7 @@ fn main() {
     // line even for the axiom-free preludes, so a prelude that silently stopped
     // being built here fails that gate instead of shrinking the published total.
     let mut real = Kernel::new();
-    let _ = build_arith_prelude(&mut real).expect("Real prelude must build");
+    let _ = build_arith_prelude(&mut real).expect("AxReal prelude must build");
     let real_rows = inventory("real", &real);
 
     let mut integer = Kernel::new();

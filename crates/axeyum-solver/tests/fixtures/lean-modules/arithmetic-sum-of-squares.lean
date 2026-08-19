@@ -40,18 +40,18 @@ unsafe axiom lcVoid : Type
 inductive False : Prop where
 def Not : ((x0 : Prop) -> Prop) :=
   fun (x0 : Prop) => ((x1 : x0) -> False)
-axiom Real : Sort (1)
-axiom Real.mul : ((x0 : Real) -> ((x1 : Real) -> Real))
-axiom Real.zero : Real
-axiom Real.le : ((x0 : Real) -> ((x1 : Real) -> Prop))
-axiom Real.lt : ((x0 : Real) -> ((x1 : Real) -> Prop))
-axiom Real.lt_irrefl : ((x0 : Real) -> Not (Real.lt x0 x0))
-axiom Real.lt_of_le_of_lt : ((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> ((x3 : Real.le x0 x1) -> ((x4 : Real.lt x1 x2) -> Real.lt x0 x2)))))
-axiom Real.sq_nonneg : ((x0 : Real) -> Real.le Real.zero (Real.mul x0 x0))
-axiom axeyum.reconstruct.lra.x._0 : Real
-axiom axeyum.reconstruct.lra.hyp._1 : Real.lt (Real.mul axeyum.reconstruct.lra.x._0 axeyum.reconstruct.lra.x._0) Real.zero
+axiom AxReal : Sort (1)
+axiom AxReal.mul : ((x0 : AxReal) -> ((x1 : AxReal) -> AxReal))
+axiom AxReal.zero : AxReal
+axiom AxReal.le : ((x0 : AxReal) -> ((x1 : AxReal) -> Prop))
+axiom AxReal.lt : ((x0 : AxReal) -> ((x1 : AxReal) -> Prop))
+axiom AxReal.lt_irrefl : ((x0 : AxReal) -> Not (AxReal.lt x0 x0))
+axiom AxReal.lt_of_le_of_lt : ((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.le x0 x1) -> ((x4 : AxReal.lt x1 x2) -> AxReal.lt x0 x2)))))
+axiom AxReal.sq_nonneg : ((x0 : AxReal) -> AxReal.le AxReal.zero (AxReal.mul x0 x0))
+axiom axeyum.reconstruct.lra.x._0 : AxReal
+axiom axeyum.reconstruct.lra.hyp._1 : AxReal.lt (AxReal.mul axeyum.reconstruct.lra.x._0 axeyum.reconstruct.lra.x._0) AxReal.zero
 
 theorem axeyum_refutation : False :=
-  Real.lt_irrefl Real.zero (Real.lt_of_le_of_lt Real.zero (Real.mul axeyum.reconstruct.lra.x._0 axeyum.reconstruct.lra.x._0) Real.zero (Real.sq_nonneg axeyum.reconstruct.lra.x._0) axeyum.reconstruct.lra.hyp._1)
+  AxReal.lt_irrefl AxReal.zero (AxReal.lt_of_le_of_lt AxReal.zero (AxReal.mul axeyum.reconstruct.lra.x._0 axeyum.reconstruct.lra.x._0) AxReal.zero (AxReal.sq_nonneg axeyum.reconstruct.lra.x._0) axeyum.reconstruct.lra.hyp._1)
 
 #print axioms axeyum_refutation

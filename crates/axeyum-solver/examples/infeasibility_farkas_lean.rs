@@ -14,7 +14,7 @@
 //! arithmetic reconstructor `reconstruct_lra_proof` used NOT to produce the same
 //! thing for this query, and the difference was the entire honesty of the claim:
 //!
-//! - **Until 2026-08-15** `prove_unsat_to_lean_module` routed a pure-Real
+//! - **Until 2026-08-15** `prove_unsat_to_lean_module` routed a pure-AxReal
 //!   conjunctive `unsat` through `ProofFragment::LraDpll`, whose Lean module is a
 //!   **structural attestation**: `axiom A : P`, `axiom B : ¬P`,
 //!   `theorem _ : False := B A`. It kernel-checks, it is `sorry`-free, and it
@@ -41,7 +41,7 @@
 //! routed to `ProofFragment::Lra`.
 //!
 //! It also counts the axioms the resulting module actually rests on, because the
-//! `Real` prelude is a block of asserted ordered-field laws plus one variable
+//! `AxReal` prelude is a block of asserted ordered-field laws plus one variable
 //! axiom per symbol and one hypothesis axiom per row — this route is not, and
 //! cannot presently be, axiom-free. The count is NOT written down here: it was
 //! `30` in this comment for three days after the code produced `26`, which is
@@ -200,7 +200,7 @@ fn run() -> Result<(), String> {
     // `axeyum.reconstruct.lra.hyp._N`, so it returned `false` for a genuine
     // arithmetic module too. It gave the right answer for exactly as long as the
     // facade emitted an attestation, and the moment the dispatch was fixed it
-    // reported `STRUCTURAL ATTESTATION` for a module full of `Real.le`. The
+    // reported `STRUCTURAL ATTESTATION` for a module full of `AxReal.le`. The
     // second instrument below caught it on its first run. A detector exercised
     // only while it reports the bad case is one nobody notices going blind.
     let arith_content = module.lines().any(|line| {
@@ -210,7 +210,20 @@ fn run() -> Result<(), String> {
         let Some((name, ty)) = rest.split_once(" : ") else {
             return false;
         };
-        name.contains(".lra.hyp._") && (ty.contains("Real.le") || ty.contains("Real.lt"))
+        // BOTH carriers, spelled in full. This read `Real.le`/`Real.lt` until
+        // 2026-08-19 and kept saying "carries ordered-field content" after the
+        // shipped LRA route moved to the CONSTRUCTED reals -- because
+        // `CReal.le` contains `Real.le` as a substring. It was reporting the
+        // right verdict for the wrong carrier, and ADR-0522's rename of the
+        // axiomatized package to `AxReal` is what made it say so out loud.
+        // Naming both is deliberate: the predicate must stay able to FAIL on a
+        // module with no ordered-field hypothesis at all, whichever carrier the
+        // route picks.
+        name.contains(".lra.hyp._")
+            && (ty.contains("CReal.le")
+                || ty.contains("CReal.lt")
+                || ty.contains("AxReal.le")
+                || ty.contains("AxReal.lt"))
     });
     // Second, independent instrument: the module's own self-label. A structural
     // attestation carries `STRUCTURAL_ATTESTATION_MARKER` in its header, which
@@ -229,7 +242,7 @@ fn run() -> Result<(), String> {
     println!("facade self-label   {labelled}");
     // Two instruments, one subject. ONE direction is impossible by
     // construction: a structural attestation's only axioms are an opaque `Prop`
-    // and its negation, so it can never carry an `…lra.hyp._N : Real.le …`.
+    // and its negation, so it can never carry an `…lra.hyp._N : AxReal.le …`.
     // That disagreement is always an error.
     if arith_content && labelled == LeanModuleContent::StructuralAttestation {
         return Err(
@@ -317,12 +330,12 @@ fn run() -> Result<(), String> {
             let prelude = axiom_names.len() - hypotheses - variables;
             // The `theorem … := <term>` body, which is where the size lives: the
             // prelude has no numerals, so an integer constant `k` reconstructs as
-            // a `k`-fold `Real.add Real.one …` chain and every cancellation is an
+            // a `k`-fold `AxReal.add AxReal.one …` chain and every cancellation is an
             // explicit `Eq`-rewrite.
             let term_bytes = rendered
                 .lines()
                 .map(|line| {
-                    if line.trim_start().starts_with("Real.") {
+                    if line.trim_start().starts_with("AxReal.") {
                         line.len()
                     } else {
                         0

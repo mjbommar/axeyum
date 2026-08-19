@@ -1,16 +1,16 @@
 //! An LRA/Farkas refutation that assumes **nothing**: the same proof term,
 //! parameterised over the ordered-ring interface, with a measured-empty axiom
-//! footprint — and the original `Real`-specific statement recovered from it by
+//! footprint — and the original `AxReal`-specific statement recovered from it by
 //! instantiation.
 //!
 //! ## What this measures, and why it is not the same claim as before
 //!
-//! `reconstruct_lra_proof` builds a term of type `False` over the `Real`
+//! `reconstruct_lra_proof` builds a term of type `False` over the `AxReal`
 //! prelude. That prelude is 30 trusted declarations, and ADR-0456 measured what
 //! they are: eight carrier/operation symbols and 22 laws of an **ordered
 //! commutative ring with 1** — no inverse, no division, no completeness, no
 //! Archimedean axiom, not even totality. So the refutation was a statement
-//! *about `Real`* resting on 30 assumptions.
+//! *about `AxReal`* resting on 30 assumptions.
 //!
 //! `generalize_over_ordered_ring` λ-abstracts those constants out of the proof
 //! term. What comes back is
@@ -22,7 +22,7 @@
 //! ```
 //!
 //! whose footprint is **empty**: the laws became the theorem's own hypotheses.
-//! Applying it back to the 30 `Real` constants recovers the original `False`,
+//! Applying it back to the 30 `AxReal` constants recovers the original `False`,
 //! which the kernel re-checks — so nothing was lost, and the axioms became
 //! unnecessary rather than proved.
 //!
@@ -46,14 +46,14 @@
 //! ## `--constructed-reals`: the same refutations with nothing assumed at all
 //!
 //! The generalized theorem is axiom-free either way — that is what abstraction
-//! buys. The *instantiated* one is not: applying it back at the `Real` package
+//! buys. The *instantiated* one is not: applying it back at the `AxReal` package
 //! re-imports all 30 of that package's declarations, which are this repository's
 //! entire remaining trusted surface. `--constructed-reals` applies it at
 //! `CReal` instead (ADR-0512): a Bishop setoid of regular ℚ-sequences that
 //! **proves** all 22 ordered-ring laws and all nine equality-slot obligations,
 //! with an empty axiom footprint for each. The closed `False` then rests on
 //! **zero** carrier axioms — only on the query's own variable and hypothesis
-//! axioms — and the `Real` column in the same output is the control.
+//! axioms — and the `AxReal` column in the same output is the control.
 
 use std::process::ExitCode;
 
@@ -66,7 +66,7 @@ use axeyum_solver::{
 };
 
 /// Which reconstructor a fixture goes through. Both land in the same kernel
-/// over the same `Real` package, and both generalize the same way — the point
+/// over the same `AxReal` package, and both generalize the same way — the point
 /// of listing an SOS fixture here is that it is the only route that touches the
 /// multiplicative laws and `sq_nonneg`.
 #[derive(Clone, Copy)]
@@ -148,7 +148,7 @@ fn single_square() -> (TermArena, Vec<TermId>) {
     (arena, vec![negative])
 }
 
-/// The 30 rendered `Real` declaration names, so the "never reached" line can be
+/// The 30 rendered `AxReal` declaration names, so the "never reached" line can be
 /// a set difference rather than a guess.
 fn ordered_ring_declarations() -> Vec<String> {
     let leaves = [
@@ -182,8 +182,8 @@ fn ordered_ring_declarations() -> Vec<String> {
         "mul_nonneg",
         "sq_nonneg",
     ];
-    std::iter::once("Real".to_owned())
-        .chain(leaves.iter().map(|leaf| format!("Real.{leaf}")))
+    std::iter::once("AxReal".to_owned())
+        .chain(leaves.iter().map(|leaf| format!("AxReal.{leaf}")))
         .collect()
 }
 
@@ -288,8 +288,8 @@ fn run() -> Result<(), String> {
         if !footprint_table {
             println!("=== {label}");
             println!(
-                "  original     : False over the Real package -- footprint {} \
-             ({} Real, {} variable/hypothesis)",
+                "  original     : False over the AxReal package -- footprint {} \
+             ({} AxReal, {} variable/hypothesis)",
                 full.original_footprint.len(),
                 full.ring_used.len(),
                 full.original_footprint.len() - full.ring_used.len()
@@ -364,7 +364,7 @@ fn run() -> Result<(), String> {
                 println!("    at Eq   : {}", specialized.statement_rendered);
                 println!("    today   : {}", specialized.reference_rendered);
             }
-            println!("  Real laws used ({}): {}", full.ring_used.len(), {
+            println!("  AxReal laws used ({}): {}", full.ring_used.len(), {
                 let mut used = full.ring_used.clone();
                 used.sort();
                 used.join(" ")
@@ -401,11 +401,11 @@ fn run() -> Result<(), String> {
 
     // Which of the 30 anything still USES. Not the same question as which are
     // declared: after this change no reconstructed refutation *depends* on any
-    // of them, but a consumer that wants a `Real`-specific conclusion still
+    // of them, but a consumer that wants a `AxReal`-specific conclusion still
     // instantiates at the ones its proof shape invokes.
     println!();
     println!(
-        "Real declarations reached by at least one fixture: {} of 30",
+        "AxReal declarations reached by at least one fixture: {} of 30",
         ever_used.len()
     );
     let never: Vec<String> = ordered_ring_declarations()
@@ -440,7 +440,7 @@ fn run() -> Result<(), String> {
             return Err(
                 "--require-empty was given but a refutation over the CONSTRUCTED reals \
                  still rests on a carrier axiom, cost a declaration to adopt its equality \
-                 slot, or did not reduce the carrier footprint against the `Real` route"
+                 slot, or did not reduce the carrier footprint against the `AxReal` route"
                     .to_owned(),
             );
         }
@@ -526,7 +526,7 @@ fn creal_signature() -> Result<(Kernel, RingSignature, EqualitySlot), String> {
 /// carrier footprint of the closed `False` each way.
 ///
 /// The number that matters is the last column: how many of the refutation's
-/// remaining axioms are *the carrier's*. Over the `Real` package it is 15-17 —
+/// remaining axioms are *the carrier's*. Over the `AxReal` package it is 15-17 —
 /// this repository's entire remaining trusted surface. Over `CReal` it is zero,
 /// because `CRealPrelude` proves all 22 ordered-ring laws and all nine
 /// equality-slot obligations outright.
@@ -541,7 +541,7 @@ fn over_the_constructed_reals(fixtures: &[Fixture]) -> Result<bool, String> {
     println!("=== the CONSTRUCTED reals (ADR-0512 phase R4): the same fixtures over `CReal`");
 
     // The equality slot, adopted rather than axiomatized. The control is in the
-    // same line: the `Real` route has to declare eighteen axioms for it.
+    // same line: the `AxReal` route has to declare eighteen axioms for it.
     let mut probe = LraReconstructCtx::with_ring_signature(kernel, sig)
         .map_err(|error| format!("CReal is not an admissible signature: {error:?}"))?;
     let adoption = probe
@@ -551,12 +551,12 @@ fn over_the_constructed_reals(fixtures: &[Fixture]) -> Result<bool, String> {
         let mut real = LraReconstructCtx::new();
         let before = real.kernel().environment().len();
         real.enable_setoid_equality()
-            .map_err(|error| format!("the Real route did not declare its slot: {error:?}"))?;
+            .map_err(|error| format!("the AxReal route did not declare its slot: {error:?}"))?;
         real.kernel().environment().len() - before
     };
     println!(
         "  equality slot: `{}` adopted from CRealPrelude -- {} declarations added \
-         (the `Real` route declares {} AXIOMS for the same slot)",
+         (the `AxReal` route declares {} AXIOMS for the same slot)",
         adoption.relation, adoption.declarations_added, real_slot_cost
     );
     let mut all_carrier_free = adoption.declarations_added == 0 && real_slot_cost > 0;
@@ -565,13 +565,13 @@ fn over_the_constructed_reals(fixtures: &[Fixture]) -> Result<bool, String> {
     for &(label, route, build) in fixtures {
         let (arena, assertions) = build();
 
-        // (a) The `Real` route, as the control.
+        // (a) The `AxReal` route, as the control.
         let mut real_ctx = LraReconstructCtx::new();
         let real_proof = reconstruct(&mut real_ctx, route, &arena, &assertions)
-            .map_err(|error| format!("{label}: Real reconstruction failed: {error:?}"))?;
+            .map_err(|error| format!("{label}: AxReal reconstruction failed: {error:?}"))?;
         let real_general =
             generalize_over_ordered_ring(&mut real_ctx, real_proof, RingTelescope::FullInterface)
-                .map_err(|error| format!("{label}: Real generalization failed: {error:?}"))?;
+                .map_err(|error| format!("{label}: AxReal generalization failed: {error:?}"))?;
         let real_carrier = carrier_axioms(&real_ctx, &real_general);
 
         // (b) The same query over the constructed reals.
@@ -589,7 +589,7 @@ fn over_the_constructed_reals(fixtures: &[Fixture]) -> Result<bool, String> {
 
         println!("  --- {label}");
         println!(
-            "    over Real  : closed False -- footprint {} of which {} are CARRIER axioms",
+            "    over AxReal: closed False -- footprint {} of which {} are CARRIER axioms",
             real_general.instantiated_footprint.len(),
             real_carrier.len()
         );

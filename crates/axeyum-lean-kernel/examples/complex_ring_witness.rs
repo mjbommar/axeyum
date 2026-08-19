@@ -36,12 +36,12 @@
 //!    `Complex.no_compatible_order` says why.** Omitting an order proves
 //!    nothing — a development that simply never got round to it looks
 //!    identical. The theorem quantifies over both relations and derives
-//!    `False` from seven of the `Real` package's 13 order laws, so this is a
+//!    `False` from seven of the `AxReal` package's 13 order laws, so this is a
 //!    refutation and the absence is checked against it.
 //!
 //! # The nine, and the thirteen
 //!
-//! `ArithPrelude`'s axiomatized `Real` package is an **ordered** commutative
+//! `ArithPrelude`'s axiomatized `AxReal` package is an **ordered** commutative
 //! ring: 22 laws, 13 of which mention `le` or `lt`. The other nine —
 //! `add_comm`, `add_assoc`, `add_zero`, `add_neg`, `mul_comm`, `mul_assoc`,
 //! `mul_one`, `mul_zero`, `left_distrib` — are exactly what ℂ satisfies, and
@@ -261,7 +261,7 @@ fn main() {
     if !order_declared.is_empty() {
         eprintln!(
             "FAIL: {} is declared on Complex, and Complex.no_compatible_order refutes \
-             any such relation satisfying seven of the Real package's order laws. The \
+             any such relation satisfying seven of the AxReal package's order laws. The \
              two cannot both stand.",
             order_declared.join(", ")
         );

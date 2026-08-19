@@ -11,15 +11,15 @@
 //! indistinguishable from a measurement that broke. That is this repository's own
 //! standing audit finding: a checker that cannot fail is worse than no checker.
 //!
-//! The `Real` package has been playing that part. It is 30 axioms, and
+//! The `AxReal` package has been playing that part. It is 30 axioms, and
 //! [ADR-0509](../../../../docs/research/09-decisions/adr-0509-the-trusted-surface-is-measured-as-reached-not-only-declared.md)
 //! records that its *only* remaining job is to be the thing that is not zero.
 //! Thirty is twenty-nine more than the job needs.
 //!
 //! ## Why the control cannot simply be shrunk in place
 //!
-//! You cannot delete 29 of the `Real` axioms and keep a working carrier, and the
-//! reason is structural rather than a matter of effort: `Real` is an **opaque**
+//! You cannot delete 29 of the `AxReal` axioms and keep a working carrier, and the
+//! reason is structural rather than a matter of effort: `AxReal` is an **opaque**
 //! carrier. Nothing can be *defined* over an opaque type, so every operation and
 //! every law over it has to be assumed. The floor for an axiomatized ordered
 //! commutative ring with `1` is the whole signature — one carrier, seven
@@ -66,7 +66,7 @@
 //! without adding a *real* one — the environment it lives in is exactly as
 //! consistent as the `Int` development.
 //!
-//! The `Real` package cannot say that. Its 30 axioms are only *relatively*
+//! The `AxReal` package cannot say that. Its 30 axioms are only *relatively*
 //! consistent (`build_int_model_of_arith` exhibits ℤ as a model), which is a
 //! weaker statement than "here is the proof". Shrinking the control therefore
 //! strengthens it on the one axis a control is judged by: it can still come out
@@ -127,7 +127,7 @@ pub fn build_control_carrier(kernel: &mut Kernel) -> Result<ControlCarrier, Reco
 /// [`build_control_carrier`] over an already-built interface.
 ///
 /// Split out so the discharge guard below is reachable from a test: handed a
-/// signature whose `lt_irrefl` is itself an **axiom** — the `Real` package's, for
+/// signature whose `lt_irrefl` is itself an **axiom** — the `AxReal` package's, for
 /// instance — the discharge cannot be axiom-free, and building a control on an
 /// assumed law is exactly the mistake the guard exists to refuse. A control
 /// standing in for an assumption rather than for a theorem would be one that

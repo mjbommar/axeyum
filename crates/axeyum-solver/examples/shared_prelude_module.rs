@@ -5,7 +5,7 @@
 //!
 //! `examples/front_door_carrier.rs` reports the price of the axiom-free carrier:
 //! a refutation over the constructed reals renders to a Lean module of
-//! ~1.3 MB, against ~8 KB over the axiomatized `Real` package. Measured
+//! ~1.3 MB, against ~8 KB over the axiomatized `AxReal` package. Measured
 //! 2026-08-18, **the refutation's own theorem term is 4,193 bytes** of that —
 //! 0.16%. The rest is the ℕ/ℤ/ℚ/setoid development, and it is *the same bytes*
 //! for every query over that carrier.

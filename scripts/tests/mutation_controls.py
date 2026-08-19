@@ -316,6 +316,21 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
                 "if not isinstance(committed, dict):",
                 "if False:",
             ),
+            (
+                "--accept-rename refuses an unmeasured target",
+                "            if key not in admitted:\n                raise LedgerError(",
+                "            if False:\n                raise LedgerError(",
+            ),
+            (
+                "--accept-rename prefix does not capture a longer name",
+                'elif name.startswith(f"{old}."):',
+                "elif name.startswith(old):",
+            ),
+            (
+                "--accept-rename OLD=NEW argument shape",
+                "    if not separator or not old or not new:",
+                "    if False:",
+            ),
             # REMOVED 2026-08-18. This one was listed with the note "not
             # independently isolable: without the flag `measure()` fails
             # cross-check and the whole suite dies at setUpClass. Listed so the

@@ -3307,7 +3307,7 @@ fn conjunctive_lra_still_reconstructs_unchanged() {
     );
     assert!(!source.contains("sorryAx"));
     assert!(
-        source.contains("Real.lt_irrefl"),
+        source.contains("AxReal.lt_irrefl"),
         "the module must carry the ordered-field reasoning, not an opaque prop"
     );
 }

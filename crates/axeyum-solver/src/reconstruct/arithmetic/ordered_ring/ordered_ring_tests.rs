@@ -1,9 +1,9 @@
 //! Tests for the ordered-ring generalization of an LRA refutation.
 //!
 //! The claims under test are (1) the generalized theorem's measured axiom
-//! footprint is empty, (2) instantiating it at `Real` recovers the original
+//! footprint is empty, (2) instantiating it at `AxReal` recovers the original
 //! statement, (3) under [`RingTelescope::Used`] the recovery is footprint-exact,
-//! and (4) the telescope this module abstracts is *all* of the `Real` package —
+//! and (4) the telescope this module abstracts is *all* of the `AxReal` package —
 //! a 31st axiom cannot slip past it.
 
 use axeyum_ir::{Rational, TermArena, TermId};
@@ -46,7 +46,7 @@ fn general_farkas() -> (TermArena, Vec<TermId>) {
 /// **The result.** A reconstructed Farkas refutation, parameterised over the
 /// ordered-ring interface, has an EMPTY axiom footprint — measured by
 /// `Kernel::axiom_footprint`, not asserted — while the un-generalized statement
-/// it came from rests on `Real` declarations plus its own variable and
+/// it came from rests on `AxReal` declarations plus its own variable and
 /// hypothesis axioms.
 #[test]
 fn generalized_refutation_has_an_empty_axiom_footprint() {
@@ -63,7 +63,7 @@ fn generalized_refutation_has_an_empty_axiom_footprint() {
         generalized.footprint
     );
     // The baseline is NOT empty, so the assertion above discriminates rather
-    // than passing vacuously: 15 Real declarations + 1 variable + 2 hypotheses.
+    // than passing vacuously: 15 AxReal declarations + 1 variable + 2 hypotheses.
     assert_eq!(
         generalized.original_footprint.len(),
         18,
@@ -73,7 +73,7 @@ fn generalized_refutation_has_an_empty_axiom_footprint() {
     assert_eq!(
         generalized.ring_used.len(),
         15,
-        "the baby-Farkas chain uses 15 of the 30 Real declarations: {:?}",
+        "the baby-Farkas chain uses 15 of the 30 AxReal declarations: {:?}",
         generalized.ring_used
     );
     assert_eq!(generalized.ring_binders, 30);
@@ -82,7 +82,7 @@ fn generalized_refutation_has_an_empty_axiom_footprint() {
     assert_eq!(generalized.binder_count(), 30 + 1 + 2);
 }
 
-/// **Nothing is lost.** Applying the generalized theorem to the 30 `Real`
+/// **Nothing is lost.** Applying the generalized theorem to the 30 `AxReal`
 /// constants and to the refutation's own variable/hypothesis axioms is a proof
 /// of `False` the kernel re-checks, and every axiom the original rested on is
 /// back. The generalization is a strengthening, not a different claim.
@@ -184,7 +184,7 @@ fn sum_of_squares_refutation_generalizes_axiom_free() {
         generalized.footprint
     );
     assert!(
-        generalized.ring_used.iter().any(|n| n == "Real.sq_nonneg"),
+        generalized.ring_used.iter().any(|n| n == "AxReal.sq_nonneg"),
         "the SOS route must reach sq_nonneg, else this covers nothing new: {:?}",
         generalized.ring_used
     );
@@ -209,14 +209,14 @@ fn strict_cycle_refutation_generalizes_axiom_free() {
 
     assert!(generalized.footprint.is_empty());
     assert!(
-        generalized.ring_used.iter().any(|n| n == "Real.lt_trans"),
+        generalized.ring_used.iter().any(|n| n == "AxReal.lt_trans"),
         "expected lt_trans in {:?}",
         generalized.ring_used
     );
     assert!(generalized.instantiation_footprint_is_exact());
 }
 
-/// The abstraction telescope must cover the **whole** `Real` package. If a 31st
+/// The abstraction telescope must cover the **whole** `AxReal` package. If a 31st
 /// declaration is added and not listed here, a refutation using it would keep a
 /// non-empty footprint; this fails first, and loudly, at the source.
 #[test]
@@ -224,7 +224,7 @@ fn the_ring_telescope_is_every_real_declaration() {
     use axeyum_lean_kernel::{Declaration, Kernel, build_arith_prelude};
 
     let mut kernel = Kernel::new();
-    let arith = build_arith_prelude(&mut kernel).expect("Real prelude builds");
+    let arith = build_arith_prelude(&mut kernel).expect("AxReal prelude builds");
     let signature = crate::reconstruct::arithmetic::RingSignature::from(arith);
     let telescope: std::collections::BTreeSet<_> = ring_telescope(&signature).into_iter().collect();
     assert_eq!(telescope.len(), RING_BINDER_NAMES.len());
@@ -237,17 +237,17 @@ fn the_ring_telescope_is_every_real_declaration() {
             Declaration::Axiom { name, .. } => Some(*name),
             _ => None,
         })
-        .filter(|&name| kernel.display_name(name).to_string().starts_with("Real"))
+        .filter(|&name| kernel.display_name(name).to_string().starts_with("AxReal"))
         .collect();
     assert_eq!(
         declared.len(),
         RING_BINDER_NAMES.len(),
-        "the Real package is no longer 30 declarations"
+        "the AxReal package is no longer 30 declarations"
     );
     for name in declared {
         assert!(
             telescope.contains(&name),
-            "`{}` is a Real axiom the ordered-ring telescope does not abstract",
+            "`{}` is an AxReal axiom the ordered-ring telescope does not abstract",
             kernel.display_name(name)
         );
     }
@@ -407,7 +407,7 @@ fn the_setoid_telescope_refuses_an_eq_shaped_proof() {
     );
 
     // And once the slot exists, the OLD proof is still refused — it rests on the
-    // Eq-shaped `Real` laws, which the setoid telescope does not bind.
+    // Eq-shaped `AxReal` laws, which the setoid telescope does not bind.
     ctx.enable_setoid_equality()
         .expect("the equality slot declares");
     let still_refused =
@@ -440,7 +440,7 @@ fn the_setoid_binder_table_extends_the_eq_shaped_one() {
 /// this pins the difference.
 ///
 /// The `axeyum.reconstruct.` namespace is NOT reserved for a query's own free
-/// variables. The `Real` route mints eighteen equality-slot axioms there,
+/// variables. The `AxReal` route mints eighteen equality-slot axioms there,
 /// Ackermann mints `axeyum.reconstruct.func._*`, and the `.dio` / `.word` /
 /// `.lex` / `.regex` routes all mint under it. Excluding the whole namespace by
 /// prefix therefore lets a route reach "zero carrier axioms" by minting what it
@@ -459,7 +459,7 @@ fn a_minted_axiom_is_not_hidden_by_the_reconstruct_namespace() {
         "axeyum.reconstruct.func._0",
         "axeyum.reconstruct.lra.setoid.eq_trans",
         // the carrier's own
-        "Real.add_comm",
+        "AxReal.add_comm",
     ]
     .iter()
     .map(|s| (*s).to_string())
@@ -467,7 +467,7 @@ fn a_minted_axiom_is_not_hidden_by_the_reconstruct_namespace() {
 
     assert_eq!(
         super::carrier_axioms_of(&footprint),
-        vec!["Real.add_comm".to_string()],
+        vec!["AxReal.add_comm".to_string()],
         "carrier classification is `outside the reconstruct namespace`"
     );
     assert_eq!(
@@ -549,7 +549,7 @@ fn the_standalone_telescope_is_the_generalized_statements_own_prefix() {
 }
 
 /// **The result ADR-0515 rests on.** The interface telescope read off the
-/// axiomatized `Real` package and the one read off the **axiom-free** `Int`
+/// axiomatized `AxReal` package and the one read off the **axiom-free** `Int`
 /// development are the same 30 statements, rendered byte for byte.
 ///
 /// So the ledger's 30 digest pins do not need the axioms: the same canonical
@@ -562,9 +562,9 @@ fn the_interface_is_the_same_statements_over_real_and_over_int() {
     use axeyum_lean_kernel::{Kernel, build_arith_prelude, build_int_prelude};
 
     let mut real_kernel = Kernel::new();
-    let arith = build_arith_prelude(&mut real_kernel).expect("the Real package builds");
+    let arith = build_arith_prelude(&mut real_kernel).expect("the AxReal package builds");
     let real = super::ring_interface_telescope(&mut real_kernel, &RingSignature::from(arith))
-        .expect("the Real interface telescope is computable");
+        .expect("the AxReal interface telescope is computable");
 
     let mut int_kernel = Kernel::new();
     let int = build_int_prelude(&mut int_kernel).expect("the Int development builds");
@@ -581,13 +581,13 @@ fn the_interface_is_the_same_statements_over_real_and_over_int() {
         .collect();
     assert!(
         differing.is_empty(),
-        "the axiom-free `Int` interface differs from the axiomatized `Real` one at {} of 30 \
+        "the axiom-free `Int` interface differs from the axiomatized `AxReal` one at {} of 30 \
          binders: {differing:?}",
         differing.len()
     );
     // The control on that zero: the two telescopes really were read from
     // different environments, so "identical" is not "compared with itself".
-    assert!(real[0].source.starts_with("Real"), "{}", real[0].source);
+    assert!(real[0].source.starts_with("AxReal"), "{}", real[0].source);
     assert!(
         integer[0].source.starts_with("Int"),
         "{}",
@@ -602,7 +602,7 @@ fn the_interface_is_the_same_statements_over_real_and_over_int() {
 /// [`NameId`](axeyum_lean_kernel::NameId) is an **index**, so a signature
 /// carried into a *populated* other kernel resolves silently to whatever
 /// declarations happen to sit at those indices — measured while writing this
-/// test, the `Real` signature read against a kernel carrying the `Int`
+/// test, the `AxReal` signature read against a kernel carrying the `Int`
 /// development produced 30 well-formed binders sourced from `Nat.le`,
 /// `Nat.beq_refl`, `Nat.pow_succ`, … and no error at all. Presence cannot see
 /// that; [`RingSignature::validate_in`] is the guard that can, and this guard
@@ -612,7 +612,7 @@ fn the_interface_telescope_refuses_a_signature_the_environment_does_not_carry() 
     use axeyum_lean_kernel::{Kernel, build_arith_prelude};
 
     let mut real_kernel = Kernel::new();
-    let arith = build_arith_prelude(&mut real_kernel).expect("the Real package builds");
+    let arith = build_arith_prelude(&mut real_kernel).expect("the AxReal package builds");
     let mut empty = Kernel::new();
 
     let err = super::ring_interface_telescope(&mut empty, &RingSignature::from(arith))

@@ -19,7 +19,7 @@
 //!
 //! # ℂ is a ring, and that is the *whole* of it
 //!
-//! `ArithPrelude`'s axiomatized `Real` package is an **ordered** commutative
+//! `ArithPrelude`'s axiomatized `AxReal` package is an **ordered** commutative
 //! ring: 22 laws, of which 13 mention `le` or `lt`. Nine do not, and those nine
 //! — `add_comm`, `add_assoc`, `add_zero`, `add_neg`, `mul_comm`, `mul_assoc`,
 //! `mul_one`, `mul_zero`, `left_distrib` — are exactly the ones proved here, in
@@ -230,9 +230,9 @@ pub struct ComplexPrelude {
 
 impl ComplexPrelude {
     /// The nine commutative-**ring** laws over `Complex`, in the declaration
-    /// order of the `Real` package.
+    /// order of the `AxReal` package.
     ///
-    /// These are exactly the `Real` package's 22 ordered-commutative-ring laws
+    /// These are exactly the `AxReal` package's 22 ordered-commutative-ring laws
     /// **minus** the 13 that mention `le` or `lt`. The omission is not a gap:
     /// [`Self::no_compatible_order`] proves that no `le`/`lt` on `Complex` can
     /// satisfy them. All nine mention equality in the axiomatized package and
@@ -1337,7 +1337,7 @@ fn declare_norm(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError
 ///
 /// The statement quantifies over the two relations, so it refutes *every*
 /// candidate order at once rather than the one this module might have picked.
-/// Seven of the `Real` package's 13 order laws are enough; `I` is the witness.
+/// Seven of the `AxReal` package's 13 order laws are enough; `I` is the witness.
 fn declare_no_order(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
     let carrier = complex_ty(d, p);
     let prop = d.kernel().sort_zero();
@@ -1352,7 +1352,7 @@ fn declare_no_order(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelE
     let lt = d.kernel().fvar(lt_fv);
     let rel = |d: &mut IntDev<'_>, r: ExprId, a: ExprId, b: ExprId| d.apply(r, &[a, b]);
 
-    // The seven hypotheses, in the `Real` package's own shapes.
+    // The seven hypotheses, in the `AxReal` package's own shapes.
     let le_refl_ty = {
         let x_fv = d.fresh_fvar();
         let x = d.kernel().fvar(x_fv);

@@ -42,80 +42,80 @@ inductive Eq.{u} (x0 : Sort (u)) (x1 : x0) : ((x2 : x0) -> Prop) where
   | refl : Eq x0 x1 x1
 def Not : ((x0 : Prop) -> Prop) :=
   fun (x0 : Prop) => ((x1 : x0) -> False)
-axiom Real : Sort (1)
-axiom Real.add : ((x0 : Real) -> ((x1 : Real) -> Real))
-axiom Real.neg : ((x0 : Real) -> Real)
-axiom Real.zero : Real
-axiom Real.one : Real
-axiom Real.le : ((x0 : Real) -> ((x1 : Real) -> Prop))
-axiom Real.lt : ((x0 : Real) -> ((x1 : Real) -> Prop))
-axiom Real.lt_irrefl : ((x0 : Real) -> Not (Real.lt x0 x0))
-axiom Real.lt_of_lt_of_le : ((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> ((x3 : Real.lt x0 x1) -> ((x4 : Real.le x1 x2) -> Real.lt x0 x2)))))
-axiom Real.add_le_add : ((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> ((x3 : Real) -> ((x4 : Real.le x0 x1) -> ((x5 : Real.le x2 x3) -> Real.le (Real.add x0 x2) (Real.add x1 x3)))))))
-axiom Real.add_comm : ((x0 : Real) -> ((x1 : Real) -> Eq.{1} Real (Real.add x0 x1) (Real.add x1 x0)))
-axiom Real.add_assoc : ((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> Eq.{1} Real (Real.add (Real.add x0 x1) x2) (Real.add x0 (Real.add x1 x2)))))
-axiom Real.add_zero : ((x0 : Real) -> Eq.{1} Real (Real.add x0 Real.zero) x0)
-axiom Real.add_neg : ((x0 : Real) -> Eq.{1} Real (Real.add x0 (Real.neg x0)) Real.zero)
-axiom Real.zero_lt_one : Real.lt Real.zero Real.one
-axiom axeyum.reconstruct.lra.x._0 : Real
-axiom axeyum.reconstruct.lra.hyp._1 : Real.le (Real.add axeyum.reconstruct.lra.x._0 Real.zero) Real.zero
-axiom axeyum.reconstruct.lra.hyp._2 : Real.le (Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)) Real.zero
+axiom AxReal : Sort (1)
+axiom AxReal.add : ((x0 : AxReal) -> ((x1 : AxReal) -> AxReal))
+axiom AxReal.neg : ((x0 : AxReal) -> AxReal)
+axiom AxReal.zero : AxReal
+axiom AxReal.one : AxReal
+axiom AxReal.le : ((x0 : AxReal) -> ((x1 : AxReal) -> Prop))
+axiom AxReal.lt : ((x0 : AxReal) -> ((x1 : AxReal) -> Prop))
+axiom AxReal.lt_irrefl : ((x0 : AxReal) -> Not (AxReal.lt x0 x0))
+axiom AxReal.lt_of_lt_of_le : ((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.lt x0 x1) -> ((x4 : AxReal.le x1 x2) -> AxReal.lt x0 x2)))))
+axiom AxReal.add_le_add : ((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal) -> ((x4 : AxReal.le x0 x1) -> ((x5 : AxReal.le x2 x3) -> AxReal.le (AxReal.add x0 x2) (AxReal.add x1 x3)))))))
+axiom AxReal.add_comm : ((x0 : AxReal) -> ((x1 : AxReal) -> Eq.{1} AxReal (AxReal.add x0 x1) (AxReal.add x1 x0)))
+axiom AxReal.add_assoc : ((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> Eq.{1} AxReal (AxReal.add (AxReal.add x0 x1) x2) (AxReal.add x0 (AxReal.add x1 x2)))))
+axiom AxReal.add_zero : ((x0 : AxReal) -> Eq.{1} AxReal (AxReal.add x0 AxReal.zero) x0)
+axiom AxReal.add_neg : ((x0 : AxReal) -> Eq.{1} AxReal (AxReal.add x0 (AxReal.neg x0)) AxReal.zero)
+axiom AxReal.zero_lt_one : AxReal.lt AxReal.zero AxReal.one
+axiom axeyum.reconstruct.lra.x._0 : AxReal
+axiom axeyum.reconstruct.lra.hyp._1 : AxReal.le (AxReal.add axeyum.reconstruct.lra.x._0 AxReal.zero) AxReal.zero
+axiom axeyum.reconstruct.lra.hyp._2 : AxReal.le (AxReal.add (AxReal.neg axeyum.reconstruct.lra.x._0) (AxReal.add AxReal.one AxReal.zero)) AxReal.zero
 
 def axeyum_proof_share_0 :=
-  Real.add (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero)
+  AxReal.add (AxReal.neg axeyum.reconstruct.lra.x._0) (AxReal.add AxReal.one AxReal.zero)
 
 def axeyum_proof_share_1 :=
-  Real.add axeyum.reconstruct.lra.x._0 axeyum_proof_share_0
+  AxReal.add axeyum.reconstruct.lra.x._0 axeyum_proof_share_0
 
 def axeyum_proof_share_2 :=
-  Eq.{1} Real axeyum_proof_share_1
+  Eq.{1} AxReal axeyum_proof_share_1
 
 def axeyum_proof_share_3 :=
-  Real.add (Real.add axeyum.reconstruct.lra.x._0 Real.zero) axeyum_proof_share_0
+  AxReal.add (AxReal.add axeyum.reconstruct.lra.x._0 AxReal.zero) axeyum_proof_share_0
 
 def axeyum_proof_share_4 :=
-  Eq.{1} Real axeyum_proof_share_3
+  Eq.{1} AxReal axeyum_proof_share_3
 
 def axeyum_proof_share_5 :=
-  Real.add Real.zero axeyum_proof_share_0
+  AxReal.add AxReal.zero axeyum_proof_share_0
 
 def axeyum_proof_share_6 :=
-  Real.add axeyum.reconstruct.lra.x._0 axeyum_proof_share_5
+  AxReal.add axeyum.reconstruct.lra.x._0 axeyum_proof_share_5
 
 def axeyum_proof_share_7 :=
-  Eq.{1} Real axeyum_proof_share_6
+  Eq.{1} AxReal axeyum_proof_share_6
 
 def axeyum_proof_share_8 :=
-  Eq.{1} Real axeyum_proof_share_5
+  Eq.{1} AxReal axeyum_proof_share_5
 
 def axeyum_proof_share_9 :=
-  Real.add axeyum_proof_share_0
+  AxReal.add axeyum_proof_share_0
 
 def axeyum_proof_share_10 :=
-  axeyum_proof_share_9 Real.zero
+  axeyum_proof_share_9 AxReal.zero
 
 def axeyum_proof_share_11 :=
-  Real.add Real.zero (Real.add Real.one Real.zero)
+  AxReal.add AxReal.zero (AxReal.add AxReal.one AxReal.zero)
 
 def axeyum_proof_share_12 :=
-  Eq.{1} Real axeyum_proof_share_11
+  Eq.{1} AxReal axeyum_proof_share_11
 
 def axeyum_proof_share_13 :=
-  Real.add (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0))
+  AxReal.add (AxReal.add axeyum.reconstruct.lra.x._0 (AxReal.neg axeyum.reconstruct.lra.x._0))
 
 def axeyum_proof_share_14 :=
-  axeyum_proof_share_13 (Real.add Real.one Real.zero)
+  axeyum_proof_share_13 (AxReal.add AxReal.one AxReal.zero)
 
 def axeyum_proof_share_15 :=
-  Eq.{1} Real axeyum_proof_share_14
+  Eq.{1} AxReal axeyum_proof_share_14
 
 def axeyum_proof_share_16 :=
-  @Eq.refl.{1} Real axeyum_proof_share_14
+  @Eq.refl.{1} AxReal axeyum_proof_share_14
 
 def axeyum_proof_share_17 :=
-  Real.add (Real.add Real.one Real.zero) Real.zero
+  AxReal.add (AxReal.add AxReal.one AxReal.zero) AxReal.zero
 
 theorem axeyum_refutation : False :=
-  Real.lt_irrefl Real.zero (Real.lt_of_lt_of_le Real.zero (Real.add Real.one Real.zero) Real.zero (@Eq.rec.{0, 1} Real Real.one (fun (x0 : Real) => fun (x1 : Eq.{1} Real Real.one x0) => Real.lt Real.zero x0) Real.zero_lt_one (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real (Real.add Real.one Real.zero) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add Real.one Real.zero) x0) => Eq.{1} Real x0 (Real.add Real.one Real.zero)) (@Eq.refl.{1} Real (Real.add Real.one Real.zero)) Real.one (Real.add_zero Real.one))) (@Eq.rec.{0, 1} Real axeyum_proof_share_1 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_2 x0) => Real.le x0 Real.zero) (@Eq.rec.{0, 1} Real axeyum_proof_share_3 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_4 x0) => Real.le x0 Real.zero) (@Eq.rec.{0, 1} Real (Real.add Real.zero Real.zero) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add Real.zero Real.zero) x0) => Real.le axeyum_proof_share_3 x0) (Real.add_le_add (Real.add axeyum.reconstruct.lra.x._0 Real.zero) Real.zero axeyum_proof_share_0 Real.zero axeyum.reconstruct.lra.hyp._1 axeyum.reconstruct.lra.hyp._2) Real.zero (Real.add_zero Real.zero)) axeyum_proof_share_1 (@Eq.rec.{0, 1} Real axeyum_proof_share_6 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_7 x0) => axeyum_proof_share_4 x0) (Real.add_assoc axeyum.reconstruct.lra.x._0 Real.zero axeyum_proof_share_0) axeyum_proof_share_1 (@Eq.rec.{0, 1} Real axeyum_proof_share_5 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_8 x0) => axeyum_proof_share_7 (Real.add axeyum.reconstruct.lra.x._0 x0)) (@Eq.refl.{1} Real axeyum_proof_share_6) axeyum_proof_share_0 (@Eq.rec.{0, 1} Real axeyum_proof_share_10 (fun (x0 : Real) => fun (x1 : Eq.{1} Real axeyum_proof_share_10 x0) => axeyum_proof_share_8 x0) (Real.add_comm Real.zero axeyum_proof_share_0) axeyum_proof_share_0 (Real.add_zero axeyum_proof_share_0))))) (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real axeyum_proof_share_1 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_2 x0) => axeyum_proof_share_2 x0) (@Eq.refl.{1} Real axeyum_proof_share_1) (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real axeyum_proof_share_11 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_12 x0) => axeyum_proof_share_2 x0) (@Eq.rec.{0, 1} Real axeyum_proof_share_14 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_15 x0) => axeyum_proof_share_2 x0) (@Eq.rec.{0, 1} Real axeyum_proof_share_14 (fun (x0 : Real) => fun (x1 : axeyum_proof_share_15 x0) => Eq.{1} Real x0 axeyum_proof_share_14) axeyum_proof_share_16 axeyum_proof_share_1 (Real.add_assoc axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0) (Real.add Real.one Real.zero))) axeyum_proof_share_11 (@Eq.rec.{0, 1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) (fun (x0 : Real) => fun (x1 : Eq.{1} Real (Real.add axeyum.reconstruct.lra.x._0 (Real.neg axeyum.reconstruct.lra.x._0)) x0) => axeyum_proof_share_15 (Real.add x0 (Real.add Real.one Real.zero))) axeyum_proof_share_16 Real.zero (Real.add_neg axeyum.reconstruct.lra.x._0))) (Real.add Real.one Real.zero) (@Eq.rec.{0, 1} Real axeyum_proof_share_17 (fun (x0 : Real) => fun (x1 : Eq.{1} Real axeyum_proof_share_17 x0) => axeyum_proof_share_12 x0) (Real.add_comm Real.zero (Real.add Real.one Real.zero)) (Real.add Real.one Real.zero) (Real.add_zero (Real.add Real.one Real.zero)))))))
+  AxReal.lt_irrefl AxReal.zero (AxReal.lt_of_lt_of_le AxReal.zero (AxReal.add AxReal.one AxReal.zero) AxReal.zero (@Eq.rec.{0, 1} AxReal AxReal.one (fun (x0 : AxReal) => fun (x1 : Eq.{1} AxReal AxReal.one x0) => AxReal.lt AxReal.zero x0) AxReal.zero_lt_one (AxReal.add AxReal.one AxReal.zero) (@Eq.rec.{0, 1} AxReal (AxReal.add AxReal.one AxReal.zero) (fun (x0 : AxReal) => fun (x1 : Eq.{1} AxReal (AxReal.add AxReal.one AxReal.zero) x0) => Eq.{1} AxReal x0 (AxReal.add AxReal.one AxReal.zero)) (@Eq.refl.{1} AxReal (AxReal.add AxReal.one AxReal.zero)) AxReal.one (AxReal.add_zero AxReal.one))) (@Eq.rec.{0, 1} AxReal axeyum_proof_share_1 (fun (x0 : AxReal) => fun (x1 : axeyum_proof_share_2 x0) => AxReal.le x0 AxReal.zero) (@Eq.rec.{0, 1} AxReal axeyum_proof_share_3 (fun (x0 : AxReal) => fun (x1 : axeyum_proof_share_4 x0) => AxReal.le x0 AxReal.zero) (@Eq.rec.{0, 1} AxReal (AxReal.add AxReal.zero AxReal.zero) (fun (x0 : AxReal) => fun (x1 : Eq.{1} AxReal (AxReal.add AxReal.zero AxReal.zero) x0) => AxReal.le axeyum_proof_share_3 x0) (AxReal.add_le_add (AxReal.add axeyum.reconstruct.lra.x._0 AxReal.zero) AxReal.zero axeyum_proof_share_0 AxReal.zero axeyum.reconstruct.lra.hyp._1 axeyum.reconstruct.lra.hyp._2) AxReal.zero (AxReal.add_zero AxReal.zero)) axeyum_proof_share_1 (@Eq.rec.{0, 1} AxReal axeyum_proof_share_6 (fun (x0 : AxReal) => fun (x1 : axeyum_proof_share_7 x0) => axeyum_proof_share_4 x0) (AxReal.add_assoc axeyum.reconstruct.lra.x._0 AxReal.zero axeyum_proof_share_0) axeyum_proof_share_1 (@Eq.rec.{0, 1} AxReal axeyum_proof_share_5 (fun (x0 : AxReal) => fun (x1 : axeyum_proof_share_8 x0) => axeyum_proof_share_7 (AxReal.add axeyum.reconstruct.lra.x._0 x0)) (@Eq.refl.{1} AxReal axeyum_proof_share_6) axeyum_proof_share_0 (@Eq.rec.{0, 1} AxReal axeyum_proof_share_10 (fun (x0 : AxReal) => fun (x1 : Eq.{1} AxReal axeyum_proof_share_10 x0) => axeyum_proof_share_8 x0) (AxReal.add_comm AxReal.zero axeyum_proof_share_0) axeyum_proof_share_0 (AxReal.add_zero axeyum_proof_share_0))))) (AxReal.add AxReal.one AxReal.zero) (@Eq.rec.{0, 1} AxReal axeyum_proof_share_1 (fun (x0 : AxReal) => fun (x1 : axeyum_proof_share_2 x0) => axeyum_proof_share_2 x0) (@Eq.refl.{1} AxReal axeyum_proof_share_1) (AxReal.add AxReal.one AxReal.zero) (@Eq.rec.{0, 1} AxReal axeyum_proof_share_11 (fun (x0 : AxReal) => fun (x1 : axeyum_proof_share_12 x0) => axeyum_proof_share_2 x0) (@Eq.rec.{0, 1} AxReal axeyum_proof_share_14 (fun (x0 : AxReal) => fun (x1 : axeyum_proof_share_15 x0) => axeyum_proof_share_2 x0) (@Eq.rec.{0, 1} AxReal axeyum_proof_share_14 (fun (x0 : AxReal) => fun (x1 : axeyum_proof_share_15 x0) => Eq.{1} AxReal x0 axeyum_proof_share_14) axeyum_proof_share_16 axeyum_proof_share_1 (AxReal.add_assoc axeyum.reconstruct.lra.x._0 (AxReal.neg axeyum.reconstruct.lra.x._0) (AxReal.add AxReal.one AxReal.zero))) axeyum_proof_share_11 (@Eq.rec.{0, 1} AxReal (AxReal.add axeyum.reconstruct.lra.x._0 (AxReal.neg axeyum.reconstruct.lra.x._0)) (fun (x0 : AxReal) => fun (x1 : Eq.{1} AxReal (AxReal.add axeyum.reconstruct.lra.x._0 (AxReal.neg axeyum.reconstruct.lra.x._0)) x0) => axeyum_proof_share_15 (AxReal.add x0 (AxReal.add AxReal.one AxReal.zero))) axeyum_proof_share_16 AxReal.zero (AxReal.add_neg axeyum.reconstruct.lra.x._0))) (AxReal.add AxReal.one AxReal.zero) (@Eq.rec.{0, 1} AxReal axeyum_proof_share_17 (fun (x0 : AxReal) => fun (x1 : Eq.{1} AxReal axeyum_proof_share_17 x0) => axeyum_proof_share_12 x0) (AxReal.add_comm AxReal.zero (AxReal.add AxReal.one AxReal.zero)) (AxReal.add AxReal.one AxReal.zero) (AxReal.add_zero (AxReal.add AxReal.one AxReal.zero)))))))
 
 #print axioms axeyum_refutation

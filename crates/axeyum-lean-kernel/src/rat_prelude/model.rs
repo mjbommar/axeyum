@@ -1,14 +1,14 @@
-//! `ℚ` as a **machine-checked model** of the `Real` axiom package.
+//! `ℚ` as a **machine-checked model** of the `AxReal` axiom package.
 //!
 //! [`build_int_model_of_arith`](crate::build_int_model_of_arith) already
-//! exhibits `ℤ` as a model of all 22 `Real` laws, and its own doc comment is
+//! exhibits `ℤ` as a model of all 22 `AxReal` laws, and its own doc comment is
 //! careful about what that does and does not buy:
 //!
 //! > Discharging them requires either constructing a carrier (`ℚ` suffices for
 //! > every axiom in the package; `ℝ` is needed only once a completeness axiom
 //! > is added) or parameterising the consumers over the ordered-ring interface.
 //!
-//! This is the first half of that sentence, carried out. The `Real` package
+//! This is the first half of that sentence, carried out. The `AxReal` package
 //! declares no inverse, no division, no completeness, no Archimedean and no
 //! density axiom (ADR-0456), so **`ℚ` satisfies every axiom in it** — and
 //! unlike `ℤ`, `ℚ` is a *field*, which is what a Farkas refutation's rational
@@ -30,18 +30,18 @@ use crate::env::Declaration;
 use crate::name::NameId;
 use crate::{Kernel, KernelError};
 
-/// One interpreted law: the `Real` axiom, the `Rat` theorem that models it, and
+/// One interpreted law: the `AxReal` axiom, the `Rat` theorem that models it, and
 /// the kernel-checked witness binding them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RatModelLaw {
-    /// The `Real` axiom being interpreted.
+    /// The `AxReal` axiom being interpreted.
     pub real: NameId,
     /// The `Rat` theorem supplied as its proof under the interpretation.
     pub rat: NameId,
-    /// The admitted witness `Real.RatModel.<law>`, whose type is the *computed*
+    /// The admitted witness `AxReal.RatModel.<law>`, whose type is the *computed*
     /// interpretation of `real`'s type.
     pub witness: NameId,
-    /// Whether the interpreted `Real` type is **syntactically identical** to the
+    /// Whether the interpreted `AxReal` type is **syntactically identical** to the
     /// `Rat` theorem's own declared type, rather than merely definitionally
     /// equal. Identity is the stronger and more auditable outcome.
     pub identical: bool,
@@ -50,13 +50,13 @@ pub struct RatModelLaw {
 /// The result of [`build_rat_model_of_arith`].
 #[derive(Debug, Clone)]
 pub struct RatModel {
-    /// The axiomatized `Real` package being modelled.
+    /// The axiomatized `AxReal` package being modelled.
     pub arith: ArithPrelude,
     /// The constructed `ℚ` development doing the modelling.
     pub rat: RatPrelude,
-    /// The interpretation of `Real`'s eight carrier/operation symbols.
+    /// The interpretation of `AxReal`'s eight carrier/operation symbols.
     pub symbols: Vec<(NameId, NameId)>,
-    /// One entry per `Real` law, in declaration order.
+    /// One entry per `AxReal` law, in declaration order.
     pub laws: Vec<RatModelLaw>,
 }
 
@@ -68,14 +68,14 @@ impl RatModel {
     }
 }
 
-/// Build both preludes and admit the interpretation of every `Real` law into
+/// Build both preludes and admit the interpretation of every `AxReal` law into
 /// the constructed `ℚ` development.
 ///
 /// # Errors
 ///
 /// Returns the trusted gate's rejection. A [`KernelError`] from
 /// `add_declaration` here means the kernel **refused** a `Rat` theorem as a
-/// proof of the interpreted `Real` axiom — i.e. `ℚ` was not shown to model that
+/// proof of the interpreted `AxReal` axiom — i.e. `ℚ` was not shown to model that
 /// axiom.
 pub fn build_rat_model_of_arith(kernel: &mut Kernel) -> Result<RatModel, KernelError> {
     let arith = build_arith_prelude(kernel)?;
@@ -93,7 +93,7 @@ pub fn build_rat_model_of_arith(kernel: &mut Kernel) -> Result<RatModel, KernelE
     ];
     let interpretation: HashMap<NameId, NameId> = symbols.iter().copied().collect();
 
-    // The `Real` laws in declaration order, paired with `RatPrelude::ring_laws`
+    // The `AxReal` laws in declaration order, paired with `RatPrelude::ring_laws`
     // — which is written in that same order, so the two lists cannot drift.
     let real_laws: [NameId; 22] = [
         arith.le_refl,
@@ -123,7 +123,7 @@ pub fn build_rat_model_of_arith(kernel: &mut Kernel) -> Result<RatModel, KernelE
 
     let anon = kernel.anon();
     let model_root = {
-        let real = kernel.name_str(anon, "Real");
+        let real = kernel.name_str(anon, "AxReal");
         kernel.name_str(real, "RatModel")
     };
 

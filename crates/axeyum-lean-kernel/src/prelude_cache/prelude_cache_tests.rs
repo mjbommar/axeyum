@@ -206,8 +206,8 @@ fn the_creal_slot_restores_the_constructed_reals_and_nothing_else() {
         );
     }
     assert!(
-        !names.contains("Real"),
-        "the CReal slot restored a kernel carrying the AXIOMATIZED `Real` \
+        !names.contains("AxReal"),
+        "the CReal slot restored a kernel carrying the AXIOMATIZED `AxReal` \
          carrier -- the slot is wired to the wrong builder"
     );
 

@@ -34,7 +34,7 @@
 //!
 //! ## What a disagreement would mean
 //!
-//! Not a bug in this example: a genuine divergence between what the `Real`
+//! Not a bug in this example: a genuine divergence between what the `AxReal`
 //! package assumes and what the `Int` development proves. The two are supposed
 //! to be the same interface — `build_int_model_of_arith` reports
 //! `identical: true` for all 22 laws — so a differing row is the honest report
@@ -56,12 +56,12 @@ fn hex(bytes: &[u8]) -> String {
     output
 }
 
-/// The telescope over the axiomatized `Real` package.
+/// The telescope over the axiomatized `AxReal` package.
 fn real_telescope() -> Result<Vec<RingInterfaceBinder>, String> {
     let mut kernel = Kernel::new();
-    let arith = build_arith_prelude(&mut kernel).map_err(|e| format!("Real prelude: {e:?}"))?;
+    let arith = build_arith_prelude(&mut kernel).map_err(|e| format!("AxReal prelude: {e:?}"))?;
     ring_interface_telescope(&mut kernel, &RingSignature::from(arith))
-        .map_err(|e| format!("Real telescope: {e:?}"))
+        .map_err(|e| format!("AxReal telescope: {e:?}"))
 }
 
 /// The telescope over the constructed, axiom-free `Int` development.
@@ -132,7 +132,7 @@ fn run() -> Result<(), String> {
 
     if require_identical && !differing.is_empty() {
         return Err(format!(
-            "{} of 30 interface binders differ between the axiomatized `Real` package and the \
+            "{} of 30 interface binders differ between the axiomatized `AxReal` package and the \
              axiom-free `Int` development; the telescope is NOT the same specification",
             differing.len()
         ));

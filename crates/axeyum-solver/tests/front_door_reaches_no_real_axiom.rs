@@ -1,8 +1,8 @@
-//! **The shipped front door never builds the `Real` axiom package.**
+//! **The shipped front door never builds the `AxReal` axiom package.**
 //!
 //! # The gap this closes
 //!
-//! Every claim so far that a route no longer depends on the axiomatized `Real`
+//! Every claim so far that a route no longer depends on the axiomatized `AxReal`
 //! carrier has been checked by reading the finished proof term's axiom
 //! footprint — `examples/front_door_carrier.rs --require-axiom-free`,
 //! `examples/ordered_ring_refutation.rs --require-empty`, and the payoff tests
@@ -11,10 +11,10 @@
 //! answers were different:
 //!
 //! `reconstruct_int_farkas_to_lean_module` — the `ProofFragment::IntFarkas`
-//! arm of `prove_unsat_to_lean_module`, and a shipped route — built the `Real`
+//! arm of `prove_unsat_to_lean_module`, and a shipped route — built the `AxReal`
 //! package, refuted there, abstracted all 30 constants back out with
 //! `generalize_over_ordered_ring`, and instantiated at `ℤ`. Its module named no
-//! `Real` axiom and its footprint was empty, so every footprint-shaped check
+//! `AxReal` axiom and its footprint was empty, so every footprint-shaped check
 //! passed while the route constructed the entire trusted surface to get there.
 //! `front_door_carrier` could not see it either: its three fixtures are all
 //! real-typed, so they route to `Lra` and `Sos` and never reach the integer
@@ -98,7 +98,7 @@ fn the_shipped_front_door_never_builds_the_real_axiom_package() {
     assert_eq!(
         arith_prelude_builds(),
         0,
-        "something built the Real package before this test ran; the reading below would \
+        "something built the AxReal package before this test ran; the reading below would \
          not be about the front door"
     );
 
@@ -135,8 +135,8 @@ fn the_shipped_front_door_never_builds_the_real_axiom_package() {
             "{label} no longer routes to the arm this fixture exists to cover"
         );
         assert!(
-            !source.contains("axiom Real : Sort"),
-            "{label}: the emitted module declares the axiomatized Real carrier"
+            !source.contains("axiom AxReal : Sort"),
+            "{label}: the emitted module declares the axiomatized AxReal carrier"
         );
         assert!(
             !source.contains("sorryAx"),
@@ -152,7 +152,7 @@ fn the_shipped_front_door_never_builds_the_real_axiom_package() {
         );
         assert_eq!(
             builds, 0,
-            "{label}: the shipped front door built the Real axiom package. Its module can \
+            "{label}: the shipped front door built the AxReal axiom package. Its module can \
              still be footprint-clean -- the IntFarkas arm abstracted the 30 constants back \
              out and instantiated at Z -- and that is exactly the failure this counter \
              exists to see."
@@ -162,12 +162,12 @@ fn the_shipped_front_door_never_builds_the_real_axiom_package() {
     // The control, and the reason the four zeros above are worth reading: the
     // counter does move. Without this an `arith_prelude_builds` that had been
     // wired to a constant would pass every assertion in this test.
-    let _real = LraReconstructCtx::try_new().expect("the Real package still builds");
+    let _real = LraReconstructCtx::try_new().expect("the AxReal package still builds");
     let after_control = arith_prelude_builds();
     println!("FRONT_DOOR_REACH control | arith_prelude_builds={after_control}");
     assert_eq!(
         after_control, 1,
-        "the build counter did not move when the Real package was built on purpose, so the \
+        "the build counter did not move when the AxReal package was built on purpose, so the \
          zeros above measure nothing"
     );
 }

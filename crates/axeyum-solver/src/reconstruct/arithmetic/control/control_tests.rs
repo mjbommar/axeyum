@@ -63,7 +63,7 @@ fn the_control_environment_carries_exactly_one_axiom() {
 /// The property the 30-axiom control does not have: the control assumption is
 /// **provably redundant**, and the proof is in the same environment.
 ///
-/// `Real`'s 30 are only *relatively* consistent. This one is discharged
+/// `AxReal`'s 30 are only *relatively* consistent. This one is discharged
 /// outright, so shrinking the control also removed the last way the control
 /// itself could make the system unsound.
 #[test]
@@ -137,8 +137,8 @@ fn a_refutation_reaches_the_control_axiom_and_nothing_over_the_integers() {
 /// The discharge guard, reached: a control built on a law that is **assumed**
 /// rather than proved is refused.
 ///
-/// Handed the `Real` package's interface, the discharge's value is
-/// `Real.lt_irrefl`, an axiom — so the control would stand in for an assumption
+/// Handed the `AxReal` package's interface, the discharge's value is
+/// `AxReal.lt_irrefl`, an axiom — so the control would stand in for an assumption
 /// and the trusted base would grow by one rather than merely become visible.
 /// Deleting the guard in `control_carrier_over` kills this test and no other
 /// (measured; see the lane note).
@@ -150,7 +150,7 @@ fn a_control_built_on_an_assumed_law_is_refused() {
     use crate::reconstruct::arithmetic::control::control_carrier_over;
 
     let mut kernel = Kernel::new();
-    let arith = build_arith_prelude(&mut kernel).expect("the Real package builds");
+    let arith = build_arith_prelude(&mut kernel).expect("the AxReal package builds");
     let err = control_carrier_over(&mut kernel, RingSignature::from(arith))
         .expect_err("a control standing in for an AXIOM must be refused");
     let rendered = format!("{err:?}");
@@ -159,7 +159,7 @@ fn a_control_built_on_an_assumed_law_is_refused() {
         "the refusal must say the discharge failed: {rendered}"
     );
     assert!(
-        rendered.contains("Real.lt_irrefl"),
+        rendered.contains("AxReal.lt_irrefl"),
         "the refusal must name what the discharge rests on: {rendered}"
     );
 }

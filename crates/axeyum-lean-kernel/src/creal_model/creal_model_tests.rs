@@ -1,10 +1,10 @@
-//! Tests for the `CReal` model of the `Real` axiom package (ADR-0512 phase R4).
+//! Tests for the `CReal` model of the `AxReal` axiom package (ADR-0512 phase R4).
 //!
 //! The first test is the claim; the rest are the ones that stop the claim being
 //! vacuous, and each of them fails for a *different* reason:
 //!
 //! - [`every_law_is_witnessed_and_axiom_free`] — the interpretation of each
-//!   `Real` law is admitted with a `CReal` theorem as its proof, and rests on
+//!   `AxReal` law is admitted with a `CReal` theorem as its proof, and rests on
 //!   nothing.
 //! - [`the_pairing_is_by_leaf_name`] — the two 22-element lists really do
 //!   correspond entry by entry. **This one is belt-and-braces today, and the
@@ -18,10 +18,10 @@
 //!   is what would still hold if two law types ever coincided, and because it
 //!   costs one pass over a list already in hand.
 //! - [`exactly_nine_laws_are_restated_over_equiv`] — ADR-0512's Measurement 2,
-//!   read out of the kernel. Thirteen laws are the `Real` package's statements
+//!   read out of the kernel. Thirteen laws are the `AxReal` package's statements
 //!   verbatim and nine are not, and it is the nine that make the setoid route
 //!   cost anything at all.
-//! - [`the_interpretation_covers_every_real_declaration`] — no `Real`
+//! - [`the_interpretation_covers_every_real_declaration`] — no `AxReal`
 //!   declaration is left out; the population comes from the environment.
 //! - [`the_model_is_worthless_without_the_discrimination_witnesses`] — the
 //!   seven witnesses that keep `CReal`'s laws from being true of an empty
@@ -39,18 +39,18 @@ use crate::arith_model::leaf_name;
 use crate::env::Declaration;
 use crate::{Kernel, build_creal_prelude};
 
-/// Every `Real` law is modelled by a `CReal` theorem the kernel accepted, and
+/// Every `AxReal` law is modelled by a `CReal` theorem the kernel accepted, and
 /// every witness has an empty axiom footprint.
 ///
 /// The empty footprint is the whole point. A witness whose closure reached a
-/// `Real` axiom would type-check trivially (`Real.add_comm` proves
-/// `Real.add_comm`) and would establish nothing; only the footprint separates a
+/// `AxReal` axiom would type-check trivially (`AxReal.add_comm` proves
+/// `AxReal.add_comm`) and would establish nothing; only the footprint separates a
 /// model from a restatement.
 #[test]
 fn every_law_is_witnessed_and_axiom_free() {
     let mut k = Kernel::new();
     let model = build_creal_model_of_arith(&mut k).expect("the CReal model must build");
-    assert_eq!(model.laws.len(), 22, "the Real package has 22 laws");
+    assert_eq!(model.laws.len(), 22, "the AxReal package has 22 laws");
     for law in &model.laws {
         assert!(
             matches!(
@@ -73,7 +73,7 @@ fn every_law_is_witnessed_and_axiom_free() {
     }
 }
 
-/// The `Real` law and the `CReal` theorem paired with it have the same leaf
+/// The `AxReal` law and the `CReal` theorem paired with it have the same leaf
 /// name, for all 22.
 ///
 /// `build_creal_model_of_arith` zips two hand-written orderings, and this says
@@ -103,7 +103,7 @@ fn the_pairing_is_by_leaf_name() {
         .collect();
     assert!(
         mismatched.is_empty(),
-        "Real/CReal laws paired across different names: {mismatched:?}"
+        "AxReal/CReal laws paired across different names: {mismatched:?}"
     );
     let distinct: BTreeSet<String> = model
         .laws
@@ -114,12 +114,12 @@ fn the_pairing_is_by_leaf_name() {
 }
 
 /// Exactly nine of the 22 laws mention the carrier's `Eq` and are therefore
-/// modelled in `CReal.Equiv`-restated form; the other thirteen are the `Real`
+/// modelled in `CReal.Equiv`-restated form; the other thirteen are the `AxReal`
 /// package's statements verbatim.
 ///
 /// This is ADR-0512's Measurement 2 and it is the entire price of the setoid
 /// route. It is pinned here because both directions are interesting: a tenth
-/// restated law means the `Real` package grew an `Eq`-statement the order
+/// restated law means the `AxReal` package grew an `Eq`-statement the order
 /// fragment did not have, and an eighth means one was dropped.
 #[test]
 fn exactly_nine_laws_are_restated_over_equiv() {
@@ -151,7 +151,7 @@ fn exactly_nine_laws_are_restated_over_equiv() {
     assert_eq!(model.laws.len() - model.restated_count(), 13);
 }
 
-/// Every `Real.*` declaration is accounted for: either an interpreted symbol or
+/// Every `AxReal.*` declaration is accounted for: either an interpreted symbol or
 /// a modelled law. Nothing in the package is silently skipped, so a 31st axiom
 /// cannot slip past this model while the count still reads "all covered".
 #[test]
@@ -166,7 +166,7 @@ fn the_interpretation_covers_every_real_declaration() {
     for (_, declaration) in k.environment().iter() {
         if let Declaration::Axiom { name, .. } = declaration {
             let rendered = k.display_name(*name).to_string();
-            if rendered == "Real" || rendered.starts_with("Real.") {
+            if rendered == "AxReal" || rendered.starts_with("AxReal.") {
                 declared.insert(*name);
             }
         }
@@ -174,7 +174,7 @@ fn the_interpretation_covers_every_real_declaration() {
     assert_eq!(
         declared.len(),
         30,
-        "the Real package is 30 trusted declarations"
+        "the AxReal package is 30 trusted declarations"
     );
     let missed: Vec<_> = declared
         .difference(&accounted)
@@ -182,7 +182,7 @@ fn the_interpretation_covers_every_real_declaration() {
         .collect();
     assert!(
         missed.is_empty(),
-        "Real declarations with no interpretation: {missed:?}"
+        "AxReal declarations with no interpretation: {missed:?}"
     );
 }
 
@@ -266,7 +266,7 @@ fn the_equality_slot_is_not_eq() {
 }
 
 /// The whole trusted surface of the environment the model was built in is the
-/// `Real` package and nothing else — in particular the constructed `CReal` and
+/// `AxReal` package and nothing else — in particular the constructed `CReal` and
 /// everything under it adds **zero**.
 ///
 /// This is the measurement that says what deleting `build_arith_prelude` would
@@ -287,15 +287,15 @@ fn the_only_trusted_declarations_left_are_the_real_package() {
         .collect();
     let non_real: Vec<&String> = trusted
         .iter()
-        .filter(|n| *n != "Real" && !n.starts_with("Real."))
+        .filter(|n| *n != "AxReal" && !n.starts_with("AxReal."))
         .collect();
     assert!(
         non_real.is_empty(),
-        "trusted declarations outside the Real package: {non_real:?}"
+        "trusted declarations outside the AxReal package: {non_real:?}"
     );
     assert_eq!(
         trusted.len(),
         30,
-        "the Real package is the whole remaining trusted surface"
+        "the AxReal package is the whole remaining trusted surface"
     );
 }

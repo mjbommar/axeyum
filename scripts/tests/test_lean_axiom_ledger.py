@@ -180,7 +180,7 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
     def test_a_new_axiom_fails_until_it_is_accepted(self) -> None:
         grown = clone(self.measurement)
         template = grown.axiom_rows[0]
-        invented = {**template, "name": "Real.zzz_invented"}
+        invented = {**template, "name": "AxReal.zzz_invented"}
         grown.axiom_rows.append(invented)
         grown.axiom_rows.sort(key=GEN.entry_key)
         grown.surface_rows.append({**invented, "kind": "axiom"})
@@ -192,6 +192,90 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
                 for failure in self.failures(grown)
             )
         )
+
+    # ---- a rename is not a retirement -------------------------------------
+
+    def test_a_rename_carries_metadata_and_retires_nothing(self) -> None:
+        """`Real` -> `AxReal` (ADR-0522) must not read as 30 retirements."""
+        renamed_measurement = clone(self.measurement)
+        for row in renamed_measurement.axiom_rows + renamed_measurement.surface_rows:
+            if row["prelude"] != "real":
+                continue
+            row["name"] = "Ax" + row["name"]
+            row["canonical_type"] = row["canonical_type"].replace("AxReal", "AxAxReal")
+            row["type_sha256"] = GEN.digest(row["canonical_type"])
+        renamed_measurement.axiom_rows.sort(key=GEN.entry_key)
+
+        # Without the deliberate flag this reads as a whole-package swap.
+        failures = self.failures(renamed_measurement)
+        self.assertTrue(any("ledger is missing admitted axioms" in f for f in failures))
+        self.assertTrue(
+            any("the kernel no longer admits" in f for f in failures), failures
+        )
+
+        before = {
+            entry["name"]: entry["classification"]
+            for entry in self.data["entries"]
+            if entry["prelude"] == "real"
+        }
+        retired_before = len(self.data["retired_entries"])
+        moved = GEN.accept_rename(
+            self.data, renamed_measurement, {"AxReal": "AxAxReal"}
+        )
+        self.assertEqual(len(moved), len(before))
+        # Nothing was filed as retired: the trusted surface did not shrink.
+        self.assertEqual(len(self.data["retired_entries"]), retired_before)
+        # Every authored classification survived the move.
+        after = {
+            entry["name"]: entry["classification"]
+            for entry in self.data["entries"]
+            if entry["prelude"] == "real"
+        }
+        self.assertEqual(
+            {"Ax" + name: value for name, value in before.items()}, after
+        )
+        self.assertEqual(
+            GEN.validate_rows(self.data["entries"], renamed_measurement), []
+        )
+
+    def test_a_rename_whose_target_is_not_admitted_is_refused(self) -> None:
+        with self.assertRaises(GEN.LedgerError) as caught:
+            GEN.accept_rename(self.data, self.measurement, {"AxReal": "Nonesuch"})
+        self.assertIn("which the kernel does not admit", str(caught.exception))
+        self.assertIn("--accept-population-change", str(caught.exception))
+
+    def test_a_rename_prefix_does_not_capture_a_longer_name(self) -> None:
+        """A rename maps `X` and `X.child`, never every name starting with `X`.
+
+        `Real` being a *substring* of `CReal` is the confusion ADR-0522 exists to
+        end; a rename verb that matched on bare `startswith` would reintroduce it
+        one level up. `AxRea` is a proper prefix of every live row's name and of
+        no declaration, so the correct behaviour is to rename nothing at all.
+        """
+        live = [
+            entry["name"]
+            for entry in self.data["entries"]
+            if entry["prelude"] == "real"
+        ]
+        self.assertTrue(all(name.startswith("AxRea") for name in live), live)
+        self.assertEqual(
+            GEN.accept_rename(self.data, self.measurement, {"AxRea": "Q"}), []
+        )
+        self.assertEqual(
+            [
+                entry["name"]
+                for entry in self.data["entries"]
+                if entry["prelude"] == "real"
+            ],
+            live,
+        )
+        self.assertEqual(GEN.validate_rows(self.data["entries"], self.measurement), [])
+
+    def test_rename_argument_must_be_old_equals_new(self) -> None:
+        for bad in ("AxReal", "=AxReal", "AxReal="):
+            with self.assertRaises(GEN.LedgerError):
+                GEN.parse_rename(bad)
+        self.assertEqual(GEN.parse_rename("A=B"), ("A", "B"))
 
     def test_retired_row_cannot_be_live_or_still_admitted(self) -> None:
         revived = copy.deepcopy(self.data["entries"][0])

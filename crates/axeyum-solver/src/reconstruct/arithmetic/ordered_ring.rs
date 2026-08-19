@@ -1,12 +1,12 @@
 //! Parameterising a finished LRA/Farkas refutation over the **ordered-ring
-//! interface**, so the refutation stops being a statement *about* the `Real`
+//! interface**, so the refutation stops being a statement *about* the `AxReal`
 //! prelude's 30 trusted constants and becomes a statement about every structure
 //! that satisfies its 22 laws.
 //!
 //! ## The move
 //!
 //! [`reconstruct_lra_proof`](super::reconstruct_lra_proof) returns a term of
-//! type `False` whose [`Kernel::axiom_footprint`] is the `Real` prelude's 30
+//! type `False` whose [`Kernel::axiom_footprint`] is the `AxReal` prelude's 30
 //! declarations, plus one opaque `R`-typed axiom per real variable and one
 //! hypothesis axiom per asserted constraint. ADR-0456 measured what those 30
 //! are: eight carrier/operation symbols and 22 laws of an **ordered commutative
@@ -29,7 +29,7 @@
 //!
 //! and its axiom footprint is **empty**: the laws moved from the trusted base
 //! into the theorem's own hypotheses, which is where they belong. Nothing is
-//! lost, because applying the generalized theorem to the 30 `Real` constants
+//! lost, because applying the generalized theorem to the 30 `AxReal` constants
 //! (and to the variable/hypothesis axioms) recovers the original `False`
 //! verbatim — [`OrderedRingRefutation::instantiated`] is that recovery,
 //! admitted through the same trusted gate, with the original footprint back.
@@ -37,7 +37,7 @@
 //! ## What this is not
 //!
 //! It does not reduce `real: axiom=30`; the prelude still declares them, and
-//! any consumer that wants a `Real`-specific conclusion still instantiates at
+//! any consumer that wants a `AxReal`-specific conclusion still instantiates at
 //! them. The point is that the *refutation* no longer depends on them: the
 //! generalized theorem is the object worth shipping, and it assumes nothing.
 //!
@@ -62,7 +62,7 @@ pub use setoid::{
     SetoidEq,
 };
 
-/// The binder name each of the 30 `Real` declarations takes in the generalized
+/// The binder name each of the 30 `AxReal` declarations takes in the generalized
 /// statement, in **declaration order** — which is also dependency order, so
 /// each binder's type mentions only binders to its left.
 ///
@@ -165,7 +165,7 @@ pub const SETOID_RING_BINDERS: usize = RING_BINDER_NAMES.len() + EQUALITY_SLOT_B
 /// as hypotheses.
 pub const RING_LAW_BINDERS: usize = RING_BINDER_NAMES.len() - RING_SYMBOL_BINDERS;
 
-/// Which part of the `Real` package the generalized statement quantifies over.
+/// Which part of the `AxReal` package the generalized statement quantifies over.
 ///
 /// Both scopes produce an axiom-free theorem; they differ in what the reader is
 /// promised and in what the instantiation costs.
@@ -174,7 +174,7 @@ pub enum RingTelescope {
     /// Bind **all 30** — the uniform ordered-commutative-ring interface, the
     /// same statement shape for every refutation regardless of which laws its
     /// proof happens to invoke. This is the form ADR-0456 named. Instantiating
-    /// it mentions all 30 `Real` constants, so the recovered theorem's
+    /// it mentions all 30 `AxReal` constants, so the recovered theorem's
     /// footprint is a *superset* of the original's: the extra names are the
     /// laws supplied and never used.
     FullInterface,
@@ -190,7 +190,7 @@ pub enum RingTelescope {
     ///
     /// Requires a proof built with
     /// [`LraReconstructCtx::enable_setoid_equality`]; a proof that used the
-    /// kernel's `Eq` still rests on the `Real` package's `Eq`-shaped laws, which
+    /// kernel's `Eq` still rests on the `AxReal` package's `Eq`-shaped laws, which
     /// this telescope does not bind, and is refused rather than silently
     /// generalized over the wrong thing.
     ///
@@ -201,13 +201,13 @@ pub enum RingTelescope {
 }
 
 /// A refutation parameterised over the ordered-ring interface, together with
-/// the instantiation that recovers the original `Real`-specific statement.
+/// the instantiation that recovers the original `AxReal`-specific statement.
 ///
 /// Every field is **measured** from the kernel after admission, not asserted by
 /// the code that built it.
 #[derive(Debug, Clone)]
 pub struct OrderedRingRefutation {
-    /// Which part of the `Real` package was abstracted.
+    /// Which part of the `AxReal` package was abstracted.
     pub scope: RingTelescope,
     /// The admitted generalized theorem.
     pub theorem: NameId,
@@ -221,10 +221,10 @@ pub struct OrderedRingRefutation {
     /// result, because the whole point of the construction is that there is
     /// nothing left to depend on.
     pub footprint: Vec<String>,
-    /// How many of the 30 `Real` declarations the statement abstracts (30 under
+    /// How many of the 30 `AxReal` declarations the statement abstracts (30 under
     /// [`RingTelescope::FullInterface`]).
     pub ring_binders: usize,
-    /// The `Real` declarations the original refutation actually rests on,
+    /// The `AxReal` declarations the original refutation actually rests on,
     /// rendered — the honest answer to "which of the 30 does this route still
     /// use". Under [`RingTelescope::Used`] this is exactly what was abstracted.
     pub ring_used: Vec<String>,
@@ -234,7 +234,7 @@ pub struct OrderedRingRefutation {
     /// How many constraint-hypothesis binders the statement carries (one per
     /// asserted atom the refutation uses).
     pub hyp_binders: usize,
-    /// The `Real`-specific theorem recovered by applying [`Self::theorem`] to
+    /// The `AxReal`-specific theorem recovered by applying [`Self::theorem`] to
     /// the 30 prelude constants and the refutation's own variable/hypothesis
     /// axioms. Its type is `False`, and the kernel re-checked the application.
     pub instantiated: NameId,
@@ -259,9 +259,9 @@ pub struct OrderedRingRefutation {
     /// abstracts `axeyum.reconstruct.lra.x.0`, which the integer model does not
     /// interpret".
     ///
-    /// Exposed so a consumer can instantiate at a model other than `Real`. That
+    /// Exposed so a consumer can instantiate at a model other than `AxReal`. That
     /// is the whole point of generalizing: [`instantiate_at_int_model`] supplies
-    /// `ℤ` instead, and nothing about the construction is `Real`-specific.
+    /// `ℤ` instead, and nothing about the construction is `AxReal`-specific.
     pub ring_names: Vec<NameId>,
 }
 
@@ -295,7 +295,7 @@ impl OrderedRingRefutation {
 }
 
 /// Generalize a kernel-checked LRA/Farkas refutation over the ordered-ring
-/// interface, admit it, and admit its instantiation at `Real`.
+/// interface, admit it, and admit its instantiation at `AxReal`.
 ///
 /// `proof` must be a term this `ctx` built (so its constants live in this
 /// kernel) whose inferred type is the prelude's `False` — i.e. exactly what
@@ -425,7 +425,7 @@ pub fn generalize_over_ordered_ring(
     }
 
     // (3) Binder names, purely cosmetic, but deterministic. A ring binder keeps
-    //     the leaf of the declaration it stands for (`Real.add_comm` ↦
+    //     the leaf of the declaration it stands for (`AxReal.add_comm` ↦
     //     `add_comm`), so a rendered statement is readable next to the prelude.
     let mut binder_names: Vec<String> = ring.iter().map(|&(_, binder)| binder.to_owned()).collect();
     for i in 0..vars.len() {
@@ -501,7 +501,7 @@ pub fn generalize_over_ordered_ring(
         });
     }
 
-    // (7) Instantiate at `Real` and recover the original statement. The kernel
+    // (7) Instantiate at `AxReal` and recover the original statement. The kernel
     //     re-checks the application against `False`; if the generalization had
     //     weakened or shifted the claim, this is where it would fail.
     let mut applied = ctx.kernel.const_(theorem, vec![]);
@@ -524,7 +524,7 @@ pub fn generalize_over_ordered_ring(
         .map_err(|e| ReconstructError::KernelRejected {
             rule: "ordered_ring".to_owned(),
             detail: format!(
-                "instantiating the generalized refutation at Real did not recover False: {e:?}"
+                "instantiating the generalized refutation at AxReal did not recover False: {e:?}"
             ),
         })?;
     let instantiated_footprint = footprint(&ctx.kernel, instantiated);
@@ -570,12 +570,12 @@ pub fn render_ordered_ring_module(
     )
 }
 
-/// The 30 `Real` declarations in declaration (= dependency) order.
+/// The 30 `AxReal` declarations in declaration (= dependency) order.
 /// The same refutation, as a theorem about the **integers**.
 ///
-/// [`generalize_over_ordered_ring`] abstracts a `Real` Farkas refutation over
+/// [`generalize_over_ordered_ring`] abstracts a `AxReal` Farkas refutation over
 /// the 22 laws of an ordered commutative ring, leaving an axiom-free theorem
-/// that holds in *any* model of those laws. `Real` is then one instantiation of
+/// that holds in *any* model of those laws. `AxReal` is then one instantiation of
 /// it. So is `ℤ`: `build_int_model_of_arith` exhibits the integers as a model of
 /// all 22, every witness with an **empty** axiom footprint.
 ///
@@ -597,7 +597,7 @@ pub fn render_ordered_ring_module(
 /// —  `x > 5 ∧ x < 3`, or `x - y ≤ 1 ∧ y - x ≤ -3` — has an ordinary Farkas
 /// refutation, but measured 2026-08-17 every such query routed to `ArithDpll`
 /// and rendered a structural attestation: an `axiom P` / `axiom ¬P` shim
-/// containing none of the reasoning. The proof existed; only a `Real`-shaped
+/// containing none of the reasoning. The proof existed; only a `AxReal`-shaped
 /// destination for it did.
 ///
 /// # Errors
@@ -618,7 +618,7 @@ pub fn instantiate_at_int_model(
         }
     })?;
 
-    // `Real` name -> what `ℤ` supplies for it: the interpreted symbol for the
+    // `AxReal` name -> what `ℤ` supplies for it: the interpreted symbol for the
     // eight carrier/operation constants, the checked witness for each law.
     let mut interpretation: HashMap<NameId, NameId> = HashMap::new();
     for &(real, int) in &model.symbols {
@@ -694,7 +694,7 @@ pub fn instantiate_at_int_model(
 /// because the consumer encoded the same constraint differently.
 ///
 /// The declared hypotheses ARE the query's constraints, in the normalized form
-/// the refutation uses. That is the same bar the `Real` LRA modules meet, where
+/// the refutation uses. That is the same bar the `AxReal` LRA modules meet, where
 /// the rendered hypothesis axioms are likewise normalized rather than verbatim
 /// source syntax.
 ///
@@ -714,7 +714,7 @@ pub fn refutation_over_int_axioms(
 
     // Peel every binder, declaring what it asks for. A variable binder wants an
     // inhabitant of `Int`; a constraint binder wants a proof of a Prop. Both are
-    // supplied as axioms — they are the query's own data, exactly as the `Real`
+    // supplied as axioms — they are the query's own data, exactly as the `AxReal`
     // route treats its variables and assertions.
     while let ExprNode::Pi(_, domain, body, _) = *ctx.kernel.expr_node(ty) {
         let is_variable = variables.len() < instantiation.var_binders_hint;
@@ -779,7 +779,7 @@ pub fn refutation_over_int_axioms(
 /// The whole pipeline, for a conjunctive integer system whose rational
 /// relaxation is already infeasible:
 ///
-/// 1. relax `Int` to `Real` faithfully (fresh symbols, injective map) — the
+/// 1. relax `Int` to `AxReal` faithfully (fresh symbols, injective map) — the
 ///    relaxation is a *search* device, used to find the Farkas combination,
 /// 2. refute it by Farkas directly **in a context over the constructed
 ///    integers** ([`LraReconstructCtx::try_new_over_integers`]),
@@ -789,13 +789,13 @@ pub fn refutation_over_int_axioms(
 /// because it uses ring operations and order and never division. What comes
 /// back is a theorem about the integers, not about their real embedding.
 ///
-/// # Why this no longer goes through the `Real` package
+/// # Why this no longer goes through the `AxReal` package
 ///
 /// Until 2026-08-18 this route built [`LraReconstructCtx::new`] — the
-/// axiomatized `Real` package, this repository's entire remaining trusted
+/// axiomatized `AxReal` package, this repository's entire remaining trusted
 /// surface — refuted there, abstracted the proof over the 22 ordered-ring laws
 /// with [`generalize_over_ordered_ring`], and instantiated the result at `ℤ`
-/// through [`instantiate_at_int_model`]. The finished term named no `Real`
+/// through [`instantiate_at_int_model`]. The finished term named no `AxReal`
 /// axiom, so the emitted module was already clean; but the route *constructed*
 /// 30 axioms to produce it, and it was the **only shipped route that still
 /// did** — `prove_unsat_to_lean_module`'s other arithmetic fragments moved to
@@ -955,7 +955,7 @@ pub struct RingInterfaceBinder {
     /// `sq_nonneg`) — the private `RING_BINDER_NAMES` table, in declaration order.
     pub binder: &'static str,
     /// The declaration in the source environment this binder abstracts,
-    /// rendered (`Real.add_comm`, `Int.add_comm`, …).
+    /// rendered (`AxReal.add_comm`, `Int.add_comm`, …).
     pub source: String,
     /// The abstracted binder type: the declaration's type with every *earlier*
     /// telescope entry replaced by its bound variable.
@@ -971,13 +971,13 @@ pub struct RingInterfaceBinder {
 /// This is the [`RingTelescope::FullInterface`] prefix of what
 /// [`generalize_over_ordered_ring`] builds, available without a refutation to
 /// generalize. It exists so the interface can be *pinned* — the same 30
-/// statements the `Real` package declares as axioms, stated as binders and
+/// statements the `AxReal` package declares as axioms, stated as binders and
 /// therefore assuming nothing (ADR-0509's route to `declared = 0`).
 ///
 /// The rendered types are independent of which environment they were read from
 /// whenever two signatures state the same laws over the same connectives:
-/// abstraction replaces `Real`/`Int` and their operations by the *same* bound
-/// variables, so `Real.add_comm` and `Int.add_comm` abstract to the same
+/// abstraction replaces `AxReal`/`Int` and their operations by the *same* bound
+/// variables, so `AxReal.add_comm` and `Int.add_comm` abstract to the same
 /// expression. That is a measurement, not a promise — see
 /// `examples/ring_interface_pin.rs`, which is the thing that would fail if it
 /// stopped holding.
@@ -990,7 +990,7 @@ pub struct RingInterfaceBinder {
 /// That guard is **narrow, and deliberately not claimed to be more**: a
 /// [`NameId`] is an index, so a signature carried into a *different, populated*
 /// kernel does not go missing — it resolves to whatever declarations sit at
-/// those indices. Measured while writing the test for this: the `Real` signature
+/// those indices. Measured while writing the test for this: the `AxReal` signature
 /// read against a kernel carrying the `Int` development produced 30 well-formed
 /// binders sourced from `Nat.le`, `Nat.beq_refl`, `Nat.pow_succ`, … and no
 /// error. Call [`RingSignature::validate_in`] first if you need to know that the
@@ -1042,7 +1042,7 @@ fn footprint(kernel: &Kernel, name: NameId) -> Vec<String> {
 ///
 /// The dual of [`Kernel::abstract_fvars`], which does the same job for free
 /// variables. Constants are what a proof term over a prelude actually mentions,
-/// so this is the operation that turns "a theorem about `Real`" into "a theorem
+/// so this is the operation that turns "a theorem about `AxReal`" into "a theorem
 /// about any structure with these operations".
 ///
 /// Universe arguments, binder names and binder info ride through untouched, so
@@ -1195,7 +1195,7 @@ pub struct EqSpecialization {
 /// what the theorem proves, and every downstream instantiation (including at the
 /// constructed ℝ) would be proving something else.
 ///
-/// The specialization is not an application at `Real`: the carrier stays
+/// The specialization is not an application at `AxReal`: the carrier stays
 /// **bound**. The 30 `Eq`-shaped binders are re-introduced from `reference`'s own
 /// statement, and inside them the 39-binder theorem is applied to
 ///
@@ -1511,7 +1511,7 @@ fn is_query_local(name: &str) -> bool {
 /// This exists because "outside the `axeyum.reconstruct.` namespace" is a
 /// weaker question than it looks, and [`carrier_axioms_of`] alone was answering
 /// the weaker one. That namespace is not reserved for query variables: the
-/// `Real` route mints its **eighteen equality-slot axioms** there, the
+/// `AxReal` route mints its **eighteen equality-slot axioms** there, the
 /// Ackermann route mints `axeyum.reconstruct.func._*`, and `.dio`, `.word`,
 /// `.lex` and `.regex` all mint under it too. An assumption minted there is
 /// still an assumption; excluding it by prefix would let a route buy a
@@ -1532,7 +1532,7 @@ pub fn minted_axioms_of(footprint: &[String]) -> Vec<String> {
 
 /// The entries of a footprint that are assumptions of the **carrier**.
 ///
-/// Everything outside the `axeyum.reconstruct.` namespace. Over the `Real`
+/// Everything outside the `axeyum.reconstruct.` namespace. Over the `AxReal`
 /// package that is 8-17 of its 30 axioms; over the constructed reals it is
 /// empty, which is the measurement this predicate exists to make falsifiable.
 ///

@@ -1,7 +1,7 @@
 //! The ordered-ring interface's **equality slot** (ADR-0512 phase R3).
 //!
 //! Today's [`generalize_over_ordered_ring`](super::generalize_over_ordered_ring)
-//! abstracts the `Real` package's 30 declarations out of a Farkas refutation.
+//! abstracts the `AxReal` package's 30 declarations out of a Farkas refutation.
 //! Nine of those 30 are stated with the kernel's own `Eq` — `add_comm`,
 //! `add_assoc`, `add_zero`, `add_neg`, `mul_comm`, `mul_assoc`, `mul_one`,
 //! `mul_zero`, `left_distrib` — and the proof term *uses* `Eq` structurally: every
@@ -30,8 +30,8 @@
 //!
 //! plus the nine `Eq`-laws **rewritten through `eq`**. Those nine types are not
 //! written out here: they are computed from the environment by replacing the
-//! partial application `Eq Real` with the `eq` symbol
-//! ([`rewrite_eq_at_real`]), so a change to a `Real` law changes its setoid
+//! partial application `Eq AxReal` with the `eq` symbol
+//! ([`rewrite_eq_at_real`]), so a change to a `AxReal` law changes its setoid
 //! counterpart rather than silently disagreeing with it. The rewrite is checked
 //! to have actually fired on each of the nine.
 //!
@@ -176,11 +176,11 @@ fn type1(kernel: &mut Kernel) -> ExprId {
 }
 
 // ---------------------------------------------------------------------------
-// The equality slot, as declared axioms over the `Real` package.
+// The equality slot, as declared axioms over the `AxReal` package.
 // ---------------------------------------------------------------------------
 
 /// The nine equality-interface declarations and the nine `Eq`-laws restated
-/// through them: eighteen axioms, all under the `Real.Setoid` namespace.
+/// through them: eighteen axioms, all under the `AxReal.Setoid` namespace.
 ///
 /// These are declared into a reconstruction kernel on demand
 /// (`LraReconstructCtx::enable_setoid_equality`). They are **not** part of
@@ -189,44 +189,44 @@ fn type1(kernel: &mut Kernel) -> ExprId {
 /// λ-abstracted back out of the finished proof.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SetoidEq {
-    /// `eq : Real → Real → Prop` — ring equality as a *parameter*.
+    /// `eq : AxReal → AxReal → Prop` — ring equality as a *parameter*.
     pub eq: NameId,
-    /// `eq_refl : ∀ (a : Real), eq a a`.
+    /// `eq_refl : ∀ (a : AxReal), eq a a`.
     pub eq_refl: NameId,
-    /// `eq_symm : ∀ (a b : Real), eq a b → eq b a`.
+    /// `eq_symm : ∀ (a b : AxReal), eq a b → eq b a`.
     pub eq_symm: NameId,
-    /// `eq_trans : ∀ (a b c : Real), eq a b → eq b c → eq a c`.
+    /// `eq_trans : ∀ (a b c : AxReal), eq a b → eq b c → eq a c`.
     pub eq_trans: NameId,
-    /// `add_congr : ∀ (a b c d : Real), eq a b → eq c d → eq (add a c) (add b d)`.
+    /// `add_congr : ∀ (a b c d : AxReal), eq a b → eq c d → eq (add a c) (add b d)`.
     pub add_congr: NameId,
-    /// `mul_congr : ∀ (a b c d : Real), eq a b → eq c d → eq (mul a c) (mul b d)`.
+    /// `mul_congr : ∀ (a b c d : AxReal), eq a b → eq c d → eq (mul a c) (mul b d)`.
     pub mul_congr: NameId,
-    /// `neg_congr : ∀ (a b : Real), eq a b → eq (neg a) (neg b)`.
+    /// `neg_congr : ∀ (a b : AxReal), eq a b → eq (neg a) (neg b)`.
     pub neg_congr: NameId,
-    /// `le_congr : ∀ (a b c d : Real), eq a b → eq c d → le a c → le b d`.
+    /// `le_congr : ∀ (a b c d : AxReal), eq a b → eq c d → le a c → le b d`.
     pub le_congr: NameId,
-    /// `lt_congr : ∀ (a b c d : Real), eq a b → eq c d → lt a c → lt b d`.
+    /// `lt_congr : ∀ (a b c d : AxReal), eq a b → eq c d → lt a c → lt b d`.
     pub lt_congr: NameId,
 
     // The nine `Eq`-laws, restated through `eq`. Each type is COMPUTED from the
-    // corresponding `Real` declaration, never written out here.
-    /// `Real.add_comm` with `Eq Real` replaced by `eq`.
+    // corresponding `AxReal` declaration, never written out here.
+    /// `AxReal.add_comm` with `Eq AxReal` replaced by `eq`.
     pub add_comm: NameId,
-    /// `Real.add_assoc` with `Eq Real` replaced by `eq`.
+    /// `AxReal.add_assoc` with `Eq AxReal` replaced by `eq`.
     pub add_assoc: NameId,
-    /// `Real.add_zero` with `Eq Real` replaced by `eq`.
+    /// `AxReal.add_zero` with `Eq AxReal` replaced by `eq`.
     pub add_zero: NameId,
-    /// `Real.add_neg` with `Eq Real` replaced by `eq`.
+    /// `AxReal.add_neg` with `Eq AxReal` replaced by `eq`.
     pub add_neg: NameId,
-    /// `Real.mul_comm` with `Eq Real` replaced by `eq`.
+    /// `AxReal.mul_comm` with `Eq AxReal` replaced by `eq`.
     pub mul_comm: NameId,
-    /// `Real.mul_assoc` with `Eq Real` replaced by `eq`.
+    /// `AxReal.mul_assoc` with `Eq AxReal` replaced by `eq`.
     pub mul_assoc: NameId,
-    /// `Real.mul_one` with `Eq Real` replaced by `eq`.
+    /// `AxReal.mul_one` with `Eq AxReal` replaced by `eq`.
     pub mul_one: NameId,
-    /// `Real.mul_zero` with `Eq Real` replaced by `eq`.
+    /// `AxReal.mul_zero` with `Eq AxReal` replaced by `eq`.
     pub mul_zero: NameId,
-    /// `Real.left_distrib` with `Eq Real` replaced by `eq`.
+    /// `AxReal.left_distrib` with `Eq AxReal` replaced by `eq`.
     pub left_distrib: NameId,
 }
 
@@ -374,7 +374,7 @@ fn equality_slot_law_types(
 /// [`ReconstructError::KernelRejected`] from the trusted gate — which type-checks every axiom type,
 /// so a malformed congruence statement is rejected here rather than surfacing as
 /// a mysterious proof failure later. Also errors when the `Eq`→`eq` rewrite fails
-/// to fire on one of the nine laws, which would mean the `Real` package no longer
+/// to fire on one of the nine laws, which would mean the `AxReal` package no longer
 /// has the shape this module was measured against.
 #[allow(clippy::too_many_lines)]
 pub fn declare_setoid_equality(
@@ -420,15 +420,15 @@ pub fn declare_setoid_equality(
             .environment()
             .get(law)
             .map(Declaration::ty)
-            .expect("a Real law is in the environment");
+            .expect("an AxReal law is in the environment");
         let (rewritten, fired) =
             rewrite_eq_at_real(kernel, declared, arith.logic.eq, arith.r, eq_c);
         if !fired {
             return Err(ReconstructError::KernelRejected {
                 rule: "setoid_equality".to_owned(),
                 detail: format!(
-                    "`{}` does not mention `Eq Real`, so restating it through the equality slot \
-                     would be a no-op: the Real package no longer has the shape this module was \
+                    "`{}` does not mention `Eq AxReal`, so restating it through the equality slot \
+                     would be a no-op: the AxReal package no longer has the shape this module was \
                      measured against",
                     kernel.display_name(law)
                 ),
@@ -492,7 +492,7 @@ fn declare(
 /// The nine equality-slot members a carrier supplies **from its own
 /// development**, as names already declared in the reconstruction kernel.
 ///
-/// `declare_setoid_equality` mints these as eighteen axioms because the `Real`
+/// `declare_setoid_equality` mints these as eighteen axioms because the `AxReal`
 /// package cannot prove them: its equality *is* the kernel's `Eq`, so the only
 /// way to fill the slot there is to assume it. A constructed carrier is the
 /// opposite case —
@@ -539,7 +539,7 @@ impl From<CRealPrelude> for EqualitySlot {
     ///
     /// Every one of these is a `Theorem` in the constructed development with an
     /// empty axiom footprint. Compare `declare_setoid_equality`, which mints
-    /// eighteen axioms to fill the same slot over the `Real` package because
+    /// eighteen axioms to fill the same slot over the `AxReal` package because
     /// there is nothing there to prove them from.
     fn from(c: CRealPrelude) -> Self {
         Self {
@@ -794,12 +794,12 @@ fn adoption_defect(detail: String) -> ReconstructError {
     }
 }
 
-/// Replace every occurrence of the partial application `Eq Real` by `eq`.
+/// Replace every occurrence of the partial application `Eq AxReal` by `eq`.
 ///
 /// Returns the rewritten expression and whether the pattern fired at least once.
-/// Only the two-argument-short spine `App(Const(Eq, [1]), Const(Real))` is
+/// Only the two-argument-short spine `App(Const(Eq, [1]), Const(AxReal))` is
 /// matched, so the result is *syntactically* interchangeable: instantiating the
-/// resulting `eq` back at `Eq Real` reproduces the input node for node, with no
+/// resulting `eq` back at `Eq AxReal` reproduces the input node for node, with no
 /// β-redex in between. That is what makes the round trip in
 /// [`super::specialize_setoid_to_eq`] an identity rather than a defeq.
 fn rewrite_eq_at_real(

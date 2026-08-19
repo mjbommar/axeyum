@@ -1,5 +1,5 @@
 //! The **ordered-ring signature**: the 30 declarations LRA/SOS reconstruction
-//! reasons over, named as a *parameter* rather than as the `Real` package.
+//! reasons over, named as a *parameter* rather than as the `AxReal` package.
 //!
 //! ## Why this type exists
 //!
@@ -8,7 +8,7 @@
 //! [`build_arith_prelude`](axeyum_lean_kernel::build_arith_prelude) can produce
 //! — and its constructor built that package into a fresh kernel and panicked if
 //! the build failed. That welded the whole reconstruction route to the
-//! axiomatized carrier `Real`, which is the entire remaining trusted surface of
+//! axiomatized carrier `AxReal`, which is the entire remaining trusted surface of
 //! this repository (`real: axiom=30`, and 30 of 30 of the recorded axiom ledger).
 //!
 //! Nothing in the reconstruction actually needs *that* carrier. Measured across
@@ -21,7 +21,7 @@
 //! [`RingSignature`] is that type, decoupled from `build_arith_prelude`. It has
 //! the same field names as [`ArithPrelude`] (so the 158 reads are unchanged) plus
 //! [`RingSignature::equality`], which says *which relation plays the role of
-//! equality* — `Eq` at the carrier for the `Real` package, and a defined
+//! equality* — `Eq` at the carrier for the `AxReal` package, and a defined
 //! relation for a constructed carrier. `CReal`'s equality is `CReal.Equiv`, a
 //! definition rather than the kernel's `Eq`, and that difference is exactly what
 //! keeps its trusted surface at zero (ADR-0512 phase R3), so it has to be part of
@@ -50,7 +50,7 @@
 //!    refused rather than silently generalized over the wrong relation.
 //!
 //! Guard 5 is what makes [`RingSignature::equality`] load-bearing rather than
-//! decorative: flip it to [`RingEquality::Defined`] on the `Real` package and the
+//! decorative: flip it to [`RingEquality::Defined`] on the `AxReal` package and the
 //! nine `Eq`-stated laws become stray constants.
 
 use axeyum_lean_kernel::{
@@ -64,7 +64,7 @@ use super::ReconstructError;
 ///
 /// The nine `Eq`-shaped ordered-ring laws (`add_comm`, `add_assoc`, `add_zero`,
 /// `add_neg`, `mul_comm`, `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib`)
-/// have to be stated with *some* equality. The axiomatized `Real` package uses
+/// have to be stated with *some* equality. The axiomatized `AxReal` package uses
 /// the kernel's `Eq` at the carrier; a constructed carrier generally cannot,
 /// because its elements are equal as *values of a setoid* and not as terms —
 /// `CReal.Equiv` is a definition over regular rational sequences, and stating
@@ -89,7 +89,7 @@ pub enum RingEquality {
 /// relation playing the role of equality.
 ///
 /// Field names mirror [`ArithPrelude`] exactly; [`From<ArithPrelude>`] is the
-/// `Real`-package instance and is what [`LraReconstructCtx::new`] uses, so the
+/// `AxReal`-package instance and is what [`LraReconstructCtx::new`] uses, so the
 /// default route is bit-for-bit what it was.
 ///
 /// Handles belong to the kernel they were interned in; do not mix them across
@@ -171,7 +171,7 @@ pub struct RingSignature {
 }
 
 impl From<ArithPrelude> for RingSignature {
-    /// The `Real` package as a signature: the same 30 names, with equality the
+    /// The `AxReal` package as a signature: the same 30 names, with equality the
     /// kernel's `Eq`.
     fn from(a: ArithPrelude) -> Self {
         Self {
@@ -273,13 +273,13 @@ impl From<IntPrelude> for RingSignature {
     /// equality is the *defined* relation `CReal.Equiv`, because `Eq CReal` is
     /// equality of representatives (ADR-0512). `ℤ` is the case where both hold
     /// at once: `build_int_prelude` proves all 22 laws — `build_int_model_of_arith`
-    /// admits each `Real` axiom's interpretation with `Int.<law>` as its proof and
+    /// admits each `AxReal` axiom's interpretation with `Int.<law>` as its proof and
     /// records `identical: true` for all 22, so the statements agree symbol for
     /// symbol after renaming — and its equality really is the kernel's `Eq`,
     /// since `Int` is a one-constructor inductive with no setoid over it.
     ///
     /// So a route that only needs *an* axiom-free ordered commutative ring with
-    /// `Eq` — which is every consumer of the `Real` package that is not
+    /// `Eq` — which is every consumer of the `AxReal` package that is not
     /// specifically about ℝ — can take this and reach no axiom at all. It is
     /// also cheap: the `Int` development is a small fraction of `CReal`'s
     /// construction cost.
@@ -531,7 +531,7 @@ impl RingSignature {
     /// Guard 5: every constant in a law statement is one of the eight symbols, a
     /// propositional connective, or this signature's declared equality.
     ///
-    /// Returns the laws that mention the equality — nine, for the `Real`
+    /// Returns the laws that mention the equality — nine, for the `AxReal`
     /// package.
     fn guard_laws_speak_the_ring_language(
         &self,
@@ -589,15 +589,15 @@ impl RingSignature {
 /// kernel, not asserted by the caller.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RingSignatureReport {
-    /// The carrier's universe: `n` for `Sort n`. `1` for the `Real` package's
-    /// `Real : Type`.
+    /// The carrier's universe: `n` for `Sort n`. `1` for the `AxReal` package's
+    /// `AxReal : Type`.
     ///
     /// Reported rather than assumed because the reconstruction builds `Eq` and
     /// `Eq.rec` at a *fixed* universe 1; a carrier at any other level is a
     /// finding, not a configuration.
     pub carrier_level: usize,
     /// The laws whose statement mentions [`RingSignature::equality`], rendered
-    /// and in declaration order. Nine for the `Real` package — the nine ADR-0512
+    /// and in declaration order. Nine for the `AxReal` package — the nine ADR-0512
     /// Measurement 2 counted, and the nine
     /// [`enable_setoid_equality`](super::LraReconstructCtx::enable_setoid_equality)
     /// restates through the equality slot.

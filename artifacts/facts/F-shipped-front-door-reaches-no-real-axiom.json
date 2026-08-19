@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "id": "F:shipped-front-door-reaches-no-real-axiom",
-  "title": "No shipped reconstruction route BUILDS the Real axiom package: the trusted surface is declared but never reached",
-  "statement": "The 30 declarations of the axiomatized Real package are this repository's entire remaining trusted surface (real: axiom=30, and 30 of 30 rows of the Lean axiom ledger). No route reachable from prove_unsat_to_lean_module -- the public entry point that turns an unsatisfiable query into a self-contained Lean module -- constructs them. Measured by a process-global counter on build_arith_prelude itself, driven through the front door on one fixture per arithmetic arm (Lra, Sos, DisjunctiveLra, IntFarkas): the count is zero after all four, and one after the same process builds the package on purpose. This is strictly stronger than the emitted proof term having an empty Real footprint, and the two answers were different until 2026-08-18: the IntFarkas arm refuted over Real, abstracted all 30 constants back out and instantiated at the integers, so it built the whole trusted surface to produce a module that named none of it.",
+  "title": "No shipped reconstruction route BUILDS the AxReal axiom package: the trusted surface is declared but never reached",
+  "statement": "The 30 declarations of the axiomatized AxReal package are this repository's entire remaining trusted surface (real: axiom=30, and 30 of 30 rows of the Lean axiom ledger). No route reachable from prove_unsat_to_lean_module -- the public entry point that turns an unsatisfiable query into a self-contained Lean module -- constructs them. Measured by a process-global counter on build_arith_prelude itself, driven through the front door on one fixture per arithmetic arm (Lra, Sos, DisjunctiveLra, IntFarkas): the count is zero after all four, and one after the same process builds the package on purpose. This is strictly stronger than the emitted proof term having an empty AxReal footprint, and the two answers were different until 2026-08-18: the IntFarkas arm refuted over AxReal, abstracted all 30 constants back out and instantiated at the integers, so it built the whole trusted surface to produce a module that named none of it.",
   "formal": {
     "language": "lean4",
-    "statement": "Let B(t) be the value of axeyum_lean_kernel::arith_prelude_builds() -- a process-global counter incremented by build_arith_prelude, the only public entry point that declares the 30 Real axioms into a kernel. In a process that has built nothing, B = 0; after prove_unsat_to_lean_module(F) returns for each of four fixtures F, one per arithmetic fragment (Lra, Sos, DisjunctiveLra, IntFarkas), B = 0 still; after LraReconstructCtx::try_new() is then called in the same process, B = 1.",
+    "statement": "Let B(t) be the value of axeyum_lean_kernel::arith_prelude_builds() -- a process-global counter incremented by build_arith_prelude, the only public entry point that declares the 30 AxReal axioms into a kernel. In a process that has built nothing, B = 0; after prove_unsat_to_lean_module(F) returns for each of four fixtures F, one per arithmetic fragment (Lra, Sos, DisjunctiveLra, IntFarkas), B = 0 still; after LraReconstructCtx::try_new() is then called in the same process, B = 1.",
     "fragment": "QF_LRA",
     "free_symbols": [
-      "Real",
-      "Real.le",
-      "Real.lt",
-      "Real.add",
-      "Real.mul"
+      "AxReal",
+      "AxReal.le",
+      "AxReal.lt",
+      "AxReal.add",
+      "AxReal.mul"
     ]
   },
   "epistemic_status": "proved",
@@ -26,7 +26,7 @@
     {
       "id": "shipped-front-door-reaches-no-real-axiom-1",
       "kind": "kernel-term",
-      "supports": "The negative control: the counter DOES move. After the four measurements the same process builds the Real package on purpose and the counter reads 1.",
+      "supports": "The negative control: the counter DOES move. After the four measurements the same process builds the AxReal package on purpose and the counter reads 1.",
       "check_status": "checked",
       "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'FRONT_DOOR_REACH control \\| arith_prelude_builds=1$'",
       "notes": "Without this row every other row here would pass just as happily against an arith_prelude_builds() wired to return 0. This is the row that makes the four zeros a finding rather than a broken instrument, and it is anchored on the value 1 -- not on `nonzero` -- because the control builds the package exactly once."
@@ -34,7 +34,7 @@
     {
       "id": "shipped-front-door-reaches-no-real-axiom-2",
       "kind": "kernel-term",
-      "supports": "The purely conjunctive real Farkas arm reaches no Real axiom.",
+      "supports": "The purely conjunctive real Farkas arm reaches no AxReal axiom.",
       "check_status": "checked",
       "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=Lra module=[0-9]+ arith_prelude_builds=0$'",
       "notes": "Anchored on the fragment AND the counter value on the same line, so a fixture that silently stopped routing to Lra cannot satisfy it. `module=[0-9]+` is left free because the module size is not the claim."
@@ -42,7 +42,7 @@
     {
       "id": "shipped-front-door-reaches-no-real-axiom-3",
       "kind": "kernel-term",
-      "supports": "The sum-of-squares arm -- the only one that touches the multiplicative laws and sq_nonneg -- reaches no Real axiom.",
+      "supports": "The sum-of-squares arm -- the only one that touches the multiplicative laws and sq_nonneg -- reaches no AxReal axiom.",
       "check_status": "checked",
       "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=Sos module=[0-9]+ arith_prelude_builds=0$'",
       "notes": "Same anchoring. Sos is listed separately from Lra because it is a different reconstructor (reconstruct_sos_to_lean_module), not a different fixture through the same one."
@@ -50,7 +50,7 @@
     {
       "id": "shipped-front-door-reaches-no-real-axiom-4",
       "kind": "kernel-term",
-      "supports": "The Or.rec case-split arm reaches no Real axiom.",
+      "supports": "The Or.rec case-split arm reaches no AxReal axiom.",
       "check_status": "checked",
       "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=DisjunctiveLra module=[0-9]+ arith_prelude_builds=0$'",
       "notes": "Same anchoring. `fragment=DisjunctiveLra` cannot be matched by the Lra pattern only because that pattern requires the space after `Lra`; both are pinned separately so a collapse of one arm into the other is visible."
@@ -58,7 +58,7 @@
     {
       "id": "shipped-front-door-reaches-no-real-axiom-5",
       "kind": "kernel-term",
-      "supports": "The integer Farkas arm -- the one that DID build all 30 until 2026-08-18 -- reaches no Real axiom.",
+      "supports": "The integer Farkas arm -- the one that DID build all 30 until 2026-08-18 -- reaches no AxReal axiom.",
       "check_status": "checked",
       "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=IntFarkas module=[0-9]+ arith_prelude_builds=0$'",
       "notes": "The row this fact exists for. Restore the pre-2026-08-18 body of reconstruct_int_farkas_to_lean_module and this row is the one that fails -- mutation-checked, and all nine tests of tests/farkas_over_the_integers.rs, the suite named for this route, pass under that mutation because they assert on the module and the footprint, both of which were already clean."
@@ -86,5 +86,5 @@
     "established_by": "axeyum-lean-kernel arith_prelude::arith_prelude_builds + axeyum-solver tests/front_door_reaches_no_real_axiom.rs (agent-retire-real lane, commit b20720e9f)",
     "source": "measured in this repository; no external source"
   },
-  "notes": "WHAT THIS DOES NOT SAY. It does not retire the 30 Real axioms: `nat_axiom_inventory --include-constructed` still reports `real: axiom=30` and the Lean axiom ledger is still 30 of 30 real, because that ledger publishes what is DECLARED. This fact is about what is REACHED, and the gap between the two is now the whole of the trusted surface. Nor does it say the package is unused: LraReconstructCtx::try_new() still builds it in tests, in examples/front_door_carrier.rs and examples/ordered_ring_refutation.rs -- where it is the NEGATIVE CONTROL that keeps every axiom-freedom measurement in this repository from being vacuous -- and in the three relative-consistency models (Int, Rat, CReal), which are statements ABOUT the package and would be unstatable without it. Nor does it cover every public entry point: the fixtures drive prove_unsat_to_lean_module, and a route reachable only from some other entry point is outside what was measured."
+  "notes": "WHAT THIS DOES NOT SAY. It does not retire the 30 AxReal axioms: `nat_axiom_inventory --include-constructed` still reports `real: axiom=30` and the Lean axiom ledger is still 30 of 30 real, because that ledger publishes what is DECLARED. This fact is about what is REACHED, and the gap between the two is now the whole of the trusted surface. Nor does it say the package is unused: LraReconstructCtx::try_new() still builds it in tests, in examples/front_door_carrier.rs and examples/ordered_ring_refutation.rs -- where it is the NEGATIVE CONTROL that keeps every axiom-freedom measurement in this repository from being vacuous -- and in the three relative-consistency models (Int, Rat, CReal), which are statements ABOUT the package and would be unstatable without it. Nor does it cover every public entry point: the fixtures drive prove_unsat_to_lean_module, and a route reachable only from some other entry point is outside what was measured. RENAMED 2026-08-19 (ADR-0522): the package's kernel declarations are now `AxReal`/`AxReal.*`, so this fact spells them that way. Nothing about the measurement moved -- `arith_prelude_builds()` counts calls to `build_arith_prelude`, not names, and every checker_command below is anchored on the counter line rather than on a declaration name."
 }

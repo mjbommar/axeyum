@@ -1,8 +1,8 @@
-//! A `Real` Farkas refutation, restated over the **integers**, axiom-free.
+//! A `AxReal` Farkas refutation, restated over the **integers**, axiom-free.
 //!
 //! `generalize_over_ordered_ring` abstracts a Farkas refutation over the 22 laws
 //! of an ordered commutative ring, leaving an axiom-free theorem that holds in
-//! any model of them. `Real` is one such model. `ℤ` is another —
+//! any model of them. `AxReal` is one such model. `ℤ` is another —
 //! `build_int_model_of_arith` discharges all 22 with witnesses whose axiom
 //! footprints are empty — and until now nothing instantiated at it.
 //!
@@ -20,7 +20,7 @@
 //! the reasoning. Yet `x > 5 ∧ x < 3` is refuted by ordinary Farkas, and a
 //! Farkas combination uses only ring operations and order — never division,
 //! which is exactly why the abstraction is possible in the first place. The
-//! proof existed; only a `Real`-shaped destination for it did.
+//! proof existed; only a `AxReal`-shaped destination for it did.
 //!
 //! Nothing here is relaxed and no `Int → Real` embedding is involved. The
 //! generalized theorem is applied to `ℤ`'s own symbols and law witnesses, so the
@@ -404,7 +404,7 @@ fn lean_binary() -> Option<std::path::PathBuf> {
 /// End to end from a genuinely INTEGER query — the shape that attests today.
 #[test]
 fn an_integer_query_reconstructs_through_the_whole_pipeline() {
-    // `x > 5 ∧ x < 3` over Int, built as Int terms (not the Real analogue).
+    // `x > 5 ∧ x < 3` over Int, built as Int terms (not the AxReal analogue).
     let mut arena = TermArena::new();
     let x = arena.int_var("x").expect("int variable");
     let five = arena.int_const(5);

@@ -24,7 +24,7 @@ fn theorems(kernel: &Kernel) -> Vec<(String, Vec<String>)> {
         .environment()
         .iter()
         .filter_map(|(_, declaration)| match declaration {
-            // Axioms are included, not just theorems. In the `Int` and `Real`
+            // Axioms are included, not just theorems. In the `Int` and `AxReal`
             // preludes they are the ONLY substantive declarations — those
             // preludes derive nothing, they assert 34 and 30 properties outright
             // — so restricting to theorems would report on two pieces of
@@ -67,7 +67,7 @@ fn main() {
     let mut integer = Kernel::new();
     let _ = build_int_prelude(&mut integer).expect("Int prelude must build");
     let mut real = Kernel::new();
-    let _ = build_arith_prelude(&mut real).expect("Real prelude must build");
+    let _ = build_arith_prelude(&mut real).expect("AxReal prelude must build");
 
     for (label, kernel) in [("nat", &nat), ("integer", &integer), ("real", &real)] {
         let rows = theorems(kernel);

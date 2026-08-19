@@ -1,9 +1,9 @@
-//! **The `Real` axiom package has a model that is actually ℝ** — ADR-0512
+//! **The `AxReal` axiom package has a model that is actually ℝ** — ADR-0512
 //! phase R4, with the exit status depending on it.
 //!
 //! `arith_model_witness` prints the same table for the `Int` model and ends
 //! with the sentence that bounds what it establishes: *"This is relative
-//! consistency of the Real axiom set, not a discharge of it: Int is not R."*
+//! consistency of the `AxReal` axiom set, not a discharge of it: Int is not R."*
 //! This example is that caveat being discharged. The carrier is
 //! [`CReal`](axeyum_lean_kernel::CRealPrelude) — a Bishop setoid of regular
 //! ℚ-sequences over the constructed ℚ, admitted at **zero** trusted
@@ -14,10 +14,10 @@
 //! cargo run --release -q -p axeyum-lean-kernel --example creal_model_witness
 //! ```
 //!
-//! Each `law` row is a `Real` axiom, the `CReal` theorem modelling it, and the
-//! `Kernel::axiom_footprint` of the witness `Real.CRealModel.<law>` — a theorem
+//! Each `law` row is a `AxReal` axiom, the `CReal` theorem modelling it, and the
+//! `Kernel::axiom_footprint` of the witness `AxReal.CRealModel.<law>` — a theorem
 //! whose type is the axiom's own type with the eight carrier/operation
-//! constants substituted **and** `Eq Real` read as `CReal.Equiv`, computed from
+//! constants substituted **and** `Eq AxReal` read as `CReal.Equiv`, computed from
 //! the environment rather than written by hand, and type-checked by the kernel
 //! at admission. `restated` marks the nine laws that needed the equality
 //! rewrite; `identical` marks those whose interpreted type is the `CReal`
@@ -30,7 +30,7 @@
 //!    footprint — presence asserted before the footprint is read, because
 //!    `axiom_footprint` of an interned-but-undeclared name is the empty vector
 //!    and a footprint-only check passes with the witness deleted;
-//! 2. the 22 laws come from the environment: every `Real.*` trusted declaration
+//! 2. the 22 laws come from the environment: every `AxReal.*` trusted declaration
 //!    is either one of the eight interpreted symbols or a modelled law, so a
 //!    31st axiom is a shortfall here rather than a smaller-but-tidy count;
 //! 3. exactly **nine** are restated over `CReal.Equiv` and thirteen are
@@ -57,7 +57,7 @@
 //! the standard homomorphism argument over the term language and is not
 //! machine-checked here — the kernel cannot state it.
 //!
-//! And the `Real` package's 30 axioms are **unchanged** by this: ADR-0512
+//! And the `AxReal` package's 30 axioms are **unchanged** by this: ADR-0512
 //! retires them by *deletion*, once no consumer references them, not by
 //! exhibiting a model. Measured after phase R3 landed, 18 files still reference
 //! `build_arith_prelude`/`ArithPrelude`, and `LraReconstructCtx`'s own doc says
@@ -142,15 +142,15 @@ fn main() {
         .filter(|(_, declaration)| match declaration {
             Declaration::Axiom { name, .. } => {
                 let rendered = kernel.display_name(*name).to_string();
-                rendered == "Real" || rendered.starts_with("Real.")
+                rendered == "AxReal" || rendered.starts_with("AxReal.")
             }
             _ => false,
         })
         .count();
     if declared != model.symbols.len() + model.laws.len() {
         eprintln!(
-            "FAIL: the Real package has {declared} trusted declarations but this model \
-             accounts for {} symbols + {} laws. A Real axiom with no interpretation is \
+            "FAIL: the AxReal package has {declared} trusted declarations but this model \
+             accounts for {} symbols + {} laws. A AxReal axiom with no interpretation is \
              not modelled, whatever the footprints below say.",
             model.symbols.len(),
             model.laws.len()
@@ -161,7 +161,7 @@ fn main() {
     // (3): ADR-0512 Measurement 2, read out of the kernel.
     if restated != 9 {
         eprintln!(
-            "FAIL: {restated} laws were restated over CReal.Equiv, not 9. The Real \
+            "FAIL: {restated} laws were restated over CReal.Equiv, not 9. The AxReal \
              package's Eq-fragment changed shape and ADR-0512's Measurement 2 no \
              longer describes it."
         );
@@ -208,7 +208,7 @@ fn main() {
     }
 
     eprintln!(
-        "Real: {declared} trusted declarations = {} interpreted symbols + {} modelled \
+        "AxReal: {declared} trusted declarations = {} interpreted symbols + {} modelled \
          laws; {axiom_free}/{} witnesses have an EMPTY axiom footprint, {identical}/{} \
          are syntactically the CReal law, {restated}/{} needed restating over \
          CReal.Equiv; {guards_held}/{} discrimination witnesses hold",
@@ -222,13 +222,13 @@ fn main() {
 
     if failed {
         eprintln!(
-            "FAIL: the constructed reals are NOT a model of the Real axiom package as \
+            "FAIL: the constructed reals are NOT a model of the AxReal axiom package as \
              claimed — see above. ADR-0512 phase R4 does not hold as stated."
         );
         std::process::exit(1);
     }
     eprintln!(
-        "The Real axiom package is modelled by the CONSTRUCTED reals, at zero trusted \
+        "The AxReal axiom package is modelled by the CONSTRUCTED reals, at zero trusted \
          declarations. ADR-0456's caveat is discharged: the carrier is no longer Int, \
          it is a Bishop setoid of regular rational sequences, and CReal.ofRat embeds Q \
          into it. What is NOT on offer is Eq CReal as real-number equality — it is \

@@ -51,7 +51,11 @@ What ``--check`` fails on
 * a ledger population change -- rows added or removed -- which requires a
   deliberate ``--accept-population-change`` run that files the departed rows in
   ``retired_entries`` rather than deleting them, so a *reduction in the trusted
-  surface is published as a reduction* instead of quietly shrinking a table;
+  surface is published as a reduction* instead of quietly shrinking a table.
+  A **rename** is not a population change and has its own verb,
+  ``--accept-rename OLD=NEW``: routing one through the retirement path would
+  discard every classification decision and publish 30 retirements that never
+  happened;
 * a stale count in any document listed in the manifest's ``live_documents``.
 
 Scope limit of the document scan, stated plainly: it gates the *anchored*
@@ -874,7 +878,7 @@ def render(data: dict[str, Any]) -> str:
         "own coverage; a prelude that silently stopped being built fails the gate "
         "instead of shrinking the total.",
         f"- {len(shared)} names are shared by the isolated real and integer "
-        "preludes; ADR-0387's `Int.*` / `Real.*` namespaces make the packages "
+        "preludes; ADR-0387's `Int.*` / `AxReal.*` namespaces make the packages "
         "composable.",
         f"- Integer trust policy: [{adr_label}]({adr_link}) — "
         + policy["publication_rule"],
@@ -1025,6 +1029,77 @@ def refresh(data: dict[str, Any], measurement: Measurement) -> dict[str, Any]:
     return data
 
 
+def accept_rename(
+    data: dict[str, Any],
+    measurement: Measurement,
+    mapping: dict[str, str],
+) -> list[str]:
+    """Carry a live row's authored metadata across a *renamed* declaration.
+
+    A rename is not a population change and must not be filed as one.  Routing
+    it through ``--accept-population-change`` would retire 30 rows and admit 30
+    fresh ``unclassified`` ones, which loses every classification and discharge
+    decision **and** inflates the published "assumptions retired" figure by 30 --
+    a trusted-surface reduction this project did not make, in the direction that
+    flatters it.  That is the same class of error the ledger exists to prevent,
+    so renaming gets its own verb.
+
+    Identity still comes from the measurement, never from this argument: the
+    caller says *which prefix moved where*, the rows are re-keyed, and the
+    canonical type and digest are taken from the admitted row under the new
+    name.  If the mapping is wrong in any way -- target not admitted, source
+    unmatched, collision with a row that already exists -- this raises, and even
+    if it did not, `validate_rows` would then report the live set disagreeing
+    with the kernel.  There is no spelling of this flag that lets an unmeasured
+    name into the ledger.
+
+    A prefix maps the declaration itself (``Real``) and its children
+    (``Real.add``), and nothing else: ``CReal`` is not renamed by ``Real=AxReal``
+    because ``CReal`` neither equals ``Real`` nor starts with ``Real.`` -- which
+    is the very confusion ADR-0522's rename removes.
+    """
+    admitted = {entry_key(row): row for row in measurement.axiom_rows}
+    entries: list[dict[str, Any]] = list(data.get("entries", []))
+    renamed: list[str] = []
+
+    for entry in entries:
+        name = str(entry["name"])
+        for old, new in mapping.items():
+            if name == old:
+                moved = new
+            elif name.startswith(f"{old}."):
+                moved = new + name[len(old) :]
+            else:
+                continue
+            key = (str(entry["prelude"]), moved)
+            if key not in admitted:
+                raise LedgerError(
+                    f"--accept-rename {old}={new}: {entry['prelude']}::{name} would "
+                    f"become {moved}, which the kernel does not admit. A rename is "
+                    "only a rename if the new name is measured; if the declaration "
+                    "actually left, use --accept-population-change."
+                )
+            entry["name"] = moved
+            entry["canonical_type"] = admitted[key]["canonical_type"]
+            entry["type_sha256"] = admitted[key]["type_sha256"]
+            renamed.append(f"{entry['prelude']}::{name}->{moved}")
+            break
+
+    keys = [entry_key(entry) for entry in entries]
+    if len(set(keys)) != len(keys):
+        raise LedgerError("--accept-rename produced duplicate prelude/name keys")
+    entries.sort(key=entry_key)
+    data["entries"] = entries
+    return renamed
+
+
+def parse_rename(argument: str) -> tuple[str, str]:
+    old, separator, new = argument.partition("=")
+    if not separator or not old or not new:
+        raise LedgerError(f"--accept-rename expects OLD=NEW, got {argument!r}")
+    return old, new
+
+
 def accept_population_change(
     data: dict[str, Any],
     measurement: Measurement,
@@ -1116,6 +1191,15 @@ def main() -> int:
         help="file rows the kernel no longer admits as retired, and add new ones "
         "as unclassified; required whenever the trusted population moves",
     )
+    parser.add_argument(
+        "--accept-rename",
+        action="append",
+        default=[],
+        metavar="OLD=NEW",
+        help="a declaration (and its dotted children) was RENAMED, not retired: "
+        "carry each live row's authored classification across the new name and "
+        "re-derive its type from the measurement (repeatable)",
+    )
     parser.add_argument("--retired-on", help="ISO date recorded on retired rows")
     parser.add_argument("--retirement-note", help="why the rows left the trusted surface")
     parser.add_argument(
@@ -1136,6 +1220,21 @@ def main() -> int:
         print(f"missing ledger: {relative(MANIFEST)}", file=sys.stderr)
         return 1
     data = load_manifest()
+
+    if args.accept_rename:
+        if args.check:
+            print("--check and --accept-rename are exclusive", file=sys.stderr)
+            return 1
+        try:
+            mapping = dict(parse_rename(item) for item in args.accept_rename)
+            renamed = accept_rename(data, measurement, mapping)
+        except LedgerError as error:
+            print(f"LEAN_AXIOM_LEDGER_ERROR|{error}", file=sys.stderr)
+            return 1
+        print(
+            f"LEAN_AXIOM_LEDGER_RENAME|rows={len(renamed)}|"
+            + ",".join(f"{old}->{new}" for old, new in sorted(mapping.items()))
+        )
 
     if args.accept_population_change:
         if args.check:

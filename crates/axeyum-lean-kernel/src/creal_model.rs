@@ -1,10 +1,10 @@
-//! A **machine-checked model of the `Real` axiom package in the constructed
+//! A **machine-checked model of the `AxReal` axiom package in the constructed
 //! `CReal`** — ADR-0512 phase R4, and the step that supersedes
 //! [`build_int_model_of_arith`](crate::build_int_model_of_arith).
 //!
 //! ## What changed, and why it needed a new module
 //!
-//! [`build_int_model_of_arith`] interprets the `Real` package in `ℤ` by
+//! [`build_int_model_of_arith`] interprets the `AxReal` package in `ℤ` by
 //! renaming eight constants, and it is careful about what that buys: relative
 //! consistency, not a discharge. Its own module docs say it outright — **`Int`
 //! is not ℝ**, so a theorem obtained by instantiating the interface there is a
@@ -28,7 +28,7 @@
 //! > not the equality of real numbers.** `CReal.Equiv` is.
 //!
 //! So the interpretation is not a constant renaming. It is a constant renaming
-//! **plus** the rewrite that replaces the partial application `Eq Real` — the
+//! **plus** the rewrite that replaces the partial application `Eq AxReal` — the
 //! `Eq` of the carrier, and only that one — with `CReal.Equiv`. That is the
 //! same rewrite ADR-0512 phase R3 applies to the consumer telescope's nine
 //! `Eq`-laws (`ordered_ring::setoid::rewrite_eq_at_real` in `axeyum-solver`);
@@ -37,10 +37,10 @@
 //!
 //! ## The discipline, unchanged from `arith_model`
 //!
-//! For each of the 22 `Real` laws this module admits
+//! For each of the 22 `AxReal` laws this module admits
 //!
 //! ```text
-//! Real.CRealModel.<law> : ⟦ type of Real.<law> ⟧    := CReal.<law>
+//! AxReal.CRealModel.<law> : ⟦ type of AxReal.<law> ⟧    := CReal.<law>
 //! ```
 //!
 //! where `⟦·⟧` is computed **from the axiom as it stands in the environment**,
@@ -64,7 +64,7 @@
 //!   [`axiom_footprint`](crate::Kernel::axiom_footprint). ADR-0456's caveat
 //!   that the model was `ℤ` and `ℤ` is not ℝ is **discharged**: the carrier is
 //!   ℝ, and `CReal.ofRat` embeds ℚ into it.
-//! - Thirteen laws are modelled **verbatim** and nine only after `Eq Real` is
+//! - Thirteen laws are modelled **verbatim** and nine only after `Eq AxReal` is
 //!   read as `CReal.Equiv`. [`CRealModelLaw::restated_over_equiv`] records
 //!   which, per law, so ADR-0512's Measurement 2 (9 vs 21) is read out of the
 //!   kernel rather than quoted.
@@ -102,28 +102,28 @@ use crate::expr::{ExprId, ExprNode};
 use crate::name::NameId;
 use crate::{Kernel, KernelError};
 
-/// One interpreted law: the `Real` axiom, the `CReal` theorem that models it,
+/// One interpreted law: the `AxReal` axiom, the `CReal` theorem that models it,
 /// and the kernel-checked witness declaration binding them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CRealModelLaw {
-    /// The `Real` axiom being interpreted.
+    /// The `AxReal` axiom being interpreted.
     pub real: NameId,
     /// The `CReal` theorem supplied as its proof under the interpretation.
     pub creal: NameId,
-    /// The admitted witness `Real.CRealModel.<law>`, whose type is the
+    /// The admitted witness `AxReal.CRealModel.<law>`, whose type is the
     /// *computed* interpretation of `real`'s type.
     pub witness: NameId,
-    /// Whether the interpreted `Real` type is **syntactically identical** to
+    /// Whether the interpreted `AxReal` type is **syntactically identical** to
     /// the `CReal` theorem's own declared type, up to binder names and binder
     /// info (both of which are irrelevant to what a `∀` says, and neither of
     /// which the two developments were written to agree on).
     ///
     /// Recorded because identity is the stronger and more auditable outcome
-    /// than definitional equality: it means the `Real` axiom and the `CReal`
+    /// than definitional equality: it means the `AxReal` axiom and the `CReal`
     /// theorem say the same thing symbol for symbol, rather than merely
     /// something the conversion checker can reconcile.
     pub identical: bool,
-    /// Whether the `Eq Real ↦ CReal.Equiv` rewrite **fired** on this law — i.e.
+    /// Whether the `Eq AxReal ↦ CReal.Equiv` rewrite **fired** on this law — i.e.
     /// whether this is one of the nine that ADR-0512 says the setoid route can
     /// only satisfy in restated form.
     ///
@@ -136,18 +136,18 @@ pub struct CRealModelLaw {
 /// interpretation, and one checked witness per law.
 #[derive(Debug, Clone)]
 pub struct CRealModel {
-    /// The axiomatized `Real` package being modelled.
+    /// The axiomatized `AxReal` package being modelled.
     pub arith: ArithPrelude,
     /// The constructed `CReal` development doing the modelling.
     pub creal: CRealPrelude,
-    /// The interpretation of `Real`'s eight carrier/operation symbols, as
-    /// `(Real symbol, CReal symbol)` pairs in declaration order.
+    /// The interpretation of `AxReal`'s eight carrier/operation symbols, as
+    /// `(AxReal symbol, CReal symbol)` pairs in declaration order.
     pub symbols: Vec<(NameId, NameId)>,
     /// The equality slot: `(Eq, CReal.Equiv)`. Not a constant renaming — `Eq`
     /// is polymorphic and `CReal.Equiv` is not, so the partial application
-    /// `Eq Real` is what gets replaced.
+    /// `Eq AxReal` is what gets replaced.
     pub equality: (NameId, NameId),
-    /// One entry per `Real` law, in declaration order.
+    /// One entry per `AxReal` law, in declaration order.
     pub laws: Vec<CRealModelLaw>,
 }
 
@@ -169,11 +169,11 @@ impl CRealModel {
     }
 }
 
-/// Build the `Real` package and the constructed `CReal` development, and admit
-/// the interpretation of every `Real` law into `CReal`.
+/// Build the `AxReal` package and the constructed `CReal` development, and admit
+/// the interpretation of every `AxReal` law into `CReal`.
 ///
-/// The witness types are computed by rewriting `Eq Real` to `CReal.Equiv` and
-/// substituting the interpreted symbols into the `Real` axioms **as they stand
+/// The witness types are computed by rewriting `Eq AxReal` to `CReal.Equiv` and
+/// substituting the interpreted symbols into the `AxReal` axioms **as they stand
 /// in the environment**, so an axiom whose statement changes changes the
 /// obligation, and an axiom that `CReal` does not satisfy makes this function
 /// fail rather than silently drop a row.
@@ -182,7 +182,7 @@ impl CRealModel {
 ///
 /// Returns the trusted gate's rejection. A [`KernelError`] from
 /// `add_declaration` here means the kernel **refused** a `CReal` theorem as a
-/// proof of the interpreted `Real` axiom — i.e. the constructed reals were not
+/// proof of the interpreted `AxReal` axiom — i.e. the constructed reals were not
 /// shown to model that axiom. In particular a `TypeMismatch` on one of the nine
 /// `Eq`-laws is what a broken equality rewrite looks like: the obligation would
 /// still read `Eq CReal …` while the proof proves `CReal.Equiv …`.
@@ -205,7 +205,7 @@ pub fn build_creal_model_of_arith(kernel: &mut Kernel) -> Result<CRealModel, Ker
 
     let anon = kernel.anon();
     let model_root = {
-        let real = kernel.name_str(anon, "Real");
+        let real = kernel.name_str(anon, "AxReal");
         kernel.name_str(real, "CRealModel")
     };
 
@@ -218,8 +218,8 @@ pub fn build_creal_model_of_arith(kernel: &mut Kernel) -> Result<CRealModel, Ker
         let real_ty = declaration_type(kernel, real)?;
         let creal_ty = declaration_type(kernel, creal_law)?;
 
-        // The equality slot first: `Eq Real` is matched on the *un-interpreted*
-        // axiom, where the carrier is still the `Real` constant.
+        // The equality slot first: `Eq AxReal` is matched on the *un-interpreted*
+        // axiom, where the carrier is still the `AxReal` constant.
         let (restated_ty, restated_over_equiv) =
             rewrite_eq_at_carrier(kernel, real_ty, arith.logic.eq, arith.r, equiv);
         // ...and then the eight-symbol renaming over what is left.
@@ -362,7 +362,7 @@ fn rewrite_aux(
 ///
 /// Used only to decide [`CRealModelLaw::identical`]. Binder names are display
 /// data — they do not participate in definitional equality and the two
-/// developments were written with different conventions (`a b c` under `Real`,
+/// developments were written with different conventions (`a b c` under `AxReal`,
 /// `x y z` under `CReal`) — so comparing interned ids without erasing them
 /// would report "drifted" for every law and measure nothing.
 fn erase_binder_names(

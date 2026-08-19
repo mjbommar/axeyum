@@ -4,7 +4,7 @@
 //!
 //! ## Why this is the missing rung
 //!
-//! `Real` is 30 trusted constants. Enumerate them and 22 are the laws of an
+//! `AxReal` is 30 trusted constants. Enumerate them and 22 are the laws of an
 //! **ordered commutative ring with `1`** — no inverse, no completeness, no
 //! Archimedean axiom (`crate::arith_model`, ADR-0456). `ℤ` already models all
 //! 22 with an empty axiom footprint. `ℚ` is the next rung because it is the
@@ -321,9 +321,9 @@ pub struct RatPrelude {
     // --- beyond the ring interface -------------------------------------------
     /// `Rat.le_total : ∀ a b, Or (le a b) (le b a)`.
     ///
-    /// **Not** one of the 22: the `Real` package does not assume totality
+    /// **Not** one of the 22: the `AxReal` package does not assume totality
     /// (ADR-0456 counted it as absent), so this is a property `ℚ` has and the
-    /// axiomatized `Real` does not. It is one line — `Rat.le` unfolds to
+    /// axiomatized `AxReal` does not. It is one line — `Rat.le` unfolds to
     /// `Int.le` on cross-products, and `Int.le_total` is already proved.
     pub le_total: NameId,
     /// `Rat.lt_of_not_le : ∀ a b, Not (le a b) → lt b a`.
@@ -610,7 +610,7 @@ pub struct RatPrelude {
 
 impl RatPrelude {
     /// The 22 ordered-commutative-ring laws, in the **declaration order of the
-    /// `Real` package** — which is the order
+    /// `AxReal` package** — which is the order
     /// [`build_rat_model_of_arith`](crate::build_rat_model_of_arith) pairs them
     /// in, and the order `generalize_over_ordered_ring` binds them in.
     #[must_use]
