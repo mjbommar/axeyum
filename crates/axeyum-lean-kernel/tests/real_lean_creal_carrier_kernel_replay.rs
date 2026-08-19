@@ -83,7 +83,8 @@ fn replay(lean: &Path, stream: &str, stem: &str) -> (bool, String) {
         .join("../../scripts/lean/replay-lean4export.lean")
         .canonicalize()
         .expect("the replay script must exist");
-    let directory = std::env::temp_dir().join(format!("axeyum_creal_replay_{}", std::process::id()));
+    let directory =
+        std::env::temp_dir().join(format!("axeyum_creal_replay_{}", std::process::id()));
     std::fs::create_dir_all(&directory).expect("create replay directory");
     let file = directory.join(format!("{stem}.ndjson"));
     std::fs::write(&file, stream).expect("write replay stream");
@@ -188,9 +189,8 @@ fn the_real_lean_kernel_accepts_every_declaration_of_the_constructed_real_carrie
         "the REAL LEAN KERNEL rejected the constructed-real carrier this kernel \
          admitted:\n{report}"
     );
-    let held = reported_constants(&report).unwrap_or_else(|| {
-        panic!("the replay must report its final constant count:\n{report}")
-    });
+    let held = reported_constants(&report)
+        .unwrap_or_else(|| panic!("the replay must report its final constant count:\n{report}"));
     assert_eq!(
         held, declared,
         "Lean's kernel ended with {held} constants where this kernel holds {declared}. \
