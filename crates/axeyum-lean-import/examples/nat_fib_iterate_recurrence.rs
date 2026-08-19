@@ -83,6 +83,9 @@ fn run() -> Result<(), String> {
         Some(Declaration::Definition { uparams, value, .. }) if uparams.is_empty() => *value,
         _ => return Err("target is not a monomorphic statement definition".to_owned()),
     };
+    if arguments.stage_control {
+        return run_recurrence_stage_control(&mut kernel, goal, &shape);
+    }
     let output_path = arguments
         .output
         .as_ref()
@@ -506,17 +509,239 @@ fn recurrence_proof(
         return Err("target body is not equality".to_owned());
     }
     let middle = kernel.app(shape.snd, iter_succ_n);
-    let proof = equality_trans(
+    let actual_rhs = kernel.app(shape.snd, transition_iter_n);
+    let left_to_actual = equality_trans(
         kernel,
         shape.nat,
         target_arguments[1],
         middle,
-        target_arguments[2],
+        actual_rhs,
         first,
         second,
     )?;
+    let fst_helper_n = congr_arg(
+        kernel,
+        shape.product,
+        shape.nat,
+        fst_function,
+        iter_succ_n,
+        transition_iter_n,
+        helper_n,
+    )?;
+    let fst_iter_succ_n = kernel.app(shape.fst, iter_succ_n);
+    let fst_transition_iter_n = kernel.app(shape.fst, transition_iter_n);
+    let reversed_fst_helper = equality_symm(
+        kernel,
+        shape.nat,
+        fst_iter_succ_n,
+        fst_transition_iter_n,
+        fst_helper_n,
+    )?;
+    let add_right = replace_last_argument_function(kernel, target_arguments[2], shape.nat)?;
+    let rhs_bridge = congr_arg(
+        kernel,
+        shape.nat,
+        shape.nat,
+        add_right,
+        fst_transition_iter_n,
+        fst_iter_succ_n,
+        reversed_fst_helper,
+    )?;
+    let proof = equality_trans(
+        kernel,
+        shape.nat,
+        target_arguments[1],
+        actual_rhs,
+        target_arguments[2],
+        left_to_actual,
+        rhs_bridge,
+    )?;
     let proof = kernel.abstract_fvars(proof, &[n_id]);
     Ok(kernel.lam(name, domain, proof, info))
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_recurrence_stage_control(
+    kernel: &mut Kernel,
+    goal: ExprId,
+    shape: &FibShape,
+) -> Result<(), String> {
+    let (helper, _) = iterator_successor_helper(kernel, shape)?;
+    let ExprNode::Pi(name, domain, body, info) = kernel.expr_node(goal).clone() else {
+        return Err("stage control target has no pointwise binder".to_owned());
+    };
+    let n_id = u64::MAX - 88_000;
+    let n = kernel.fvar(n_id);
+    let target = kernel.instantiate(body, &[n]);
+    let (_, target_arguments) = app_spine(kernel, target);
+    if target_arguments.len() != 3 {
+        return Err("stage control target body is not equality".to_owned());
+    }
+    let successor_n = kernel.app(shape.successor, n);
+    let successor_successor_n = kernel.app(shape.successor, successor_n);
+    let iter_n = iterate(kernel, shape, n, shape.initial);
+    let iter_succ_n = iterate(kernel, shape, successor_n, shape.initial);
+    let iter_successor_successor_n = iterate(kernel, shape, successor_successor_n, shape.initial);
+
+    let helper_n = kernel.app(helper, n);
+    let helper_n = kernel.app(helper_n, shape.initial);
+    let helper_n_expected = helper_proposition(kernel, shape, n, shape.initial)?;
+    let helper_succ = kernel.app(helper, successor_n);
+    let helper_succ = kernel.app(helper_succ, shape.initial);
+    let helper_succ_expected = helper_proposition(kernel, shape, successor_n, shape.initial)?;
+
+    let fst_function = unary_projection(kernel, shape, shape.fst, "fst");
+    let transition_iter_succ_n = kernel.app(shape.transition, iter_succ_n);
+    let first = congr_arg(
+        kernel,
+        shape.product,
+        shape.nat,
+        fst_function,
+        iter_successor_successor_n,
+        transition_iter_succ_n,
+        helper_succ,
+    )?;
+    let middle = kernel.app(shape.snd, iter_succ_n);
+    let first_expected = equality(kernel, shape.nat, target_arguments[1], middle)?;
+
+    let snd_function = unary_projection(kernel, shape, shape.snd, "snd");
+    let transition_iter_n = kernel.app(shape.transition, iter_n);
+    let second = congr_arg(
+        kernel,
+        shape.product,
+        shape.nat,
+        snd_function,
+        iter_succ_n,
+        transition_iter_n,
+        helper_n,
+    )?;
+    let actual_rhs = kernel.app(shape.snd, transition_iter_n);
+    let second_expected = equality(kernel, shape.nat, middle, actual_rhs)?;
+    let left_to_actual = equality_trans(
+        kernel,
+        shape.nat,
+        target_arguments[1],
+        middle,
+        actual_rhs,
+        first,
+        second,
+    )?;
+    let fst_helper_n = congr_arg(
+        kernel,
+        shape.product,
+        shape.nat,
+        fst_function,
+        iter_succ_n,
+        transition_iter_n,
+        helper_n,
+    )?;
+    let fst_iter_succ_n = kernel.app(shape.fst, iter_succ_n);
+    let fst_transition_iter_n = kernel.app(shape.fst, transition_iter_n);
+    let fst_helper_expected = equality(kernel, shape.nat, fst_iter_succ_n, fst_transition_iter_n)?;
+    let reversed_fst_helper = equality_symm(
+        kernel,
+        shape.nat,
+        fst_iter_succ_n,
+        fst_transition_iter_n,
+        fst_helper_n,
+    )?;
+    let reversed_fst_expected =
+        equality(kernel, shape.nat, fst_transition_iter_n, fst_iter_succ_n)?;
+    let add_right = replace_last_argument_function(kernel, target_arguments[2], shape.nat)?;
+    let rhs_bridge = congr_arg(
+        kernel,
+        shape.nat,
+        shape.nat,
+        add_right,
+        fst_transition_iter_n,
+        fst_iter_succ_n,
+        reversed_fst_helper,
+    )?;
+    let rhs_bridge_expected = equality(kernel, shape.nat, actual_rhs, target_arguments[2])?;
+    let combined = equality_trans(
+        kernel,
+        shape.nat,
+        target_arguments[1],
+        actual_rhs,
+        target_arguments[2],
+        left_to_actual,
+        rhs_bridge,
+    )?;
+
+    let stages = [
+        ("helper-n", helper_n, helper_n_expected),
+        ("helper-succ", helper_succ, helper_succ_expected),
+        ("fst-congruence", first, first_expected),
+        ("snd-congruence", second, second_expected),
+        ("fst-helper", fst_helper_n, fst_helper_expected),
+        (
+            "fst-helper-symm",
+            reversed_fst_helper,
+            reversed_fst_expected,
+        ),
+        ("rhs-bridge", rhs_bridge, rhs_bridge_expected),
+        ("transitivity", combined, target),
+    ];
+    let mut failures = Vec::new();
+    for (label, proof, expected) in stages {
+        if !report_recurrence_stage(kernel, label, proof, expected, n_id, name, domain, info)? {
+            failures.push(label);
+        }
+    }
+    println!(
+        "AUTOGENESIS_NAT_FIB_STAGE_CONTROL_OK|failures={}|target_submissions=0|target_outcomes=0|receipts=0|evaluation=0|ledger_writes=0",
+        if failures.is_empty() {
+            "none".to_owned()
+        } else {
+            failures.join(",")
+        }
+    );
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn report_recurrence_stage(
+    kernel: &mut Kernel,
+    label: &str,
+    proof: ExprId,
+    expected: ExprId,
+    n_id: u64,
+    binder: NameId,
+    domain: ExprId,
+    info: BinderInfo,
+) -> Result<bool, String> {
+    let closed_proof_body = kernel.abstract_fvars(proof, &[n_id]);
+    let closed_proof = kernel.lam(binder, domain, closed_proof_body, info);
+    let closed_expected_body = kernel.abstract_fvars(expected, &[n_id]);
+    let closed_expected = kernel.pi(binder, domain, closed_expected_body, info);
+    let proof_sha256 = canonical_expression_sha256(kernel, closed_proof)?;
+    let expected_sha256 = canonical_expression_sha256(kernel, closed_expected)?;
+    match kernel.infer(closed_proof) {
+        Ok(inferred) => {
+            let inferred_sha256 = canonical_expression_sha256(kernel, inferred)?;
+            let matches = kernel.def_eq(inferred, closed_expected);
+            println!(
+                "STAGE|{label}|inferred=1|matches={}|proof={proof_sha256}|expected={expected_sha256}|actual={inferred_sha256}|expected_type={}|actual_type={}",
+                usize::from(matches),
+                kernel.render_lean(closed_expected),
+                kernel.render_lean(inferred),
+            );
+            Ok(matches)
+        }
+        Err(KernelError::TypeMismatch {
+            expected: wanted,
+            got,
+        }) => {
+            println!(
+                "STAGE|{label}|inferred=0|matches=0|proof={proof_sha256}|expected={expected_sha256}|error_expected={}|error_got={}|expected_type={}",
+                kernel.render_lean(wanted),
+                kernel.render_lean(got),
+                kernel.render_lean(closed_expected),
+            );
+            Ok(false)
+        }
+        Err(error) => Err(format!("{label} inference failed: {error:?}")),
+    }
 }
 
 fn iterate(kernel: &mut Kernel, shape: &FibShape, count: ExprId, value: ExprId) -> ExprId {
@@ -597,6 +822,52 @@ fn equality_trans(
         rec = kernel.app(rec, argument);
     }
     Ok(rec)
+}
+
+fn equality_symm(
+    kernel: &mut Kernel,
+    ty: ExprId,
+    left: ExprId,
+    right: ExprId,
+    proof: ExprId,
+) -> Result<ExprId, String> {
+    let right_id = u64::MAX - 89_001;
+    let equality_id = u64::MAX - 89_002;
+    let variable = kernel.fvar(right_id);
+    let premise = equality(kernel, ty, left, variable)?;
+    let result = equality(kernel, ty, variable, left)?;
+    let motive = close_lam(kernel, equality_id, "h", premise, result);
+    let motive = close_lam(kernel, right_id, "b", ty, motive);
+    let reflexivity = equality_refl(kernel, ty, left)?;
+    let carrier_level = sort_level(kernel, ty)?;
+    let motive_level = kernel.level_zero();
+    let mut rec = kernel.const_(
+        exact_name(kernel, "Eq.rec")?,
+        vec![motive_level, carrier_level],
+    );
+    for argument in [ty, left, motive, reflexivity, right, proof] {
+        rec = kernel.app(rec, argument);
+    }
+    Ok(rec)
+}
+
+fn replace_last_argument_function(
+    kernel: &mut Kernel,
+    application: ExprId,
+    domain: ExprId,
+) -> Result<ExprId, String> {
+    let (head, mut arguments) = app_spine(kernel, application);
+    arguments
+        .pop()
+        .ok_or("right-addition target has no arguments")?;
+    let right_id = u64::MAX - 89_003;
+    let mut body = head;
+    for argument in arguments {
+        body = kernel.app(body, argument);
+    }
+    let right = kernel.fvar(right_id);
+    body = kernel.app(body, right);
+    Ok(close_lam(kernel, right_id, "rhs", domain, body))
 }
 
 fn direct_reflexivity(kernel: &mut Kernel, goal: ExprId) -> Result<ExprId, String> {
@@ -710,6 +981,7 @@ struct Arguments {
     output: Option<PathBuf>,
     preflight: bool,
     composition_control: bool,
+    stage_control: bool,
 }
 
 fn parse_arguments() -> Result<Arguments, String> {
@@ -717,6 +989,7 @@ fn parse_arguments() -> Result<Arguments, String> {
     let mut output = None;
     let mut preflight = false;
     let mut composition_control = false;
+    let mut stage_control = false;
     let mut arguments = env::args().skip(1);
     while let Some(flag) = arguments.next() {
         if flag == "--preflight" {
@@ -733,6 +1006,13 @@ fn parse_arguments() -> Result<Arguments, String> {
             composition_control = true;
             continue;
         }
+        if flag == "--stage-control" {
+            if stage_control {
+                return Err("duplicate --stage-control".to_owned());
+            }
+            stage_control = true;
+            continue;
+        }
         let value = arguments
             .next()
             .ok_or_else(|| format!("{flag} requires a value"))?;
@@ -745,7 +1025,7 @@ fn parse_arguments() -> Result<Arguments, String> {
             return Err(format!("duplicate {flag}"));
         }
     }
-    if preflight && composition_control {
+    if usize::from(preflight) + usize::from(composition_control) + usize::from(stage_control) > 1 {
         return Err("preflight modes are mutually exclusive".to_owned());
     }
     Ok(Arguments {
@@ -753,6 +1033,7 @@ fn parse_arguments() -> Result<Arguments, String> {
         output,
         preflight,
         composition_control,
+        stage_control,
     })
 }
 
