@@ -254,7 +254,7 @@ fn the_ring_telescope_is_every_real_declaration() {
 }
 
 // ---------------------------------------------------------------------------
-// ADR-0468 phase R3: the equality slot.
+// ADR-0483 phase R3: the equality slot.
 // ---------------------------------------------------------------------------
 
 /// Reconstruct `fixture` twice in one context — once with the kernel's `Eq`,

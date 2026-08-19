@@ -3,7 +3,7 @@
 //!
 //! ## Why this is here and not in the real construction
 //!
-//! ADR-0468 (`docs/research/09-decisions/adr-0468-real-is-constructed-as-a-setoid-over-the-rationals.md`)
+//! ADR-0483 (`docs/research/09-decisions/adr-0483-real-is-constructed-as-a-setoid-over-the-rationals.md`)
 //! builds `ℝ` as a Bishop setoid of *regular* sequences of rationals, and the
 //! one step of that construction which is not routine is transitivity of the
 //! setoid relation. Chaining two closeness hypotheses directly gives

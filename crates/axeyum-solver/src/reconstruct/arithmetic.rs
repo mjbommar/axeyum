@@ -163,7 +163,7 @@ pub struct LraReconstructCtx {
     hyps: Vec<NameId>,
     /// Monotone counter for fresh, collision-free declaration names.
     next_id: u64,
-    /// The **equality slot** (ADR-0468 phase R3), once declared.
+    /// The **equality slot** (ADR-0483 phase R3), once declared.
     ///
     /// `None` — the default — means ring equality is the kernel's own `Eq` at
     /// `Real`, and every rewrite in a reconstructed proof is an `Eq.rec`
@@ -373,7 +373,7 @@ impl LraReconstructCtx {
     }
 
     /// Declare the **equality slot** into this context and route every
-    /// subsequent equality step through it (ADR-0468 phase R3).
+    /// subsequent equality step through it (ADR-0483 phase R3).
     ///
     /// Call before reconstructing. Afterwards, a proof built by
     /// [`reconstruct_lra_proof`] or [`reconstruct_sos_proof`] contains no `Eq`,
@@ -409,7 +409,7 @@ impl LraReconstructCtx {
     }
 
     /// Fill the **equality slot** from the carrier's own lemmas, declaring
-    /// nothing (ADR-0468 phase R4).
+    /// nothing (ADR-0483 phase R4).
     ///
     /// [`Self::enable_setoid_equality`] is the `Real` route: it *axiomatizes*
     /// the slot, because the `Real` package's equality is the kernel's `Eq` and
