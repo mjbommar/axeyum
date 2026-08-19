@@ -6,7 +6,9 @@ use std::io::Cursor;
 use std::path::PathBuf;
 
 use axeyum_lean_import::{
-    ImportLimits, canonical_declaration_sha256, canonical_expression_sha256, import_ndjson,
+    CHECKED_SEMANTIC_THEOREM_RECEIPT_VERSION, CheckedTheoremAuthority, ImportLimits,
+    canonical_declaration_sha256, canonical_expression_sha256, import_ndjson,
+    issue_checked_semantic_theorem_receipt, verify_checked_semantic_theorem_receipt,
 };
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, ExprNode, Kernel, KernelError, LevelId, NameId,
@@ -20,6 +22,13 @@ const STREAM_SHA256: &str = "00578e949d71154cf5d9e79005b2a1c8f7fe73d9885ae96b0dd
 const POLICY_VERSION: &str = "nat-fib-iterate-recurrence-v3";
 const MAX_PLAN_TEMPLATES: usize = 2;
 const MAX_KERNEL_SUBMISSIONS: usize = 2;
+const CANDIDATE_OBSERVATION_SHA256: &str =
+    "920ef21dffc17402180725f940220e26a02db02cdf7ff636779d9cdfe6680969";
+const CANDIDATE_PROOF_SHA256: &str =
+    "b5965831fd4654e708b03bd3145f9124f02fc57aaa04bc16ded8287b6cee50f2";
+const CANDIDATE_THEOREM_SHA256: &str =
+    "ad53b80748ad1d3f0a0958277774e36a621ce25f5f1441b6882085349886537a";
+const GOAL_SHA256: &str = "5433b34c4a138d615c488e4c7dfbee5dac8dc253e14680e114f40a55cf5eb16d";
 
 #[derive(Debug)]
 struct FibShape {
@@ -56,6 +65,13 @@ fn run() -> Result<(), String> {
     let stream = fs::read(&arguments.stream).map_err(|error| error.to_string())?;
     if hex_sha256(&stream) != STREAM_SHA256 {
         return Err("r080 stream identity changed".to_owned());
+    }
+    if let Some(candidate) = &arguments.receipt_candidate {
+        let output = arguments
+            .output
+            .as_ref()
+            .ok_or("receipt mode requires --output")?;
+        return run_checked_receipt(&stream, candidate, output);
     }
     let completed = import_ndjson(Cursor::new(&stream), ImportLimits::default())
         .map_err(|error| format!("source import failed: {error:?}"))?;
@@ -166,6 +182,163 @@ fn run() -> Result<(), String> {
         search.plan_rank, search.submissions
     );
     Ok(())
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_checked_receipt(
+    stream: &[u8],
+    candidate_path: &PathBuf,
+    output_path: &PathBuf,
+) -> Result<(), String> {
+    let candidate: Value =
+        serde_json::from_slice(&fs::read(candidate_path).map_err(|error| error.to_string())?)
+            .map_err(|error| error.to_string())?;
+    let mut unsigned = candidate.clone();
+    let claimed = unsigned
+        .as_object_mut()
+        .and_then(|value| value.remove("observation_sha256"))
+        .and_then(|value| value.as_str().map(str::to_owned));
+    if claimed.as_deref() != Some(CANDIDATE_OBSERVATION_SHA256)
+        || canonical_digest(&unsigned)? != CANDIDATE_OBSERVATION_SHA256
+        || candidate
+            .pointer("/candidate/proof_sha256")
+            .and_then(Value::as_str)
+            != Some(CANDIDATE_PROOF_SHA256)
+        || candidate
+            .pointer("/candidate/theorem_content_sha256")
+            .and_then(Value::as_str)
+            != Some(CANDIDATE_THEOREM_SHA256)
+        || candidate
+            .pointer("/source/goal_sha256")
+            .and_then(Value::as_str)
+            != Some(GOAL_SHA256)
+        || candidate
+            .pointer("/authority/evaluation_credit")
+            .and_then(Value::as_u64)
+            != Some(0)
+        || candidate
+            .pointer("/authority/ledger_writes")
+            .and_then(Value::as_u64)
+            != Some(0)
+    {
+        return Err("sealed candidate authority changed".to_owned());
+    }
+    let authority = CheckedTheoremAuthority {
+        policy_version: "nat-fib-add-two-checked-theorem-receipt-v1".to_owned(),
+        source_artifact_sha256: STREAM_SHA256.to_owned(),
+        target_definition: TARGET.to_owned(),
+        fact_id: TARGET_FACT.to_owned(),
+        goal_sha256: GOAL_SHA256.to_owned(),
+        candidate_observation_sha256: CANDIDATE_OBSERVATION_SHA256.to_owned(),
+        expected_proof_sha256: CANDIDATE_PROOF_SHA256.to_owned(),
+        expected_theorem_content_sha256: CANDIDATE_THEOREM_SHA256.to_owned(),
+        operation: "bounded-iterate-recurrence-v3".to_owned(),
+        max_plan_templates: MAX_PLAN_TEMPLATES,
+        max_kernel_submissions: MAX_KERNEL_SUBMISSIONS,
+        max_executor_invocations: 1,
+        max_retries: 0,
+    };
+    let (mut first_kernel, first_theorem) = reconstruct_fixed_candidate(stream)?;
+    let receipt =
+        issue_checked_semantic_theorem_receipt(&mut first_kernel, first_theorem, &authority)
+            .map_err(|error| error.to_string())?;
+    let (mut replay_kernel, replay_theorem) = reconstruct_fixed_candidate(stream)?;
+    verify_checked_semantic_theorem_receipt(
+        &receipt,
+        &mut replay_kernel,
+        replay_theorem,
+        &authority,
+    )
+    .map_err(|error| error.to_string())?;
+    let replayed =
+        issue_checked_semantic_theorem_receipt(&mut replay_kernel, replay_theorem, &authority)
+            .map_err(|error| error.to_string())?;
+    if receipt != replayed
+        || receipt.schema_version != CHECKED_SEMANTIC_THEOREM_RECEIPT_VERSION
+        || !receipt.has_valid_digest()
+    {
+        return Err("fresh-kernel theorem receipt replay changed".to_owned());
+    }
+    let receipt_json: Value = serde_json::from_str(
+        &receipt
+            .to_pretty_json()
+            .map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| error.to_string())?;
+    let mut output = json!({
+        "schema_version": 1,
+        "kind": "axeyum-autogenesis-nat-fib-checked-theorem-receipt",
+        "state": "semantic-theorem-receipt-issued-no-evaluation-or-ledger-credit",
+        "source": {
+            "artifact_file": "r080.ndjson",
+            "stream_sha256": STREAM_SHA256,
+            "target_definition": TARGET,
+            "fact_id": TARGET_FACT,
+            "goal_sha256": GOAL_SHA256,
+        },
+        "candidate_observation_sha256": CANDIDATE_OBSERVATION_SHA256,
+        "semantic_theorem_receipt": receipt_json,
+        "assurance": {
+            "fresh_imports": 2,
+            "fixed_plan_reconstructions": 2,
+            "search_invocations": 0,
+            "target_theorem_submissions": 2,
+            "receipt_reissued_exactly": true,
+            "axiom_footprint": [],
+            "direct_theorem_dependencies": [],
+        },
+        "authority": {
+            "held_out_inspected": false,
+            "proof_bodies_inspected": false,
+            "semantic_theorem_receipts_issued": 1,
+            "evaluation_credit": 0,
+            "ledger_writes": 0,
+        },
+        "limitations": "This independently replays and receipts the fixed accepted candidate. The fact remains open until a separate crash-safe admission transaction succeeds.",
+    });
+    let digest = canonical_digest(&output)?;
+    output["observation_sha256"] = json!(digest);
+    let mut rendered = serde_json::to_string_pretty(&output).map_err(|error| error.to_string())?;
+    rendered.push('\n');
+    fs::write(output_path, rendered).map_err(|error| error.to_string())?;
+    println!(
+        "AUTOGENESIS_NAT_FIB_CHECKED_RECEIPT_OK|{digest}|receipt={}|fresh_imports=2|search=0|axioms=0|theorem_dependencies=0|evaluation=0|ledger_writes=0",
+        receipt.receipt_sha256
+    );
+    Ok(())
+}
+
+fn reconstruct_fixed_candidate(stream: &[u8]) -> Result<(Kernel, NameId), String> {
+    let completed = import_ndjson(Cursor::new(stream), ImportLimits::default())
+        .map_err(|error| format!("receipt source import failed: {error:?}"))?;
+    let (mut kernel, report) = completed.into_parts();
+    if report.lean_version != "4.30.0"
+        || report.lean_githash != "d024af099ca4bf2c86f649261ebf59565dc8c622"
+        || !report.axioms.is_empty()
+    {
+        return Err("receipt source authority changed".to_owned());
+    }
+    let target = exact_name(&kernel, TARGET)?;
+    let goal = match kernel.environment().get(target) {
+        Some(Declaration::Definition { uparams, value, .. }) if uparams.is_empty() => *value,
+        _ => return Err("receipt target is not a monomorphic statement definition".to_owned()),
+    };
+    if canonical_expression_sha256(&kernel, goal)? != GOAL_SHA256 {
+        return Err("receipt goal identity changed".to_owned());
+    }
+    let shape = inspect_fib_shape(&mut kernel)?;
+    let (helper, _) = iterator_successor_helper(&mut kernel, &shape)?;
+    let proof = recurrence_proof(&mut kernel, goal, &shape, helper)?;
+    let theorem = nested_name(&mut kernel, &["Axeyum", "Autogenesis", "NatFibAddTwo"]);
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: theorem,
+            uparams: vec![],
+            ty: goal,
+            value: proof,
+        })
+        .map_err(|error| format!("fixed receipt reconstruction rejected: {error:?}"))?;
+    Ok((kernel, theorem))
 }
 
 fn run_composition_control(kernel: &mut Kernel, shape: &FibShape) -> Result<(), String> {
@@ -982,6 +1155,7 @@ struct Arguments {
     preflight: bool,
     composition_control: bool,
     stage_control: bool,
+    receipt_candidate: Option<PathBuf>,
 }
 
 fn parse_arguments() -> Result<Arguments, String> {
@@ -990,6 +1164,7 @@ fn parse_arguments() -> Result<Arguments, String> {
     let mut preflight = false;
     let mut composition_control = false;
     let mut stage_control = false;
+    let mut receipt_candidate = None;
     let mut arguments = env::args().skip(1);
     while let Some(flag) = arguments.next() {
         if flag == "--preflight" {
@@ -1013,6 +1188,15 @@ fn parse_arguments() -> Result<Arguments, String> {
             stage_control = true;
             continue;
         }
+        if flag == "--receipt-candidate" {
+            let value = arguments
+                .next()
+                .ok_or("--receipt-candidate requires a value")?;
+            if receipt_candidate.replace(PathBuf::from(value)).is_some() {
+                return Err("duplicate --receipt-candidate".to_owned());
+            }
+            continue;
+        }
         let value = arguments
             .next()
             .ok_or_else(|| format!("{flag} requires a value"))?;
@@ -1025,7 +1209,12 @@ fn parse_arguments() -> Result<Arguments, String> {
             return Err(format!("duplicate {flag}"));
         }
     }
-    if usize::from(preflight) + usize::from(composition_control) + usize::from(stage_control) > 1 {
+    if usize::from(preflight)
+        + usize::from(composition_control)
+        + usize::from(stage_control)
+        + usize::from(receipt_candidate.is_some())
+        > 1
+    {
         return Err("preflight modes are mutually exclusive".to_owned());
     }
     Ok(Arguments {
@@ -1034,6 +1223,7 @@ fn parse_arguments() -> Result<Arguments, String> {
         preflight,
         composition_control,
         stage_control,
+        receipt_candidate,
     })
 }
 

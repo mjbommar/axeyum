@@ -40,6 +40,7 @@ use axeyum_lean_kernel::{
 };
 use serde_json::{Map, Value};
 
+mod checked_theorem_receipt;
 mod contract_residualization;
 mod identity;
 mod semantic_contract_receipt;
@@ -49,6 +50,11 @@ mod trace_contract_theorem_receipt;
 mod type_slice;
 mod type_slice_receipt;
 
+pub use checked_theorem_receipt::{
+    CHECKED_SEMANTIC_THEOREM_RECEIPT_VERSION, CheckedSemanticTheoremReceipt,
+    CheckedSemanticTheoremReceiptError, CheckedTheoremAuthority,
+    issue_checked_semantic_theorem_receipt, verify_checked_semantic_theorem_receipt,
+};
 pub use contract_residualization::{
     ResidualizedFunctionContract, ResidualizedFunctionContractError,
     residualize_function_contract_body,
