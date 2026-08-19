@@ -71,12 +71,15 @@ no-wrap hypothesis is substantive.  Direct tests through `d=7` also require
 the explicit divisor bound to dominate both the largest rational-fibre
 multiplicity and the exact energy.
 
-The exponent ledger verifies that ideal energy exponents `2d` on two
-intervals of size exponent `d=100` at modulus degree `300` improve the
-trivial bilinear exponent `200` to `187.5`.  At modulus degree `400`, where
-the total interval exponent is exactly `r/2`, the same input merely reaches
-the trivial exponent.  Thus the energy theorem closes a real Type-II region
-but cannot by itself settle the whole Lemire convolution.
+In modulus-degree notation the no-wrap hypothesis is strict: `3d<r`.  The
+generic exponent ledger verifies that *idealized* energy exponents `2d` on two
+intervals of size exponent `d=100` at the first valid modulus degree `r=301`
+would improve the trivial bilinear exponent `200` to `187.625`.  At modulus
+degree `400`, where the total interval exponent is exactly `r/2`, the same
+ideal input merely reaches the trivial exponent.  This calculation does not
+substitute the explicit divisor envelope or reserve epsilon/constants.
+ADR-0494 adds the loss-aware operation that does so and extends the energy
+theorem through the wrapped range.
 
 ## Alternatives
 
@@ -95,6 +98,7 @@ but cannot by itself settle the whole Lemire convolution.
 - Rational collision fibres expose the exact divisor-counting problem for
   sharper constants or exponents.
 - Every later energy improvement can be tested immediately against the
-  Type-II exponent target.
-- The remaining endpoint work still needs the wrap range and cancellation
-  across the full Möbius convolution.
+  Type-II exponent target, with explicit loss accounting supplied by
+  ADR-0494.
+- The remaining endpoint work needs cancellation across the full Möbius
+  convolution; the wrapped energy range is no longer itself open.

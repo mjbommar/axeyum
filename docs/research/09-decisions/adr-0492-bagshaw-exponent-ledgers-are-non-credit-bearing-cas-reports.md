@@ -86,6 +86,11 @@ admissible `u` for all `1<=r0<=40` and `1<=N<=2r0`.  For
 `(N,r0)=(300,300)` the crossing is `u=80` and the bound is `280`, saving `20`.
 For `(350,300)` the crossing lies beyond the interval, so the exact optimizer
 selects the upper endpoint `u=100` and obtains exponent `300`, saving `50`.
+ADR-0494 now supplies the previously open internal wrapped binary energy input
+behind `A(u)`, including `u=r0/3`.  The Case-2 report nevertheless records
+that its displayed quarter-exponent suppresses the explicit divisor envelope
+and any epsilon/constants reserve; these zero-loss savings remain calibration,
+not endpoint proof credit.
 
 This is a boundary on a full binary port, not a Lemire endpoint blocker.
 Bagshaw's Case 5 assumes `n<=r0`, whereas every Lemire cumulative cutoff in

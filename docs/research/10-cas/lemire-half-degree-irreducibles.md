@@ -629,7 +629,8 @@ irreducible polynomials*](https://arxiv.org/abs/2401.10399):
 - Lemma 3.14's energy proof invokes Lemma 5.3 of Bagshaw's
   [2023 paper](https://arxiv.org/abs/2304.05014), whose initial-interval proof
   is stated for arbitrary prime powers, followed by divisor counting and
-  orthogonality; but
+  orthogonality; Axeyum now has an independent explicit `q=2,F=x^r` reproof;
+  but
 - the Type-I estimates in the proof of Theorem 2.3 invoke the complete
   Kloosterman bound from the 2023 paper's Lemma A.13, which explicitly assumes
   odd `q`.
@@ -648,12 +649,12 @@ The source dependency audit is:
 | Lemma 3.9 | additive orthogonality | characteristic-free | reuse directly |
 | Lemma 3.10 | complete Kloosterman square-root bound | imports 2023 Lemma A.13, explicitly odd `q` | replace only by the proved binary wild bound |
 | Lemmas 3.11--3.12 | incomplete completion and coprimality removal | algebraic steps are characteristic-free, but inherit Lemma 3.10 | recompute with the binary exponent |
-| Lemma 3.13 | general inverse energy | external fixed-`k` estimate | unnecessary for the `k=2` balanced range if Lemma 3.14 is reproved |
-| Lemma 3.14 | fourth inverse-additive energy | 2023 Lemma 5.3 is arbitrary-characteristic; the remaining divisor and congruence argument is characteristic-free | reprove with explicit constants or a special `x^r` estimate |
+| Lemma 3.13 | general inverse energy | external fixed-`k` estimate | unnecessary for the `k=2` balanced range |
+| Lemma 3.14 | fourth inverse-additive energy | 2023 Lemma 5.3 is arbitrary-characteristic; the remaining divisor and congruence argument is characteristic-free | closed internally for `q=2,F=x^r` by the explicit valuation/lift/divisor envelope `(WE)` below |
 | Lemmas 4.1--4.2 | Hölder/Cauchy--Schwarz bilinear bounds | characteristic-free once inverse energy is supplied | reusable |
 | Vaughan reduction | splits into Type I and Type II | formal convolution is characteristic-free | retain, but audit every resulting range |
 | Theorem 2.3 proof, Type-I Cases 1, 2, and 5 | completion/incomplete Kloosterman input | inherits the odd-only square-root bound | a full binary port does not survive unchanged; Case 5 is outside the Lemire cutoff domain |
-| Theorem 2.3 proof, balanced Cases 3--4 and Type II | inverse energy and Hölder | plausibly characteristic-free | reusable after an explicit energy reproof |
+| Theorem 2.3 proof, balanced Cases 3--4 and Type II | inverse energy and Hölder | characteristic-free after the explicit special-modulus energy reproof | audit the full endpoint ranges and retained losses |
 
 Here is the decisive Type-I calculation.  For effective modulus degree `r0`,
 Axeyum proves the complete binary exponent
@@ -852,6 +853,76 @@ range and has the different wrapped value `928`.  The companion operation
 `principal_unit_inverse_additive_energy_no_wrap_bound` replays the explicit
 divisor envelope.
 
+In modulus-degree notation `r=ell+1`, the exact no-wrap condition is
+
+```text
+3d < r,
+```
+
+not `3d<=r`.  Thus the modular checks at `ell=3d` use modulus degree
+`r=3d+1` and are inside the theorem, while an exponent substitution at
+`r=3d` is outside it.
+
+The wrapped range now has a separate internal theorem.  Put
+
+```text
+U_m={A in GF(2)[x]: deg A<m, A(0)=1};
+```
+
+this is `V_(m-1)`.  For a nonzero inverse sum `a`, let `s=v_x(a)`.  Since
+`AB` is a unit, `s=v_x(A+B)`, and the exact number of ordered pairs in the
+stratum is `2^(2m-s-2)`.  Set
+
+```text
+k=min(r-s-1,ceil((r+m)/2)).
+```
+
+A homogeneous top-coefficient system with `k` equations and `k+1` unknowns
+produces `u!=0` with `deg u<=k` and
+`v=au mod x^r` of degree at most `r-k-1`.  Since `k<r-s`, also `v!=0`.
+Clearing denominators and lifting gives
+
+```text
+(vA+u)(vB+u)=u^2+t v x^r.
+```
+
+There are at most `2^L` choices for `t`, where
+
+```text
+L=max(0,k+m-r,2m-k-2).
+```
+
+The right side cannot vanish: if `h=v_x(u)`, its summands have valuations
+`2h` and at least `r+s+h`, which differ because `h<r-s`.  Each solution thus
+injects into an ordered factorization of a nonzero polynomial of degree at
+most `D=2 max(k,r-k+m-2)`.  Splitting irreducibles at
+`R=max(1,floor(log_2(D)/2))` gives the fully explicit envelope
+
+```text
+tau(P) <= (D+1)^(2^(R+1)) 2^floor(D/(R+1)).
+```
+
+`binary_prime_power_inverse_additive_energy_bound` sums the exact stratum
+populations times these lift and divisor bounds, then adds the exact diagonal
+energy `|U_m|^2`.  Since `D=O(r)`, the divisor exponent is `o(r)`.  The strata
+with `k=ceil((r+m)/2)` have
+`L=max(0,ceil((3m-r)/2))`; the remaining strata contribute at most exponent
+`max(2m,4m-r)+o(r)`.  Consequently, uniformly for `m<=r`,
+
+```text
+E_inv(x^r,m)
+ <= 2^(2m+o(r)) + 2^((7m-r)/2+o(r)).                (WE)
+```
+
+This proves the characteristic-two energy input used by Bagshaw's Cases 2--4
+and balanced Type II, including the exact boundary `3m=r`.  Independent exact
+Walsh tables dominate-check the explicit envelope for every `3<=r<=9` and
+`2<=m<r`; the test `(r,m)=(9,3)` prevents the old boundary gap from
+returning.  The retrieved 2023 LaTeX source confirms that the underlying
+pointwise argument is characteristic-free; it also reveals a source typo
+writing the first inverse twice where the algebra immediately uses both
+variables.
+
 Feeding a general energy exponent back into Bagshaw's characteristic-free
 `k=2` bilinear lemma gives, in base-two exponents,
 
@@ -859,16 +930,22 @@ Feeding a general energy exponent back into Bagshaw's characteristic-free
 w = m+n + (e_m+e_n+r-4m-4n)/8.
 ```
 
-With `(NW)` on both intervals this is
+With the asymptotic main term of `(NW)` on both intervals this is
 `3(m+n)/4+r/8+o(m+n)`, which is nontrivial precisely beyond the boundary
 `m+n=r/2+o(r)`.  The no-wrap hypotheses also require
-`3 max(m,n)<=r`, so this closes a genuine small/small Type-II region near
+`3 max(m,n)<r`, so this closes a genuine small/small Type-II region near
 balanced thirds but not the whole endpoint decomposition.  The exact
 `binary_bilinear_energy_exponent` report accepts arbitrary rational energy
 exponents and returns the deficit from a requested target; it prevents a
 sharper energy theorem from being pursued without checking its endpoint
-effect.  The remaining analytic task is the wrapped range and the cancellation
-across the complete Möbius convolution.
+effect.  It is a conditional arithmetic tool: inserting the ideal exponent
+`2d` does not insert the proved finite divisor envelope.  The new
+`binary_bilinear_explicit_prime_power_energy_exponent` operation instead uses
+the ceiling exponent of `(WE)`'s explicit `BigUint` envelope and adds a
+caller-selected rational analytic-loss reserve.  At the small wrapped boundary
+`(r,m)=(9,3)`, that honest finite report does not close the target.  The
+remaining analytic task is cancellation across the complete signed Möbius
+convolution, not the wrapped energy lemma itself.
 
 Berlekamp's characteristic-two analogue of Pellet's formula is the natural
 next structural input: for squarefree polynomials it expresses the Möbius

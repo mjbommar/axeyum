@@ -419,6 +419,81 @@ impl PrincipalUnitInverseAdditiveNoWrapBoundReport {
     }
 }
 
+/// One valuation stratum in the explicit wrapped inverse-energy proof for
+/// `GF(2)[x]/(x^r)`.
+///
+/// The stratum contains ordered pairs `(A,B)` with
+/// `v_x(A^(-1)+B^(-1))=v_x(A+B)=s`.  Its contribution bounds
+/// `sum_a I(a)^2` by the exact pair population times a uniform fibre bound
+/// obtained from Padé approximation, lift counting, and polynomial divisors.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryPrimePowerInverseEnergyStratum {
+    /// Exact positive `x`-adic valuation `s`.
+    pub valuation: usize,
+    /// Padé denominator degree bound
+    /// `k=min(r-s-1,ceil((r+m)/2))`.
+    pub approximation_degree: usize,
+    /// Exponent `L` in the upper bound `2^L` for lift polynomials `t`.
+    pub lift_choice_exponent: usize,
+    /// Degree bound for the nonzero polynomial being factored.
+    pub factor_polynomial_degree_bound: usize,
+    /// Low/high irreducible-factor split used in the divisor envelope.
+    pub divisor_split_degree: usize,
+    /// Explicit upper bound for the number of ordered factorizations.
+    pub factorization_count_bound: BigUint,
+    /// Exact number of ordered interval pairs in this valuation stratum.
+    pub ordered_pair_count: BigUint,
+    /// Bound contributed to the additive energy by this stratum.
+    pub energy_contribution_bound: BigUint,
+}
+
+/// Explicit characteristic-two inverse-additive-energy theorem for the
+/// prime-power modulus `x^r`, including the wrapped range.
+///
+/// Let `U_m={A in GF(2)[x]: deg A<m, A(0)=1}`.  This report proves an
+/// explicit upper bound for
+///
+/// ```text
+/// #{(A,B,C,D) in U_m^4:
+///     A^(-1)+B^(-1)=C^(-1)+D^(-1) (mod x^r)}.
+/// ```
+///
+/// It is the special-modulus internal reproof of Bagshaw's fourth inverse
+/// energy input.  Unlike the no-wrap report, it is valid for every `1<=m<=r`,
+/// including `3m=r`; all divisor losses remain explicit `BigUint` factors.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryPrimePowerInverseEnergyBoundReport {
+    /// Modulus degree `r` in `x^r`.
+    pub modulus_degree: usize,
+    /// Polynomial cutoff `m` in `deg A<m`.
+    pub polynomial_degree_cutoff: usize,
+    /// Interval size, exactly `2^(m-1)`.
+    pub set_size: BigUint,
+    /// Diagonal `a=0` contribution, exactly `set_size^2`.
+    pub diagonal_energy: BigUint,
+    /// Explicit nonzero-valuation contributions.
+    pub strata: Vec<BinaryPrimePowerInverseEnergyStratum>,
+    /// Sum of the diagonal and every stratum bound.
+    pub additive_energy_bound: BigUint,
+}
+
+impl BinaryPrimePowerInverseEnergyBoundReport {
+    /// Smallest integer `e` with `additive_energy_bound<=2^e`.
+    #[must_use]
+    pub fn ceiling_energy_exponent(&self) -> Option<usize> {
+        let bits = usize::try_from(self.additive_energy_bound.bits()).ok()?;
+        if bits == 0 {
+            return Some(0);
+        }
+        let floor = bits - 1;
+        if self.additive_energy_bound == (BigUint::from(1_u8) << floor) {
+            Some(floor)
+        } else {
+            Some(bits)
+        }
+    }
+}
+
 /// Exact exponent substitution in Bagshaw's characteristic-free `k=2`
 /// bilinear-energy lemma.
 ///
@@ -450,6 +525,39 @@ pub struct BinaryBilinearEnergyExponentReport {
     /// `target-bound` over denominator `8D`.
     pub deficit_numerator: i128,
     /// Whether the energy substitution is strictly below the target exponent.
+    pub strict_saving: bool,
+}
+
+/// Loss-aware bilinear exponent report fed by the explicit wrapped binary
+/// prime-power energy envelope rather than an idealized energy exponent.
+///
+/// The final exponents use denominator `8D`, where `D` is the caller's
+/// denominator for an additional analytic loss exponent.  This keeps the
+/// divisor envelope, suppressed constants, and any chosen epsilon reserve
+/// distinct from the formal Hölder substitution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryBilinearExplicitEnergyExponentReport {
+    /// Left interval cardinality exponent `d`, for cutoff `m=d+1`.
+    pub left_interval_exponent: usize,
+    /// Right interval cardinality exponent `d`, for cutoff `m=d+1`.
+    pub right_interval_exponent: usize,
+    /// Modulus degree `r` in `x^r`.
+    pub modulus_degree: usize,
+    /// Ceiling exponent of the proved left energy envelope.
+    pub left_energy_ceiling_exponent: usize,
+    /// Ceiling exponent of the proved right energy envelope.
+    pub right_energy_ceiling_exponent: usize,
+    /// Numerator of the caller-supplied extra analytic loss.
+    pub analytic_loss_exponent_numerator: usize,
+    /// Denominator `D` of the caller-supplied extra analytic loss.
+    pub analytic_loss_exponent_denominator: usize,
+    /// Final bound exponent numerator over denominator `8D`.
+    pub bound_exponent_numerator: u128,
+    /// Target exponent numerator over denominator `8D`.
+    pub target_exponent_numerator: u128,
+    /// `target-bound` over denominator `8D`.
+    pub deficit_numerator: i128,
+    /// Whether the explicit envelope plus reserve lies below the target.
     pub strict_saving: bool,
 }
 
@@ -508,6 +616,12 @@ pub struct BinaryTypeOneCaseTwoExponentReport {
     pub worst_admissible_u: usize,
     /// Proved complete binary Kloosterman exponent `kappa(r0)`.
     pub complete_kloosterman_exponent: usize,
+    /// Whether Axeyum has an internal wrapped `q=2,F=x^r` energy theorem for
+    /// the `A(u)` input across this full case.
+    pub wrapped_energy_input_available: bool,
+    /// Whether the displayed quarter-exponent omits the explicit divisor
+    /// envelope and any analytic epsilon reserve.
+    pub suppressed_energy_loss: bool,
     /// Numerator `3N+r0-u` of the energy bound at the worst `u`.
     pub energy_bound_quarters: u128,
     /// Numerator `4u+4kappa(r0)` of the completion bound at the worst `u`.
@@ -1677,6 +1791,137 @@ pub fn principal_unit_inverse_additive_energy_no_wrap_bound(
     })
 }
 
+fn binary_polynomial_divisor_envelope(degree: usize) -> Result<(usize, BigUint), HayesError> {
+    if degree == 0 {
+        return Ok((0, BigUint::from(1_u8)));
+    }
+    let floor_log_two = usize::BITS as usize - 1 - degree.leading_zeros() as usize;
+    let split_degree = (floor_log_two / 2).max(1);
+    let low_factor_count = 1_usize
+        .checked_shl(u32::try_from(split_degree + 1).map_err(|_| {
+            HayesError::InvalidParameter("divisor low-factor shift overflow".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("divisor low-factor count exceeds host width".to_owned())
+        })?;
+    let low_factor_count = u32::try_from(low_factor_count).map_err(|_| {
+        HayesError::InvalidParameter("divisor low-factor count exceeds BigUint::pow".to_owned())
+    })?;
+    let high_factor_count = degree / (split_degree + 1);
+    let base = degree
+        .checked_add(1)
+        .ok_or_else(|| HayesError::InvalidParameter("divisor-envelope base overflow".to_owned()))?;
+    let low = BigUint::from(base).pow(low_factor_count);
+    Ok((split_degree, low << high_factor_count))
+}
+
+/// Prove an explicit inverse-additive-energy bound for the wrapped binary
+/// prime-power modulus `x^r`.
+///
+/// For a nonzero inverse sum `a`, put `s=v_x(a)`.  Linear algebra supplies
+/// nonzero polynomials `u,v` with
+///
+/// ```text
+/// au=v (mod x^r),  deg u<=k,  deg v<=r-k-1,
+/// k=min(r-s-1,ceil((r+m)/2)).
+/// ```
+///
+/// Clearing denominators and lifting the congruence gives
+///
+/// ```text
+/// (vA+u)(vB+u)=u^2+t v x^r.
+/// ```
+///
+/// The right side is nonzero for `x^r`: if `h=v_x(u)`, then
+/// `h<r-s`, while its two summands have distinct valuations `2h` and at
+/// least `r+s+h`.  Thus every solution injects into an ordered polynomial
+/// factorization.  The report bounds lift choices and factorization counts
+/// explicitly and sums them against the exact population of every valuation
+/// stratum.  No odd-characteristic estimate or hidden `epsilon` is used.
+///
+/// # Errors
+///
+/// Rejects `r=0`, `m=0`, `m>r`, a caller degree limit, or arithmetic
+/// overflow.
+pub fn binary_prime_power_inverse_additive_energy_bound(
+    modulus_degree: usize,
+    polynomial_degree_cutoff: usize,
+    limits: HayesLimits,
+) -> Result<BinaryPrimePowerInverseEnergyBoundReport, HayesError> {
+    if modulus_degree == 0
+        || polynomial_degree_cutoff == 0
+        || polynomial_degree_cutoff > modulus_degree
+    {
+        return Err(HayesError::InvalidParameter(format!(
+            "binary prime-power inverse energy requires 1<=m<=r, got m={polynomial_degree_cutoff}, r={modulus_degree}"
+        )));
+    }
+    check_limit("degree", modulus_degree, limits.max_degree)?;
+    let interval_exponent = polynomial_degree_cutoff - 1;
+    let set_size = BigUint::from(1_u8) << interval_exponent;
+    let diagonal_energy = &set_size * &set_size;
+    let approximation_midpoint = modulus_degree
+        .checked_add(polynomial_degree_cutoff)
+        .ok_or_else(|| HayesError::InvalidParameter("energy midpoint overflow".to_owned()))?
+        .div_ceil(2);
+    let twice_cutoff = polynomial_degree_cutoff.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("energy cutoff exponent overflow".to_owned())
+    })?;
+    let mut strata = Vec::with_capacity(interval_exponent);
+    let mut additive_energy_bound = diagonal_energy.clone();
+    for valuation in 1..polynomial_degree_cutoff {
+        let approximation_degree = (modulus_degree - valuation - 1).min(approximation_midpoint);
+        let lift_from_linear = approximation_degree
+            .checked_add(polynomial_degree_cutoff)
+            .ok_or_else(|| HayesError::InvalidParameter("lift degree overflow".to_owned()))?
+            .saturating_sub(modulus_degree);
+        let lift_from_quadratic =
+            twice_cutoff.saturating_sub(approximation_degree.checked_add(2).ok_or_else(|| {
+                HayesError::InvalidParameter("quadratic lift degree overflow".to_owned())
+            })?);
+        let lift_choice_exponent = lift_from_linear.max(lift_from_quadratic);
+        let factor_linear_degree = modulus_degree
+            .checked_sub(approximation_degree)
+            .and_then(|value| value.checked_add(polynomial_degree_cutoff))
+            .and_then(|value| value.checked_sub(2))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("factor linear degree overflow".to_owned())
+            })?;
+        let factor_degree = approximation_degree.max(factor_linear_degree);
+        let factor_polynomial_degree_bound = factor_degree.checked_mul(2).ok_or_else(|| {
+            HayesError::InvalidParameter("factor polynomial degree overflow".to_owned())
+        })?;
+        let (divisor_split_degree, factorization_count_bound) =
+            binary_polynomial_divisor_envelope(factor_polynomial_degree_bound)?;
+        let pair_exponent = twice_cutoff
+            .checked_sub(valuation)
+            .and_then(|value| value.checked_sub(2))
+            .ok_or_else(|| HayesError::Invariant("valuation pair exponent underflow".to_owned()))?;
+        let ordered_pair_count = BigUint::from(1_u8) << pair_exponent;
+        let fibre_bound = &factorization_count_bound << lift_choice_exponent;
+        let energy_contribution_bound = &ordered_pair_count * fibre_bound;
+        additive_energy_bound += &energy_contribution_bound;
+        strata.push(BinaryPrimePowerInverseEnergyStratum {
+            valuation,
+            approximation_degree,
+            lift_choice_exponent,
+            factor_polynomial_degree_bound,
+            divisor_split_degree,
+            factorization_count_bound,
+            ordered_pair_count,
+            energy_contribution_bound,
+        });
+    }
+    Ok(BinaryPrimePowerInverseEnergyBoundReport {
+        modulus_degree,
+        polynomial_degree_cutoff,
+        set_size,
+        diagonal_energy,
+        strata,
+        additive_energy_bound,
+    })
+}
+
 /// Substitute arbitrary rational energy exponents into the `k=2` bilinear
 /// Hölder bound and compare the result with an integer target exponent.
 ///
@@ -1750,6 +1995,96 @@ pub fn binary_bilinear_energy_exponent(
         right_interval_exponent,
         modulus_degree,
         energy_exponent_denominator,
+        bound_exponent_numerator,
+        target_exponent_numerator,
+        deficit_numerator,
+        strict_saving: deficit_numerator > 0,
+    })
+}
+
+/// Feed the explicit wrapped `GF(2)[x]/(x^r)` energy envelopes into the
+/// `k=2` bilinear Hölder ledger and add a caller-selected analytic reserve.
+///
+/// # Errors
+///
+/// Rejects interval cutoffs larger than `r`, a zero loss denominator, caller
+/// resource limits, or checked-arithmetic overflow.
+pub fn binary_bilinear_explicit_prime_power_energy_exponent(
+    left_interval_exponent: usize,
+    right_interval_exponent: usize,
+    modulus_degree: usize,
+    analytic_loss_exponent_numerator: usize,
+    analytic_loss_exponent_denominator: usize,
+    target_exponent: usize,
+    limits: HayesLimits,
+) -> Result<BinaryBilinearExplicitEnergyExponentReport, HayesError> {
+    if analytic_loss_exponent_denominator == 0 {
+        return Err(HayesError::InvalidParameter(
+            "analytic loss exponent denominator must be positive".to_owned(),
+        ));
+    }
+    let left_cutoff = left_interval_exponent
+        .checked_add(1)
+        .ok_or_else(|| HayesError::InvalidParameter("left interval cutoff overflow".to_owned()))?;
+    let right_cutoff = right_interval_exponent
+        .checked_add(1)
+        .ok_or_else(|| HayesError::InvalidParameter("right interval cutoff overflow".to_owned()))?;
+    let left_energy =
+        binary_prime_power_inverse_additive_energy_bound(modulus_degree, left_cutoff, limits)?;
+    let right_energy =
+        binary_prime_power_inverse_additive_energy_bound(modulus_degree, right_cutoff, limits)?;
+    let left_energy_ceiling_exponent = left_energy.ceiling_energy_exponent().ok_or_else(|| {
+        HayesError::InvalidParameter("left energy exponent exceeds usize".to_owned())
+    })?;
+    let right_energy_ceiling_exponent =
+        right_energy.ceiling_energy_exponent().ok_or_else(|| {
+            HayesError::InvalidParameter("right energy exponent exceeds usize".to_owned())
+        })?;
+    let base = binary_bilinear_energy_exponent(
+        left_interval_exponent,
+        right_interval_exponent,
+        modulus_degree,
+        left_energy_ceiling_exponent,
+        right_energy_ceiling_exponent,
+        1,
+        target_exponent,
+    )?;
+    let loss_denominator = u128::try_from(analytic_loss_exponent_denominator).map_err(|_| {
+        HayesError::InvalidParameter("analytic loss denominator exceeds u128".to_owned())
+    })?;
+    let loss_numerator = u128::try_from(analytic_loss_exponent_numerator).map_err(|_| {
+        HayesError::InvalidParameter("analytic loss numerator exceeds u128".to_owned())
+    })?;
+    let bound_exponent_numerator = base
+        .bound_exponent_numerator
+        .checked_mul(loss_denominator)
+        .and_then(|value| {
+            loss_numerator
+                .checked_mul(8)
+                .and_then(|loss| value.checked_add(loss))
+        })
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("loss-aware bilinear bound overflow".to_owned())
+        })?;
+    let target_exponent_numerator = base
+        .target_exponent_numerator
+        .checked_mul(loss_denominator)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("loss-aware bilinear target overflow".to_owned())
+        })?;
+    let deficit_numerator = checked_exponent_deficit(
+        target_exponent_numerator,
+        bound_exponent_numerator,
+        "loss-aware bilinear",
+    )?;
+    Ok(BinaryBilinearExplicitEnergyExponentReport {
+        left_interval_exponent,
+        right_interval_exponent,
+        modulus_degree,
+        left_energy_ceiling_exponent,
+        right_energy_ceiling_exponent,
+        analytic_loss_exponent_numerator,
+        analytic_loss_exponent_denominator,
         bound_exponent_numerator,
         target_exponent_numerator,
         deficit_numerator,
@@ -1937,6 +2272,8 @@ pub fn binary_type_one_case_two_exponent(
             HayesError::Invariant("bounded Case-2 optimizer does not fit usize".to_owned())
         })?,
         complete_kloosterman_exponent,
+        wrapped_energy_input_available: true,
+        suppressed_energy_loss: true,
         energy_bound_quarters,
         completion_bound_quarters,
         bound_exponent_quarters,
@@ -4503,13 +4840,54 @@ mod tests {
     }
 
     #[test]
+    fn wrapped_binary_inverse_energy_envelope_dominates_exact_tables() {
+        let limits = HayesLimits::default();
+        for modulus_degree in 3..=9 {
+            for cutoff in 2..modulus_degree {
+                let bound = binary_prime_power_inverse_additive_energy_bound(
+                    modulus_degree,
+                    cutoff,
+                    limits,
+                )
+                .unwrap();
+                let exact =
+                    principal_unit_inverse_additive_energy(modulus_degree - 1, cutoff - 1, limits)
+                        .unwrap();
+                assert!(exact.additive_energy <= bound.additive_energy_bound);
+                let non_diagonal_pairs = &bound.set_size * (&bound.set_size - 1_u8);
+                let stratified_pairs = bound
+                    .strata
+                    .iter()
+                    .fold(BigUint::from(0_u8), |sum, stratum| {
+                        sum + &stratum.ordered_pair_count
+                    });
+                assert_eq!(stratified_pairs, non_diagonal_pairs);
+            }
+        }
+
+        // The wrapped theorem includes the exact boundary excluded by the
+        // no-wrap condition: 3m=r in modulus-degree notation.
+        let boundary = binary_prime_power_inverse_additive_energy_bound(9, 3, limits).unwrap();
+        let boundary_exact = principal_unit_inverse_additive_energy(8, 2, limits).unwrap();
+        assert!(boundary_exact.additive_energy <= boundary.additive_energy_bound);
+
+        let full_units = binary_prime_power_inverse_additive_energy_bound(6, 6, limits).unwrap();
+        assert_eq!(full_units.strata.len(), 5);
+        assert!(matches!(
+            binary_prime_power_inverse_additive_energy_bound(5, 6, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+    }
+
+    #[test]
     fn bilinear_energy_ledger_exposes_the_exact_type_two_margin() {
-        // With optimal no-wrap energy exponents em=en=2d at r=3d,
-        // Bagshaw's k=2 Hölder lemma saves d/8 from the trivial 2d bound.
-        let saving = binary_bilinear_energy_exponent(100, 100, 300, 200, 200, 1, 200).unwrap();
-        assert_eq!(saving.bound_exponent_numerator, 1_500);
+        // This first report deliberately checks a caller-supplied idealized
+        // energy exponent.  The strict no-wrap modulus condition is r>3d,
+        // so r=301 is the first valid modulus degree for d=100.
+        let saving = binary_bilinear_energy_exponent(100, 100, 301, 200, 200, 1, 200).unwrap();
+        assert_eq!(saving.bound_exponent_numerator, 1_501);
         assert_eq!(saving.target_exponent_numerator, 1_600);
-        assert_eq!(saving.deficit_numerator, 100);
+        assert_eq!(saving.deficit_numerator, 99);
         assert!(saving.strict_saving);
 
         // At total interval size r/2, the same energy scale merely reaches
@@ -4521,6 +4899,39 @@ mod tests {
 
         assert!(matches!(
             binary_bilinear_energy_exponent(1, 1, 3, 2, 2, 0, 2),
+            Err(HayesError::InvalidParameter(_))
+        ));
+    }
+
+    #[test]
+    fn explicit_bilinear_ledger_carries_divisor_envelope_and_loss_reserve() {
+        let limits = HayesLimits::default();
+        let explicit =
+            binary_bilinear_explicit_prime_power_energy_exponent(2, 2, 9, 0, 1, 4, limits).unwrap();
+        let energy = binary_prime_power_inverse_additive_energy_bound(9, 3, limits).unwrap();
+        assert_eq!(
+            explicit.left_energy_ceiling_exponent,
+            energy.ceiling_energy_exponent().unwrap()
+        );
+        assert_eq!(
+            explicit.right_energy_ceiling_exponent,
+            energy.ceiling_energy_exponent().unwrap()
+        );
+        assert!(!explicit.strict_saving);
+
+        let reserved =
+            binary_bilinear_explicit_prime_power_energy_exponent(2, 2, 9, 1, 2, 4, limits).unwrap();
+        assert_eq!(
+            reserved.bound_exponent_numerator,
+            2 * explicit.bound_exponent_numerator + 8
+        );
+        assert_eq!(
+            reserved.target_exponent_numerator,
+            2 * explicit.target_exponent_numerator
+        );
+        assert!(reserved.deficit_numerator < explicit.deficit_numerator);
+        assert!(matches!(
+            binary_bilinear_explicit_prime_power_energy_exponent(2, 2, 9, 0, 0, 4, limits),
             Err(HayesError::InvalidParameter(_))
         ));
     }
