@@ -98,3 +98,20 @@ heuristic over prose and says so.
 | 2026-08-17 | `pending` | `refutation_over_int_axioms` closes the integer route: the ∀-statement's binders are discharged against fresh `Int` axioms, giving a kernel-checked `False` and a 221 KB module **official Lean 4.30.0 accepts** — and REJECTS when one hypothesis relation is swapped, so acceptance is not vacuous. Content class is `TheoryReconstruction`, not the attestation those queries render today. Still undispatched: fragment + routing + a crosscheck family are the remaining slice. |
 | 2026-08-17 | `pending` | `ProofFragment::IntFarkas` dispatched: `QF_LIA` and `QF_IDL` conjunctive systems whose rational relaxation is infeasible now reconstruct instead of attesting, with a crosscheck family each (footprint = the query's own vars/hyps, no Real axioms, no sorryAx). Split 34 → 37 theory families vs 40; a committed QF_LIA corpus row moved with it. Declines integer-only infeasibility (3x≥1 ∧ 3x≤2). **Band 1 empty**; 13 → 14 of 23 logics, floor 39. |
 | 2026-08-17 | `pending` | Qualified the "axiom-free" claim against official Lean rather than leaving it to be overread: instantiating at Lean core's standard `Int` costs `propext` — a FLOOR, since every core `Int` ring/order lemma carries it — so axiom-freedom over the standard ℤ is unreachable by anyone. Our empty footprint follows from instantiating at our own constructed ℤ (zero axioms, but no proved bridge to Lean's). Even bridged, this route lands at `propext` vs `omega`'s `propext + Quot.sound` on the identical goal. |
+
+## Open queue, items 5-6 (2026-08-19)
+
+5. **The shared worktree's `target/` is 404 GB on a root disk at 91%.** The fix
+   is `build.target-dir` onto /data0 plus `[profile.dev] debug =
+   "line-tables-only"` — 80% of the largest artefact is `.debug*`. Disruptive
+   (cargo bakes absolute paths, so it forces one cold rebuild of the whole
+   workspace); must be scheduled for a window with no cargo running, not
+   slipped in. Policy written up in
+   [`fleet-hosts.md`](../../contributor-guide/fleet-hosts.md).
+6. **No heavy-cargo suite is registered with the mutation harness.** Its cargo
+   runner is proven on `axeyum-fp` (~4 s) and two ad-hoc probes; nothing
+   exercises it under `--features full`.
+
+4. **One guard in `check-lra-hypothesis-binding.py:1244` measurably SURVIVES**
+   (`bind_structural`'s opaque-sort check). Needs a control in
+   `102-attestation-gap`'s test module.

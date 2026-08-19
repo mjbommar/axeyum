@@ -1239,28 +1239,31 @@ freshly-proved decomposition.
 
 Detail moved to [`../notes/98-evidence-certification.md`](docs/plan/notes/98-evidence-certification.md).
 
-**The gate hosted CI calls "the authoritative gate for main" has never run, and
-could not have** (`WIP`, capability-assurance, 2026-08-18).
-`.github/workflows/ci.yml` deliberately keeps only the light checks and says
-`scripts/local-ci.sh` is the real one — run on local hardware, because the ~32
-z3/cvc5 differential-fuzz binaries starve on 4-core hosted runners. The reasoning
-is sound. The gate is not:
+**Open queue, in the order I intend to clear it** (`WIP`,
+capability-assurance, 2026-08-19). Detail per item in
+[the lane note](docs/plan/notes/99-capability-assurance.md).
 
-```
-cargo nextest --version          -> 101  no such command      (s4, s5, s7)
-rustup run 1.88.0 cargo --version ->   1  not installed        (s4, s5, s7)
-```
+1. **`hooks/pre-push` now runs real-Lean suites on every push.** It invokes
+   `cargo test -p axeyum-lean-kernel` wholesale, and that package gained
+   `real_lean_creal_carrier_kernel_replay` (~62 s) and
+   `real_lean_wellfounded_elaborator_divergence` (~115 s, four Lean
+   invocations). `scripts/check-lean-gate.sh` already owns those. Every push in
+   the repository pays twice; the step was documented at 206-248 s.
+2. **`docs/plan/status/103-creal-lean-divergence.md` is 3,029 bytes**, over the
+   per-lane ceiling (ADR-0478). Its lane has finished, so
+   `scripts/archive-plan-status.py --apply` can take it once it is clean.
+3. **`PLAN.md` and `101-expect-axioms.md` publish 11 ledger guards where there
+   are 10.** The eleventh sabotaged its own fixture, printed `Ran 0 tests`, and
+   the old mutation classifier scored that as a kill — on the control over the
+   axiom ledger, i.e. the axiom-freedom claim. The count is wrong in a
+   generated view.
+Items 4-6 (an uncovered guard in the transcription binder, the 404 GB
+target-dir relocation, and registering a heavy-cargo suite with the mutation
+harness) are in [the lane note](docs/plan/notes/99-capability-assurance.md).
 
-`cargo nextest run --profile local --workspace --all-features` *is* the test
-sweep, and every step is `run … || rc=$?`, so it would not have stopped — it
-would have carried on with the two central steps never executing. Four
-independent signals say it had never run at all: `artifacts/local-ci/` absent,
-the isolated target dir absent, no crontab and no user systemd timer, and four
-tracked files mentioning it, none an entry point. `provision-fleet-host.sh`
-installs none of the three prerequisites. **`main` has no heavy pre-merge gate
-and has not had one.**
-
-Detail and older landed rows moved to [`../notes/99-capability-assurance.md`](docs/plan/notes/99-capability-assurance.md).
+Cleared today: the axiom-freedom measurements are gated (nothing ran them),
+`local-ci` has a PASS record with its freshness gate enforcing, ADR numbers are
+checked against `origin/main`, and `lane-commit.sh` checks a pathspec both ways.
 
 **`gen-adr-index.py --check-remote` detects an ADR number two checkouts both
 claimed, before merge (`DONE`, agent-adr-numbering, 2026-08-18).** `--check`

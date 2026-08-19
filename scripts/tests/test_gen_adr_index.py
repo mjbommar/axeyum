@@ -153,15 +153,22 @@ class RemoteCollisionTests(unittest.TestCase):
     """
 
     def test_same_number_different_content_is_a_collision(self) -> None:
+        # A number no real ADR uses. The fixture originally used 0468, a LIVE
+        # number, and a repository-wide renumber (`ADR-0468` -> `ADR-0483`,
+        # itself a collision fix) rewrote the two filenames here and left the
+        # bare `"0468"` assertion behind, because the sed patterns were
+        # `ADR-0468` and `adr-0468-` and a bare number matches neither. The
+        # suite then failed `'0483' != '0468'`. A fixture that names real ADRs
+        # is a fixture the next renumber breaks, so this one names none.
         collisions = MODULE.find_remote_collisions(
-            ["adr-0483-real-is-constructed.md"],
-            ["adr-0483-autogenesis-transaction.md"],
+            ["adr-0999-local-side.md"],
+            ["adr-0999-remote-side.md"],
         )
         self.assertEqual(len(collisions), 1)
         number, local_only, remote_only = collisions[0]
-        self.assertEqual(number, "0468")
-        self.assertEqual(local_only, ["adr-0483-real-is-constructed.md"])
-        self.assertEqual(remote_only, ["adr-0483-autogenesis-transaction.md"])
+        self.assertEqual(number, "0999")
+        self.assertEqual(local_only, ["adr-0999-local-side.md"])
+        self.assertEqual(remote_only, ["adr-0999-remote-side.md"])
 
     def test_identical_filename_on_both_sides_is_not_a_collision(self) -> None:
         # Shared history: the same lane's ADR, already present on both trees.
