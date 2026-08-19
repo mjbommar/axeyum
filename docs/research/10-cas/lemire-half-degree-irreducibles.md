@@ -113,6 +113,14 @@ lemma.
   missing family cancellation: [Equidistribution of high traces of random
   matrices over finite fields and cancellation in character sums of high
   conductor](https://doi.org/10.1112/blms.13057).
+- Sawin's stationary-phase analysis of wild hyper-Kloosterman sums is a direct
+  warning against replacing the missing aggregate estimate by generic
+  square-root cancellation for each convolution order.  In equal
+  characteristic `p`, divisor-like short-interval sums can exceed the
+  square-root scale when their order is divisible by `p`.  This does not bound
+  the signed logarithm used here, but it confirms that its cross-order
+  cancellation cannot be discarded: [The size of wild Kloosterman sums in
+  number fields and function fields](https://arxiv.org/abs/2209.02170).
 
 There is also no reduction of the family size to the odd power traces. In
 characteristic two, Newton's identities make the even power traces Frobenius
@@ -256,7 +264,20 @@ tuple counts can still lose the whole main term.  The independent integer
 group-ring checker evaluates the centered logarithm with exact rational
 coefficients for both endpoints through `ell=5`, verifies the structural
 support cutoff before class arithmetic, and matches the recurrence
-discrepancies.  It provides a new exact attack surface, not universal credit.
+discrepancies.
+
+Nor can the logarithm be bounded by taking absolute values one factor order at
+a time.  At `(ell,n)=(5,12)`, its nonzero order contributions are exactly
+
+```text
+32, -744, 6144, -20736, 37056, -39480, 26624, -11472, 2976, -368.
+```
+
+Their absolute values sum to `145632`, while their signed sum, the full
+discrepancy, is only `32`.  The checker pins this cancellation vector.  The
+centered formula is therefore a new exact attack surface, not universal
+credit: a successful estimate must preserve cancellation both across
+conductor levels and across the orders of the logarithm.
 
 A tempting shape-preserving induction also fails. If `f=x^n+q`, then `f^2+x`
 has degree `2n` and tail degree at most `n`, but it is reducible for every

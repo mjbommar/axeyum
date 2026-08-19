@@ -236,7 +236,9 @@ def exact_conductor_second_moment(level: int, degree: int) -> int:
     return current_energy - previous_energy
 
 
-def centered_log_discrepancy(ell: int, degree: int) -> tuple[int, int]:
+def centered_log_discrepancy(
+    ell: int, degree: int
+) -> tuple[int, int, tuple[Fraction, ...]]:
     """Recover Delta from the nonuniform logarithm, with exact rationals.
 
     If U is the uniform idempotent and B_d=A_d-2^d U, then the nonuniform
@@ -281,6 +283,7 @@ def centered_log_discrepancy(ell: int, degree: int) -> tuple[int, int]:
     minimum_order = (degree + ell - 2) // (ell - 1)
     power = centered
     discrepancy = Fraction(0)
+    contributions: list[Fraction] = []
     for order in range(1, degree + 1):
         coefficient = power[degree][group.identity]
         if order < minimum_order and coefficient:
@@ -289,7 +292,9 @@ def centered_log_discrepancy(ell: int, degree: int) -> tuple[int, int]:
                 "appears below its degree support"
             )
         sign = 1 if order % 2 else -1
-        discrepancy += sign * Fraction(degree, order) * coefficient
+        contribution = sign * Fraction(degree, order) * coefficient
+        contributions.append(contribution)
+        discrepancy += contribution
         if order != degree:
             power = series_product(power, centered)
     if discrepancy.denominator != 1:
@@ -297,7 +302,7 @@ def centered_log_discrepancy(ell: int, degree: int) -> tuple[int, int]:
             f"ell={ell} degree={degree}: centered discrepancy is nonintegral "
             f"({discrepancy})"
         )
-    return discrepancy.numerator, minimum_order
+    return discrepancy.numerator, minimum_order, tuple(contributions)
 
 
 def main() -> None:
@@ -328,13 +333,16 @@ def main() -> None:
     if normalized_layer * normalized_layer <= 1 << 45:
         fail("constant-one layer target is no longer refuted")
     centered_controls: list[str] = []
+    endpoint_order_contributions: tuple[Fraction, ...] | None = None
     for ell in range(2, 6):
         for degree in (2 * ell + 1, 2 * ell + 2):
             group, distribution = mangoldt_class_distribution(ell, degree)
             expected = distribution[group.identity] - (1 << (degree - ell))
-            observed_discrepancy, minimum_order = centered_log_discrepancy(
-                ell, degree
-            )
+            (
+                observed_discrepancy,
+                minimum_order,
+                order_contributions,
+            ) = centered_log_discrepancy(ell, degree)
             if observed_discrepancy != expected:
                 fail(
                     f"ell={ell} degree={degree}: centered={observed_discrepancy} "
@@ -348,6 +356,33 @@ def main() -> None:
             centered_controls.append(
                 f"{ell}:{degree}:{observed_discrepancy}:{minimum_order}"
             )
+            if (ell, degree) == (5, 12):
+                endpoint_order_contributions = order_contributions
+    if endpoint_order_contributions is None:
+        fail("centered order-cancellation control was not evaluated")
+    nonzero_order_contributions = tuple(
+        value for value in endpoint_order_contributions if value
+    )
+    expected_order_contributions = (
+        Fraction(32),
+        Fraction(-744),
+        Fraction(6_144),
+        Fraction(-20_736),
+        Fraction(37_056),
+        Fraction(-39_480),
+        Fraction(26_624),
+        Fraction(-11_472),
+        Fraction(2_976),
+        Fraction(-368),
+    )
+    if nonzero_order_contributions != expected_order_contributions:
+        fail(
+            "ell=5 degree=12 centered order contributions differ: "
+            f"{nonzero_order_contributions}"
+        )
+    order_triangle_bound = sum(abs(value) for value in nonzero_order_contributions)
+    if order_triangle_bound != 145_632:
+        fail(f"centered order triangle control differs: {order_triangle_bound}")
     print(
         "GF2_HAYES|status=PASS|degrees=3..20|"
         f"counts={','.join(str(value) for value in observed)}|"
@@ -356,7 +391,10 @@ def main() -> None:
         f"level5_degree45_normalized_layer={normalized_layer}|"
         "constant_one_layer_target=false|"
         "centered_endpoint_log=PASS|"
-        f"centered_controls={','.join(centered_controls)}"
+        f"centered_controls={','.join(centered_controls)}|"
+        "centered_order_triangle_route=false|"
+        f"ell5_degree12_order_abs_sum={order_triangle_bound}|"
+        "ell5_degree12_full_discrepancy=32"
     )
 
 
