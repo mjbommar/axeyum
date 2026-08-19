@@ -41,12 +41,18 @@ use axeyum_lean_kernel::{
 use serde_json::{Map, Value};
 
 mod identity;
+mod semantic_contract_receipt;
 mod type_slice;
 mod type_slice_receipt;
 
 pub use identity::{
     AxiomIdentity, DeclarationDependencyIdentity, DeclarationIdentity, DeclarationKind,
     canonical_declaration_sha256, canonical_expression_sha256, canonical_level_sha256,
+};
+pub use semantic_contract_receipt::{
+    SEMANTIC_FUNCTION_CONTRACT_RECEIPT_VERSION, SemanticContractDependencyReceipt,
+    SemanticFunctionContractReceipt, SemanticFunctionContractReceiptError,
+    issue_semantic_function_contract_receipt, verify_semantic_function_contract_receipt,
 };
 pub use type_slice::{
     ConstantInstance, GeneralizedBinder, GeneralizedGoal, TypeSliceError,

@@ -1,6 +1,9 @@
 //! Kernel controls for ADR-0488's first discharged local function contract.
 
-use axeyum_lean_import::canonical_declaration_sha256;
+use axeyum_lean_import::{
+    SemanticFunctionContractReceiptError, canonical_declaration_sha256,
+    issue_semantic_function_contract_receipt, verify_semantic_function_contract_receipt,
+};
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, Kernel, LogicPrelude, NameId, ReducibilityHint,
     build_logic_prelude,
@@ -134,8 +137,52 @@ fn source_contract(kernel: &mut Kernel, logic: &LogicPrelude, source: NameId) ->
     (ty, proof)
 }
 
+fn proof_kernel() -> (Kernel, NameId) {
+    let mut kernel = Kernel::new();
+    let logic = build_logic_prelude(&mut kernel).expect("proof logic prelude builds");
+    let nat = kernel.const_(logic.nat, vec![]);
+    let anonymous = kernel.anon();
+    let function_type = kernel.pi(anonymous, nat, nat, BinderInfo::Default);
+    let contract_x = kernel.bvar(0);
+    let contract_f = kernel.bvar(1);
+    let applied_contract_function = kernel.app(contract_f, contract_x);
+    let contract_body = eq(
+        &mut kernel,
+        &logic,
+        nat,
+        applied_contract_function,
+        contract_x,
+    );
+    let contract = kernel.pi(anonymous, nat, contract_body, BinderInfo::Default);
+    let target_n = kernel.bvar(0);
+    let target_f = kernel.bvar(2);
+    let applied_target_function = kernel.app(target_f, target_n);
+    let target_body = eq(&mut kernel, &logic, nat, applied_target_function, target_n);
+    let target = kernel.pi(anonymous, nat, target_body, BinderInfo::Default);
+    let with_contract = kernel.pi(anonymous, contract, target, BinderInfo::Default);
+    let generic_type = kernel.pi(anonymous, function_type, with_contract, BinderInfo::Default);
+    let local_contract = kernel.bvar(1);
+    let local_argument = kernel.bvar(0);
+    let proof = kernel.app(local_contract, local_argument);
+    let proof = kernel.lam(anonymous, nat, proof, BinderInfo::Default);
+    let proof = kernel.lam(anonymous, contract, proof, BinderInfo::Default);
+    let proof = kernel.lam(anonymous, function_type, proof, BinderInfo::Default);
+    let generic = name(&mut kernel, &["Generated", "use_id_contract"]);
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: generic,
+            uparams: vec![],
+            ty: generic_type,
+            value: proof,
+        })
+        .expect("generic proof checks in its isolated kernel");
+    (kernel, generic)
+}
+
 #[test]
+#[allow(clippy::too_many_lines)]
 fn local_contract_and_source_witness_close_without_axioms() {
+    let (mut independent, independent_generic) = proof_kernel();
     let mut fixture = fixture();
     let generic = name(&mut fixture.kernel, &["Generated", "use_id_contract"]);
     fixture
@@ -186,6 +233,124 @@ fn local_contract_and_source_witness_close_without_axioms() {
     assert_eq!(dependencies.len(), 2);
     assert!(dependencies.contains(&generic));
     assert!(dependencies.contains(&witness));
+
+    let receipt = issue_semantic_function_contract_receipt(
+        &mut independent,
+        independent_generic,
+        &mut fixture.kernel,
+        fixture.source_id,
+        generic,
+        witness,
+        concrete,
+        "synthetic-pointwise-function-contract-v1",
+    )
+    .expect("the two kernels issue one exact-source receipt");
+    assert!(receipt.has_valid_digest());
+    assert!(receipt.axiom_footprint.is_empty());
+    assert_eq!(receipt.source_binder_position, 0);
+    assert_eq!(receipt.contract_binder_position, 1);
+    assert!(
+        receipt
+            .source_witness_dependencies
+            .iter()
+            .any(|dependency| dependency.name == "Source.id")
+    );
+    verify_semantic_function_contract_receipt(
+        &receipt,
+        &mut independent,
+        independent_generic,
+        &mut fixture.kernel,
+        fixture.source_id,
+        generic,
+        witness,
+        concrete,
+    )
+    .expect("the receipt reissues exactly");
+
+    for mutate in [
+        |receipt: &mut axeyum_lean_import::SemanticFunctionContractReceipt| {
+            receipt.source_content_sha256 = "mutated".to_owned();
+        },
+        |receipt: &mut axeyum_lean_import::SemanticFunctionContractReceipt| {
+            receipt.specialized_contract_sha256 = "mutated".to_owned();
+        },
+        |receipt: &mut axeyum_lean_import::SemanticFunctionContractReceipt| {
+            receipt.contract_binder_position = 2;
+        },
+        |receipt: &mut axeyum_lean_import::SemanticFunctionContractReceipt| {
+            receipt.source_witness_proof_sha256 = "mutated".to_owned();
+        },
+    ] {
+        let mut mutated = receipt.clone();
+        mutate(&mut mutated);
+        assert!(matches!(
+            verify_semantic_function_contract_receipt(
+                &mutated,
+                &mut independent,
+                independent_generic,
+                &mut fixture.kernel,
+                fixture.source_id,
+                generic,
+                witness,
+                concrete,
+            ),
+            Err(SemanticFunctionContractReceiptError::ReceiptMismatch)
+        ));
+    }
+
+    assert!(matches!(
+        issue_semantic_function_contract_receipt(
+            &mut independent,
+            independent_generic,
+            &mut fixture.kernel,
+            fixture.source_succ,
+            generic,
+            witness,
+            concrete,
+            "synthetic-pointwise-function-contract-v1",
+        ),
+        Err(SemanticFunctionContractReceiptError::WitnessTypeMismatch)
+    ));
+    assert!(matches!(
+        issue_semantic_function_contract_receipt(
+            &mut independent,
+            independent_generic,
+            &mut fixture.kernel,
+            fixture.source_id,
+            witness,
+            witness,
+            concrete,
+            "synthetic-pointwise-function-contract-v1",
+        ),
+        Err(SemanticFunctionContractReceiptError::GenericMirrorMismatch)
+    ));
+
+    let direct = name(
+        &mut fixture.kernel,
+        &["Generated", "direct_source_id_result"],
+    );
+    fixture
+        .kernel
+        .add_declaration(Declaration::Theorem {
+            name: direct,
+            uparams: vec![],
+            ty: concrete_type,
+            value: witness_proof,
+        })
+        .expect("direct proof is a typed negative control");
+    assert!(matches!(
+        issue_semantic_function_contract_receipt(
+            &mut independent,
+            independent_generic,
+            &mut fixture.kernel,
+            fixture.source_id,
+            generic,
+            witness,
+            direct,
+            "synthetic-pointwise-function-contract-v1",
+        ),
+        Err(SemanticFunctionContractReceiptError::ConcreteProofMismatch)
+    ));
 }
 
 #[test]
@@ -214,7 +379,18 @@ fn same_type_different_definition_has_a_different_identity_and_rejects_the_witne
 
 #[test]
 fn circular_source_answer_is_visible_in_the_axiom_footprint() {
+    let (mut independent, independent_generic) = proof_kernel();
     let mut fixture = fixture();
+    let generic = name(&mut fixture.kernel, &["Generated", "use_id_contract"]);
+    fixture
+        .kernel
+        .add_declaration(Declaration::Theorem {
+            name: generic,
+            uparams: vec![],
+            ty: fixture.generalized_type,
+            value: fixture.generalized_proof,
+        })
+        .expect("source kernel admits the exact generic mirror");
     let (contract_type, _) =
         source_contract(&mut fixture.kernel, &fixture.logic, fixture.source_id);
     let answer = name(&mut fixture.kernel, &["Upstream", "answer"]);
@@ -238,4 +414,33 @@ fn circular_source_answer_is_visible_in_the_axiom_footprint() {
         })
         .expect("type checking alone cannot establish answer isolation");
     assert_eq!(fixture.kernel.axiom_footprint(contaminated), vec![answer]);
+
+    let generic_term = fixture.kernel.const_(generic, vec![]);
+    let source_term = fixture.kernel.const_(fixture.source_id, vec![]);
+    let applied = fixture.kernel.app(generic_term, source_term);
+    let contaminated_term = fixture.kernel.const_(contaminated, vec![]);
+    let applied = fixture.kernel.app(applied, contaminated_term);
+    let concrete = name(&mut fixture.kernel, &["Generated", "contaminated_result"]);
+    fixture
+        .kernel
+        .add_declaration(Declaration::Theorem {
+            name: concrete,
+            uparams: vec![],
+            ty: contract_type,
+            value: applied,
+        })
+        .expect("the source kernel exposes why assurance is a separate gate");
+    assert!(matches!(
+        issue_semantic_function_contract_receipt(
+            &mut independent,
+            independent_generic,
+            &mut fixture.kernel,
+            fixture.source_id,
+            generic,
+            contaminated,
+            concrete,
+            "synthetic-pointwise-function-contract-v1",
+        ),
+        Err(SemanticFunctionContractReceiptError::WitnessNotIndependent)
+    ));
 }
