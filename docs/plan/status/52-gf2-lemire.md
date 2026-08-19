@@ -33,7 +33,9 @@ aggregate endpoint estimate remains open.  Group-ring logarithmic
 differentiation now reduces that choice to one exact short signed
 Möbius-convolution sum; the CAS reconstructs it from a single recurrence table
 and the ledger exposes its still-unproved uniform endpoint bound without
-granting finite experiments theorem credit.
+granting finite experiments theorem credit.  A direct small-degree
+factorization oracle now checks each convolution term and detects inverse- and
+weight-dropping mutations independently of the transform reconstruction.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.

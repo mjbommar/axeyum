@@ -67,6 +67,11 @@ matches every class for `1<=ell<=5`, `1<=degree<=8`.  A larger transform pin at
 squared norm `85072`.  Invalid, resource-limited, and signed-CRT-ambiguous
 requests decline explicitly.
 
+The same factorization oracle independently checks every convolution term at
+both endpoints for `2<=ell<=5`.  Mutation controls require at least one case
+to reject omission of the interval-degree weight and at least one to reject
+replacement of the inverse class by the original class.
+
 ## Alternatives
 
 - Infer Möbius values from the Mangoldt table: rejected because logarithmic

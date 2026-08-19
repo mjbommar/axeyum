@@ -2987,6 +2987,33 @@ mod tests {
         inverse
     }
 
+    fn direct_class_mobius_distribution(ell: usize, degree: usize) -> Vec<i128> {
+        let unit_to_index = principal_unit_index_map(ell);
+        let mut direct = vec![0_i128; 1_usize << ell];
+        for lower in 0_u64..1_u64 << degree {
+            let polynomial = (1_u64 << degree) | lower;
+            let coefficients = (0..=degree)
+                .map(|index| i128::from((polynomial >> index) & 1))
+                .collect::<Vec<_>>();
+            let factors = crate::gfp::factor_berlekamp(&coefficients, 2).unwrap();
+            let mobius = if factors.iter().any(|(_, multiplicity)| *multiplicity != 1) {
+                0
+            } else if factors.len().is_multiple_of(2) {
+                1
+            } else {
+                -1
+            };
+            let mut unit = 1_u64;
+            for prefix_degree in 1..=ell.min(degree) {
+                if polynomial >> (degree - prefix_degree) & 1 != 0 {
+                    unit |= 1_u64 << prefix_degree;
+                }
+            }
+            direct[unit_to_index[&unit]] += mobius;
+        }
+        direct
+    }
+
     const EXPECTED: &[(i128, i128)] = &[
         (0, 0),
         (-2, 0),
@@ -3513,31 +3540,9 @@ mod tests {
     fn class_mobius_distribution_matches_independent_factorization() {
         let limits = HayesLimits::default();
         for ell in 1_usize..=5 {
-            let unit_to_index = principal_unit_index_map(ell);
             for degree in 1_usize..=8 {
                 let report = class_mobius_distribution(ell, degree, limits).unwrap();
-                let mut direct = vec![0_i128; 1_usize << ell];
-                for lower in 0_u64..1_u64 << degree {
-                    let polynomial = (1_u64 << degree) | lower;
-                    let coefficients = (0..=degree)
-                        .map(|index| i128::from((polynomial >> index) & 1))
-                        .collect::<Vec<_>>();
-                    let factors = crate::gfp::factor_berlekamp(&coefficients, 2).unwrap();
-                    let mobius = if factors.iter().any(|(_, multiplicity)| *multiplicity != 1) {
-                        0
-                    } else if factors.len().is_multiple_of(2) {
-                        1
-                    } else {
-                        -1
-                    };
-                    let mut unit = 1_u64;
-                    for prefix_degree in 1..=ell.min(degree) {
-                        if polynomial >> (degree - prefix_degree) & 1 != 0 {
-                            unit |= 1_u64 << prefix_degree;
-                        }
-                    }
-                    direct[unit_to_index[&unit]] += mobius;
-                }
+                let direct = direct_class_mobius_distribution(ell, degree);
                 assert_eq!(report.values, direct, "ell={ell}, degree={degree}");
                 assert_eq!(
                     report.values.iter().sum::<i128>(),
@@ -3632,6 +3637,39 @@ mod tests {
             even.terms.iter().map(|term| term.value).collect::<Vec<_>>(),
             vec![-20, 36, 39, 0, -20, 54, -14]
         );
+    }
+
+    #[test]
+    fn identity_class_mobius_convolution_terms_match_direct_factorization() {
+        let limits = HayesLimits::default();
+        let mut inverse_mutation_detected = false;
+        let mut weight_mutation_detected = false;
+        for ell in 2_usize..=5 {
+            let unit_to_index = principal_unit_index_map(ell);
+            let mut direct_rows = BTreeMap::new();
+            for degree in ell + 2..=2 * ell + 1 {
+                direct_rows.insert(degree, direct_class_mobius_distribution(ell, degree));
+            }
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report = identity_class_mobius_convolution(ell, degree, limits).unwrap();
+                for term in &report.terms {
+                    let mobius = &direct_rows[&(degree - term.interval_degree)];
+                    let mut inverse_fibre = 0_i128;
+                    let mut uninverted_fibre = 0_i128;
+                    for tail in 0..1_u64 << term.interval_degree {
+                        let unit = 1 | (tail << 1);
+                        inverse_fibre += mobius[unit_to_index[&unit_inverse(unit, ell)]];
+                        uninverted_fibre += mobius[unit_to_index[&unit]];
+                    }
+                    let weight = i128::try_from(term.interval_degree).unwrap();
+                    assert_eq!(term.value, weight * inverse_fibre);
+                    inverse_mutation_detected |= weight * uninverted_fibre != term.value;
+                    weight_mutation_detected |= inverse_fibre != term.value;
+                }
+            }
+        }
+        assert!(inverse_mutation_detected);
+        assert!(weight_mutation_detected);
     }
 
     #[test]

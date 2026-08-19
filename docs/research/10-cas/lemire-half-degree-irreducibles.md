@@ -554,6 +554,13 @@ the seven terms at `(ell,n)=(8,17)` are
 signed cancellation, so replacing (MC) by the sum of absolute values is not a
 plausible route to the desired sharp endpoint bound.
 
+A separate small oracle factors every monic polynomial needed by both
+endpoints for `2<=ell<=5`, constructs its Möbius value and leading-coefficient
+class directly, and checks every individual weighted inverse-fibre term.  The
+test also requires the corpus to detect both replacing `u^(-1)` by `u` and
+omitting the factor `d`; it therefore controls the termwise map rather than
+only its final sum.
+
 Berlekamp's characteristic-two analogue of Pellet's formula is the natural
 next structural input: for squarefree polynomials it expresses the Möbius
 sign through an additive character of the Berlekamp discriminant.  Carmon's
