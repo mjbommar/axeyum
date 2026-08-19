@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `2a21ca519` | Proved inverse-additive energy stabilizes for `ell>=3d`, classified the rational collision fibres to obtain `E_inv<=2^(2d+o(d))`, and added an exact energy-to-Type-II exponent ledger. |
 | 2026-08-19 | `d33c43e5e` | Scoped the binary Bagshaw Case-5 obstruction to its actual domain, proved it is empty for every Lemire cutoff, and checked that Hsu's older half-coefficient shorthand does not close the exact endpoint. |
 | 2026-08-19 | `eef2032e5` | Completed the source-level Bagshaw dependency audit and added exact non-credit-bearing exponent ledgers that isolate the binary Type-I Case-5 obstruction and the uncovered endpoint interval range. |
 | 2026-08-19 | `e0398d06a` | Added exact inverse-additive interval energy and Walsh fourth moments with independent collision controls, a characteristic-two source audit, and an explicit boundary against finite no-wrap inference. |
