@@ -579,3 +579,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0500](adr-0500-fibonacci-recurrence-needs-an-explicit-right-hand-bridge.md) | Bridge snd(iter n) to fib(n+1) by reversed fst-helper congruence before composing the recurrence target | accepted |
 | [0501](adr-0501-v3-is-bound-to-all-eight-passing-recurrence-stages.md) | Authorize one Nat.fib_add_two v3 run against the explicit right-hand bridge and unchanged search budget | accepted |
 | [0502](adr-0502-v3-success-is-a-candidate-until-receipt-and-admission.md) | Retain the axiom-free Nat.fib_add_two candidate but require a semantic receipt and ordinary admission before ledger credit | accepted |
+| [0503](adr-0503-checked-candidate-receipts-reconstruct-in-two-fresh-kernels.md) | Receipt non-reflexive candidates by exact fixed-plan reconstruction in two fresh kernels with source and budget binding | accepted |
