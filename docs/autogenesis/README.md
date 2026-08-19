@@ -226,6 +226,16 @@ credible held-out population. See the [nursery foundation
 result](11-nursery-foundation-result.md) and [frozen split
 result](16-mathlib-frozen-nursery-split-result.md).
 
+The first [type-slice feasibility result](25-type-slice-feasibility.md) then
+measured the 138 unsealed statement streams bottom-up. All 114 strict-adapter
+rejections have a syntactically clean proposition-facing type closure: their
+trusted declarations appear only through implementation bodies. The boundary
+shrinks 67,099 implementation-closure declaration occurrences to 1,806 type
+occurrences, but remains diagnostic. The next semantic gate must construct the
+generalized proposition in a fresh kernel, reject proposition-valued
+abstractions, bind universe-instantiated type identities, and check an exact
+specialization back to the source proposition before any fact receives credit.
+
 ## Phase summary
 
 | Phase | Future state | Decisive exit |

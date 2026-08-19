@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-type-slice-feasibility",
+  "state": "syntactic-diagnostic-no-proof-or-ledger-credit",
+  "tooling_base_commit": "a68e3d81d",
+  "analyzer": {
+    "path": "scripts/analyze-autogenesis-type-slices.py",
+    "sha256": "a7a3d079b04e6ba9c8b27e21a7ea327ba4496776577448a899fb9e65105daf4d"
+  },
+  "source_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1",
+    "mapping_sha256": "4596d178d574b90b8bd17801719ff485a1fa588fd52f1ae1b4b3b3b47654239b",
+    "coverage_observation_sha256": "4515d41797f37bd4282feb1fedc85fa7246e9929be491b4f452f698439e7e202"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/type-slice/26fcc2c2f-mathlib-v4.30.0-feasibility-v1",
+    "file": "observation.json",
+    "file_sha256": "f09c83cbfb0f38435aec5d273cf0ef1670306eb69a1b3f5b923e2604703bed7d",
+    "observation_sha256": "a8e2c8b9bc04616e1efe82ec496f83ba120d8312534fc3fc8a76f1068e9b7800"
+  },
+  "population": {
+    "train_development": 138,
+    "prior_adapter_rejections": 114,
+    "held_out_inspected": false,
+    "proof_bodies_executed": false,
+    "ledger_writes": 0
+  },
+  "coverage": {
+    "implementation_closure_has_trusted": 114,
+    "type_closure_has_no_trusted": 138,
+    "type_closure_has_trusted": 0,
+    "prior_adapter_rejections_with_clean_type_closure": 114
+  },
+  "aggregate_declarations": {
+    "exported": 67911,
+    "implementation_closure": 67099,
+    "type_closure": 1806,
+    "type_closure_per_target_min": 2,
+    "type_closure_per_target_median": 8,
+    "type_closure_per_target_max": 80,
+    "abstractable_type_boundary_occurrences": 962
+  },
+  "reproduction": "python3 scripts/check-autogenesis-type-slice-feasibility.py",
+  "limitations": "This proves only syntactic reachability over already independently imported format-3.1 streams. It does not construct or typecheck an abstracted proposition, classify whether an abstraction type is itself Prop, preserve definitional equality, produce a proof, or authorize a ledger transition."
+}

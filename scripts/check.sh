@@ -86,6 +86,8 @@ step autogenesis-reflexivity-coverage-rust cargo test -p axeyum-lean-import --ex
 step autogenesis-reflexivity-coverage-input-tests python3 -m unittest scripts.tests.test_create_autogenesis_reflexivity_coverage_input
 step autogenesis-reflexivity-coverage-tests python3 -m unittest scripts.tests.test_check_autogenesis_reflexivity_coverage
 step autogenesis-reflexivity-coverage python3 scripts/check-autogenesis-reflexivity-coverage.py
+step autogenesis-type-slice-feasibility-tests python3 -m unittest scripts.tests.test_analyze_autogenesis_type_slices scripts.tests.test_check_autogenesis_type_slice_feasibility
+step autogenesis-type-slice-feasibility python3 scripts/check-autogenesis-type-slice-feasibility.py
 step autogenesis-factorial-zero-family-tests python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
 step autogenesis-factorial-zero-family python3 scripts/check-autogenesis-factorial-zero-family.py
 step autogenesis-mathlib-source-tests python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source

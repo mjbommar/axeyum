@@ -81,6 +81,8 @@ autogenesis-nursery:
     python3 -m unittest scripts.tests.test_create_autogenesis_reflexivity_coverage_input
     python3 -m unittest scripts.tests.test_check_autogenesis_reflexivity_coverage
     python3 scripts/check-autogenesis-reflexivity-coverage.py
+    python3 -m unittest scripts.tests.test_analyze_autogenesis_type_slices scripts.tests.test_check_autogenesis_type_slice_feasibility
+    python3 scripts/check-autogenesis-type-slice-feasibility.py
     python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
     python3 scripts/check-autogenesis-factorial-zero-family.py
 
