@@ -402,6 +402,44 @@ impl IdentityClassFourierVariance {
     }
 }
 
+/// Exact Mangoldt populations of every principal-unit class.
+///
+/// `counts` uses the mixed-radix coordinate order returned by
+/// [`principal_unit_structure`]: the first factor varies fastest.  Coordinate
+/// zero is the identity class.  Keeping the compact coordinate order avoids a
+/// second `O(2^ell)` table of polynomial representatives.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ClassPopulationDistribution {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Extension degree `n`.
+    pub degree: usize,
+    /// Exact class populations in stable mixed-radix order.
+    pub counts: Vec<u128>,
+}
+
+impl ClassPopulationDistribution {
+    /// Uniform population mean `2^(degree-ell)`.
+    #[must_use]
+    pub fn uniform_mean(&self) -> Option<u128> {
+        let shift = u32::try_from(self.degree.checked_sub(self.ell)?).ok()?;
+        1_u128.checked_shl(shift)
+    }
+
+    /// Largest absolute class deviation from the uniform mean.
+    #[must_use]
+    pub fn maximum_absolute_deviation(&self) -> Option<u128> {
+        let mean = self.uniform_mean()?;
+        self.counts.iter().map(|count| count.abs_diff(mean)).max()
+    }
+
+    /// Whether every class has positive Mangoldt population.
+    #[must_use]
+    pub fn all_classes_positive(&self) -> bool {
+        self.counts.iter().all(|count| *count != 0)
+    }
+}
+
 /// Return the exact cyclic structure used by the finite Fourier transform.
 ///
 /// # Errors
@@ -700,6 +738,74 @@ pub fn identity_class_count(
     Ok(exact)
 }
 
+/// Compute every exact principal-unit class population.
+///
+/// This is the inverse-Fourier companion of [`identity_class_count`].  It is
+/// intended for bounded `L^infinity` and higher-moment diagnostics: a caller
+/// that needs only the identity coordinate should use the cheaper scalar API.
+/// Both modular distributions are reconstructed entrywise, and the exact
+/// total is checked to be `2^degree`.
+///
+/// # Errors
+///
+/// Returns a typed resource decline before allocation, rejects parameters
+/// outside the two-prime CRT uniqueness domain, and reports transform,
+/// reconstruction, or population-conservation failures.
+pub fn class_population_distribution(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<ClassPopulationDistribution, HayesError> {
+    admit(ell, degree, limits)?;
+    let shift = u32::try_from(degree).map_err(|_| {
+        HayesError::InvalidParameter("degree does not fit the shift domain".to_owned())
+    })?;
+    let total = 1_u128.checked_shl(shift).ok_or_else(|| {
+        HayesError::InvalidParameter("degree exceeds the exact u128 count domain".to_owned())
+    })?;
+    let crt_modulus = u128::from(PRIME_ONE) * u128::from(PRIME_TWO);
+    if total >= crt_modulus {
+        return Err(HayesError::InvalidParameter(format!(
+            "2^{degree} does not fit uniquely below the CRT modulus"
+        )));
+    }
+
+    let first = class_population_residue(ell, degree, PRIME_ONE)?;
+    let second = class_population_residue(ell, degree, PRIME_TWO)?;
+    if first.len() != second.len() {
+        return Err(HayesError::Invariant(
+            "class-population residue tables have different lengths".to_owned(),
+        ));
+    }
+    let mut counts = Vec::with_capacity(first.len());
+    let mut recovered_total = 0_u128;
+    for (first_residue, second_residue) in first.into_iter().zip(second) {
+        let count = crt(first_residue, PRIME_ONE, second_residue, PRIME_TWO)?;
+        if count > total {
+            return Err(HayesError::Invariant(format!(
+                "recovered class count {count} exceeds 2^{degree}"
+            )));
+        }
+        recovered_total = recovered_total.checked_add(count).ok_or_else(|| {
+            HayesError::InvalidParameter(
+                "class-population total exceeds the exact u128 result domain".to_owned(),
+            )
+        })?;
+        counts.push(count);
+    }
+    if recovered_total != total {
+        return Err(HayesError::Invariant(format!(
+            "class populations sum to {recovered_total}, expected 2^{degree}={total}"
+        )));
+    }
+
+    Ok(ClassPopulationDistribution {
+        ell,
+        degree,
+        counts,
+    })
+}
+
 /// Compute both Lemire/Hayes endpoint discrepancies for `ell`.
 ///
 /// # Errors
@@ -959,6 +1065,51 @@ fn identity_class_residue(ell: usize, target: usize, modulus: u64) -> Result<u64
         mod_pow(size as u64, modulus - 2, modulus),
         modulus,
     ))
+}
+
+fn class_population_residue(
+    ell: usize,
+    target: usize,
+    modulus: u64,
+) -> Result<Vec<u64>, HayesError> {
+    let (mut character_values, dimensions) = character_power_sums_residue(ell, target, modulus)?;
+    invert_group_coordinates(&mut character_values, &dimensions)?;
+    group_transform(&mut character_values, &dimensions, modulus);
+    let inverse_order = mod_pow(character_values.len() as u64, modulus - 2, modulus);
+    for value in &mut character_values {
+        *value = multiply_mod(*value, inverse_order, modulus);
+    }
+    Ok(character_values)
+}
+
+fn invert_group_coordinates(values: &mut [u64], dimensions: &[usize]) -> Result<(), HayesError> {
+    let mut inverted = vec![0_u64; values.len()];
+    for (index, value) in values.iter().enumerate() {
+        let mut quotient = index;
+        let mut inverse_index = 0;
+        let mut stride = 1;
+        for &dimension in dimensions {
+            let coordinate = quotient % dimension;
+            quotient /= dimension;
+            let inverse_coordinate = if coordinate == 0 {
+                0
+            } else {
+                dimension - coordinate
+            };
+            inverse_index += inverse_coordinate * stride;
+            stride = stride.checked_mul(dimension).ok_or_else(|| {
+                HayesError::Invariant("group-coordinate stride overflow".to_owned())
+            })?;
+        }
+        if quotient != 0 || inverse_index >= values.len() {
+            return Err(HayesError::Invariant(
+                "group-coordinate inversion escaped the transform domain".to_owned(),
+            ));
+        }
+        inverted[inverse_index] = *value;
+    }
+    values.copy_from_slice(&inverted);
+    Ok(())
 }
 
 fn character_power_sums_residue(
@@ -1408,6 +1559,35 @@ mod tests {
         assert_eq!(even.uniform_mean, 1_024);
         assert_eq!(even.total_squared_deviation, 1_861_136);
         assert!(!even.proves_identity_class_positive());
+    }
+
+    #[test]
+    fn full_class_distribution_recovers_l_infinity_controls() {
+        let limits = HayesLimits::default();
+        let odd = class_population_distribution(8, 17, limits).unwrap();
+        assert_eq!(odd.counts.len(), 256);
+        assert_eq!(odd.counts[0], identity_class_count(8, 17, limits).unwrap());
+        assert_eq!(odd.uniform_mean(), Some(512));
+        assert_eq!(odd.maximum_absolute_deviation(), Some(155));
+        assert!(odd.all_classes_positive());
+        let odd_squared_deviation = odd
+            .counts
+            .iter()
+            .map(|count| count.abs_diff(512).pow(2))
+            .sum::<u128>();
+        assert_eq!(odd_squared_deviation, 693_360);
+
+        let even = class_population_distribution(8, 18, limits).unwrap();
+        assert_eq!(even.counts[0], identity_class_count(8, 18, limits).unwrap());
+        assert_eq!(even.uniform_mean(), Some(1_024));
+        assert_eq!(even.maximum_absolute_deviation(), Some(290));
+        assert!(even.all_classes_positive());
+        let even_squared_deviation = even
+            .counts
+            .iter()
+            .map(|count| count.abs_diff(1_024).pow(2))
+            .sum::<u128>();
+        assert_eq!(even_squared_deviation, 1_861_136);
     }
 
     #[test]

@@ -1,7 +1,8 @@
 //! Exact second-moment diagnostic for the Lemire/Hayes conductor families.
 
 use axeyum_cas::gf2_hayes::{
-    HayesLimits, exact_conductor_second_moment, identity_class_fourier_variance,
+    HayesLimits, class_population_distribution, exact_conductor_second_moment,
+    identity_class_fourier_variance,
 };
 
 const DEFAULT_ELL: usize = 12;
@@ -40,11 +41,17 @@ fn run() -> Result<(), String> {
         }
         let variance = identity_class_fourier_variance(ell, degree, limits)
             .map_err(|error| error.to_string())?;
+        let distribution = class_population_distribution(ell, degree, limits)
+            .map_err(|error| error.to_string())?;
+        let maximum_deviation = distribution
+            .maximum_absolute_deviation()
+            .ok_or_else(|| "class distribution has no exact uniform mean".to_owned())?;
         println!(
-            "GF2_HAYES_MOMENTS|status=PASS|ell={ell}|degree={degree}|exact=two_ntt_primes_plus_crt|all_second_moments_meet_cauchy_threshold={candidate}|uniform_mean={}|total_squared_deviation={}|full_family_parseval_proves_identity_positive={}|moments={}",
+            "GF2_HAYES_MOMENTS|status=PASS|ell={ell}|degree={degree}|exact=two_ntt_primes_plus_crt|all_second_moments_meet_cauchy_threshold={candidate}|uniform_mean={}|total_squared_deviation={}|full_family_parseval_proves_identity_positive={}|maximum_absolute_class_deviation={maximum_deviation}|all_classes_positive={}|moments={}",
             variance.uniform_mean,
             variance.total_squared_deviation,
             variance.proves_identity_class_positive(),
+            distribution.all_classes_positive(),
             rows.join(",")
         );
     }

@@ -406,7 +406,19 @@ def main() -> None:
             )
         if deviation < mean * mean:
             fail("full-family Parseval unexpectedly proves identity positivity")
-        variance_controls.append(f"{degree}:{mean}:{deviation}")
+        _, distribution = mangoldt_class_distribution(8, degree)
+        maximum_deviation = max(abs(value - mean) for value in distribution)
+        expected_maximum = {17: 155, 18: 290}[degree]
+        if maximum_deviation != expected_maximum:
+            fail(
+                f"ell=8 degree={degree} maximum class deviation differs: "
+                f"{maximum_deviation}"
+            )
+        if min(distribution) <= 0:
+            fail("ell=8 endpoint unexpectedly contains an empty Mangoldt class")
+        variance_controls.append(
+            f"{degree}:{mean}:{deviation}:{maximum_deviation}"
+        )
     _, level_five = mangoldt_class_distribution(5, 45)
     _, level_four = mangoldt_class_distribution(4, 45)
     normalized_layer = 2 * level_five[0] - level_four[0]

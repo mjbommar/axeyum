@@ -319,6 +319,20 @@ characterwise calculation.  A useful geometric proof must exploit additional
 structure of this one wildly ramified cyclotomic tower, rather than cite the
 generic curve bound.
 
+Supersingularity does not provide that extra structure beyond the first few
+levels.  Gorodetsky identifies the same curve through the completed
+short-interval-character factorization and proves that `C_ell` is not
+supersingular for every `ell>=4`; in fact, at binary level four he exhibits a
+character whose normalized `L`-roots are not roots of unity.  See
+[Irreducible polynomials over `F_(2^r)` with three prescribed
+coefficients](https://arxiv.org/abs/1805.07105), Theorem 1.3 and Section 6.
+Thus the exact periodic formulas available for one, two, or three prescribed
+coefficients cannot extend to the moving half-degree level by declaring the
+whole cyclotomic Jacobian supersingular.  The fixed level-four factor is small
+relative to the full tower, so this negative result does not rule out a
+partial isogeny decomposition or an endpoint-only trace estimate; it rules out
+only the tempting global supersingularity shortcut.
+
 There is a sharper endpoint-specific form of the same obligation. Work in the
 rational group algebra, put
 
@@ -698,6 +712,16 @@ and it does not refute a weighted or cancellation-preserving moment argument;
 it records exactly where the unweighted sufficient inequality fails.  The
 Rust two-prime/CRT calculation and the independent integer group-ring checker
 agree on both integers.
+
+The failure comes from converting a global norm into a single-coordinate
+bound, not from an empty class in these controls.  The bounded inverse-Fourier
+API reconstructs every class population and checks that they sum to `2^n`.
+At `(ell,n)=(8,17)` and `(8,18)`, the largest absolute class errors are only
+`155` and `290`, respectively, and every class has positive Mangoldt
+population.  This separates the live `L^infinity` problem from the rejected
+raw `L^2` estimate: a higher-moment, hypercontractive, or otherwise
+class-sensitive bound could still work, but it must preserve enough structure
+to avoid the extraneous square root of the number of classes.
 
 The exact algebra is no longer trapped in that executable. ADR-0482 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
