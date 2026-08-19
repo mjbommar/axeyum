@@ -547,6 +547,23 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   this tree. Treat dirty files you don't own as off-limits.
 - Format single files with `rustfmt --edition 2024 <file>` — never
   `cargo fmt`/`cargo fmt -p` (workspace-wide; clobbers other lanes' WIP).
+- **THE SESSION SCRATCHPAD IS SHARED BY EVERY LANE IN THE SESSION, and a
+  fixed-name file in it is a shared append point.** `/tmp/claude-1000/<project>/
+  <session>/scratchpad` is per SESSION, not per lane, so concurrent lanes write
+  into one directory. On 2026-08-18 a lane kept its snapshot path in `W.txt`
+  there; another lane overwrote `W.txt` with its own path, and the first lane's
+  next `cp` loop wrote 13 files into the second lane's `/data0` snapshot tree
+  before it noticed. It restored every one with `git show <sha>:<path>`, but any
+  UNCOMMITTED edit inside that snapshot would have been gone.
+
+  The failure is not the collision, it is that the collision was silent and
+  compounded: a wrong path in a variable turns an ordinary `cp` into a write
+  into someone else's checkout. Name scratchpad files per lane
+  (`$AXEYUM_AGENT.W`, not `W.txt`) — the repository's own rule about per-lane
+  state in per-lane paths applies here too, and nothing said so until it cost
+  something. Prefer `scripts/lane-snapshot.sh`, which already stamps its
+  directories with the owning lane, and prefer passing paths in a variable
+  within one invocation over persisting them to a file at all.
 - **Heavy cargo goes through `scripts/cargo-serialized.sh <cargo args…>`.** Two
   dev boxes (s1, s4) have been taken down by concurrent lane builds, and on
   2026-08-17 a kernel OOM killed a live agent session — one test reached 125 GB,
