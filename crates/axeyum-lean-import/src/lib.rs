@@ -50,7 +50,8 @@ pub use identity::{
 };
 pub use type_slice::{
     ConstantInstance, GeneralizedBinder, GeneralizedGoal, TypeSliceError,
-    generalize_goal_constants, verify_generalized_specialization,
+    generalize_goal_constants, select_definition_abstractions_v1,
+    verify_generalized_specialization,
 };
 pub use type_slice_receipt::{
     TYPE_SLICE_RECEIPT_VERSION, TypeSliceAbstractionReceipt, TypeSliceReceipt,

@@ -9,6 +9,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
+use axeyum_lean_kernel::Declaration;
 use axeyum_lean_kernel::{BinderInfo, ExprId, ExprNode, Kernel, KernelError, LevelId, NameId};
 
 /// One exact global constant instance to generalize.
@@ -87,6 +88,48 @@ pub enum TypeSliceError {
         /// Rendered structure type name.
         name: String,
     },
+    /// Automatic v1 selection encountered a trusted declaration directly in a
+    /// proposition-facing type.
+    TrustedTypeDependency {
+        /// Rendered declaration name.
+        name: String,
+        /// Stable declaration kind.
+        kind: &'static str,
+    },
+    /// Automatic v1 selection encountered a missing declaration.
+    MissingTypeDependency {
+        /// Rendered declaration name.
+        name: String,
+    },
+    /// Definition-type dependencies formed a cycle and cannot become a `Pi`
+    /// telescope.
+    AbstractionDependencyCycle {
+        /// Rendered declaration at the detected cycle.
+        name: String,
+    },
+    /// V1 cannot infer the universe instance of a definition named only by a
+    /// projection's structure-type metadata.
+    DefinitionProjectionType {
+        /// Rendered projection structure type.
+        name: String,
+    },
+    /// The exact atomic closure of a retained inductive-layer declaration would
+    /// expose a trusted declaration to the producer.
+    TrustedRetainedClosure {
+        /// Retained declaration requested by the proposition.
+        declaration: String,
+        /// Trusted declaration pulled by its atomic closure.
+        dependency: String,
+        /// Stable trusted declaration kind.
+        kind: &'static str,
+    },
+    /// Exact atomic root-closure construction failed during selection.
+    RootClosure {
+        /// Declaration whose closure was requested.
+        name: String,
+        /// Exporter's fail-closed diagnostic.
+        reason: String,
+    },
     /// Exact specialization supplied the wrong number of arguments.
     SpecializationArity {
         /// Number of generalized binders.
@@ -139,6 +182,30 @@ impl fmt::Display for TypeSliceError {
                     "projection structure type {name} cannot be abstracted in v1"
                 )
             }
+            Self::TrustedTypeDependency { name, kind } => {
+                write!(f, "type boundary directly references {kind} {name}")
+            }
+            Self::MissingTypeDependency { name } => {
+                write!(f, "type boundary references missing declaration {name}")
+            }
+            Self::AbstractionDependencyCycle { name } => {
+                write!(f, "definition abstraction dependency cycles at {name}")
+            }
+            Self::DefinitionProjectionType { name } => write!(
+                f,
+                "projection structure type {name} is a definition unsupported by v1 selection"
+            ),
+            Self::TrustedRetainedClosure {
+                declaration,
+                dependency,
+                kind,
+            } => write!(
+                f,
+                "retaining {declaration} would expose {kind} {dependency}"
+            ),
+            Self::RootClosure { name, reason } => {
+                write!(f, "cannot construct atomic closure for {name}: {reason}")
+            }
             Self::SpecializationArity { expected, observed } => write!(
                 f,
                 "specialization expected {expected} arguments but received {observed}"
@@ -162,6 +229,217 @@ impl fmt::Display for TypeSliceError {
 impl std::error::Error for TypeSliceError {}
 
 type InstanceKey = (NameId, Vec<LevelId>);
+
+/// Conservatively select each ordinary definition instance whose complete
+/// implementation closure contains a trusted declaration and is reachable from
+/// a proposition or another selected instance's type, in dependency-first
+/// order. Definitions with wholly proof-free implementation closure remain
+/// concrete so required definitional equality is preserved.
+///
+/// Inductives, constructors, and recursors remain concrete so their computation
+/// rules survive root-selected transport. A direct axiom, theorem, opaque, or
+/// quotient dependency declines rather than becoming an implicit premise.
+/// Definition-backed projection structure types also decline because projection
+/// metadata does not carry the universe instance needed for an exact key.
+///
+/// # Errors
+///
+/// Returns [`TypeSliceError`] for trusted/missing direct dependencies,
+/// definition-type cycles, unsupported projection types, or kernel inference
+/// failure.
+pub fn select_definition_abstractions_v1(
+    kernel: &mut Kernel,
+    goal: ExprId,
+) -> Result<Vec<ConstantInstance>, TypeSliceError> {
+    ensure_closed(kernel, goal, "source goal")?;
+    ensure_prop(kernel, goal, "source goal")?;
+    let mut states = BTreeMap::new();
+    let mut trusted_closure_by_name = BTreeMap::new();
+    let mut ordered = Vec::new();
+    select_from_expression(
+        kernel,
+        goal,
+        &mut states,
+        &mut trusted_closure_by_name,
+        &mut ordered,
+    )?;
+    Ok(ordered
+        .into_iter()
+        .map(|(name, levels)| ConstantInstance {
+            name,
+            levels,
+            binder_name: name,
+        })
+        .collect())
+}
+
+fn select_from_expression(
+    kernel: &mut Kernel,
+    expression: ExprId,
+    states: &mut BTreeMap<InstanceKey, u8>,
+    trusted_closure_by_name: &mut BTreeMap<NameId, Option<(NameId, &'static str)>>,
+    ordered: &mut Vec<InstanceKey>,
+) -> Result<(), TypeSliceError> {
+    match kernel.expr_node(expression).clone() {
+        ExprNode::Const(name, levels) => {
+            select_constant_instance(
+                kernel,
+                name,
+                levels,
+                states,
+                trusted_closure_by_name,
+                ordered,
+            )?;
+        }
+        ExprNode::Proj(type_name, _, structure) => {
+            let kind = declaration_selection_kind(kernel, type_name, trusted_closure_by_name)?;
+            match kind {
+                SelectionKind::Definition => {
+                    return Err(TypeSliceError::DefinitionProjectionType {
+                        name: kernel.display_name(type_name).to_string(),
+                    });
+                }
+                SelectionKind::Trusted(kind) => {
+                    return Err(TypeSliceError::TrustedTypeDependency {
+                        name: kernel.display_name(type_name).to_string(),
+                        kind,
+                    });
+                }
+                SelectionKind::Retain => {}
+            }
+            select_from_expression(kernel, structure, states, trusted_closure_by_name, ordered)?;
+        }
+        ExprNode::App(function, argument)
+        | ExprNode::Lam(_, function, argument, _)
+        | ExprNode::Pi(_, function, argument, _) => {
+            select_from_expression(kernel, function, states, trusted_closure_by_name, ordered)?;
+            select_from_expression(kernel, argument, states, trusted_closure_by_name, ordered)?;
+        }
+        ExprNode::Let(_, ty, value, body) => {
+            select_from_expression(kernel, ty, states, trusted_closure_by_name, ordered)?;
+            select_from_expression(kernel, value, states, trusted_closure_by_name, ordered)?;
+            select_from_expression(kernel, body, states, trusted_closure_by_name, ordered)?;
+        }
+        ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Sort(_) | ExprNode::Lit(_) => {}
+    }
+    Ok(())
+}
+
+fn select_constant_instance(
+    kernel: &mut Kernel,
+    name: NameId,
+    levels: Vec<LevelId>,
+    states: &mut BTreeMap<InstanceKey, u8>,
+    trusted_closure_by_name: &mut BTreeMap<NameId, Option<(NameId, &'static str)>>,
+    ordered: &mut Vec<InstanceKey>,
+) -> Result<(), TypeSliceError> {
+    match declaration_selection_kind(kernel, name, trusted_closure_by_name)? {
+        SelectionKind::Retain => Ok(()),
+        SelectionKind::Trusted(kind) => Err(TypeSliceError::TrustedTypeDependency {
+            name: kernel.display_name(name).to_string(),
+            kind,
+        }),
+        SelectionKind::Definition => {
+            let key = (name, levels);
+            match states.get(&key) {
+                Some(2) => return Ok(()),
+                Some(1) => {
+                    return Err(TypeSliceError::AbstractionDependencyCycle {
+                        name: kernel.display_name(name).to_string(),
+                    });
+                }
+                _ => {}
+            }
+            states.insert(key.clone(), 1);
+            let constant = kernel.const_(key.0, key.1.clone());
+            let ty = kernel
+                .infer(constant)
+                .map_err(|source| TypeSliceError::Kernel {
+                    stage: "selection constant type inference",
+                    source,
+                })?;
+            select_from_expression(kernel, ty, states, trusted_closure_by_name, ordered)?;
+            states.insert(key.clone(), 2);
+            ordered.push(key);
+            Ok(())
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum SelectionKind {
+    Retain,
+    Definition,
+    Trusted(&'static str),
+}
+
+fn declaration_selection_kind(
+    kernel: &Kernel,
+    name: NameId,
+    trusted_closure_by_name: &mut BTreeMap<NameId, Option<(NameId, &'static str)>>,
+) -> Result<SelectionKind, TypeSliceError> {
+    let Some(declaration) = kernel.environment().get(name) else {
+        return Err(TypeSliceError::MissingTypeDependency {
+            name: kernel.display_name(name).to_string(),
+        });
+    };
+    Ok(match declaration {
+        Declaration::Definition { .. } => {
+            if trusted_atomic_dependency(kernel, name, trusted_closure_by_name)?.is_some() {
+                SelectionKind::Definition
+            } else {
+                SelectionKind::Retain
+            }
+        }
+        Declaration::Axiom { .. } => SelectionKind::Trusted("axiom"),
+        Declaration::Theorem { .. } => SelectionKind::Trusted("theorem"),
+        Declaration::Opaque { .. } => SelectionKind::Trusted("opaque"),
+        Declaration::Quotient { .. } => SelectionKind::Trusted("quotient"),
+        Declaration::Inductive { .. }
+        | Declaration::Constructor { .. }
+        | Declaration::Recursor { .. } => {
+            if let Some((dependency, kind)) =
+                trusted_atomic_dependency(kernel, name, trusted_closure_by_name)?
+            {
+                return Err(TypeSliceError::TrustedRetainedClosure {
+                    declaration: kernel.display_name(name).to_string(),
+                    dependency: kernel.display_name(dependency).to_string(),
+                    kind,
+                });
+            }
+            SelectionKind::Retain
+        }
+    })
+}
+
+fn trusted_atomic_dependency(
+    kernel: &Kernel,
+    name: NameId,
+    cache: &mut BTreeMap<NameId, Option<(NameId, &'static str)>>,
+) -> Result<Option<(NameId, &'static str)>, TypeSliceError> {
+    if let Some(result) = cache.get(&name) {
+        return Ok(*result);
+    }
+    let closure =
+        kernel
+            .root_declaration_closure(&[name])
+            .map_err(|error| TypeSliceError::RootClosure {
+                name: kernel.display_name(name).to_string(),
+                reason: error.to_string(),
+            })?;
+    let result = closure.into_iter().find_map(|dependency| {
+        let kind = match kernel.environment().get(dependency) {
+            Some(Declaration::Axiom { .. }) => "axiom",
+            Some(Declaration::Theorem { .. }) => "theorem",
+            Some(Declaration::Opaque { .. }) => "opaque",
+            Some(Declaration::Quotient { .. }) => "quotient",
+            _ => return None,
+        };
+        Some((dependency, kind))
+    });
+    cache.insert(name, result);
+    Ok(result)
+}
 
 /// Generalize exact global constant instances into an explicit dependent
 /// `Pi` telescope and independently check the closed result as `Prop`.

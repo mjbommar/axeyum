@@ -5,7 +5,7 @@ use std::io::Cursor;
 use axeyum_lean_import::{
     ConstantInstance, ImportLimits, TypeSliceError, TypeSliceReceiptError,
     generalize_goal_constants, import_ndjson, import_statement_ndjson, issue_type_slice_receipt,
-    verify_generalized_specialization,
+    select_definition_abstractions_v1, verify_generalized_specialization,
 };
 use axeyum_lean_kernel::{
     Declaration, ExprId, Kernel, Lean4ExportMetadata, LogicPrelude, NameId, ReducibilityHint,
@@ -252,6 +252,66 @@ fn universe_instances_of_one_declaration_are_distinct() {
         .expect("one exact universe instance must generalize independently");
     verify_generalized_specialization(&mut fixture.kernel, &generalized, &[c0], goal)
         .expect("only the selected universe instance must specialize");
+}
+
+#[test]
+fn conservative_selector_orders_definition_types_before_values() {
+    let mut kernel = Kernel::new();
+    let logic = build_logic_prelude(&mut kernel).expect("logic prelude must build");
+    let untrusted_type = nested_name(&mut kernel, &["Source", "UntrustedType"]);
+    let alias = nested_name(&mut kernel, &["Source", "Alias"]);
+    let untrusted_value = nested_name(&mut kernel, &["Source", "UntrustedValue"]);
+    let value = nested_name(&mut kernel, &["Source", "definedValue"]);
+    let zero = kernel.level_zero();
+    let one = kernel.level_succ(zero);
+    let sort_one = kernel.sort(one);
+    kernel
+        .add_declaration(Declaration::Axiom {
+            name: untrusted_type,
+            uparams: vec![],
+            ty: sort_one,
+        })
+        .expect("untrusted source type must check");
+    let untrusted_type = kernel.const_(untrusted_type, vec![]);
+    kernel
+        .add_declaration(Declaration::Definition {
+            name: alias,
+            uparams: vec![],
+            ty: sort_one,
+            value: untrusted_type,
+            hint: ReducibilityHint::Regular(0),
+        })
+        .expect("type alias must check");
+    let alias_type = kernel.const_(alias, vec![]);
+    kernel
+        .add_declaration(Declaration::Axiom {
+            name: untrusted_value,
+            uparams: vec![],
+            ty: alias_type,
+        })
+        .expect("untrusted source value must check");
+    let untrusted_value = kernel.const_(untrusted_value, vec![]);
+    kernel
+        .add_declaration(Declaration::Definition {
+            name: value,
+            uparams: vec![],
+            ty: alias_type,
+            value: untrusted_value,
+            hint: ReducibilityHint::Regular(0),
+        })
+        .expect("defined value must check");
+    let value_expr = kernel.const_(value, vec![]);
+    let goal = equality(&mut kernel, &logic, alias_type, value_expr, value_expr);
+
+    let selected = select_definition_abstractions_v1(&mut kernel, goal)
+        .expect("ordinary definitions must be selected");
+    assert_eq!(selected.len(), 2);
+    assert_eq!(selected[0].name, alias);
+    assert_eq!(selected[1].name, value);
+    let generalized = generalize_goal_constants(&mut kernel, goal, &selected)
+        .expect("selected definitions must form a checked dependent telescope");
+    verify_generalized_specialization(&mut kernel, &generalized, &[alias_type, value_expr], goal)
+        .expect("selected exact constants must specialize to the source");
 }
 
 #[test]

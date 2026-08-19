@@ -310,6 +310,24 @@ impl Kernel {
         })
     }
 
+    /// Return the exact atomic declaration closure root-selected export would
+    /// transport, in deterministic dependency order.
+    ///
+    /// This includes complete inductive and quotient units, recursor reduction
+    /// rules, and implicit literal bootstrap dependencies. It is the read-only
+    /// authority for deciding whether a prospective producer environment would
+    /// retain a trusted declaration.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same typed root, package, missing-dependency, or cycle errors
+    /// as [`Self::render_lean4export_ndjson_roots`].
+    pub fn root_declaration_closure(&self, roots: &[NameId]) -> Result<Vec<NameId>, ExportError> {
+        let units = self.select_root_units(self.export_units()?, roots)?;
+        let order = self.order_units(units)?;
+        Ok(order.into_iter().flat_map(|unit| unit.members()).collect())
+    }
+
     /// Stream the complete checked environment as official `lean4export`
     /// NDJSON 3.1.0 without accumulating it beside the checked arenas.
     ///
@@ -677,10 +695,42 @@ impl Kernel {
                     roots.push(*value);
                     roots.push(*body);
                 }
-                ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Sort(_) | ExprNode::Lit(_) => {}
+                ExprNode::Lit(Lit::Str(_)) => {
+                    constants.extend(self.string_literal_dependency_names());
+                }
+                ExprNode::BVar(_)
+                | ExprNode::FVar(_)
+                | ExprNode::Sort(_)
+                | ExprNode::Lit(Lit::Nat(_)) => {}
             }
         }
         constants
+    }
+
+    /// Reserved declarations whose checked shapes give string literals their
+    /// type and constructor expansion. Literals carry no explicit `Const`
+    /// edges, so root selection must add these semantic dependencies itself.
+    pub(crate) fn string_literal_dependency_names(&self) -> Vec<NameId> {
+        let anonymous = NameId(0);
+        let Some(string) = self.lookup_name_str(anonymous, "String") else {
+            return Vec::new();
+        };
+        let Some(char_) = self.lookup_name_str(anonymous, "Char") else {
+            return Vec::new();
+        };
+        let Some(list) = self.lookup_name_str(anonymous, "List") else {
+            return Vec::new();
+        };
+        let Some(nat) = self.lookup_name_str(anonymous, "Nat") else {
+            return Vec::new();
+        };
+        let Some(of_list) = self.lookup_name_str(string, "ofList") else {
+            return Vec::new();
+        };
+        let Some(char_of_nat) = self.lookup_name_str(char_, "ofNat") else {
+            return Vec::new();
+        };
+        vec![string, char_, list, nat, of_list, char_of_nat]
     }
 
     /// Lean's reflexivity predicate, which the wire format records as the
@@ -1354,6 +1404,48 @@ mod tests {
         assert!(stream.contains("selected_target"), "{stream}");
         assert!(stream.contains("selected_dependency"), "{stream}");
         assert!(!stream.contains("unrelated"), "{stream}");
+    }
+
+    #[test]
+    fn a_root_export_keeps_implicit_string_literal_bootstrap_dependencies() {
+        let mut kernel = kernel_with_logic();
+        let anonymous = kernel.anon();
+        let string = kernel.name_str(anonymous, "String");
+        let char_ = kernel.name_str(anonymous, "Char");
+        let list = kernel.name_str(anonymous, "List");
+        let of_list = kernel.name_str(string, "ofList");
+        let char_of_nat = kernel.name_str(char_, "ofNat");
+        let target = kernel.name_str(anonymous, "StringLiteralRoot");
+        let prop = kernel.sort_zero();
+        for name in [string, char_, list, of_list, char_of_nat] {
+            kernel.env.insert_unchecked(Declaration::Axiom {
+                name,
+                uparams: Vec::new(),
+                ty: prop,
+            });
+        }
+        let literal = kernel.lit(Lit::Str("root payload".to_owned()));
+        kernel.env.insert_unchecked(Declaration::Definition {
+            name: target,
+            uparams: Vec::new(),
+            ty: prop,
+            value: literal,
+            hint: ReducibilityHint::Regular(0),
+        });
+
+        let stream = kernel
+            .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[target])
+            .expect("the semantic literal dependencies must form a selected closure");
+        let closure = kernel.declaration_dependency_closure(target);
+        for dependency in [string, char_, list, of_list, char_of_nat] {
+            assert!(closure.contains(&dependency));
+        }
+        for component in ["String", "Char", "List", "ofList", "ofNat", "Nat"] {
+            assert!(
+                stream.contains(&format!("\"str\":\"{component}\"")),
+                "{component}"
+            );
+        }
     }
 
     #[test]

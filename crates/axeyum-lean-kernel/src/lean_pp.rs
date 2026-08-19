@@ -919,7 +919,11 @@ impl Kernel {
                     stack.push(*v);
                     stack.push(*b);
                 }
-                ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Sort(_) | ExprNode::Lit(_) => {}
+                ExprNode::Lit(Lit::Str(_)) => out.extend(self.string_literal_dependency_names()),
+                ExprNode::BVar(_)
+                | ExprNode::FVar(_)
+                | ExprNode::Sort(_)
+                | ExprNode::Lit(Lit::Nat(_)) => {}
             }
         }
     }
