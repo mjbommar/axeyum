@@ -529,12 +529,48 @@ An algebraically separate Berlekamp-factorization test checks every class for
 the largest class magnitude is `48`, and the squared `L^2` norm is `85072`.
 These are finite diagnostics, not a Möbius cancellation theorem.
 
+There is also an exact short decomposition of the prime discrepancy.  In the
+class group ring, logarithmic differentiation gives
+
+```text
+Lambda_n = sum_(1<=d<=n) d A_d M_(n-d).
+```
+
+For `d>=ell`, `A_d` is uniform.  Since the total polynomial Möbius sum is
+`-2` in degree one and zero above degree one, the `d=n-1,n` terms combine to
+`2^(n-ell)` and all other uniform terms vanish.  Therefore, for `n>=ell+1`,
+
+```text
+Delta_(ell,n)
+  = sum_(1<=d<ell) d sum_(u in V_d) M_(n-d)(u^(-1)).             (MC)
+```
+
+`identity_class_mobius_convolution` computes both sides from one retained
+Möbius recurrence table and rejects unless they agree.  Direct endpoint tests
+through `ell=9` reconstruct the existing Hayes discrepancies.  For example,
+the seven terms at `(ell,n)=(8,17)` are
+`[-1,36,-9,8,40,60,-84]`, summing to `50`; at `(8,18)` they are
+`[-20,36,39,0,-20,54,-14]`, summing to `75`.  Larger probes show substantial
+signed cancellation, so replacing (MC) by the sum of absolute values is not a
+plausible route to the desired sharp endpoint bound.
+
+Berlekamp's characteristic-two analogue of Pellet's formula is the natural
+next structural input: for squarefree polynomials it expresses the Möbius
+sign through an additive character of the Berlekamp discriminant.  Carmon's
+characteristic-two Chowla argument develops this conversion, but its
+asymptotic is fixed degree with `q` tending to infinity, not fixed `q=2` with
+degree tending to infinity.  It is therefore a technique source rather than a
+theorem that closes (MC): [The autocorrelation of the Möbius function and
+Chowla's conjecture for the rational function field in characteristic
+2](https://arxiv.org/abs/1409.3694), Section 2.
+
 This also sharpens the boundary on the new Kloosterman result.  The
 stationary-phase bound controls the **unweighted** distribution of one product
 of intervals.  A Vaughan identity introduces Möbius-derived weights, and an
 unweighted pointwise multiplicity estimate does not bound an arbitrary
 weighted bilinear form.  A valid completion must either prove a weighted
-binary bilinear estimate, exploit the special Möbius recurrence above, or
+binary bilinear estimate, bound the complete signed sum (MC) using its special
+Möbius/Berlekamp structure, or
 retain cancellation across the orders of the centered logarithm.  Merely
 inserting the unweighted Kloosterman number into an odd-characteristic Vaughan
 proof would be invalid.

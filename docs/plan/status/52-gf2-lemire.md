@@ -29,7 +29,11 @@ decomposition is Möbius-weighted; substituting one for the other has now been
 closed as invalid.  Exact signed classwise Möbius distributions are exposed as
 a bounded native diagnostic with independent factorization controls.  Proving
 a weighted binary bilinear estimate, a recurrence-wide Möbius bound, or the
-aggregate endpoint estimate remains open.
+aggregate endpoint estimate remains open.  Group-ring logarithmic
+differentiation now reduces that choice to one exact short signed
+Möbius-convolution sum; the CAS reconstructs it from a single recurrence table
+and the ledger exposes its still-unproved uniform endpoint bound without
+granting finite experiments theorem credit.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.

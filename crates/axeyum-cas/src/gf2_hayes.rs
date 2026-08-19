@@ -15,6 +15,12 @@ const PRIME_ONE: u64 = 998_244_353;
 const PRIME_TWO: u64 = 1_004_535_809;
 const PRIMITIVE_ROOT: u64 = 3;
 
+struct CharacterMobiusTable {
+    rows: Vec<Vec<u64>>,
+    dimensions: Vec<usize>,
+    unit_to_index: BTreeMap<u64, usize>,
+}
+
 /// Resource admission for an exact Hayes transform.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HayesLimits {
@@ -578,6 +584,32 @@ pub struct ClassMobiusDistribution {
     pub degree: usize,
     /// Exact signed Möbius sum in every class.
     pub values: Vec<i128>,
+}
+
+/// One exact low-degree term in the identity-class Möbius convolution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MobiusConvolutionTerm {
+    /// Degree `d` of the interval factor `V_d`.
+    pub interval_degree: usize,
+    /// `d sum_(u in V_d) M_(degree-d)(u^(-1))`.
+    pub value: i128,
+}
+
+/// Exact decomposition of an identity-class Mangoldt discrepancy.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IdentityClassMobiusConvolution {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Target degree.
+    pub degree: usize,
+    /// Uniform identity-class mean `2^(degree-ell)`.
+    pub uniform_mean: u128,
+    /// Exact identity-class Mangoldt population.
+    pub mangoldt_population: u128,
+    /// `mangoldt_population-uniform_mean`.
+    pub discrepancy: i128,
+    /// Exact signed terms for `1<=d<ell`.
+    pub terms: Vec<MobiusConvolutionTerm>,
 }
 
 /// Exact removal of proper prime powers from one identity-class population.
@@ -1691,6 +1723,124 @@ pub fn class_mobius_distribution(
     })
 }
 
+/// Decompose one identity-class Mangoldt discrepancy into Möbius terms.
+///
+/// If `A_d` is the class distribution of monic degree-`d` polynomials and
+/// `M=A^(-1)`, logarithmic differentiation gives
+///
+/// ```text
+/// Lambda_n = sum_(1<=d<=n) d A_d M_(n-d).
+/// ```
+///
+/// For `d>=ell`, `A_d` is uniform.  The ordinary polynomial Möbius totals
+/// vanish above degree one, so the `d=n-1,n` terms combine to the uniform
+/// mean and every other uniform term vanishes.  Consequently
+///
+/// ```text
+/// Delta_(ell,n)
+///   = sum_(1<=d<ell) d sum_(u in V_d) M_(n-d)(u^(-1)).
+/// ```
+///
+/// This operation checks that exact identity.  It does not bound the signed
+/// sum uniformly in `ell`.
+///
+/// # Errors
+///
+/// Returns a typed resource or representation decline, rejects
+/// `degree<ell+1`, and reports failed transform, CRT, or reconstruction
+/// invariants.
+pub fn identity_class_mobius_convolution(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<IdentityClassMobiusConvolution, HayesError> {
+    admit(ell, degree, limits)?;
+    if degree <= ell {
+        return Err(HayesError::InvalidParameter(
+            "Mobius convolution decomposition requires degree>=ell+1".to_owned(),
+        ));
+    }
+    let first = identity_class_mobius_convolution_residue(ell, degree, PRIME_ONE)?;
+    let second = identity_class_mobius_convolution_residue(ell, degree, PRIME_TWO)?;
+    if first.len() != second.len() {
+        return Err(HayesError::Invariant(
+            "Mobius-convolution residue vectors have different lengths".to_owned(),
+        ));
+    }
+    let crt_modulus = u128::from(PRIME_ONE) * u128::from(PRIME_TWO);
+    let half_modulus = crt_modulus / 2;
+    let power_bound = 1_u128
+        .checked_shl(u32::try_from(degree).map_err(|_| {
+            HayesError::InvalidParameter("degree does not fit the shift domain".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("degree exceeds the exact i128 domain".to_owned())
+        })?;
+    let mut terms = Vec::with_capacity(ell.saturating_sub(1));
+    for (offset, (first_residue, second_residue)) in first.into_iter().zip(second).enumerate() {
+        let interval_degree = offset + 1;
+        let magnitude_bound = power_bound
+            .checked_mul(interval_degree as u128)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Mobius-convolution term bound overflow".to_owned())
+            })?;
+        if magnitude_bound
+            .checked_mul(2)
+            .is_none_or(|width| width >= crt_modulus)
+        {
+            return Err(HayesError::InvalidParameter(format!(
+                "signed Mobius-convolution term at d={interval_degree} does not fit uniquely below the CRT modulus"
+            )));
+        }
+        let unsigned = crt(first_residue, PRIME_ONE, second_residue, PRIME_TWO)?;
+        let value = if unsigned <= half_modulus {
+            i128::try_from(unsigned).map_err(|_| {
+                HayesError::Invariant("positive convolution CRT value exceeds i128".to_owned())
+            })?
+        } else {
+            i128::try_from(unsigned).map_err(|_| {
+                HayesError::Invariant("negative convolution CRT residue exceeds i128".to_owned())
+            })? - i128::try_from(crt_modulus).map_err(|_| {
+                HayesError::Invariant("convolution CRT modulus exceeds i128".to_owned())
+            })?
+        };
+        if value.unsigned_abs() > magnitude_bound {
+            return Err(HayesError::Invariant(format!(
+                "Mobius-convolution term {value} exceeds its coarse bound at d={interval_degree}"
+            )));
+        }
+        terms.push(MobiusConvolutionTerm {
+            interval_degree,
+            value,
+        });
+    }
+
+    let mangoldt_population = identity_class_count(ell, degree, limits)?;
+    let uniform_mean = 1_u128 << (degree - ell);
+    let discrepancy = i128::try_from(mangoldt_population).map_err(|_| {
+        HayesError::InvalidParameter("Mangoldt population does not fit i128".to_owned())
+    })? - i128::try_from(uniform_mean)
+        .map_err(|_| HayesError::InvalidParameter("uniform mean does not fit i128".to_owned()))?;
+    let reconstructed = terms.iter().try_fold(0_i128, |sum, term| {
+        sum.checked_add(term.value).ok_or_else(|| {
+            HayesError::InvalidParameter("Mobius-convolution sum exceeds i128".to_owned())
+        })
+    })?;
+    if reconstructed != discrepancy {
+        return Err(HayesError::Invariant(format!(
+            "Mobius convolution reconstructs {reconstructed}, expected discrepancy {discrepancy}"
+        )));
+    }
+    Ok(IdentityClassMobiusConvolution {
+        ell,
+        degree,
+        uniform_mean,
+        mangoldt_population,
+        discrepancy,
+        terms,
+    })
+}
+
 /// Certify the exact proper-prime-power reduction at `n = 2 ell + 1`.
 ///
 /// This operation is structural: it enumerates divisors and checks the
@@ -2390,10 +2540,10 @@ fn class_population_residue(
 }
 
 fn class_mobius_residue(ell: usize, target: usize, modulus: u64) -> Result<Vec<u64>, HayesError> {
-    let (mut character_values, dimensions) =
-        character_mobius_coefficients_residue(ell, target, modulus)?;
-    invert_group_coordinates(&mut character_values, &dimensions)?;
-    group_transform(&mut character_values, &dimensions, modulus);
+    let mut table = character_mobius_coefficients_through_residue(ell, target, modulus)?;
+    let mut character_values = table.rows.swap_remove(target);
+    invert_group_coordinates(&mut character_values, &table.dimensions)?;
+    group_transform(&mut character_values, &table.dimensions, modulus);
     let inverse_order = mod_pow(character_values.len() as u64, modulus - 2, modulus);
     for value in &mut character_values {
         *value = multiply_mod(*value, inverse_order, modulus);
@@ -2401,11 +2551,38 @@ fn class_mobius_residue(ell: usize, target: usize, modulus: u64) -> Result<Vec<u
     Ok(character_values)
 }
 
-fn character_mobius_coefficients_residue(
+fn identity_class_mobius_convolution_residue(
     ell: usize,
     target: usize,
     modulus: u64,
-) -> Result<(Vec<u64>, Vec<usize>), HayesError> {
+) -> Result<Vec<u64>, HayesError> {
+    let mut table = character_mobius_coefficients_through_residue(ell, target - 1, modulus)?;
+    let inverse_order = mod_pow((1_usize << ell) as u64, modulus - 2, modulus);
+    let mut terms = Vec::with_capacity(ell.saturating_sub(1));
+    for interval_degree in 1..ell {
+        let row = &mut table.rows[target - interval_degree];
+        invert_group_coordinates(row, &table.dimensions)?;
+        group_transform(row, &table.dimensions, modulus);
+        let mut fibre_sum = 0_u64;
+        for tail in 0..1_u64 << interval_degree {
+            let unit = 1 | (tail << 1);
+            let inverse = principal_unit_inverse(unit, ell);
+            fibre_sum = add_mod(
+                fibre_sum,
+                multiply_mod(row[table.unit_to_index[&inverse]], inverse_order, modulus),
+                modulus,
+            );
+        }
+        terms.push(multiply_mod(interval_degree as u64, fibre_sum, modulus));
+    }
+    Ok(terms)
+}
+
+fn character_mobius_coefficients_through_residue(
+    ell: usize,
+    target: usize,
+    modulus: u64,
+) -> Result<CharacterMobiusTable, HayesError> {
     let factors = principal_unit_factors(ell);
     let odd_degrees = factors
         .iter()
@@ -2476,7 +2653,22 @@ fn character_mobius_coefficients_residue(
             mobius[degree][character] = value;
         }
     }
-    Ok((mobius.swap_remove(target), dimensions))
+    Ok(CharacterMobiusTable {
+        rows: mobius,
+        dimensions,
+        unit_to_index,
+    })
+}
+
+fn principal_unit_inverse(unit: u64, ell: usize) -> u64 {
+    let mut inverse = 1_u64;
+    for degree in 1..=ell {
+        let coefficient = (1..=degree).fold(0_u64, |parity, left| {
+            parity ^ (((unit >> left) & 1) & ((inverse >> (degree - left)) & 1))
+        });
+        inverse |= coefficient << degree;
+    }
+    inverse
 }
 
 fn invert_group_coordinates(values: &mut [u64], dimensions: &[usize]) -> Result<(), HayesError> {
@@ -3399,6 +3591,64 @@ mod tests {
         );
         assert!(matches!(
             class_mobius_distribution(
+                3,
+                60,
+                HayesLimits {
+                    max_degree: 60,
+                    ..limits
+                }
+            ),
+            Err(HayesError::InvalidParameter(_))
+        ));
+    }
+
+    #[test]
+    fn identity_class_mobius_convolution_reconstructs_endpoints() {
+        let limits = HayesLimits::default();
+        for ell in 2_usize..=9 {
+            let exact = endpoint_discrepancies(ell, limits).unwrap();
+            for (degree, expected) in [(2 * ell + 1, exact.odd), (2 * ell + 2, exact.even)] {
+                let report = identity_class_mobius_convolution(ell, degree, limits).unwrap();
+                assert_eq!(report.discrepancy, expected);
+                assert_eq!(report.terms.len(), ell - 1);
+                assert_eq!(
+                    report.terms.iter().map(|term| term.value).sum::<i128>(),
+                    expected
+                );
+            }
+        }
+
+        let odd = identity_class_mobius_convolution(8, 17, limits).unwrap();
+        assert_eq!(odd.uniform_mean, 512);
+        assert_eq!(odd.mangoldt_population, 562);
+        assert_eq!(odd.discrepancy, 50);
+        assert_eq!(
+            odd.terms.iter().map(|term| term.value).collect::<Vec<_>>(),
+            vec![-1, 36, -9, 8, 40, 60, -84]
+        );
+        let even = identity_class_mobius_convolution(8, 18, limits).unwrap();
+        assert_eq!(even.discrepancy, 75);
+        assert_eq!(
+            even.terms.iter().map(|term| term.value).collect::<Vec<_>>(),
+            vec![-20, 36, 39, 0, -20, 54, -14]
+        );
+    }
+
+    #[test]
+    fn identity_class_mobius_convolution_declines_invalid_inputs() {
+        let limits = HayesLimits::default();
+        assert!(matches!(
+            identity_class_mobius_convolution(0, 3, limits),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        assert_eq!(
+            identity_class_mobius_convolution(3, 3, limits),
+            Err(HayesError::InvalidParameter(
+                "Mobius convolution decomposition requires degree>=ell+1".to_owned()
+            ))
+        );
+        assert!(matches!(
+            identity_class_mobius_convolution(
                 3,
                 60,
                 HayesLimits {

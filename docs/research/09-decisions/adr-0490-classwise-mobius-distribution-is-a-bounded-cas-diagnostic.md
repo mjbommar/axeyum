@@ -38,6 +38,17 @@ an SMT predicate for analytic cancellation.  The returned finite table is a
 diagnostic and a source of exact conjecture-selection data, not a universal
 bound.
 
+Also expose `identity_class_mobius_convolution`, the checked group-ring
+logarithmic-derivative identity
+
+```text
+Delta_(ell,n)=sum_(1<=d<ell) d sum_(u in V_d) M_(n-d)(u^(-1)).
+```
+
+Compute all required Möbius rows once per NTT modulus, reconstruct every
+signed summand by CRT, and require their sum to equal the independently
+computed identity-class discrepancy.
+
 ## Evidence
 
 Every recovered coordinate is checked against `|M_n(e)|<=2^n`.  Summing the
@@ -70,6 +81,8 @@ requests decline explicitly.
 
 - Axeyum can now measure the exact parity-breaking object selected by a
   characteristic-two Vaughan or Berlekamp-discriminant attack.
+- The remaining weighted cancellation is one explicit short signed sum, not
+  an unspecified appeal to a Vaughan decomposition.
 - Autogenesis and the fact ledger still receive no universal cancellation
   credit from this bounded operation.
 - The remaining mathematical choice is explicit: prove a weighted binary
