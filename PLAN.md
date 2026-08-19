@@ -158,6 +158,8 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `e0398d06a` | Added exact inverse-additive interval energy and Walsh fourth moments with independent collision controls, a characteristic-two source audit, and an explicit boundary against finite no-wrap inference. |
+| 2026-08-19 | `329e842c6` | Recorded the exact inverse-additive Fourier and reciprocal-polynomial bridge in the canonical research note and lane status. |
 | 2026-08-19 | `3c3be779a` | Added the exact inverse-additive Möbius Walsh spectrum, annihilator reconstruction, and frequencywise direct controls for the reciprocal-polynomial and ramified-`x` bridge. |
 | 2026-08-19 | `c021db86a` | Added a direct Berlekamp-factorization oracle for every endpoint convolution term through level 5, with mutation controls for inverse-class and interval-weight errors. |
 | 2026-08-19 | `53eeeda49` | Reduced the endpoint discrepancy to one exact signed Möbius-convolution sum, added a one-table native reconstruction with endpoint controls, and exposed the remaining uniform bound as an uncredited ledger obligation. |
