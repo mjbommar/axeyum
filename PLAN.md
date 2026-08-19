@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `5ddfe3984` | Added an exact full-family Parseval diagnostic, dual-checked both `ell=8` endpoints, and showed that raw total variance cannot supply the missing positivity estimate. |
 | 2026-08-19 | `f02916fa9` | Proved translation pairing for level `2^v_2(n)`, bounded all but the top `ceil(log_2 ell)+2` levels by ordinary Weil, retained the bounded one-level runner, and extended the exact native endpoint diagnostic to `ell=24`. |
 | 2026-08-19 | `fda041d49` | Independently replayed the level-24 endpoint transform in C++ on s1, matched both native Axeyum discrepancies with hashed provenance, and identified the family norm as one cyclotomic curve's zeta numerator without misusing the generic Hasse--Weil bound. |
 | 2026-08-18 | `cf998788b` | Automated the exact authoritative B-then-A chain; two isolated fixed-budget runs matched all 56 retained artifact bytes and passed Autogenesis-1. |
@@ -343,127 +344,45 @@ cannot instantiate, which is why all three multi-goal probes decline; widening
 than dropping the goal would reach them. Neither is a soundness item.
 
 **The Lemire half-degree conjecture is an active CAS/evidence lane** (`WIP`,
-gf2-lemire, 2026-08-18).  The exact target is the paper's non-strict bound
+gf2-lemire, 2026-08-19).  The exact target is the paper's non-strict
 `deg(f-x^n) <= floor(n/2)`; the strict social-post wording fails at degree 2.
-The existing general-prime-field code has no limits or evidence consumer and
-takes about 6.45 seconds in release for the known degree-400 witness.
+The reciprocal reduction asks for a degree-`n` prime in the identity class
+modulo `x^ceil(n/2)`.
 
-ADR-0480 is accepted and `81321fc65` lands the CAS-local, bit-packed
-`GF(2)[x]` value layer with explicit resource limits and portable
-Frobenius/Bezout irreducibility certificates before any finite-field IR or SMT
-surface.  Exhaustive monic inputs through degree 10 agree with both the old
-general-field test and independent trial division; the warmed release
-producer-plus-checker regression for degree 400 is below 10 ms.  The reciprocal
-lemma reduces the universal conjecture to a prime polynomial in the identity
-class modulo `x^ceil(n/2)`.  The current mathematical blocker is a positivity
-theorem at that exact fixed-field half-degree boundary. The exact integral
-Hayes-class recurrence has now been specialized and independently matched to
-direct counts through degree 20; its error has varying sign, so the remaining
-target is aggregate cancellation rather than a termwise sign argument.
-`fd1e8793b` adds an exact two-prime NTT/CRT oracle for that aggregate, and
-`4b129601c` scales its fail-closed control range through `ell=22`. It identifies
-the sufficient candidate lemma
-`abs(N_n(1)-2^(n-ell)) <= 2^ell` at `n=2 ell+1, 2 ell+2` and verifies it only
-through `ell=22`; the result is a finite proof target, not universal credit.
-The same increment derives the exact family-norm degree
-`(ell-2)2^ell+2`, showing that character-by-character Weil bounds necessarily
-lose a factor asymptotic to `ell`; the missing proof must establish aggregate
-family cancellation. An optimized exact `ell=22` replay on s7 matched every
-control in 8m27s with 2.38 GB peak RSS and exit 0.
+The bounded machinery is complete for present research needs.  ADRs 0480--0482
+cover bit-packed `GF(2)[x]`, portable Frobenius/Bezout certificates, the finite
+fact-ledger contract, and the public resource-bounded Hayes CAS API.  The lane
+gate dual-checks all degrees `1..=400`, direct class counts through degree 20,
+and exact NTT/CRT endpoint diagnostics.  Rust and independent C++ agree at
+`ell=24`: `Delta_(24,49)=1651`, `Delta_(24,50)=4787`.  These are finite facts,
+not a universal proof.  No SMT surface is missing: the outstanding statement
+is an analytic cancellation theorem, with no solver/model/replay consumer that
+would justify new SMT semantics.
 
-`1ff1ca6b7` closes the machinery gap exposed by that experiment. Accepted
-ADR-0482 extracts a public, bounded `axeyum_cas::gf2_hayes` API for the
-principal-unit cyclic decomposition, exact identity-class populations,
-endpoint discrepancies, conductor layers, and exact bignum checking of the
-conditional sufficient-bound implication. The transform now admits `ell`,
-degree, group-order, and retained-table-cell limits before allocation. A Rust
-checker and algebraically separate Python checker both prove that the explicit
-target `8 j^12 2^((n+j)/2)` would finish the endpoint argument from `ell=194`,
-with the certified degree-400 range covering the remainder; neither checker
-claims that target itself. No SMT or finite-field IR surface was added because
-there is no solver/model/proof consumer for the missing analytic family bound.
-Independent C++ and refactored Rust transforms agree at `ell=23` on endpoint
-discrepancies `57574` and `-88336`; the Rust replay completed in 20m23s with
-4.96 GB peak RSS and exit 0.
+The exact reductions leave a sharply bounded obligation.  Characterwise Weil
+controls all but the highest `ceil(log_2 ell)+2` conductor levels within half
+the candidate budget; translation kills level `2^v_2(n)`.  Equivalently, the
+family norm is the numerator of one binary Carlitz cyclotomic curve, but its
+generic Hasse--Weil bound still loses a factor asymptotic to `ell`.  The
+centered group-ring logarithm starts at order three, yet its orders must remain
+signed: at `(ell,n)=(5,12)` their absolute sum is `145632` while the answer is
+`32`.
 
-The next cancellation refinement is now closed negatively rather than left as
-an attractive assumption. A constant-one exact-conductor target would imply
-the theorem from `ell=22`, after using the characteristic-two restriction on
-the even square proper-divisor term. Rust bignums and a separate Python checker
-agree on that conditional arithmetic. But two exact calculations refute the
-route itself: the unweighted exact-character second moment at `(j,n)=(8,17)`
-is `86,200,320`, more than five times its Cauchy threshold, and the target
-layer is directly false at the first symbolic endpoint,
-`T_(5,45)=113,287,168` with normalized magnitude `7,080,448 > 2^(45/2)`.
-Both falsifiers are pinned in the CAS gate. The missing theorem must therefore
-control the full identity-class discrepancy or exploit cancellation between
-conductor levels; neither characterwise triangle bounds nor unweighted
-second moments can finish the proof.
+The CAS also pins the excluded routes.  A constant-one layer estimate is false
+at `(j,n)=(5,45)`.  Exact-conductor Cauchy fails at `(8,17)`.  `5ddfe3984`
+adds the full-family Parseval diagnostic: at the two `ell=8` endpoints its
+total squared deviations are `693360` and `1861136`, exceeding uniform-mean
+squares `512^2` and `1024^2`; an independent integer group-ring checker agrees.
+Thus raw unweighted variance cannot force positivity at these controls.  Hsu's
+known bound retains a logarithmic loss, and sparse-polynomial conjectures plus
+standard Artin--Schreier doubling do not close the endpoint.
 
-`f247587c6` now removes the conductor partition from the exact formula.  After
-projecting the monic-class series away from its uniform idempotent, the
-remaining polynomial has degree `ell-1`; consequently its logarithmic
-coefficient at either endpoint has no linear or quadratic term.  The full
-discrepancy is an alternating sum of centered factor-tuple correlations that
-begins at order at least three.  A separate exact-rational group-ring route
-checks this centered logarithm at both endpoints through `ell=5` and agrees
-with the integral recurrence.  This is a cancellation-preserving reduction,
-not a bound: controlling those connected correlations remains the central
-mathematical obligation.  `01cc5dfdf` also pins why their orders cannot be
-bounded separately: at `(ell,n)=(5,12)` the orderwise absolute sum is
-`145632`, but the signed logarithm is `32`.  The surviving route must keep the
-full signed logarithm intact, not introduce a second triangle inequality over
-factor order.
-
-The latest increment removes two more false exits and narrows the live one.
-The social-post strict inequality is not the paper's theorem (it already fails
-in degree 2), while the paper's non-strict endpoint is not supplied by the
-informal "half" wording in the 1999 survey or 2003 AIM notes: detailed Hsu
-restatements retain the logarithmic loss.  Standard Artin--Schreier composition
-also cannot provide a shaped doubling induction: even base degree forces the
-trace obstruction and odd base degree creates a forbidden `x^(2n-1)` term.
-On the positive side, translation `alpha -> alpha+1` annihilates the exact
-conductor level `2^v_2(n)` by Lucas' theorem, and the ordinary Weil bound now
-controls every level except the highest `ceil(log_2 ell)+2` within half of the
-candidate discrepancy budget.  At the finite boundary `ell=199`, only levels
-190 through 199 remain.  Both statements are enforced by the reusable bounded
-Rust API and an algebraically separate integer group-ring checker; the split
-is checked through `ell=4000` without being mislabeled as the missing top-level
-cancellation theorem.
-
-The exact native diagnostic has also advanced to `ell=24`: a one-level Axeyum
-run on s4 returned `Delta_(24,49)=1651` and `Delta_(24,50)=4787` in 25m41.54s
-including a clean release build, at 10,311,424 KiB peak RSS.  The repository
-now contains the explicitly bounded `axeyum-gf2-hayes-endpoint` runner used for
-that high-memory calculation; it rejects levels above 24 and is excluded from
-default gates.  An algebraically independent C++ replay on s1 matched both
-integers and exited 0 in 1h25m20s with 14,423,180 KiB peak RSS.  This is one
-more dual-implementation finite observation, not universal credit.
-
-The portable boundary is complete for bounded witnesses. `98f2d953f` adds
-canonical JSON, a dense-coefficient second checker, and a standalone dual-check
-CLI; `b678ec7e6` adds the fail-closed producer. `3718aab11` commits and gates the
-188,458-byte degree-400 certificate (SHA-256 `30ae3f33...383d5`) from both
-aggregate check paths.
-
-`6e1372073` adds deterministic sparse shards and exact population checking.
-Five single-threaded jobs on s1/s4/s5/s6/s7 produced 400/400 found receipts with
-no exhaustion or candidate limit. `d308c7bc1` admits and gates every child:
-227 trinomials, 172 pentanomials, degree-one `x`, 38,679 candidates total, and a
-maximum of 870 at degree 349. This establishes the finite range `1..=400` under
-both implemented checkers, not the universal theorem. `6aff45e82` records that
-bounded proposition in the fact ledger using the accepted ADR-0481
-`certificate-spec` language. Its canonical proposition is bound to the range
-checker and has mutation controls; it creates no finite-field SMT, CAS-identity,
-or kernel surface and gives the universal conjecture no credit.
-
-**Next.** Prove cancellation for the highest `ceil(log_2 ell)+2` exact
-conductor levels at degrees `2 ell+1` and `2 ell+2`, with their signed sum kept
-intact, or find a universal construction.  Ordinary characterwise Weil,
-unweighted second moments, sparse-polynomial conjectures, and
-Artin--Schreier doubling are now explicitly excluded routes.  Then reconstruct
-reciprocity and the central lemma through the kernel before promoting the
-finite ledger fact or claiming a universal proof.
+**Next.** Prove a signed or weighted estimate for the highest
+`ceil(log_2 ell)+2` conductor levels at `n=2 ell+1,2 ell+2`, or find a universal
+construction.  Then reconstruct reciprocity and the central lemma through the
+kernel before promoting the finite ledger fact or claiming a proof.  Full
+derivations, literature audits, provenance, and rejected routes remain in
+`docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 **Claim-dashboard gate, finding-8 re-measurement, and PLAN.md returned under its
 ceiling** (`WIP`, ledger-integrity, 2026-08-16). Three defects behind a dashboard
