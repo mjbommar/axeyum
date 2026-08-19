@@ -117,6 +117,18 @@ proof-free goal boundaries; no source theorem or ledger transition is claimed:
 python3 scripts/check-autogenesis-auto-param-binder-replay.py
 ```
 
+`mathlib-type-slice-producer-census-v1.json` binds the first fixed-budget
+producer run across all 138 checked train/development slices. The checker
+requires one valid slice receipt and one structured proof outcome per row,
+recomputes the source and observation identities, pins the two accepted proof
+identities and their zero-dependency audits, and rejects budget, outcome,
+receipt, proof, authority, or mutability drift. It grants no operation or
+ledger authority:
+
+```sh
+python3 scripts/check-autogenesis-type-slice-producer-census.py
+```
+
 `mathlib-factorial-zero-admission-v1.json` binds the second family member's
 clean-commit execution, crash-recovered ledger transition, complete external
 archive, and detached-worktree replay. It uses the same generic admission

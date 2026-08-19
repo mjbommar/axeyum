@@ -92,6 +92,8 @@ step autogenesis-checked-type-slice-replay-tests python3 -m unittest scripts.tes
 step autogenesis-checked-type-slice-replay python3 scripts/check-autogenesis-checked-type-slice-replay.py
 step autogenesis-auto-param-binder-replay-tests python3 -m unittest scripts.tests.test_check_autogenesis_auto_param_binder_replay
 step autogenesis-auto-param-binder-replay python3 scripts/check-autogenesis-auto-param-binder-replay.py
+step autogenesis-type-slice-producer-census-tests python3 -m unittest scripts.tests.test_check_autogenesis_type_slice_producer_census
+step autogenesis-type-slice-producer-census python3 scripts/check-autogenesis-type-slice-producer-census.py
 step autogenesis-factorial-zero-family-tests python3 -m unittest scripts.tests.test_check_autogenesis_factorial_zero_family
 step autogenesis-factorial-zero-family python3 scripts/check-autogenesis-factorial-zero-family.py
 step autogenesis-mathlib-source-tests python3 -m unittest scripts.tests.test_check_autogenesis_mathlib_source

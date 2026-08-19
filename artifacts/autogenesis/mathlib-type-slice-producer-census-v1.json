@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-type-slice-producer-census",
+  "state": "diagnostic-fixed-budget-no-ledger-credit",
+  "tooling_commit": "10ab370a919ebc3136583c1d630a239e7c253187",
+  "tooling_files": [
+    {
+      "path": "crates/axeyum-lean-import/examples/type_slice_replay.rs",
+      "sha256": "1705b2d517e8b2dc5beac8996da0c54434ecc5621214e0cbbe7f2907083e28f2"
+    },
+    {
+      "path": "crates/axeyum-lean-import/examples/statement_reflexivity_support/mod.rs",
+      "sha256": "f9cd8141adc79c96a19ecc49f5fc021e59e3f5b98df87ab3ed7d9d930bfa9007"
+    }
+  ],
+  "source_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1",
+    "mapping_sha256": "4596d178d574b90b8bd17801719ff485a1fa588fd52f1ae1b4b3b3b47654239b",
+    "lean_version": "4.30.0",
+    "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "partitions": [
+      "development",
+      "train"
+    ]
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/producer-census/10ab370a9-mathlib-v4.30.0-reflexivity-v1",
+    "file": "observation.json",
+    "bytes": 2207523,
+    "mode": "0444",
+    "file_sha256": "849cdcb67f0428b17db811d27fead774c099777bff8996b5ef8d952def18dd54",
+    "observation_sha256": "b37c5a6fcfffe257d3d0df6904fb6575ee41989814137b835609a1968d8f8e46",
+    "default_regression": {
+      "file": "default-observation.json",
+      "bytes": 2151767,
+      "mode": "0444",
+      "file_sha256": "969b53a44ed31166b94c611af406ab46c07f5be2b7e1aa9a5ceff1aac78dc5c5",
+      "observation_sha256": "49c36e75fcaedef1f76ee1b99268903cc2a10192a549c8b835acf4e1c1f181ec"
+    }
+  },
+  "population": {
+    "train_development": 138,
+    "held_out_inspected": false,
+    "proof_bodies_requested": false,
+    "ledger_writes": 0
+  },
+  "producer": {
+    "policy": "type-slice-reflexivity-census-v1",
+    "operation": "bounded-pi-equality-reflexivity-v1",
+    "max_binders": 8,
+    "max_constructed_nodes": 16,
+    "invocations": 138,
+    "retries": 0
+  },
+  "slice_population": {
+    "exact_without_abstractions": 24,
+    "semantically_abstracted": 114,
+    "definition_abstractions": 152,
+    "admissible_exact": 2,
+    "admissible_abstracted": 0
+  },
+  "coverage": {
+    "admissible-proof": 2,
+    "kernel-rejection:candidate-typecheck-failed": 46,
+    "producer-decline:binder-budget-exceeded": 1,
+    "producer-decline:terminal-not-constant-headed-equality": 40,
+    "producer-decline:terminal-not-exact-equality": 49
+  },
+  "admissible_artifacts": [
+    "r053.ndjson",
+    "r070.ndjson"
+  ],
+  "reproduction": "cargo run -p axeyum-lean-import --example type_slice_replay -- --auto-param-binders-v3 --reflexivity-v1 --archive /nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1 --mapping /nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/mapping.json --output observation.json",
+  "verification": "python3 scripts/check-autogenesis-type-slice-producer-census.py",
+  "limitations": "This is one fixed diagnostic grammar over train/development only. The two accepted candidates are not registered or admitted; the 136 declines and rejections establish capability demand, not falsehood; held-out and upstream proof bodies remain sealed; and no fact-ledger status changes."
+}

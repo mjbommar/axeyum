@@ -127,6 +127,7 @@ compounding, not automation theatre.
 | [Type-slice receipt foundation](28-type-slice-receipt-foundation.md) | Which identities and checks must one durable proof-free slice receipt bind? |
 | [Checked Mathlib type-slice replay](29-checked-type-slice-replay.md) | How many frozen train/development statements survive the complete semantic slice boundary, and why do the rest decline? |
 | [Checked `autoParam` binder replay](30-auto-param-binder-replay.md) | Can the ten metadata-contaminated closures be normalized under a narrow kernel-checked contract? |
+| [First complete producer census](31-first-type-slice-producer-census.md) | What does one preregistered proof grammar establish across all checked slices, and which gap should drive the next turn? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -262,6 +263,14 @@ metadata definition and checks every normalized declaration and rule by
 definitional equality. This closes the goal boundary, not the proofs: the next
 increment measures bounded producer yield and structured declines over
 train/development while held-out remains sealed.
+
+That [first complete producer census](31-first-type-slice-producer-census.md)
+now admits two of 138 goals under the fixed reflexivity grammar. More
+importantly, it separates 24 exact slices from 114 slices whose 152 definition
+abstractions preserve types but intentionally omit behavior. The next flywheel
+turn therefore has two controlled lanes: develop proof plans against the 22
+unsolved exact goals, and add kernel-discharged semantic contracts before
+treating the 114 abstracted goals as a fair proof-search curriculum.
 
 ## Phase summary
 
