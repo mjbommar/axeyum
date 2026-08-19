@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `8649aa085` | Added exact bounded inverse-Fourier class distributions, matched Parseval and an independent group-ring implementation, and isolated the surviving class-sensitive `L^infinity` problem. |
 | 2026-08-19 | `5ddfe3984` | Added an exact full-family Parseval diagnostic, dual-checked both `ell=8` endpoints, and showed that raw total variance cannot supply the missing positivity estimate. |
 | 2026-08-19 | `f02916fa9` | Proved translation pairing for level `2^v_2(n)`, bounded all but the top `ceil(log_2 ell)+2` levels by ordinary Weil, retained the bounded one-level runner, and extended the exact native endpoint diagnostic to `ell=24`. |
 | 2026-08-19 | `fda041d49` | Independently replayed the level-24 endpoint transform in C++ on s1, matched both native Axeyum discrepancies with hashed provenance, and identified the family norm as one cyclotomic curve's zeta numerator without misusing the generic Hasse--Weil bound. |
@@ -373,11 +374,18 @@ at `(j,n)=(5,45)`.  Exact-conductor Cauchy fails at `(8,17)`.  `5ddfe3984`
 adds the full-family Parseval diagnostic: at the two `ell=8` endpoints its
 total squared deviations are `693360` and `1861136`, exceeding uniform-mean
 squares `512^2` and `1024^2`; an independent integer group-ring checker agrees.
-Thus raw unweighted variance cannot force positivity at these controls.  Hsu's
-known bound retains a logarithmic loss, and sparse-polynomial conjectures plus
-standard Artin--Schreier doubling do not close the endpoint.
+Thus raw unweighted variance cannot force positivity at these controls.
+`8649aa085` adds the missing bounded inverse-Fourier distribution API: the
+actual maximum class errors are only `155` and `290`, and every class is
+positive.  The live analytic distinction is therefore `L^infinity` versus raw
+`L^2`, suggesting a class-sensitive higher-moment or hypercontractive estimate.
+Global supersingularity is not that estimate: Gorodetsky proves this exact
+cyclotomic curve nonsupersingular for every `ell>=4`.  Hsu's known bound retains
+a logarithmic loss, and sparse-polynomial conjectures plus standard
+Artin--Schreier doubling do not close the endpoint.
 
-**Next.** Prove a signed or weighted estimate for the highest
+**Next.** Prove a class-sensitive `L^infinity` or signed/weighted estimate for
+the highest
 `ceil(log_2 ell)+2` conductor levels at `n=2 ell+1,2 ell+2`, or find a universal
 construction.  Then reconstruct reciprocity and the central lemma through the
 kernel before promoting the finite ledger fact or claiming a proof.  Full
