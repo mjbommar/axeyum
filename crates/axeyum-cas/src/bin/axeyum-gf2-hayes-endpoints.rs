@@ -93,8 +93,11 @@ fn run() -> Result<(), String> {
                 .map(|layer| format!("{}:{}", layer.level, layer.value))
                 .collect::<Vec<_>>()
                 .join(",");
+            let all_observed_layers_satisfy_square_root_bound = layers
+                .iter()
+                .all(|layer| layer.satisfies_square_root_bound(degree));
             println!(
-                "GF2_HAYES_CONDUCTORS|status=PASS|ell={max_ell}|degree={degree}|identity=fourier_exact_conductor_difference|layers={details}"
+                "GF2_HAYES_CONDUCTORS|status=PASS|ell={max_ell}|degree={degree}|identity=fourier_exact_conductor_difference|all_observed_layers_satisfy_square_root_bound={all_observed_layers_satisfy_square_root_bound}|layers={details}"
             );
         }
     }

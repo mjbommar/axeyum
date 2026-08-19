@@ -202,6 +202,39 @@ def identity_irreducible_count(ell: int, target_degree: int) -> int:
     return irreducibles[target_degree][group.identity]
 
 
+def mangoldt_class_distribution(
+    ell: int, target_degree: int
+) -> tuple[PrincipalUnitGroup, list[int]]:
+    """Return every exact characteristic-polynomial class population."""
+    group = PrincipalUnitGroup.construct(ell)
+    class_sums = [
+        monic_class_sum(group, degree) for degree in range(target_degree + 1)
+    ]
+    mangoldt = [[0] * len(group.elements) for _ in range(target_degree + 1)]
+    for degree in range(1, target_degree + 1):
+        current = [degree * value for value in class_sums[degree]]
+        for earlier in range(1, degree):
+            correction = group.convolution(
+                mangoldt[earlier], class_sums[degree - earlier]
+            )
+            current = [
+                left - right for left, right in zip(current, correction, strict=True)
+            ]
+        mangoldt[degree] = current
+    return group, mangoldt[target_degree]
+
+
+def exact_conductor_second_moment(level: int, degree: int) -> int:
+    """Integer group-ring/Parseval calculation independent of the Rust NTT."""
+    current_group, current = mangoldt_class_distribution(level, degree)
+    previous_group, previous = mangoldt_class_distribution(level - 1, degree)
+    current_energy = len(current_group.elements) * sum(value * value for value in current)
+    previous_energy = len(previous_group.elements) * sum(
+        value * value for value in previous
+    )
+    return current_energy - previous_energy
+
+
 def main() -> None:
     observed: list[int] = []
     for degree in range(3, 21):
@@ -216,9 +249,26 @@ def main() -> None:
 
     if tuple(observed) != EXPECTED:
         fail(f"count vector differs: {observed}")
+    moment = exact_conductor_second_moment(8, 17)
+    if moment != 86_200_320:
+        fail(f"level-8 degree-17 second moment differs: {moment}")
+    cauchy_bound = 1 << (8 - 1 + 17)
+    if moment <= cauchy_bound:
+        fail("second-moment falsifier no longer exceeds the Cauchy bound")
+    _, level_five = mangoldt_class_distribution(5, 45)
+    _, level_four = mangoldt_class_distribution(4, 45)
+    normalized_layer = 2 * level_five[0] - level_four[0]
+    if normalized_layer != 7_080_448:
+        fail(f"level-5 degree-45 normalized layer differs: {normalized_layer}")
+    if normalized_layer * normalized_layer <= 1 << 45:
+        fail("constant-one layer target is no longer refuted")
     print(
         "GF2_HAYES|status=PASS|degrees=3..20|"
-        f"counts={','.join(str(value) for value in observed)}"
+        f"counts={','.join(str(value) for value in observed)}|"
+        f"level8_degree17_second_moment={moment}|"
+        "generic_cauchy_route=false|"
+        f"level5_degree45_normalized_layer={normalized_layer}|"
+        "constant_one_layer_target=false"
     )
 
 

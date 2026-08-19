@@ -111,6 +111,30 @@ pub struct ConductorLayer {
     pub value: i128,
 }
 
+impl ConductorLayer {
+    /// Whether this observed layer satisfies the constant-one square-root target.
+    ///
+    /// This checks `value^2 <= 2^(2*level-2+degree)` exactly. It is a
+    /// diagnostic for one supplied finite value, not a proof for other levels
+    /// or degrees.
+    #[must_use]
+    pub fn satisfies_square_root_bound(self, degree: usize) -> bool {
+        if self.level == 0 {
+            return false;
+        }
+        let Some(exponent) = self
+            .level
+            .checked_mul(2)
+            .and_then(|value| value.checked_sub(2))
+            .and_then(|value| value.checked_add(degree))
+        else {
+            return false;
+        };
+        let magnitude = BigUint::from(self.value.unsigned_abs());
+        &magnitude * &magnitude <= (BigUint::from(1_u8) << exponent)
+    }
+}
+
 /// One cyclic factor in the principal-unit decomposition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PrincipalUnitFactor {
@@ -164,6 +188,80 @@ pub struct SufficientBoundReport {
     pub first_odd_degree: usize,
     /// First even endpoint degree discharged by the symbolic estimate.
     pub first_even_degree: usize,
+}
+
+/// A constant-one square-root bound on every exact-conductor family.
+///
+/// The mathematical assumption is
+/// `T_(j,n)^2 <= 2^(2j-2+n)` for `1 <= j <= ell` at the two endpoint
+/// degrees.  The rational fields provide a checked upper approximation to
+/// `sqrt(2)` for the odd endpoint; they are arithmetic witnesses rather than
+/// part of the conjectured character-sum estimate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SquareRootLayerBoundAssumption {
+    /// First `ell` at which the family estimate is assumed.
+    pub threshold: usize,
+    /// Largest degree covered by separate finite certificates.
+    pub finite_max_degree: usize,
+    /// Numerator of a strict rational upper bound for `sqrt(2)`.
+    pub sqrt_two_upper_numerator: usize,
+    /// Denominator of a strict rational upper bound for `sqrt(2)`.
+    pub sqrt_two_upper_denominator: usize,
+}
+
+impl Default for SquareRootLayerBoundAssumption {
+    fn default() -> Self {
+        Self {
+            threshold: 22,
+            finite_max_degree: 400,
+            sqrt_two_upper_numerator: 99,
+            sqrt_two_upper_denominator: 70,
+        }
+    }
+}
+
+/// Exact arithmetic implication from the constant-one family estimate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SquareRootLayerBoundReport {
+    /// Assumption checked by the arithmetic route.
+    pub assumption: SquareRootLayerBoundAssumption,
+    /// First odd endpoint discharged by the symbolic argument.
+    pub first_odd_degree: usize,
+    /// First even endpoint discharged by the symbolic argument.
+    pub first_even_degree: usize,
+}
+
+/// Exact Fourier second moment for one conductor family.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExactConductorSecondMoment {
+    /// Exact conductor level `j` in `T_(j,n)`.
+    pub level: usize,
+    /// Extension degree `n`.
+    pub degree: usize,
+    /// `sum_(chi exact level j) |S_chi(n)|^2`.
+    pub value: u128,
+}
+
+impl ExactConductorSecondMoment {
+    /// Whether Cauchy--Schwarz with this moment proves the layer target.
+    ///
+    /// The required inequality is `value <= 2^(level-1+degree)` because
+    /// there are `2^(level-1)` characters of exact level `level`.
+    #[must_use]
+    pub fn proves_square_root_layer_bound(self) -> bool {
+        let Some(exponent) = self
+            .level
+            .checked_sub(1)
+            .and_then(|value| value.checked_add(self.degree))
+            .and_then(|value| u32::try_from(value).ok())
+        else {
+            return false;
+        };
+        let Some(bound) = 1_u128.checked_shl(exponent) else {
+            return false;
+        };
+        self.value <= bound
+    }
 }
 
 /// Return the exact cyclic structure used by the finite Fourier transform.
@@ -298,6 +396,133 @@ pub fn check_conductor_bound_sufficiency(
     })
 }
 
+/// Check that a constant-one exact-conductor estimate implies endpoint positivity.
+///
+/// The even endpoint uses the class restriction on the square proper-divisor
+/// term: if `n = 2m`, then `<P>^2 = 1 (mod x^(ell+1))` fixes the first
+/// `floor(ell/2)` coefficients of `P`.  This replaces the coarse `2^m`
+/// estimate by `m * 2^(m-floor(ell/2))`.  All remaining proper-divisor terms
+/// are bounded by `n * 2^ceil(n/3)`.
+///
+/// This function proves only the arithmetic implication. It does not prove
+/// `T_(j,n)^2 <= 2^(2j-2+n)`.
+///
+/// # Errors
+///
+/// Returns an error for malformed rational witnesses, a gap before the
+/// finite range, or a failed exact seed/monotonicity inequality.
+pub fn check_square_root_layer_bound_sufficiency(
+    assumption: SquareRootLayerBoundAssumption,
+) -> Result<SquareRootLayerBoundReport, HayesError> {
+    let SquareRootLayerBoundAssumption {
+        threshold,
+        finite_max_degree,
+        sqrt_two_upper_numerator: numerator,
+        sqrt_two_upper_denominator: denominator,
+    } = assumption;
+    if threshold < 4 || numerator == 0 || denominator == 0 {
+        return Err(HayesError::InvalidParameter(
+            "threshold must be at least four and the rational witness must be positive".to_owned(),
+        ));
+    }
+    let twice_threshold = threshold.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("threshold degree calculation overflow".to_owned())
+    })?;
+    if twice_threshold > finite_max_degree {
+        return Err(HayesError::InvalidParameter(
+            "finite remainder exceeds the checked degree range".to_owned(),
+        ));
+    }
+    let numerator_big = BigUint::from(numerator);
+    let denominator_big = BigUint::from(denominator);
+    if &numerator_big * &numerator_big <= BigUint::from(2_u8) * &denominator_big * &denominator_big
+    {
+        return Err(HayesError::InvalidParameter(
+            "rational witness is not a strict upper bound for sqrt(2)".to_owned(),
+        ));
+    }
+    let twice_denominator = denominator.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("rational witness calculation overflow".to_owned())
+    })?;
+    let odd_margin_numerator = twice_denominator.checked_sub(numerator).ok_or_else(|| {
+        HayesError::InvalidParameter("sqrt(2) upper bound must be smaller than two".to_owned())
+    })?;
+    if odd_margin_numerator == 0 {
+        return Err(HayesError::InvalidParameter(
+            "sqrt(2) upper bound must be smaller than two".to_owned(),
+        ));
+    }
+
+    // Increasing ell by three multiplies the coarse proper-divisor
+    // exponential by four and the endpoint margin by eight.  These three
+    // residue-class seeds therefore cover every later odd endpoint.
+    for ell in threshold..threshold + 3 {
+        let degree = ell
+            .checked_mul(2)
+            .and_then(|value| value.checked_add(1))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("odd endpoint calculation overflow".to_owned())
+            })?;
+        let proper = BigUint::from(degree) << degree.div_ceil(3);
+        let left = BigUint::from(denominator) * proper;
+        let right = BigUint::from(odd_margin_numerator) << ell;
+        if left >= right {
+            return Err(HayesError::Invariant(
+                "odd proper-divisor seed does not fit the family-bound margin".to_owned(),
+            ));
+        }
+        if degree <= 6 {
+            return Err(HayesError::Invariant(
+                "odd proper-divisor monotonicity has not started".to_owned(),
+            ));
+        }
+    }
+
+    // At an even endpoint, reserve one 2^ell half-margin for the square
+    // term and one for all exponents k >= 3.  Two and three seeds cover the
+    // respective parity and residue recurrences.
+    for ell in threshold..threshold + 2 {
+        let half_degree = ell + 1;
+        let fixed_coefficients = ell / 2;
+        let square_term = BigUint::from(half_degree) << (half_degree - fixed_coefficients);
+        if square_term >= (BigUint::from(1_u8) << ell) {
+            return Err(HayesError::Invariant(
+                "even square proper-divisor seed exceeds its half-margin".to_owned(),
+            ));
+        }
+        if half_degree <= 2 {
+            return Err(HayesError::Invariant(
+                "even square-term monotonicity has not started".to_owned(),
+            ));
+        }
+    }
+    for ell in threshold..threshold + 3 {
+        let degree = ell
+            .checked_mul(2)
+            .and_then(|value| value.checked_add(2))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("even endpoint calculation overflow".to_owned())
+            })?;
+        let other_terms = BigUint::from(degree) << degree.div_ceil(3);
+        if other_terms >= (BigUint::from(1_u8) << ell) {
+            return Err(HayesError::Invariant(
+                "even nonsquare proper-divisor seed exceeds its half-margin".to_owned(),
+            ));
+        }
+        if degree <= 6 {
+            return Err(HayesError::Invariant(
+                "even proper-divisor monotonicity has not started".to_owned(),
+            ));
+        }
+    }
+
+    Ok(SquareRootLayerBoundReport {
+        assumption,
+        first_odd_degree: twice_threshold + 1,
+        first_even_degree: twice_threshold + 2,
+    })
+}
+
 /// Compute the exact identity-class population `N_n(1)`.
 ///
 /// The result counts elements of `GF(2^degree)` whose characteristic
@@ -415,6 +640,53 @@ pub fn conductor_layers(
     Ok(layers)
 }
 
+/// Compute the exact Fourier second moment of one conductor family.
+///
+/// Two modular character tables are paired with their inverse characters;
+/// checked CRT reconstruction uses the individual Weil bound only as an
+/// a-priori uniqueness limit.  The returned value itself is exact.
+///
+/// # Errors
+///
+/// Returns a typed admission error, or declines when the two-prime CRT range
+/// cannot uniquely represent the proven second-moment upper bound.
+pub fn exact_conductor_second_moment(
+    level: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<ExactConductorSecondMoment, HayesError> {
+    admit(level, degree, limits)?;
+    if level == 1 {
+        return Ok(ExactConductorSecondMoment {
+            level,
+            degree,
+            value: 0,
+        });
+    }
+    let character_count = BigUint::from(1_u8) << (level - 1);
+    let weil_factor = BigUint::from(level - 1).pow(2);
+    let upper_bound = character_count * weil_factor * (BigUint::from(1_u8) << degree);
+    let crt_modulus = BigUint::from(PRIME_ONE) * BigUint::from(PRIME_TWO);
+    if upper_bound >= crt_modulus {
+        return Err(HayesError::InvalidParameter(format!(
+            "exact conductor second moment at level {level}, degree {degree} exceeds the CRT uniqueness range"
+        )));
+    }
+    let first = exact_conductor_energy_residue(level, degree, PRIME_ONE)?;
+    let second = exact_conductor_energy_residue(level, degree, PRIME_TWO)?;
+    let exact = crt(first, PRIME_ONE, second, PRIME_TWO)?;
+    if BigUint::from(exact) > upper_bound {
+        return Err(HayesError::Invariant(
+            "recovered second moment exceeds its Weil upper bound".to_owned(),
+        ));
+    }
+    Ok(ExactConductorSecondMoment {
+        level,
+        degree,
+        value: exact,
+    })
+}
+
 fn admit(ell: usize, degree: usize, limits: HayesLimits) -> Result<(), HayesError> {
     if ell == 0 {
         return Err(HayesError::InvalidParameter(
@@ -473,6 +745,23 @@ fn principal_unit_factors(ell: usize) -> Vec<PrincipalUnitFactor> {
 }
 
 fn identity_class_residue(ell: usize, target: usize, modulus: u64) -> Result<u64, HayesError> {
+    let (character_values, _) = character_power_sums_residue(ell, target, modulus)?;
+    let sum = character_values.iter().fold(0_u64, |accumulator, value| {
+        add_mod(accumulator, *value, modulus)
+    });
+    let size = 1_usize << ell;
+    Ok(multiply_mod(
+        sum,
+        mod_pow(size as u64, modulus - 2, modulus),
+        modulus,
+    ))
+}
+
+fn character_power_sums_residue(
+    ell: usize,
+    target: usize,
+    modulus: u64,
+) -> Result<(Vec<u64>, Vec<usize>), HayesError> {
     let factors = principal_unit_factors(ell);
     let odd_degrees = factors
         .iter()
@@ -545,14 +834,57 @@ fn identity_class_residue(ell: usize, target: usize, modulus: u64) -> Result<u64
             mangoldt[degree][character] = value;
         }
     }
-    let sum = mangoldt[target].iter().fold(0_u64, |accumulator, value| {
-        add_mod(accumulator, *value, modulus)
+    Ok((mangoldt.swap_remove(target), dimensions))
+}
+
+fn exact_conductor_energy_residue(
+    level: usize,
+    degree: usize,
+    modulus: u64,
+) -> Result<u64, HayesError> {
+    let (current, current_dimensions) = character_power_sums_residue(level, degree, modulus)?;
+    let (previous, previous_dimensions) = character_power_sums_residue(level - 1, degree, modulus)?;
+    let current_energy = fourier_energy_residue(&current, &current_dimensions, modulus)?;
+    let previous_energy = fourier_energy_residue(&previous, &previous_dimensions, modulus)?;
+    Ok(subtract_mod(current_energy, previous_energy, modulus))
+}
+
+fn fourier_energy_residue(
+    values: &[u64],
+    dimensions: &[usize],
+    modulus: u64,
+) -> Result<u64, HayesError> {
+    let expected = dimensions.iter().try_fold(1_usize, |product, dimension| {
+        product.checked_mul(*dimension)
     });
-    Ok(multiply_mod(
-        sum,
-        mod_pow(size as u64, modulus - 2, modulus),
-        modulus,
-    ))
+    if expected != Some(values.len()) {
+        return Err(HayesError::Invariant(
+            "Fourier dimensions do not recover the character table size".to_owned(),
+        ));
+    }
+    let mut energy = 0_u64;
+    for (index, value) in values.iter().enumerate() {
+        let mut quotient = index;
+        let mut inverse_index = 0_usize;
+        let mut stride = 1_usize;
+        for dimension in dimensions {
+            let coordinate = quotient % dimension;
+            quotient /= dimension;
+            let inverse_coordinate = if coordinate == 0 {
+                0
+            } else {
+                dimension - coordinate
+            };
+            inverse_index += inverse_coordinate * stride;
+            stride *= dimension;
+        }
+        energy = add_mod(
+            energy,
+            multiply_mod(*value, values[inverse_index], modulus),
+            modulus,
+        );
+    }
+    Ok(energy)
 }
 
 fn unit_multiply(mut left: u64, right: u64, ell: usize) -> u64 {
@@ -752,6 +1084,38 @@ mod tests {
     }
 
     #[test]
+    fn square_root_layer_bound_implication_is_exact() {
+        let report =
+            check_square_root_layer_bound_sufficiency(SquareRootLayerBoundAssumption::default())
+                .unwrap();
+        assert_eq!(report.first_odd_degree, 45);
+        assert_eq!(report.first_even_degree, 46);
+
+        for malformed in [
+            SquareRootLayerBoundAssumption {
+                threshold: 21,
+                ..SquareRootLayerBoundAssumption::default()
+            },
+            SquareRootLayerBoundAssumption {
+                finite_max_degree: 43,
+                ..SquareRootLayerBoundAssumption::default()
+            },
+            SquareRootLayerBoundAssumption {
+                sqrt_two_upper_numerator: 7,
+                sqrt_two_upper_denominator: 5,
+                ..SquareRootLayerBoundAssumption::default()
+            },
+            SquareRootLayerBoundAssumption {
+                sqrt_two_upper_numerator: 2,
+                sqrt_two_upper_denominator: 1,
+                ..SquareRootLayerBoundAssumption::default()
+            },
+        ] {
+            assert!(check_square_root_layer_bound_sufficiency(malformed).is_err());
+        }
+    }
+
+    #[test]
     fn conductor_layers_telescope() {
         let limits = HayesLimits::default();
         let layers = conductor_layers(8, 17, limits).unwrap();
@@ -764,6 +1128,39 @@ mod tests {
             layers.iter().map(|layer| layer.value).sum::<i128>(),
             256 * discrepancy
         );
+        assert!(
+            layers
+                .iter()
+                .all(|layer| layer.satisfies_square_root_bound(17))
+        );
+        assert!(!ConductorLayer { level: 0, value: 0 }.satisfies_square_root_bound(17));
+    }
+
+    #[test]
+    fn exact_conductor_second_moment_is_reconstructed() {
+        let limits = HayesLimits::default();
+        let moment = exact_conductor_second_moment(8, 17, limits).unwrap();
+        assert_eq!(moment.level, 8);
+        assert_eq!(moment.degree, 17);
+        assert_eq!(moment.value, 86_200_320);
+        assert!(!moment.proves_square_root_layer_bound());
+        assert_eq!(
+            exact_conductor_second_moment(17, 36, limits),
+            Err(HayesError::InvalidParameter(
+                "exact conductor second moment at level 17, degree 36 exceeds the CRT uniqueness range"
+                    .to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn constant_one_layer_target_is_refuted_at_first_symbolic_endpoint() {
+        let layers = conductor_layers(5, 45, HayesLimits::default()).unwrap();
+        let layer = layers.last().copied().unwrap();
+        assert_eq!(layer.level, 5);
+        assert_eq!(layer.value, 113_287_168);
+        assert_eq!(layer.value / 16, 7_080_448);
+        assert!(!layer.satisfies_square_root_bound(45));
     }
 
     #[test]

@@ -163,6 +163,7 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-18 | `bd7b55bff` | Extracted 9,729 proof-isolated Mathlib Nat/Int statements externally and selected 240 outcome-blind source candidates across twelve families without vendoring bulk exports. |
 | 2026-08-18 | `30e7e6ec3` | Projected 95 direct Mathlib candidate dependencies into 146 whole leakage components without exposing proof terms or freezing evaluation splits. |
 | 2026-08-18 | `f4dc0d4f1` | Registered and cleanly exercised the exact axiom-free authoritative B operation, whose durable event made A newly ready. |
+| 2026-08-18 | pending | Added exact conductor-family second moments, refuted generic Cauchy at `(8,17)`, and pinned the direct `(5,45)` counterexample to the otherwise sufficient constant-one layer target. |
 | 2026-08-18 | `1ff1ca6b7` | Extracted bounded reusable Hayes/principal-unit/conductor CAS APIs, dual-checked the conditional sufficient-bound arithmetic, retained the missing cancellation lemma as an explicit obligation, and independently reproduced `ell=23`. |
 | 2026-08-18 | `4b129601c` | Extended the exact NTT/CRT endpoint oracle through `ell=22`, added an a-priori CRT uniqueness guard, reduced peak memory, and isolated the family-norm cancellation factor that the universal proof must recover. |
 | 2026-08-18 | `6aff45e82` | Added accepted ADR-0481 and a canonical, mutation-checked certificate-spec fact for the dual-replayed degree-1-through-400 result without inventing finite-field SMT or kernel support. |
@@ -381,6 +382,20 @@ Independent C++ and refactored Rust transforms agree at `ell=23` on endpoint
 discrepancies `57574` and `-88336`; the Rust replay completed in 20m23s with
 4.96 GB peak RSS and exit 0.
 
+The next cancellation refinement is now closed negatively rather than left as
+an attractive assumption. A constant-one exact-conductor target would imply
+the theorem from `ell=22`, after using the characteristic-two restriction on
+the even square proper-divisor term. Rust bignums and a separate Python checker
+agree on that conditional arithmetic. But two exact calculations refute the
+route itself: the unweighted exact-character second moment at `(j,n)=(8,17)`
+is `86,200,320`, more than five times its Cauchy threshold, and the target
+layer is directly false at the first symbolic endpoint,
+`T_(5,45)=113,287,168` with normalized magnitude `7,080,448 > 2^(45/2)`.
+Both falsifiers are pinned in the CAS gate. The missing theorem must therefore
+control the full identity-class discrepancy or exploit cancellation between
+conductor levels; neither characterwise triangle bounds nor unweighted
+second moments can finish the proof.
+
 The portable boundary is complete for bounded witnesses. `98f2d953f` adds
 canonical JSON, a dense-coefficient second checker, and a standalone dual-check
 CLI; `b678ec7e6` adds the fail-closed producer. `3718aab11` commits and gates the
@@ -398,11 +413,12 @@ bounded proposition in the fact ledger using the accepted ADR-0481
 checker and has mutation controls; it creates no finite-field SMT, CAS-identity,
 or kernel surface and gives the universal conjecture no credit.
 
-**Next.** Prove a genuinely positive aggregate bound for the identity
-principal-unit class at degrees `2 ell+1` and `2 ell+2` (where `ell` is the
-number of prescribed zero coefficients), or find a universal construction.
-Then reconstruct reciprocity and the central lemma through the kernel before
-promoting the finite ledger fact or claiming a universal proof.
+**Next.** Prove a genuinely positive bound for the *full* identity-class
+discrepancy at degrees `2 ell+1` and `2 ell+2` (where `ell` is the number of
+prescribed zero coefficients), with cancellation between conductor levels
+kept intact, or find a universal construction. Then reconstruct reciprocity
+and the central lemma through the kernel before promoting the finite ledger
+fact or claiming a universal proof.
 
 **Claim-dashboard gate, finding-8 re-measurement, and PLAN.md returned under its
 ceiling** (`WIP`, ledger-integrity, 2026-08-16). Three defects behind a dashboard

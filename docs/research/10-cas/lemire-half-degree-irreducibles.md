@@ -341,6 +341,73 @@ these `T_(j,n)` values exactly and checks that they telescope back to the full
 discrepancy. This is a diagnostic for the proposed lemma, not evidence that the
 lemma holds universally.
 
+One tempting much weaker, but constant-sensitive, target is:
+
+```text
+T_(j,n)^2 <= 2^(2j-2+n).                            (layer target)
+```
+
+Equivalently, the absolute aggregate over the `2^(j-1)` exact-conductor
+characters is at most `2^(j-1) 2^(n/2)`.  Telescoping at the odd endpoint
+`n=2 ell+1` then gives
+
+```text
+abs(Delta_(ell,n)) <= (2^ell-1) sqrt(2),
+```
+
+leaving more than `(2-sqrt(2))2^ell` before proper prime powers.  At the even
+endpoint it gives `abs(Delta) <= 2^(ell+1)-2`, leaving `2^(ell+1)+2`.
+
+The even square term is substantially smaller than the earlier coarse bound.
+If `n=2m` and `<P>^2=1 mod x^(ell+1)`, characteristic two doubles every
+coefficient index, so the first `floor(ell/2)` coefficients of `P` vanish.
+There are at most `2^(m-floor(ell/2))` such monic degree-`m` polynomials and
+their weighted contribution is at most
+
+```text
+m 2^(m-floor(ell/2)).
+```
+
+All exponent-`k>=3` terms together are at most `n 2^ceil(n/3)`.  Using the
+strict rational witness `sqrt(2)<99/70`, these margins hold from `ell=22`.
+`check_square_root_layer_bound_sufficiency` verifies the implication with
+Rust bignums, and `scripts/check-gf2-hayes-layer-bound.py` independently checks
+the same seed and monotonicity inequalities.  The degree-1-through-400
+certificates cover the finite remainder.  Neither checker proves the displayed
+layer target.
+
+The displayed layer target is in fact **false**, already at the first proposed
+symbolic endpoint. At `(j,n)=(5,45)`, exact class arithmetic gives
+
+```text
+T_(5,45) / 2^4 = 7,080,448 > 2^(45/2),
+```
+
+or `T_(5,45)=113,287,168`. The Rust conductor calculation and the separate
+integer group-ring recurrence both pin this counterexample. The conditional
+checker is retained only to record which constant would have been sufficient
+and why the otherwise attractive route fails; it supplies no assumption for a
+proof.
+
+A generic second-moment proof of the layer target does **not** work.  If
+`S_chi(n)` is the power sum for an exact-conductor character, Cauchy--Schwarz
+would suffice if
+
+```text
+sum_chi abs(S_chi(n))^2 <= 2^(j-1+n).
+```
+
+The new exact Fourier-energy diagnostic reconstructs this integer using two
+NTT primes and CRT, while a separate integer group-ring/Parseval calculation
+checks the control.  At `(j,n)=(8,17)` the moment is `86,200,320`, whereas the
+required bound is `16,777,216`. Thus average character size is already about
+`5.14` times too large in squared norm, even though the tested
+identity-direction layer at degree 17 satisfies the target. More importantly,
+the degree-45 counterexample above shows that the constant-one target itself
+cannot be the missing theorem. A successful estimate must aggregate levels
+differently, exploit more endpoint structure, or allow a rigorously controlled
+larger constant; unweighted Cauchy--Schwarz cannot establish those refinements.
+
 The exact algebra is no longer trapped in that executable. ADR-0482 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
 identity-class populations, endpoint discrepancies, conductor layers, and the
