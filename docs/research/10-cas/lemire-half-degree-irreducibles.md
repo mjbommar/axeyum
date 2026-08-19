@@ -690,6 +690,56 @@ additional endpoint obligation.  In the remaining Type-I cases, inserting the
 binary exponent still gives a power saving in the restricted `N>r0` domain;
 the endpoint calibration below is therefore the relevant bottleneck.
 
+That last statement can be made fully replayable.  In Type-I Case 1 the exact
+integer constraints are
+
+```text
+0 <= u <= min(floor(2r0/3),N-r0).
+```
+
+Replacing the odd-characteristic square-root complete exponent gives
+
+```text
+N-r0/2  ->  N-r0+kappa(r0)
+          =  N-ceil((r0-1)/3).
+```
+
+The bound is independent of `u` and saves exactly `ceil((r0-1)/3)` bits from
+the trivial exponent `N`.  For example, `(N,r0)=(601,301)` has the full range
+`0<=u<=200`, binary exponent `501`, and deficit `100`.
+
+In Type-I Case 2 the exact integer interval is
+
+```text
+max(0,N-r0) <= u
+             <= min(floor(r0/3),N-ceil(r0/3)).
+```
+
+The two available bounds become
+
+```text
+A(u)=(3N+r0-u)/4,       B(u)=u+kappa(r0).
+```
+
+Here `A` decreases and `B` increases, so the exact worst bound
+`max_u min(A(u),B(u))` occurs at an interval endpoint or one of the two
+integers surrounding
+
+```text
+u_*=(3N+r0-4kappa(r0))/5.
+```
+
+At `(N,r0)=(300,300)` the crossing is `u=80` and the resulting exponent is
+`280`, a `20`-bit saving.  At `(350,300)` the crossing lies beyond the
+admissible interval `[50,100]`; the optimizer correctly selects `u=100` and
+gives exponent `300`, a `50`-bit saving.  The CAS operations
+`binary_type_one_case_one_exponent` and
+`binary_type_one_case_two_exponent` implement these exact domains with checked
+integer arithmetic.  The Case-2 production optimizer checks the clipped
+crossing and endpoints in constant time, while an independent test enumerates
+every admissible `u` for all small `(N,r0)` pairs.  Empty cases are rejected,
+not silently optimized over.
+
 There is a second, endpoint-facing ledger.  Put `r=ell+1`, let the endpoint
 degree be `n0`, and set `k=n0-d`.  Since
 `H_k=C_(k+1)-2C_k+C_(k-1)`, the largest cumulative cutoff is `N=k+1`.
@@ -706,10 +756,11 @@ only at `d=283` for degree 601 and `d=284` for degree 602.  In general this is
 only the large-`d` tail near `d>(14/15)ell+O(1)`; the linear-sized range below
 it remains uncovered.  Moreover, a fixed positive margin is still needed to
 absorb epsilon, constants, and the polynomial convolution weights.  The CAS
-operations `binary_type_one_case_five_exponent` and
+operations `binary_type_one_case_one_exponent`,
+`binary_type_one_case_two_exponent`, `binary_type_one_case_five_exponent`, and
 `endpoint_inverse_mobius_exponent_calibration` replay both ledgers with exact
-integer numerators over denominators six and 48, respectively, while
-deliberately granting no theorem credit.
+integer numerators over their stated denominators while deliberately granting
+no theorem credit.
 
 An older literature phrase needs similar care.  Gao--Howell--Panario (1999)
 say that Hsu proved existence with the lower or upper "half" of the

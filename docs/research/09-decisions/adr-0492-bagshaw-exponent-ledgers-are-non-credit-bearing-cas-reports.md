@@ -22,8 +22,13 @@ pair covers only the largest interval degrees.
 
 ## Decision
 
-Add two exact arithmetic diagnostics to `axeyum-cas::gf2_hayes`:
+Add four exact arithmetic diagnostics to `axeyum-cas::gf2_hayes`:
 
+- `binary_type_one_case_one_exponent` checks the exact Case-1 integer range
+  and the replacement `N-r0/2 -> N-r0+kappa(r0)`;
+- `binary_type_one_case_two_exponent` maximizes
+  `min((3N+r0-u)/4,u+kappa(r0))` over every integer `u` in the exact Case-2
+  range, including both endpoints and the two integers around the crossing;
 - `binary_type_one_case_five_exponent` computes the worst Case-5 exponent
   `2n/3+kappa(r0)/2` over denominator six and compares it with the trivial
   exponent `n`;
@@ -32,9 +37,9 @@ Add two exact arithmetic diagnostics to `axeyum-cas::gf2_hayes`:
   convolution order, where `N=k+1` is forced by the exact
   `H_k=C_(k+1)-2C_k+C_(k-1)` bridge.
 
-Both reports use checked integer arithmetic.  Their names, documentation, and
-fields state that they are diagnostics, not theorem certificates.  They grant
-no proof credit and do not expose SMT predicates.
+All four reports use checked integer arithmetic.  Their names, documentation,
+and fields state that they are diagnostics, not theorem certificates.  They
+grant no proof credit and do not expose SMT predicates.
 
 ## Evidence
 
@@ -48,9 +53,43 @@ At `(n,r0)=(300,320)` its exponent is `306.5`, exceeding trivial by `6.5`.
 Residue-class rounding can yield a constant one-sixth saving, but not a
 uniform power saving.
 
+The two previously prose-only Type-I cases retain genuine binary savings.  In
+Case 1 the exact admissible interval is
+
+```text
+0 <= u <= min(floor(2r0/3),N-r0),
+```
+
+and the replacement bound is independent of `u`:
+
+```text
+N-r0+kappa(r0) = N-ceil((r0-1)/3).
+```
+
+Thus it saves exactly `ceil((r0-1)/3)` from the trivial exponent `N`.  At
+`(N,r0)=(601,301)` the report gives exponent `501`, a saving of `100`, over
+the full interval `0<=u<=200`.
+
+In Case 2 the exact integer interval is
+
+```text
+max(0,N-r0) <= u
+             <= min(floor(r0/3),N-ceil(r0/3)).
+```
+
+The energy line `A(u)=(3N+r0-u)/4` decreases and the completion line
+`B(u)=u+kappa(r0)` increases.  Therefore the worst combined bound occurs at
+an interval endpoint or one of the two integers surrounding
+`u=(3N+r0-4kappa(r0))/5`.  The implementation checks precisely those
+candidates in constant time; a separate unit-test oracle enumerates every
+admissible `u` for all `1<=r0<=40` and `1<=N<=2r0`.  For
+`(N,r0)=(300,300)` the crossing is `u=80` and the bound is `280`, saving `20`.
+For `(350,300)` the crossing lies beyond the interval, so the exact optimizer
+selects the upper endpoint `u=100` and obtains exponent `300`, saving `50`.
+
 This is a boundary on a full binary port, not a Lemire endpoint blocker.
 Bagshaw's Case 5 assumes `n<=r0`, whereas every Lemire cumulative cutoff in
-the second report satisfies `N>ell+1>=r0`.  The endpoint report exposes this
+the endpoint calibration satisfies `N>ell+1>=r0`.  That report exposes this
 domain separation explicitly.
 
 For `ell=300`, the zero-epsilon endpoint calibration first lies strictly below
@@ -73,6 +112,8 @@ tests pin these transitions and reject invalid parameter domains.
 
 - The failed full-range port is localized to a precise Vaughan range, and
   that range is explicitly marked empty for the Lemire endpoint cutoffs.
+- The claim that Cases 1 and 2 retain a binary saving is now backed by exact,
+  replayable range and optimization ledgers rather than prose substitution.
 - The large-`d` tail that a future binary inverse-Möbius theorem could cover is
   distinguished from the linear-sized uncovered range.
 - The Lemire-specific analytic obligation is the linear-sized low/medium-`d`

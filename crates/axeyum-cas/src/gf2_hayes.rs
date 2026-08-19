@@ -453,6 +453,75 @@ pub struct BinaryBilinearEnergyExponentReport {
     pub strict_saving: bool,
 }
 
+/// Exact exponent ledger for Bagshaw's Type-I Case 1 after replacing the
+/// odd-characteristic square-root complete-sum exponent by the proved binary
+/// exponent `kappa(r0)=r0-ceil((r0-1)/3)`.
+///
+/// The case has `0<=u<=2r0/3` and `r0<=N-u`.  Completion changes the
+/// published exponent `N-r0/2` to `N-r0+kappa(r0)`, independently of `u`.
+/// This is an arithmetic audit of the source proof, not a certificate that
+/// all of Bagshaw's odd-characteristic argument has been ported.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryTypeOneCaseOneExponentReport {
+    /// Cumulative Möbius cutoff `N`.
+    pub mobius_degree_cutoff: usize,
+    /// Effective modulus degree `r0`.
+    pub effective_modulus_degree: usize,
+    /// Largest integer `u` in the Case-1 range.
+    pub maximum_admissible_u: usize,
+    /// Proved complete binary Kloosterman exponent `kappa(r0)`.
+    pub complete_kloosterman_exponent: usize,
+    /// Binary-completion bound exponent `N-r0+kappa(r0)`.
+    pub bound_exponent: u128,
+    /// Trivial exponent `N`.
+    pub trivial_exponent: u128,
+    /// `trivial-bound`; a positive value is a power saving.
+    pub deficit: i128,
+    /// Whether the replacement retains a strict power saving.
+    pub strict_saving: bool,
+}
+
+/// Exact endpoint optimization for Bagshaw's Type-I Case 2 with the proved
+/// binary complete-sum exponent.
+///
+/// On the integer range `u<=r0/3` and `r0/3<=N-u<=r0`, the two available
+/// exponent bounds are
+///
+/// ```text
+/// A(u)=(3N+r0-u)/4,       B(u)=u+kappa(r0).
+/// ```
+///
+/// The combined bound is the maximum over admissible `u` of `min(A(u),B(u))`.
+/// All reported exponents are exact numerators over denominator four.  This
+/// report audits exponent arithmetic only and grants no theorem credit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryTypeOneCaseTwoExponentReport {
+    /// Cumulative Möbius cutoff `N`.
+    pub mobius_degree_cutoff: usize,
+    /// Effective modulus degree `r0`.
+    pub effective_modulus_degree: usize,
+    /// Smallest admissible integer `u`.
+    pub minimum_admissible_u: usize,
+    /// Largest admissible integer `u`.
+    pub maximum_admissible_u: usize,
+    /// Smallest `u` attaining the worst combined bound.
+    pub worst_admissible_u: usize,
+    /// Proved complete binary Kloosterman exponent `kappa(r0)`.
+    pub complete_kloosterman_exponent: usize,
+    /// Numerator `3N+r0-u` of the energy bound at the worst `u`.
+    pub energy_bound_quarters: u128,
+    /// Numerator `4u+4kappa(r0)` of the completion bound at the worst `u`.
+    pub completion_bound_quarters: u128,
+    /// Worst combined exponent numerator over denominator four.
+    pub bound_exponent_quarters: u128,
+    /// Trivial exponent numerator `4N`.
+    pub trivial_exponent_quarters: u128,
+    /// `trivial-bound`, in quarters; a positive value is a power saving.
+    pub deficit_quarters: i128,
+    /// Whether the replacement retains a strict power saving on the full case.
+    pub strict_saving: bool,
+}
+
 /// Exact exponent ledger for Bagshaw's Type-I Case 5 after inserting the
 /// proved binary wild-Kloosterman bound.
 ///
@@ -1688,6 +1757,195 @@ pub fn binary_bilinear_energy_exponent(
     })
 }
 
+fn binary_complete_kloosterman_exponent(
+    effective_modulus_degree: usize,
+) -> Result<usize, HayesError> {
+    if effective_modulus_degree == 0 {
+        return Err(HayesError::InvalidParameter(
+            "effective modulus degree must be positive".to_owned(),
+        ));
+    }
+    let stationary_precision = (effective_modulus_degree - 1).div_ceil(3);
+    effective_modulus_degree
+        .checked_sub(stationary_precision)
+        .ok_or_else(|| {
+            HayesError::Invariant(
+                "stationary precision exceeds effective modulus degree".to_owned(),
+            )
+        })
+}
+
+fn checked_exponent_deficit(target: u128, bound: u128, context: &str) -> Result<i128, HayesError> {
+    if target >= bound {
+        i128::try_from(target - bound).map_err(|_| {
+            HayesError::InvalidParameter(format!("{context} exponent deficit exceeds i128"))
+        })
+    } else {
+        i128::try_from(bound - target)
+            .map(|value| -value)
+            .map_err(|_| {
+                HayesError::InvalidParameter(format!("{context} exponent deficit exceeds i128"))
+            })
+    }
+}
+
+/// Audit Bagshaw Type-I Case 1 with the binary complete-sum exponent.
+///
+/// # Errors
+///
+/// Rejects zero degrees, an empty Case-1 range (`N<r0`), or arithmetic
+/// overflow.
+pub fn binary_type_one_case_one_exponent(
+    mobius_degree_cutoff: usize,
+    effective_modulus_degree: usize,
+) -> Result<BinaryTypeOneCaseOneExponentReport, HayesError> {
+    if mobius_degree_cutoff == 0
+        || effective_modulus_degree == 0
+        || mobius_degree_cutoff < effective_modulus_degree
+    {
+        return Err(HayesError::InvalidParameter(format!(
+            "Type-I Case 1 requires N>=r0>=1, got N={mobius_degree_cutoff}, r0={effective_modulus_degree}"
+        )));
+    }
+    let maximum_admissible_u = effective_modulus_degree
+        .checked_sub(effective_modulus_degree.div_ceil(3))
+        .ok_or_else(|| HayesError::Invariant("Case-1 range underflow".to_owned()))?
+        .min(mobius_degree_cutoff - effective_modulus_degree);
+    let complete_kloosterman_exponent =
+        binary_complete_kloosterman_exponent(effective_modulus_degree)?;
+    let bound_exponent = u128::try_from(mobius_degree_cutoff - effective_modulus_degree)
+        .ok()
+        .and_then(|value| {
+            u128::try_from(complete_kloosterman_exponent)
+                .ok()
+                .and_then(|kappa| value.checked_add(kappa))
+        })
+        .ok_or_else(|| HayesError::InvalidParameter("Case-1 exponent exceeds u128".to_owned()))?;
+    let trivial_exponent = u128::try_from(mobius_degree_cutoff)
+        .map_err(|_| HayesError::InvalidParameter("Case-1 cutoff exceeds u128".to_owned()))?;
+    let deficit = checked_exponent_deficit(trivial_exponent, bound_exponent, "Case-1")?;
+    Ok(BinaryTypeOneCaseOneExponentReport {
+        mobius_degree_cutoff,
+        effective_modulus_degree,
+        maximum_admissible_u,
+        complete_kloosterman_exponent,
+        bound_exponent,
+        trivial_exponent,
+        deficit,
+        strict_saving: deficit > 0,
+    })
+}
+
+/// Audit and exactly optimize Bagshaw Type-I Case 2 with the binary
+/// complete-sum exponent.
+///
+/// # Errors
+///
+/// Rejects zero degrees, an empty integer Case-2 range, or arithmetic
+/// overflow.
+pub fn binary_type_one_case_two_exponent(
+    mobius_degree_cutoff: usize,
+    effective_modulus_degree: usize,
+) -> Result<BinaryTypeOneCaseTwoExponentReport, HayesError> {
+    if mobius_degree_cutoff == 0 || effective_modulus_degree == 0 {
+        return Err(HayesError::InvalidParameter(format!(
+            "Type-I Case 2 requires N,r0>=1, got N={mobius_degree_cutoff}, r0={effective_modulus_degree}"
+        )));
+    }
+    let minimum_admissible_u = mobius_degree_cutoff.saturating_sub(effective_modulus_degree);
+    let one_third_ceiling = effective_modulus_degree.div_ceil(3);
+    let maximum_from_lower_y = mobius_degree_cutoff
+        .checked_sub(one_third_ceiling)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter(format!(
+                "Type-I Case 2 has empty range for N={mobius_degree_cutoff}, r0={effective_modulus_degree}"
+            ))
+        })?;
+    let maximum_admissible_u = (effective_modulus_degree / 3).min(maximum_from_lower_y);
+    if minimum_admissible_u > maximum_admissible_u {
+        return Err(HayesError::InvalidParameter(format!(
+            "Type-I Case 2 has empty range for N={mobius_degree_cutoff}, r0={effective_modulus_degree}"
+        )));
+    }
+
+    let complete_kloosterman_exponent =
+        binary_complete_kloosterman_exponent(effective_modulus_degree)?;
+    let cutoff = u128::try_from(mobius_degree_cutoff)
+        .map_err(|_| HayesError::InvalidParameter("Case-2 cutoff exceeds u128".to_owned()))?;
+    let modulus = u128::try_from(effective_modulus_degree)
+        .map_err(|_| HayesError::InvalidParameter("Case-2 modulus exceeds u128".to_owned()))?;
+    let kappa = u128::try_from(complete_kloosterman_exponent)
+        .map_err(|_| HayesError::InvalidParameter("Case-2 kappa exceeds u128".to_owned()))?;
+    let energy_base = cutoff
+        .checked_mul(3)
+        .and_then(|value| value.checked_add(modulus))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Case-2 energy exponent overflow".to_owned())
+        })?;
+    let completion_base = kappa.checked_mul(4).ok_or_else(|| {
+        HayesError::InvalidParameter("Case-2 completion exponent overflow".to_owned())
+    })?;
+    let intersection_numerator = energy_base.saturating_sub(completion_base);
+    let lower = u128::try_from(minimum_admissible_u).map_err(|_| {
+        HayesError::InvalidParameter("Case-2 lower endpoint exceeds u128".to_owned())
+    })?;
+    let upper = u128::try_from(maximum_admissible_u).map_err(|_| {
+        HayesError::InvalidParameter("Case-2 upper endpoint exceeds u128".to_owned())
+    })?;
+    let floor_intersection = (intersection_numerator / 5).clamp(lower, upper);
+    let ceil_intersection = intersection_numerator.div_ceil(5).clamp(lower, upper);
+    let candidates = [lower, upper, floor_intersection, ceil_intersection];
+
+    let mut best: Option<(u128, u128, u128)> = None;
+    for candidate in candidates {
+        let energy = energy_base.checked_sub(candidate).ok_or_else(|| {
+            HayesError::Invariant("Case-2 candidate exceeds energy base".to_owned())
+        })?;
+        let completion = candidate
+            .checked_mul(4)
+            .and_then(|value| value.checked_add(completion_base))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Case-2 completion exponent overflow".to_owned())
+            })?;
+        let combined = energy.min(completion);
+        if best.is_none_or(|(best_u, _, best_combined)| {
+            combined > best_combined || (combined == best_combined && candidate < best_u)
+        }) {
+            best = Some((candidate, energy, combined));
+        }
+    }
+    let (worst_u, energy_bound_quarters, bound_exponent_quarters) = best.ok_or_else(|| {
+        HayesError::Invariant("nonempty Case-2 range produced no candidates".to_owned())
+    })?;
+    let completion_bound_quarters = worst_u
+        .checked_mul(4)
+        .and_then(|value| value.checked_add(completion_base))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Case-2 completion exponent overflow".to_owned())
+        })?;
+    let trivial_exponent_quarters = cutoff.checked_mul(4).ok_or_else(|| {
+        HayesError::InvalidParameter("Case-2 trivial exponent overflow".to_owned())
+    })?;
+    let deficit_quarters =
+        checked_exponent_deficit(trivial_exponent_quarters, bound_exponent_quarters, "Case-2")?;
+    Ok(BinaryTypeOneCaseTwoExponentReport {
+        mobius_degree_cutoff,
+        effective_modulus_degree,
+        minimum_admissible_u,
+        maximum_admissible_u,
+        worst_admissible_u: usize::try_from(worst_u).map_err(|_| {
+            HayesError::Invariant("bounded Case-2 optimizer does not fit usize".to_owned())
+        })?,
+        complete_kloosterman_exponent,
+        energy_bound_quarters,
+        completion_bound_quarters,
+        bound_exponent_quarters,
+        trivial_exponent_quarters,
+        deficit_quarters,
+        strict_saving: deficit_quarters > 0,
+    })
+}
+
 /// Check the Type-I Case-5 exponent obtained from the binary complete-sum
 /// estimate.
 ///
@@ -1709,17 +1967,8 @@ pub fn binary_type_one_case_five_exponent(
             "Type-I Case 5 requires 1<=n<=r0, got n={mobius_degree_cutoff}, r0={effective_modulus_degree}"
         )));
     }
-    let stationary_precision = effective_modulus_degree
-        .checked_sub(1)
-        .ok_or_else(|| HayesError::Invariant("positive modulus lost one degree".to_owned()))?
-        .div_ceil(3);
-    let complete_kloosterman_exponent = effective_modulus_degree
-        .checked_sub(stationary_precision)
-        .ok_or_else(|| {
-            HayesError::Invariant(
-                "stationary precision exceeds effective modulus degree".to_owned(),
-            )
-        })?;
+    let complete_kloosterman_exponent =
+        binary_complete_kloosterman_exponent(effective_modulus_degree)?;
     let n = u128::try_from(mobius_degree_cutoff).map_err(|_| {
         HayesError::InvalidParameter("Möbius degree cutoff does not fit u128".to_owned())
     })?;
@@ -4300,6 +4549,89 @@ mod tests {
                 limit: 128,
             })
         );
+    }
+
+    #[test]
+    fn binary_type_one_case_one_ledger_replays_range_and_saving() {
+        let report = binary_type_one_case_one_exponent(601, 301).unwrap();
+        assert_eq!(report.maximum_admissible_u, 200);
+        assert_eq!(report.complete_kloosterman_exponent, 201);
+        assert_eq!(report.bound_exponent, 501);
+        assert_eq!(report.trivial_exponent, 601);
+        assert_eq!(report.deficit, 100);
+        assert!(report.strict_saving);
+
+        let one = binary_type_one_case_one_exponent(1, 1).unwrap();
+        assert_eq!(one.maximum_admissible_u, 0);
+        assert_eq!(one.deficit, 0);
+        assert!(!one.strict_saving);
+        assert!(matches!(
+            binary_type_one_case_one_exponent(300, 301),
+            Err(HayesError::InvalidParameter(_))
+        ));
+    }
+
+    #[test]
+    fn binary_type_one_case_two_ledger_optimizes_every_integer_endpoint() {
+        let balanced = binary_type_one_case_two_exponent(300, 300).unwrap();
+        assert_eq!(balanced.minimum_admissible_u, 0);
+        assert_eq!(balanced.maximum_admissible_u, 100);
+        assert_eq!(balanced.worst_admissible_u, 80);
+        assert_eq!(balanced.complete_kloosterman_exponent, 200);
+        assert_eq!(balanced.energy_bound_quarters, 1_120);
+        assert_eq!(balanced.completion_bound_quarters, 1_120);
+        assert_eq!(balanced.bound_exponent_quarters, 1_120);
+        assert_eq!(balanced.deficit_quarters, 80);
+        assert!(balanced.strict_saving);
+
+        // Here the two formal lines meet beyond the Case-2 interval, so the
+        // exact maximum is attained at its upper endpoint.
+        let clipped = binary_type_one_case_two_exponent(350, 300).unwrap();
+        assert_eq!(clipped.minimum_admissible_u, 50);
+        assert_eq!(clipped.maximum_admissible_u, 100);
+        assert_eq!(clipped.worst_admissible_u, 100);
+        assert_eq!(clipped.energy_bound_quarters, 1_250);
+        assert_eq!(clipped.completion_bound_quarters, 1_200);
+        assert_eq!(clipped.bound_exponent_quarters, 1_200);
+        assert_eq!(clipped.deficit_quarters, 200);
+
+        // Independently enumerate all small integer ranges.  This pins the
+        // floor/ceiling choices around the intersection and both endpoints.
+        for r0 in 1..=40 {
+            let kappa = binary_complete_kloosterman_exponent(r0).unwrap();
+            for cutoff in 1..=2 * r0 {
+                let lower = cutoff.saturating_sub(r0);
+                let upper_from_y = cutoff.checked_sub(r0.div_ceil(3));
+                let upper = upper_from_y.map(|value| (r0 / 3).min(value));
+                let expected = upper.filter(|value| lower <= *value).map(|upper| {
+                    (lower..=upper)
+                        .map(|u| {
+                            let energy = 3 * cutoff + r0 - u;
+                            let completion = 4 * (u + kappa);
+                            (u, energy.min(completion))
+                        })
+                        .max_by(|left, right| {
+                            left.1.cmp(&right.1).then_with(|| right.0.cmp(&left.0))
+                        })
+                        .unwrap()
+                });
+                match (binary_type_one_case_two_exponent(cutoff, r0), expected) {
+                    (Ok(report), Some((u, bound))) => {
+                        assert_eq!(report.worst_admissible_u, u);
+                        assert_eq!(report.bound_exponent_quarters, bound as u128);
+                    }
+                    (Err(HayesError::InvalidParameter(_)), None) => {}
+                    (actual, expected) => panic!(
+                        "Case-2 domain mismatch at N={cutoff}, r0={r0}: {actual:?} versus {expected:?}"
+                    ),
+                }
+            }
+        }
+
+        assert!(matches!(
+            binary_type_one_case_two_exponent(601, 301),
+            Err(HayesError::InvalidParameter(_))
+        ));
     }
 
     #[test]
