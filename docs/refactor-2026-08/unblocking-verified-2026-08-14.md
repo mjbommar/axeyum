@@ -63,6 +63,22 @@ The `gates` lane predicted exactly this in its FEEDBACK F2 — `check.sh` and th
 lane appends a step. Its proposed fix, a single authoritative step manifest that
 generates both, remains the right one and is not done.
 
+> **CONFIRMED 2026-08-19, and it cost something.** The prediction was right and
+> the fix is still not done. `scripts/check-aggregate-scope.sh` was built to
+> *detect* the divergence rather than to remove it, and it now reports
+> `check.sh` at **203** steps against `just check`'s **278**, with **32** steps
+> that `main` ships recorded as accepted in neither — every one of them a lane
+> appending to one file and not the other.
+>
+> The cost was not the divergence. `just` aborts its dependency chain at the
+> first failure, and the red `aggregate-scope` sat at **#18 of 41**, so
+> `just check` died there and **23 gates never ran** — including `test`,
+> `frontier`, `gate-liveness`, `lean-gate` and `doc`. `check.sh` accumulates
+> instead of aborting, so for that window the *fallback* was the more complete
+> gate. Detection at an early position in an aborting chain is worse than
+> detection at the tail; the three expected-red gates were moved to #39–#41 in
+> `51fdc0ae6`. **The manifest that generates both is still the right fix.**
+
 One residual risk observed as *possible* but not *realised*: `gen-plan.py` reads
 every status file from the worktree, so a lane regenerating `PLAN.md` while
 another lane's status file is present-but-uncommitted would commit that lane's

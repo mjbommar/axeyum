@@ -39,7 +39,7 @@ the input to this one:
 | library provenance | counts from `nat_axiom_inventory` over the FULL trusted surface (`Axiom`/`Opaque`/`Quotient`), not from counting `Declaration::Axiom` literals in source — the literal count said `3` where the real figure was `34` |
 | library growth | `nat_prelude.rs` 3,856 → **9,969 lines in 60 commits**, one session |
 | architecture doc | 82 lines, documents **11 of 23 crates**; omits `axeyum-cas` (47,472 lines, the second-largest crate) |
-| decision records | **455 ADRs** |
+| decision records | **455 ADRs** (2026-08-14); `gen-adr-index.py --check` reports `rows=523` on 2026-08-19 |
 
 ## The findings this plan is built on
 
@@ -67,6 +67,21 @@ deployment from the full one. →
 the code does not.** Three gate-scope holes and one whole class of
 prose-only guards were found in a single day — none by running the gates. →
 [`04-gates-and-truth.md`](04-gates-and-truth.md)
+
+> **RE-MEASURED 2026-08-18/19: five more, and the class climbed a level.** The
+> original three are gates blind to *files*. The five since are gates blind to
+> their own *findings*, and two of them are the aggregate gates themselves: the
+> ADR-identity check printed `duplicate_numbers=0166,0167,0455` and exited 0; the
+> mutation harness scored a mutant that failed to compile as a kill (and thereby
+> found a registered guard that had never run); the axiom-freedom measurements —
+> the evidence for this project's headline claim — were invoked by **no gate at
+> all** while two ADRs cited them; `scripts/local-ci.sh`, which hosted CI calls
+> the authoritative gate for `main`, **had never run and could not**; and
+> `just check` aborted at dependency **#18 of 41** so 23 gates never ran, which
+> made the no-`just` FALLBACK the more complete gate — the inverse of what
+> CLAUDE.md says. All five are fixed. Three items remain open and are named in
+> `04`: `check-aggregate-scope`'s 32 unrecorded steps, ADR numbering's structural
+> fix, and the absence of any `axeyum-lean-kernel` suite in the mutation harness.
 
 **5. Proof consumption is nearly closed, and this folder was quoting the
 pre-fix number.** ADR-0426 took backward checking from 8.00× the proof's size to
