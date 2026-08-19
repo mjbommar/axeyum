@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-eqrec-composition-control",
+  "state": "constructor-control-passed-no-target-execution-or-credit",
+  "tooling_commit": "b69a7534aacdd1d951709ce8e3127310ccf6b13e",
+  "tooling_file": {
+    "path": "crates/axeyum-lean-import/examples/nat_fib_iterate_recurrence.rs",
+    "sha256": "13d131d30484a54e6859742c892a823b2f26e339e4879e9cf08378c856eeb49c"
+  },
+  "source": {
+    "artifact_file": "r080.ndjson",
+    "stream_sha256": "00578e949d71154cf5d9e79005b2a1c8f7fe73d9885ae96b0dd5cb6744c30501",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "controls": {
+    "eq_rec_type_sha256": "0103709339f24495981349289a7912aa10dc1bb7c2e1fe060566a654a7d9b177",
+    "transitivity_declaration_sha256": "cc4b8c535ad43a4ff88462ce4a4800ae9b3e7bb29a08b2b894206798d0eae49e",
+    "congruence_declaration_sha256": "fff923e8148cfd27c1bfb62f03c334e6d62998e613c2b4735494a84998df0b01",
+    "correct_universe_order": [
+      "motive",
+      "carrier"
+    ],
+    "proposition_motive_level": 0,
+    "nat_carrier_level": 1,
+    "reversed_universe_order_rejected": true,
+    "generic_transitivity_kernel_accepted": true,
+    "generic_congruence_kernel_accepted": true,
+    "axiom_footprint": [],
+    "theorem_dependencies": []
+  },
+  "authority": {
+    "target_definition_resolved": false,
+    "target_submissions": 0,
+    "target_outcomes": 0,
+    "held_out_inspected": false,
+    "proof_bodies_inspected": false,
+    "semantic_theorem_receipts_issued": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": [
+    "cargo test -p axeyum-lean-import --example nat_fib_iterate_recurrence",
+    "cargo run -p axeyum-lean-import --example nat_fib_iterate_recurrence -- --composition-control --stream <r080.ndjson>"
+  ],
+  "limitations": "This establishes the local Eq.rec constructor contract only. It does not execute or establish Nat.fib_add_two and cannot authorize a retry under the exhausted v1 policy."
+}
