@@ -99,6 +99,10 @@ autogenesis-nursery:
     cargo test -p axeyum-lean-import --example int_gcd_source_delta_trace
     python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_source_delta
     python3 scripts/check-autogenesis-int-gcd-source-delta.py
+    cargo test -p axeyum-lean-import --test trace_contract_receipt
+    cargo test -p axeyum-lean-import --example int_gcd_trace_contract_receipt
+    python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_trace_contract_receipt
+    python3 scripts/check-autogenesis-int-gcd-trace-contract-receipt.py
 
 # The bulk source is external and optional on CI. The first checker reports
 # verified/unavailable without conflating them; the committed 240-row view is

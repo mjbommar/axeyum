@@ -158,7 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
-| 2026-08-19 | `4bcfe58eb` | Int.gcd source delta |
+| 2026-08-19 | `7a0ac7be6` | Int.gcd contract receipt |
 | 2026-08-19 | `6c000b1ef` | Checked slice replay |
 | 2026-08-19 | `5e5141dba` | Slice receipt |
 | 2026-08-19 | `903c22423` | Typed slice |
@@ -189,9 +189,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Status:** Int.gcd one-step delta passes; receipt open.
+**Status:** Int.gcd contract receipt replays.
 
-**Next:** replace the theorem witness with a trace receipt.
+**Next:** select one contract-dependent theorem.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

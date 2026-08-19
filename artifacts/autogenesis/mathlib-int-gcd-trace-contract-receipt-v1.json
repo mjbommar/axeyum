@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-trace-contract-receipt",
+  "state": "source-contract-receipt-issued-no-theorem-or-ledger-credit",
+  "tooling_commit": "7a0ac7be64680bfb6337b6befb4efb0682026479",
+  "tooling_file": {
+    "path": "crates/axeyum-lean-import/examples/int_gcd_trace_contract_receipt.rs",
+    "sha256": "facecfd0429a6d6ec014e08fa2a35b69adf37dd02dbf1de5be02958361758de4"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/trace-contract-receipt/7a0ac7be6-int-gcd-r018-v1",
+    "file": "observation.json",
+    "bytes": 3688,
+    "mode": "0444",
+    "file_sha256": "22a968ae3fb662d730906415cfc7f84f4dee4e92ac7186dcdb0e1edac4ed065d",
+    "observation_sha256": "2c86744046efc1908e168eca804afc103a31473f7b7df93c4a22700d82a3533f"
+  },
+  "result": {
+    "source": "Int.gcd",
+    "source_content_sha256": "1b4460e69780e5080a107bc178b77ffe064585b9712c5f7468a80c02cdee0655",
+    "residual": ["Nat.gcd"],
+    "retained": ["Int", "Int.natAbs"],
+    "function_arity": 2,
+    "contract_binders": 2,
+    "selected_delta_steps": 1,
+    "consulted_declarations": ["Int.gcd"],
+    "source_axioms": 0,
+    "witness_theorems_constructed": 0,
+    "receipt_reissued_exactly": true,
+    "source_contract_receipts_issued": 1,
+    "semantic_theorem_receipts_issued": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-int-gcd-trace-contract-receipt.py",
+  "limitations": "One exact source-contract receipt issues and replays. No downstream theorem was selected or proved, no semantic theorem receipt issued, no held-out outcome inspected, and no fact ledger transition occurred."
+}

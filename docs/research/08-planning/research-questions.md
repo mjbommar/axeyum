@@ -860,6 +860,13 @@ Out of scope:
     opaque, and binds a generalized template containing neither function
     constant. Receipt integration remains open. See
     [ADR-0491](../09-decisions/adr-0491-source-contract-discharge-uses-a-selected-structural-delta-step.md).
+- [x] Can the first real residualized source contract issue and replay without
+      constructing a theorem-valued source witness?
+  - Answer (2026-08-19): yes. The exact pinned `Int.gcd` receipt binds source,
+    residual and retained identities, residualization, specialization, one
+    selected delta step, and an empty source axiom footprint. It grants no
+    downstream theorem or ledger credit. See
+    [ADR-0492](../09-decisions/adr-0492-trace-backed-source-contract-receipts-precede-theorem-receipts.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?

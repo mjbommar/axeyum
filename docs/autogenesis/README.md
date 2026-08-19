@@ -134,6 +134,7 @@ compounding, not automation theatre.
 | [Real contract target census](35-real-contract-target-census.md) | Is any pointwise Mathlib binding ready for a direct equation contract, and what representation capability must come first? |
 | [First exact contract-body residualization](36-int-gcd-contract-residualization.md) | Can the omitted `Nat.gcd` dependency become a checked local binder, and what trust evidence still blocks a real receipt? |
 | [First bounded source-delta trace](37-int-gcd-source-delta.md) | Can the exact source body be exposed by one recorded definition unfold while residual functions remain opaque? |
+| [First real trace-backed source-contract receipt](38-int-gcd-trace-contract-receipt.md) | Can exact residualization, specialization, delta evidence, and assumption freedom become one replayable real-source receipt without a witness theorem? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -322,6 +323,14 @@ ADR-0491 accepts the structural trace mechanism without weakening ADR-0490.
 The next turn must replace the receipt's theorem-valued source witness with
 this independently replayed trace; the current result grants no contract or
 ledger credit.
+
+The [trace-backed receipt](38-int-gcd-trace-contract-receipt.md) now closes that
+source-side boundary for the exact pinned `Int.gcd`: one receipt issues and
+replays with residual `Nat.gcd`, retained `Int`/`Int.natAbs`, one selected delta,
+zero source axioms, and no witness theorem. ADR-0492 keeps this source-contract
+receipt distinct from downstream theorem evidence. The next turn returns
+top-down: select one frozen proposition that actually needs the contract before
+running a producer.
 
 ## Phase summary
 
