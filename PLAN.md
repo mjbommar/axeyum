@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `0cf536a9d` | Added exhaustive endpoint Vaughan tables across every convolution order and source split, confirming the pointwise transition while retaining all suppressed-loss and non-credit boundaries. |
 | 2026-08-19 | `b4c13c14e` | Proved the wrapped `q=2,F=x^r` inverse-energy envelope by exact valuation, lift, and divisor ledgers; corrected the no-wrap strictness and added loss-aware bilinear substitution. |
 | 2026-08-19 | `9c891a0a6` | Completed replayable Bagshaw Type-I Case-1 and Case-2 ledgers with exact integer domains, binary completion exponents, and independently enumerated optimizer controls. |
 | 2026-08-19 | `2a21ca519` | Proved inverse-additive energy stabilizes for `ell>=3d`, classified the rational collision fibres to obtain `E_inv<=2^(2d+o(d))`, and added an exact energy-to-Type-II exponent ledger. |
@@ -410,9 +411,13 @@ loses all uniform saving in Bagshaw's Type-I Case 5.  Exact variable mapping
 also shows that Case 5 is empty here because every Lemire cutoff has
 `N>ell+1>=r0`.  The actual endpoint gap is that even the published
 zero-epsilon exponent pair would pointwise cover only the tail
-`d>(14/15)ell+O(1)`.  The next step is therefore a cancellation-preserving
-estimate for the low/medium-`d` block, not a verbatim all-range Bagshaw port
-or more normalization guesswork.
+`d>(14/15)ell+O(1)`.  An exhaustive Vaughan table now checks every endpoint
+convolution order, effective modulus, and Type-I/Type-II split; Cases 4 and 5
+are empty and all seven relevant rows occur.  At `ell=300` it confirms the
+same first strict degrees `283` and `284`, with only a `15/16`-bit initial
+margin before the explicit divisor envelope, epsilon/constants, and factor
+`d`.  The next step is therefore a margin-aware, conductor-regrouped estimate
+for the low/medium-`d` block, not more pointwise exponent bookkeeping.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
