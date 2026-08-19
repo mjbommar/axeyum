@@ -72,17 +72,71 @@ lemma.
 - Pollack's prescribed-coefficient results do not reach this fixed-field
   half-degree boundary: [Irreducible polynomials with several prescribed
   coefficients](https://arxiv.org/abs/1601.06867).
-- Gao's exact Hayes-class formulas and improved error terms reach the relevant
-  parameter boundary and are the best current attack surface, but their crude
-  absolute error bound does not by itself prove positivity at `q = 2`:
+- Gao, Kuttner, and Wang's exact Hayes-class formulas reach the relevant
+  parameter boundary and are the best current attack surface:
   [Counting irreducible polynomials with prescribed coefficients over a finite
-  field](https://arxiv.org/abs/2109.14154).
+  field](https://arxiv.org/abs/2109.02000). Gao's later
+  [improved error bounds](https://arxiv.org/abs/2109.14154) still do not prove
+  positivity here. With `ell = ceil(n/2) - 1`, `q = 2`, and the identity type-II
+  class, the main term and the published absolute error are of the same
+  exponential order; the coefficient multiplying the error is too large.
 
-The first theoretical work item is to specialize Gao's group-algebra formula
-to the identity class of the principal-unit group
-`1 + x GF(2)[x] / x^(ell+1)`, and seek cancellation or an exact recurrence at
-degrees `2 ell` and `2 ell + 1`.  Any claimed bound must be checked for strict
-positivity, not merely asymptotic main-term dominance.
+### Exact integral specialization
+
+Complex characters are not required to state the exact recurrence. Let
+
+```text
+E_ell = (1 + x GF(2)[x]) / (x^(ell+1))
+S_ell = sum_{epsilon in E_ell} epsilon
+A_d   = sum_{f monic, deg f = d} <f>  in Z[E_ell].
+```
+
+The coefficient classes are injective below `ell` and uniform from `ell`
+onward, so
+
+```text
+A_d = sum of the 2^d represented classes,       d < ell,
+A_d = 2^(d-ell) S_ell,                          d >= ell.
+```
+
+For `A(z) = sum A_d z^d`, define
+`Lambda(z) = z A'(z) / A(z) = sum Lambda_d z^d`. Comparing coefficients in
+`Lambda(z) A(z) = z A'(z)` gives the exact group-ring recurrence
+
+```text
+Lambda_n = n A_n - sum_{i=1}^{n-1} Lambda_i A_(n-i).
+```
+
+Unique factorization gives its coefficient meaning:
+
+```text
+[epsilon] Lambda_n
+  = sum_{d | n} d *
+      #{P monic irreducible : deg P = d, <P>^(n/d) = epsilon}.
+```
+
+Consequently the identity-class irreducible count is recovered recursively by
+subtracting the proper-divisor terms and dividing by `n`. This is an exact,
+integer-only version of the Hayes-class formula and a useful falsifier for any
+proposed cancellation lemma. It is not yet a positivity proof.
+
+Here `ell` counts prescribed zero coefficients. The conjecture's boundary is
+therefore degree `2 ell + 1` in the odd case and `2 ell + 2` in the even case.
+An independent implementation of the recurrence and direct Rabin enumeration
+agree on the identity-class counts through degree 20:
+
+```text
+n:      3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19  20
+count:  1  1  1  2  3  2  4   7  4 12  6 19 20 28 33 59 49 101
+```
+
+The signs of the deviation from the equidistributed main term vary, so a proof
+cannot assume that every nontrivial-character contribution has a favorable
+sign. The first theoretical work item is now sharper: bound the *aggregate*
+properly weighted nontrivial contribution in the identity class at degrees
+`2 ell + 1` and `2 ell + 2`, or replace it with a construction. Any claimed
+bound must be checked for strict positivity, not merely asymptotic main-term
+dominance.
 
 ## Axeyum boundary and evidence ladder
 

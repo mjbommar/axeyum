@@ -120,16 +120,18 @@ target exactly into existence of a degree-`n` irreducible congruent to 1 modulo
 
 The remaining mathematical obligation is positivity in that identity ray class
 at the fixed-field half-degree boundary. General large-field short-interval
-theorems and crude absolute Hayes-class error bounds do not supply it. The next
-theoretical target is an exact recurrence or cancellation argument from Gao's
-Hayes-class/group-algebra formula at degrees `2 ell` and `2 ell+1`.
+theorems and crude absolute Hayes-class error bounds do not supply it. The exact
+integral group-ring recurrence is now recorded in the research note and agrees
+with independent direct counts through degree 20. With `ell` denoting the
+number of prescribed zero coefficients, the remaining target is an aggregate
+cancellation argument at degrees `2 ell+1` and `2 ell+2`.
 
 ## Next execution boundary
 
 1. Use the counts and character data to test proposed exact recurrences, not as
    a substitute for proof.
-2. Specialize Gao's Hayes-class formula to the identity principal-unit class at
-   degrees `2 ell` and `2 ell+1`, preserving every sign and square-root term.
+2. Bound the aggregate nontrivial contribution in the identity principal-unit
+   class at degrees `2 ell+1` and `2 ell+2`, preserving every power-map term.
 3. Formalize reciprocity and the eventual positivity lemma through the Lean
    kernel route; only then create a universal established fact in the ledger.
 4. Add a finite-field SMT surface only if a real query consumer justifies its

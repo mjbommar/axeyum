@@ -16,8 +16,10 @@ general-field test and independent trial division; the warmed release
 producer-plus-checker regression for degree 400 is below 10 ms.  The reciprocal
 lemma reduces the universal conjecture to a prime polynomial in the identity
 class modulo `x^ceil(n/2)`.  The current mathematical blocker is a positivity
-theorem at that exact fixed-field half-degree boundary; Gao's Hayes-class
-formula is the first target for specialization.
+theorem at that exact fixed-field half-degree boundary. The exact integral
+Hayes-class recurrence has now been specialized and independently matched to
+direct counts through degree 20; its error has varying sign, so the remaining
+target is aggregate cancellation rather than a termwise sign argument.
 
 The portable boundary is complete for bounded witnesses. `98f2d953f` adds
 canonical JSON, a dense-coefficient second checker, and a standalone dual-check
@@ -32,10 +34,11 @@ no exhaustion or candidate limit. `d308c7bc1` admits and gates every child:
 maximum of 870 at degree 349. This establishes the finite range `1..=400` under
 both implemented checkers, not the universal theorem.
 
-**Next.** Specialize Gao's Hayes-class/group-algebra formula to the identity
-principal-unit class at degrees `2 ell` and `2 ell+1`; derive an exact recurrence
-or a genuinely positive bound. Then reconstruct reciprocity and the central
-lemma through the kernel and fact ledger before claiming a universal proof.
+**Next.** Prove a genuinely positive aggregate bound for the identity
+principal-unit class at degrees `2 ell+1` and `2 ell+2` (where `ell` is the
+number of prescribed zero coefficients), or find a universal construction.
+Then reconstruct reciprocity and the central lemma through the kernel and fact
+ledger before claiming a universal proof.
 
 <!-- plan-section: landed-changes -->
 
