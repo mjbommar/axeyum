@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `e587bb854` | Added an exact Berlekamp-plus-inverse stationary-fibre and Cauchy ledger for the residual aggregate, checked the squarefree phase boundary, and pointed the universal Autogenesis fact at the live Möbius-convolution obligation. |
 | 2026-08-19 | `381748943` | Replaced the crude binary divisor factor by an exact finite-degree optimizer, carried the proved wrapped-energy ceiling through every endpoint Vaughan row, and showed the former ideal tail is not yet rigorous. |
 | 2026-08-19 | `85e9ba5cd` | Regrouped the signed Möbius convolution exactly by Fourier annihilator depth, added the odd-endpoint buffered-tail margin ledger, and isolated the weighted summation-by-parts obligation. |
 | 2026-08-19 | `0cf536a9d` | Added exhaustive endpoint Vaughan tables across every convolution order and source split, confirming the pointwise transition while retaining all suppressed-loss and non-credit boundaries. |
@@ -430,7 +431,16 @@ not multiplicative conductor alone, and verifies the regrouped identity at
 both endpoints through `ell=8`.  Summation by parts reduces the next proof
 step to a weighted `B` combination plus its boundary term on these annihilator
 layers.  Proving that aggregate bound, together with a buffered explicit tail,
-is now the precise blocker.
+is now the precise blocker.  Carmon's original characteristic-two equations
+have now been checked directly: on the squarefree locus the Möbius sign is the
+additive Berlekamp-discriminant phase, while squareful inputs retain weight
+zero.  A bounded native diagnostic measures the combined Berlekamp-plus-
+inverse phase on low-coefficient shift fibres, counts stationary versus
+oscillating pairs, and returns the exact van-der-Corput/Cauchy bound.  At the
+pinned `(ell,k,s)=(4,9,4)` control every frequency improves on the trivial
+bound, but this remains finite evidence.  The next theorem obligation is a
+uniform shift-fibre energy bound on the annihilator frequencies and residual
+degree block, immediately substituted into the aggregate budget.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
