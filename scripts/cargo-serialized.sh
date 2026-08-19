@@ -24,12 +24,20 @@
 # status **137** (SIGKILL by the cgroup's own OOM killer) with the host
 # untouched. Ceiling without swap ceiling is decoration.
 #
+# ONE AT A TIME WAS TOO STRICT, MEASURED. On 2026-08-18 with seven lanes active
+# this box sat at load 3.13 with 105 GB free and THREE jobs blocked on the lock.
+# The hazard the lock was built for is memory, not CPU -- and MemoryMax +
+# MemorySwapMax already bound that per job. So the lock is now a counting
+# semaphore of N slots, N derived from RAM / the per-job ceiling, and a single
+# runaway is still capped by its own cgroup rather than by everyone else waiting.
+#
 # Usage:
 #   scripts/cargo-serialized.sh test -p axeyum-solver --lib --features full
 #   scripts/cargo-serialized.sh --self-check   # does the ceiling actually bite HERE?
 #   AXEYUM_CARGO_MEM=48G scripts/cargo-serialized.sh test --workspace --all-features
 #
 # Env:
+#   AXEYUM_CARGO_SLOTS concurrent jobs on this host (default: RAM / MEM, 1..6)
 #   AXEYUM_CARGO_MEM   scope MemoryMax          (default 24G)
 #   AXEYUM_CARGO_SWAP  scope MemorySwapMax      (default 0 -- see above)
 #   AXEYUM_CARGO_WAIT  seconds to wait for lock (default 5400; 0 = fail fast)
@@ -41,6 +49,22 @@
 set -uo pipefail
 
 LOCK="${AXEYUM_CARGO_LOCK:-/var/tmp/axeyum-cargo.lock}"
+
+# Slots: floor(RAM_GB / MEM_GB), clamped to [1, 6]. The clamp is not timidity --
+# beyond a handful of concurrent cargo jobs this workspace is I/O and link bound,
+# and the ceiling keeps the worst case (every slot at MemoryMax) inside RAM.
+slots_default() {
+  local ram mem
+  ram=$(awk '/MemTotal/{print int($2/1048576)}' /proc/meminfo 2>/dev/null) || ram=8
+  mem="${AXEYUM_CARGO_MEM:-24G}"
+  mem=${mem%[Gg]}
+  case "$mem" in ''|*[!0-9]*) mem=24 ;; esac
+  local n=$(( ram / mem ))
+  [ "$n" -lt 1 ] && n=1
+  [ "$n" -gt 6 ] && n=6
+  echo "$n"
+}
+SLOTS="${AXEYUM_CARGO_SLOTS:-$(slots_default)}"
 MEM="${AXEYUM_CARGO_MEM:-24G}"
 SWAP="${AXEYUM_CARGO_SWAP:-0}"
 WAIT="${AXEYUM_CARGO_WAIT:-5400}"
@@ -95,4 +119,23 @@ else
   echo "cargo-serialized: no user systemd manager; running WITHOUT MemoryMax=$MEM" >&2
 fi
 
-exec flock --timeout "$WAIT" --conflict-exit-code 75 "$LOCK" "${run[@]}"
+# Take the first FREE slot without blocking; only if every slot is busy do we
+# wait, and then on slot 1 -- so a queue forms in one place instead of N lanes
+# each polling. `flock -n` on a per-slot file is a counting semaphore with no
+# shared counter to corrupt.
+# NOT the file-descriptor form. `flock <fd>` takes no command, so
+# `flock "$fd" cmd` is parsed as `flock <FILE> <cmd>` with the fd NUMBER as the
+# filename -- it silently creates `./9` in the current directory, locks that, and
+# three jobs at one slot hung for 60 s under a `timeout` instead of taking 9 s.
+# The file form with a probe is simpler and cannot do that. The probe races (two
+# jobs can both see a slot free), and losing that race is correct behaviour, not
+# a bug: the loser blocks on the same slot with the same timeout it would have
+# waited anyway.
+for i in $(seq 1 "$SLOTS"); do
+  slot="$LOCK.$i"
+  touch "$slot" 2>/dev/null || slot="${TMPDIR:-/tmp}/axeyum-cargo.lock.$i"
+  if flock -n "$slot" true 2>/dev/null; then
+    exec flock --timeout "$WAIT" --conflict-exit-code 75 "$slot" "${run[@]}"
+  fi
+done
+exec flock --timeout "$WAIT" --conflict-exit-code 75 "$LOCK.1" "${run[@]}"
