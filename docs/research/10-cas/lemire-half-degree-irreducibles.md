@@ -104,6 +104,22 @@ lemma.
   Results About Irreducible Polynomials and Self-Reciprocal Irreducible
   Polynomials with Prescribed Coefficients Over a Finite
   Field](https://doi.org/10.1007/s44007-023-00062-1).
+- Gorodetsky and Kovaleva obtain unusually strong cancellation for the special
+  primitive character `chi_(k,psi)` modulo `x^(k+1)`, but their Theorem 1.5
+  sums over all monic polynomials and explicitly leaves the restriction to
+  irreducibles open. Their von-Mangoldt Corollary 3.9 handles one special
+  power-sum character, whereas the layer `T_(j,n)` below aggregates every
+  character of exact conductor `x^(j+1)`. It therefore does not supply the
+  missing family cancellation: [Equidistribution of high traces of random
+  matrices over finite fields and cancellation in character sums of high
+  conductor](https://doi.org/10.1112/blms.13057).
+
+There is also no reduction of the family size to the odd power traces. In
+characteristic two, Newton's identities make the even power traces Frobenius
+squares of earlier traces, but they do **not** recover the even elementary
+coefficients. Those coefficients carry genuine Witt-vector data. Consequently
+the `2^(j-1)` exact-conductor family below cannot be replaced by only about
+`2^(j/2)` ordinary additive characters without an additional theorem.
 
 ### Exact integral specialization
 
@@ -230,18 +246,114 @@ individual characters.
 `axeyum-gf2-hayes-endpoints` evaluates the group-ring recurrence after an exact
 Fourier transform of the finite principal-unit group.  It uses two NTT primes,
 CRT reconstruction, and the a priori bound `N_n(1) <= 2^n`; no floating-point
-rounding is involved. Through `ell = 22` (endpoint degrees 45 and 46), the
-candidate bound holds. The endpoint discrepancies for `ell = 13..22` are
+rounding is involved. Through `ell = 23` (endpoint degrees 47 and 48), the
+candidate bound holds. The endpoint discrepancies for `ell = 13..23` are
 
 ```text
-ell:                 13    14    15    16     17    18      19    20      21     22
-Delta odd:         -345  -896   340  2744  -1988   928    4074  3115  -20938  -7582
-Delta even:         980   645 -1832   660   6587  9592  -13496 -4509   25007  28402
+ell:                 13    14    15    16     17    18      19    20      21     22     23
+Delta odd:         -345  -896   340  2744  -1988   928    4074  3115  -20938  -7582  57574
+Delta even:         980   645 -1832   660   6587  9592  -13496 -4509   25007  28402 -88336
 ```
 
 This is finite evidence and a proof target, not a theorem.  In particular, the
 checker deliberately reports the bound as a `candidate` observation and the
 fact ledger must not grant universal credit for it.
+
+A separate C++ transform at `ell=23` on s6 completed in 23m11s with 6.96 GB
+peak RSS; the refactored Rust transform
+completed in 20m23s with 4.96 GB peak RSS and matched every row through 23.
+The Rust output SHA-256 is
+`5122d3dec0097e648aa683928d040a87a6fd9c6938757d107bf86fe654e6c4b9`.
+This raises the dual-implementation finite diagnostic by one level, not the
+certified theorem range or universal credit.
+
+### A weaker conductor-local lemma would also suffice
+
+The constant-one candidate above is stronger than the application needs. Put
+`Delta_(0,n)=0` and, for `1 <= j <= ell`, define the exact-conductor layer
+
+```text
+T_(j,n) = 2^j Delta_(j,n) - 2^(j-1) Delta_(j-1,n).
+```
+
+Fourier character inclusion shows that `T_(j,n)` is precisely the aggregate
+over characters of exact conductor `x^(j+1)`. Equivalently, if `C_0` and `C_1`
+count field elements whose first `j-1` characteristic coefficients vanish and
+whose next coefficient is respectively zero or one, then
+
+```text
+T_(j,n) = 2^(j-1) (C_0 - C_1).
+```
+
+This gives the telescoping identity
+
+```text
+Delta_(ell,n) = 2^(-ell) sum_(j=1)^ell T_(j,n).
+```
+
+It exposes a weaker sufficient proof target. Any explicit conductor-uniform
+square-root estimate of the form
+
+```text
+abs(T_(j,n)) <= C j^a 2^((n+j)/2)
+```
+
+for fixed constants `C,a` would imply
+`abs(Delta_(ell,n)) = O(ell^a 2^(ell/2))` at both endpoint degrees. That is
+smaller than `2^ell` for all sufficiently large `ell`; the dual-checked range
+through degree 400 can cover an explicit threshold up to `ell=199`. Thus the
+paper need not prove the observed constant-one bound. It is enough to prove
+square-root cancellation *within each exact-conductor family* with explicit
+polynomial dependence on the conductor and a threshold within the checked
+range.
+
+A deliberately generous concrete target is
+
+```text
+abs(T_(j,n)) <= 8 j^12 2^((n+j)/2).                 (conductor target)
+```
+
+At `n <= 2 ell+2`, telescoping and rounding half-powers upward give
+
+```text
+abs(Delta_(ell,n))
+  <= 16 sum_(j=1)^ell j^12 2^(ceil(j/2)).
+```
+
+The right side is at most `2^ell` for every `ell >= 194`. The base inequality
+and the two parity induction are checked with exact integer arithmetic by
+`scripts/check-gf2-hayes-sufficient-bound.py`; degrees through 400 cover every
+smaller endpoint. Therefore a proof of the displayed conductor target would
+complete the counting step with ample slack. The same script checks the strict
+proper-divisor margins at the first remaining degrees, `389` and `390`, using
+
+```text
+n^6 < 2^(n-3)   (odd),       n^6 < 2^(n-6)   (even),
+```
+
+which are exact sixth-power forms of the required
+`n 2^(n/3)` estimates and strengthen monotonically within each parity. The
+script checks only these arithmetic implications, not the conductor target
+itself.
+
+The optional `--conductor-layers` mode of `axeyum-gf2-hayes-endpoints` computes
+these `T_(j,n)` values exactly and checks that they telescope back to the full
+discrepancy. This is a diagnostic for the proposed lemma, not evidence that the
+lemma holds universally.
+
+The exact algebra is no longer trapped in that executable. ADR-0482 extracts a
+bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
+identity-class populations, endpoint discrepancies, conductor layers, and the
+conditional sufficient-bound arithmetic. Every transform admits `ell`, degree,
+group-order, and retained-table-cell limits before allocation. The Rust bignum
+checker and the separate Python checker both verify the implication and its
+failure controls; neither claims the conductor estimate itself.
+
+No SMT surface is missing for this step. Adding ray classes or character sums
+to SMT-LIB would require term semantics, model lifting, replay, and proof
+evidence but would not prove the required analytic family cancellation. The
+research operation therefore remains CAS-local until a real solver consumer
+and the foundational contracts justify a broader logic.
 
 ## Axeyum boundary and evidence ladder
 

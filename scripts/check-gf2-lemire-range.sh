@@ -6,7 +6,23 @@ cd "$(dirname "$0")/.."
 
 python3 scripts/check-gf2-lemire-range.py
 python3 scripts/check-gf2-hayes-recurrence.py
+cargo run --quiet -p axeyum-cas --bin axeyum-gf2-hayes-bound
+python3 scripts/check-gf2-hayes-sufficient-bound.py
+if python3 scripts/check-gf2-hayes-sufficient-bound.py \
+  --threshold 10 >/dev/null 2>&1
+then
+  echo "GF2_HAYES_SUFFICIENT_MUTATION|status=FAIL|error=weak threshold was accepted" >&2
+  exit 1
+fi
+if python3 scripts/check-gf2-hayes-sufficient-bound.py \
+  --threshold 201 >/dev/null 2>&1
+then
+  echo "GF2_HAYES_SUFFICIENT_MUTATION|status=FAIL|error=unchecked finite remainder was accepted" >&2
+  exit 1
+fi
 cargo run --quiet -p axeyum-cas --bin axeyum-gf2-hayes-endpoints -- 12
+cargo run --quiet -p axeyum-cas --bin axeyum-gf2-hayes-endpoints -- \
+  8 --conductor-layers
 cargo run --quiet -p axeyum-cas --bin axeyum-gf2-check -- \
   artifacts/gf2/lemire/degree-400.json
 
