@@ -807,6 +807,15 @@ Out of scope:
     Proposition-valued parameters, quotient participation, and missing required
     computation fail closed. See
     [ADR-0484](../09-decisions/adr-0484-proof-free-type-slices-are-generalized-and-exactly-specialized.md).
+- [x] May elaborator-only `autoParam` tactic syntax be removed from an atomic
+      structure package without weakening proof-free transport?
+  - Answer (2026-08-19): only for a saturated annotation in a declaration type,
+    after validating the canonical Lean 4.30 definition, checking source-kernel
+    definitional equality, sharing the normalized expression between
+    reachability and emission, and independently admitting the normalized
+    package. Values, partial applications, other annotations, and arbitrary
+    delta reduction remain exact. See
+    [ADR-0485](../09-decisions/adr-0485-auto-param-erasure-is-checked-type-only-normalization.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?
