@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-iterate-recurrence-policy",
+  "state": "preregistered-v3-no-target-execution-or-credit",
+  "policy_version": "nat-fib-iterate-recurrence-v3",
+  "inputs": {
+    "stage_control": {
+      "path": "artifacts/autogenesis/mathlib-nat-fib-recurrence-stage-control-v1.json",
+      "sha256": "889c05c1d829adf11419fc96938d23e252709933f496222f7e7216b42ca60825",
+      "stages_inferred": 8,
+      "stages_matching": 8,
+      "failures": []
+    },
+    "v2_observation_sha256": "f69f0c6815e8d57a57e590756e62a8b08cdbf489673db648a159f20d14c0e9f1"
+  },
+  "tooling": {
+    "commit": "a0ee2a4c90dd97c1260cd7b29f5a30c7aaa9ea3e",
+    "path": "crates/axeyum-lean-import/examples/nat_fib_iterate_recurrence.rs",
+    "sha256": "a85d65da6c1aa106a1022fc23499035fd89bef3b44a69085473f0586edd6e3d8"
+  },
+  "target": {
+    "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+    "name": "Nat.fib_add_two",
+    "target_definition": "Axeyum.Autogenesis.Coverage.r080",
+    "artifact_file": "r080.ndjson",
+    "stream_sha256": "00578e949d71154cf5d9e79005b2a1c8f7fe73d9885ae96b0dd5cb6744c30501"
+  },
+  "producer": {
+    "operation": "bounded-iterate-recurrence-v3",
+    "allowed_helper_schemas": 1,
+    "max_plan_templates": 2,
+    "max_kernel_submissions": 2,
+    "max_executor_invocations": 1,
+    "max_retries": 0,
+    "proof_bodies_allowed": false,
+    "held_out_allowed": false,
+    "historical_successful_target_outcomes_are_inputs": false
+  },
+  "authority": {
+    "v3_executor_invocations_so_far": 0,
+    "semantic_theorem_receipts_so_far": 0,
+    "evaluation_credit_so_far": 0,
+    "ledger_writes_so_far": 0
+  },
+  "limitations": "This authorizes one v3 execution after eight zero-submission stage controls. It is not a theorem result or ledger transition."
+}

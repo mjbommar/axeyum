@@ -143,6 +143,7 @@ compounding, not automation theatre.
 | [Corrected Fibonacci recurrence v2 selection](44-nat-fib-recurrence-v2-selection.md) | Which exact repair evidence and unchanged budget authorize one second `Nat.fib_add_two` execution? |
 | [Corrected Fibonacci recurrence v2 result](45-nat-fib-recurrence-v2-result.md) | Did the corrected one-shot plan establish `Nat.fib_add_two`, and which target-specific stage must be localized next? |
 | [Fibonacci recurrence stage control](46-nat-fib-recurrence-stage-control.md) | Which explicit equality bridge closes the v2 mismatch, and do all closed stages match without target submission? |
+| [Fibonacci recurrence v3 selection](47-nat-fib-recurrence-v3-selection.md) | Which exact stage evidence and unchanged ceiling authorize one complete repaired target execution? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

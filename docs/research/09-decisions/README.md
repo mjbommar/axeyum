@@ -577,3 +577,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0498](adr-0498-corrected-recurrence-reuses-the-original-budget.md) | Authorize one Nat.fib_add_two v2 run after target-free Eq.rec controls without widening the original search budget | accepted |
 | [0499](adr-0499-v2-rejection-requires-stage-local-projected-equality-controls.md) | Retain the second Nat.fib_add_two rejection and infer each projected equality stage before considering v3 | accepted |
 | [0500](adr-0500-fibonacci-recurrence-needs-an-explicit-right-hand-bridge.md) | Bridge snd(iter n) to fib(n+1) by reversed fst-helper congruence before composing the recurrence target | accepted |
+| [0501](adr-0501-v3-is-bound-to-all-eight-passing-recurrence-stages.md) | Authorize one Nat.fib_add_two v3 run against the explicit right-hand bridge and unchanged search budget | accepted |
