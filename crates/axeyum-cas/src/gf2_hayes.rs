@@ -2287,6 +2287,132 @@ pub struct FourthMomentConductorDecomposition {
     pub levels: Vec<SquaredDeviationConductorLevel>,
 }
 
+/// Largest raw population imbalance across one binary Witt refinement.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PopulationRefinementLevel {
+    /// Quotient level being split over `E_(level-1)`.
+    pub level: usize,
+    /// Parent cylinder attaining the largest sibling difference.
+    pub witness_parent: usize,
+    /// `max_parent |N(child_0)-N(child_1)|`.
+    pub maximum_sibling_difference: u128,
+}
+
+/// Exact `L1` Haar triangle ledger for one class-population distribution.
+///
+/// If `H_j(b)` is the signed difference between the two children of a
+/// level-`j-1` cylinder, then every leaf discrepancy has the exact expansion
+///
+/// ```text
+/// N(e)-2^(degree-ell)
+///   = sum_(j=1)^ell sign_j(e) H_j(parent_j(e)) / 2^(ell-j+1).
+/// ```
+///
+/// Thus `sum_j 2^(j-1) max_b |H_j(b)| <= 2^(2ell)` implies the desired
+/// `max_e |N(e)-2^(degree-ell)| <= 2^ell`.  This report checks the expansion
+/// leaf by leaf before exposing that sufficient finite diagnostic.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PopulationRefinementTriangleReport {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Extension degree.
+    pub degree: usize,
+    /// Exact refinement levels in increasing order.
+    pub levels: Vec<PopulationRefinementLevel>,
+    /// `sum_j 2^(j-1) max_b |H_j(b)|`.
+    pub triangle_numerator: BigUint,
+    /// Numerator target `2^(2ell)`.
+    pub candidate_target_numerator: BigUint,
+    /// Actual maximum leaf discrepancy, independently computed.
+    pub actual_maximum_absolute_deviation: u128,
+}
+
+/// Symbolic endpoint implication of the proposed square-root-fibre envelope.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PopulationRefinementEnvelopeImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// One of the two Lemire endpoint degrees.
+    pub degree: usize,
+    /// Triangle bound obtained by substituting the envelope at every level.
+    pub envelope_triangle_numerator: BigUint,
+    /// Required numerator `2^(2ell)`.
+    pub candidate_target_numerator: BigUint,
+}
+
+impl PopulationRefinementEnvelopeImplication {
+    /// Whether the proposed envelope alone closes this endpoint.
+    #[must_use]
+    pub fn proves_candidate_discrepancy_bound(&self) -> bool {
+        self.envelope_triangle_numerator <= self.candidate_target_numerator
+    }
+}
+
+impl PopulationRefinementTriangleReport {
+    /// Whether the exact Haar triangle ledger proves the `2^ell` discrepancy
+    /// bound for this finite distribution.
+    #[must_use]
+    pub fn proves_candidate_discrepancy_bound(&self) -> bool {
+        self.triangle_numerator <= self.candidate_target_numerator
+    }
+
+    /// Whether every finite level satisfies
+    /// `H_j^* <= 3j 2^ceil((degree-j)/2)`.
+    ///
+    /// This checks only the supplied finite distribution.  It does not infer
+    /// the same bound at another degree or conductor.
+    #[must_use]
+    pub fn satisfies_square_root_fibre_envelope(&self) -> bool {
+        self.levels.iter().all(|row| {
+            let residual = self.degree - row.level;
+            let exponent = residual.div_ceil(2);
+            BigUint::from(row.maximum_sibling_difference)
+                <= ((BigUint::from(3_u8) * BigUint::from(row.level)) << exponent)
+        })
+    }
+}
+
+/// Substitute the proposed raw-refinement square-root envelope into the exact
+/// Haar triangle at a Lemire endpoint.
+///
+/// The assumption is
+///
+/// ```text
+/// max_b |H_j(b)| <= 3j 2^ceil((degree-j)/2),  1<=j<=ell.
+/// ```
+///
+/// This operation proves only the arithmetic implication.  It does not prove
+/// the displayed analytic envelope.
+///
+/// # Errors
+///
+/// Rejects zero `ell`, a non-endpoint degree, or host-width overflow.
+pub fn population_refinement_envelope_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<PopulationRefinementEnvelopeImplication, HayesError> {
+    let doubled = ell.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("refinement envelope ell overflow".to_owned())
+    })?;
+    if ell == 0 || !matches!(degree.checked_sub(doubled), Some(1 | 2)) {
+        return Err(HayesError::InvalidParameter(
+            "refinement envelope implication requires degree=2ell+1 or 2ell+2".to_owned(),
+        ));
+    }
+    let mut envelope_triangle_numerator = BigUint::from(0_u8);
+    for level in 1..=ell {
+        let exponent = (degree - level).div_ceil(2);
+        let maximum = (BigUint::from(3_u8) * BigUint::from(level)) << exponent;
+        envelope_triangle_numerator += maximum << (level - 1);
+    }
+    Ok(PopulationRefinementEnvelopeImplication {
+        ell,
+        degree,
+        envelope_triangle_numerator,
+        candidate_target_numerator: BigUint::from(1_u8) << doubled,
+    })
+}
+
 impl FourthMomentConductorDecomposition {
     /// Test the buffered geometric conductor estimate implying `R_0<=4`.
     ///
@@ -2659,6 +2785,113 @@ impl ClassPopulationDistribution {
             second_moment,
             fourth_moment,
             levels,
+        })
+    }
+
+    /// Build the exact `L1` Haar triangle ledger for the raw Mangoldt class
+    /// populations.
+    ///
+    /// At each quotient level the method aggregates the full class counts,
+    /// pairs the two children of every parent cylinder, and records the
+    /// largest absolute sibling difference.  It then reconstructs every
+    /// original leaf count from the signed differences and the root total.
+    /// The reconstruction is an invariant check independent of the final
+    /// triangle comparison.
+    ///
+    /// `max_projection_cells` bounds both quotient aggregation and leafwise
+    /// reconstruction work before any level table is allocated.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed resource decline, rejects a malformed distribution, or
+    /// fails closed if a quotient is not binary or the Haar expansion does not
+    /// reconstruct every population exactly.
+    pub fn population_refinement_triangle(
+        &self,
+        max_projection_cells: usize,
+    ) -> Result<PopulationRefinementTriangleReport, HayesError> {
+        let ell_shift = u32::try_from(self.ell)
+            .map_err(|_| HayesError::InvalidParameter("refinement ell exceeds u32".to_owned()))?;
+        let expected_classes = 1_usize.checked_shl(ell_shift).ok_or_else(|| {
+            HayesError::InvalidParameter("refinement class count overflow".to_owned())
+        })?;
+        if self.counts.len() != expected_classes {
+            return Err(HayesError::InvalidParameter(
+                "refinement ledger received a malformed distribution".to_owned(),
+            ));
+        }
+        let work = self
+            .ell
+            .checked_mul(expected_classes)
+            .and_then(|cells| cells.checked_mul(2))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("refinement projection work overflow".to_owned())
+            })?;
+        check_limit(
+            "population_refinement_projection_cells",
+            work,
+            max_projection_cells,
+        )?;
+        let mean = self.uniform_mean().ok_or_else(|| {
+            HayesError::InvalidParameter("refinement distribution has no uniform mean".to_owned())
+        })?;
+        let total = self.counts.iter().try_fold(0_u128, |sum, count| {
+            sum.checked_add(*count).ok_or_else(|| {
+                HayesError::InvalidParameter("refinement population total overflow".to_owned())
+            })
+        })?;
+        let full_factors = principal_unit_factors(self.ell);
+        let mut reconstruction = vec![BigInt::from(total); expected_classes];
+        let mut triangle_numerator = BigUint::from(0_u8);
+        let mut levels = Vec::with_capacity(self.ell);
+
+        for level in 1..=self.ell {
+            let level_factors = principal_unit_factors(level);
+            let step =
+                raw_population_refinement_step(&self.counts, &full_factors, &level_factors, level)?;
+            let weight = BigUint::from(1_u8) << (level - 1);
+            triangle_numerator += BigUint::from(step.report.maximum_sibling_difference) * &weight;
+            let signed_weight = BigInt::from(weight);
+            for (index, reconstructed) in reconstruction.iter_mut().enumerate() {
+                let child = project_mixed_radix_index(index, &full_factors, &level_factors)?;
+                *reconstructed += &step.signed_child_differences[child] * &signed_weight;
+            }
+            levels.push(step.report);
+        }
+
+        let group_order = BigInt::from(expected_classes);
+        for (index, (reconstructed, count)) in reconstruction
+            .iter()
+            .zip(self.counts.iter().copied())
+            .enumerate()
+        {
+            if reconstructed != &(BigInt::from(count) * &group_order) {
+                return Err(HayesError::Invariant(format!(
+                    "population Haar expansion does not reconstruct class {index}"
+                )));
+            }
+        }
+        let actual_maximum_absolute_deviation = self
+            .counts
+            .iter()
+            .map(|count| count.abs_diff(mean))
+            .max()
+            .unwrap_or(0);
+        if BigUint::from(actual_maximum_absolute_deviation) * BigUint::from(expected_classes)
+            > triangle_numerator
+        {
+            return Err(HayesError::Invariant(
+                "population Haar triangle does not dominate the actual discrepancy".to_owned(),
+            ));
+        }
+
+        Ok(PopulationRefinementTriangleReport {
+            ell: self.ell,
+            degree: self.degree,
+            levels,
+            triangle_numerator,
+            candidate_target_numerator: BigUint::from(1_u8) << (2 * self.ell),
+            actual_maximum_absolute_deviation,
         })
     }
 
@@ -9338,6 +9571,66 @@ fn project_mixed_radix_index(
     Ok(quotient_index)
 }
 
+struct RawPopulationRefinementStep {
+    report: PopulationRefinementLevel,
+    signed_child_differences: Vec<BigInt>,
+}
+
+fn raw_population_refinement_step(
+    counts: &[u128],
+    full_factors: &[PrincipalUnitFactor],
+    level_factors: &[PrincipalUnitFactor],
+    level: usize,
+) -> Result<RawPopulationRefinementStep, HayesError> {
+    let parent_factors = principal_unit_factors(level - 1);
+    let level_order = 1_usize << level;
+    let parent_order = 1_usize << (level - 1);
+    let mut buckets = vec![0_u128; level_order];
+    for (index, count) in counts.iter().copied().enumerate() {
+        let child = project_mixed_radix_index(index, full_factors, level_factors)?;
+        buckets[child] = buckets[child].checked_add(count).ok_or_else(|| {
+            HayesError::InvalidParameter("refinement quotient population overflow".to_owned())
+        })?;
+    }
+    let mut parent_children = vec![Vec::with_capacity(2); parent_order];
+    for child in 0..level_order {
+        let parent = if level == 1 {
+            0
+        } else {
+            project_mixed_radix_index(child, level_factors, &parent_factors)?
+        };
+        parent_children[parent].push(child);
+    }
+    let mut signed_child_differences = vec![BigInt::from(0_u8); level_order];
+    let mut witness_parent = 0_usize;
+    let mut maximum_sibling_difference = 0_u128;
+    for (parent, children) in parent_children.iter().enumerate() {
+        if children.len() != 2 {
+            return Err(HayesError::Invariant(format!(
+                "population refinement level {level} is not binary"
+            )));
+        }
+        let left = children[0];
+        let right = children[1];
+        let signed = BigInt::from(buckets[left]) - BigInt::from(buckets[right]);
+        signed_child_differences[left].clone_from(&signed);
+        signed_child_differences[right] = -signed;
+        let magnitude = buckets[left].abs_diff(buckets[right]);
+        if magnitude > maximum_sibling_difference {
+            maximum_sibling_difference = magnitude;
+            witness_parent = parent;
+        }
+    }
+    Ok(RawPopulationRefinementStep {
+        report: PopulationRefinementLevel {
+            level,
+            witness_parent,
+            maximum_sibling_difference,
+        },
+        signed_child_differences,
+    })
+}
+
 fn witt_haar_difference_square_sum(
     level: usize,
     quotient_factors: &[PrincipalUnitFactor],
@@ -11522,6 +11815,58 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn population_refinement_triangle_reconstructs_and_has_failure_control() {
+        let projection_limit = 2 * 12 * (1 << 12);
+        let low_failure = class_population_distribution(4, 9, HayesLimits::default())
+            .unwrap()
+            .population_refinement_triangle(projection_limit)
+            .unwrap();
+        assert_eq!(low_failure.triangle_numerator, BigUint::from(272_u16));
+        assert_eq!(
+            low_failure.candidate_target_numerator,
+            BigUint::from(256_u16)
+        );
+        assert!(!low_failure.proves_candidate_discrepancy_bound());
+
+        let expected = [(25_usize, 8_213_504_u128), (26_usize, 14_542_848_u128)];
+        for (degree, triangle) in expected {
+            let distribution =
+                class_population_distribution(12, degree, HayesLimits::default()).unwrap();
+            let report = distribution
+                .population_refinement_triangle(projection_limit)
+                .unwrap();
+            assert_eq!(report.levels.len(), 12);
+            assert_eq!(report.triangle_numerator, BigUint::from(triangle));
+            assert_eq!(
+                report.candidate_target_numerator,
+                BigUint::from(16_777_216_u128)
+            );
+            assert!(report.proves_candidate_discrepancy_bound());
+            assert_eq!(
+                report.levels.last().unwrap().maximum_sibling_difference,
+                if degree == 25 { 1_575 } else { 3_016 }
+            );
+            assert!(report.satisfies_square_root_fibre_envelope());
+        }
+        for ell in 1_usize..=30 {
+            let odd = population_refinement_envelope_implication(ell, 2 * ell + 1).unwrap();
+            let even = population_refinement_envelope_implication(ell, 2 * ell + 2).unwrap();
+            assert_eq!(odd.proves_candidate_discrepancy_bound(), ell >= 13);
+            assert_eq!(even.proves_candidate_discrepancy_bound(), ell >= 15);
+        }
+        assert!(population_refinement_envelope_implication(12, 24).is_err());
+        assert!(matches!(
+            class_population_distribution(12, 25, HayesLimits::default())
+                .unwrap()
+                .population_refinement_triangle(1),
+            Err(HayesError::ResourceLimit {
+                resource: "population_refinement_projection_cells",
+                ..
+            })
+        ));
     }
 
     #[test]

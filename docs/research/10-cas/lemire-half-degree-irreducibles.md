@@ -88,6 +88,15 @@ lemma.
   `(1-epsilon) sqrt(n)` arbitrary coefficients, not a linear half of them.
   See [Irreducible polynomials with several prescribed
   coefficients](https://www.pollack-math.net/prescribed.pdf).
+- Andrade and Yiasemides do prove a fixed-`q`, growing-modulus fourth moment
+  for primitive Dirichlet `L(1/2,chi)` values, including square-full moduli in
+  their companion second-moment formula.  This is not the missing theorem:
+  the endpoint discrepancy uses the high power sums
+  `-Tr(Theta_chi^n)`, equivalently coefficients of `L'/L`, and a fourth
+  moment of `L` itself does not control its logarithmic derivative on the
+  critical circle where the zeros lie.  See [The fourth power mean of
+  Dirichlet L-functions in F_q[T]](https://arxiv.org/abs/1901.06295), in
+  particular its two main moment theorems.
 - A sentence in Gao, Howell, and Panario's 1999 survey says that Hsu's theorem
   permits the lower or higher "half" of the coefficients to be fixed. The
   explicit bound is not an endpoint existence theorem for fixed `q = 2`.
@@ -2434,6 +2443,70 @@ The CAS reconstructs both sides independently at every level and rejects a
 nonbinary fibre.  Thus the live analytic lemma is an `L2` estimate for binary
 Witt-refinement imbalances.  Generic martingale inequalities do not provide
 it; an arithmetic pairing or relative Artin--Schreier estimate still must.
+
+There is also an exact first-moment Haar route that avoids the fourth moment.
+Aggregate the raw Mangoldt populations to every quotient `E_j`, and for a
+level-`j-1` cylinder `b` put
+
+```text
+H_j(b)=N_j(b,0)-N_j(b,1),
+H_j^*=max_b |H_j(b)|.
+```
+
+Successive binary splitting gives, for every full class `e`,
+
+```text
+2^ell N_ell(e)
+ = 2^n + sum_(j=1)^ell sign_j(e) 2^(j-1) H_j(parent_j(e)).
+```
+
+The new native operation `population_refinement_triangle` reconstructs this
+identity leaf by leaf with exact signed integers.  It follows immediately that
+
+```text
+T(ell,n)=sum_(j=1)^ell 2^(j-1) H_j^* <= 2^(2ell)       (Haar triangle)
+```
+
+implies `max_e |N_ell(e)-2^(n-ell)|<=2^ell`.  This is a sufficient
+triangle inequality, not an equality with the observed maximum.  The low
+control `(ell,n)=(4,9)` has `T=272>256`, so the finite check is not a
+tautology.  Both level-12 endpoints pass, with numerators `8,213,504` and
+`14,542,848` against `16,777,216`.
+
+The level maxima suggest a concrete square-root-fibre theorem:
+
+```text
+H_j^* <= 3j 2^ceil((n-j)/2).                            (RF)
+```
+
+`population_refinement_envelope_implication` substitutes this displayed
+bound into the exact sum.  Pure integer arithmetic shows that it closes the
+odd endpoint for every `ell>=13` and the even endpoint for every `ell>=15`.
+Thus a proof of (RF) for `ell>=200` would combine with the existing finite
+certificates without any fourth-moment or cross-order remainder.  The
+coefficient three is a real reserve: the initially tested coefficient two is
+false at `(ell,n,j)=(19,40,4)`, where the exact maximum `2,112,512` exceeds
+`2,097,152`.
+
+Exact fleet runs at both endpoints for every `16<=ell<=20` satisfy the Haar
+triangle and (RF).  At `ell=20`, the odd and even triangle numerators are
+respectively `64,147,961,856` and `96,723,105,792`, against the common target
+`1,099,511,627,776`; their ratios are approximately `0.0583` and `0.0880`.
+The release executable used for the original coefficient-two sweep has
+SHA-256
+`1d0092a8087a353a00e1d13725488cfec4b2c5001ea6f4339ebf8017c69eeecc`;
+the per-level logs remain on `s1,s4,s5,s6,s7` as
+`/tmp/axeyum-gf2-hayes-refinement-{16,17,18,19,20}.log`.  These rows select a
+lemma; they do not prove its universal quantifier.
+
+The raw refinement target is not the already refuted valuation-layer
+square-root claim.  Each `H_j` first aggregates the complete degree-`n`
+Mangoldt population in a quotient cylinder and only then compares its two
+children.  Analytically, (RF) asks for square-root cancellation in the
+residual fibre dimension `n-j`, with a linear conductor loss.  A relative
+Artin--Schreier--Witt or fixed-long-cycle estimate at exactly that scale would
+finish the proof.  Until such an estimate is derived, this remains a parallel
+local route beside the aggregate connected-cumulant bound, not theorem credit.
 
 The most direct generalization of Fomenko's fixed-coordinate character map is
 now closed before any expensive `L`-factor enumeration.  The native cyclic
