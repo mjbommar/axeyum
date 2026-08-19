@@ -2,6 +2,10 @@
 
 Date: 2026-08-19
 
+Outcome: the frozen control later succeeded exactly once; see the
+[result](40-int-gcd-contract-theorem-control-result.md). This page preserves the
+pre-execution selection boundary.
+
 ## Selection
 
 The next bounded producer target is frozen as `Int.gcd_def`:
@@ -16,7 +20,7 @@ bound by the first real `Int.gcd` source receipt, so it isolates one question:
 can theorem admission consume the trace-backed receipt without reconstructing a
 theorem-valued source witness or whitelisting its 52-theorem closure?
 
-The producer has not run. Its fixed budget is:
+At preregistration time the producer had not run. Its fixed budget was:
 
 | Control | Frozen value |
 |---|---:|

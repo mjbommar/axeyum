@@ -874,6 +874,13 @@ Out of scope:
     Keep `Int.gcd_fib` as the real horizon target; its named premises
     `Int.fib_neg` and `Nat.fib_gcd` remain open. See
     [ADR-0493](../09-decisions/adr-0493-calibration-closes-the-contract-to-theorem-seam-before-evaluation.md).
+- [x] Can one exact source-contract receipt authorize a bounded theorem receipt
+      without treating the source definition's theorem closure as premises?
+  - Answer (2026-08-19): yes. One frozen `Int.gcd_def` invocation constructed
+    two binders and five nodes, the independent kernel admitted it with zero
+    axioms and zero direct theorem dependencies, and the receipt replays. The
+    52 transitive source-closure theorems remain diagnostic only. See
+    [ADR-0494](../09-decisions/adr-0494-contract-receipt-authority-and-theorem-dependency-diagnostics-remain-distinct.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?

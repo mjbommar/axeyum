@@ -136,6 +136,7 @@ compounding, not automation theatre.
 | [First bounded source-delta trace](37-int-gcd-source-delta.md) | Can the exact source body be exposed by one recorded definition unfold while residual functions remain opaque? |
 | [First real trace-backed source-contract receipt](38-int-gcd-trace-contract-receipt.md) | Can exact residualization, specialization, delta evidence, and assumption freedom become one replayable real-source receipt without a witness theorem? |
 | [Preregistered contract-to-theorem bridge](39-int-gcd-contract-theorem-control-selection.md) | Which bounded theorem control should consume the receipt before real evaluation, and which dependency chain lies beyond it? |
+| [First contract-backed theorem receipt](40-int-gcd-contract-theorem-control-result.md) | Did the frozen bridge close the source-contract-to-theorem seam, and what remains before evaluation credit? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
@@ -333,11 +334,13 @@ receipt distinct from downstream theorem evidence. The next turn returns
 top-down: select one frozen proposition that actually needs the contract before
 running a producer.
 
-The [next bridge](39-int-gcd-contract-theorem-control-selection.md) is now
-preregistered, not run. `Int.gcd_def` is a one-invocation, zero-retry,
-calibration-only control for the receipt-to-theorem seam and carries zero
-evaluation or ledger credit. `Int.gcd_fib` remains the real horizon target; its
-explicit upstream facts `Int.fib_neg` and `Nat.fib_gcd` are both still open.
+The [preregistered bridge](39-int-gcd-contract-theorem-control-selection.md)
+has now run exactly once. Its [result](40-int-gcd-contract-theorem-control-result.md)
+is one replayable, axiom-free semantic theorem receipt for `Int.gcd_def`, built
+with the frozen two-binder, five-node grammar. This closes the mechanism seam
+but carries zero evaluation or ledger credit. `Int.gcd_fib` remains the real
+horizon target; its explicit upstream facts `Int.fib_neg` and `Nat.fib_gcd` are
+both still open.
 
 ## Phase summary
 

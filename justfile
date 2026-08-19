@@ -105,6 +105,10 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-int-gcd-trace-contract-receipt.py
     python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_theorem_control_policy
     python3 scripts/check-autogenesis-int-gcd-contract-theorem-control-policy.py
+    cargo test -p axeyum-lean-import --test trace_contract_theorem_receipt
+    cargo test -p axeyum-lean-import --example int_gcd_contract_theorem_control
+    python3 -m unittest scripts.tests.test_check_autogenesis_int_gcd_contract_theorem_control
+    python3 scripts/check-autogenesis-int-gcd-contract-theorem-control.py
 
 # The bulk source is external and optional on CI. The first checker reports
 # verified/unavailable without conflating them; the committed 240-row view is

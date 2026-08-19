@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-contract-theorem-control",
+  "state": "calibration-theorem-receipt-issued-no-evaluation-or-ledger-credit",
+  "tooling_commit": "e1549ec47cc628b540f0f6f6730f8ed664c42b12",
+  "tooling_file": {
+    "path": "crates/axeyum-lean-import/examples/int_gcd_contract_theorem_control.rs",
+    "sha256": "7ac50d0e115ed73aacff767e62f2b14570f024a146b75ae73a69435f61e64055"
+  },
+  "frozen_policy": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-contract-theorem-control-policy-v1.json",
+    "sha256": "7b5a63a5fe0738c807eaa8dab9e51e6549d553d2bb18a43dfb61494c30d931c9"
+  },
+  "observation_archive": {
+    "root": "/nas3/data/axeyum/autogenesis/contract-theorem-control/e1549ec47-int-gcd-def-r018-v1",
+    "file": "observation.json",
+    "bytes": 4308,
+    "mode": "0444",
+    "file_sha256": "2be77236d3f8d05edb989340768fb4203233da19a040e07da0a5a4d31821ae16",
+    "observation_sha256": "2bbbaeb67c44fb27520873fbda3667335263c1887d6caf926f4f550a507765cb"
+  },
+  "result": {
+    "target": "Int.gcd_def",
+    "source": "Int.gcd",
+    "source_contract_receipt_sha256": "ae7585751df713ac8fda6f611c3197b0917c9001dc8bda134e9a43416ce3ec82",
+    "semantic_theorem_receipt_sha256": "2aaf51c928c786b8a72b635d8fb783b4dc1bbdde5ab9b7c18c8e79ca0213f9d7",
+    "operation": "trace-contract-reflexivity-v1",
+    "binders": 2,
+    "constructed_nodes": 5,
+    "producer_invocations": 1,
+    "producer_retries": 0,
+    "kernel_accepted": true,
+    "theorem_axioms": 0,
+    "direct_theorem_dependencies": 0,
+    "diagnostic_transitive_theorem_dependencies": 52,
+    "source_contract_receipts_consumed": 1,
+    "semantic_theorem_receipts_issued": 1,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-int-gcd-contract-theorem-control.py",
+  "limitations": "This is a calibration-only theorem receipt. It proves the exact Int.gcd source equation and closes the receipt-to-theorem mechanism seam, but grants no evaluation or ledger credit and establishes neither open premise of Int.gcd_fib."
+}
