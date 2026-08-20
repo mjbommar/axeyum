@@ -164,6 +164,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatIntQuadraticNegativeDiscriminant(_) => {
             "int-quadratic-negative-discriminant-unsat"
         }
+        Evidence::UnsatIntUnivariatePoly(_) => "int-univariate-poly-unsat",
         Evidence::UnsatNraEvenPower(_) => "nra-even-power-unsat",
         Evidence::UnsatDiophantine { .. } => "diophantine-unsat",
         Evidence::UnsatBoundedIntBlast(_) => "bounded-int-blast-unsat",

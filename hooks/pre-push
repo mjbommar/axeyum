@@ -197,8 +197,25 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   }
 
   gate_started=$SECONDS
-  step_seconds "cargo check --workspace" \
-    env MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh cargo check --workspace --quiet
+  # `--all-targets` IS LOAD-BEARING, and its absence let a non-compiling
+  # workspace onto `main` on 2026-08-20 under the message "pushed SHA compiles".
+  #
+  # `cargo check --workspace` builds lib and bin targets and NOT `examples/` or
+  # `tests/`. Adding one `Evidence` variant broke the exhaustive `match` in
+  # `crates/axeyum-bench/examples/{audit_dominance,diagnose_evidence}.rs`; this
+  # step passed, the hook printed its green line, and the break was found later
+  # by running one of those examples by hand. The type system had the answer the
+  # whole time — the gate simply never asked the compiler about half the tree.
+  #
+  # It is close to free: measured on this host, 13s cold and **0s warm**, against
+  # a step already documented at 0s. `scripts/check.sh` was never blind to this
+  # (its clippy wrapper is `--all-targets`), so the aggregate gate would have
+  # caught it — which is exactly why the narrower gate must not claim
+  # "compiles" for a subset of what compiles.
+  #
+  # Control: scripts/tests/test-prepush-checks-all-targets.sh
+  step_seconds "cargo check --workspace --all-targets" \
+    env MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh cargo check --workspace --all-targets --quiet
   step_seconds "cargo fmt --all --check" cargo fmt --all --check
   # The oracle-free :status corpus sweep (~6s warm): CI's copy caught a
   # vacuous-sat harness hole (f5b00c72) only AFTER the SHA was public —

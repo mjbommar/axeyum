@@ -204,6 +204,10 @@ step local-ci-freshness-controls ./scripts/tests/test-check-local-ci-freshness.s
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
 step lane-push-controls ./scripts/tests/test-lane-push-target.sh
+# The pre-push compile step must build examples/ and tests/. Without
+# `--all-targets` it builds neither, and on 2026-08-20 a non-compiling
+# workspace reached `main` under the hook's own "pushed SHA compiles" line.
+step prepush-all-targets ./scripts/tests/test-prepush-checks-all-targets.sh
 step prepush-worktree-controls ./scripts/tests/test-prepare-prepush-worktree.sh
 step lean-golden-pin-controls ./scripts/tests/test-check-lean-golden-pins.sh
 # ...and the ratchet that makes the two lines above impossible to forget. Both

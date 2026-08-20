@@ -355,6 +355,10 @@ gate-controls:
     # Against a stale `origin/<branch>` the same doc-only landing reads FULL
     # BATTERY instead of FREE, and an estimate that errs expensive gets ignored.
     scripts/tests/test-lane-push-target.sh
+    # The pre-push compile step must carry --all-targets: without it,
+    # examples/ and tests/ are never compiled and the hook's
+    # "pushed SHA compiles" line is false for half the tree.
+    scripts/tests/test-prepush-checks-all-targets.sh
     scripts/tests/test-prepare-prepush-worktree.sh
     scripts/tests/test-check-lean-golden-pins.sh
     # ...and the ratchet that makes the two lines above impossible to forget.

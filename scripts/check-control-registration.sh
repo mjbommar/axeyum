@@ -33,7 +33,26 @@ for f in scripts/tests/*.sh; do
   found=0
   for c in "${CALLERS[@]}"; do
     [ -e "$c" ] || continue
-    if grep -rqF "$base" "$c" 2>/dev/null; then found=1; break; fi
+    # COMMENTS ARE NOT CALLERS. Found the day this gate landed: a `# Control:
+    # scripts/tests/test-...sh` line in `hooks/pre-push` satisfied a plain
+    # `grep -F`, so a control that nothing ran reported as registered -- this
+    # gate failing in exactly the way it exists to prevent. Cross-referencing a
+    # control from a comment is good practice and must stay possible; it just
+    # must not COUNT. Strip whole-line comments before looking.
+    #
+    # `grep -c`, NOT `grep -q`, and the difference is not style. This script
+    # runs under `set -o pipefail`, and `grep -q` exits the instant it matches
+    # -- which SIGPIPEs the producer, making the pipeline status 141. Under
+    # pipefail that reads as "not found", so a MATCH was being reported as an
+    # orphan. It was worse than a plain wrong answer: whether the producer had
+    # finished writing before the consumer exited depends on buffering, so the
+    # same tree reported 7 orphans on one run and 3 on the next. `grep -c`
+    # consumes all of its input and cannot SIGPIPE.
+    hits=$(grep -rhv -e '^[[:space:]]*#' "$c" 2>/dev/null | grep -cF "$base")
+    if [ "${hits:-0}" -gt 0 ]; then
+      found=1
+      break
+    fi
   done
   [ "$found" = 0 ] && orphans+=("$f")
 done
