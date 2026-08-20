@@ -931,7 +931,8 @@ fn executable_gcd_uses_checked_remainder_descent_and_computes() {
     let ten = f.num(10);
     let fifteen = f.num(15);
 
-    let remainder_bound = f.lemma(p.mod_lt, &[three, six]);
+    let positive = f.zero_lt_succ(three);
+    let remainder_bound = f.lemma(p.mod_lt, &[six, four, positive]);
     let remainder = f.modulo(six, four);
     let bound_ty = f.lt(remainder, four);
     let inferred =
@@ -965,6 +966,43 @@ fn executable_gcd_uses_checked_remainder_descent_and_computes() {
         error,
         KernelError::DeclarationValueMismatch { .. }
     ));
+}
+
+#[test]
+fn mod_lt_matches_the_general_positive_denominator_contract() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let declaration =
+        f.k.environment()
+            .get(p.mod_lt)
+            .expect("Nat.mod_lt must be declared");
+    assert!(matches!(declaration, Declaration::Theorem { .. }));
+    assert!(
+        f.k.axiom_footprint(p.mod_lt).is_empty(),
+        "Nat.mod_lt must remain derived"
+    );
+    assert_eq!(
+        f.k.render_lean(declaration.ty()),
+        "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt AxNat.zero x1) -> AxNat.lt (AxNat.mod x0 x1) x1)))"
+    );
+
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+    let positive = f.zero_lt_succ(three);
+    let proof = f.lemma(p.mod_lt, &[six, four, positive]);
+    let expected = {
+        let remainder = f.modulo(six, four);
+        f.lt(remainder, four)
+    };
+    let inferred = f.k.infer(proof).expect("general Nat.mod_lt must apply");
+    assert!(f.k.def_eq(inferred, expected));
+
+    let old_argument_order = f.lemma(p.mod_lt, &[three, six, positive]);
+    assert!(
+        f.k.infer(old_argument_order).is_err(),
+        "the old predecessor-first call shape must not remain silently usable"
+    );
 }
 
 #[test]

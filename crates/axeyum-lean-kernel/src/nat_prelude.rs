@@ -428,7 +428,7 @@ pub struct NatPrelude {
     pub div_mod_exact_exists: NameId,
     /// Executable quotient and remainder satisfy `divMod` at every successor divisor.
     pub div_mod_exec: NameId,
-    /// `Nat.mod_lt : ∀ k n, mod n (succ k) < succ k`.
+    /// `Nat.mod_lt : ∀ x y, 0 < y → mod x y < y`.
     pub mod_lt: NameId,
     /// `Nat.gcd_zero_left : ∀ n, gcd zero n = n`.
     pub gcd_zero_left: NameId,

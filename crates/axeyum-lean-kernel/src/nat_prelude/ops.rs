@@ -394,6 +394,14 @@ pub trait NatOps {
         self.const_app(f, &[x, y])
     }
 
+    /// `0 < succ n`, derived from `zero_le n` and `le_succ_succ`.
+    fn zero_lt_succ(&mut self, n: ExprId) -> ExprId {
+        let zero = self.zero();
+        let prelude = self.prelude();
+        let base = self.lemma(prelude.zero_le, &[n]);
+        self.lemma(prelude.le_succ_succ, &[zero, n, base])
+    }
+
     /// `Nat.inClosedInterval lower upper value`.
     fn in_closed_interval(&mut self, lower: ExprId, upper: ExprId, value: ExprId) -> ExprId {
         let f = self.prelude().in_closed_interval;
