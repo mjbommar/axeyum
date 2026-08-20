@@ -606,3 +606,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0531](adr-0531-admit-capell-cubic-towers-as-partial-lemire-families.md) | Admit Capell cubic towers as partial Lemire families | accepted |
 | [0532](adr-0532-do-not-import-linnik-selberg-across-the-fixed-wild-modulus.md) | Do not import Linnik--Selberg across the fixed wild modulus | accepted |
 | [0533](adr-0533-reject-root-number-only-control-of-the-endpoint-hayes-trace.md) | Use exact integral cyclotomic arithmetic to prove that primitive Hayes characters with the same functional-equation root number have different endpoint power sums | accepted |
+| [0534](adr-0534-group-hayes-characters-by-galois-orbit-and-exact-order-before-bounding.md) | Add an exact Ramanujan-orbit trace decomposition, refute one-unit orbit and fixed coefficient-four order-layer bounds, and preserve cancellation across character orders | accepted |

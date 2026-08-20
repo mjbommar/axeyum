@@ -186,6 +186,53 @@ pub struct HayesRootNumberFibreReport {
     pub witness: Option<HayesRootNumberFibreWitness>,
 }
 
+/// Exact trace statistics for character Galois orbits of one order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesGaloisOrbitOrderRow {
+    /// Exact multiplicative order of every character in these orbits.
+    pub character_order: usize,
+    /// Number of Galois orbits of this order and exact conductor level.
+    pub orbit_count: usize,
+    /// Largest absolute integral orbit trace.
+    pub maximum_absolute_trace: u128,
+    /// Signed sum of every orbit trace in this exact-order layer.
+    pub signed_trace_sum: i128,
+}
+
+/// Exact Galois-orbit decomposition of one Hayes conductor-layer trace.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesGaloisOrbitTraceReport {
+    /// Exact conductor level.
+    pub level: usize,
+    /// Logarithmic power-sum degree.
+    pub degree: usize,
+    /// Number `2^(level-1)` of primitive characters.
+    pub primitive_character_count: usize,
+    /// Number of rational Galois orbits.
+    pub orbit_count: usize,
+    /// Candidate one-unit allowance `2^ceil(degree/2)` per orbit.
+    pub candidate_orbit_allowance: u128,
+    /// Largest exact absolute orbit trace.
+    pub maximum_absolute_orbit_trace: u128,
+    /// Number of orbits violating the candidate allowance.
+    pub candidate_violation_count: usize,
+    /// Candidate allowance `4(level-1)2^ceil(degree/2)` per exact-order layer.
+    pub order_layer_candidate_allowance: u128,
+    /// Largest absolute signed exact-order layer trace.
+    pub maximum_absolute_order_layer_trace: u128,
+    /// Number of exact-order layers violating their candidate allowance.
+    pub order_layer_candidate_violation_count: usize,
+    /// Smallest integral coefficient multiplying
+    /// `(level-1)2^ceil(degree/2)` that covers every exact-order layer.
+    pub required_order_layer_coefficient: u128,
+    /// Sum of all exact integral orbit traces.
+    pub reconstructed_conductor_trace: i128,
+    /// Independent conductor-layer trace from class populations.
+    pub direct_conductor_trace: i128,
+    /// Orbit statistics partitioned by exact character order.
+    pub orders: Vec<HayesGaloisOrbitOrderRow>,
+}
+
 /// Compute the exact binary Hayes `L`-degree distribution.
 ///
 /// This replays the conductor-count proof behind the binary pattern
@@ -591,6 +638,253 @@ pub fn hayes_root_number_fibre_report(
         leading_coefficient_fibre_count: fibres.len(),
         varying_power_sum_fibre_count,
         witness,
+    })
+}
+
+fn mixed_radix_character_order(
+    mut character: usize,
+    factors: &[PrincipalUnitFactor],
+) -> Result<usize, HayesError> {
+    let mut order = 1_usize;
+    for factor in factors {
+        let coordinate = character % factor.order;
+        character /= factor.order;
+        if coordinate == 0 {
+            continue;
+        }
+        let coordinate_valuation = 1_usize << coordinate.trailing_zeros();
+        order = order.max(factor.order / coordinate_valuation);
+    }
+    if character != 0 {
+        return Err(HayesError::Invariant(
+            "character-order calculation left unused coordinates".to_owned(),
+        ));
+    }
+    Ok(order)
+}
+
+fn signed_crt_residue(first: u64, second: u64) -> Result<i128, HayesError> {
+    let value = crt(first, PRIME_ONE, second, PRIME_TWO)?;
+    let modulus = u128::from(PRIME_ONE) * u128::from(PRIME_TWO);
+    let value = i128::try_from(value).map_err(|_| {
+        HayesError::InvalidParameter("signed CRT value does not fit i128".to_owned())
+    })?;
+    if value
+        > i128::try_from(modulus / 2).map_err(|_| {
+            HayesError::InvalidParameter("signed CRT midpoint does not fit i128".to_owned())
+        })?
+    {
+        value
+            .checked_sub(i128::try_from(modulus).map_err(|_| {
+                HayesError::InvalidParameter("signed CRT modulus does not fit i128".to_owned())
+            })?)
+            .ok_or_else(|| HayesError::InvalidParameter("signed CRT underflow".to_owned()))
+    } else {
+        Ok(value)
+    }
+}
+
+struct RawGaloisOrbitTraces {
+    primitive_character_count: usize,
+    orbit_count: usize,
+    maximum_absolute_orbit_trace: u128,
+    candidate_violation_count: usize,
+    reconstructed_conductor_trace: i128,
+    orders: BTreeMap<usize, (usize, u128, i128)>,
+}
+
+fn raw_galois_orbit_traces(
+    level: usize,
+    factors: &[PrincipalUnitFactor],
+    candidate_orbit_allowance: u128,
+    prime_one_powers: &[u64],
+    prime_two_powers: &[u64],
+) -> Result<RawGaloisOrbitTraces, HayesError> {
+    let group_order = 1_usize << level;
+    let group_exponent = factors.iter().map(|factor| factor.order).max().unwrap_or(1);
+    let crt_modulus = u128::from(PRIME_ONE) * u128::from(PRIME_TWO);
+    let mut visited = BTreeSet::new();
+    let mut orders = BTreeMap::<usize, (usize, u128, i128)>::new();
+    let mut orbit_count = 0_usize;
+    let mut maximum_absolute_orbit_trace = 0_u128;
+    let mut candidate_violation_count = 0_usize;
+    let mut reconstructed_conductor_trace = 0_i128;
+    for character in 1..group_order {
+        if visited.contains(&character)
+            || mixed_radix_character_conductor(character, factors)? != Some(level)
+        {
+            continue;
+        }
+        let character_order = mixed_radix_character_order(character, factors)?;
+        let mut orbit = BTreeSet::new();
+        for multiplier in (1..group_exponent).step_by(2) {
+            orbit.insert(power_mixed_radix_index(character, multiplier, factors)?);
+        }
+        if orbit.len() != character_order / 2 {
+            return Err(HayesError::Invariant(format!(
+                "character {character}: Galois orbit has the wrong size"
+            )));
+        }
+        for member in &orbit {
+            if mixed_radix_character_conductor(*member, factors)? != Some(level) {
+                return Err(HayesError::Invariant(format!(
+                    "character {character}: Galois orbit changes conductor"
+                )));
+            }
+        }
+        visited.extend(orbit.iter().copied());
+        let first = orbit.iter().fold(0_u64, |sum, member| {
+            add_mod(sum, prime_one_powers[*member], PRIME_ONE)
+        });
+        let second = orbit.iter().fold(0_u64, |sum, member| {
+            add_mod(sum, prime_two_powers[*member], PRIME_TWO)
+        });
+        let trace = signed_crt_residue(first, second)?;
+        let ordinary_bound = candidate_orbit_allowance
+            .checked_mul((level - 1) as u128)
+            .and_then(|value| value.checked_mul(orbit.len() as u128))
+            .ok_or_else(|| HayesError::InvalidParameter("orbit Weil bound overflow".to_owned()))?;
+        if ordinary_bound
+            .checked_mul(2)
+            .is_none_or(|twice| twice >= crt_modulus)
+            || trace.unsigned_abs() > ordinary_bound
+        {
+            return Err(HayesError::InvalidParameter(format!(
+                "character {character}: orbit trace is not uniquely certified by the CRT Weil envelope"
+            )));
+        }
+        let magnitude = trace.unsigned_abs();
+        maximum_absolute_orbit_trace = maximum_absolute_orbit_trace.max(magnitude);
+        candidate_violation_count += usize::from(magnitude > candidate_orbit_allowance);
+        reconstructed_conductor_trace = reconstructed_conductor_trace
+            .checked_add(trace)
+            .ok_or_else(|| HayesError::InvalidParameter("conductor trace overflow".to_owned()))?;
+        let row = orders.entry(character_order).or_default();
+        row.0 += 1;
+        row.1 = row.1.max(magnitude);
+        row.2 = row
+            .2
+            .checked_add(trace)
+            .ok_or_else(|| HayesError::InvalidParameter("order-layer trace overflow".to_owned()))?;
+        orbit_count += 1;
+    }
+    Ok(RawGaloisOrbitTraces {
+        primitive_character_count: visited.len(),
+        orbit_count,
+        maximum_absolute_orbit_trace,
+        candidate_violation_count,
+        reconstructed_conductor_trace,
+        orders,
+    })
+}
+
+/// Decompose one exact-conductor Hayes trace into rational Galois orbits.
+///
+/// Odd powers act on a power-of-two-valued character through the Galois group
+/// of its cyclotomic value field.  Summing each orbit is therefore an exact
+/// integer Ramanujan projection.  The report tests the theorem candidate
+///
+/// ```text
+/// abs(sum_(chi in orbit) S_degree(chi)) <= 2^ceil(degree/2)
+/// ```
+///
+/// without extrapolating a passing finite row into a universal estimate.
+/// Two independent transform primes reconstruct every signed orbit trace, and
+/// their total must reproduce the independently computed conductor layer.
+///
+/// # Errors
+///
+/// Propagates transform admission failures and declines if the ordinary
+/// characterwise Weil envelope is too large for unique signed CRT recovery.
+pub fn hayes_galois_orbit_trace_report(
+    level: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<HayesGaloisOrbitTraceReport, HayesError> {
+    if level < 2 {
+        return Err(HayesError::InvalidParameter(
+            "Galois-orbit trace audit requires level at least two".to_owned(),
+        ));
+    }
+    admit(level, degree, limits)?;
+    let factors = principal_unit_factors(level);
+    let candidate_shift = u32::try_from(degree.div_ceil(2)).map_err(|_| {
+        HayesError::InvalidParameter("orbit allowance shift exceeds u32".to_owned())
+    })?;
+    let candidate_orbit_allowance = 1_u128
+        .checked_shl(candidate_shift)
+        .ok_or_else(|| HayesError::InvalidParameter("orbit allowance exceeds u128".to_owned()))?;
+    let (prime_one_powers, _) = character_power_sums_residue(level, degree, PRIME_ONE)?;
+    let (prime_two_powers, _) = character_power_sums_residue(level, degree, PRIME_TWO)?;
+    let raw = raw_galois_orbit_traces(
+        level,
+        &factors,
+        candidate_orbit_allowance,
+        &prime_one_powers,
+        &prime_two_powers,
+    )?;
+    let primitive_character_count = raw.primitive_character_count;
+    if primitive_character_count != 1_usize << (level - 1) {
+        return Err(HayesError::Invariant(
+            "Galois orbits do not partition the primitive character family".to_owned(),
+        ));
+    }
+    let orbit_count = raw.orbit_count;
+    let maximum_absolute_orbit_trace = raw.maximum_absolute_orbit_trace;
+    let candidate_violation_count = raw.candidate_violation_count;
+    let reconstructed_conductor_trace = raw.reconstructed_conductor_trace;
+    let direct_conductor_trace = conductor_layers(level, degree, limits)?[level - 1].value;
+    if reconstructed_conductor_trace != direct_conductor_trace {
+        return Err(HayesError::Invariant(format!(
+            "Galois orbit sum {reconstructed_conductor_trace} does not recover conductor trace {direct_conductor_trace}"
+        )));
+    }
+    let order_layer_base_allowance = candidate_orbit_allowance
+        .checked_mul((level - 1) as u128)
+        .ok_or_else(|| HayesError::InvalidParameter("order-layer allowance overflow".to_owned()))?;
+    let order_layer_candidate_allowance = order_layer_base_allowance
+        .checked_mul(4)
+        .ok_or_else(|| HayesError::InvalidParameter("order-layer allowance overflow".to_owned()))?;
+    let orders = raw
+        .orders
+        .into_iter()
+        .map(
+            |(character_order, (orbit_count, maximum_absolute_trace, signed_trace_sum))| {
+                HayesGaloisOrbitOrderRow {
+                    character_order,
+                    orbit_count,
+                    maximum_absolute_trace,
+                    signed_trace_sum,
+                }
+            },
+        )
+        .collect::<Vec<_>>();
+    let maximum_absolute_order_layer_trace = orders
+        .iter()
+        .map(|row| row.signed_trace_sum.unsigned_abs())
+        .max()
+        .unwrap_or(0);
+    let order_layer_candidate_violation_count = orders
+        .iter()
+        .filter(|row| row.signed_trace_sum.unsigned_abs() > order_layer_candidate_allowance)
+        .count();
+    let required_order_layer_coefficient =
+        maximum_absolute_order_layer_trace.div_ceil(order_layer_base_allowance);
+    Ok(HayesGaloisOrbitTraceReport {
+        level,
+        degree,
+        primitive_character_count,
+        orbit_count,
+        candidate_orbit_allowance,
+        maximum_absolute_orbit_trace,
+        candidate_violation_count,
+        order_layer_candidate_allowance,
+        maximum_absolute_order_layer_trace,
+        order_layer_candidate_violation_count,
+        required_order_layer_coefficient,
+        reconstructed_conductor_trace,
+        direct_conductor_trace,
+        orders,
     })
 }
 
@@ -13684,6 +13978,70 @@ mod tests {
                 limit: HayesLimits::default().max_table_cells,
             })
         );
+    }
+
+    #[test]
+    fn galois_orbit_traces_reconstruct_exact_conductor_layers() {
+        let mut worst = (0_u128, None);
+        for level in 2..=12 {
+            for degree in [2 * level + 1, 2 * level + 2] {
+                let report =
+                    hayes_galois_orbit_trace_report(level, degree, HayesLimits::default()).unwrap();
+                assert_eq!(report.primitive_character_count, 1 << (level - 1));
+                assert_eq!(
+                    report.reconstructed_conductor_trace,
+                    report.direct_conductor_trace
+                );
+                if report.required_order_layer_coefficient > worst.0 {
+                    worst = (
+                        report.required_order_layer_coefficient,
+                        Some(report.clone()),
+                    );
+                }
+                if (level, degree) == (6, 14) {
+                    assert_eq!(report.maximum_absolute_order_layer_trace, 1_920);
+                    assert_eq!(report.required_order_layer_coefficient, 3);
+                }
+                assert_eq!(
+                    report
+                        .orders
+                        .iter()
+                        .map(|row| row.orbit_count)
+                        .sum::<usize>(),
+                    report.orbit_count
+                );
+                assert_eq!(
+                    report
+                        .orders
+                        .iter()
+                        .map(|row| row.signed_trace_sum)
+                        .sum::<i128>(),
+                    report.direct_conductor_trace
+                );
+                if (level, degree) == (7, 15) {
+                    assert_eq!(report.candidate_orbit_allowance, 256);
+                    assert_eq!(report.maximum_absolute_orbit_trace, 1_696);
+                    assert_eq!(report.candidate_violation_count, 18);
+                    assert_eq!(report.order_layer_candidate_allowance, 6_144);
+                    assert_eq!(report.maximum_absolute_order_layer_trace, 1_472);
+                    assert_eq!(report.order_layer_candidate_violation_count, 0);
+                    assert_eq!(report.required_order_layer_coefficient, 1);
+                    assert_eq!(
+                        report
+                            .orders
+                            .iter()
+                            .map(|row| (row.character_order, row.signed_trace_sum))
+                            .collect::<Vec<_>>(),
+                        [(2, 128), (4, 1_344), (8, 1_472)]
+                    );
+                }
+            }
+        }
+        assert_eq!(worst.0, 17, "{:?}", worst.1);
+        let worst = worst.1.unwrap();
+        assert_eq!((worst.level, worst.degree), (11, 24));
+        assert_eq!(worst.maximum_absolute_order_layer_trace, 663_552);
+        assert_eq!(worst.order_layer_candidate_violation_count, 2);
     }
 
     #[test]

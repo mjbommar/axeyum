@@ -234,6 +234,18 @@ lemma.
   `-32-32 zeta_8^2`.  Thus a characteristic-two replacement for a
   primitive Gauss-sum formula must retain more than root-number data.  This is
   a bounded exact obstruction, not cancellation toward the connected target.
+- Cyclotomic Galois orbits provide an exact intermediate Ramanujan
+  decomposition, but they still cannot be bounded separately at one Weil
+  unit.  The native `hayes_galois_orbit_trace_report` reconstructs every
+  signed integral orbit with both NTT primes, groups them by exact character
+  order, and independently recovers the conductor layer.  At `(j,n)=(7,15)`,
+  18 of 28 orbits exceed `2^ceil(n/2)` and the maximum is `1696` against
+  `256`.  Exact-order aggregation is smaller but not constant-scale: the
+  `(11,24)` order layer reaches `663552`, requiring coefficient 17 relative
+  to `(j-1)2^ceil(n/2)`.  Both endpoint parities are checked through level 12.
+  Thus absolute values must remain outside individual Galois orbits, and a
+  future order-layer estimate must carry its conductor growth into the
+  endpoint ledger before receiving proof credit.
 - Ma and Xing improve the Hasse--Weil estimate for an ordinary
   Artin--Schreier curve by relating it to the minimum distance of a code:
   [The Hasse--Weil bound for Artin--Schreier curves](https://arxiv.org/abs/2105.04370).
