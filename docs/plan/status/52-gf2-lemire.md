@@ -10,6 +10,14 @@ only the strict analytic bound `N_(2ell+1)(1)>1` remains there.  Even endpoints
 still require the checked general proper-power subtraction.  The CAS now also
 has proved closed forms for every pair of principal-unit interval degrees:
 exact mixed product energies and nonprincipal Fourier `L^2 x L^2` moments.
+The phase-two conductor audit has now reduced the selected wild fourth-moment
+target to one exact-conductor delocalization estimate `(SUP-L)`.  A native
+integer diagnostic retains the finite rational constant without theorem
+credit, while a separate symbolic checker proves that any fixed polynomial
+loss yields `M_4<=625 C ell^(a+4)2^(3ell)` and completes the degree-400
+handoff.  The ordinary individual Weil estimate already proves the concrete
+`C=4` target through conductor level three; the open quantified fact therefore
+starts at level four.  This is the current load-bearing proof obligation.
 
 **Next:** prove a uniform endpoint discrepancy bound, encode it as replayable
 evidence, then write the paper.  The selected sufficient fourth-moment bound is
@@ -692,6 +700,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `d9380f0d7` | Reduced the wild fourth-moment target to exact-conductor delocalization, proved the `C=4` prefix through level three, and added a fail-closed finite diagnostic plus the polynomial-loss endpoint implication. |
 | 2026-08-20 | `f729f3ad1` | Translated Hast--Matei into the exact proper-power-aware endpoint normalization, exposed the missing degree-uniform wild constant, and sharpened the even proper-power envelope by eliminating all odd exponent layers. |
 | 2026-08-20 | `b01ac7cd6` | Classified every shape-preserving polynomial composition, added certified tower search, and refuted the proposed degree `8 -> 64 -> 512` chain by exhaustive degree-eight controls. |
 | 2026-08-20 | `dd6dcd94a` | Corrected the weak fourth-moment target to retain proper-power subtraction, rejected the proposed KLLM/Efron shortcut at theorem and finite-scaling levels, and generalized Capell to every odd monomial power with 371/174 independently reproduced finite seeds. |
