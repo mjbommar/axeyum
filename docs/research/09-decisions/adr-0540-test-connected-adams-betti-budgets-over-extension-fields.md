@@ -76,3 +76,6 @@ base-field agreement and the nontrivial `r=1,2,3` sequence in 0.32 seconds.
 - The next geometric test is to separate weight growth from multiplicity by
   recovering more of the reduced virtual zeta factor, or to derive an explicit
   replacement `B(ell)` and immediately replay it through the endpoint ledger.
+- ADR-0541 performs that separation exactly at level two: the connected trace
+  is `q^12(q-1)(q^2-6q+6)`, so its normalized degree is genuinely one above
+  the proposed cutoff rather than a bounded multiplicity fluctuation.

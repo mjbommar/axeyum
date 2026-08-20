@@ -82,6 +82,10 @@ Betti bound.
 - ADR-0540 subsequently refutes `ell^4` as a universal all-`ell` Betti budget
   at `(ell,n,r)=(2,5,5)`.  A surviving use must prove an explicitly scoped
   large-`ell` budget or replace this coefficient and replay the endpoint.
+- ADR-0541 then derives the entire level-two trace polynomial and proves that
+  its normalized `q`-degree is 5, one above the proposed degree 4.  Thus the
+  cutoff itself is also false universally, although a separately proved
+  large-`ell` statement remains logically possible.
 - Ordinary large-monodromy fourth moments remain the wrong contraction.
 - Killing only the top cohomology group or gaining one Weil half-weight is
   insufficient; all compactly-supported cohomology above degree `4ell` must

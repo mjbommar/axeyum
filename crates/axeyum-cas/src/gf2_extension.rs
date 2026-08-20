@@ -99,6 +99,37 @@ pub struct BinaryExtensionConnectedAdamsTraceReport {
     pub satisfies_candidate_bound: bool,
 }
 
+/// Closed-form connected trace at the first nontrivial endpoint `(ell,n)=(2,5)`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BinaryExtensionEllTwoDegreeFiveClosedForm {
+    /// Extension degree `r` in `q=2^r`.
+    pub field_degree: usize,
+    /// Field order `q`.
+    pub field_order: BigUint,
+    /// Population of each of the `q` classes with subtrace zero.
+    pub zero_subtrace_population: BigInt,
+    /// Population of each of the `q(q-1)` classes with nonzero subtrace.
+    pub nonzero_subtrace_population: BigInt,
+    /// Exact second central moment `q^4(q-1)`.
+    pub centered_second_moment: BigUint,
+    /// Exact fourth central moment `q^5((q-1)^4+(q-1))`.
+    pub centered_fourth_moment: BigUint,
+    /// Exact cumulant numerator `q^8(q-1)(q^2-6q+6)`.
+    pub fourth_cumulant_numerator: BigInt,
+    /// Exact connected trace `q^12(q-1)(q^2-6q+6)`.
+    pub connected_adams_trace: BigInt,
+    /// Leading degree 15 in `q` of the connected trace polynomial.
+    pub connected_trace_q_degree: usize,
+    /// Adams weight degree `2n=10` in `q`.
+    pub adams_weight_q_degree: usize,
+    /// Leading degree 5 after removing the Adams weight.
+    pub normalized_connected_q_degree: usize,
+    /// Degree `2ell=4` permitted by the proposed cutoff.
+    pub proposed_normalized_q_degree: usize,
+    /// One-degree excess over the proposed cutoff.
+    pub normalized_q_degree_excess: usize,
+}
+
 /// One deterministic interval of an extension-field long-cycle trace.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct BinaryExtensionLongCycleTraceShardReport {
@@ -429,6 +460,84 @@ pub fn binary_extension_connected_adams_trace(
         candidate_absolute_bound,
         minimum_normalized_betti_ceiling,
         satisfies_candidate_bound,
+    })
+}
+
+/// Evaluate the exact trace/subtrace closed form for `(ell,n)=(2,5)`.
+///
+/// For `q=2^r`, the characteristic-two trace/subtrace quadratic-form count is
+///
+/// ```text
+/// N_(t,0) = q^3 + (-1)^r (q-1)q,
+/// N_(t,s) = q^3 - (-1)^r q       for s != 0.
+/// ```
+///
+/// There are `q` classes of the first kind and `q(q-1)` of the second.  Exact
+/// algebra then gives
+///
+/// ```text
+/// T_r = q^12 (q-1)(q^2-6q+6).
+/// ```
+///
+/// Its leading `q`-degree is 15.  Removing the degree-10 Adams weight leaves
+/// degree 5, refuting a universal normalized degree-`2ell=4` cutoff.  This is
+/// a fixed-`ell` obstruction and says nothing by itself about `ell>=200`.
+///
+/// # Errors
+///
+/// Rejects zero extension degree or a degree above the configured bound.
+pub fn binary_extension_ell_two_degree_five_closed_form(
+    field_degree: usize,
+    limits: BinaryExtensionTraceLimits,
+) -> Result<BinaryExtensionEllTwoDegreeFiveClosedForm, BinaryExtensionTraceError> {
+    if field_degree == 0 {
+        return Err(BinaryExtensionTraceError::InvalidParameter(
+            "extension degree must be positive".to_owned(),
+        ));
+    }
+    if field_degree > limits.max_field_degree {
+        return Err(BinaryExtensionTraceError::ResourceLimit(format!(
+            "field degree {field_degree} exceeds limit {}",
+            limits.max_field_degree
+        )));
+    }
+    let q = BigUint::from(1_u8) << field_degree;
+    let q_minus_one = &q - BigUint::from(1_u8);
+    let q_cubed = q.pow(3);
+    let correction = &q * &q_minus_one;
+    let single_correction = q.clone();
+    let (zero_subtrace_population, nonzero_subtrace_population) = if field_degree.is_multiple_of(2)
+    {
+        (
+            BigInt::from(&q_cubed + correction),
+            BigInt::from(&q_cubed - single_correction),
+        )
+    } else {
+        (
+            BigInt::from(&q_cubed - correction),
+            BigInt::from(&q_cubed + single_correction),
+        )
+    };
+    let centered_second_moment = q.pow(4) * &q_minus_one;
+    let centered_fourth_moment = q.pow(5) * (q_minus_one.pow(4) + &q_minus_one);
+    let quadratic_factor =
+        BigInt::from(q.pow(2)) - BigInt::from(6_u8) * BigInt::from(q.clone()) + BigInt::from(6_u8);
+    let fourth_cumulant_numerator = BigInt::from(q.pow(8) * &q_minus_one) * &quadratic_factor;
+    let connected_adams_trace = BigInt::from(q.pow(12) * &q_minus_one) * quadratic_factor;
+    Ok(BinaryExtensionEllTwoDegreeFiveClosedForm {
+        field_degree,
+        field_order: q,
+        zero_subtrace_population,
+        nonzero_subtrace_population,
+        centered_second_moment,
+        centered_fourth_moment,
+        fourth_cumulant_numerator,
+        connected_adams_trace,
+        connected_trace_q_degree: 15,
+        adams_weight_q_degree: 10,
+        normalized_connected_q_degree: 5,
+        proposed_normalized_q_degree: 4,
+        normalized_q_degree_excess: 1,
     })
 }
 
@@ -1305,9 +1414,35 @@ mod tests {
             (0b1011, 10_582_799_417_344),
         ] {
             let row = binary_extension_connected_adams_trace(modulus, 2, 5, limits).unwrap();
+            let closed =
+                binary_extension_ell_two_degree_five_closed_form(row.field_degree, limits).unwrap();
             assert_eq!(row.connected_adams_trace, BigInt::from(expected_trace));
+            assert_eq!(closed.field_order, BigUint::from(row.field_order));
+            assert_eq!(
+                closed.zero_subtrace_population,
+                BigInt::from(row.identity_class_mangoldt_sum)
+            );
+            assert_eq!(closed.centered_second_moment, row.centered_second_moment);
+            assert_eq!(closed.centered_fourth_moment, row.centered_fourth_moment);
+            assert_eq!(
+                closed.fourth_cumulant_numerator,
+                row.fourth_cumulant_numerator
+            );
+            assert_eq!(closed.connected_adams_trace, row.connected_adams_trace);
+            assert_eq!(closed.normalized_connected_q_degree, 5);
+            assert_eq!(closed.proposed_normalized_q_degree, 4);
+            assert_eq!(closed.normalized_q_degree_excess, 1);
             assert!(row.satisfies_candidate_bound);
         }
+        assert!(binary_extension_ell_two_degree_five_closed_form(0, limits).is_err());
+        let field_tight = BinaryExtensionTraceLimits {
+            max_field_degree: 2,
+            ..limits
+        };
+        assert!(matches!(
+            binary_extension_ell_two_degree_five_closed_form(3, field_tight),
+            Err(BinaryExtensionTraceError::ResourceLimit(_))
+        ));
         assert!(binary_extension_connected_adams_trace(0b11, 0, 1, limits).is_err());
         assert!(binary_extension_connected_adams_trace(0b11, 2, 4, limits).is_err());
         let tight = BinaryExtensionTraceLimits {
@@ -1343,7 +1478,10 @@ mod tests {
             ),
         ] {
             let row = binary_extension_connected_adams_trace(modulus, 2, 5, limits).unwrap();
+            let closed =
+                binary_extension_ell_two_degree_five_closed_form(row.field_degree, limits).unwrap();
             assert_eq!(row.connected_adams_trace, expected_trace);
+            assert_eq!(row.connected_adams_trace, closed.connected_adams_trace);
             assert_eq!(row.minimum_normalized_betti_ceiling, expected_ceiling);
             assert_eq!(row.satisfies_candidate_bound, expected_passes);
             println!(

@@ -2798,6 +2798,39 @@ cohomology cutoff, and it does not rule out a replacement estimate scoped to
 of `ell` and be replayed through the endpoint ledger before receiving credit.
 See ADR-0540.
 
+At level two the weight question can be decided without further enumeration.
+The first two leading coefficients are the trace and subtrace.  Theorem 2 of
+Ri--Myong--Kim--Rim's characteristic-two
+[trace/subtrace formula](https://arxiv.org/abs/1304.0521) says that for
+`q=2^r` and `n=5`, independently of `t`,
+
+```text
+N_(t,0)=q^3+(-1)^r(q-1)q,
+N_(t,s)=q^3-(-1)^r q for s!=0.
+```
+
+The polynomial-Mangoldt class population equals this element count: an element
+whose minimal polynomial has degree `m|n` contributes one of the `m` conjugate
+roots, while the corresponding degree-`n` prime power has Mangoldt weight `m`.
+There are `q` zero-subtrace classes and `q(q-1)` nonzero-subtrace classes, so
+exact expansion gives
+
+```text
+M_2=q^4(q-1),
+M_4=q^5((q-1)^4+(q-1)),
+T_r=q^12(q-1)(q^2-6q+6).                         (L2)
+```
+
+The native `binary_extension_ell_two_degree_five_closed_form` reconstructs
+all three identities and agrees with exhaustive enumeration through `r=5`.
+Formula (L2) has leading degree 15 in `q`.  After removing the Adams weight
+`q^(2n)=q^10`, the normalized trace has degree 5, while the proposed
+degree-`4ell` cutoff at `ell=2` permits only `q^(2ell)=q^4`.  Therefore the
+cutoff itself, not only the coefficient `ell^4`, is false as a universal
+all-level statement.  This does not logically exclude a new theorem proved
+only for `ell>=200`; it does show that Wick subtraction alone does not force
+the desired top-degree cancellation.  See ADR-0541.
+
 Parseval gives an equivalent conductor form.  If `E_j` is the exact Fourier
 energy of `D_e^2` at conductor level `j`, the obligation is
 
