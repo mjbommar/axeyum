@@ -558,12 +558,22 @@ components.  Conversely, the simplest odd lift with complement one always
 has the root one when the smaller component is irreducible.  Any useful
 recursive construction therefore needs a genuinely new uniform complement
 theorem; the active universal frontier remains the connected signed trace.
+The long-cycle geometry now has one further exact theorem.  Writing
+`n=2^a b` with `b` odd, Deligne--Lusztig finite-order reduction and a
+triangular coefficient calculation collapse the odd-part fixed locus to one
+point whenever `b>1`.  Hence the non-top long-cycle complex has alternating
+Euler trace zero at every non-power-of-two degree.  The native report keeps
+power-of-two degrees undecided and explicitly grants no Frobenius-weighted
+cancellation: that weighted refinement, together with a separate purely wild
+power-of-two analysis, is the remaining geometric bridge rather than another
+unweighted fixed-locus count.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `1c517c87f` | Localized the long-cycle Euler trace by its tame/wild decomposition, proving exact non-top cancellation away from power-of-two degrees while retaining the Frobenius-weighted trace as unproved. |
 | 2026-08-20 | `18062735c` | Certified the Frobenius-square parity decomposition, its exact squarefreeness criterion, and the failure of the naive irreducibility induction without granting finite complement searches theorem credit. |
 | 2026-08-20 | `6c6e36597` | Certified the exact long-cycle cyclic/Foulkes compression, retained odd/even proper-power margins, and isolated a quartic characteristic-two cyclic-Betti theorem that would close every degree after 400 without claiming it. |
 | 2026-08-20 | `9a3e77556` | Derived the exact ell-three degree-seven extension trace from characteristic-two period-24 symmetry, reproduced the sharded GF(16) row, and refuted the one-extra-q cutoff repair. |
