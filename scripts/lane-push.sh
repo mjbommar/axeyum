@@ -27,6 +27,7 @@
 # whole time. This script's own `--dry-run` never invokes git push at all.
 #   scripts/lane-push.sh --force      # push even if another push is running
 #   scripts/lane-push.sh --to main    # push HEAD to a DIFFERENT branch
+#   scripts/lane-push.sh --to main --retry 3   # re-merge and retry on a race
 #
 # `--to main` exists because landing a lane's work is `git push origin HEAD:main`,
 # and without a target every part of this script reasoned about the WRONG REF:
@@ -52,11 +53,12 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 2
 
-DRY=0; FORCE=0; TO=""
+DRY=0; FORCE=0; TO=""; RETRY=1
 while [ $# -gt 0 ]; do case "$1" in
   --dry-run) DRY=1 ;;
   --force) FORCE=1 ;;
   --to) TO="${2:-}"; [ -n "$TO" ] || { echo "lane-push: --to needs a branch" >&2; exit 2; }; shift ;;
+  --retry) RETRY="${2:-}"; case "$RETRY" in ''|*[!0-9]*) echo "lane-push: --retry needs a count" >&2; exit 2 ;; esac; shift ;;
   *) echo "lane-push: unknown option $1" >&2; exit 2 ;;
 esac; shift; done
 
@@ -115,4 +117,38 @@ if git rev-parse --verify -q "$upstream" >/dev/null && \
 fi
 
 [ "$DRY" = 1 ] && { echo "lane-push: --dry-run, not pushing"; exit 0; }
-exec git push origin "HEAD:refs/heads/$target"
+
+# The fast-forward check above cannot close the window it opens. The hook runs
+# for MINUTES -- 176s to 545s here -- and the remote can advance inside it: on
+# 2026-08-20 a push passed every gate and was then rejected with `cannot lock ref
+# 'refs/heads/main': is at 4c7ad5e63 but expected 92fa6188a`. That is not a race
+# you can win by checking harder beforehand, and paying the battery again by hand
+# is the expensive way to lose it.
+#
+# `--retry N` re-merges the branch that moved and pushes again. It only ever
+# merges the TARGET, and it stops on anything that is not a lock conflict, so a
+# rejected push for a real reason (a failing gate) still fails immediately —
+# which matters, because a failed gate and a rejected ref both exit 1 and their
+# messages are hundreds of lines apart in the hook's output.
+attempt=1
+while :; do
+  out=$(git push origin "HEAD:refs/heads/$target" 2>&1)
+  status=$?
+  printf '%s\n' "$out"
+  [ "$status" -eq 0 ] && exit 0
+  # One condition, several phrasings. GitHub says `cannot lock ref ... but
+  # expected <sha>`; a local file remote says `incorrect old value provided`;
+  # others say `stale info`, `fetch first`, or `non-fast-forward`. Matching only
+  # the phrasing you happened to see in production leaves the control green while
+  # the retry never fires -- which is how the fixture caught this.
+  case "$out" in
+    *"cannot lock ref"*|*"incorrect old value"*|*"stale info"*|*"fetch first"*|*"non-fast-forward"*) ;;
+    *) exit "$status" ;;
+  esac
+  [ "$attempt" -ge "$RETRY" ] && exit "$status"
+  attempt=$((attempt + 1))
+  echo "lane-push: origin/$target moved during the hook; re-merging and retrying ($attempt/$RETRY)" >&2
+  git fetch -q origin "$target" || exit "$status"
+  git merge --no-edit "origin/$target" >&2 || {
+    echo "lane-push: the re-merge conflicted; resolve it by hand." >&2; exit 1; }
+done

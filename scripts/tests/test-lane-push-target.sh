@@ -55,5 +55,55 @@ if [ "$rc" -eq 0 ]; then
   echo "$behind" | sed 's/^/    /'; fail=1
 fi
 
-[ "$fail" = 0 ] && echo "lane-push --to: ok (estimate follows the pushed ref; non-ff declined)"
+# --retry must recover when the target moves DURING the push, and must not retry
+# a rejection for any other reason.
+#
+# The race is simulated by moving the remote ref from inside the pre-push hook —
+# which is exactly where the real one happens, since the real hook runs for
+# minutes. Plumbing (`update-ref` on the bare repo) rather than a nested clone:
+# a nested push re-enters the hook and the fixture hangs.
+git checkout -q main && git reset -q --hard origin/main
+echo other >> README.md && git add -A && git commit -qm "other lane's commit"
+OTHER=$(git rev-parse HEAD)
+# The bare repo must actually HAVE the object before a ref can point at it.
+git push -q origin "HEAD:refs/heads/scratch"
+git reset -q --hard origin/main
+git checkout -q feature
+# The non-fast-forward block above deliberately left origin/main ahead; sync so
+# the pre-push decline is not what this case measures.
+git merge -q --no-edit origin/main -m sync
+
+cat > "$work/wt/.git/hooks/pre-push" <<HOOK
+#!/usr/bin/env bash
+# Once: move the remote's main out from under this push.
+if [ ! -e "$work/raced" ]; then
+  : > "$work/raced"
+  git --git-dir="$work/origin.git" update-ref refs/heads/main $OTHER
+fi
+exit 0
+HOOK
+chmod +x "$work/wt/.git/hooks/pre-push"
+
+out=$(bash "$here/scripts/lane-push.sh" --to main --retry 3 2>&1); rc=$?
+rm -f "$work/wt/.git/hooks/pre-push"
+if [ "$rc" -ne 0 ]; then
+  echo "FAIL: --retry did not recover from a mid-push remote advance (rc=$rc):" >&2
+  echo "$out" | tail -8 | sed 's/^/    /' >&2; fail=1
+elif ! printf '%s' "$out" | grep -q "moved during the hook"; then
+  echo "FAIL: the push succeeded without the race firing; the fixture proved nothing." >&2
+  echo "$out" | tail -6 | sed 's/^/    /' >&2; fail=1
+else
+  echo "  ok   --retry re-merged and landed after a mid-push race"
+fi
+
+# ...and the other lane's commit must still be there: a retry that discards it
+# would be worse than a failed push.
+git fetch -q origin main
+if git merge-base --is-ancestor "$OTHER" origin/main; then
+  echo "  ok   the retry preserved the commit that raced in"
+else
+  echo "FAIL: the retry dropped the other lane's commit" >&2; fail=1
+fi
+
+[ "$fail" = 0 ] && echo "lane-push --to: ok (estimate follows the pushed ref; non-ff declined; --retry recovers)"
 exit "$fail"
