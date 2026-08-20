@@ -2671,6 +2671,23 @@ of every new Carlitz layer into only the supersingular quadratic Heisenberg
 pieces.  It does not reject a useful smaller subquotient or a
 non-supersingular rank argument for the connected relative trace.
 
+Nor does a direct family `L2` estimate preserve enough information.  Summing
+the exact second moments of all top characters and applying Cauchy gives
+
+```text
+|sum_top S_chi(n)|^2
+  <= (# top characters) sum_top |S_chi(n)|^2.
+```
+
+At `ell=12`, there are 4032 top characters.  The exact degree-25 moment is
+`1326053720064`, making the Cauchy square `303.92` times the (CRT) allowance
+square; degree 26 gives ratio `632.42`.  The required integral moment savings
+are respectively `304` and `633`, even though the actual signed traces satisfy
+(CRT).  The native `connected_top_second_moment_cauchy` report pins these
+values and the exact threshold.  This finite failure is not an asymptotic
+counterexample, but it shows that Cauchy discards precisely the phase
+alignment the connected reformulation was designed to retain.
+
 Exact fleet runs at both endpoints for every `16<=ell<=20` satisfy the Haar
 triangle and (RF).  At `ell=20`, the odd and even triangle numerators are
 respectively `64,147,961,856` and `96,723,105,792`, against the common target

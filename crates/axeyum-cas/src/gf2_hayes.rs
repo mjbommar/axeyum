@@ -1213,6 +1213,40 @@ pub struct ExactConductorSecondMoment {
     pub value: u128,
 }
 
+/// Exact Cauchy--Schwarz ledger for the connected top-conductor character
+/// family.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectedTopSecondMomentCauchy {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree.
+    pub degree: usize,
+    /// First exact conductor level in the connected family.
+    pub first_top_level: usize,
+    /// Number of characters in the union of the top conductor families.
+    pub character_count: BigUint,
+    /// Exact sum of `|S_chi(degree)|^2` over those characters.
+    pub exact_second_moment: BigUint,
+    /// Square of the Cauchy upper bound.
+    pub cauchy_bound_square: BigUint,
+    /// Square of the connected trace allowance.
+    pub connected_allowance_square: BigUint,
+    /// Largest integral second moment for which Cauchy would close.
+    pub maximum_second_moment_for_candidate: BigUint,
+    /// Smallest integer factor by which the observed second moment would have
+    /// to improve before Cauchy could close.
+    pub required_second_moment_saving_ceiling: BigUint,
+}
+
+impl ConnectedTopSecondMomentCauchy {
+    /// Whether Cauchy with the exact finite second moment proves the connected
+    /// trace candidate.
+    #[must_use]
+    pub fn proves_connected_top_candidate(&self) -> bool {
+        self.cauchy_bound_square <= self.connected_allowance_square
+    }
+}
+
 impl ExactConductorSecondMoment {
     /// Whether Cauchy--Schwarz with this moment proves the layer target.
     ///
@@ -9814,6 +9848,49 @@ pub fn exact_conductor_second_moment(
     })
 }
 
+/// Combine exact conductor-family second moments before applying one Cauchy
+/// inequality to the connected top character sum.
+///
+/// This is a finite diagnostic and arithmetic implication.  It does not
+/// extrapolate the observed moment or assert a uniform family estimate.
+///
+/// # Errors
+///
+/// Rejects invalid endpoints and propagates the exact second-moment CRT range
+/// and resource declines.
+pub fn connected_top_second_moment_cauchy(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<ConnectedTopSecondMomentCauchy, HayesError> {
+    let implication = population_refinement_connected_top_implication(ell, degree)?;
+    let first_top_level = implication.first_top_level;
+    let mut exact_second_moment = BigUint::from(0_u8);
+    for level in first_top_level..=ell {
+        exact_second_moment +=
+            BigUint::from(exact_conductor_second_moment(level, degree, limits)?.value);
+    }
+    let character_count =
+        (BigUint::from(1_u8) << ell) - (BigUint::from(1_u8) << (first_top_level - 1));
+    let cauchy_bound_square = &character_count * &exact_second_moment;
+    let connected_allowance_square = implication.connected_top_assumption_numerator.pow(2);
+    let maximum_second_moment_for_candidate = &connected_allowance_square / &character_count;
+    let required_second_moment_saving_ceiling =
+        (&exact_second_moment + &maximum_second_moment_for_candidate - BigUint::from(1_u8))
+            / &maximum_second_moment_for_candidate;
+    Ok(ConnectedTopSecondMomentCauchy {
+        ell,
+        degree,
+        first_top_level,
+        character_count,
+        exact_second_moment,
+        cauchy_bound_square,
+        connected_allowance_square,
+        maximum_second_moment_for_candidate,
+        required_second_moment_saving_ceiling,
+    })
+}
+
 /// Compute the exact full-family squared deviation from uniformity.
 ///
 /// The nontrivial character group is partitioned by exact conductor.  This
@@ -12427,6 +12504,26 @@ mod tests {
         let inconclusive = exact_conductor_supersingularity_divisibility(4, 4, limits).unwrap();
         assert!(!inconclusive.obstructs_supersingularity());
         assert!(exact_conductor_supersingularity_divisibility(4, 5, limits).is_err());
+    }
+
+    #[test]
+    fn connected_top_second_moment_cauchy_is_an_exact_finite_ledger() {
+        let limits = HayesLimits::default();
+        for degree in [25_usize, 26] {
+            let report = connected_top_second_moment_cauchy(12, degree, limits).unwrap();
+            assert_eq!(report.first_top_level, 7);
+            assert_eq!(report.character_count, BigUint::from(4_032_u16));
+            assert!(!report.proves_connected_top_candidate());
+            assert_eq!(
+                report.maximum_second_moment_for_candidate,
+                BigUint::from(4_363_141_380_u64)
+            );
+            assert_eq!(
+                report.required_second_moment_saving_ceiling,
+                BigUint::from(if degree == 25 { 304_u16 } else { 633_u16 })
+            );
+        }
+        assert!(connected_top_second_moment_cauchy(12, 24, limits).is_err());
     }
 
     #[test]
