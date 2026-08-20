@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `ac41b35d0` | Added the exact connected high-frequency L2/Cauchy ledger and showed that structural-support Cauchy still requires savings 1425/1483 on pinned endpoint rows. |
 | 2026-08-20 | `dfc581025` | Embedded the coarse inverse-additive spectrum into the fine domain, proved every inflated coarse frequency cancels in the connected projector, and exposed the exact surviving high-frequency Möbius sum. |
 | 2026-08-20 | `32746e3f4` | Decomposed the connected top-conductor trace exactly by Möbius order and proved on pinned endpoint rows that low orders survive, requiring signed cross-order cancellation. |
 | 2026-08-20 | `c949b166f` | Classified every half-shaped standard characteristic-two Q-transform via self-reciprocity and Dickson invariants, proving the certified cubic-to-sextic pair is the sole irreducible exception. |
@@ -900,6 +901,13 @@ formula retains every Möbius order and then groups by annihilator depth.  Its
 support still has size `2^ell-2^(a-1)`, and the orderwise and depthwise
 triangle losses are cross-cutting, so this sharpens the selected analytic
 object without proving its uniform cancellation bound.
+The final high-frequency vector now carries an exact structural-support `L2`
+ledger.  Direct Cauchy still misses the connected allowance on the pinned
+`ell=8` endpoints: the exact square sums require further integral savings
+`1425/1483`, despite the signed traces already satisfying the target.  This
+closes another phase-erasing shortcut; a surviving proof must keep the final
+frequency signs or prove an explicit large-`ell` norm collapse with that loss
+absorbed.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
