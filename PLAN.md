@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `8b07f7a45` | Added exact integral cyclotomic Hayes L-polynomials and proved that every pinned primitive root-number fibre contains distinct endpoint power sums, rejecting root-number-only Gauss control. |
 | 2026-08-20 | `726bd8411` | Audited the 2026 function-field Linnik--Selberg input at equation level and rejected its varying-modulus average as a substitute for the fixed-wild-modulus, Möbius-weighted endpoint sum. |
 | 2026-08-20 | `556888c96` | Added the checked cubic Capell criterion and dual-checker audit, proving 138 committed seeds generate 95 infinite degree rays while explicitly retaining the uncovered odd and even 3-free degrees. |
 | 2026-08-20 | `f85830458` | Added a bounded characteristic-two Q-transform with independent irreducibility controls, retained its special cubic-to-sextic success and cyclotomic degree family, and proved the standard iterated hypothesis forces a forbidden upper-half coefficient. |
@@ -776,6 +777,17 @@ both endpoints at `ell=23`; every new row still rejects the max-to-average
 shortcut.  The canonical note retains their exact ratios, resource use, and
 log hashes.  These results remain uncredited finite evidence and do not move
 the universal proof frontier.
+The primitive/imprimitive Gauss-sum template now has a decisive exact stopping
+test.  A native integral `Z[zeta_(2^r)]` evaluator constructs every primitive
+Hayes `L`-coefficient and logarithmic power sum, with both NTT primes as
+independent controls.  At conductor level five and endpoint degree eleven,
+all six functional-equation root-number fibres contain different power sums;
+the pinned pair has common leading coefficient `-4` but sums
+`-32+32 zeta_8^2` and `-32-32 zeta_8^2`.  Thus root-number data and
+cyclotomic zeta factorization alone cannot control the connected endpoint
+trace.  A surviving characteristic-two argument must retain the full
+coefficient vectors and their signed cross-character cancellation; this exact
+obstruction grants no Lemire theorem credit.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
