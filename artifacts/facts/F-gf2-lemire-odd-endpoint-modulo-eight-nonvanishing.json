@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "F:gf2-lemire-odd-endpoint-modulo-eight-nonvanishing",
   "title": "Modulo-eight nonvanishing at every odd Lemire endpoint",
-  "statement": "For every integer ell at least one, the number I_(2ell+1)(1) of monic irreducible binary polynomials of degree 2ell+1 congruent to 1 modulo x^(ell+1) is not divisible by eight.",
+  "statement": "For every integer ell at least one, the number I_(2ell+1)(1) of monic irreducible binary polynomials of degree 2ell+1 congruent to 1 modulo x^(ell+1) is not divisible by eight. THIS PROPOSITION IS FALSE: ell=27 gives I_55(1)=4883944, which is divisible by eight.",
   "formal": {
     "language": "certificate-spec",
     "statement": "{\"bound\":\"I_(2*ell+1)(1) mod 8 != 0\",\"field_order\":2,\"format\":\"axeyum-gf2-lemire-odd-endpoint-modulo-eight-nonvanishing\",\"interval\":\"ell>=1\",\"modulus\":\"x^(ell+1)\",\"version\":1}",
@@ -11,15 +11,25 @@
       "ell"
     ]
   },
-  "epistemic_status": "conjectured",
-  "external_status": "unknown",
+  "epistemic_status": "refuted",
+  "external_status": "refuted",
   "depends_on": [],
-  "proof_route": "none",
-  "evidence": [],
+  "proof_route": "cas-certificate",
+  "evidence": [
+    {
+      "id": "gf2-lemire-odd-endpoint-modulo-eight-degree-55-counterexample",
+      "kind": "exhaustive-enumeration",
+      "supports": "At ell=27 the exact uniqueness-bounded transform gives N_55(1)=268616921 and I_55(1)=4883944=0 mod 8, refuting the universal statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -p axeyum-cas --bin axeyum-gf2-hayes-odd-endpoint -- 27",
+      "artifact": "crates/axeyum-cas/src/bin/axeyum-gf2-hayes-odd-endpoint.rs",
+      "notes": "Fleet replay on s4 exited zero after 4217.201 seconds at 30417756 KiB peak RSS. Executable SHA-256 0a505ec4360069c868999d5c00819f2e31721d83fbfc8086e27f56ad4d3cea2; complete output/timing-log SHA-256 1567140e8a0875ab55514ddacb8d114c235818a0dcea2830b1e5ffc4906e7744. The single NTT residue is admitted only because a proved candidate-count bound makes it the unique integer result."
+    }
+  ],
   "provenance": {
     "date": "2026-08-20",
-    "established_by": "not established in this ledger",
-    "source": "Axeyum gf2-lemire lane; exact odd-endpoint residues and Carlitz two-adic precision re-aim"
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "exact uniqueness-bounded odd-endpoint transform on s4"
   },
-  "notes": "The exact native report finds nonzero residues modulo eight in every odd endpoint from degree 3 through degree 51, with maximum observed two-adic valuation two. Those 25 rows are stopping diagnostics only and do not establish the quantified statement. The proved identity N_(2ell+1)(1)=1+(2ell+1)I_(2ell+1)(1) means this fact would settle every odd Lemire endpoint. Deuring-Shafarevich gives two-rank zero for the associated one-branch-point Carlitz cover but does not provide the point-count precision modulo 2^(ell+3) required to prove the residue. Exact primitive-character Newton polygons have minimum slopes 1/4 from conductor level four and 1/8 from level eight, so low positive slopes require cancellation across the complete Galois and conductor aggregate rather than a near-half characterwise cutoff. No Autogenesis operation is registered because the bounded exact checkers cannot establish universal nonvanishing."
+  "notes": "The first 25 exact rows, through degree 51, were nonzero modulo eight and had two-adic valuation at most two. The declared stopping row ell=27, degree 55, has valuation three and refutes the universal claim. The same witness contains 4883944 requested irreducibles, so it does not refute Lemire existence. Deuring-Shafarevich still gives two-rank zero for the associated Carlitz cover, and the exact primitive-character Newton polygons remain valid diagnostics, but neither implies fixed-modulus nonvanishing."
 }

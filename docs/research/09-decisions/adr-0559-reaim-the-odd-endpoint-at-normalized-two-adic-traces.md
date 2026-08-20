@@ -1,8 +1,11 @@
 # ADR-0559: Re-aim the odd endpoint at normalized two-adic traces
 
-Status: accepted
+Status: superseded by ADR-0560
 Date: 2026-08-20
 Index-summary: Promote modulo-eight nonvanishing as the bounded odd-endpoint target while proving that Carlitz p-rank zero alone lacks the required normalized precision
+
+The stopping target selected here was refuted at `ell=27`; see ADR-0560.  The
+precision audit and exact Newton-polygon conclusions remain valid.
 
 ## Context
 

@@ -531,18 +531,25 @@ The exact native counts already give `N_9(1)=2^(9-4)+5=37`, so the endpoint
 population can be odd.  Any new-point argument must provide a genuine lower
 bound or cancellation estimate, not infer one from `N_n(1)>=1` and divisibility.
 
-### A normalized two-adic target for odd endpoints
+### A refuted normalized two-adic target for odd endpoints
 
-The exact reduction nevertheless leaves a different algebraic possibility.
-Every checked odd endpoint through degree 51 satisfies
+The exact reduction suggested a different algebraic possibility.  Every odd
+endpoint through degree 51 satisfied
 
 ```text
 I_(2ell+1)(1) != 0 mod 8,                           (C8)
 ```
 
-with observed `2`-adic valuation at most two.  Since a nonzero residue is
-already positivity, `(C8)` would settle every odd endpoint without an
-analytic square-root saving.  The typed `odd_endpoint_two_adic_report`
+with observed `2`-adic valuation at most two.  But the next expensive stopping
+row refutes `(C8)`:
+
+```text
+ell=27, n=55: N_n(1)=268616921,
+               I_n(1)=4883944 = 0 mod 8, v_2(I_n(1))=3.
+```
+
+This does not threaten Lemire existence in that row; it kills only the fixed
+congruence shortcut.  The typed `odd_endpoint_two_adic_report`
 retains the exact residues modulo 8 and 16, the valuation, and the geometric
 precision needed to reproduce the residue.
 
@@ -564,9 +571,10 @@ I_n(1)=((#C_ell(GF(2^n))-1)/2^ell-1)/n.
 Thus `I_n(1) mod 8` requires the raw point count modulo `2^(ell+3)`.
 `2`-rank zero controls only the slope-zero part, or the zeta numerator modulo
 two; it does not determine the three normalized bits after division by
-`2^ell`.  The honest target is therefore a congruence for the **higher-slope
-normalized trace**, not a p-rank formula by itself.  The 25 surviving rows are
-stopping evidence, not theorem credit.  Nor do they yield an even induction:
+`2^ell`.  Before the counterexample, the honest target would therefore have
+been a congruence for the **higher-slope normalized trace**, not a p-rank
+formula by itself.  The degree-55 row now stops that fixed-modulus target
+(ADR-0560).  Nor do the earlier rows yield an even induction:
 the known half-sized square proper-power stratum supplies bookkeeping but no
 strict inequality or congruence recurrence (ADR-0559).
 
@@ -579,9 +587,10 @@ finds minimum primitive-character slopes `1/2` at levels two and three,
 At level ten the minimum-slope multiplicity is already 256.  These terms lie
 far below the endpoint cutoff and the independently computed integral
 conductor trace gains its valuation only after they are summed.  The proposed
-theorem must therefore preserve cancellation across the complete
+theorem would have had to preserve cancellation across the complete
 Galois/conductor family of low positive slopes; a characterwise Newton cutoff
-does not supply `(C8)`.
+does not supply `(C8)`.  With `(C8)` refuted, these polygons remain a diagnostic
+for any future degree-dependent trace law, not an active existence bridge.
 
 ### The exact half-level sieve hits the parity barrier
 

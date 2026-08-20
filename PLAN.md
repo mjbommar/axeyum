@@ -1046,10 +1046,13 @@ precision ledger.  Exact cyclotomic arithmetic also computes every primitive
 character Newton polygon through repeated `(1-zeta)` division, independently
 checked against field norms and exact conductor traces.  Levels four and
 eight already contain slopes `1/4` and `1/8` with large multiplicity; hence a
-near-half characterwise cutoff is false.  Any modulo-eight proof must instead
-explain cancellation in the complete Galois/conductor aggregate of these low
-positive slopes.  The observed residues remain nonzero through `ell=25`, but
-this is a stopping diagnostic and receives no theorem credit.
+near-half characterwise cutoff is false.  The declared stopping row has now
+terminated this route: the exact `ell=27`, degree-55 computation gives
+`I_55(1)=4883944=0 mod 8`, with valuation three.  This refutes universal
+fixed-modulo-eight nonvanishing while strongly certifying existence in that
+row.  The Newton machinery remains a diagnostic for a possible
+degree-dependent law, but theorem effort returns to a genuine aggregate trace
+estimate; no endpoint credit came from the refuted congruence.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
