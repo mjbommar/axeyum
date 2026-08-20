@@ -51,6 +51,7 @@ use axeyum_lean_kernel::{build_arith_prelude, build_creal_prelude, build_int_pre
 
 pub(crate) mod control;
 pub(crate) mod signature;
+pub(crate) mod zero_product;
 
 pub(crate) use signature::{RingEquality, RingSignature};
 

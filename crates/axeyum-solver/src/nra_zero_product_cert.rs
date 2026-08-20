@@ -79,6 +79,24 @@ impl RealZeroProductRefutationCertificate {
     pub fn nonzero_factors(&self) -> &[String] {
         &self.nonzero_factors
     }
+
+    /// Build a certificate from parts, for tests that must construct one the
+    /// producer would never emit.
+    ///
+    /// `#[doc(hidden)]` and test-only: a public constructor would let a caller
+    /// mint an unchecked certificate, which is the opposite of the point.
+    #[doc(hidden)]
+    #[cfg(test)]
+    #[must_use]
+    pub fn testing_from_parts(
+        zeroing_cases: Vec<Vec<String>>,
+        nonzero_factors: Vec<String>,
+    ) -> Self {
+        RealZeroProductRefutationCertificate {
+            zeroing_cases,
+            nonzero_factors,
+        }
+    }
 }
 
 /// Flatten a `RealMul` tower into its factor terms.
