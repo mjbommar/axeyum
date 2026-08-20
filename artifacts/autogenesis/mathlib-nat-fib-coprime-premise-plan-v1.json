@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "proof-plan-frozen-first-native-library-slice-composed",
+  "state": "proof-plan-frozen-first-native-library-slice-publicly-composed",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -17,9 +17,11 @@
   },
   "composition_probe": {
     "tool": "crates/axeyum-lean-import/examples/nat_prelude_composition_probe.rs",
-    "tool_sha256": "54e64902439c461426dd6e4d7b63c8060ab08df23f595db8d031b16afaf0d7d4",
-    "observation": "/nas3/data/axeyum/autogenesis/probes/9caac0bf5-nat-add-comm-composition-v5/observation.json",
-    "observation_sha256": "b25a7a759eed6be79078c61d5286bee4c63d63c51df7f65dce62bee0e8b7a4ce",
+    "tool_sha256": "eb4b138f8dc49fc409b9b3669f81d6fbdcc0cd3c200c488cc3b9d0eb18b58a1d",
+    "api": "crates/axeyum-lean-import/src/theorem_composition.rs",
+    "api_sha256": "c6bac756a232b1e40748ae20c9ef9ea16d92c50e230e99406a390b9fe9800497",
+    "observation": "/nas3/data/axeyum/autogenesis/probes/0bcbe935d-nat-add-comm-public-api-receipt-v7/observation.json",
+    "observation_sha256": "a22c6953e689bd2b672c7e26a1c27487727ebf5202486ad3674a0d2b4f476fb7",
     "outcome": "rejected",
     "first_conflict": "True",
     "imported_declarations": 261,
@@ -47,15 +49,37 @@
   "composition_result": {
     "root": "Nat.add_comm",
     "outcome": "composed",
+    "receipt_schema": "axeyum.checked-theorem-composition.v1",
+    "receipt_sha256": "91e372a6217c7299c85ca0acdb29770d875200009282b41d33e29aaf56d30c7f",
+    "source_closure": [
+      "Nat",
+      "Nat.zero",
+      "Nat.succ",
+      "Nat.rec",
+      "Eq",
+      "Eq.refl",
+      "Eq.rec",
+      "Nat.add",
+      "Nat.zero_add",
+      "Nat.succ_add",
+      "Nat.add_comm"
+    ],
     "reused_dependencies": 8,
+    "reused_exact_declarations": 2,
+    "reused_type_shape_compatible_content_mismatches": 6,
     "added_theorem_names": ["Nat.zero_add", "Nat.succ_add", "Nat.add_comm"],
+    "added_declaration_sha256": {
+      "Nat.add_comm": "c05e6d0986251392c9b1bc9fcc2bd5d66de22c856b9669cdd993e9993d94f4f9",
+      "Nat.succ_add": "02f4d04bea47ca25f58c4d43300262c64f125dc16839f03219c4b657852ae3a2",
+      "Nat.zero_add": "64e76cab401dd305e7520dd15302e3228b18ca0cf0ba8c1d1c93945acce00fbe"
+    },
     "added_axiom_footprints": {
       "Nat.add_comm": [],
       "Nat.succ_add": [],
       "Nat.zero_add": []
     },
-    "environment_sha256_before": "798b19a16b1e6937d4fc9eb6f0c2f5f58c5544d5ea58641c7aa04119dc6b0982",
-    "environment_sha256_after": "68d95b32414757044ce3433fbf8c069b9304eca42d3d261ecff8ef6bb9131085",
+    "environment_sha256_before": "82ac7b0143bdd9891b666a37220fb91b86afc4af4b920d68773d80b5c9348855",
+    "environment_sha256_after": "bda5fa7e1660db1635ea2e019775ead03663cf3676e6a7695ea5352f8572c9bf",
     "negative_control_root": "Nat.eq_one_of_dvd_one",
     "negative_control_first_mismatch": "Nat.zero_le",
     "negative_control_environment_unchanged": true
@@ -100,5 +124,5 @@
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "This freezes a proof plan and composes one three-theorem native slice in a probe-local imported kernel. It does not expose a public composition API, compose the remaining six required lemmas, submit the Fibonacci target, inspect held-out data, write the ledger, or establish the fact."
+  "limitations": "This freezes a proof plan and reproduces one three-theorem native slice through the public theorem-only completed-clone API. It does not transport definitions or inductive declarations, compose the remaining six required lemmas, submit the Fibonacci target, inspect held-out data, write the ledger, or establish the fact."
 }

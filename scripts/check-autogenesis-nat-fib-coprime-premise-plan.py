@@ -37,7 +37,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "proof-plan-frozen-first-native-library-slice-composed"
+        != "proof-plan-frozen-first-native-library-slice-publicly-composed"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -46,6 +46,8 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     probe = manifest["composition_probe"]
     if sha256(ROOT / probe["tool"]) != probe["tool_sha256"]:
         raise PlanError("composition probe changed")
+    if sha256(ROOT / probe["api"]) != probe["api_sha256"]:
+        raise PlanError("composition API changed")
     observation_path = pathlib.Path(probe["observation"])
     if (
         sha256(observation_path) != probe["observation_sha256"]
@@ -148,15 +150,37 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     composed = observation["source"]["composition_control"]
     negative = observation["source"]["structural_mismatch_control"]
     composition_result = manifest["composition_result"]
+    reused_receipts = composed["reused_declaration_receipts"]
+    reused_names = [row["name"] for row in reused_receipts]
+    exact_reused = sum(
+        row["source_declaration_sha256"] == row["target_declaration_sha256"]
+        for row in reused_receipts
+    )
+    type_shape_only_reused = len(reused_receipts) - exact_reused
     if (
         composed["roots"] != [composition_result["root"]]
+        or composed["source_closure"] != composition_result["source_closure"]
+        or composed["source_closure"][-1] != composition_result["root"]
         or composed["outcome"] != composition_result["outcome"]
+        or composed["receipt_schema"] != composition_result["receipt_schema"]
+        or composed["receipt_sha256"] != composition_result["receipt_sha256"]
         or len(composed["reused_dependency_names"])
         != composition_result["reused_dependencies"]
+        or reused_names != composed["reused_dependency_names"]
+        or len(reused_receipts) != composition_result["reused_dependencies"]
+        or exact_reused != composition_result["reused_exact_declarations"]
+        or type_shape_only_reused
+        != composition_result["reused_type_shape_compatible_content_mismatches"]
+        or any(
+            row["source_type_shape_sha256"] != row["target_type_shape_sha256"]
+            for row in reused_receipts
+        )
         or composed["added_theorem_names"]
         != composition_result["added_theorem_names"]
         or composed["declarations_absent_before"]
         != composition_result["added_theorem_names"]
+        or composed["added_declaration_sha256"]
+        != composition_result["added_declaration_sha256"]
         or composed["added_axiom_footprints"]
         != composition_result["added_axiom_footprints"]
         or composed["environment_sha256_before"]

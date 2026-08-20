@@ -1,19 +1,17 @@
 //! Measure whether the axiom-free native Nat library composes with an import.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
 
 use axeyum_lean_import::{
-    ImportLimits, canonical_alpha_expression_sha256, canonical_declaration_sha256,
-    canonical_expression_sha256, canonical_kernel_type_shape_sha256, import_ndjson,
+    AddedTheoremReceipt, ImportLimits, ReusedDeclarationReceipt, canonical_alpha_expression_sha256,
+    canonical_declaration_sha256, canonical_expression_sha256, canonical_kernel_type_shape_sha256,
+    compose_checked_theorem_slice, import_ndjson,
 };
-use axeyum_lean_kernel::{
-    Declaration, ExprId, ExprNode, Kernel, KernelError, LevelId, LevelNode, NameId, NameNode,
-    build_nat_prelude,
-};
+use axeyum_lean_kernel::{Declaration, Kernel, KernelError, build_nat_prelude};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 
@@ -124,295 +122,70 @@ fn run() -> Result<(), String> {
 fn exercise_composition_controls(
     kernel: &mut Kernel,
 ) -> Result<(serde_json::Value, serde_json::Value), String> {
+    let mut native = Kernel::new();
+    build_nat_prelude(&mut native)
+        .map_err(|error| format!("native Nat prelude failed to build: {error:?}"))?;
     let negative_before = environment_sha256(kernel)?;
-    let mut negative_kernel = kernel.clone();
-    let negative_error =
-        compose_native_theorem_slice(&mut negative_kernel, &["Nat.eq_one_of_dvd_one"])
-            .expect_err("the structurally mismatched control must decline");
-    let negative_after = environment_sha256(&negative_kernel)?;
+    let negative_error = compose_checked_theorem_slice(&native, kernel, &["Nat.eq_one_of_dvd_one"])
+        .expect_err("the structurally mismatched control must decline");
+    let negative_after = environment_sha256(kernel)?;
     if negative_before != negative_after {
         return Err("failed composition changed the caller kernel".to_owned());
     }
-    let positive = compose_native_theorem_slice(kernel, &["Nat.add_comm"])?;
+    let completed = compose_checked_theorem_slice(&native, kernel, &["Nat.add_comm"])
+        .map_err(|error| format!("checked composition failed: {error:?}"))?;
+    let receipt = completed.receipt();
+    let positive = json!({
+        "roots": receipt.roots,
+        "source_closure": receipt.source_closure,
+        "outcome": "composed",
+        "reused_dependency_names": receipt.reused_declarations.iter().map(|row| &row.name).collect::<Vec<_>>(),
+        "declarations_absent_before": receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
+        "added_theorem_names": receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
+        "added_declaration_sha256": added_digests(&receipt.added_theorems),
+        "added_axiom_footprints": added_footprints(&receipt.added_theorems),
+        "reused_declaration_receipts": reused_receipts(&receipt.reused_declarations),
+        "environment_sha256_before": receipt.target_environment_sha256_before,
+        "environment_sha256_after": receipt.target_environment_sha256_after,
+        "receipt_schema": receipt.schema_version,
+        "receipt_sha256": receipt.receipt_sha256,
+    });
+    let (composed_kernel, _) = completed.into_parts();
+    *kernel = composed_kernel;
     let negative = json!({
         "root": "Nat.eq_one_of_dvd_one",
         "outcome": "declined",
-        "error": negative_error,
+        "error": format!("{negative_error:?}"),
         "environment_sha256_before": negative_before,
         "environment_sha256_after": negative_after,
     });
     Ok((positive, negative))
 }
 
-fn compose_native_theorem_slice(
-    target: &mut Kernel,
-    roots: &[&str],
-) -> Result<serde_json::Value, String> {
-    let mut native = Kernel::new();
-    build_nat_prelude(&mut native)
-        .map_err(|error| format!("native Nat prelude failed to build: {error:?}"))?;
-    let native_names = declaration_names(&native);
-    let target_names = declaration_names(target);
-    let root_ids: Vec<NameId> = roots
-        .iter()
-        .map(|root| {
-            native_names
-                .get(*root)
-                .copied()
-                .ok_or_else(|| format!("native root missing: {root}"))
+fn added_digests(rows: &[AddedTheoremReceipt]) -> BTreeMap<&str, &str> {
+    rows.iter()
+        .map(|row| (row.name.as_str(), row.target_declaration_sha256.as_str()))
+        .collect()
+}
+
+fn added_footprints(rows: &[AddedTheoremReceipt]) -> BTreeMap<&str, &[String]> {
+    rows.iter()
+        .map(|row| (row.name.as_str(), row.axiom_footprint.as_slice()))
+        .collect()
+}
+
+fn reused_receipts(rows: &[ReusedDeclarationReceipt]) -> Vec<serde_json::Value> {
+    rows.iter()
+        .map(|row| {
+            json!({
+                "name": row.name,
+                "source_declaration_sha256": row.source_declaration_sha256,
+                "target_declaration_sha256": row.target_declaration_sha256,
+                "source_type_shape_sha256": row.source_type_shape_sha256,
+                "target_type_shape_sha256": row.target_type_shape_sha256,
+            })
         })
-        .collect::<Result<_, _>>()?;
-    let closure = native
-        .root_declaration_closure(&root_ids)
-        .map_err(|error| format!("native closure failed: {error:?}"))?;
-    let mut reused = Vec::new();
-    let mut missing = Vec::new();
-    for &source_name in &closure {
-        let rendered = native.display_name(source_name).to_string();
-        if let Some(&target_name) = target_names.get(&rendered) {
-            let source_type = native
-                .environment()
-                .get(source_name)
-                .expect("closure declaration")
-                .ty();
-            let target_type = target
-                .environment()
-                .get(target_name)
-                .expect("mapped target declaration")
-                .ty();
-            let source_shape = canonical_kernel_type_shape_sha256(&native, source_type)?;
-            let target_shape = canonical_kernel_type_shape_sha256(target, target_type)?;
-            if source_shape != target_shape {
-                return Err(format!(
-                    "kernel type-shape mismatch for reused declaration {rendered}: native={source_shape} imported={target_shape}"
-                ));
-            }
-            reused.push(rendered);
-        } else {
-            missing.push(rendered);
-        }
-    }
-
-    let before = environment_sha256(target)?;
-    let mut staged = target.clone();
-    let mut translator = ExpressionTranslator::new(&native, &mut staged);
-    let mut added = Vec::new();
-    for &source_name in &closure {
-        let rendered = native.display_name(source_name).to_string();
-        if target_names.contains_key(&rendered) {
-            continue;
-        }
-        let declaration = native
-            .environment()
-            .get(source_name)
-            .expect("closure declaration")
-            .clone();
-        let translated = translate_checked_theorem(&mut translator, declaration, &rendered)?;
-        translator
-            .target
-            .add_declaration(translated)
-            .map_err(|error| format!("trusted gate rejected {rendered}: {error:?}"))?;
-        added.push(rendered);
-    }
-    let evidence = added_theorem_evidence(translator.target, &added)?;
-    let after = environment_sha256(translator.target)?;
-    drop(translator);
-    *target = staged;
-    Ok(json!({
-        "roots": roots,
-        "outcome": "composed",
-        "reused_dependency_names": reused,
-        "declarations_absent_before": missing,
-        "added_theorem_names": added,
-        "added_declaration_sha256": evidence.digests,
-        "added_axiom_footprints": evidence.footprints,
-        "environment_sha256_before": before,
-        "environment_sha256_after": after,
-    }))
-}
-
-fn translate_checked_theorem(
-    translator: &mut ExpressionTranslator<'_>,
-    declaration: Declaration,
-    rendered: &str,
-) -> Result<Declaration, String> {
-    let Declaration::Theorem {
-        name,
-        uparams,
-        ty,
-        value,
-    } = declaration
-    else {
-        return Err(format!(
-            "missing dependency is not a checked theorem: {rendered}"
-        ));
-    };
-    Ok(Declaration::Theorem {
-        name: translator.name(name),
-        uparams: uparams
-            .into_iter()
-            .map(|name| translator.name(name))
-            .collect(),
-        ty: translator.expr(ty)?,
-        value: translator.expr(value)?,
-    })
-}
-
-struct AddedTheoremEvidence {
-    digests: BTreeMap<String, String>,
-    footprints: BTreeMap<String, Vec<String>>,
-}
-
-fn added_theorem_evidence(
-    kernel: &Kernel,
-    added: &[String],
-) -> Result<AddedTheoremEvidence, String> {
-    let names = declaration_names(kernel);
-    let digests = added
-        .iter()
-        .map(|name| {
-            Ok((
-                name.clone(),
-                canonical_declaration_sha256(kernel, names[name])?,
-            ))
-        })
-        .collect::<Result<_, String>>()?;
-    let footprints = added
-        .iter()
-        .map(|name| {
-            let footprint = kernel
-                .axiom_footprint(names[name])
-                .into_iter()
-                .map(|axiom| kernel.display_name(axiom).to_string())
-                .collect();
-            (name.clone(), footprint)
-        })
-        .collect();
-    Ok(AddedTheoremEvidence {
-        digests,
-        footprints,
-    })
-}
-
-struct ExpressionTranslator<'a> {
-    source: &'a Kernel,
-    target: &'a mut Kernel,
-    names: HashMap<NameId, NameId>,
-    levels: HashMap<LevelId, LevelId>,
-    expressions: HashMap<ExprId, ExprId>,
-}
-
-impl<'a> ExpressionTranslator<'a> {
-    fn new(source: &'a Kernel, target: &'a mut Kernel) -> Self {
-        Self {
-            source,
-            target,
-            names: HashMap::new(),
-            levels: HashMap::new(),
-            expressions: HashMap::new(),
-        }
-    }
-
-    fn name(&mut self, source: NameId) -> NameId {
-        if let Some(&translated) = self.names.get(&source) {
-            return translated;
-        }
-        let translated = match self.source.name_node(source).clone() {
-            NameNode::Anonymous => self.target.anon(),
-            NameNode::Str(parent, component) => {
-                let parent = self.name(parent);
-                self.target.name_str(parent, component)
-            }
-            NameNode::Num(parent, component) => {
-                let parent = self.name(parent);
-                self.target.name_num(parent, component)
-            }
-        };
-        self.names.insert(source, translated);
-        translated
-    }
-
-    fn level(&mut self, source: LevelId) -> LevelId {
-        if let Some(&translated) = self.levels.get(&source) {
-            return translated;
-        }
-        let translated = match self.source.level_node(source).clone() {
-            LevelNode::Zero => self.target.level_zero(),
-            LevelNode::Succ(level) => {
-                let level = self.level(level);
-                self.target.level_succ(level)
-            }
-            LevelNode::Max(left, right) => {
-                let left = self.level(left);
-                let right = self.level(right);
-                self.target.level_max(left, right)
-            }
-            LevelNode::IMax(left, right) => {
-                let left = self.level(left);
-                let right = self.level(right);
-                self.target.level_imax(left, right)
-            }
-            LevelNode::Param(name) => {
-                let name = self.name(name);
-                self.target.level_param(name)
-            }
-        };
-        self.levels.insert(source, translated);
-        translated
-    }
-
-    fn expr(&mut self, source: ExprId) -> Result<ExprId, String> {
-        if let Some(&translated) = self.expressions.get(&source) {
-            return Ok(translated);
-        }
-        let translated = match self.source.expr_node(source).clone() {
-            ExprNode::BVar(index) => self.target.bvar(index),
-            ExprNode::FVar(_) => {
-                return Err("closed declaration contains a free variable".to_owned());
-            }
-            ExprNode::Sort(level) => {
-                let level = self.level(level);
-                self.target.sort(level)
-            }
-            ExprNode::Const(name, levels) => {
-                let name = self.name(name);
-                let levels = levels.into_iter().map(|level| self.level(level)).collect();
-                self.target.const_(name, levels)
-            }
-            ExprNode::Proj(name, index, structure) => {
-                let name = self.name(name);
-                let structure = self.expr(structure)?;
-                self.target.proj(name, index, structure)
-            }
-            ExprNode::App(function, argument) => {
-                let function = self.expr(function)?;
-                let argument = self.expr(argument)?;
-                self.target.app(function, argument)
-            }
-            ExprNode::Lam(name, ty, body, info) => {
-                let name = self.name(name);
-                let ty = self.expr(ty)?;
-                let body = self.expr(body)?;
-                self.target.lam(name, ty, body, info)
-            }
-            ExprNode::Pi(name, ty, body, info) => {
-                let name = self.name(name);
-                let ty = self.expr(ty)?;
-                let body = self.expr(body)?;
-                self.target.pi(name, ty, body, info)
-            }
-            ExprNode::Let(name, ty, value, body) => {
-                let name = self.name(name);
-                let ty = self.expr(ty)?;
-                let value = self.expr(value)?;
-                let body = self.expr(body)?;
-                self.target.let_(name, ty, value, body)
-            }
-            ExprNode::Lit(literal) => self.target.lit(literal),
-        };
-        self.expressions.insert(source, translated);
-        Ok(translated)
-    }
+        .collect()
 }
 
 fn environment_sha256(kernel: &Kernel) -> Result<String, String> {

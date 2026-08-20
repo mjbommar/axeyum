@@ -45,6 +45,7 @@ mod contract_residualization;
 mod identity;
 mod semantic_contract_receipt;
 mod source_delta_trace;
+mod theorem_composition;
 mod trace_contract_receipt;
 mod trace_contract_theorem_receipt;
 mod type_slice;
@@ -71,6 +72,11 @@ pub use semantic_contract_receipt::{
 };
 pub use source_delta_trace::{
     CheckedSourceDeltaStep, SourceDeltaStepError, build_source_delta_step, verify_source_delta_step,
+};
+pub use theorem_composition::{
+    AddedTheoremReceipt, CHECKED_THEOREM_COMPOSITION_VERSION, CheckedTheoremCompositionError,
+    CheckedTheoremCompositionReceipt, CompletedTheoremComposition, ReusedDeclarationReceipt,
+    compose_checked_theorem_slice, verify_checked_theorem_composition,
 };
 pub use trace_contract_receipt::{
     TRACE_BACKED_SOURCE_CONTRACT_RECEIPT_VERSION, TraceBackedSourceContractReceipt,

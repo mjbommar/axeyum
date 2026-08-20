@@ -45,14 +45,13 @@ does not replace or mutate any imported declaration.
 
 ## Boundary and next step
 
-This implementation remains inside the measurement example. It is not yet a
-public composition API, a general declaration transport facility, or permission
-to compose arbitrary native closures. Promotion requires a reviewed contract
-covering root authority, supported declaration kinds, exact provenance,
-deterministic translation, compatibility policy, and all-or-nothing publication.
-Controls must include incompatible types, unsupported non-theorems, free
-variables, trusted-gate rejection after partial staging, and unchanged caller
-state on every failure.
+At this historical checkpoint the implementation remained inside the
+measurement example. ADR-0523 and the subsequent
+[public checked theorem composition](58-public-checked-theorem-composition.md)
+have now promoted the exact theorem-only, completed-clone boundary and added the
+required incompatible-type, unsupported-kind, free-variable, partial-staging,
+receipt-replay, and unchanged-caller controls. This document retains the first
+probe-local observation rather than rewriting its evidence identity.
 
 No Fibonacci theorem was submitted, no proof search ran, no proof body was
 displayed, and no ledger row changed. Three native library proofs were submitted
