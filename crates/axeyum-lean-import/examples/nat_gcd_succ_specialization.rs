@@ -10,14 +10,18 @@ use std::io::Cursor;
 use std::path::PathBuf;
 
 use axeyum_lean_import::{
-    CheckedTheoremCompositionError, ImportLimits, canonical_declaration_sha256,
-    canonical_expression_sha256, checked_reused_declaration_compatibility,
-    compose_checked_theorem_slice, compose_checked_theorem_slice_with_target_leaves, import_ndjson,
-    specialize_checked_theorem, verify_checked_theorem_composition,
+    CHECKED_DEPENDENCY_THEOREM_RECEIPT_VERSION, CheckedDependencyTheoremAuthority,
+    CheckedTheoremAuthority, CheckedTheoremCompositionError, CheckedTheoremDependency,
+    ImportLimits, canonical_declaration_sha256, canonical_expression_sha256,
+    checked_reused_declaration_compatibility, compose_checked_theorem_slice,
+    compose_checked_theorem_slice_with_target_leaves, import_ndjson,
+    issue_checked_dependency_theorem_receipt, specialize_checked_theorem,
+    verify_checked_dependency_theorem_receipt, verify_checked_theorem_composition,
     verify_checked_theorem_composition_with_target_leaves, verify_checked_theorem_specialization,
 };
 use axeyum_lean_kernel::{Declaration, Kernel, NameId, build_nat_prelude};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 
 const MOD_INVARIANT_GENERIC: &str = "Axeyum.Autogenesis.modSucc_dvd_iff";
 const MOD_INVARIANT_HELPERS: [&str; 3] = [
@@ -39,6 +43,17 @@ const FIB_RECURRENCE: &str = "Axeyum.Autogenesis.fibAddTwo";
 const FIB_COPRIME_TARGET: &str = "Nat.fib_coprime_fib_succ";
 const TARGET_STATEMENT: &str = "Axeyum.Autogenesis.Coverage.r082";
 const TARGET_GOAL_SHA256: &str = "a053d8f483f2cc1e79c53924baf5f79e4897ce992ca77722168cee20a6f5150f";
+const TARGET_STREAM_SHA256: &str =
+    "6afa79d79481403d3e3273ea3eea26b4d1194762f9bd623ec019f8e821323cfd";
+const TARGET_FACT: &str = "F:ml430-nat-fib-coprime-fib-succ-162fc738";
+const CANDIDATE_OBSERVATION_SHA256: &str =
+    "a1d92b2090392ac90e22419e6e4f6572beff1cbbd27f83d72c7dfcd566ca860a";
+const CANDIDATE_PROOF_SHA256: &str =
+    "baa3313f7b40ad1c73ae29de08deb9f0368e9fcf06fd318fea9c73822c7d6827";
+const CANDIDATE_THEOREM_SHA256: &str =
+    "7fd9a1e811b93f8021ded1e34de5a816a0e9b23940e15cfcd5cbe81309daede9";
+const RECEIPT_AUTHORITY_MANIFEST_SHA256: &str =
+    "b9eb358d0928be257084150998f4f57c87cbbe01040f2c43ac1a306810093b6b";
 const DVD_GCD_LEAVES: [&str; 3] = ["Nat.dvd_mod_iff", "Nat.mod_lt", "Nat.gcd_succ"];
 const REQUIRED_SUPPORT_ROOTS: [&str; 7] = [
     "Nat.add_comm",
@@ -63,23 +78,40 @@ fn run() -> Result<(), String> {
     let mod_invariant_path = required_path(&mut arguments, "mod-invariant.ndjson")?;
     let target_path = required_path(&mut arguments, "target.ndjson")?;
     let gcd_bridge_path = required_path(&mut arguments, "gcd-bridge.ndjson")?;
-    let (all_support, exact_target_path, authority_audit) = match arguments.next() {
-        None => (false, None, false),
-        Some(flag) if flag == "--all-support" => (true, None, false),
-        Some(flag) if flag == "--exact-target" => (
-            true,
-            Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
-            false,
-        ),
-        Some(flag) if flag == "--exact-authority" => (
-            true,
-            Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
-            true,
-        ),
-        Some(_) => return Err("unexpected trailing argument".to_owned()),
-    };
+    let (all_support, exact_target_path, authority_audit, receipt_candidate_path) =
+        match arguments.next() {
+            None => (false, None, false, None),
+            Some(flag) if flag == "--all-support" => (true, None, false, None),
+            Some(flag) if flag == "--exact-target" => (
+                true,
+                Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+                false,
+                None,
+            ),
+            Some(flag) if flag == "--exact-authority" => (
+                true,
+                Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+                true,
+                None,
+            ),
+            Some(flag) if flag == "--issue-receipt" => (
+                true,
+                Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+                false,
+                Some(required_path(&mut arguments, "candidate-observation.json")?),
+            ),
+            Some(_) => return Err("unexpected trailing argument".to_owned()),
+        };
     if arguments.next().is_some() {
         return Err("unexpected trailing argument".to_owned());
+    }
+    if receipt_candidate_path.is_some()
+        && hex_sha256(
+            &fs::read(&target_path)
+                .map_err(|error| format!("receipt target stream read failed: {error}"))?,
+        ) != TARGET_STREAM_SHA256
+    {
+        return Err("receipt target stream identity changed".to_owned());
     }
 
     let mod_invariant = import(&mod_invariant_path, "mod-invariant")?;
@@ -237,10 +269,16 @@ fn run() -> Result<(), String> {
             .as_ref()
             .map(axeyum_lean_import::CompletedImport::kernel),
         authority_audit,
+        receipt_candidate_path.as_ref(),
     )?;
+    let kind = if receipt_candidate_path.is_some() {
+        "axeyum-exact-fibonacci-dependency-theorem-receipt"
+    } else {
+        "axeyum-nat-gcd-succ-specialization"
+    };
     let output = json!({
         "schema_version": 1,
-        "kind": "axeyum-nat-gcd-succ-specialization",
+        "kind": kind,
         "lean_version": gcd_bridge.report().lean_version,
         "bridge_composition": {
             "roots": [MOD_LT_SUCC_GENERIC, GCD_SUCC_GENERIC],
@@ -275,6 +313,7 @@ fn retry_native_support(
     roots: &[&str],
     exact_source: Option<&Kernel>,
     authority_audit: bool,
+    receipt_candidate_path: Option<&PathBuf>,
 ) -> Result<Value, String> {
     match compose_checked_theorem_slice_with_target_leaves(source, target, roots, &DVD_GCD_LEAVES) {
         Ok(completed) => {
@@ -301,8 +340,19 @@ fn retry_native_support(
                 "receipt_sha256": completed.receipt().receipt_sha256,
             });
             if let Some(exact_source) = exact_source {
-                value["exact_target"] =
-                    compose_exact_target(exact_source, completed.kernel(), authority_audit)?;
+                value["exact_target"] = if let Some(candidate_path) = receipt_candidate_path {
+                    issue_exact_target_receipt(
+                        source,
+                        target,
+                        roots,
+                        exact_source,
+                        completed.kernel(),
+                        completed.receipt().receipt_sha256.as_str(),
+                        candidate_path,
+                    )?
+                } else {
+                    compose_exact_target(exact_source, completed.kernel(), authority_audit)?
+                };
             }
             Ok(with_optional_roots(value, roots))
         }
@@ -323,11 +373,42 @@ fn retry_native_support(
     }
 }
 
+struct ExactTargetAdmission {
+    kernel: Kernel,
+    theorem: NameId,
+    dependency_ids: Vec<NameId>,
+    dependencies: Vec<String>,
+    footprint: Vec<String>,
+    target_goal_sha256: String,
+    proof_sha256: String,
+    declaration_sha256: String,
+    source_closure: usize,
+    added_theorems: usize,
+    added_definitions: usize,
+    added_singleton_inductives: usize,
+    recurrence_composition_receipt_sha256: String,
+}
+
 fn compose_exact_target(
     source: &Kernel,
     target: &Kernel,
     authority_audit: bool,
 ) -> Result<Value, String> {
+    let first = reconstruct_exact_target(source, target)?;
+    let replay = reconstruct_exact_target(source, target)?;
+    require_same_exact_target(&first, &replay)?;
+    let mut result = exact_target_json(&first, 2);
+    if authority_audit {
+        result["receipt_authority_audit"] =
+            receipt_authority_audit(&first.kernel, &first.dependency_ids)?;
+    }
+    Ok(result)
+}
+
+fn reconstruct_exact_target(
+    source: &Kernel,
+    target: &Kernel,
+) -> Result<ExactTargetAdmission, String> {
     let completed = compose_checked_theorem_slice(source, target, &[FIB_RECURRENCE])
         .map_err(|error| format!("Fibonacci recurrence composition declined: {error:?}"))?;
     verify_checked_theorem_composition(source, target, completed.kernel(), completed.receipt())
@@ -390,45 +471,238 @@ fn compose_exact_target(
     }
     let proof_sha256 = canonical_expression_sha256(&checked, proof)?;
     let declaration_sha256 = canonical_declaration_sha256(&checked, theorem)?;
+    Ok(ExactTargetAdmission {
+        kernel: checked,
+        theorem,
+        dependency_ids,
+        dependencies,
+        footprint,
+        target_goal_sha256,
+        proof_sha256,
+        declaration_sha256,
+        source_closure: completed.receipt().source_closure.len(),
+        added_theorems: completed.receipt().added_theorems.len(),
+        added_definitions: completed.receipt().added_definitions.len(),
+        added_singleton_inductives: completed.receipt().added_singleton_inductives.len(),
+        recurrence_composition_receipt_sha256: completed.receipt().receipt_sha256.clone(),
+    })
+}
 
-    let mut replay = completed.kernel().clone();
-    let replay_statement = find_name(&replay, TARGET_STATEMENT)?;
-    let replay_goal = match replay.environment().get(replay_statement) {
-        Some(Declaration::Definition { value, .. }) => *value,
-        _ => return Err("replay target statement is not a definition".to_owned()),
-    };
-    let replay_target = {
-        let nat = find_name(&replay, "Nat")?;
-        replay.name_str(nat, "fib_coprime_fib_succ")
-    };
-    let (replay_theorem, _, replay_proof) =
-        fib_coprime::admit(&mut replay, replay_target, replay_goal, FIB_RECURRENCE)?;
-    if canonical_expression_sha256(&replay, replay_proof)? != proof_sha256
-        || canonical_declaration_sha256(&replay, replay_theorem)? != declaration_sha256
-        || replay.axiom_footprint(replay_theorem) != checked.axiom_footprint(theorem)
-        || replay.theorem_dependencies(replay_theorem) != checked.theorem_dependencies(theorem)
+fn require_same_exact_target(
+    first: &ExactTargetAdmission,
+    replay: &ExactTargetAdmission,
+) -> Result<(), String> {
+    if first.target_goal_sha256 != replay.target_goal_sha256
+        || first.proof_sha256 != replay.proof_sha256
+        || first.declaration_sha256 != replay.declaration_sha256
+        || first.footprint != replay.footprint
+        || first.dependencies != replay.dependencies
+        || first.recurrence_composition_receipt_sha256
+            != replay.recurrence_composition_receipt_sha256
     {
         return Err("exact Fibonacci theorem reconstruction changed".to_owned());
     }
-    let mut result = json!({
+    Ok(())
+}
+
+fn exact_target_json(admission: &ExactTargetAdmission, fresh_reconstructions: usize) -> Value {
+    json!({
         "recurrence_root": FIB_RECURRENCE,
-        "source_closure": completed.receipt().source_closure.len(),
-        "added_theorems": completed.receipt().added_theorems.len(),
-        "added_definitions": completed.receipt().added_definitions.len(),
-        "added_singleton_inductives": completed.receipt().added_singleton_inductives.len(),
-        "recurrence_composition_receipt_sha256": completed.receipt().receipt_sha256,
+        "source_closure": admission.source_closure,
+        "added_theorems": admission.added_theorems,
+        "added_definitions": admission.added_definitions,
+        "added_singleton_inductives": admission.added_singleton_inductives,
+        "recurrence_composition_receipt_sha256": admission.recurrence_composition_receipt_sha256,
         "target": FIB_COPRIME_TARGET,
-        "target_goal_sha256": target_goal_sha256,
-        "proof_sha256": proof_sha256,
-        "target_declaration_sha256": declaration_sha256,
-        "target_axiom_footprint": footprint,
-        "direct_theorem_dependencies": dependencies,
-        "fresh_reconstructions": 2,
-    });
-    if authority_audit {
-        result["receipt_authority_audit"] = receipt_authority_audit(&checked, &dependency_ids)?;
+        "target_goal_sha256": admission.target_goal_sha256,
+        "proof_sha256": admission.proof_sha256,
+        "target_declaration_sha256": admission.declaration_sha256,
+        "target_axiom_footprint": admission.footprint,
+        "direct_theorem_dependencies": admission.dependencies,
+        "fresh_reconstructions": fresh_reconstructions,
+    })
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn issue_exact_target_receipt(
+    support_source: &Kernel,
+    support_target: &Kernel,
+    support_roots: &[&str],
+    recurrence_source: &Kernel,
+    first_support: &Kernel,
+    first_support_receipt_sha256: &str,
+    candidate_path: &PathBuf,
+) -> Result<Value, String> {
+    let candidate_bytes = fs::read(candidate_path)
+        .map_err(|error| format!("candidate observation read failed: {error}"))?;
+    if hex_sha256(&candidate_bytes) != CANDIDATE_OBSERVATION_SHA256 {
+        return Err("candidate observation identity changed".to_owned());
     }
-    Ok(result)
+    let candidate: Value = serde_json::from_slice(&candidate_bytes)
+        .map_err(|error| format!("candidate observation JSON failed: {error}"))?;
+    require_sealed_candidate(&candidate)?;
+
+    let mut first = reconstruct_exact_target(recurrence_source, first_support)?;
+    let replay_support = compose_checked_theorem_slice_with_target_leaves(
+        support_source,
+        support_target,
+        support_roots,
+        &DVD_GCD_LEAVES,
+    )
+    .map_err(|error| format!("replay support composition declined: {error:?}"))?;
+    verify_checked_theorem_composition_with_target_leaves(
+        support_source,
+        support_target,
+        replay_support.kernel(),
+        replay_support.receipt(),
+    )
+    .map_err(|error| format!("replay support composition changed: {error:?}"))?;
+    require_empty_added_footprints(
+        replay_support
+            .receipt()
+            .added_theorems
+            .iter()
+            .map(|row| (row.name.as_str(), row.axiom_footprint.as_slice())),
+    )?;
+    if replay_support.receipt().receipt_sha256 != first_support_receipt_sha256 {
+        return Err("fresh support composition receipt changed".to_owned());
+    }
+    let mut replay = reconstruct_exact_target(recurrence_source, replay_support.kernel())?;
+    require_same_exact_target(&first, &replay)?;
+
+    let authority = CheckedDependencyTheoremAuthority {
+        theorem: CheckedTheoremAuthority {
+            policy_version: "nat-fib-coprime-official-receipt-v1".to_owned(),
+            source_artifact_sha256: TARGET_STREAM_SHA256.to_owned(),
+            target_definition: TARGET_STATEMENT.to_owned(),
+            fact_id: TARGET_FACT.to_owned(),
+            goal_sha256: TARGET_GOAL_SHA256.to_owned(),
+            candidate_observation_sha256: CANDIDATE_OBSERVATION_SHA256.to_owned(),
+            expected_proof_sha256: CANDIDATE_PROOF_SHA256.to_owned(),
+            expected_theorem_content_sha256: CANDIDATE_THEOREM_SHA256.to_owned(),
+            operation: "official-fibonacci-coprimality-induction-v1".to_owned(),
+            max_plan_templates: 1,
+            max_kernel_submissions: 2,
+            max_executor_invocations: 1,
+            max_retries: 0,
+        },
+        expected_direct_theorem_dependencies: receipt_dependencies(),
+    };
+    let receipt =
+        issue_checked_dependency_theorem_receipt(&mut first.kernel, first.theorem, &authority)
+            .map_err(|error| error.to_string())?;
+    verify_checked_dependency_theorem_receipt(
+        &receipt,
+        &mut replay.kernel,
+        replay.theorem,
+        &authority,
+    )
+    .map_err(|error| error.to_string())?;
+    let replayed =
+        issue_checked_dependency_theorem_receipt(&mut replay.kernel, replay.theorem, &authority)
+            .map_err(|error| error.to_string())?;
+    if receipt != replayed
+        || receipt.schema_version != CHECKED_DEPENDENCY_THEOREM_RECEIPT_VERSION
+        || !receipt.has_valid_digest()
+    {
+        return Err("fresh exact theorem receipt replay changed".to_owned());
+    }
+    let receipt_json: Value = serde_json::from_str(
+        &receipt
+            .to_pretty_json()
+            .map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| error.to_string())?;
+    let mut output = exact_target_json(&first, 2);
+    output["candidate_observation_sha256"] = json!(CANDIDATE_OBSERVATION_SHA256);
+    output["receipt_authority_manifest_sha256"] = json!(RECEIPT_AUTHORITY_MANIFEST_SHA256);
+    output["semantic_theorem_receipt"] = receipt_json;
+    output["assurance"] = json!({
+        "fresh_full_reconstructions": 2,
+        "target_theorem_submissions": 2,
+        "receipt_reissued_exactly": true,
+        "axiom_footprint": [],
+        "direct_theorem_dependencies": receipt.direct_theorem_dependencies.iter().map(|row| json!({
+            "name": row.name,
+            "content_sha256": row.content_sha256,
+        })).collect::<Vec<_>>(),
+        "proof_search_invocations": 0,
+    });
+    output["authority"] = json!({
+        "held_out_inspected": false,
+        "semantic_theorem_receipts_issued": 1,
+        "fact_status_changes": 0,
+        "evaluation_credit": 0,
+        "ledger_writes": 0,
+    });
+    Ok(output)
+}
+
+fn require_sealed_candidate(candidate: &Value) -> Result<(), String> {
+    let exact = candidate
+        .pointer("/dvd_gcd_frontier/exact_target")
+        .ok_or("candidate exact target is missing")?;
+    if candidate.get("kind").and_then(Value::as_str) != Some("axeyum-nat-gcd-succ-specialization")
+        || exact.get("target").and_then(Value::as_str) != Some(FIB_COPRIME_TARGET)
+        || exact.get("target_goal_sha256").and_then(Value::as_str) != Some(TARGET_GOAL_SHA256)
+        || exact.get("proof_sha256").and_then(Value::as_str) != Some(CANDIDATE_PROOF_SHA256)
+        || exact
+            .get("target_declaration_sha256")
+            .and_then(Value::as_str)
+            != Some(CANDIDATE_THEOREM_SHA256)
+        || exact.get("target_axiom_footprint") != Some(&json!([]))
+        || candidate
+            .get("proof_search_invocations")
+            .and_then(Value::as_u64)
+            != Some(0)
+        || candidate.get("ledger_writes").and_then(Value::as_u64) != Some(0)
+    {
+        return Err("sealed candidate authority changed".to_owned());
+    }
+    Ok(())
+}
+
+fn receipt_dependencies() -> Vec<CheckedTheoremDependency> {
+    [
+        (
+            FIB_RECURRENCE,
+            "982c676b0656664e807c5e195bbdbd43376d78dec029bb3c409df661de39edb4",
+        ),
+        (
+            "Nat.add_comm",
+            "c05e6d0986251392c9b1bc9fcc2bd5d66de22c856b9669cdd993e9993d94f4f9",
+        ),
+        (
+            "Nat.dvd_add_iff_right",
+            "4bc8146aabb20e59aa1b0a19f80588ac80656320031f12b61f96da3f94802cf0",
+        ),
+        (
+            "Nat.dvd_gcd",
+            "325197e87bf46cc929ad03177c49e73de7054b446ec22f132c605af4d3c35e94",
+        ),
+        (
+            "Nat.eq_one_of_dvd_one",
+            "bc5301b4f9dbd08785db127ca6512283d2125321be596b362129d339c80ffa37",
+        ),
+        (
+            "Nat.gcd_dvd_left",
+            "7fa32fac2240feebdb94d6259f2bbab2dbb83059227286303efd7c306e5ad399",
+        ),
+        (
+            "Nat.gcd_dvd_right",
+            "d3214bf5b657f399baa82c9e2817996b64ae26d688308dfa0641a6ed376fdef4",
+        ),
+        (
+            "Nat.gcd_zero_left",
+            "f81aee8a1d8528ddf8b7be6007efbee190f2208cdef3dcfda9fa03a1f200175d",
+        ),
+    ]
+    .into_iter()
+    .map(|(name, content_sha256)| CheckedTheoremDependency {
+        name: name.to_owned(),
+        content_sha256: content_sha256.to_owned(),
+    })
+    .collect()
 }
 
 fn receipt_authority_audit(kernel: &Kernel, dependencies: &[NameId]) -> Result<Value, String> {
@@ -513,4 +787,14 @@ fn require_empty_added_footprints<'a>(
         }
     }
     Ok(())
+}
+
+fn hex_sha256(bytes: &[u8]) -> String {
+    let digest = Sha256::digest(bytes);
+    let mut output = String::with_capacity(64);
+    for byte in digest {
+        use std::fmt::Write;
+        write!(output, "{byte:02x}").expect("writing to String cannot fail");
+    }
+    output
 }
