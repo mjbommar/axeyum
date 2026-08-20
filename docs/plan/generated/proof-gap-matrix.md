@@ -32,13 +32,13 @@ end of this file against `git log -1 crates/axeyum-solver/src`.
 
 | Stage | Instances | Retained from baseline UNSAT |
 |---|---:|---:|
-| Baseline UNSAT | 327 | 100.0% |
-| Evidence audit reproduced UNSAT | 325 | 99.4% |
-| Evidence marked certified | 272 | 83.2% |
-| Evidence independently checked | 272 | 83.2% |
-| Audit UNSAT with no declared trust hole | 325 | 99.4% |
-| Lean reconstruction checked | 260 | 79.5% |
-| All dominance conditions | 260 | 79.5% |
+| Baseline UNSAT | 323 | 100.0% |
+| Evidence audit reproduced UNSAT | 321 | 99.4% |
+| Evidence marked certified | 273 | 84.5% |
+| Evidence independently checked | 273 | 84.5% |
+| Audit UNSAT with no declared trust hole | 321 | 99.4% |
+| Lean reconstruction checked | 261 | 80.8% |
+| All dominance conditions | 261 | 80.8% |
 
 The stages are not assumed to be a monotone funnel; the final row is the
 explicit conjunction of certification, independent checking, zero declared
@@ -53,13 +53,13 @@ normalizes uncertified outcomes to independently unchecked.
 | Category | Instances | Meaning |
 |---|---:|---|
 | `proof-production-error` | 2 | Evidence production did not reproduce UNSAT. |
-| `uncertified-and-unchecked` | 53 | The UNSAT route is neither certified nor independently checked. |
+| `uncertified-and-unchecked` | 48 | The UNSAT route is neither certified nor independently checked. |
 | `uncertified-but-checked` | 0 | Reserved invalid combination; normalized into uncertified-and-unchecked. |
 | `evidence-check-gap` | 0 | Certified evidence exists but did not pass its independent checker. |
 | `trust-hole-and-lean-gap` | 0 | Checked evidence retains a trust hole and has no Lean reconstruction. |
 | `trust-hole` | 0 | Lean reconstruction exists, but a declared trust hole remains. |
 | `lean-reconstruction-gap` | 12 | Certified, checked, trust-free evidence lacks Lean reconstruction. |
-| `dominant` | 260 | Certified, checked, trust-free, and Lean-reconstructed UNSAT. |
+| `dominant` | 261 | Certified, checked, trust-free, and Lean-reconstructed UNSAT. |
 
 ## Evidence-kind gaps
 
@@ -68,7 +68,7 @@ mechanisms that should drive reconstruction work.
 
 | Evidence kind | Baseline UNSAT | Certified | Checked | Lean | Trust holes | Dominant | Gap |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `bare-unsat` | 53 | 0 | 0 | 0 | 0 | 0 | 53 |
+| `bare-unsat` | 48 | 0 | 0 | 0 | 0 | 0 | 48 |
 | `alethe-unsat` | 12 | 12 | 12 | 9 | 0 | 9 | 3 |
 | `(none)` | 2 | 0 | 0 | 0 | 0 | 0 | 2 |
 | `bv-alternation-counterexample-unsat` | 2 | 2 | 2 | 0 | 0 | 0 | 2 |
@@ -80,8 +80,8 @@ mechanisms that should drive reconstruction work.
 | `array-axiom-unsat` | 86 | 86 | 86 | 86 | 0 | 86 | 0 |
 | `bounded-int-blast-unsat` | 20 | 20 | 20 | 20 | 0 | 20 | 0 |
 | `term-level-unsat` | 14 | 14 | 14 | 14 | 0 | 14 | 0 |
+| `regex-emptiness-unsat` | 11 | 11 | 11 | 11 | 0 | 11 | 0 |
 | `nra-even-power-unsat` | 10 | 10 | 10 | 10 | 0 | 10 | 0 |
-| `regex-emptiness-unsat` | 10 | 10 | 10 | 10 | 0 | 10 | 0 |
 | `arith-dpll-unsat` | 8 | 8 | 8 | 8 | 0 | 8 | 0 |
 | `bv-defined-enum-unsat` | 8 | 8 | 8 | 8 | 0 | 8 | 0 |
 | `bool-euf-exhaustive-unsat` | 7 | 7 | 7 | 7 | 0 | 7 | 0 |
@@ -142,9 +142,9 @@ mechanisms that should drive reconstruction work.
 | QF_NIA | `qf-nia-synthetic-graduated-vs-z3.json` | 16 | 16 | 16 | 16 | 16 | 0 | 16 | 0 | - |
 | QF_NRA | `qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json` | 14 | 14 | 6 | 6 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=8, `lean-reconstruction-gap`=4 |
 | QF_NRA | `qf-nra-synthetic-graduated-vs-z3.json` | 16 | 16 | 16 | 16 | 16 | 0 | 16 | 0 | - |
-| QF_S | `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json` | 28 | 28 | 8 | 8 | 8 | 0 | 8 | 0 | `uncertified-and-unchecked`=20 |
-| QF_SEQ | `qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json` | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | `uncertified-and-unchecked`=5 |
-| QF_SLIA | `qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json` | 8 | 8 | 2 | 2 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=6 |
+| QF_S | `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json` | 26 | 26 | 9 | 9 | 9 | 0 | 9 | 0 | `uncertified-and-unchecked`=17 |
+| QF_SEQ | `qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json` | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | `uncertified-and-unchecked`=1 |
+| QF_SLIA | `qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json` | 10 | 10 | 2 | 2 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=8 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-solver-vs-z3-10s.json` | 15 | 15 | 15 | 15 | 15 | 0 | 15 | 0 | - |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json` | 15 | 15 | 15 | 15 | 15 | 0 | 15 | 0 | - |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json` | 3 | 3 | 3 | 3 | 3 | 0 | 3 | 0 | - |
@@ -191,7 +191,7 @@ correctness or certificate-production queue.
 
 ## Evidence-driven priority
 
-1. Replace the 53 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
+1. Replace the 48 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
 2. Add Lean reconstruction for the 12 already certified, checked, trust-free instances.
 3. Eliminate the 0 declared trust-hole instances rather than counting Lean module acceptance alone.
 4. Fix the 2 proof-production errors and rerun their exact committed rows.
@@ -231,9 +231,9 @@ regressions to `unknown` still counted as decided.
 | `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` | `4fe9491f3` | 2026-06-25 (file date, NOT measurement date) |
 | `bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json` | `4d53f321d` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` | `521976c4c` | 2026-06-25 (file date, NOT measurement date) |
-| `bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json` | `8aff8d507` | 2026-07-21 (file date, NOT measurement date) |
-| `bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json` | `8aff8d507` | 2026-07-21 (file date, NOT measurement date) |
-| `bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json` | `8aff8d507` | 2026-07-21 (file date, NOT measurement date) |
+| `bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json` | `406662100` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json` | `406662100` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json` | `406662100` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json` | `9d12953c8` | 2026-07-07 (file date, NOT measurement date) |
 | `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` | `c890e4cbc` | 2026-06-26 (file date, NOT measurement date) |
 | `bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json` | `7d30c76b2` | 2026-06-26 (file date, NOT measurement date) |
