@@ -9,7 +9,8 @@ use std::path::PathBuf;
 use axeyum_lean_import::{
     AddedTheoremReceipt, CheckedTheoremCompositionReceipt, ImportLimits, ReusedDeclarationReceipt,
     canonical_alpha_expression_sha256, canonical_declaration_sha256, canonical_expression_sha256,
-    canonical_kernel_type_shape_sha256, compose_checked_theorem_slice, import_ndjson,
+    canonical_kernel_type_shape_sha256, checked_reused_declaration_compatibility,
+    compose_checked_theorem_slice, import_ndjson,
 };
 use axeyum_lean_kernel::{BinderInfo, Declaration, Kernel, KernelError, build_nat_prelude};
 use serde_json::json;
@@ -26,6 +27,7 @@ struct ControlObservations {
     composition: serde_json::Value,
     singleton: serde_json::Value,
     definition: serde_json::Value,
+    mod_lt_compatibility: serde_json::Value,
     negative: serde_json::Value,
     kernel_submissions: usize,
 }
@@ -111,6 +113,7 @@ fn run() -> Result<(), String> {
             "composition_control": controls.composition,
             "singleton_inductive_control": controls.singleton,
             "definition_control": controls.definition,
+            "mod_lt_compatibility_control": controls.mod_lt_compatibility,
             "structural_mismatch_control": controls.negative,
         },
         "result": result,
@@ -134,6 +137,9 @@ fn exercise_composition_controls(kernel: &mut Kernel) -> Result<ControlObservati
     let prelude = build_nat_prelude(&mut native)
         .map_err(|error| format!("native Nat prelude failed to build: {error:?}"))?;
     let singleton_root = add_exists_control_theorem(&mut native, prelude.logic)?;
+    let mod_lt_compatibility =
+        checked_reused_declaration_compatibility(&native, kernel, "Nat.mod_lt")
+            .map_err(|error| format!("Nat.mod_lt compatibility failed: {error:?}"))?;
     let negative_before = environment_sha256(kernel)?;
     let negative_error = compose_checked_theorem_slice(&native, kernel, &["Nat.dvd_gcd"])
         .expect_err("the structurally mismatched control must decline");
@@ -167,6 +173,7 @@ fn exercise_composition_controls(kernel: &mut Kernel) -> Result<ControlObservati
         composition: positive,
         singleton,
         definition,
+        mod_lt_compatibility: reused_receipt_json(&mod_lt_compatibility),
         negative,
         kernel_submissions,
     })
@@ -298,18 +305,18 @@ fn singleton_package_rows(receipt: &CheckedTheoremCompositionReceipt) -> Vec<ser
 }
 
 fn reused_receipts(rows: &[ReusedDeclarationReceipt]) -> Vec<serde_json::Value> {
-    rows.iter()
-        .map(|row| {
-            json!({
-                "name": row.name,
-                "source_declaration_sha256": row.source_declaration_sha256,
-                "target_declaration_sha256": row.target_declaration_sha256,
-                "source_type_shape_sha256": row.source_type_shape_sha256,
-                "target_type_shape_sha256": row.target_type_shape_sha256,
-                "compatibility": row.compatibility.as_str(),
-            })
-        })
-        .collect()
+    rows.iter().map(reused_receipt_json).collect()
+}
+
+fn reused_receipt_json(row: &ReusedDeclarationReceipt) -> serde_json::Value {
+    json!({
+        "name": row.name,
+        "source_declaration_sha256": row.source_declaration_sha256,
+        "target_declaration_sha256": row.target_declaration_sha256,
+        "source_type_shape_sha256": row.source_type_shape_sha256,
+        "target_type_shape_sha256": row.target_type_shape_sha256,
+        "compatibility": row.compatibility.as_str(),
+    })
 }
 
 fn environment_sha256(kernel: &Kernel) -> Result<String, String> {

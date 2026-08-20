@@ -223,6 +223,8 @@ pub enum CheckedTheoremCompositionError {
     DuplicateRoot(String),
     /// A requested source root does not exist.
     MissingRoot(String),
+    /// A named compatibility check has no same-name target declaration.
+    MissingTarget(String),
     /// Every requested root must already be a checked theorem.
     RootIsNotTheorem(String),
     /// The kernel could not derive a closed dependency order.
@@ -355,6 +357,43 @@ pub fn verify_checked_theorem_composition(
         return Err(CheckedTheoremCompositionError::ReceiptMismatch);
     }
     Ok(())
+}
+
+/// Check the exact reuse relation for one same-name declaration without
+/// selecting a proof closure or publishing any declaration.
+///
+/// This is a diagnostic for the same compatibility boundary used by
+/// [`compose_checked_theorem_slice`]. A successful receipt authorizes only a
+/// later target-kernel reconstruction attempt; it is not proof or admission
+/// evidence by itself.
+///
+/// # Errors
+///
+/// Returns a missing-name, type-shape, translation, or identity error. Neither
+/// input kernel is mutated.
+pub fn checked_reused_declaration_compatibility(
+    source: &Kernel,
+    target: &Kernel,
+    name: &str,
+) -> Result<ReusedDeclarationReceipt, CheckedTheoremCompositionError> {
+    let source_names = declaration_names(source);
+    let source_name = source_names
+        .get(name)
+        .copied()
+        .ok_or_else(|| CheckedTheoremCompositionError::MissingRoot(name.to_owned()))?;
+    let target_names = declaration_names(target);
+    if !target_names.contains_key(name) {
+        return Err(CheckedTheoremCompositionError::MissingTarget(
+            name.to_owned(),
+        ));
+    }
+    validate_reused(source, target, &[source_name], &target_names)?
+        .pop()
+        .ok_or_else(|| {
+            CheckedTheoremCompositionError::Identity(
+                "named compatibility check produced no receipt".to_owned(),
+            )
+        })
 }
 
 fn select_closure(

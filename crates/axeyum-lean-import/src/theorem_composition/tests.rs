@@ -395,6 +395,11 @@ fn translated_definitional_equality_authorizes_only_a_fresh_gate_check() {
         ReusedTypeCompatibility::TranslatedDefinitionalEquality
     );
     assert_eq!(
+        checked_reused_declaration_compatibility(&source, &target, "Composition.defeqWitness")
+            .unwrap(),
+        *witness
+    );
+    assert_eq!(
         completed.receipt().added_theorems[0].axiom_footprint,
         ["Composition.defeqWitness"]
     );
@@ -454,6 +459,16 @@ fn a_structural_reuse_mismatch_leaves_the_target_unchanged() {
         compose_checked_theorem_slice(&source, &target, &["Composition.mismatchRoot"]),
         Err(CheckedTheoremCompositionError::TypeShapeMismatch { name, .. })
             if name == "Composition.P"
+    ));
+    assert!(matches!(
+        checked_reused_declaration_compatibility(&source, &target, "Composition.P"),
+        Err(CheckedTheoremCompositionError::TypeShapeMismatch { name, .. })
+            if name == "Composition.P"
+    ));
+    assert!(matches!(
+        checked_reused_declaration_compatibility(&source, &target, "Composition.p"),
+        Err(CheckedTheoremCompositionError::MissingTarget(name))
+            if name == "Composition.p"
     ));
     assert_eq!(environment_sha256(&target).unwrap(), before);
 }
