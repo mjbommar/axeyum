@@ -653,16 +653,28 @@ nonpositive fibre defect into one restricted four-shift Mobius correlation.
 The candidate survives exhaustive endpoint rows through `ell=7` and the
 maximal-interval fleet rows through `ell=14`, but remains conjectural and
 would not by itself close the cross-order convolution.  The next audit must
-also use the review sweep's favorable corrections: compare every previously
-rejected shortcut against the genuinely sufficient weak fourth-moment
-allowance, and independently recheck the generalized odd-`k` Capell and
-power-of-two composition families before granting construction coverage.
+also use the review sweep's favorable corrections.  The genuinely sufficient
+weak fourth-moment allowance is now encoded with the necessary proper-power
+margin; the positivity-only version is rejected.  Exact Efron--Stein masses
+and a primary-source KLLM audit close the proposed constant-three shortcut:
+the cited theorem controls a strongly noised, coordinate-count-graded
+function, while even the hypothetical `C=2` log-order proxy misses the weak
+allowance by four to six orders of magnitude on fleet rows through `ell=17`.
+The cubic Capell operation is now generalized to every odd monomial power.
+At a 20,000,000-prime cutoff, native and independent bit-polynomial audits
+agree on 371 eligible committed seeds, including 174 odd degrees, and every
+eligible seed generates a proved infinite ray.  This corrects the old claim
+that monomial constructions omit all odd degrees, but the union is still not
+an all-degree proof.  The next bounded constructive task is the classified
+power-of-two non-monomial composition window; the analytic obligation remains
+the proper-power-aware weak fourth moment.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `dd6dcd94a` | Corrected the weak fourth-moment target to retain proper-power subtraction, rejected the proposed KLLM/Efron shortcut at theorem and finite-scaling levels, and generalized Capell to every odd monomial power with 371/174 independently reproduced finite seeds. |
 | 2026-08-20 | `833806e24` | Expanded exact dyadic fibre `L^2`, proved the inverse-difference parallelogram criterion `h*t*(t+h)=0`, and reduced the conjectural nonpositive defect to a restricted four-shift Mobius correlation without granting endpoint credit. |
 | 2026-08-20 | `9a49f2023` | Inserted Wan--Zhang's sharper complete-intersection Betti theorem into the exact Foulkes endpoint ledger and quantified its remaining 6,800-bit miss, isolating cyclic-eigenspace cancellation rather than generic total cohomology as the needed theorem. |
 | 2026-08-20 | `6f4a275db` | Audited the proposed Newton-polygon literature at source level, recording its odd-prime or `Z_p`-tower scope and preventing those nearby results from being substituted for the binary product-group theorem. |
