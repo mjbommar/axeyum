@@ -15,9 +15,13 @@ target to one exact-conductor delocalization estimate `(SUP-L)`.  A native
 integer diagnostic retains the finite rational constant without theorem
 credit, while a separate symbolic checker proves that any fixed polynomial
 loss yields `M_4<=625 C ell^(a+4)2^(3ell)` and completes the degree-400
-handoff.  The ordinary individual Weil estimate already proves the concrete
-`C=4` target through conductor level three; the open quantified fact therefore
-starts at level four.  This is the current load-bearing proof obligation.
+handoff.  The initially selected absolute constant is now refuted exactly at
+`(ell,n,j)=(27,56,4)`, with an arbitrary-precision recurrence witness at
+`(343,688,4)` beyond the finite handoff; compact-torus recurrence proves that
+no absolute constant can be uniform in the conductor.  The corrected target
+allows the squared polynomial loss `4ell^4`; ordinary Weil then discharges
+every level with `2^(j-1)<=4ell^4`.  Only the growing range above roughly
+`4log2(ell)+3` remains the current load-bearing proof obligation.
 
 **Next:** prove a uniform endpoint discrepancy bound, encode it as replayable
 evidence, then write the paper.  The selected sufficient fourth-moment bound is
@@ -700,6 +704,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `c6c0dc238` | Refuted the absolute conductor-layer constant by exact fixed-level recurrence, retained the corrected polynomial-loss theorem, and reduced its open range to growing conductors above the individual-Weil prefix. |
 | 2026-08-20 | `d9380f0d7` | Reduced the wild fourth-moment target to exact-conductor delocalization, proved the `C=4` prefix through level three, and added a fail-closed finite diagnostic plus the polynomial-loss endpoint implication. |
 | 2026-08-20 | `f729f3ad1` | Translated Hast--Matei into the exact proper-power-aware endpoint normalization, exposed the missing degree-uniform wild constant, and sharpened the even proper-power envelope by eliminating all odd exponent layers. |
 | 2026-08-20 | `b01ac7cd6` | Classified every shape-preserving polynomial composition, added certified tower search, and refuted the proposed degree `8 -> 64 -> 512` chain by exhaustive degree-eight controls. |
