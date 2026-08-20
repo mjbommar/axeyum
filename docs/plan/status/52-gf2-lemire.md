@@ -454,12 +454,24 @@ violate it and the worst needs coefficient 65; packetwise absolute values are
 Fomenko's decisive fixed-level degree-two `L`-polynomial formula has not
 generalized, so the endpoint still requires cross-packet/cross-conductor
 cancellation.
+The product-constrained fourth moment is now represented exactly as the
+identity value of a fourfold character convolution, with all three Wick
+pairings retained and independently checked against the spatial fourth
+cumulant.  Adams operations turn this into a precise geometric budget rather
+than a generic monodromy slogan: after removing the `2^(2n)` Adams weight, a
+mixed connected complex with `H_c^i=0` above degree `4ell` and total normalized
+Betti number at most `ell^4` would prove the accepted endpoint envelope.  At
+`ell=200` this means cancelling the possible cohomology degrees from `1200`
+down through `801`.  Literal support on the Wick diagonals is explicitly not
+claimed; proving or refuting this uniform cohomological cutoff is the active
+geometric stopping test.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `702191bff` | Reconstructed the product-one Adams convolution and all three Wick projectors, then exposed the exact degree-`4ell` cohomology cutoff and `ell^4` Betti budget needed for endpoint credit without claiming either. |
 | 2026-08-20 | `5bdebc271` | Added bounded generalized Fomenko restriction/Galois packets, proved their exact conductor reconstruction, and refuted a one-square-root-unit bound for both one-coordinate and endpoint-matched logarithmic quotients. |
 | 2026-08-20 | `254be42f7` | Proved that Katz's pointwise character fourth moment is a different contraction from the product-constrained Hayes cumulant and retained the missing uniform Betti bound. |
 | 2026-08-20 | `a38675b8f` | Expanded the fourth cumulant into exact positive fibre products and proved that the connected target is a signed virtual trace, not an off-diagonal point count. |
