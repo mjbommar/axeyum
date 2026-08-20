@@ -219,6 +219,10 @@ step control-registration ./scripts/check-control-registration.sh
 # made the SAME tree report 7 orphans then 3, and `$?` after a pipeline
 # reported exit=0 for a script that exits 1.
 step shell-antipatterns ./scripts/check-shell-antipatterns.sh
+# `bench-results/DOMINANCE.md` is generated and had NO `--check` and no gate,
+# so it sat SIX AUDITS behind its own inputs -- its QF_S row claimed 87
+# decided against an artifact recording 93 -- while reading as current.
+step dominance-scoreboard python3 scripts/gen-dominance-scoreboard.py --check
 # The Lean-reconstruction unit tests, moved OUT of `hooks/pre-push` on
 # 2026-08-20. Measured idle: 268 tests, 294s, because each builds Lean
 # preludes -- 90% of the hook's unit sweep and ~45% of every Rust push. They

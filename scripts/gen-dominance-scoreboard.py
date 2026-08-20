@@ -33,6 +33,9 @@ Writes:
 
 from __future__ import annotations
 
+import argparse
+import pathlib
+import sys
 import importlib.util
 import glob
 import json
@@ -598,14 +601,63 @@ def build_markdown(rows: list[dict], audits: dict[str, dict]) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
+def main() -> int:
+    """Write `bench-results/DOMINANCE.md`, or with `--check` verify it is current.
+
+    `--check` exists because this file had no way to go stale loudly. Measured
+    2026-08-20: `DOMINANCE.md` was SIX AUDITS behind its own inputs — its QF_S
+    row claimed 87 decided against an artifact recording 93 — because nobody
+    regenerated it after a refresh, and neither this generator nor the tree had
+    anything that would notice. A generated file with no `--check` and no gate
+    can sit arbitrarily far behind its source while reading as current, which is
+    the same defect the proof-gap matrix carried until its provenance table
+    landed the same day.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="fail if the committed DOMINANCE.md differs from a fresh generation",
+    )
+    args = parser.parse_args()
+
     scoreboard = load_scoreboard_module()
     rows = scoreboard.load_division_baselines() + scoreboard.load_synthetic_baselines()
     audits = load_audits()
     markdown = build_markdown(rows, audits)
+
+    # A generator that produced nothing would make `--check` pass against an
+    # equally empty file, so refuse an empty render rather than compare it.
+    if not markdown.strip():
+        print(
+            "DOMINANCE_SCOREBOARD_ERROR|the generator produced an empty document; "
+            "comparing that against the committed file would pass for the wrong reason",
+            file=sys.stderr,
+        )
+        return 1
+
+    if args.check:
+        try:
+            committed = pathlib.Path(OUT_PATH).read_text(encoding="utf-8")
+        except OSError as error:
+            print(f"DOMINANCE_SCOREBOARD_ERROR|{OUT_PATH} unreadable: {error}", file=sys.stderr)
+            return 1
+        if committed != markdown:
+            print(
+                f"DOMINANCE_SCOREBOARD_ERROR|{OUT_PATH} is stale: it disagrees with a fresh "
+                "generation from the committed baselines and audits. Regenerate with "
+                "`python3 scripts/gen-dominance-scoreboard.py` and commit the result.",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"DOMINANCE_SCOREBOARD|{OUT_PATH} is current ({len(audits)} audits)")
+        return 0
+
     with open(OUT_PATH, "w", encoding="utf-8") as fh:
         fh.write(markdown)
+    print(f"DOMINANCE_SCOREBOARD|wrote {OUT_PATH} ({len(audits)} audits)")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
