@@ -2866,6 +2866,25 @@ across the fleet, but it changes no evidence status: even a complete merged
 row is a finite stopping test, not the required growing-conductor theorem
 (ADR-0547).
 
+The first fleet-sharded row stops the apparent level-three coefficient bound.
+For `(q,ell,n)=(16,3,7)`, 100 shards cover all `16^7=268435456`
+polynomials and conserve the same total Mangoldt population.  Their checked
+merge gives
+
+```text
+M_2 = 267386880,
+M_4 = 4433642394746880,
+T_r = 301079086801372657987092480,
+ceil(abs(T_r)/q^(2ell+2n)) = 250.
+```
+
+Thus the rows with `q=2,4,8`, whose minimum coefficients were `1,10,58`,
+cannot justify the proposed `ell^4=81` coefficient: the `q=16` row exceeds it
+by a factor of about `3.07465`.  The weaker one-extra-`q` stopping allowance
+has coefficient `ell^4 q=1296` and survives, but remains unproved.  This is an
+extension-field Adams diagnostic, not a test of the separate binary Witt
+off-diagonal inequality or of cancellation across Möbius orders (ADR-0548).
+
 At level two the weight question can be decided without further enumeration.
 The first two leading coefficients are the trace and subtrace.  Theorem 2 of
 Ri--Myong--Kim--Rim's characteristic-two
