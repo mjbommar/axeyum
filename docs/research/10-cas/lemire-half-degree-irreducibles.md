@@ -3018,6 +3018,32 @@ therefore reproduce the endpoint loss for every additive-coordinate variant,
 not only the first-slot presentation.  A non-elementary higher-Witt quotient
 could still work if it brings new cross-block orthogonality (ADR-0516).
 
+A different generalization, closer to Fomenko's literal restriction map, is
+also now exact.  For `1<=t<ell`, let `H_t` be the subgroup of principal units
+congruent to one modulo `x^(t+1)`.  Restriction of characters to `H_t` is
+surjective and has kernel the inflated group `E_t^dual`, of order `2^t`.
+Individual restriction fibres are cyclotomic rather than rational, so the
+native `hayes_fomenko_restriction_packet_report` first closes each fibre under
+odd-power Galois action.  It then reconstructs every integral packet trace
+with two transform primes and requires their signed sum to equal the
+independent exact-conductor trace.
+
+The strongest one-unit packet estimate is false.  At `(ell,n)=(12,26)`, the
+literal `t=1` choice has 256 rational packets, 233 of which exceed `2^13`;
+the maximum is `226816`, requiring coefficient 28.  Their absolute sum is
+`15422336`, versus signed total `933888`.  Matching the connected window with
+`t=ceil(log2 ell)+1=5` leaves 32 packets, but 29 exceed `2^13`; the maximum
+is `525056`, requiring coefficient 65, and the packetwise absolute sum is
+`6433280`.  Thus the larger kernel compresses the number of packets without
+creating the missing trace cancellation.
+
+This pinpoints the nonformal ingredient in Fomenko's level-three theorem.  In
+Gorodetsky's exposition, the restriction coordinates feed an explicit
+degree-two `L`-polynomial formula; surjectivity and kernel size alone are not
+the estimate.  A growing-conductor analogue would need a new uniform formula
+or cross-packet orthogonality.  The exact quotient remains available for that
+purpose, but it contributes no present endpoint credit (ADR-0538).
+
 Existing geometric
 higher-moment work of Hast and Matei treats fixed polynomial degree as the
 field size tends to infinity, whereas this problem fixes the field at two and

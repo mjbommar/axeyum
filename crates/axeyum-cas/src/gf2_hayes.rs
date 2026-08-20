@@ -233,6 +233,46 @@ pub struct HayesGaloisOrbitTraceReport {
     pub orders: Vec<HayesGaloisOrbitOrderRow>,
 }
 
+/// Exact Galois-closed primitive trace packets induced by a generalized
+/// Fomenko coefficient-zero restriction.
+///
+/// Restricting a Hayes character to the subgroup of principal units whose
+/// first `t` coefficients vanish has kernel `E_t^dual`.  A restriction fibre
+/// is not generally rational, so each fibre is closed under odd-power
+/// cyclotomic Galois action before its integral trace is reconstructed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesFomenkoRestrictionPacketReport {
+    /// Exact conductor level.
+    pub level: usize,
+    /// Coefficients `x^1..=x^restriction_level` killed in the subgroup.
+    pub restriction_level: usize,
+    /// Logarithmic power-sum degree.
+    pub degree: usize,
+    /// Size `2^restriction_level` of the restriction kernel.
+    pub restriction_kernel_size: usize,
+    /// Number `2^(level-1)` of primitive characters.
+    pub primitive_character_count: usize,
+    /// Number of Galois-closed restriction packets.
+    pub packet_count: usize,
+    /// Largest number of characters in one packet.
+    pub maximum_packet_size: usize,
+    /// Candidate one-unit allowance `2^ceil(degree/2)` per packet.
+    pub square_root_allowance: u128,
+    /// Largest exact absolute packet trace.
+    pub maximum_absolute_packet_trace: u128,
+    /// Sum of absolute packet traces before the final signed conductor sum.
+    pub packetwise_absolute_trace: u128,
+    /// Packets exceeding `square_root_allowance`.
+    pub square_root_violation_count: usize,
+    /// Smallest integer coefficient multiplying `square_root_allowance` that
+    /// covers every fibre.
+    pub required_square_root_coefficient: u128,
+    /// Sum of all exact fibre traces.
+    pub reconstructed_conductor_trace: i128,
+    /// Independent exact-conductor trace from the population transform.
+    pub direct_conductor_trace: i128,
+}
+
 /// Exact size obstruction to extending the Gorodetsky--Kovaleva monomial
 /// symmetry to a complete primitive Hayes conductor layer.
 ///
@@ -912,6 +952,191 @@ pub fn hayes_galois_orbit_trace_report(
         reconstructed_conductor_trace,
         direct_conductor_trace,
         orders,
+    })
+}
+
+/// Group primitive Hayes traces through Fomenko's restriction map and Galois.
+///
+/// Let `H_t` be the subgroup of principal units congruent to one modulo
+/// `x^(t+1)`, where `t=restriction_level`.  Restriction from the character
+/// group of `E_level` to `H_t^dual` is surjective and has kernel equal to the
+/// inflated character group of `E_t`, of size `2^t`.  Kernel translation
+/// preserves exact conductor above `t`.  Since an individual restriction
+/// fibre is generally cyclotomic rather than rational, this operation takes
+/// its full odd-power Galois closure before exact integer reconstruction.
+///
+/// The report tests the strongest useful finite candidate
+///
+/// ```text
+/// abs(sum_(psi in packet(chi)) S_degree(psi)) <= 2^ceil(degree/2).
+/// ```
+///
+/// It does not extrapolate a passing row.  Every signed packet trace is
+/// reconstructed from two independent transform primes, certified against
+/// the ordinary packetwise Weil envelope, and the signed total must equal
+/// the independently computed exact-conductor layer.
+///
+/// # Errors
+///
+/// Propagates transform admission failures and declines if the CRT modulus is
+/// too small for unique reconstruction under the ordinary Weil envelope.
+#[allow(clippy::too_many_lines)]
+pub fn hayes_fomenko_restriction_packet_report(
+    level: usize,
+    restriction_level: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<HayesFomenkoRestrictionPacketReport, HayesError> {
+    if level < 2 || restriction_level == 0 || restriction_level >= level {
+        return Err(HayesError::InvalidParameter(
+            "Fomenko restriction audit requires 1<=restriction_level<level".to_owned(),
+        ));
+    }
+    admit(level, degree, limits)?;
+    let factors = principal_unit_factors(level);
+    let source_factors = principal_unit_factors(restriction_level);
+    let restriction_kernel_size = 1_usize << restriction_level;
+    let mut kernel_characters = Vec::with_capacity(restriction_kernel_size);
+    for source_character in 0..restriction_kernel_size {
+        let character =
+            verschiebung_embed_mixed_radix_index(source_character, &source_factors, &factors)?;
+        if mixed_radix_character_conductor(character, &factors)?
+            .is_some_and(|conductor| conductor > restriction_level)
+        {
+            return Err(HayesError::Invariant(
+                "restriction kernel contains a character above its quotient level".to_owned(),
+            ));
+        }
+        kernel_characters.push(character);
+    }
+
+    let shift = u32::try_from(degree.div_ceil(2)).map_err(|_| {
+        HayesError::InvalidParameter("Fomenko allowance shift exceeds u32".to_owned())
+    })?;
+    let square_root_allowance = 1_u128.checked_shl(shift).ok_or_else(|| {
+        HayesError::InvalidParameter("Fomenko square-root allowance exceeds u128".to_owned())
+    })?;
+    let ordinary_family_bound = square_root_allowance
+        .checked_mul((level - 1) as u128)
+        .and_then(|value| value.checked_mul(1_u128 << (level - 1)))
+        .ok_or_else(|| HayesError::InvalidParameter("Fomenko Weil envelope overflow".to_owned()))?;
+    let crt_modulus = u128::from(PRIME_ONE) * u128::from(PRIME_TWO);
+    if ordinary_family_bound
+        .checked_mul(2)
+        .is_none_or(|width| width >= crt_modulus)
+    {
+        return Err(HayesError::InvalidParameter(
+            "Fomenko packet traces are not uniquely certified by the CRT Weil envelope".to_owned(),
+        ));
+    }
+
+    let group_order = 1_usize << level;
+    let group_exponent = factors.iter().map(|factor| factor.order).max().unwrap_or(1);
+    let packet_work = group_order
+        .checked_mul(restriction_kernel_size)
+        .and_then(|value| value.checked_mul(group_exponent))
+        .ok_or_else(|| HayesError::InvalidParameter("Fomenko packet work overflow".to_owned()))?;
+    check_limit(
+        "fomenko_restriction_packet_cells",
+        packet_work,
+        limits.max_table_cells,
+    )?;
+    let (prime_one_powers, _) = character_power_sums_residue(level, degree, PRIME_ONE)?;
+    let (prime_two_powers, _) = character_power_sums_residue(level, degree, PRIME_TWO)?;
+    let mut visited = BTreeSet::new();
+    let mut packet_count = 0_usize;
+    let mut maximum_packet_size = 0_usize;
+    let mut maximum_absolute_packet_trace = 0_u128;
+    let mut packetwise_absolute_trace = 0_u128;
+    let mut square_root_violation_count = 0_usize;
+    let mut reconstructed_conductor_trace = 0_i128;
+    for character in 0..group_order {
+        if visited.contains(&character)
+            || mixed_radix_character_conductor(character, &factors)? != Some(level)
+        {
+            continue;
+        }
+        let mut packet = BTreeSet::new();
+        for multiplier in (1..group_exponent).step_by(2) {
+            let conjugate = power_mixed_radix_index(character, multiplier, &factors)?;
+            for kernel_character in &kernel_characters {
+                packet.insert(add_mixed_radix_indices(
+                    conjugate,
+                    *kernel_character,
+                    &factors,
+                )?);
+            }
+        }
+        for member in &packet {
+            if mixed_radix_character_conductor(*member, &factors)? != Some(level) {
+                return Err(HayesError::Invariant(
+                    "Fomenko packet does not preserve the primitive level".to_owned(),
+                ));
+            }
+        }
+        visited.extend(packet.iter().copied());
+        let first = packet.iter().fold(0_u64, |sum, member| {
+            add_mod(sum, prime_one_powers[*member], PRIME_ONE)
+        });
+        let second = packet.iter().fold(0_u64, |sum, member| {
+            add_mod(sum, prime_two_powers[*member], PRIME_TWO)
+        });
+        let trace = signed_crt_residue(first, second)?;
+        let ordinary_packet_bound = square_root_allowance
+            .checked_mul((level - 1) as u128)
+            .and_then(|value| value.checked_mul(packet.len() as u128))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Fomenko packet envelope overflow".to_owned())
+            })?;
+        if trace.unsigned_abs() > ordinary_packet_bound {
+            return Err(HayesError::Invariant(format!(
+                "level={level}, degree={degree}, character={character}: Fomenko packet trace {trace} exceeds ordinary Weil envelope {ordinary_packet_bound}"
+            )));
+        }
+        let magnitude = trace.unsigned_abs();
+        maximum_packet_size = maximum_packet_size.max(packet.len());
+        maximum_absolute_packet_trace = maximum_absolute_packet_trace.max(magnitude);
+        packetwise_absolute_trace = packetwise_absolute_trace
+            .checked_add(magnitude)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Fomenko absolute total overflow".to_owned())
+            })?;
+        square_root_violation_count += usize::from(magnitude > square_root_allowance);
+        reconstructed_conductor_trace = reconstructed_conductor_trace
+            .checked_add(trace)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Fomenko trace total overflow".to_owned())
+            })?;
+        packet_count += 1;
+    }
+    let primitive_character_count = visited.len();
+    if primitive_character_count != 1_usize << (level - 1) {
+        return Err(HayesError::Invariant(
+            "Fomenko packets do not partition the primitive character family".to_owned(),
+        ));
+    }
+    let direct_conductor_trace = conductor_layers(level, degree, limits)?[level - 1].value;
+    if reconstructed_conductor_trace != direct_conductor_trace {
+        return Err(HayesError::Invariant(format!(
+            "Fomenko packet sum {reconstructed_conductor_trace} does not recover conductor trace {direct_conductor_trace}"
+        )));
+    }
+    Ok(HayesFomenkoRestrictionPacketReport {
+        level,
+        restriction_level,
+        degree,
+        restriction_kernel_size,
+        primitive_character_count,
+        packet_count,
+        maximum_packet_size,
+        square_root_allowance,
+        maximum_absolute_packet_trace,
+        packetwise_absolute_trace,
+        square_root_violation_count,
+        required_square_root_coefficient: maximum_absolute_packet_trace
+            .div_ceil(square_root_allowance),
+        reconstructed_conductor_trace,
+        direct_conductor_trace,
     })
 }
 
@@ -14330,6 +14555,100 @@ mod tests {
         assert_eq!((worst.level, worst.degree), (11, 24));
         assert_eq!(worst.maximum_absolute_order_layer_trace, 663_552);
         assert_eq!(worst.order_layer_candidate_violation_count, 2);
+    }
+
+    #[test]
+    fn fomenko_restriction_packets_reconstruct_exact_conductor_layers() {
+        let mut worst_one_coordinate = (0_u128, None);
+        let mut worst_logarithmic = (0_u128, None);
+        for level in 2..=12 {
+            for degree in [2 * level + 1, 2 * level + 2] {
+                let report = hayes_fomenko_restriction_packet_report(
+                    level,
+                    1,
+                    degree,
+                    HayesLimits::default(),
+                )
+                .unwrap();
+                assert_eq!(report.restriction_kernel_size, 2);
+                assert_eq!(report.primitive_character_count, 1 << (level - 1));
+                assert!(report.packet_count <= 1 << (level - 2));
+                assert!(report.maximum_packet_size >= 2);
+                assert_eq!(
+                    report.reconstructed_conductor_trace,
+                    report.direct_conductor_trace
+                );
+                if report.required_square_root_coefficient > worst_one_coordinate.0 {
+                    worst_one_coordinate = (
+                        report.required_square_root_coefficient,
+                        Some(report.clone()),
+                    );
+                }
+
+                let restriction_level =
+                    (level.ilog2() as usize + usize::from(!level.is_power_of_two()) + 1)
+                        .min(level - 1);
+                let logarithmic = hayes_fomenko_restriction_packet_report(
+                    level,
+                    restriction_level,
+                    degree,
+                    HayesLimits::default(),
+                )
+                .unwrap();
+                assert_eq!(logarithmic.restriction_kernel_size, 1 << restriction_level);
+                assert_eq!(
+                    logarithmic.reconstructed_conductor_trace,
+                    logarithmic.direct_conductor_trace
+                );
+                if logarithmic.required_square_root_coefficient > worst_logarithmic.0 {
+                    worst_logarithmic = (
+                        logarithmic.required_square_root_coefficient,
+                        Some(logarithmic),
+                    );
+                }
+            }
+        }
+        let worst_one_coordinate = worst_one_coordinate.1.unwrap();
+        let worst_logarithmic = worst_logarithmic.1.unwrap();
+        assert_eq!(
+            (worst_one_coordinate.level, worst_one_coordinate.degree),
+            (12, 26)
+        );
+        assert_eq!(worst_one_coordinate.packet_count, 256);
+        assert_eq!(worst_one_coordinate.maximum_packet_size, 8);
+        assert_eq!(worst_one_coordinate.maximum_absolute_packet_trace, 226_816);
+        assert_eq!(worst_one_coordinate.packetwise_absolute_trace, 15_422_336);
+        assert_eq!(worst_one_coordinate.square_root_violation_count, 233);
+        assert_eq!(worst_one_coordinate.required_square_root_coefficient, 28);
+        assert_eq!(
+            (worst_logarithmic.level, worst_logarithmic.degree),
+            (12, 26)
+        );
+        assert_eq!(worst_logarithmic.restriction_level, 5);
+        assert_eq!(worst_logarithmic.packet_count, 32);
+        assert_eq!(worst_logarithmic.maximum_packet_size, 64);
+        assert_eq!(worst_logarithmic.maximum_absolute_packet_trace, 525_056);
+        assert_eq!(worst_logarithmic.packetwise_absolute_trace, 6_433_280);
+        assert_eq!(worst_logarithmic.square_root_violation_count, 29);
+        assert_eq!(worst_logarithmic.required_square_root_coefficient, 65);
+
+        assert!(hayes_fomenko_restriction_packet_report(1, 1, 3, HayesLimits::default()).is_err());
+        assert_eq!(
+            hayes_fomenko_restriction_packet_report(
+                12,
+                5,
+                26,
+                HayesLimits {
+                    max_table_cells: 2_097_151,
+                    ..HayesLimits::default()
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "fomenko_restriction_packet_cells",
+                requested: 2_097_152,
+                limit: 2_097_151,
+            })
+        );
     }
 
     #[test]
