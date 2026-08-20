@@ -17,7 +17,8 @@
 #   cargo fmt --all --check          3s
 #   corpus :status sweep            13s
 #   cargo test --workspace --lib   224s
-#   solver unit sweep (full)        30s
+#   solver unit sweep (full)        31s   (1008 tests; --skip reconstruct::)
+#   [moved to `just check`]        294s   (268 reconstruct:: tests, Lean preludes)
 #   capability frontier ratchet    216s
 #   integration suites x4           ~1s
 #   evidence suite                  70s
@@ -267,8 +268,24 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   # `full`-gated module would sail through a "green" workspace sweep. `full` is
   # pure Rust (the C/C++ z3 backend is a separate feature), so requiring it here
   # keeps the no-C-dependency promise intact.
-  gated_test "solver unit sweep (full)" \
-    cargo test -p axeyum-solver --lib --features full --quiet
+  # `--skip reconstruct::` is why this step is 31s and not 294s.
+  #
+  # Measured 2026-08-20 on an IDLE box (load 1.03, zero other cargo): the 1008
+  # solver unit tests run in **31s**; the 268 `reconstruct::` tests take
+  # **294s**, because each builds Lean preludes. They were 90% of this step and
+  # ~45% of the entire push, on every push touching a single `.rs` file.
+  #
+  # They are not what this step exists for. The sweep was added because a
+  # wrong-`unsat` unit test shipped (52f3b1d1) — a SOLVER soundness defect. The
+  # `reconstruct::` tests check that a Lean module is built correctly, which is
+  # a different property, caught by `lean-gate` and by the reconstruct sweep now
+  # registered in `scripts/check.sh` and the justfile. Nothing is dropped; the
+  # daily gate keeps them and every git round stops paying for them.
+  #
+  # The comment at the top of this file said this step cost 30s. That was true
+  # once. Timings in a comment rot; these were re-measured today.
+  gated_test "solver unit sweep (full, minus Lean reconstruction)" \
+    cargo test -p axeyum-solver --lib --features full --quiet -- --skip reconstruct::
 
   # The KERNEL's integration suites. `cargo test --workspace --lib` above runs
   # unit tests only and SKIPS every `tests/*.rs`, which is how
@@ -418,8 +435,15 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
       'crates/axeyum-solver/src/**' \
       'crates/axeyum-rewrite/src/**' | head -1)" ]; then
     echo "pre-push: solver/rewrite source changed — evidence suite" >&2
-    gated_test "integration: evidence" \
-      cargo test -p axeyum-solver --features full --quiet --test evidence
+    # ONE test is this whole suite: `qf_nra_sos_certificate_wrapper_carries_
+    # lean_module` measured at **292.973s** of a 293.08s run, because it builds
+    # Lean preludes. The other 68 tests together are ~76s, and they are the ones
+    # that check evidence PRODUCTION -- which is what a solver/rewrite change can
+    # break. The Lean-module wrapper is checked by `lean-gate` and by the
+    # reconstruct sweep now in `scripts/check.sh`.
+    gated_test "integration: evidence (minus the Lean-module wrapper)" \
+      cargo test -p axeyum-solver --features full --quiet --test evidence \
+        -- --skip qf_nra_sos_certificate_wrapper_carries_lean_module
   fi
 
   # `--lib` compiles ONLY lib targets, so it skips every integration suite in

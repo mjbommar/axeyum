@@ -149,6 +149,27 @@ while :; do
   attempt=$((attempt + 1))
   echo "lane-push: origin/$target moved during the hook; re-merging and retrying ($attempt/$RETRY)" >&2
   git fetch -q origin "$target" || exit "$status"
-  git merge --no-edit "origin/$target" >&2 || {
-    echo "lane-push: the re-merge conflicted; resolve it by hand." >&2; exit 1; }
+  if ! git merge --no-edit "origin/$target" >&2; then
+    # PLAN.md conflicts on EVERY race, and resolving it by hand costs a second
+    # full battery -- measured 2026-08-20 at 630-689 s each. It is a GENERATED
+    # file (`scripts/gen-plan.py`, never hand-edited; the per-lane sources are
+    # `docs/plan/status/<lane>.md`), so the resolution is always "regenerate",
+    # and both lanes' rows survive because both status files do.
+    #
+    # Auto-resolve ONLY when it is the sole conflict. Any other conflicted path
+    # is real content and still stops here: guessing at those is how lanes lose
+    # each other's work.
+    conflicted=$(git diff --name-only --diff-filter=U)
+    if [ "$conflicted" = "PLAN.md" ] && [ -x scripts/gen-plan.py -o -f scripts/gen-plan.py ]; then
+      echo "lane-push: PLAN.md is generated; regenerating instead of conflicting" >&2
+      if python3 scripts/gen-plan.py >/dev/null 2>&1 \
+         && [ "$(grep -c '<<<<<<<' PLAN.md)" -eq 0 ] \
+         && git add -- PLAN.md && git commit --no-edit -q; then
+        continue
+      fi
+    fi
+    echo "lane-push: the re-merge conflicted; resolve it by hand." >&2
+    printf '  %s\n' $conflicted >&2
+    exit 1
+  fi
 done
