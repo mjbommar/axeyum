@@ -149,6 +149,25 @@ const QUERIES: &[(&str, &str)] = &[
          (assert (not (= (* v1 v2 v3 v4 v5) 0)))\n\
          (check-sat)",
     ),
+    // QF_NRA degree-2 Positivstellensatz: two asserted lower bounds whose
+    // product is exactly the polynomial a third assertion calls negative. Both
+    // shapes are verbatim from committed corpus files
+    // (`cli__regress1__nl__coeff-unsat-base`, `cli__regress1__nl__simple-mono`).
+    (
+        "nra_product_nonstrict_factor",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)\n\
+         (assert (> a 0))(assert (> b 0))(assert (>= a (* 3 b)))\n\
+         (assert (< (* a a) (* 3 a b)))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_product_strict_factors",
+        "(set-logic QF_NRA)\n\
+         (declare-fun x () Real)(declare-fun y () Real)(declare-fun z () Real)\n\
+         (assert (> z 0))(assert (> x y))(assert (< (* x z) (* y z)))\n\
+         (check-sat)",
+    ),
     (
         "skolemised_existential",
         "(set-logic UF)\n\

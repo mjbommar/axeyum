@@ -108,6 +108,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatIntUnivariatePoly(_) => "int-univariate-poly-unsat",
         Evidence::UnsatNraEvenPower(_) => "nra-even-power-unsat",
         Evidence::UnsatRealZeroProduct(_) => "real-zero-product-unsat",
+        Evidence::UnsatRealProduct(_) => "real-product-unsat",
         Evidence::UnsatDiophantine { .. } => "diophantine-unsat",
         Evidence::UnsatBoundedIntBlast(_) => "bounded-int-blast-unsat",
         Evidence::UnsatFiniteDomainPigeonhole(_) => "finite-domain-pigeonhole-unsat",
