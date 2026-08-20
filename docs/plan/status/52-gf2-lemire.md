@@ -24,7 +24,12 @@ diagnostic through `ell=26` led to a uniform proved wild-Kloosterman amplitude
 bound for the extremal pair `V_(ell-1)^2`, now exposed as a bounded native CAS
 report and as an explicitly uncredited Autogenesis fact obligation.  The
 stronger exact plateau support formula remains finite evidence only, but is no
-longer a dependency.  The Kloosterman estimate is unweighted, while a Vaughan
+longer a dependency.  The odd-degree Artin--Schreier doubling fallback is now
+closed under all six binary projective changes of variable: the three
+involution classes are impossible at half shape, explicitly reducible, or
+reduce to the already known `x^(2n)+x^n+1` cyclotomic/Q candidate.  This is a
+checked construction obstruction and gives no aggregate endpoint credit.  The
+Kloosterman estimate is unweighted, while a Vaughan
 decomposition is Möbius-weighted; substituting one for the other has now been
 closed as invalid.  Exact signed classwise Möbius distributions are exposed as
 a bounded native diagnostic with independent factorization controls.  Proving
@@ -513,6 +518,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `4d162d984` | Classified every binary projective repair of odd-degree Artin--Schreier doubling, reducing it to an impossible translation case, an explicitly reducible transvection case, or the existing cyclotomic/Q candidate. |
 | 2026-08-20 | `ac41b35d0` | Added the exact connected high-frequency L2/Cauchy ledger and showed that structural-support Cauchy still requires savings 1425/1483 on pinned endpoint rows. |
 | 2026-08-20 | `dfc581025` | Embedded the coarse inverse-additive spectrum into the fine domain, proved every inflated coarse frequency cancels in the connected projector, and exposed the exact surviving high-frequency Möbius sum. |
 | 2026-08-20 | `32746e3f4` | Decomposed the connected top-conductor trace exactly by Möbius order and proved on pinned endpoint rows that low orders survive, requiring signed cross-order cancellation. |
