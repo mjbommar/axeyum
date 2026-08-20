@@ -28,7 +28,18 @@ for a power-of-two root of unity `zeta`.  It computes logarithmic power sums by
 the exact coefficient recurrence, groups primitive characters by their common
 leading coefficient, and searches for distinct power sums inside a group.
 Every integral result is also reduced through both independent NTT primes and
-must agree with the existing character-power-sum transform.
+must agree with the existing character-power-sum transform.  Because the
+direct audit has quadratic work in the character-group order, admission prices
+`4^level` exact work cells against the caller's explicit table-cell ceiling and
+declines before either transform or cyclotomic enumeration.  For every
+primitive character the same integral coefficients must also satisfy
+
+```text
+2^k A_(d-k) = A_d conjugate(A_k)  (0 <= k <= d),
+```
+
+the coefficientwise functional equation.  This verifies inside the report
+that the common leading coefficient really fixes the common root number.
 
 At `(level,degree)=(5,11)`, all `16` primitive characters lie in six
 leading-coefficient fibres, and every one of the six fibres contains more than
@@ -55,4 +66,3 @@ different high traces.
   open route remains a genuinely signed full-coefficient/Witt average or the
   connected fourth-cumulant/gcd stratification.
 - The report is a bounded exact obstruction and gives no Lemire theorem credit.
-

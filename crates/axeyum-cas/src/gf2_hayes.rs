@@ -292,6 +292,28 @@ impl PowerTwoCyclotomicInteger {
         Ok(())
     }
 
+    fn scale(&self, scalar: i128) -> Result<Self, HayesError> {
+        self.0
+            .iter()
+            .map(|coefficient| {
+                coefficient.checked_mul(scalar).ok_or_else(|| {
+                    HayesError::InvalidParameter("cyclotomic scaling overflow".to_owned())
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(Self)
+    }
+
+    fn conjugate(&self) -> Result<Self, HayesError> {
+        let order = self.0.len() * 2;
+        let mut conjugate = Self::zero(order);
+        for (exponent, coefficient) in self.0.iter().copied().enumerate() {
+            let root = Self::root_power(order, (order - exponent) % order).scale(coefficient)?;
+            conjugate.add_assign(&root)?;
+        }
+        Ok(conjugate)
+    }
+
     fn multiply(&self, other: &Self) -> Result<Self, HayesError> {
         if self.0.len() != other.0.len() {
             return Err(HayesError::Invariant(
@@ -399,6 +421,34 @@ fn exact_character_l_coefficients(
     Ok((order, coefficients))
 }
 
+fn validate_primitive_functional_equation(
+    coefficients: &[PowerTwoCyclotomicInteger],
+) -> Result<(), HayesError> {
+    let l_degree = coefficients.len() - 1;
+    let leading = &coefficients[l_degree];
+    for coefficient_degree in 0..=l_degree {
+        let scale = 1_i128
+            .checked_shl(u32::try_from(coefficient_degree).map_err(|_| {
+                HayesError::InvalidParameter(
+                    "functional-equation coefficient degree exceeds u32".to_owned(),
+                )
+            })?)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "functional-equation power of two exceeds i128".to_owned(),
+                )
+            })?;
+        let left = coefficients[l_degree - coefficient_degree].scale(scale)?;
+        let right = leading.multiply(&coefficients[coefficient_degree].conjugate()?)?;
+        if left != right {
+            return Err(HayesError::Invariant(format!(
+                "primitive Hayes functional equation failed at coefficient {coefficient_degree}"
+            )));
+        }
+    }
+    Ok(())
+}
+
 fn logarithmic_power_sum(
     coefficients: &[PowerTwoCyclotomicInteger],
     degree: usize,
@@ -462,8 +512,9 @@ fn cyclotomic_integer_residue(
 ///
 /// # Errors
 ///
-/// Rejects levels below two, resource-limit violations, and arithmetic
-/// overflow in the exact integral cyclotomic ring.
+/// Rejects levels below two, generic transform-limit violations, a quadratic
+/// exact-enumeration work estimate above `limits.max_table_cells`, and
+/// arithmetic overflow in the integral cyclotomic ring.
 pub fn hayes_root_number_fibre_report(
     level: usize,
     degree: usize,
@@ -475,16 +526,26 @@ pub fn hayes_root_number_fibre_report(
         ));
     }
     admit(level, degree, limits)?;
+    let group_order = 1_usize << level;
+    let exact_work_cells = group_order.checked_mul(group_order).ok_or_else(|| {
+        HayesError::InvalidParameter("root-number fibre work estimate overflow".to_owned())
+    })?;
+    check_limit(
+        "root_number_fibre_cells",
+        exact_work_cells,
+        limits.max_table_cells,
+    )?;
     let factors = principal_unit_factors(level);
     let (prime_one_powers, _) = character_power_sums_residue(level, degree, PRIME_ONE)?;
     let (prime_two_powers, _) = character_power_sums_residue(level, degree, PRIME_TWO)?;
     let mut fibres =
         BTreeMap::<PowerTwoCyclotomicInteger, Vec<(usize, PowerTwoCyclotomicInteger)>>::new();
-    for character in 1..(1_usize << level) {
+    for character in 1..group_order {
         if mixed_radix_character_conductor(character, &factors)? != Some(level) {
             continue;
         }
         let (_, coefficients) = exact_character_l_coefficients(level, character)?;
+        validate_primitive_functional_equation(&coefficients)?;
         let leading = coefficients[level - 1].clone();
         let power = logarithmic_power_sum(&coefficients, degree)?;
         if cyclotomic_integer_residue(&power, PRIME_ONE)? != prime_one_powers[character]
@@ -13613,6 +13674,16 @@ mod tests {
         assert_eq!(witness.common_leading_coefficient, [-4, 0, 0, 0]);
         assert_eq!(witness.left_power_sum, [-32, 0, 32, 0]);
         assert_eq!(witness.right_power_sum, [-32, 0, -32, 0]);
+
+        let declined = hayes_root_number_fibre_report(15, 31, HayesLimits::default());
+        assert_eq!(
+            declined,
+            Err(HayesError::ResourceLimit {
+                resource: "root_number_fibre_cells",
+                requested: 1 << 30,
+                limit: HayesLimits::default().max_table_cells,
+            })
+        );
     }
 
     #[test]

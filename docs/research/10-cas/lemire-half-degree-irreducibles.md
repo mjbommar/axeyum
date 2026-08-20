@@ -222,7 +222,10 @@ lemma.
 - Functional-equation root numbers do not recover the missing high power
   sums.  The native `hayes_root_number_fibre_report` computes primitive Hayes
   `L`-coefficients in an exact integral power-of-two cyclotomic basis and
-  cross-checks every resulting power sum through both NTT primes.  At
+  requires the coefficientwise primitive functional equation
+  `2^k A_(d-k)=A_d conjugate(A_k)` before using `A_d` as the root-number
+  label.  It also cross-checks every resulting power sum through both NTT
+  primes.  At
   conductor level five and endpoint degree eleven, the 16 primitive
   characters form six leading-coefficient fibres, and every fibre contains
   distinct power sums.  In particular, characters 26 and 30 have the common
