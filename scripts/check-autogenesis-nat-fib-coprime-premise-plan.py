@@ -509,6 +509,167 @@ def validate_nat_gcd_target_leaf_frontier(manifest: dict[str, Any]) -> None:
             raise PlanError(f"Nat.gcd official support changed for {row['root']}")
 
 
+def validate_nat_gcd_succ_bridge(manifest: dict[str, Any]) -> None:
+    tracked = manifest["nat_gcd_succ_bridge"]
+    manifest_path = pathlib.Path(tracked["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "autogenesis_nat_gcd_fix_eq.lean",
+        "gcd-succ-audit.txt",
+        "lean-axiom-audit.txt",
+        "manifest.json",
+        "mod-lt-succ-audit.txt",
+        "nat-gcd-bridge.ndjson",
+        "specialization-replay.json",
+        "specialization.json",
+    }
+    if (
+        sha256(manifest_path) != tracked["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(
+            stat.S_IMODE((pack_dir / name).stat().st_mode) != 0o444
+            for name in expected_files
+        )
+    ):
+        raise PlanError("Nat.gcd successor bridge pack changed or is mutable")
+
+    external = load(manifest_path)
+    authored = external["authored_source"]
+    export = external["export"]
+    inputs = external["inputs"]
+    implementation = external["implementation"]
+    result = external["result"]
+    authored_path = pack_dir / authored["pack_path"]
+    export_path = pack_dir / export["path"]
+    result_path = pack_dir / result["path"]
+    replay_path = pack_dir / result["replay_path"]
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-lean430-axiom-free-nat-gcd-succ-bridge-pack"
+        or external.get("repository_commit") != tracked["implementation_commit"]
+        or external.get("lean_version") != manifest["source"]["lean_version"]
+        or external.get("lean_githash") != manifest["source"]["lean_githash"]
+        or authored["repository_path"]
+        != "scripts/lean/autogenesis_nat_gcd_fix_eq.lean"
+        or authored["sha256"] != tracked["authored_source_sha256"]
+        or sha256(authored_path) != authored["sha256"]
+        or git_blob_sha256(tracked["implementation_commit"], authored["repository_path"])
+        != authored["sha256"]
+        or authored["bytes"] != authored_path.stat().st_size
+        or authored["lines"] != len(authored_path.read_text().splitlines())
+        or export["sha256"] != tracked["source_stream_sha256"]
+        or sha256(export_path) != export["sha256"]
+        or export["bytes"] != export_path.stat().st_size
+        or export["lines"] != len(export_path.read_bytes().splitlines())
+        or export["axioms"] != []
+        or inputs["nat_mod_invariant_sha256"]
+        != manifest["nat_mod_invariant_pack"]["source_stream_sha256"]
+        or sha256(pathlib.Path(inputs["nat_mod_invariant_path"]))
+        != inputs["nat_mod_invariant_sha256"]
+        or inputs["target_sha256"] != manifest["source"]["stream_sha256"]
+        or sha256(pathlib.Path(inputs["target_path"])) != inputs["target_sha256"]
+        or implementation["specialization_tool"]["path"]
+        != "crates/axeyum-lean-import/examples/nat_gcd_succ_specialization.rs"
+        or git_blob_sha256(
+            tracked["implementation_commit"],
+            implementation["specialization_tool"]["path"],
+        )
+        != implementation["specialization_tool"]["sha256"]
+        or git_blob_sha256(
+            tracked["implementation_commit"],
+            "crates/axeyum-lean-import/src/theorem_composition.rs",
+        )
+        != implementation["composition_library_sha256"]
+        or git_blob_sha256(
+            tracked["implementation_commit"],
+            "crates/axeyum-lean-import/src/theorem_specialization.rs",
+        )
+        != implementation["specialization_library_sha256"]
+        or sha256(result_path) != tracked["result_sha256"]
+        or sha256(replay_path) != tracked["result_sha256"]
+        or result_path.read_bytes() != replay_path.read_bytes()
+    ):
+        raise PlanError("Nat.gcd successor bridge identity or replay changed")
+
+    lean_audit = (pack_dir / external["lean_axiom_audit"]["path"]).read_text()
+    if (
+        sha256(pack_dir / external["lean_axiom_audit"]["path"])
+        != external["lean_axiom_audit"]["sha256"]
+        or lean_audit.count("does not depend on any axioms") != 4
+        or "depends on axioms:" in lean_audit
+    ):
+        raise PlanError("Nat.gcd successor official-Lean axiom audit changed")
+    for key, theorem in [
+        ("mod_lt_succ", "Axeyum.Autogenesis.modLtSucc"),
+        ("nat_gcd_succ", "Axeyum.Autogenesis.nat_gcd_succ"),
+    ]:
+        audit = external["import_audits"][key]
+        audit_path = pack_dir / audit["path"]
+        text = audit_path.read_text()
+        if (
+            sha256(audit_path) != audit["sha256"]
+            or audit["axiom_footprint"] != []
+            or f"name={theorem}|" not in text
+            or "|axiom_free=true|axiom_footprint=none|" not in text
+            or "|axioms=none|" not in text
+        ):
+            raise PlanError(f"Nat.gcd successor import audit changed for {theorem}")
+
+    observed = load(result_path)
+    mod_lt_succ = observed["mod_lt_succ_specialization"]
+    gcd_succ = observed["gcd_succ_specialization"]
+    dvd_gcd = observed["dvd_gcd_frontier"]
+    tracked_dvd_gcd = tracked["dvd_gcd"]
+    if (
+        observed.get("schema_version") != 1
+        or observed.get("kind") != "axeyum-nat-gcd-succ-specialization"
+        or observed["bridge_composition"]["receipt_sha256"]
+        != tracked["bridge_composition_receipt_sha256"]
+        or observed["bridge_composition"]["source_closure"] != 274
+        or observed["bridge_composition"]["added_theorems"] != 7
+        or observed["bridge_composition"]["added_definitions"] != 9
+        or observed["bridge_composition"]["added_singleton_inductives"] != 1
+        or mod_lt_succ["receipt_sha256"]
+        != tracked["mod_lt_succ_specialization_receipt_sha256"]
+        or mod_lt_succ["arguments"] != ["Nat.mod_lt"]
+        or mod_lt_succ["axiom_footprint"] != []
+        or gcd_succ["result"]["receipt_sha256"]
+        != tracked["gcd_succ_specialization_receipt_sha256"]
+        or gcd_succ["result"]["target"] != "Nat.gcd_succ"
+        or gcd_succ["result"]["target_sha256"]
+        != tracked["gcd_succ_declaration_sha256"]
+        or gcd_succ["result"]["axiom_footprint"]
+        != tracked["gcd_succ_axiom_footprint"]
+        or gcd_succ["native_type_compatibility"]
+        != tracked["native_type_compatibility"]
+        or dvd_gcd["outcome"] != tracked_dvd_gcd["outcome"]
+        or dvd_gcd["target_theorem_leaves"]
+        != tracked_dvd_gcd["target_theorem_leaves"]
+        or dvd_gcd["source_closure"] != tracked_dvd_gcd["source_closure"]
+        or dvd_gcd["added_theorems"] != tracked_dvd_gcd["added_theorems"]
+        or dvd_gcd["added_definitions"] != tracked_dvd_gcd["added_definitions"]
+        or dvd_gcd["receipt_sha256"] != tracked_dvd_gcd["receipt_sha256"]
+        or observed["proof_search_invocations"] != 0
+        or observed["ledger_writes"] != 0
+        or tracked["fresh_full_runs"] != 2
+        or tracked["fact_status_changes"] != 0
+    ):
+        raise PlanError("Nat.gcd successor bridge result or authority changed")
+    if external["authority"] != {
+        "authored_proof_is_untrusted": True,
+        "official_lean_compilation_checked": True,
+        "proof_terms_independently_admitted": True,
+        "specializations_independently_admitted": True,
+        "native_type_compatibility_checked": True,
+        "target_leaf_composition_replayed": True,
+        "fact_status_changes": 0,
+        "ledger_writes": 0,
+    }:
+        raise PlanError("Nat.gcd successor bridge authority changed")
+
+
 def validate_native_fib_composition(manifest: dict[str, Any]) -> None:
     pack = manifest["native_fib_composition"]
     manifest_path = pathlib.Path(pack["manifest"])
@@ -762,7 +923,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "native-coprimality-proved-semantic-transport-to-r082-unresolved"
+        != "official-gcd-succ-and-dvd-gcd-composed-full-target-theorem-pending"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -859,7 +1020,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest["proof_plan"]["required_present_in_import"] != []
         or manifest["proof_plan"]["already_present_in_import"] != ["Nat.rec"]
         or manifest["proof_plan"]["next_action"]
-        != "construct an explicit checked semantic bridge from the r082 Nat.Coprime statement over official Nat.gcd to the independently proved native-gcd theorem; same-name definitions alone are not transport authority"
+        != "compose the remaining six planned native gcd/divisibility support theorems over the new axiom-free official Nat.gcd_succ leaf, then independently reconstruct the exact r082 Fibonacci-coprimality target"
         or probe["imported_division_declaration_names"] != expected_division_names
         or observation["source"]["imported_division_declaration_names"]
         != expected_division_names
@@ -1164,7 +1325,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         "held_out_inspected": False,
         "proof_bodies_displayed": False,
         "proof_search_invocations": 0,
-        "kernel_submissions": 24,
+        "kernel_submissions": 52,
         "evaluation_credit": 0,
         "ledger_writes": 0,
     }:
@@ -1173,6 +1334,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     validate_official_equation_pack(manifest)
     validate_nat_mod_invariant_pack(manifest)
     validate_nat_gcd_target_leaf_frontier(manifest)
+    validate_nat_gcd_succ_bridge(manifest)
     validate_native_fib_composition(manifest)
     validate_native_fib_coprimality(manifest)
     return manifest
@@ -1184,9 +1346,10 @@ def main() -> int:
         print(
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
-            "present=0|exact=11|compatible=Nat.mod_lt,Acc,Nat.dvd_mod_iff|"
-            "next=official-native-gcd-semantic-bridge|"
-            "submissions=24|native_submissions=2|evaluation=0|writes=0"
+            "present=0|exact=11|"
+            "compatible=Nat.mod_lt,Acc,Nat.dvd_mod_iff,Nat.gcd_succ,Nat.dvd_gcd|"
+            "next=remaining-gcd-support-then-exact-target|"
+            "submissions=52|native_submissions=2|evaluation=0|writes=0"
         )
         return 0
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, PlanError) as error:

@@ -231,6 +231,29 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "official support"):
             MODULE.validate(changed)
 
+    def test_nat_gcd_succ_bridge_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_succ_bridge"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_succ_bridge"]["gcd_succ_axiom_footprint"] = [
+            "Quot.sound"
+        ]
+        with self.assertRaisesRegex(MODULE.PlanError, "result or authority"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_succ_bridge"]["dvd_gcd"]["outcome"] = "declined"
+        with self.assertRaisesRegex(MODULE.PlanError, "result or authority"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_succ_bridge"]["fresh_full_runs"] = 1
+        with self.assertRaisesRegex(MODULE.PlanError, "result or authority"):
+            MODULE.validate(changed)
+
     def test_native_fib_composition_mutations_are_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)
         changed["native_fib_composition"]["manifest_sha256"] = "0" * 64

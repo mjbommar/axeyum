@@ -887,6 +887,15 @@ Out of scope:
     zero-dependency `Nat.fib_add_two`. Its missing capability is a bounded
     iterator-recurrence proof plan, not another source-contract control. See
     [ADR-0495](../09-decisions/adr-0495-fibonacci-gcd-progress-starts-at-the-iterator-recurrence-foothold.md).
+- [x] How should Autogenesis replace the quotient-bearing official
+      `Nat.gcd_succ` equation without transporting the native gcd definition?
+  - Answer (2026-08-20): prove fuel independence only at the concrete Euclidean
+    argument and its one recursive modulo successor. Keep the modulo decrease
+    theorem explicit, specialize it over the already checked target
+    `Nat.mod_lt`, and admit the resulting official theorem through the ordinary
+    target kernel. Do not compare complete recursive functions with `funext` or
+    infer semantics from same-name declarations. See
+    [ADR-0533](../09-decisions/adr-0533-official-gcd-unfolding-uses-pointwise-fuel-congruence-not-function-extensionality.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?
