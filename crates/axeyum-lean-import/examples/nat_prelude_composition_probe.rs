@@ -1,6 +1,6 @@
 //! Measure whether the axiom-free native Nat library composes with an import.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::fs;
 use std::io::Cursor;
@@ -97,6 +97,7 @@ fn run() -> Result<(), String> {
             "alpha_type_compatible_content_mismatched_names": overlaps.alpha_type_compatible_content_mismatched,
             "kernel_type_shape_compatible_content_mismatched_names": overlaps.kernel_type_shape_compatible_content_mismatched,
             "type_mismatched_overlaps": overlaps.type_mismatched,
+            "required_native_theorem_dependency_closures": overlaps.required_theorem_dependency_closures,
         },
         "result": result,
         "authority": {
@@ -128,6 +129,7 @@ struct OverlapReport {
     alpha_type_compatible_content_mismatched: Vec<String>,
     kernel_type_shape_compatible_content_mismatched: Vec<String>,
     type_mismatched: Vec<serde_json::Value>,
+    required_theorem_dependency_closures: Vec<serde_json::Value>,
 }
 
 fn compare_native_overlaps(imported: &Kernel) -> Result<OverlapReport, String> {
@@ -191,13 +193,101 @@ fn compare_native_overlaps(imported: &Kernel) -> Result<OverlapReport, String> {
             }
         }
     }
+    let required_theorem_dependency_closures = required_theorem_dependency_closures(
+        &native,
+        &native_names,
+        &imported_names,
+        &exact,
+        &alpha_type_compatible_content_mismatched,
+        &kernel_type_shape_compatible_content_mismatched,
+        &type_mismatched,
+    )?;
     Ok(OverlapReport {
         native_declarations: native.environment().len(),
         exact,
         alpha_type_compatible_content_mismatched,
         kernel_type_shape_compatible_content_mismatched,
         type_mismatched,
+        required_theorem_dependency_closures,
     })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn required_theorem_dependency_closures(
+    native: &Kernel,
+    native_names: &BTreeMap<String, axeyum_lean_kernel::NameId>,
+    imported_names: &BTreeMap<String, axeyum_lean_kernel::NameId>,
+    exact: &[String],
+    alpha_compatible: &[String],
+    kernel_shape_compatible: &[String],
+    type_mismatched: &[serde_json::Value],
+) -> Result<Vec<serde_json::Value>, String> {
+    let exact: BTreeSet<&str> = exact.iter().map(String::as_str).collect();
+    let alpha_compatible: BTreeSet<&str> = alpha_compatible.iter().map(String::as_str).collect();
+    let kernel_shape_compatible: BTreeSet<&str> =
+        kernel_shape_compatible.iter().map(String::as_str).collect();
+    let type_mismatched: BTreeSet<&str> = type_mismatched
+        .iter()
+        .map(|row| {
+            row["name"]
+                .as_str()
+                .expect("type mismatch rows always carry a name")
+        })
+        .collect();
+    let required = [
+        "Nat.add_comm",
+        "Nat.dvd_add_iff_right",
+        "Nat.dvd_gcd",
+        "Nat.eq_one_of_dvd_one",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.gcd_zero_left",
+    ];
+    required
+        .into_iter()
+        .map(|theorem| {
+            let root = native_names
+                .get(theorem)
+                .copied()
+                .ok_or_else(|| format!("required native theorem missing: {theorem}"))?;
+            let dependencies: Vec<String> = native
+                .declaration_dependency_closure(root)
+                .into_iter()
+                .map(|name| native.display_name(name).to_string())
+                .collect();
+            let mut missing = Vec::new();
+            let mut exact_dependencies = Vec::new();
+            let mut alpha_dependencies = Vec::new();
+            let mut kernel_shape_dependencies = Vec::new();
+            let mut type_mismatched_dependencies = Vec::new();
+            for dependency in &dependencies {
+                if !imported_names.contains_key(dependency) {
+                    missing.push(dependency.clone());
+                } else if exact.contains(dependency.as_str()) {
+                    exact_dependencies.push(dependency.clone());
+                } else if alpha_compatible.contains(dependency.as_str()) {
+                    alpha_dependencies.push(dependency.clone());
+                } else if kernel_shape_compatible.contains(dependency.as_str()) {
+                    kernel_shape_dependencies.push(dependency.clone());
+                } else if type_mismatched.contains(dependency.as_str()) {
+                    type_mismatched_dependencies.push(dependency.clone());
+                } else {
+                    return Err(format!(
+                        "shared dependency was absent from overlap partition: {dependency}"
+                    ));
+                }
+            }
+            Ok(json!({
+                "theorem": theorem,
+                "native_dependency_count": dependencies.len(),
+                "missing_dependency_names": missing,
+                "exact_dependency_names": exact_dependencies,
+                "alpha_type_compatible_dependency_names": alpha_dependencies,
+                "kernel_type_shape_compatible_dependency_names": kernel_shape_dependencies,
+                "type_mismatched_dependency_names": type_mismatched_dependencies,
+            }))
+        })
+        .collect()
 }
 
 fn hex_sha256(bytes: &[u8]) -> String {
