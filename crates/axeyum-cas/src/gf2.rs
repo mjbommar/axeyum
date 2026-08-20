@@ -205,6 +205,121 @@ pub fn characteristic_two_q_transform(
     Ok(Gf2Poly::from_words(words))
 }
 
+/// Exact Capell criterion data for the cubic composition `f(x^3)`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CubicCompositionCriterion {
+    /// Degree of the checked irreducible source polynomial.
+    pub source_degree: usize,
+    /// Whether the source already has Lemire's half-degree shape.
+    pub source_is_half_degree_shaped: bool,
+    /// The formal cubic composition `f(x^3)`.
+    pub composition: Gf2Poly,
+    /// `x^((2^n-1)/3) mod f` when `n` is even; absent when cubes are a
+    /// permutation of `GF(2^n)`.
+    pub cube_test_residue: Option<Gf2Poly>,
+    /// Whether Capell's criterion proves the composition irreducible.
+    pub proves_composition_irreducible: bool,
+}
+
+/// Substitute `x^power` for `x` without changing coefficients.
+///
+/// # Errors
+///
+/// Returns a typed decline for zero `power` or an output degree beyond the
+/// supplied intermediate-degree ceiling.
+pub fn monomial_compose(
+    polynomial: &Gf2Poly,
+    power: usize,
+    limits: Gf2Limits,
+) -> Result<Gf2Poly, Gf2Error> {
+    if power == 0 {
+        return Err(Gf2Error::InvalidCertificate(
+            "monomial composition power must be positive",
+        ));
+    }
+    let Some(degree) = polynomial.degree() else {
+        return Ok(Gf2Poly::zero());
+    };
+    let output_degree = degree.checked_mul(power).ok_or(Gf2Error::DegreeLimit {
+        observed: usize::MAX,
+        limit: limits.max_intermediate_degree,
+    })?;
+    if output_degree > limits.max_intermediate_degree {
+        return Err(Gf2Error::DegreeLimit {
+            observed: output_degree,
+            limit: limits.max_intermediate_degree,
+        });
+    }
+    let exponents = polynomial
+        .exponents()
+        .into_iter()
+        .map(|exponent| exponent * power)
+        .collect::<Vec<_>>();
+    Gf2Poly::from_exponents(&exponents, limits)
+}
+
+/// Check the finite-field Capell criterion for `f(x^3)`.
+///
+/// The source is first replay-checked as irreducible.  If its degree `n` is
+/// odd, cubing permutes `GF(2^n)` and the composition is reducible.  If `n` is
+/// even, `f(x^3)` is irreducible exactly when a root `alpha` of `f` is not a
+/// cube, checked by
+///
+/// ```text
+/// alpha^((2^n-1)/3) != 1.
+/// ```
+///
+/// Substitution by an odd power preserves the half-degree shape exactly.
+/// The report establishes the criterion; callers may additionally produce a
+/// Rabin certificate for the returned composition.
+///
+/// # Errors
+///
+/// Returns a typed decline if the source certificate fails or any bounded
+/// polynomial operation exceeds its limits.
+pub fn cubic_composition_criterion(
+    source: &IrreducibilityCertificate,
+    limits: Gf2Limits,
+) -> Result<CubicCompositionCriterion, Gf2Error> {
+    check_irreducible_certificate(source, limits)?;
+    let source_degree = source
+        .polynomial
+        .degree()
+        .ok_or(Gf2Error::NotPositiveDegree)?;
+    let composition = monomial_compose(&source.polynomial, 3, limits)?;
+    if source_degree % 2 == 1 {
+        return Ok(CubicCompositionCriterion {
+            source_degree,
+            source_is_half_degree_shaped: source.polynomial.is_half_degree_shaped(),
+            composition,
+            cube_test_residue: None,
+            proves_composition_irreducible: false,
+        });
+    }
+
+    let mut context = Gf2Context::new(limits);
+    let mut result = Gf2Poly::one();
+    let mut power = Gf2Poly::x();
+    for bit in 0..source_degree {
+        if bit % 2 == 0 {
+            let product = context.multiply(&result, &power)?;
+            result = context.div_rem(&product, &source.polynomial)?.1;
+        }
+        if bit + 1 < source_degree {
+            let square = context.square(&power)?;
+            power = context.div_rem(&square, &source.polynomial)?.1;
+        }
+    }
+    let proves_composition_irreducible = result != Gf2Poly::one();
+    Ok(CubicCompositionCriterion {
+        source_degree,
+        source_is_half_degree_shaped: source.polynomial.is_half_degree_shaped(),
+        composition,
+        cube_test_residue: Some(result),
+        proves_composition_irreducible,
+    })
+}
+
 /// Deterministic resource ceilings for `GF(2)[x]` work.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Gf2Limits {
@@ -921,6 +1036,73 @@ mod tests {
         assert_eq!(
             characteristic_two_q_transform(&Gf2Poly::zero(), Gf2Limits::default()),
             Err(Gf2Error::NotPositiveDegree)
+        );
+    }
+
+    #[test]
+    fn cubic_capell_criterion_builds_shaped_irreducible_families() {
+        let limits = Gf2Limits::default();
+
+        let quadratic = certify_irreducible(&poly(&[0, 1, 2]), limits)
+            .unwrap()
+            .unwrap();
+        let first = cubic_composition_criterion(&quadratic, limits).unwrap();
+        assert!(first.source_is_half_degree_shaped);
+        assert_eq!(first.cube_test_residue, Some(poly(&[1])));
+        assert!(first.proves_composition_irreducible);
+        assert_eq!(first.composition, poly(&[0, 3, 6]));
+        assert!(first.composition.is_half_degree_shaped());
+        let sextic = certify_irreducible(&first.composition, limits)
+            .unwrap()
+            .expect("Capell-positive composition must be Rabin irreducible");
+        check_irreducible_certificate(&sextic, limits).unwrap();
+
+        let second = cubic_composition_criterion(&sextic, limits).unwrap();
+        assert!(second.proves_composition_irreducible);
+        assert_eq!(second.composition, poly(&[0, 9, 18]));
+        let degree_eighteen = certify_irreducible(&second.composition, limits)
+            .unwrap()
+            .expect("second cyclotomic composition must be irreducible");
+        check_irreducible_certificate(&degree_eighteen, limits).unwrap();
+
+        let primitive_quartic = certify_irreducible(&poly(&[0, 1, 4]), limits)
+            .unwrap()
+            .unwrap();
+        let degree_twelve = cubic_composition_criterion(&primitive_quartic, limits).unwrap();
+        assert!(degree_twelve.proves_composition_irreducible);
+        assert_eq!(degree_twelve.composition, poly(&[0, 3, 12]));
+        assert!(degree_twelve.composition.is_half_degree_shaped());
+        let certificate = certify_irreducible(&degree_twelve.composition, limits)
+            .unwrap()
+            .expect("Capell-positive degree-twelve composition must be irreducible");
+        check_irreducible_certificate(&certificate, limits).unwrap();
+    }
+
+    #[test]
+    fn cubic_capell_criterion_rejects_cube_and_odd_degree_sources() {
+        let limits = Gf2Limits::default();
+        let cyclotomic_five = certify_irreducible(&poly(&[0, 1, 2, 3, 4]), limits)
+            .unwrap()
+            .unwrap();
+        let cube = cubic_composition_criterion(&cyclotomic_five, limits).unwrap();
+        assert_eq!(cube.cube_test_residue, Some(Gf2Poly::one()));
+        assert!(!cube.proves_composition_irreducible);
+        assert!(
+            certify_irreducible(&cube.composition, limits)
+                .unwrap()
+                .is_none()
+        );
+
+        let odd = certify_irreducible(&poly(&[0, 1, 3]), limits)
+            .unwrap()
+            .unwrap();
+        let permutation = cubic_composition_criterion(&odd, limits).unwrap();
+        assert_eq!(permutation.cube_test_residue, None);
+        assert!(!permutation.proves_composition_irreducible);
+        assert!(
+            certify_irreducible(&permutation.composition, limits)
+                .unwrap()
+                .is_none()
         );
     }
 

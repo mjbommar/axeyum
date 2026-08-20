@@ -37,3 +37,23 @@ Run the repository gate with:
 This establishes the conjecture for every degree `1 <= n <= 400` under the two
 implemented checkers. It is not an inductive argument and does not establish
 the universal conjecture.
+
+## Derived cubic-composition families
+
+The checked witnesses can also be audited as seeds for the theorem-backed
+composition `f(x^3)`. Build the release binary and run:
+
+```sh
+find artifacts/gf2/lemire/range-1-400/shards \
+  -type f -name 'degree-*.json' -print0 \
+  | sort -z \
+  | xargs -0 target/release/axeyum-gf2-capell-audit
+```
+
+The exact result is 138 criterion-positive seeds, 200 odd-degree structural
+rejections, and 62 selected even witnesses whose roots are cubes. For each
+positive seed the command produces a fresh certificate for `f(x^3)` and runs
+both irreducibility checkers. Capell's criterion plus the retained 3-primary
+order condition extends each positive seed to all degrees `d*3^k`. These 138
+seeds occupy 95 distinct 3-free rays, not every degree; this derived result is
+not a proof of the universal conjecture.

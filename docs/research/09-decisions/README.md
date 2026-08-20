@@ -603,3 +603,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0528](adr-0528-prove-the-binary-hayes-l-degree-distribution.md) | Replace Gao's observed binary L-degree pattern by the exact conductor count while retaining its fatal endpoint factor | accepted |
 | [0529](adr-0529-shard-extension-traces-and-require-characteristic-two-hook-control.md) | Make long-cycle traces deterministically mergeable, compress exact Frobenius orbits, and reject characteristic-zero symmetric-cohomology bounds as an endpoint bridge | accepted |
 | [0530](adr-0530-bound-q-transforms-without-promoting-a-universal-lemire-induction.md) | Bound characteristic-two Q-transforms without promoting a universal Lemire induction | accepted |
+| [0531](adr-0531-admit-capell-cubic-towers-as-partial-lemire-families.md) | Admit Capell cubic towers as partial Lemire families | accepted |

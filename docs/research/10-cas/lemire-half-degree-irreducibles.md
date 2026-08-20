@@ -2007,6 +2007,36 @@ Its tests pin the special success, the second-iterate shape failure, the
 forced upper coefficient under the standard theorem hypotheses, and typed
 resource declines.
 
+Odd monomial composition supplies a broader but still non-universal family.
+Let `f` be irreducible of even degree `d`, let `alpha` be one of its roots,
+and suppose
+
+```text
+alpha^((2^d-1)/3) != 1.                              (NC3)
+```
+
+Since `3 | 2^d-1`, condition (NC3) says exactly that `alpha` is not a cube in
+`GF(2^d)`.  Capell's theorem and the cubic binomial criterion then show that
+`f(x^3)` is irreducible.  Its nonleading exponents are three times those of
+`f`, so the half-degree shape is preserved.  This iterates indefinitely: if
+`beta^3=alpha`, then the 3-primary part of the order of `beta` and of
+`2^(3d)-1` both gain exactly one factor of three (the latter by LTE), so the
+new root again satisfies (NC3).  Thus one checked seed proves shaped
+irreducibles in every degree `d*3^k`, `k>=0`.
+
+The native `cubic_composition_criterion` first replays the source Rabin
+certificate, computes the displayed power in the quotient ring, and returns
+the exact composition.  The standalone `axeyum-gf2-capell-audit` additionally
+produces and checks a fresh Rabin certificate for every criterion-positive
+composition with both Axeyum polynomial implementations.  On the committed
+degree-1-through-400 witnesses it reports 138 eligible even seeds, 200
+structurally ineligible odd degrees, and 62 selected even witnesses whose root
+is a cube.  The 138 seeds occupy 95 distinct 3-free degree rays (83 beginning
+at their 3-free base and 12 beginning later).  These are infinite certified
+families, but their union omits every odd degree and infinitely many even
+3-free bases.  They therefore reduce no uniform endpoint estimate and are not
+an all-degree proof.
+
 ### A sufficient endpoint discrepancy lemma
 
 Let `N_n(1)` be `[1] Lambda_n`, equivalently the number of elements of

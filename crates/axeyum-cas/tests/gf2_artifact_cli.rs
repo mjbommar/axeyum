@@ -141,3 +141,48 @@ fn sparse_shard_producer_composes_with_population_and_artifact_checker() {
     assert!(!rejected.status.success());
     fs::remove_dir_all(directory).unwrap();
 }
+
+#[test]
+fn capell_audit_replays_sources_and_both_composition_checkers() {
+    let directory =
+        std::env::temp_dir().join(format!("axeyum-gf2-capell-audit-{}", std::process::id()));
+    fs::create_dir(&directory).unwrap();
+    let limits = Gf2Limits::default();
+    let cases = [
+        ("degree-3.json", "capell-degree-3", vec![0, 1, 3]),
+        ("degree-4.json", "capell-degree-4", vec![0, 1, 4]),
+    ];
+    let mut paths = Vec::new();
+    for (name, id, exponents) in cases {
+        let polynomial = Gf2Poly::from_exponents(&exponents, limits).unwrap();
+        let artifact = HalfDegreeArtifact {
+            id: id.to_owned(),
+            producer: "integration-test".to_owned(),
+            certificate: certify_irreducible(&polynomial, limits)
+                .unwrap()
+                .expect("control must be irreducible"),
+        };
+        let path = directory.join(name);
+        fs::write(
+            &path,
+            to_canonical_json(&artifact, ArtifactLimits::default()).unwrap(),
+        )
+        .unwrap();
+        paths.push(path);
+    }
+
+    let audited = Command::new(env!("CARGO_BIN_EXE_axeyum-gf2-capell-audit"))
+        .args(&paths)
+        .output()
+        .unwrap();
+    assert!(
+        audited.status.success(),
+        "{}",
+        String::from_utf8_lossy(&audited.stderr)
+    );
+    assert_eq!(
+        String::from_utf8(audited.stdout).unwrap(),
+        "GF2_CAPELL_AUDIT|status=PASS|sources=2|min_degree=3|max_degree=4|eligible=1|odd_degree=1|cube=0|eligible_degrees=4\n"
+    );
+    fs::remove_dir_all(directory).unwrap();
+}
