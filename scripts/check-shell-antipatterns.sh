@@ -39,9 +39,17 @@ tmp=$(mktemp); trap 'rm -f "$tmp"' EXIT
 # --- pattern 1: `grep -q` piped, in a script that sets pipefail --------------
 for f in $(git ls-files '*.sh'); do
   [ -e "$f" ] || continue
+  # THIS FILE IS EXCLUDED, and not to spare itself: its own detection regexes
+  # and its own error messages contain the literal patterns, so scanning itself
+  # reports 2 `grep -q` uses and a `$?`-after-pipeline that do not exist as code.
+  # A linter that matches its own pattern strings is reporting on its source
+  # text, not on behaviour. Measured the moment the gate first ran in CI.
+  [ "$f" = "scripts/check-shell-antipatterns.sh" ] && continue
   # `grep -c`, deliberately: this gate must not contain the bug it bans.
   [ "$(grep -cE 'set -[a-z]*o pipefail' "$f")" -gt 0 ] || continue
-  n=$(grep -cE '\|[^|]*grep[[:space:]]+(-[a-zA-Z]*q|--quiet)' "$f")
+  # Whole-line comments are prose, not code: a commented-out example must not
+  # count, the same rule `check-control-registration.sh` needed.
+  n=$(grep -vE '^[[:space:]]*#' "$f" | grep -cE '\|[^|]*grep[[:space:]]+(-[a-zA-Z]*q|--quiet)')
   [ "$n" -gt 0 ] && printf '%s %s\n' "$f" "$n"
 done | LC_ALL=C sort > "$tmp"
 
@@ -50,7 +58,8 @@ done | LC_ALL=C sort > "$tmp"
 pipe_status=0
 for f in $(git ls-files '*.sh'); do
   [ -e "$f" ] || continue
-  n=$(grep -cE '\|.*;[[:space:]]*(echo|printf)[^;]*\$\?' "$f")
+  [ "$f" = "scripts/check-shell-antipatterns.sh" ] && continue
+  n=$(grep -vE '^[[:space:]]*#' "$f" | grep -cE '\|.*;[[:space:]]*(echo|printf)[^;]*\$\?')
   if [ "$n" -gt 0 ]; then
     echo "SHELL_ANTIPATTERN_ERROR|$f reads \$? after a pipeline ($n occurrence(s));" \
          "that is the LAST stage's status, not the command you meant" >&2
