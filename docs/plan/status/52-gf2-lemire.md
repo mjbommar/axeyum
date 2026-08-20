@@ -465,12 +465,23 @@ Betti number at most `ell^4` would prove the accepted endpoint envelope.  At
 down through `801`.  Literal support on the Wick diagonals is explicitly not
 claimed; proving or refuting this uniform cohomological cutoff is the active
 geometric stopping test.
+The first genuine extension-field connected trace now separates that cutoff
+from its proposed Betti coefficient.  A bounded native operation retains all
+`q^ell` class populations over `GF(2^r)`, reconstructs the Wick-subtracted
+trace, and agrees exactly with the independent base-field Hayes transform.
+At `(ell,n,r)=(2,5,5)` its exhaustive `32^5` row needs normalized coefficient
+26, refuting the universal `ell^4=16` Betti budget.  This does not refute the
+degree-`4ell` cohomology cutoff or a replacement budget scoped to `ell>=200`.
+The active geometric task is therefore to determine the actual weight versus
+multiplicity growth and feed any explicit replacement `B(ell)` back into the
+endpoint ledger.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `ff09b9baa` | Added exact connected Adams traces over binary extension fields, cross-checked the base field, and used the exhaustive `(ell,n,r)=(2,5,5)` row to refute the universal `ell^4` Betti budget while retaining the separate cutoff question. |
 | 2026-08-20 | `702191bff` | Reconstructed the product-one Adams convolution and all three Wick projectors, then exposed the exact degree-`4ell` cohomology cutoff and `ell^4` Betti budget needed for endpoint credit without claiming either. |
 | 2026-08-20 | `5bdebc271` | Added bounded generalized Fomenko restriction/Galois packets, proved their exact conductor reconstruction, and refuted a one-square-root-unit bound for both one-coordinate and endpoint-matched logarithmic quotients. |
 | 2026-08-20 | `254be42f7` | Proved that Katz's pointwise character fourth moment is a different contraction from the product-constrained Hayes cumulant and retained the missing uniform Betti bound. |
