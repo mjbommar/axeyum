@@ -170,6 +170,7 @@ compounding, not automation theatre.
 | [Axiom-free official `Nat.gcd_succ`](71-axiom-free-official-nat-gcd-succ.md) | Can a pointwise fuel proof remove the quotient-bearing generic recursion equation and advance the official target through `Nat.dvd_gcd`? |
 | [Official Fibonacci coprimality support surface](72-official-fibonacci-support-surface.md) | Do all seven preregistered native dependencies compose together over the checked official gcd leaves, leaving only the exact target theorem? |
 | [Exact official Fibonacci coprimality](73-exact-official-fibonacci-coprimality.md) | Does the exact frozen r082 theorem pass ordinary kernel admission twice per run with an empty footprint, and what authority still precedes ledger credit? |
+| [Fibonacci receipt authority](74-fibonacci-receipt-authority.md) | Which exact library-premise identities may the semantic receipt authorize, and how are they frozen before issuance? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

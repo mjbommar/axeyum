@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "exact-official-target-admitted-semantic-receipt-pending",
+  "state": "exact-official-target-dependencies-preregistered-receipt-pending",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -321,6 +321,53 @@
     "evaluation_credit": 0,
     "ledger_writes": 0
   },
+  "fibonacci_receipt_authority": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/b55bc977e-fibonacci-receipt-authority-v1/manifest.json",
+    "manifest_sha256": "b9eb358d0928be257084150998f4f57c87cbbe01040f2c43ac1a306810093b6b",
+    "implementation_commit": "b55bc977e6c2a3e395db302639dde4d304dbde36",
+    "result_sha256": "739d9a4c6ce38576d6573547f1c98e052d6df80dca5334be36154026ebd01954",
+    "dependency_set_sha256": "d407340befc681d6d9abd187bbfead1f6ca1a7395c7dcf908950fd9c4d02e4d5",
+    "direct_theorem_dependencies": [
+      {
+        "name": "Axeyum.Autogenesis.fibAddTwo",
+        "content_sha256": "982c676b0656664e807c5e195bbdbd43376d78dec029bb3c409df661de39edb4"
+      },
+      {
+        "name": "Nat.add_comm",
+        "content_sha256": "c05e6d0986251392c9b1bc9fcc2bd5d66de22c856b9669cdd993e9993d94f4f9"
+      },
+      {
+        "name": "Nat.dvd_add_iff_right",
+        "content_sha256": "4bc8146aabb20e59aa1b0a19f80588ac80656320031f12b61f96da3f94802cf0"
+      },
+      {
+        "name": "Nat.dvd_gcd",
+        "content_sha256": "325197e87bf46cc929ad03177c49e73de7054b446ec22f132c605af4d3c35e94"
+      },
+      {
+        "name": "Nat.eq_one_of_dvd_one",
+        "content_sha256": "bc5301b4f9dbd08785db127ca6512283d2125321be596b362129d339c80ffa37"
+      },
+      {
+        "name": "Nat.gcd_dvd_left",
+        "content_sha256": "7fa32fac2240feebdb94d6259f2bbab2dbb83059227286303efd7c306e5ad399"
+      },
+      {
+        "name": "Nat.gcd_dvd_right",
+        "content_sha256": "d3214bf5b657f399baa82c9e2817996b64ae26d688308dfa0641a6ed376fdef4"
+      },
+      {
+        "name": "Nat.gcd_zero_left",
+        "content_sha256": "f81aee8a1d8528ddf8b7be6007efbee190f2208cdef3dcfda9fa03a1f200175d"
+      }
+    ],
+    "fresh_full_runs": 2,
+    "kernel_submissions": 4,
+    "semantic_theorem_receipts_issued": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
   "native_fib_composition": {
     "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/91d7df736-lean430-native-fib-composition-v1/manifest.json",
     "manifest_sha256": "b797f5876ca3d033a5e58424573a774e3cad1af6dc9723059555a779d3028877",
@@ -557,7 +604,7 @@
     ],
     "required_present_in_import": [],
     "already_present_in_import": ["Nat.rec"],
-    "next_action": "preregister the exact official theorem identities, issue and independently replay one semantic theorem receipt, then attempt the crash-safe fact transition"
+    "next_action": "issue and independently replay one dependency-bound semantic theorem receipt from the preregistered exact official authority, then attempt the crash-safe fact transition"
   },
   "next_capability_sequence": [
     "bind existing imported logic and Nat declarations to reusable prelude handles",
@@ -582,9 +629,10 @@
     "proof_search_invocations": 0,
     "kernel_submissions": 52,
     "exact_target_kernel_submissions": 4,
+    "authority_audit_kernel_submissions": 4,
     "evaluation_credit": 0,
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "The exact official r082 Fibonacci-coprimality theorem is independently reconstructed in two fresh full executions, with two fresh admissions per execution, an empty footprint, and exactly the authored recurrence plus seven planned theorem dependencies. The recurrence itself is compiled by Lean 4.30, exported, independently admitted, and assumption-free. This proves the target inside the checked candidate environment but does not itself issue the semantic theorem receipt or authorize evaluation credit. It does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, weakening definitional equality, inspecting held-out data, writing the ledger, or establishing the fact before the preregistered receipt and crash-safe transaction replay."
+  "limitations": "The exact official r082 Fibonacci-coprimality theorem is independently reconstructed in two fresh full executions, with two fresh admissions per execution, an empty footprint, and exactly the authored recurrence plus seven planned theorem dependencies. A second pair of full executions preregisters every direct premise by name and canonical declaration identity without issuing a receipt. This proves and freezes the checked candidate and its intended library basis, but does not itself issue the dependency-bound semantic theorem receipt or authorize evaluation credit. It does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, weakening definitional equality, inspecting held-out data, writing the ledger, or establishing the fact before receipt replay and the crash-safe transaction."
 }

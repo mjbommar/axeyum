@@ -102,7 +102,8 @@ crash-safe fact transaction. Accordingly this increment issues no semantic
 receipt, claims no evaluation credit, changes no fact status, and writes no
 ledger state.
 
-Next, bind the exact target, proof, declaration, dependency, source, and
-observation identities in the preregistered authority; issue the semantic
-theorem receipt twice from fresh reconstructions; then attempt the fact
-transition with the checked receipt as its sole evidence authority.
+The exact dependency authority is now preregistered; see
+[Fibonacci receipt authority](74-fibonacci-receipt-authority.md). Next, issue
+the dependency-bound semantic theorem receipt twice from fresh
+reconstructions, then attempt the fact transition with the checked receipt as
+its sole evidence authority.

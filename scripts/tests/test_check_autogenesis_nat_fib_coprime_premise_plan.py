@@ -300,6 +300,26 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "authority changed"):
             MODULE.validate(changed)
 
+    def test_fibonacci_receipt_authority_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["fibonacci_receipt_authority"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["fibonacci_receipt_authority"]["direct_theorem_dependencies"][0][
+            "content_sha256"
+        ] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "identity or result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["fibonacci_receipt_authority"][
+            "semantic_theorem_receipts_issued"
+        ] = 1
+        with self.assertRaisesRegex(MODULE.PlanError, "boundary changed"):
+            MODULE.validate(changed)
+
     def test_native_fib_composition_mutations_are_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)
         changed["native_fib_composition"]["manifest_sha256"] = "0" * 64

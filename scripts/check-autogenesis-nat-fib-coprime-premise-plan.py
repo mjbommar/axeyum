@@ -940,6 +940,104 @@ def validate_exact_fibonacci_coprimality(manifest: dict[str, Any]) -> None:
         raise PlanError("exact Fibonacci theorem authority changed")
 
 
+def validate_fibonacci_receipt_authority(manifest: dict[str, Any]) -> None:
+    tracked = manifest["fibonacci_receipt_authority"]
+    manifest_path = pathlib.Path(tracked["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "authority-audit-replay.json",
+        "authority-audit.json",
+        "manifest.json",
+    }
+    if (
+        sha256(manifest_path) != tracked["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(stat.S_IMODE(path.stat().st_mode) != 0o444 for path in pack_dir.iterdir())
+    ):
+        raise PlanError("Fibonacci receipt-authority pack changed or is mutable")
+
+    external = load(manifest_path)
+    implementation = external["implementation"]
+    inputs = external["inputs"]
+    result = external["result"]
+    result_path = pack_dir / result["path"]
+    replay_path = pack_dir / result["replay_path"]
+    observed = load(result_path)
+    exact = observed["dvd_gcd_frontier"]["exact_target"]
+    audit = exact["receipt_authority_audit"]
+    dependencies = audit["direct_theorem_dependencies"]
+    dependency_payload = (
+        json.dumps(dependencies, sort_keys=True, separators=(",", ":")) + "\n"
+    ).encode()
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-fibonacci-dependency-receipt-authority-pack"
+        or external.get("repository_commit") != tracked["implementation_commit"]
+        or implementation["path"]
+        != "crates/axeyum-lean-import/examples/nat_gcd_succ_specialization.rs"
+        or implementation["mode"] != "--exact-authority"
+        or git_blob_sha256(tracked["implementation_commit"], implementation["path"])
+        != implementation["sha256"]
+        or inputs["exact_candidate_manifest_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["manifest_sha256"]
+        or sha256(pathlib.Path(inputs["exact_candidate_manifest"]))
+        != inputs["exact_candidate_manifest_sha256"]
+        or inputs["candidate_observation_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["result_sha256"]
+        or inputs["target_stream_sha256"] != manifest["source"]["stream_sha256"]
+        or result["sha256"] != tracked["result_sha256"]
+        or sha256(result_path) != result["sha256"]
+        or sha256(replay_path) != result["sha256"]
+        or result_path.read_bytes() != replay_path.read_bytes()
+        or result_path.stat().st_size != result["bytes"]
+        or len(result_path.read_bytes().splitlines()) != result["lines"]
+        or result["target"] != manifest["exact_fibonacci_coprimality"]["name"]
+        or result["target_goal_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["target_goal_sha256"]
+        or result["proof_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["proof_sha256"]
+        or result["declaration_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["declaration_sha256"]
+        or result["dependency_set_sha256"] != tracked["dependency_set_sha256"]
+        or hashlib.sha256(dependency_payload).hexdigest()
+        != result["dependency_set_sha256"]
+        or result["direct_theorem_dependencies"] != tracked["direct_theorem_dependencies"]
+        or dependencies != tracked["direct_theorem_dependencies"]
+        or [row["name"] for row in dependencies]
+        != sorted(row["name"] for row in dependencies)
+        or len({row["name"] for row in dependencies}) != len(dependencies)
+        or len(dependencies) != 8
+        or exact["target"] != result["target"]
+        or exact["target_goal_sha256"] != result["target_goal_sha256"]
+        or exact["proof_sha256"] != result["proof_sha256"]
+        or exact["target_declaration_sha256"] != result["declaration_sha256"]
+        or exact["target_axiom_footprint"] != []
+        or result["fresh_full_runs"] != tracked["fresh_full_runs"]
+        or result["byte_identical_replay"] is not True
+    ):
+        raise PlanError("Fibonacci receipt-authority identity or result changed")
+
+    zero_authority = {
+        "semantic_theorem_receipts_issued": 0,
+        "fact_status_changes": 0,
+        "evaluation_credit": 0,
+        "ledger_writes": 0,
+    }
+    if (
+        {key: audit[key] for key in zero_authority} != zero_authority
+        or external["authority"] != zero_authority
+        or tracked["fresh_full_runs"] != 2
+        or tracked["kernel_submissions"] != 4
+        or tracked["semantic_theorem_receipts_issued"] != 0
+        or tracked["fact_status_changes"] != 0
+        or tracked["evaluation_credit"] != 0
+        or tracked["ledger_writes"] != 0
+    ):
+        raise PlanError("Fibonacci receipt-authority boundary changed")
+
+
 def validate_native_fib_composition(manifest: dict[str, Any]) -> None:
     pack = manifest["native_fib_composition"]
     manifest_path = pathlib.Path(pack["manifest"])
@@ -1193,7 +1291,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "exact-official-target-admitted-semantic-receipt-pending"
+        != "exact-official-target-dependencies-preregistered-receipt-pending"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -1290,7 +1388,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest["proof_plan"]["required_present_in_import"] != []
         or manifest["proof_plan"]["already_present_in_import"] != ["Nat.rec"]
         or manifest["proof_plan"]["next_action"]
-        != "preregister the exact official theorem identities, issue and independently replay one semantic theorem receipt, then attempt the crash-safe fact transition"
+        != "issue and independently replay one dependency-bound semantic theorem receipt from the preregistered exact official authority, then attempt the crash-safe fact transition"
         or probe["imported_division_declaration_names"] != expected_division_names
         or observation["source"]["imported_division_declaration_names"]
         != expected_division_names
@@ -1597,6 +1695,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         "proof_search_invocations": 0,
         "kernel_submissions": 52,
         "exact_target_kernel_submissions": 4,
+        "authority_audit_kernel_submissions": 4,
         "evaluation_credit": 0,
         "ledger_writes": 0,
     }:
@@ -1608,6 +1707,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     validate_nat_gcd_succ_bridge(manifest)
     validate_fibonacci_support_surface(manifest)
     validate_exact_fibonacci_coprimality(manifest)
+    validate_fibonacci_receipt_authority(manifest)
     validate_native_fib_composition(manifest)
     validate_native_fib_coprimality(manifest)
     return manifest
@@ -1621,8 +1721,8 @@ def main() -> int:
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
             "present=0|exact=11|"
             "compatible=Nat.mod_lt,Acc,Nat.dvd_mod_iff,Nat.gcd_succ,Nat.dvd_gcd|"
-            "next=semantic-receipt|"
-            "submissions=52|native_submissions=2|exact_submissions=4|evaluation=0|writes=0"
+            "next=issue-dependency-receipt|"
+            "submissions=52|native_submissions=2|exact_submissions=4|authority_submissions=4|evaluation=0|writes=0"
         )
         return 0
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, PlanError) as error:
