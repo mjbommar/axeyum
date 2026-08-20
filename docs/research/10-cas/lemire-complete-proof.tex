@@ -1,0 +1,194 @@
+\documentclass[10pt]{article}
+\usepackage[a4paper,margin=0.72in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newcommand{\F}{\mathbb F}
+\newcommand{\TOP}{\textup{TOP}}
+
+\title{Half-sparse irreducible polynomials over $\F_2$}
+\author{Axeyum Lemire proof project}
+\date{Working proof manuscript --- 20 August 2026}
+
+\begin{document}
+\maketitle
+\vspace{-1.2em}
+\begin{center}
+\fcolorbox{red}{red!6}{\parbox{0.93\linewidth}{\centering
+\textbf{Not yet a proof.}  Lemma~\ref{lem:top} is the sole open mathematical
+statement.  Every other implication below is proved and replayed in Axeyum.
+This notice must be removed only after Lemma~\ref{lem:top} has a checked proof.}}
+\end{center}
+
+\begin{abstract}
+Kaser and Lemire asked whether, for every $n$, there is an irreducible
+$f\in\F_2[x]$ of degree $n$ for which
+$\deg(f-x^n)\leq\lfloor n/2\rfloor$.  We reduce the question to a single
+uniform estimate for a binary refinement of von Mangoldt populations.  The
+estimate is needed only on $4\lceil\log_2\ell\rceil+1$ conductor levels and
+asks for a factor $12\ell/5$ beyond the individual Riemann--Hypothesis bound.
+An independently checked finite calculation handles $n\leq400$.
+\end{abstract}
+
+\section{The ray class and its binary refinements}
+
+Put $\ell=\lceil n/2\rceil-1$ and
+\[
+ E_j=(\F_2[x]/x^{j+1})^*,\qquad |E_j|=2^j.
+\]
+For a monic polynomial $F$, write
+$\langle F\rangle_j=x^{\deg F}F(x^{-1})\pmod{x^{j+1}}$ and define
+\[
+ N_j(b)=\sum_{\substack{F\ \mathrm{monic},\ \deg F=n\\
+                         \langle F\rangle_j=b}}\Lambda(F)
+ \quad(b\in E_j).
+\]
+The desired shape is equivalent to $\langle f\rangle_\ell=1$.  Thus it is
+enough to prove that the identity class contains more von Mangoldt mass than
+can be supplied by proper prime powers.
+
+The quotient $E_j\to E_{j-1}$ has two-element fibres.  For a parent
+$b\in E_{j-1}$, let $b_0=b$ be its degree-$<j$ lift and
+$b_1=b_0(1+x^j)$, and put
+\[
+ H_j(b)=N_j(b_0)-N_j(b_1),\qquad H_j^*=\max_b|H_j(b)|.
+\]
+
+\begin{proposition}[Haar reconstruction]\label{prop:haar}
+For every $e\in E_\ell$,
+\[
+ 2^\ell N_\ell(e)
+ =2^n+\sum_{j=1}^{\ell}\varepsilon_j(e)2^{j-1}H_j(b_j(e)),
+ \qquad \varepsilon_j(e)\in\{-1,1\}.
+\]
+Consequently
+\begin{equation}\label{eq:triangle}
+ \sum_{j=1}^{\ell}2^{j-1}H_j^*<2^{2\ell}
+ \quad\Longrightarrow\quad
+ |N_\ell(e)-2^{n-\ell}|<2^\ell\quad(e\in E_\ell).
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+At each binary split, a child's value is half the parent value plus or minus
+half the sibling difference.  Iterating from
+$N_0(1)=\sum_{\deg F=n}\Lambda(F)=2^n$ gives the identity.  Taking absolute
+values gives \eqref{eq:triangle}.
+\end{proof}
+
+Let $X_j$ be the $2^{j-1}$ characters of $E_j$ that do not factor through
+$E_{j-1}$, and set
+$S_n(\chi)=\sum_{\deg F=n}\Lambda(F)\chi(\langle F\rangle_j)$.
+Fourier inversion on a two-child fibre gives
+\begin{equation}\label{eq:fourier}
+ H_j(b)=2^{1-j}\sum_{\chi\in X_j}\overline{\chi(b)}S_n(\chi).
+\end{equation}
+The $L$-polynomial of such a character has degree $j-1$.  The function-field
+Riemann hypothesis and \eqref{eq:fourier} therefore give
+\begin{equation}\label{eq:weil}
+ H_j^*\leq (j-1)2^{\lceil n/2\rceil}.
+\end{equation}
+
+\section{The one remaining estimate}
+
+\begin{lemma}[Top-conductor polynomial saving]\label{lem:top}
+Let $\ell\geq200$, $n\in\{2\ell+1,2\ell+2\}$, and
+\[
+ \ell-4\lceil\log_2\ell\rceil\leq j\leq\ell.
+\]
+Then
+\begin{equation}\tag{$\TOP$}\label{eq:top}
+ (12\ell H_j^*)^2\leq25(j-1)^2 2^n.
+\end{equation}
+\end{lemma}
+
+\noindent\textcolor{red}{\textbf{Proof status: open.}}
+The estimate improves \eqref{eq:weil} by only $12\ell/5$, but it is uniform
+in the moving near-diagonal range $n=2j+O(\log\ell)$.  Fixed-conductor
+recurrence counterexamples to absolute delocalisation occur outside this
+range and do not contradict \eqref{eq:top}.
+
+\begin{proposition}[The closing calculation]\label{prop:close}
+Lemma~\ref{lem:top}, together with \eqref{eq:weil}, implies
+\eqref{eq:triangle} for both endpoint degrees and every $\ell\geq200$.
+\end{proposition}
+
+\begin{proof}
+Put $c=\lceil\log_2\ell\rceil$ and $a=\ell-4c$.  With
+\[
+ S_{\rm low}=\sum_{j<a}(j-1)2^{j-1},\qquad
+ S_{\rm top}=\sum_{a\leq j\leq\ell}(j-1)2^{j-1},
+\]
+the geometric sums satisfy
+$S_{\rm low}\leq2^\ell/(2\ell^3)$ and
+$S_{\rm top}\leq\ell2^\ell$.
+For $n=2\ell+1$, use $\sqrt2<3/2$ in \eqref{eq:weil} and
+\eqref{eq:top}; the left side of \eqref{eq:triangle} is at most
+\[
+ 2^\ell\left(\frac32S_{\rm low}
+                    +\frac{5}{8\ell}S_{\rm top}\right)<2^{2\ell}.
+\]
+For $n=2\ell+2$ it is at most
+\[
+ 2^{\ell+1}\left(S_{\rm low}
+                    +\frac{5}{12\ell}S_{\rm top}\right)<2^{2\ell}.
+\]
+The displayed strict inequalities follow from $2^c\geq\ell$ (and are
+checked with exact integers, without floating point).
+\end{proof}
+
+\section{Completion of the conjecture}
+
+\begin{lemma}[Proper powers]\label{lem:powers}
+For $n=2\ell+1$, one has
+$N_\ell(1)=1+nI_n(1)$, where $I_n(1)$ counts degree-$n$ irreducibles in the
+identity class.  For $n=2\ell+2$ and $\ell\geq200$, the total identity-class
+mass of proper prime powers is strictly smaller than
+$2^{n-\ell}-2^\ell$.
+\end{lemma}
+
+\begin{proof}
+At the odd endpoint every proper divisor of $n$ is at most $\ell$; the only
+irreducible of that degree in the identity ray class is $x$, and odd powering
+is an automorphism of the $2$-group $E_\ell$.  This gives the first identity.
+At the even endpoint, every odd exponent $k\geq3$ contributes zero by the
+same automorphism argument.  Squares reduce to the $2$-torsion subgroup,
+of order $2^{\lceil\ell/2\rceil}$; all remaining even exponents are at least
+four.  Counting all monic irreducibles at their possible degrees (and
+including the ramified power $x^n$) gives the explicit upper bound
+\[
+ (\ell+1)2^{\lceil\ell/2\rceil}
+ +(2\ell+2)2^{\lceil(\ell+1)/2\rceil},
+\]
+which is smaller than $2^{\ell+2}-2^\ell$ for $\ell\geq200$.
+\end{proof}
+
+\begin{theorem}\label{thm:lemire}
+Assuming Lemma~\ref{lem:top}, for every $n\geq1$ there is a monic irreducible
+$f\in\F_2[x]$ of degree $n$ satisfying
+$\deg(f-x^n)\leq\lfloor n/2\rfloor$.
+\end{theorem}
+
+\begin{proof}
+Degrees $n\leq400$ are covered by independently checked Rabin certificates.
+For $n>400$, Proposition~\ref{prop:close} and
+Proposition~\ref{prop:haar} give
+$N_\ell(1)>2^{n-\ell}-2^\ell$.  Lemma~\ref{lem:powers} shows that this exceeds
+the proper-prime-power mass, so an irreducible lies in the identity class.
+Taking reciprocals gives the asserted half-sparse polynomial.
+\end{proof}
+
+\begin{thebibliography}{9}\small
+\bibitem{KL} O.~Kaser and D.~Lemire,
+\emph{Strongly universal string hashing is fast},
+The Computer Journal \textbf{57} (2014), 1624--1638.
+\bibitem{Hayes} D.~R.~Hayes,
+\emph{The distribution of irreducibles in $\mathrm{GF}[q,x]$},
+Trans. Amer. Math. Soc. \textbf{117} (1965), 101--127.
+\end{thebibliography}
+
+\end{document}
