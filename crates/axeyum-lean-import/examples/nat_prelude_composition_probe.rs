@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use axeyum_lean_import::{
     ImportLimits, canonical_alpha_expression_sha256, canonical_declaration_sha256,
-    canonical_expression_sha256, import_ndjson,
+    canonical_expression_sha256, canonical_kernel_type_shape_sha256, import_ndjson,
 };
 use axeyum_lean_kernel::{Declaration, Kernel, KernelError, build_nat_prelude};
 use serde_json::json;
@@ -95,6 +95,7 @@ fn run() -> Result<(), String> {
             "native_declarations": overlaps.native_declarations,
             "exact_overlap_names": overlaps.exact,
             "alpha_type_compatible_content_mismatched_names": overlaps.alpha_type_compatible_content_mismatched,
+            "kernel_type_shape_compatible_content_mismatched_names": overlaps.kernel_type_shape_compatible_content_mismatched,
             "type_mismatched_overlaps": overlaps.type_mismatched,
         },
         "result": result,
@@ -125,6 +126,7 @@ struct OverlapReport {
     native_declarations: usize,
     exact: Vec<String>,
     alpha_type_compatible_content_mismatched: Vec<String>,
+    kernel_type_shape_compatible_content_mismatched: Vec<String>,
     type_mismatched: Vec<serde_json::Value>,
 }
 
@@ -136,6 +138,7 @@ fn compare_native_overlaps(imported: &Kernel) -> Result<OverlapReport, String> {
     let native_names = declaration_names(&native);
     let mut exact = Vec::new();
     let mut alpha_type_compatible_content_mismatched = Vec::new();
+    let mut kernel_type_shape_compatible_content_mismatched = Vec::new();
     let mut type_mismatched = Vec::new();
     for (name, &native_id) in &native_names {
         let Some(&imported_id) = imported_names.get(name) else {
@@ -164,17 +167,27 @@ fn compare_native_overlaps(imported: &Kernel) -> Result<OverlapReport, String> {
             if native_alpha_type == imported_alpha_type {
                 alpha_type_compatible_content_mismatched.push(name.clone());
             } else {
-                type_mismatched.push(json!({
-                    "name": name,
-                    "native_content_sha256": native_digest,
-                    "imported_content_sha256": imported_digest,
-                    "native_type_sha256": native_type,
-                    "imported_type_sha256": imported_type,
-                    "native_alpha_type_sha256": native_alpha_type,
-                    "imported_alpha_type_sha256": imported_alpha_type,
-                    "native_type": native.render_lean(native_type_id),
-                    "imported_type": imported.render_lean(imported_type_id),
-                }));
+                let native_kernel_type_shape =
+                    canonical_kernel_type_shape_sha256(&native, native_type_id)?;
+                let imported_kernel_type_shape =
+                    canonical_kernel_type_shape_sha256(imported, imported_type_id)?;
+                if native_kernel_type_shape == imported_kernel_type_shape {
+                    kernel_type_shape_compatible_content_mismatched.push(name.clone());
+                } else {
+                    type_mismatched.push(json!({
+                        "name": name,
+                        "native_content_sha256": native_digest,
+                        "imported_content_sha256": imported_digest,
+                        "native_type_sha256": native_type,
+                        "imported_type_sha256": imported_type,
+                        "native_alpha_type_sha256": native_alpha_type,
+                        "imported_alpha_type_sha256": imported_alpha_type,
+                        "native_kernel_type_shape_sha256": native_kernel_type_shape,
+                        "imported_kernel_type_shape_sha256": imported_kernel_type_shape,
+                        "native_type": native.render_lean(native_type_id),
+                        "imported_type": imported.render_lean(imported_type_id),
+                    }));
+                }
             }
         }
     }
@@ -182,6 +195,7 @@ fn compare_native_overlaps(imported: &Kernel) -> Result<OverlapReport, String> {
         native_declarations: native.environment().len(),
         exact,
         alpha_type_compatible_content_mismatched,
+        kernel_type_shape_compatible_content_mismatched,
         type_mismatched,
     })
 }
