@@ -69,7 +69,7 @@ fn main() {
     let mut real = Kernel::new();
     let _ = build_arith_prelude(&mut real).expect("AxReal prelude must build");
 
-    for (label, kernel) in [("nat", &nat), ("integer", &integer), ("real", &real)] {
+    for (label, kernel) in [("nat", &nat), ("integer", &integer), ("axreal", &real)] {
         let rows = theorems(kernel);
         let env_axioms = environment_axioms(kernel);
 

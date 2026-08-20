@@ -77,11 +77,17 @@ KERNEL_ROUTES = {"kernel-lean"}
 # theorems this kernel declares contain a prime, so excluding it costs nothing
 # today. If a primed name ever appears, this must handle quoting rather than
 # widening the class back.
+#
+# `(?<![A-Za-z])` and the `AxReal`-before-`Real` ordering are both load-bearing
+# after ADR-0522. Without the boundary, `AxReal.add_comm` matches at offset 2 and
+# yields `Real.add_comm` -- a name no kernel declares. That is worse than missing
+# it: `unnamed` never fires (a name WAS found), the graph lookup misses, and the
+# fact is skipped with nothing printed. Measured 2026-08-19, the silent-skip path
+# this file's header promises to report instead.
 _SEG = r"[A-Za-z0-9_]+"
 _DOT = r"(?:\\?\.|\[\.\])"
-THEOREM_RE = re.compile(
-    rf"\^?((?:Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Str)(?:{_DOT}{_SEG})+)"
-)
+_NS = "AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Str"
+THEOREM_RE = re.compile(rf"\^?(?<![A-Za-z])((?:{_NS})(?:{_DOT}{_SEG})+)")
 
 
 def inventory() -> dict[str, list[str]]:

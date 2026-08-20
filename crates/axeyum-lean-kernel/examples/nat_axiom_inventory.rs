@@ -269,7 +269,7 @@ fn main() -> ExitCode {
     // is a finding: it means the ledger binds less than it appears to.
     let mut real = Kernel::new();
     let _ = build_arith_prelude(&mut real).expect("AxReal prelude must build");
-    let real_rows = inventory("real", &real);
+    let real_rows = inventory("axreal", &real);
 
     let mut integer = Kernel::new();
     let _ = build_int_prelude(&mut integer).expect("Int prelude must build");
@@ -296,7 +296,7 @@ fn main() -> ExitCode {
     let mut groups: Vec<(&str, &Vec<Row>)> = vec![
         ("logic", &logic_rows),
         ("nat", &nat_rows),
-        ("real", &real_rows),
+        ("axreal", &real_rows),
         ("integer", &integer_rows),
         ("rat", &rational_rows),
         ("string", &string_rows),

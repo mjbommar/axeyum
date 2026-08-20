@@ -8,7 +8,7 @@ This ledger inventories declarations actually admitted as trusted after construc
 
 ## Snapshot
 
-- **30 total assumptions:** real 30.
+- **30 total assumptions:** axreal 30.
 - Axiom-free preludes, enumerated rather than inferred from absence: `complex`, `creal`, `integer`, `logic`, `nat`, `rat`, `string`. An axiom-free prelude emits no rows, so the measurement declares its own coverage; a prelude that silently stopped being built fails the gate instead of shrinking the total.
 - 0 names are shared by the isolated real and integer preludes; ADR-0387's `Int.*` / `AxReal.*` namespaces make the packages composable.
 - Integer trust policy: [ADR-0465](../../research/09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md) — The integer prelude admits no assumption; a checked dependency closure using it inherits nothing from this ledger.
@@ -20,15 +20,19 @@ This ledger inventories declarations actually admitted as trusted after construc
 
 Counts are over the whole trusted surface, not `Declaration::Axiom` alone: `Opaque` has no proof body and `Quotient` admits `Quot.sound`.
 
+**`axreal` is not this project's real numbers.** It is the legacy *axiomatized* ordered field — an opaque carrier plus the field, order and compatibility laws asserted (ADR-0522) — and every one of the assumptions in this table is one of its laws. The real numbers the shipped route actually reasons over are `creal`, the Bishop setoid of regular rational sequences (ADR-0512), which is **constructed** and appears above at zero. `complex` is built from `creal` and is likewise at zero (ADR-0521).
+
+So read the total as *what is still assumed somewhere in the tree*, not as the cost of having real numbers. ADR-0509 draws the distinction this table cannot: these 30 are **declared** and no shipped route **reaches** them, which is a weaker claim than deletion and a stronger one than a count of 30 suggests. The prelude was named `real` until 2026-08-19, and this row read `real 30` — which invited exactly the opposite reading of the same measurement.
+
 | Prelude | Axiom | Opaque | Quotient | Trusted total | Ledger rows |
 |---|---|---|---|---|---|
+| `axreal` | 30 | 0 | 0 | 30 | 30 |
 | `complex` | 0 | 0 | 0 | 0 | 0 |
 | `creal` | 0 | 0 | 0 | 0 | 0 |
 | `integer` | 0 | 0 | 0 | 0 | 0 |
 | `logic` | 0 | 0 | 0 | 0 | 0 |
 | `nat` | 0 | 0 | 0 | 0 | 0 |
 | `rat` | 0 | 0 | 0 | 0 | 0 |
-| `real` | 30 | 0 | 0 | 30 | 30 |
 | `string` | 0 | 0 | 0 | 0 | 0 |
 
 ## Machine-checked contract
@@ -47,36 +51,36 @@ Counts are over the whole trusted surface, not `Declaration::Axiom` alone: `Opaq
 
 | Prelude | Name | Type SHA-256 | Classification | Discharge | Owner | Source |
 |---|---|---|---|---|---|---|
-| `real` | `AxReal` | `73d4fe359be51073c75f6c2a03507b52a55364cf0c923d65def2fa12cb438933` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.add` | `9a1095ebb7e7f3c8be0739e50fdeb8e477e65eef4654053d850e60af4945506e` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.add_assoc` | `89c85f1b696b466df15b38ca075b5a655e12aef7a1a225def814f7b4078c940a` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.add_comm` | `b57422809db16ffcc4d601a421b11fe41a90e683fae2da8a95cff9695eb11dee` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.add_le_add` | `1ecd890660212db88dd7f1a1340209521a84afba8a39bc41207908170b54ed3b` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.add_lt_add_of_le_of_lt` | `81db25978ae163c5610ea820e54f8a29c077120a66e772957c19702af4778a49` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.add_neg` | `d6410774eb71dd100d1840dda4c6cf2e1ef23fe8659634a0ee57dbeb1d0f7dff` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.add_zero` | `b696625c14e848148eac73b7015b4eebf2a1f441e9300611e8486804655088c7` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.le` | `753c8c2001b13a61dc9ecba0b4daadd145d5178cb9769b15f161e4e92386a031` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.le_of_lt` | `902a4ace4a1bcc22926db02f8fc44a630495ef6ead57ec119f3667e8412a3d94` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.le_refl` | `21ecd845e5615f2c29f0ae811192f97ae4e3dea6a2e7fc85f09d127bdc3662ab` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.le_trans` | `03c11c1fcb9de331066ec3719ec2fb8e3f364434c7eb9554bc836b1da6b78ca8` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.left_distrib` | `b50968b27155f838eb986b3471f04dcc721a66bfaf020e0c679f679f8f58033e` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.lt` | `753c8c2001b13a61dc9ecba0b4daadd145d5178cb9769b15f161e4e92386a031` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.lt_irrefl` | `3f3146b15e86a7a3a488a6f239883501102785bbe518495a0c8f0017a2560325` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.lt_of_le_of_lt` | `a0c71c2fa471224978fcfc7372df6df4cc3ac3874120c77d6a675a282e0eddb9` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.lt_of_lt_of_le` | `0ce9705a9a600ff66a412d1fca5ed8ace97ad0c3f89e7394aa544e18762ba8e8` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.lt_trans` | `9709b10a6ac19cfb0e7b6e8c2b9ee0026504b8ed990fa00474296cb13e8c6142` | `derivable-theorem` | `planned` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.mul` | `9a1095ebb7e7f3c8be0739e50fdeb8e477e65eef4654053d850e60af4945506e` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.mul_assoc` | `7ba323e70286173ebede9d8e223a30193688eb946f9ae061f9e4eb89d4a89981` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.mul_comm` | `d15d2dd4b854b32a5f47a3c49c7e528780b1c158a9658608e50c8ef910d2828e` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.mul_le_mul_of_nonneg_left` | `1efb13a1e2c0fed9f871e5f95ff768a3eb6739d36a155cf44ced2f1ae4cc5ae3` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.mul_nonneg` | `0e3ef33f4684b720e9d95fef8286288f5d7d12af939b06f0b5cc346319fca937` | `derivable-theorem` | `planned` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.mul_one` | `905dc270f401d094bca9dab6de51827758fd994576d177ab1d9318fccbc87b55` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.mul_zero` | `91d06a7ebaa2bd7ae862690aa81ae68f08cb742ca76cfdcd6a03586c99aefe44` | `derivable-theorem` | `planned` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.neg` | `5fea5c580ac9ac835e3d60d9ae3b8bccfba7913ce4e5f79f7361129f2d285982` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.one` | `c5072556a63d1dca64c66cc5e93df90b6549bfd5f6eea0a1b1acfaa66fd38df9` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.sq_nonneg` | `5ceb1722fb0c114b8dc277ee24f1bac88a03fc10977ed3731b036b6476e3763d` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.zero` | `c5072556a63d1dca64c66cc5e93df90b6549bfd5f6eea0a1b1acfaa66fd38df9` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
-| `real` | `AxReal.zero_lt_one` | `69d2008346a542c24e2442df5976cddee657de7b42f8c01c1b1ad3005ff8799b` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal` | `73d4fe359be51073c75f6c2a03507b52a55364cf0c923d65def2fa12cb438933` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.add` | `9a1095ebb7e7f3c8be0739e50fdeb8e477e65eef4654053d850e60af4945506e` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.add_assoc` | `89c85f1b696b466df15b38ca075b5a655e12aef7a1a225def814f7b4078c940a` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.add_comm` | `b57422809db16ffcc4d601a421b11fe41a90e683fae2da8a95cff9695eb11dee` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.add_le_add` | `1ecd890660212db88dd7f1a1340209521a84afba8a39bc41207908170b54ed3b` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.add_lt_add_of_le_of_lt` | `81db25978ae163c5610ea820e54f8a29c077120a66e772957c19702af4778a49` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.add_neg` | `d6410774eb71dd100d1840dda4c6cf2e1ef23fe8659634a0ee57dbeb1d0f7dff` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.add_zero` | `b696625c14e848148eac73b7015b4eebf2a1f441e9300611e8486804655088c7` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.le` | `753c8c2001b13a61dc9ecba0b4daadd145d5178cb9769b15f161e4e92386a031` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.le_of_lt` | `902a4ace4a1bcc22926db02f8fc44a630495ef6ead57ec119f3667e8412a3d94` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.le_refl` | `21ecd845e5615f2c29f0ae811192f97ae4e3dea6a2e7fc85f09d127bdc3662ab` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.le_trans` | `03c11c1fcb9de331066ec3719ec2fb8e3f364434c7eb9554bc836b1da6b78ca8` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.left_distrib` | `b50968b27155f838eb986b3471f04dcc721a66bfaf020e0c679f679f8f58033e` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.lt` | `753c8c2001b13a61dc9ecba0b4daadd145d5178cb9769b15f161e4e92386a031` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.lt_irrefl` | `3f3146b15e86a7a3a488a6f239883501102785bbe518495a0c8f0017a2560325` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.lt_of_le_of_lt` | `a0c71c2fa471224978fcfc7372df6df4cc3ac3874120c77d6a675a282e0eddb9` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.lt_of_lt_of_le` | `0ce9705a9a600ff66a412d1fca5ed8ace97ad0c3f89e7394aa544e18762ba8e8` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.lt_trans` | `9709b10a6ac19cfb0e7b6e8c2b9ee0026504b8ed990fa00474296cb13e8c6142` | `derivable-theorem` | `planned` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.mul` | `9a1095ebb7e7f3c8be0739e50fdeb8e477e65eef4654053d850e60af4945506e` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.mul_assoc` | `7ba323e70286173ebede9d8e223a30193688eb946f9ae061f9e4eb89d4a89981` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.mul_comm` | `d15d2dd4b854b32a5f47a3c49c7e528780b1c158a9658608e50c8ef910d2828e` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.mul_le_mul_of_nonneg_left` | `1efb13a1e2c0fed9f871e5f95ff768a3eb6739d36a155cf44ced2f1ae4cc5ae3` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.mul_nonneg` | `0e3ef33f4684b720e9d95fef8286288f5d7d12af939b06f0b5cc346319fca937` | `derivable-theorem` | `planned` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.mul_one` | `905dc270f401d094bca9dab6de51827758fd994576d177ab1d9318fccbc87b55` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.mul_zero` | `91d06a7ebaa2bd7ae862690aa81ae68f08cb742ca76cfdcd6a03586c99aefe44` | `derivable-theorem` | `planned` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.neg` | `5fea5c580ac9ac835e3d60d9ae3b8bccfba7913ce4e5f79f7361129f2d285982` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.one` | `c5072556a63d1dca64c66cc5e93df90b6549bfd5f6eea0a1b1acfaa66fd38df9` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.sq_nonneg` | `5ceb1722fb0c114b8dc277ee24f1bac88a03fc10977ed3731b036b6476e3763d` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.zero` | `c5072556a63d1dca64c66cc5e93df90b6549bfd5f6eea0a1b1acfaa66fd38df9` | `primitive-interface` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
+| `axreal` | `AxReal.zero_lt_one` | `69d2008346a542c24e2442df5976cddee657de7b42f8c01c1b1ad3005ff8799b` | `external-assumption` | `retained` | `axeyum-lean-kernel` / `TL3.2` | [source](../../../crates/axeyum-lean-kernel/src/arith_prelude.rs) |
 
 ## Retired assumptions
 

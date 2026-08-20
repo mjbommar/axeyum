@@ -52,7 +52,7 @@ fn main() {
     // being built here fails that gate instead of shrinking the published total.
     let mut real = Kernel::new();
     let _ = build_arith_prelude(&mut real).expect("AxReal prelude must build");
-    let real_rows = inventory("real", &real);
+    let real_rows = inventory("axreal", &real);
 
     let mut integer = Kernel::new();
     let _ = build_int_prelude(&mut integer).expect("Int prelude must build");

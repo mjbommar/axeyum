@@ -117,7 +117,7 @@ TYPE_IDENTITY = "sha256 of Kernel::render_lean(declaration.ty) UTF-8 bytes"
 SOURCE_PATHS = {
     "logic": "crates/axeyum-lean-kernel/src/prelude.rs",
     "nat": "crates/axeyum-lean-kernel/src/nat_prelude.rs",
-    "real": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
+    "axreal": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
     "integer": "crates/axeyum-lean-kernel/src/int_prelude.rs",
     "rat": "crates/axeyum-lean-kernel/src/rat_prelude.rs",
     "string": "crates/axeyum-lean-kernel/src/string_prelude.rs",
@@ -173,17 +173,26 @@ ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # command never builds passes vacuously.  Their membership here is precisely what
 # makes silently dropping that flag fail.
 EXPECTED_PRELUDES: tuple[str, ...] = (
+    "axreal",
     "complex",
     "creal",
     "integer",
     "logic",
     "nat",
     "rat",
-    "real",
     "string",
 )
 
 # Anchored count phrasings.  Each entry is (label, pattern, quantity-per-group).
+#
+# THE `(?<![A-Za-z])` IS LBearing WEIGHT, not tidiness.  `real (\d+)` matches
+# inside `creal 0`, and "creal 0, integer 0, string 0" is an ordinary sentence to
+# write now that the constructed carrier exists and is the one at zero.  Measured
+# 2026-08-19, before the lookbehind: that sentence captured (0, 0, 0) and was
+# scored against `axreal`, which is 30 -- so a document stating the constructed
+# carriers' counts correctly would red this gate, and the diagnosis would name
+# the wrong prelude.  A checker that fails on true prose teaches people to
+# disable it.  `scripts/tests/test_lean_axiom_ledger.py` controls both readings.
 # Anchoring on ledger vocabulary -- prelude names, "ledger", "prelude
 # assumptions" -- is what keeps the scan from matching unrelated integers in
 # large documents.  A pattern that would match "34-row ESBMC gate" is not worth
@@ -195,18 +204,18 @@ EXPECTED_PRELUDES: tuple[str, ...] = (
 COUNT_CLAIM_PATTERNS: tuple[tuple[str, re.Pattern[str], tuple[str, ...]], ...] = (
     (
         "real N, integer N, string N",
-        re.compile(r"real (\d+), integer (\d+), string (\d+)"),
-        ("real", "integer", "string"),
+        re.compile(r"(?<![A-Za-z])real (\d+), integer (\d+), string (\d+)"),
+        ("axreal", "integer", "string"),
     ),
     (
         "N real, N integer, N string",
         re.compile(r"(\d+) real, (\d+) integer, (\d+) string"),
-        ("real", "integer", "string"),
+        ("axreal", "integer", "string"),
     ),
     (
         "real N + integer N + string ... N",
-        re.compile(r"real (\d+) \+ integer (\d+) \+ string [^0-9\n]{0,24}(\d+)"),
-        ("real", "integer", "string"),
+        re.compile(r"(?<![A-Za-z])real (\d+) \+ integer (\d+) \+ string [^0-9\n]{0,24}(\d+)"),
+        ("axreal", "integer", "string"),
     ),
     ("N-row ledger", re.compile(r"(\d+)-row [^\n]{0,32}?ledger"), ("total",)),
     ("N prelude assumptions", re.compile(r"(\d+) prelude assumptions"), ("total",)),
@@ -832,7 +841,7 @@ def render(data: dict[str, Any]) -> str:
     policy = data["trust_policy"]
     classifications = Counter(entry["classification"] for entry in entries)
     discharges = Counter(entry["discharge_status"] for entry in entries)
-    real_names = {entry["name"] for entry in entries if entry["prelude"] == "real"}
+    real_names = {entry["name"] for entry in entries if entry["prelude"] == "axreal"}
     int_names = {entry["name"] for entry in entries if entry["prelude"] == "integer"}
     shared = sorted(real_names & int_names)
     axiom_free = [
@@ -897,6 +906,23 @@ def render(data: dict[str, Any]) -> str:
         "",
         "Counts are over the whole trusted surface, not `Declaration::Axiom` alone: "
         "`Opaque` has no proof body and `Quotient` admits `Quot.sound`.",
+        "",
+        "**`axreal` is not this project's real numbers.** It is the legacy "
+        "*axiomatized* ordered field — an opaque carrier plus the field, order "
+        "and compatibility laws asserted (ADR-0522) — and every one of the "
+        "assumptions in this table is one of its laws. The real numbers the "
+        "shipped route actually reasons over are `creal`, the Bishop setoid of "
+        "regular rational sequences (ADR-0512), which is **constructed** and "
+        "appears above at zero. `complex` is built from `creal` and is likewise "
+        "at zero (ADR-0521).",
+        "",
+        "So read the total as *what is still assumed somewhere in the tree*, not "
+        "as the cost of having real numbers. ADR-0509 draws the distinction this "
+        "table cannot: these 30 are **declared** and no shipped route **reaches** "
+        "them, which is a weaker claim than deletion and a stronger one than a "
+        "count of 30 suggests. The prelude was named `real` until 2026-08-19, "
+        "and this row read `real 30` — which invited exactly the opposite "
+        "reading of the same measurement.",
         "",
         "| Prelude | Axiom | Opaque | Quotient | Trusted total | Ledger rows |",
         "|---|---|---|---|---|---|",

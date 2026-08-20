@@ -184,8 +184,8 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
         grown.axiom_rows.append(invented)
         grown.axiom_rows.sort(key=GEN.entry_key)
         grown.surface_rows.append({**invented, "kind": "axiom"})
-        grown.surface_counts["real"]["axiom"] += 1
-        grown.surface_counts["real"]["total_trusted"] += 1
+        grown.surface_counts["axreal"]["axiom"] += 1
+        grown.surface_counts["axreal"]["total_trusted"] += 1
         self.assertTrue(
             any(
                 "ledger is missing admitted axioms" in failure
@@ -199,7 +199,7 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
         """`Real` -> `AxReal` (ADR-0522) must not read as 30 retirements."""
         renamed_measurement = clone(self.measurement)
         for row in renamed_measurement.axiom_rows + renamed_measurement.surface_rows:
-            if row["prelude"] != "real":
+            if row["prelude"] != "axreal":
                 continue
             row["name"] = "Ax" + row["name"]
             row["canonical_type"] = row["canonical_type"].replace("AxReal", "AxAxReal")
@@ -216,7 +216,7 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
         before = {
             entry["name"]: entry["classification"]
             for entry in self.data["entries"]
-            if entry["prelude"] == "real"
+            if entry["prelude"] == "axreal"
         }
         retired_before = len(self.data["retired_entries"])
         moved = GEN.accept_rename(
@@ -229,7 +229,7 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
         after = {
             entry["name"]: entry["classification"]
             for entry in self.data["entries"]
-            if entry["prelude"] == "real"
+            if entry["prelude"] == "axreal"
         }
         self.assertEqual(
             {"Ax" + name: value for name, value in before.items()}, after
@@ -255,7 +255,7 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
         live = [
             entry["name"]
             for entry in self.data["entries"]
-            if entry["prelude"] == "real"
+            if entry["prelude"] == "axreal"
         ]
         self.assertTrue(all(name.startswith("AxRea") for name in live), live)
         self.assertEqual(
@@ -265,7 +265,7 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
             [
                 entry["name"]
                 for entry in self.data["entries"]
-                if entry["prelude"] == "real"
+                if entry["prelude"] == "axreal"
             ],
             live,
         )
@@ -384,7 +384,7 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
     # directions do not read the same, because they are not the same event.
 
     def test_a_risen_count_is_reported_as_a_regression(self) -> None:
-        self.data["measurement"]["trusted_surface"]["real"] = {
+        self.data["measurement"]["trusted_surface"]["axreal"] = {
             "axiom": 28, "opaque": 0, "quotient": 0, "total_trusted": 28,
         }
         failures = self.failures()
@@ -392,7 +392,7 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
         self.assertFalse(any("IMPROVEMENT" in f for f in failures))
 
     def test_a_fallen_count_is_reported_as_an_improvement_to_publish(self) -> None:
-        self.data["measurement"]["trusted_surface"]["real"] = {
+        self.data["measurement"]["trusted_surface"]["axreal"] = {
             "axiom": 32, "opaque": 0, "quotient": 0, "total_trusted": 32,
         }
         failures = self.failures()
@@ -429,11 +429,11 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
     def test_a_kind_reshape_at_an_unchanged_total_fails(self) -> None:
         # `opaque` and `quotient` are trusted for different reasons than
         # `axiom`; a swap that holds the total constant is still a change.
-        self.data["measurement"]["trusted_surface"]["real"] = {
+        self.data["measurement"]["trusted_surface"]["axreal"] = {
             "axiom": 29, "opaque": 1, "quotient": 0, "total_trusted": 30,
         }
         self.assertTrue(
-            any("RESHAPED" in f and "`real`" in f for f in self.failures())
+            any("RESHAPED" in f and "`axreal`" in f for f in self.failures())
         )
 
     def test_unexplained_measurement_drift_still_fails(self) -> None:
@@ -451,10 +451,10 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
 
     def test_the_two_inventories_must_agree_on_counts(self) -> None:
         skewed = clone(self.measurement)
-        skewed.surface_counts["real"]["axiom"] += 1
+        skewed.surface_counts["axreal"]["axiom"] += 1
         with self.assertRaises(GEN.LedgerError) as caught:
             GEN.cross_check(skewed)
-        self.assertIn("the two inventories disagree on real", str(caught.exception))
+        self.assertIn("the two inventories disagree on axreal", str(caught.exception))
 
     def test_the_two_inventories_must_agree_on_canonical_types(self) -> None:
         skewed = clone(self.measurement)
@@ -530,6 +530,30 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
         )
         self.assertTrue(any("stale ledger count" in failure for failure in failures))
         self.assertTrue(any("integer=34" in failure for failure in failures))
+
+    def test_creal_is_not_read_as_a_claim_about_axreal(self) -> None:
+        """`real (\\d+)` matches inside `creal 0`, and that sentence is true prose."""
+        counts = self.measurement.axiom_counts
+        # Exactly what a document describing the CONSTRUCTED carriers would say.
+        # Before the `(?<![A-Za-z])` lookbehind this captured (0, 0, 0), scored
+        # it against `axreal` (30), and reported a stale count in a sentence
+        # that is correct -- a checker failing on true prose gets switched off.
+        failures = GEN.scan_live_document(
+            "fake.md", "the constructed carriers stand at creal 0, integer 0, string 0", counts
+        )
+        self.assertFalse(
+            any("stale ledger count" in failure for failure in failures),
+            f"`creal 0` was read as a claim about `axreal`: {failures}",
+        )
+        # ...and the guard must not have been bought by making the pattern inert.
+        # A genuine `axreal` claim at the wrong number must still be caught.
+        stale = GEN.scan_live_document(
+            "fake.md", "the assumptions stand at real 7, integer 0, string 0", counts
+        )
+        self.assertTrue(
+            any("stale ledger count" in failure for failure in stale),
+            "the lookbehind disabled the pattern instead of narrowing it",
+        )
 
     def test_a_document_that_stops_citing_the_ledger_fails(self) -> None:
         # The cheapest way to pass a stale-number scan is to delete the

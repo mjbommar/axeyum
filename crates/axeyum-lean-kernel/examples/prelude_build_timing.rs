@@ -50,7 +50,7 @@ fn main() {
             ("integer", |kernel: &mut Kernel| {
                 build_int_prelude(kernel).expect("integer prelude must build");
             }),
-            ("real", |kernel: &mut Kernel| {
+            ("axreal", |kernel: &mut Kernel| {
                 build_arith_prelude(kernel).expect("real prelude must build");
             }),
             ("rat", |kernel: &mut Kernel| {

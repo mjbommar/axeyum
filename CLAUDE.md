@@ -671,20 +671,34 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   that it ran. (`nat_axiom_inventory` now covers `nat`/`logic` and the full
   trusted surface — `Axiom` alone is not it, since `Opaque` has no proof body and
   `Quotient` admits `Quot.sound`.)
-- **`Real` and `CReal` are different things and one is a substring of the
+- **`AxReal` and `CReal` are different things and one is a substring of the
   other.** `CReal` is the CONSTRUCTED reals — a Bishop setoid over the
-  constructed rationals, trusted surface 0 (ADR-0512). `Real` is the
-  AXIOMATIZED ordered-field package, and it is the repository's only nonzero
-  row: `real: axiom=30`. Every other prelude — `logic`, `nat`, `integer`, `rat`,
+  constructed rationals, trusted surface 0 (ADR-0512) — and it is what the
+  shipped route actually reasons over. `AxReal` is the legacy AXIOMATIZED
+  ordered-field package, and it is the repository's only nonzero row:
+  `axreal: axiom=30`. Every other prelude — `logic`, `nat`, `integer`, `rat`,
   `creal`, `complex`, `string` — measures 0.
+
+  **The prelude key was `real` until 2026-08-19, and the rename was half-done for
+  a day.** ADR-0522 renamed the declarations `Real.*` → `AxReal.*`, but the
+  ledger still filed them under prelude `real`, so the table a referee reads said
+  `real 30` about 30 rows all named `AxReal.…` — the label contradicting its own
+  contents, and inviting precisely the reading the rename existed to prevent
+  ("their reals cost 30 axioms", when the reals are `creal` at 0). Both halves
+  are landed now. Do not reintroduce `real` as a prelude label; the generated
+  ledger carries a paragraph saying what `axreal` is, and `EXPECTED_PRELUDES`
+  in `scripts/gen-lean-axiom-ledger.py` is the list a new one must join.
 
   A `contains("Real.")` test matches `CReal.` too, and that has already been hit
   and worked around locally (`examples/front_door_carrier.rs:169` decides the
-  carrier from the carrier DECLARATION for exactly this reason). Decide which
-  package you mean by its declaration, never by a substring. ADR-0522 renames it
-  `AxReal` — the convention `lean_pp.rs` already uses for `AxNat`, where our
-  computational naturals are renamed so they cannot collide with Lean's builtin
-  `Nat` — and then retires it.
+  carrier from the carrier DECLARATION for exactly this reason). The same hazard
+  bit the ledger's own prose scanner: `real (\d+), integer (\d+), string (\d+)`
+  matched inside "creal 0, integer 0, string 0" — an ordinary sentence now that
+  the constructed carrier is the one at zero — and scored it against `axreal`,
+  so a document stating the counts CORRECTLY would have redded the gate. Fixed
+  with a `(?<![A-Za-z])` lookbehind and controlled both ways in
+  `scripts/tests/test_lean_axiom_ledger.py`. Decide which package you mean by
+  its declaration, never by a substring; if you must match text, anchor it.
 
   **Declared is not reached, and both numbers are published** (ADR-0509). The 30
   are declared; no shipped route reaches them — `Lra`, `DisjunctiveLra`, `Sos`
