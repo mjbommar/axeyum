@@ -847,7 +847,25 @@ fn main() {
         }
     }
 
-    let complete = audited_decided == baseline_decided;
+    // `>=`, not `==`. **Beating the baseline used to delete the logic from the
+    // report.**
+    //
+    // `complete_audit` means "this audit re-ran every instance the baseline
+    // decided", and `gen-proof-gap-matrix.py` skips any audit where it is false.
+    // With `==`, an audit that decides MORE than its baseline — an improvement —
+    // was scored incomplete and dropped entirely.
+    //
+    // Measured 2026-08-20: `qf-nra-synthetic-graduated` decided 31 against a
+    // baseline of 30 and vanished from the matrix. That single drop was the
+    // ENTIRE apparent decline in the day's numbers; counting it, dominance was
+    // flat at 261. A metric that punishes improvement by making it invisible is
+    // worse than one that merely lags.
+    //
+    // Deciding FEWER is still incomplete, which is the property the flag exists
+    // to carry: the audit could not reproduce the baseline's population, so its
+    // percentages are over a different denominator and must not be published as
+    // comparable.
+    let complete = audited_decided >= baseline_decided;
     let dominant_pct_audited = if audited_decided == 0 {
         0.0
     } else {
