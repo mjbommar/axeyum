@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-19 | `pending` | `scripts/check-kernel-suites.sh`: the kernel's push-time / real-Lean suite partition, discovered from the source and asserted total; `hooks/pre-push` repointed at the non-Lean half (2,296 s → 80 s warm). Found `real_lean_string_monoid_crosscheck` owned by nothing and mis-formatting its check count; floor 218 → 219. |
 | 2026-08-19 | `e3e105cd6` | The local-ci freshness gate is ENFORCING in both `check.sh` and `justfile`, on a `PASS` record (`57af69142-s4.json`, 6656 s, 7561 tests + 179 doctests, no vacuous/unreadable step). Landed report-only the day before because the only record was FAIL; that was the sole blocker. Flip re-tested through the real call site: NO_RECORD / STALE / STEP VACUOUS all red, unmodified green. |
 | 2026-08-19 | (pending) | `artifacts/local-ci-runs/57af69142-s4.json`: first all-pass authoritative-gate record (5/5 steps, 7561+179 tests, 6656 s); `check-local-ci-freshness` flipped from `--report-only` to ENFORCING in `scripts/check.sh` and `justfile`. |
@@ -539,6 +540,20 @@ non-vacuous; `check-lean-gate.sh` green at **21 suites, 66 tests, 473 checks**
 (floor 219) — **40 of 77 crosscheck families are attestations**, now in `03`
 because "473 modules read" is not "473 propositions proved".
 Detail: [`../notes/107-doc-formalized.md`](docs/plan/notes/107-doc-formalized.md).
+
+**The persistent pre-push checkout no longer inherits the caller lane's Git
+metadata (`DONE`, codex-autogenesis-prepush, 2026-08-20).** Git exports
+`GIT_DIR` and related local variables to hooks; previously, `git -C` changed
+the filesystem path but still detached and rewrote the caller's HEAD/index.
+`prepare-prepush-worktree.sh` clears those variables at the foreign-worktree
+boundary, checks out and cleans the exact target, then fails unless its
+registered HEAD and status agree. The registered control preserves a caller
+with staged and untracked work across fresh and reused gate checkouts and
+rejects an unsafe root and nonexistent target.
+
+**Next:** require the first post-repair Rust push to report the exact registered
+gate HEAD and a clean checkout before treating the operational incident as
+closed in the live environment.
 
 **Status:** Fib prelude compatibility separates exact identity from alpha-stable type shape; direct graft remains unauthorized.
 
