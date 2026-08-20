@@ -601,8 +601,15 @@ extension-field oracle agrees through degree eight.  The universal period
 lemma remains conjectural: maximum period of each separate factor cannot be
 multiplied blindly, as the degree-eight product including the middle
 coefficient has period `15` rather than `255`.  Proving the weaker
-no-proper-subfield-period statement is now the shortest candidate route to the
-paper; bounded rows receive no theorem credit.
+no-proper-subfield-period statement would still suffice, but it is exact only
+at prime-power degrees.  The selected minimal target now applies
+`product_(p|n)(1+tau_(2^(n/p)-1))` to `Gamma`; Fourier inversion proves this
+iterated difference is nonzero exactly when the coefficient-zero support
+contains an element outside every maximal proper subfield.  The native report
+computes that exact difference with charged work, distinguishes nested from
+mixed subfield lattices, and agrees with a direct extension-field oracle.
+Nonvanishing through degree twelve is only a control: the universal
+nonvanishing theorem, like the connected trace, remains open.
 The odd-endpoint stopping path now uses the exact identity
 `N_(2ell+1)(1)=1+(2ell+1)I_(2ell+1)(1)` twice: its candidate-count bound makes
 one admitted `75161927681` NTT residue the unique integer population, while a
@@ -620,6 +627,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `3c332b648` | Replaced the overstrong characteristic-delta common-period target by the exact product of maximal-subfield differences, added charged native support witnesses and an independent field oracle, and retained universal nonvanishing as the explicit open lemma. |
 | 2026-08-20 | `40df3c8ee` | Added uniqueness-bounded one-prime odd-endpoint reconstruction, blocked conductor-width power-sum history, executable NTT assumptions, and exact fleet rows through degree 51 without granting the surviving mod-eight pattern theorem credit. |
 | 2026-08-20 | `0e9a3ca9d` | Reduced the complete Lemire class to one characteristic-delta convolution period, added dual exact controls, and isolated the universal no-proper-period lemma without granting finite evidence theorem credit. |
 | 2026-08-20 | `531ed174a` | Translated Hast--Matei's top long-cycle variance at the exact endpoint, proved its second moment is insufficient, and confined the selected characteristic-two repeated-root defect to square proper powers. |
