@@ -3036,6 +3036,28 @@ etale cohomology of this singular wild affine quotient.  A valid bridge must
 prove precisely that characteristic-two statement rather than transfer a
 characteristic-zero Euler-characteristic formula.
 
+The function-field Linnik--Selberg theorem also does not supply the missing
+cross-order estimate. Its proved form is an untwisted average over **varying
+moduli**,
+
+```text
+sum_(g monic, deg g=j) S(f,h;g) << 2^(j(1+epsilon)) |fh|^epsilon.
+```
+
+Florea--Lalín--Malik--Sahay use exactly this organization in their
+[shifted-convolution theorem](https://doi.org/10.1007/s00208-026-03340-9):
+after grouping by `deg(g_1)=j`, they apply Linnik--Selberg to the sum over
+`g_1`; when a multiplicative twist remains, they explicitly return to the
+pointwise Weil bound. In (MC), however, every inverse and Kloosterman phase is
+modulo the one wild modulus `x^(ell+1)`. The interval variable `u` changes an
+argument of that sum, not its modulus, and the Möbius transform supplies an
+additional arithmetic weight. Polynomial reciprocity does not exchange these
+roles. The stronger twisted/divisibility Linnik--Selberg statement is still
+described by the published source as open and without the explicit parameter
+dependence required here. ADR-0532 therefore records the exact domain
+mismatch: the theorem is a model for a new fixed-wild-modulus trace formula,
+not an input to the current endpoint ledger.
+
 The exact algebra is no longer trapped in that executable. ADR-0486 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
 identity-class populations, endpoint discrepancies, conductor layers, and the
