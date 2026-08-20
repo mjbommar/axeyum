@@ -203,6 +203,12 @@ step local-ci-freshness ./scripts/check-local-ci-freshness.sh
 step local-ci-freshness-controls ./scripts/tests/test-check-local-ci-freshness.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
+step lane-push-controls ./scripts/tests/test-lane-push-target.sh
+step lean-golden-pin-controls ./scripts/tests/test-check-lean-golden-pins.sh
+# ...and the ratchet that makes the two lines above impossible to forget. Both
+# were written, both pass, and one of them was invoked by nothing for a day
+# because registering a control is a manual step separate from writing it.
+step control-registration ./scripts/check-control-registration.sh
 # The axiom-freedom measurements. `real: axiom=30` is the whole remaining
 # trusted surface and the claim that the shipped route no longer reaches it
 # rested, until 2026-08-18, on three examples that NO gate ran -- zero

@@ -350,6 +350,17 @@ gate-controls:
     scripts/tests/test-check-local-ci-freshness.sh
     scripts/tests/test-new-fact-controls.sh
     scripts/tests/test-lane-commit.sh
+    # `--to <branch>`: the range, the cost estimate and the fast-forward check
+    # must follow the ref being PUSHED, not the current branch's remote copy.
+    # Against a stale `origin/<branch>` the same doc-only landing reads FULL
+    # BATTERY instead of FREE, and an estimate that errs expensive gets ignored.
+    scripts/tests/test-lane-push-target.sh
+    scripts/tests/test-check-lean-golden-pins.sh
+    # ...and the ratchet that makes the two lines above impossible to forget.
+    # Both were written, both pass, and one was invoked by NOTHING for a day,
+    # because registering a control is a manual step separate from writing it.
+    # A control nobody runs cannot fail, so it is not a control.
+    scripts/check-control-registration.sh
 
 # Is there a FRESH, PASSING, fully-measured `local-ci --record` for (an
 # ancestor of) HEAD? A green record proves nothing on its own -- see

@@ -26,21 +26,43 @@
 # full battery for 46 minutes before anyone noticed, and blocked a real push the
 # whole time. This script's own `--dry-run` never invokes git push at all.
 #   scripts/lane-push.sh --force      # push even if another push is running
+#   scripts/lane-push.sh --to main    # push HEAD to a DIFFERENT branch
+#
+# `--to main` exists because landing a lane's work is `git push origin HEAD:main`,
+# and without a target every part of this script reasoned about the WRONG REF:
+# the range, the cost estimate, and the fast-forward check were all computed
+# against `origin/<current-branch>`, which is not what the push updates.
+#
+# The cost estimate is the reason to run this script at all, so getting it wrong
+# is not cosmetic. Measured on a fixture (`scripts/tests/test-lane-push-target.sh`)
+# with a session branch whose remote copy has fallen behind main -- the ordinary
+# state of a branch that has merged main down since it was last pushed:
+#
+#     lane-push.sh            ->  2 commit(s) -> origin/feature
+#                                 FULL BATTERY -- 1 Rust/TOML file(s) changed
+#     lane-push.sh --to main  ->  1 commit(s) -> origin/main
+#                                 FREE -- no *.rs/*.toml in the range
+#
+# Same push. The `.rs` it "found" was one main already has; the range against the
+# stale upstream re-counts everything merged down in between. An estimate that is
+# wrong in the expensive direction gets ignored, and then it is not an estimate.
 #
 # Exit 75 (EX_TEMPFAIL) when it declines because another push holds the lock --
 # distinguishable from a rejected push, which is the point.
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 2
 
-DRY=0; FORCE=0
-for a in "$@"; do case "$a" in
+DRY=0; FORCE=0; TO=""
+while [ $# -gt 0 ]; do case "$1" in
   --dry-run) DRY=1 ;;
   --force) FORCE=1 ;;
-  *) echo "lane-push: unknown option $a" >&2; exit 2 ;;
-esac; done
+  --to) TO="${2:-}"; [ -n "$TO" ] || { echo "lane-push: --to needs a branch" >&2; exit 2; }; shift ;;
+  *) echo "lane-push: unknown option $1" >&2; exit 2 ;;
+esac; shift; done
 
 branch=$(git rev-parse --abbrev-ref HEAD)
-upstream="origin/$branch"
+target="${TO:-$branch}"
+upstream="origin/$target"
 if ! git rev-parse --verify -q "$upstream" >/dev/null; then
   echo "lane-push: no $upstream yet; pushing will create it"
   range="HEAD"
@@ -62,7 +84,7 @@ if [ "$changed" -eq 0 ]; then
 else
   cost="FULL BATTERY — $changed Rust/TOML file(s) changed; 545 s uncontended, far more under lane contention"
 fi
-echo "lane-push: $n commit(s) on $branch"
+echo "lane-push: $n commit(s) from $branch -> origin/$target"
 echo "lane-push: $cost"
 
 # Another push in flight? `pgrep -x git` and not a pattern containing our own
@@ -81,5 +103,16 @@ if [ "$others" -gt 0 ] && [ "$FORCE" = 0 ]; then
   exit 75
 fi
 
+# Non-fast-forward is worth knowing BEFORE the hook runs, not after: the hook is
+# the expensive part and the remote rejects afterwards, so you pay in full for a
+# push that was never going to land.
+if git rev-parse --verify -q "$upstream" >/dev/null && \
+   ! git merge-base --is-ancestor "$upstream" HEAD; then
+  echo "lane-push: DECLINING -- origin/$target is NOT an ancestor of HEAD." >&2
+  echo "  $(git rev-list --count HEAD.."$upstream") commit(s) are on it that you do not have." >&2
+  echo "  Merge or rebase first; pushing would be rejected AFTER the hook has run." >&2
+  exit 1
+fi
+
 [ "$DRY" = 1 ] && { echo "lane-push: --dry-run, not pushing"; exit 0; }
-exec git push origin HEAD
+exec git push origin "HEAD:refs/heads/$target"
