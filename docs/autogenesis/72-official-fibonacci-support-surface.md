@@ -62,7 +62,7 @@ not evidence that it is already proved there.
 
 ## Next
 
-Reconstruct the native induction term against the exact official
-`Nat.Coprime (Nat.fib n) (Nat.fib (n + 1))` goal in this completed target.
-After two identical fresh-kernel admissions, issue and replay the semantic
-receipt, then attempt the crash-safe fact-ledger transition.
+The exact theorem is now reconstructed and independently admitted; see
+[Exact official Fibonacci coprimality](73-exact-official-fibonacci-coprimality.md).
+The remaining boundary is issuance and replay of its preregistered semantic
+receipt before any crash-safe fact-ledger transition.

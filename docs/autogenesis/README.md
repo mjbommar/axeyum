@@ -169,6 +169,7 @@ compounding, not automation theatre.
 | [Native Fibonacci coprimality](70-native-fibonacci-coprimality.md) | Does the bounded induction close with exactly the planned axiom-free dependencies, and why does the official r082 statement still require a semantic gcd bridge? |
 | [Axiom-free official `Nat.gcd_succ`](71-axiom-free-official-nat-gcd-succ.md) | Can a pointwise fuel proof remove the quotient-bearing generic recursion equation and advance the official target through `Nat.dvd_gcd`? |
 | [Official Fibonacci coprimality support surface](72-official-fibonacci-support-surface.md) | Do all seven preregistered native dependencies compose together over the checked official gcd leaves, leaving only the exact target theorem? |
+| [Exact official Fibonacci coprimality](73-exact-official-fibonacci-coprimality.md) | Does the exact frozen r082 theorem pass ordinary kernel admission twice per run with an empty footprint, and what authority still precedes ledger credit? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

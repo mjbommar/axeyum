@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "official-support-surface-composed-exact-target-theorem-pending",
+  "state": "exact-official-target-admitted-semantic-receipt-pending",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -289,6 +289,38 @@
     "fact_status_changes": 0,
     "ledger_writes": 0
   },
+  "exact_fibonacci_coprimality": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/d12736b63-lean430-exact-fibonacci-coprimality-v1/manifest.json",
+    "manifest_sha256": "69a99345f384dc906b34196958fe5a1863665da7fc27eb1c62054f57fffff109",
+    "implementation_commit": "d12736b63d97327aac5a84776b86ac521bd3ff7d",
+    "recurrence_source_sha256": "b339a3d8e4ce1700d367fa5fdf0ac0e05d411cc48c49ce6f6e30b702a9b7baf5",
+    "recurrence_export_sha256": "5220ace53dcbf0b89121ba72c8e63cc7dcb2a2d7836b313bc597607859d78674",
+    "recurrence_declaration_sha256": "982c676b0656664e807c5e195bbdbd43376d78dec029bb3c409df661de39edb4",
+    "recurrence_composition_receipt_sha256": "1c073ec45fa0af03f8d2318afea9d8b106f8b65c86b69d7d3677587c5a36775b",
+    "result_sha256": "a1d92b2090392ac90e22419e6e4f6572beff1cbbd27f83d72c7dfcd566ca860a",
+    "name": "Nat.fib_coprime_fib_succ",
+    "target_definition": "Axeyum.Autogenesis.Coverage.r082",
+    "target_goal_sha256": "a053d8f483f2cc1e79c53924baf5f79e4897ce992ca77722168cee20a6f5150f",
+    "proof_sha256": "baa3313f7b40ad1c73ae29de08deb9f0368e9fcf06fd318fea9c73822c7d6827",
+    "declaration_sha256": "7fd9a1e811b93f8021ded1e34de5a816a0e9b23940e15cfcd5cbe81309daede9",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.fibAddTwo",
+      "Nat.add_comm",
+      "Nat.dvd_add_iff_right",
+      "Nat.dvd_gcd",
+      "Nat.eq_one_of_dvd_one",
+      "Nat.gcd_dvd_left",
+      "Nat.gcd_dvd_right",
+      "Nat.gcd_zero_left"
+    ],
+    "fresh_full_runs": 2,
+    "kernel_submissions": 4,
+    "semantic_theorem_receipts_issued": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
   "native_fib_composition": {
     "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/91d7df736-lean430-native-fib-composition-v1/manifest.json",
     "manifest_sha256": "b797f5876ca3d033a5e58424573a774e3cad1af6dc9723059555a779d3028877",
@@ -525,7 +557,7 @@
     ],
     "required_present_in_import": [],
     "already_present_in_import": ["Nat.rec"],
-    "next_action": "reuse the fully composed official support surface and independently reconstruct the exact r082 Fibonacci-coprimality target; only then issue a semantic receipt and attempt the crash-safe fact transition"
+    "next_action": "preregister the exact official theorem identities, issue and independently replay one semantic theorem receipt, then attempt the crash-safe fact transition"
   },
   "next_capability_sequence": [
     "bind existing imported logic and Nat declarations to reusable prelude handles",
@@ -540,7 +572,8 @@
     "compose all seven planned gcd/divisibility support roots together over the checked target leaves and replay the resulting 92-declaration closure",
     "compose the exact imported Nat.fib definition and the admitted Nat.fib_add_two theorem into the axiom-free native Nat kernel in source dependency order",
     "retain the twice-reconstructed native Fibonacci coprimality theorem with its exact eight-theorem dependency set and empty footprint",
-    "reconstruct the exact official r082 Nat.Coprime theorem over the completed support surface before any receipt or ledger transition"
+    "reconstruct the exact official r082 Nat.Coprime theorem over the completed support surface before any receipt or ledger transition",
+    "preregister the exact target, proof, declaration, dependency, and evidence identities before issuing and replaying the semantic theorem receipt"
   ],
   "authority": {
     "partitions_inspected": ["train"],
@@ -548,9 +581,10 @@
     "proof_bodies_displayed": false,
     "proof_search_invocations": 0,
     "kernel_submissions": 52,
+    "exact_target_kernel_submissions": 4,
     "evaluation_credit": 0,
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "The bounded native Fibonacci-coprimality induction is independently kernel-accepted twice with an empty footprint and exactly the admitted recurrence plus seven planned native theorem dependencies. A target-specific pointwise fuel proof reconstructs official Nat.gcd_succ without Quot.sound or propext. All seven planned gcd/divisibility roots now compose together over the checked official target leaves with empty added footprints and exact replay. The final proof term has not yet been reconstructed against the exact r082 Nat.Coprime goal. This does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, weakening definitional equality, issuing a theorem receipt, submitting the Fibonacci target, inspecting held-out data, writing the ledger, or establishing the fact."
+  "limitations": "The exact official r082 Fibonacci-coprimality theorem is independently reconstructed in two fresh full executions, with two fresh admissions per execution, an empty footprint, and exactly the authored recurrence plus seven planned theorem dependencies. The recurrence itself is compiled by Lean 4.30, exported, independently admitted, and assumption-free. This proves the target inside the checked candidate environment but does not itself issue the semantic theorem receipt or authorize evaluation credit. It does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, weakening definitional equality, inspecting held-out data, writing the ledger, or establishing the fact before the preregistered receipt and crash-safe transaction replay."
 }
