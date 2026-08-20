@@ -568,9 +568,9 @@ registered gate checkout, left it clean, and preserved the caller branch,
 index, and status. The operational incident is closed; future changes remain
 covered by the registered control and the live hook.
 
-**Status:** ADR-0524 and receipt V2 add a second explicit reuse class: a structurally rebuilt source type may authorize a fresh target check only when it is well-typed and definitionally equal in the target. The r082 control advances past `Nat.zero_le` and `Nat.le_trans` to the first real missing package, `Exists`.
+**Status:** ADR-0525 and receipt V3 atomically reconstruct demanded non-recursive singleton inductives through the target kernel. A real r082 control composes exact `Exists` / `Exists.intro` / `Exists.rec` plus an axiom-free theorem; the unchanged Fibonacci-support root now advances to missing definition `Nat.mul`.
 
-**Next:** specify and implement atomic checked composition of the demanded singleton `Exists` inductive package (family, constructor, and generated recursor together), retain explicit quotient/mutual/nested declines, then retry `Nat.dvd_add_iff_right` to expose the next bottom-up blocker.
+**Next:** specify definition composition as exact rebuilt type/value/reducibility plus ordinary target admission and receipt identity, initially for the measured `Nat.mul` demand; retain opaque/axiom and conflicting-definition declines, then retry the original root unchanged.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

@@ -11,7 +11,7 @@ use axeyum_lean_import::{
     canonical_declaration_sha256, canonical_expression_sha256, canonical_kernel_type_shape_sha256,
     compose_checked_theorem_slice, import_ndjson,
 };
-use axeyum_lean_kernel::{Declaration, Kernel, KernelError, build_nat_prelude};
+use axeyum_lean_kernel::{BinderInfo, Declaration, Kernel, KernelError, build_nat_prelude};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 
@@ -66,7 +66,8 @@ fn run() -> Result<(), String> {
         })
         .collect::<serde_json::Map<_, _>>();
     let overlaps = compare_native_overlaps(&kernel)?;
-    let (composition, structural_mismatch_control) = exercise_composition_controls(&mut kernel)?;
+    let (composition, singleton_inductive_control, structural_mismatch_control) =
+        exercise_composition_controls(&mut kernel)?;
     let result = match build_nat_prelude(&mut kernel) {
         Ok(_) => json!({"outcome": "composed"}),
         Err(error) => {
@@ -101,13 +102,14 @@ fn run() -> Result<(), String> {
             "type_mismatched_overlaps": overlaps.type_mismatched,
             "required_native_theorem_dependency_closures": overlaps.required_theorem_dependency_closures,
             "composition_control": composition,
+            "singleton_inductive_control": singleton_inductive_control,
             "structural_mismatch_control": structural_mismatch_control,
         },
         "result": result,
         "authority": {
             "proof_bodies_displayed": false,
             "proof_search_invocations": 0,
-            "kernel_submissions": 3,
+            "kernel_submissions": 5,
             "ledger_writes": 0,
         },
     }))
@@ -121,10 +123,11 @@ fn run() -> Result<(), String> {
 
 fn exercise_composition_controls(
     kernel: &mut Kernel,
-) -> Result<(serde_json::Value, serde_json::Value), String> {
+) -> Result<(serde_json::Value, serde_json::Value, serde_json::Value), String> {
     let mut native = Kernel::new();
-    build_nat_prelude(&mut native)
+    let prelude = build_nat_prelude(&mut native)
         .map_err(|error| format!("native Nat prelude failed to build: {error:?}"))?;
+    let singleton_root = add_exists_control_theorem(&mut native, prelude.logic)?;
     let negative_before = environment_sha256(kernel)?;
     let negative_error = compose_checked_theorem_slice(&native, kernel, &["Nat.eq_one_of_dvd_one"])
         .expect_err("the structurally mismatched control must decline");
@@ -132,6 +135,26 @@ fn exercise_composition_controls(
     if negative_before != negative_after {
         return Err("failed composition changed the caller kernel".to_owned());
     }
+    let singleton_completed = compose_checked_theorem_slice(&native, kernel, &[singleton_root])
+        .map_err(|error| format!("singleton inductive composition failed: {error:?}"))?;
+    let singleton_receipt = singleton_completed.receipt();
+    let singleton = json!({
+        "roots": singleton_receipt.roots,
+        "outcome": "composed",
+        "added_theorem_names": singleton_receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
+        "added_axiom_footprints": added_footprints(&singleton_receipt.added_theorems),
+        "added_singleton_inductives": singleton_receipt.added_singleton_inductives.iter().map(|row| json!({
+            "family": row.family,
+            "constructors": row.constructors,
+            "recursor": row.recursor,
+            "source_declaration_sha256": row.source_declaration_sha256,
+            "target_declaration_sha256": row.target_declaration_sha256,
+        })).collect::<Vec<_>>(),
+        "environment_sha256_before": singleton_receipt.target_environment_sha256_before,
+        "environment_sha256_after": singleton_receipt.target_environment_sha256_after,
+        "receipt_schema": singleton_receipt.schema_version,
+        "receipt_sha256": singleton_receipt.receipt_sha256,
+    });
     let completed = compose_checked_theorem_slice(&native, kernel, &["Nat.add_comm"])
         .map_err(|error| format!("checked composition failed: {error:?}"))?;
     let receipt = completed.receipt();
@@ -144,6 +167,13 @@ fn exercise_composition_controls(
         "added_theorem_names": receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
         "added_declaration_sha256": added_digests(&receipt.added_theorems),
         "added_axiom_footprints": added_footprints(&receipt.added_theorems),
+        "added_singleton_inductives": receipt.added_singleton_inductives.iter().map(|row| json!({
+            "family": row.family,
+            "constructors": row.constructors,
+            "recursor": row.recursor,
+            "source_declaration_sha256": row.source_declaration_sha256,
+            "target_declaration_sha256": row.target_declaration_sha256,
+        })).collect::<Vec<_>>(),
         "reused_declaration_receipts": reused_receipts(&receipt.reused_declarations),
         "environment_sha256_before": receipt.target_environment_sha256_before,
         "environment_sha256_after": receipt.target_environment_sha256_after,
@@ -159,7 +189,38 @@ fn exercise_composition_controls(
         "environment_sha256_before": negative_before,
         "environment_sha256_after": negative_after,
     });
-    Ok((positive, negative))
+    Ok((positive, singleton, negative))
+}
+
+fn add_exists_control_theorem(
+    kernel: &mut Kernel,
+    logic: axeyum_lean_kernel::LogicPrelude,
+) -> Result<&'static str, String> {
+    let zero = kernel.level_zero();
+    let true_type = kernel.const_(logic.true_, vec![]);
+    let true_intro = kernel.const_(logic.true_intro, vec![]);
+    let exists = kernel.const_(logic.exists_, vec![zero]);
+    let anon = kernel.anon();
+    let predicate = kernel.lam(anon, true_type, true_type, BinderInfo::Default);
+    let exists_true = {
+        let applied = kernel.app(exists, true_type);
+        kernel.app(applied, predicate)
+    };
+    let intro = kernel.const_(logic.exists_intro, vec![zero]);
+    let proof = [true_type, predicate, true_intro, true_intro]
+        .into_iter()
+        .fold(intro, |term, argument| kernel.app(term, argument));
+    let composition = kernel.name_str(anon, "Composition");
+    let name = kernel.name_str(composition, "existsTrue");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: exists_true,
+            value: proof,
+        })
+        .map_err(|error| format!("Exists control theorem failed: {error:?}"))?;
+    Ok("Composition.existsTrue")
 }
 
 fn added_digests(rows: &[AddedTheoremReceipt]) -> BTreeMap<&str, &str> {
