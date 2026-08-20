@@ -26,6 +26,25 @@ fn add_true_theorem(kernel: &mut Kernel, name: &str) -> NameId {
     theorem
 }
 
+fn target_leaf_control_source() -> Kernel {
+    let mut source = Kernel::new();
+    let source_logic = build_logic_prelude(&mut source).expect("source logic");
+    let leaf = add_true_theorem(&mut source, "LeafControl.leaf");
+    let root = name(&mut source, "LeafControl.root");
+    let true_ty = source.const_(source_logic.true_, vec![]);
+    let leaf_proof = source.const_(leaf, vec![]);
+    source
+        .add_declaration(Declaration::Theorem {
+            name: root,
+            uparams: vec![],
+            ty: true_ty,
+            value: leaf_proof,
+        })
+        .expect("source root checks");
+    add_true_theorem(&mut source, "LeafControl.unreachable");
+    source
+}
+
 #[test]
 fn completed_composition_is_axiom_free_deterministic_and_reverifiable() {
     let mut source = Kernel::new();
@@ -51,6 +70,252 @@ fn completed_composition_is_axiom_free_deterministic_and_reverifiable() {
     assert!(matches!(
         compose_checked_theorem_slice(&source, first.kernel(), &["Composition.root"]),
         Err(CheckedTheoremCompositionError::NoAdditions)
+    ));
+}
+
+#[test]
+fn explicit_target_theorem_leaf_is_compatible_axiom_free_and_replayable() {
+    let mut source = Kernel::new();
+    let source_logic = build_logic_prelude(&mut source).expect("source logic");
+    let source_hidden = add_true_theorem(&mut source, "LeafControl.hidden");
+    let source_leaf = name(&mut source, "LeafControl.leaf");
+    let true_ty = source.const_(source_logic.true_, vec![]);
+    let hidden_proof = source.const_(source_hidden, vec![]);
+    source
+        .add_declaration(Declaration::Theorem {
+            name: source_leaf,
+            uparams: vec![],
+            ty: true_ty,
+            value: hidden_proof,
+        })
+        .expect("source leaf checks");
+    let source_root = name(&mut source, "LeafControl.root");
+    let leaf_proof = source.const_(source_leaf, vec![]);
+    source
+        .add_declaration(Declaration::Theorem {
+            name: source_root,
+            uparams: vec![],
+            ty: true_ty,
+            value: leaf_proof,
+        })
+        .expect("source root checks");
+
+    let mut target = Kernel::new();
+    build_logic_prelude(&mut target).expect("target logic");
+    add_true_theorem(&mut target, "LeafControl.leaf");
+    let target_before = environment_sha256(&target).unwrap();
+    let target_len = target.environment().len();
+    let completed = compose_checked_theorem_slice_with_target_leaves(
+        &source,
+        &target,
+        &["LeafControl.root"],
+        &["LeafControl.leaf"],
+    )
+    .expect("the explicit target leaf cuts only the source proof behind it");
+    assert_eq!(target.environment().len(), target_len);
+    assert_eq!(environment_sha256(&target).unwrap(), target_before);
+    assert_eq!(
+        completed.receipt().schema_version,
+        CHECKED_TARGET_LEAF_THEOREM_COMPOSITION_VERSION
+    );
+    assert_eq!(
+        completed.receipt().target_theorem_leaves,
+        ["LeafControl.leaf"]
+    );
+    assert!(
+        completed
+            .receipt()
+            .source_closure
+            .contains(&"LeafControl.leaf".to_owned())
+    );
+    assert!(
+        !completed
+            .receipt()
+            .source_closure
+            .contains(&"LeafControl.hidden".to_owned())
+    );
+    assert_eq!(
+        completed
+            .receipt()
+            .added_theorems
+            .iter()
+            .map(|row| row.name.as_str())
+            .collect::<Vec<_>>(),
+        ["LeafControl.root"]
+    );
+    assert!(
+        completed.receipt().added_theorems[0]
+            .axiom_footprint
+            .is_empty()
+    );
+    verify_checked_theorem_composition_with_target_leaves(
+        &source,
+        &target,
+        completed.kernel(),
+        completed.receipt(),
+    )
+    .expect("target-leaf receipt replays");
+
+    let full = compose_checked_theorem_slice(&source, &target, &["LeafControl.root"])
+        .expect("the uncut control still composes");
+    assert!(
+        full.receipt()
+            .source_closure
+            .contains(&"LeafControl.hidden".to_owned())
+    );
+    assert_eq!(full.receipt().target_theorem_leaves, Vec::<String>::new());
+
+    let mut mutated = completed.receipt().clone();
+    mutated.target_theorem_leaves = vec!["LeafControl.hidden".to_owned()];
+    assert_eq!(
+        verify_checked_theorem_composition_with_target_leaves(
+            &source,
+            &target,
+            completed.kernel(),
+            &mutated,
+        ),
+        Err(CheckedTheoremCompositionError::ReceiptMismatch)
+    );
+}
+
+#[test]
+fn target_theorem_leaf_controls_fail_closed() {
+    let source = target_leaf_control_source();
+
+    let mut target = Kernel::new();
+    build_logic_prelude(&mut target).expect("target logic");
+    add_true_theorem(&mut target, "LeafControl.leaf");
+    let before = environment_sha256(&target).unwrap();
+    let len = target.environment().len();
+
+    assert!(matches!(
+        compose_checked_theorem_slice_with_target_leaves(
+            &source,
+            &target,
+            &["LeafControl.root"],
+            &[]
+        ),
+        Err(CheckedTheoremCompositionError::EmptyTargetTheoremLeaves)
+    ));
+    assert!(matches!(
+        compose_checked_theorem_slice_with_target_leaves(
+            &source,
+            &target,
+            &["LeafControl.root"],
+            &["LeafControl.leaf", "LeafControl.leaf"]
+        ),
+        Err(CheckedTheoremCompositionError::InvalidTargetTheoremLeaf {
+            reason: "duplicate",
+            ..
+        })
+    ));
+    assert!(matches!(
+        compose_checked_theorem_slice_with_target_leaves(
+            &source,
+            &target,
+            &["LeafControl.root"],
+            &["LeafControl.missing"]
+        ),
+        Err(CheckedTheoremCompositionError::InvalidTargetTheoremLeaf {
+            reason: "missing from source",
+            ..
+        })
+    ));
+    assert!(matches!(
+        compose_checked_theorem_slice_with_target_leaves(
+            &source,
+            &target,
+            &["LeafControl.root"],
+            &["LeafControl.unreachable"]
+        ),
+        Err(CheckedTheoremCompositionError::InvalidTargetTheoremLeaf {
+            reason: "missing from target",
+            ..
+        })
+    ));
+    assert_eq!(target.environment().len(), len);
+    assert_eq!(environment_sha256(&target).unwrap(), before);
+    add_true_theorem(&mut target, "LeafControl.unreachable");
+    assert!(matches!(
+        compose_checked_theorem_slice_with_target_leaves(
+            &source,
+            &target,
+            &["LeafControl.root"],
+            &["LeafControl.unreachable"]
+        ),
+        Err(CheckedTheoremCompositionError::Closure(error))
+            if error.contains("UnreachableTheoremLeaf")
+    ));
+}
+
+#[test]
+fn target_theorem_leaf_requires_the_same_checked_type() {
+    let source = target_leaf_control_source();
+    let mut wrong_type_target = Kernel::new();
+    let wrong_logic = build_logic_prelude(&mut wrong_type_target).expect("target logic");
+    let wrong_leaf = name(&mut wrong_type_target, "LeafControl.leaf");
+    let wrong_true = wrong_type_target.const_(wrong_logic.true_, vec![]);
+    let wrong_anon = wrong_type_target.anon();
+    let wrong_type = wrong_type_target.pi(wrong_anon, wrong_true, wrong_true, BinderInfo::Default);
+    let identity = wrong_type_target.bvar(0);
+    let wrong_value = wrong_type_target.lam(wrong_anon, wrong_true, identity, BinderInfo::Default);
+    wrong_type_target
+        .add_declaration(Declaration::Theorem {
+            name: wrong_leaf,
+            uparams: vec![],
+            ty: wrong_type,
+            value: wrong_value,
+        })
+        .expect("wrong-type target control is itself a valid theorem");
+    assert!(matches!(
+        compose_checked_theorem_slice_with_target_leaves(
+            &source,
+            &wrong_type_target,
+            &["LeafControl.root"],
+            &["LeafControl.leaf"]
+        ),
+        Err(CheckedTheoremCompositionError::TypeShapeMismatch { name, .. })
+            if name == "LeafControl.leaf"
+    ));
+}
+
+#[test]
+fn target_theorem_leaf_rejects_an_assumption_footprint() {
+    let source = target_leaf_control_source();
+    let mut assumption_target = Kernel::new();
+    let logic = build_logic_prelude(&mut assumption_target).expect("target logic");
+    let assumption = name(&mut assumption_target, "LeafControl.assumption");
+    let target_true = assumption_target.const_(logic.true_, vec![]);
+    assumption_target
+        .add_declaration(Declaration::Axiom {
+            name: assumption,
+            uparams: vec![],
+            ty: target_true,
+        })
+        .expect("control assumption checks");
+    let target_leaf = name(&mut assumption_target, "LeafControl.leaf");
+    let assumption_proof = assumption_target.const_(assumption, vec![]);
+    assumption_target
+        .add_declaration(Declaration::Theorem {
+            name: target_leaf,
+            uparams: vec![],
+            ty: target_true,
+            value: assumption_proof,
+        })
+        .expect("assumption-bearing target leaf checks");
+    assert!(matches!(
+        compose_checked_theorem_slice_with_target_leaves(
+            &source,
+            &assumption_target,
+            &["LeafControl.root"],
+            &["LeafControl.leaf"]
+        ),
+        Err(
+            CheckedTheoremCompositionError::TargetTheoremLeafAxiomFootprint {
+                footprint,
+                ..
+            }
+        ) if footprint == ["LeafControl.assumption"]
     ));
 }
 

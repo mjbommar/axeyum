@@ -6,7 +6,9 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import re
 import stat
+import subprocess
 import sys
 from typing import Any
 
@@ -30,6 +32,29 @@ def sha256(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def git_blob_sha256(revision: str, path: str) -> str:
+    """Hash one tracked file at the evidence-producing revision.
+
+    Immutable evidence binds the tool that produced it, not every future
+    version of the same path. Reading the pinned blob keeps historical packs
+    verifiable while allowing the current implementation to evolve.
+    """
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise PlanError("historical tool revision is not a full Git object ID")
+    relative = pathlib.PurePosixPath(path)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise PlanError("historical tool path is not repository-relative")
+    completed = subprocess.run(
+        ["git", "show", f"{revision}:{relative.as_posix()}"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        raise PlanError("historical tool blob is unavailable")
+    return hashlib.sha256(completed.stdout).hexdigest()
+
+
 def validate_official_support_audit(manifest: dict[str, Any]) -> None:
     audit = manifest["official_support_audit"]
     audit_path = pathlib.Path(audit["manifest"])
@@ -49,7 +74,10 @@ def validate_official_support_audit(manifest: dict[str, Any]) -> None:
         or external.get("lean4export_commit") != audit["lean4export_commit"]
         or external.get("audit_commit") != audit["audit_commit"]
         or external.get("audit_tool_sha256")
-        != sha256(ROOT / "crates/axeyum-lean-import/examples/lean4export_import.rs")
+        != git_blob_sha256(
+            audit["audit_commit"],
+            "crates/axeyum-lean-import/examples/lean4export_import.rs",
+        )
         or external.get("authority")
         != {
             "proof_search_invocations": 0,
@@ -117,7 +145,7 @@ def validate_official_equation_pack(manifest: dict[str, Any]) -> None:
         != "d024af099ca4bf2c86f649261ebf59565dc8c622"
         or external.get("composition_tool_commit") != pack["implementation_commit"]
         or external.get("composition_tool_sha256")
-        != sha256(ROOT / external["composition_tool"])
+        != git_blob_sha256(pack["implementation_commit"], external["composition_tool"])
         or external.get("generation")
         != {
             "module": "Init",
@@ -225,7 +253,8 @@ def validate_nat_mod_invariant_pack(manifest: dict[str, Any]) -> None:
         or authored["root"] != "Axeyum.Autogenesis.modSucc_dvd_iff"
         or authored["sha256"] != pack["authored_source_sha256"]
         or sha256(authored_path) != authored["sha256"]
-        or sha256(ROOT / authored["repository_path"]) != authored["sha256"]
+        or git_blob_sha256(pack["implementation_commit"], authored["repository_path"])
+        != authored["sha256"]
         or authored["bytes"] != authored_path.stat().st_size
         or authored["lines"] != len(authored_path.read_text().splitlines())
         or export["sha256"] != pack["source_stream_sha256"]
@@ -236,7 +265,8 @@ def validate_nat_mod_invariant_pack(manifest: dict[str, Any]) -> None:
         or export["axioms"] != []
         or audit["tool"]
         != "crates/axeyum-lean-import/examples/lean4export_import.rs"
-        or audit["tool_sha256"] != sha256(ROOT / audit["tool"])
+        or audit["tool_sha256"]
+        != git_blob_sha256(pack["implementation_commit"], audit["tool"])
         or sha256(audit_path) != audit["sha256"]
         or target["sha256"] != manifest["source"]["stream_sha256"]
         or sha256(pathlib.Path(target["path"])) != target["sha256"]
@@ -245,9 +275,13 @@ def validate_nat_mod_invariant_pack(manifest: dict[str, Any]) -> None:
         or tool["path"]
         != "crates/axeyum-lean-import/examples/nat_mod_invariant_specialization.rs"
         or tool["sha256"] != pack["specialization_tool_sha256"]
+        or git_blob_sha256(pack["implementation_commit"], tool["path"])
+        != tool["sha256"]
         or tool["library_path"]
         != "crates/axeyum-lean-import/src/theorem_specialization.rs"
         or tool["library_sha256"] != pack["specialization_library_sha256"]
+        or git_blob_sha256(pack["implementation_commit"], tool["library_path"])
+        != tool["library_sha256"]
         or sha256(result_path) != result["sha256"]
         or external["authority"]
         != {
@@ -371,9 +405,10 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     ):
         raise PlanError("native alignment implementation identity changed")
     probe = manifest["composition_probe"]
-    if sha256(ROOT / probe["tool"]) != probe["tool_sha256"]:
+    evidence_commit = implementation["evidence_commit"]
+    if git_blob_sha256(evidence_commit, probe["tool"]) != probe["tool_sha256"]:
         raise PlanError("composition probe changed")
-    if sha256(ROOT / probe["api"]) != probe["api_sha256"]:
+    if git_blob_sha256(evidence_commit, probe["api"]) != probe["api_sha256"]:
         raise PlanError("composition API changed")
     observation_path = pathlib.Path(probe["observation"])
     if (

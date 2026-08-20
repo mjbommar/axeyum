@@ -45,6 +45,18 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
     def test_exact_plan_is_accepted(self) -> None:
         MODULE.validate(self.manifest)
 
+    def test_historical_tool_identity_survives_current_api_evolution(self) -> None:
+        probe = self.manifest["composition_probe"]
+        commit = self.manifest["implementation"]["evidence_commit"]
+        self.assertEqual(
+            MODULE.git_blob_sha256(commit, probe["api"]), probe["api_sha256"]
+        )
+        self.assertNotEqual(MODULE.sha256(ROOT / probe["api"]), probe["api_sha256"])
+        with self.assertRaisesRegex(MODULE.PlanError, "full Git object ID"):
+            MODULE.git_blob_sha256(commit[:12], probe["api"])
+        with self.assertRaisesRegex(MODULE.PlanError, "repository-relative"):
+            MODULE.git_blob_sha256(commit, "../outside")
+
     def test_probe_and_authority_mutations_are_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)
         changed["composition_probe"]["first_conflict"] = "Nat"
