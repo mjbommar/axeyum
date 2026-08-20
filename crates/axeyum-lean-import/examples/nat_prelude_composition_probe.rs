@@ -137,6 +137,7 @@ fn exercise_composition_controls(
     let receipt = completed.receipt();
     let positive = json!({
         "roots": receipt.roots,
+        "source_closure": receipt.source_closure,
         "outcome": "composed",
         "reused_dependency_names": receipt.reused_declarations.iter().map(|row| &row.name).collect::<Vec<_>>(),
         "declarations_absent_before": receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
@@ -147,6 +148,7 @@ fn exercise_composition_controls(
         "environment_sha256_before": receipt.target_environment_sha256_before,
         "environment_sha256_after": receipt.target_environment_sha256_after,
         "receipt_schema": receipt.schema_version,
+        "receipt_sha256": receipt.receipt_sha256,
     });
     let (composed_kernel, _) = completed.into_parts();
     *kernel = composed_kernel;
