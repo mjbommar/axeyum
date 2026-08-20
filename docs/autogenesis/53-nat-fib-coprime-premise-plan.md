@@ -11,7 +11,8 @@ replayable receipt. Translated definitional equality resolves the first
 order-wrapper differences, atomic singleton composition reconstructs the
 absent `Exists` package, and checked definition composition admits exact
 `Nat.mul` and `Nat.dvd` definitions plus eight axiom-free theorems. The larger
-`Nat.dvd_gcd` control now stops at the imported/native `Bool.rec` branch order.
+`Nat.dvd_gcd` control now passes the exact official-order Bool package and
+stops at the imported/native `Nat.mod_lt` statement mismatch.
 
 The exact `r082` train stream imports 261 declarations and 52 theorems with no
 axioms. It contains `Nat.rec`, but none of the seven native lemmas required by
@@ -49,9 +50,12 @@ The completed first increment followed this order:
 The definition increment rebuilds demanded types, values, universe parameters,
 and reducibility exactly in the private target, submits them through the
 ordinary target gate, and binds both source and target identities. Opaque,
-conflicting, and unsupported declaration kinds still decline. The next
-increment must resolve the measured `Bool.rec` representation seam without
-granting generic recursor permutation authority.
+conflicting, and unsupported declaration kinds still decline. The Bool
+increment aligned the native package to official Lean's `false`, `true` order,
+migrated every branch-sensitive consumer, and retained independent replay. The
+next increment must explicitly specialize or adapt imported general
+`Nat.mod_lt` to the native successor-denominator statement without granting
+generic theorem transport.
 
 This is the holistic point: theorem search cannot use the library until the
 library and imported target share one checked environment. Solving this seam
@@ -60,7 +64,7 @@ also benefits every later Mathlib target that needs native arithmetic facts.
 ## Evidence
 
 The current read-only observation is
-`/nas3/data/axeyum/autogenesis/probes/acade2a45-definition-composition-v10/observation.json`.
+`/nas3/data/axeyum/autogenesis/probes/772646c0d-official-bool-order-v11/observation.json`.
 It binds the public API, exact source closure, reused declaration identities,
 added theorem identities, environment transition, and composition receipt. The
 history is recorded in
@@ -69,8 +73,9 @@ the promoted boundary in
 [public checked theorem composition](58-public-checked-theorem-composition.md),
 and the next compatibility result in
 [translated definitional reuse](59-translated-definitional-reuse.md), followed
-by [atomic singleton-inductive composition](60-atomic-singleton-inductive-composition.md)
-and [checked definition composition](61-checked-definition-composition.md).
+by [atomic singleton-inductive composition](60-atomic-singleton-inductive-composition.md),
+[checked definition composition](61-checked-definition-composition.md), and
+[official Bool order](62-official-bool-order.md).
 Verify the tracked plan and its authority boundary with:
 
 ```sh

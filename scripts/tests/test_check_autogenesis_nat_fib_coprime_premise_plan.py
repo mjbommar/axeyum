@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 import pathlib
+import tempfile
 import unittest
+from contextlib import contextmanager
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -13,6 +16,26 @@ SPEC = importlib.util.spec_from_file_location("check_fib_coprime_plan", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+
+
+@contextmanager
+def pinned_observation(manifest: dict, observation: dict):
+    temporary = tempfile.TemporaryDirectory()
+    directory = pathlib.Path(temporary.name)
+    path = directory / "observation.json"
+    path.write_text(json.dumps(observation, sort_keys=True) + "\n")
+    path.chmod(0o444)
+    directory.chmod(0o555)
+    changed = copy.deepcopy(manifest)
+    changed["composition_probe"]["observation"] = str(path)
+    changed["composition_probe"]["observation_sha256"] = hashlib.sha256(
+        path.read_bytes()
+    ).hexdigest()
+    try:
+        yield changed
+    finally:
+        directory.chmod(0o755)
+        temporary.cleanup()
 
 
 class FibCoprimePremisePlanTests(unittest.TestCase):
@@ -43,6 +66,60 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         changed = copy.deepcopy(self.manifest)
         changed["composition_probe"]["api_sha256"] = "0" * 64
         with self.assertRaisesRegex(MODULE.PlanError, "API"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["implementation"]["native_prelude_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "Bool implementation"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["implementation"]["bool_constructor_order"].reverse()
+        with self.assertRaisesRegex(MODULE.PlanError, "Bool implementation"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["implementation"]["commit"] = "0" * 40
+        with self.assertRaisesRegex(MODULE.PlanError, "Bool implementation"):
+            MODULE.validate(changed)
+
+    def test_bool_overlap_and_next_mismatch_mutations_are_rejected(self) -> None:
+        observation = json.loads(
+            pathlib.Path(self.manifest["composition_probe"]["observation"]).read_text()
+        )
+        source = observation["source"]
+        source["exact_overlap_names"].remove("Bool.true")
+        source["exact_overlap_names"].append("And")
+        source["exact_overlap_names"].sort()
+        source["alpha_type_compatible_content_mismatched_names"].remove("And")
+        source["alpha_type_compatible_content_mismatched_names"].append("Bool.true")
+        source["alpha_type_compatible_content_mismatched_names"].sort()
+        with pinned_observation(self.manifest, observation) as changed:
+            with self.assertRaisesRegex(MODULE.PlanError, "overlap partition"):
+                MODULE.validate(changed)
+
+        observation = json.loads(
+            pathlib.Path(self.manifest["composition_probe"]["observation"]).read_text()
+        )
+        observation["source"]["structural_mismatch_control"]["error"] = (
+            observation["source"]["structural_mismatch_control"]["error"].replace(
+                'name: "Nat.mod_lt"', 'name: "Nat.mod"'
+            )
+        )
+        with pinned_observation(self.manifest, observation) as changed:
+            with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
+                MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["composition_result"]["negative_control_source_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["composition_result"]["negative_control_environment_sha256"] = (
+            "0" * 64
+        )
+        with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
             MODULE.validate(changed)
 
     def test_required_surface_mutation_is_rejected(self) -> None:
