@@ -896,6 +896,15 @@ Out of scope:
     target kernel. Do not compare complete recursive functions with `funext` or
     infer semantics from same-name declarations. See
     [ADR-0533](../09-decisions/adr-0533-official-gcd-unfolding-uses-pointwise-fuel-congruence-not-function-extensionality.md).
+- [x] May a checked semantic theorem receipt authorize intentional direct
+      library premises rather than requiring a zero-dependency proof?
+  - Answer (2026-08-20): yes, but only through a distinct receipt schema whose
+    authority preregisters the complete sorted direct premise set by both name
+    and canonical declaration digest. The ordinary kernel must reproduce the
+    exact candidate and an empty complete axiom footprint; observed direct rows
+    must equal authority exactly, while transitive rows remain replay-bound
+    diagnostics. The zero-dependency V1 schema remains unchanged. See
+    [ADR-0534](../09-decisions/adr-0534-library-theorem-receipts-preregister-direct-premise-identities.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?
