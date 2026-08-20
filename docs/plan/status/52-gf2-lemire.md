@@ -470,17 +470,21 @@ from its proposed Betti coefficient.  A bounded native operation retains all
 `q^ell` class populations over `GF(2^r)`, reconstructs the Wick-subtracted
 trace, and agrees exactly with the independent base-field Hayes transform.
 At `(ell,n,r)=(2,5,5)` its exhaustive `32^5` row needs normalized coefficient
-26, refuting the universal `ell^4=16` Betti budget.  This does not refute the
-degree-`4ell` cohomology cutoff or a replacement budget scoped to `ell>=200`.
-The active geometric task is therefore to determine the actual weight versus
-multiplicity growth and feed any explicit replacement `B(ell)` back into the
-endpoint ledger.
+26, refuting the universal `ell^4=16` Betti budget.  The exact
+trace/subtrace formula then closes the weight question at this level:
+`T_r=q^12(q-1)(q^2-6q+6)` has normalized degree five, one above the proposed
+degree-four cutoff.  Thus the cutoff itself is also false as a universal
+all-level lemma, not merely under-budgeted.  This does not refute a new theorem
+proved only for `ell>=200`.  The active geometric task is now to identify the
+surviving top-weight stratum for general `ell` and determine whether another
+endpoint-relevant cancellation removes it before any Betti estimate is used.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `0cbcafe68` | Derived the exact `(ell,n)=(2,5)` connected trace polynomial from the characteristic-two trace/subtrace formula and proved its normalized q-degree exceeds the proposed universal cohomology cutoff by one. |
 | 2026-08-20 | `ff09b9baa` | Added exact connected Adams traces over binary extension fields, cross-checked the base field, and used the exhaustive `(ell,n,r)=(2,5,5)` row to refute the universal `ell^4` Betti budget while retaining the separate cutoff question. |
 | 2026-08-20 | `702191bff` | Reconstructed the product-one Adams convolution and all three Wick projectors, then exposed the exact degree-`4ell` cohomology cutoff and `ell^4` Betti budget needed for endpoint credit without claiming either. |
 | 2026-08-20 | `5bdebc271` | Added bounded generalized Fomenko restriction/Galois packets, proved their exact conductor reconstruction, and refuted a one-square-root-unit bound for both one-coordinate and endpoint-matched logarithmic quotients. |
