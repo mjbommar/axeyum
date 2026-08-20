@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `c949b166f` | Classified every half-shaped standard characteristic-two Q-transform via self-reciprocity and Dickson invariants, proving the certified cubic-to-sextic pair is the sole irreducible exception. |
 | 2026-08-20 | `0cbcafe68` | Derived the exact `(ell,n)=(2,5)` connected trace polynomial from the characteristic-two trace/subtrace formula and proved its normalized q-degree exceeds the proposed universal cohomology cutoff by one. |
 | 2026-08-20 | `ff09b9baa` | Added exact connected Adams traces over binary extension fields, cross-checked the base field, and used the exhaustive `(ell,n,r)=(2,5,5)` row to refute the universal `ell^4` Betti budget while retaining the separate cutoff question. |
 | 2026-08-20 | `702191bff` | Reconstructed the product-one Adams convolution and all three Wick projectors, then exposed the exact degree-`4ell` cohomology cutoff and `ell^4` Betti budget needed for endpoint credit without claiming either. |
@@ -875,6 +876,14 @@ all-level lemma, not merely under-budgeted.  This does not refute a new theorem
 proved only for `ell>=200`.  The active geometric task is now to identify the
 surviving top-weight stratum for general `ell` and determine whether another
 endpoint-relevant cancellation removes it before any Betti estimate is used.
+The standard Q-transform constructive fallback is now closed completely, not
+only for its published iteration hypotheses.  Self-reciprocity forces every
+half-shaped irreducible Q-output to be `x^(2n)+x^n+1`, whose unique source is
+`D_n+1`.  Even `n` makes that source a square; odd `n>=5` leaves a forbidden
+`x^(n-2)` term.  Independent Rabin certificates confirm that
+`x^3+x+1 -> x^6+x^3+1` is the sole exceptional shaped irreducible pair.  A
+constructive completion therefore needs a genuinely different degree-changing
+transform rather than another choice of standard Q-source.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
