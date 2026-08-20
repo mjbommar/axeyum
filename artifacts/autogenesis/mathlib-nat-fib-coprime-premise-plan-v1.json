@@ -17,9 +17,9 @@
   },
   "composition_probe": {
     "tool": "crates/axeyum-lean-import/examples/nat_prelude_composition_probe.rs",
-    "tool_sha256": "898acfaf6563c7fea21b916341792cb15c8a5c9f82c0fc1b2a2de34198b2fd21",
-    "observation": "/nas3/data/axeyum/autogenesis/probes/d1eb38a13-fib-coprime-prelude-compatibility-v2/observation.json",
-    "observation_sha256": "64f6b89a52071a13cb002be9cad88676fb92a0f45afb02e983e3cdaefdb6a302",
+    "tool_sha256": "dfedf72e4e44227ce95d8083a52eaa176f6c02f8d5bd2e6b5f7e8dfaf03284b3",
+    "observation": "/nas3/data/axeyum/autogenesis/probes/24b16642e-fib-coprime-kernel-type-shape-v3/observation.json",
+    "observation_sha256": "67542c90420ad576238dfeaaaa54a128cf99b8b080cbc46c04c9357ee879ea93",
     "outcome": "rejected",
     "first_conflict": "True",
     "imported_declarations": 261,
@@ -27,7 +27,8 @@
     "native_declarations": 198,
     "exact_overlaps": 7,
     "alpha_type_compatible_content_mismatches": 18,
-    "unresolved_type_overlaps": 18
+    "kernel_type_shape_compatible_content_mismatches": 10,
+    "unresolved_type_overlaps": 8
   },
   "proof_plan": {
     "induction_binder": "n",

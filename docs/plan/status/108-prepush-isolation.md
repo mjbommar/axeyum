@@ -12,10 +12,12 @@ registered HEAD and status agree. The registered control preserves a caller
 with staged and untracked work across fresh and reused gate checkouts and
 rejects an unsafe root and nonexistent target.
 
-**Next:** require the first post-repair Rust push to report the exact registered
-gate HEAD and a clean checkout before treating the operational incident as
-closed in the live environment.
+The first post-repair Rust push checked exact topic SHA `24b16642e` in the
+registered gate checkout, left it clean, and preserved the caller branch,
+index, and status. The operational incident is closed; future changes remain
+covered by the registered control and the live hook.
 
 <!-- plan-section: landed-changes -->
 
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
+| 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |

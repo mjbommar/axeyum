@@ -74,6 +74,12 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
             ]
         )
         != probe["alpha_type_compatible_content_mismatches"]
+        or len(
+            observation["source"][
+                "kernel_type_shape_compatible_content_mismatched_names"
+            ]
+        )
+        != probe["kernel_type_shape_compatible_content_mismatches"]
         or len(observation["source"]["type_mismatched_overlaps"])
         != probe["unresolved_type_overlaps"]
         or any(presence[name] for name in required)
@@ -82,6 +88,28 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest["proof_plan"]["already_present_in_import"] != ["Nat.rec"]
     ):
         raise PlanError("composition observation semantics changed")
+    categories = [
+        observation["source"]["exact_overlap_names"],
+        observation["source"]["alpha_type_compatible_content_mismatched_names"],
+        observation["source"][
+            "kernel_type_shape_compatible_content_mismatched_names"
+        ],
+        [row["name"] for row in observation["source"]["type_mismatched_overlaps"]],
+    ]
+    flattened = [name for category in categories for name in category]
+    if (
+        len(flattened) != 43
+        or len(set(flattened)) != len(flattened)
+        or any(category != sorted(category) for category in categories)
+        or observation["authority"]
+        != {
+            "proof_bodies_displayed": False,
+            "proof_search_invocations": 0,
+            "kernel_submissions": 0,
+            "ledger_writes": 0,
+        }
+    ):
+        raise PlanError("composition overlap partition or authority changed")
     if (
         manifest["target"]["fact_id"]
         != "F:ml430-nat-fib-coprime-fib-succ-162fc738"

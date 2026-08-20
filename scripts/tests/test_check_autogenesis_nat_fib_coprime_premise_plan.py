@@ -29,6 +29,13 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
             MODULE.validate(changed)
 
         changed = copy.deepcopy(self.manifest)
+        changed["composition_probe"][
+            "kernel_type_shape_compatible_content_mismatches"
+        ] = 9
+        with self.assertRaisesRegex(MODULE.PlanError, "semantics"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
         changed["authority"]["kernel_submissions"] = 1
         with self.assertRaisesRegex(MODULE.PlanError, "authority"):
             MODULE.validate(changed)
