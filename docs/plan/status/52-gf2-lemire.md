@@ -640,6 +640,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `2233fa65f` | Re-aimed the odd endpoint at exact normalized two-adic traces, proved Carlitz 2-rank zero is insufficient for the required modulo-eight precision, and added exact primitive-character Newton polygons that isolate aggregate low-slope cancellation as the open lemma. |
 | 2026-08-20 | `3c332b648` | Replaced the overstrong characteristic-delta common-period target by the exact product of maximal-subfield differences, added charged native support witnesses and an independent field oracle, and retained universal nonvanishing as the explicit open lemma. |
 | 2026-08-20 | `40df3c8ee` | Added uniqueness-bounded one-prime odd-endpoint reconstruction, blocked conductor-width power-sum history, executable NTT assumptions, and exact fleet rows through degree 51 without granting the surviving mod-eight pattern theorem credit. |
 | 2026-08-20 | `0e9a3ca9d` | Reduced the complete Lemire class to one characteristic-delta convolution period, added dual exact controls, and isolated the universal no-proper-period lemma without granting finite evidence theorem credit. |
