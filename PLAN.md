@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `7cb9c1ce3` | Identified the connected top-conductor trace with a relative Carlitz point trace, checked its Artin--Schreier tower and genus ledger, and quantified the exact linear saving still missing beyond relative Hasse--Weil. |
 | 2026-08-19 | `7582fbf7b` | Telescoped the identity path into one signed relative top-conductor trace, added a quarter-scale connected endpoint budget, and retained all cross-conductor cancellation before absolute values. |
 | 2026-08-19 | `9c146dcc9` | Combined exact-conductor Fourier inversion with the proved individual Weil bound, reducing the open square-root-fibre estimate from every level to only `ceil(log2 ell)+1` top conductor levels. |
 | 2026-08-19 | `039d905a6` | Reconstructed every endpoint population from raw binary Witt sibling imbalances, added an exact sufficient Haar triangle, and isolated a buffered square-root-fibre bound that closes both symbolic endpoint ledgers. |
@@ -628,6 +629,15 @@ over the relative Weil trace and preserves cross-conductor cancellation.
 Exact fine/coarse reconstruction, the symbolic implication, and both fleet
 endpoints through `ell=20` pass; the statement remains a conjectured fact, not
 theorem credit.
+The connected trace is now also represented exactly as the point-count
+difference between the Carlitz curves of conductors `t^(ell+1)` and `t^a`.
+A native geometry ledger checks the chain of quadratic Artin--Schreier steps,
+the relative Galois degree, and the relative genus.  The genus reproduces the
+entire separate-Weil envelope: at `ell=200` a proof must save exactly
+`50641/32`, with integral ceiling `1583`, asymptotically about `8ell`.  The
+available Ito--Takeuchi--Tsushima Heisenberg theorem concerns a single
+quadratic `y^2-y=xR(x)` curve and a length-two Witt torsor, so it is not
+credited for this growing relative chain without a new checked reduction.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
