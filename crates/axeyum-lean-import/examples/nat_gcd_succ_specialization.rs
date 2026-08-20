@@ -1,17 +1,22 @@
-//! Reconstruct an axiom-free official `Nat.gcd_succ` theorem and retry the
-//! native `Nat.dvd_gcd` composition frontier with it as a target-owned leaf.
+//! Reconstruct an axiom-free official `Nat.gcd_succ`, compose the complete
+//! Fibonacci support surface, and optionally admit the exact frozen
+//! `Nat.fib_coprime_fib_succ` target using an isolated recurrence export.
+
+#[path = "support/fib_coprime.rs"]
+mod fib_coprime;
 
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
 
 use axeyum_lean_import::{
-    CheckedTheoremCompositionError, ImportLimits, checked_reused_declaration_compatibility,
+    CheckedTheoremCompositionError, ImportLimits, canonical_declaration_sha256,
+    canonical_expression_sha256, checked_reused_declaration_compatibility,
     compose_checked_theorem_slice, compose_checked_theorem_slice_with_target_leaves, import_ndjson,
     specialize_checked_theorem, verify_checked_theorem_composition,
     verify_checked_theorem_composition_with_target_leaves, verify_checked_theorem_specialization,
 };
-use axeyum_lean_kernel::{Kernel, NameId, build_nat_prelude};
+use axeyum_lean_kernel::{Declaration, Kernel, NameId, build_nat_prelude};
 use serde_json::{Value, json};
 
 const MOD_INVARIANT_GENERIC: &str = "Axeyum.Autogenesis.modSucc_dvd_iff";
@@ -30,6 +35,10 @@ const MOD_LT_SUCC_GENERIC: &str = "Axeyum.Autogenesis.modLtSucc";
 const GCD_SUCC_GENERIC: &str = "Axeyum.Autogenesis.nat_gcd_succ";
 const MOD_LT_SUCC_TARGET: &str = "Axeyum.Autogenesis.ModLtSucc";
 const GCD_SUCC_TARGET: &str = "Nat.gcd_succ";
+const FIB_RECURRENCE: &str = "Axeyum.Autogenesis.fibAddTwo";
+const FIB_COPRIME_TARGET: &str = "Nat.fib_coprime_fib_succ";
+const TARGET_STATEMENT: &str = "Axeyum.Autogenesis.Coverage.r082";
+const TARGET_GOAL_SHA256: &str = "a053d8f483f2cc1e79c53924baf5f79e4897ce992ca77722168cee20a6f5150f";
 const DVD_GCD_LEAVES: [&str; 3] = ["Nat.dvd_mod_iff", "Nat.mod_lt", "Nat.gcd_succ"];
 const REQUIRED_SUPPORT_ROOTS: [&str; 7] = [
     "Nat.add_comm",
@@ -54,20 +63,34 @@ fn run() -> Result<(), String> {
     let mod_invariant_path = required_path(&mut arguments, "mod-invariant.ndjson")?;
     let target_path = required_path(&mut arguments, "target.ndjson")?;
     let gcd_bridge_path = required_path(&mut arguments, "gcd-bridge.ndjson")?;
-    let all_support = match arguments.next() {
-        None => false,
-        Some(flag) if flag == "--all-support" => true,
+    let (all_support, exact_target_path) = match arguments.next() {
+        None => (false, None),
+        Some(flag) if flag == "--all-support" => (true, None),
+        Some(flag) if flag == "--exact-target" => (
+            true,
+            Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+        ),
         Some(_) => return Err("unexpected trailing argument".to_owned()),
     };
+    if arguments.next().is_some() {
+        return Err("unexpected trailing argument".to_owned());
+    }
 
     let mod_invariant = import(&mod_invariant_path, "mod-invariant")?;
     let target = import(&target_path, "target")?;
     let gcd_bridge = import(&gcd_bridge_path, "gcd-bridge")?;
+    let exact_target = exact_target_path
+        .as_ref()
+        .map(|path| import(path, "fib-recurrence"))
+        .transpose()?;
     if !mod_invariant.report().axioms.is_empty()
         || !target.report().axioms.is_empty()
         || !gcd_bridge.report().axioms.is_empty()
+        || exact_target
+            .as_ref()
+            .is_some_and(|imported| !imported.report().axioms.is_empty())
     {
-        return Err("all three imports must be proof-isolated".to_owned());
+        return Err("every selected input must be proof-isolated".to_owned());
     }
 
     let generic_mod = compose_checked_theorem_slice(
@@ -200,7 +223,14 @@ fn run() -> Result<(), String> {
     } else {
         &["Nat.dvd_gcd"]
     };
-    let frontier = retry_native_support(&native, gcd_succ.kernel(), support_roots)?;
+    let frontier = retry_native_support(
+        &native,
+        gcd_succ.kernel(),
+        support_roots,
+        exact_target
+            .as_ref()
+            .map(axeyum_lean_import::CompletedImport::kernel),
+    )?;
     let output = json!({
         "schema_version": 1,
         "kind": "axeyum-nat-gcd-succ-specialization",
@@ -232,7 +262,12 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
-fn retry_native_support(source: &Kernel, target: &Kernel, roots: &[&str]) -> Result<Value, String> {
+fn retry_native_support(
+    source: &Kernel,
+    target: &Kernel,
+    roots: &[&str],
+    exact_source: Option<&Kernel>,
+) -> Result<Value, String> {
     match compose_checked_theorem_slice_with_target_leaves(source, target, roots, &DVD_GCD_LEAVES) {
         Ok(completed) => {
             verify_checked_theorem_composition_with_target_leaves(
@@ -249,17 +284,18 @@ fn retry_native_support(source: &Kernel, target: &Kernel, roots: &[&str]) -> Res
                     .iter()
                     .map(|row| (row.name.as_str(), row.axiom_footprint.as_slice())),
             )?;
-            Ok(with_optional_roots(
-                json!({
-                    "outcome": "composed",
-                    "target_theorem_leaves": DVD_GCD_LEAVES,
-                    "source_closure": completed.receipt().source_closure.len(),
-                    "added_theorems": completed.receipt().added_theorems.len(),
-                    "added_definitions": completed.receipt().added_definitions.len(),
-                    "receipt_sha256": completed.receipt().receipt_sha256,
-                }),
-                roots,
-            ))
+            let mut value = json!({
+                "outcome": "composed",
+                "target_theorem_leaves": DVD_GCD_LEAVES,
+                "source_closure": completed.receipt().source_closure.len(),
+                "added_theorems": completed.receipt().added_theorems.len(),
+                "added_definitions": completed.receipt().added_definitions.len(),
+                "receipt_sha256": completed.receipt().receipt_sha256,
+            });
+            if let Some(exact_source) = exact_source {
+                value["exact_target"] = compose_exact_target(exact_source, completed.kernel())?;
+            }
+            Ok(with_optional_roots(value, roots))
         }
         Err(CheckedTheoremCompositionError::AdmissionRejected { name, error }) => {
             Ok(with_optional_roots(
@@ -276,6 +312,106 @@ fn retry_native_support(source: &Kernel, target: &Kernel, roots: &[&str]) -> Res
             "Nat.dvd_gcd composition declined unexpectedly: {error:?}"
         )),
     }
+}
+
+fn compose_exact_target(source: &Kernel, target: &Kernel) -> Result<Value, String> {
+    let completed = compose_checked_theorem_slice(source, target, &[FIB_RECURRENCE])
+        .map_err(|error| format!("Fibonacci recurrence composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(source, target, completed.kernel(), completed.receipt())
+        .map_err(|error| format!("Fibonacci recurrence composition did not replay: {error:?}"))?;
+    require_empty_added_footprints(
+        completed
+            .receipt()
+            .added_theorems
+            .iter()
+            .map(|row| (row.name.as_str(), row.axiom_footprint.as_slice())),
+    )?;
+
+    let mut checked = completed.kernel().clone();
+    let statement = find_name(&checked, TARGET_STATEMENT)?;
+    let target_goal = match checked.environment().get(statement) {
+        Some(Declaration::Definition { value, .. }) => *value,
+        _ => return Err("r082 target statement is not a definition".to_owned()),
+    };
+    let target_goal_sha256 = canonical_expression_sha256(&checked, target_goal)?;
+    if target_goal_sha256 != TARGET_GOAL_SHA256 {
+        return Err(format!(
+            "r082 target goal identity changed: {target_goal_sha256}"
+        ));
+    }
+    let target_name = {
+        let nat = find_name(&checked, "Nat")?;
+        checked.name_str(nat, "fib_coprime_fib_succ")
+    };
+    let (theorem, _, proof) =
+        fib_coprime::admit(&mut checked, target_name, target_goal, FIB_RECURRENCE)?;
+    let footprint = checked
+        .axiom_footprint(theorem)
+        .into_iter()
+        .map(|name| checked.display_name(name).to_string())
+        .collect::<Vec<_>>();
+    if !footprint.is_empty() {
+        return Err(format!(
+            "exact Fibonacci theorem reaches assumptions: {footprint:?}"
+        ));
+    }
+    let dependencies = checked
+        .theorem_dependencies(theorem)
+        .into_iter()
+        .map(|name| checked.display_name(name).to_string())
+        .collect::<Vec<_>>();
+    let expected_dependencies = [
+        FIB_RECURRENCE,
+        "Nat.add_comm",
+        "Nat.dvd_add_iff_right",
+        "Nat.dvd_gcd",
+        "Nat.eq_one_of_dvd_one",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.gcd_zero_left",
+    ];
+    if dependencies != expected_dependencies.map(str::to_owned) {
+        return Err(format!(
+            "exact Fibonacci theorem dependencies changed: {dependencies:?}"
+        ));
+    }
+    let proof_sha256 = canonical_expression_sha256(&checked, proof)?;
+    let declaration_sha256 = canonical_declaration_sha256(&checked, theorem)?;
+
+    let mut replay = completed.kernel().clone();
+    let replay_statement = find_name(&replay, TARGET_STATEMENT)?;
+    let replay_goal = match replay.environment().get(replay_statement) {
+        Some(Declaration::Definition { value, .. }) => *value,
+        _ => return Err("replay target statement is not a definition".to_owned()),
+    };
+    let replay_target = {
+        let nat = find_name(&replay, "Nat")?;
+        replay.name_str(nat, "fib_coprime_fib_succ")
+    };
+    let (replay_theorem, _, replay_proof) =
+        fib_coprime::admit(&mut replay, replay_target, replay_goal, FIB_RECURRENCE)?;
+    if canonical_expression_sha256(&replay, replay_proof)? != proof_sha256
+        || canonical_declaration_sha256(&replay, replay_theorem)? != declaration_sha256
+        || replay.axiom_footprint(replay_theorem) != checked.axiom_footprint(theorem)
+        || replay.theorem_dependencies(replay_theorem) != checked.theorem_dependencies(theorem)
+    {
+        return Err("exact Fibonacci theorem reconstruction changed".to_owned());
+    }
+    Ok(json!({
+        "recurrence_root": FIB_RECURRENCE,
+        "source_closure": completed.receipt().source_closure.len(),
+        "added_theorems": completed.receipt().added_theorems.len(),
+        "added_definitions": completed.receipt().added_definitions.len(),
+        "added_singleton_inductives": completed.receipt().added_singleton_inductives.len(),
+        "recurrence_composition_receipt_sha256": completed.receipt().receipt_sha256,
+        "target": FIB_COPRIME_TARGET,
+        "target_goal_sha256": target_goal_sha256,
+        "proof_sha256": proof_sha256,
+        "target_declaration_sha256": declaration_sha256,
+        "target_axiom_footprint": footprint,
+        "direct_theorem_dependencies": dependencies,
+        "fresh_reconstructions": 2,
+    }))
 }
 
 fn with_optional_roots(mut value: Value, roots: &[&str]) -> Value {
