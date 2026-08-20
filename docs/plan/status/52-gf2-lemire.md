@@ -640,6 +640,12 @@ estimate; no endpoint credit came from the refuted congruence.
 The nearest local-to-global Newton references do not change that verdict:
 their primary statements assume an odd prime or a `Z_p`-tower, while the
 binary Hayes group is a finite product of cyclic 2-groups.
+Wan--Zhang's newer general complete-intersection Betti theorem does apply to
+Sawin's ordered-root variety and is now inserted exactly into the Foulkes
+ledger.  It improves the old generic bound but still misses the first two
+post-400 endpoint margins by 6,829 and 6,851 bits, confirming that the needed
+saving is cyclic-eigenspace or signed long-cycle cancellation rather than a
+better total-Betti constant.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.

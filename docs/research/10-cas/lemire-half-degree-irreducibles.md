@@ -3619,6 +3619,22 @@ inequality `(CF)` is only a checked implication.  No source currently proves
 the required characteristic-two cyclic-eigenspace bound, so neither line is
 endpoint theorem evidence (ADR-0550).
 
+Wan--Zhang's 2026 complete-intersection theorem is a genuine improvement to
+that comparison.  Applied to the first `ell` elementary-symmetric equations,
+it gives the exact total-Betti bound
+
+```text
+B_WZ=binom(n-1,ell-1)(ell+1)^n.
+```
+
+The native ledger now inserts this value before the Foulkes coefficient mass
+and Sawin weight.  It is smaller than Sawin's earlier generic bound at the
+handoff, but still misses the squared endpoint margin by 6,829 bits at degree
+401 and 6,851 bits at degree 402.  This positive general theorem therefore
+confirms that the missing saving is representation-specific: one must bound
+the cyclic eigenspace or the signed Frobenius--long-cycle trace, not merely
+improve the total cohomology of the complete intersection (ADR-0561).
+
 There is now also an all-degree arithmetic handoff with no asymptotic notation.
 The coarse inequality `2^omega(n)<=n` shows that a uniform cyclic bound
 `B(n,r)<=n^4` makes the squared Foulkes cost at most `n^10`.  The native

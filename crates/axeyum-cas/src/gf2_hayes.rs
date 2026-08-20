@@ -3025,6 +3025,13 @@ pub struct SawinFoulkesEndpointLedger {
     pub published_generic_squared_total_cost: BigUint,
     /// Whether the published generic bound leaves a proper-power reserve.
     pub published_generic_endpoint_closure: bool,
+    /// Wan--Zhang's 2026 complete-intersection bound
+    /// `binom(n-1,ell-1)(ell+1)^n` for the ordered-root variety.
+    pub wan_zhang_complete_intersection_betti_bound: BigUint,
+    /// Square of the Wan--Zhang bound after the Foulkes coefficient mass.
+    pub wan_zhang_squared_total_cost: BigUint,
+    /// Whether the Wan--Zhang bound leaves a proper-power reserve.
+    pub wan_zhang_endpoint_closure: bool,
 }
 
 /// Exact long-cycle fixed-locus and Euler-trace ledger at a Lemire endpoint.
@@ -9275,6 +9282,81 @@ pub fn tuxanidy_lemire_period_report(
     })
 }
 
+fn biguint_binomial(n: usize, k: usize) -> BigUint {
+    if k > n {
+        return BigUint::from(0_u8);
+    }
+    let k = k.min(n - k);
+    let mut value = BigUint::from(1_u8);
+    for index in 1..=k {
+        value *= n - k + index;
+        value /= index;
+    }
+    value
+}
+
+fn wan_zhang_endpoint_betti_cost(
+    degree: usize,
+    ell: usize,
+    coefficient_l1_mass: &BigUint,
+    sawin_weight_exponent_numerator: usize,
+    squared_irreducible_margin: &BigUint,
+) -> Result<(BigUint, BigUint, bool), HayesError> {
+    let exponent = u32::try_from(degree).map_err(|_| {
+        HayesError::InvalidParameter("Wan--Zhang Betti exponent exceeds u32".to_owned())
+    })?;
+    let bound = biguint_binomial(degree - 1, ell - 1) * BigUint::from(ell + 1).pow(exponent);
+    let total_cost = coefficient_l1_mass * &bound;
+    let squared_total_cost = &total_cost * &total_cost;
+    let squared_error = &squared_total_cost << sawin_weight_exponent_numerator;
+    let closes = squared_error < *squared_irreducible_margin;
+    Ok((bound, squared_total_cost, closes))
+}
+
+struct ExistingSawinBettiCosts {
+    generic_bound: BigUint,
+    generic_squared_total_cost: BigUint,
+    generic_closes: bool,
+    wan_zhang_bound: BigUint,
+    wan_zhang_squared_total_cost: BigUint,
+    wan_zhang_closes: bool,
+}
+
+fn existing_sawin_betti_costs(
+    degree: usize,
+    ell: usize,
+    coefficient_l1_mass: &BigUint,
+    sawin_weight_exponent_numerator: usize,
+    squared_irreducible_margin: &BigUint,
+) -> Result<ExistingSawinBettiCosts, HayesError> {
+    let generic_exponent = u32::try_from(degree.checked_add(ell).ok_or_else(|| {
+        HayesError::InvalidParameter("Sawin generic Betti exponent overflow".to_owned())
+    })?)
+    .map_err(|_| {
+        HayesError::InvalidParameter("Sawin generic Betti exponent exceeds u32".to_owned())
+    })?;
+    let generic_bound = BigUint::from(3_u8) * BigUint::from(degree + 2).pow(generic_exponent);
+    let generic_total_cost = coefficient_l1_mass * &generic_bound;
+    let generic_squared_total_cost = &generic_total_cost * &generic_total_cost;
+    let generic_squared_error = &generic_squared_total_cost << sawin_weight_exponent_numerator;
+    let (wan_zhang_bound, wan_zhang_squared_total_cost, wan_zhang_closes) =
+        wan_zhang_endpoint_betti_cost(
+            degree,
+            ell,
+            coefficient_l1_mass,
+            sawin_weight_exponent_numerator,
+            squared_irreducible_margin,
+        )?;
+    Ok(ExistingSawinBettiCosts {
+        generic_bound,
+        generic_squared_total_cost,
+        generic_closes: generic_squared_error < *squared_irreducible_margin,
+        wan_zhang_bound,
+        wan_zhang_squared_total_cost,
+        wan_zhang_closes,
+    })
+}
+
 /// Certify the cyclic/Foulkes long-cycle identity and evaluate its exact
 /// Lemire endpoint margin under a hypothetical cyclic Betti bound.
 ///
@@ -9296,9 +9378,9 @@ pub fn tuxanidy_lemire_period_report(
 ///
 /// where `P_n=1` at the odd endpoint and the even endpoint uses the proved
 /// square/higher-power envelope.  The function checks this implication and
-/// also inserts Sawin's published generic bound to demonstrate whether
-/// existing geometry suffices.  It does not establish the caller-supplied
-/// `B`.
+/// also inserts Sawin's published generic bound and Wan--Zhang's sharper 2026
+/// complete-intersection bound to demonstrate whether existing geometry
+/// suffices.  It does not establish the caller-supplied `B`.
 ///
 /// # Errors
 ///
@@ -9367,21 +9449,13 @@ pub fn sawin_foulkes_endpoint_ledger(
     let squared_irreducible_margin = &irreducible_margin * &irreducible_margin;
     let conditional_endpoint_closure = assumed_squared_absolute_error < squared_irreducible_margin;
 
-    let generic_exponent = degree.checked_add(ell).ok_or_else(|| {
-        HayesError::InvalidParameter("Sawin generic Betti exponent overflow".to_owned())
-    })?;
-    let generic_exponent = u32::try_from(generic_exponent).map_err(|_| {
-        HayesError::InvalidParameter("Sawin generic Betti exponent exceeds u32".to_owned())
-    })?;
-    let published_generic_single_betti_bound =
-        BigUint::from(3_u8) * BigUint::from(degree + 2).pow(generic_exponent);
-    let published_generic_total_cost = &coefficient_l1_mass * &published_generic_single_betti_bound;
-    let published_generic_squared_total_cost =
-        &published_generic_total_cost * &published_generic_total_cost;
-    let published_generic_squared_absolute_error =
-        &published_generic_squared_total_cost << sawin_weight_exponent_numerator;
-    let published_generic_endpoint_closure =
-        published_generic_squared_absolute_error < squared_irreducible_margin;
+    let existing_betti = existing_sawin_betti_costs(
+        degree,
+        ell,
+        &coefficient_l1_mass,
+        sawin_weight_exponent_numerator,
+        &squared_irreducible_margin,
+    )?;
 
     Ok(SawinFoulkesEndpointLedger {
         degree,
@@ -9406,9 +9480,12 @@ pub fn sawin_foulkes_endpoint_ledger(
         assumed_squared_absolute_error,
         squared_irreducible_margin,
         conditional_endpoint_closure,
-        published_generic_single_betti_bound,
-        published_generic_squared_total_cost,
-        published_generic_endpoint_closure,
+        published_generic_single_betti_bound: existing_betti.generic_bound,
+        published_generic_squared_total_cost: existing_betti.generic_squared_total_cost,
+        published_generic_endpoint_closure: existing_betti.generic_closes,
+        wan_zhang_complete_intersection_betti_bound: existing_betti.wan_zhang_bound,
+        wan_zhang_squared_total_cost: existing_betti.wan_zhang_squared_total_cost,
+        wan_zhang_endpoint_closure: existing_betti.wan_zhang_closes,
     })
 }
 
@@ -19562,6 +19639,11 @@ mod tests {
         assert_eq!(report.squared_irreducible_margin, BigUint::from(0_u8));
         assert!(!report.conditional_endpoint_closure);
         assert!(!report.published_generic_endpoint_closure);
+        assert_eq!(
+            report.wan_zhang_complete_intersection_betti_bound,
+            BigUint::from(330_u16) * BigUint::from(6_u8).pow(12)
+        );
+        assert!(!report.wan_zhang_endpoint_closure);
     }
 
     #[test]
@@ -20077,6 +20159,11 @@ mod tests {
             assert!(report.assumed_squared_absolute_error < report.squared_irreducible_margin);
             assert!(report.conditional_endpoint_closure);
             assert!(!report.published_generic_endpoint_closure);
+            assert!(
+                report.wan_zhang_complete_intersection_betti_bound
+                    < report.published_generic_single_betti_bound
+            );
+            assert!(!report.wan_zhang_endpoint_closure);
         }
 
         let exact_even_boundary = BigUint::from(1_u8) << 47_usize;
@@ -20088,6 +20175,7 @@ mod tests {
             report.squared_exponential_margin
         );
         assert!(!report.conditional_endpoint_closure);
+        assert!(!report.wan_zhang_endpoint_closure);
     }
 
     #[test]
