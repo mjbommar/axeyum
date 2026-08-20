@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `786a16b5c` | Summed the exact top-conductor character second moments and showed that direct Cauchy loses factors 304/633 at the pinned endpoints, selecting a phase-preserving argument instead. |
 | 2026-08-19 | `74c40427e` | Refuted a blanket supersingular decomposition of every new Carlitz conductor layer using the exact level-ten degree-22 trace-divisibility obstruction. |
 | 2026-08-19 | `7cb9c1ce3` | Identified the connected top-conductor trace with a relative Carlitz point trace, checked its Artin--Schreier tower and genus ledger, and quantified the exact linear saving still missing beyond relative Hasse--Weil. |
 | 2026-08-19 | `7582fbf7b` | Telescoped the identity path into one signed relative top-conductor trace, added a quarter-scale connected endpoint budget, and retained all cross-conductor cancellation before absolute values. |
@@ -646,6 +647,13 @@ remainder `1024` modulo `2048`.  Thus the new layer itself cannot consist only
 of supersingular quadratic Heisenberg pieces; a useful argument must isolate a
 smaller cancelling subquotient or handle non-supersingular relative
 cohomology.
+A direct family-second-moment shortcut is also now quantified and rejected as
+the selected route.  At `ell=12`, exact Cauchy across the 4032 top characters
+exceeds the connected allowance squared by factors about `303.92` and
+`632.42` at the two endpoints, even though the signed traces themselves pass.
+The native ledger reports the exact moments, thresholds, and integral savings
+`304/633`; any next lemma must retain phase alignment rather than take an
+absolute square across the full character family.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
