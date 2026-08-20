@@ -295,6 +295,17 @@ viable joined law must genuinely mix fibre multiplication with auxiliary,
 valuation, or Witt coordinates before its commutator rank is meaningful.  This
 is a construction-class obstruction and grants no endpoint cancellation
 credit.
+The bridge audit's independent second-trace/Kerdock route has now received its
+stopping test.  The native CAS retains every second-trace quadratic form inside
+the simultaneous coefficient/inverse buckets, computes pairwise polar ranks
+and radicals, and independently checks the corresponding exact Gauss sums.  At
+`(ell,k,d)=(9,11,8)`, 28,830 pairs occupy ten types and realize every even rank
+from zero through ten; five nonzero correlations have rank only two and
+radical dimension nine.  Degrees eight and nine already contain distinct
+phase-trivial rank-zero pairs.  Thus the raw forms are not a uniformly
+high-rank Kerdock family.  Any Arf-based rescue must aggregate the same
+low-rank sectors across fibres or orders, so the selected proof architecture
+returns to the connected cross-order Witt-Haar/fourth-cumulant estimate.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
@@ -306,6 +317,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `540c4d41f` | Retained pairwise second-trace quadratic forms inside simultaneous buckets and refuted the raw high-rank Kerdock model with exact rank-zero/rank-two Gauss witnesses. |
 | 2026-08-19 | `9c24671a6` | Reconstructed the pinned dyadic product-discriminant fibre and used its exact mod-four additivity witness to reject every projection-preserving central extension. |
 | 2026-08-19 | `d56410d21` | Certified the exact dyadic auxiliary-unit quadratic projector, including its cyclotomic Gauss identity, polarization, radicals, and squareful-zero cancellation. |
 | 2026-08-19 | `786a16b5c` | Summed the exact top-conductor character second moments and showed that direct Cauchy loses factors 304/633 at the pinned endpoints, selecting a phase-preserving argument instead. |
