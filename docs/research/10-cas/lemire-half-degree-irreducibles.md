@@ -2056,6 +2056,34 @@ the Dickson source, checks (Q1) exactly, and replays the classification through
 degree 64 under explicit work bounds.  Thus there is no alternate sequence of
 standard Q-sources hiding behind the failed familiar iteration.  See ADR-0542.
 
+The raw even--odd decomposition is exact but does not restore an induction.
+In characteristic two every polynomial has a unique expression
+
+```text
+f(x)=E(x)^2+xH(x)^2.
+```
+
+For a half-shaped polynomial of odd degree `2m+1`, `H` is monic, degree `m`,
+and half-shaped; for even degree `2m`, `E` has those properties.  However,
+
+```text
+f'(x)=H(x)^2,
+gcd(f,f')=gcd(E,H)^2,
+```
+
+so irreducibility of `f` forces only coprimality of the two components.  It
+does not force the smaller shaped component to be irreducible.  The certified
+counterexamples `x^5+x^2+1` and `x^6+x^3+1` have respective leading parity
+components `x^2` and `x^3+1`, both reducible.  Conversely, fixing the odd
+complement to `E=1` can never lift an irreducible `H` of degree greater than
+one: `H(1)=1`, hence `(xH(x)^2+1)(1)=0`.  The bounded native
+`half_degree_parity_split_report` reconstructs both square components, checks
+the two gcds independently, obtains all irreducibility verdicts from the exact
+Rabin route, and independently checks every positive certificate (ADR-0551).
+Searching other complements is
+a new prescribed-coefficient problem and receives no induction credit without
+a uniform theorem.
+
 Nor can an odd-degree witness be advanced one degree by `f -> x f+1`.  The
 map has exactly the desired shape: a degree-`2m-1` tail of degree at most
 `m-1` becomes a degree-`2m` tail of degree at most `m`.  But every irreducible

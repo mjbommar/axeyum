@@ -136,6 +136,220 @@ impl Gf2Poly {
     }
 }
 
+/// Exact checked Rabin verdict retained by a parity-split report.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Gf2IrreducibilityVerdict {
+    /// The Rabin producer emitted a certificate which its independent checker
+    /// accepted.
+    Irreducible,
+    /// The exact Rabin criterion found a proper-factor obstruction and no
+    /// irreducibility certificate can be emitted.
+    Reducible,
+}
+
+/// Exact even/odd decomposition of a half-degree-shaped binary polynomial.
+///
+/// In characteristic two, writing the even and odd coefficient parts as
+/// `E` and `H` gives `f(x)=E(x)^2+xH(x)^2`.  For odd
+/// `degree(f)=2m+1`, `H` is monic of degree `m` and is itself half-degree
+/// shaped.  For even `degree(f)=2m`, the same is true of `E`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HalfDegreeParitySplitReport {
+    /// Degree of the supplied half-degree-shaped polynomial.
+    pub degree: usize,
+    /// `floor(degree/2)`.
+    pub half_degree: usize,
+    /// Polynomial formed from the even coefficients of the input.
+    pub even_component: Gf2Poly,
+    /// Polynomial formed from the odd coefficients of the input.
+    pub odd_component: Gf2Poly,
+    /// Monic half-degree-shaped component carrying the leading term.
+    pub recursive_component: Gf2Poly,
+    /// The other parity component.
+    pub complementary_component: Gf2Poly,
+    /// Exact gcd of the two parity components.
+    pub component_gcd: Gf2Poly,
+    /// Exact gcd `gcd(f,f')`, independently reconstructed from the input.
+    pub derivative_gcd: Gf2Poly,
+    /// Independent Rabin verdict for the recursive component.
+    pub recursive_component_irreducibility: Gf2IrreducibilityVerdict,
+    /// Independent Rabin verdict for the supplied polynomial.
+    pub polynomial_irreducibility: Gf2IrreducibilityVerdict,
+}
+
+impl HalfDegreeParitySplitReport {
+    /// Whether `gcd(E,H)=1`, equivalently whether `f` is squarefree.
+    #[must_use]
+    pub fn is_squarefree(&self) -> bool {
+        self.component_gcd == Gf2Poly::one()
+    }
+
+    /// Whether the independently checked Rabin route proves the recursive
+    /// component irreducible.
+    #[must_use]
+    pub const fn recursive_component_is_irreducible(&self) -> bool {
+        matches!(
+            self.recursive_component_irreducibility,
+            Gf2IrreducibilityVerdict::Irreducible
+        )
+    }
+
+    /// Whether the independently checked Rabin route proves the input
+    /// polynomial irreducible.
+    #[must_use]
+    pub const fn polynomial_is_irreducible(&self) -> bool {
+        matches!(
+            self.polynomial_irreducibility,
+            Gf2IrreducibilityVerdict::Irreducible
+        )
+    }
+
+    /// At an odd degree, whether complement `1` and an irreducible recursive
+    /// component of degree greater than one force the factor `x+1`.
+    #[must_use]
+    pub fn unit_complement_forces_x_plus_one(&self) -> bool {
+        !self.degree.is_multiple_of(2)
+            && self.complementary_component == Gf2Poly::one()
+            && self
+                .recursive_component
+                .degree()
+                .is_some_and(|value| value > 1)
+            && self.recursive_component_is_irreducible()
+    }
+}
+
+/// Decompose a half-degree-shaped polynomial into its Frobenius-square parity
+/// components and certify the exact squarefreeness criterion.
+///
+/// If `f=E(x)^2+xH(x)^2`, then `f'=H(x)^2` and
+///
+/// ```text
+/// gcd(f,f') = gcd(E,H)^2.
+/// ```
+///
+/// Thus parity decomposition gives a smaller shaped component but does **not**
+/// give an irreducibility induction: irreducibility of `f` only forces
+/// coprimality of `E,H`.  Moreover, at odd degree, choosing complement `E=1`
+/// with irreducible `H` of degree greater than one forces `f(1)=0`, since such
+/// an `H` has no root at one and therefore `H(1)=1`.
+///
+/// # Errors
+///
+/// Rejects degrees below two, inputs without Lemire's half-degree shape, and
+/// configured degree/work excess.  Every irreducibility verdict is obtained
+/// from the exact Rabin route, and every positive verdict is independently
+/// certificate-checked.
+pub fn half_degree_parity_split_report(
+    polynomial: &Gf2Poly,
+    limits: Gf2Limits,
+) -> Result<HalfDegreeParitySplitReport, Gf2Error> {
+    let degree = polynomial.degree().ok_or(Gf2Error::NotPositiveDegree)?;
+    if degree < 2 {
+        return Err(Gf2Error::NotPositiveDegree);
+    }
+    if degree > limits.max_input_degree {
+        return Err(Gf2Error::DegreeLimit {
+            observed: degree,
+            limit: limits.max_input_degree,
+        });
+    }
+    if !polynomial.is_half_degree_shaped() {
+        return Err(Gf2Error::InvalidCertificate(
+            "parity split input is not half-degree shaped",
+        ));
+    }
+
+    let mut even_exponents = Vec::new();
+    let mut odd_exponents = Vec::new();
+    for exponent in polynomial.exponents() {
+        if exponent.is_multiple_of(2) {
+            even_exponents.push(exponent / 2);
+        } else {
+            odd_exponents.push(exponent / 2);
+        }
+    }
+    let even_component = Gf2Poly::from_exponents(&even_exponents, limits)?;
+    let odd_component = Gf2Poly::from_exponents(&odd_exponents, limits)?;
+    let (recursive_component, complementary_component) = if degree.is_multiple_of(2) {
+        (even_component.clone(), odd_component.clone())
+    } else {
+        (odd_component.clone(), even_component.clone())
+    };
+    if recursive_component.degree() != Some(degree / 2)
+        || !recursive_component.is_half_degree_shaped()
+    {
+        return Err(Gf2Error::InvalidCertificate(
+            "leading parity component did not retain half-degree shape",
+        ));
+    }
+
+    let mut context = Gf2Context::new(limits);
+    let even_square = context.square(&even_component)?;
+    let odd_square = context.square(&odd_component)?;
+    let x_odd_square = context.multiply(&Gf2Poly::x(), &odd_square)?;
+    let reconstructed = context.add(&even_square, &x_odd_square)?;
+    if reconstructed != *polynomial {
+        return Err(Gf2Error::InvalidCertificate(
+            "parity components did not reconstruct the input",
+        ));
+    }
+    let component_gcd = context.gcd(&even_component, &odd_component)?;
+    let derivative_gcd = context.gcd(polynomial, &odd_square)?;
+    let squared_component_gcd = context.square(&component_gcd)?;
+    if derivative_gcd != squared_component_gcd {
+        return Err(Gf2Error::InvalidCertificate(
+            "parity-component gcd did not reconstruct gcd(f,f')",
+        ));
+    }
+    let recursive_component_irreducibility =
+        checked_irreducibility_verdict(&recursive_component, limits)?;
+    let polynomial_irreducibility = checked_irreducibility_verdict(polynomial, limits)?;
+    let recursive_component_is_irreducible = matches!(
+        recursive_component_irreducibility,
+        Gf2IrreducibilityVerdict::Irreducible
+    );
+    let polynomial_is_irreducible = matches!(
+        polynomial_irreducibility,
+        Gf2IrreducibilityVerdict::Irreducible
+    );
+    let unit_complement_forces_x_plus_one = !degree.is_multiple_of(2)
+        && complementary_component == Gf2Poly::one()
+        && recursive_component.degree().is_some_and(|value| value > 1)
+        && recursive_component_is_irreducible;
+    if unit_complement_forces_x_plus_one {
+        let value_at_one_is_zero = polynomial.exponents().len().is_multiple_of(2);
+        if !value_at_one_is_zero || polynomial_is_irreducible {
+            return Err(Gf2Error::InvalidCertificate(
+                "unit complement did not force the factor x+1",
+            ));
+        }
+    }
+
+    Ok(HalfDegreeParitySplitReport {
+        degree,
+        half_degree: degree / 2,
+        even_component,
+        odd_component,
+        recursive_component,
+        complementary_component,
+        component_gcd,
+        derivative_gcd,
+        recursive_component_irreducibility,
+        polynomial_irreducibility,
+    })
+}
+
+fn checked_irreducibility_verdict(
+    polynomial: &Gf2Poly,
+    limits: Gf2Limits,
+) -> Result<Gf2IrreducibilityVerdict, Gf2Error> {
+    let Some(certificate) = certify_irreducible(polynomial, limits)? else {
+        return Ok(Gf2IrreducibilityVerdict::Reducible);
+    };
+    check_irreducible_certificate(&certificate, limits)?;
+    Ok(Gf2IrreducibilityVerdict::Irreducible)
+}
+
 /// Apply the characteristic-two `Q`-transform
 ///
 /// ```text
@@ -1225,6 +1439,78 @@ mod tests {
             .unwrap()
             .expect("known witness must be irreducible");
         check_irreducible_certificate(&certificate, limits).unwrap();
+    }
+
+    #[test]
+    fn parity_split_certifies_shape_squarefreeness_and_failed_induction() {
+        let limits = Gf2Limits::default();
+
+        // x^5+x^2+1 is irreducible, although its leading odd component is
+        // x^2.  Thus irreducibility of f does not descend to the smaller
+        // shaped component.
+        let irreducible = poly(&[0, 2, 5]);
+        let report = half_degree_parity_split_report(&irreducible, limits).unwrap();
+        assert_eq!(report.degree, 5);
+        assert_eq!(report.half_degree, 2);
+        assert_eq!(report.even_component, poly(&[0, 1]));
+        assert_eq!(report.odd_component, poly(&[2]));
+        assert_eq!(report.recursive_component, poly(&[2]));
+        assert_eq!(report.complementary_component, poly(&[0, 1]));
+        assert_eq!(report.component_gcd, Gf2Poly::one());
+        assert_eq!(report.derivative_gcd, Gf2Poly::one());
+        assert!(report.is_squarefree());
+        assert!(report.polynomial_is_irreducible());
+        assert!(!report.recursive_component_is_irreducible());
+        assert!(!report.unit_complement_forces_x_plus_one());
+
+        // For irreducible H=x^3+x+1 and E=1, the proposed odd lift is
+        // x H(x)^2+1=x^7+x^3+x+1 and has the forced root one.
+        let unit_complement = poly(&[0, 1, 3, 7]);
+        let report = half_degree_parity_split_report(&unit_complement, limits).unwrap();
+        assert_eq!(report.recursive_component, poly(&[0, 1, 3]));
+        assert_eq!(report.complementary_component, Gf2Poly::one());
+        assert!(report.recursive_component_is_irreducible());
+        assert!(!report.polynomial_is_irreducible());
+        assert!(report.unit_complement_forces_x_plus_one());
+
+        // The identity and squarefreeness criterion apply to even endpoints
+        // as well; there the even component carries the leading term.
+        let even = poly(&[0, 3, 6]);
+        let report = half_degree_parity_split_report(&even, limits).unwrap();
+        assert_eq!(report.even_component, poly(&[0, 3]));
+        assert_eq!(report.odd_component, poly(&[1]));
+        assert_eq!(report.recursive_component, report.even_component);
+        assert!(report.is_squarefree());
+        assert!(report.polynomial_is_irreducible());
+        assert!(!report.recursive_component_is_irreducible());
+    }
+
+    #[test]
+    fn parity_split_rejects_nonshaped_and_bounded_inputs() {
+        let limits = Gf2Limits::default();
+        assert!(matches!(
+            half_degree_parity_split_report(&poly(&[0, 4, 6]), limits),
+            Err(Gf2Error::InvalidCertificate(
+                "parity split input is not half-degree shaped"
+            ))
+        ));
+        assert_eq!(
+            half_degree_parity_split_report(
+                &poly(&[0, 2, 5]),
+                Gf2Limits {
+                    max_input_degree: 4,
+                    ..limits
+                }
+            ),
+            Err(Gf2Error::DegreeLimit {
+                observed: 5,
+                limit: 4
+            })
+        );
+        assert_eq!(
+            half_degree_parity_split_report(&Gf2Poly::one(), limits),
+            Err(Gf2Error::NotPositiveDegree)
+        );
     }
 
     #[test]
