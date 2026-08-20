@@ -89,7 +89,7 @@ rm -f "$work/wt/.git/hooks/pre-push"
 if [ "$rc" -ne 0 ]; then
   echo "FAIL: --retry did not recover from a mid-push remote advance (rc=$rc):" >&2
   echo "$out" | tail -8 | sed 's/^/    /' >&2; fail=1
-elif ! printf '%s' "$out" | grep -q "moved during the hook"; then
+elif [ "$(printf '%s' "$out" | grep -c "moved during the hook")" -eq 0 ]; then
   echo "FAIL: the push succeeded without the race firing; the fixture proved nothing." >&2
   echo "$out" | tail -6 | sed 's/^/    /' >&2; fail=1
 else

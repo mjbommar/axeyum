@@ -119,7 +119,12 @@ for d in $dirs; do
   while IFS= read -r tracked; do
     [ -n "$tracked" ] || continue
     [ -e "$tracked" ] && continue
-    printf '%s\n' "$GOT" | grep -qxF "$tracked" && continue
+    # `grep -c`, not `grep -q`: this script runs under `set -o pipefail`, and
+    # `-q` exits at the first match, SIGPIPEs `printf`, and makes the pipeline
+    # 141 -- which pipefail reads as "no match". A path that IS staged would
+    # then be reported as failed-to-stage, and whether that happens depends on
+    # whether printf finished writing first. See CLAUDE.md, banned shell idioms.
+    [ "$(printf '%s\n' "$GOT" | grep -cxF "$tracked")" -gt 0 ] && continue
     echo "lane-commit: REFUSING -- \`$tracked\` is in HEAD, gone from disk, and" >&2
     echo "  its deletion is not staged. If you renamed it, NAME BOTH SIDES; if" >&2
     echo "  another lane deleted it, this commit would land an inconsistent tree." >&2
