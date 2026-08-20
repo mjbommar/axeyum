@@ -202,6 +202,7 @@ macro_rules! full_modules {
         pub mod smtlib;
         mod solver;
         mod strategy;
+        mod string_length_cert;
         mod string_theory;
         pub mod strings;
         pub mod support_matrix;
@@ -649,6 +650,10 @@ pub mod theories {
 
     /// String-theory decision procedures.
     pub mod strings {
+        pub use crate::string_length_cert::{
+            FactRef, LengthLemma, StringLengthRefutationCertificate,
+            check_string_length_refutation, string_length_refutation,
+        };
         pub use crate::string_theory::{
             check_qf_s_online_cdclt, check_qf_s_online_cdclt_with_memberships, check_qf_slia_length,
         };
@@ -1336,6 +1341,11 @@ macro_rules! full_exports {
         pub use solver::Solver;
         pub use strategy::{
             Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy,
+        };
+        #[doc(hidden)]
+        pub use string_length_cert::{
+            FactRef, LengthLemma, StringLengthRefutationCertificate,
+            check_string_length_refutation, string_length_refutation,
         };
         #[doc(hidden)]
         pub use string_theory::{

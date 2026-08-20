@@ -96,18 +96,6 @@ pub(crate) fn reconstruct_real_zero_product(
     ctx: &mut LraReconstructCtx,
     certificate: &RealZeroProductRefutationCertificate,
 ) -> Result<ExprId, ReconstructError> {
-    // Map each NAME to a stable opaque constant (same name → same variable).
-    fn var_expr(
-        ctx: &mut LraReconstructCtx,
-        index_of: &mut BTreeMap<String, usize>,
-        name: &str,
-    ) -> ExprId {
-        let next = index_of.len();
-        let idx = *index_of.entry(name.to_owned()).or_insert(next);
-        let n = ctx.var_const(idx);
-        ctx.kernel.const_(n, vec![])
-    }
-
     let cases = certificate.zeroing_cases();
     let [zeroed] = cases else {
         return Err(ReconstructError::UnsupportedTerm {

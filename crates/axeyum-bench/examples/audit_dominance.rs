@@ -197,6 +197,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatFifoBc04(_) => "fifo-bc04-unsat",
         Evidence::UnsatRegexEmptiness { .. } => "regex-emptiness-unsat",
         Evidence::UnsatWordClash(_) => "word-clash-unsat",
+        Evidence::UnsatStringLength(_) => "string-length-unsat",
         Evidence::UnsatQuantInstanceSet(_) => "quant-instance-set-unsat",
         Evidence::Unknown(_) => "unknown",
     }

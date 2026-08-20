@@ -118,6 +118,7 @@ use crate::quant_residue_cert::IntEuclideanResidueRefutationCertificate;
 use crate::quant_vacuous_exists_counterexample_cert::VacuousExistsUniversalCounterexampleCertificate;
 use crate::sat_bv_backend::SatBvBackend;
 use crate::set_cardinality::SetCardinalityRefutationCertificate;
+use crate::string_length_cert::StringLengthRefutationCertificate;
 use crate::term_identity::TermIdentityRefutationCertificate;
 use crate::trust::{TrustId, TrustStep};
 use crate::uf_arith::UfArithCongruenceCertificate;
@@ -771,6 +772,23 @@ pub enum Evidence {
     /// bare [`Evidence::Unsat(None)`](Evidence::Unsat) for the word-only string
     /// fragment.
     UnsatWordClash(crate::WordClashCertificate),
+    /// Unsatisfiable (`QF_S`/`QF_SLIA`/`QF_SEQ` length fragment): a length /
+    /// code-point abstraction plus a Farkas-style linear refutation.
+    ///
+    /// Every string term becomes an integer length variable keyed on its SOURCE
+    /// NAME, the handful of theory lemmas the argument uses are named
+    /// individually (`|x| >= 0`, `|u| = |v|` from an asserted word equality,
+    /// `|x| >= 1` from `x != ""`, and the `str.to_code` range), and the
+    /// refutation is one nonnegative combination per case-split branch.
+    ///
+    /// Self-contained like [`Evidence::UnsatWordClash`] and
+    /// [`Evidence::UnsatRegexEmptiness`] (ADR-0061), and for the same reason: the
+    /// flat arena view of a string script is the bounded packed-BV encoding, not
+    /// the query. The certificate carries the script's own top-level commands, and
+    /// [`Evidence::check`] re-derives the premises from them before re-deriving
+    /// the arithmetic — a lemma the query does not license is rejected before any
+    /// multiplier is read.
+    UnsatStringLength(StringLengthRefutationCertificate),
     /// Undecided, with the classified reason.
     Unknown(UnknownReason),
 }
@@ -867,6 +885,7 @@ impl Evidence {
             Evidence::UnsatFifoBc04(_) => "unsat-fifo-bc04",
             Evidence::UnsatRegexEmptiness { .. } => "unsat-regex-emptiness",
             Evidence::UnsatWordClash(_) => "unsat-word-clash",
+            Evidence::UnsatStringLength(_) => "unsat-string-length",
             Evidence::Unknown(_) => "unknown",
         }
     }
@@ -905,8 +924,9 @@ impl Evidence {
     /// [`EvidenceCheck::NothingToCheck`] with the reason. A certificate that is
     /// present and does not hold up is [`EvidenceCheck::Failed`].
     ///
-    /// The certificates that are *self-contained* — [`Evidence::UnsatWordClash`]
-    /// and [`Evidence::UnsatRegexEmptiness`], which carry their own premises and
+    /// The certificates that are *self-contained* — [`Evidence::UnsatWordClash`],
+    /// [`Evidence::UnsatRegexEmptiness`] and [`Evidence::UnsatStringLength`],
+    /// which carry their own premises and
     /// deliberately ignore `(arena, assertions)` (ADR-0061) — are re-derived
     /// here regardless of the arena view, so they still report `Verified`.
     ///
@@ -1204,6 +1224,14 @@ impl Evidence {
             // the empty clause (arena-free; the certificate carries its own premises and
             // element sort key). A tampered proof fails here — never trusted as-is.
             Evidence::UnsatWordClash(certificate) => Ok(certificate.check()),
+            // Length/code-point abstraction refutation: stage 1 re-derives the
+            // premise conjuncts from the carried source commands and binds every
+            // lemma instance to the conjunct that licenses it; stage 2 re-derives
+            // the Farkas combination. Arena-free for the same reason as the two
+            // above — the flat view of a string script is not the query.
+            Evidence::UnsatStringLength(certificate) => Ok(
+                crate::string_length_cert::check_string_length_refutation(certificate),
+            ),
             // Nothing to re-validate. `check_outcome` answers these before ever
             // calling here; `false` (never `true`) is the conservative value if
             // that guard is ever bypassed, so no route can resurrect the
@@ -1280,6 +1308,7 @@ impl Evidence {
                 | Evidence::UnsatFifoBc04(_)
                 | Evidence::UnsatRegexEmptiness { .. }
                 | Evidence::UnsatWordClash(_)
+                | Evidence::UnsatStringLength(_)
         )
     }
 }
@@ -3451,7 +3480,9 @@ impl EvidenceWithScript {
 fn is_subject_independent_evidence(evidence: &Evidence) -> bool {
     matches!(
         evidence,
-        Evidence::UnsatWordClash(_) | Evidence::UnsatRegexEmptiness { .. }
+        Evidence::UnsatWordClash(_)
+            | Evidence::UnsatRegexEmptiness { .. }
+            | Evidence::UnsatStringLength(_)
     )
 }
 
@@ -3525,7 +3556,7 @@ pub fn produce_evidence_smtlib_with_script(
         // A word-clash / regex-emptiness / concat-emptiness / length conflict decided
         // the `unsat`; upgrade it to a transferable certified variant where one exists,
         // else a correct bare-but-sound `Evidence::Unsat(None)`.
-        CheckResult::Unsat => string_unsat_evidence(&mut script, config),
+        CheckResult::Unsat => string_unsat_evidence(input, &mut script, config),
         CheckResult::Unknown(reason) => Evidence::Unknown(reason),
     };
     Ok(EvidenceWithScript {
@@ -3550,13 +3581,30 @@ pub fn produce_evidence_smtlib_with_script(
 /// 2. **Word clash** → [`Evidence::UnsatWordClash`], carrying the self-contained,
 ///    self-checking Alethe [`WordClashCertificate`](crate::WordClashCertificate)
 ///    (`check()` re-runs the Alethe replay, arena-free — a tampered proof fails).
-/// 3. Otherwise (concat/length conflict, or a reconstruction/cap decline) a correct
+/// 3. **Length / code-point abstraction** → [`Evidence::UnsatStringLength`], carrying
+///    the script's own top-level commands, the named theory lemmas the argument uses,
+///    and one Farkas combination per case-split branch (re-derived from the commands
+///    on re-check — the carried lemma instances are bound to the conjuncts that
+///    license them before any multiplier is read).
+/// 4. Otherwise (concat conflict, or a reconstruction/cap decline) a correct
 ///    bare-but-sound [`Evidence::Unsat(None)`](Evidence::Unsat).
 ///
 /// The verdict is never changed — this is a pure evidence upgrade over the object the
 /// route already decided. Each certificate independently re-checks; a decline is a
 /// clean fall-through to the next class, never a fabricated certificate.
-fn string_unsat_evidence(script: &mut axeyum_smtlib::Script, config: &SolverConfig) -> Evidence {
+///
+/// # Why the ORDER puts the length certificate last
+///
+/// It is the newest and the most generic of the three, and its job is to upgrade what
+/// was a bare `Evidence::Unsat(None)` — never to displace a regex-emptiness proof that
+/// reconstructs to a kernel-checked Lean module, or a word clash whose Alethe replay
+/// is stronger evidence about the same query. Placing a new certifier first has
+/// shadowed better ones here before (`quant_instance_set_certificate`, four tests).
+fn string_unsat_evidence(
+    input: &str,
+    script: &mut axeyum_smtlib::Script,
+    config: &SolverConfig,
+) -> Evidence {
     // (1) Regex derivative-emptiness (kernel-checked Lean).
     if let Some((membership, lean_module)) = crate::membership_unsat_certificate(script, config) {
         return Evidence::UnsatRegexEmptiness {
@@ -3575,7 +3623,16 @@ fn string_unsat_evidence(script: &mut axeyum_smtlib::Script, config: &SolverConf
     {
         return Evidence::UnsatWordClash(certificate);
     }
-    // (3) No transferable certificate yet: the correct, honestly-uncertified verdict.
+    // (3) Length / code-point abstraction with a Farkas-style linear refutation.
+    // This reads the SOURCE s-expressions, not `script.arena`: the arena holds the
+    // ADR-0029 bounded packed-BV encoding (or nothing at all under the word-first
+    // fallback), which is neither the query nor a checking subject for it.
+    if let Ok(commands) = axeyum_smtlib::read_all(input)
+        && let Some(certificate) = crate::string_length_cert::string_length_refutation(&commands)
+    {
+        return Evidence::UnsatStringLength(certificate);
+    }
+    // (4) No transferable certificate yet: the correct, honestly-uncertified verdict.
     Evidence::Unsat(None)
 }
 
@@ -4226,7 +4283,8 @@ pub fn prove(
         | Evidence::UnsatBinarySearch16(_)
         | Evidence::UnsatFifoBc04(_)
         | Evidence::UnsatRegexEmptiness { .. }
-        | Evidence::UnsatWordClash(_) => {
+        | Evidence::UnsatWordClash(_)
+        | Evidence::UnsatStringLength(_) => {
             // Three-valued so the two very different "not verified" cases stay
             // apart (ADR-0384): a certificate that FAILS is a soundness alarm,
             // while a bare `unsat` has nothing to check and keeps the historical
