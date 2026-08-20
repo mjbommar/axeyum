@@ -119,6 +119,7 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
+| 2026-08-20 | `0797719a7` | Rational operands no longer defeat algebraic field arithmetic; the NRA `sat` witness replays and the evidence route matches the decision route |
 | 2026-08-20 | `b5c4bb48b` | Binder-info-insensitive kernel type-shape identity with adversarial controls |
 | 2026-08-20 | `24b16642e` | r082 overlap probe classifies kernel-compatible and structurally different types |
 | 2026-08-20 | `8dbd18c82` | Required Nat theorem closure census isolates a structurally unblocked first replay slice |
@@ -590,6 +591,30 @@ The first post-repair Rust push checked exact topic SHA `24b16642e` in the
 registered gate checkout, left it clean, and preserved the caller branch,
 index, and status. The operational incident is closed; future changes remain
 covered by the registered control and the live hook.
+
+**The decision route and the evidence route agreed again on
+`QF_NRA/.../cli__regress0__nl__issue3003.smt2` (`DONE`, agent-route-divergence,
+2026-08-20).** `check_auto_explained` said `sat` in 0.9 ms; `produce_evidence`
+said `unknown certified=false checked=false`. Both run the same exact real-root
+decider, so the decider was never the difference — the evidence route replays
+its candidate model through the ground evaluator first (the Hard Rule), and the
+replay was failing on a CORRECT model.
+
+`poly_big::combine` reaches an operand's interval only by bisection, and
+bisecting toward a *rational* root lands the midpoint exactly on it: the
+interval collapses and the code declined. Every rational lifted by
+`from_rational` hits that on its first refinement, so `c + α` — here
+`1 + (−3/4)`, from the witness `y = −√3/2` — never computed. A collapsed
+interval is more information, not less: the operand is exactly that rational, so
+`α + c` is a root of `p(x − c)` and `α · c` of `p(x / c)`, isolation carried
+over by bijection instead of re-derived inside a resultant's interval. Accepted
+under `combine`'s own criterion (opposite endpoint signs, exact Sturm count 1),
+so a decline stays a decline.
+
+The instance now reports `sat-model certified=true checked=true`. Worth noting
+for the next lane on this axis: nothing else in the tree compares the two routes
+on the same query, so a divergence is only visible when someone points
+`diagnose_evidence` at a file by hand.
 
 **Status:** Semantic admission diagnostics isolate official `Nat.mod` versus the native Bool-rollover remainder inside `Nat.div_mod_exec`; the 92-declaration `Nat.dvd_gcd` closure shows `Nat.mod_lt` already reusable and `Nat.dvd_mod_iff` independently missing. Official high-level support (`Nat.dvd_mod_iff`, `Nat.mod_add_div`, and `Nat.div_add_mod`) carries `propext` and remains reference-only. A minimal Lean 4.30.0 pack of generated `Nat.mod.eq_2` and `Nat.modCore.go.eq_1` equations instead imports with zero axioms and composes into r082 exactly: 183 selected declarations, 181 reused, two added theorem identities equal, both footprints empty, and the V5 receipt replays.
 
