@@ -13,12 +13,17 @@ Every figure here is replayed from committed `bench-results/dominance/*.json`,
 and a dominance audit records nothing about the code that produced it. So the
 table is only as current as the audits, and the audits are refreshed by hand.
 
-Measured 2026-08-20: all 35 committed audits predated the newest solver-source
-commit, the oldest by **55 days**, and the drift ran in BOTH directions —
-instances recorded as `bare-unsat` are now certified, and two recorded as
-decided `unsat` (`replace-find-base`, `str-code-unsat-2`) now return `unknown`
-at a 60s budget. That capability regression went unreported because the
-artifact that would have shown it carried no age.
+Measured 2026-08-20: all 35 committed audits predate the newest solver-source
+commit, the oldest by **55 days**. 20 of the 31 string-family paths recorded
+here as `bare-unsat` are certified today, as is
+`cli__regress0__nl__very-simple-unsat`.
+
+And the file date is not the measurement date. `r0_QF_SLIA_replace-find-base`
+is recorded `audit_outcome=unsat ... baseline_matches_audit=true`; building the
+audit's own commit `8aff8d507` and running the byte-identical corpus file
+returns **`sat`** — a wrong answer on a query z3 decides unsat, since fixed
+(today: `unknown`, which is sound). An audit row can therefore disagree with
+the tree it is filed against, so the numbers below have no reliable age at all.
 
 Before quoting any number below, check the dates in **Audit provenance** at the
 end of this file against `git log -1 crates/axeyum-solver/src`.

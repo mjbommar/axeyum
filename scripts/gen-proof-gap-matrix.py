@@ -250,16 +250,26 @@ def audit_provenance() -> list[tuple[str, str, str]]:
     way to tell a measurement taken today from one taken two months ago, and the
     numbers below are reproduced verbatim into planning documents as if current.
 
-    Measured 2026-08-20: every one of the 35 committed audits predated the
-    newest solver-source commit, the oldest by **55 days** — and the drift ran
-    in BOTH directions. Instances the audits record as `bare-unsat` are now
-    certified (`unsat__replace_all__not-first-only` is `drat-unsat`,
-    `cli__regress0__nl__very-simple-unsat` is `nra-even-power-unsat`), while
-    others no longer decide at all: `replace-find-base` and
-    `str-code-unsat-2` are recorded as decided `unsat` and today return
-    `unknown` at a 60s budget, confirmed against the z3 binary with DISAGREE=0.
-    A capability regression sat unreported because the artifact that would show
-    it had no age on it.
+    Measured 2026-08-20: every one of the 35 committed audits predates the
+    newest solver-source commit, the oldest by **55 days**. Instances the audits
+    record as `bare-unsat` are certified today — 20 of the 31 string-family
+    paths, plus `cli__regress0__nl__very-simple-unsat`, which is now
+    `nra-even-power-unsat`.
+
+    Worse than stale: **an audit row can disagree with the tree at its own
+    commit.** `r0_QF_SLIA_replace-find-base` is recorded `audit_outcome=unsat,
+    baseline_outcome=unsat, baseline_matches_audit=true` in the audit last
+    touched by `8aff8d507`. Building that exact commit and running the same
+    byte-identical corpus file (`git hash-object` matches) returns **`sat`** —
+    a wrong answer on a query z3 decides unsat. Today the same file returns
+    `unknown`, which is sound; the wrong-sat has been fixed since.
+
+    So the date on the audit FILE is not the date of the measurement inside it.
+    `8aff8d507` is titled "refresh bare-route audits to v2" — a schema migration
+    that can rewrite JSON without re-running anything, leaving rows of unknown
+    and unknowable age. That is the defect: not that the numbers are old, but
+    that nothing in the artifact says how old, and the commit date is not a
+    usable proxy.
 
     Dates are commit dates of the audit FILES, so they are stable inputs: they
     move only when an audit is actually refreshed, which is exactly when this
@@ -303,12 +313,17 @@ def markdown(report: dict) -> str:
         "and a dominance audit records nothing about the code that produced it. So the",
         "table is only as current as the audits, and the audits are refreshed by hand.",
         "",
-        "Measured 2026-08-20: all 35 committed audits predated the newest solver-source",
-        "commit, the oldest by **55 days**, and the drift ran in BOTH directions —",
-        "instances recorded as `bare-unsat` are now certified, and two recorded as",
-        "decided `unsat` (`replace-find-base`, `str-code-unsat-2`) now return `unknown`",
-        "at a 60s budget. That capability regression went unreported because the",
-        "artifact that would have shown it carried no age.",
+        "Measured 2026-08-20: all 35 committed audits predate the newest solver-source",
+        "commit, the oldest by **55 days**. 20 of the 31 string-family paths recorded",
+        "here as `bare-unsat` are certified today, as is",
+        "`cli__regress0__nl__very-simple-unsat`.",
+        "",
+        "And the file date is not the measurement date. `r0_QF_SLIA_replace-find-base`",
+        "is recorded `audit_outcome=unsat ... baseline_matches_audit=true`; building the",
+        "audit's own commit `8aff8d507` and running the byte-identical corpus file",
+        "returns **`sat`** — a wrong answer on a query z3 decides unsat, since fixed",
+        "(today: `unknown`, which is sound). An audit row can therefore disagree with",
+        "the tree it is filed against, so the numbers below have no reliable age at all.",
         "",
         "Before quoting any number below, check the dates in **Audit provenance** at the",
         "end of this file against `git log -1 crates/axeyum-solver/src`.",
