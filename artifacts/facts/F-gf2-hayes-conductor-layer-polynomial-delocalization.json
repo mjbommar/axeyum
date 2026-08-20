@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-conductor-layer-polynomial-delocalization",
+  "title": "Polynomial-loss delocalization of binary Hayes conductor layers",
+  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, put D_e=N_n(e)-2^(n-ell), and let D_[j]=P_j D-P_(j-1)D. For every 2<=j<=ell and every class e, |D_[j](e)|^2 is at most 4 ell^4 (j-1)^2 2^(j-1+n-2ell).",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"max_e |D_[j](e)|^2 <= 4*ell^4*(j-1)^2*2^(j-1+n-2*ell)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-conductor-layer-polynomial-delocalization\",\"level_min\":200,\"level_range\":\"2<=j<=ell\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "ell",
+      "n",
+      "j",
+      "e"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; corrected conductor martingale reduction after the absolute-constant recurrence obstruction"
+  },
+  "notes": "This is the corrected open SUP-L target. The individual Weil triangle bound proves it whenever 2^(j-1)<=4 ell^4, so only levels above about 4 log2(ell) remain new. The native implication derives M_4 <= 2500 ell^8 2^(3ell) and checks the proper-power-aware finite handoff at degrees 401 and 402. The exact finite diagnostic is useful for falsification but cannot establish the quantified statement. No Autogenesis operation is registered because no universal checker exists."
+}

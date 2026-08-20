@@ -7,7 +7,7 @@
 //! specialized odd-endpoint route uses its sharper proved population bound to
 //! recover the same integer from one admitted transform prime.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt;
 use std::sync::{Mutex, OnceLock};
 
@@ -2782,7 +2782,7 @@ impl Default for ConductorLayerSupBoundAssumption {
     fn default() -> Self {
         Self {
             squared_constant: 4,
-            polynomial_power: 0,
+            polynomial_power: 4,
             threshold: 200,
             finite_max_degree: 400,
         }
@@ -2800,13 +2800,14 @@ pub struct ConductorLayerSupBoundReport {
     pub derived_fourth_moment_constant: usize,
     /// Polynomial power in the derived fourth-moment envelope.
     pub derived_fourth_moment_power: usize,
-    /// Last conductor level already supplied by the individual Weil bound.
+    /// Last conductor level already supplied by the individual Weil bound at
+    /// the assumption threshold.
     ///
     /// Indeed the triangle estimate is the requested layer estimate with
     /// squared constant `2^(j-1)`.  Thus every level satisfying
-    /// `2^(j-1)<=C` is unconditional; for the default `C=4`, only levels
-    /// `j>=4` remain part of the new delocalization obligation.
-    pub individual_weil_proved_through_level: usize,
+    /// `2^(j-1)<=C ell^a` is unconditional.  The report uses a conservative
+    /// exact lower power of two at `ell=threshold`.
+    pub individual_weil_proved_through_level_at_threshold: usize,
     /// Existing exact endpoint implication fed by the derived envelope.
     pub derived_fourth_moment: FourthMomentBoundReport,
 }
@@ -5041,6 +5042,47 @@ pub struct ConductorLayerSupNormDiagnostic {
     pub maximum_squared_constant_numerator: BigUint,
     /// Denominator of that largest ratio.
     pub maximum_squared_constant_denominator: BigUint,
+}
+
+/// Exact fixed-conductor sibling difference propagated in the degree.
+///
+/// The level-`j` Hayes `L`-polynomials have degree `j-1`, so their Fourier
+/// inverse `Delta_j(.;n)` satisfies the same group-ring recurrence.  This
+/// report seeds that recurrence from exact small-degree populations, checks
+/// its first propagated row independently, and retains the target row as
+/// arbitrary-precision integers.  It avoids allocating the ambient endpoint
+/// group `E_ell`, because the level layer depends only on `(j,n)`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FixedConductorSiblingRecurrenceReport {
+    /// Exact conductor level `j`.
+    pub level: usize,
+    /// Target polynomial degree `n`.
+    pub degree: usize,
+    /// Order `2^j` of the level group.
+    pub group_order: usize,
+    /// Number `j-1` of exact seed rows.
+    pub seed_count: usize,
+    /// First recurrence degree checked against a fresh population transform.
+    pub independently_checked_degree: usize,
+    /// Class attaining the largest sibling-difference magnitude.
+    pub witness_class: usize,
+    /// Packed principal unit of the witness class.
+    pub witness_unit: u64,
+    /// Exact peak `max_b |Delta_j(b;n)|`.
+    pub maximum_sibling_difference: BigUint,
+    /// Numerator of the exact required squared constant.
+    pub squared_constant_numerator: BigUint,
+    /// Denominator of the exact required squared constant.
+    pub squared_constant_denominator: BigUint,
+}
+
+impl FixedConductorSiblingRecurrenceReport {
+    /// Whether this row violates an integer squared-constant ceiling.
+    #[must_use]
+    pub fn violates_squared_constant(&self, squared_constant: usize) -> bool {
+        self.squared_constant_numerator
+            > BigUint::from(squared_constant) * &self.squared_constant_denominator
+    }
 }
 
 impl ConductorLayerSupNormDiagnostic {
@@ -10515,18 +10557,221 @@ pub fn check_conductor_layer_sup_bound_sufficiency(
             threshold: assumption.threshold,
             finite_max_degree: assumption.finite_max_degree,
         })?;
-    let individual_weil_proved_through_level = usize::try_from(
-        usize::BITS - assumption.squared_constant.leading_zeros(),
+    if assumption.threshold == 0 {
+        return Err(HayesError::InvalidParameter(
+            "conductor-layer threshold must be positive".to_owned(),
+        ));
+    }
+    let constant_log = usize::try_from(
+        usize::BITS - 1 - assumption.squared_constant.leading_zeros(),
     )
     .map_err(|_| {
-        HayesError::InvalidParameter("conductor-layer Weil prefix does not fit usize".to_owned())
+        HayesError::InvalidParameter(
+            "conductor-layer constant logarithm does not fit usize".to_owned(),
+        )
     })?;
+    let threshold_log = usize::try_from(usize::BITS - 1 - assumption.threshold.leading_zeros())
+        .map_err(|_| {
+            HayesError::InvalidParameter(
+                "conductor-layer threshold logarithm does not fit usize".to_owned(),
+            )
+        })?;
+    let individual_weil_proved_through_level_at_threshold = assumption
+        .polynomial_power
+        .checked_mul(threshold_log)
+        .and_then(|value| value.checked_add(constant_log))
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("conductor-layer Weil prefix overflow".to_owned())
+        })?;
     Ok(ConductorLayerSupBoundReport {
         assumption,
         derived_fourth_moment_constant,
         derived_fourth_moment_power,
-        individual_weil_proved_through_level,
+        individual_weil_proved_through_level_at_threshold,
         derived_fourth_moment,
+    })
+}
+
+struct FixedConductorRecurrenceGroup {
+    order: usize,
+    units: Vec<u64>,
+    unit_to_index: BTreeMap<u64, usize>,
+    addition: Vec<usize>,
+    generator: usize,
+}
+
+fn fixed_conductor_recurrence_group(
+    level: usize,
+    limits: HayesLimits,
+) -> Result<FixedConductorRecurrenceGroup, HayesError> {
+    let structure = principal_unit_structure(level, limits)?;
+    let order = structure.group_order;
+    let (_, unit_to_index) = principal_unit_index_table(level, limits)?;
+    let units = (0..order)
+        .map(|index| principal_unit_from_mixed_radix_index(index, &structure.factors, level))
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut addition = vec![0_usize; order * order];
+    for left in 0..order {
+        for right in 0..order {
+            let product = unit_multiply(units[left], units[right], level);
+            addition[left * order + right] = *unit_to_index.get(&product).ok_or_else(|| {
+                HayesError::Invariant("fixed-conductor product has no mixed-radix index".to_owned())
+            })?;
+        }
+    }
+    let generator_unit = 1_u64
+        .checked_shl(u32::try_from(level).map_err(|_| {
+            HayesError::InvalidParameter("fixed-conductor level exceeds u32".to_owned())
+        })?)
+        .map(|value| value | 1)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("fixed-conductor generator overflow".to_owned())
+        })?;
+    let generator = *unit_to_index
+        .get(&generator_unit)
+        .ok_or_else(|| HayesError::Invariant("fixed-conductor generator is absent".to_owned()))?;
+    Ok(FixedConductorRecurrenceGroup {
+        order,
+        units,
+        unit_to_index,
+        addition,
+        generator,
+    })
+}
+
+fn fixed_conductor_first_recurrence_degree(level: usize) -> Result<usize, HayesError> {
+    if level < 2 {
+        return Err(HayesError::InvalidParameter(
+            "fixed-conductor recurrence requires level at least two".to_owned(),
+        ));
+    }
+    level
+        .checked_mul(2)
+        .and_then(|value| value.checked_sub(1))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("fixed-conductor recurrence degree overflow".to_owned())
+        })
+}
+
+/// Propagate one exact-conductor sibling-difference row to an arbitrary degree.
+///
+/// If `Delta_j(n)` denotes the level-`j` sibling-difference vector, logarithmic
+/// differentiation of the degree-`j-1` Hayes `L`-polynomials gives
+///
+/// ```text
+/// Delta_j(n) = -sum_(d=1)^(j-1) A_d * Delta_j(n-d),
+/// A_d = sum_(u in V_d) [u].
+/// ```
+///
+/// The operation constructs `Delta_j(j),...,Delta_j(2j-2)` by the independent
+/// exact population transform, checks the first recurrence row at `2j-1`
+/// against another fresh transform, and then uses `BigInt` recurrence.  The
+/// admitted work bound is conservative `degree * |E_j|^2`.
+///
+/// # Errors
+///
+/// Rejects levels below two, degrees below `2j-1`, packed-unit overflow, or a
+/// request above the supplied group/table limits, and fails closed if the
+/// first propagated row differs from the independent population transform.
+pub fn fixed_conductor_sibling_recurrence(
+    level: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<FixedConductorSiblingRecurrenceReport, HayesError> {
+    let first_recurrence_degree = fixed_conductor_first_recurrence_degree(level)?;
+    if degree < first_recurrence_degree {
+        return Err(HayesError::InvalidParameter(format!(
+            "fixed-conductor recurrence requires degree at least {first_recurrence_degree}"
+        )));
+    }
+    check_limit("degree", degree, limits.max_degree)?;
+    let group = fixed_conductor_recurrence_group(level, limits)?;
+    let group_order = group.order;
+    let work = degree
+        .checked_mul(group_order)
+        .and_then(|value| value.checked_mul(group_order))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("fixed-conductor recurrence work overflow".to_owned())
+        })?;
+    check_limit(
+        "fixed_conductor_recurrence_cells",
+        work,
+        limits.max_table_cells,
+    )?;
+    let direct = |target_degree: usize| -> Result<Vec<BigInt>, HayesError> {
+        let distribution = class_population_distribution(level, target_degree, limits)?;
+        Ok((0..group_order)
+            .map(|class| {
+                let sibling = group.addition[class * group_order + group.generator];
+                BigInt::from(distribution.counts[class])
+                    - BigInt::from(distribution.counts[sibling])
+            })
+            .collect())
+    };
+    let mut blocks = vec![Vec::new(); level];
+    for (block_degree, block) in blocks.iter_mut().enumerate().skip(1) {
+        let size = 1_usize << block_degree;
+        block.reserve(size);
+        for mask in 0..size {
+            let unit = 1_u64 | ((mask as u64) << 1);
+            block.push(*group.unit_to_index.get(&unit).ok_or_else(|| {
+                HayesError::Invariant("fixed-conductor coefficient block is absent".to_owned())
+            })?);
+        }
+    }
+    let seed_count = level - 1;
+    let mut history = VecDeque::with_capacity(seed_count);
+    for seed_degree in level..(level + seed_count) {
+        history.push_back(direct(seed_degree)?);
+    }
+    for current_degree in first_recurrence_degree..=degree {
+        let mut next = vec![BigInt::from(0_u8); group_order];
+        for lag in 1..level {
+            let previous = &history[history.len() - lag];
+            for &shift in &blocks[lag] {
+                for (class, value) in previous.iter().enumerate() {
+                    if value == &BigInt::from(0_u8) {
+                        continue;
+                    }
+                    let output = group.addition[class * group_order + shift];
+                    next[output] -= value;
+                }
+            }
+        }
+        if current_degree == first_recurrence_degree && next != direct(current_degree)? {
+            return Err(HayesError::Invariant(
+                "fixed-conductor recurrence disagrees with independent population transform"
+                    .to_owned(),
+            ));
+        }
+        history.pop_front();
+        history.push_back(next);
+    }
+    let target = history.back().ok_or_else(|| {
+        HayesError::Invariant("fixed-conductor recurrence has no target row".to_owned())
+    })?;
+    let (witness_class, maximum_sibling_difference) = target
+        .iter()
+        .enumerate()
+        .map(|(class, value)| (class, value.magnitude().clone()))
+        .max_by(|left, right| left.1.cmp(&right.1))
+        .ok_or_else(|| {
+            HayesError::Invariant("fixed-conductor recurrence target is empty".to_owned())
+        })?;
+    let squared_constant_numerator = maximum_sibling_difference.pow(2) << (level - 1);
+    let squared_constant_denominator = BigUint::from(level - 1).pow(2) << degree;
+    Ok(FixedConductorSiblingRecurrenceReport {
+        level,
+        degree,
+        group_order,
+        seed_count,
+        independently_checked_degree: first_recurrence_degree,
+        witness_class,
+        witness_unit: group.units[witness_class],
+        maximum_sibling_difference,
+        squared_constant_numerator,
+        squared_constant_denominator,
     })
 }
 
@@ -20634,8 +20879,8 @@ mod tests {
         )
         .unwrap();
         assert_eq!(report.derived_fourth_moment_constant, 2_500);
-        assert_eq!(report.derived_fourth_moment_power, 4);
-        assert_eq!(report.individual_weil_proved_through_level, 3);
+        assert_eq!(report.derived_fourth_moment_power, 8);
+        assert_eq!(report.individual_weil_proved_through_level_at_threshold, 31);
         assert_eq!(report.derived_fourth_moment.first_odd_degree, 401);
         assert_eq!(report.derived_fourth_moment.first_even_degree, 402);
 
@@ -20653,6 +20898,95 @@ mod tests {
             })
             .is_err()
         );
+    }
+
+    #[test]
+    fn absolute_conductor_delocalization_has_exact_counterexample() {
+        // Degree 56 is the even endpoint for ell=27.  The level-four sibling
+        // difference is independent of the ambient endpoint level, so the
+        // E_4 transform gives the exact counterexample without allocating
+        // the much larger E_27 table.
+        let distribution = class_population_distribution(
+            4,
+            56,
+            HayesLimits {
+                max_degree: 56,
+                ..HayesLimits::default()
+            },
+        )
+        .unwrap();
+        let report = distribution
+            .conductor_layer_sup_norm_diagnostic(2 * 4 * 16)
+            .unwrap();
+        let level = report.levels.iter().find(|level| level.level == 4).unwrap();
+        assert_eq!(level.maximum_sibling_difference, 670_285_824);
+        assert_eq!(
+            level.squared_constant_numerator,
+            BigUint::from(3_594_264_686_842_871_808_u128)
+        );
+        assert_eq!(
+            level.squared_constant_denominator,
+            BigUint::from(648_518_346_341_351_424_u128)
+        );
+        assert!(!report.satisfies_squared_constant(4));
+
+        let recurrence = fixed_conductor_sibling_recurrence(
+            4,
+            56,
+            HayesLimits {
+                max_degree: 56,
+                ..HayesLimits::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            recurrence.maximum_sibling_difference,
+            BigUint::from(level.maximum_sibling_difference)
+        );
+        assert_eq!(
+            recurrence.squared_constant_numerator,
+            level.squared_constant_numerator
+        );
+        assert_eq!(
+            recurrence.squared_constant_denominator,
+            level.squared_constant_denominator
+        );
+    }
+
+    #[test]
+    fn absolute_conductor_delocalization_fails_after_finite_handoff() {
+        // Degree 688 is the even endpoint for ell=343, beyond the separately
+        // certified degree-400 range.  The exact BigInt recurrence proves
+        // that the absolute C=4 target still fails there.
+        let limits = HayesLimits {
+            max_degree: 688,
+            max_table_cells: 688 * 16 * 16,
+            ..HayesLimits::default()
+        };
+        let report = fixed_conductor_sibling_recurrence(4, 688, limits).unwrap();
+        assert_eq!(report.level, 4);
+        assert_eq!(report.degree, 688);
+        assert_eq!(report.group_order, 16);
+        assert_eq!(report.seed_count, 3);
+        assert_eq!(report.independently_checked_degree, 7);
+        assert!(report.violates_squared_constant(4));
+        assert!(!report.violates_squared_constant(4 * 343_usize.pow(4)));
+
+        assert!(matches!(
+            fixed_conductor_sibling_recurrence(
+                4,
+                688,
+                HayesLimits {
+                    max_degree: 688,
+                    max_table_cells: 688 * 16 * 16 - 1,
+                    ..HayesLimits::default()
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "fixed_conductor_recurrence_cells",
+                ..
+            })
+        ));
     }
 
     #[test]

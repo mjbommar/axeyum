@@ -1,6 +1,6 @@
 # ADR-0568: Reduce the wild moment to conductor-layer delocalization
 
-Status: accepted
+Status: superseded by ADR-0569
 Date: 2026-08-20
 Index-summary: Replace the undifferentiated wild fourth-moment target by an exact conductor martingale and one square-root sup bound with polynomial loss allowed
 
@@ -78,5 +78,6 @@ universal premise.
   theorem, not another unrestricted fourth-moment table.
 - The bottom levels `j<=3` are discharged unconditionally for `C=4`; work may
   start at `j=4`.
-- Finite tests currently support `C=4,a=0`, but receive no theorem credit.
+- Finite tests through `ell=20` supported `C=4,a=0`, but a later exact
+  `(ell,n,j)=(27,56,4)` row refuted it; ADR-0569 records the correction.
 - No Lemire theorem is established by this decision.

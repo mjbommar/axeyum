@@ -3354,22 +3354,53 @@ M_4 <= 625 C ell^(a+4) 2^(3ell).                     (CL4)
 ```
 
 The proper-power-aware endpoint checker verifies that every fixed
-polynomial-loss bound (CL4) eventually closes.  Its concrete `C=4,a=0`
-instance gives `M_4<=2500 ell^4 2^(3ell)` and completes the certified
+polynomial-loss bound (CL4) eventually closes.  The current concrete target
+`C=4,a=4` gives `M_4<=2500 ell^8 2^(3ell)` and completes the certified
 degree-400 handoff at degrees 401 and 402.
 
-The first two nonzero levels are partly settled already.  Applying the
-individual Weil estimate inside the exact Fourier identity (HF) proves
-`(SUP-L)` with squared constant `2^(j-1)`.  Therefore `C=4` is unconditional
-for `j=2,3`; the new theorem starts at `j=4`.  This is small but genuine
-progress on the universal quantifier, rather than another finite row.
+The initially selected absolute-constant specialization `C=4,a=0` is false.
+At the even endpoint `(ell,n)=(27,56)`, the level-four sibling-difference peak
+is exactly `670285824`, so the required squared constant is
+
+```text
+3594264686842871808/648518346341351424 > 4.
+```
+
+The exact arbitrary-precision degree recurrence supplies a second violation at
+`(ell,n,j)=(343,688,4)`, beyond both the asymptotic threshold and the certified
+degree-400 handoff.  It seeds `j-1` rows from full population transforms and
+checks the first propagated row against a fresh transform before proceeding.
+
+There is also a structural obstruction to *every* absolute `K`.  For fixed
+`j`, normalize all inverse roots of all primitive level-`j` Hayes
+`L`-polynomials by `sqrt(2)`.  They form one finite vector on a compact torus.
+Simultaneous recurrence supplies `n_k->infinity` for which every normalized
+root to the power `n_k` tends to one.  Hence all normalized power sums tend to
+`j-1` simultaneously, and Fourier inversion at the identity gives
+
+```text
+sup_(endpoint n>=2j+1) kappa_j(n)=2^((j-1)/2),
+```
+
+the trivial triangle ceiling.  Since every sufficiently large integer is one
+of the two endpoint forms, an absolute `K` cannot be uniform in `j`.
+
+This does not refute polynomial loss in `ell`: the recurrent degree can grow
+rapidly with `j`.  Applying the individual Weil estimate inside (HF) proves
+`(SUP-L)` whenever `2^(j-1)<=C ell^a`.  For the selected `C=4,a=4`, only
+
+```text
+2^(j-1)>4ell^4,
+```
+
+or roughly `j>4log2(ell)+3`, remains genuinely open.
 
 `conductor_layer_sup_norm_diagnostic` records the exact rational squared
 constant required at each enumerated level, using only integer sibling
 differences.  `check_conductor_layer_sup_bound_sufficiency` separately checks
-the symbolic implication and reports the unconditional Weil prefix.  The
-finite diagnostic supports `C=4` through the tested endpoints up to `ell=20`,
-but it is explicitly non-credit-bearing.  The exact conductor energy also
+the symbolic implication and reports the unconditional Weil prefix.  It also
+pins the degree-56 refutation, preventing the earlier finite fit through
+`ell=20` from being promoted again.  The exact conductor energy also
 telescopes multiplicatively as
 
 ```text
@@ -3378,9 +3409,9 @@ telescopes multiplicatively as
 ```
 
 which is retained as an invariant rather than mistaken for a bound.  The
-remaining load-bearing lemma is `(SUP-L)` for `j>=4`, most plausibly as a
-relative trace/purity statement for one exact conductor family.  See
-ADR-0568.
+remaining load-bearing lemma is polynomial-loss `(SUP-L)` in the growing
+high-conductor range, most plausibly as a relative trace/purity statement for
+one exact conductor family.  See ADR-0569.
 
 There is a weaker and better-connected target.  Lemire needs only the identity
 class, and along its path the weighted increments telescope.  Put

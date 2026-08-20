@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "id": "F:gf2-hayes-conductor-layer-delocalization",
-  "title": "Square-root delocalization of binary Hayes conductor layers",
-  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, put D_e=N_n(e)-2^(n-ell), and let D_[j]=P_j D-P_(j-1)D be its exact-conductor martingale layer. For every 4<=j<=ell and every class e, |D_[j](e)|^2 is at most 4 (j-1)^2 2^(j-1+n-2ell).",
+  "title": "Absolute-constant square-root delocalization of binary Hayes conductor layers",
+  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, put D_e=N_n(e)-2^(n-ell), and let D_[j]=P_j D-P_(j-1)D be its exact-conductor martingale layer. For every 4<=j<=ell and every class e, |D_[j](e)|^2 is at most 4 (j-1)^2 2^(j-1+n-2ell). THIS PROPOSITION IS FALSE: the exact fixed-conductor recurrence gives a level-j=4 violation at the even endpoint (ell,n)=(343,688), beyond the degree-400 finite handoff.",
   "formal": {
     "language": "certificate-spec",
-    "statement": "{\"bound\":\"max_e |D_[j](e)|^2 <= 4*(j-1)^2*2^(j-1+n-2*ell)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-conductor-layer-delocalization\",\"level_min\":200,\"level_range\":\"4<=j<=ell\",\"version\":1}",
+    "statement": "{\"bound\":\"max_e |D_[j](e)|^2 <= 4*(j-1)^2*2^(j-1+n-2*ell)\",\"counterexample\":{\"degree\":688,\"ell\":343,\"level\":4,\"required_squared_constant_gt\":4},\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-conductor-layer-delocalization\",\"level_min\":200,\"level_range\":\"4<=j<=ell\",\"version\":3}",
     "fragment": "none",
     "free_symbols": [
       "ell",
@@ -14,15 +14,25 @@
       "e"
     ]
   },
-  "epistemic_status": "conjectured",
-  "external_status": "unknown",
+  "epistemic_status": "refuted",
+  "external_status": "refuted",
   "depends_on": [],
-  "proof_route": "none",
-  "evidence": [],
+  "proof_route": "cas-certificate",
+  "evidence": [
+    {
+      "id": "gf2-hayes-level-four-absolute-delocalization-counterexample",
+      "kind": "witness-replay",
+      "supports": "The exact level-four degree recurrence gives a normalized squared constant strictly greater than four at degree 688, the even endpoint for ell=343.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features absolute_conductor_delocalization_fails_after_finite_handoff",
+      "artifact": "crates/axeyum-cas/src/gf2_hayes.rs",
+      "notes": "The level-j sibling difference is independent of the ambient ell once ell>=j. The arbitrary-precision recurrence is seeded by exact population transforms and its first propagated row is independently checked. It avoids allocating E_343 while retaining the exact E_4 endpoint layer."
+    }
+  ],
   "provenance": {
     "date": "2026-08-20",
-    "established_by": "not established in this ledger",
-    "source": "Axeyum gf2-lemire lane; exact conductor martingale reduction and endpoint implication"
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "native exact level-four Hayes population and conductor-layer normalization"
   },
-  "notes": "This is the open SUP-L statement, not a promoted finite computation. The individual character Weil bound proves the same inequality for j<=3, so the machine-visible obligation begins at j=4. Exact bounded rows through ell=20 require squared constant at most four, but those rows are falsification controls only. The native implication derives M_4 <= 2500 ell^4 2^(3ell) and checks the proper-power-aware finite handoff at degrees 401 and 402. A more general C ell^a loss is also sufficient for fixed C,a. No Autogenesis operation is registered because no checker establishes the quantified estimate."
+  "notes": "This refutes the concrete absolute-constant target selected from rows through ell=20. More generally, simultaneous recurrence of the finitely many normalized Frobenius eigenvalues at a fixed level j shows that the supremum over endpoint degrees of the normalized kappa_j is exactly the trivial ceiling 2^((j-1)/2), so no absolute K can work uniformly in j. It does not refute a polynomial-in-ell loss, because the recurrent degrees can grow rapidly with j. The replacement conjectured fact uses squared loss 4 ell^4 and the existing endpoint implication."
 }
