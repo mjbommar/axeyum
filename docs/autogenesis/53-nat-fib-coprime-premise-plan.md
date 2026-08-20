@@ -5,17 +5,19 @@ Date: 2026-08-19
 ## Result
 
 The proof shape is bounded, and the first composition seam is now closed through
-the public theorem-only API. Axeyum's axiom-free `Nat.zero_add`, `Nat.succ_add`,
+the public theorem-rooted API. Axeyum's axiom-free `Nat.zero_add`, `Nat.succ_add`,
 and `Nat.add_comm` proofs compose into the imported Mathlib environment with a
 replayable receipt. Translated definitional equality resolves the first
-order-wrapper differences, and atomic singleton composition reconstructs the
-absent `Exists` package. The next root now stops at definition `Nat.mul`.
+order-wrapper differences, atomic singleton composition reconstructs the
+absent `Exists` package, and checked definition composition admits exact
+`Nat.mul` and `Nat.dvd` definitions plus eight axiom-free theorems. The larger
+`Nat.dvd_gcd` control now stops at the imported/native `Bool.rec` branch order.
 
 The exact `r082` train stream imports 261 declarations and 52 theorems with no
 axioms. It contains `Nat.rec`, but none of the seven native lemmas required by
 the bounded proof. Calling `build_nat_prelude` wholesale still rejects at the
 first overlapping logic declaration, `True`, with `DeclarationExists`; selected
-theorem-only composition avoids granting that rejected bulk operation authority.
+theorem-rooted composition avoids granting that rejected bulk operation authority.
 
 ## Bounded proof shape
 
@@ -44,10 +46,12 @@ The completed first increment followed this order:
 4. Reproduce the selected three-theorem slice through a public completed-clone
    API and bind its exact receipt.
 
-The next increment must rebuild the demanded `Nat.mul` definition's type,
-value, universe parameters, and reducibility exactly in the private target,
-submit it through the ordinary target gate, and bind both source and target
-identities. Opaque, conflicting, and unsupported definitions must decline.
+The definition increment rebuilds demanded types, values, universe parameters,
+and reducibility exactly in the private target, submits them through the
+ordinary target gate, and binds both source and target identities. Opaque,
+conflicting, and unsupported declaration kinds still decline. The next
+increment must resolve the measured `Bool.rec` representation seam without
+granting generic recursor permutation authority.
 
 This is the holistic point: theorem search cannot use the library until the
 library and imported target share one checked environment. Solving this seam
@@ -56,7 +60,7 @@ also benefits every later Mathlib target that needs native arithmetic facts.
 ## Evidence
 
 The current read-only observation is
-`/nas3/data/axeyum/autogenesis/probes/fced2b166-singleton-inductive-composition-v9/observation.json`.
+`/nas3/data/axeyum/autogenesis/probes/acade2a45-definition-composition-v10/observation.json`.
 It binds the public API, exact source closure, reused declaration identities,
 added theorem identities, environment transition, and composition receipt. The
 history is recorded in
@@ -65,7 +69,8 @@ the promoted boundary in
 [public checked theorem composition](58-public-checked-theorem-composition.md),
 and the next compatibility result in
 [translated definitional reuse](59-translated-definitional-reuse.md), followed
-by [atomic singleton-inductive composition](60-atomic-singleton-inductive-composition.md).
+by [atomic singleton-inductive composition](60-atomic-singleton-inductive-composition.md)
+and [checked definition composition](61-checked-definition-composition.md).
 Verify the tracked plan and its authority boundary with:
 
 ```sh

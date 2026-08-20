@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** ADR-0525 and receipt V3 atomically reconstruct demanded non-recursive singleton inductives through the target kernel. A real r082 control composes exact `Exists` / `Exists.intro` / `Exists.rec` plus an axiom-free theorem; the unchanged Fibonacci-support root now advances to missing definition `Nat.mul`.
+**Status:** ADR-0526 and receipt V4 reconstruct demanded definitions only through ordinary target-kernel admission. The real r082 `Nat.eq_one_of_dvd_one` root now composes exact `Nat.mul`, `Nat.dvd`, the `Exists` package, and eight axiom-free theorems; the larger `Nat.dvd_gcd` control advances to the imported/native `Bool.rec` branch-order mismatch.
 
-**Next:** specify definition composition as exact rebuilt type/value/reducibility plus ordinary target admission and receipt identity, initially for the measured `Nat.mul` demand; retain opaque/axiom and conflicting-definition declines, then retry the original root unchanged.
+**Next:** measure the blast radius of aligning the native Bool package with official Lean's `false`, `true` constructor order, preserve existing kernel computation and theorem inventories, and retry `Nat.dvd_gcd` unchanged. Do not authorize generic recursor permutation or declaration grafting from one mismatch.
 
 <!-- plan-section: landed-changes -->
 
@@ -20,3 +20,4 @@
 | 2026-08-20 | `0bcbe935d` | The r082 public-API probe exposes the exact source closure and canonical composition receipt identity |
 | 2026-08-20 | `c17b7e65b` | Receipt V2 records translated definitional equality as attempt-only reuse authority and moves the r082 blocker to missing `Exists` |
 | 2026-08-20 | `fced2b166` | Receipt V3 atomically reconstructs a demanded singleton inductive and advances the r082 root to missing definition `Nat.mul` |
+| 2026-08-20 | `acade2a45` | Receipt V4 target-checks exact demanded definitions and advances the r082 root to the `Bool.rec` branch-order seam |

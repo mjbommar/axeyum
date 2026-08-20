@@ -7,9 +7,9 @@ use std::io::Cursor;
 use std::path::PathBuf;
 
 use axeyum_lean_import::{
-    AddedTheoremReceipt, ImportLimits, ReusedDeclarationReceipt, canonical_alpha_expression_sha256,
-    canonical_declaration_sha256, canonical_expression_sha256, canonical_kernel_type_shape_sha256,
-    compose_checked_theorem_slice, import_ndjson,
+    AddedTheoremReceipt, CheckedTheoremCompositionReceipt, ImportLimits, ReusedDeclarationReceipt,
+    canonical_alpha_expression_sha256, canonical_declaration_sha256, canonical_expression_sha256,
+    canonical_kernel_type_shape_sha256, compose_checked_theorem_slice, import_ndjson,
 };
 use axeyum_lean_kernel::{BinderInfo, Declaration, Kernel, KernelError, build_nat_prelude};
 use serde_json::json;
@@ -20,6 +20,14 @@ fn main() {
         eprintln!("nat-prelude-composition-probe: {error}");
         std::process::exit(1);
     }
+}
+
+struct ControlObservations {
+    composition: serde_json::Value,
+    singleton: serde_json::Value,
+    definition: serde_json::Value,
+    negative: serde_json::Value,
+    kernel_submissions: usize,
 }
 
 fn run() -> Result<(), String> {
@@ -66,8 +74,7 @@ fn run() -> Result<(), String> {
         })
         .collect::<serde_json::Map<_, _>>();
     let overlaps = compare_native_overlaps(&kernel)?;
-    let (composition, singleton_inductive_control, structural_mismatch_control) =
-        exercise_composition_controls(&mut kernel)?;
+    let controls = exercise_composition_controls(&mut kernel)?;
     let result = match build_nat_prelude(&mut kernel) {
         Ok(_) => json!({"outcome": "composed"}),
         Err(error) => {
@@ -101,15 +108,16 @@ fn run() -> Result<(), String> {
             "kernel_type_shape_compatible_content_mismatched_names": overlaps.kernel_type_shape_compatible_content_mismatched,
             "type_mismatched_overlaps": overlaps.type_mismatched,
             "required_native_theorem_dependency_closures": overlaps.required_theorem_dependency_closures,
-            "composition_control": composition,
-            "singleton_inductive_control": singleton_inductive_control,
-            "structural_mismatch_control": structural_mismatch_control,
+            "composition_control": controls.composition,
+            "singleton_inductive_control": controls.singleton,
+            "definition_control": controls.definition,
+            "structural_mismatch_control": controls.negative,
         },
         "result": result,
         "authority": {
             "proof_bodies_displayed": false,
             "proof_search_invocations": 0,
-            "kernel_submissions": 5,
+            "kernel_submissions": controls.kernel_submissions,
             "ledger_writes": 0,
         },
     }))
@@ -121,15 +129,13 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
-fn exercise_composition_controls(
-    kernel: &mut Kernel,
-) -> Result<(serde_json::Value, serde_json::Value, serde_json::Value), String> {
+fn exercise_composition_controls(kernel: &mut Kernel) -> Result<ControlObservations, String> {
     let mut native = Kernel::new();
     let prelude = build_nat_prelude(&mut native)
         .map_err(|error| format!("native Nat prelude failed to build: {error:?}"))?;
     let singleton_root = add_exists_control_theorem(&mut native, prelude.logic)?;
     let negative_before = environment_sha256(kernel)?;
-    let negative_error = compose_checked_theorem_slice(&native, kernel, &["Nat.eq_one_of_dvd_one"])
+    let negative_error = compose_checked_theorem_slice(&native, kernel, &["Nat.dvd_gcd"])
         .expect_err("the structurally mismatched control must decline");
     let negative_after = environment_sha256(kernel)?;
     if negative_before != negative_after {
@@ -137,59 +143,33 @@ fn exercise_composition_controls(
     }
     let singleton_completed = compose_checked_theorem_slice(&native, kernel, &[singleton_root])
         .map_err(|error| format!("singleton inductive composition failed: {error:?}"))?;
-    let singleton_receipt = singleton_completed.receipt();
-    let singleton = json!({
-        "roots": singleton_receipt.roots,
-        "outcome": "composed",
-        "added_theorem_names": singleton_receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
-        "added_axiom_footprints": added_footprints(&singleton_receipt.added_theorems),
-        "added_singleton_inductives": singleton_receipt.added_singleton_inductives.iter().map(|row| json!({
-            "family": row.family,
-            "constructors": row.constructors,
-            "recursor": row.recursor,
-            "source_declaration_sha256": row.source_declaration_sha256,
-            "target_declaration_sha256": row.target_declaration_sha256,
-        })).collect::<Vec<_>>(),
-        "environment_sha256_before": singleton_receipt.target_environment_sha256_before,
-        "environment_sha256_after": singleton_receipt.target_environment_sha256_after,
-        "receipt_schema": singleton_receipt.schema_version,
-        "receipt_sha256": singleton_receipt.receipt_sha256,
-    });
+    let singleton = singleton_control_json(singleton_completed.receipt());
+    let definition_completed =
+        compose_checked_theorem_slice(&native, kernel, &["Nat.eq_one_of_dvd_one"])
+            .map_err(|error| format!("definition composition failed: {error:?}"))?;
+    let definition_receipt = definition_completed.receipt();
+    let definition = definition_control_json(definition_receipt);
     let completed = compose_checked_theorem_slice(&native, kernel, &["Nat.add_comm"])
         .map_err(|error| format!("checked composition failed: {error:?}"))?;
-    let receipt = completed.receipt();
-    let positive = json!({
-        "roots": receipt.roots,
-        "source_closure": receipt.source_closure,
-        "outcome": "composed",
-        "reused_dependency_names": receipt.reused_declarations.iter().map(|row| &row.name).collect::<Vec<_>>(),
-        "declarations_absent_before": receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
-        "added_theorem_names": receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
-        "added_declaration_sha256": added_digests(&receipt.added_theorems),
-        "added_axiom_footprints": added_footprints(&receipt.added_theorems),
-        "added_singleton_inductives": receipt.added_singleton_inductives.iter().map(|row| json!({
-            "family": row.family,
-            "constructors": row.constructors,
-            "recursor": row.recursor,
-            "source_declaration_sha256": row.source_declaration_sha256,
-            "target_declaration_sha256": row.target_declaration_sha256,
-        })).collect::<Vec<_>>(),
-        "reused_declaration_receipts": reused_receipts(&receipt.reused_declarations),
-        "environment_sha256_before": receipt.target_environment_sha256_before,
-        "environment_sha256_after": receipt.target_environment_sha256_after,
-        "receipt_schema": receipt.schema_version,
-        "receipt_sha256": receipt.receipt_sha256,
-    });
+    let positive = positive_control_json(completed.receipt());
     let (composed_kernel, _) = completed.into_parts();
     *kernel = composed_kernel;
     let negative = json!({
-        "root": "Nat.eq_one_of_dvd_one",
+        "root": "Nat.dvd_gcd",
         "outcome": "declined",
         "error": format!("{negative_error:?}"),
         "environment_sha256_before": negative_before,
         "environment_sha256_after": negative_after,
     });
-    Ok((positive, singleton, negative))
+    let kernel_submissions =
+        5 + definition_receipt.added_definitions.len() + definition_receipt.added_theorems.len();
+    Ok(ControlObservations {
+        composition: positive,
+        singleton,
+        definition,
+        negative,
+        kernel_submissions,
+    })
 }
 
 fn add_exists_control_theorem(
@@ -232,6 +212,88 @@ fn added_digests(rows: &[AddedTheoremReceipt]) -> BTreeMap<&str, &str> {
 fn added_footprints(rows: &[AddedTheoremReceipt]) -> BTreeMap<&str, &[String]> {
     rows.iter()
         .map(|row| (row.name.as_str(), row.axiom_footprint.as_slice()))
+        .collect()
+}
+
+fn singleton_control_json(receipt: &CheckedTheoremCompositionReceipt) -> serde_json::Value {
+    json!({
+        "roots": receipt.roots,
+        "outcome": "composed",
+        "added_theorem_names": receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
+        "added_axiom_footprints": added_footprints(&receipt.added_theorems),
+        "added_singleton_inductives": singleton_package_rows(receipt),
+        "environment_sha256_before": receipt.target_environment_sha256_before,
+        "environment_sha256_after": receipt.target_environment_sha256_after,
+        "receipt_schema": receipt.schema_version,
+        "receipt_sha256": receipt.receipt_sha256,
+    })
+}
+
+fn definition_control_json(receipt: &CheckedTheoremCompositionReceipt) -> serde_json::Value {
+    json!({
+        "roots": receipt.roots,
+        "source_closure": receipt.source_closure,
+        "outcome": "composed",
+        "added_definitions": definition_rows(receipt),
+        "added_theorem_names": receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
+        "added_axiom_footprints": added_footprints(&receipt.added_theorems),
+        "added_singleton_inductives": singleton_package_rows(receipt),
+        "reused_declaration_receipts": reused_receipts(&receipt.reused_declarations),
+        "environment_sha256_before": receipt.target_environment_sha256_before,
+        "environment_sha256_after": receipt.target_environment_sha256_after,
+        "receipt_schema": receipt.schema_version,
+        "receipt_sha256": receipt.receipt_sha256,
+    })
+}
+
+fn positive_control_json(receipt: &CheckedTheoremCompositionReceipt) -> serde_json::Value {
+    json!({
+        "roots": receipt.roots,
+        "source_closure": receipt.source_closure,
+        "outcome": "composed",
+        "reused_dependency_names": receipt.reused_declarations.iter().map(|row| &row.name).collect::<Vec<_>>(),
+        "declarations_absent_before": receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
+        "added_theorem_names": receipt.added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
+        "added_declaration_sha256": added_digests(&receipt.added_theorems),
+        "added_axiom_footprints": added_footprints(&receipt.added_theorems),
+        "added_definitions": definition_rows(receipt),
+        "added_singleton_inductives": singleton_package_rows(receipt),
+        "reused_declaration_receipts": reused_receipts(&receipt.reused_declarations),
+        "environment_sha256_before": receipt.target_environment_sha256_before,
+        "environment_sha256_after": receipt.target_environment_sha256_after,
+        "receipt_schema": receipt.schema_version,
+        "receipt_sha256": receipt.receipt_sha256,
+    })
+}
+
+fn definition_rows(receipt: &CheckedTheoremCompositionReceipt) -> Vec<serde_json::Value> {
+    receipt
+        .added_definitions
+        .iter()
+        .map(|row| {
+            json!({
+                "name": row.name,
+                "source_declaration_sha256": row.source_declaration_sha256,
+                "target_declaration_sha256": row.target_declaration_sha256,
+                "reducibility": row.reducibility,
+            })
+        })
+        .collect()
+}
+
+fn singleton_package_rows(receipt: &CheckedTheoremCompositionReceipt) -> Vec<serde_json::Value> {
+    receipt
+        .added_singleton_inductives
+        .iter()
+        .map(|row| {
+            json!({
+                "family": row.family,
+                "constructors": row.constructors,
+                "recursor": row.recursor,
+                "source_declaration_sha256": row.source_declaration_sha256,
+                "target_declaration_sha256": row.target_declaration_sha256,
+            })
+        })
         .collect()
 }
 

@@ -9,7 +9,7 @@ use std::fmt;
 use std::fmt::Write as _;
 
 use axeyum_lean_kernel::{
-    Declaration, ExprId, ExprNode, Kernel, LevelId, LevelNode, NameId, NameNode,
+    Declaration, ExprId, ExprNode, Kernel, LevelId, LevelNode, NameId, NameNode, ReducibilityHint,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -17,7 +17,7 @@ use sha2::{Digest, Sha256};
 use crate::{canonical_declaration_sha256, canonical_kernel_type_shape_sha256};
 
 /// Version of the checked theorem-composition receipt and compatibility policy.
-pub const CHECKED_THEOREM_COMPOSITION_VERSION: &str = "axeyum.checked-theorem-composition.v3";
+pub const CHECKED_THEOREM_COMPOSITION_VERSION: &str = "axeyum.checked-theorem-composition.v4";
 
 /// The checked relation that authorized reuse of one target declaration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,6 +69,19 @@ pub struct AddedTheoremReceipt {
     pub axiom_footprint: Vec<String>,
 }
 
+/// One missing definition independently admitted to the target clone.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AddedDefinitionReceipt {
+    /// Complete declaration name.
+    pub name: String,
+    /// Exact source definition identity.
+    pub source_declaration_sha256: String,
+    /// Exact independently admitted target identity.
+    pub target_declaration_sha256: String,
+    /// Stable spelling of the preserved reducibility hint.
+    pub reducibility: String,
+}
+
 /// One atomically reconstructed non-recursive singleton inductive package.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AddedSingletonInductiveReceipt {
@@ -84,7 +97,7 @@ pub struct AddedSingletonInductiveReceipt {
     pub target_declaration_sha256: BTreeMap<String, String>,
 }
 
-/// Deterministic receipt for one completed theorem-only composition.
+/// Deterministic receipt for one completed theorem-rooted composition.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CheckedTheoremCompositionReceipt {
     /// Compatibility, translation, and receipt schema.
@@ -99,6 +112,8 @@ pub struct CheckedTheoremCompositionReceipt {
     pub reused_declarations: Vec<ReusedDeclarationReceipt>,
     /// Missing source theorems independently admitted to the target clone.
     pub added_theorems: Vec<AddedTheoremReceipt>,
+    /// Missing source definitions independently admitted in dependency order.
+    pub added_definitions: Vec<AddedDefinitionReceipt>,
     /// Missing singleton inductives atomically reconstructed before theorem admission.
     pub added_singleton_inductives: Vec<AddedSingletonInductiveReceipt>,
     /// Exact target environment identity after composition.
@@ -146,6 +161,12 @@ impl CheckedTheoremCompositionReceipt {
                 "source_declaration_sha256": row.source_declaration_sha256,
                 "target_declaration_sha256": row.target_declaration_sha256,
                 "axiom_footprint": row.axiom_footprint,
+            })).collect::<Vec<_>>(),
+            "added_definitions": self.added_definitions.iter().map(|row| json!({
+                "name": row.name,
+                "source_declaration_sha256": row.source_declaration_sha256,
+                "target_declaration_sha256": row.target_declaration_sha256,
+                "reducibility": row.reducibility,
             })).collect::<Vec<_>>(),
             "added_singleton_inductives": self.added_singleton_inductives.iter().map(|row| json!({
                 "family": row.family,
@@ -215,8 +236,8 @@ pub enum CheckedTheoremCompositionError {
         /// Target type-shape digest.
         target_sha256: String,
     },
-    /// The current schema admits only missing checked theorems and complete
-    /// non-recursive singleton inductive packages.
+    /// The current schema admits only missing definitions, checked theorems,
+    /// and complete non-recursive singleton inductive packages.
     UnsupportedMissingDeclaration {
         /// Complete declaration name.
         name: String,
@@ -251,8 +272,8 @@ impl std::error::Error for CheckedTheoremCompositionError {}
 /// Compose a theorem-rooted source slice into an owned clone of `target`.
 ///
 /// `target` is never mutated. The function validates all reused declarations
-/// before cloning, admits every missing theorem into the private clone, and
-/// returns the clone only after the complete slice succeeds.
+/// before cloning, admits every supported missing declaration into the private
+/// clone, and returns the clone only after the complete slice succeeds.
 ///
 /// # Errors
 ///
@@ -283,17 +304,8 @@ pub fn compose_checked_theorem_slice(
     let mut staged = target.clone();
     let added_singleton_inductives =
         admit_missing_singleton_inductives(source, &mut staged, &singleton_packages)?;
-    let missing_theorems = missing
-        .iter()
-        .copied()
-        .filter(|name| {
-            matches!(
-                source.environment().get(*name),
-                Some(Declaration::Theorem { .. })
-            )
-        })
-        .collect::<Vec<_>>();
-    let added = admit_missing_theorems(source, &mut staged, &missing_theorems)?;
+    let (added_definitions, added) =
+        admit_missing_definitions_and_theorems(source, &mut staged, &missing)?;
     let after = environment_sha256(&staged)?;
     let mut receipt = CheckedTheoremCompositionReceipt {
         schema_version: CHECKED_THEOREM_COMPOSITION_VERSION.to_owned(),
@@ -305,6 +317,7 @@ pub fn compose_checked_theorem_slice(
         target_environment_sha256_before: before,
         reused_declarations: reused,
         added_theorems: added,
+        added_definitions,
         added_singleton_inductives,
         target_environment_sha256_after: after,
         receipt_sha256: String::new(),
@@ -490,7 +503,11 @@ fn validate_missing_declarations(
                 "selected source declaration disappeared".to_owned(),
             )
         })?;
-        if !matches!(declaration, Declaration::Theorem { .. }) && !package_members.contains(&name) {
+        if !matches!(
+            declaration,
+            Declaration::Definition { .. } | Declaration::Theorem { .. }
+        ) && !package_members.contains(&name)
+        {
             return Err(
                 CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
                     name: source.display_name(name).to_string(),
@@ -696,15 +713,16 @@ fn admit_missing_singleton_inductives(
     Ok(added)
 }
 
-fn admit_missing_theorems(
+fn admit_missing_definitions_and_theorems(
     source: &Kernel,
     target: &mut Kernel,
     missing: &[NameId],
-) -> Result<Vec<AddedTheoremReceipt>, CheckedTheoremCompositionError> {
+) -> Result<(Vec<AddedDefinitionReceipt>, Vec<AddedTheoremReceipt>), CheckedTheoremCompositionError>
+{
     let mut translator = ExpressionTranslator::new(source, target);
-    let mut added = Vec::new();
+    let mut definitions = Vec::new();
+    let mut theorems = Vec::new();
     for &source_name in missing {
-        let rendered = source.display_name(source_name).to_string();
         let declaration = source
             .environment()
             .get(source_name)
@@ -714,36 +732,102 @@ fn admit_missing_theorems(
                 )
             })?
             .clone();
-        let translated = translator.theorem(declaration)?;
-        translator
-            .target
-            .add_declaration(translated)
-            .map_err(|error| CheckedTheoremCompositionError::AdmissionRejected {
-                name: rendered.clone(),
-                error: format!("{error:?}"),
-            })?;
-        let target_name = declaration_names(translator.target)
-            .get(&rendered)
-            .copied()
-            .ok_or_else(|| {
-                CheckedTheoremCompositionError::Identity(format!(
-                    "admitted theorem is absent from target: {rendered}"
-                ))
-            })?;
-        let axiom_footprint = translator
-            .target
-            .axiom_footprint(target_name)
-            .into_iter()
-            .map(|name| translator.target.display_name(name).to_string())
-            .collect();
-        added.push(AddedTheoremReceipt {
-            name: rendered,
-            source_declaration_sha256: declaration_sha256(source, source_name)?,
-            target_declaration_sha256: declaration_sha256(translator.target, target_name)?,
-            axiom_footprint,
-        });
+        match declaration {
+            declaration @ Declaration::Definition { .. } => definitions.push(admit_one_definition(
+                &mut translator,
+                source_name,
+                declaration,
+            )?),
+            declaration @ Declaration::Theorem { .. } => {
+                theorems.push(admit_one_theorem(
+                    &mut translator,
+                    source_name,
+                    declaration,
+                )?);
+            }
+            _ => {}
+        }
     }
-    Ok(added)
+    Ok((definitions, theorems))
+}
+
+fn admit_one_definition(
+    translator: &mut ExpressionTranslator<'_>,
+    source_name: NameId,
+    declaration: Declaration,
+) -> Result<AddedDefinitionReceipt, CheckedTheoremCompositionError> {
+    let rendered = translator.source.display_name(source_name).to_string();
+    let hint = match &declaration {
+        Declaration::Definition { hint, .. } => *hint,
+        _ => unreachable!("dispatcher selects only definitions"),
+    };
+    let translated = translator.definition(declaration)?;
+    translator
+        .target
+        .add_declaration(translated)
+        .map_err(|error| CheckedTheoremCompositionError::AdmissionRejected {
+            name: rendered.clone(),
+            error: format!("{error:?}"),
+        })?;
+    let target_name = admitted_target_name(translator.target, &rendered, "definition")?;
+    Ok(AddedDefinitionReceipt {
+        name: rendered,
+        source_declaration_sha256: declaration_sha256(translator.source, source_name)?,
+        target_declaration_sha256: declaration_sha256(translator.target, target_name)?,
+        reducibility: reducibility_receipt(hint),
+    })
+}
+
+fn admit_one_theorem(
+    translator: &mut ExpressionTranslator<'_>,
+    source_name: NameId,
+    declaration: Declaration,
+) -> Result<AddedTheoremReceipt, CheckedTheoremCompositionError> {
+    let rendered = translator.source.display_name(source_name).to_string();
+    let translated = translator.theorem(declaration)?;
+    translator
+        .target
+        .add_declaration(translated)
+        .map_err(|error| CheckedTheoremCompositionError::AdmissionRejected {
+            name: rendered.clone(),
+            error: format!("{error:?}"),
+        })?;
+    let target_name = admitted_target_name(translator.target, &rendered, "theorem")?;
+    let axiom_footprint = translator
+        .target
+        .axiom_footprint(target_name)
+        .into_iter()
+        .map(|name| translator.target.display_name(name).to_string())
+        .collect();
+    Ok(AddedTheoremReceipt {
+        name: rendered,
+        source_declaration_sha256: declaration_sha256(translator.source, source_name)?,
+        target_declaration_sha256: declaration_sha256(translator.target, target_name)?,
+        axiom_footprint,
+    })
+}
+
+fn admitted_target_name(
+    target: &Kernel,
+    rendered: &str,
+    kind: &str,
+) -> Result<NameId, CheckedTheoremCompositionError> {
+    declaration_names(target)
+        .get(rendered)
+        .copied()
+        .ok_or_else(|| {
+            CheckedTheoremCompositionError::Identity(format!(
+                "admitted {kind} is absent from target: {rendered}"
+            ))
+        })
+}
+
+fn reducibility_receipt(hint: ReducibilityHint) -> String {
+    match hint {
+        ReducibilityHint::Opaque => "opaque".to_owned(),
+        ReducibilityHint::Regular(height) => format!("regular:{height}"),
+        ReducibilityHint::Abbrev => "abbrev".to_owned(),
+    }
 }
 
 struct ExpressionTranslator<'a> {
@@ -783,6 +867,29 @@ impl<'a> ExpressionTranslator<'a> {
             uparams: uparams.into_iter().map(|name| self.name(name)).collect(),
             ty: self.expr(ty)?,
             value: self.expr(value)?,
+        })
+    }
+
+    fn definition(
+        &mut self,
+        declaration: Declaration,
+    ) -> Result<Declaration, CheckedTheoremCompositionError> {
+        let Declaration::Definition {
+            name,
+            uparams,
+            ty,
+            value,
+            hint,
+        } = declaration
+        else {
+            unreachable!("missing declaration kinds are dispatched before translation")
+        };
+        Ok(Declaration::Definition {
+            name: self.name(name),
+            uparams: uparams.into_iter().map(|name| self.name(name)).collect(),
+            ty: self.expr(ty)?,
+            value: self.expr(value)?,
+            hint,
         })
     }
 

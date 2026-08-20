@@ -157,6 +157,7 @@ compounding, not automation theatre.
 | [Public checked theorem composition](58-public-checked-theorem-composition.md) | Does the first composition survive a reviewed reusable API, exact receipt, and fail-closed control matrix? |
 | [Translated definitional reuse](59-translated-definitional-reuse.md) | Are the first structural mismatches real blockers, and which checked package becomes the next demand after target-kernel reduction? |
 | [Atomic singleton-inductive composition](60-atomic-singleton-inductive-composition.md) | Can a demanded family, constructor, and generated recursor enter the imported target as one checked package, and what blocks the original root next? |
+| [Checked definition composition](61-checked-definition-composition.md) | Can demanded computational helpers enter only through target-kernel admission, and which representation seam appears next? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
