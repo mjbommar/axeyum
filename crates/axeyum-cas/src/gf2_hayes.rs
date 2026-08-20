@@ -2197,6 +2197,34 @@ pub struct ClassPopulationDistribution {
     pub counts: Vec<u128>,
 }
 
+/// Exact raw fibre-product and connected virtual-count decomposition of one
+/// Hayes population map.
+///
+/// If `N_e` is the fibre size above class `e`, then `sum_e N_e^r` counts the
+/// `r`-fold fibre product.  Centering and subtracting the three pairings turns
+/// these positive counts into the signed fourth cumulant.  The final value is
+/// therefore a virtual Frobenius trace, not the cardinality of an off-diagonal
+/// variety.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesConnectedFibreProductReport {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Polynomial degree.
+    pub degree: usize,
+    /// `sum_e N_e^2`.
+    pub raw_pair_fibre_count: BigUint,
+    /// `sum_e N_e^3`.
+    pub raw_triple_fibre_count: BigUint,
+    /// `sum_e N_e^4`.
+    pub raw_quadruple_fibre_count: BigUint,
+    /// `M_2=sum_e (N_e-mu)^2`.
+    pub centered_second_moment: BigUint,
+    /// `M_4=sum_e (N_e-mu)^4`.
+    pub centered_fourth_moment: BigUint,
+    /// `2^ell M_4-3M_2^2`, the signed connected virtual count.
+    pub connected_fourth_cumulant: BigInt,
+}
+
 /// Exact Möbius sums in every principal-unit class.
 ///
 /// `values[e]` is the signed sum of the polynomial Möbius function over all
@@ -3971,6 +3999,78 @@ impl ClassPopulationDistribution {
             .iter()
             .map(|count| BigUint::from(count.abs_diff(mean)).pow(power))
             .sum())
+    }
+
+    /// Expand the centred fourth cumulant into exact positive fibre-product
+    /// counts and check their signed inclusion--exclusion reconstruction.
+    ///
+    /// This is the point-counting bridge for geometric attacks.  In
+    /// particular, callers must not reinterpret `connected_fourth_cumulant`
+    /// as the number of points of a single off-diagonal variety: its defining
+    /// combination is virtual and may be negative.
+    ///
+    /// # Errors
+    ///
+    /// Returns a parameter error if the distribution has no exact uniform
+    /// mean or an invariant failure if the raw fibre products do not recover
+    /// the independently computed centred moments and cumulant.
+    pub fn connected_fibre_product_report(
+        &self,
+    ) -> Result<HayesConnectedFibreProductReport, HayesError> {
+        let mean = self.uniform_mean().ok_or_else(|| {
+            HayesError::InvalidParameter("class distribution has no exact uniform mean".to_owned())
+        })?;
+        let group_order = BigInt::from(self.counts.len());
+        let mean = BigInt::from(mean);
+        let total = self
+            .counts
+            .iter()
+            .map(|count| BigInt::from(*count))
+            .sum::<BigInt>();
+        let raw = |power: u32| {
+            self.counts
+                .iter()
+                .map(|count| BigUint::from(*count).pow(power))
+                .sum::<BigUint>()
+        };
+        let raw_pair_fibre_count = raw(2);
+        let raw_triple_fibre_count = raw(3);
+        let raw_quadruple_fibre_count = raw(4);
+        let reconstructed_second = BigInt::from(raw_pair_fibre_count.clone())
+            - BigInt::from(2_u8) * &mean * &total
+            + &group_order * mean.pow(2);
+        let reconstructed_fourth = BigInt::from(raw_quadruple_fibre_count.clone())
+            - BigInt::from(4_u8) * &mean * BigInt::from(raw_triple_fibre_count.clone())
+            + BigInt::from(6_u8) * mean.pow(2) * BigInt::from(raw_pair_fibre_count.clone())
+            - BigInt::from(4_u8) * mean.pow(3) * &total
+            + &group_order * mean.pow(4);
+        let centered_second_moment = self.central_absolute_power_sum(2)?;
+        let centered_fourth_moment = self.central_absolute_power_sum(4)?;
+        if reconstructed_second != BigInt::from(centered_second_moment.clone())
+            || reconstructed_fourth != BigInt::from(centered_fourth_moment.clone())
+        {
+            return Err(HayesError::Invariant(
+                "raw fibre products do not reconstruct centered moments".to_owned(),
+            ));
+        }
+        let connected_fourth_cumulant = BigInt::from(self.counts.len())
+            * BigInt::from(centered_fourth_moment.clone())
+            - BigInt::from(3_u8) * BigInt::from(centered_second_moment.clone()).pow(2);
+        if connected_fourth_cumulant != self.fourth_cumulant_numerator()? {
+            return Err(HayesError::Invariant(
+                "fibre-product cumulant disagrees with direct cumulant".to_owned(),
+            ));
+        }
+        Ok(HayesConnectedFibreProductReport {
+            ell: self.ell,
+            degree: self.degree,
+            raw_pair_fibre_count,
+            raw_triple_fibre_count,
+            raw_quadruple_fibre_count,
+            centered_second_moment,
+            centered_fourth_moment,
+            connected_fourth_cumulant,
+        })
     }
 
     /// Experimental endpoint envelope `64 ell^2 2^(3 ell)` for the fourth
@@ -14194,6 +14294,27 @@ mod tests {
                 limit: 16
             })
         ));
+    }
+
+    #[test]
+    fn connected_fibre_product_is_a_signed_virtual_count() {
+        let distribution = class_population_distribution(9, 19, HayesLimits::default()).unwrap();
+        let report = distribution.connected_fibre_product_report().unwrap();
+        assert_eq!((report.ell, report.degree), (9, 19));
+        assert_eq!(
+            report.centered_second_moment,
+            distribution.central_absolute_power_sum(2).unwrap()
+        );
+        assert_eq!(
+            report.centered_fourth_moment,
+            distribution.central_absolute_power_sum(4).unwrap()
+        );
+        assert_eq!(
+            report.connected_fourth_cumulant,
+            BigInt::from(-2_086_965_956_608_i64)
+        );
+        assert!(report.raw_quadruple_fibre_count > report.raw_triple_fibre_count);
+        assert!(report.raw_triple_fibre_count > report.raw_pair_fibre_count);
     }
 
     #[test]

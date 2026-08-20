@@ -2654,6 +2654,25 @@ second-moment envelope gives
 `M_4<=64 ell^4 2^(3ell)`, which the exact endpoint ledger verifies is
 sufficient after the degree-400 handoff.  This finite pattern is not a proof.
 
+The point-counting version of this target is necessarily virtual.  The
+Mangoldt population `N_e` is the fibre size of the characteristic-polynomial
+class map from `GF(2^n)` to `E_ell`, so each positive integer
+
+```text
+C_r = sum_e N_e^r
+```
+
+counts an `r`-fold fibre product.  But expanding `(N_e-mu)^4` and subtracting
+the three Wick pairings expresses `K_4` as a signed combination of `C_2`,
+`C_3`, `C_4`, and uniform terms.  The public
+`connected_fibre_product_report` reconstructs `M_2`, `M_4`, and `K_4`
+independently from those raw counts.  Its pinned `(ell,n)=(9,19)` value is
+`K_4=-2086965956608`.  Therefore the connected term is not the point count of
+an honest off-diagonal variety; it is a virtual Frobenius trace.  A geometric
+proof must retain the centering complex and all three pairing projectors (or
+use the equivalent conductor-Haar differences), rather than proving only
+irreducibility or Weil bounds for the positive fourfold fibre product.
+
 Parseval gives an equivalent conductor form.  If `E_j` is the exact Fourier
 energy of `D_e^2` at conductor level `j`, the obligation is
 
