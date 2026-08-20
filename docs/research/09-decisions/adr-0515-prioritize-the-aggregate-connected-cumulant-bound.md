@@ -26,10 +26,13 @@ the endpoint implication.
 
 ## Evidence
 
-Both endpoint parities satisfy the bound through `ell=21`, and the completed
-odd row satisfies it at `ell=22`.  At `ell=20,21`, all four root ratios lie
-between `2.998` and `3.004`, while local cylinder maxima exceed `10.6`.
-Finite satisfaction grants no theorem credit.
+Both endpoint parities satisfy the bound through `ell=23`.  The exact new root
+ratios at `(ell,n)=(22,46),(23,47),(23,48)` are approximately `2.999670`,
+`2.994842`, and `3.001146`.  All three rows also satisfy the stronger local
+linear cylinder ceiling, while all three fail the max-to-average dominance
+shortcut.  The ignored fleet probes are bound to exact commit `03d7502bb` and
+their full result/resource logs are content-hashed in the canonical research
+note.  Finite satisfaction grants no theorem credit.
 
 The proved estimate `M_2<=ell^2 2^n` turns the assumption into
 

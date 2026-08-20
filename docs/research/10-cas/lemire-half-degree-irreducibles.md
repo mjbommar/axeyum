@@ -2443,7 +2443,7 @@ and the worst local ratio is the level-six value
 provisional ceiling `R_j(b)<=8` is false: the even `ell=12` row already has
 `1226465917304832/149099338469376>8`, and the even `ell=15` row exceeds nine.
 Both endpoint parities satisfy the replacement linear target
-`R_j(b)<=ell` through `ell=19`.  This is finite evidence only.  The tempting
+`R_j(b)<=ell` through `ell=23`.  This is finite evidence only.  The tempting
 pointwise reduction `2^(ell-j) max f_e <= ell sum f_e` is already false at the
 root of `(ell,n)=(8,17)`, where its exact ratio is
 `6150400/693360>8` even though the aggregate concentration target holds.  Thus
@@ -2475,9 +2475,26 @@ R_0 = 2^ell M_4/M_2^2 = 3 + K_4/M_2^2,
 the candidate `R_0<=4` is exactly the signed connected statement
 `K_4<=M_2^2`; it takes the full convolution-order sum before comparison and
 therefore addresses the cross-order obstruction directly.  Both endpoints
-satisfy it through `ell=21`, and the odd endpoint does at `ell=22`.  The four
-root ratios at `ell=20,21` lie between `2.998` and `3.004`, even though the
-worst local ratios exceed `10.6`.  If proved, the second-moment envelope gives
+satisfy it through `ell=23`.  The new exact ratios are
+
+```text
+R_0(22,46) = 2.999669624360008395435130475296692273575,
+R_0(23,47) = 2.994842465247524680037501455785136891896,
+R_0(23,48) = 3.001146364915799464504182706169550452291.
+```
+
+Thus the connected normalized cumulants `K_4/M_2^2=R_0-3` are respectively
+about `-0.0003304`, `-0.005158`, and `0.001146`.  The three ignored probes
+exited zero at exact commit `03d7502bb6ee430ebafd00365c2a2ccceca93a25`.
+Their wall times and peak RSS were `2m56.58s/2,418,408 KiB`,
+`6m42.70s/4,963,032 KiB`, and `7m00.90s/5,028,332 KiB`; the result/resource
+log SHA-256 values are, in the same order,
+`9aee051881a3086975dbd2ca8d5c842f2adaefb0e41ba763185b6ec584b744e6`,
+`12c52b1525ac227064c776e10a7d355d2b415bdd2e6035ab623c8338713d27ba`,
+and `9e3ea35c318f026bed6bf5d3c09c091c55c9578110812e8d88deb414d41c29fb`.
+The four earlier root ratios at `ell=20,21` lie between `2.998` and `3.004`,
+even though the worst local ratios exceed `10.6`.  If proved, the
+second-moment envelope gives
 `M_4<=64 ell^4 2^(3ell)`, which the exact endpoint ledger verifies is
 sufficient after the degree-400 handoff.  This finite pattern is not a proof.
 
