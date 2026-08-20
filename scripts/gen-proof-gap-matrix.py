@@ -278,6 +278,31 @@ def audit_provenance() -> list[tuple[str, str, str]]:
     rows: list[tuple[str, str, str]] = []
     for path in sorted(AUDIT_DIR.glob("*.json")):
         rel = path.relative_to(ROOT).as_posix()
+
+        # Prefer the audit's OWN stamp when it has one. `audit_dominance` records
+        # `source_revision: {sha, dirty}` from schema version 3 onward, and that
+        # is the only answer that means "the code this measurement ran against"
+        # rather than "the last time somebody touched the file". Until the 35
+        # committed audits are re-run they all fall through to the git date, and
+        # the table says which is which -- a `file-date` row is an admission, not
+        # a value.
+        try:
+            stamped = json.loads(path.read_text(encoding="utf-8")).get("source_revision")
+        except (OSError, json.JSONDecodeError):
+            stamped = None
+        if isinstance(stamped, dict) and isinstance(stamped.get("sha"), str):
+            sha = stamped["sha"][:9]
+            dirty = stamped.get("dirty")
+            label = "stamped"
+            if dirty is True:
+                # A dirty tree has no name and cannot be rebuilt; the sha is
+                # actively misleading unless this is said out loud.
+                label = "stamped, DIRTY TREE"
+            elif dirty is None:
+                label = "stamped, dirty unknown"
+            rows.append((rel, sha, label))
+            continue
+
         try:
             out = subprocess.run(
                 ["git", "log", "-1", "--format=%h %cs", "--", rel],
@@ -288,10 +313,10 @@ def audit_provenance() -> list[tuple[str, str, str]]:
         if not out:
             # Uncommitted or unreadable: say so rather than omitting the row,
             # which would quietly shrink the provenance table.
-            rows.append((rel, "uncommitted", "-"))
+            rows.append((rel, "uncommitted", "no stamp, no commit"))
             continue
         sha, _, date = out.partition(" ")
-        rows.append((rel, sha, date))
+        rows.append((rel, sha, f"{date} (file date, NOT measurement date)"))
     return rows
 
 
@@ -476,7 +501,7 @@ def markdown(report: dict) -> str:
             "in either direction — newly certified instances still counted as bare, and",
             "regressions to `unknown` still counted as decided.",
             "",
-            "| Audit | Commit | Date |",
+            "| Audit | Revision | Provenance |",
             "|---|---|---|",
         ]
     )

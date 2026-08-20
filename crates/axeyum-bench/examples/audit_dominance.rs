@@ -855,7 +855,8 @@ fn main() {
     };
 
     let artifact = json!({
-        "version": 2,
+        "version": 3,
+        "source_revision": source_revision(),
         "baseline": repo_rel(&baseline),
         "logic": logic,
         "slice": slice,
@@ -904,5 +905,49 @@ mod tests {
         assert!(evidence.check(&arena, &[]).unwrap());
         assert!(!evidence.is_certified());
         assert!(!independently_check_evidence(&evidence, &arena, &[], false));
+    }
+}
+
+/// The source revision this audit actually ran against, and whether the tree was
+/// clean when it did.
+///
+/// A dominance audit recorded `logic`, `slice`, `timeout_ms` and a `version`
+/// integer — and nothing about the code that produced it. That is not a
+/// cosmetic omission. Measured 2026-08-20: `r0_QF_SLIA_replace-find-base` is
+/// recorded in a committed audit as `audit_outcome=unsat,
+/// baseline_matches_audit=true`, and building `8aff8d507` — the commit that
+/// last touched that audit — and running the byte-identical corpus file returns
+/// **`sat`**, a wrong answer on a query z3 decides unsat. The row disagrees
+/// with the tree it appears to belong to, because the file's commit date is the
+/// date of a SCHEMA MIGRATION ("refresh bare-route audits to v2"), not of the
+/// measurement. Nothing in the artifact let anyone notice, and the proof-gap
+/// matrix replays these rows into planning documents as current.
+///
+/// So every audit now carries the sha it ran against. `dirty` matters as much as
+/// the sha: an audit produced from a modified worktree describes a tree that has
+/// no name and cannot be rebuilt, and saying so is more useful than a sha that
+/// silently means something else.
+fn source_revision() -> JsonValue {
+    let rev = std::process::Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+        .filter(|s| !s.is_empty());
+    let dirty = std::process::Command::new("git")
+        .args(["status", "--porcelain", "--untracked-files=no"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| !String::from_utf8_lossy(&o.stdout).trim().is_empty());
+    match (rev, dirty) {
+        // `unknown` rather than an omitted field: a missing key reads as an old
+        // schema, which is exactly the ambiguity this exists to remove.
+        (None, _) => json!({ "sha": "unknown", "dirty": JsonValue::Null }),
+        (Some(sha), dirty) => json!({
+            "sha": sha,
+            "dirty": dirty.map_or(JsonValue::Null, JsonValue::from),
+        }),
     }
 }
