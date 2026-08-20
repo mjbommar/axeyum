@@ -2207,7 +2207,7 @@ pub fn prove_unsat_to_lean_module(
 ) -> Result<(ProofFragment, String), ReconstructError> {
     let fragment = scan_proof_fragment(arena, assertions);
     match reconstruct_proof_fragment_to_lean_module(fragment, arena, assertions) {
-        Ok(source) => Ok((fragment, source)),
+        Ok(source) => bounded(fragment, source),
         Err(original_error) if should_retry_with_normalized_lean_input(&original_error) => {
             let normalized_assertions = normalize_lean_assertion_inputs(arena, assertions);
             let normalized = normalized_assertions.as_slice();
@@ -2216,10 +2216,54 @@ pub fn prove_unsat_to_lean_module(
             }
             let fragment = scan_proof_fragment(arena, normalized);
             let source = reconstruct_proof_fragment_to_lean_module(fragment, arena, normalized)?;
-            Ok((fragment, source))
+            bounded(fragment, source)
         }
         Err(error) => Err(error),
     }
+}
+
+/// Largest module this front door will hand back.
+///
+/// Measured 2026-08-20 across the 262 modules the committed dominance audits
+/// record a size for: **median 3,169 bytes**, and the largest LEGITIMATE one is
+/// `cli__regress0__quantifiers__issue2031-bv-var-elim` at 28.6 MB. Against that,
+/// `BvAlternationCounterexample` was returning `Ok` with **625 MB**
+/// (`cli__regress1__quantifiers__bug802`) and **2.38 GB**
+/// (`small-pipeline-fixpoint-3`) — 22x and 83x the largest real module.
+///
+/// 64 MiB is therefore ~2x headroom over anything observed to be useful and 10x
+/// to 37x below the pathological cases: the two populations are well separated,
+/// so this is a threshold rather than a guess.
+///
+/// This matters beyond tidiness. A 2.4 GB `String` is held in memory on a box
+/// whose kernel OOM-killed a live agent session on 2026-08-17. A route that
+/// SUCCEEDS at that size is worse than one that declines, because nothing
+/// downstream treats `Ok` as a hazard.
+pub const MAX_LEAN_MODULE_BYTES: usize = 64 * 1024 * 1024;
+
+/// Refuse a module too large to be useful, rather than returning it.
+///
+/// **This bounds what is RETURNED, not the peak allocation.** The module is
+/// already built by the time it is measured, so the transient 2.4 GB still
+/// happens; what changes is that it is released immediately and reported as a
+/// failure instead of travelling on as a success. Bounding construction itself
+/// means threading a budget through every renderer, which is the right fix and a
+/// larger one.
+fn bounded(
+    fragment: ProofFragment,
+    source: String,
+) -> Result<(ProofFragment, String), ReconstructError> {
+    if source.len() > MAX_LEAN_MODULE_BYTES {
+        let bytes = source.len();
+        drop(source);
+        return Err(ReconstructError::MalformedStep {
+            rule: "lean_module_size".to_owned(),
+            detail: format!(
+                "{fragment:?} produced a {bytes}-byte Lean module, over the {MAX_LEAN_MODULE_BYTES}-byte cap. The largest module any committed audit records is 28.6 MB; nothing consumes one this size, and holding it is a memory hazard. Declining is the honest outcome"
+            ),
+        });
+    }
+    Ok((fragment, source))
 }
 
 /// **[`prove_unsat_to_lean_module`], but it declines instead of handing back a
@@ -3555,3 +3599,58 @@ fn fresh_axiom(
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod lean_module_cap_tests {
+    //! The size guard itself, exercised directly.
+    //!
+    //! The integration test in `tests/lean_module_size_cap.rs` pins the
+    //! THRESHOLD — that 64 MiB sits between the largest real module (28.6 MB)
+    //! and the smallest pathological one (625 MB). It does not pin the guard:
+    //! mutation testing showed the whole `if` could be deleted with everything
+    //! still green, because no fixture there is large enough to trip it and
+    //! building a 2.4 GB one to find out would cost more memory than the bug.
+    //!
+    //! Calling `bounded` directly costs one 65 MiB allocation, held for the
+    //! length of one assertion.
+
+    use super::{MAX_LEAN_MODULE_BYTES, ProofFragment, bounded};
+
+    #[test]
+    fn a_module_over_the_cap_is_refused() {
+        let oversized = "x".repeat(MAX_LEAN_MODULE_BYTES + 1);
+        let result = bounded(ProofFragment::Lra, oversized);
+        let Err(error) = result else {
+            panic!("a module over the cap must be refused, not returned");
+        };
+        let rendered = format!("{error:?}");
+        assert!(
+            rendered.contains("lean_module_size"),
+            "the refusal must name the rule so a caller can tell it from a \
+             reconstruction failure; got {rendered}"
+        );
+        // The message is a diagnostic a human reads: it must not arrive as a
+        // ribbon of continuation whitespace.
+        assert!(
+            !rendered.contains("  "),
+            "the detail should be single-spaced; got {rendered}"
+        );
+    }
+
+    #[test]
+    fn a_module_at_the_cap_is_returned_unchanged() {
+        // Boundary: exactly at the limit is fine, one over is not.
+        let exact = "y".repeat(MAX_LEAN_MODULE_BYTES);
+        let (fragment, source) =
+            bounded(ProofFragment::Lra, exact).expect("a module AT the cap is acceptable");
+        assert_eq!(fragment, ProofFragment::Lra);
+        assert_eq!(source.len(), MAX_LEAN_MODULE_BYTES);
+    }
+
+    #[test]
+    fn an_ordinary_module_passes_through_untouched() {
+        let ordinary = "theorem refute : False := by exact absurd h1 h2".to_owned();
+        let (_, source) = bounded(ProofFragment::Lra, ordinary.clone()).expect("accepted");
+        assert_eq!(source, ordinary);
+    }
+}
