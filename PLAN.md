@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `f85830458` | Added a bounded characteristic-two Q-transform with independent irreducibility controls, retained its special cubic-to-sextic success and cyclotomic degree family, and proved the standard iterated hypothesis forces a forbidden upper-half coefficient. |
 | 2026-08-20 | `6d6e1a7d8` | Added deterministic and hierarchical binary extension-trace sharding, exact Frobenius-orbit compression and Hankel minors, and used the complete `A_7(9,4)` trace to exclude every recurrence of order at most three without claiming endpoint proof credit. |
 | 2026-08-19 | `1705eb688` | Proved Gao's binary Hayes L-degree distribution from exact conductors and quantified why its aggregate degree retains the fatal endpoint factor. |
 | 2026-08-19 | `0db0c7ffd` | Added bounded native fixed-degree traces over binary extension fields, separating genuine Frobenius-power long-cycle diagnostics from the base-field Hayes population. |
@@ -739,6 +740,15 @@ or move the endpoint proof frontier.  Characteristic-zero smooth-projective
 and real semi-algebraic symmetric-cohomology bounds are explicitly rejected
 as substitutes for the missing characteristic-two compact-support hook
 theorem.
+The characteristic-two `Q`-transform bridge is now audited from its exact
+equations.  A bounded native Lucas-submask expansion independently certifies
+the special shaped success `x^3+x+1 -> x^6+x^3+1`, but its next iterate loses
+the half-degree window.  More generally, the standard indefinitely iterated
+irreducibility hypothesis forces the transformed coefficient of degree
+`2n-1` to be one, so it cannot produce a shaped degree-`2n` polynomial.
+The cyclotomic trinomials `Phi_(3^r)` give the honest infinite degree family
+`2*3^(r-1)`, not arbitrary-degree coverage.  This closes the cheap recursive
+construction bridge without moving the connected endpoint proof obligation.
 The multi-minute endpoint sweep is now an explicit ignored,
 environment-selected research probe; the ordinary theorem gate keeps the
 bounded `ell<=7` controls.  Three exact-commit fleet probes extend both the
