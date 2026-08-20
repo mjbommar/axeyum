@@ -119,6 +119,7 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
+| 2026-08-20 | (pending) | The string family's first re-derivable UNSAT artifact beyond word-clash/regex-emptiness: `Evidence::UnsatStringLength` abstracts every string term to an integer length keyed on its SOURCE NAME, names the five theory lemmas the argument uses, and closes with one nonnegative combination per case-split branch. The checker is two stages — bind each lemma to the conjunct that licenses it, then re-derive the arithmetic — and is arena-free, because a string script's flat view is the bounded packed-BV encoding rather than the query. 23 guards mutation-checked; two killed nothing and were fixed rather than kept (one was dead code the command allow-list already covered, one had no multi-`check-sat` fixture). Also: `diagnose_evidence` reported the ARENA front door for string files, i.e. a query nobody solves — it now reports the text front door too, and agreed with the dominance audit for the first time. |
 | 2026-08-20 | `0797719a7` | Rational operands no longer defeat algebraic field arithmetic; the NRA `sat` witness replays and the evidence route matches the decision route |
 | 2026-08-20 | (pending) | `Evidence::UnsatRealHandelman`: multi-term Handelman/Positivstellensatz refutations for `QF_NRA`, with case splitting over a top-level disjunction and polynomial multipliers on asserted equalities. Certifies the three corpus rows `nra_product_cert` declined by design. 15 guards mutation-checked; 14 kill at least one test, and the fifteenth (the producer's own self-check) kills nothing and is documented as such at the function rather than pretended to be a guard. Three checks that provably could not fail were deleted instead of kept. `NamedPoly` is now shared with `nra_product_cert` rather than reimplemented — two name-keyed polynomial types would be two chances to disagree about what `a*b` means. |
 | 2026-08-20 | `b5c4bb48b` | Binder-info-insensitive kernel type-shape identity with adversarial controls |
@@ -592,6 +593,27 @@ The first post-repair Rust push checked exact topic SHA `24b16642e` in the
 registered gate checkout, left it clean, and preserved the caller branch,
 index, and status. The operational incident is closed; future changes remain
 covered by the registered control and the live hook.
+
+**Three of the 26 uncertified string UNSATs now carry a re-derivable
+certificate; the other 23 need regex/`replace`/`contains` reasoning, not
+lengths** (`WIP`, string-cert, 2026-08-20).
+
+The refreshed dominance audits
+(`bench-results/dominance/qf-{s,slia,seq}-cvc5-regress-clean-dominance-audit.json`)
+list 26 rows at `evidence_kind = bare-unsat`, every one decided by
+`smtlib-string-front-door` with `certified=false checked=false`. A length /
+code-point abstraction plus a Farkas-style linear refutation closes the three
+that are arithmetic once the strings are abstracted away (`str004`, `str005`,
+`str-code-unsat-2`). The remaining 23 are regex membership, `str.replace`,
+`str.contains`, lexicographic order, `seq.nth` congruence, and one pigeonhole
+over `str.to_code` — none of them a length argument, and none of them silently
+approximated.
+
+Next: the `str.to_code` **injectivity** lemma
+(`code(y) = code(z) ∧ code(y) ≥ 0 → y = z`) would take
+`r1_QF_SLIA_str-code-unsat`, whose refutation is linear right up to the final
+`distinct`; its sibling `-3` additionally needs pigeonhole over seven pinned
+code points and is a different argument.
 
 **The decision route and the evidence route agreed again on
 `QF_NRA/.../cli__regress0__nl__issue3003.smt2` (`DONE`, agent-route-divergence,
