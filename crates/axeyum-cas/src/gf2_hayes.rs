@@ -141,6 +141,51 @@ pub struct BinaryHayesLDegreeDistribution {
     pub aggregate_degree_closed_form: BigUint,
 }
 
+/// Exact witness that a functional-equation root number does not determine
+/// the high Hayes power sum used at the Lemire endpoint.
+///
+/// Character values are retained in the integral basis
+/// `1,zeta,...,zeta^(phi-1)` of `Z[zeta]`, where `zeta` has the reported
+/// power-of-two order and `phi=order/2`.  Thus equality and inequality below
+/// are exact coefficient-vector statements, not modular or floating-point
+/// comparisons.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesRootNumberFibreWitness {
+    /// Exact conductor level of both primitive characters.
+    pub level: usize,
+    /// Power-sum degree compared inside the fibre.
+    pub degree: usize,
+    /// Order of the common primitive root used for the integral basis.
+    pub cyclotomic_order: usize,
+    /// First mixed-radix character index.
+    pub left_character: usize,
+    /// Second mixed-radix character index.
+    pub right_character: usize,
+    /// Common leading `L`-coefficient, which fixes the root number.
+    pub common_leading_coefficient: Vec<i128>,
+    /// Exact logarithmic power sum for the first character.
+    pub left_power_sum: Vec<i128>,
+    /// Exact logarithmic power sum for the second character.
+    pub right_power_sum: Vec<i128>,
+}
+
+/// Bounded exact audit of root-number fibres among primitive Hayes characters.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesRootNumberFibreReport {
+    /// Exact conductor level.
+    pub level: usize,
+    /// Compared logarithmic power-sum degree.
+    pub degree: usize,
+    /// Number `2^(level-1)` of primitive characters inspected.
+    pub primitive_character_count: usize,
+    /// Number of distinct exact leading-coefficient fibres.
+    pub leading_coefficient_fibre_count: usize,
+    /// Number of fibres containing more than one endpoint power sum.
+    pub varying_power_sum_fibre_count: usize,
+    /// First exact witness, when root-number data are insufficient.
+    pub witness: Option<HayesRootNumberFibreWitness>,
+}
+
 /// Compute the exact binary Hayes `L`-degree distribution.
 ///
 /// This replays the conductor-count proof behind the binary pattern
@@ -196,6 +241,295 @@ pub fn binary_hayes_l_degree_distribution(
         nontrivial_character_count: group_order - BigUint::from(1_u8),
         aggregate_degree,
         aggregate_degree_closed_form,
+    })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct PowerTwoCyclotomicInteger(Vec<i128>);
+
+impl PowerTwoCyclotomicInteger {
+    fn zero(order: usize) -> Self {
+        Self(vec![0; order / 2])
+    }
+
+    fn root_power(order: usize, exponent: usize) -> Self {
+        let phi = order / 2;
+        let reduced = exponent % order;
+        let mut coefficients = vec![0; phi];
+        if reduced < phi {
+            coefficients[reduced] = 1;
+        } else {
+            coefficients[reduced - phi] = -1;
+        }
+        Self(coefficients)
+    }
+
+    fn add_assign(&mut self, other: &Self) -> Result<(), HayesError> {
+        if self.0.len() != other.0.len() {
+            return Err(HayesError::Invariant(
+                "cyclotomic addition used incompatible bases".to_owned(),
+            ));
+        }
+        for (left, right) in self.0.iter_mut().zip(&other.0) {
+            *left = left.checked_add(*right).ok_or_else(|| {
+                HayesError::InvalidParameter("cyclotomic coefficient overflow".to_owned())
+            })?;
+        }
+        Ok(())
+    }
+
+    fn subtract_assign(&mut self, other: &Self) -> Result<(), HayesError> {
+        if self.0.len() != other.0.len() {
+            return Err(HayesError::Invariant(
+                "cyclotomic subtraction used incompatible bases".to_owned(),
+            ));
+        }
+        for (left, right) in self.0.iter_mut().zip(&other.0) {
+            *left = left.checked_sub(*right).ok_or_else(|| {
+                HayesError::InvalidParameter("cyclotomic coefficient overflow".to_owned())
+            })?;
+        }
+        Ok(())
+    }
+
+    fn multiply(&self, other: &Self) -> Result<Self, HayesError> {
+        if self.0.len() != other.0.len() {
+            return Err(HayesError::Invariant(
+                "cyclotomic multiplication used incompatible bases".to_owned(),
+            ));
+        }
+        let phi = self.0.len();
+        let mut product = vec![0_i128; phi];
+        for (left_degree, left) in self.0.iter().copied().enumerate() {
+            for (right_degree, right) in other.0.iter().copied().enumerate() {
+                let raw = left.checked_mul(right).ok_or_else(|| {
+                    HayesError::InvalidParameter("cyclotomic product overflow".to_owned())
+                })?;
+                let degree = left_degree + right_degree;
+                let (slot, signed) = if degree < phi {
+                    (degree, raw)
+                } else {
+                    (
+                        degree - phi,
+                        raw.checked_neg().ok_or_else(|| {
+                            HayesError::InvalidParameter("cyclotomic product overflow".to_owned())
+                        })?,
+                    )
+                };
+                product[slot] = product[slot].checked_add(signed).ok_or_else(|| {
+                    HayesError::InvalidParameter("cyclotomic product overflow".to_owned())
+                })?;
+            }
+        }
+        Ok(Self(product))
+    }
+}
+
+fn character_root_exponent(
+    mut character: usize,
+    mut class: usize,
+    factors: &[PrincipalUnitFactor],
+    order: usize,
+) -> Result<usize, HayesError> {
+    let mut exponent = 0_usize;
+    for factor in factors {
+        let character_coordinate = character % factor.order;
+        let class_coordinate = class % factor.order;
+        character /= factor.order;
+        class /= factor.order;
+        let term = character_coordinate
+            .checked_mul(class_coordinate)
+            .and_then(|value| value.checked_mul(order / factor.order))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("cyclotomic exponent overflow".to_owned())
+            })?;
+        exponent = exponent.checked_add(term).ok_or_else(|| {
+            HayesError::InvalidParameter("cyclotomic exponent overflow".to_owned())
+        })? % order;
+    }
+    if character != 0 || class != 0 {
+        return Err(HayesError::Invariant(
+            "cyclotomic character evaluation left unused coordinates".to_owned(),
+        ));
+    }
+    Ok(exponent)
+}
+
+fn exact_character_l_coefficients(
+    level: usize,
+    character: usize,
+) -> Result<(usize, Vec<PowerTwoCyclotomicInteger>), HayesError> {
+    let factors = principal_unit_factors(level);
+    let order = factors.iter().map(|factor| factor.order).max().unwrap_or(1);
+    let mut unit_to_index = BTreeMap::new();
+    for index in 0..(1_usize << level) {
+        let mut quotient = index;
+        let mut unit = 1_u64;
+        for factor in &factors {
+            let coordinate = quotient % factor.order;
+            quotient /= factor.order;
+            let generator = 1 | (1_u64 << factor.odd_degree);
+            for _ in 0..coordinate {
+                unit = unit_multiply(unit, generator, level);
+            }
+        }
+        if unit_to_index.insert(unit, index).is_some() {
+            return Err(HayesError::Invariant(format!(
+                "level {level}: exact cyclotomic class decomposition is not injective"
+            )));
+        }
+    }
+    if unit_to_index.len() != 1_usize << level {
+        return Err(HayesError::Invariant(format!(
+            "level {level}: exact cyclotomic class decomposition is incomplete"
+        )));
+    }
+    let mut coefficients = Vec::with_capacity(level);
+    coefficients.push(PowerTwoCyclotomicInteger::root_power(order, 0));
+    for polynomial_degree in 1..level {
+        let mut coefficient = PowerTwoCyclotomicInteger::zero(order);
+        for tail in 0..(1_u64 << polynomial_degree) {
+            let unit = 1 | (tail << 1);
+            let class = unit_to_index[&unit];
+            let exponent = character_root_exponent(character, class, &factors, order)?;
+            coefficient.add_assign(&PowerTwoCyclotomicInteger::root_power(order, exponent))?;
+        }
+        coefficients.push(coefficient);
+    }
+    Ok((order, coefficients))
+}
+
+fn logarithmic_power_sum(
+    coefficients: &[PowerTwoCyclotomicInteger],
+    degree: usize,
+) -> Result<PowerTwoCyclotomicInteger, HayesError> {
+    let order = coefficients
+        .first()
+        .map_or(2, |coefficient| coefficient.0.len() * 2);
+    let mut powers = vec![PowerTwoCyclotomicInteger::zero(order); degree + 1];
+    for current in 1..=degree {
+        let mut value = if current < coefficients.len() {
+            let mut scaled = PowerTwoCyclotomicInteger::zero(order);
+            for _ in 0..current {
+                scaled.add_assign(&coefficients[current])?;
+            }
+            scaled
+        } else {
+            PowerTwoCyclotomicInteger::zero(order)
+        };
+        for (earlier, earlier_power) in powers.iter().enumerate().take(current).skip(1) {
+            let coefficient_degree = current - earlier;
+            if coefficient_degree >= coefficients.len() {
+                continue;
+            }
+            value.subtract_assign(&earlier_power.multiply(&coefficients[coefficient_degree])?)?;
+        }
+        powers[current] = value;
+    }
+    Ok(powers.swap_remove(degree))
+}
+
+fn cyclotomic_integer_residue(
+    value: &PowerTwoCyclotomicInteger,
+    modulus: u64,
+) -> Result<u64, HayesError> {
+    let order = value.0.len() * 2;
+    if !(modulus - 1).is_multiple_of(order as u64) {
+        return Err(HayesError::Invariant(
+            "audit prime does not contain the required cyclotomic roots".to_owned(),
+        ));
+    }
+    let root = mod_pow(PRIMITIVE_ROOT, (modulus - 1) / order as u64, modulus);
+    let mut result = 0_u64;
+    let mut power = 1_u64;
+    for coefficient in &value.0 {
+        let reduced = u64::try_from(coefficient.rem_euclid(i128::from(modulus))).map_err(|_| {
+            HayesError::Invariant("reduced cyclotomic coefficient does not fit u64".to_owned())
+        })?;
+        result = add_mod(result, multiply_mod(reduced, power, modulus), modulus);
+        power = multiply_mod(power, root, modulus);
+    }
+    Ok(result)
+}
+
+/// Group primitive Hayes characters by their exact leading `L`-coefficient
+/// and compare a high logarithmic power sum within each group.
+///
+/// The functional equation determines the root number from that leading
+/// coefficient.  A returned witness therefore proves that root-number data
+/// alone cannot recover the endpoint trace.  This is a bounded obstruction,
+/// not a bound on the connected character sum.
+///
+/// # Errors
+///
+/// Rejects levels below two, resource-limit violations, and arithmetic
+/// overflow in the exact integral cyclotomic ring.
+pub fn hayes_root_number_fibre_report(
+    level: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<HayesRootNumberFibreReport, HayesError> {
+    if level < 2 || degree == 0 {
+        return Err(HayesError::InvalidParameter(
+            "root-number fibre audit requires level at least two and positive degree".to_owned(),
+        ));
+    }
+    admit(level, degree, limits)?;
+    let factors = principal_unit_factors(level);
+    let (prime_one_powers, _) = character_power_sums_residue(level, degree, PRIME_ONE)?;
+    let (prime_two_powers, _) = character_power_sums_residue(level, degree, PRIME_TWO)?;
+    let mut fibres =
+        BTreeMap::<PowerTwoCyclotomicInteger, Vec<(usize, PowerTwoCyclotomicInteger)>>::new();
+    for character in 1..(1_usize << level) {
+        if mixed_radix_character_conductor(character, &factors)? != Some(level) {
+            continue;
+        }
+        let (_, coefficients) = exact_character_l_coefficients(level, character)?;
+        let leading = coefficients[level - 1].clone();
+        let power = logarithmic_power_sum(&coefficients, degree)?;
+        if cyclotomic_integer_residue(&power, PRIME_ONE)? != prime_one_powers[character]
+            || cyclotomic_integer_residue(&power, PRIME_TWO)? != prime_two_powers[character]
+        {
+            return Err(HayesError::Invariant(format!(
+                "exact cyclotomic power sum disagrees with both-prime transform at character {character}"
+            )));
+        }
+        fibres.entry(leading).or_default().push((character, power));
+    }
+    let mut varying_power_sum_fibre_count = 0_usize;
+    let mut witness = None;
+    for (leading, entries) in &fibres {
+        let Some((left_character, left_power)) = entries.first() else {
+            continue;
+        };
+        if let Some((right_character, right_power)) = entries
+            .iter()
+            .skip(1)
+            .find(|(_, power)| power != left_power)
+        {
+            varying_power_sum_fibre_count += 1;
+            if witness.is_none() {
+                witness = Some(HayesRootNumberFibreWitness {
+                    level,
+                    degree,
+                    cyclotomic_order: leading.0.len() * 2,
+                    left_character: *left_character,
+                    right_character: *right_character,
+                    common_leading_coefficient: leading.0.clone(),
+                    left_power_sum: left_power.0.clone(),
+                    right_power_sum: right_power.0.clone(),
+                });
+            }
+        }
+    }
+    let primitive_character_count = fibres.values().map(Vec::len).sum();
+    Ok(HayesRootNumberFibreReport {
+        level,
+        degree,
+        primitive_character_count,
+        leading_coefficient_fibre_count: fibres.len(),
+        varying_power_sum_fibre_count,
+        witness,
     })
 }
 
@@ -13263,6 +13597,22 @@ mod tests {
         let inconclusive = exact_conductor_supersingularity_divisibility(4, 4, limits).unwrap();
         assert!(!inconclusive.obstructs_supersingularity());
         assert!(exact_conductor_supersingularity_divisibility(4, 5, limits).is_err());
+    }
+
+    #[test]
+    fn root_number_fibres_do_not_determine_endpoint_power_sums() {
+        let report = hayes_root_number_fibre_report(5, 11, HayesLimits::default()).unwrap();
+        assert_eq!(report.primitive_character_count, 16);
+        assert_eq!(report.leading_coefficient_fibre_count, 6);
+        assert_eq!(report.varying_power_sum_fibre_count, 6);
+        let witness = report.witness.unwrap();
+        assert_eq!(witness.level, 5);
+        assert_eq!(witness.degree, 11);
+        assert_eq!(witness.cyclotomic_order, 8);
+        assert_eq!((witness.left_character, witness.right_character), (26, 30));
+        assert_eq!(witness.common_leading_coefficient, [-4, 0, 0, 0]);
+        assert_eq!(witness.left_power_sum, [-32, 0, 32, 0]);
+        assert_eq!(witness.right_power_sum, [-32, 0, -32, 0]);
     }
 
     #[test]

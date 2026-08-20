@@ -219,6 +219,18 @@ lemma.
   coefficient vector, not only the functional-equation root number.  Turning
   it into one of Sawin's Kloosterman sums would therefore drop data and is not
   a valid reduction.
+- Functional-equation root numbers do not recover the missing high power
+  sums.  The native `hayes_root_number_fibre_report` computes primitive Hayes
+  `L`-coefficients in an exact integral power-of-two cyclotomic basis and
+  cross-checks every resulting power sum through both NTT primes.  At
+  conductor level five and endpoint degree eleven, the 16 primitive
+  characters form six leading-coefficient fibres, and every fibre contains
+  distinct power sums.  In particular, characters 26 and 30 have the common
+  leading coefficient `-4`, hence the same functional-equation root number,
+  but their degree-eleven sums are `-32+32 zeta_8^2` and
+  `-32-32 zeta_8^2`.  Thus a characteristic-two replacement for a
+  primitive Gauss-sum formula must retain more than root-number data.  This is
+  a bounded exact obstruction, not cancellation toward the connected target.
 - Ma and Xing improve the Hasse--Weil estimate for an ordinary
   Artin--Schreier curve by relating it to the minimum distance of a code:
   [The Hasse--Weil bound for Artin--Schreier curves](https://arxiv.org/abs/2105.04370).
