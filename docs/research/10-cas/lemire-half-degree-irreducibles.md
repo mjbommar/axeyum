@@ -2800,8 +2800,8 @@ cross-conductor cancellation.  Until one of these estimates is derived, this
 remains a parallel local route beside the aggregate connected-cumulant bound,
 not theorem credit.
 
-The most direct generalization of Fomenko's fixed-coordinate character map is
-now closed before any expensive `L`-factor enumeration.  The native cyclic
+The elementary-abelian generalization of Fomenko's fixed-coordinate character
+map is now closed before any expensive `L`-factor enumeration.  The native cyclic
 decomposition has one 2-typical Witt block for every odd `m<=ell`.  Reducing
 each block coordinate modulo two is a surjective homomorphism
 
@@ -2816,10 +2816,13 @@ exhaustive small-level control independently verifies every fibre and every
 homomorphism pair through `ell=8`.  Fomenko's useful kernel is small because
 the number of prescribed coordinates is fixed.  Selecting the first active
 coordinate from every growing Witt block instead leaves an exponentially
-large unresolved family, so ordinary characterwise Weil bounds inside those
-fibres reproduce the endpoint loss.  A different quotient could still work
-if it brings new cross-block orthogonality, but the naive many-block map is not
-that quotient (ADR-0516).
+large unresolved family.  In fact this kernel is minimal for every map to a
+binary vector space: such a homomorphism kills `2E_ell`, factors through
+`E_ell/2E_ell`, and that maximal elementary quotient has rank
+`ceil(ell/2)`.  Ordinary characterwise Weil bounds inside those fibres
+therefore reproduce the endpoint loss for every additive-coordinate variant,
+not only the first-slot presentation.  A non-elementary higher-Witt quotient
+could still work if it brings new cross-block orthogonality (ADR-0516).
 
 Existing geometric
 higher-moment work of Hast and Matei treats fixed polynomial degree as the
@@ -2828,6 +2831,47 @@ moves both degree and conductor.  It therefore motivates the complete-
 intersection interpretation but does not prove this envelope; see
 [Higher moments of arithmetic functions in short intervals: a geometric
 perspective](https://arxiv.org/abs/1604.02067).
+
+### Why Sawin's binary square locus does not yet recurse
+
+Sawin's complete-intersection geometry gives an exact and useful weight
+cutoff.  For `X_(n,m,c)` in characteristic two, the bad locus has dimension at
+most `floor(n/2)-floor(m/2)`, because at infinity its root polynomial has
+zero derivative and therefore lies in `k[u^2]`.  At the Lemire endpoints this
+would leave ample exponential room if the long-cycle part of the remaining
+cohomology had only polynomial or partition-scale multiplicity.
+
+That last implication is not present in the source.  The proof of Sawin's
+vanishing lemma replaces the defining equations by a **generic** complete
+intersection.  Those generic equations are not symmetric, so the smoothing
+and its vanishing-cycle triangle do not carry the `S_n` action of the original
+root variety.  Although `H_c^*(X_(n,m,c))` itself is an `S_n` representation,
+the support argument used to bound its degrees cannot consequently be
+projected onto the von Mangoldt long-cycle virtual character.
+
+Nor is the support a recursive copy of a smaller short-interval variety.  The
+logarithmic-derivative calculation says only that the finite symmetric
+quotient sends the bad locus at infinity into the even-coefficient subspace.
+It does not identify vanishing-cycle stalks, their multiplicities, or their
+Frobenius actions there.  The quotient is wildly ramified on this repeated-
+root locus in characteristic two, so those missing data cannot be discarded.
+
+The exact character identity remains
+
+```text
+Tr(Frob * sigma_n | H_c^*(X_(n,m,0)))
+  = sum_(f in I_0) Lambda(f)
+  = # {alpha in GF(2^n): charpoly(alpha) is in I_0}.
+```
+
+The native `identity_class_count` already reconstructs this last population
+exactly through the Hayes transform.  Thus explicit extension-field
+enumeration would duplicate an existing exact CAS value layer.  More
+importantly, applying the fixed-point formula to the left side merely returns
+the original population; it does not bound it.  A valid geometric bridge must
+instead construct an equivariant smoothing, bound the twisted trace directly,
+or identify a recursive complex including its stalk ranks and cyclic
+induction data (ADR-0526).
 
 The exact algebra is no longer trapped in that executable. ADR-0486 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,

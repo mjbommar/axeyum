@@ -1968,8 +1968,8 @@ pub struct BinaryPrincipalUnitWittReport {
     pub blocks: Vec<BinaryWittBlockCoordinate>,
 }
 
-/// Exact size ledger for the projection onto the first slot of every binary
-/// 2-typical Witt block.
+/// Exact size ledger for the maximal elementary-abelian quotient of the
+/// binary 2-typical Witt blocks.
 ///
 /// On a block `Z/2^L`, the first-slot map is reduction modulo two.  Taking
 /// the product over all odd block indices gives a surjection
@@ -1979,9 +1979,11 @@ pub struct BinaryPrincipalUnitWittReport {
 /// ```
 ///
 /// This is the direct many-block analogue of the low-coordinate character
-/// maps used for a fixed number of prescribed coefficients.  The report keeps
-/// its exponentially growing kernel explicit; it is a structural ledger, not
-/// a character-sum estimate.
+/// maps used for a fixed number of prescribed coefficients.  Every
+/// homomorphism from `E_ell` to an elementary abelian binary group kills
+/// `2 E_ell`, hence factors through this quotient.  The report therefore
+/// keeps the *minimum possible* kernel of any such maximal-rank map explicit;
+/// it is a structural ledger, not a character-sum estimate.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BinaryWittFirstSlotProjectionReport {
     /// Principal-unit truncation level.
@@ -1994,10 +1996,15 @@ pub struct BinaryWittFirstSlotProjectionReport {
     pub source_order: usize,
     /// Order of the first-slot image, `2^ceil(ell/2)`.
     pub image_order: usize,
+    /// Binary rank of the maximal elementary-abelian quotient `E_ell/2E_ell`.
+    pub maximal_elementary_quotient_rank: usize,
     /// Order of every fibre, `2^floor(ell/2)`.
     pub kernel_order: usize,
     /// Binary dimension of the kernel, `floor(ell/2)`.
     pub kernel_dimension: usize,
+    /// Minimum kernel dimension among homomorphisms from `E_ell` to an
+    /// elementary abelian binary group.
+    pub minimum_elementary_kernel_dimension: usize,
 }
 
 /// Projection of simultaneous Möbius cosets onto one order-two character.
@@ -3705,14 +3712,18 @@ pub fn binary_principal_unit_witt_report(
     })
 }
 
-/// Compute the exact source, image, and kernel sizes of the projection onto
-/// the first binary slot of every 2-typical Witt block.
+/// Compute the exact source, image, and kernel sizes of the maximal
+/// elementary-abelian quotient of the 2-typical Witt blocks.
 ///
 /// Each cyclic factor has power-of-two order `2^L`.  Reduction of its
 /// coordinate modulo two is a surjective homomorphism to `GF(2)`, with kernel
 /// order `2^(L-1)`.  The product map therefore has one target bit for every
 /// odd degree at most `ell` and kernel dimension
-/// `sum(L-1)=ell-ceil(ell/2)=floor(ell/2)`.
+/// `sum(L-1)=ell-ceil(ell/2)=floor(ell/2)`.  Conversely, every homomorphism
+/// to a binary vector space kills doubles.  On each cyclic block its image
+/// therefore has rank at most one, so this first-slot map realizes
+/// `E_ell/2E_ell` and has the smallest kernel possible for any elementary-
+/// abelian target.
 ///
 /// # Errors
 ///
@@ -3769,8 +3780,10 @@ pub fn binary_witt_first_slot_projection_report(
         block_lengths,
         source_order: structure.group_order,
         image_order,
+        maximal_elementary_quotient_rank: ell.div_ceil(2),
         kernel_order,
         kernel_dimension,
+        minimum_elementary_kernel_dimension: ell / 2,
     })
 }
 
@@ -12933,8 +12946,10 @@ mod tests {
             );
             assert_eq!(report.source_order, 1 << ell);
             assert_eq!(report.image_order, 1 << ell.div_ceil(2));
+            assert_eq!(report.maximal_elementary_quotient_rank, ell.div_ceil(2));
             assert_eq!(report.kernel_order, 1 << (ell / 2));
             assert_eq!(report.kernel_dimension, ell / 2);
+            assert_eq!(report.minimum_elementary_kernel_dimension, ell / 2);
             assert_eq!(report.block_lengths.iter().sum::<usize>(), ell);
 
             let factors = principal_unit_factors(ell);

@@ -1,8 +1,8 @@
-# ADR-0516: Reject the naive many-block Fomenko projection
+# ADR-0516: Reject elementary-abelian many-block Fomenko projections
 
 Status: accepted
 Date: 2026-08-19
-Index-summary: Prove that projecting every binary Witt block to its first slot has kernel order `2^floor(ell/2)`, so the fixed-coordinate Fomenko mechanism does not scale with the Lemire conductor
+Index-summary: Prove that every elementary-abelian quotient has kernel at least `2^floor(ell/2)`, so the fixed-coordinate Fomenko mechanism does not scale with the Lemire conductor
 
 ## Context
 
@@ -10,7 +10,9 @@ Fomenko's treatment of three prescribed binary coefficients obtains a useful
 low-degree `L`-function family by mapping Hayes characters to a fixed number of
 additive coordinates with a small kernel.  A natural Lemire analogue projects
 each odd-indexed 2-typical Witt block of the principal-unit group to its first
-binary slot.
+binary slot.  Fomenko's actual map restricts characters to a square-zero
+additive subgroup, so the relevant stopping test is broader: could *any*
+homomorphism to an elementary abelian binary group have a smaller kernel?
 
 Before computing any grouped `L`-polynomials, the source, image, and kernel of
 that map must be exact.  A growing kernel would fail the stopping test recorded
@@ -43,7 +45,18 @@ kernel rank = floor(ell/2),
 kernel size = 2^floor(ell/2).
 ```
 
-Stop the naive first-slot generalization here.  Do not compute finite
+This is optimal among all elementary-abelian targets.  Every homomorphism
+`phi:E_ell -> GF(2)^r` kills `2 E_ell` and therefore factors through
+
+```text
+E_ell / 2 E_ell = GF(2)^ceil(ell/2).
+```
+
+Each cyclic Witt block contributes exactly one bit to this quotient.  Thus
+`rank(image phi)<=ceil(ell/2)` and
+`dim(kernel phi)>=floor(ell/2)`; the checked first-slot map attains equality.
+
+Stop every elementary-abelian generalization here.  Do not compute finite
 `L`-factor tables and call their grouping a small-kernel reduction.
 
 ## Evidence
@@ -54,15 +67,18 @@ checked power-of-two cyclic decomposition and fails closed if the three orders
 do not multiply back to `2^ell`.
 
 Fomenko's fixed-coordinate construction remains useful as a pattern only if a
-different quotient has a bounded kernel or if an additional orthogonality
-theorem cancels the large fibres.  Neither is supplied here.
+non-elementary target retains higher Witt slots together with an additional
+orthogonality theorem that cancels the large fibres.  Merely choosing a
+different collection of additive binary coordinates cannot improve the
+kernel.  No such higher-Witt orthogonality theorem is supplied here.
 
 ## Consequences
 
-- The direct many-block Fomenko route is structurally rejected, not merely
-  unsupported by finite data.
+- Every elementary-abelian many-block Fomenko route is structurally rejected,
+  not merely unsupported by finite data.
 - No SMT surface is added: this is exact finite-group algebra in the CAS.
 - The live proof obligation remains the signed aggregate connected-cumulant
   bound, equivalently the `L2` estimate for binary Witt-refinement imbalances.
-- A future quotient must expose new cross-block structure; selecting one bit
-  independently from every block cannot inherit Fomenko's small-kernel gain.
+- A future quotient must retain non-elementary higher-Witt structure and
+  expose new cross-block cancellation; no additive binary coordinate map can
+  inherit Fomenko's small-kernel gain.
