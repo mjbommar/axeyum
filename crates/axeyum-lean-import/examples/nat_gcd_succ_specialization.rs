@@ -31,6 +31,15 @@ const GCD_SUCC_GENERIC: &str = "Axeyum.Autogenesis.nat_gcd_succ";
 const MOD_LT_SUCC_TARGET: &str = "Axeyum.Autogenesis.ModLtSucc";
 const GCD_SUCC_TARGET: &str = "Nat.gcd_succ";
 const DVD_GCD_LEAVES: [&str; 3] = ["Nat.dvd_mod_iff", "Nat.mod_lt", "Nat.gcd_succ"];
+const REQUIRED_SUPPORT_ROOTS: [&str; 7] = [
+    "Nat.add_comm",
+    "Nat.dvd_add_iff_right",
+    "Nat.dvd_gcd",
+    "Nat.eq_one_of_dvd_one",
+    "Nat.gcd_dvd_left",
+    "Nat.gcd_dvd_right",
+    "Nat.gcd_zero_left",
+];
 
 fn main() {
     if let Err(error) = run() {
@@ -45,9 +54,11 @@ fn run() -> Result<(), String> {
     let mod_invariant_path = required_path(&mut arguments, "mod-invariant.ndjson")?;
     let target_path = required_path(&mut arguments, "target.ndjson")?;
     let gcd_bridge_path = required_path(&mut arguments, "gcd-bridge.ndjson")?;
-    if arguments.next().is_some() {
-        return Err("unexpected trailing argument".to_owned());
-    }
+    let all_support = match arguments.next() {
+        None => false,
+        Some(flag) if flag == "--all-support" => true,
+        Some(_) => return Err("unexpected trailing argument".to_owned()),
+    };
 
     let mod_invariant = import(&mod_invariant_path, "mod-invariant")?;
     let target = import(&target_path, "target")?;
@@ -184,7 +195,12 @@ fn run() -> Result<(), String> {
         checked_reused_declaration_compatibility(&native, gcd_succ.kernel(), GCD_SUCC_TARGET)
             .map_err(|error| format!("native Nat.gcd_succ compatibility failed: {error:?}"))?;
 
-    let frontier = retry_dvd_gcd(&native, gcd_succ.kernel())?;
+    let support_roots: &[&str] = if all_support {
+        &REQUIRED_SUPPORT_ROOTS
+    } else {
+        &["Nat.dvd_gcd"]
+    };
+    let frontier = retry_native_support(&native, gcd_succ.kernel(), support_roots)?;
     let output = json!({
         "schema_version": 1,
         "kind": "axeyum-nat-gcd-succ-specialization",
@@ -216,13 +232,8 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
-fn retry_dvd_gcd(source: &Kernel, target: &Kernel) -> Result<Value, String> {
-    match compose_checked_theorem_slice_with_target_leaves(
-        source,
-        target,
-        &["Nat.dvd_gcd"],
-        &DVD_GCD_LEAVES,
-    ) {
+fn retry_native_support(source: &Kernel, target: &Kernel, roots: &[&str]) -> Result<Value, String> {
+    match compose_checked_theorem_slice_with_target_leaves(source, target, roots, &DVD_GCD_LEAVES) {
         Ok(completed) => {
             verify_checked_theorem_composition_with_target_leaves(
                 source,
@@ -238,25 +249,40 @@ fn retry_dvd_gcd(source: &Kernel, target: &Kernel) -> Result<Value, String> {
                     .iter()
                     .map(|row| (row.name.as_str(), row.axiom_footprint.as_slice())),
             )?;
-            Ok(json!({
-                "outcome": "composed",
-                "target_theorem_leaves": DVD_GCD_LEAVES,
-                "source_closure": completed.receipt().source_closure.len(),
-                "added_theorems": completed.receipt().added_theorems.len(),
-                "added_definitions": completed.receipt().added_definitions.len(),
-                "receipt_sha256": completed.receipt().receipt_sha256,
-            }))
+            Ok(with_optional_roots(
+                json!({
+                    "outcome": "composed",
+                    "target_theorem_leaves": DVD_GCD_LEAVES,
+                    "source_closure": completed.receipt().source_closure.len(),
+                    "added_theorems": completed.receipt().added_theorems.len(),
+                    "added_definitions": completed.receipt().added_definitions.len(),
+                    "receipt_sha256": completed.receipt().receipt_sha256,
+                }),
+                roots,
+            ))
         }
-        Err(CheckedTheoremCompositionError::AdmissionRejected { name, error }) => Ok(json!({
-            "outcome": "declined",
-            "target_theorem_leaves": DVD_GCD_LEAVES,
-            "first_rejected": name,
-            "error": error,
-        })),
+        Err(CheckedTheoremCompositionError::AdmissionRejected { name, error }) => {
+            Ok(with_optional_roots(
+                json!({
+                    "outcome": "declined",
+                    "target_theorem_leaves": DVD_GCD_LEAVES,
+                    "first_rejected": name,
+                    "error": error,
+                }),
+                roots,
+            ))
+        }
         Err(error) => Err(format!(
             "Nat.dvd_gcd composition declined unexpectedly: {error:?}"
         )),
     }
+}
+
+fn with_optional_roots(mut value: Value, roots: &[&str]) -> Value {
+    if roots != ["Nat.dvd_gcd"] {
+        value["roots"] = json!(roots);
+    }
+    value
 }
 
 fn specialization_json(receipt: &axeyum_lean_import::CheckedTheoremSpecializationReceipt) -> Value {
