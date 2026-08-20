@@ -230,6 +230,94 @@ fn complete_nonrecursive_singleton_inductive_is_reconstructed_atomically() {
 }
 
 #[test]
+fn canonical_recursive_acc_is_regenerated_exactly_and_reverified() {
+    let mut source = Kernel::new();
+    build_logic_prelude(&mut source).unwrap();
+    let target = Kernel::new();
+    let target_len = target.environment().len();
+    let completed = compose_checked_theorem_slice(&source, &target, &["Acc.inv"]).unwrap();
+
+    assert_eq!(target.environment().len(), target_len);
+    assert_eq!(completed.receipt().added_singleton_inductives.len(), 1);
+    let package = &completed.receipt().added_singleton_inductives[0];
+    assert_eq!(package.family, "Acc");
+    assert_eq!(package.constructors, ["Acc.intro"]);
+    assert_eq!(package.recursor, "Acc.rec");
+    assert_eq!(
+        package.source_declaration_sha256,
+        package.target_declaration_sha256
+    );
+    assert_eq!(
+        completed
+            .receipt()
+            .added_theorems
+            .iter()
+            .map(|row| row.name.as_str())
+            .collect::<Vec<_>>(),
+        ["Acc.inv"]
+    );
+    assert!(
+        completed.receipt().added_theorems[0]
+            .axiom_footprint
+            .is_empty()
+    );
+    verify_checked_theorem_composition(&source, &target, completed.kernel(), completed.receipt())
+        .unwrap();
+}
+
+#[test]
+fn incomplete_acc_package_declines_before_admission() {
+    let mut source = Kernel::new();
+    build_logic_prelude(&mut source).unwrap();
+    let names = declaration_names(&source);
+    let acc = names["Acc"];
+    let missing = [acc, names["Acc.intro"]]
+        .into_iter()
+        .collect::<BTreeSet<_>>();
+
+    assert!(matches!(
+        validate_singleton_inductive(&source, acc, &missing, &names),
+        Err(CheckedTheoremCompositionError::UnsupportedMissingDeclaration { kind, .. })
+            if kind == "non-singleton-or-partial-inductive-package"
+    ));
+}
+
+#[test]
+fn a_recursive_lookalike_named_acc_has_no_composition_authority() {
+    let mut source = Kernel::new();
+    let anon = source.anon();
+    let prop = source.sort_zero();
+    let acc = source.name_str(anon, "Acc");
+    let intro = source.name_str(acc, "intro");
+    let acc_type = source.const_(acc, vec![]);
+    let intro_type = source.pi(anon, acc_type, acc_type, BinderInfo::Default);
+    source
+        .add_inductive(acc, &[], 0, prop, &[(intro, intro_type)])
+        .unwrap();
+    let root = name(&mut source, "Composition.fakeAccIdentity");
+    let root_type = source.pi(anon, acc_type, acc_type, BinderInfo::Default);
+    let root_body = source.bvar(0);
+    let root_value = source.lam(anon, acc_type, root_body, BinderInfo::Default);
+    source
+        .add_declaration(Declaration::Theorem {
+            name: root,
+            uparams: vec![],
+            ty: root_type,
+            value: root_value,
+        })
+        .unwrap();
+    let target = Kernel::new();
+    let target_len = target.environment().len();
+
+    assert!(matches!(
+        compose_checked_theorem_slice(&source, &target, &["Composition.fakeAccIdentity"]),
+        Err(CheckedTheoremCompositionError::UnsupportedMissingDeclaration { name, kind })
+            if name == "Acc" && kind == "recursive-inductive"
+    ));
+    assert_eq!(target.environment().len(), target_len);
+}
+
+#[test]
 fn mutual_inductive_package_remains_outside_the_boundary() {
     let mut source = Kernel::new();
     let prop = source.sort_zero();

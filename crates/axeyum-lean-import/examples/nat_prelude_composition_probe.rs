@@ -26,6 +26,7 @@ fn main() {
 struct ControlObservations {
     composition: serde_json::Value,
     singleton: serde_json::Value,
+    acc: serde_json::Value,
     definition: serde_json::Value,
     mod_lt_compatibility: serde_json::Value,
     negative: serde_json::Value,
@@ -112,6 +113,7 @@ fn run() -> Result<(), String> {
             "required_native_theorem_dependency_closures": overlaps.required_theorem_dependency_closures,
             "composition_control": controls.composition,
             "singleton_inductive_control": controls.singleton,
+            "acc_inductive_control": controls.acc,
             "definition_control": controls.definition,
             "mod_lt_compatibility_control": controls.mod_lt_compatibility,
             "structural_mismatch_control": controls.negative,
@@ -142,7 +144,7 @@ fn exercise_composition_controls(kernel: &mut Kernel) -> Result<ControlObservati
             .map_err(|error| format!("Nat.mod_lt compatibility failed: {error:?}"))?;
     let negative_before = environment_sha256(kernel)?;
     let negative_error = compose_checked_theorem_slice(&native, kernel, &["Nat.dvd_gcd"])
-        .expect_err("the structurally mismatched control must decline");
+        .expect_err("the unresolved composition control must decline");
     let negative_after = environment_sha256(kernel)?;
     if negative_before != negative_after {
         return Err("failed composition changed the caller kernel".to_owned());
@@ -150,6 +152,9 @@ fn exercise_composition_controls(kernel: &mut Kernel) -> Result<ControlObservati
     let singleton_completed = compose_checked_theorem_slice(&native, kernel, &[singleton_root])
         .map_err(|error| format!("singleton inductive composition failed: {error:?}"))?;
     let singleton = singleton_control_json(singleton_completed.receipt());
+    let acc_completed = compose_checked_theorem_slice(&native, kernel, &["Acc.inv"])
+        .map_err(|error| format!("Acc inductive composition failed: {error:?}"))?;
+    let acc = singleton_control_json(acc_completed.receipt());
     let definition_completed =
         compose_checked_theorem_slice(&native, kernel, &["Nat.eq_one_of_dvd_one"])
             .map_err(|error| format!("definition composition failed: {error:?}"))?;
@@ -158,6 +163,10 @@ fn exercise_composition_controls(kernel: &mut Kernel) -> Result<ControlObservati
     let completed = compose_checked_theorem_slice(&native, kernel, &["Nat.add_comm"])
         .map_err(|error| format!("checked composition failed: {error:?}"))?;
     let positive = positive_control_json(completed.receipt());
+    let kernel_submissions = receipt_kernel_submissions(singleton_completed.receipt())
+        + receipt_kernel_submissions(acc_completed.receipt())
+        + receipt_kernel_submissions(definition_receipt)
+        + receipt_kernel_submissions(completed.receipt());
     let (composed_kernel, _) = completed.into_parts();
     *kernel = composed_kernel;
     let negative = json!({
@@ -167,16 +176,25 @@ fn exercise_composition_controls(kernel: &mut Kernel) -> Result<ControlObservati
         "environment_sha256_before": negative_before,
         "environment_sha256_after": negative_after,
     });
-    let kernel_submissions =
-        5 + definition_receipt.added_definitions.len() + definition_receipt.added_theorems.len();
     Ok(ControlObservations {
         composition: positive,
         singleton,
+        acc,
         definition,
         mod_lt_compatibility: reused_receipt_json(&mod_lt_compatibility),
         negative,
         kernel_submissions,
     })
+}
+
+fn receipt_kernel_submissions(receipt: &CheckedTheoremCompositionReceipt) -> usize {
+    receipt.added_theorems.len()
+        + receipt.added_definitions.len()
+        + receipt
+            .added_singleton_inductives
+            .iter()
+            .map(|package| package.constructors.len() + 2)
+            .sum::<usize>()
 }
 
 fn add_exists_control_theorem(
