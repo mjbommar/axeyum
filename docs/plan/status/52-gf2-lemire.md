@@ -646,12 +646,24 @@ ledger.  It improves the old generic bound but still misses the first two
 post-400 endpoint margins by 6,829 and 6,851 bits, confirming that the needed
 saving is cyclic-eigenspace or signed long-cycle cancellation rather than a
 better total-Betti constant.
+The dyadic fibre report now retains its exact `L^2` mass and proves that
+inverse-difference equality is equivalent to the base-point-independent
+nilpotent condition `h*t*(t+h)=0` modulo `x^(ell+1)`.  This turns the proposed
+nonpositive fibre defect into one restricted four-shift Mobius correlation.
+The candidate survives exhaustive endpoint rows through `ell=7` and the
+maximal-interval fleet rows through `ell=14`, but remains conjectural and
+would not by itself close the cross-order convolution.  The next audit must
+also use the review sweep's favorable corrections: compare every previously
+rejected shortcut against the genuinely sufficient weak fourth-moment
+allowance, and independently recheck the generalized odd-`k` Capell and
+power-of-two composition families before granting construction coverage.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `833806e24` | Expanded exact dyadic fibre `L^2`, proved the inverse-difference parallelogram criterion `h*t*(t+h)=0`, and reduced the conjectural nonpositive defect to a restricted four-shift Mobius correlation without granting endpoint credit. |
 | 2026-08-20 | `9a49f2023` | Inserted Wan--Zhang's sharper complete-intersection Betti theorem into the exact Foulkes endpoint ledger and quantified its remaining 6,800-bit miss, isolating cyclic-eigenspace cancellation rather than generic total cohomology as the needed theorem. |
 | 2026-08-20 | `6f4a275db` | Audited the proposed Newton-polygon literature at source level, recording its odd-prime or `Z_p`-tower scope and preventing those nearby results from being substituted for the binary product-group theorem. |
 | 2026-08-20 | `29f3c4d94` | Stopped the fixed modulo-eight endpoint route after the exact degree-55 counterexample `I_55(1)=4883944`, marked the universal congruence refuted, and returned theorem effort to an aggregate trace estimate. |
