@@ -121,6 +121,7 @@ now. Nothing was deleted.
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
 | 2026-08-20 | `b5c4bb48b` | Binder-info-insensitive kernel type-shape identity with adversarial controls |
 | 2026-08-20 | `24b16642e` | r082 overlap probe classifies kernel-compatible and structurally different types |
+| 2026-08-20 | `8dbd18c82` | Required Nat theorem closure census isolates a structurally unblocked first replay slice |
 | 2026-08-19 | `pending` | `scripts/check-kernel-suites.sh`: the kernel's push-time / real-Lean suite partition, discovered from the source and asserted total; `hooks/pre-push` repointed at the non-Lean half (2,296 s → 80 s warm). Found `real_lean_string_monoid_crosscheck` owned by nothing and mis-formatting its check count; floor 218 → 219. |
 | 2026-08-19 | `e3e105cd6` | The local-ci freshness gate is ENFORCING in both `check.sh` and `justfile`, on a `PASS` record (`57af69142-s4.json`, 6656 s, 7561 tests + 179 doctests, no vacuous/unreadable step). Landed report-only the day before because the only record was FAIL; that was the sole blocker. Flip re-tested through the real call site: NO_RECORD / STALE / STEP VACUOUS all red, unmodified green. |
 | 2026-08-19 | (pending) | `artifacts/local-ci-runs/57af69142-s4.json`: first all-pass authoritative-gate record (5/5 steps, 7561+179 tests, 6656 s); `check-local-ci-freshness` flipped from `--report-only` to ENFORCING in `scripts/check.sh` and `justfile`. |
@@ -559,9 +560,9 @@ registered gate checkout, left it clean, and preserved the caller branch,
 index, and status. The operational incident is closed; future changes remain
 covered by the registered control and the live hook.
 
-**Status:** Fib prelude compatibility now separates 35 kernel-type-shape-compatible overlaps from 8 genuine structural mismatches; direct graft remains unauthorized.
+**Status:** The seven required Fib-coprimality lemmas now have measured native declaration closures; `Nat.add_comm` alone reaches no structural mismatch and needs only two missing dependencies.
 
-**Next:** trace the seven required Nat lemmas against the eight structural mismatches, then design the smallest transactional reuse/translation boundary that can replay their surface without replacing imported declarations.
+**Next:** transactionally replay `Nat.zero_add`, `Nat.succ_add`, and `Nat.add_comm` over the ten compatible imported dependencies, proving rollback on any incompatible reused declaration before touching the six structurally blocked lemmas.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

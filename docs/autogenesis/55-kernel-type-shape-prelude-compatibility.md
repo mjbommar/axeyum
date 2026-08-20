@@ -58,3 +58,8 @@ Verify it with:
 ```sh
 python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py
 ```
+
+The subsequent
+[required-theorem closure census](56-required-nat-theorem-closure-census.md)
+shows that `Nat.add_comm` reaches none of the eight structural mismatches and is
+the first bounded transactional composition slice.

@@ -47,10 +47,10 @@ also benefits every later Mathlib target that needs native arithmetic facts.
 ## Evidence
 
 The current read-only observation is
-`/nas3/data/axeyum/autogenesis/probes/24b16642e-fib-coprime-kernel-type-shape-v3/observation.json`.
+`/nas3/data/axeyum/autogenesis/probes/8dbd18c82-fib-coprime-required-closure-v4/observation.json`.
 It extends the original rejection receipt with a fail-closed overlap census;
 the interpretation and next boundary are recorded in
-[the kernel-type-shape compatibility result](55-kernel-type-shape-prelude-compatibility.md).
+[the required Nat closure census](56-required-nat-theorem-closure-census.md).
 Verify the tracked plan and its authority boundary with:
 
 ```sh

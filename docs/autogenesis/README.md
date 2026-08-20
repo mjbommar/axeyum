@@ -152,6 +152,7 @@ compounding, not automation theatre.
 | [Fibonacci coprimality premise plan](53-nat-fib-coprime-premise-plan.md) | Which bounded proof shape applies, and what exact composition seam blocks its execution? |
 | [Alpha-stable prelude compatibility](54-alpha-stable-prelude-compatibility.md) | Which imported/native overlaps are exact, alpha-type compatible, or still unresolved before checked reuse? |
 | [Kernel-type-shape prelude compatibility](55-kernel-type-shape-prelude-compatibility.md) | Which remaining overlaps differ only in kernel-irrelevant binder metadata, and which eight need explicit translation? |
+| [Required Nat closure census](56-required-nat-theorem-closure-census.md) | Which representation mismatches actually block the seven-lemma target surface, and what is the first safe composition slice? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

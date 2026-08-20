@@ -17,9 +17,9 @@
   },
   "composition_probe": {
     "tool": "crates/axeyum-lean-import/examples/nat_prelude_composition_probe.rs",
-    "tool_sha256": "dfedf72e4e44227ce95d8083a52eaa176f6c02f8d5bd2e6b5f7e8dfaf03284b3",
-    "observation": "/nas3/data/axeyum/autogenesis/probes/24b16642e-fib-coprime-kernel-type-shape-v3/observation.json",
-    "observation_sha256": "67542c90420ad576238dfeaaaa54a128cf99b8b080cbc46c04c9357ee879ea93",
+    "tool_sha256": "247ca6c11e46dfa88f76733a35dc3beb938fdab3a00996922e3c4f2bc7b65b4a",
+    "observation": "/nas3/data/axeyum/autogenesis/probes/8dbd18c82-fib-coprime-required-closure-v4/observation.json",
+    "observation_sha256": "0b9217c59ade8546c6a4a1aa956dd8185b8bbce67e75fc0a79fad14782865d6d",
     "outcome": "rejected",
     "first_conflict": "True",
     "imported_declarations": 261,
@@ -29,6 +29,20 @@
     "alpha_type_compatible_content_mismatches": 18,
     "kernel_type_shape_compatible_content_mismatches": 10,
     "unresolved_type_overlaps": 8
+  },
+  "closure_census": {
+    "required_theorems": 7,
+    "first_structurally_unblocked_theorem": "Nat.add_comm",
+    "first_dependency_count": 10,
+    "first_missing_dependencies": ["Nat.succ_add", "Nat.zero_add"],
+    "structurally_blocked_theorems": [
+      "Nat.dvd_add_iff_right",
+      "Nat.dvd_gcd",
+      "Nat.eq_one_of_dvd_one",
+      "Nat.gcd_dvd_left",
+      "Nat.gcd_dvd_right",
+      "Nat.gcd_zero_left"
+    ]
   },
   "proof_plan": {
     "induction_binder": "n",

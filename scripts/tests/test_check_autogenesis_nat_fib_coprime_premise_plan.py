@@ -51,6 +51,11 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "premise"):
             MODULE.validate(changed)
 
+        changed = copy.deepcopy(self.manifest)
+        changed["closure_census"]["first_dependency_count"] = 9
+        with self.assertRaisesRegex(MODULE.PlanError, "closure census"):
+            MODULE.validate(changed)
+
 
 if __name__ == "__main__":
     unittest.main()

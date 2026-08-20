@@ -110,6 +110,41 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         }
     ):
         raise PlanError("composition overlap partition or authority changed")
+    closures = observation["source"]["required_native_theorem_dependency_closures"]
+    for row in closures:
+        closure_categories = [
+            row["missing_dependency_names"],
+            row["exact_dependency_names"],
+            row["alpha_type_compatible_dependency_names"],
+            row["kernel_type_shape_compatible_dependency_names"],
+            row["type_mismatched_dependency_names"],
+        ]
+        closure_names = [name for category in closure_categories for name in category]
+        if (
+            len(closure_names) != row["native_dependency_count"]
+            or len(set(closure_names)) != len(closure_names)
+            or any(category != sorted(category) for category in closure_categories)
+        ):
+            raise PlanError(f"invalid dependency closure partition for {row['theorem']}")
+    closure_census = manifest["closure_census"]
+    unblocked = [
+        row for row in closures if not row["type_mismatched_dependency_names"]
+    ]
+    blocked = sorted(
+        row["theorem"] for row in closures if row["type_mismatched_dependency_names"]
+    )
+    if (
+        len(closures) != closure_census["required_theorems"]
+        or len(unblocked) != 1
+        or unblocked[0]["theorem"]
+        != closure_census["first_structurally_unblocked_theorem"]
+        or unblocked[0]["native_dependency_count"]
+        != closure_census["first_dependency_count"]
+        or unblocked[0]["missing_dependency_names"]
+        != closure_census["first_missing_dependencies"]
+        or blocked != closure_census["structurally_blocked_theorems"]
+    ):
+        raise PlanError("required theorem closure census changed")
     if (
         manifest["target"]["fact_id"]
         != "F:ml430-nat-fib-coprime-fib-succ-162fc738"
