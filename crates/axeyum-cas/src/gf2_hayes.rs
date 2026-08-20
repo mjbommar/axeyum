@@ -2885,7 +2885,17 @@ pub struct HastMateiLongCycleEndpointReport {
 /// of the degree-`n` characteristic polynomial vanish.  The
 /// Tuxanidy--Wang support theorem therefore proves Lemire at degree `n` if
 /// the least period of `Gamma` does not divide
-/// `lcm_(d|n,d<n)(2^d-1) = N/Phi_n(2)`.
+/// `lcm_(d|n,d<n)(2^d-1) = N/Phi_n(2)`.  The exact (rather than merely
+/// sufficient) support test applies one difference for every maximal proper
+/// subfield.  If `p` runs over the distinct prime divisors of `n`, put
+/// `T_p=2^(n/p)-1`; then
+///
+/// ```text
+/// product_(p|n) (1+tau_(T_p)) Gamma != 0
+/// ```
+///
+/// if and only if the common coefficient-zero set contains an element of
+/// exact degree `n`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TuxanidyLemirePeriodReport {
     /// Target polynomial degree `n`.
@@ -2902,10 +2912,21 @@ pub struct TuxanidyLemirePeriodReport {
     pub least_period: usize,
     /// `lcm_(d|n,d<n)(2^d-1)`, equal to `N/Phi_n(2)`.
     pub proper_subfield_exponent_lcm: usize,
+    /// Translation periods `2^(n/p)-1` of the maximal proper subfields,
+    /// ordered by the distinct prime divisors `p` of `n`.
+    pub maximal_proper_subfield_periods: Vec<usize>,
+    /// Support size after applying every maximal-subfield difference
+    /// `1+tau_(2^(n/p)-1)`.
+    pub exact_degree_difference_support_size: usize,
+    /// First nonzero coefficient of the exact-degree difference, if any.
+    pub first_exact_degree_difference_witness: Option<usize>,
     /// Whether the computed period is the maximum `N`.
     pub maximum_least_period: bool,
     /// Whether the exact Tuxanidy--Wang sufficient condition holds.
     pub period_criterion_holds: bool,
+    /// Logical relation between the older single-period condition and the
+    /// exact maximal-subfield criterion at this degree.
+    pub period_criterion_relation: TuxanidyPeriodCriterionRelation,
     /// Explicit epistemic boundary between the cited general implication and
     /// the still-open universal period statement.
     pub theorem_boundary: TuxanidyPeriodTheoremBoundary,
@@ -2916,9 +2937,29 @@ pub struct TuxanidyLemirePeriodReport {
 /// The theorem boundary retained by a Tuxanidy--Lemire period report.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TuxanidyPeriodTheoremBoundary {
-    /// Tuxanidy--Wang certify that the period criterion implies Lemire at this
-    /// degree; the report does not certify the universal maximum-period lemma.
-    CriterionImplicationCertifiedUniversalPeriodOpen,
+    /// Fourier inversion certifies the maximal-subfield difference
+    /// equivalence; the report does not certify its universal nonvanishing.
+    ExactDegreeDifferenceCertifiedUniversalNonvanishingOpen,
+}
+
+/// Relation between the common-period and exact maximal-subfield tests.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TuxanidyPeriodCriterionRelation {
+    /// Proper subfields are nested, so the one maximal-subfield period is
+    /// equivalent to exact-degree support.
+    ExactPrimePowerDegree,
+    /// The common exponent subgroup overcovers the union of proper subfields;
+    /// failure of its period remains sufficient but is not necessary.
+    SufficientOnlyMixedDivisorDegree,
+}
+
+impl TuxanidyLemirePeriodReport {
+    /// Whether the exact maximal-subfield difference proves that an
+    /// admissible element of degree `n` exists in this bounded row.
+    #[must_use]
+    pub const fn exact_degree_support_criterion_holds(&self) -> bool {
+        self.exact_degree_difference_support_size != 0
+    }
 }
 
 /// Hypothetical polynomial bound on every effective cyclic Foulkes Betti
@@ -8538,6 +8579,108 @@ struct CharacteristicDeltaConvolution {
     cells: usize,
 }
 
+struct ExactDegreeDifferenceCertificate {
+    maximal_proper_subfield_periods: Vec<usize>,
+    support_size: usize,
+    first_witness: Option<usize>,
+    criterion_holds: bool,
+    period_criterion_relation: TuxanidyPeriodCriterionRelation,
+    total_cells: usize,
+}
+
+fn exact_degree_difference_certificate(
+    degree: usize,
+    cyclic_order: usize,
+    coefficients: &[bool],
+    base_cells: usize,
+    maximum_cells: usize,
+) -> Result<ExactDegreeDifferenceCertificate, HayesError> {
+    let degree_factors = factor_usize(degree);
+    let maximal_proper_subfield_periods = degree_factors
+        .iter()
+        .map(|&(prime, _)| {
+            1_usize
+                .checked_shl(u32::try_from(degree / prime).map_err(|_| {
+                    HayesError::InvalidParameter(
+                        "Tuxanidy maximal-subfield shift overflow".to_owned(),
+                    )
+                })?)
+                .and_then(|value| value.checked_sub(1))
+                .ok_or_else(|| {
+                    HayesError::InvalidParameter(
+                        "Tuxanidy maximal-subfield period overflow".to_owned(),
+                    )
+                })
+        })
+        .collect::<Result<Vec<_>, HayesError>>()?;
+    let difference_cells = cyclic_order
+        .checked_mul(maximal_proper_subfield_periods.len())
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Tuxanidy difference work overflow".to_owned())
+        })?;
+    let total_cells = base_cells
+        .checked_add(difference_cells)
+        .ok_or_else(|| HayesError::InvalidParameter("Tuxanidy total work overflow".to_owned()))?;
+    if total_cells > maximum_cells {
+        return Err(HayesError::ResourceLimit {
+            resource: "tuxanidy_period_convolution_cells",
+            requested: total_cells,
+            limit: maximum_cells,
+        });
+    }
+
+    let mut difference = coefficients.to_vec();
+    let mut scratch = vec![false; cyclic_order];
+    for &period in &maximal_proper_subfield_periods {
+        for (index, output) in scratch.iter_mut().enumerate() {
+            *output = difference[index] ^ difference[(index + period) % cyclic_order];
+        }
+        std::mem::swap(&mut difference, &mut scratch);
+    }
+    let support_size = difference.iter().filter(|present| **present).count();
+    let first_witness = difference.iter().position(|present| *present);
+    let period_criterion_relation = if degree_factors.len() == 1 {
+        TuxanidyPeriodCriterionRelation::ExactPrimePowerDegree
+    } else {
+        TuxanidyPeriodCriterionRelation::SufficientOnlyMixedDivisorDegree
+    };
+    Ok(ExactDegreeDifferenceCertificate {
+        maximal_proper_subfield_periods,
+        support_size,
+        first_witness,
+        criterion_holds: support_size != 0,
+        period_criterion_relation,
+        total_cells,
+    })
+}
+
+fn tuxanidy_proper_subfield_exponent(
+    degree: usize,
+    cyclic_order: usize,
+) -> Result<usize, HayesError> {
+    let mut exponent = 1_usize;
+    for divisor in positive_divisors(degree)
+        .into_iter()
+        .filter(|divisor| *divisor != degree)
+    {
+        let subfield_order = 1_usize
+            .checked_shl(u32::try_from(divisor).map_err(|_| {
+                HayesError::InvalidParameter("Tuxanidy subfield shift overflow".to_owned())
+            })?)
+            .and_then(|value| value.checked_sub(1))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Tuxanidy subfield order overflow".to_owned())
+            })?;
+        exponent = lcm_usize_checked(exponent, subfield_order)?;
+    }
+    if !cyclic_order.is_multiple_of(exponent) || exponent >= cyclic_order {
+        return Err(HayesError::Invariant(
+            "Tuxanidy proper-subfield exponent is not a proper divisor".to_owned(),
+        ));
+    }
+    Ok(exponent)
+}
+
 fn characteristic_delta_convolution(
     degree: usize,
     maximum_weight: usize,
@@ -8611,10 +8754,15 @@ fn characteristic_delta_convolution(
 /// Tuxanidy--Wang support criterion, a period not dividing
 /// `lcm_(d|n,d<n)(2^d-1)` forces the common zero set to contain an element of
 /// exact degree `n`, whose minimal polynomial is the required irreducible.
+/// More sharply, multiplying the Fourier transform by
+/// `product_(p|n)(1+alpha^(2^(n/p)-1))` removes exactly the union of maximal
+/// proper subfields.  On the group-algebra side this is the iterated
+/// translation difference reported by this operation.
 ///
 /// The implication is a general algebraic theorem.  This operation computes
-/// only one bounded row and deliberately does not certify that the maximum-
-/// period pattern holds for every degree.
+/// only one bounded row and deliberately does not certify that either the
+/// maximum-period pattern or the weaker exact difference is nonzero for every
+/// degree.
 ///
 /// # Errors
 ///
@@ -8676,30 +8824,29 @@ pub fn tuxanidy_lemire_period_report(
         ));
     }
 
-    let mut proper_subfield_exponent_lcm = 1_usize;
-    for divisor in positive_divisors(degree) {
-        if divisor == degree {
-            continue;
-        }
-        let subfield_order = 1_usize
-            .checked_shl(u32::try_from(divisor).map_err(|_| {
-                HayesError::InvalidParameter("Tuxanidy subfield shift overflow".to_owned())
-            })?)
-            .and_then(|value| value.checked_sub(1))
-            .ok_or_else(|| {
-                HayesError::InvalidParameter("Tuxanidy subfield order overflow".to_owned())
-            })?;
-        proper_subfield_exponent_lcm =
-            lcm_usize_checked(proper_subfield_exponent_lcm, subfield_order)?;
-    }
-    if cyclic_order % proper_subfield_exponent_lcm != 0
-        || proper_subfield_exponent_lcm >= cyclic_order
-    {
+    let proper_subfield_exponent_lcm = tuxanidy_proper_subfield_exponent(degree, cyclic_order)?;
+    let period_criterion_holds = !proper_subfield_exponent_lcm.is_multiple_of(least_period);
+
+    let exact_degree = exact_degree_difference_certificate(
+        degree,
+        cyclic_order,
+        &convolution.coefficients,
+        convolution.cells,
+        limits.max_convolution_cells,
+    )?;
+    if period_criterion_holds && !exact_degree.criterion_holds {
         return Err(HayesError::Invariant(
-            "Tuxanidy proper-subfield exponent is not a proper divisor".to_owned(),
+            "Tuxanidy period criterion does not imply the exact-degree difference".to_owned(),
         ));
     }
-    let period_criterion_holds = !proper_subfield_exponent_lcm.is_multiple_of(least_period);
+    if exact_degree.period_criterion_relation
+        == TuxanidyPeriodCriterionRelation::ExactPrimePowerDegree
+        && period_criterion_holds != exact_degree.criterion_holds
+    {
+        return Err(HayesError::Invariant(
+            "prime-power period and exact-degree criteria disagree".to_owned(),
+        ));
+    }
 
     Ok(TuxanidyLemirePeriodReport {
         degree,
@@ -8713,11 +8860,15 @@ pub fn tuxanidy_lemire_period_report(
             .count(),
         least_period,
         proper_subfield_exponent_lcm,
+        maximal_proper_subfield_periods: exact_degree.maximal_proper_subfield_periods,
+        exact_degree_difference_support_size: exact_degree.support_size,
+        first_exact_degree_difference_witness: exact_degree.first_witness,
         maximum_least_period: least_period == cyclic_order,
         period_criterion_holds,
+        period_criterion_relation: exact_degree.period_criterion_relation,
         theorem_boundary:
-            TuxanidyPeriodTheoremBoundary::CriterionImplicationCertifiedUniversalPeriodOpen,
-        convolution_cells: convolution.cells,
+            TuxanidyPeriodTheoremBoundary::ExactDegreeDifferenceCertifiedUniversalNonvanishingOpen,
+        convolution_cells: exact_degree.total_cells,
     })
 }
 
@@ -19054,9 +19205,27 @@ mod tests {
             assert_eq!(report.least_period, report.cyclic_order);
             assert!(report.maximum_least_period);
             assert!(report.period_criterion_holds);
+            assert!(report.exact_degree_support_criterion_holds());
+            assert!(report.exact_degree_difference_support_size > 0);
+            assert!(report.first_exact_degree_difference_witness.is_some());
+            assert_eq!(
+                report.period_criterion_relation,
+                if factor_usize(degree).len() == 1 {
+                    TuxanidyPeriodCriterionRelation::ExactPrimePowerDegree
+                } else {
+                    TuxanidyPeriodCriterionRelation::SufficientOnlyMixedDivisorDegree
+                }
+            );
+            assert_eq!(
+                report.maximal_proper_subfield_periods,
+                factor_usize(degree)
+                    .iter()
+                    .map(|(prime, _)| (1_usize << (degree / prime)) - 1)
+                    .collect::<Vec<_>>()
+            );
             assert_eq!(
                 report.theorem_boundary,
-                TuxanidyPeriodTheoremBoundary::CriterionImplicationCertifiedUniversalPeriodOpen
+                TuxanidyPeriodTheoremBoundary::ExactDegreeDifferenceCertifiedUniversalNonvanishingOpen
             );
             assert!(report.proper_subfield_exponent_lcm < report.cyclic_order);
         }
@@ -19144,6 +19313,7 @@ mod tests {
             .unwrap();
             let mut element = 1_u64;
             let mut support_gcd = report.cyclic_order;
+            let mut exact_degree_support = false;
             let mut seen = BTreeSet::new();
             for exponent in 0..report.cyclic_order {
                 assert!(seen.insert(element), "listed modulus is not primitive");
@@ -19165,11 +19335,25 @@ mod tests {
                     (1..=report.ell).all(|index| characteristic[degree - index] == 0);
                 if in_lemire_class {
                     support_gcd = gcd_usize(support_gcd, exponent);
+                    let lies_in_maximal_proper_subfield =
+                        factor_usize(degree).iter().any(|(prime, _)| {
+                            let mut conjugate = element;
+                            for _ in 0..(degree / prime) {
+                                conjugate =
+                                    binary_quotient_multiply(conjugate, conjugate, modulus, degree);
+                            }
+                            conjugate == element
+                        });
+                    exact_degree_support |= !lies_in_maximal_proper_subfield;
                 }
                 element = binary_quotient_multiply(element, 2, modulus, degree);
             }
             assert_eq!(seen.len(), report.cyclic_order);
             assert_eq!(report.least_period, report.cyclic_order / support_gcd);
+            assert_eq!(
+                report.exact_degree_support_criterion_holds(),
+                exact_degree_support
+            );
         }
     }
 

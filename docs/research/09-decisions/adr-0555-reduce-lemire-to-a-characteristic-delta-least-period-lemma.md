@@ -114,9 +114,15 @@ false universal-certification flag.
   required irreducible directly.  Until then, it receives no Lemire theorem
   credit.
 
+ADR-0558 sharpens this boundary.  The single period `M_n` gives an exact
+criterion only for prime-power `n`; at mixed-divisor degrees its root subgroup
+strictly overcovers the union of proper subfields.  The exact all-degree target
+is instead the nonvanishing of the product of maximal-subfield translation
+differences recorded there.  The present least-period condition remains a
+valid sufficient condition, but is no longer the selected minimal target.
+
 ## References
 
 - Tuxanidy and Wang, [*A new proof of the Hansen--Mullen irreducibility
   conjecture*](https://arxiv.org/abs/1604.04023), especially the DFT-period
   criterion and the characteristic delta functions.
-

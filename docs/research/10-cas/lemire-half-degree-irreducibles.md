@@ -3726,21 +3726,54 @@ would prove Lemire directly:
 least_period(Gamma_(n,ell))=N.                     (MP)
 ```
 
+The single-period condition is not the exact support condition when `n` has
+more than one prime divisor: the subgroup killed by `M_n` then strictly
+contains the union of the proper subfields.  The exact replacement is still a
+short group-algebra formula.  For every distinct prime `p|n`, put
+
+```text
+T_p=2^(n/p)-1,
+Q_n=product_(p|n)(1+tau_(T_p)).
+```
+
+Fourier transformation gives
+
+```text
+DFT(Q_n Gamma)(a)
+ = F(zeta^a) product_(p|n)(1+(zeta^a)^(T_p)).       (ED)
+```
+
+The `p`-th factor vanishes exactly on `GF(2^(n/p))^*`, and those maximal
+proper subfields contain every element of degree less than `n`.  Hence
+
+```text
+Q_n Gamma != 0
+ iff an admissible element has exact degree n
+ iff a Lemire irreducible of degree n exists.        (EQ)
+```
+
+For prime-power `n` there is only one maximal proper subfield, so the older
+period criterion is exact.  For mixed-divisor `n` it remains sufficient but
+is stronger than `(EQ)`.
+
 The bounded native `tuxanidy_lemire_period_report` multiplies (CD) exactly in
-the binary cyclic group algebra and computes the actual translation period.
-It finds (MP) for every `3<=n<=12`.  An independent oracle through degree eight
-instead enumerates `GF(2^n)^*`, constructs each Frobenius-root characteristic
-polynomial, and recovers the DFT period from the gcd of the supported
-exponents; the two routes agree.  These are finite controls only.
+the binary cyclic group algebra, computes the actual translation period, and
+applies every maximal-subfield difference in `(ED)`.  It finds (MP), and hence
+nonzero exact-degree difference, for every `3<=n<=12`.  An independent oracle
+through degree eight instead enumerates `GF(2^n)^*`, constructs each
+Frobenius-root characteristic polynomial, recovers the DFT period from the gcd
+of the supported exponents, and directly tests membership in every maximal
+proper subfield; the routes agree.  These are finite controls only.
 
 Tuxanidy--Wang prove maximum period for each individual binary factor
 `delta_0+delta_j` when `j<=n/2`, but that result cannot simply be multiplied.
 At degree eight the product through weights `1,2,3,4`, including the middle
 coefficient, has period `15`, even though every factor has maximum period;
 the Lemire product through weight three has period `255`.  Consequently the
-new universal obligation is genuinely the combined half-open convolution,
-and the weakest useful theorem is only that its period does not divide `M_n`.
-No theorem credit is attached to (MP) (ADR-0555).
+new universal obligation is genuinely the combined half-open convolution.
+The minimal exact target is nonvanishing in `(EQ)`, not the stronger common-
+period condition.  No theorem credit is attached to (MP) or to the finite
+differences (ADRs 0555 and 0558).
 
 The closest general symmetric-cohomology theorems do not fill that gap.
 Chenevert's smooth projective hypersurface calculation assumes `n!` is
