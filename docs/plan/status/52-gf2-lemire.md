@@ -433,12 +433,24 @@ cumulant is a signed virtual Frobenius trace rather than an honest
 off-diagonal point count.  A geometric proof must control the centering
 complex and pairing projectors, or the equivalent conductor-Haar differences;
 irreducibility of only the raw fourfold fibre product is insufficient.
+Katz's universal big-Witt sheaf has the expected large `SL` monodromy, but an
+exact native comparison now proves that its ordinary pointwise fourth moment
+is a different tensor contraction.  The CAS reconstructs
+`sum_chi |S_chi|^4` from spatial autocorrelations, separately reconstructs the
+full product-constrained sum `2^(3ell)M_4`, and retains the connected numerator
+`2^(2ell)K_4`; the two fourth moments already differ at the level-seven odd
+endpoint.  Katz's effective equidistribution also fixes conductor while the
+field grows and leaves a compactly-supported Betti constant uncontrolled in
+the growing-conductor regime.  A viable monodromy bridge therefore needs a
+convolutional four-design theorem and uniform Betti bounds over fixed
+`GF(2)`, not the standard pointwise large-field limit.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `254be42f7` | Proved that Katz's pointwise character fourth moment is a different contraction from the product-constrained Hayes cumulant and retained the missing uniform Betti bound. |
 | 2026-08-20 | `a38675b8f` | Expanded the fourth cumulant into exact positive fibre products and proved that the connected target is a signed virtual trace, not an off-diagonal point count. |
 | 2026-08-20 | `0b6d6d79a` | Proved that binary monomial power-sum characters cover at most the thin primitive quadratic sector and none of every even conductor layer. |
 | 2026-08-20 | `783006fcd` | Added an exact two-prime Galois/Ramanujan orbit trace decomposition, refuted one-unit orbit and coefficient-four order-layer bounds, and retained the connected cross-order target. |
