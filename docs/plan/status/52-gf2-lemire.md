@@ -415,12 +415,22 @@ exact character order helps but does not give a fixed small constant: the
 Thus a viable order-layer theorem must expose and ledger its conductor growth,
 or cancellation must remain across character orders inside the selected
 connected Carlitz trace; no theorem credit moves.
+The special high-trace symmetry has now been bounded at the character-family
+level as well.  Over `GF(2)` every monomial power-sum character is quadratic,
+and its multiplicative span cannot leave the order-two subgroup.  Exact
+mixed-radix enumeration proves that an odd primitive level `j` contains only
+`2^((j-1)/2)` quadratic characters among `2^(j-1)` total, while every even
+primitive level contains none.  Thus the maximum eligible coverage is
+`32/1024` at level 11 and `0/2048` at level 12.  Gorodetsky--Kovaleva's
+monomial image/kernel identity cannot reach the full higher-Witt family or
+the connected fourth cumulant; the whole-family target remains unchanged.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `0b6d6d79a` | Proved that binary monomial power-sum characters cover at most the thin primitive quadratic sector and none of every even conductor layer. |
 | 2026-08-20 | `783006fcd` | Added an exact two-prime Galois/Ramanujan orbit trace decomposition, refuted one-unit orbit and coefficient-four order-layer bounds, and retained the connected cross-order target. |
 | 2026-08-20 | `0a459d914` | Made the exact Hayes root-number audit fail closed with a quadratic work-cell admission and checked the primitive functional equation coefficient by coefficient. |
 | 2026-08-20 | `8b07f7a45` | Added exact integral cyclotomic Hayes L-polynomials and proved that every pinned primitive root-number fibre contains distinct endpoint power sums, rejecting root-number-only Gauss control. |
