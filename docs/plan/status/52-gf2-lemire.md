@@ -286,6 +286,15 @@ residues satisfy the exact four-phase projector, polarization
 Möbius zero/sign cancellation in one quadratic Gauss object.  It still does
 not supply the larger joined fibre/valuation/Witt group law: the next
 fail-fast condition is additivity of the discriminant difference modulo four.
+That fail-fast condition now rejects every projection-preserving central
+extension of the pinned worst fibre, not merely the direct product.  The
+native exact table independently reproduces its full-support coefficient `6
+mod 8` and finds `d(1)=1`, so `d(1 xor 1)=0` differs from `d(1)+d(1)=2 mod 4`.
+Any surjective homomorphic projection would force quotient additivity; hence a
+viable joined law must genuinely mix fibre multiplication with auxiliary,
+valuation, or Witt coordinates before its commutator rank is meaningful.  This
+is a construction-class obstruction and grants no endpoint cancellation
+credit.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
@@ -297,6 +306,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `9c24671a6` | Reconstructed the pinned dyadic product-discriminant fibre and used its exact mod-four additivity witness to reject every projection-preserving central extension. |
 | 2026-08-19 | `d56410d21` | Certified the exact dyadic auxiliary-unit quadratic projector, including its cyclotomic Gauss identity, polarization, radicals, and squareful-zero cancellation. |
 | 2026-08-19 | `786a16b5c` | Summed the exact top-conductor character second moments and showed that direct Cauchy loses factors 304/633 at the pinned endpoints, selecting a phase-preserving argument instead. |
 | 2026-08-19 | `74c40427e` | Refuted a blanket supersingular decomposition of every new Carlitz conductor layer using the exact level-ten degree-22 trace-divisibility obstruction. |
