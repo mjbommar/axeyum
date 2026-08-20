@@ -1963,6 +1963,50 @@ all 199 odd-degree committed witnesses from degrees 3 through 399; the
 elementary root argument is the theorem, while the scan is only its mutation
 control.
 
+The characteristic-two `Q`-transform gives genuine degree families but not an
+all-degree induction.  For a monic degree-`n` polynomial put
+
+```text
+Q(f)(x)=x^n f(x+x^(-1)).
+```
+
+The coefficient of `x^(2n-1)` in `Q(f)` is exactly the coefficient of
+`x^(n-1)` in `f`: the leading summand contributes only even exponents, the
+`x^(n-1)` summand contributes its top odd exponent, and every lower summand
+has degree at most `2n-2`.  Over `GF(2)`, the standard sufficient hypotheses
+for indefinitely iterated irreducible `Q`-transforms include
+`a_(n-1)=a_1/a_0=1`.  They therefore force the forbidden `x^(2n-1)` output
+coefficient.  Conversely, a shaped input of degree greater than two has
+`a_(n-1)=0`, so it cannot enter that theorem.  See Kyuregyan,
+[*Recurrent Methods for Constructing Irreducible Polynomials over
+GF(2^s)*](https://doi.org/10.1006/ffta.2001.0323).
+
+The incompatibility is with the universal recurrence, not with every isolated
+transform.  Axeyum checks
+
+```text
+Q(x^3+x+1)=x^6+x^3+1,
+```
+
+and independently certifies both sides irreducible and shaped.  The next
+iterate already has nonzero terms in degrees seven, eight, and nine above its
+degree-six allowance.  Separately, the cyclotomic identity
+
+```text
+Phi_(3^r)(x)=x^(2*3^(r-1))+x^(3^(r-1))+1
+```
+
+gives a shaped irreducible for every degree `2*3^(r-1)`: by the lifting-the-
+exponent identity,
+`v_3(2^(2*3^(r-1))-1)=r`, so `2` has order
+`2*3^(r-1)=phi(3^r)` modulo `3^r`.  This is an infinite family, not coverage
+of arbitrary degrees.  The bounded native operation
+`characteristic_two_q_transform` expands by Lucas submasks, declines before
+unbounded work, and keeps irreducibility as a separate certificate obligation.
+Its tests pin the special success, the second-iterate shape failure, the
+forced upper coefficient under the standard theorem hypotheses, and typed
+resource declines.
+
 ### A sufficient endpoint discrepancy lemma
 
 Let `N_n(1)` be `[1] Lambda_n`, equivalently the number of elements of

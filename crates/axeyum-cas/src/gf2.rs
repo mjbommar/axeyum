@@ -118,6 +118,91 @@ impl Gf2Poly {
         }
         result
     }
+
+    /// Whether every nonleading term has degree at most half the degree.
+    ///
+    /// This is the non-strict polynomial shape in Lemire and Kaser's
+    /// conjecture.  The zero polynomial has no leading term and returns
+    /// `false`.
+    #[must_use]
+    pub fn is_half_degree_shaped(&self) -> bool {
+        let Some(degree) = self.degree() else {
+            return false;
+        };
+        self.exponents()
+            .into_iter()
+            .filter(|&exponent| exponent != degree)
+            .all(|exponent| exponent <= degree / 2)
+    }
+}
+
+/// Apply the characteristic-two `Q`-transform
+///
+/// ```text
+/// Q(f)(x) = x^n f(x + x^(-1)),  n = degree(f).
+/// ```
+///
+/// The negative powers cancel termwise, so the result lies in `GF(2)[x]`
+/// and has degree `2n` when `f` is monic.  Expansion uses Lucas's theorem:
+/// the nonzero terms of `(x^2+1)^i` are indexed by the submasks of `i`.
+/// This operation establishes the polynomial identity only; irreducibility
+/// of a transformed polynomial remains a separate certificate obligation.
+///
+/// # Errors
+///
+/// Returns a typed decline for the zero polynomial, an input or output degree
+/// beyond the supplied ceilings, or a submask expansion beyond the work
+/// ceiling.
+pub fn characteristic_two_q_transform(
+    polynomial: &Gf2Poly,
+    limits: Gf2Limits,
+) -> Result<Gf2Poly, Gf2Error> {
+    let degree = polynomial.degree().ok_or(Gf2Error::NotPositiveDegree)?;
+    if degree == 0 {
+        return Err(Gf2Error::NotPositiveDegree);
+    }
+    if degree > limits.max_input_degree {
+        return Err(Gf2Error::DegreeLimit {
+            observed: degree,
+            limit: limits.max_input_degree,
+        });
+    }
+    let output_degree = degree.checked_mul(2).ok_or(Gf2Error::DegreeLimit {
+        observed: usize::MAX,
+        limit: limits.max_intermediate_degree,
+    })?;
+    if output_degree > limits.max_intermediate_degree {
+        return Err(Gf2Error::DegreeLimit {
+            observed: output_degree,
+            limit: limits.max_intermediate_degree,
+        });
+    }
+
+    let mut estimated_work = 0_u64;
+    for exponent in polynomial.exponents() {
+        let term_work = 1_u64.checked_shl(exponent.count_ones()).unwrap_or(u64::MAX);
+        estimated_work = estimated_work.saturating_add(term_work);
+        if estimated_work > limits.max_word_ops {
+            return Err(Gf2Error::WorkLimit {
+                used: estimated_work,
+                limit: limits.max_word_ops,
+            });
+        }
+    }
+
+    let mut words = vec![0_u64; output_degree / 64 + 1];
+    for exponent in polynomial.exponents() {
+        let mut submask = exponent;
+        loop {
+            let output_exponent = degree - exponent + 2 * submask;
+            words[output_exponent / 64] ^= 1_u64 << (output_exponent % 64);
+            if submask == 0 {
+                break;
+            }
+            submask = (submask - 1) & exponent;
+        }
+    }
+    Ok(Gf2Poly::from_words(words))
 }
 
 /// Deterministic resource ceilings for `GF(2)[x]` work.
@@ -779,6 +864,64 @@ mod tests {
             .unwrap()
             .expect("known witness must be irreducible");
         check_irreducible_certificate(&certificate, limits).unwrap();
+    }
+
+    #[test]
+    fn characteristic_two_q_transform_separates_families_from_induction() {
+        let limits = Gf2Limits::default();
+
+        let cubic = poly(&[0, 1, 3]);
+        assert!(cubic.is_half_degree_shaped());
+        let sextic = characteristic_two_q_transform(&cubic, limits).unwrap();
+        assert_eq!(sextic, poly(&[0, 3, 6]));
+        assert!(sextic.is_half_degree_shaped());
+        let sextic_certificate = certify_irreducible(&sextic, limits)
+            .unwrap()
+            .expect("x^6+x^3+1 is irreducible");
+        check_irreducible_certificate(&sextic_certificate, limits).unwrap();
+
+        let degree_twelve = characteristic_two_q_transform(&sextic, limits).unwrap();
+        assert_eq!(degree_twelve, poly(&[0, 3, 4, 5, 6, 7, 8, 9, 12]));
+        assert!(!degree_twelve.is_half_degree_shaped());
+
+        let cyclotomic_five = poly(&[0, 1, 2, 3, 4]);
+        let degree_eight = characteristic_two_q_transform(&cyclotomic_five, limits).unwrap();
+        assert!(degree_eight.coefficient(7));
+        assert_eq!(degree_eight.coefficient(7), cyclotomic_five.coefficient(3));
+        assert!(!degree_eight.is_half_degree_shaped());
+        let degree_eight_certificate = certify_irreducible(&degree_eight, limits)
+            .unwrap()
+            .expect("the theorem-hypothesis Q-transform is irreducible");
+        check_irreducible_certificate(&degree_eight_certificate, limits).unwrap();
+    }
+
+    #[test]
+    fn characteristic_two_q_transform_declines_before_unbounded_expansion() {
+        let dense = poly(&(0..=20).collect::<Vec<_>>());
+        let tight_work = Gf2Limits {
+            max_word_ops: 16,
+            ..Gf2Limits::default()
+        };
+        assert!(matches!(
+            characteristic_two_q_transform(&dense, tight_work),
+            Err(Gf2Error::WorkLimit { .. })
+        ));
+
+        let tight_degree = Gf2Limits {
+            max_intermediate_degree: 7,
+            ..Gf2Limits::default()
+        };
+        assert_eq!(
+            characteristic_two_q_transform(&poly(&[0, 1, 4]), tight_degree),
+            Err(Gf2Error::DegreeLimit {
+                observed: 8,
+                limit: 7
+            })
+        );
+        assert_eq!(
+            characteristic_two_q_transform(&Gf2Poly::zero(), Gf2Limits::default()),
+            Err(Gf2Error::NotPositiveDegree)
+        );
     }
 
     #[test]
