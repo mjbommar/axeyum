@@ -63,12 +63,18 @@ fn run() -> Result<(), String> {
     let mod_invariant_path = required_path(&mut arguments, "mod-invariant.ndjson")?;
     let target_path = required_path(&mut arguments, "target.ndjson")?;
     let gcd_bridge_path = required_path(&mut arguments, "gcd-bridge.ndjson")?;
-    let (all_support, exact_target_path) = match arguments.next() {
-        None => (false, None),
-        Some(flag) if flag == "--all-support" => (true, None),
+    let (all_support, exact_target_path, authority_audit) = match arguments.next() {
+        None => (false, None, false),
+        Some(flag) if flag == "--all-support" => (true, None, false),
         Some(flag) if flag == "--exact-target" => (
             true,
             Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+            false,
+        ),
+        Some(flag) if flag == "--exact-authority" => (
+            true,
+            Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+            true,
         ),
         Some(_) => return Err("unexpected trailing argument".to_owned()),
     };
@@ -230,6 +236,7 @@ fn run() -> Result<(), String> {
         exact_target
             .as_ref()
             .map(axeyum_lean_import::CompletedImport::kernel),
+        authority_audit,
     )?;
     let output = json!({
         "schema_version": 1,
@@ -267,6 +274,7 @@ fn retry_native_support(
     target: &Kernel,
     roots: &[&str],
     exact_source: Option<&Kernel>,
+    authority_audit: bool,
 ) -> Result<Value, String> {
     match compose_checked_theorem_slice_with_target_leaves(source, target, roots, &DVD_GCD_LEAVES) {
         Ok(completed) => {
@@ -293,7 +301,8 @@ fn retry_native_support(
                 "receipt_sha256": completed.receipt().receipt_sha256,
             });
             if let Some(exact_source) = exact_source {
-                value["exact_target"] = compose_exact_target(exact_source, completed.kernel())?;
+                value["exact_target"] =
+                    compose_exact_target(exact_source, completed.kernel(), authority_audit)?;
             }
             Ok(with_optional_roots(value, roots))
         }
@@ -314,7 +323,11 @@ fn retry_native_support(
     }
 }
 
-fn compose_exact_target(source: &Kernel, target: &Kernel) -> Result<Value, String> {
+fn compose_exact_target(
+    source: &Kernel,
+    target: &Kernel,
+    authority_audit: bool,
+) -> Result<Value, String> {
     let completed = compose_checked_theorem_slice(source, target, &[FIB_RECURRENCE])
         .map_err(|error| format!("Fibonacci recurrence composition declined: {error:?}"))?;
     verify_checked_theorem_composition(source, target, completed.kernel(), completed.receipt())
@@ -355,10 +368,10 @@ fn compose_exact_target(source: &Kernel, target: &Kernel) -> Result<Value, Strin
             "exact Fibonacci theorem reaches assumptions: {footprint:?}"
         ));
     }
-    let dependencies = checked
-        .theorem_dependencies(theorem)
-        .into_iter()
-        .map(|name| checked.display_name(name).to_string())
+    let dependency_ids = checked.theorem_dependencies(theorem);
+    let dependencies = dependency_ids
+        .iter()
+        .map(|&name| checked.display_name(name).to_string())
         .collect::<Vec<_>>();
     let expected_dependencies = [
         FIB_RECURRENCE,
@@ -397,7 +410,7 @@ fn compose_exact_target(source: &Kernel, target: &Kernel) -> Result<Value, Strin
     {
         return Err("exact Fibonacci theorem reconstruction changed".to_owned());
     }
-    Ok(json!({
+    let mut result = json!({
         "recurrence_root": FIB_RECURRENCE,
         "source_closure": completed.receipt().source_closure.len(),
         "added_theorems": completed.receipt().added_theorems.len(),
@@ -411,6 +424,33 @@ fn compose_exact_target(source: &Kernel, target: &Kernel) -> Result<Value, Strin
         "target_axiom_footprint": footprint,
         "direct_theorem_dependencies": dependencies,
         "fresh_reconstructions": 2,
+    });
+    if authority_audit {
+        result["receipt_authority_audit"] = receipt_authority_audit(&checked, &dependency_ids)?;
+    }
+    Ok(result)
+}
+
+fn receipt_authority_audit(kernel: &Kernel, dependencies: &[NameId]) -> Result<Value, String> {
+    let mut identities = dependencies
+        .iter()
+        .map(|&name| {
+            Ok((
+                kernel.display_name(name).to_string(),
+                canonical_declaration_sha256(kernel, name)?,
+            ))
+        })
+        .collect::<Result<Vec<(String, String)>, String>>()?;
+    identities.sort_by(|left, right| left.0.cmp(&right.0));
+    Ok(json!({
+        "direct_theorem_dependencies": identities.iter().map(|(name, content_sha256)| json!({
+            "name": name,
+            "content_sha256": content_sha256,
+        })).collect::<Vec<_>>(),
+        "semantic_theorem_receipts_issued": 0,
+        "fact_status_changes": 0,
+        "evaluation_credit": 0,
+        "ledger_writes": 0,
     }))
 }
 
