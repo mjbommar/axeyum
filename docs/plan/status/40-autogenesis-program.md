@@ -14,4 +14,4 @@
 | 2026-08-20 | `24b16642e` | r082 overlap probe classifies kernel-compatible and structurally different types |
 | 2026-08-20 | `8dbd18c82` | Required Nat theorem closure census isolates a structurally unblocked first replay slice |
 | 2026-08-20 | `9caac0bf5` | First probe-local checked native Nat theorem slice composes over the imported r082 kernel |
-| 2026-08-20 | `e2c89be4b` | ADR-0523 fixes theorem-only identity-gated completed-clone composition as the public V1 boundary |
+| 2026-08-20 | `b7573a525` | ADR-0523 fixes theorem-only identity-gated completed-clone composition as the public V1 boundary |
