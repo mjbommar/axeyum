@@ -3632,6 +3632,30 @@ The next theorem must bound that projective Frobenius--long-cycle
 trace, not merely its zero unweighted Euler specialization or a generic total
 Betti number.  No Lemire endpoint credit is attached (ADR-0552).
 
+A projective cyclic quotient does not remove this trace.  Projective fixed
+points are eigenlines, rather than only affine fixed vectors.  Write
+`n=qb`, with `q=2^v2(n)` and `b` odd.  An eigenvalue of exact order `e|b`
+has geometric-progression coordinates and root polynomial
+
+```text
+(x^e-A^e)^(n/e).
+```
+
+Its first potentially nonzero prescribed coefficient has index `eq`.  At the
+endpoint `eq>ell` holds exactly for `e=b`: every proper divisor of odd `b` is
+at most `b/3`, while `bq=n`.  The surviving eigenlines therefore have root
+polynomial `x^n-A^n`, and the reduced projective fixed locus contains exactly
+`phi(b)` points.  In particular it has `400` points at degree `401`, `132` at
+degree `402`, and one even at the power-of-two degree `512`.  The full
+projective long-cycle action is never free.  For odd `n` it is tame and its
+ordinary projective Euler trace is exactly `phi(n)`; for even `n` no reduced
+wild fixed-scheme claim is made.
+
+The native `sawin_projective_eigenline_report` enumerates every divisor of
+`b`, checks the endpoint inequality, and computes the totient.  This blocks a
+plausible finite-etale torsor shortcut but supplies no bound on `Frob*c`; the
+report keeps that obligation false (ADR-0553).
+
 The closest general symmetric-cohomology theorems do not fill that gap.
 Chenevert's smooth projective hypersurface calculation assumes `n!` is
 invertible in the ground field, excluding this characteristic-two `S_n`

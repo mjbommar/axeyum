@@ -2727,6 +2727,50 @@ pub struct SawinLongCycleEulerReport {
     pub frobenius_weighted_cancellation_certified: bool,
 }
 
+/// Projective eigenline obstruction to a free long-cycle quotient.
+///
+/// A projective point fixed by the full cycle need only be an eigenline, not
+/// an affine fixed vector.  Over the algebraic closure, the cyclic shift has
+/// one eigenline for every root of `z^b-1`.  For an eigenvalue of order
+/// `e|b`, the first potentially nonzero prescribed coefficient has index
+/// `e*2^a`.  At the half-degree endpoint this exceeds `ell` exactly when
+/// `e=b`: every proper divisor of odd `b` is at most `b/3`.  The surviving
+/// primitive eigenlines have root polynomial
+///
+/// ```text
+/// product_(i=0)^(n-1) (x-lambda^i A) = x^n-A^n.
+/// ```
+///
+/// Hence the reduced fixed locus has `phi(b)` geometric points (including one
+/// when `b=1`).  It is certified reduced only when `n` is odd; at even degree
+/// the cycle is wild and the fixed scheme may carry nilpotents.  In particular
+/// the projective action is never free.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SawinProjectiveEigenlineReport {
+    /// Polynomial degree `n`.
+    pub degree: usize,
+    /// Lemire/Hayes level `ell=ceil(n/2)-1`.
+    pub ell: usize,
+    /// Order `2^a` of the wild part of the cycle.
+    pub wild_cycle_order: usize,
+    /// Odd order `b` of the tame part of the cycle.
+    pub tame_cycle_order: usize,
+    /// Number `phi(b)` of primitive tame eigenvalues.
+    pub primitive_tame_eigenvalue_count: usize,
+    /// Number of geometric points in the reduced projective fixed locus.
+    pub reduced_projective_fixed_point_count: usize,
+    /// Whether the full cycle is tame, making its projective fixed scheme
+    /// reduced and the ordinary Lefschetz fixed-point formula applicable.
+    pub projective_fixed_scheme_reduced_certified: bool,
+    /// Ordinary long-cycle trace on projective cohomology in the tame case.
+    pub tame_projective_euler_trace: Option<usize>,
+    /// Explicit rejection of a free projective cyclic-torsor reduction.
+    pub projective_long_cycle_action_free: bool,
+    /// Explicit boundary: this fixed-locus calculation proves no weighted
+    /// Frobenius trace estimate.
+    pub frobenius_weighted_trace_bound_certified: bool,
+}
+
 /// Hypothetical polynomial bound on every effective cyclic Foulkes Betti
 /// multiplicity beyond one degree threshold.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -8076,6 +8120,70 @@ pub fn sawin_long_cycle_euler_report(
         non_top_alternating_cycle_trace,
         binary_frobenius_projective_trace_factor: 1,
         frobenius_weighted_cancellation_certified: false,
+    })
+}
+
+/// Certify the full-cycle eigenlines contained in the projective endpoint
+/// fibre and reject a free cyclic quotient.
+///
+/// This operation deliberately distinguishes affine fixed vectors from
+/// projective fixed lines.  It reuses the checked tame/wild factorization in
+/// [`sawin_long_cycle_euler_report`].  The reduced fixed-point count is the
+/// number of primitive roots of the odd part `b` of `n`.  For every divisor
+/// `e|b`, it checks the endpoint inequality `e*2^a>ell` exactly when `e=b`.
+///
+/// # Errors
+///
+/// Declines exactly when the underlying long-cycle report declines, or when
+/// an endpoint/eigenvalue invariant fails.
+pub fn sawin_projective_eigenline_report(
+    degree: usize,
+    limits: SawinFoulkesLimits,
+) -> Result<SawinProjectiveEigenlineReport, HayesError> {
+    let euler = sawin_long_cycle_euler_report(degree, limits)?;
+    if degree != euler.wild_cycle_order * euler.tame_cycle_order {
+        return Err(HayesError::Invariant(
+            "Sawin projective eigenline factorization failed".to_owned(),
+        ));
+    }
+
+    let tame_factors = factor_usize(euler.tame_cycle_order);
+    let tame_divisors = divisors_from_factorization(&tame_factors)?;
+    let mut surviving_orders = Vec::new();
+    for order in tame_divisors {
+        let first_nonzero_index = order.checked_mul(euler.wild_cycle_order).ok_or_else(|| {
+            HayesError::InvalidParameter(
+                "Sawin projective eigenline coefficient index overflow".to_owned(),
+            )
+        })?;
+        if first_nonzero_index > euler.ell {
+            surviving_orders.push(order);
+        }
+    }
+    let eigenline_root_polynomial_has_endpoint_shape =
+        surviving_orders == vec![euler.tame_cycle_order];
+    if !eigenline_root_polynomial_has_endpoint_shape {
+        return Err(HayesError::Invariant(
+            "Sawin projective eigenline endpoint shape failed".to_owned(),
+        ));
+    }
+    let primitive_tame_eigenvalue_count = euler_phi_usize(euler.tame_cycle_order, &tame_factors)?;
+    let reduced_projective_fixed_point_count = primitive_tame_eigenvalue_count;
+    let projective_fixed_scheme_reduced_certified = euler.wild_cycle_order == 1;
+    let tame_projective_euler_trace =
+        projective_fixed_scheme_reduced_certified.then_some(reduced_projective_fixed_point_count);
+
+    Ok(SawinProjectiveEigenlineReport {
+        degree,
+        ell: euler.ell,
+        wild_cycle_order: euler.wild_cycle_order,
+        tame_cycle_order: euler.tame_cycle_order,
+        primitive_tame_eigenvalue_count,
+        reduced_projective_fixed_point_count,
+        projective_fixed_scheme_reduced_certified,
+        tame_projective_euler_trace,
+        projective_long_cycle_action_free: false,
+        frobenius_weighted_trace_bound_certified: false,
     })
 }
 
@@ -18013,6 +18121,36 @@ mod tests {
                 report.first_odd_binomial_index,
                 independently_enumerated_first
             );
+        }
+    }
+
+    #[test]
+    fn projective_eigenlines_reject_a_free_long_cycle_quotient() {
+        for (degree, wild, tame, fixed_points, reduced, tame_trace) in [
+            (
+                401_usize,
+                1_usize,
+                401_usize,
+                400_usize,
+                true,
+                Some(400_usize),
+            ),
+            (402, 2, 201, 132, false, None),
+            (12, 4, 3, 2, false, None),
+            (512, 512, 1, 1, false, None),
+        ] {
+            let report =
+                sawin_projective_eigenline_report(degree, SawinFoulkesLimits::default()).unwrap();
+            assert_eq!(report.degree, degree);
+            assert_eq!(report.ell, degree.div_ceil(2) - 1);
+            assert_eq!(report.wild_cycle_order, wild);
+            assert_eq!(report.tame_cycle_order, tame);
+            assert_eq!(report.primitive_tame_eigenvalue_count, fixed_points);
+            assert_eq!(report.reduced_projective_fixed_point_count, fixed_points);
+            assert_eq!(report.projective_fixed_scheme_reduced_certified, reduced);
+            assert_eq!(report.tame_projective_euler_trace, tame_trace);
+            assert!(!report.projective_long_cycle_action_free);
+            assert!(!report.frobenius_weighted_trace_bound_certified);
         }
     }
 
