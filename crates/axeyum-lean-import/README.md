@@ -13,6 +13,7 @@ trust split.
 ```sh
 cargo test -p axeyum-lean-import
 cargo run -p axeyum-lean-import --example lean4export_import -- export.ndjson
+cargo run -p axeyum-lean-import --example lean4export_import -- export.ndjson Nat.example
 ```
 
 Autogenesis statement inputs use the stronger proof-isolated adapter boundary:
