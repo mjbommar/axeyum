@@ -2673,6 +2673,42 @@ the first odd symbolic row.  Only a polynomial saving over the trivial
 `R_0<=2^ell` is needed.  This is a major strategic relaxation, not a proof:
 the weak uniform estimate remains conjectural.
 
+Hast--Matei's Theorem 1.4 gives the closest published statement, but its
+scope must be retained exactly.  With `H=mu=2^(n-ell)` their `m=4` estimate
+translates to
+
+```text
+M_4 <= C_(4,n,h) 2^ell H^3,
+```
+
+so the exact proper-power-aware requirement is
+
+```text
+C_(4,n,h) < (H-P_n)^4/(2^ell H^3).
+```
+
+The right side tends to `2` at the odd endpoint and `4` at the even endpoint.
+The published theorem does not supply this uniform constant: it fixes `n,h`,
+allows its constant to depend on them, takes `q` to infinity, and assumes
+`p>n` for `m>2`.  Consequently the live theorem is a **degree-uniform wild
+characteristic-two fourth moment**, not merely deletion of the tameness
+hypothesis.  Their proposed nontrivial `S_n^4` cohomology action and the
+localized equivariant-trace route are two descriptions of the same missing
+cancellation.  ADR-0567 records this boundary.  The weak ledger now exposes
+the unit scale and exact allowed constant without granting theorem credit.
+
+The even proper-power envelope is also sharpened before this normalization is
+used.  Every odd exponent `k>=3` layer is empty, the square layer injects into
+`E_ell[2]`, and the surviving even `k>=4` layers have base degree at most
+`(ell+1)/2`.  Hence
+
+```text
+P_(2ell+2) <= (ell+1) 2^ceil(ell/2)
+              +(2ell+2) 2^ceil((ell+1)/2).
+```
+
+This moves the exact even strong-target crossover from `ell=17` to `ell=13`.
+
 The suggested Efron--Stein hypercontractive shortcut has also been audited
 against this weaker allowance.  `efron_stein_spectral_weight_report` computes
 the exact Fourier second-moment mass at every support weight by subgroup

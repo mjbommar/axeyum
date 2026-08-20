@@ -2626,6 +2626,13 @@ pub struct WeakFourthMomentEndpointLedger {
     pub positivity_only_fourth_moment_threshold: BigUint,
     /// Exact strict irreducibility threshold `(mu-P_n)^4`.
     pub strict_irreducible_fourth_moment_threshold: BigUint,
+    /// Unit scale `2^ell*mu^3` in the Hast--Matei fourth-moment normalization.
+    pub wild_fourth_moment_unit_scale: BigUint,
+    /// Numerator of the exact sufficient wild constant
+    /// `C < numerator/denominator` in `M_4 <= C*2^ell*mu^3`.
+    pub sufficient_wild_constant_numerator: BigUint,
+    /// Denominator of the exact sufficient wild constant.
+    pub sufficient_wild_constant_denominator: BigUint,
     /// `Sigma(ell)=sum_(j=2)^ell 2^(j-1)(j-1)^2` in the proved `M_2` bound.
     pub second_moment_weil_factor: BigUint,
     /// Proved upper bound `M_2<=mu*Sigma(ell)`.
@@ -8505,6 +8512,9 @@ pub fn weak_fourth_moment_endpoint_ledger(
     let irreducible_margin = &main_mangoldt_term - &proper_prime_power_upper_bound;
     let positivity_only_fourth_moment_threshold = main_mangoldt_term.pow(4);
     let strict_irreducible_fourth_moment_threshold = irreducible_margin.pow(4);
+    let wild_fourth_moment_unit_scale = (BigUint::from(1_u8) << ell) * main_mangoldt_term.pow(3);
+    let sufficient_wild_constant_numerator = strict_irreducible_fourth_moment_threshold.clone();
+    let sufficient_wild_constant_denominator = wild_fourth_moment_unit_scale.clone();
     let mut second_moment_weil_factor = BigUint::from(0_u8);
     for level in 2..=ell {
         second_moment_weil_factor += BigUint::from(level - 1).pow(2) << (level - 1);
@@ -8523,6 +8533,9 @@ pub fn weak_fourth_moment_endpoint_ledger(
         irreducible_margin,
         positivity_only_fourth_moment_threshold,
         strict_irreducible_fourth_moment_threshold,
+        wild_fourth_moment_unit_scale,
+        sufficient_wild_constant_numerator,
+        sufficient_wild_constant_denominator,
         second_moment_weil_factor,
         second_moment_upper_bound,
         sufficient_root_ratio_numerator,
@@ -9016,12 +9029,17 @@ fn endpoint_proper_prime_power_upper_bound(
             "Foulkes degree is not a Lemire endpoint".to_owned(),
         ));
     }
+    // For k=2, an irreducible P of degree ell+1 has P(0)=1.  Its truncated
+    // class therefore determines P injectively, and <P>^2=1 places it in the
+    // 2-torsion subgroup of order 2^ceil(ell/2).
     let half_degree = degree / 2;
-    let square_exponent = half_degree.checked_sub(ell / 2).ok_or_else(|| {
-        HayesError::Invariant("Foulkes square proper-power exponent underflow".to_owned())
-    })?;
-    let square_power_bound = BigUint::from(half_degree) << square_exponent;
-    let higher_power_bound = BigUint::from(degree) << degree.div_ceil(3);
+    let square_power_bound = BigUint::from(half_degree) << ell.div_ceil(2);
+
+    // Every odd k>=3 layer is empty.  Indeed d=degree/k<=ell, odd powering is
+    // an automorphism of the principal-unit 2-group, and <P>^k=1 forces
+    // P=x^d, which is not irreducible because degree is even and d>=2.  Thus
+    // the remaining exponents are even k>=4, with d<=degree/4=(ell+1)/2.
+    let higher_power_bound = BigUint::from(degree) << (ell + 1).div_ceil(2);
     Ok(square_power_bound + higher_power_bound)
 }
 
@@ -9939,9 +9957,9 @@ pub fn sawin_foulkes_endpoint_ledger(
 ///
 /// All floor/ceiling patterns repeat when `n` increases by twelve.  The error
 /// allowance then grows by eight, while its polynomial ratio decreases.  For
-/// proper powers, the odd contribution remains one; at the even endpoint the
-/// square term grows by less than `16` and the higher-power term by less than
-/// `32`, while half the main term grows by `64`.  Twelve base rows plus the
+/// proper powers, the odd contribution remains one; at the even endpoint both
+/// the square term and the surviving even-exponent higher-power term grow by
+/// less than `16`, while half the main term grows by `64`.  Twelve base rows plus the
 /// checked polynomial step therefore prove the arithmetic implication for all
 /// `n` at or above `threshold`.  This function does not prove the polynomial
 /// Betti assumption itself.
@@ -17178,16 +17196,65 @@ mod tests {
             BigUint::from(4_u8) * &odd.sufficient_root_ratio_denominator
                 < odd.sufficient_root_ratio_numerator
         );
+        assert_eq!(
+            odd.wild_fourth_moment_unit_scale,
+            (BigUint::from(1_u8) << 200) * (BigUint::from(1_u8) << 603)
+        );
+        assert_eq!(
+            odd.sufficient_wild_constant_numerator,
+            odd.strict_irreducible_fourth_moment_threshold
+        );
+        assert_eq!(
+            odd.sufficient_wild_constant_denominator,
+            odd.wild_fourth_moment_unit_scale
+        );
+        assert!(
+            odd.sufficient_wild_constant_numerator
+                < BigUint::from(2_u8) * &odd.sufficient_wild_constant_denominator
+        );
 
         let even = weak_fourth_moment_endpoint_ledger(200, 402).unwrap();
         assert!(even.proper_prime_power_upper_bound > BigUint::from(1_u8));
         assert!(even.strong_connected_target_has_strict_reserve);
+        assert!(
+            even.sufficient_wild_constant_numerator
+                < BigUint::from(4_u8) * &even.sufficient_wild_constant_denominator
+        );
         assert_eq!(
             weak_fourth_moment_endpoint_ledger(8, 16),
             Err(HayesError::InvalidParameter(
                 "weak fourth-moment ledger is endpoint-only: ell=8, degree=16".to_owned()
             ))
         );
+    }
+
+    #[test]
+    fn even_endpoint_proper_power_bound_uses_only_even_exponent_layers() {
+        let ell_11 = weak_fourth_moment_endpoint_ledger(11, 24).unwrap();
+        assert_eq!(
+            ell_11.proper_prime_power_upper_bound,
+            BigUint::from(2_304_u32)
+        );
+        let ell_13 = weak_fourth_moment_endpoint_ledger(13, 28).unwrap();
+        assert_eq!(
+            ell_13.proper_prime_power_upper_bound,
+            BigUint::from(5_376_u32)
+        );
+
+        assert!(
+            !weak_fourth_moment_endpoint_ledger(12, 26)
+                .unwrap()
+                .strong_connected_target_has_strict_reserve
+        );
+        for ell in 13..=100 {
+            let degree = 2 * ell + 2;
+            assert!(
+                weak_fourth_moment_endpoint_ledger(ell, degree)
+                    .unwrap()
+                    .strong_connected_target_has_strict_reserve,
+                "even strong-target crossover failed at ell={ell}"
+            );
+        }
     }
 
     #[test]
