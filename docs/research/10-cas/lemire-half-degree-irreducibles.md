@@ -2001,6 +2001,38 @@ has degree at most `2 floor(n/2)=n-1`, so the composition violates the shaped
 bound.  Hence no choice of the binary shift `a` turns this familiar extension
 construction into a universal shaped doubling induction.
 
+The standard Q-transform admits a complete negative classification, stronger
+than checking its familiar recurrence hypotheses.  For
+
+```text
+Q(f)(x)=x^n f(x+x^-1),
+```
+
+the output is monic, constant-one, and self-reciprocal.  If it is half-shaped,
+all coefficients in degrees `n+1,...,2n-1` vanish; reciprocity then also kills
+degrees `1,...,n-1`.  An irreducible output must consequently be exactly
+
+```text
+x^(2n)+x^n+1,                                       (Q1)
+```
+
+because omitting the middle term gives `(x^n+1)^2`.  The unique invariant-ring
+preimage of (Q1) is `D_n(x)+1`, where
+
+```text
+D_0=0, D_1=x, D_n=xD_(n-1)+D_(n-2),
+D_n(x+x^-1)=x^n+x^-n.
+```
+
+For even `n`, `D_n+1=(D_(n/2)+1)^2` in characteristic two and is reducible.
+For odd `n>=5`, its coefficient at `x^(n-2)` is one and lies above the allowed
+half-degree window.  The sole survivor is
+`D_3+1=x^3+x+1`, whose Q-image is the already certified
+`x^6+x^3+1`.  The native `characteristic_two_q_shape_obstruction` reconstructs
+the Dickson source, checks (Q1) exactly, and replays the classification through
+degree 64 under explicit work bounds.  Thus there is no alternate sequence of
+standard Q-sources hiding behind the failed familiar iteration.  See ADR-0542.
+
 Nor can an odd-degree witness be advanced one degree by `f -> x f+1`.  The
 map has exactly the desired shape: a degree-`2m-1` tail of degree at most
 `m-1` becomes a degree-`2m` tail of degree at most `m`.  But every irreducible

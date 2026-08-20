@@ -205,6 +205,110 @@ pub fn characteristic_two_q_transform(
     Ok(Gf2Poly::from_words(words))
 }
 
+/// Exact obstruction to using the standard `Q`-transform as a shaped
+/// degree-doubling induction.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CharacteristicTwoQShapeObstruction {
+    /// Source degree `n`.
+    pub source_degree: usize,
+    /// Unique constant-one source `D_n(x)+1` whose Q-transform can be shaped.
+    pub unique_source: Gf2Poly,
+    /// Forced shaped self-reciprocal output `x^(2n)+x^n+1`.
+    pub forced_output: Gf2Poly,
+    /// Whether the unique source itself has Lemire's half-degree shape.
+    pub source_is_half_degree_shaped: bool,
+    /// Whether the source is visibly a square because `n` is even.
+    pub source_is_square: bool,
+    /// Whether the structural filters leave the exceptional cubic source.
+    pub cubic_is_only_possible_irreducible_source: bool,
+}
+
+/// Classify every shaped output of the standard characteristic-two
+/// `Q`-transform.
+///
+/// A degree-`2n` Q-transform is self-reciprocal.  If it is half-degree shaped,
+/// reciprocity removes all terms except degrees `0,n,2n`; irreducibility
+/// forces the middle coefficient to be one.  The invariant-ring identity
+///
+/// ```text
+/// D_n(x+x^-1)=x^n+x^-n
+/// ```
+///
+/// then makes `D_n(x)+1` the unique possible source.  In characteristic two,
+/// even `n` gives `D_n+1=(D_(n/2)+1)^2`.  For odd `n>=5`, `D_n+1` contains the
+/// forbidden term `x^(n-2)`.  Thus only `n=3` survives both structural tests.
+/// The operation reconstructs `D_n` by its recurrence and checks the Q-image
+/// exactly; irreducibility of the exceptional cubic and sextic remains under
+/// the independent Rabin checker.
+///
+/// # Errors
+///
+/// Rejects degrees below two, configured degree/work excess, or failure of the
+/// exact Dickson/Q identity.
+pub fn characteristic_two_q_shape_obstruction(
+    source_degree: usize,
+    limits: Gf2Limits,
+) -> Result<CharacteristicTwoQShapeObstruction, Gf2Error> {
+    if source_degree < 2 {
+        return Err(Gf2Error::NotPositiveDegree);
+    }
+    if source_degree > limits.max_input_degree {
+        return Err(Gf2Error::DegreeLimit {
+            observed: source_degree,
+            limit: limits.max_input_degree,
+        });
+    }
+    let output_degree = source_degree.checked_mul(2).ok_or(Gf2Error::DegreeLimit {
+        observed: usize::MAX,
+        limit: limits.max_intermediate_degree,
+    })?;
+    if output_degree > limits.max_intermediate_degree {
+        return Err(Gf2Error::DegreeLimit {
+            observed: output_degree,
+            limit: limits.max_intermediate_degree,
+        });
+    }
+    let estimated_work = u64::try_from(source_degree)
+        .unwrap_or(u64::MAX)
+        .saturating_add(1)
+        .saturating_pow(2);
+    if estimated_work > limits.max_word_ops {
+        return Err(Gf2Error::WorkLimit {
+            used: estimated_work,
+            limit: limits.max_word_ops,
+        });
+    }
+
+    let mut previous_previous = Gf2Poly::zero();
+    let mut previous = Gf2Poly::x();
+    for degree in 2..=source_degree {
+        let mut words = vec![0_u64; degree / 64 + 1];
+        xor_shifted(&mut words, previous.words(), 1);
+        xor_shifted(&mut words, previous_previous.words(), 0);
+        previous_previous = previous;
+        previous = Gf2Poly::from_words(words);
+    }
+    let mut source_words = previous.words().to_vec();
+    source_words[0] ^= 1;
+    let unique_source = Gf2Poly::from_words(source_words);
+    let forced_output = Gf2Poly::from_exponents(&[0, source_degree, output_degree], limits)?;
+    if characteristic_two_q_transform(&unique_source, limits)? != forced_output {
+        return Err(Gf2Error::InvalidCertificate(
+            "Dickson source does not reconstruct the forced shaped Q-output",
+        ));
+    }
+    let source_is_half_degree_shaped = unique_source.is_half_degree_shaped();
+    let source_is_square = source_degree.is_multiple_of(2);
+    Ok(CharacteristicTwoQShapeObstruction {
+        source_degree,
+        unique_source,
+        forced_output,
+        source_is_half_degree_shaped,
+        source_is_square,
+        cubic_is_only_possible_irreducible_source: source_degree == 3,
+    })
+}
+
 /// Exact Capell criterion data for the cubic composition `f(x^3)`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CubicCompositionCriterion {
@@ -1008,6 +1112,50 @@ mod tests {
             .unwrap()
             .expect("the theorem-hypothesis Q-transform is irreducible");
         check_irreducible_certificate(&degree_eight_certificate, limits).unwrap();
+    }
+
+    #[test]
+    fn characteristic_two_q_transform_has_only_one_shaped_irreducible_source() {
+        let limits = Gf2Limits::default();
+        for degree in 2_usize..=64 {
+            let report = characteristic_two_q_shape_obstruction(degree, limits).unwrap();
+            assert_eq!(
+                characteristic_two_q_transform(&report.unique_source, limits).unwrap(),
+                report.forced_output
+            );
+            assert_eq!(report.source_is_square, degree.is_multiple_of(2));
+            let odd_part = degree >> degree.trailing_zeros();
+            assert_eq!(
+                report.source_is_half_degree_shaped,
+                odd_part == 1 || odd_part == 3
+            );
+            assert_eq!(
+                report.cubic_is_only_possible_irreducible_source,
+                degree == 3
+            );
+        }
+        let cubic = characteristic_two_q_shape_obstruction(3, limits).unwrap();
+        assert_eq!(cubic.unique_source, poly(&[0, 1, 3]));
+        assert_eq!(cubic.forced_output, poly(&[0, 3, 6]));
+        assert!(
+            certify_irreducible(&cubic.unique_source, limits)
+                .unwrap()
+                .is_some()
+        );
+        assert!(
+            certify_irreducible(&cubic.forced_output, limits)
+                .unwrap()
+                .is_some()
+        );
+        assert!(characteristic_two_q_shape_obstruction(1, limits).is_err());
+        let tight = Gf2Limits {
+            max_word_ops: 8,
+            ..limits
+        };
+        assert!(matches!(
+            characteristic_two_q_shape_obstruction(3, tight),
+            Err(Gf2Error::WorkLimit { .. })
+        ));
     }
 
     #[test]

@@ -62,3 +62,7 @@ polynomial identities and independent Rabin certificates.  This closes the
 standard Q-transform as the missing universal construction while retaining
 honest credit for special degree families.  The endpoint proof still requires
 the connected Hayes/Witt cancellation lemma or another all-degree argument.
+
+ADR-0542 subsequently strengthens this boundary: self-reciprocity and the
+Dickson invariant classify every shaped standard Q-image, proving that the
+cubic-to-sextic example is the only irreducible shaped source/output pair.
