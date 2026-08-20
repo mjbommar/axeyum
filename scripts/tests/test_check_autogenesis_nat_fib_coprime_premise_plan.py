@@ -122,6 +122,51 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
             MODULE.validate(changed)
 
+        changed = copy.deepcopy(self.manifest)
+        changed["composition_result"][
+            "negative_control_missing_nat_div_mod_exec_direct_consumers"
+        ] = []
+        with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["composition_probe"]["imported_division_declaration_names"].append(
+            "Nat.div"
+        )
+        with self.assertRaisesRegex(MODULE.PlanError, "semantics"):
+            MODULE.validate(changed)
+
+    def test_official_support_audit_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["official_support_audit"]["theorems"]["Nat.dvd_mod_iff"][
+            "axiom_footprint"
+        ] = []
+        with self.assertRaisesRegex(MODULE.PlanError, "official support audit"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["official_support_audit"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+    def test_official_equation_pack_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["official_equation_pack"]["added_theorems"]["Nat.mod.eq_2"][
+            "axiom_footprint"
+        ] = ["propext"]
+        with self.assertRaisesRegex(MODULE.PlanError, "equation theorem"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["official_equation_pack"]["source_closure_count"] = 182
+        with self.assertRaisesRegex(MODULE.PlanError, "identity or authority"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["official_equation_pack"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
     def test_nat_mod_lt_compatibility_mutations_are_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)
         changed["nat_mod_lt_compatibility_result"]["source_declaration_sha256"] = (

@@ -30,6 +30,154 @@ def sha256(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def validate_official_support_audit(manifest: dict[str, Any]) -> None:
+    audit = manifest["official_support_audit"]
+    audit_path = pathlib.Path(audit["manifest"])
+    audit_dir = audit_path.parent
+    if (
+        sha256(audit_path) != audit["manifest_sha256"]
+        or stat.S_IMODE(audit_dir.stat().st_mode) != 0o555
+        or stat.S_IMODE(audit_path.stat().st_mode) != 0o444
+    ):
+        raise PlanError("official support audit changed or is mutable")
+    external = load(audit_path)
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind") != "axeyum-lean430-nat-division-support-audit"
+        or external.get("lean_version") != audit["lean_version"]
+        or external.get("lean_githash") != audit["lean_githash"]
+        or external.get("lean4export_commit") != audit["lean4export_commit"]
+        or external.get("audit_commit") != audit["audit_commit"]
+        or external.get("audit_tool_sha256")
+        != sha256(ROOT / "crates/axeyum-lean-import/examples/lean4export_import.rs")
+        or external.get("authority")
+        != {
+            "proof_search_invocations": 0,
+            "imported_declarations_admitted": 719,
+            "admitted_by_artifact": {
+                "Nat.dvd_mod_iff": 395,
+                "Nat.mod_add_div": 324,
+            },
+            "ledger_writes": 0,
+        }
+    ):
+        raise PlanError("official support audit identity or authority changed")
+    artifacts = external.get("artifacts")
+    if not isinstance(artifacts, list) or len(artifacts) != 2:
+        raise PlanError("official support audit artifact set changed")
+    expected_theorems = audit["theorems"]
+    if sorted(row.get("root") for row in artifacts) != sorted(expected_theorems):
+        raise PlanError("official support audit theorem set changed")
+    for row in artifacts:
+        root = row["root"]
+        stream_path = audit_dir / row["stream"]
+        report_path = audit_dir / row["audit"]
+        expected = expected_theorems[root]
+        if (
+            sha256(stream_path) != row["stream_sha256"]
+            or sha256(report_path) != row["audit_sha256"]
+            or stat.S_IMODE(stream_path.stat().st_mode) != 0o444
+            or stat.S_IMODE(report_path.stat().st_mode) != 0o444
+            or row["declaration_sha256"] != expected["declaration_sha256"]
+            or row["axiom_footprint"] != expected["axiom_footprint"]
+            or row["axiom_footprint"] != ["propext"]
+        ):
+            raise PlanError(f"official support audit changed for {root}")
+        report = report_path.read_text()
+        if (
+            f"name={root}|identity={row['declaration_sha256']}|axiom_free=false|"
+            not in report
+            or "|axiom_footprint=propext|" not in report
+        ):
+            raise PlanError(f"official support audit report changed for {root}")
+
+
+def validate_official_equation_pack(manifest: dict[str, Any]) -> None:
+    pack = manifest["official_equation_pack"]
+    manifest_path = pathlib.Path(pack["manifest"])
+    pack_dir = manifest_path.parent
+    if (
+        sha256(manifest_path) != pack["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or stat.S_IMODE(manifest_path.stat().st_mode) != 0o444
+    ):
+        raise PlanError("official equation pack changed or is mutable")
+    external = load(manifest_path)
+    source = external["source"]
+    audit = external["audit"]
+    composition = external["composition"]
+    source_path = pack_dir / source["path"]
+    audit_path = pack_dir / audit["path"]
+    receipt_path = pack_dir / composition["receipt"]
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind") != "axeyum-lean430-nat-mod-equation-pack"
+        or external.get("lean_version") != "4.30.0"
+        or external.get("lean_githash")
+        != "d024af099ca4bf2c86f649261ebf59565dc8c622"
+        or external.get("composition_tool_commit") != pack["implementation_commit"]
+        or external.get("composition_tool_sha256")
+        != sha256(ROOT / external["composition_tool"])
+        or external.get("generation")
+        != {
+            "module": "Init",
+            "roots": ["Nat.mod.eq_2", "Nat.modCore.go.eq_1"],
+        }
+        or source["sha256"] != pack["source_stream_sha256"]
+        or sha256(source_path) != source["sha256"]
+        or source["declarations_admitted"] != 183
+        or source["axioms"] != []
+        or sha256(audit_path) != audit["sha256"]
+        or sha256(receipt_path) != composition["receipt_file_sha256"]
+        or stat.S_IMODE(source_path.stat().st_mode) != 0o444
+        or stat.S_IMODE(audit_path.stat().st_mode) != 0o444
+        or stat.S_IMODE(receipt_path.stat().st_mode) != 0o444
+        or external["target"]["sha256"] != manifest["source"]["stream_sha256"]
+        or external["target"]["axioms"] != []
+        or composition["receipt_sha256"] != pack["composition_receipt_sha256"]
+        or composition["source_closure_count"] != pack["source_closure_count"]
+        or composition["source_closure_count"] != 183
+        or composition["reused_declarations"] != pack["reused_declarations"]
+        or composition["reused_declarations"] != 181
+        or composition["added_theorems"] != list(pack["added_theorems"])
+        or composition["added_axiom_footprints"]
+        != {name: [] for name in pack["added_theorems"]}
+        or external["authority"]
+        != {
+            "proof_bodies_displayed": False,
+            "proof_search_invocations": 0,
+            "imported_declarations_admitted": 444,
+            "composed_theorem_admissions_including_replay": 4,
+            "ledger_writes": 0,
+        }
+    ):
+        raise PlanError("official equation pack identity or authority changed")
+    receipt = load(receipt_path)
+    if (
+        receipt["schema_version"] != composition["receipt_schema"]
+        or receipt["roots"] != external["generation"]["roots"]
+        or receipt["receipt_sha256"] != composition["receipt_sha256"]
+        or len(receipt["source_closure"]) != composition["source_closure_count"]
+        or len(receipt["reused_declarations"]) != composition["reused_declarations"]
+        or [row["name"] for row in receipt["added_theorems"]]
+        != composition["added_theorems"]
+        or receipt["target_environment_sha256_before"]
+        != composition["target_environment_sha256_before"]
+        or receipt["target_environment_sha256_after"]
+        != composition["target_environment_sha256_after"]
+    ):
+        raise PlanError("official equation pack receipt changed")
+    for row in receipt["added_theorems"]:
+        expected = pack["added_theorems"][row["name"]]
+        if (
+            row["source_declaration_sha256"] != expected["declaration_sha256"]
+            or row["target_declaration_sha256"] != expected["declaration_sha256"]
+            or row["axiom_footprint"] != expected["axiom_footprint"]
+            or row["axiom_footprint"] != []
+        ):
+            raise PlanError(f"official equation theorem changed for {row['name']}")
+
+
 def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     manifest = load(MANIFEST) if manifest is None else manifest
     if (
@@ -37,7 +185,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "proof-plan-frozen-canonical-acc-library-slice-compatible"
+        != "proof-plan-frozen-nat-division-representation-mismatch-isolated"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -46,7 +194,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     implementation = manifest["implementation"]
     if (
         implementation["evidence_commit"]
-        != "3d466b45cc34435702db09604f47d0362eb9d17b"
+        != "f099a4a37d58b0d976d73a564cb13245462c8b11"
         or implementation["bool_order_commit"]
         != "772646c0d1a0c6ebca302c37a42cf2bb2f5030ee"
         or implementation["bool_constructor_order"]
@@ -82,6 +230,24 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     ):
         raise PlanError("composition observation changed or is mutable")
     observation = load(observation_path)
+    expected_division_names = [
+        "HMod",
+        "HMod.hMod",
+        "HMod.mk",
+        "HMod.rec",
+        "Nat.div.go.match_1",
+        "Nat.div_rec_fuel_lemma",
+        "Nat.div_rec_lemma",
+        "Nat.instMod",
+        "Nat.mod",
+        "Nat.mod.match_1",
+        "Nat.modCore",
+        "Nat.modCore.go",
+        "Nat.modCore.go._f",
+        "Nat.modCoreGo_lt",
+        "Nat.modCore_lt",
+        "Nat.mod_lt",
+    ]
     required = manifest["proof_plan"]["required_native_declarations"]
     presence = observation["source"]["required_declarations_present"]
     if (
@@ -114,6 +280,9 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or not presence["Nat.rec"]
         or manifest["proof_plan"]["required_present_in_import"] != []
         or manifest["proof_plan"]["already_present_in_import"] != ["Nat.rec"]
+        or probe["imported_division_declaration_names"] != expected_division_names
+        or observation["source"]["imported_division_declaration_names"]
+        != expected_division_names
     ):
         raise PlanError("composition observation semantics changed")
     categories = [
@@ -257,11 +426,38 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or composed["environment_sha256_before"]
         == composed["environment_sha256_after"]
         or negative["root"] != composition_result["negative_control_root"]
-        or negative["error"] != composition_result["negative_control_error"]
+        or hashlib.sha256(negative["error"].encode()).hexdigest()
+        != composition_result["negative_control_error_sha256"]
         or composition_result["negative_control_first_rejected"]
         not in negative["error"]
         or composition_result["negative_control_error_kind"]
         not in negative["error"]
+        or "ExprId" in negative["error"]
+        or any(
+            marker not in negative["error"]
+            for marker in [
+                "expected:",
+                "got:",
+                "expected_whnf:",
+                "got_whnf:",
+                "first_expected:",
+                "first_got:",
+            ]
+        )
+        or negative["source_closure_count"]
+        != composition_result["negative_control_source_closure_count"]
+        or negative["source_closure_count"] != 92
+        or negative["reused_nat_div_mod_exec_direct_consumers"]
+        != composition_result[
+            "negative_control_reused_nat_div_mod_exec_direct_consumers"
+        ]
+        or negative["reused_nat_div_mod_exec_direct_consumers"] != ["Nat.mod_lt"]
+        or negative["missing_nat_div_mod_exec_direct_consumers"]
+        != composition_result[
+            "negative_control_missing_nat_div_mod_exec_direct_consumers"
+        ]
+        or negative["missing_nat_div_mod_exec_direct_consumers"]
+        != ["Nat.dvd_mod_iff"]
         or negative["environment_sha256_before"]
         != composition_result["negative_control_environment_sha256"]
         or negative["environment_sha256_after"]
@@ -393,6 +589,8 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         "ledger_writes": 0,
     }:
         raise PlanError("plan authority changed")
+    validate_official_support_audit(manifest)
+    validate_official_equation_pack(manifest)
     return manifest
 
 
@@ -402,7 +600,7 @@ def main() -> int:
         print(
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
-            "present=0|exact=11|compatible=Nat.mod_lt,Acc|next=Nat.div_mod_exec|"
+            "present=0|exact=11|compatible=Nat.mod_lt,Acc|next=Nat.dvd_mod_iff|"
             "submissions=24|evaluation=0|writes=0"
         )
         return 0

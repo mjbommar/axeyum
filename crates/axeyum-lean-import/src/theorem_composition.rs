@@ -9,8 +9,8 @@ use std::fmt;
 use std::fmt::Write as _;
 
 use axeyum_lean_kernel::{
-    Declaration, ExprId, ExprNode, Kernel, LevelId, LevelNode, NameId, NameNode, ReducibilityHint,
-    build_logic_prelude,
+    Declaration, ExprId, ExprNode, Kernel, KernelError, LevelId, LevelNode, NameId, NameNode,
+    ReducibilityHint, build_logic_prelude,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -771,7 +771,7 @@ fn admit_missing_singleton_inductives(
             )
             .map_err(|error| CheckedTheoremCompositionError::AdmissionRejected {
                 name: source.display_name(package.family).to_string(),
-                error: format!("{error:?}"),
+                error: explain_admission_error(translator.target, &error),
             })?;
 
         let family = source.display_name(package.family).to_string();
@@ -878,7 +878,7 @@ fn admit_one_definition(
         .add_declaration(translated)
         .map_err(|error| CheckedTheoremCompositionError::AdmissionRejected {
             name: rendered.clone(),
-            error: format!("{error:?}"),
+            error: explain_admission_error(translator.target, &error),
         })?;
     let target_name = admitted_target_name(translator.target, &rendered, "definition")?;
     Ok(AddedDefinitionReceipt {
@@ -901,7 +901,7 @@ fn admit_one_theorem(
         .add_declaration(translated)
         .map_err(|error| CheckedTheoremCompositionError::AdmissionRejected {
             name: rendered.clone(),
-            error: format!("{error:?}"),
+            error: explain_admission_error(translator.target, &error),
         })?;
     let target_name = admitted_target_name(translator.target, &rendered, "theorem")?;
     let axiom_footprint = translator
@@ -916,6 +916,65 @@ fn admit_one_theorem(
         target_declaration_sha256: declaration_sha256(translator.target, target_name)?,
         axiom_footprint,
     })
+}
+
+/// Render arena-owned expression payloads before the private target is
+/// discarded. Raw `ExprId`s are process-local and cannot identify a semantic
+/// mismatch in a durable decline receipt.
+fn explain_admission_error(target: &mut Kernel, error: &KernelError) -> String {
+    match error {
+        KernelError::TypeMismatch { expected, got } => {
+            let expected_rendered = target.render_lean(*expected);
+            let got_rendered = target.render_lean(*got);
+            let expected_whnf = target.whnf(*expected);
+            let got_whnf = target.whnf(*got);
+            let (first_expected, first_got) =
+                first_defeq_mismatch(target, expected_whnf, got_whnf, 0);
+            let first_expected_whnf = target.whnf(first_expected);
+            let first_got_whnf = target.whnf(first_got);
+            format!(
+                "TypeMismatch {{ expected: {expected_rendered:?}, got: {got_rendered:?}, expected_whnf: {:?}, got_whnf: {:?}, first_expected: {:?}, first_got: {:?}, first_expected_whnf: {:?}, first_got_whnf: {:?} }}",
+                target.render_lean(expected_whnf),
+                target.render_lean(got_whnf),
+                target.render_lean(first_expected),
+                target.render_lean(first_got),
+                target.render_lean(first_expected_whnf),
+                target.render_lean(first_got_whnf)
+            )
+        }
+        KernelError::DeclarationValueMismatch { declared, inferred } => format!(
+            "DeclarationValueMismatch {{ declared: {:?}, inferred: {:?} }}",
+            target.render_lean(*declared),
+            target.render_lean(*inferred)
+        ),
+        _ => format!("{error:?}"),
+    }
+}
+
+fn first_defeq_mismatch(
+    target: &mut Kernel,
+    expected: ExprId,
+    got: ExprId,
+    depth: usize,
+) -> (ExprId, ExprId) {
+    if depth >= 64 || target.def_eq(expected, got) {
+        return (expected, got);
+    }
+    let expected = target.whnf(expected);
+    let got = target.whnf(got);
+    match (
+        target.expr_node(expected).clone(),
+        target.expr_node(got).clone(),
+    ) {
+        (ExprNode::App(expected_fn, expected_arg), ExprNode::App(got_fn, got_arg)) => {
+            if target.def_eq(expected_fn, got_fn) {
+                first_defeq_mismatch(target, expected_arg, got_arg, depth + 1)
+            } else {
+                first_defeq_mismatch(target, expected_fn, got_fn, depth + 1)
+            }
+        }
+        _ => (expected, got),
+    }
 }
 
 fn admitted_target_name(

@@ -614,6 +614,32 @@ fn admission_failure_after_staging_does_not_publish_the_prefix() {
 }
 
 #[test]
+fn admission_diagnostics_render_semantics_without_process_local_expression_ids() {
+    let mut kernel = Kernel::new();
+    let logic = build_logic_prelude(&mut kernel).unwrap();
+    let expected = kernel.const_(logic.true_, vec![]);
+    let got = kernel.const_(logic.false_, vec![]);
+    let rendered =
+        explain_admission_error(&mut kernel, &KernelError::TypeMismatch { expected, got });
+    assert!(rendered.contains("TypeMismatch"));
+    assert!(rendered.contains("expected: \"True\""));
+    assert!(rendered.contains("got: \"False\""));
+    assert!(rendered.contains("first_expected"));
+    assert!(!rendered.contains("ExprId"));
+
+    let rendered = explain_admission_error(
+        &mut kernel,
+        &KernelError::DeclarationValueMismatch {
+            declared: expected,
+            inferred: got,
+        },
+    );
+    assert!(rendered.contains("declared: \"True\""));
+    assert!(rendered.contains("inferred: \"False\""));
+    assert!(!rendered.contains("ExprId"));
+}
+
+#[test]
 fn free_variables_and_receipt_mutations_are_rejected() {
     let mut source = Kernel::new();
     let free = source.fvar(7);

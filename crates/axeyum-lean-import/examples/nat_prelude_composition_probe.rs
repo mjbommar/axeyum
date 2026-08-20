@@ -56,6 +56,7 @@ fn run() -> Result<(), String> {
         .iter()
         .filter(|(_, declaration)| matches!(declaration, Declaration::Theorem { .. }))
         .count();
+    let imported_division_declaration_names = imported_division_declaration_names(&kernel);
     let required_names = [
         "Nat.rec",
         "Nat.add_comm",
@@ -105,6 +106,7 @@ fn run() -> Result<(), String> {
             "declarations_before": declarations_before,
             "theorems_before": theorems_before,
             "required_declarations_present": required,
+            "imported_division_declaration_names": imported_division_declaration_names,
             "native_declarations": overlaps.native_declarations,
             "exact_overlap_names": overlaps.exact,
             "alpha_type_compatible_content_mismatched_names": overlaps.alpha_type_compatible_content_mismatched,
@@ -134,6 +136,28 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
+fn imported_division_declaration_names(kernel: &Kernel) -> Vec<String> {
+    let mut names = kernel
+        .environment()
+        .iter()
+        .map(|(&name, _)| kernel.display_name(name).to_string())
+        .filter(|name| {
+            [
+                "Nat.div",
+                "Nat.mod",
+                "Nat.instDiv",
+                "Nat.instMod",
+                "HDiv",
+                "HMod",
+            ]
+            .iter()
+            .any(|prefix| name.starts_with(prefix))
+        })
+        .collect::<Vec<_>>();
+    names.sort();
+    names
+}
+
 fn exercise_composition_controls(kernel: &mut Kernel) -> Result<ControlObservations, String> {
     let mut native = Kernel::new();
     let prelude = build_nat_prelude(&mut native)
@@ -142,6 +166,28 @@ fn exercise_composition_controls(kernel: &mut Kernel) -> Result<ControlObservati
     let mod_lt_compatibility =
         checked_reused_declaration_compatibility(&native, kernel, "Nat.mod_lt")
             .map_err(|error| format!("Nat.mod_lt compatibility failed: {error:?}"))?;
+    let native_names = declaration_names(&native);
+    let imported_names = declaration_names(kernel);
+    let dvd_gcd = native_names
+        .get("Nat.dvd_gcd")
+        .copied()
+        .ok_or("native Nat.dvd_gcd is missing")?;
+    let full_closure = native
+        .root_declaration_closure(&[dvd_gcd])
+        .map_err(|error| format!("full Nat.dvd_gcd closure failed: {error:?}"))?;
+    let div_mod_exec = native_names
+        .get("Nat.div_mod_exec")
+        .copied()
+        .ok_or("native Nat.div_mod_exec is missing")?;
+    let (reused_div_mod_exec_direct_consumers, missing_div_mod_exec_direct_consumers): (
+        Vec<_>,
+        Vec<_>,
+    ) = full_closure
+        .iter()
+        .copied()
+        .filter(|&name| native.theorem_dependencies(name).contains(&div_mod_exec))
+        .map(|name| native.display_name(name).to_string())
+        .partition(|name| imported_names.contains_key(name));
     let negative_before = environment_sha256(kernel)?;
     let negative_error = compose_checked_theorem_slice(&native, kernel, &["Nat.dvd_gcd"])
         .expect_err("the unresolved composition control must decline");
@@ -173,6 +219,9 @@ fn exercise_composition_controls(kernel: &mut Kernel) -> Result<ControlObservati
         "root": "Nat.dvd_gcd",
         "outcome": "declined",
         "error": format!("{negative_error:?}"),
+        "source_closure_count": full_closure.len(),
+        "reused_nat_div_mod_exec_direct_consumers": reused_div_mod_exec_direct_consumers,
+        "missing_nat_div_mod_exec_direct_consumers": missing_div_mod_exec_direct_consumers,
         "environment_sha256_before": negative_before,
         "environment_sha256_after": negative_after,
     });
