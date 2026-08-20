@@ -2225,6 +2225,23 @@ pub struct HayesConnectedFibreProductReport {
     pub connected_fourth_cumulant: BigInt,
 }
 
+/// Exact comparison between the ordinary pointwise character fourth moment
+/// and the product-constrained fourth moment entering the Hayes cumulant.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesCharacterFourthMomentComparison {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Polynomial degree.
+    pub degree: usize,
+    /// `sum_chi |S_chi|^4`, reconstructed from spatial autocorrelations.
+    pub pointwise_character_fourth_moment: BigUint,
+    /// `sum_(chi_1...chi_4=1) product_i S_(chi_i) = 2^(3ell) M_4`.
+    pub product_constrained_fourth_moment: BigUint,
+    /// Connected constrained numerator `2^(2ell) K_4` after subtracting the
+    /// three Wick pairings.
+    pub connected_product_constrained_numerator: BigInt,
+}
+
 /// Exact Möbius sums in every principal-unit class.
 ///
 /// `values[e]` is the signed sum of the polynomial Möbius function over all
@@ -4070,6 +4087,72 @@ impl ClassPopulationDistribution {
             centered_second_moment,
             centered_fourth_moment,
             connected_fourth_cumulant,
+        })
+    }
+
+    /// Compare the diagonal fourth moment controlled by ordinary family
+    /// monodromy with the product-constrained contraction required here.
+    ///
+    /// For the Fourier transform `S_chi` of the centred class distribution,
+    /// Parseval and convolution give
+    ///
+    /// ```text
+    /// sum_chi |S_chi|^4 = G sum_h (sum_e D_e D_(e+h))^2,
+    /// sum_(chi_1...chi_4=1) product_i S_(chi_i) = G^3 M_4.
+    /// ```
+    ///
+    /// These are different tensor contractions.  The second contains every
+    /// product-constrained quadruple, while the first sees only the pointwise
+    /// diagonal.  `max_autocorrelation_cells` bounds the explicit `G^2`
+    /// spatial reconstruction before work begins.
+    ///
+    /// # Errors
+    ///
+    /// Returns a resource decline before the autocorrelation table, or a
+    /// parameter/invariant error inherited from the exact distribution.
+    pub fn character_fourth_moment_comparison(
+        &self,
+        max_autocorrelation_cells: usize,
+    ) -> Result<HayesCharacterFourthMomentComparison, HayesError> {
+        let group_order = self.counts.len();
+        let work = group_order.checked_mul(group_order).ok_or_else(|| {
+            HayesError::InvalidParameter("character fourth-moment work overflow".to_owned())
+        })?;
+        check_limit(
+            "character_fourth_moment_autocorrelation_cells",
+            work,
+            max_autocorrelation_cells,
+        )?;
+        let mean = self.uniform_mean().ok_or_else(|| {
+            HayesError::InvalidParameter("class distribution has no exact uniform mean".to_owned())
+        })?;
+        let discrepancies = self
+            .counts
+            .iter()
+            .map(|count| BigInt::from(*count) - BigInt::from(mean))
+            .collect::<Vec<_>>();
+        let factors = principal_unit_factors(self.ell);
+        let mut autocorrelation_square_sum = BigUint::from(0_u8);
+        for shift in 0..group_order {
+            let mut correlation = BigInt::from(0_i8);
+            for class in 0..group_order {
+                let shifted = add_mixed_radix_indices(class, shift, &factors)?;
+                correlation += &discrepancies[class] * &discrepancies[shifted];
+            }
+            autocorrelation_square_sum += correlation.magnitude().pow(2);
+        }
+        let group_order_big = BigUint::from(group_order);
+        let pointwise_character_fourth_moment = &group_order_big * autocorrelation_square_sum;
+        let centered_fourth = self.central_absolute_power_sum(4)?;
+        let product_constrained_fourth_moment = group_order_big.pow(3) * centered_fourth;
+        let connected_product_constrained_numerator =
+            BigInt::from(group_order_big.pow(2)) * self.fourth_cumulant_numerator()?;
+        Ok(HayesCharacterFourthMomentComparison {
+            ell: self.ell,
+            degree: self.degree,
+            pointwise_character_fourth_moment,
+            product_constrained_fourth_moment,
+            connected_product_constrained_numerator,
         })
     }
 
@@ -14315,6 +14398,31 @@ mod tests {
         );
         assert!(report.raw_quadruple_fibre_count > report.raw_triple_fibre_count);
         assert!(report.raw_triple_fibre_count > report.raw_pair_fibre_count);
+    }
+
+    #[test]
+    fn pointwise_character_fourth_moment_is_not_the_constrained_cumulant() {
+        let distribution = class_population_distribution(7, 15, HayesLimits::default()).unwrap();
+        let report = distribution
+            .character_fourth_moment_comparison(1 << 14)
+            .unwrap();
+        assert_eq!((report.ell, report.degree), (7, 15));
+        assert_ne!(
+            report.pointwise_character_fourth_moment,
+            report.product_constrained_fourth_moment
+        );
+        assert_eq!(
+            report.connected_product_constrained_numerator,
+            BigInt::from(1_u16 << 14) * distribution.fourth_cumulant_numerator().unwrap()
+        );
+        assert!(matches!(
+            distribution.character_fourth_moment_comparison((1 << 14) - 1),
+            Err(HayesError::ResourceLimit {
+                resource: "character_fourth_moment_autocorrelation_cells",
+                requested,
+                limit
+            }) if requested == 1 << 14 && limit == (1 << 14) - 1
+        ));
     }
 
     #[test]

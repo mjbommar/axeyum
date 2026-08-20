@@ -2673,6 +2673,39 @@ proof must retain the centering complex and all three pairing projectors (or
 use the equivalent conductor-Haar differences), rather than proving only
 irreducibility or Weil bounds for the positive fourfold fibre product.
 
+Katz's big-Witt monodromy theorem explains the random-unitary heuristic but
+does not bound this virtual trace.  In characteristic two and rank at least
+three, the universal primitive-character sheaf has geometric monodromy
+containing `SL`; hence its ordinary tensor fourth moment has only the expected
+Wick invariants.  But Katz's Theorem 8.1 fixes the conductor and lets the field
+size grow.  Its effective error is `C(p,n,Xi)/sqrt(q)`, where `C` is a sum of
+compactly supported Betti numbers, and the source does not give the uniform
+growing-conductor bound needed over `GF(2)`.
+
+There is also an exact tensor-contraction mismatch.  The public
+`character_fourth_moment_comparison` uses spatial autocorrelation to check
+
+```text
+sum_chi |S_chi|^4
+  = 2^ell sum_h (sum_e D_e D_(e+h))^2,
+```
+
+whereas the spatial fourth moment and cumulant use
+
+```text
+sum_(chi_1 chi_2 chi_3 chi_4=1) product_i S_(chi_i)
+  = 2^(3ell) M_4.
+```
+
+These two exact integers already differ at the pinned level-seven endpoint.
+Thus ordinary pointwise `SL`-monodromy moments do not prove the constrained
+four-character statement.  A valid bridge requires a convolutional
+four-design theorem plus effective Betti control, uniform while conductor,
+rank, trace power, and representation complexity grow.  See
+[Witt Vectors and a Question of Keating and
+Rudnick](https://web.math.princeton.edu/~nmk/wittchar31.pdf), especially
+Theorems 5.1 and 8.1.
+
 Parseval gives an equivalent conductor form.  If `E_j` is the exact Fourier
 energy of `D_e^2` at conductor level `j`, the obligation is
 
