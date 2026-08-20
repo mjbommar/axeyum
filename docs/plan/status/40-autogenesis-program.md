@@ -18,3 +18,4 @@
 | 2026-08-20 | `bdc9bf1c9` | Public checked theorem-slice composition API publishes only a fully admitted owned clone and replayable receipt |
 | 2026-08-20 | `75aa21d1a` | Composition boundary controls cover unsupported kinds, type mismatch, binder metadata, free variables, partial staging, and receipt mutation |
 | 2026-08-20 | `0bcbe935d` | The r082 public-API probe exposes the exact source closure and canonical composition receipt identity |
+| 2026-08-20 | `2a9efefe3` | Receipt V2 records translated definitional equality as attempt-only reuse authority and moves the r082 blocker to missing `Exists` |

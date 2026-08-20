@@ -37,7 +37,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "proof-plan-frozen-first-native-library-slice-publicly-composed"
+        != "proof-plan-frozen-first-native-library-slice-definitionally-composed"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -157,6 +157,13 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         for row in reused_receipts
     )
     type_shape_only_reused = len(reused_receipts) - exact_reused
+    compatibility_counts = {
+        kind: sum(row["compatibility"] == kind for row in reused_receipts)
+        for kind in [
+            "kernel-type-shape",
+            "translated-definitional-equality",
+        ]
+    }
     if (
         composed["roots"] != [composition_result["root"]]
         or composed["source_closure"] != composition_result["source_closure"]
@@ -171,6 +178,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or exact_reused != composition_result["reused_exact_declarations"]
         or type_shape_only_reused
         != composition_result["reused_type_shape_compatible_content_mismatches"]
+        or compatibility_counts != composition_result["reused_compatibility"]
         or any(
             row["source_type_shape_sha256"] != row["target_type_shape_sha256"]
             for row in reused_receipts

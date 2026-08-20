@@ -76,6 +76,13 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
             MODULE.validate(changed)
 
+        changed = copy.deepcopy(self.manifest)
+        changed["composition_result"]["reused_compatibility"][
+            "translated-definitional-equality"
+        ] = 1
+        with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
+            MODULE.validate(changed)
+
 
 if __name__ == "__main__":
     unittest.main()

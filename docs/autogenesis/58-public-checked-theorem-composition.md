@@ -43,14 +43,13 @@ from binder-info-only type compatibility.
 
 ## Horizon and next step
 
-This closes one architectural arrow, not the Fibonacci target. Six of the seven
-required native roots still reach incompatible imported representations;
-`Nat.dvd_add_iff_right` is the smallest remaining closure and reaches
-`Nat.le_trans` and `Nat.zero_le`. The next bottom-up increment should select one
-of those representation bridges by measured downstream unlock, state its
-translation contract explicitly, and retry the original root. Expanding the
-public API to definitions or inductives is justified only by that concrete
-demand and requires a new reviewed boundary.
+This closed one architectural arrow, not the Fibonacci target. At this V1
+checkpoint, `Nat.dvd_add_iff_right` reached `Nat.le_trans` and `Nat.zero_le`.
+ADR-0524's subsequent
+[translated definitional reuse](59-translated-definitional-reuse.md) shows that
+both are definitionally compatible in the real target and moves the blocker to
+missing `Exists`. This page retains the V1 receipt identity; it is not the
+current policy receipt.
 
 No proof search ran, no proof body was displayed, no held-out partition was
 inspected, and no fact-ledger row changed. The three kernel submissions are
