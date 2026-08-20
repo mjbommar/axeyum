@@ -7,7 +7,7 @@
 
 use core::fmt;
 
-use num_bigint::BigInt;
+use num_bigint::{BigInt, BigUint};
 use serde::{Deserialize, Serialize};
 
 use crate::gf2::{
@@ -56,6 +56,47 @@ pub struct BinaryExtensionLongCycleTraceReport {
     pub mangoldt_sum: u128,
     /// Signed long-cycle error `mangoldt_sum-candidate_count`.
     pub error: i128,
+}
+
+/// Exact connected fourth-cumulant trace over one binary extension field.
+///
+/// This is the extension-field analogue of the base-field Hayes class
+/// distribution.  It retains every leading-coefficient class before forming
+/// the second moment, fourth moment, and connected Wick subtraction.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BinaryExtensionConnectedAdamsTraceReport {
+    /// Packed monic irreducible modulus defining `GF(2^r)`.
+    pub field_modulus: u64,
+    /// Extension degree `r`.
+    pub field_degree: usize,
+    /// Field order `q=2^r`.
+    pub field_order: u64,
+    /// Leading-coefficient prefix length.
+    pub ell: usize,
+    /// Degree of every monic polynomial.
+    pub polynomial_degree: usize,
+    /// Number `q^ell` of coefficient classes.
+    pub class_count: u64,
+    /// Number `q^degree` of enumerated monic polynomials.
+    pub candidate_count: u64,
+    /// Exact uniform Mangoldt mean `q^(degree-ell)` in every class.
+    pub uniform_mean: u64,
+    /// Mangoldt population of the all-zero leading-coefficient class.
+    pub identity_class_mangoldt_sum: u128,
+    /// `M_2=sum_e (N_e-uniform_mean)^2`.
+    pub centered_second_moment: BigUint,
+    /// `M_4=sum_e (N_e-uniform_mean)^4`.
+    pub centered_fourth_moment: BigUint,
+    /// Connected cumulant numerator `q^ell M_4-3M_2^2`.
+    pub fourth_cumulant_numerator: BigInt,
+    /// Product-constrained connected trace `q^(2ell)` times the cumulant.
+    pub connected_adams_trace: BigInt,
+    /// Candidate geometric allowance `ell^4 q^(2ell+2degree)`.
+    pub candidate_absolute_bound: BigUint,
+    /// Least integral coefficient `B` with `abs(trace)<=B q^(2ell+2degree)`.
+    pub minimum_normalized_betti_ceiling: BigUint,
+    /// Whether this bounded row satisfies the candidate allowance.
+    pub satisfies_candidate_bound: bool,
 }
 
 /// One deterministic interval of an extension-field long-cycle trace.
@@ -273,6 +314,122 @@ pub fn binary_extension_long_cycle_trace(
         limits,
     )?;
     combine_binary_extension_long_cycle_trace_shards(&[shard])
+}
+
+/// Compute the exact connected endpoint trace over `GF(2^r)`.
+///
+/// All `q^degree` monic polynomials are partitioned by their first `ell`
+/// next-to-leading coefficients.  Their polynomial Mangoldt weights give
+/// populations `N_e`; the operation then computes
+///
+/// ```text
+/// M_2 = sum_e (N_e-q^(degree-ell))^2,
+/// M_4 = sum_e (N_e-q^(degree-ell))^4,
+/// T_r = q^(2ell) (q^ell M_4-3M_2^2).
+/// ```
+///
+/// Thus `T_r` is the extension-field point-count sequence attached to the
+/// connected product-constrained contraction, rather than the one-class
+/// long-cycle trace returned by [`binary_extension_long_cycle_trace`].  The
+/// candidate bound is a stopping test only and receives no theorem credit.
+///
+/// # Errors
+///
+/// Rejects non-endpoint degrees, inadmissible fields or populations, host-size
+/// overflow, and failures of the exact Mangoldt conservation identity.
+pub fn binary_extension_connected_adams_trace(
+    field_modulus: u64,
+    ell: usize,
+    polynomial_degree: usize,
+    limits: BinaryExtensionTraceLimits,
+) -> Result<BinaryExtensionConnectedAdamsTraceReport, BinaryExtensionTraceError> {
+    let twice_ell = ell.checked_mul(2).ok_or_else(|| {
+        BinaryExtensionTraceError::InvalidParameter("connected ell overflow".to_owned())
+    })?;
+    if ell == 0 || !matches!(polynomial_degree.checked_sub(twice_ell), Some(1 | 2)) {
+        return Err(BinaryExtensionTraceError::InvalidParameter(
+            "connected Adams trace requires degree in {2*ell+1,2*ell+2}".to_owned(),
+        ));
+    }
+    let (field, free_coefficients, candidate_count) =
+        extension_trace_domain(field_modulus, polynomial_degree, 0, limits)?;
+    if free_coefficients != polynomial_degree {
+        return Err(BinaryExtensionTraceError::Invariant(
+            "full connected trace did not admit every coefficient".to_owned(),
+        ));
+    }
+    let ell_exponent = u32::try_from(ell).map_err(|_| {
+        BinaryExtensionTraceError::ResourceLimit("class exponent exceeds u32".to_owned())
+    })?;
+    let class_count = field.order.checked_pow(ell_exponent).ok_or_else(|| {
+        BinaryExtensionTraceError::ResourceLimit("class count overflow".to_owned())
+    })?;
+    let class_len = usize::try_from(class_count).map_err(|_| {
+        BinaryExtensionTraceError::ResourceLimit("class count exceeds host size".to_owned())
+    })?;
+    let low_exponent = u32::try_from(polynomial_degree - ell).map_err(|_| {
+        BinaryExtensionTraceError::ResourceLimit("class-block exponent exceeds u32".to_owned())
+    })?;
+    let uniform_mean = field.order.checked_pow(low_exponent).ok_or_else(|| {
+        BinaryExtensionTraceError::ResourceLimit("uniform class mean overflow".to_owned())
+    })?;
+    let populations = extension_class_mangoldt_populations(
+        field,
+        polynomial_degree,
+        class_len,
+        uniform_mean,
+        candidate_count,
+    )?;
+    let mean = u128::from(uniform_mean);
+    let centered_second_moment = populations
+        .iter()
+        .map(|population| BigUint::from(population.abs_diff(mean)).pow(2))
+        .sum::<BigUint>();
+    let centered_fourth_moment = populations
+        .iter()
+        .map(|population| BigUint::from(population.abs_diff(mean)).pow(4))
+        .sum::<BigUint>();
+    let class_count_big = BigUint::from(class_count);
+    let fourth_cumulant_numerator = BigInt::from(&class_count_big * &centered_fourth_moment)
+        - BigInt::from(BigUint::from(3_u8) * centered_second_moment.pow(2));
+    let connected_adams_trace = BigInt::from(class_count_big.pow(2)) * &fourth_cumulant_numerator;
+    let allowance_exponent = ell
+        .checked_mul(2)
+        .and_then(|value| {
+            polynomial_degree
+                .checked_mul(2)
+                .and_then(|n| value.checked_add(n))
+        })
+        .and_then(|value| u32::try_from(value).ok())
+        .ok_or_else(|| {
+            BinaryExtensionTraceError::ResourceLimit(
+                "connected allowance exponent overflow".to_owned(),
+            )
+        })?;
+    let geometric_scale = BigUint::from(field.order).pow(allowance_exponent);
+    let candidate_absolute_bound = BigUint::from(ell).pow(4) * &geometric_scale;
+    let minimum_normalized_betti_ceiling = (connected_adams_trace.magnitude() + &geometric_scale
+        - BigUint::from(1_u8))
+        / &geometric_scale;
+    let satisfies_candidate_bound = connected_adams_trace.magnitude() <= &candidate_absolute_bound;
+    Ok(BinaryExtensionConnectedAdamsTraceReport {
+        field_modulus,
+        field_degree: field.degree,
+        field_order: field.order,
+        ell,
+        polynomial_degree,
+        class_count,
+        candidate_count,
+        uniform_mean,
+        identity_class_mangoldt_sum: populations[0],
+        centered_second_moment,
+        centered_fourth_moment,
+        fourth_cumulant_numerator,
+        connected_adams_trace,
+        candidate_absolute_bound,
+        minimum_normalized_betti_ceiling,
+        satisfies_candidate_bound,
+    })
 }
 
 /// Compute one deterministic contiguous shard of an extension-field trace.
@@ -721,6 +878,44 @@ fn extension_trace_range(
     Ok(mangoldt_sum)
 }
 
+fn extension_class_mangoldt_populations(
+    field: BinaryExtensionField,
+    polynomial_degree: usize,
+    class_len: usize,
+    uniform_mean: u64,
+    candidate_count: u64,
+) -> Result<Vec<u128>, BinaryExtensionTraceError> {
+    let mut populations = vec![0_u128; class_len];
+    for encoded in 0..candidate_count {
+        let mut digits = encoded;
+        let mut polynomial = vec![0_u64; polynomial_degree + 1];
+        for coefficient in polynomial.iter_mut().take(polynomial_degree) {
+            *coefficient = digits % field.order;
+            digits /= field.order;
+        }
+        polynomial[polynomial_degree] = 1;
+        let class_index = usize::try_from(encoded / uniform_mean).map_err(|_| {
+            BinaryExtensionTraceError::Invariant("class index exceeds host size".to_owned())
+        })?;
+        let lambda = polynomial_mangoldt(&polynomial, field)? as u128;
+        populations[class_index] =
+            populations[class_index]
+                .checked_add(lambda)
+                .ok_or_else(|| {
+                    BinaryExtensionTraceError::ResourceLimit(
+                        "class Mangoldt population overflow".to_owned(),
+                    )
+                })?;
+    }
+    let recovered_total = populations.iter().copied().sum::<u128>();
+    if recovered_total != u128::from(candidate_count) {
+        return Err(BinaryExtensionTraceError::Invariant(format!(
+            "Mangoldt populations sum to {recovered_total}, expected {candidate_count}"
+        )));
+    }
+    Ok(populations)
+}
+
 /// Return the orbit size when `encoded` is the least element of its
 /// coefficientwise-Frobenius orbit, and `None` otherwise.
 fn canonical_frobenius_orbit_size(
@@ -1013,6 +1208,7 @@ fn distinct_prime_factors(mut value: usize) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gf2_hayes::{HayesLimits, class_population_distribution};
 
     fn naive_extension_trace_sum(
         field_modulus: u64,
@@ -1065,6 +1261,99 @@ mod tests {
         for (modulus, expected_error) in [(0b111_u64, 129_i128), (0b1011, -1_771)] {
             let report = binary_extension_long_cycle_trace(modulus, 9, 4, limits).unwrap();
             assert_eq!(report.error, expected_error);
+        }
+    }
+
+    #[test]
+    fn connected_adams_trace_matches_base_field_hayes_moments() {
+        let limits = BinaryExtensionTraceLimits::default();
+        for degree in [5_usize, 6] {
+            let extension =
+                binary_extension_connected_adams_trace(0b11, 2, degree, limits).unwrap();
+            let base = class_population_distribution(2, degree, HayesLimits::default()).unwrap();
+            assert_eq!(extension.class_count, 4);
+            assert_eq!(extension.candidate_count, 1_u64 << degree);
+            assert_eq!(extension.uniform_mean, 1_u64 << (degree - 2));
+            assert_eq!(extension.identity_class_mangoldt_sum, base.counts[0]);
+            assert_eq!(
+                extension.centered_second_moment,
+                base.central_absolute_power_sum(2).unwrap()
+            );
+            assert_eq!(
+                extension.centered_fourth_moment,
+                base.central_absolute_power_sum(4).unwrap()
+            );
+            assert_eq!(
+                extension.fourth_cumulant_numerator,
+                base.fourth_cumulant_numerator().unwrap()
+            );
+            assert_eq!(
+                extension.connected_adams_trace,
+                BigInt::from(16_u8) * base.fourth_cumulant_numerator().unwrap()
+            );
+            assert!(extension.satisfies_candidate_bound);
+        }
+
+        for modulus in [0b11_u64, 0b111, 0b1011] {
+            let row = binary_extension_connected_adams_trace(modulus, 1, 3, limits).unwrap();
+            assert_eq!(row.connected_adams_trace, BigInt::from(0_u8));
+            assert!(row.satisfies_candidate_bound);
+        }
+        for (modulus, expected_trace) in [
+            (0b11_u64, -8_192_i128),
+            (0b111, -100_663_296),
+            (0b1011, 10_582_799_417_344),
+        ] {
+            let row = binary_extension_connected_adams_trace(modulus, 2, 5, limits).unwrap();
+            assert_eq!(row.connected_adams_trace, BigInt::from(expected_trace));
+            assert!(row.satisfies_candidate_bound);
+        }
+        assert!(binary_extension_connected_adams_trace(0b11, 0, 1, limits).is_err());
+        assert!(binary_extension_connected_adams_trace(0b11, 2, 4, limits).is_err());
+        let tight = BinaryExtensionTraceLimits {
+            max_candidates: 31,
+            ..limits
+        };
+        assert!(matches!(
+            binary_extension_connected_adams_trace(0b11, 2, 5, tight),
+            Err(BinaryExtensionTraceError::ResourceLimit(_))
+        ));
+    }
+
+    #[test]
+    #[ignore = "33,554,432 exact extension-field candidates in the r=5 stopping row"]
+    fn connected_adams_trace_extension_stopping_probe() {
+        let limits = BinaryExtensionTraceLimits {
+            max_field_degree: 5,
+            max_polynomial_degree: 5,
+            max_candidates: 34_000_000,
+        };
+        for (modulus, expected_trace, expected_ceiling, expected_passes) in [
+            (
+                0b10011_u64,
+                BigInt::from(700_872_692_009_533_440_i128),
+                BigUint::from(10_u8),
+                true,
+            ),
+            (
+                0b10_0101,
+                BigInt::from(29_950_594_846_676_670_742_528_i128),
+                BigUint::from(26_u8),
+                false,
+            ),
+        ] {
+            let row = binary_extension_connected_adams_trace(modulus, 2, 5, limits).unwrap();
+            assert_eq!(row.connected_adams_trace, expected_trace);
+            assert_eq!(row.minimum_normalized_betti_ceiling, expected_ceiling);
+            assert_eq!(row.satisfies_candidate_bound, expected_passes);
+            println!(
+                "ell=2 r={} trace={} bound={} minimum_betti={} passes={}",
+                row.field_degree,
+                row.connected_adams_trace,
+                row.candidate_absolute_bound,
+                row.minimum_normalized_betti_ceiling,
+                row.satisfies_candidate_bound
+            );
         }
     }
 

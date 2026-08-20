@@ -79,6 +79,9 @@ Betti bound.
 
 - A proposed geometric proof can now be checked against exact dimension,
   weight, and Betti budgets before it receives endpoint credit.
+- ADR-0540 subsequently refutes `ell^4` as a universal all-`ell` Betti budget
+  at `(ell,n,r)=(2,5,5)`.  A surviving use must prove an explicitly scoped
+  large-`ell` budget or replace this coefficient and replay the endpoint.
 - Ordinary large-monodromy fourth moments remain the wrong contraction.
 - Killing only the top cohomology group or gaining one Weil half-weight is
   insufficient; all compactly-supported cohomology above degree `4ell` must

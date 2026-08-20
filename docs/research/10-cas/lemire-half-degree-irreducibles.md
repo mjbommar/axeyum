@@ -2767,6 +2767,37 @@ degree-`4ell` cohomological cutoff, or a growing-conductor Betti bound over
 `GF(2)`.  Those are now the exact geometric proof obligations rather than an
 informal appeal to monodromy.
 
+The combined budget in (AG) is already false as a universal all-level lemma.
+The existing extension-field tracer measures only one zero-coefficient
+long-cycle slice, so a separate bounded operation now retains every
+`GF(2^r)` leading-coefficient class and computes the connected trace
+
+```text
+T_r=q^(2ell) (q^ell M_4-3M_2^2).
+```
+
+It cross-checks exactly with the independent base-field Hayes distribution.
+At `(ell,n)=(2,5)`, the first five traces and the least integral coefficients
+`B_r` in `abs(T_r)<=B_r q^(2ell+2n)` are
+
+```text
+r:       1             2               3
+T_r:    -8192     -100663296     10582799417344
+B_r:     1             1               3
+
+r:       4                         5
+T_r:     700872692009533440        29950594846676670742528
+B_r:     10                        26.
+```
+
+Thus the `r=5` row violates `B_r<=ell^4=16`.  This distinguishes two proof
+obligations that the sufficient ledger had bundled together: it refutes the
+universal `ell^4` Betti coefficient, but does not refute the degree-`4ell`
+cohomology cutoff, and it does not rule out a replacement estimate scoped to
+`ell>=200`.  Any such replacement must expose its coefficient as a function
+of `ell` and be replayed through the endpoint ledger before receiving credit.
+See ADR-0540.
+
 Parseval gives an equivalent conductor form.  If `E_j` is the exact Fourier
 energy of `D_e^2` at conductor level `j`, the obligation is
 
