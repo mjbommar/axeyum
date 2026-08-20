@@ -8,7 +8,7 @@
     {
       "category": "uncertified-and-unchecked",
       "description": "The UNSAT route is neither certified nor independently checked.",
-      "instances": 58
+      "instances": 53
     },
     {
       "category": "uncertified-but-checked",
@@ -33,26 +33,26 @@
     {
       "category": "lean-reconstruction-gap",
       "description": "Certified, checked, trust-free evidence lacks Lean reconstruction.",
-      "instances": 8
+      "instances": 12
     },
     {
       "category": "dominant",
       "description": "Certified, checked, trust-free, and Lean-reconstructed UNSAT.",
-      "instances": 259
+      "instances": 260
     }
   ],
   "evidence_kinds": [
     {
       "audit_reported_checked": 0,
-      "audit_unsat": 58,
-      "baseline_unsat": 58,
+      "audit_unsat": 53,
+      "baseline_unsat": 53,
       "dominant_unsat": 0,
       "evidence_certified": 0,
       "evidence_checked": 0,
       "evidence_kind": "bare-unsat",
-      "lean_checked": 1,
+      "lean_checked": 0,
       "proof_errors": 0,
-      "trust_hole_free": 58,
+      "trust_hole_free": 53,
       "trust_hole_instances": 0
     },
     {
@@ -89,6 +89,32 @@
       "evidence_certified": 2,
       "evidence_checked": 2,
       "evidence_kind": "bv-alternation-counterexample-unsat",
+      "lean_checked": 0,
+      "proof_errors": 0,
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "dominant_unsat": 0,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "evidence_kind": "real-product-unsat",
+      "lean_checked": 0,
+      "proof_errors": 0,
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "dominant_unsat": 0,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "evidence_kind": "real-zero-product-unsat",
       "lean_checked": 0,
       "proof_errors": 0,
       "trust_hole_free": 2,
@@ -179,23 +205,23 @@
       "dominant_unsat": 10,
       "evidence_certified": 10,
       "evidence_checked": 10,
-      "evidence_kind": "regex-emptiness-unsat",
+      "evidence_kind": "nra-even-power-unsat",
       "lean_checked": 10,
       "proof_errors": 0,
       "trust_hole_free": 10,
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 9,
-      "audit_unsat": 9,
-      "baseline_unsat": 9,
-      "dominant_unsat": 9,
-      "evidence_certified": 9,
-      "evidence_checked": 9,
-      "evidence_kind": "nra-even-power-unsat",
-      "lean_checked": 9,
+      "audit_reported_checked": 10,
+      "audit_unsat": 10,
+      "baseline_unsat": 10,
+      "dominant_unsat": 10,
+      "evidence_certified": 10,
+      "evidence_checked": 10,
+      "evidence_kind": "regex-emptiness-unsat",
+      "lean_checked": 10,
       "proof_errors": 0,
-      "trust_hole_free": 9,
+      "trust_hole_free": 10,
       "trust_hole_instances": 0
     },
     {
@@ -689,6 +715,30 @@
       "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__minimal_unsat_core.smt2",
       "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
       "logic": "QF_NIA"
+    },
+    {
+      "evidence_kind": "real-product-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2",
+      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication",
+      "logic": "QF_NRA"
+    },
+    {
+      "evidence_kind": "real-product-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2",
+      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication",
+      "logic": "QF_NRA"
+    },
+    {
+      "evidence_kind": "real-zero-product-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2",
+      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
+      "logic": "QF_NRA"
+    },
+    {
+      "evidence_kind": "real-zero-product-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__zero-subset.smt2",
+      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication",
+      "logic": "QF_NRA"
     }
   ],
   "proof_errors": [
@@ -1021,15 +1071,16 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 1,
+      "audit_reported_checked": 6,
       "audit_unsat": 14,
       "baseline_unsat": 14,
       "blockers": {
-        "uncertified-and-unchecked": 13
+        "lean-reconstruction-gap": 4,
+        "uncertified-and-unchecked": 8
       },
-      "dominant_unsat": 1,
-      "evidence_certified": 1,
-      "evidence_checked": 1,
+      "dominant_unsat": 2,
+      "evidence_certified": 6,
+      "evidence_checked": 6,
       "lean_checked": 2,
       "logic": "QF_NRA",
       "proof_errors": 0,
@@ -1368,7 +1419,7 @@
     },
     {
       "path": "bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "fa84205e08c7657e3bdbd7196acc3ffc0edd71643d109836c58f96a17ddbc4da"
+      "sha256": "e211818ee49d43e63f32151e8d18222ce0d22eb0fac38484355f15353bc38488"
     },
     {
       "path": "bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json",
@@ -1432,13 +1483,13 @@
     }
   ],
   "summary": {
-    "audit_reported_checked": 267,
+    "audit_reported_checked": 272,
     "audit_unsat": 325,
     "baseline_unsat": 327,
     "complete_audits": 35,
-    "dominant_unsat": 259,
-    "evidence_certified": 267,
-    "evidence_checked": 267,
+    "dominant_unsat": 260,
+    "evidence_certified": 272,
+    "evidence_checked": 272,
     "lean_checked": 260,
     "proof_errors": 2,
     "trust_hole_free": 325,
