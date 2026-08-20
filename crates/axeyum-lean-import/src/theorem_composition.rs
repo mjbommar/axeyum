@@ -1199,7 +1199,9 @@ fn declaration_sha256(
     canonical_declaration_sha256(kernel, name).map_err(CheckedTheoremCompositionError::Identity)
 }
 
-fn environment_sha256(kernel: &Kernel) -> Result<String, CheckedTheoremCompositionError> {
+pub(crate) fn environment_sha256(
+    kernel: &Kernel,
+) -> Result<String, CheckedTheoremCompositionError> {
     let mut entries: Vec<(String, String)> = kernel
         .environment()
         .iter()

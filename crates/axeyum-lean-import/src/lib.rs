@@ -46,6 +46,7 @@ mod identity;
 mod semantic_contract_receipt;
 mod source_delta_trace;
 mod theorem_composition;
+mod theorem_specialization;
 mod trace_contract_receipt;
 mod trace_contract_theorem_receipt;
 mod type_slice;
@@ -79,6 +80,12 @@ pub use theorem_composition::{
     CheckedTheoremCompositionReceipt, CompletedTheoremComposition, ReusedDeclarationReceipt,
     ReusedTypeCompatibility, checked_reused_declaration_compatibility,
     compose_checked_theorem_slice, verify_checked_theorem_composition,
+};
+pub use theorem_specialization::{
+    CHECKED_THEOREM_SPECIALIZATION_VERSION, CheckedTheoremSpecializationError,
+    CheckedTheoremSpecializationReceipt, CompletedTheoremSpecialization,
+    SpecializationArgumentReceipt, specialize_checked_theorem,
+    verify_checked_theorem_specialization,
 };
 pub use trace_contract_receipt::{
     TRACE_BACKED_SOURCE_CONTRACT_RECEIPT_VERSION, TraceBackedSourceContractReceipt,
