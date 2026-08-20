@@ -7,11 +7,13 @@ use std::path::PathBuf;
 
 use axeyum_lean_import::{
     CHECKED_SEMANTIC_THEOREM_RECEIPT_VERSION, CheckedTheoremAuthority, ImportLimits,
-    canonical_declaration_sha256, canonical_expression_sha256, import_ndjson,
-    issue_checked_semantic_theorem_receipt, verify_checked_semantic_theorem_receipt,
+    canonical_declaration_sha256, canonical_expression_sha256, compose_checked_theorem_slice,
+    import_ndjson, issue_checked_semantic_theorem_receipt, verify_checked_semantic_theorem_receipt,
+    verify_checked_theorem_composition,
 };
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, ExprNode, Kernel, KernelError, LevelId, NameId,
+    build_nat_prelude,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -72,6 +74,9 @@ fn run() -> Result<(), String> {
             .as_ref()
             .ok_or("receipt mode requires --output")?;
         return run_checked_receipt(&stream, candidate, output);
+    }
+    if arguments.native_composition {
+        return run_native_composition(&stream);
     }
     let completed = import_ndjson(Cursor::new(&stream), ImportLimits::default())
         .map_err(|error| format!("source import failed: {error:?}"))?;
@@ -180,6 +185,77 @@ fn run() -> Result<(), String> {
     println!(
         "AUTOGENESIS_NAT_FIB_ITERATE_RECURRENCE_OK|{digest}|fact={TARGET_FACT}|plan={}|submissions={}|axioms=0|theorem_dependencies=0|receipts=0|evaluation=0|held_out=0|ledger_writes=0",
         search.plan_rank, search.submissions
+    );
+    Ok(())
+}
+
+fn run_native_composition(stream: &[u8]) -> Result<(), String> {
+    let (source, theorem) = reconstruct_fixed_candidate(stream)?;
+    let theorem_name = source.display_name(theorem).to_string();
+    let fib = exact_name(&source, "Nat.fib")?;
+    let fib_declaration_sha256 = canonical_declaration_sha256(&source, fib)?;
+    let mut native = Kernel::new();
+    build_nat_prelude(&mut native)
+        .map_err(|error| format!("native Nat prelude failed to build: {error:?}"))?;
+    let caller_declarations = native.environment().len();
+    let completed = compose_checked_theorem_slice(&source, &native, &[&theorem_name])
+        .map_err(|error| format!("native theorem composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(&source, &native, completed.kernel(), completed.receipt())
+        .map_err(|error| format!("native theorem composition did not replay: {error:?}"))?;
+    if native.environment().len() != caller_declarations {
+        return Err("native theorem composition mutated its caller".to_owned());
+    }
+    let names = completed
+        .kernel()
+        .environment()
+        .iter()
+        .map(|(&name, _)| completed.kernel().display_name(name).to_string())
+        .collect::<Vec<_>>();
+    if !names.iter().any(|name| name == "Nat.fib")
+        || !names.iter().any(|name| name == &theorem_name)
+        || completed
+            .receipt()
+            .added_theorems
+            .iter()
+            .any(|row| !row.axiom_footprint.is_empty())
+    {
+        return Err("native theorem composition assurance failed".to_owned());
+    }
+    let completed_theorem = exact_name(completed.kernel(), &theorem_name)?;
+    let footprint = rendered_names(
+        completed.kernel(),
+        &completed.kernel().axiom_footprint(completed_theorem),
+    );
+    let theorem_dependencies = rendered_names(
+        completed.kernel(),
+        &completed.kernel().theorem_dependencies(completed_theorem),
+    );
+    if !footprint.is_empty() || !theorem_dependencies.is_empty() {
+        return Err("native theorem dependency audit failed".to_owned());
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-nat-fib-recurrence-native-composition",
+            "source_stream_sha256": STREAM_SHA256,
+            "nat_fib_declaration_sha256": fib_declaration_sha256,
+            "root": theorem_name,
+            "source_closure": completed.receipt().source_closure.len(),
+            "reused_declarations": completed.receipt().reused_declarations.len(),
+            "added_definitions": completed.receipt().added_definitions.iter().map(|row| &row.name).collect::<Vec<_>>(),
+            "added_singleton_inductives": completed.receipt().added_singleton_inductives.iter().map(|row| &row.family).collect::<Vec<_>>(),
+            "added_theorems": completed.receipt().added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
+            "target_theorem_axiom_footprint": footprint,
+            "target_theorem_dependencies": theorem_dependencies,
+            "caller_declarations_before": caller_declarations,
+            "caller_declarations_after": native.environment().len(),
+            "completed_declarations": completed.kernel().environment().len(),
+            "receipt_sha256": completed.receipt().receipt_sha256,
+            "proof_search_invocations": 0,
+            "ledger_writes": 0,
+        }))
+        .map_err(|error| error.to_string())?
     );
     Ok(())
 }
@@ -1156,6 +1232,7 @@ struct Arguments {
     composition_control: bool,
     stage_control: bool,
     receipt_candidate: Option<PathBuf>,
+    native_composition: bool,
 }
 
 fn parse_arguments() -> Result<Arguments, String> {
@@ -1165,6 +1242,7 @@ fn parse_arguments() -> Result<Arguments, String> {
     let mut composition_control = false;
     let mut stage_control = false;
     let mut receipt_candidate = None;
+    let mut native_composition = false;
     let mut arguments = env::args().skip(1);
     while let Some(flag) = arguments.next() {
         if flag == "--preflight" {
@@ -1197,6 +1275,13 @@ fn parse_arguments() -> Result<Arguments, String> {
             }
             continue;
         }
+        if flag == "--native-composition" {
+            if native_composition {
+                return Err("duplicate --native-composition".to_owned());
+            }
+            native_composition = true;
+            continue;
+        }
         let value = arguments
             .next()
             .ok_or_else(|| format!("{flag} requires a value"))?;
@@ -1213,6 +1298,7 @@ fn parse_arguments() -> Result<Arguments, String> {
         + usize::from(composition_control)
         + usize::from(stage_control)
         + usize::from(receipt_candidate.is_some())
+        + usize::from(native_composition)
         > 1
     {
         return Err("preflight modes are mutually exclusive".to_owned());
@@ -1224,6 +1310,7 @@ fn parse_arguments() -> Result<Arguments, String> {
         composition_control,
         stage_control,
         receipt_candidate,
+        native_composition,
     })
 }
 

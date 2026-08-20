@@ -495,6 +495,75 @@ fn complete_nonrecursive_singleton_inductive_is_reconstructed_atomically() {
 }
 
 #[test]
+fn missing_definition_precedes_the_singleton_inductive_that_uses_it() {
+    let mut source = Kernel::new();
+    let zero = source.level_zero();
+    let one = source.level_succ(zero);
+    let sort_one = source.sort(one);
+    let proposition = source.sort_zero();
+    let base = name(&mut source, "Composition.BaseProp");
+    source
+        .add_declaration(Declaration::Definition {
+            name: base,
+            uparams: vec![],
+            ty: sort_one,
+            value: proposition,
+            hint: ReducibilityHint::Regular(1),
+        })
+        .unwrap();
+
+    let wrapped = name(&mut source, "Composition.Wrapped");
+    let intro = source.name_str(wrapped, "intro");
+    let wrapped_sort = source.const_(base, vec![]);
+    let wrapped_type = source.const_(wrapped, vec![]);
+    source
+        .add_inductive(wrapped, &[], 0, wrapped_sort, &[(intro, wrapped_type)])
+        .unwrap();
+    let root = name(&mut source, "Composition.wrappedRoot");
+    let proof = source.const_(intro, vec![]);
+    source
+        .add_declaration(Declaration::Theorem {
+            name: root,
+            uparams: vec![],
+            ty: wrapped_type,
+            value: proof,
+        })
+        .unwrap();
+
+    let target = Kernel::new();
+    let completed = compose_checked_theorem_slice(&source, &target, &["Composition.wrappedRoot"])
+        .expect("the definition must be admitted before its dependent package");
+    assert_eq!(
+        completed
+            .receipt()
+            .added_definitions
+            .iter()
+            .map(|row| row.name.as_str())
+            .collect::<Vec<_>>(),
+        ["Composition.BaseProp"]
+    );
+    assert_eq!(completed.receipt().added_singleton_inductives.len(), 1);
+    assert_eq!(
+        completed.receipt().added_singleton_inductives[0].family,
+        "Composition.Wrapped"
+    );
+    assert_eq!(
+        completed.receipt().added_theorems[0].name,
+        "Composition.wrappedRoot"
+    );
+    assert!(
+        completed.receipt().added_theorems[0]
+            .axiom_footprint
+            .is_empty()
+    );
+    verify_checked_theorem_composition(&source, &target, completed.kernel(), completed.receipt())
+        .unwrap();
+
+    // The composition is functional: the caller remains unchanged.
+    assert!(target.environment().is_empty());
+}
+
+#[test]
 fn canonical_recursive_acc_is_regenerated_exactly_and_reverified() {
     let mut source = Kernel::new();
     build_logic_prelude(&mut source).unwrap();

@@ -459,10 +459,12 @@ fn compose_selected_theorem_slice(
 
     let before = environment_sha256(target)?;
     let mut staged = target.clone();
-    let added_singleton_inductives =
-        admit_missing_singleton_inductives(source, &mut staged, &singleton_packages)?;
-    let (added_definitions, added) =
-        admit_missing_definitions_and_theorems(source, &mut staged, &missing)?;
+    let admitted = admit_missing_declarations_in_dependency_order(
+        source,
+        &mut staged,
+        &missing,
+        &singleton_packages,
+    )?;
     let after = environment_sha256(&staged)?;
     let mut receipt = CheckedTheoremCompositionReceipt {
         schema_version: schema_version.to_owned(),
@@ -477,9 +479,9 @@ fn compose_selected_theorem_slice(
             .collect(),
         target_environment_sha256_before: before,
         reused_declarations: reused,
-        added_theorems: added,
-        added_definitions,
-        added_singleton_inductives,
+        added_theorems: admitted.theorems,
+        added_definitions: admitted.definitions,
+        added_singleton_inductives: admitted.singleton_inductives,
         target_environment_sha256_after: after,
         receipt_sha256: String::new(),
     };
@@ -912,119 +914,144 @@ fn is_canonical_native_acc_package(
     Ok(true)
 }
 
-fn admit_missing_singleton_inductives(
+fn admit_one_singleton_inductive(
     source: &Kernel,
-    target: &mut Kernel,
-    packages: &[SingletonInductivePackage],
-) -> Result<Vec<AddedSingletonInductiveReceipt>, CheckedTheoremCompositionError> {
-    let mut translator = ExpressionTranslator::new(source, target);
-    let mut added = Vec::new();
-    for package in packages {
-        let Some(Declaration::Inductive {
-            name,
-            uparams,
-            ty,
-            num_params,
-            ..
-        }) = source.environment().get(package.family).cloned()
+    translator: &mut ExpressionTranslator<'_>,
+    package: &SingletonInductivePackage,
+) -> Result<AddedSingletonInductiveReceipt, CheckedTheoremCompositionError> {
+    let Some(Declaration::Inductive {
+        name,
+        uparams,
+        ty,
+        num_params,
+        ..
+    }) = source.environment().get(package.family).cloned()
+    else {
+        return Err(CheckedTheoremCompositionError::Identity(
+            "validated singleton family disappeared".to_owned(),
+        ));
+    };
+    let target_family = translator.name(name);
+    let target_uparams = uparams
+        .into_iter()
+        .map(|name| translator.name(name))
+        .collect::<Vec<_>>();
+    let target_type = translator.expr(ty)?;
+    let mut target_constructors = Vec::with_capacity(package.constructors.len());
+    for &constructor in &package.constructors {
+        let Some(Declaration::Constructor { name, ty, .. }) =
+            source.environment().get(constructor).cloned()
         else {
             return Err(CheckedTheoremCompositionError::Identity(
-                "validated singleton family disappeared".to_owned(),
+                "validated singleton constructor disappeared".to_owned(),
             ));
         };
-        let target_family = translator.name(name);
-        let target_uparams = uparams
-            .into_iter()
-            .map(|name| translator.name(name))
-            .collect::<Vec<_>>();
-        let target_type = translator.expr(ty)?;
-        let mut target_constructors = Vec::with_capacity(package.constructors.len());
-        for &constructor in &package.constructors {
-            let Some(Declaration::Constructor { name, ty, .. }) =
-                source.environment().get(constructor).cloned()
-            else {
-                return Err(CheckedTheoremCompositionError::Identity(
-                    "validated singleton constructor disappeared".to_owned(),
-                ));
-            };
-            let name = translator.name(name);
-            let ty = translator.expr(ty)?;
-            target_constructors.push((name, ty));
-        }
-        translator
-            .target
-            .add_inductive(
-                target_family,
-                &target_uparams,
-                usize::from(num_params),
-                target_type,
-                &target_constructors,
-            )
-            .map_err(|error| CheckedTheoremCompositionError::AdmissionRejected {
-                name: source.display_name(package.family).to_string(),
-                error: explain_admission_error(translator.target, &error),
-            })?;
-
-        let family = source.display_name(package.family).to_string();
-        let constructors = package
-            .constructors
-            .iter()
-            .map(|name| source.display_name(*name).to_string())
-            .collect::<Vec<_>>();
-        let recursor = source.display_name(package.recursor).to_string();
-        let package_declarations = std::iter::once((family.clone(), package.family))
-            .chain(
-                constructors
-                    .iter()
-                    .cloned()
-                    .zip(package.constructors.iter().copied()),
-            )
-            .chain(std::iter::once((recursor.clone(), package.recursor)))
-            .collect::<Vec<_>>();
-        let target_names = declaration_names(translator.target);
-        let mut source_digests = BTreeMap::new();
-        let mut target_digests = BTreeMap::new();
-        for (rendered, source_name) in package_declarations {
-            let target_name = target_names.get(&rendered).copied().ok_or_else(|| {
-                CheckedTheoremCompositionError::Identity(format!(
-                    "reconstructed singleton declaration is absent: {rendered}"
-                ))
-            })?;
-            let source_digest = declaration_sha256(source, source_name)?;
-            let target_digest = declaration_sha256(translator.target, target_name)?;
-            if package.require_exact_reconstruction && source_digest != target_digest {
-                return Err(
-                    CheckedTheoremCompositionError::ReconstructedInductiveMismatch {
-                        name: rendered,
-                        source_sha256: source_digest,
-                        target_sha256: target_digest,
-                    },
-                );
-            }
-            source_digests.insert(rendered.clone(), source_digest);
-            target_digests.insert(rendered, target_digest);
-        }
-        added.push(AddedSingletonInductiveReceipt {
-            family,
-            constructors,
-            recursor,
-            source_declaration_sha256: source_digests,
-            target_declaration_sha256: target_digests,
-        });
+        let name = translator.name(name);
+        let ty = translator.expr(ty)?;
+        target_constructors.push((name, ty));
     }
-    Ok(added)
+    translator
+        .target
+        .add_inductive(
+            target_family,
+            &target_uparams,
+            usize::from(num_params),
+            target_type,
+            &target_constructors,
+        )
+        .map_err(|error| CheckedTheoremCompositionError::AdmissionRejected {
+            name: source.display_name(package.family).to_string(),
+            error: explain_admission_error(translator.target, &error),
+        })?;
+
+    let family = source.display_name(package.family).to_string();
+    let constructors = package
+        .constructors
+        .iter()
+        .map(|name| source.display_name(*name).to_string())
+        .collect::<Vec<_>>();
+    let recursor = source.display_name(package.recursor).to_string();
+    let package_declarations = std::iter::once((family.clone(), package.family))
+        .chain(
+            constructors
+                .iter()
+                .cloned()
+                .zip(package.constructors.iter().copied()),
+        )
+        .chain(std::iter::once((recursor.clone(), package.recursor)))
+        .collect::<Vec<_>>();
+    let target_names = declaration_names(translator.target);
+    let mut source_digests = BTreeMap::new();
+    let mut target_digests = BTreeMap::new();
+    for (rendered, source_name) in package_declarations {
+        let target_name = target_names.get(&rendered).copied().ok_or_else(|| {
+            CheckedTheoremCompositionError::Identity(format!(
+                "reconstructed singleton declaration is absent: {rendered}"
+            ))
+        })?;
+        let source_digest = declaration_sha256(source, source_name)?;
+        let target_digest = declaration_sha256(translator.target, target_name)?;
+        if package.require_exact_reconstruction && source_digest != target_digest {
+            return Err(
+                CheckedTheoremCompositionError::ReconstructedInductiveMismatch {
+                    name: rendered,
+                    source_sha256: source_digest,
+                    target_sha256: target_digest,
+                },
+            );
+        }
+        source_digests.insert(rendered.clone(), source_digest);
+        target_digests.insert(rendered, target_digest);
+    }
+    Ok(AddedSingletonInductiveReceipt {
+        family,
+        constructors,
+        recursor,
+        source_declaration_sha256: source_digests,
+        target_declaration_sha256: target_digests,
+    })
 }
 
-fn admit_missing_definitions_and_theorems(
+struct AdmittedDeclarations {
+    definitions: Vec<AddedDefinitionReceipt>,
+    theorems: Vec<AddedTheoremReceipt>,
+    singleton_inductives: Vec<AddedSingletonInductiveReceipt>,
+}
+
+fn admit_missing_declarations_in_dependency_order(
     source: &Kernel,
     target: &mut Kernel,
     missing: &[NameId],
-) -> Result<(Vec<AddedDefinitionReceipt>, Vec<AddedTheoremReceipt>), CheckedTheoremCompositionError>
-{
+    packages: &[SingletonInductivePackage],
+) -> Result<AdmittedDeclarations, CheckedTheoremCompositionError> {
     let mut translator = ExpressionTranslator::new(source, target);
     let mut definitions = Vec::new();
     let mut theorems = Vec::new();
+    let packages_by_family = packages
+        .iter()
+        .map(|package| (package.family, package))
+        .collect::<BTreeMap<_, _>>();
+    let package_members = packages
+        .iter()
+        .flat_map(|package| {
+            std::iter::once(package.family)
+                .chain(package.constructors.iter().copied())
+                .chain(std::iter::once(package.recursor))
+        })
+        .collect::<BTreeSet<_>>();
+    let mut singleton_inductives = Vec::new();
     for &source_name in missing {
+        if let Some(package) = packages_by_family.get(&source_name) {
+            singleton_inductives.push(admit_one_singleton_inductive(
+                source,
+                &mut translator,
+                package,
+            )?);
+            continue;
+        }
+        if package_members.contains(&source_name) {
+            continue;
+        }
         let declaration = source
             .environment()
             .get(source_name)
@@ -1050,7 +1077,11 @@ fn admit_missing_definitions_and_theorems(
             _ => {}
         }
     }
-    Ok((definitions, theorems))
+    Ok(AdmittedDeclarations {
+        definitions,
+        theorems,
+        singleton_inductives,
+    })
 }
 
 fn admit_one_definition(
