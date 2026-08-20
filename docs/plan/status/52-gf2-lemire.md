@@ -533,12 +533,27 @@ ledger.  Direct Cauchy still misses the connected allowance on the pinned
 closes another phase-erasing shortcut; a surviving proof must keep the final
 frequency signs or prove an explicit large-`ell` norm collapse with that loss
 absorbed.
+The independent Sawin route now has an exact cyclic/Foulkes compression rather
+than a heuristic representation slogan.  Ramanujan orthogonality reconstructs
+the von Mangoldt long-cycle character as
+`p_n=sum_(k|n) mu(k) Ind_(C_n)^(S_n) theta_(n/k)`, with exact coefficient mass
+`2^omega(n)`.  A bounded native ledger recomputes every Ramanujan coefficient
+from two formulas, checks all power-sum and grouped coefficients, and inserts
+the exact characteristic-two endpoint weight.  It proves that a hypothetical
+uniform effective cyclic Betti bound `B(n,r)<=n^4` would close every degree
+after the certified 400 handoff; twelve base rows, odd/even proper-power
+reserves, and a strict twelve-degree induction step are replayable.  Sawin's
+published generic bound still fails, and the new quartic cyclic-eigenspace
+statement is recorded as conjectured with no evidence.  The representation
+compression has been proved; the characteristic-two cohomology estimate has
+not.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `6c6e36597` | Certified the exact long-cycle cyclic/Foulkes compression, retained odd/even proper-power margins, and isolated a quartic characteristic-two cyclic-Betti theorem that would close every degree after 400 without claiming it. |
 | 2026-08-20 | `9a3e77556` | Derived the exact ell-three degree-seven extension trace from characteristic-two period-24 symmetry, reproduced the sharded GF(16) row, and refuted the one-extra-q cutoff repair. |
 | 2026-08-20 | `ef5a90f0b` | Added an atomic bounded fleet shard runner and used the exact GF(16) level-three merge to refute the apparent ell^4 connected Adams trace allowance without granting endpoint credit. |
 | 2026-08-20 | `6b064750d` | Added deterministic connected extension-field class-vector shards, fail-closed exact merge, CLI JSON workflows, and mutation-tested equality with direct connected Adams traces. |
