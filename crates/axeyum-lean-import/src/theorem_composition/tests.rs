@@ -226,6 +226,81 @@ fn binder_info_only_type_difference_authorizes_a_fresh_gate_check() {
         completed.receipt().added_theorems[0].axiom_footprint,
         ["Composition.surfaceWitness"]
     );
+    assert_eq!(
+        surface.compatibility,
+        ReusedTypeCompatibility::KernelTypeShape
+    );
+}
+
+#[test]
+fn translated_definitional_equality_authorizes_only_a_fresh_gate_check() {
+    fn add_surface(kernel: &mut Kernel, wrapped_witness: bool, add_root: bool) {
+        let logic = build_logic_prelude(kernel).unwrap();
+        let prop = kernel.sort_zero();
+        let true_type = kernel.const_(logic.true_, vec![]);
+        let surface = name(kernel, "Composition.DefeqSurface");
+        kernel
+            .add_declaration(Declaration::Definition {
+                name: surface,
+                uparams: vec![],
+                ty: prop,
+                value: true_type,
+                hint: ReducibilityHint::Regular(1),
+            })
+            .unwrap();
+        let wrapped_type = kernel.const_(surface, vec![]);
+        let witness = name(kernel, "Composition.defeqWitness");
+        kernel
+            .add_declaration(Declaration::Axiom {
+                name: witness,
+                uparams: vec![],
+                ty: if wrapped_witness {
+                    wrapped_type
+                } else {
+                    true_type
+                },
+            })
+            .unwrap();
+        if add_root {
+            let root = name(kernel, "Composition.defeqRoot");
+            let proof = kernel.const_(witness, vec![]);
+            kernel
+                .add_declaration(Declaration::Theorem {
+                    name: root,
+                    uparams: vec![],
+                    ty: wrapped_type,
+                    value: proof,
+                })
+                .unwrap();
+        }
+    }
+
+    let mut source = Kernel::new();
+    add_surface(&mut source, true, true);
+    let mut target = Kernel::new();
+    add_surface(&mut target, false, false);
+    let completed =
+        compose_checked_theorem_slice(&source, &target, &["Composition.defeqRoot"]).unwrap();
+    let witness = completed
+        .receipt()
+        .reused_declarations
+        .iter()
+        .find(|row| row.name == "Composition.defeqWitness")
+        .unwrap();
+    assert_ne!(
+        witness.source_type_shape_sha256,
+        witness.target_type_shape_sha256
+    );
+    assert_eq!(
+        witness.compatibility,
+        ReusedTypeCompatibility::TranslatedDefinitionalEquality
+    );
+    assert_eq!(
+        completed.receipt().added_theorems[0].axiom_footprint,
+        ["Composition.defeqWitness"]
+    );
+    verify_checked_theorem_composition(&source, &target, completed.kernel(), completed.receipt())
+        .unwrap();
 }
 
 #[test]
@@ -354,6 +429,14 @@ fn free_variables_and_receipt_mutations_are_rejected() {
         compose_checked_theorem_slice(&source, &target, &["Composition.receiptRoot"]).unwrap();
     let mut changed = completed.receipt().clone();
     changed.target_environment_sha256_after = "00".repeat(32);
+    assert_eq!(
+        verify_checked_theorem_composition(&source, &target, completed.kernel(), &changed),
+        Err(CheckedTheoremCompositionError::ReceiptMismatch)
+    );
+
+    let mut changed = completed.receipt().clone();
+    changed.reused_declarations[0].compatibility =
+        ReusedTypeCompatibility::TranslatedDefinitionalEquality;
     assert_eq!(
         verify_checked_theorem_composition(&source, &target, completed.kernel(), &changed),
         Err(CheckedTheoremCompositionError::ReceiptMismatch)

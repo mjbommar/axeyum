@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** The ADR-0523 public theorem-only completed-clone API reproduces the first three axiom-free native Nat admissions over r082 with an exact source closure, environment transition, and canonical receipt; ten controls cover the major fail-closed boundary.
+**Status:** ADR-0524 and receipt V2 add a second explicit reuse class: a structurally rebuilt source type may authorize a fresh target check only when it is well-typed and definitionally equal in the target. The r082 control advances past `Nat.zero_le` and `Nat.le_trans` to the first real missing package, `Exists`.
 
-**Next:** finish the missing constructor/recursor/quotient-kind controls, then measure and specify the smallest representation bridge for `Nat.dvd_add_iff_right` (`Nat.le_trans` / `Nat.zero_le`) before retrying that original root. Do not broaden V1 into definition or inductive transport without a demand-backed ADR.
+**Next:** specify and implement atomic checked composition of the demanded singleton `Exists` inductive package (family, constructor, and generated recursor together), retain explicit quotient/mutual/nested declines, then retry `Nat.dvd_add_iff_right` to expose the next bottom-up blocker.
 
 <!-- plan-section: landed-changes -->
 

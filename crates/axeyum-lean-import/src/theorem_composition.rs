@@ -17,7 +17,27 @@ use sha2::{Digest, Sha256};
 use crate::{canonical_declaration_sha256, canonical_kernel_type_shape_sha256};
 
 /// Version of the checked theorem-composition receipt and compatibility policy.
-pub const CHECKED_THEOREM_COMPOSITION_VERSION: &str = "axeyum.checked-theorem-composition.v1";
+pub const CHECKED_THEOREM_COMPOSITION_VERSION: &str = "axeyum.checked-theorem-composition.v2";
+
+/// The checked relation that authorized reuse of one target declaration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReusedTypeCompatibility {
+    /// Canonical kernel-relevant type shapes are identical.
+    KernelTypeShape,
+    /// The rebuilt source type is definitionally equal to the target type.
+    TranslatedDefinitionalEquality,
+}
+
+impl ReusedTypeCompatibility {
+    /// Stable receipt spelling for this relation.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::KernelTypeShape => "kernel-type-shape",
+            Self::TranslatedDefinitionalEquality => "translated-definitional-equality",
+        }
+    }
+}
 
 /// One source declaration reused from the target environment.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,6 +52,8 @@ pub struct ReusedDeclarationReceipt {
     pub source_type_shape_sha256: String,
     /// Kernel-relevant target type-shape identity.
     pub target_type_shape_sha256: String,
+    /// Checked compatibility relation that authorized this reuse attempt.
+    pub compatibility: ReusedTypeCompatibility,
 }
 
 /// One checked theorem newly admitted to the completed target.
@@ -100,6 +122,7 @@ impl CheckedTheoremCompositionReceipt {
                 "target_declaration_sha256": row.target_declaration_sha256,
                 "source_type_shape_sha256": row.source_type_shape_sha256,
                 "target_type_shape_sha256": row.target_type_shape_sha256,
+                "compatibility": row.compatibility.as_str(),
             })).collect::<Vec<_>>(),
             "added_theorems": self.added_theorems.iter().map(|row| json!({
                 "name": row.name,
@@ -337,6 +360,8 @@ fn validate_reused(
     target_names: &BTreeMap<String, NameId>,
 ) -> Result<Vec<ReusedDeclarationReceipt>, CheckedTheoremCompositionError> {
     let mut reused = Vec::new();
+    let mut compatibility_target = target.clone();
+    let mut compatibility_translator = ExpressionTranslator::new(source, &mut compatibility_target);
     for &source_name in selected {
         let rendered = source.display_name(source_name).to_string();
         let Some(&target_name) = target_names.get(&rendered) else {
@@ -362,22 +387,47 @@ fn validate_reused(
             .ty();
         let source_shape = type_shape(source, source_type)?;
         let target_shape = type_shape(target, target_type)?;
-        if source_shape != target_shape {
+        let compatibility = if source_shape == target_shape {
+            ReusedTypeCompatibility::KernelTypeShape
+        } else if translated_type_is_definitionally_equal(
+            &mut compatibility_translator,
+            source_type,
+            target_type,
+        )? {
+            ReusedTypeCompatibility::TranslatedDefinitionalEquality
+        } else {
             return Err(CheckedTheoremCompositionError::TypeShapeMismatch {
                 name: rendered,
                 source_sha256: source_shape,
                 target_sha256: target_shape,
             });
-        }
+        };
         reused.push(ReusedDeclarationReceipt {
             name: rendered,
             source_declaration_sha256: declaration_sha256(source, source_name)?,
             target_declaration_sha256: declaration_sha256(target, target_name)?,
             source_type_shape_sha256: source_shape,
             target_type_shape_sha256: target_shape,
+            compatibility,
         });
     }
     Ok(reused)
+}
+
+fn translated_type_is_definitionally_equal(
+    translator: &mut ExpressionTranslator<'_>,
+    source_type: ExprId,
+    target_type: ExprId,
+) -> Result<bool, CheckedTheoremCompositionError> {
+    let translated = translator.expr(source_type)?;
+    let Ok(inferred) = translator.target.infer(translated) else {
+        return Ok(false);
+    };
+    let inferred = translator.target.whnf(inferred);
+    if !matches!(translator.target.expr_node(inferred), ExprNode::Sort(_)) {
+        return Ok(false);
+    }
+    Ok(translator.target.def_eq(translated, target_type))
 }
 
 fn admit_missing_theorems(

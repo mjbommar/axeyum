@@ -183,6 +183,7 @@ fn reused_receipts(rows: &[ReusedDeclarationReceipt]) -> Vec<serde_json::Value> 
                 "target_declaration_sha256": row.target_declaration_sha256,
                 "source_type_shape_sha256": row.source_type_shape_sha256,
                 "target_type_shape_sha256": row.target_type_shape_sha256,
+                "compatibility": row.compatibility.as_str(),
             })
         })
         .collect()
