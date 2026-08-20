@@ -184,7 +184,10 @@ fn sum_of_squares_refutation_generalizes_axiom_free() {
         generalized.footprint
     );
     assert!(
-        generalized.ring_used.iter().any(|n| n == "AxReal.sq_nonneg"),
+        generalized
+            .ring_used
+            .iter()
+            .any(|n| n == "AxReal.sq_nonneg"),
         "the SOS route must reach sq_nonneg, else this covers nothing new: {:?}",
         generalized.ring_used
     );

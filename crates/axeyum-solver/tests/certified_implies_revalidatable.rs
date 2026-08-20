@@ -41,7 +41,9 @@
 #![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{EvidenceCheck, SolverConfig, produce_evidence};
+use axeyum_solver::{
+    EvidenceCheck, SolverConfig, produce_evidence, produce_evidence_smtlib_with_script,
+};
 
 /// `(name, smtlib2)`. Each must be `unsat`; a `sat` or `unknown` query would
 /// make the invariant vacuous for that row.
@@ -198,6 +200,36 @@ const QUERIES: &[(&str, &str)] = &[
          (assert (< (* a b c d d) 0))\n\
          (check-sat)",
     ),
+    // QF_S / QF_SLIA length and code-point abstraction. Verbatim from committed
+    // corpus files (`r0_QF_SLIA_str004`, `r0_QF_S_str005`,
+    // `r1_QF_SLIA_str-code-unsat-2`), all bare `Evidence::Unsat(None)` until
+    // 2026-08-20. These rows take the STRING front door (see `measure`): a string
+    // script's flat arena view is the bounded packed-BV encoding, so
+    // `produce_evidence` over it is not the route that ships.
+    (
+        "string_length_concat_congruence",
+        "(set-logic QF_SLIA)\n\
+         (declare-fun xx () String)(declare-fun yy () String)\n\
+         (assert (> (str.len yy) (str.len xx)))\n\
+         (assert (= xx (str.++ xx yy)))\n\
+         (check-sat)",
+    ),
+    (
+        "string_length_zero_nonempty",
+        "(set-logic QF_S)\n\
+         (declare-fun yy () String)\n\
+         (assert (= (str.len yy) 0))\n\
+         (assert (not (= yy \"\")))\n\
+         (check-sat)",
+    ),
+    (
+        "string_code_point_case_split",
+        "(set-logic QF_SLIA)\n\
+         (declare-fun x () String)\n\
+         (assert (= (str.len x) 1))\n\
+         (assert (or (< (str.to_code x) 0) (> (str.to_code x) 10000000000000000000000000000)))\n\
+         (check-sat)",
+    ),
     // QF_NRA multi-term Handelman / Positivstellensatz. All three shapes are
     // verbatim from committed corpus files (`cli__regress1__nl__coeff-unsat`,
     // `cli__regress1__nl__combine`, `cli__regress1__nl__approx-sqrt-unsat`),
@@ -258,8 +290,18 @@ fn measure() -> Vec<Row> {
             // Produce on one arena...
             let mut produced = parse_script(text).expect("query parses");
             let assertions = produced.assertions.clone();
-            let report = produce_evidence(&mut produced.arena, &assertions, &config)
-                .expect("evidence production runs");
+            // ...except for a STRING script, whose flat arena view is the
+            // ADR-0029 bounded packed-BV encoding rather than the query. The
+            // route that ships for those is the text front door, so measuring
+            // `produce_evidence` here would grade a query nobody solves.
+            let report = if produced.uses_bounded_strings || produced.word_only_fallback.is_some() {
+                produce_evidence_smtlib_with_script(text, &config)
+                    .expect("string evidence production runs")
+                    .report
+            } else {
+                produce_evidence(&mut produced.arena, &assertions, &config)
+                    .expect("evidence production runs")
+            };
 
             // ...and re-validate on an arena that shares nothing with it.
             let fresh = parse_script(text).expect("query re-parses");
