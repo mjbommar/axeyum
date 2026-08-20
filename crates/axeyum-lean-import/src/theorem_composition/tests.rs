@@ -55,7 +55,7 @@ fn completed_composition_is_axiom_free_deterministic_and_reverifiable() {
 }
 
 #[test]
-fn roots_and_missing_non_theorems_fail_closed() {
+fn roots_fail_closed_and_a_missing_definition_is_checked() {
     let mut source = Kernel::new();
     let logic = build_logic_prelude(&mut source).expect("source logic");
     let target = {
@@ -110,11 +110,23 @@ fn roots_and_missing_non_theorems_fail_closed() {
             value: proof,
         })
         .unwrap();
-    assert!(matches!(
-        compose_checked_theorem_slice(&source, &target, &["Composition.definitionRoot"]),
-        Err(CheckedTheoremCompositionError::UnsupportedMissingDeclaration { name, kind })
-            if name == "Composition.payload" && kind == "definition"
-    ));
+    let completed =
+        compose_checked_theorem_slice(&source, &target, &["Composition.definitionRoot"]).unwrap();
+    assert_eq!(completed.receipt().added_definitions.len(), 1);
+    let added = &completed.receipt().added_definitions[0];
+    assert_eq!(added.name, "Composition.payload");
+    assert_eq!(added.reducibility, "regular:1");
+    assert_eq!(
+        added.source_declaration_sha256,
+        added.target_declaration_sha256
+    );
+    assert!(
+        completed.receipt().added_theorems[0]
+            .axiom_footprint
+            .is_empty()
+    );
+    verify_checked_theorem_composition(&source, &target, completed.kernel(), completed.receipt())
+        .unwrap();
 }
 
 fn source_with_missing_proof_dependency(kind: &str) -> (Kernel, Kernel, &'static str) {
