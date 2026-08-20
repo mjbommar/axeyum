@@ -2881,9 +2881,37 @@ ceil(abs(T_r)/q^(2ell+2n)) = 250.
 Thus the rows with `q=2,4,8`, whose minimum coefficients were `1,10,58`,
 cannot justify the proposed `ell^4=81` coefficient: the `q=16` row exceeds it
 by a factor of about `3.07465`.  The weaker one-extra-`q` stopping allowance
-has coefficient `ell^4 q=1296` and survives, but remains unproved.  This is an
+has coefficient `ell^4 q=1296` and survives this row.  This is an
 extension-field Adams diagnostic, not a test of the separate binary Witt
 off-diagonal inequality or of cancellation across Möbius orders (ADR-0548).
+
+Gorodetsky's exact characteristic-two period-24 theorem determines the whole
+level-three sequence without further enumeration.  For degree seven,
+`7^(-1)=7 mod 24`; its coefficient power map reduces the normalized class
+population to degree one.  Since both `binom(7,2)` and `binom(7,3)` are odd,
+
+```text
+N(t_1,t_2,t_3)=q^4-q+q^3  if t_2=t_1^2 and t_3=t_1^3,
+                  q^4-q  otherwise.
+```
+
+There are `q` classes of the first kind and `q^3-q` of the second.  Hence
+
+```text
+M_2=q^5(q^2-1),
+M_4=q^5((q^2-1)^4+(q^2-1)),
+K_4=q^10(q^2-1)(q^4-6q^2+6),
+T_r=q^16(q^2-1)(q^4-6q^2+6).                    (L3)
+```
+
+The native closed form agrees with exhaustive `GF(2)` and `GF(4)` class
+populations and every integer in the sharded `GF(16)` report.  Formula (L3)
+has leading degree 22; after removing the degree-14 Adams weight, its
+normalized degree is 8.  This exceeds the proposed degree `2ell=6` by two and
+also refutes the one-extra-`q` repair: at `q=128` the minimum coefficient is
+`16378`, greater than `81q=10368`.  Gorodetsky's nonperiodicity theorem from
+four prescribed coefficients onward simultaneously prevents promoting this
+fixed-level compression to the growing endpoint (ADR-0549).
 
 At level two the weight question can be decided without further enumeration.
 The first two leading coefficients are the trace and subtrace.  Theorem 2 of

@@ -161,6 +161,43 @@ pub struct BinaryExtensionEllTwoDegreeFiveClosedForm {
     pub normalized_q_degree_excess: usize,
 }
 
+/// Closed-form connected trace at `(ell,n)=(3,7)`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BinaryExtensionEllThreeDegreeSevenClosedForm {
+    /// Extension degree `r` in `q=2^r`.
+    pub field_degree: usize,
+    /// Field order `q`.
+    pub field_order: BigUint,
+    /// Number `q` of classes satisfying `t_2=t_1^2, t_3=t_1^3`.
+    pub special_class_count: BigUint,
+    /// Number `q^3-q` of remaining classes.
+    pub ordinary_class_count: BigUint,
+    /// Population `q^4-q+q^3` of every special class.
+    pub special_class_population: BigUint,
+    /// Population `q^4-q` of every ordinary class.
+    pub ordinary_class_population: BigUint,
+    /// Exact second central moment `q^5(q^2-1)`.
+    pub centered_second_moment: BigUint,
+    /// Exact fourth central moment `q^5((q^2-1)^4+(q^2-1))`.
+    pub centered_fourth_moment: BigUint,
+    /// Exact cumulant numerator `q^10(q^2-1)(q^4-6q^2+6)`.
+    pub fourth_cumulant_numerator: BigInt,
+    /// Exact connected trace `q^16(q^2-1)(q^4-6q^2+6)`.
+    pub connected_adams_trace: BigInt,
+    /// Leading degree 22 in `q` of the connected trace polynomial.
+    pub connected_trace_q_degree: usize,
+    /// Adams weight degree `2n=14` in `q`.
+    pub adams_weight_q_degree: usize,
+    /// Leading degree 8 after removing the Adams weight.
+    pub normalized_connected_q_degree: usize,
+    /// Degree `2ell=6` permitted by the original proposed cutoff.
+    pub proposed_normalized_q_degree: usize,
+    /// Degree 7 permitted after adding one factor of `q`.
+    pub one_extra_q_normalized_degree: usize,
+    /// Two-degree excess over the original proposed cutoff.
+    pub normalized_q_degree_excess: usize,
+}
+
 /// One deterministic interval of an extension-field long-cycle trace.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct BinaryExtensionLongCycleTraceShardReport {
@@ -753,6 +790,84 @@ pub fn binary_extension_ell_two_degree_five_closed_form(
         normalized_connected_q_degree: 5,
         proposed_normalized_q_degree: 4,
         normalized_q_degree_excess: 1,
+    })
+}
+
+/// Evaluate the exact three-leading-coefficient form for `(ell,n)=(3,7)`.
+///
+/// Gorodetsky's characteristic-two period-24 symmetry reduces normalized
+/// degree-seven Mangoldt populations to degree one.  Since `7^-1=7 mod 24`,
+/// the transformed degree-one class is nonempty exactly when
+///
+/// ```text
+/// t_2=t_1^2 and t_3=t_1^3.
+/// ```
+///
+/// Therefore the `q^3` class populations take only the two values
+///
+/// ```text
+/// N(t_1,t_2,t_3) = q^4-q+q^3  on the q special classes,
+///                   q^4-q      otherwise.
+/// ```
+///
+/// Exact central-moment algebra gives
+///
+/// ```text
+/// T_r = q^16 (q^2-1)(q^4-6q^2+6).
+/// ```
+///
+/// Its leading `q`-degree is 22.  Removing the degree-14 Adams weight leaves
+/// degree 8, exceeding both the proposed normalized degree `2ell=6` and its
+/// one-extra-`q` repair.  This fixed-level obstruction does not decide the
+/// growing binary endpoint.
+///
+/// # Errors
+///
+/// Rejects zero extension degree or a degree above the configured bound.
+pub fn binary_extension_ell_three_degree_seven_closed_form(
+    field_degree: usize,
+    limits: BinaryExtensionTraceLimits,
+) -> Result<BinaryExtensionEllThreeDegreeSevenClosedForm, BinaryExtensionTraceError> {
+    if field_degree == 0 {
+        return Err(BinaryExtensionTraceError::InvalidParameter(
+            "extension degree must be positive".to_owned(),
+        ));
+    }
+    if field_degree > limits.max_field_degree {
+        return Err(BinaryExtensionTraceError::ResourceLimit(format!(
+            "field degree {field_degree} exceeds limit {}",
+            limits.max_field_degree
+        )));
+    }
+    let q = BigUint::from(1_u8) << field_degree;
+    let q_squared_minus_one = q.pow(2) - BigUint::from(1_u8);
+    let ordinary_class_count = q.pow(3) - &q;
+    let ordinary_class_population = q.pow(4) - &q;
+    let special_class_population = &ordinary_class_population + q.pow(3);
+    let centered_second_moment = q.pow(5) * &q_squared_minus_one;
+    let centered_fourth_moment = q.pow(5) * (q_squared_minus_one.pow(4) + &q_squared_minus_one);
+    let quartic_factor =
+        BigInt::from(q.pow(4)) - BigInt::from(6_u8) * BigInt::from(q.pow(2)) + BigInt::from(6_u8);
+    let fourth_cumulant_numerator =
+        BigInt::from(q.pow(10) * &q_squared_minus_one) * &quartic_factor;
+    let connected_adams_trace = BigInt::from(q.pow(16) * &q_squared_minus_one) * quartic_factor;
+    Ok(BinaryExtensionEllThreeDegreeSevenClosedForm {
+        field_degree,
+        field_order: q.clone(),
+        special_class_count: q,
+        ordinary_class_count,
+        special_class_population,
+        ordinary_class_population,
+        centered_second_moment,
+        centered_fourth_moment,
+        fourth_cumulant_numerator,
+        connected_adams_trace,
+        connected_trace_q_degree: 22,
+        adams_weight_q_degree: 14,
+        normalized_connected_q_degree: 8,
+        proposed_normalized_q_degree: 6,
+        one_extra_q_normalized_degree: 7,
+        normalized_q_degree_excess: 2,
     })
 }
 
@@ -1661,6 +1776,75 @@ mod tests {
         };
         assert!(matches!(
             binary_extension_connected_adams_trace(0b11, 2, 5, tight),
+            Err(BinaryExtensionTraceError::ResourceLimit(_))
+        ));
+    }
+
+    #[test]
+    fn ell_three_degree_seven_closed_form_matches_exact_populations() {
+        let limits = BinaryExtensionTraceLimits::default();
+        for (modulus, expected_trace) in
+            [(0b11_u64, -393_216_i128), (0b111, 10_694_468_567_040_i128)]
+        {
+            let row = binary_extension_connected_adams_trace(modulus, 3, 7, limits).unwrap();
+            let closed =
+                binary_extension_ell_three_degree_seven_closed_form(row.field_degree, limits)
+                    .unwrap();
+            assert_eq!(row.connected_adams_trace, BigInt::from(expected_trace));
+            assert_eq!(closed.field_order, BigUint::from(row.field_order));
+            assert_eq!(
+                closed.special_class_population,
+                BigUint::from(row.identity_class_mangoldt_sum)
+            );
+            assert_eq!(closed.centered_second_moment, row.centered_second_moment);
+            assert_eq!(closed.centered_fourth_moment, row.centered_fourth_moment);
+            assert_eq!(
+                closed.fourth_cumulant_numerator,
+                row.fourth_cumulant_numerator
+            );
+            assert_eq!(closed.connected_adams_trace, row.connected_adams_trace);
+        }
+
+        let q16 = binary_extension_ell_three_degree_seven_closed_form(4, limits).unwrap();
+        assert_eq!(q16.special_class_count, BigUint::from(16_u8));
+        assert_eq!(q16.ordinary_class_count, BigUint::from(4_080_u16));
+        assert_eq!(q16.centered_second_moment, BigUint::from(267_386_880_u32));
+        assert_eq!(
+            q16.centered_fourth_moment,
+            BigUint::from(4_433_642_394_746_880_u64)
+        );
+        assert_eq!(
+            q16.fourth_cumulant_numerator,
+            BigInt::from(17_945_712_018_094_817_280_i128)
+        );
+        assert_eq!(
+            q16.connected_adams_trace,
+            BigInt::from(301_079_086_801_372_657_987_092_480_i128)
+        );
+        assert_eq!(q16.normalized_connected_q_degree, 8);
+        assert_eq!(q16.proposed_normalized_q_degree, 6);
+        assert_eq!(q16.one_extra_q_normalized_degree, 7);
+        assert_eq!(q16.normalized_q_degree_excess, 2);
+
+        for (field_degree, expected_failure) in [(6_usize, false), (7, true)] {
+            let closed =
+                binary_extension_ell_three_degree_seven_closed_form(field_degree, limits).unwrap();
+            let geometric_scale = closed.field_order.pow(20);
+            let one_extra_q_allowance =
+                BigUint::from(81_u8) * &closed.field_order * geometric_scale;
+            assert_eq!(
+                closed.connected_adams_trace.magnitude() > &one_extra_q_allowance,
+                expected_failure
+            );
+        }
+
+        assert!(binary_extension_ell_three_degree_seven_closed_form(0, limits).is_err());
+        let field_tight = BinaryExtensionTraceLimits {
+            max_field_degree: 3,
+            ..limits
+        };
+        assert!(matches!(
+            binary_extension_ell_three_degree_seven_closed_form(4, field_tight),
             Err(BinaryExtensionTraceError::ResourceLimit(_))
         ));
     }
