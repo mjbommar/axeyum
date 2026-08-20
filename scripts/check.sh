@@ -204,6 +204,7 @@ step local-ci-freshness-controls ./scripts/tests/test-check-local-ci-freshness.s
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
 step lane-push-controls ./scripts/tests/test-lane-push-target.sh
+step prepush-worktree-controls ./scripts/tests/test-prepare-prepush-worktree.sh
 step lean-golden-pin-controls ./scripts/tests/test-check-lean-golden-pins.sh
 # ...and the ratchet that makes the two lines above impossible to forget. Both
 # were written, both pass, and one of them was invoked by nothing for a day

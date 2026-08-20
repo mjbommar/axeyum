@@ -355,6 +355,7 @@ gate-controls:
     # Against a stale `origin/<branch>` the same doc-only landing reads FULL
     # BATTERY instead of FREE, and an estimate that errs expensive gets ignored.
     scripts/tests/test-lane-push-target.sh
+    scripts/tests/test-prepare-prepush-worktree.sh
     scripts/tests/test-check-lean-golden-pins.sh
     # ...and the ratchet that makes the two lines above impossible to forget.
     # Both were written, both pass, and one was invoked by NOTHING for a day,
