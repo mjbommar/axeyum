@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-weak-fourth-moment-endpoint-bound",
+  "title": "Weak proper-power-aware fourth-moment bound at the binary Hayes endpoints",
+  "statement": "Let ell>=200 and n be 2 ell+1 or 2 ell+2. Put mu=2^(n-ell), D_e=N_n(e)-mu, M_4=sum_e D_e^4, and let P_n be one at the odd endpoint and the proved square-plus-higher-power upper bound at the even endpoint. Then M_4<(mu-P_n)^4.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"M_4 < (2^(n-ell)-P_n)^4\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-weak-fourth-moment-endpoint-bound\",\"level_min\":200,\"proper_power_bound\":\"P_odd=1; P_even=(n/2)*2^(n/2-floor(ell/2))+n*2^ceil(n/3)\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": ["ell", "n", "e"]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; corrected weak fourth-moment implication after the ten-lens blocker sweep"
+  },
+  "notes": "This is the current weakest recorded aggregate target that preserves the repository's proved proper-power subtraction. The weaker-looking M_4<2^(4(n-ell)) proves only positive Mangoldt mass and still permits N_n(1)=1 at the odd endpoint, so it is not sufficient. The native ledger proves the implication and reports the exact rational R_0 allowance, but no universal estimate is registered. At ell=200 the allowed log2 root ratios are approximately 171.482426 and 173.482426, versus the older target R_0<=4. Finite distributions are controls only."
+}

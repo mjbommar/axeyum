@@ -2257,34 +2257,35 @@ forced upper coefficient under the standard theorem hypotheses, and typed
 resource declines.
 
 Odd monomial composition supplies a broader but still non-universal family.
-Let `f` be irreducible of even degree `d`, let `alpha` be one of its roots,
-and suppose
+Let `f` be irreducible of degree `d`, let `alpha` be one of its roots, and let
+`k` be odd.  The binary binomial criterion and Capell's lemma say that
+`f(x^k)` is irreducible exactly when, for every prime `p|k`,
 
 ```text
-alpha^((2^d-1)/3) != 1.                              (NC3)
+alpha^((2^d-1)/p) != 1.                              (NCp)
 ```
 
-Since `3 | 2^d-1`, condition (NC3) says exactly that `alpha` is not a cube in
-`GF(2^d)`.  Capell's theorem and the cubic binomial criterion then show that
-`f(x^3)` is irreducible.  Its nonleading exponents are three times those of
-`f`, so the half-degree shape is preserved.  This iterates indefinitely: if
-`beta^3=alpha`, then the 3-primary part of the order of `beta` and of
-`2^(3d)-1` both gain exactly one factor of three (the latter by LTE), so the
-new root again satisfies (NC3).  Thus one checked seed proves shaped
-irreducibles in every degree `d*3^k`, `k>=0`.
+Condition (NCp) says exactly that `alpha` is not a `p`-th power in
+`GF(2^d)`.  Odd substitution scales every exponent and therefore preserves
+the half-degree shape.  The construction iterates indefinitely: if
+`beta^k=alpha`, then for each `p|k` the `p`-primary parts of `ord(beta)` and
+`2^(dk)-1` both gain `v_p(k)` (the latter by LTE), so (NCp) renews.  One
+checked seed therefore proves shaped irreducibles in every degree `d*k^j`,
+`j>=0`.
 
-The native `cubic_composition_criterion` first replays the source Rabin
-certificate, computes the displayed power in the quotient ring, and returns
-the exact composition.  The standalone `axeyum-gf2-capell-audit` additionally
-produces and checks a fresh Rabin certificate for every criterion-positive
-composition with both Axeyum polynomial implementations.  On the committed
-degree-1-through-400 witnesses it reports 138 eligible even seeds, 200
-structurally ineligible odd degrees, and 62 selected even witnesses whose root
-is a cube.  The 138 seeds occupy 95 distinct 3-free degree rays (83 beginning
-at their 3-free base and 12 beginning later).  These are infinite certified
-families, but their union omits every odd degree and infinitely many even
-3-free bases.  They therefore reduce no uniform endpoint estimate and are not
-an all-degree proof.
+The native `monomial_composition_criterion` replays the source Rabin
+certificate, factors `k`, computes every displayed residue, and returns the
+exact bounded composition.  `monomial_prime_eligibility` checks a large ray
+without allocating its output.  The old `cubic_composition_criterion` is now
+a compatible specialization.  On the 400 committed witnesses, scanning odd
+primes through 20,000,000 finds 371 eligible seeds, including 174 of the 200
+odd degrees; 35 bounded outputs receive fresh certificates from both Axeyum
+polynomial implementations, and 400 deliberately incompatible primes are
+rejected.  A separate integer-bit-polynomial implementation reproduced all
+371 positive residues.  ADR-0565 records the theorem and the correction to
+the old cubic-only conclusion.  These are infinite certified families, but
+the cutoff census leaves 29 witnesses uncovered and supplies no theorem that
+the union contains every degree.  It is not an all-degree proof.
 
 ### A sufficient endpoint discrepancy lemma
 
@@ -2623,6 +2624,46 @@ Put
 ```text
 M_r(ell,n) = sum_e |D_e|^r.
 ```
+
+The weakest useful fourth-moment threshold must retain the proper-power
+margin.  If `mu=2^(n-ell)` and `P_n` is the exact odd contribution `1` or the
+proved even square/higher-power upper bound, then
+
+```text
+M_4 < (mu-P_n)^4                                      (weak target)
+```
+
+implies `N_n(1)>P_n` and hence an irreducible.  The tempting replacement
+`M_4<mu^4` proves only `N_n(1)>0`; at an odd endpoint it still permits the bad
+value `N_n(1)=1`.  `weak_fourth_moment_endpoint_ledger` retains both
+thresholds under different names so this distinction fails closed.
+
+Combining the weak target with the proved second-moment estimate gives the
+exact sufficient root-ratio condition
+
+```text
+R_0 < 2^ell (mu-P_n)^4 / (mu Sigma(ell))^2,
+Sigma(ell)=2^ell(ell^2-4ell+6)-6.
+```
+
+At `(ell,n)=(200,401)` and `(200,402)`, the base-two logarithms of the
+allowed ratios are approximately `171.482426` and `173.482426`.  The old
+`R_0<=4` target is therefore stronger than necessary by about `169` bits on
+the first odd symbolic row.  Only a polynomial saving over the trivial
+`R_0<=2^ell` is needed.  This is a major strategic relaxation, not a proof:
+the weak uniform estimate remains conjectural.
+
+The suggested Efron--Stein hypercontractive shortcut has also been audited
+against this weaker allowance.  `efron_stein_spectral_weight_report` computes
+the exact Fourier second-moment mass at every support weight by subgroup
+Parseval and Boolean-lattice Moebius inversion.  The associated
+`conditional_hypercontractive_root_ratio_proxy` is deliberately diagnostic:
+the cited KLLM product-space theorem controls a strongly noised function and
+does not imply the proposed unnoised, log-order-weighted inequality.  Exact
+endpoint rows through `ell=17` miss the weak allowance by at least four
+orders of magnitude even under the more favorable hypothetical constant
+`C=2`.  ADR-0564 records the theorem mismatch and finite stopping test.  No
+future ledger may credit that proxy without an explicit intervening theorem.
 
 The CAS now returns the exact power sums for every caller-selected
 `1<=r<=64`; the research runner records `r=2,4,6,8`.  It also records the

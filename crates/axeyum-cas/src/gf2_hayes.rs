@@ -12,6 +12,7 @@ use std::fmt;
 use std::sync::{Mutex, OnceLock};
 
 use num_bigint::{BigInt, BigUint};
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 
 const PRIME_ONE: u64 = 998_244_353;
@@ -2597,6 +2598,47 @@ pub struct FourthMomentBoundReport {
     pub first_even_degree: usize,
 }
 
+/// Exact weak fourth-moment threshold using the proved proper-power envelope.
+///
+/// If `mu=2^(n-ell)` is the uniform Mangoldt-class mean and `P_n` is the
+/// proved proper-prime-power upper bound in the identity class, then
+///
+/// ```text
+/// M_4=sum_e |N_n(e)-mu|^4 < (mu-P_n)^4
+/// ```
+///
+/// implies `N_n(1)>P_n`, hence a shaped irreducible exists.  The superficially
+/// weaker threshold `M_4<mu^4` proves only `N_n(1)>0`; at the odd endpoint it
+/// still permits the bad value `N_n(1)=1`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WeakFourthMomentEndpointLedger {
+    /// Lemire endpoint degree `n`.
+    pub degree: usize,
+    /// Number of prescribed leading coefficients.
+    pub ell: usize,
+    /// Uniform Mangoldt-class mean `mu=2^(n-ell)`.
+    pub main_mangoldt_term: BigUint,
+    /// Exact odd proper-power contribution or proved even upper bound `P_n`.
+    pub proper_prime_power_upper_bound: BigUint,
+    /// Strict discrepancy margin `mu-P_n`.
+    pub irreducible_margin: BigUint,
+    /// The positivity-only threshold `mu^4`, retained to prevent conflation.
+    pub positivity_only_fourth_moment_threshold: BigUint,
+    /// Exact strict irreducibility threshold `(mu-P_n)^4`.
+    pub strict_irreducible_fourth_moment_threshold: BigUint,
+    /// `Sigma(ell)=sum_(j=2)^ell 2^(j-1)(j-1)^2` in the proved `M_2` bound.
+    pub second_moment_weil_factor: BigUint,
+    /// Proved upper bound `M_2<=mu*Sigma(ell)`.
+    pub second_moment_upper_bound: BigUint,
+    /// Numerator of the sufficient root-kurtosis threshold
+    /// `R_0 < numerator/denominator`.
+    pub sufficient_root_ratio_numerator: BigUint,
+    /// Denominator of the sufficient root-kurtosis threshold.
+    pub sufficient_root_ratio_denominator: BigUint,
+    /// Whether the old strong target `R_0<=4` is strictly sufficient here.
+    pub strong_connected_target_has_strict_reserve: bool,
+}
+
 /// A linear local concentration bound on every Witt cylinder.
 ///
 /// The mathematical assumption is `R_j(b) <= ell` for every cylinder in the
@@ -2822,6 +2864,67 @@ pub struct ClassPopulationDistribution {
     pub degree: usize,
     /// Exact class populations in stable mixed-radix order.
     pub counts: Vec<u128>,
+}
+
+/// Exact Fourier `L^2` mass at one Efron--Stein coordinate weight.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EfronSteinSpectralWeightMass {
+    /// Sum of `log2(order)` over the nontrivial cyclic coordinates.
+    pub weight: usize,
+    /// Number of characters having exactly this coordinate-support weight.
+    pub character_count: usize,
+    /// Exact sum of squared unnormalized Fourier magnitudes on those characters.
+    pub spectral_second_moment: BigUint,
+}
+
+/// Exact Efron--Stein support decomposition of a Hayes discrepancy spectrum.
+///
+/// The cyclic factors of `E_ell` are treated as product coordinates.  For
+/// every coordinate subset `S`, subgroup Parseval computes the Fourier mass
+/// supported inside `S`; Boolean-lattice Mobius inversion then recovers the
+/// exact mass whose support is precisely `S`.  No roots of unity or
+/// floating-point transforms enter the retained masses.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EfronSteinSpectralWeightReport {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree.
+    pub degree: usize,
+    /// `log2(order)` of each stable mixed-radix cyclic factor.
+    pub factor_weights: Vec<usize>,
+    /// Exact full spectral second moment `2^ell M_2`.
+    pub total_spectral_second_moment: BigUint,
+    /// Exact masses grouped by coordinate-support weight.
+    pub weights: Vec<EfronSteinSpectralWeightMass>,
+}
+
+impl EfronSteinSpectralWeightReport {
+    /// Evaluate the conditional weight-graded hypercontractive proxy
+    ///
+    /// ```text
+    /// (sum_w C^(w/4) sqrt(f_w))^4,
+    /// f_w=mass_w/total_mass.
+    /// ```
+    ///
+    /// The exact masses are converted only for this finite diagnostic.  The
+    /// result is conditional on a separate per-weight `(2,4)` theorem with
+    /// constant `C`; it is not a certified upper bound supplied by this CAS.
+    #[must_use]
+    pub fn conditional_hypercontractive_root_ratio_proxy(&self, constant: f64) -> Option<f64> {
+        if !constant.is_finite()
+            || constant <= 0.0
+            || self.total_spectral_second_moment == BigUint::from(0_u8)
+        {
+            return None;
+        }
+        let total = self.total_spectral_second_moment.to_f64()?;
+        let mut sum = 0.0_f64;
+        for row in &self.weights {
+            let fraction = row.spectral_second_moment.to_f64()? / total;
+            sum += constant.powf(row.weight.to_f64()? / 4.0) * fraction.sqrt();
+        }
+        Some(sum.powi(4))
+    }
 }
 
 /// Exact raw fibre-product and connected virtual-count decomposition of one
@@ -5365,6 +5468,171 @@ impl ClassPopulationDistribution {
             .sum())
     }
 
+    /// Decompose the exact Fourier second moment by Efron--Stein coordinate
+    /// support weight.
+    ///
+    /// For a subset `S` of the stable cyclic factors, let `B_S(y)` be the sum
+    /// of the discrepancies over the fibre with selected coordinates `y`.
+    /// Subgroup Parseval gives
+    ///
+    /// ```text
+    /// sum_(supp chi subset S) |Dhat(chi)|^2
+    ///   = |E_S| sum_y B_S(y)^2.
+    /// ```
+    ///
+    /// Mobius inversion on the Boolean subset lattice recovers exact-support
+    /// masses, which are then grouped by
+    /// `weight=sum_(i in supp chi) log2(order_i)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a resource decline before the subset projections, or a typed
+    /// invariant/parameter error from the exact population distribution.
+    #[allow(clippy::too_many_lines)]
+    pub fn efron_stein_spectral_weight_report(
+        &self,
+        max_projection_cells: usize,
+    ) -> Result<EfronSteinSpectralWeightReport, HayesError> {
+        let factors = principal_unit_factors(self.ell);
+        let factor_count = factors.len();
+        let factor_shift = u32::try_from(factor_count).map_err(|_| {
+            HayesError::InvalidParameter("Efron--Stein factor count exceeds u32".to_owned())
+        })?;
+        let subset_count = 1_usize.checked_shl(factor_shift).ok_or_else(|| {
+            HayesError::InvalidParameter("Efron--Stein subset count overflow".to_owned())
+        })?;
+        let work = subset_count.checked_mul(self.counts.len()).ok_or_else(|| {
+            HayesError::InvalidParameter("Efron--Stein projection work overflow".to_owned())
+        })?;
+        check_limit("efron_stein_projection_cells", work, max_projection_cells)?;
+        let mean = self.uniform_mean().ok_or_else(|| {
+            HayesError::InvalidParameter("class distribution has no exact uniform mean".to_owned())
+        })?;
+        let factor_weights = factors
+            .iter()
+            .map(|factor| factor.order.trailing_zeros() as usize)
+            .collect::<Vec<_>>();
+        if factor_weights.iter().sum::<usize>() != self.ell {
+            return Err(HayesError::Invariant(
+                "Efron--Stein factor weights do not sum to ell".to_owned(),
+            ));
+        }
+        let discrepancies = self
+            .counts
+            .iter()
+            .map(|count| BigInt::from(*count) - BigInt::from(mean))
+            .collect::<Vec<_>>();
+        let mut exact_support_masses = vec![BigUint::from(0_u8); subset_count];
+        let mut grouped = BTreeMap::<usize, (usize, BigUint)>::new();
+        for subset in 0..subset_count {
+            let mut selected_group_order = 1_usize;
+            let mut character_count = 1_usize;
+            let mut weight = 0_usize;
+            for (factor_index, factor) in factors.iter().enumerate() {
+                if subset & (1_usize << factor_index) != 0 {
+                    selected_group_order = selected_group_order
+                        .checked_mul(factor.order)
+                        .ok_or_else(|| {
+                            HayesError::InvalidParameter(
+                                "Efron--Stein selected group order overflow".to_owned(),
+                            )
+                        })?;
+                    character_count =
+                        character_count
+                            .checked_mul(factor.order - 1)
+                            .ok_or_else(|| {
+                                HayesError::InvalidParameter(
+                                    "Efron--Stein character count overflow".to_owned(),
+                                )
+                            })?;
+                    weight = weight
+                        .checked_add(factor_weights[factor_index])
+                        .ok_or_else(|| {
+                            HayesError::InvalidParameter(
+                                "Efron--Stein support weight overflow".to_owned(),
+                            )
+                        })?;
+                }
+            }
+            let mut buckets = vec![BigInt::from(0_i8); selected_group_order];
+            for (class, discrepancy) in discrepancies.iter().enumerate() {
+                let mut quotient = class;
+                let mut selected_index = 0_usize;
+                let mut selected_stride = 1_usize;
+                for (factor_index, factor) in factors.iter().enumerate() {
+                    let coordinate = quotient % factor.order;
+                    quotient /= factor.order;
+                    if subset & (1_usize << factor_index) != 0 {
+                        selected_index += coordinate * selected_stride;
+                        selected_stride *= factor.order;
+                    }
+                }
+                if quotient != 0 || selected_stride != selected_group_order {
+                    return Err(HayesError::Invariant(
+                        "Efron--Stein projection left a mixed-radix coordinate".to_owned(),
+                    ));
+                }
+                buckets[selected_index] += discrepancy;
+            }
+            let cumulative_mass = BigUint::from(selected_group_order)
+                * buckets
+                    .into_iter()
+                    .map(|value| value.magnitude().pow(2))
+                    .sum::<BigUint>();
+            let mut exact_mass = BigInt::from(cumulative_mass);
+            if subset != 0 {
+                let mut proper = (subset - 1) & subset;
+                loop {
+                    exact_mass -= BigInt::from(exact_support_masses[proper].clone());
+                    if proper == 0 {
+                        break;
+                    }
+                    proper = (proper - 1) & subset;
+                }
+            }
+            let exact_mass = exact_mass.to_biguint().ok_or_else(|| {
+                HayesError::Invariant("Efron--Stein exact-support mass is negative".to_owned())
+            })?;
+            exact_support_masses[subset].clone_from(&exact_mass);
+            let entry = grouped
+                .entry(weight)
+                .or_insert_with(|| (0, BigUint::from(0_u8)));
+            entry.0 = entry.0.checked_add(character_count).ok_or_else(|| {
+                HayesError::InvalidParameter("Efron--Stein grouped count overflow".to_owned())
+            })?;
+            entry.1 += exact_mass;
+        }
+        if grouped.values().map(|entry| entry.0).sum::<usize>() != self.counts.len() {
+            return Err(HayesError::Invariant(
+                "Efron--Stein character weights miss the dual group".to_owned(),
+            ));
+        }
+        let total_spectral_second_moment =
+            BigUint::from(self.counts.len()) * self.central_absolute_power_sum(2)?;
+        if exact_support_masses.iter().sum::<BigUint>() != total_spectral_second_moment {
+            return Err(HayesError::Invariant(
+                "Efron--Stein support masses miss Parseval".to_owned(),
+            ));
+        }
+        let weights = grouped
+            .into_iter()
+            .map(|(weight, (character_count, spectral_second_moment))| {
+                EfronSteinSpectralWeightMass {
+                    weight,
+                    character_count,
+                    spectral_second_moment,
+                }
+            })
+            .collect();
+        Ok(EfronSteinSpectralWeightReport {
+            ell: self.ell,
+            degree: self.degree,
+            factor_weights,
+            total_spectral_second_moment,
+            weights,
+        })
+    }
+
     /// Expand the centred fourth cumulant into exact positive fibre-product
     /// counts and check their signed inclusion--exclusion reconstruction.
     ///
@@ -5560,6 +5828,21 @@ impl ClassPopulationDistribution {
     /// or [`Self::central_absolute_power_sum`].
     pub fn satisfies_fourth_moment_candidate(&self) -> Result<bool, HayesError> {
         Ok(self.central_absolute_power_sum(4)? <= self.fourth_moment_candidate_bound()?)
+    }
+
+    /// Whether this exact endpoint fourth moment alone proves an irreducible
+    /// in the identity class after removing proper prime powers.
+    ///
+    /// This checks the strict and endpoint-specific threshold
+    /// `M_4<(2^(n-ell)-P_n)^4`, not the insufficient positivity-only bound
+    /// `M_4<2^(4(n-ell))`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed endpoint or exact-moment error.
+    pub fn fourth_moment_proves_identity_class_irreducible(&self) -> Result<bool, HayesError> {
+        let ledger = weak_fourth_moment_endpoint_ledger(self.ell, self.degree)?;
+        Ok(self.central_absolute_power_sum(4)? < ledger.strict_irreducible_fourth_moment_threshold)
     }
 
     /// Whether the exact fourth moment alone forces every class discrepancy
@@ -8163,6 +8446,88 @@ pub fn check_conductor_bound_sufficiency(
         assumption,
         first_odd_degree,
         first_even_degree,
+    })
+}
+
+/// Compute the exact weak fourth-moment endpoint ledger using the proved
+/// proper-power envelope.
+///
+/// The proved second-moment estimate is
+///
+/// ```text
+/// M_2 <= mu Sigma(ell),
+/// Sigma(ell)=sum_(j=2)^ell 2^(j-1)(j-1)^2.
+/// ```
+///
+/// Since `R_0=2^ell M_4/M_2^2`, the strict rational condition
+///
+/// ```text
+/// R_0 < 2^ell (mu-P_n)^4 / (mu Sigma(ell))^2
+/// ```
+///
+/// implies the exact irreducibility threshold.  This function proves only
+/// that arithmetic implication; it does not establish a bound on `R_0`.
+///
+/// # Errors
+///
+/// Rejects non-endpoint parameters and checked exponent overflow.
+pub fn weak_fourth_moment_endpoint_ledger(
+    ell: usize,
+    degree: usize,
+) -> Result<WeakFourthMomentEndpointLedger, HayesError> {
+    if ell == 0 {
+        return Err(HayesError::InvalidParameter(
+            "weak fourth-moment ledger requires ell at least one".to_owned(),
+        ));
+    }
+    let odd_degree = ell
+        .checked_mul(2)
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| HayesError::InvalidParameter("weak endpoint degree overflow".to_owned()))?;
+    let even_degree = odd_degree
+        .checked_add(1)
+        .ok_or_else(|| HayesError::InvalidParameter("weak endpoint degree overflow".to_owned()))?;
+    if degree != odd_degree && degree != even_degree {
+        return Err(HayesError::InvalidParameter(format!(
+            "weak fourth-moment ledger is endpoint-only: ell={ell}, degree={degree}"
+        )));
+    }
+    let main_exponent = degree.checked_sub(ell).ok_or_else(|| {
+        HayesError::InvalidParameter("weak fourth-moment main exponent underflow".to_owned())
+    })?;
+    let main_mangoldt_term = BigUint::from(1_u8) << main_exponent;
+    let proper_prime_power_upper_bound = endpoint_proper_prime_power_upper_bound(degree, ell)?;
+    if proper_prime_power_upper_bound >= main_mangoldt_term {
+        return Err(HayesError::Invariant(
+            "proper powers exhaust the weak fourth-moment main term".to_owned(),
+        ));
+    }
+    let irreducible_margin = &main_mangoldt_term - &proper_prime_power_upper_bound;
+    let positivity_only_fourth_moment_threshold = main_mangoldt_term.pow(4);
+    let strict_irreducible_fourth_moment_threshold = irreducible_margin.pow(4);
+    let mut second_moment_weil_factor = BigUint::from(0_u8);
+    for level in 2..=ell {
+        second_moment_weil_factor += BigUint::from(level - 1).pow(2) << (level - 1);
+    }
+    let second_moment_upper_bound = &main_mangoldt_term * &second_moment_weil_factor;
+    let sufficient_root_ratio_numerator =
+        (BigUint::from(1_u8) << ell) * &strict_irreducible_fourth_moment_threshold;
+    let sufficient_root_ratio_denominator = second_moment_upper_bound.pow(2);
+    let strong_connected_target_has_strict_reserve =
+        BigUint::from(4_u8) * &sufficient_root_ratio_denominator < sufficient_root_ratio_numerator;
+    Ok(WeakFourthMomentEndpointLedger {
+        degree,
+        ell,
+        main_mangoldt_term,
+        proper_prime_power_upper_bound,
+        irreducible_margin,
+        positivity_only_fourth_moment_threshold,
+        strict_irreducible_fourth_moment_threshold,
+        second_moment_weil_factor,
+        second_moment_upper_bound,
+        sufficient_root_ratio_numerator,
+        sufficient_root_ratio_denominator,
+        strong_connected_target_has_strict_reserve,
     })
 }
 
@@ -16792,6 +17157,40 @@ mod tests {
     }
 
     #[test]
+    fn weak_fourth_moment_ledger_retains_the_proper_power_margin() {
+        let odd = weak_fourth_moment_endpoint_ledger(200, 401).unwrap();
+        assert_eq!(odd.main_mangoldt_term, BigUint::from(1_u8) << 201);
+        assert_eq!(odd.proper_prime_power_upper_bound, BigUint::from(1_u8));
+        assert_eq!(
+            odd.irreducible_margin,
+            (BigUint::from(1_u8) << 201) - BigUint::from(1_u8)
+        );
+        assert!(
+            odd.strict_irreducible_fourth_moment_threshold
+                < odd.positivity_only_fourth_moment_threshold
+        );
+        assert_eq!(
+            odd.second_moment_weil_factor,
+            (BigUint::from(1_u8) << 200) * BigUint::from(39_206_u32) - BigUint::from(6_u8)
+        );
+        assert!(odd.strong_connected_target_has_strict_reserve);
+        assert!(
+            BigUint::from(4_u8) * &odd.sufficient_root_ratio_denominator
+                < odd.sufficient_root_ratio_numerator
+        );
+
+        let even = weak_fourth_moment_endpoint_ledger(200, 402).unwrap();
+        assert!(even.proper_prime_power_upper_bound > BigUint::from(1_u8));
+        assert!(even.strong_connected_target_has_strict_reserve);
+        assert_eq!(
+            weak_fourth_moment_endpoint_ledger(8, 16),
+            Err(HayesError::InvalidParameter(
+                "weak fourth-moment ledger is endpoint-only: ell=8, degree=16".to_owned()
+            ))
+        );
+    }
+
+    #[test]
     fn square_root_layer_bound_implication_is_exact() {
         let report =
             check_square_root_layer_bound_sufficiency(SquareRootLayerBoundAssumption::default())
@@ -16962,6 +17361,10 @@ mod tests {
         );
         assert!(odd.satisfies_fourth_moment_candidate().unwrap());
         assert!(
+            odd.fourth_moment_proves_identity_class_irreducible()
+                .unwrap()
+        );
+        assert!(
             !odd.fourth_moment_proves_candidate_discrepancy_bound()
                 .unwrap()
         );
@@ -16981,6 +17384,12 @@ mod tests {
         assert!(even.all_classes_positive());
         assert!(even.satisfies_fourth_moment_candidate().unwrap());
         assert_eq!(
+            even.fourth_moment_proves_identity_class_irreducible(),
+            Err(HayesError::Invariant(
+                "proper powers exhaust the weak fourth-moment main term".to_owned()
+            ))
+        );
+        assert_eq!(
             even.central_absolute_power_sum(4).unwrap(),
             BigUint::from(54_144_813_200_u64)
         );
@@ -16999,6 +17408,89 @@ mod tests {
             .map(|count| count.abs_diff(1_024).pow(2))
             .sum::<u128>();
         assert_eq!(even_squared_deviation, 1_861_136);
+    }
+
+    #[test]
+    fn efron_stein_spectral_weights_reconstruct_parseval() {
+        let distribution = class_population_distribution(8, 17, HayesLimits::default()).unwrap();
+        let report = distribution
+            .efron_stein_spectral_weight_report(16 * 256)
+            .unwrap();
+        assert_eq!(report.factor_weights, vec![4, 2, 1, 1]);
+        assert_eq!(
+            report.total_spectral_second_moment,
+            BigUint::from(256_u16) * BigUint::from(693_360_u32)
+        );
+        assert_eq!(
+            report
+                .weights
+                .iter()
+                .map(|row| row.character_count)
+                .sum::<usize>(),
+            256
+        );
+        assert_eq!(report.weights[0].weight, 0);
+        assert_eq!(report.weights[0].character_count, 1);
+        assert_eq!(
+            report.weights[0].spectral_second_moment,
+            BigUint::from(0_u8)
+        );
+        assert!(
+            report
+                .conditional_hypercontractive_root_ratio_proxy(3.0)
+                .is_some_and(|value| value > 0.0)
+        );
+        assert!(
+            report
+                .conditional_hypercontractive_root_ratio_proxy(0.0)
+                .is_none()
+        );
+        assert_eq!(
+            distribution.efron_stein_spectral_weight_report(16 * 256 - 1),
+            Err(HayesError::ResourceLimit {
+                resource: "efron_stein_projection_cells",
+                requested: 16 * 256,
+                limit: 16 * 256 - 1,
+            })
+        );
+    }
+
+    #[test]
+    #[ignore = "extended finite diagnostic; select one row with AXEYUM_EFRON_STEIN_ELL/OFFSET"]
+    fn efron_stein_spectral_weight_extended_probe() {
+        let parse = |name: &str| {
+            std::env::var(name)
+                .unwrap_or_else(|_| panic!("missing {name}"))
+                .parse::<usize>()
+                .unwrap_or_else(|_| panic!("invalid {name}"))
+        };
+        let ell = parse("AXEYUM_EFRON_STEIN_ELL");
+        let offset = parse("AXEYUM_EFRON_STEIN_OFFSET");
+        assert!(matches!(offset, 1 | 2));
+        let degree = 2 * ell + offset;
+        let distribution =
+            class_population_distribution(ell, degree, HayesLimits::default()).unwrap();
+        let factor_count = principal_unit_factors(ell).len();
+        let max_projection_cells = (1_usize << factor_count) * (1_usize << ell);
+        let report = distribution
+            .efron_stein_spectral_weight_report(max_projection_cells)
+            .unwrap();
+        let weak = weak_fourth_moment_endpoint_ledger(ell, degree).ok();
+        let allowance = weak.as_ref().and_then(|ledger| {
+            Some(
+                ledger.sufficient_root_ratio_numerator.to_f64()?
+                    / ledger.sufficient_root_ratio_denominator.to_f64()?,
+            )
+        });
+        eprintln!(
+            "ell={ell} degree={degree} factors={:?} masses={:?} proxy_c2={:?} proxy_c3={:?} proxy_c4={:?} proxy_c9={:?} weak_root_allowance={allowance:?}",
+            report.factor_weights,
+            report.weights,
+            report.conditional_hypercontractive_root_ratio_proxy(2.0),
+            report.conditional_hypercontractive_root_ratio_proxy(3.0),
+            report.conditional_hypercontractive_root_ratio_proxy(4.0),
+            report.conditional_hypercontractive_root_ratio_proxy(9.0),
+        );
     }
 
     #[test]

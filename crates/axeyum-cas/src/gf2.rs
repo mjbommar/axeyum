@@ -7,6 +7,8 @@
 
 use core::fmt;
 
+use num_bigint::BigUint;
+
 /// A normalized polynomial over `GF(2)`, packed coefficient-first into words.
 ///
 /// Bit `i` is the coefficient of `x^i`; trailing zero words are absent.
@@ -681,6 +683,36 @@ pub struct CubicCompositionCriterion {
     pub proves_composition_irreducible: bool,
 }
 
+/// One prime-divisor test in the general monomial-composition criterion.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MonomialCompositionPrimeTest {
+    /// Prime divisor `p` of the substitution power.
+    pub prime: usize,
+    /// Whether `p` divides `2^n-1`, the source field's multiplicative order.
+    pub divides_source_group_order: bool,
+    /// `alpha^((2^n-1)/p) mod f` when the exponent is integral.
+    pub power_test_residue: Option<Gf2Poly>,
+    /// Whether a root `alpha` of `f` is not a `p`-th power in `GF(2^n)`.
+    pub root_is_not_prime_power: bool,
+}
+
+/// Exact Capell/binomial criterion data for the composition `f(x^k)`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MonomialCompositionCriterion {
+    /// Degree of the replay-checked irreducible source.
+    pub source_degree: usize,
+    /// Positive substitution power `k`.
+    pub power: usize,
+    /// Whether the source already has Lemire's half-degree shape.
+    pub source_is_half_degree_shaped: bool,
+    /// The formal composition `f(x^k)`.
+    pub composition: Gf2Poly,
+    /// One exact non-power test for every distinct prime divisor of `k`.
+    pub prime_tests: Vec<MonomialCompositionPrimeTest>,
+    /// Whether the finite-field binomial criterion proves irreducibility.
+    pub proves_composition_irreducible: bool,
+}
+
 /// Substitute `x^power` for `x` without changing coefficients.
 ///
 /// # Errors
@@ -718,6 +750,174 @@ pub fn monomial_compose(
     Gf2Poly::from_exponents(&exponents, limits)
 }
 
+fn distinct_prime_divisors(mut value: usize) -> Vec<usize> {
+    let mut factors = Vec::new();
+    let mut candidate = 2_usize;
+    while candidate <= value / candidate {
+        if value.is_multiple_of(candidate) {
+            factors.push(candidate);
+            while value.is_multiple_of(candidate) {
+                value /= candidate;
+            }
+        }
+        candidate = if candidate == 2 { 3 } else { candidate + 2 };
+    }
+    if value > 1 {
+        factors.push(value);
+    }
+    factors
+}
+
+fn is_prime_usize(value: usize) -> bool {
+    if value < 2 {
+        return false;
+    }
+    if value.is_multiple_of(2) {
+        return value == 2;
+    }
+    let mut divisor = 3_usize;
+    while divisor <= value / divisor {
+        if value.is_multiple_of(divisor) {
+            return false;
+        }
+        divisor += 2;
+    }
+    true
+}
+
+fn x_power_mod_biguint(
+    exponent: &BigUint,
+    modulus: &Gf2Poly,
+    context: &mut Gf2Context,
+) -> Result<Gf2Poly, Gf2Error> {
+    let mut result = Gf2Poly::one();
+    for bit in (0..exponent.bits()).rev() {
+        let square = context.square(&result)?;
+        result = context.div_rem(&square, modulus)?.1;
+        if exponent.bit(bit) {
+            let product = context.multiply(&result, &Gf2Poly::x())?;
+            result = context.div_rem(&product, modulus)?.1;
+        }
+    }
+    Ok(result)
+}
+
+fn monomial_prime_test_unchecked(
+    source: &Gf2Poly,
+    source_degree: usize,
+    prime: usize,
+    context: &mut Gf2Context,
+) -> Result<MonomialCompositionPrimeTest, Gf2Error> {
+    let group_order = (BigUint::from(1_u8) << source_degree) - BigUint::from(1_u8);
+    let prime_big = BigUint::from(prime);
+    let divides_source_group_order = &group_order % &prime_big == BigUint::from(0_u8);
+    let power_test_residue = if divides_source_group_order {
+        let exponent = &group_order / &prime_big;
+        Some(x_power_mod_biguint(&exponent, source, context)?)
+    } else {
+        None
+    };
+    let root_is_not_prime_power = power_test_residue
+        .as_ref()
+        .is_some_and(|residue| *residue != Gf2Poly::one());
+    Ok(MonomialCompositionPrimeTest {
+        prime,
+        divides_source_group_order,
+        power_test_residue,
+        root_is_not_prime_power,
+    })
+}
+
+/// Check whether a source root is not a `p`-th power in its binary field.
+///
+/// This is the prime-local part of [`monomial_composition_criterion`], exposed
+/// separately so callers can audit large candidate rays without allocating
+/// the potentially much larger formal composition.  A positive result for an
+/// odd prime `p` proves that `f(x^p)` is irreducible by the same binomial and
+/// Capell criterion.
+///
+/// # Errors
+///
+/// Returns a typed decline unless `prime` is prime, or when source replay or
+/// bounded polynomial arithmetic fails.
+pub fn monomial_prime_eligibility(
+    source: &IrreducibilityCertificate,
+    prime: usize,
+    limits: Gf2Limits,
+) -> Result<MonomialCompositionPrimeTest, Gf2Error> {
+    if !is_prime_usize(prime) {
+        return Err(Gf2Error::InvalidCertificate(
+            "monomial eligibility divisor must be prime",
+        ));
+    }
+    check_irreducible_certificate(source, limits)?;
+    let source_degree = source
+        .polynomial
+        .degree()
+        .ok_or(Gf2Error::NotPositiveDegree)?;
+    monomial_prime_test_unchecked(
+        &source.polynomial,
+        source_degree,
+        prime,
+        &mut Gf2Context::new(limits),
+    )
+}
+
+/// Check the binary finite-field binomial criterion for `f(x^k)`.
+///
+/// Let `f` be irreducible of degree `n`, let `alpha` be one of its roots,
+/// and put `Q=2^n-1`.  The classical binomial criterion says that
+/// `x^k-alpha` is irreducible over `GF(2^n)` exactly when every prime `p|k`
+/// divides `ord(alpha)` but not `Q/ord(alpha)`, together with the usual
+/// condition at `4|k`.  Since `Q` is odd, these conditions force `k` odd.
+/// For an odd prime `p|Q`, the two order conditions are equivalently the
+/// directly checkable non-power condition
+///
+/// ```text
+/// alpha^(Q/p) != 1.
+/// ```
+///
+/// Capell's lemma then identifies irreducibility of `x^k-alpha` with that of
+/// `f(x^k)`.  Odd monomial substitution preserves Lemire's half-degree shape.
+/// The source certificate is replay-checked before any conclusion is returned.
+///
+/// # Errors
+///
+/// Returns a typed decline for `k=0`, a malformed source certificate, or a
+/// bounded polynomial operation that exceeds `limits`.
+pub fn monomial_composition_criterion(
+    source: &IrreducibilityCertificate,
+    power: usize,
+    limits: Gf2Limits,
+) -> Result<MonomialCompositionCriterion, Gf2Error> {
+    check_irreducible_certificate(source, limits)?;
+    let source_degree = source
+        .polynomial
+        .degree()
+        .ok_or(Gf2Error::NotPositiveDegree)?;
+    let composition = monomial_compose(&source.polynomial, power, limits)?;
+    let mut context = Gf2Context::new(limits);
+    let mut prime_tests = Vec::new();
+    for prime in distinct_prime_divisors(power) {
+        prime_tests.push(monomial_prime_test_unchecked(
+            &source.polynomial,
+            source_degree,
+            prime,
+            &mut context,
+        )?);
+    }
+    let proves_composition_irreducible =
+        power == 1 || prime_tests.iter().all(|test| test.root_is_not_prime_power);
+    Ok(MonomialCompositionCriterion {
+        source_degree,
+        power,
+        source_is_half_degree_shaped: source.polynomial.is_half_degree_shaped(),
+        composition,
+        prime_tests,
+        proves_composition_irreducible,
+    })
+}
+
 /// Check the finite-field Capell criterion for `f(x^3)`.
 ///
 /// The source is first replay-checked as irreducible.  If its degree `n` is
@@ -741,42 +941,24 @@ pub fn cubic_composition_criterion(
     source: &IrreducibilityCertificate,
     limits: Gf2Limits,
 ) -> Result<CubicCompositionCriterion, Gf2Error> {
-    check_irreducible_certificate(source, limits)?;
-    let source_degree = source
-        .polynomial
-        .degree()
-        .ok_or(Gf2Error::NotPositiveDegree)?;
-    let composition = monomial_compose(&source.polynomial, 3, limits)?;
-    if source_degree % 2 == 1 {
-        return Ok(CubicCompositionCriterion {
-            source_degree,
-            source_is_half_degree_shaped: source.polynomial.is_half_degree_shaped(),
-            composition,
-            cube_test_residue: None,
-            proves_composition_irreducible: false,
-        });
+    let general = monomial_composition_criterion(source, 3, limits)?;
+    let cube = general
+        .prime_tests
+        .first()
+        .ok_or(Gf2Error::InvalidCertificate(
+            "cubic criterion did not emit its prime-divisor test",
+        ))?;
+    if cube.prime != 3 {
+        return Err(Gf2Error::InvalidCertificate(
+            "cubic criterion emitted the wrong prime-divisor test",
+        ));
     }
-
-    let mut context = Gf2Context::new(limits);
-    let mut result = Gf2Poly::one();
-    let mut power = Gf2Poly::x();
-    for bit in 0..source_degree {
-        if bit % 2 == 0 {
-            let product = context.multiply(&result, &power)?;
-            result = context.div_rem(&product, &source.polynomial)?.1;
-        }
-        if bit + 1 < source_degree {
-            let square = context.square(&power)?;
-            power = context.div_rem(&square, &source.polynomial)?.1;
-        }
-    }
-    let proves_composition_irreducible = result != Gf2Poly::one();
     Ok(CubicCompositionCriterion {
-        source_degree,
-        source_is_half_degree_shaped: source.polynomial.is_half_degree_shaped(),
-        composition,
-        cube_test_residue: Some(result),
-        proves_composition_irreducible,
+        source_degree: general.source_degree,
+        source_is_half_degree_shaped: general.source_is_half_degree_shaped,
+        composition: general.composition,
+        cube_test_residue: cube.power_test_residue.clone(),
+        proves_composition_irreducible: general.proves_composition_irreducible,
     })
 }
 
@@ -1717,6 +1899,98 @@ mod tests {
                 .unwrap()
                 .is_none()
         );
+    }
+
+    #[test]
+    fn general_monomial_criterion_covers_odd_and_composite_powers() {
+        let limits = Gf2Limits::default();
+
+        let cubic = certify_irreducible(&poly(&[0, 1, 3]), limits)
+            .unwrap()
+            .unwrap();
+        let degree_twenty_one = monomial_composition_criterion(&cubic, 7, limits).unwrap();
+        assert!(degree_twenty_one.source_is_half_degree_shaped);
+        assert_eq!(degree_twenty_one.composition, poly(&[0, 7, 21]));
+        assert_eq!(degree_twenty_one.prime_tests.len(), 1);
+        assert_eq!(degree_twenty_one.prime_tests[0].prime, 7);
+        assert!(degree_twenty_one.prime_tests[0].divides_source_group_order);
+        assert!(degree_twenty_one.prime_tests[0].root_is_not_prime_power);
+        assert!(degree_twenty_one.proves_composition_irreducible);
+        assert_eq!(
+            monomial_prime_eligibility(&cubic, 7, limits).unwrap(),
+            degree_twenty_one.prime_tests[0]
+        );
+        assert!(degree_twenty_one.composition.is_half_degree_shaped());
+        let certificate = certify_irreducible(&degree_twenty_one.composition, limits)
+            .unwrap()
+            .expect("degree-21 generalized Capell composition must be irreducible");
+        check_irreducible_certificate(&certificate, limits).unwrap();
+
+        let primitive_quartic = certify_irreducible(&poly(&[0, 1, 4]), limits)
+            .unwrap()
+            .unwrap();
+        let composite_power =
+            monomial_composition_criterion(&primitive_quartic, 15, limits).unwrap();
+        assert_eq!(
+            composite_power
+                .prime_tests
+                .iter()
+                .map(|test| test.prime)
+                .collect::<Vec<_>>(),
+            vec![3, 5]
+        );
+        assert!(
+            composite_power
+                .prime_tests
+                .iter()
+                .all(|test| test.root_is_not_prime_power)
+        );
+        assert!(composite_power.proves_composition_irreducible);
+        let certificate = certify_irreducible(&composite_power.composition, limits)
+            .unwrap()
+            .expect("degree-60 composite-power composition must be irreducible");
+        check_irreducible_certificate(&certificate, limits).unwrap();
+    }
+
+    #[test]
+    fn general_monomial_criterion_rejects_incompatible_powers() {
+        let limits = Gf2Limits::default();
+        let cubic = certify_irreducible(&poly(&[0, 1, 3]), limits)
+            .unwrap()
+            .unwrap();
+
+        for power in [2, 3, 5] {
+            let report = monomial_composition_criterion(&cubic, power, limits).unwrap();
+            assert!(!report.proves_composition_irreducible);
+            assert!(
+                report
+                    .prime_tests
+                    .iter()
+                    .any(|test| !test.divides_source_group_order)
+            );
+            assert!(
+                certify_irreducible(&report.composition, limits)
+                    .unwrap()
+                    .is_none()
+            );
+        }
+
+        let identity = monomial_composition_criterion(&cubic, 1, limits).unwrap();
+        assert!(identity.prime_tests.is_empty());
+        assert!(identity.proves_composition_irreducible);
+        assert_eq!(identity.composition, cubic.polynomial);
+        assert!(matches!(
+            monomial_composition_criterion(&cubic, 0, limits),
+            Err(Gf2Error::InvalidCertificate(
+                "monomial composition power must be positive"
+            ))
+        ));
+        assert!(matches!(
+            monomial_prime_eligibility(&cubic, 9, limits),
+            Err(Gf2Error::InvalidCertificate(
+                "monomial eligibility divisor must be prime"
+            ))
+        ));
     }
 
     #[test]

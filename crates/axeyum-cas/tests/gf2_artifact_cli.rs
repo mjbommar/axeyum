@@ -184,5 +184,20 @@ fn capell_audit_replays_sources_and_both_composition_checkers() {
         String::from_utf8(audited.stdout).unwrap(),
         "GF2_CAPELL_AUDIT|status=PASS|sources=2|min_degree=3|max_degree=4|eligible=1|odd_degree=1|cube=0|eligible_degrees=4\n"
     );
+
+    let generalized = Command::new(env!("CARGO_BIN_EXE_axeyum-gf2-capell-audit"))
+        .args(["--prime-limit", "7"])
+        .args(&paths)
+        .output()
+        .unwrap();
+    assert!(
+        generalized.status.success(),
+        "{}",
+        String::from_utf8_lossy(&generalized.stderr)
+    );
+    assert_eq!(
+        String::from_utf8(generalized.stdout).unwrap(),
+        "GF2_GENERAL_CAPELL_AUDIT|status=PASS|sources=2|min_degree=3|max_degree=4|prime_limit=7|eligible=2|odd_eligible=1|direct_certificates=2|falsification_controls=2|eligible_rays=3:7,4:3\n"
+    );
     fs::remove_dir_all(directory).unwrap();
 }
