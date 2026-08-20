@@ -569,12 +569,21 @@ With Frobenius inserted, however, the fibre factor becomes `2^r-1`, which is
 already one over the binary base field.  The remaining geometric bridge is
 therefore a bound for the projective Frobenius--long-cycle trace, not another
 unweighted fixed-locus count.
+That projective action is now classified far enough to reject a second false
+shortcut.  A projective fixed point is a cycle eigenline, not necessarily an
+affine fixed vector.  If `n=2^a b` with `b` odd, exactly the primitive
+`b`th-root eigenlines survive the endpoint equations, so the reduced
+projective fixed locus has `phi(b)` points and is never empty.  The native
+report checks every divisor order and retains wild scheme reducedness and the
+Frobenius-weighted estimate as unproved.  Hence no free cyclic-torsor quotient
+is available; the positive weighted trace theorem remains the frontier.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `636f9da38` | Classified the projective long-cycle eigenlines, proving that exactly `phi(oddpart(n))` survive and rejecting a free cyclic-torsor shortcut without granting a Frobenius bound. |
 | 2026-08-20 | `35b4c6ad2` | Pinned the exact degree-five separation between zero unweighted non-top Euler trace and nonzero binary Frobenius error `-2`, preventing the cone identity from receiving endpoint credit. |
 | 2026-08-20 | `ada2c4542` | Closed the purely wild power-of-two Euler row by the homogeneous-cone decomposition and exposed the surviving projective Frobenius--long-cycle trace with exact factor `2^r-1`. |
 | 2026-08-20 | `1c517c87f` | Localized the long-cycle Euler trace by its tame/wild decomposition, proving exact non-top cancellation away from power-of-two degrees while retaining the Frobenius-weighted trace as unproved. |
