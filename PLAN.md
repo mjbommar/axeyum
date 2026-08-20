@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `0a459d914` | Made the exact Hayes root-number audit fail closed with a quadratic work-cell admission and checked the primitive functional equation coefficient by coefficient. |
 | 2026-08-20 | `8b07f7a45` | Added exact integral cyclotomic Hayes L-polynomials and proved that every pinned primitive root-number fibre contains distinct endpoint power sums, rejecting root-number-only Gauss control. |
 | 2026-08-20 | `726bd8411` | Audited the 2026 function-field Linnik--Selberg input at equation level and rejected its varying-modulus average as a substitute for the fixed-wild-modulus, Möbius-weighted endpoint sum. |
 | 2026-08-20 | `556888c96` | Added the checked cubic Capell criterion and dual-checker audit, proving 138 committed seeds generate 95 infinite degree rays while explicitly retaining the uncovered odd and even 3-free degrees. |
@@ -787,7 +788,10 @@ the pinned pair has common leading coefficient `-4` but sums
 cyclotomic zeta factorization alone cannot control the connected endpoint
 trace.  A surviving characteristic-two argument must retain the full
 coefficient vectors and their signed cross-character cancellation; this exact
-obstruction grants no Lemire theorem credit.
+obstruction grants no Lemire theorem credit.  The same audit now checks the
+coefficientwise primitive functional equation exactly and prices its direct
+enumeration as `4^level` work cells, declining before allocation when the
+caller's explicit ceiling is exceeded.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
