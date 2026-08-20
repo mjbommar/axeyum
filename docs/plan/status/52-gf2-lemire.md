@@ -577,12 +577,27 @@ projective fixed locus has `phi(b)` points and is never empty.  The native
 report checks every divisor order and retains wild scheme reducedness and the
 Frobenius-weighted estimate as unproved.  Hence no free cyclic-torsor quotient
 is available; the positive weighted trace theorem remains the frontier.
+The Hast--Matei bridge is now translated at the exact endpoint rather than
+invoked schematically.  Their explicit two-polynomial top-weight
+representation leaves exactly `ell-1` hook characters on two long cycles, so
+its idealized global second moment is `(ell-1)2^n`; Cauchy misses the odd and
+even endpoints by squared ratios `(ell-1)/2` and `(ell-1)/4`.  The same native
+report classifies every repeated-root stratum compatible with one long-cycle
+Frobenius condition.  Odd uniform multiplicity gives triangular recovery of
+the base polynomial from its leading coefficients, while even multiplicity
+is a genuine Frobenius-square proper power with coefficient stride
+`2^v2(n/e)`.  Thus the characteristic-two defect in the selected sector is
+confined to square proper-power strata.  Proving that the connected virtual
+projector cancels or separately controls those square strata, with an
+effective bound on the remaining triangular sector, is now the precise
+Hast--Matei route; no weighted-trace credit has yet been granted.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `531ed174a` | Translated Hast--Matei's top long-cycle variance at the exact endpoint, proved its second moment is insufficient, and confined the selected characteristic-two repeated-root defect to square proper powers. |
 | 2026-08-20 | `636f9da38` | Classified the projective long-cycle eigenlines, proving that exactly `phi(oddpart(n))` survive and rejecting a free cyclic-torsor shortcut without granting a Frobenius bound. |
 | 2026-08-20 | `35b4c6ad2` | Pinned the exact degree-five separation between zero unweighted non-top Euler trace and nonzero binary Frobenius error `-2`, preventing the cone identity from receiving endpoint credit. |
 | 2026-08-20 | `ada2c4542` | Closed the purely wild power-of-two Euler row by the homogeneous-cone decomposition and exposed the surviving projective Frobenius--long-cycle trace with exact factor `2^r-1`. |
