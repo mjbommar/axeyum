@@ -1470,6 +1470,31 @@ pub struct BinaryDyadicCharacterFourierReport {
     pub expected_basis: [i8; 4],
 }
 
+/// One residue row in the auxiliary-unit quadratic projector over
+/// `(Z/8Z)^x`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DyadicAuxiliaryProjectorResidue {
+    /// Discriminant residue modulo eight.
+    pub discriminant_residue: u8,
+    /// Exact projector sum in the basis `1,zeta_8,zeta_8^2,zeta_8^3`.
+    pub projector_cyclotomic_basis: [i8; 4],
+    /// Closed-form right side `2(zeta_8-zeta_8^3)chi_8(D)`.
+    pub expected_projector_cyclotomic_basis: [i8; 4],
+    /// Exact normalized quadratic Gauss sum over the auxiliary unit group.
+    pub normalized_gauss_cyclotomic_basis: [i8; 4],
+    /// Size of the radical of the normalized phase polarization.
+    pub radical_size: usize,
+    /// Whether the normalized phase is trivial on its radical.
+    pub phase_trivial_on_radical: bool,
+}
+
+/// Exact characteristic-two auxiliary-unit projector and polarization table.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DyadicAuxiliaryQuadraticProjectorReport {
+    /// Stable rows for `D=0,...,7`.
+    pub residues: Vec<DyadicAuxiliaryProjectorResidue>,
+}
+
 /// Coefficient counts at one support degree in the multilinear discriminant
 /// polynomial modulo eight.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -6414,6 +6439,16 @@ const fn kronecker_two_mod_eight(residue: u8) -> i8 {
     }
 }
 
+fn add_zeta_eight_power(basis: &mut [i8; 4], exponent: u8, coefficient: i8) {
+    let exponent = usize::from(exponent % 8);
+    let (slot, sign) = if exponent < 4 {
+        (exponent, 1_i8)
+    } else {
+        (exponent - 4, -1_i8)
+    };
+    basis[slot] += sign * coefficient;
+}
+
 /// Expand the real dyadic character as four exact additive phases in
 /// `Z[zeta_8]`.
 ///
@@ -6448,6 +6483,115 @@ pub fn binary_dyadic_character_fourier_report(
         gauss_sum_basis,
         expected_basis,
     })
+}
+
+/// Certify the auxiliary-unit quadratic Gauss projector over
+/// `(Z/8Z)^x=<3,5>`.
+///
+/// Write `a=3^u 5^v=1+2u+4v (mod 8)` and
+/// `chi_8(a)=(-1)^(u+v)`.  For each `D mod 8`, the normalized phase
+///
+/// ```text
+/// Q_D(u,v)=chi_8(a) zeta_8^((a-1)D)
+/// ```
+///
+/// has polarization `(-1)^(D u u')`.  Odd `D` gives radical `{u=0}`
+/// on which the phase is trivial and hence a Gauss sum of squared magnitude
+/// eight; even `D` gives a nontrivial linear character and zero sum.  Summing
+/// the unnormalized auxiliary phases recovers the Kronecker character.
+///
+/// # Errors
+///
+/// Returns an invariant failure if any group, polarization, radical, or
+/// cyclotomic projector identity fails.
+pub fn dyadic_auxiliary_quadratic_projector_report()
+-> Result<DyadicAuxiliaryQuadraticProjectorReport, HayesError> {
+    let mut residues = Vec::with_capacity(8);
+    for discriminant_residue in 0_u8..8 {
+        let mut projector = [0_i8; 4];
+        let mut normalized_gauss = [0_i8; 4];
+        let mut phase_exponents = [0_u8; 4];
+        for u in 0_u8..=1 {
+            for v in 0_u8..=1 {
+                let index = usize::from(u | (v << 1));
+                let unit = (1 + 2 * u + 4 * v) % 8;
+                let character = if (u + v).is_multiple_of(2) {
+                    1_i8
+                } else {
+                    -1_i8
+                };
+                add_zeta_eight_power(&mut projector, unit * discriminant_residue, character);
+                let phase = (4 * ((u + v) % 2) + (unit + 7) % 8 * discriminant_residue) % 8;
+                phase_exponents[index] = phase;
+                add_zeta_eight_power(&mut normalized_gauss, phase, 1);
+            }
+        }
+        let expected = [
+            0,
+            2 * kronecker_two_mod_eight(discriminant_residue),
+            0,
+            -2 * kronecker_two_mod_eight(discriminant_residue),
+        ];
+        if projector != expected {
+            return Err(HayesError::Invariant(
+                "auxiliary-unit cyclotomic projector identity failed".to_owned(),
+            ));
+        }
+        for left in 0_u8..4 {
+            for right in 0_u8..4 {
+                let polarization = (phase_exponents[usize::from(left ^ right)] + 8
+                    - phase_exponents[usize::from(left)]
+                    + 8
+                    - phase_exponents[usize::from(right)])
+                    % 8;
+                let expected_polarization =
+                    4 * (discriminant_residue % 2) * (left & 1) * (right & 1);
+                if polarization != expected_polarization {
+                    return Err(HayesError::Invariant(
+                        "auxiliary-unit polarization identity failed".to_owned(),
+                    ));
+                }
+            }
+        }
+        let mut radical_size = 0_usize;
+        let mut phase_trivial_on_radical = true;
+        for left in 0_u8..4 {
+            let is_radical = (0_u8..4).all(|right| {
+                let sum = usize::from(left ^ right);
+                let polarization = (phase_exponents[sum] + 8 - phase_exponents[usize::from(left)]
+                    + 8
+                    - phase_exponents[usize::from(right)])
+                    % 8;
+                polarization == 0
+            });
+            if is_radical {
+                radical_size += 1;
+                phase_trivial_on_radical &= phase_exponents[usize::from(left)] == 0;
+            }
+        }
+        let expected_radical_size = if discriminant_residue.is_multiple_of(2) {
+            4
+        } else {
+            2
+        };
+        if radical_size != expected_radical_size
+            || phase_trivial_on_radical == discriminant_residue.is_multiple_of(2)
+            || (discriminant_residue.is_multiple_of(2) && normalized_gauss != [0_i8; 4])
+        {
+            return Err(HayesError::Invariant(
+                "auxiliary-unit quadratic radical identity failed".to_owned(),
+            ));
+        }
+        residues.push(DyadicAuxiliaryProjectorResidue {
+            discriminant_residue,
+            projector_cyclotomic_basis: projector,
+            expected_projector_cyclotomic_basis: expected,
+            normalized_gauss_cyclotomic_basis: normalized_gauss,
+            radical_size,
+            phase_trivial_on_radical,
+        });
+    }
+    Ok(DyadicAuxiliaryQuadraticProjectorReport { residues })
 }
 
 /// Recover the exact multilinear coefficient polynomial for the integral
@@ -12735,6 +12879,31 @@ mod tests {
         assert_eq!(failure.worst_bucket_minimum_defect, 54);
         assert_eq!(failure.worst_bucket_population, 88);
         assert!(!failure.finite_defect_candidate_holds);
+    }
+
+    #[test]
+    fn dyadic_auxiliary_projector_has_the_exact_quadratic_radicals() {
+        let auxiliary = dyadic_auxiliary_quadratic_projector_report().unwrap();
+        assert_eq!(auxiliary.residues.len(), 8);
+        for row in &auxiliary.residues {
+            assert_eq!(
+                row.projector_cyclotomic_basis,
+                row.expected_projector_cyclotomic_basis
+            );
+            if row.discriminant_residue.is_multiple_of(2) {
+                assert_eq!(row.radical_size, 4);
+                assert!(!row.phase_trivial_on_radical);
+                assert_eq!(row.normalized_gauss_cyclotomic_basis, [0; 4]);
+            } else {
+                assert_eq!(row.radical_size, 2);
+                assert!(row.phase_trivial_on_radical);
+                assert_ne!(row.normalized_gauss_cyclotomic_basis, [0; 4]);
+            }
+        }
+        assert_eq!(
+            auxiliary.residues[1].normalized_gauss_cyclotomic_basis,
+            [2, 0, -2, 0]
+        );
     }
 
     #[test]

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-dyadic-auxiliary-quadratic-projector",
+  "title": "Dyadic auxiliary-unit quadratic projector",
+  "statement": "For A=(Z/8Z)^x written as a=3^u 5^v and chi_8(a)=(-1)^(u+v), the phase Q_D(u,v)=chi_8(a) zeta_8^((a-1)D) has polarization (-1)^(D u u'), and summing the unnormalized phases gives 2(zeta_8-zeta_8^3)chi_8(D) for every D modulo eight. For odd D the radical has size two and Q_D is trivial on it; for even D the quadratic Gauss sum is zero.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"auxiliary_group\":\"(Z/8Z)^x=<3,5>\",\"format\":\"axeyum-gf2-dyadic-auxiliary-quadratic-projector\",\"polarization\":\"B_D((u,v),(u',v'))=(-1)^(D*u*u')\",\"projector\":\"sum_a chi_8(a)*zeta_8^(aD)=2*(zeta_8-zeta_8^3)*chi_8(D)\",\"residues\":\"D=0,...,7\",\"version\":1}",
+    "fragment": "bounded-cyclotomic-identity",
+    "free_symbols": ["D", "u", "v"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-integer-cyclotomic-basis-arithmetic",
+    "cas.exhaustive-finite-group-enumeration",
+    "cas.modulo-eight-unit-group-coordinate-specification"
+  ],
+  "evidence": [
+    {
+      "id": "gf2-dyadic-auxiliary-projector-exact-table",
+      "kind": "exhaustive-enumeration",
+      "supports": "All eight residues and all sixteen polarization pairs per residue satisfy the exact cyclotomic, bilinear, radical, and phase-restriction identities.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features dyadic_auxiliary_projector_has_the_exact_quadratic_radicals",
+      "artifact": "crates/axeyum-cas/src/gf2_hayes.rs",
+      "notes": "The checker uses integer coordinates in Z[zeta_8] reduced by zeta_8^4=-1; no floating-point roots of unity are used."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "direct finite-group and cyclotomic-basis calculation"
+  },
+  "notes": "This settles the auxiliary projector only. It does not establish a group law mixing the affine inverse fibres, valuation layers, and Witt coordinates, and it does not bound the endpoint trace."
+}

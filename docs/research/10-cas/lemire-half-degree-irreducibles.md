@@ -1333,6 +1333,31 @@ external squarefreeness gate.  What remains is a uniform cancellation theorem
 for these four modulo-eight discriminant phases after the inverse-coset
 constraints are imposed.
 
+The auxiliary phases can be retained as one exact quadratic projector rather
+than bounded four times.  Write
+
+```text
+A=(Z/8Z)^x=<3,5>,
+a=3^u 5^v=1+2u+4v mod 8,
+Q_D(u,v)=chi_8(a) zeta_8^((a-1)D).
+```
+
+Direct calculation gives the polarization
+
+```text
+Q_D(x+y)/(Q_D(x)Q_D(y))=(-1)^(D u u').
+```
+
+For odd `D`, its radical is `{u=0}`, of size two, and the phase is trivial
+there; the normalized Gauss sum has squared magnitude eight.  For even `D`,
+the polarization is trivial but `Q_D` is a nontrivial character, so its sum
+is zero.  The native `dyadic_auxiliary_quadratic_projector_report` checks all
+eight residues, all polarization pairs, both radical cases, and `(dyadic
+Fourier)` in the exact cyclotomic basis.  This proves the small projector,
+not the endpoint bound.  A larger joined fibre/valuation/Witt law must first
+make the discriminant difference additive modulo four; the already pinned
+nonquadratic affine fibre shows that the direct-product law cannot do so.
+
 The raw discriminant phase is not globally low degree in the binary
 coefficient bits.  `binary_discriminant_anf_report` evaluates every integral
 discriminant residue, applies the exact subset Möbius transform over `Z/8`,
