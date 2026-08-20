@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `726bd8411` | Audited the 2026 function-field Linnik--Selberg input at equation level and rejected its varying-modulus average as a substitute for the fixed-wild-modulus, Möbius-weighted endpoint sum. |
 | 2026-08-20 | `556888c96` | Added the checked cubic Capell criterion and dual-checker audit, proving 138 committed seeds generate 95 infinite degree rays while explicitly retaining the uncovered odd and even 3-free degrees. |
 | 2026-08-20 | `f85830458` | Added a bounded characteristic-two Q-transform with independent irreducibility controls, retained its special cubic-to-sextic success and cyclotomic degree family, and proved the standard iterated hypothesis forces a forbidden upper-half coefficient. |
 | 2026-08-20 | `6d6e1a7d8` | Added deterministic and hierarchical binary extension-trace sharding, exact Frobenius-orbit compression and Hankel minors, and used the complete `A_7(9,4)` trace to exclude every recurrence of order at most three without claiming endpoint proof credit. |
@@ -741,6 +742,14 @@ or move the endpoint proof frontier.  Characteristic-zero smooth-projective
 and real semi-algebraic symmetric-cohomology bounds are explicitly rejected
 as substitutes for the missing characteristic-two compact-support hook
 theorem.
+The published function-field Linnik--Selberg average has now also been audited
+at equation level. It cancels Kloosterman sums over varying monic moduli of a
+fixed degree, while the endpoint inverse phases all live modulo the single
+wild modulus `x^(ell+1)` and vary their arguments with a Möbius weight. The
+same source says that the twisted/divisibility extension is open and lacks
+explicit parameter dependence. ADR-0532 therefore grants it no endpoint
+credit; a useful spectral argument would have to prove a new fixed-wild-
+modulus Voronoi/Kuznetsov statement that preserves the cross-order weight.
 The characteristic-two `Q`-transform bridge is now audited from its exact
 equations.  A bounded native Lucas-submask expansion independently certifies
 the special shaped success `x^3+x+1 -> x^6+x^3+1`, but its next iterate loses
