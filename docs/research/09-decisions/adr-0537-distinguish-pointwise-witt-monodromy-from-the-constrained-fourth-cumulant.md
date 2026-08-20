@@ -33,10 +33,18 @@ from exact spatial autocorrelations.  It separately computes
 
 ```text
 Q_4 = sum_(chi_1 chi_2 chi_3 chi_4=1) product_i S_(chi_i)
-    = 2^(3ell) M_4,
+    = 2^(3ell) M_4
 ```
 
-and the connected constrained numerator `2^(2ell)K_4`.  The level-seven odd
+as the identity value of the fourfold character convolution.  It also retains
+the Parseval contraction
+
+```text
+P_2 = sum_chi S_chi S_(chi^-1) = 2^ell M_2
+```
+
+and checks `Q_4-3P_2^2=2^(2ell)K_4` exactly.  Thus all three Wick projectors
+are explicit rather than implicit in the cumulant formula.  The level-seven odd
 endpoint pins `P_4 != Q_4`; a resource mutation one cell below `2^(2ell)` is
 required to decline before work.
 
@@ -51,4 +59,3 @@ required to decline before work.
 - Even such a theorem needs effective Betti bounds at that scale.  The
   existing fixed-conductor, growing-field equidistribution theorem supplies
   neither requirement and grants no endpoint credit.
-

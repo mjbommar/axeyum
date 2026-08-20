@@ -2460,11 +2460,52 @@ pub struct HayesCharacterFourthMomentComparison {
     pub degree: usize,
     /// `sum_chi |S_chi|^4`, reconstructed from spatial autocorrelations.
     pub pointwise_character_fourth_moment: BigUint,
+    /// `sum_chi S_chi S_(chi^-1) = 2^ell M_2` by Parseval.
+    pub character_second_moment: BigUint,
+    /// One Wick contraction `(sum_chi S_chi S_(chi^-1))^2`.
+    pub single_wick_pairing: BigUint,
+    /// Sum of the three equal Wick contractions.
+    pub three_wick_pairings: BigUint,
     /// `sum_(chi_1...chi_4=1) product_i S_(chi_i) = 2^(3ell) M_4`.
     pub product_constrained_fourth_moment: BigUint,
     /// Connected constrained numerator `2^(2ell) K_4` after subtracting the
     /// three Wick pairings.
     pub connected_product_constrained_numerator: BigInt,
+}
+
+/// Exact geometric budget for an Adams-operation identity-fibre proof of the
+/// connected fourth-moment bound.
+///
+/// The product-one character fibre has dimension `3*ell`; its unrestricted
+/// compactly-supported cohomology can reach degree `6*ell`.  After removing
+/// the Adams weight factor `2^(2*degree)`, a mixed connected complex of
+/// weights at most zero whose compactly-supported cohomology vanishes above
+/// degree `4*ell` and has total Betti number at most `ell^4` would bound the
+/// connected trace by the exact allowance recorded here.  This is a
+/// sufficient-target ledger, not a claim that such a complex or any of those
+/// properties has been proved.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesAdamsIdentityFibreRequirement {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint power-sum degree.
+    pub degree: usize,
+    /// Dimension `3*ell` of the product-one four-character fibre.
+    pub identity_fibre_dimension: usize,
+    /// Unrestricted top compactly-supported cohomology degree `6*ell`.
+    pub ambient_max_cohomology_degree: usize,
+    /// Dimension `2*ell` of every Wick pairing diagonal.
+    pub wick_pairing_dimension: usize,
+    /// Required top compactly-supported cohomology degree `4*ell`.
+    pub required_max_cohomology_degree: usize,
+    /// Required cohomological degree drop `2*ell` after Wick subtraction.
+    pub required_cohomology_degree_drop: usize,
+    /// Polynomial normalized Betti budget `ell^4`.
+    pub normalized_betti_budget: BigUint,
+    /// Weight-zero allowance `ell^4 * 2^(2*ell)`.
+    pub normalized_connected_trace_allowance: BigUint,
+    /// Unnormalized allowance `ell^4 * 2^(2*ell+2*degree)`.
+    pub connected_trace_allowance: BigUint,
 }
 
 /// Exact Möbius sums in every principal-unit class.
@@ -4368,14 +4409,30 @@ impl ClassPopulationDistribution {
         }
         let group_order_big = BigUint::from(group_order);
         let pointwise_character_fourth_moment = &group_order_big * autocorrelation_square_sum;
+        let centered_second = self.central_absolute_power_sum(2)?;
+        let character_second_moment = &group_order_big * centered_second;
+        let single_wick_pairing = character_second_moment.pow(2);
+        let three_wick_pairings = BigUint::from(3_u8) * &single_wick_pairing;
         let centered_fourth = self.central_absolute_power_sum(4)?;
         let product_constrained_fourth_moment = group_order_big.pow(3) * centered_fourth;
         let connected_product_constrained_numerator =
             BigInt::from(group_order_big.pow(2)) * self.fourth_cumulant_numerator()?;
+        if BigInt::from(product_constrained_fourth_moment.clone())
+            - BigInt::from(three_wick_pairings.clone())
+            != connected_product_constrained_numerator
+        {
+            return Err(HayesError::Invariant(
+                "identity-fibre convolution minus Wick pairings misses the connected cumulant"
+                    .to_owned(),
+            ));
+        }
         Ok(HayesCharacterFourthMomentComparison {
             ell: self.ell,
             degree: self.degree,
             pointwise_character_fourth_moment,
+            character_second_moment,
+            single_wick_pairing,
+            three_wick_pairings,
             product_constrained_fourth_moment,
             connected_product_constrained_numerator,
         })
@@ -7170,6 +7227,79 @@ pub fn check_connected_cumulant_bound_sufficiency(
     Ok(ConnectedCumulantBoundReport {
         assumption,
         derived_fourth_moment,
+    })
+}
+
+/// Compute the exact cohomological cutoff and Betti budget for a connected
+/// Adams identity-fibre proof.
+///
+/// Write `G=2^ell`.  For the centred character power sums, the connected
+/// convolution numerator is `G^2 K_4`.  The sufficient geometric estimate
+///
+/// ```text
+/// abs(G^2 K_4) <= ell^4 * 2^(2*ell+2*degree)
+/// ```
+///
+/// gives `K_4<=ell^4*2^(2*degree)`.  Together with the proved
+/// `M_2<=ell^2*2^degree`, this yields
+/// `M_4<=64*ell^4*2^(3*ell)` at either Lemire endpoint, exactly the envelope
+/// consumed by [`check_connected_cumulant_bound_sufficiency`].  Geometrically,
+/// the displayed estimate would follow after removing the Adams weight
+/// `2^(2*degree)` from a mixed complex of weights at most zero whose compactly
+/// supported cohomology vanishes above degree `4*ell` and whose normalized
+/// total Betti number is at most `ell^4`.
+///
+/// # Errors
+///
+/// Returns a parameter error away from the two Lemire endpoints or if a
+/// dimension/exponent calculation overflows.
+pub fn hayes_adams_identity_fibre_requirement(
+    ell: usize,
+    degree: usize,
+) -> Result<HayesAdamsIdentityFibreRequirement, HayesError> {
+    let twice_ell = ell
+        .checked_mul(2)
+        .ok_or_else(|| HayesError::InvalidParameter("Adams endpoint degree overflow".to_owned()))?;
+    if ell == 0 || !matches!(degree.checked_sub(twice_ell), Some(1 | 2)) {
+        return Err(HayesError::InvalidParameter(
+            "Adams identity-fibre budget requires degree in {2*ell+1,2*ell+2}".to_owned(),
+        ));
+    }
+    let identity_fibre_dimension = ell.checked_mul(3).ok_or_else(|| {
+        HayesError::InvalidParameter("Adams identity-fibre dimension overflow".to_owned())
+    })?;
+    let wick_pairing_dimension = ell.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("Adams pairing dimension overflow".to_owned())
+    })?;
+    let ambient_max_cohomology_degree = ell.checked_mul(6).ok_or_else(|| {
+        HayesError::InvalidParameter("Adams ambient cohomology degree overflow".to_owned())
+    })?;
+    let required_max_cohomology_degree = ell.checked_mul(4).ok_or_else(|| {
+        HayesError::InvalidParameter("Adams required cohomology degree overflow".to_owned())
+    })?;
+    let normalized_betti_budget = BigUint::from(ell).pow(4);
+    let normalized_shift = u32::try_from(wick_pairing_dimension).map_err(|_| {
+        HayesError::InvalidParameter("Adams normalized allowance shift exceeds u32".to_owned())
+    })?;
+    let weight_shift = degree
+        .checked_mul(2)
+        .and_then(|value| u32::try_from(value).ok())
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Adams weight allowance shift exceeds u32".to_owned())
+        })?;
+    let normalized_connected_trace_allowance = &normalized_betti_budget << normalized_shift;
+    let connected_trace_allowance = &normalized_connected_trace_allowance << weight_shift;
+    Ok(HayesAdamsIdentityFibreRequirement {
+        ell,
+        degree,
+        identity_fibre_dimension,
+        ambient_max_cohomology_degree,
+        wick_pairing_dimension,
+        required_max_cohomology_degree,
+        required_cohomology_degree_drop: wick_pairing_dimension,
+        normalized_betti_budget,
+        normalized_connected_trace_allowance,
+        connected_trace_allowance,
     })
 }
 
@@ -14731,6 +14861,23 @@ mod tests {
             report.product_constrained_fourth_moment
         );
         assert_eq!(
+            report.character_second_moment,
+            BigUint::from(1_u16 << 7) * distribution.central_absolute_power_sum(2).unwrap()
+        );
+        assert_eq!(
+            report.single_wick_pairing,
+            report.character_second_moment.pow(2)
+        );
+        assert_eq!(
+            report.three_wick_pairings,
+            BigUint::from(3_u8) * &report.single_wick_pairing
+        );
+        assert_eq!(
+            BigInt::from(report.product_constrained_fourth_moment.clone())
+                - BigInt::from(report.three_wick_pairings.clone()),
+            report.connected_product_constrained_numerator
+        );
+        assert_eq!(
             report.connected_product_constrained_numerator,
             BigInt::from(1_u16 << 14) * distribution.fourth_cumulant_numerator().unwrap()
         );
@@ -16201,6 +16348,36 @@ mod tests {
             ..ConnectedCumulantBoundAssumption::default()
         };
         assert!(check_connected_cumulant_bound_sufficiency(unchecked_remainder).is_err());
+    }
+
+    #[test]
+    fn adams_identity_fibre_budget_matches_the_connected_endpoint_envelope() {
+        for degree in [401_usize, 402] {
+            let report = hayes_adams_identity_fibre_requirement(200, degree).unwrap();
+            assert_eq!(report.identity_fibre_dimension, 600);
+            assert_eq!(report.ambient_max_cohomology_degree, 1_200);
+            assert_eq!(report.wick_pairing_dimension, 400);
+            assert_eq!(report.required_max_cohomology_degree, 800);
+            assert_eq!(report.required_cohomology_degree_drop, 400);
+            assert_eq!(
+                report.normalized_betti_budget,
+                BigUint::from(1_600_000_000_u64)
+            );
+            assert_eq!(
+                report.normalized_connected_trace_allowance,
+                &report.normalized_betti_budget << 400
+            );
+            assert_eq!(
+                report.connected_trace_allowance,
+                &report.normalized_connected_trace_allowance << (2 * degree)
+            );
+            assert_eq!(
+                &report.connected_trace_allowance >> 400,
+                &report.normalized_betti_budget << (2 * degree)
+            );
+        }
+        assert!(hayes_adams_identity_fibre_requirement(0, 1).is_err());
+        assert!(hayes_adams_identity_fibre_requirement(12, 24).is_err());
     }
 
     #[test]

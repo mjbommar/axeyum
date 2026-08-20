@@ -2697,7 +2697,18 @@ sum_(chi_1 chi_2 chi_3 chi_4=1) product_i S_(chi_i)
   = 2^(3ell) M_4.
 ```
 
-These two exact integers already differ at the pinned level-seven endpoint.
+The latter is exactly the identity value of the fourfold convolution on the
+character group.  Parseval supplies the value of each of the three Wick
+pairings,
+
+```text
+P_2=sum_chi S_chi S_(chi^-1)=2^ell M_2,
+Q_4-3P_2^2=2^(2ell)K_4.
+```
+
+The CAS retains `P_2`, one pairing, their threefold sum, and checks the final
+subtraction against the independently computed cumulant.  These two fourth
+moments already differ at the pinned level-seven endpoint.
 Thus ordinary pointwise `SL`-monodromy moments do not prove the constrained
 four-character statement.  A valid bridge requires a convolutional
 four-design theorem plus effective Betti control, uniform while conductor,
@@ -2705,6 +2716,56 @@ rank, trace power, and representation complexity grow.  See
 [Witt Vectors and a Question of Keating and
 Rudnick](https://web.math.princeton.edu/~nmk/wittchar31.pdf), especially
 Theorems 5.1 and 8.1.
+
+Adams operations make the required geometric statement precise.  If
+`V_chi` is the Frobenius space whose characteristic polynomial is the Hayes
+`L`-polynomial, then
+
+```text
+S_n(chi)=Tr(Frob_chi^n|V_chi)=Tr(Frob_chi|psi^n V_chi).
+```
+
+Hence `Q_4` is the Frobenius trace of the external fourth tensor power of the
+virtual Adams object on the product-one character fibre.  That fibre has
+dimension `3ell`; unrestricted compactly-supported cohomology can therefore
+reach degree `6ell`, while each Wick pairing diagonal has dimension `2ell`.
+The connected Adams object still has nonzero generic virtual rank, so literal
+support on those diagonals would be an unjustified and generally false target.
+Removing the Adams weight `2^(2n)`, the following cohomological lemma would
+instead imply the existing sufficient fourth-moment envelope:
+
+```text
+normalized connected complex is mixed of weights <=0,
+H_c^i of the connected complex vanishes for i>4ell,
+normalized total Betti number <= ell^4.                (AG)
+```
+
+Indeed, (AG) gives
+
+```text
+abs(2^(2ell) K_4) <= ell^4 2^(2ell+2n),
+K_4 <= ell^4 2^(2n).
+```
+
+Together with the proved `M_2<=ell^2 2^n`, this yields
+`M_4<=64 ell^4 2^(3ell)` at both endpoints, which the finite handoff already
+checks from `ell=200`.  The native
+`hayes_adams_identity_fibre_requirement` records the ambient dimension,
+unrestricted and required top cohomology degrees, Betti budget, normalized
+allowance, and restored-weight allowance exactly. At `ell=200`, the required
+cancellation is a top-cohomology cutoff from degree `1200` to degree `800`,
+not merely the half-weight saving supplied by a generic Weil estimate.
+
+Neither cited monodromy source proves (AG).  Katz proves large monodromy for
+one universal primitive-character sheaf.  His effective equidistribution
+constant is the total compactly-supported Betti number and is used with fixed
+conductor while the field grows.  Fresan's arithmetic Fourier formalism
+correctly turns convolution into tensor product, but its moment theorem again
+averages characters over extension fields for one fixed group and sheaf.  It
+does not give four-pullback independence on the product-one fibre, the
+degree-`4ell` cohomological cutoff, or a growing-conductor Betti bound over
+`GF(2)`.  Those are now the exact geometric proof obligations rather than an
+informal appeal to monodromy.
 
 Parseval gives an equivalent conductor form.  If `E_j` is the exact Fourier
 energy of `D_e^2` at conductor level `j`, the obligation is
