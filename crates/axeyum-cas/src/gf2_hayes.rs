@@ -46,6 +46,30 @@ impl Default for HayesLimits {
     }
 }
 
+/// Resource admission for the exact cyclic/Foulkes compression ledger.
+///
+/// The orthogonality certificate retains one Ramanujan sum for every residue
+/// and recomputes its scalar product against every divisor of `degree`.
+/// Keeping this limit separate from [`HayesLimits`] allows the representation
+/// ledger to reach the degree-400 finite handoff without admitting a Hayes
+/// transform of comparable size.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SawinFoulkesLimits {
+    /// Largest admitted polynomial degree.
+    pub max_degree: usize,
+    /// Largest admitted residue-by-divisor orthogonality table.
+    pub max_orthogonality_cells: usize,
+}
+
+impl Default for SawinFoulkesLimits {
+    fn default() -> Self {
+        Self {
+            max_degree: 10_000,
+            max_orthogonality_cells: 1_000_000,
+        }
+    }
+}
+
 /// A typed decline or failed invariant from an exact Hayes computation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HayesError {
@@ -2506,6 +2530,173 @@ pub struct HayesAdamsIdentityFibreRequirement {
     pub normalized_connected_trace_allowance: BigUint,
     /// Unnormalized allowance `ell^4 * 2^(2*ell+2*degree)`.
     pub connected_trace_allowance: BigUint,
+}
+
+/// One coefficient in the cyclic/Foulkes decomposition of the long-cycle
+/// virtual character.
+///
+/// With `F_(n,r)=Ind_(C_n)^(S_n) theta_r`, the coefficient of `F_(n,r)` is
+/// `c_n(r)/phi(n)`.  The numerator is retained as an exact signed integer and
+/// the common denominator is stored once in
+/// [`SawinFoulkesEndpointLedger::coefficient_denominator`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FoulkesRamanujanCoefficient {
+    /// Residue `r` modulo `n` indexing the cyclic character `theta_r`.
+    pub residue: usize,
+    /// Ramanujan sum `c_n(r)`.
+    pub numerator: BigInt,
+}
+
+/// One coefficient after grouping equal induced cyclic characters.
+///
+/// The `n` residue-indexed Foulkes modules have only `tau(n)` distinct
+/// characters.  Grouping by `gcd(n,r)` turns the rational Ramanujan
+/// coefficients into the integral formula
+///
+/// ```text
+/// p_n=sum_(k|n) mu(k) F_(n,n/k).
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FoulkesDistinctCoefficient {
+    /// Divisor `k` of `n`.
+    pub divisor: usize,
+    /// Canonical residue `n/k` for the distinct induced cyclic character.
+    pub cyclic_character_residue: usize,
+    /// Grouped coefficient, expected to equal `mu(k)`.
+    pub coefficient: BigInt,
+}
+
+/// One independently checked power-sum coefficient after substituting the
+/// cyclic/Foulkes decomposition.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FoulkesPowerSumCoefficient {
+    /// Divisor `d` of `n` indexing the power sum `p_d^(n/d)`.
+    pub divisor: usize,
+    /// Exact numerator `sum_(r mod n) c_n(r)c_d(r)`.
+    pub numerator: BigInt,
+    /// Expected numerator: `n*phi(n)` for `d=n`, and zero otherwise.
+    pub expected_numerator: BigInt,
+}
+
+/// Exact endpoint ledger for the long-cycle/cyclic-Foulkes compression of
+/// Sawin's short-interval geometry.
+///
+/// This report proves the representation identity
+///
+/// ```text
+/// p_n = sum_(r mod n) c_n(r)/phi(n) Ind_(C_n)^(S_n) theta_r
+/// ```
+///
+/// by Ramanujan orthogonality and proves that the coefficient `l1` mass is
+/// `2^omega(n)`.  It then inserts a caller-supplied *hypothetical* uniform
+/// bound on each cyclic eigenspace into Sawin's exact weight exponent.  The
+/// resulting endpoint comparison is conditional: this operation does not
+/// prove the missing cyclic-eigenspace cohomology bound.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SawinFoulkesEndpointLedger {
+    /// Polynomial degree `n`.
+    pub degree: usize,
+    /// Lemire/Hayes level `ell=ceil(n/2)-1`.
+    pub ell: usize,
+    /// Number `n-ell` of free short-interval coefficients.
+    pub interval_dimension: usize,
+    /// Number `ell` of prescribed leading coefficients.
+    pub fixed_leading_coefficient_count: usize,
+    /// Numerator `W` of Sawin's exact exponent `2^(W/2)` at `q=2`.
+    pub sawin_weight_exponent_numerator: usize,
+    /// Exact exponent `2h-W=floor(ell/2)` left after squaring the endpoint
+    /// comparison against the main term `2^h`.
+    pub squared_exponential_margin_exponent: usize,
+    /// Euler totient `phi(n)`, the common coefficient denominator.
+    pub coefficient_denominator: BigUint,
+    /// Number `omega(n)` of distinct prime factors.
+    pub distinct_prime_factor_count: usize,
+    /// Exact coefficient numerators `c_n(r)`.
+    pub coefficients: Vec<FoulkesRamanujanCoefficient>,
+    /// Integral coefficients after grouping the `tau(n)` distinct Foulkes
+    /// characters.
+    pub distinct_coefficients: Vec<FoulkesDistinctCoefficient>,
+    /// Orthogonality certificate for every divisor power-sum term.
+    pub reconstructed_power_sum_coefficients: Vec<FoulkesPowerSumCoefficient>,
+    /// Exact numerator `sum_r |c_n(r)|` of the coefficient `l1` mass.
+    pub coefficient_l1_numerator: BigUint,
+    /// Exact normalized coefficient mass `2^omega(n)`.
+    pub coefficient_l1_mass: BigUint,
+    /// Caller-supplied hypothetical uniform cyclic-eigenspace Betti bound.
+    pub assumed_uniform_cyclic_betti_bound: BigUint,
+    /// Square of `2^omega(n)` times the hypothetical Betti bound.
+    pub assumed_squared_total_cost: BigUint,
+    /// Exact squared exponential margin `2^floor(ell/2)`.
+    pub squared_exponential_margin: BigUint,
+    /// Main Mangoldt term `2^(n-ell)`.
+    pub main_mangoldt_term: BigUint,
+    /// Exact odd proper-power contribution or proved even upper bound.
+    pub proper_prime_power_upper_bound: BigUint,
+    /// Main term remaining after proper prime powers are removed.
+    pub irreducible_margin: BigUint,
+    /// Square of the complete hypothetical Sawin error, including `2^W`.
+    pub assumed_squared_absolute_error: BigUint,
+    /// Square of the remaining irreducible margin.
+    pub squared_irreducible_margin: BigUint,
+    /// Whether the hypothetical bound leaves a strict proper-power reserve.
+    pub conditional_endpoint_closure: bool,
+    /// Sawin's published generic single-representation Betti bound
+    /// `3(n+2)^(n+ell)`.
+    pub published_generic_single_betti_bound: BigUint,
+    /// Square of the generic bound after the Foulkes coefficient mass.
+    pub published_generic_squared_total_cost: BigUint,
+    /// Whether the published generic bound leaves a proper-power reserve.
+    pub published_generic_endpoint_closure: bool,
+}
+
+/// Hypothetical polynomial bound on every effective cyclic Foulkes Betti
+/// multiplicity beyond one degree threshold.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SawinFoulkesPolynomialBettiAssumption {
+    /// First degree governed by the assumption.
+    pub threshold: usize,
+    /// Exponent `a` in `B(n,r)<=n^a`.
+    pub polynomial_power: u32,
+}
+
+impl Default for SawinFoulkesPolynomialBettiAssumption {
+    fn default() -> Self {
+        Self {
+            threshold: 401,
+            polynomial_power: 4,
+        }
+    }
+}
+
+/// One residue-class base check for the polynomial cyclic-Betti implication.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SawinFoulkesPolynomialBaseRow {
+    /// Base degree for one of the twelve floor/ceiling residue classes.
+    pub degree: usize,
+    /// Coarse squared cost `n^(2(a+1))`.
+    pub squared_polynomial_cost: BigUint,
+    /// Squared half-main allowance `2^(floor((ceil(n/2)-1)/2)-2)`.
+    pub squared_half_main_margin: BigUint,
+    /// Exact odd proper-power contribution or proved even upper bound.
+    pub proper_prime_power_upper_bound: BigUint,
+    /// Half of the main Mangoldt term.
+    pub half_main_mangoldt_term: BigUint,
+}
+
+/// Checked arithmetic implication from a polynomial cyclic-Betti theorem to
+/// every Lemire degree beyond a finite handoff.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SawinFoulkesPolynomialBettiReport {
+    /// Hypothetical theorem whose arithmetic consequence was checked.
+    pub assumption: SawinFoulkesPolynomialBettiAssumption,
+    /// Exponent `2(a+1)` after using `2^omega(n)<=n` and squaring.
+    pub squared_polynomial_power: u32,
+    /// Twelve exact base inequalities covering every floor/ceiling residue.
+    pub base_rows: Vec<SawinFoulkesPolynomialBaseRow>,
+    /// Left side `(threshold+12)^(2(a+1))` of the induction-step ratio.
+    pub step_left: BigUint,
+    /// Right side `8 threshold^(2(a+1))` of the induction-step ratio.
+    pub step_right: BigUint,
 }
 
 /// Exact Möbius sums in every principal-unit class.
@@ -7396,6 +7587,517 @@ pub fn hayes_adams_identity_fibre_requirement(
         normalized_betti_budget,
         normalized_connected_trace_allowance,
         connected_trace_allowance,
+    })
+}
+
+fn gcd_usize(mut left: usize, mut right: usize) -> usize {
+    while right != 0 {
+        let remainder = left % right;
+        left = right;
+        right = remainder;
+    }
+    left
+}
+
+fn factor_usize(mut value: usize) -> Vec<(usize, usize)> {
+    let mut factors = Vec::new();
+    let mut prime = 2_usize;
+    while prime <= value / prime {
+        if value.is_multiple_of(prime) {
+            let mut exponent = 0_usize;
+            while value.is_multiple_of(prime) {
+                value /= prime;
+                exponent += 1;
+            }
+            factors.push((prime, exponent));
+        }
+        prime = if prime == 2 { 3 } else { prime + 2 };
+    }
+    if value > 1 {
+        factors.push((value, 1));
+    }
+    factors
+}
+
+fn divisors_from_factorization(factors: &[(usize, usize)]) -> Result<Vec<usize>, HayesError> {
+    let mut divisors = vec![1_usize];
+    for &(prime, exponent) in factors {
+        let original = divisors.clone();
+        let mut power = 1_usize;
+        for _ in 0..exponent {
+            power = power.checked_mul(prime).ok_or_else(|| {
+                HayesError::InvalidParameter("Foulkes divisor power overflow".to_owned())
+            })?;
+            for divisor in &original {
+                divisors.push(divisor.checked_mul(power).ok_or_else(|| {
+                    HayesError::InvalidParameter("Foulkes divisor overflow".to_owned())
+                })?);
+            }
+        }
+    }
+    divisors.sort_unstable();
+    Ok(divisors)
+}
+
+fn euler_phi_usize(value: usize, factors: &[(usize, usize)]) -> Result<usize, HayesError> {
+    let mut result = value;
+    for &(prime, _) in factors {
+        result = result
+            .checked_div(prime)
+            .and_then(|quotient| quotient.checked_mul(prime - 1))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Foulkes Euler totient overflow".to_owned())
+            })?;
+    }
+    Ok(result)
+}
+
+fn mobius_usize(value: usize) -> i8 {
+    let factors = factor_usize(value);
+    if factors.iter().any(|(_, exponent)| *exponent > 1) {
+        0
+    } else if factors.len().is_multiple_of(2) {
+        1
+    } else {
+        -1
+    }
+}
+
+fn ramanujan_sum_usize(modulus: usize, residue: usize) -> Result<BigInt, HayesError> {
+    let common = gcd_usize(modulus, residue);
+    let divisors = divisors_from_factorization(&factor_usize(common))?;
+    let mut sum = BigInt::from(0_u8);
+    for divisor in divisors {
+        let quotient = modulus.checked_div(divisor).ok_or_else(|| {
+            HayesError::Invariant("Ramanujan divisor does not divide modulus".to_owned())
+        })?;
+        sum += BigInt::from(divisor) * BigInt::from(mobius_usize(quotient));
+    }
+    Ok(sum)
+}
+
+fn ramanujan_sum_closed_form(modulus: usize, residue: usize) -> Result<BigInt, HayesError> {
+    let quotient = modulus / gcd_usize(modulus, residue);
+    let mobius = mobius_usize(quotient);
+    if mobius == 0 {
+        return Ok(BigInt::from(0_u8));
+    }
+    let modulus_phi = euler_phi_usize(modulus, &factor_usize(modulus))?;
+    let quotient_phi = euler_phi_usize(quotient, &factor_usize(quotient))?;
+    let ratio = modulus_phi.checked_div(quotient_phi).ok_or_else(|| {
+        HayesError::Invariant("Ramanujan closed-form totient ratio is not integral".to_owned())
+    })?;
+    Ok(BigInt::from(mobius) * BigInt::from(ratio))
+}
+
+struct FoulkesCompressionCertificate {
+    coefficient_denominator: BigUint,
+    distinct_prime_factor_count: usize,
+    coefficients: Vec<FoulkesRamanujanCoefficient>,
+    distinct_coefficients: Vec<FoulkesDistinctCoefficient>,
+    reconstructed_power_sum_coefficients: Vec<FoulkesPowerSumCoefficient>,
+    coefficient_l1_numerator: BigUint,
+    coefficient_l1_mass: BigUint,
+}
+
+fn certify_foulkes_compression(
+    degree: usize,
+    limits: SawinFoulkesLimits,
+) -> Result<FoulkesCompressionCertificate, HayesError> {
+    if degree > limits.max_degree {
+        return Err(HayesError::ResourceLimit {
+            resource: "sawin_foulkes_degree",
+            requested: degree,
+            limit: limits.max_degree,
+        });
+    }
+    let factors = factor_usize(degree);
+    let divisors = divisors_from_factorization(&factors)?;
+    let orthogonality_cells = degree.checked_mul(divisors.len()).ok_or_else(|| {
+        HayesError::InvalidParameter("Foulkes orthogonality cell count overflow".to_owned())
+    })?;
+    if orthogonality_cells > limits.max_orthogonality_cells {
+        return Err(HayesError::ResourceLimit {
+            resource: "sawin_foulkes_orthogonality_cells",
+            requested: orthogonality_cells,
+            limit: limits.max_orthogonality_cells,
+        });
+    }
+
+    let phi = euler_phi_usize(degree, &factors)?;
+    let coefficients = (0..degree)
+        .map(|residue| {
+            let numerator = ramanujan_sum_usize(degree, residue)?;
+            if numerator != ramanujan_sum_closed_form(degree, residue)? {
+                return Err(HayesError::Invariant(format!(
+                    "independent Ramanujan formulas disagree at residue {residue}"
+                )));
+            }
+            Ok(FoulkesRamanujanCoefficient { residue, numerator })
+        })
+        .collect::<Result<Vec<_>, HayesError>>()?;
+    let coefficient_l1_numerator = coefficients.iter().fold(BigUint::from(0_u8), |sum, row| {
+        sum + row.numerator.magnitude()
+    });
+    let distinct_prime_factor_count = factors.len();
+    let coefficient_l1_mass = BigUint::from(1_u8) << distinct_prime_factor_count;
+    let coefficient_denominator = BigUint::from(phi);
+    if coefficient_l1_numerator != &coefficient_denominator * &coefficient_l1_mass {
+        return Err(HayesError::Invariant(
+            "Foulkes coefficient l1 mass does not equal 2^omega(n)".to_owned(),
+        ));
+    }
+
+    let distinct_coefficients = certify_distinct_foulkes_coefficients(
+        degree,
+        phi,
+        &divisors,
+        &coefficients,
+        &coefficient_l1_mass,
+    )?;
+    let reconstructed_power_sum_coefficients =
+        certify_foulkes_power_sum_coefficients(degree, phi, &divisors, &coefficients)?;
+    Ok(FoulkesCompressionCertificate {
+        coefficient_denominator,
+        distinct_prime_factor_count,
+        coefficients,
+        distinct_coefficients,
+        reconstructed_power_sum_coefficients,
+        coefficient_l1_numerator,
+        coefficient_l1_mass,
+    })
+}
+
+fn certify_distinct_foulkes_coefficients(
+    degree: usize,
+    phi: usize,
+    divisors: &[usize],
+    coefficients: &[FoulkesRamanujanCoefficient],
+    coefficient_l1_mass: &BigUint,
+) -> Result<Vec<FoulkesDistinctCoefficient>, HayesError> {
+    let mut distinct_coefficients = Vec::with_capacity(divisors.len());
+    for &divisor in divisors {
+        let cyclic_character_residue = degree / divisor;
+        let grouped_numerator = coefficients
+            .iter()
+            .filter(|row| gcd_usize(degree, row.residue) == cyclic_character_residue)
+            .fold(BigInt::from(0_u8), |sum, row| sum + &row.numerator);
+        let coefficient = BigInt::from(mobius_usize(divisor));
+        if grouped_numerator != &coefficient * BigInt::from(phi) {
+            return Err(HayesError::Invariant(format!(
+                "grouped Foulkes coefficient is not mu({divisor})"
+            )));
+        }
+        distinct_coefficients.push(FoulkesDistinctCoefficient {
+            divisor,
+            cyclic_character_residue,
+            coefficient,
+        });
+    }
+    let nonzero_count = distinct_coefficients
+        .iter()
+        .filter(|row| row.coefficient != BigInt::from(0_u8))
+        .count();
+    if BigUint::from(nonzero_count) != *coefficient_l1_mass {
+        return Err(HayesError::Invariant(
+            "nonzero distinct Foulkes count does not equal 2^omega(n)".to_owned(),
+        ));
+    }
+    Ok(distinct_coefficients)
+}
+
+fn certify_foulkes_power_sum_coefficients(
+    degree: usize,
+    phi: usize,
+    divisors: &[usize],
+    coefficients: &[FoulkesRamanujanCoefficient],
+) -> Result<Vec<FoulkesPowerSumCoefficient>, HayesError> {
+    let expected_diagonal = BigInt::from(degree) * BigInt::from(phi);
+    let mut result = Vec::with_capacity(divisors.len());
+    for &divisor in divisors {
+        let mut numerator = BigInt::from(0_u8);
+        for row in coefficients {
+            numerator += &row.numerator * ramanujan_sum_usize(divisor, row.residue)?;
+        }
+        let expected_numerator = if divisor == degree {
+            expected_diagonal.clone()
+        } else {
+            BigInt::from(0_u8)
+        };
+        if numerator != expected_numerator {
+            return Err(HayesError::Invariant(format!(
+                "Foulkes orthogonality failed at divisor {divisor}"
+            )));
+        }
+        result.push(FoulkesPowerSumCoefficient {
+            divisor,
+            numerator,
+            expected_numerator,
+        });
+    }
+    Ok(result)
+}
+
+fn endpoint_proper_prime_power_upper_bound(
+    degree: usize,
+    ell: usize,
+) -> Result<BigUint, HayesError> {
+    let odd_degree = ell
+        .checked_mul(2)
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| HayesError::InvalidParameter("Foulkes odd endpoint overflow".to_owned()))?;
+    if degree == odd_degree {
+        return Ok(BigUint::from(1_u8));
+    }
+    let even_degree = odd_degree
+        .checked_add(1)
+        .ok_or_else(|| HayesError::InvalidParameter("Foulkes even endpoint overflow".to_owned()))?;
+    if degree != even_degree {
+        return Err(HayesError::Invariant(
+            "Foulkes degree is not a Lemire endpoint".to_owned(),
+        ));
+    }
+    let half_degree = degree / 2;
+    let square_exponent = half_degree.checked_sub(ell / 2).ok_or_else(|| {
+        HayesError::Invariant("Foulkes square proper-power exponent underflow".to_owned())
+    })?;
+    let square_power_bound = BigUint::from(half_degree) << square_exponent;
+    let higher_power_bound = BigUint::from(degree) << degree.div_ceil(3);
+    Ok(square_power_bound + higher_power_bound)
+}
+
+/// Certify the cyclic/Foulkes long-cycle identity and evaluate its exact
+/// Lemire endpoint margin under a hypothetical cyclic Betti bound.
+///
+/// For `ell=ceil(n/2)-1`, Sawin's characteristic-two weight exponent has
+/// numerator
+///
+/// ```text
+/// W=(n-ell)+floor(n/2)-floor(ell/2)+1
+///   =2(n-ell)-floor(ell/2).
+/// ```
+///
+/// Hence squaring the comparison with the main term leaves precisely
+/// `2^floor(ell/2)`.  If every cyclic eigenspace had total Betti multiplicity
+/// at most `B`, the Foulkes triangle proves an irreducible exactly when
+///
+/// ```text
+/// (2^omega(n) B)^2 2^W < (2^h-P_n)^2,
+/// ```
+///
+/// where `P_n=1` at the odd endpoint and the even endpoint uses the proved
+/// square/higher-power envelope.  The function checks this implication and
+/// also inserts Sawin's published generic bound to demonstrate whether
+/// existing geometry suffices.  It does not establish the caller-supplied
+/// `B`.
+///
+/// # Errors
+///
+/// Declines degrees below the asymptotic endpoint range, a zero hypothetical
+/// bound, resource-limit violations, arithmetic overflow, or any failed
+/// Ramanujan orthogonality/coefficient-mass invariant.
+pub fn sawin_foulkes_endpoint_ledger(
+    degree: usize,
+    assumed_uniform_cyclic_betti_bound: BigUint,
+    limits: SawinFoulkesLimits,
+) -> Result<SawinFoulkesEndpointLedger, HayesError> {
+    if degree < 3 {
+        return Err(HayesError::InvalidParameter(
+            "Sawin/Foulkes endpoint ledger requires degree at least three".to_owned(),
+        ));
+    }
+    if assumed_uniform_cyclic_betti_bound == BigUint::from(0_u8) {
+        return Err(HayesError::InvalidParameter(
+            "Sawin/Foulkes hypothetical Betti bound must be positive".to_owned(),
+        ));
+    }
+    let FoulkesCompressionCertificate {
+        coefficient_denominator,
+        distinct_prime_factor_count,
+        coefficients,
+        distinct_coefficients,
+        reconstructed_power_sum_coefficients,
+        coefficient_l1_numerator,
+        coefficient_l1_mass,
+    } = certify_foulkes_compression(degree, limits)?;
+
+    let ell = degree.div_ceil(2).checked_sub(1).ok_or_else(|| {
+        HayesError::InvalidParameter("Sawin/Foulkes endpoint level underflow".to_owned())
+    })?;
+    let interval_dimension = degree.checked_sub(ell).ok_or_else(|| {
+        HayesError::InvalidParameter("Sawin/Foulkes interval dimension underflow".to_owned())
+    })?;
+    let sawin_weight_exponent_numerator = interval_dimension
+        .checked_add(degree / 2)
+        .and_then(|value| value.checked_sub(ell / 2))
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| HayesError::InvalidParameter("Sawin weight exponent overflow".to_owned()))?;
+    let twice_interval_dimension = interval_dimension.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("Sawin squared main exponent overflow".to_owned())
+    })?;
+    let squared_exponential_margin_exponent = twice_interval_dimension
+        .checked_sub(sawin_weight_exponent_numerator)
+        .ok_or_else(|| HayesError::Invariant("Sawin endpoint margin is negative".to_owned()))?;
+    if squared_exponential_margin_exponent != ell / 2 {
+        return Err(HayesError::Invariant(
+            "Sawin endpoint margin does not simplify to floor(ell/2)".to_owned(),
+        ));
+    }
+    let squared_exponential_margin = BigUint::from(1_u8) << squared_exponential_margin_exponent;
+    let assumed_total_cost = &coefficient_l1_mass * &assumed_uniform_cyclic_betti_bound;
+    let assumed_squared_total_cost = &assumed_total_cost * &assumed_total_cost;
+    let assumed_squared_absolute_error =
+        &assumed_squared_total_cost << sawin_weight_exponent_numerator;
+    let main_mangoldt_term = BigUint::from(1_u8) << interval_dimension;
+    let proper_prime_power_upper_bound = endpoint_proper_prime_power_upper_bound(degree, ell)?;
+    let irreducible_margin = if proper_prime_power_upper_bound < main_mangoldt_term {
+        &main_mangoldt_term - &proper_prime_power_upper_bound
+    } else {
+        BigUint::from(0_u8)
+    };
+    let squared_irreducible_margin = &irreducible_margin * &irreducible_margin;
+    let conditional_endpoint_closure = assumed_squared_absolute_error < squared_irreducible_margin;
+
+    let generic_exponent = degree.checked_add(ell).ok_or_else(|| {
+        HayesError::InvalidParameter("Sawin generic Betti exponent overflow".to_owned())
+    })?;
+    let generic_exponent = u32::try_from(generic_exponent).map_err(|_| {
+        HayesError::InvalidParameter("Sawin generic Betti exponent exceeds u32".to_owned())
+    })?;
+    let published_generic_single_betti_bound =
+        BigUint::from(3_u8) * BigUint::from(degree + 2).pow(generic_exponent);
+    let published_generic_total_cost = &coefficient_l1_mass * &published_generic_single_betti_bound;
+    let published_generic_squared_total_cost =
+        &published_generic_total_cost * &published_generic_total_cost;
+    let published_generic_squared_absolute_error =
+        &published_generic_squared_total_cost << sawin_weight_exponent_numerator;
+    let published_generic_endpoint_closure =
+        published_generic_squared_absolute_error < squared_irreducible_margin;
+
+    Ok(SawinFoulkesEndpointLedger {
+        degree,
+        ell,
+        interval_dimension,
+        fixed_leading_coefficient_count: ell,
+        sawin_weight_exponent_numerator,
+        squared_exponential_margin_exponent,
+        coefficient_denominator,
+        distinct_prime_factor_count,
+        coefficients,
+        distinct_coefficients,
+        reconstructed_power_sum_coefficients,
+        coefficient_l1_numerator,
+        coefficient_l1_mass,
+        assumed_uniform_cyclic_betti_bound,
+        assumed_squared_total_cost,
+        squared_exponential_margin,
+        main_mangoldt_term,
+        proper_prime_power_upper_bound,
+        irreducible_margin,
+        assumed_squared_absolute_error,
+        squared_irreducible_margin,
+        conditional_endpoint_closure,
+        published_generic_single_betti_bound,
+        published_generic_squared_total_cost,
+        published_generic_endpoint_closure,
+    })
+}
+
+/// Check that a polynomial cyclic-Foulkes Betti bound closes every endpoint
+/// after a finite handoff.
+///
+/// Since every distinct prime divisor is at least two,
+/// `2^omega(n)<=rad(n)<=n`.  Under `B(n,r)<=n^a`, the squared Foulkes cost is
+/// therefore at most `n^(2(a+1))`.  Reserving half of the main term for proper
+/// prime powers leaves the normalized squared error allowance
+///
+/// ```text
+/// 2^(floor((ceil(n/2)-1)/2)-2).
+/// ```
+///
+/// All floor/ceiling patterns repeat when `n` increases by twelve.  The error
+/// allowance then grows by eight, while its polynomial ratio decreases.  For
+/// proper powers, the odd contribution remains one; at the even endpoint the
+/// square term grows by less than `16` and the higher-power term by less than
+/// `32`, while half the main term grows by `64`.  Twelve base rows plus the
+/// checked polynomial step therefore prove the arithmetic implication for all
+/// `n` at or above `threshold`.  This function does not prove the polynomial
+/// Betti assumption itself.
+///
+/// # Errors
+///
+/// Returns an error if parameters overflow or any strict base/step inequality
+/// fails.
+pub fn check_sawin_foulkes_polynomial_betti_sufficiency(
+    assumption: SawinFoulkesPolynomialBettiAssumption,
+) -> Result<SawinFoulkesPolynomialBettiReport, HayesError> {
+    if assumption.threshold < 13 {
+        return Err(HayesError::InvalidParameter(
+            "Sawin/Foulkes polynomial implication requires threshold at least thirteen".to_owned(),
+        ));
+    }
+    let squared_polynomial_power = assumption
+        .polynomial_power
+        .checked_add(1)
+        .and_then(|value| value.checked_mul(2))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter(
+                "Sawin/Foulkes polynomial implication exponent overflow".to_owned(),
+            )
+        })?;
+    let last_base = assumption.threshold.checked_add(11).ok_or_else(|| {
+        HayesError::InvalidParameter("Sawin/Foulkes base block overflow".to_owned())
+    })?;
+    let mut base_rows = Vec::with_capacity(12);
+    for degree in assumption.threshold..=last_base {
+        let ell = degree.div_ceil(2) - 1;
+        let squared_polynomial_cost = BigUint::from(degree).pow(squared_polynomial_power);
+        let half_margin_exponent = (ell / 2).checked_sub(2).ok_or_else(|| {
+            HayesError::InvalidParameter(
+                "Sawin/Foulkes half-main squared margin underflow".to_owned(),
+            )
+        })?;
+        let squared_half_main_margin = BigUint::from(1_u8) << half_margin_exponent;
+        if squared_polynomial_cost >= squared_half_main_margin {
+            return Err(HayesError::InvalidParameter(format!(
+                "Sawin/Foulkes polynomial implication fails at base degree {degree}"
+            )));
+        }
+        let interval_dimension = degree - ell;
+        let half_main_mangoldt_term = BigUint::from(1_u8) << (interval_dimension - 1);
+        let proper_prime_power_upper_bound = endpoint_proper_prime_power_upper_bound(degree, ell)?;
+        if proper_prime_power_upper_bound >= half_main_mangoldt_term {
+            return Err(HayesError::InvalidParameter(format!(
+                "Sawin/Foulkes proper-power reserve fails at base degree {degree}"
+            )));
+        }
+        base_rows.push(SawinFoulkesPolynomialBaseRow {
+            degree,
+            squared_polynomial_cost,
+            squared_half_main_margin,
+            proper_prime_power_upper_bound,
+            half_main_mangoldt_term,
+        });
+    }
+
+    let next_degree = assumption.threshold.checked_add(12).ok_or_else(|| {
+        HayesError::InvalidParameter("Sawin/Foulkes induction step overflow".to_owned())
+    })?;
+    let step_left = BigUint::from(next_degree).pow(squared_polynomial_power);
+    let step_right =
+        BigUint::from(8_u8) * BigUint::from(assumption.threshold).pow(squared_polynomial_power);
+    if step_left >= step_right {
+        return Err(HayesError::InvalidParameter(
+            "Sawin/Foulkes polynomial implication induction step is not strict".to_owned(),
+        ));
+    }
+
+    Ok(SawinFoulkesPolynomialBettiReport {
+        assumption,
+        squared_polynomial_power,
+        base_rows,
+        step_left,
+        step_right,
     })
 }
 
@@ -16945,6 +17647,212 @@ mod tests {
         }
         assert!(hayes_adams_identity_fibre_requirement(0, 1).is_err());
         assert!(hayes_adams_identity_fibre_requirement(12, 24).is_err());
+    }
+
+    #[test]
+    fn foulkes_ramanujan_compression_reconstructs_only_the_long_cycle() {
+        let report =
+            sawin_foulkes_endpoint_ledger(12, BigUint::from(1_u8), SawinFoulkesLimits::default())
+                .unwrap();
+        assert_eq!(report.ell, 5);
+        assert_eq!(report.interval_dimension, 7);
+        assert_eq!(report.fixed_leading_coefficient_count, 5);
+        assert_eq!(report.sawin_weight_exponent_numerator, 12);
+        assert_eq!(report.squared_exponential_margin_exponent, 2);
+        assert_eq!(report.coefficient_denominator, BigUint::from(4_u8));
+        assert_eq!(report.distinct_prime_factor_count, 2);
+        assert_eq!(report.coefficient_l1_numerator, BigUint::from(16_u8));
+        assert_eq!(report.coefficient_l1_mass, BigUint::from(4_u8));
+        assert_eq!(
+            report
+                .coefficients
+                .iter()
+                .map(|row| row.numerator.clone())
+                .collect::<Vec<_>>(),
+            [4, 0, 2, 0, -2, 0, -4, 0, -2, 0, 2, 0]
+                .into_iter()
+                .map(BigInt::from)
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            report
+                .reconstructed_power_sum_coefficients
+                .iter()
+                .map(|row| (row.divisor, row.numerator.clone()))
+                .collect::<Vec<_>>(),
+            [
+                (1, BigInt::from(0_u8)),
+                (2, BigInt::from(0_u8)),
+                (3, BigInt::from(0_u8)),
+                (4, BigInt::from(0_u8)),
+                (6, BigInt::from(0_u8)),
+                (12, BigInt::from(48_u8)),
+            ]
+        );
+        assert_eq!(
+            report
+                .distinct_coefficients
+                .iter()
+                .map(|row| (
+                    row.divisor,
+                    row.cyclic_character_residue,
+                    row.coefficient.clone()
+                ))
+                .collect::<Vec<_>>(),
+            [
+                (1, 12, BigInt::from(1_i8)),
+                (2, 6, BigInt::from(-1_i8)),
+                (3, 4, BigInt::from(-1_i8)),
+                (4, 3, BigInt::from(0_i8)),
+                (6, 2, BigInt::from(1_i8)),
+                (12, 1, BigInt::from(0_i8)),
+            ]
+        );
+        assert_eq!(report.assumed_squared_total_cost, BigUint::from(16_u8));
+        assert_eq!(report.squared_exponential_margin, BigUint::from(4_u8));
+        assert_eq!(report.main_mangoldt_term, BigUint::from(128_u8));
+        assert_eq!(
+            report.proper_prime_power_upper_bound,
+            BigUint::from(288_u16)
+        );
+        assert_eq!(report.irreducible_margin, BigUint::from(0_u8));
+        assert_eq!(
+            report.assumed_squared_absolute_error,
+            BigUint::from(65_536_u32)
+        );
+        assert_eq!(report.squared_irreducible_margin, BigUint::from(0_u8));
+        assert!(!report.conditional_endpoint_closure);
+        assert!(!report.published_generic_endpoint_closure);
+    }
+
+    #[test]
+    fn foulkes_endpoint_ledger_preserves_strictness_at_degree_400_handoff() {
+        let below_boundary = BigUint::from(1_u8) << 46_usize;
+        for (degree, phi, mass) in [(401_usize, 400_u16, 2_u8), (402, 132, 8)] {
+            let report = sawin_foulkes_endpoint_ledger(
+                degree,
+                below_boundary.clone(),
+                SawinFoulkesLimits::default(),
+            )
+            .unwrap();
+            assert_eq!(report.ell, 200);
+            assert_eq!(report.squared_exponential_margin_exponent, 100);
+            assert_eq!(
+                report.squared_exponential_margin,
+                BigUint::from(1_u8) << 100
+            );
+            assert_eq!(report.coefficient_denominator, BigUint::from(phi));
+            assert_eq!(report.coefficient_l1_mass, BigUint::from(mass));
+            assert!(report.proper_prime_power_upper_bound < (&report.main_mangoldt_term >> 1));
+            assert!(report.assumed_squared_absolute_error < report.squared_irreducible_margin);
+            assert!(report.conditional_endpoint_closure);
+            assert!(!report.published_generic_endpoint_closure);
+        }
+
+        let exact_even_boundary = BigUint::from(1_u8) << 47_usize;
+        let report =
+            sawin_foulkes_endpoint_ledger(402, exact_even_boundary, SawinFoulkesLimits::default())
+                .unwrap();
+        assert_eq!(
+            report.assumed_squared_total_cost,
+            report.squared_exponential_margin
+        );
+        assert!(!report.conditional_endpoint_closure);
+    }
+
+    #[test]
+    fn quartic_cyclic_betti_target_closes_every_degree_after_400() {
+        let report = check_sawin_foulkes_polynomial_betti_sufficiency(
+            SawinFoulkesPolynomialBettiAssumption::default(),
+        )
+        .unwrap();
+        assert_eq!(report.squared_polynomial_power, 10);
+        assert_eq!(
+            report
+                .base_rows
+                .iter()
+                .map(|row| row.degree)
+                .collect::<Vec<_>>(),
+            (401..=412).collect::<Vec<_>>()
+        );
+        assert!(report.base_rows.iter().all(|row| {
+            row.squared_polynomial_cost < row.squared_half_main_margin
+                && row.proper_prime_power_upper_bound < row.half_main_mangoldt_term
+        }));
+        assert_eq!(
+            report.base_rows[0].squared_half_main_margin,
+            BigUint::from(1_u8) << 98
+        );
+        assert_eq!(
+            report.base_rows[4].squared_half_main_margin,
+            BigUint::from(1_u8) << 99
+        );
+        assert_eq!(
+            report.base_rows[8].squared_half_main_margin,
+            BigUint::from(1_u8) << 100
+        );
+        assert!(report.step_left < report.step_right);
+
+        assert!(
+            check_sawin_foulkes_polynomial_betti_sufficiency(
+                SawinFoulkesPolynomialBettiAssumption {
+                    threshold: 401,
+                    polynomial_power: 5,
+                }
+            )
+            .is_err()
+        );
+        assert!(
+            check_sawin_foulkes_polynomial_betti_sufficiency(
+                SawinFoulkesPolynomialBettiAssumption {
+                    threshold: 2,
+                    polynomial_power: 4,
+                }
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn foulkes_endpoint_ledger_declines_bad_parameters_and_work() {
+        assert!(
+            sawin_foulkes_endpoint_ledger(2, BigUint::from(1_u8), SawinFoulkesLimits::default())
+                .is_err()
+        );
+        assert!(
+            sawin_foulkes_endpoint_ledger(12, BigUint::from(0_u8), SawinFoulkesLimits::default())
+                .is_err()
+        );
+        assert_eq!(
+            sawin_foulkes_endpoint_ledger(
+                12,
+                BigUint::from(1_u8),
+                SawinFoulkesLimits {
+                    max_degree: 11,
+                    max_orthogonality_cells: 100,
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "sawin_foulkes_degree",
+                requested: 12,
+                limit: 11,
+            })
+        );
+        assert_eq!(
+            sawin_foulkes_endpoint_ledger(
+                12,
+                BigUint::from(1_u8),
+                SawinFoulkesLimits {
+                    max_degree: 12,
+                    max_orthogonality_cells: 71,
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "sawin_foulkes_orthogonality_cells",
+                requested: 72,
+                limit: 71,
+            })
+        );
     }
 
     #[test]

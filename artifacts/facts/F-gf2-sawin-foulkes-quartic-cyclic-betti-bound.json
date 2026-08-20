@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-sawin-foulkes-quartic-cyclic-betti-bound",
+  "title": "Quartic cyclic-Foulkes Betti bound for the binary Lemire interval",
+  "statement": "For every n >= 401, put ell=ceil(n/2)-1 and let X_(n,ell,0) be Sawin's ordered-root complete intersection for the binary short interval with ell prescribed zero leading coefficients. For every squarefree divisor k of n, put F_(n,n/k)=Ind_(C_n)^(S_n) theta_(n/k). Then the total effective multiplicity B(F_(n,n/k))=sum_i dim((H_c^i(X_(n,ell,0),Q_l) tensor F_(n,n/k))^(S_n)) is at most n^4.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"B(F_(n,n/k)) <= n^4\",\"character\":\"F_(n,n/k)=Ind_(C_n)^(S_n) theta_(n/k)\",\"cohomology\":\"B(F)=sum_i dim((H_c^i(X_(n,ell,0),Q_l) tensor F)^(S_n))\",\"divisor_condition\":\"k|n and mu(k)!=0\",\"field_order\":2,\"format\":\"axeyum-gf2-sawin-foulkes-cyclic-betti-bound\",\"level\":\"ell=ceil(n/2)-1\",\"min_degree\":401,\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "n",
+      "ell",
+      "k"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; exact long-cycle/cyclic-Foulkes compression of Sawin's short-interval geometry"
+  },
+  "notes": "This is the precise new geometric obligation isolated by ADR-0550, not a promoted representation identity or finite computation. The native sawin_foulkes_endpoint_ledger proves the exact Foulkes coefficient mass 2^omega(n) and checks the conditional endpoint comparison after odd/even proper-prime-power subtraction. The separate check_sawin_foulkes_polynomial_betti_sufficiency proves that the displayed quartic bound, together with the independently certified degree-400 handoff, would settle every remaining Lemire degree: it checks twelve base rows, reserves half the main term for proper powers, and verifies an exact twelve-degree induction step. Sawin's published generic bound 3(n+2)^(n+ell) does not imply this fact, and no known equivariant characteristic-two vanishing-cycle theorem establishes it. No Autogenesis operation is registered because no checker can prove the quantified cohomology statement universally."
+}

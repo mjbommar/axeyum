@@ -3461,6 +3461,80 @@ This rigorously rejects every constant-coefficient recurrence of order at most
 three at the four-coefficient boundary.  It does not determine the reduced
 zeta factor or its growth with `m`, so no asymptotic theorem credit is attached.
 
+### Exact cyclic/Foulkes compression and its remaining theorem
+
+The alternating-hook representation used for von Mangoldt is much smaller as
+a virtual character than Sawin's parity split exposes.  If
+
+```text
+F_(n,r)=Ind_(C_n)^(S_n) theta_r,
+```
+
+Foulkes's formula and Ramanujan orthogonality give
+
+```text
+p_n = sum_(r mod n) c_n(r)/phi(n) F_(n,r)
+    = sum_(k|n) mu(k) F_(n,n/k).                 (FC)
+```
+
+The second equality groups the `n` residue labels into the `tau(n)` distinct
+induced characters.  Its exact coefficient mass is only
+
+```text
+sum_(k|n) |mu(k)| = 2^omega(n)=n^o(1).
+```
+
+The public `sawin_foulkes_endpoint_ledger` now certifies `(FC)` without a
+character table oracle.  It evaluates each Ramanujan sum from both its divisor
+formula and the independent von Sterneck totient formula, reconstructs every
+power-sum coefficient by orthogonality, checks the grouped Möbius coefficients,
+and admits the residue-by-divisor table only under explicit work limits.
+
+This compression leaves a precise rather than qualitative endpoint margin.
+For `ell=ceil(n/2)-1` and interval dimension `h=n-ell`, Sawin's binary weight
+exponent is `W/2`, with
+
+```text
+W=h+floor(n/2)-floor(ell/2)+1
+ =2h-floor(ell/2).
+```
+
+Consequently, if `B` uniformly bounds the effective Betti multiplicity of
+each cyclic summand, the Foulkes triangle proves an irreducible exactly when
+
+```text
+(2^omega(n) B)^2 2^W < (2^h-P_n)^2,              (CF)
+```
+
+where `P_n=1` at the odd endpoint, while the even endpoint uses the proved
+upper bound
+
+```text
+P_n <= (n/2)2^(n/2-floor(ell/2)) + n2^ceil(n/3).
+```
+
+At the first two degrees beyond the finite certificate, this allows
+`B<=2^49-1` for `n=401` and `B<=2^47-1` for `n=402`.  A polynomial bound with
+effective constants would therefore fit comfortably.  Sawin's published
+generic bound `3(n+2)^(n+ell)` does not: substituting it into the same native
+integer ledger fails.  Equation `(FC)` is proved representation theory;
+inequality `(CF)` is only a checked implication.  No source currently proves
+the required characteristic-two cyclic-eigenspace bound, so neither line is
+endpoint theorem evidence (ADR-0550).
+
+There is now also an all-degree arithmetic handoff with no asymptotic notation.
+The coarse inequality `2^omega(n)<=n` shows that a uniform cyclic bound
+`B(n,r)<=n^4` makes the squared Foulkes cost at most `n^10`.  The native
+`check_sawin_foulkes_polynomial_betti_sufficiency` checks all twelve bases
+`401<=n<=412`, reserving half the main term for proper prime powers, and checks
+`413^10<8*401^10`.  The normalized squared margin grows by eight every twelve
+degrees.  Over the same step the odd proper-power term stays one, while the
+two terms in the even envelope grow by less than `16` and `32`; half the main
+term grows by `64`.  This proves that the *hypothetical quartic Betti theorem*
+would settle every remaining degree, including proper-power subtraction.  The
+same ledger rejects power five at the degree-400 handoff.  This narrows the
+geometric research target without asserting it.
+
 The closest general symmetric-cohomology theorems do not fill that gap.
 Chenevert's smooth projective hypersurface calculation assumes `n!` is
 invertible in the ground field, excluding this characteristic-two `S_n`
