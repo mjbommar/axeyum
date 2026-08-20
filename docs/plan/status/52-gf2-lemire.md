@@ -218,13 +218,16 @@ its ledger statement starts only at `ell=200`.  Every conductor energy now
 also reconstructs as `2^(j-1)` times an exact sum of squared binary-cylinder
 mass differences, isolating refinement imbalance as the analytic input.  This buffered split is a separate
 conjectured fact and remains the live uniform lemma.
-The first-slot generalization of Fomenko's fixed-coordinate map is now closed
-structurally: the checked Witt projection is surjective, but its kernel has
-dimension `floor(ell/2)` and order `2^floor(ell/2)`.  Exhaustive controls verify
-every fibre and homomorphism pair through `ell=8`.  Thus the naive quotient
-leaves an exponentially large character family and cannot supply Fomenko's
-small-kernel gain; the aggregate connected-cumulant/Witt-imbalance lemma
-remains the proof frontier.  Garefalakis's dedicated consecutive-zero theorem
+The elementary-abelian generalization of Fomenko's fixed-coordinate map is now
+closed structurally: every map to a binary vector space factors through the
+maximal quotient `E_ell/2E_ell`, whose checked rank is `ceil(ell/2)` and whose
+minimum kernel has dimension `floor(ell/2)`.  The first-slot map attains that
+minimum, and exhaustive controls verify every fibre and homomorphism pair
+through `ell=8`.  Thus no alternative selection of additive binary
+coordinates can supply Fomenko's small-kernel gain; a surviving variant must
+retain non-elementary higher-Witt structure and prove cross-block
+orthogonality.  The aggregate connected-cumulant/Witt-imbalance lemma remains
+the proof frontier.  Garefalakis's dedicated consecutive-zero theorem
 was also checked directly and fails Lemire's `m=n`, `l=floor(n/2)` endpoint in
 its stated sufficient condition.
 An exact first-moment alternative now reconstructs every Mangoldt class
@@ -314,6 +317,15 @@ second-trace differences, and the separate mod-four projection obstruction.
 Future use requires a checked reduction of the complete connected sum to
 their quadratic form or a genuinely new mixed-domain associative cocycle;
 nondegeneracy cannot be imported as an assumption.
+An equation-level audit of Sawin's short-interval geometry likewise rejects a
+naive half-parameter recursion.  His characteristic-two logarithmic derivative
+only bounds the image of the bad locus at infinity, while the generic smoothing
+used for the vanishing-cycle theorem is not `S_n`-equivariant.  The resulting
+ordinary cohomological support bound therefore cannot be projected onto the
+long-cycle virtual character.  A Sawin route now requires an equivariant
+smoothing, a direct Frobenius--long-cycle trace theorem, or a recursive complex
+with checked stalk multiplicities; the fixed-point identity alone is the
+original Mangoldt population and is circular as an estimate.
 The multi-minute endpoint sweep is now an explicit ignored,
 environment-selected research probe; the ordinary theorem gate keeps the
 bounded `ell<=7` controls.  Three exact-commit fleet probes extend both the
@@ -328,6 +340,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `9e3cb37a4` | Audited Sawin's characteristic-two singular-support argument, rejected every elementary-abelian Fomenko small-kernel variant, and required genuinely equivariant or higher-Witt input. |
 | 2026-08-19 | `1b4f3503f` | Audited Ito--Takeuchi--Tsushima at equation level and required a checked linearized quadratic reduction or new mixed associative cocycle before importing its characteristic-two Heisenberg nondegeneracy. |
 | 2026-08-19 | `f01dfe8e0` | Extended both exact endpoint cumulant and local Witt-cylinder concentration diagnostics through `ell=23`, retaining exact ratios, fleet resource provenance, and the non-credit theorem boundary. |
 | 2026-08-19 | `540c4d41f` | Retained pairwise second-trace quadratic forms inside simultaneous buckets and refuted the raw high-rank Kerdock model with exact rank-zero/rank-two Gauss witnesses. |
