@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `6d6e1a7d8` | Added deterministic and hierarchical binary extension-trace sharding, exact Frobenius-orbit compression and Hankel minors, and used the complete `A_7(9,4)` trace to exclude every recurrence of order at most three without claiming endpoint proof credit. |
 | 2026-08-19 | `1705eb688` | Proved Gao's binary Hayes L-degree distribution from exact conductors and quantified why its aggregate degree retains the fatal endpoint factor. |
 | 2026-08-19 | `0db0c7ffd` | Added bounded native fixed-degree traces over binary extension fields, separating genuine Frobenius-power long-cycle diagnostics from the base-field Hayes population. |
 | 2026-08-19 | `9e3cb37a4` | Audited Sawin's characteristic-two singular-support argument, rejected every elementary-abelian Fomenko small-kernel variant, and required genuinely equivariant or higher-Witt input. |
@@ -385,7 +386,7 @@ cannot instantiate, which is why all three multi-goal probes decline; widening
 `hypotheses` to carry a universal it cannot instantiate as an assumption rather
 than dropping the goal would reach them. Neither is a soundness item.
 
-**WIP** (`gf2-lemire`, 2026-08-19).  The non-strict statement is independently
+**WIP** (`gf2-lemire`, 2026-08-20).  The non-strict statement is independently
 checked through degree 400.  Bounded native CAS operations now cover Hayes
 populations, moments/conductor filtration, and exact prime-power inversion.
 At odd endpoints they certify `N_(2ell+1)(1)=1+(2ell+1)I_(2ell+1)(1)`; hence
@@ -727,6 +728,17 @@ classification through level six.  This closes the source's conjectural
 degree-distribution pattern but also proves that the refined characterwise
 Weil ledger retains the fatal linear factor.  It does not move the connected
 top-trace obligation or grant Lemire theorem credit.
+The fixed-degree long-cycle diagnostic now has deterministic JSON sharding,
+exact coefficientwise-Frobenius orbit compression, a fail-closed hierarchical
+collapse, and native exact Hankel minors.  A 640-child fleet run computes
+`A_7(9,4)=-2,479,675` over the complete `128^5` interval.  Together with the
+six lower traces, its nonzero `4 x 4` Hankel determinant rigorously excludes
+every recurrence of order at most three for this finite row.  This closes the
+tiny-zeta shortcut negatively; it does not bound recurrence order uniformly
+or move the endpoint proof frontier.  Characteristic-zero smooth-projective
+and real semi-algebraic symmetric-cohomology bounds are explicitly rejected
+as substitutes for the missing characteristic-two compact-support hook
+theorem.
 The multi-minute endpoint sweep is now an explicit ignored,
 environment-selected research probe; the ordinary theorem gate keeps the
 bounded `ell<=7` controls.  Three exact-commit fleet probes extend both the
