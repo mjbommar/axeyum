@@ -483,6 +483,12 @@ all-level lemma, not merely under-budgeted.  This does not refute a new theorem
 proved only for `ell>=200`.  The active geometric task is now to identify the
 surviving top-weight stratum for general `ell` and determine whether another
 endpoint-relevant cancellation removes it before any Betti estimate is used.
+The connected extension-field operation now has deterministic JSON shards and
+an exact class-vector merge.  Missing, duplicate, noncontiguous,
+parameter-mutated, truncated, and total-mutated inputs fail closed; the merged
+Mangoldt population must equal `q^n` before moments are formed.  The CLI
+roundtrip reproduces the direct level-two trace exactly.  This enables larger
+fleet stopping rows but does not promote any finite row to theorem evidence.
 The standard Q-transform constructive fallback is now closed completely, not
 only for its published iteration hypotheses.  Self-reciprocity forces every
 half-shaped irreducible Q-output to be `x^(2n)+x^n+1`, whose unique source is
@@ -518,6 +524,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `6b064750d` | Added deterministic connected extension-field class-vector shards, fail-closed exact merge, CLI JSON workflows, and mutation-tested equality with direct connected Adams traces. |
 | 2026-08-20 | `4d162d984` | Classified every binary projective repair of odd-degree Artin--Schreier doubling, reducing it to an impossible translation case, an explicitly reducible transvection case, or the existing cyclotomic/Q candidate. |
 | 2026-08-20 | `ac41b35d0` | Added the exact connected high-frequency L2/Cauchy ledger and showed that structural-support Cauchy still requires savings 1425/1483 on pinned endpoint rows. |
 | 2026-08-20 | `dfc581025` | Embedded the coarse inverse-additive spectrum into the fine domain, proved every inflated coarse frequency cancels in the connected projector, and exposed the exact surviving high-frequency Möbius sum. |
