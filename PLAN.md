@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `b01ac7cd6` | Classified every shape-preserving polynomial composition, added certified tower search, and refuted the proposed degree `8 -> 64 -> 512` chain by exhaustive degree-eight controls. |
 | 2026-08-20 | `dd6dcd94a` | Corrected the weak fourth-moment target to retain proper-power subtraction, rejected the proposed KLLM/Efron shortcut at theorem and finite-scaling levels, and generalized Capell to every odd monomial power with 371/174 independently reproduced finite seeds. |
 | 2026-08-20 | `833806e24` | Expanded exact dyadic fibre `L^2`, proved the inverse-difference parallelogram criterion `h*t*(t+h)=0`, and reduced the conjectural nonpositive defect to a restricted four-shift Mobius correlation without granting endpoint credit. |
 | 2026-08-20 | `9a49f2023` | Inserted Wan--Zhang's sharper complete-intersection Betti theorem into the exact Foulkes endpoint ledger and quantified its remaining 6,800-bit miss, isolating cyclic-eigenspace cancellation rather than generic total cohomology as the needed theorem. |
@@ -1086,9 +1087,17 @@ At a 20,000,000-prime cutoff, native and independent bit-polynomial audits
 agree on 371 eligible committed seeds, including 174 odd degrees, and every
 eligible seed generates a proved infinite ray.  This corrects the old claim
 that monomial constructions omit all odd degrees, but the union is still not
-an all-degree proof.  The next bounded constructive task is the classified
-power-of-two non-monomial composition window; the analytic obligation remains
-the proper-power-aware weak fourth moment.
+an all-degree proof.  The power-of-two non-monomial composition window is now
+classified exactly: for `sigma=x^k+t` and a shaped source of degree `n`, the
+largest proper degree of `sigma^n` is
+`kn-(k-deg(t))*2^v2(n)`.  Hence a nonmonomial substitution can preserve shape
+only when the source degree is a power of two and the substitution is itself
+shaped.  Exhausting every shaped irreducible degree-eight source and every
+nonmonomial shaped degree-eight substitution finds four certified degree-64
+images but no degree-512 continuation.  This refutes the proposed
+`8 -> 64 -> 512` chain: the separately observed finite hits do not form an
+inductive family.  The analytic obligation remains the proper-power-aware
+weak fourth moment.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
