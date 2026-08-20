@@ -575,6 +575,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `35b4c6ad2` | Pinned the exact degree-five separation between zero unweighted non-top Euler trace and nonzero binary Frobenius error `-2`, preventing the cone identity from receiving endpoint credit. |
 | 2026-08-20 | `ada2c4542` | Closed the purely wild power-of-two Euler row by the homogeneous-cone decomposition and exposed the surviving projective Frobenius--long-cycle trace with exact factor `2^r-1`. |
 | 2026-08-20 | `1c517c87f` | Localized the long-cycle Euler trace by its tame/wild decomposition, proving exact non-top cancellation away from power-of-two degrees while retaining the Frobenius-weighted trace as unproved. |
 | 2026-08-20 | `18062735c` | Certified the Frobenius-square parity decomposition, its exact squarefreeness criterion, and the failure of the naive irreducibility induction without granting finite complement searches theorem credit. |
