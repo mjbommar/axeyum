@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-conductor-layer-delocalization",
+  "title": "Square-root delocalization of binary Hayes conductor layers",
+  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, put D_e=N_n(e)-2^(n-ell), and let D_[j]=P_j D-P_(j-1)D be its exact-conductor martingale layer. For every 4<=j<=ell and every class e, |D_[j](e)|^2 is at most 4 (j-1)^2 2^(j-1+n-2ell).",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"max_e |D_[j](e)|^2 <= 4*(j-1)^2*2^(j-1+n-2*ell)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-conductor-layer-delocalization\",\"level_min\":200,\"level_range\":\"4<=j<=ell\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "ell",
+      "n",
+      "j",
+      "e"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; exact conductor martingale reduction and endpoint implication"
+  },
+  "notes": "This is the open SUP-L statement, not a promoted finite computation. The individual character Weil bound proves the same inequality for j<=3, so the machine-visible obligation begins at j=4. Exact bounded rows through ell=20 require squared constant at most four, but those rows are falsification controls only. The native implication derives M_4 <= 2500 ell^4 2^(3ell) and checks the proper-power-aware finite handoff at degrees 401 and 402. A more general C ell^a loss is also sufficient for fixed C,a. No Autogenesis operation is registered because no checker establishes the quantified estimate."
+}

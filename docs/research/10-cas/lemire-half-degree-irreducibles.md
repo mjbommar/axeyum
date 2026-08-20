@@ -3317,6 +3317,71 @@ optimization: at `ell=200`, only the nine levels `192<=j<=200` require (RF).
 Thus (RF) is needed only in a logarithmic top-conductor window, not across the
 whole filtration.
 
+There is now a sharper conductor-martingale reduction.  Put
+
+```text
+D_[j]=P_jD-P_(j-1)D.
+```
+
+These layers are pairwise orthogonal, and the proved exact-conductor second
+moment is
+
+```text
+||D_[j]||_2^2 <= 2^(n-ell+j-1)(j-1)^2.                (CL2)
+```
+
+For a level-`j-1` Witt cylinder `b`, let `H_j(b)` be its two child population
+difference.  Exact Haar inversion gives
+
+```text
+D_[j](e)=sign_j(e) H_j(parent_j(e))/2^(ell-j+1).
+```
+
+Consequently the whole fourth-moment argument reduces to the single
+delocalization estimate
+
+```text
+max_e |D_[j](e)|^2
+ <= C ell^a (j-1)^2 2^(j-1+n-2ell).                  (SUP-L)
+```
+
+Here `C,a` may be any fixed constants.  Interpolating `(SUP-L)` with (CL2),
+summing the resulting `L4` norms by Minkowski, and using
+`sum_(r<ell) r 2^(r/2)<(5/2)ell 2^(ell/2)` gives
+
+```text
+M_4 <= 625 C ell^(a+4) 2^(3ell).                     (CL4)
+```
+
+The proper-power-aware endpoint checker verifies that every fixed
+polynomial-loss bound (CL4) eventually closes.  Its concrete `C=4,a=0`
+instance gives `M_4<=2500 ell^4 2^(3ell)` and completes the certified
+degree-400 handoff at degrees 401 and 402.
+
+The first two nonzero levels are partly settled already.  Applying the
+individual Weil estimate inside the exact Fourier identity (HF) proves
+`(SUP-L)` with squared constant `2^(j-1)`.  Therefore `C=4` is unconditional
+for `j=2,3`; the new theorem starts at `j=4`.  This is small but genuine
+progress on the universal quantifier, rather than another finite row.
+
+`conductor_layer_sup_norm_diagnostic` records the exact rational squared
+constant required at each enumerated level, using only integer sibling
+differences.  `check_conductor_layer_sup_bound_sufficiency` separately checks
+the symbolic implication and reports the unconditional Weil prefix.  The
+finite diagnostic supports `C=4` through the tested endpoints up to `ell=20`,
+but it is explicitly non-credit-bearing.  The exact conductor energy also
+telescopes multiplicatively as
+
+```text
+2^ell M_4/M_2^2 = product_(j=1)^ell (1+q_j),
+0<=q_j<=1,
+```
+
+which is retained as an invariant rather than mistaken for a bound.  The
+remaining load-bearing lemma is `(SUP-L)` for `j>=4`, most plausibly as a
+relative trace/purity statement for one exact conductor family.  See
+ADR-0568.
+
 There is a weaker and better-connected target.  Lemire needs only the identity
 class, and along its path the weighted increments telescope.  Put
 

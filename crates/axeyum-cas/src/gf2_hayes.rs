@@ -2753,6 +2753,64 @@ pub struct SquareRootLayerBoundReport {
     pub first_even_degree: usize,
 }
 
+/// A polynomial-loss square-root sup bound on every conductor martingale layer.
+///
+/// For `D_[j]=P_j D-P_(j-1)D`, the mathematical assumption is
+///
+/// ```text
+/// max_e |D_[j](e)|^2
+///   <= C ell^a (j-1)^2 2^(j-1+n-2ell),       2 <= j <= ell,
+/// ```
+///
+/// at both Lemire endpoint degrees.  The constant is stored as the integer
+/// `C`; a rational constant would add no proof power because a larger integer
+/// ceiling can always be used.  This is an unproved arithmetic hypothesis,
+/// not a consequence of the exact finite diagnostic below.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConductorLayerSupBoundAssumption {
+    /// Integer constant `C` in the squared layer bound.
+    pub squared_constant: usize,
+    /// Polynomial loss exponent `a`.
+    pub polynomial_power: usize,
+    /// First `ell` at which the bound is assumed.
+    pub threshold: usize,
+    /// Largest degree covered by separate finite certificates.
+    pub finite_max_degree: usize,
+}
+
+impl Default for ConductorLayerSupBoundAssumption {
+    fn default() -> Self {
+        Self {
+            squared_constant: 4,
+            polynomial_power: 0,
+            threshold: 200,
+            finite_max_degree: 400,
+        }
+    }
+}
+
+/// Checked implication from conductor-layer delocalization to endpoint
+/// irreducible positivity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConductorLayerSupBoundReport {
+    /// Assumption checked by the arithmetic route.
+    pub assumption: ConductorLayerSupBoundAssumption,
+    /// Coarse integer constant in
+    /// `M_4 <= constant ell^power 2^(3ell)`.
+    pub derived_fourth_moment_constant: usize,
+    /// Polynomial power in the derived fourth-moment envelope.
+    pub derived_fourth_moment_power: usize,
+    /// Last conductor level already supplied by the individual Weil bound.
+    ///
+    /// Indeed the triangle estimate is the requested layer estimate with
+    /// squared constant `2^(j-1)`.  Thus every level satisfying
+    /// `2^(j-1)<=C` is unconditional; for the default `C=4`, only levels
+    /// `j>=4` remain part of the new delocalization obligation.
+    pub individual_weil_proved_through_level: usize,
+    /// Existing exact endpoint implication fed by the derived envelope.
+    pub derived_fourth_moment: FourthMomentBoundReport,
+}
+
 /// Exact Fourier second moment for one conductor family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExactConductorSecondMoment {
@@ -4851,6 +4909,48 @@ pub struct FourthMomentConductorDecomposition {
     pub levels: Vec<SquaredDeviationConductorLevel>,
 }
 
+/// One exact factor in the conductor martingale product for root kurtosis.
+///
+/// With `C_j` the cumulative Fourier energy of `D^2`, the factor is
+/// `C_j/C_(j-1)=1+q_j`, where `q_j=E_j/C_(j-1)` and `0<=q_j<=1`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConductorKurtosisFactor {
+    /// Exact conductor level `j`.
+    pub level: usize,
+    /// Numerator `C_j` of `1+q_j`.
+    pub factor_numerator: BigUint,
+    /// Denominator `C_(j-1)` of `1+q_j`.
+    pub factor_denominator: BigUint,
+    /// Numerator `E_j=C_j-C_(j-1)` of `q_j`.
+    pub imbalance_numerator: BigUint,
+    /// Denominator `C_(j-1)` of `q_j`.
+    pub imbalance_denominator: BigUint,
+}
+
+/// Exact multiplicative conductor decomposition of root kurtosis.
+///
+/// The factors telescope to
+///
+/// ```text
+/// product_(j=1)^ell (1+q_j) = 2^ell M_4 / M_2^2.
+/// ```
+///
+/// This is an identity and an exact finite diagnostic.  It does not bound any
+/// `q_j` uniformly.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConductorKurtosisProductReport {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree.
+    pub degree: usize,
+    /// Exact conductor factors in increasing order.
+    pub factors: Vec<ConductorKurtosisFactor>,
+    /// Numerator `2^ell M_4` of the root ratio.
+    pub root_ratio_numerator: BigUint,
+    /// Denominator `M_2^2` of the root ratio.
+    pub root_ratio_denominator: BigUint,
+}
+
 /// Largest raw population imbalance across one binary Witt refinement.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PopulationRefinementLevel {
@@ -4897,6 +4997,63 @@ pub struct PopulationRefinementTriangleReport {
     pub connected_top_signed_numerator: BigInt,
     /// Candidate connected bound `2^(2ell-2)`.
     pub connected_top_candidate_numerator: BigUint,
+}
+
+/// Exact finite normalization of one conductor-layer sup norm.
+///
+/// If `H_j(b)` is the level-`j` sibling population difference, then
+/// `D_[j](e)=sign_j(e)H_j(b)/2^(ell-j+1)`.  Consequently the squared
+/// constant required by the no-polynomial-loss conductor bound is exactly
+///
+/// ```text
+/// max_b |H_j(b)|^2 2^(j-1) / ((j-1)^2 2^n).
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConductorLayerSupNormLevel {
+    /// Exact conductor level `j`.
+    pub level: usize,
+    /// Parent cylinder attaining the maximum sibling difference.
+    pub witness_parent: usize,
+    /// Exact maximum `max_b |H_j(b)|`.
+    pub maximum_sibling_difference: u128,
+    /// Numerator of the exact required squared constant.
+    pub squared_constant_numerator: BigUint,
+    /// Denominator of the exact required squared constant.
+    pub squared_constant_denominator: BigUint,
+}
+
+/// Bounded exact diagnostic for the conductor-layer square-root constant.
+///
+/// This report measures finite rows only.  Its maximum ratio is suitable for
+/// falsification and regression testing, but never certifies the uniform
+/// assumption used by [`check_conductor_layer_sup_bound_sufficiency`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConductorLayerSupNormDiagnostic {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree.
+    pub degree: usize,
+    /// Exact levels `2..=ell`.
+    pub levels: Vec<ConductorLayerSupNormLevel>,
+    /// Level attaining the largest exact ratio.
+    pub witness_level: usize,
+    /// Numerator of that largest ratio.
+    pub maximum_squared_constant_numerator: BigUint,
+    /// Denominator of that largest ratio.
+    pub maximum_squared_constant_denominator: BigUint,
+}
+
+impl ConductorLayerSupNormDiagnostic {
+    /// Test a finite row against an integer squared-constant ceiling.
+    ///
+    /// This is deliberately labelled as a diagnostic: success on a bounded
+    /// row does not establish a uniform theorem.
+    #[must_use]
+    pub fn satisfies_squared_constant(&self, squared_constant: usize) -> bool {
+        squared_constant > 0
+            && self.maximum_squared_constant_numerator
+                <= BigUint::from(squared_constant) * &self.maximum_squared_constant_denominator
+    }
 }
 
 /// Symbolic endpoint implication of the proposed square-root-fibre envelope.
@@ -5313,6 +5470,71 @@ pub fn carlitz_connected_top_geometry(
 }
 
 impl FourthMomentConductorDecomposition {
+    /// Expose the exact conductor martingale product for root kurtosis.
+    ///
+    /// Each binary refinement splits a nonnegative parent mass into `u,v`, so
+    /// `C_(j-1)<=C_j<=2C_(j-1)`.  The returned factors record the equivalent
+    /// exact identity `C_j/C_(j-1)=1+E_j/C_(j-1)` and fail closed if either
+    /// inequality or the endpoint telescope is violated.
+    ///
+    /// # Errors
+    ///
+    /// Returns an invariant error for an empty/zero-energy decomposition, a
+    /// broken conductor chain, a factor outside `[1,2]`, or a failed endpoint
+    /// reconstruction.
+    pub fn kurtosis_product(&self) -> Result<ConductorKurtosisProductReport, HayesError> {
+        let mut previous = self.second_moment.pow(2);
+        if previous == BigUint::from(0_u8) {
+            return Err(HayesError::Invariant(
+                "conductor kurtosis product has zero second moment".to_owned(),
+            ));
+        }
+        let mut factors = Vec::with_capacity(self.levels.len());
+        for row in &self.levels {
+            if row.cumulative_fourier_energy != &previous + &row.exact_fourier_energy {
+                return Err(HayesError::Invariant(format!(
+                    "conductor kurtosis chain breaks at level {}",
+                    row.level
+                )));
+            }
+            if row.cumulative_fourier_energy > (&previous << 1_usize) {
+                return Err(HayesError::Invariant(format!(
+                    "conductor kurtosis factor exceeds two at level {}",
+                    row.level
+                )));
+            }
+            factors.push(ConductorKurtosisFactor {
+                level: row.level,
+                factor_numerator: row.cumulative_fourier_energy.clone(),
+                factor_denominator: previous.clone(),
+                imbalance_numerator: row.exact_fourier_energy.clone(),
+                imbalance_denominator: previous.clone(),
+            });
+            previous.clone_from(&row.cumulative_fourier_energy);
+        }
+        if factors.len() != self.ell {
+            return Err(HayesError::Invariant(format!(
+                "conductor kurtosis product has {} factors, expected {}",
+                factors.len(),
+                self.ell
+            )));
+        }
+        let root_ratio_numerator = (BigUint::from(1_u8) << self.ell) * &self.fourth_moment;
+        let root_ratio_denominator = self.second_moment.pow(2);
+        if previous != root_ratio_numerator {
+            return Err(HayesError::Invariant(
+                "conductor kurtosis product misses the fourth-moment endpoint".to_owned(),
+            ));
+        }
+        Ok(ConductorKurtosisProductReport {
+            ell: self.ell,
+            degree: self.degree,
+            factors,
+            root_ratio_numerator,
+            root_ratio_denominator,
+        })
+    }
+
     /// Test the buffered geometric conductor estimate implying `R_0<=4`.
     ///
     /// Put `h=ceil(ell/2)`.  The finite diagnostic checks
@@ -6137,6 +6359,69 @@ impl ClassPopulationDistribution {
             connected_top_first_level,
             connected_top_signed_numerator,
             connected_top_candidate_numerator: BigUint::from(1_u8) << (2 * self.ell - 2),
+        })
+    }
+
+    /// Normalize the exact refinement sup norms at the square-root scale.
+    ///
+    /// The method reuses [`Self::population_refinement_triangle`], then checks
+    /// the level-one consequence of the degree-zero conductor family and
+    /// returns the exact rational constant required at every remaining level.
+    /// It performs no floating-point arithmetic and makes no extrapolation
+    /// from the admitted finite distribution.
+    ///
+    /// # Errors
+    ///
+    /// Propagates the refinement report's typed declines and fails closed if
+    /// the level-one sibling difference is nonzero or the report is empty.
+    pub fn conductor_layer_sup_norm_diagnostic(
+        &self,
+        max_projection_cells: usize,
+    ) -> Result<ConductorLayerSupNormDiagnostic, HayesError> {
+        let refinement = self.population_refinement_triangle(max_projection_cells)?;
+        let first = refinement.levels.first().ok_or_else(|| {
+            HayesError::Invariant("conductor sup diagnostic has no levels".to_owned())
+        })?;
+        if first.level != 1 || first.maximum_sibling_difference != 0 {
+            return Err(HayesError::Invariant(
+                "exact conductor level one must have zero population difference".to_owned(),
+            ));
+        }
+
+        let mut levels = Vec::with_capacity(refinement.levels.len().saturating_sub(1));
+        let mut witness_level = 0_usize;
+        let mut maximum_numerator = BigUint::from(0_u8);
+        let mut maximum_denominator = BigUint::from(1_u8);
+        for row in refinement.levels.iter().skip(1) {
+            let level_minus_one = row.level - 1;
+            let difference = BigUint::from(row.maximum_sibling_difference);
+            let numerator = difference.pow(2) << level_minus_one;
+            let denominator = BigUint::from(level_minus_one).pow(2) << self.degree;
+            if &numerator * &maximum_denominator > &maximum_numerator * &denominator {
+                witness_level = row.level;
+                maximum_numerator.clone_from(&numerator);
+                maximum_denominator.clone_from(&denominator);
+            }
+            levels.push(ConductorLayerSupNormLevel {
+                level: row.level,
+                witness_parent: row.witness_parent,
+                maximum_sibling_difference: row.maximum_sibling_difference,
+                squared_constant_numerator: numerator,
+                squared_constant_denominator: denominator,
+            });
+        }
+        if levels.is_empty() {
+            return Err(HayesError::InvalidParameter(
+                "conductor sup diagnostic requires ell at least two".to_owned(),
+            ));
+        }
+        Ok(ConductorLayerSupNormDiagnostic {
+            ell: self.ell,
+            degree: self.degree,
+            levels,
+            witness_level,
+            maximum_squared_constant_numerator: maximum_numerator,
+            maximum_squared_constant_denominator: maximum_denominator,
         })
     }
 
@@ -10165,6 +10450,83 @@ pub fn check_square_root_layer_bound_sufficiency(
         assumption,
         first_odd_degree: twice_threshold + 1,
         first_even_degree: twice_threshold + 2,
+    })
+}
+
+/// Check that polynomial-loss conductor-layer delocalization finishes Lemire.
+///
+/// The proved exact-conductor second moment is
+///
+/// ```text
+/// ||D_[j]||_2^2 <= 2^(n-ell+j-1) (j-1)^2.
+/// ```
+///
+/// Combining it with the assumed sup bound and
+/// `||f||_4 <= ||f||_infinity^(1/2)||f||_2^(1/2)` gives
+///
+/// ```text
+/// ||D_[j]||_4
+///   <= C^(1/4) ell^(a/4) (j-1) 2^((j-1)/2+n/2-3ell/4).
+/// ```
+///
+/// Minkowski and
+/// `sum_(r<ell) r 2^(r/2) < (5/2) ell 2^(ell/2)` then give, for both endpoint
+/// parities,
+///
+/// ```text
+/// M_4 <= 625 C ell^(a+4) 2^(3ell).
+/// ```
+///
+/// The factor `625` uses only the rational inequality `1+sqrt(2)<5/2`;
+/// no floating-point or asymptotic comparison enters the checker.  The
+/// resulting envelope is passed to the existing proper-power-aware endpoint
+/// implication.  This function proves the implication only, not the assumed
+/// conductor-layer estimate.
+///
+/// # Errors
+///
+/// Rejects a zero constant or exponent/constant overflow, and propagates any
+/// finite-handoff or exact endpoint failure from the fourth-moment checker.
+pub fn check_conductor_layer_sup_bound_sufficiency(
+    assumption: ConductorLayerSupBoundAssumption,
+) -> Result<ConductorLayerSupBoundReport, HayesError> {
+    if assumption.squared_constant == 0 {
+        return Err(HayesError::InvalidParameter(
+            "conductor-layer squared constant must be positive".to_owned(),
+        ));
+    }
+    let derived_fourth_moment_constant =
+        assumption
+            .squared_constant
+            .checked_mul(625)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "conductor-layer fourth-moment constant overflow".to_owned(),
+                )
+            })?;
+    let derived_fourth_moment_power =
+        assumption.polynomial_power.checked_add(4).ok_or_else(|| {
+            HayesError::InvalidParameter("conductor-layer fourth-moment power overflow".to_owned())
+        })?;
+    let derived_fourth_moment =
+        check_fourth_moment_bound_sufficiency(FourthMomentBoundAssumption {
+            constant: derived_fourth_moment_constant,
+            power: derived_fourth_moment_power,
+            threshold: assumption.threshold,
+            finite_max_degree: assumption.finite_max_degree,
+        })?;
+    let individual_weil_proved_through_level = usize::try_from(
+        usize::BITS - assumption.squared_constant.leading_zeros(),
+    )
+    .map_err(|_| {
+        HayesError::InvalidParameter("conductor-layer Weil prefix does not fit usize".to_owned())
+    })?;
+    Ok(ConductorLayerSupBoundReport {
+        assumption,
+        derived_fourth_moment_constant,
+        derived_fourth_moment_power,
+        individual_weil_proved_through_level,
+        derived_fourth_moment,
     })
 }
 
@@ -20154,6 +20516,31 @@ mod tests {
                 + decomposition.second_moment.pow(2),
             (BigUint::from(1_u8) << 8) * &decomposition.fourth_moment
         );
+        let product = decomposition.kurtosis_product().unwrap();
+        assert_eq!(product.factors.len(), 8);
+        assert_eq!(
+            product.root_ratio_denominator,
+            decomposition.second_moment.pow(2)
+        );
+        assert_eq!(
+            product.root_ratio_numerator,
+            (BigUint::from(1_u8) << 8) * &decomposition.fourth_moment
+        );
+        for (index, factor) in product.factors.iter().enumerate() {
+            assert_eq!(factor.level, index + 1);
+            assert_eq!(
+                &factor.factor_denominator + &factor.imbalance_numerator,
+                factor.factor_numerator
+            );
+            assert_eq!(factor.imbalance_denominator, factor.factor_denominator);
+            assert!(factor.factor_numerator <= (&factor.factor_denominator << 1_usize));
+            if index > 0 {
+                assert_eq!(
+                    factor.factor_denominator,
+                    product.factors[index - 1].factor_numerator
+                );
+            }
+        }
         assert!(!decomposition.satisfies_connected_geometric_split());
 
         let positive_distribution =
@@ -20201,6 +20588,70 @@ mod tests {
                 requested: 8 * 256,
                 limit: 8 * 256 - 1,
             })
+        );
+    }
+
+    #[test]
+    fn conductor_layer_sup_norm_is_exact_and_non_credit_bearing() {
+        for degree in [17, 18] {
+            let distribution =
+                class_population_distribution(8, degree, HayesLimits::default()).unwrap();
+            let report = distribution
+                .conductor_layer_sup_norm_diagnostic(2 * 8 * 256)
+                .unwrap();
+            assert_eq!(report.ell, 8);
+            assert_eq!(report.degree, degree);
+            assert_eq!(report.levels.len(), 7);
+            assert!((2..=8).eq(report.levels.iter().map(|level| level.level)));
+            assert!(report.satisfies_squared_constant(4));
+            assert!(!report.satisfies_squared_constant(0));
+            let witness = report
+                .levels
+                .iter()
+                .find(|level| level.level == report.witness_level)
+                .unwrap();
+            assert_eq!(
+                &witness.squared_constant_numerator * &report.maximum_squared_constant_denominator,
+                &report.maximum_squared_constant_numerator * &witness.squared_constant_denominator
+            );
+            for level in &report.levels {
+                assert_eq!(
+                    level.squared_constant_numerator,
+                    (BigUint::from(level.maximum_sibling_difference).pow(2) << (level.level - 1))
+                );
+                assert_eq!(
+                    level.squared_constant_denominator,
+                    BigUint::from(level.level - 1).pow(2) << degree
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn conductor_layer_sup_bound_implication_is_exact() {
+        let report = check_conductor_layer_sup_bound_sufficiency(
+            ConductorLayerSupBoundAssumption::default(),
+        )
+        .unwrap();
+        assert_eq!(report.derived_fourth_moment_constant, 2_500);
+        assert_eq!(report.derived_fourth_moment_power, 4);
+        assert_eq!(report.individual_weil_proved_through_level, 3);
+        assert_eq!(report.derived_fourth_moment.first_odd_degree, 401);
+        assert_eq!(report.derived_fourth_moment.first_even_degree, 402);
+
+        assert!(
+            check_conductor_layer_sup_bound_sufficiency(ConductorLayerSupBoundAssumption {
+                squared_constant: 0,
+                ..ConductorLayerSupBoundAssumption::default()
+            })
+            .is_err()
+        );
+        assert!(
+            check_conductor_layer_sup_bound_sufficiency(ConductorLayerSupBoundAssumption {
+                threshold: 20,
+                ..ConductorLayerSupBoundAssumption::default()
+            })
+            .is_err()
         );
     }
 
