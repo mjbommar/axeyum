@@ -1592,6 +1592,20 @@ are not a bounded-class high-rank Kerdock/Delsarte--Goethals family.  A useful
 Arf lift would still have to aggregate and cancel the growing low-rank sectors,
 which is the same connected arithmetic problem rather than a rank shortcut.
 
+The proposed Ito--Takeuchi--Tsushima bridge now has an equation-level
+admission test as well.  Their characteristic-two Heisenberg group starts
+with a linearized polynomial `R` and the quadratic Artin--Schreier phase
+`xR(x)`; the cocycle `f_R` is defined by an explicit coboundary identity before
+its commutator is proved symplectic.  Its length-two Witt maximal abelian
+subgroup does not quadratize an arbitrary modulo-eight phase.  The degree-seven
+raw fibres, zero generalized-bent count, rank-zero second-trace differences,
+and mod-four projection obstruction therefore rule out a direct application.
+A future use must first reduce the **complete connected sum** to linearized
+quadratic summands, or construct and verify a genuinely new mixed-domain
+associative cocycle.  This source audit prevents importing nondegeneracy as the
+very statement still to be proved; it does not reject a later aggregate
+cohomological decomposition (ADR-0525).
+
 The principal-unit coordinates are now explicit as well.  For every odd
 `m<=ell`, the generator `1+x^m` has order `2^L`, where `L` is the number of
 slots `m,2m,4m,...<=ell`, and
