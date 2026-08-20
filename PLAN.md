@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `32746e3f4` | Decomposed the connected top-conductor trace exactly by Möbius order and proved on pinned endpoint rows that low orders survive, requiring signed cross-order cancellation. |
 | 2026-08-20 | `c949b166f` | Classified every half-shaped standard characteristic-two Q-transform via self-reciprocity and Dickson invariants, proving the certified cubic-to-sextic pair is the sole irreducible exception. |
 | 2026-08-20 | `0cbcafe68` | Derived the exact `(ell,n)=(2,5)` connected trace polynomial from the characteristic-two trace/subtrace formula and proved its normalized q-degree exceeds the proposed universal cohomology cutoff by one. |
 | 2026-08-20 | `ff09b9baa` | Added exact connected Adams traces over binary extension fields, cross-checked the base field, and used the exhaustive `(ell,n,r)=(2,5,5)` row to refute the universal `ell^4` Betti budget while retaining the separate cutoff question. |
@@ -884,6 +885,13 @@ half-shaped irreducible Q-output to be `x^(2n)+x^n+1`, whose unique source is
 `x^3+x+1 -> x^6+x^3+1` is the sole exceptional shaped irreducible pair.  A
 constructive completion therefore needs a genuinely different degree-changing
 transform rather than another choice of standard Q-source.
+The connected top-conductor projector is now decomposed exactly by Möbius
+convolution order before absolute values.  At `ell=8`, order one survives at
+both endpoint parities; all seven orders survive in the odd row and six in the
+even row.  Thus the projector creates no high-order support cutoff.  Any
+endpoint proof must retain the signed cancellation across convolution orders
+as well as conductors; the bounded report reconstructs the selected trace but
+grants no asymptotic theorem credit.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
