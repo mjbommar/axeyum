@@ -127,6 +127,28 @@ const QUERIES: &[(&str, &str)] = &[
          (assert (= (+ (* x x x) x 1) 0))\n\
          (check-sat)",
     ),
+    // QF_NRA monomial divisibility. Unlike the QF_NIA rows above, these two
+    // shapes are taken verbatim from committed corpus files
+    // (`cli__regress1__nl__zero-subset`, `cli__regress0__nl__subs0-unsat-confirm`),
+    // which shipped as bare `Evidence::Unsat(None)` until 2026-08-20.
+    (
+        "nra_zero_product_divides",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)(declare-fun c () Real)\n\
+         (declare-fun d () Real)(declare-fun e () Real)\n\
+         (assert (= (* a b c d) 0))\n\
+         (assert (not (= (* a b c d e) 0)))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_zero_product_case_split",
+        "(set-logic QF_NRA)\n\
+         (declare-fun v1 () Real)(declare-fun v2 () Real)(declare-fun v3 () Real)\n\
+         (declare-fun v4 () Real)(declare-fun v5 () Real)\n\
+         (assert (or (= v1 0) (= v2 0)))\n\
+         (assert (not (= (* v1 v2 v3 v4 v5) 0)))\n\
+         (check-sat)",
+    ),
     (
         "skolemised_existential",
         "(set-logic UF)\n\

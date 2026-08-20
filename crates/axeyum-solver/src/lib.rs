@@ -134,6 +134,7 @@ macro_rules! full_modules {
         mod nia_univariate_cert;
         mod nra;
         mod nra_even_power;
+        mod nra_zero_product_cert;
         mod nra_real_root;
         mod optimize;
         mod pb;
@@ -449,6 +450,10 @@ pub mod certificates {
         };
         pub use crate::nra_even_power::{
             NraEvenPowerRefutationCertificate, nra_even_power_refutation,
+        };
+        pub use crate::nra_zero_product_cert::{
+            RealZeroProductRefutationCertificate, check_real_zero_product_refutation,
+            real_zero_product_refutation,
         };
         pub use crate::nra_real_root::SosCertificate;
     }

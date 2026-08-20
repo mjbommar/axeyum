@@ -94,6 +94,7 @@ use crate::nia_square::IntQuadraticNegativeDiscriminantCertificate;
 use crate::nia_univariate_cert::IntUnivariateRefutationCertificate;
 use crate::nra_even_power::NraEvenPowerRefutationCertificate;
 use crate::nra_real_root::{self, SosCertificate};
+use crate::nra_zero_product_cert::RealZeroProductRefutationCertificate;
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof_within};
 use crate::quant_affine_growth_cert::IntAffineGrowthRefutationCertificate;
 use crate::quant_bv_alternation_cert::BvAlternationCounterexampleCertificate;
@@ -564,6 +565,14 @@ pub enum Evidence {
     /// re-scans the original assertions and re-matches the exact nonnegativity
     /// shape before accepting.
     UnsatNraEvenPower(NraEvenPowerRefutationCertificate),
+    /// Unsatisfiable (`QF_NRA`): a monomial asserted zero divides a monomial
+    /// asserted non-zero, so the second is zero too. Also covers the case-split
+    /// form, where a disjunction zeroes one variable per arm and **every** arm's
+    /// variable is a factor of the non-zero monomial.
+    ///
+    /// Factors are carried by SOURCE NAME, not `SymbolId`: ids are arena-local
+    /// and mean nothing against a fresh parse, which is what re-validation uses.
+    UnsatRealZeroProduct(RealZeroProductRefutationCertificate),
     /// Unsatisfiable (integer-equality systems): a self-checking "integer Farkas" /
     /// Diophantine refutation of an integer-infeasible system of equalities. The
     /// `certificate`'s independent re-checker [`check_diophantine_certificate`]
@@ -795,6 +804,7 @@ impl Evidence {
             }
             Evidence::UnsatIntUnivariatePoly(_) => "unsat-int-univariate-poly",
             Evidence::UnsatNraEvenPower(_) => "unsat-nra-even-power",
+            Evidence::UnsatRealZeroProduct(_) => "unsat-real-zero-product",
             Evidence::UnsatDiophantine { .. } => "unsat-diophantine",
             Evidence::UnsatBoundedIntBlast(_) => "unsat-bounded-int-blast",
             Evidence::UnsatFiniteDomainPigeonhole(_) => "unsat-finite-domain-pigeonhole",
@@ -1015,6 +1025,13 @@ impl Evidence {
                     certificate,
                 ))
             }
+            Evidence::UnsatRealZeroProduct(certificate) => Ok(
+                crate::nra_zero_product_cert::check_real_zero_product_refutation(
+                    arena,
+                    assertions,
+                    certificate,
+                ),
+            ),
             Evidence::UnsatDiophantine {
                 equalities,
                 certificate,
@@ -1178,6 +1195,7 @@ impl Evidence {
                 | Evidence::UnsatIntQuadraticNegativeDiscriminant(_)
                 | Evidence::UnsatIntUnivariatePoly(_)
                 | Evidence::UnsatNraEvenPower(_)
+                | Evidence::UnsatRealZeroProduct(_)
                 | Evidence::UnsatDiophantine { .. }
                 | Evidence::UnsatBoundedIntBlast(_)
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
@@ -2685,6 +2703,31 @@ pub fn produce_nra_even_power_evidence(
     }))
 }
 
+/// Produce source-bound evidence for a real monomial-divisibility refutation.
+pub fn produce_real_zero_product_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<EvidenceReport> {
+    let certificate =
+        crate::nra_zero_product_cert::real_zero_product_refutation(arena, assertions)?;
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatRealZeroProduct(certificate),
+        provenance: Provenance {
+            semantics_version: SEMANTICS_VERSION,
+            layers: LayerVersions::CURRENT,
+            backend: "nra-zero-product-certificate".to_owned(),
+            assertion_count: assertions.len(),
+            timeout: None,
+            resource_limit: None,
+            node_budget: None,
+            cnf_variable_budget: None,
+            cnf_clause_budget: None,
+            prove_unsat: true,
+        },
+        trusted_steps: Vec::new(),
+    })
+}
+
 /// Produce source-bound evidence for a single-variable integer polynomial
 /// equality refuted by a non-square discriminant, non-integral rational roots,
 /// or rational-root exhaustion.
@@ -2888,6 +2931,15 @@ pub fn produce_evidence(
                 return Ok(report);
             }
             if let Some(report) = produce_nra_even_power_evidence(arena, assertions)? {
+                return Ok(report);
+            }
+            // Monomial divisibility. Must sit here, INSIDE the `PureReal` arm and
+            // ahead of `produce_nra_evidence` below: that call returns a bare
+            // `unsat` for anything the NRA abstraction decides, so a hook placed
+            // after the `match` is unreachable for exactly the queries this
+            // certifies. Placed after the `match` first, and it never fired on
+            // the two corpus files it was written for.
+            if let Some(report) = produce_real_zero_product_evidence(arena, assertions) {
                 return Ok(report);
             }
             match produce_lra_dpll_evidence(arena, assertions, config) {
@@ -3995,6 +4047,7 @@ pub fn prove(
         | Evidence::UnsatIntQuadraticNegativeDiscriminant(_)
         | Evidence::UnsatIntUnivariatePoly(_)
         | Evidence::UnsatNraEvenPower(_)
+        | Evidence::UnsatRealZeroProduct(_)
         | Evidence::UnsatDiophantine { .. }
         | Evidence::UnsatBoundedIntBlast(_)
         | Evidence::UnsatFiniteDomainPigeonhole(_)

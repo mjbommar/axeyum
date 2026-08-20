@@ -965,7 +965,15 @@ pub const CAPABILITIES: &[Capability] = &[
                    SAT replay-checked (sign_at / exact field-arithmetic eval), every CAD \
                    UNSAT exhaustive-or-decline; differentially VALIDATED DISAGREE=0 vs Z3 \
                    over the NRA fuzz (which found+fixed real wrong-unsats); degree-2 SOS \
-                   UNSAT carries a kernel-checked Lean proof, general CAD UNSAT no proof yet",
+                   UNSAT carries a kernel-checked Lean proof, general CAD UNSAT no proof yet. \
+                   MONOMIAL-DIVISIBILITY UNSAT carries a source-bound certificate: a product \
+                   asserted zero (or a disjunction zeroing one variable per arm) whose factors \
+                   divide a product asserted non-zero. Factors are recorded by SOURCE NAME, \
+                   not arena-local ids, so the certificate re-validates against a fresh parse; \
+                   the checker re-scans the original assertions and re-establishes multiset \
+                   containment for EVERY arm, since a partially covered case split proves \
+                   nothing. Covers the committed corpus rows cli__regress1__nl__zero-subset \
+                   and cli__regress0__nl__subs0-unsat-confirm, which shipped as bare unsat",
         checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0024/0038/0039/0040/0044/0045/0046",
     },
