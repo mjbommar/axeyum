@@ -23,5 +23,5 @@
     "established_by": "not established in this ledger",
     "source": "Axeyum gf2-lemire lane; exact repricing of the population-refinement Haar triangle after the SUP-L refutation"
   },
-  "notes": "This is the selected open TOP-POLY statement. It is the proved individual-Weil estimate improved by only 12 ell/5 on the top 4 ceil(log2 ell)+1 levels. The native exact implication uses Weil below the window and sqrt(2)<3/2 at odd endpoints; it verifies without floating point that TOP-POLY closes the degree-400 handoff for both parities. The earlier conductor-layer ell^4 statement remains sufficient but asks roughly one extra factor ell of saving at the top level. No Autogenesis operation is registered because no universal checker establishes TOP-POLY."
+  "notes": "This remains a valid sufficient TOP-POLY statement, but ADR-0572 no longer selects it: the paper needs only the identity path, preserves cancellation between top conductor levels, and needs only a one-sided lower trace bound. The native exact implication uses Weil below the window and sqrt(2)<3/2 at odd endpoints; it verifies without floating point that TOP-POLY closes the degree-400 handoff for both parities. No Autogenesis operation is registered because no universal checker establishes TOP-POLY."
 }

@@ -644,3 +644,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0569](adr-0569-reject-absolute-conductor-delocalization.md) | Refute the absolute SUP-L constant by exact endpoint recurrence and retain only a polynomial-loss high-conductor target | superseded by ADR-0570 |
 | [0570](adr-0570-select-the-top-polynomial-haar-target.md) | Replace the over-strong conductor-layer fourth-moment premise by one polynomial saving over Weil on the top logarithmic conductor window | accepted |
 | [0571](adr-0571-work-backward-from-the-lemire-proof-paper.md) | Freeze the sub-five-page proof surface and require every new Lemire estimate to discharge its sole open top-conductor lemma | accepted |
+| [0572](adr-0572-select-the-one-sided-relative-trace-target.md) | Replace separate top-conductor maxima by the exact one-sided identity-path trace allowance left after the proved Weil prefix | accepted |

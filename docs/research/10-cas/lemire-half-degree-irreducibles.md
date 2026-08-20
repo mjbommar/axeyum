@@ -3460,11 +3460,12 @@ telescopes multiplicatively as
 0<=q_j<=1,
 ```
 
-which is retained as an invariant rather than mistaken for a bound.  The
-remaining load-bearing lemma is `(TOP-POLY)`, a polynomial improvement over
-Weil on the moving top logarithmic window.  The stronger polynomial-loss
-`(SUP-L)` remains a valid sufficient premise but is no longer selected.  See
-ADR-0570.
+which is retained as an invariant rather than mistaken for a bound.
+`(TOP-POLY)` remains a valid polynomial improvement over Weil on the moving
+top logarithmic window, but the one-sided identity-path target below is
+strictly closer to what the paper consumes.  The stronger polynomial-loss
+`(SUP-L)` is also sufficient but is no longer selected.  See ADR-0570 and
+ADR-0572.
 
 There is a weaker and better-connected target.  Lemire needs only the identity
 class, and along its path the weighted increments telescope.  Put
@@ -3502,7 +3503,7 @@ envelope: it does not yet improve it.
 
 Fourier identity (HF) also shows that (CT) is one signed Mangoldt trace over
 all characters of conductor level at least `a`.  No absolute value has been
-taken between those levels.  The selected analytic target is now simply
+taken between those levels.  The earlier symmetric target was
 
 ```text
 abs(2^ell N_ell(1) - 2^(a-1) N_(a-1)(1))
@@ -3556,9 +3557,35 @@ The executable SHA-256 is
 `ea8780c3914b139ad7dffbc9a9b69336120219782f72b88962fb6f58e2a90687`;
 the five logs and their hashes are recorded on `s1,s4,s5,s6,s7` under
 `/tmp/axeyum-gf2-hayes-refinement-connected-{16,17,18,19,20}.log`.  This is
-still finite evidence only.  A relative characteristic-two Witt/Heisenberg
-theorem should now target the single trace (CT), preserving cross-conductor
-cancellation.
+still finite evidence only.
+
+The paper-facing statement can be weakened once more because only a lower
+bound for the identity population is required.  Retain the same
+`c=ceil(log2 ell)` and `a=ell-c-1`, and put
+
+```text
+W_(ell,n) = 2^ceil(n/2) sum_(1<=j<a) (j-1)2^(j-1),
+B_(ell,n) = 2^(2ell)-W_(ell,n).
+```
+
+The low Haar part is at least `-W_(ell,n)`.  It is therefore enough to prove
+the one-sided relative trace estimate
+
+```text
+(REL)  (CT) > -B_(ell,n).
+```
+
+Positive values of (CT) are unrestricted.  At `ell=200`,
+`B_(ell,n)` is just below `(81/128)2^(2ell)` and the separate-level Weil
+envelope needs an integral saving of 626, rather than 1,583 for (CRT).  The
+new requirement is asymptotic to a factor `4ell+O(log ell)`.
+`population_refinement_one_sided_connected_implication` checks the strict
+boundary and the exact allowance partition for both parities through
+`ell=1024`.  It proves the implication, not (REL).  ADR-0572 selects (REL)
+over both (CRT) and the stronger TOP-POLY statement.
+
+A relative characteristic-two theorem should now target this one harmful
+sign of the single trace (CT), preserving cross-conductor cancellation.
 
 The top-conductor projector also has an exact Möbius-order decomposition.
 Applying the fine-minus-coarse scales before absolute values gives, at

@@ -5179,6 +5179,39 @@ pub struct PopulationRefinementConnectedTopImplication {
     pub candidate_target_numerator: BigUint,
 }
 
+/// Sharp one-sided implication from the connected identity-path trace.
+///
+/// Unlike [`PopulationRefinementConnectedTopImplication`], this report does
+/// not spend a symmetric absolute-value reserve. Lemire needs only a lower
+/// bound for the identity population, so the connected trace may be
+/// arbitrarily positive. Its exact permitted negative magnitude is the full
+/// Haar target after subtracting the proved low-conductor Weil envelope.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PopulationRefinementOneSidedConnectedImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree 2ell+1 or 2ell+2.
+    pub degree: usize,
+    /// First level retained inside the connected identity-path trace.
+    pub first_top_level: usize,
+    /// Number of levels retained without intermediate absolute values.
+    pub top_level_count: usize,
+    /// Proved absolute envelope for the lower conductor levels.
+    pub low_weil_triangle_numerator: BigUint,
+    /// Individual-Weil envelope on the connected levels, retained only to
+    /// price the improvement requested from a future theorem.
+    pub connected_top_individual_weil_numerator: BigUint,
+    /// Exact allowed negative magnitude for the signed connected trace.
+    ///
+    /// The open premise is `connected_trace > -negative_allowance`.
+    pub negative_allowance_numerator: BigUint,
+    /// Smallest integer saving over the separate connected-level Weil
+    /// envelope that reaches the one-sided allowance.
+    pub required_saving_ceiling: BigUint,
+    /// Haar discrepancy target 2^(2ell).
+    pub candidate_target_numerator: BigUint,
+}
+
 /// Exact Carlitz-cyclotomic geometry underlying the connected top trace.
 ///
 /// Hayes level `j` is the Galois group of the Carlitz field of conductor
@@ -5217,6 +5250,12 @@ pub struct CarlitzConnectedTopGeometry {
     /// Smallest integral saving over relative Hasse--Weil required by the
     /// endpoint ledger.
     pub required_saving_ceiling: BigUint,
+    /// Selected one-sided allowance after spending the complete proved
+    /// low-conductor Weil envelope.
+    pub one_sided_negative_allowance_numerator: BigUint,
+    /// Smallest integral saving over relative Hasse--Weil required by the
+    /// selected one-sided premise.
+    pub one_sided_required_saving_ceiling: BigUint,
 }
 
 impl PopulationRefinementConnectedTopImplication {
@@ -5226,6 +5265,23 @@ impl PopulationRefinementConnectedTopImplication {
     pub fn proves_candidate_discrepancy_bound(&self) -> bool {
         &self.low_weil_triangle_numerator + &self.connected_top_assumption_numerator
             <= self.candidate_target_numerator
+    }
+}
+
+impl PopulationRefinementOneSidedConnectedImplication {
+    /// Whether a supplied signed connected trace satisfies the strict
+    /// one-sided premise that closes the identity-population lower bound.
+    #[must_use]
+    pub fn trace_closes_candidate(&self, connected_trace: &BigInt) -> bool {
+        connected_trace > &-BigInt::from(self.negative_allowance_numerator.clone())
+    }
+
+    /// Whether the allowance exactly spends the target not already reserved
+    /// for the proved low-conductor envelope.
+    #[must_use]
+    pub fn has_exact_allowance_partition(&self) -> bool {
+        &self.low_weil_triangle_numerator + &self.negative_allowance_numerator
+            == self.candidate_target_numerator
     }
 }
 
@@ -5560,6 +5616,60 @@ pub fn population_refinement_connected_top_implication(
     })
 }
 
+/// Retain the top identity-path increments as one signed trace and charge the
+/// proved Weil envelope only below that window.
+///
+/// If a=ell-ceil(log2(ell))-1, Haar telescoping gives
+///
+///     C = sum_(j=a)^ell 2^(j-1) H_j(1)
+///       = 2^ell N_ell(1) - 2^(a-1) N_(a-1)(1).
+///
+/// The lower levels have absolute value at most `W_low`, computed exactly by
+/// [`population_refinement_connected_top_implication`]. Therefore the sole
+/// premise
+///
+///     C > -(2^(2ell) - W_low)
+///
+/// implies `N_ell(1) > 2^(degree-ell)-2^ell`. This is strictly weaker than
+/// the earlier symmetric assumption abs(C)<=2^(2ell-2) and weaker in logical
+/// shape than a separate bound on every top-level sibling maximum. The
+/// operation proves only this arithmetic implication, not the displayed
+/// trace premise.
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`population_refinement_connected_top_implication`] and fails if its
+/// proved low-conductor envelope exhausts the Haar target.
+pub fn population_refinement_one_sided_connected_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<PopulationRefinementOneSidedConnectedImplication, HayesError> {
+    let symmetric = population_refinement_connected_top_implication(ell, degree)?;
+    if symmetric.low_weil_triangle_numerator >= symmetric.candidate_target_numerator {
+        return Err(HayesError::Invariant(
+            "low-conductor Weil envelope exhausts the one-sided Haar target".to_owned(),
+        ));
+    }
+    let negative_allowance_numerator =
+        &symmetric.candidate_target_numerator - &symmetric.low_weil_triangle_numerator;
+    let required_saving_ceiling = (&symmetric.connected_top_individual_weil_numerator
+        + &negative_allowance_numerator
+        - BigUint::from(1_u8))
+        / &negative_allowance_numerator;
+    Ok(PopulationRefinementOneSidedConnectedImplication {
+        ell,
+        degree,
+        first_top_level: symmetric.first_top_level,
+        top_level_count: symmetric.top_level_count,
+        low_weil_triangle_numerator: symmetric.low_weil_triangle_numerator,
+        connected_top_individual_weil_numerator: symmetric.connected_top_individual_weil_numerator,
+        negative_allowance_numerator,
+        required_saving_ceiling,
+        candidate_target_numerator: symmetric.candidate_target_numerator,
+    })
+}
+
 fn carlitz_twice_genus(level: usize) -> BigUint {
     if level <= 1 {
         BigUint::from(0_u8)
@@ -5592,6 +5702,7 @@ pub fn carlitz_connected_top_geometry(
     degree: usize,
 ) -> Result<CarlitzConnectedTopGeometry, HayesError> {
     let implication = population_refinement_connected_top_implication(ell, degree)?;
+    let one_sided = population_refinement_one_sided_connected_implication(ell, degree)?;
     let fine_level = ell;
     let coarse_level = implication.first_top_level - 1;
     let fine_twice_genus = carlitz_twice_genus(fine_level);
@@ -5627,6 +5738,8 @@ pub fn carlitz_connected_top_geometry(
         integer_relative_weil_numerator,
         connected_top_allowance_numerator: implication.connected_top_assumption_numerator,
         required_saving_ceiling: implication.connected_top_required_saving_ceiling,
+        one_sided_negative_allowance_numerator: one_sided.negative_allowance_numerator,
+        one_sided_required_saving_ceiling: one_sided.required_saving_ceiling,
     })
 }
 
@@ -18768,6 +18881,41 @@ mod tests {
     }
 
     #[test]
+    fn one_sided_connected_refinement_spends_the_exact_remaining_allowance() {
+        let first_odd = population_refinement_one_sided_connected_implication(200, 401).unwrap();
+        let first_even = population_refinement_one_sided_connected_implication(200, 402).unwrap();
+        assert_eq!(first_odd.required_saving_ceiling, BigUint::from(626_u16));
+        assert_eq!(first_even.required_saving_ceiling, BigUint::from(626_u16));
+        let scaled_allowance = &first_odd.negative_allowance_numerator * BigUint::from(128_u8);
+        assert!(scaled_allowance < &first_odd.candidate_target_numerator * BigUint::from(81_u8));
+        assert!(scaled_allowance > &first_odd.candidate_target_numerator * BigUint::from(80_u8));
+        for ell in 200_usize..=1_024 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let one_sided =
+                    population_refinement_one_sided_connected_implication(ell, degree).unwrap();
+                let symmetric =
+                    population_refinement_connected_top_implication(ell, degree).unwrap();
+                assert!(one_sided.has_exact_allowance_partition());
+                assert_eq!(one_sided.first_top_level, symmetric.first_top_level);
+                assert_eq!(one_sided.top_level_count, symmetric.top_level_count);
+                assert!(
+                    one_sided.negative_allowance_numerator
+                        > symmetric.connected_top_assumption_numerator
+                );
+                assert!(
+                    one_sided.required_saving_ceiling
+                        < symmetric.connected_top_required_saving_ceiling
+                );
+                let boundary = -BigInt::from(one_sided.negative_allowance_numerator.clone());
+                assert!(!one_sided.trace_closes_candidate(&boundary));
+                assert!(one_sided.trace_closes_candidate(&(boundary + BigInt::from(1_u8))));
+            }
+        }
+        assert!(population_refinement_one_sided_connected_implication(3, 7).is_err());
+        assert!(population_refinement_one_sided_connected_implication(200, 400).is_err());
+    }
+
+    #[test]
     fn top_polynomial_refinement_closes_the_finite_handoff() {
         let odd = population_refinement_top_polynomial_implication(200, 401).unwrap();
         let even = population_refinement_top_polynomial_implication(200, 402).unwrap();
@@ -18859,6 +19007,11 @@ mod tests {
             BigUint::from(4_194_304_u32)
         );
         assert_eq!(geometry.required_saving_ceiling, BigUint::from(80_u8));
+        assert!(
+            geometry.one_sided_negative_allowance_numerator
+                > geometry.connected_top_allowance_numerator
+        );
+        assert!(geometry.one_sided_required_saving_ceiling < geometry.required_saving_ceiling);
         assert!(carlitz_connected_top_geometry(12, 24).is_err());
     }
 

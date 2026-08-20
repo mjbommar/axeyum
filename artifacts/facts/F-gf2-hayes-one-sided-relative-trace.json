@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-one-sided-relative-trace",
+  "title": "One-sided connected trace bound in the binary Hayes identity path",
+  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, put c=ceil(log2 ell), a=ell-c-1, W=2^ceil(n/2) sum_{1<=j<a}(j-1)2^(j-1), and C=2^ell N_ell(1)-2^(a-1)N_{a-1}(1). Then C>-(2^(2ell)-W).",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"C > -(2^(2*ell)-W)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-one-sided-relative-trace\",\"level_min\":200,\"parameters\":{\"C\":\"2^ell*N_ell(1)-2^(a-1)*N_(a-1)(1)\",\"W\":\"2^ceil(n/2)*sum_(1<=j<a)(j-1)*2^(j-1)\",\"a\":\"ell-ceil(log2(ell))-1\"},\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "ell",
+      "n"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; one-sided repricing of the exact identity-path Haar telescope"
+  },
+  "notes": "This is the selected open REL statement. The native population_refinement_one_sided_connected_implication operation proves that REL, together with the already proved low-conductor Weil envelope, yields N_ell(1)>2^(n-ell)-2^ell at both endpoints. It retains cancellation across ceil(log2 ell)+2 conductor levels and permits arbitrary positive trace. At ell=200 the exact saving required over the separate-level Weil envelope is 626 rather than the earlier symmetric target's 1583. No Autogenesis operation is registered because no universal checker establishes REL."
+}

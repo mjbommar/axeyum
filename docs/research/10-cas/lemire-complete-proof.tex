@@ -8,7 +8,7 @@
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{proposition}[theorem]{Proposition}
 \newcommand{\F}{\mathbb F}
-\newcommand{\TOP}{\textup{TOP}}
+\newcommand{\REL}{\textup{REL}}
 
 \title{Half-sparse irreducible polynomials over $\F_2$}
 \author{Axeyum Lemire proof project}
@@ -28,10 +28,11 @@ This notice must be removed only after Lemma~\ref{lem:top} has a checked proof.}
 Kaser and Lemire asked whether, for every $n$, there is an irreducible
 $f\in\F_2[x]$ of degree $n$ for which
 $\deg(f-x^n)\leq\lfloor n/2\rfloor$.  We reduce the question to a single
-uniform estimate for a binary refinement of von Mangoldt populations.  The
-estimate is needed only on $4\lceil\log_2\ell\rceil+1$ conductor levels and
-asks for a factor $12\ell/5$ beyond the individual Riemann--Hypothesis bound.
-An independently checked finite calculation handles $n\leq400$.
+one one-sided relative trace estimate for binary von Mangoldt populations.
+The trace retains cancellation across only $\lceil\log_2\ell\rceil+2$ top
+conductor levels and asks for a linear saving over the relative
+Riemann--Hypothesis bound.  An independently checked finite calculation
+handles $n\leq400$.
 \end{abstract}
 
 \section{The ray class and its binary refinements}
@@ -95,50 +96,52 @@ Riemann hypothesis and \eqref{eq:fourier} therefore give
 
 \section{The one remaining estimate}
 
-\begin{lemma}[Top-conductor polynomial saving]\label{lem:top}
-Let $\ell\geq200$, $n\in\{2\ell+1,2\ell+2\}$, and
+Put $c=\lceil\log_2\ell\rceil$, $a=\ell-c-1$, and
 \[
- \ell-4\lceil\log_2\ell\rceil\leq j\leq\ell.
+ W_{\ell,n}=2^{\lceil n/2\rceil}
+       \sum_{1\leq j<a}(j-1)2^{j-1},\qquad
+ B_{\ell,n}=2^{2\ell}-W_{\ell,n}.
 \]
-Then
-\begin{equation}\tag{$\TOP$}\label{eq:top}
- (12\ell H_j^*)^2\leq25(j-1)^2 2^n.
+For $\ell\geq200$ the elementary geometric sum gives $B_{\ell,n}>0$.
+Along the identity path the top increments telescope:
+\begin{equation}\label{eq:connected}
+ C_{\ell,n}:=\sum_{j=a}^{\ell}2^{j-1}H_j(1)
+ =2^\ell N_\ell(1)-2^{a-1}N_{a-1}(1).
+\end{equation}
+
+\begin{lemma}[One-sided relative trace]\label{lem:top}
+For $\ell\geq200$ and $n\in\{2\ell+1,2\ell+2\}$,
+\begin{equation}\tag{$\REL$}\label{eq:rel}
+ C_{\ell,n}>-B_{\ell,n}.
 \end{equation}
 \end{lemma}
 
 \noindent\textcolor{red}{\textbf{Proof status: open.}}
-The estimate improves \eqref{eq:weil} by only $12\ell/5$, but it is uniform
-in the moving near-diagonal range $n=2j+O(\log\ell)$.  Fixed-conductor
-recurrence counterexamples to absolute delocalisation occur outside this
-range and do not contradict \eqref{eq:top}.
+Equation~\eqref{eq:connected} is also the difference of the
+$\F_{2^n}$-point counts on two levels of the Carlitz cyclotomic
+tower.  The lemma is one-sided---an arbitrarily large positive trace is
+allowed---and preserves cancellation across all $c+2$ retained levels.
+At $\ell=200$ its separate-level Riemann--Hypothesis envelope exceeds the
+allowed negative magnitude by a factor $626$; asymptotically the requested
+saving is $4\ell+O(\log\ell)$.
 
 \begin{proposition}[The closing calculation]\label{prop:close}
-Lemma~\ref{lem:top}, together with \eqref{eq:weil}, implies
-\eqref{eq:triangle} for both endpoint degrees and every $\ell\geq200$.
+Lemma~\ref{lem:top} implies
+\[
+ N_\ell(1)>2^{n-\ell}-2^\ell
+\]
+for both endpoint degrees and every $\ell\geq200$.
 \end{proposition}
 
 \begin{proof}
-Put $c=\lceil\log_2\ell\rceil$ and $a=\ell-4c$.  With
+The part of Proposition~\ref{prop:haar}'s identity below $a$ is at least
+$-W_{\ell,n}$ by \eqref{eq:weil}.  Keeping the remaining levels together and
+using \eqref{eq:rel} therefore gives
 \[
- S_{\rm low}=\sum_{j<a}(j-1)2^{j-1},\qquad
- S_{\rm top}=\sum_{a\leq j\leq\ell}(j-1)2^{j-1},
+ 2^\ell N_\ell(1)-2^n
+ >-W_{\ell,n}-B_{\ell,n}=-2^{2\ell}.
 \]
-the geometric sums satisfy
-$S_{\rm low}\leq2^\ell/(2\ell^3)$ and
-$S_{\rm top}\leq\ell2^\ell$.
-For $n=2\ell+1$, use $\sqrt2<3/2$ in \eqref{eq:weil} and
-\eqref{eq:top}; the left side of \eqref{eq:triangle} is at most
-\[
- 2^\ell\left(\frac32S_{\rm low}
-                    +\frac{5}{8\ell}S_{\rm top}\right)<2^{2\ell}.
-\]
-For $n=2\ell+2$ it is at most
-\[
- 2^{\ell+1}\left(S_{\rm low}
-                    +\frac{5}{12\ell}S_{\rm top}\right)<2^{2\ell}.
-\]
-The displayed strict inequalities follow from $2^c\geq\ell$ (and are
-checked with exact integers, without floating point).
+Division by $2^\ell$ proves the assertion.
 \end{proof}
 
 \section{Completion of the conjecture}
