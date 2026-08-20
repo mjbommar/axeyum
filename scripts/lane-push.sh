@@ -65,21 +65,26 @@ esac; shift; done
 branch=$(git rev-parse --abbrev-ref HEAD)
 target="${TO:-$branch}"
 upstream="origin/$target"
+new_ref=0
 if ! git rev-parse --verify -q "$upstream" >/dev/null; then
   echo "lane-push: no $upstream yet; pushing will create it"
-  range="HEAD"
+  new_ref=1
+  # Match hooks/pre-push: a new branch is measured from its fork with main,
+  # not from an unresolved remote name and not across the whole repository.
+  base=$(git merge-base origin/main HEAD 2>/dev/null || echo "HEAD~20")
+  range="$base..HEAD"
 else
+  base="$upstream"
   range="$upstream..HEAD"
 fi
 
 n=$(git rev-list --count "$range" 2>/dev/null || echo 0)
-if [ "$n" = 0 ]; then
+if [ "$n" = 0 ] && [ "$new_ref" = 0 ]; then
   echo "lane-push: nothing to push ($branch is up to date with $upstream)"
   exit 0
 fi
 
 # What the hook will decide, computed the same way it does.
-base=$(git rev-parse "${upstream}" 2>/dev/null || git merge-base origin/main HEAD)
 changed=$(git diff --name-only "$base" HEAD -- '*.rs' '*.toml' | wc -l)
 if [ "$changed" -eq 0 ]; then
   cost="FREE — no *.rs/*.toml in the range, the hook exits before any cargo step"
