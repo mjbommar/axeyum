@@ -87,7 +87,7 @@ struct AuditProgress {
     /// Without it, a timeout in `lean-reconstruction` is unreadable. Measured
     /// 2026-08-20, NINE of ten timing-out rows landed in that one phase, and
     /// they were three unrelated failures: an exponential blowup, a CORRECT
-    /// decline arriving 35s late because `lra_ctx()` builds a CReal prelude
+    /// decline arriving 35s late because `lra_ctx()` builds a `CReal` prelude
     /// before the route knows it will decline, and a SUCCESS emitting a 2.4 GB
     /// module. The fragment name separates all three at a glance and costs
     /// microseconds -- `scan_proof_fragment` is the same classification the
