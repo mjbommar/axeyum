@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `5bdebc271` | Added bounded generalized Fomenko restriction/Galois packets, proved their exact conductor reconstruction, and refuted a one-square-root-unit bound for both one-coordinate and endpoint-matched logarithmic quotients. |
 | 2026-08-20 | `254be42f7` | Proved that Katz's pointwise character fourth moment is a different contraction from the product-constrained Hayes cumulant and retained the missing uniform Betti bound. |
 | 2026-08-20 | `a38675b8f` | Expanded the fourth cumulant into exact positive fibre products and proved that the connected target is a signed virtual trace, not an off-diagonal point count. |
 | 2026-08-20 | `0b6d6d79a` | Proved that binary monomial power-sum characters cover at most the thin primitive quadratic sector and none of every even conductor layer. |
@@ -837,6 +838,16 @@ field grows and leaves a compactly-supported Betti constant uncontrolled in
 the growing-conductor regime.  A viable monodromy bridge therefore needs a
 convolutional four-design theorem and uniform Betti bounds over fixed
 `GF(2)`, not the standard pointwise large-field limit.
+Fomenko's coefficient-zero restriction now has a sound growing-conductor
+generalization as well: restriction fibres are closed under cyclotomic Galois
+before two-prime CRT reconstruction, and their signed packets independently
+recover each primitive conductor trace.  The one-square-root-unit packet
+bound is false.  At `(ell,t,n)=(12,5,26)`, 29 of 32 logarithmic packets
+violate it and the worst needs coefficient 65; packetwise absolute values are
+`6433280` against signed total `933888`.  The exact quotient is reusable, but
+Fomenko's decisive fixed-level degree-two `L`-polynomial formula has not
+generalized, so the endpoint still requires cross-packet/cross-conductor
+cancellation.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
