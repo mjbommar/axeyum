@@ -37,7 +37,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "proof-plan-frozen-execution-blocked-on-native-prelude-composition"
+        != "proof-plan-frozen-first-native-library-slice-composed"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -74,6 +74,12 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
             ]
         )
         != probe["alpha_type_compatible_content_mismatches"]
+        or len(
+            observation["source"][
+                "kernel_type_shape_compatible_content_mismatched_names"
+            ]
+        )
+        != probe["kernel_type_shape_compatible_content_mismatches"]
         or len(observation["source"]["type_mismatched_overlaps"])
         != probe["unresolved_type_overlaps"]
         or any(presence[name] for name in required)
@@ -82,6 +88,90 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest["proof_plan"]["already_present_in_import"] != ["Nat.rec"]
     ):
         raise PlanError("composition observation semantics changed")
+    categories = [
+        observation["source"]["exact_overlap_names"],
+        observation["source"]["alpha_type_compatible_content_mismatched_names"],
+        observation["source"][
+            "kernel_type_shape_compatible_content_mismatched_names"
+        ],
+        [row["name"] for row in observation["source"]["type_mismatched_overlaps"]],
+    ]
+    flattened = [name for category in categories for name in category]
+    if (
+        len(flattened) != 43
+        or len(set(flattened)) != len(flattened)
+        or any(category != sorted(category) for category in categories)
+        or observation["authority"]
+        != {
+            "proof_bodies_displayed": False,
+            "proof_search_invocations": 0,
+            "kernel_submissions": 3,
+            "ledger_writes": 0,
+        }
+    ):
+        raise PlanError("composition overlap partition or authority changed")
+    closures = observation["source"]["required_native_theorem_dependency_closures"]
+    for row in closures:
+        closure_categories = [
+            row["missing_dependency_names"],
+            row["exact_dependency_names"],
+            row["alpha_type_compatible_dependency_names"],
+            row["kernel_type_shape_compatible_dependency_names"],
+            row["type_mismatched_dependency_names"],
+        ]
+        closure_names = [name for category in closure_categories for name in category]
+        if (
+            len(closure_names) != row["native_dependency_count"]
+            or len(set(closure_names)) != len(closure_names)
+            or any(category != sorted(category) for category in closure_categories)
+        ):
+            raise PlanError(f"invalid dependency closure partition for {row['theorem']}")
+    closure_census = manifest["closure_census"]
+    unblocked = [
+        row for row in closures if not row["type_mismatched_dependency_names"]
+    ]
+    blocked = sorted(
+        row["theorem"] for row in closures if row["type_mismatched_dependency_names"]
+    )
+    if (
+        len(closures) != closure_census["required_theorems"]
+        or len(unblocked) != 1
+        or unblocked[0]["theorem"]
+        != closure_census["first_structurally_unblocked_theorem"]
+        or unblocked[0]["native_dependency_count"]
+        != closure_census["first_dependency_count"]
+        or unblocked[0]["missing_dependency_names"]
+        != closure_census["first_missing_dependencies"]
+        or blocked != closure_census["structurally_blocked_theorems"]
+    ):
+        raise PlanError("required theorem closure census changed")
+    composed = observation["source"]["composition_control"]
+    negative = observation["source"]["structural_mismatch_control"]
+    composition_result = manifest["composition_result"]
+    if (
+        composed["roots"] != [composition_result["root"]]
+        or composed["outcome"] != composition_result["outcome"]
+        or len(composed["reused_dependency_names"])
+        != composition_result["reused_dependencies"]
+        or composed["added_theorem_names"]
+        != composition_result["added_theorem_names"]
+        or composed["declarations_absent_before"]
+        != composition_result["added_theorem_names"]
+        or composed["added_axiom_footprints"]
+        != composition_result["added_axiom_footprints"]
+        or composed["environment_sha256_before"]
+        != composition_result["environment_sha256_before"]
+        or composed["environment_sha256_after"]
+        != composition_result["environment_sha256_after"]
+        or composed["environment_sha256_before"]
+        == composed["environment_sha256_after"]
+        or negative["root"] != composition_result["negative_control_root"]
+        or composition_result["negative_control_first_mismatch"]
+        not in negative["error"]
+        or (negative["environment_sha256_before"] == negative["environment_sha256_after"])
+        != composition_result["negative_control_environment_unchanged"]
+    ):
+        raise PlanError("native theorem composition result changed")
     if (
         manifest["target"]["fact_id"]
         != "F:ml430-nat-fib-coprime-fib-succ-162fc738"
@@ -94,7 +184,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         "held_out_inspected": False,
         "proof_bodies_displayed": False,
         "proof_search_invocations": 0,
-        "kernel_submissions": 0,
+        "kernel_submissions": 3,
         "evaluation_credit": 0,
         "ledger_writes": 0,
     }:
@@ -108,7 +198,7 @@ def main() -> int:
         print(
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
-            "present=0|first_conflict=True|submissions=0|evaluation=0|writes=0"
+            "present=0|first_conflict=True|submissions=3|evaluation=0|writes=0"
         )
         return 0
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, PlanError) as error:

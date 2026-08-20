@@ -118,6 +118,11 @@ now. Nothing was deleted.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
+| 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
+| 2026-08-20 | `b5c4bb48b` | Binder-info-insensitive kernel type-shape identity with adversarial controls |
+| 2026-08-20 | `24b16642e` | r082 overlap probe classifies kernel-compatible and structurally different types |
+| 2026-08-20 | `8dbd18c82` | Required Nat theorem closure census isolates a structurally unblocked first replay slice |
+| 2026-08-20 | `9caac0bf5` | First probe-local checked native Nat theorem slice composes over the imported r082 kernel |
 | 2026-08-20 | `e44f9d715` | **QF_NIA `unsat` now carries a refutation, band 2 -> band 1.** The proof-gap matrix loses 60 of 327 instances at "evidence marked certified" — four times what Lean reconstruction costs — and `QF_NIA` ranked *band 2, needs an UNSAT proof format first*. But `nia_square` was already deciding this fragment EXACTLY; the artifact existed and nothing emitted it. Three arguments certified (non-square discriminant, non-integral rational roots, rational-root exhaustion at degree >= 3). **The checker does not call the producer**: the in-tree `fresh == *cert` convention re-runs the matcher, which binds a certificate to its source but cannot discover that the producer's reasoning is wrong — both would be wrong together. Stage 2 re-derives from the coefficients alone, scanning `1..=|a0|` where the producer pairs cofactors to `sqrt|a0|`, so a completeness bug in the step that could turn a `sat` into a wrong `unsat` is not repeated. |
 | 2026-08-20 | `119a91c53` | Mutation testing the above, and the first run is the part worth keeping: nine guards, **five killed one test each and four killed nothing** — another guard rejected the same forgery first, the "six of seven were removable while green" shape. Isolating them needed certificates the producer would never emit: a degree-2 argument over `x^3+x^2+x-3 = 0`, which is SATISFIABLE at x=1 and whose leading three coefficients give a genuine non-square 13 with a valid bracket, so every other guard passes and only the degree check prevents certifying a satisfiable query; a constant term of right magnitude and wrong sign, leaving divisor set and recomputed count identical; and two cubics with IDENTICAL reason data so only the coefficient binding separates them. All nine now die individually. Two of my own harness bugs found on the way, both silent — a positional filter that matched no integration test name, and classifying cargo's `error: test failed` as `DID NOT BUILD`, which reported five real kills as compile failures. |
 | 2026-08-19 | `pending` | `scripts/check-kernel-suites.sh`: the kernel's push-time / real-Lean suite partition, discovered from the source and asserted total; `hooks/pre-push` repointed at the non-Lean half (2,296 s → 80 s warm). Found `real_lean_string_monoid_crosscheck` owned by nothing and mis-formatting its check count; floor 218 → 219. |
@@ -553,13 +558,14 @@ registered HEAD and status agree. The registered control preserves a caller
 with staged and untracked work across fresh and reused gate checkouts and
 rejects an unsafe root and nonexistent target.
 
-**Next:** require the first post-repair Rust push to report the exact registered
-gate HEAD and a clean checkout before treating the operational incident as
-closed in the live environment.
+The first post-repair Rust push checked exact topic SHA `24b16642e` in the
+registered gate checkout, left it clean, and preserved the caller branch,
+index, and status. The operational incident is closed; future changes remain
+covered by the registered control and the live hook.
 
-**Status:** Fib prelude compatibility separates exact identity from alpha-stable type shape; direct graft remains unauthorized.
+**Status:** A probe-local r082 kernel now transactionally admits axiom-free `Nat.zero_add`, `Nat.succ_add`, and `Nat.add_comm` over eight compatible imported dependencies; a structural mismatch leaves the environment unchanged.
 
-**Next:** add a binder-info-insensitive kernel-type compatibility check and recheck the r082 overlaps before proof transport.
+**Next:** settle the public trust boundary for checked cross-kernel theorem-slice composition, extract the probe implementation behind that reviewed contract, and retain exact-type, structural-mismatch, non-theorem, free-variable, admission-failure, and rollback controls before composing another lemma.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

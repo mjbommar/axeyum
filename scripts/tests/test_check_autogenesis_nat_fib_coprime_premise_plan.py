@@ -29,7 +29,14 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
             MODULE.validate(changed)
 
         changed = copy.deepcopy(self.manifest)
-        changed["authority"]["kernel_submissions"] = 1
+        changed["composition_probe"][
+            "kernel_type_shape_compatible_content_mismatches"
+        ] = 9
+        with self.assertRaisesRegex(MODULE.PlanError, "semantics"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["authority"]["kernel_submissions"] = 4
         with self.assertRaisesRegex(MODULE.PlanError, "authority"):
             MODULE.validate(changed)
 
@@ -42,6 +49,16 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         changed = copy.deepcopy(self.manifest)
         changed["target"]["sole_admitted_theorem_premise"] = "F:unreviewed"
         with self.assertRaisesRegex(MODULE.PlanError, "premise"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["closure_census"]["first_dependency_count"] = 9
+        with self.assertRaisesRegex(MODULE.PlanError, "closure census"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["composition_result"]["added_theorem_names"].pop()
+        with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
             MODULE.validate(changed)
 
 

@@ -51,3 +51,8 @@ Verify it with:
 ```sh
 python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py
 ```
+
+The subsequent
+[kernel-type-shape census](55-kernel-type-shape-prelude-compatibility.md)
+resolved ten of the eighteen conservative mismatches as binder-metadata-only
+and retained eight as structurally different.
