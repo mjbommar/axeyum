@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "proof-plan-frozen-first-native-library-slice-definitionally-composed",
+  "state": "proof-plan-frozen-singleton-inductive-library-slice-composed",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -17,11 +17,11 @@
   },
   "composition_probe": {
     "tool": "crates/axeyum-lean-import/examples/nat_prelude_composition_probe.rs",
-    "tool_sha256": "3af7cecc18500d33d31be23853a3583adf272fef991c13912abda4543e3d0183",
+    "tool_sha256": "cf53b022f1fab4660b6f6c53f48a9d623f4f4fbaab3d523597ba5c42add33ab7",
     "api": "crates/axeyum-lean-import/src/theorem_composition.rs",
-    "api_sha256": "16f172ec8b0cba87a7b8d23e32648390b8594fa2bc96a6814653489a8592afb6",
-    "observation": "/nas3/data/axeyum/autogenesis/probes/2a9efefe3-nat-defeq-reuse-v8/observation.json",
-    "observation_sha256": "6056e5b463386c0ec415cc304871f532fc1de533ea4b67e71d10beb0e1e44078",
+    "api_sha256": "9809ba2530a6eb78d82388623b6c26a4c5852fa7897359c65698e7dda02e1ea5",
+    "observation": "/nas3/data/axeyum/autogenesis/probes/fced2b166-singleton-inductive-composition-v9/observation.json",
+    "observation_sha256": "71923cf70ace04a37f0bae868c3d33950ccf031c156e9357268fbaaad104aaea",
     "outcome": "rejected",
     "first_conflict": "True",
     "imported_declarations": 261,
@@ -49,8 +49,8 @@
   "composition_result": {
     "root": "Nat.add_comm",
     "outcome": "composed",
-    "receipt_schema": "axeyum.checked-theorem-composition.v2",
-    "receipt_sha256": "c41abc46451d13c7dd4c7fe6c5db69e9a5accabedf137c73a4347940c282dbc4",
+    "receipt_schema": "axeyum.checked-theorem-composition.v3",
+    "receipt_sha256": "d1457727339d0928aaf2834160331cfc3b98ea868bb37ad2eba2d205e88288af",
     "source_closure": [
       "Nat",
       "Nat.zero",
@@ -72,6 +72,7 @@
       "translated-definitional-equality": 0
     },
     "added_theorem_names": ["Nat.zero_add", "Nat.succ_add", "Nat.add_comm"],
+    "added_singleton_inductives": [],
     "added_declaration_sha256": {
       "Nat.add_comm": "c05e6d0986251392c9b1bc9fcc2bd5d66de22c856b9669cdd993e9993d94f4f9",
       "Nat.succ_add": "02f4d04bea47ca25f58c4d43300262c64f125dc16839f03219c4b657852ae3a2",
@@ -85,8 +86,37 @@
     "environment_sha256_before": "82ac7b0143bdd9891b666a37220fb91b86afc4af4b920d68773d80b5c9348855",
     "environment_sha256_after": "bda5fa7e1660db1635ea2e019775ead03663cf3676e6a7695ea5352f8572c9bf",
     "negative_control_root": "Nat.eq_one_of_dvd_one",
-    "negative_control_first_mismatch": "Exists",
+    "negative_control_first_mismatch": "Nat.mul",
     "negative_control_environment_unchanged": true
+  },
+  "singleton_inductive_result": {
+    "root": "Composition.existsTrue",
+    "outcome": "composed",
+    "receipt_schema": "axeyum.checked-theorem-composition.v3",
+    "receipt_sha256": "71a9824ff9c091dbaa4825dac197ecd906881f2f0bbb7c3879a793eb8b04afdc",
+    "added_theorem_names": ["Composition.existsTrue"],
+    "added_axiom_footprints": {
+      "Composition.existsTrue": []
+    },
+    "added_singleton_inductives": [
+      {
+        "family": "Exists",
+        "constructors": ["Exists.intro"],
+        "recursor": "Exists.rec",
+        "source_declaration_sha256": {
+          "Exists": "ff2fe3775cc5839f199301429a10e5ffb1b4a520d38acc77fd8ecb88ad8c67f9",
+          "Exists.intro": "08f55a0ccf293e8393bc43ff42d178be367305aed0f6f481c550dabd81774c7a",
+          "Exists.rec": "1f6db40e1aa617d02691c352cd7c4cce1813bed372f26e9cf7b5ac4eb558e901"
+        },
+        "target_declaration_sha256": {
+          "Exists": "ff2fe3775cc5839f199301429a10e5ffb1b4a520d38acc77fd8ecb88ad8c67f9",
+          "Exists.intro": "08f55a0ccf293e8393bc43ff42d178be367305aed0f6f481c550dabd81774c7a",
+          "Exists.rec": "1f6db40e1aa617d02691c352cd7c4cce1813bed372f26e9cf7b5ac4eb558e901"
+        }
+      }
+    ],
+    "environment_sha256_before": "82ac7b0143bdd9891b666a37220fb91b86afc4af4b920d68773d80b5c9348855",
+    "environment_sha256_after": "52e5b2e9dcc275fe83e77b9b0ca7c5b4f00b8a3b2cca3b471d0c7d29ad947847"
   },
   "proof_plan": {
     "induction_binder": "n",
@@ -123,10 +153,10 @@
     "held_out_inspected": false,
     "proof_bodies_displayed": false,
     "proof_search_invocations": 0,
-    "kernel_submissions": 3,
+    "kernel_submissions": 5,
     "evaluation_credit": 0,
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "This freezes a proof plan and reproduces one three-theorem native slice through the public theorem-only completed-clone API. Definitionally equal translated types may now authorize a target recheck, moving the negative root to missing Exists. It does not transport definitions or inductive declarations, compose the remaining six required lemmas, submit the Fibonacci target, inspect held-out data, write the ledger, or establish the fact."
+  "limitations": "This freezes a proof plan, reproduces one three-theorem native slice, and atomically composes the demanded non-recursive singleton Exists package plus one axiom-free control theorem. It does not transport definitions, recursive or mutual inductives, or quotient packages; compose the remaining six required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact. The next measured blocker is Nat.mul definition composition."
 }

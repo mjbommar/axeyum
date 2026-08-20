@@ -40,9 +40,10 @@ and target definitional equality succeed; the new theorem still must pass the
 ordinary admission gate. Mutating the recorded compatibility class invalidates
 receipt replay.
 
-## Next bottom-up boundary
+## Historical next boundary
 
-The measured blocker is now atomic inductive-package composition. `Exists`
+At this checkpoint the measured blocker was atomic inductive-package
+composition. `Exists`
 cannot be copied as three unrelated declarations: its family, constructor, and
 generated recursor share positivity, parameter, elimination, and reduction
 contracts. The smallest responsible extension is singleton-package-only,
@@ -51,14 +52,16 @@ reconstructed into the target arena and submitted through
 quotient packages must continue to decline until separately demanded and
 specified.
 
-After that package admits, retry `Nat.dvd_add_iff_right` unchanged. The next
-failure, not a speculative full-prelude port, chooses the following increment.
+The subsequent
+[atomic singleton-inductive composition](60-atomic-singleton-inductive-composition.md)
+admits that exact package in r082 and moves the next failure to `Nat.mul`.
+This page retains the V2 receipt identity.
 
 ## Evidence
 
 The immutable exact-commit observation is:
 
-`/nas3/data/axeyum/autogenesis/probes/2a9efefe3-nat-defeq-reuse-v8/observation.json`
+`/nas3/data/axeyum/autogenesis/probes/c17b7e65b-nat-defeq-reuse-v8/observation.json`
 
 It is mode `0444` inside a mode `0555` directory and is bound by the tracked
 manifest to the exact probe and API hashes. Verify with:
