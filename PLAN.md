@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `40df3c8ee` | Added uniqueness-bounded one-prime odd-endpoint reconstruction, blocked conductor-width power-sum history, executable NTT assumptions, and exact fleet rows through degree 51 without granting the surviving mod-eight pattern theorem credit. |
 | 2026-08-20 | `0e9a3ca9d` | Reduced the complete Lemire class to one characteristic-delta convolution period, added dual exact controls, and isolated the universal no-proper-period lemma without granting finite evidence theorem credit. |
 | 2026-08-20 | `531ed174a` | Translated Hast--Matei's top long-cycle variance at the exact endpoint, proved its second moment is insufficient, and confined the selected characteristic-two repeated-root defect to square proper powers. |
 | 2026-08-20 | `636f9da38` | Classified the projective long-cycle eigenlines, proving that exactly `phi(oddpart(n))` survive and rejecting a free cyclic-torsor shortcut without granting a Frobenius bound. |
@@ -1016,6 +1017,17 @@ multiplied blindly, as the degree-eight product including the middle
 coefficient has period `15` rather than `255`.  Proving the weaker
 no-proper-subfield-period statement is now the shortest candidate route to the
 paper; bounded rows receive no theorem credit.
+The odd-endpoint stopping path now uses the exact identity
+`N_(2ell+1)(1)=1+(2ell+1)I_(2ell+1)(1)` twice: its candidate-count bound makes
+one admitted `75161927681` NTT residue the unique integer population, while a
+conductor-width circular recurrence halves the retained power-sum history.
+The new route agrees with the independent two-prime/full-inversion path through
+`ell=12`; its modulus and primitive root are executable checks.  On `s6` it
+certified `I_51(1)=1315030=6 mod 8` in 961.748 seconds at 13,371,736 KiB peak
+RSS.  Thus the observed odd-count 2-adic nonvanishing survives this new row but
+remains an unproved congruence and supplies no universal endpoint credit.  The
+characteristic-delta period lemma and the connected trace remain the two
+honest universal frontiers.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
