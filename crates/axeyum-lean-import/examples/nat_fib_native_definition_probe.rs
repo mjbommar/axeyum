@@ -5,8 +5,8 @@ use std::io::Cursor;
 use std::path::PathBuf;
 
 use axeyum_lean_import::{
-    ImportLimits, canonical_declaration_sha256, compose_checked_theorem_slice, import_ndjson,
-    verify_checked_theorem_composition,
+    ImportLimits, canonical_declaration_sha256, canonical_expression_sha256,
+    compose_checked_theorem_slice, import_ndjson, verify_checked_theorem_composition,
 };
 use axeyum_lean_kernel::{BinderInfo, Declaration, Kernel, NameId, build_nat_prelude};
 use serde_json::json;
@@ -22,6 +22,7 @@ fn main() {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn run() -> Result<(), String> {
     let mut arguments = std::env::args_os().skip(1);
     let path = arguments
@@ -46,7 +47,14 @@ fn run() -> Result<(), String> {
     let (mut source, report) = imported.into_parts();
     let fib_declaration_sha256 =
         canonical_declaration_sha256(&source, find_name(&source, "Nat.fib")?)
-            .map_err(|error| error.to_string())?;
+            .map_err(|error| error.clone())?;
+    let target = find_name(&source, "Axeyum.Autogenesis.Coverage.r082")?;
+    let target_goal = match source.environment().get(target) {
+        Some(Declaration::Definition { uparams, value, .. }) if uparams.is_empty() => *value,
+        _ => return Err("r082 target is not a monomorphic statement definition".to_owned()),
+    };
+    let target_goal_sha256 =
+        canonical_expression_sha256(&source, target_goal).map_err(|error| error.clone())?;
     add_fib_reflexivity_control(&mut source)?;
 
     let mut native = Kernel::new();
@@ -103,6 +111,8 @@ fn run() -> Result<(), String> {
             "lean_githash": report.lean_githash,
             "source_stream_sha256": STREAM_SHA256,
             "nat_fib_declaration_sha256": fib_declaration_sha256,
+            "target_goal_sha256": target_goal_sha256,
+            "target_goal": source.render_lean(target_goal),
             "root": CONTROL,
             "source_closure": completed.receipt().source_closure.len(),
             "source_only_declarations": source_only_declarations,
