@@ -103,7 +103,7 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         )
         observation["source"]["structural_mismatch_control"]["error"] = (
             observation["source"]["structural_mismatch_control"]["error"].replace(
-                'name: "Acc"', 'name: "WellFounded"'
+                'name: "Nat.div_mod_exec"', 'name: "Nat.mod"'
             )
         )
         with pinned_observation(self.manifest, observation) as changed:
@@ -111,7 +111,7 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
                 MODULE.validate(changed)
 
         changed = copy.deepcopy(self.manifest)
-        changed["composition_result"]["negative_control_missing_kind"] = "inductive"
+        changed["composition_result"]["negative_control_error_kind"] = "KernelError"
         with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
             MODULE.validate(changed)
 
@@ -177,6 +177,20 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
             "constructors"
         ] = []
         with self.assertRaisesRegex(MODULE.PlanError, "singleton inductive"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["acc_inductive_result"]["added_singleton_inductives"][0][
+            "constructors"
+        ] = []
+        with self.assertRaisesRegex(MODULE.PlanError, "Acc inductive"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["implementation"]["acc_package"]["source_declaration_sha256"][
+            "Acc.rec"
+        ] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "Acc inductive identity"):
             MODULE.validate(changed)
 
         changed = copy.deepcopy(self.manifest)

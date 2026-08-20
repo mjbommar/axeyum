@@ -17,6 +17,10 @@ construct `0 < succ k` explicitly and apply the general theorem.
 The unchanged Mathlib r082 `Nat.dvd_gcd` composition control now passes
 `Nat.mod_lt` and stops at the missing recursive inductive `Acc` package.
 
+Follow-on result [64](64-canonical-acc-composition.md) closes that exact
+package boundary and advances the unchanged control to target-kernel rejection
+of `Nat.div_mod_exec`.
+
 ## Exact evidence
 
 The implementation commit is `a5a1114989077b7254a5dec0daa048aa5d2793ba`.

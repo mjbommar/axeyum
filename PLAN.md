@@ -135,6 +135,7 @@ now. Nothing was deleted.
 | 2026-08-20 | `866add778` | Official-order fixtures and golden reconstruction bodies pass the authoritative pre-push gate |
 | 2026-08-20 | `a5a111498` | Native `Nat.mod_lt` proves Lean's general positive-denominator contract and migrates GCD/Bezout consumers |
 | 2026-08-20 | `ac33a0a2d` | Named compatibility diagnostics bind `Nat.mod_lt` translated definitional equality and expose `Acc` next |
+| 2026-08-20 | `3d466b45c` | Receipt V5 reconstructs only canonical native `Acc` exactly and exposes `Nat.div_mod_exec` target type mismatch |
 | 2026-08-20 | `e75ccc821` | **Refreshed 4 of 35 audits; certified moves 267/327 (81.7%) -> 273/323 (84.5%).** The number I quoted this morning to justify a work item is now partly measured rather than inherited. QF_S decides 87 -> 93, QF_SLIA 18 -> 25 — both strictly more than the committed audits recorded, the direction the stale-audit finding predicted. |
 | 2026-08-20 | `(open, NOT mine)` | **A corpus file no longer parses**, found only by refreshing: `sat__regress0__strings__issue5542-strings-seq-mix.smt2` panics with `Ir(SortsDiffer(BitVec(100), BitVec(197)))` — it mixes `String` and `(Seq Int)` in one query and the two encode at different bit-widths. The committed audit records it as decided `sat` with a replayed model. The panic is in `parse_script`, before any solver or evidence code, so it is not from this lane's work. Second defect the audits were hiding, after `replace-find-base`. |
 | 2026-08-20 | `(open, NOT mine)` | `cli__regress0__nl__issue3003`: `check_auto_explained` answers `sat` in 0.87 ms and `produce_evidence` answers `unknown` on the same query in the same tree. Confirmed not mine by disabling both new NRA producers and re-running — identical. The decision route and the evidence route disagree, which is the divergence class an independent NRA survey flagged the same day. |
@@ -586,9 +587,9 @@ registered gate checkout, left it clean, and preserved the caller branch,
 index, and status. The operational incident is closed; future changes remain
 covered by the registered control and the live hook.
 
-**Status:** ADR-0528 generalizes native `Nat.mod_lt` to Lean's `forall x y, 0 < y -> x % y < y` contract with an axiom-free kernel proof. A read-only named compatibility receipt records `translated-definitional-equality` through imported wrappers without publication authority. On exact Mathlib 4.30.0 r082 evidence, the unchanged `Nat.dvd_gcd` control advances to missing recursive inductive `Acc` with an unchanged target environment.
+**Status:** ADR-0529 permits only the declaration-exact canonical native `Acc` package through atomic target-kernel reconstruction. Receipt V5 regenerates `Acc`, `Acc.intro`, and `Acc.rec` with equal source/target identities and admits axiom-free `Acc.inv`; incomplete, lookalike, and mutual packages still decline. The unchanged Mathlib 4.30.0 r082 `Nat.dvd_gcd` control now reaches target admission of `Nat.div_mod_exec` and fails with `TypeMismatch`, leaving the caller environment unchanged.
 
-**Next:** measure the complete native/imported `Acc` family, constructor, and generated recursor package; add an atomic target-kernel reconstruction path for exactly this recursive singleton; mutation-test incompleteness, metadata mismatch, and rollback; then retry `Nat.dvd_gcd` unchanged. Do not authorize arbitrary recursive/mutual inductive transport from one package.
+**Next:** render and compare the expected and inferred target types at the `Nat.div_mod_exec` admission failure; isolate the first reusable representation/proof mismatch; correct it without weakening the target gate; then retry `Nat.dvd_gcd` unchanged. Keep raw arena IDs diagnostic-only.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

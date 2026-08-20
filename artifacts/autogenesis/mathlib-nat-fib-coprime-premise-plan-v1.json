@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "proof-plan-frozen-general-nat-mod-lt-library-slice-compatible",
+  "state": "proof-plan-frozen-canonical-acc-library-slice-compatible",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -16,7 +16,7 @@
     "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622"
   },
   "implementation": {
-    "evidence_commit": "ac33a0a2d8508d2123b23cfc9959da38d1b9ad37",
+    "evidence_commit": "3d466b45cc34435702db09604f47d0362eb9d17b",
     "bool_order_commit": "772646c0d1a0c6ebca302c37a42cf2bb2f5030ee",
     "logic_prelude": "crates/axeyum-lean-kernel/src/prelude.rs",
     "logic_prelude_sha256": "8bc2090e18e8433234e9262a1d4e605ff84c448b79aebeef88153e1d0b3b7a0b",
@@ -40,15 +40,26 @@
         "path": "crates/axeyum-lean-kernel/src/nat_prelude/bezout.rs",
         "sha256": "27bbdf48b8703304ee85b1294b519f6558aa259fd9701844a35dd5ce8d5c1ed4"
       }
-    ]
+    ],
+    "acc_package_commit": "3d466b45cc34435702db09604f47d0362eb9d17b",
+    "acc_package": {
+      "family": "Acc",
+      "constructor": "Acc.intro",
+      "recursor": "Acc.rec",
+      "source_declaration_sha256": {
+        "Acc": "a7f555ca45514f16479c09c35a226de796b93f9c023662a70b6ce0977cab9389",
+        "Acc.intro": "355e47d711d54bd979a69cf06f7870dfde696721235e2b289bfaff844fbdecce",
+        "Acc.rec": "d996fa21de5fff270d18473af734749f43cb3d2973db71ed0addac037883fc45"
+      }
+    }
   },
   "composition_probe": {
     "tool": "crates/axeyum-lean-import/examples/nat_prelude_composition_probe.rs",
-    "tool_sha256": "51b896dfc78747aa36d3903c8a25be8ebc7956c910ea2e574fd326704e657698",
+    "tool_sha256": "9767fd1df4edf4f21551b5b4043809fd3cfe513b342f16635914bcffda9180fe",
     "api": "crates/axeyum-lean-import/src/theorem_composition.rs",
-    "api_sha256": "d2a6e191ca8d517b5cae74eb5b273f454389c3140eaeed1c07c3938cabcaf654",
-    "observation": "/nas3/data/axeyum/autogenesis/probes/ac33a0a2d-nat-mod-lt-compatibility-v13/observation.json",
-    "observation_sha256": "29fc6b096e28e7f99b8005e86673259b3b1e3686778af6b0e452d4f31be079c1",
+    "api_sha256": "1ecde3d39ca9f87708d2ef00cac8b2afcb6cf8f9f82dddacbb069c3a0034a121",
+    "observation": "/nas3/data/axeyum/autogenesis/probes/3d466b45c-canonical-acc-composition-v14/observation.json",
+    "observation_sha256": "9ed5aceb87ffd73797b48069ba38c1f62db8c001f43aa2bb584b3060136076dd",
     "outcome": "rejected",
     "first_conflict": "True",
     "imported_declarations": 261,
@@ -76,8 +87,8 @@
   "composition_result": {
     "root": "Nat.add_comm",
     "outcome": "composed",
-    "receipt_schema": "axeyum.checked-theorem-composition.v4",
-    "receipt_sha256": "65cebf06c4f6ed4156631af24f94800b4de41d3ed9dbfe73e667b1a01b780a9b",
+    "receipt_schema": "axeyum.checked-theorem-composition.v5",
+    "receipt_sha256": "e61aea821be27597907f488e81c0cb2db30473756c26cd0d75e6a39cf5732be6",
     "source_closure": [
       "Nat",
       "Nat.zero",
@@ -114,9 +125,9 @@
     "environment_sha256_before": "82ac7b0143bdd9891b666a37220fb91b86afc4af4b920d68773d80b5c9348855",
     "environment_sha256_after": "bda5fa7e1660db1635ea2e019775ead03663cf3676e6a7695ea5352f8572c9bf",
     "negative_control_root": "Nat.dvd_gcd",
-    "negative_control_error_kind": "UnsupportedMissingDeclaration",
-    "negative_control_first_missing": "Acc",
-    "negative_control_missing_kind": "recursive-inductive",
+    "negative_control_error": "AdmissionRejected { name: \"Nat.div_mod_exec\", error: \"TypeMismatch { expected: ExprId(46664), got: ExprId(46674) }\" }",
+    "negative_control_first_rejected": "Nat.div_mod_exec",
+    "negative_control_error_kind": "TypeMismatch",
     "negative_control_environment_sha256": "798b19a16b1e6937d4fc9eb6f0c2f5f58c5544d5ea58641c7aa04119dc6b0982",
     "negative_control_environment_unchanged": true
   },
@@ -131,8 +142,8 @@
   "singleton_inductive_result": {
     "root": "Composition.existsTrue",
     "outcome": "composed",
-    "receipt_schema": "axeyum.checked-theorem-composition.v4",
-    "receipt_sha256": "7e40575f65ce4938795b10f6950b688a38980cb6e7cadabcc219b4b9e3a054df",
+    "receipt_schema": "axeyum.checked-theorem-composition.v5",
+    "receipt_sha256": "6f8009af7b894b403381b070d8ba656a86e70ea63f9718ae81577180cf6b37be",
     "added_theorem_names": ["Composition.existsTrue"],
     "added_axiom_footprints": {
       "Composition.existsTrue": []
@@ -157,11 +168,44 @@
     "environment_sha256_before": "82ac7b0143bdd9891b666a37220fb91b86afc4af4b920d68773d80b5c9348855",
     "environment_sha256_after": "52e5b2e9dcc275fe83e77b9b0ca7c5b4f00b8a3b2cca3b471d0c7d29ad947847"
   },
+  "acc_inductive_result": {
+    "root": "Acc.inv",
+    "outcome": "composed",
+    "receipt_schema": "axeyum.checked-theorem-composition.v5",
+    "receipt_sha256": "f4652e351956ef0e2635433dd7cb96a1d4f45707504ec577d97812a192f8ae73",
+    "added_theorem_names": [
+      "Acc.inv"
+    ],
+    "added_axiom_footprints": {
+      "Acc.inv": []
+    },
+    "added_singleton_inductives": [
+      {
+        "family": "Acc",
+        "constructors": [
+          "Acc.intro"
+        ],
+        "recursor": "Acc.rec",
+        "source_declaration_sha256": {
+          "Acc": "a7f555ca45514f16479c09c35a226de796b93f9c023662a70b6ce0977cab9389",
+          "Acc.intro": "355e47d711d54bd979a69cf06f7870dfde696721235e2b289bfaff844fbdecce",
+          "Acc.rec": "d996fa21de5fff270d18473af734749f43cb3d2973db71ed0addac037883fc45"
+        },
+        "target_declaration_sha256": {
+          "Acc": "a7f555ca45514f16479c09c35a226de796b93f9c023662a70b6ce0977cab9389",
+          "Acc.intro": "355e47d711d54bd979a69cf06f7870dfde696721235e2b289bfaff844fbdecce",
+          "Acc.rec": "d996fa21de5fff270d18473af734749f43cb3d2973db71ed0addac037883fc45"
+        }
+      }
+    ],
+    "environment_sha256_before": "82ac7b0143bdd9891b666a37220fb91b86afc4af4b920d68773d80b5c9348855",
+    "environment_sha256_after": "c3b2d26b7639d60bde7bf2ab5f441e6acbc4e48b1cc782fe9bde98a2da6fb376"
+  },
   "definition_result": {
     "root": "Nat.eq_one_of_dvd_one",
     "outcome": "composed",
-    "receipt_schema": "axeyum.checked-theorem-composition.v4",
-    "receipt_sha256": "9ac9ace96e64d1bd9cd8131ebe1f2f7404cc93b4ed9d962ae55ffe51ef200cd0",
+    "receipt_schema": "axeyum.checked-theorem-composition.v5",
+    "receipt_sha256": "701e6bccd59d3344d0c99f87603412cfabd94313c169339d1af8cf36d8e89f6b",
     "source_closure": [
       "True",
       "True.intro",
@@ -269,7 +313,8 @@
     "bind existing imported logic and Nat declarations to reusable prelude handles",
     "compare overlapping declaration identities and fail closed on semantic mismatch",
     "reconstruct missing definitions and singleton inductives only through ordinary target kernel gates",
-    "reconstruct the complete missing recursive Acc package only through an atomic target-kernel inductive gate",
+    "reconstruct the exact canonical native Acc package only through an atomic target-kernel inductive gate",
+    "diagnose and align the Nat.div_mod_exec proof term at the first independently rejected target admission",
     "replay the seven-lemma surface before any coprimality target submission"
   ],
   "authority": {
@@ -277,10 +322,10 @@
     "held_out_inspected": false,
     "proof_bodies_displayed": false,
     "proof_search_invocations": 0,
-    "kernel_submissions": 15,
+    "kernel_submissions": 24,
     "evaluation_credit": 0,
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "This freezes a proof plan and independently composes exact Nat.mul and Nat.dvd definitions, the exact official-order Bool and singleton Exists packages, and eight axiom-free theorems for one demanded root. Native Nat.mod_lt now has Lean's general positive-denominator contract and its distinct wrapper-level type is target-kernel definitionally equal to the imported theorem. This does not authorize conflicting definitions, axioms, opaque declarations, recursive or mutual inductives, quotient packages, generic theorem transport, or recursor permutation; compose the remaining six required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact. The next measured blocker is the missing recursive Acc package reached by Nat.dvd_gcd."
+  "limitations": "This freezes a proof plan and independently composes exact Nat.mul and Nat.dvd definitions, the exact official-order Bool and singleton Exists packages, the declaration-exact canonical native Acc package, and axiom-free control theorems. Native Nat.mod_lt has Lean's general positive-denominator contract and its distinct wrapper-level type is target-kernel definitionally equal to the imported theorem. This does not authorize arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, quotient packages, generic theorem transport, or recursor permutation; compose the remaining six required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact. The next measured blocker is target-kernel rejection of the translated Nat.div_mod_exec proof with a TypeMismatch."
 }

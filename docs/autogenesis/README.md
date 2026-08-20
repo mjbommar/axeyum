@@ -160,6 +160,7 @@ compounding, not automation theatre.
 | [Checked definition composition](61-checked-definition-composition.md) | Can demanded computational helpers enter only through target-kernel admission, and which representation seam appears next? |
 | [Official Bool order](62-official-bool-order.md) | Does aligning native Bool with Lean preserve every branch-sensitive consumer and advance the unchanged Mathlib composition control? |
 | [General Nat.mod_lt compatibility](63-general-nat-mod-lt-compatibility.md) | Can the native theorem adopt Lean's general contract and cross wrapper differences through checked definitional equality? |
+| [Canonical Acc composition](64-canonical-acc-composition.md) | Can one demanded recursive package be regenerated exactly without authorizing a generic transport class, and what target check appears next? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

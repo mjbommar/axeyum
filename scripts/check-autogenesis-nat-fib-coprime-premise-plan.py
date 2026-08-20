@@ -37,7 +37,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "proof-plan-frozen-general-nat-mod-lt-library-slice-compatible"
+        != "proof-plan-frozen-canonical-acc-library-slice-compatible"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -46,7 +46,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     implementation = manifest["implementation"]
     if (
         implementation["evidence_commit"]
-        != "ac33a0a2d8508d2123b23cfc9959da38d1b9ad37"
+        != "3d466b45cc34435702db09604f47d0362eb9d17b"
         or implementation["bool_order_commit"]
         != "772646c0d1a0c6ebca302c37a42cf2bb2f5030ee"
         or implementation["bool_constructor_order"]
@@ -62,6 +62,11 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
             sha256(ROOT / row["path"]) != row["sha256"]
             for row in implementation["nat_mod_lt_sources"]
         )
+        or implementation["acc_package_commit"]
+        != "3d466b45cc34435702db09604f47d0362eb9d17b"
+        or implementation["acc_package"]["family"] != "Acc"
+        or implementation["acc_package"]["constructor"] != "Acc.intro"
+        or implementation["acc_package"]["recursor"] != "Acc.rec"
     ):
         raise PlanError("native alignment implementation identity changed")
     probe = manifest["composition_probe"]
@@ -133,7 +138,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         != {
             "proof_bodies_displayed": False,
             "proof_search_invocations": 0,
-            "kernel_submissions": 15,
+            "kernel_submissions": 24,
             "ledger_writes": 0,
         }
     ):
@@ -252,12 +257,11 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or composed["environment_sha256_before"]
         == composed["environment_sha256_after"]
         or negative["root"] != composition_result["negative_control_root"]
-        or negative["error"]
-        != (
-            f'{composition_result["negative_control_error_kind"]} '
-            f'{{ name: "{composition_result["negative_control_first_missing"]}", '
-            f'kind: "{composition_result["negative_control_missing_kind"]}" }}'
-        )
+        or negative["error"] != composition_result["negative_control_error"]
+        or composition_result["negative_control_first_rejected"]
+        not in negative["error"]
+        or composition_result["negative_control_error_kind"]
+        not in negative["error"]
         or negative["environment_sha256_before"]
         != composition_result["negative_control_environment_sha256"]
         or negative["environment_sha256_after"]
@@ -295,6 +299,38 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
             != package["target_declaration_sha256"]
         ):
             raise PlanError("singleton inductive identity changed")
+    acc = observation["source"]["acc_inductive_control"]
+    acc_result = manifest["acc_inductive_result"]
+    if (
+        acc["roots"] != [acc_result["root"]]
+        or acc["outcome"] != acc_result["outcome"]
+        or acc["receipt_schema"] != acc_result["receipt_schema"]
+        or acc["receipt_sha256"] != acc_result["receipt_sha256"]
+        or acc["added_theorem_names"] != acc_result["added_theorem_names"]
+        or acc["added_axiom_footprints"]
+        != acc_result["added_axiom_footprints"]
+        or acc["added_singleton_inductives"]
+        != acc_result["added_singleton_inductives"]
+        or acc["environment_sha256_before"]
+        != acc_result["environment_sha256_before"]
+        or acc["environment_sha256_after"]
+        != acc_result["environment_sha256_after"]
+        or acc["environment_sha256_before"] == acc["environment_sha256_after"]
+        or acc["added_axiom_footprints"] != {"Acc.inv": []}
+        or len(acc["added_singleton_inductives"]) != 1
+    ):
+        raise PlanError("Acc inductive composition result changed")
+    acc_package = acc["added_singleton_inductives"][0]
+    if (
+        acc_package["family"] != "Acc"
+        or acc_package["constructors"] != ["Acc.intro"]
+        or acc_package["recursor"] != "Acc.rec"
+        or acc_package["source_declaration_sha256"]
+        != implementation["acc_package"]["source_declaration_sha256"]
+        or acc_package["source_declaration_sha256"]
+        != acc_package["target_declaration_sha256"]
+    ):
+        raise PlanError("Acc inductive identity changed")
     definition = observation["source"]["definition_control"]
     definition_result = manifest["definition_result"]
     definition_reuse_counts = {
@@ -352,7 +388,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         "held_out_inspected": False,
         "proof_bodies_displayed": False,
         "proof_search_invocations": 0,
-        "kernel_submissions": 15,
+        "kernel_submissions": 24,
         "evaluation_credit": 0,
         "ledger_writes": 0,
     }:
@@ -366,8 +402,8 @@ def main() -> int:
         print(
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
-            "present=0|exact=11|compatible=Nat.mod_lt|next=Acc|"
-            "submissions=15|evaluation=0|writes=0"
+            "present=0|exact=11|compatible=Nat.mod_lt,Acc|next=Nat.div_mod_exec|"
+            "submissions=24|evaluation=0|writes=0"
         )
         return 0
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, PlanError) as error:
