@@ -67,6 +67,7 @@ pub mod geometry_corpus;
 pub mod geometry_json;
 pub mod gf2;
 pub mod gf2_artifact;
+pub mod gf2_extension;
 pub mod gf2_hayes;
 pub mod gf2_independent;
 pub mod gf2_search;

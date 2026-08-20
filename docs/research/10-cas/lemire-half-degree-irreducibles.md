@@ -2864,14 +2864,43 @@ Tr(Frob * sigma_n | H_c^*(X_(n,m,0)))
   = # {alpha in GF(2^n): charpoly(alpha) is in I_0}.
 ```
 
-The native `identity_class_count` already reconstructs this last population
-exactly through the Hayes transform.  Thus explicit extension-field
-enumeration would duplicate an existing exact CAS value layer.  More
-importantly, applying the fixed-point formula to the left side merely returns
-the original population; it does not bound it.  A valid geometric bridge must
-instead construct an equivariant smoothing, bound the twisted trace directly,
-or identify a recursive complex including its stalk ranks and cyclic
-induction data (ADR-0526).
+The native `identity_class_count` reconstructs this population exactly over
+the base field `GF(2)`.  It does **not** compute the fixed-degree interval over
+`GF(2^r)` for `r>1`; those are higher Frobenius traces of the long-cycle
+complex, not degree-`rn` Hayes populations over `GF(2)`.  ADR-0527 therefore
+adds a separate bounded extension-field operation with certified field moduli,
+exact prime-power recognition, and explicit population admission.
+
+Its ordinary tests reproduce
+
+```text
+A_r(5,2)=(-4)^r-(-2)^r for r=1,2,3,
+(A_1,A_2,A_3)(9,4)=(5,129,-1771).
+```
+
+The `r=1` rows cross-check the Hayes value layer.  The `r>1` rows are genuine
+new trace coordinates, but remain finite diagnostics.  Applying the fixed-
+point formula merely identifies what they count; it does not bound their
+number of Frobenius modes as the prescribed-coefficient count grows.  A valid
+geometric bridge must still construct an equivariant smoothing, bound the
+twisted trace directly, or identify a recursive complex including its stalk
+ranks and cyclic induction data (ADR-0526).
+
+The explicit ignored release probe also enumerates the first
+four-fixed-coefficient stopping row over `GF(32)`, using the certified modulus
+`x^5+x^2+1`:
+
+```text
+n=9, m=4, candidates=32^5=33,554,432,
+sum Lambda=33,525,757,
+A_5(9,4)=-28,675.
+```
+
+It completed in 206.15 seconds and independently matches the earlier scratch
+value.  Together with the lower extension traces, this rejects an order-two
+rational recurrence at the four-coefficient boundary.  It does not determine
+the reduced zeta factor or its growth with `m`, so no asymptotic theorem credit
+is attached.
 
 The exact algebra is no longer trapped in that executable. ADR-0486 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
