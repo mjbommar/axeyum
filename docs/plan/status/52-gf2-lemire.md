@@ -364,6 +364,15 @@ irreducibility hypothesis forces the transformed coefficient of degree
 The cyclotomic trinomials `Phi_(3^r)` give the honest infinite degree family
 `2*3^(r-1)`, not arbitrary-degree coverage.  This closes the cheap recursive
 construction bridge without moving the connected endpoint proof obligation.
+A separate checked Capell route now turns any even-degree shaped seed with a
+noncube root into the full tower `d*3^k`.  The standalone audit replays all 400
+committed source artifacts and both output-certificate checkers: 138 selected
+seeds qualify, occupying 95 distinct 3-free rays; 200 odd degrees are
+structurally ineligible and 62 selected even roots are cubes.  The iteration
+is exact, since both the root order and `2^(3d)-1` gain one 3-adic factor at
+each step.  This establishes infinitely many additional degrees but leaves
+every odd degree and infinitely many even 3-free bases, so the uniform
+connected trace obligation is unchanged.
 The multi-minute endpoint sweep is now an explicit ignored,
 environment-selected research probe; the ordinary theorem gate keeps the
 bounded `ell<=7` controls.  Three exact-commit fleet probes extend both the
@@ -378,6 +387,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `556888c96` | Added the checked cubic Capell criterion and dual-checker audit, proving 138 committed seeds generate 95 infinite degree rays while explicitly retaining the uncovered odd and even 3-free degrees. |
 | 2026-08-20 | `f85830458` | Added a bounded characteristic-two Q-transform with independent irreducibility controls, retained its special cubic-to-sextic success and cyclotomic degree family, and proved the standard iterated hypothesis forces a forbidden upper-half coefficient. |
 | 2026-08-20 | `6d6e1a7d8` | Added deterministic and hierarchical binary extension-trace sharding, exact Frobenius-orbit compression and Hankel minors, and used the complete `A_7(9,4)` trace to exclude every recurrence of order at most three without claiming endpoint proof credit. |
 | 2026-08-19 | `1705eb688` | Proved Gao's binary Hayes L-degree distribution from exact conductors and quantified why its aggregate degree retains the fatal endpoint factor. |
