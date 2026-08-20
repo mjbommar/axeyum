@@ -3563,6 +3563,59 @@ would settle every remaining degree, including proper-power subtraction.  The
 same ledger rejects power five at the degree-400 handoff.  This narrows the
 geometric research target without asserting it.
 
+There is now an exact localization theorem behind that target for `n>=5`,
+where Sawin's strict top-cohomology hypothesis holds at the endpoint.  If `c`
+is an `n`-cycle, then
+
+```text
+<character(H),p_n>=Tr(c|H),
+```
+
+because the long-cycle class has `(n-1)!` elements and `p_n(c)=n`.  On
+`X_(n,ell,0)`, a tuple fixed by the full cycle is `(a,...,a)`, with prescribed
+coefficients `binom(n,j)a^j`.  Lucas's theorem makes the first odd binomial
+index `q=2^v2(n)`.  Hence the full fixed locus is a point except when `n` is a
+power of two, where it is an affine line; both have compactly supported Euler
+characteristic one.
+
+For even `n`, that observation alone does **not** identify the cohomological
+trace: the cycle is wild in characteristic two.  The correct
+Deligne--Lusztig finite-order reduction writes `n=qb`, with `q` a power of two
+and `b` odd, fixes the order-`b` part, and leaves the order-`q` part acting on
+that fixed locus.  A fixed tuple for the order-`b` part has root polynomial
+`G(x)^b` with `G` monic of degree `q`.  When `b>1`, one has
+`q<=n/3<=ell`; the first `q` leading-coefficient equations are triangular
+with diagonal coefficient `b=1` in `GF(2)`, so they force `G=x^q`.  The
+reduced locus is a single point.  Therefore, for every non-power-of-two
+degree,
+
+```text
+Tr(c | H_c^*(X_(n,ell,0)))=1.
+```
+
+The one-dimensional top compactly supported cohomology is trivial under
+`S_n`, also contributing one.  Thus the complete non-top long-cycle complex
+has exact alternating Euler trace zero.  The public
+`sawin_long_cycle_euler_report` certifies the lowest-set-bit classification,
+the tame/wild orders, the reduced-locus dimension, and this trace subtraction;
+an independent Pascal recurrence checks the Lucas index through degree 128.
+At power-of-two degrees it returns no trace verdict, rather than applying a
+tame formula to a wild automorphism.
+
+This is genuine exact cancellation on every non-power-of-two degree, but it is
+still unweighted.  The
+endpoint count requires
+
+```text
+Tr(Frob*c | H_c,non-top^*(X_(n,ell,0))),
+```
+
+and zero trace after forgetting Frobenius does not control distinct Frobenius
+eigenvalues on the cancelling pieces.  The next theorem must therefore be a
+Frobenius-weighted refinement of this zero Euler sector (plus a separate
+power-of-two wild analysis), not another generic total-Betti estimate.  No
+Lemire endpoint credit is attached (ADR-0552).
+
 The closest general symmetric-cohomology theorems do not fill that gap.
 Chenevert's smooth projective hypersurface calculation assumes `n!` is
 invertible in the ground field, excluding this characteristic-two `S_n`

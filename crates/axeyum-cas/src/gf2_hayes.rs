@@ -2649,6 +2649,73 @@ pub struct SawinFoulkesEndpointLedger {
     pub published_generic_endpoint_closure: bool,
 }
 
+/// Exact long-cycle fixed-locus and Euler-trace ledger at a Lemire endpoint.
+///
+/// Let `c=(1 2 ... n)` act on Sawin's ordered-root short-interval variety
+/// `X_(n,ell,0)`.  A `c`-fixed tuple has every root equal to one scalar `a`,
+/// so its `j`th prescribed elementary symmetric function is
+/// `binom(n,j) a^j`.  Lucas's theorem makes the least positive `j` with odd
+/// binomial coefficient equal to the lowest set bit of `n`.  Consequently the
+/// fixed locus is a point when that index is at most `ell`, and an affine line
+/// otherwise.
+///
+/// Both loci have compactly supported Euler characteristic one.  More
+/// generally, write `n=2^a b` with `b` odd.  The Deligne--Lusztig finite-order
+/// trace formula first fixes the order-`b` part of the cycle and leaves the
+/// order-`2^a` part acting on that locus.  When `b>1`, the first `ell`
+/// coefficients of `G(x)^b` force the degree-`2^a` block polynomial to be
+/// `G(x)=x^(2^a)`, so the reduced locus is a point.  Thus every non-power-of-two
+/// degree has total cycle Euler trace one.  The top compactly supported
+/// cohomology is the one-dimensional trivial `S_n` representation, and
+/// subtraction gives zero alternating trace on all non-top cohomology.
+/// Powers of two remain genuinely wild.  Even where the Euler cancellation is
+/// proved, it does not imply cancellation after Frobenius weights are inserted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SawinLongCycleEulerReport {
+    /// Polynomial degree `n`.
+    pub degree: usize,
+    /// Lemire/Hayes level `ell=ceil(n/2)-1`.
+    pub ell: usize,
+    /// Dimension `n-ell` of the ordered-root complete intersection.
+    pub interval_dimension: usize,
+    /// Least positive `j` for which `binom(n,j)` is odd.
+    pub first_odd_binomial_index: usize,
+    /// Whether one prescribed equation forces the common fixed root to zero.
+    pub has_active_odd_binomial_constraint: bool,
+    /// Full-cycle fixed-locus dimension: zero for a point and one for an
+    /// affine line.
+    pub full_cycle_fixed_locus_dimension: usize,
+    /// Compactly supported Euler characteristic of the fixed locus.
+    pub fixed_locus_compact_euler_characteristic: i8,
+    /// Order `2^a` of the characteristic-two part of the long cycle.
+    pub wild_cycle_order: usize,
+    /// Odd order `b` of the prime-to-characteristic part of the long cycle.
+    pub tame_cycle_order: usize,
+    /// Dimension of the locus fixed by the prime-to-characteristic part.
+    pub tame_fixed_locus_dimension: usize,
+    /// Whether Deligne--Lusztig reduction collapses the cycle trace to a point.
+    pub cycle_trace_reduced_to_point: bool,
+    /// Value `n` of the power-sum character `p_n` on an `n`-cycle.
+    pub power_sum_value_on_long_cycle: usize,
+    /// Centralizer order `n` of an `n`-cycle in `S_n`.
+    pub long_cycle_centralizer_order: usize,
+    /// Scalar in `<chi,p_n>=scalar*Tr(c|chi)`, certified to equal one.
+    pub power_sum_projection_scalar: usize,
+    /// Top compactly supported cohomological degree `2(n-ell)`.
+    pub top_compact_cohomology_degree: usize,
+    /// Long-cycle trace on the one-dimensional trivial top cohomology.
+    pub top_cycle_trace: i8,
+    /// Alternating total long-cycle trace, unavailable only at power-of-two
+    /// degrees where the remaining cycle action is entirely wild.
+    pub total_alternating_cycle_trace: Option<i8>,
+    /// Alternating long-cycle trace on all non-top cohomology, with the same
+    /// power-of-two boundary.
+    pub non_top_alternating_cycle_trace: Option<i8>,
+    /// Explicit boundary: Euler cancellation alone certifies no
+    /// Frobenius-weighted trace estimate.
+    pub frobenius_weighted_cancellation_certified: bool,
+}
+
 /// Hypothetical polynomial bound on every effective cyclic Foulkes Betti
 /// multiplicity beyond one degree threshold.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -7864,6 +7931,131 @@ fn endpoint_proper_prime_power_upper_bound(
     let square_power_bound = BigUint::from(half_degree) << square_exponent;
     let higher_power_bound = BigUint::from(degree) << degree.div_ceil(3);
     Ok(square_power_bound + higher_power_bound)
+}
+
+/// Certify the long-cycle fixed locus and its exact non-top Euler
+/// cancellation at a Lemire endpoint.
+///
+/// The character identity used here is
+///
+/// ```text
+/// <chi,p_n> = (1/n!) sum_(g in S_n) chi(g) p_n(g)
+///           = Tr(c | chi),
+/// ```
+///
+/// because there are `(n-1)!` long cycles and `p_n(c)=n`.  For the geometric
+/// fixed locus, Lucas's theorem says that the first odd entry in row `n` of
+/// Pascal's triangle occurs at `lowbit(n)`.  At
+/// `ell=ceil(n/2)-1`, this is at most `ell` for every odd `n` and every even
+/// non-power of two.  The sole affine-line case is therefore an even power of
+/// two; its compactly supported Euler characteristic is still one.
+///
+/// For `n=2^a b`, Deligne--Lusztig's finite-order formula replaces the trace
+/// of the full cycle by the trace of its `2`-power part on the locus fixed by
+/// its odd part.  If `b>1`, a triangular leading-coefficient calculation on
+/// `G(x)^b` makes that locus a point.  Subtracting the trivial one-dimensional
+/// top cohomology then proves exact zero alternating trace on the non-top
+/// complex.  At powers of two the odd part is the identity, so no trace
+/// conclusion is claimed.  Frobenius acts nontrivially on separate weight
+/// pieces even in the proved cases, and no Frobenius-weighted cancellation is
+/// certified.
+///
+/// # Errors
+///
+/// Declines degrees below five (where Sawin's strict top-cohomology hypothesis
+/// is not available), degrees above the caller's explicit Foulkes
+/// limit, arithmetic overflow, or a failed endpoint/fixed-locus invariant.
+pub fn sawin_long_cycle_euler_report(
+    degree: usize,
+    limits: SawinFoulkesLimits,
+) -> Result<SawinLongCycleEulerReport, HayesError> {
+    if degree < 5 {
+        return Err(HayesError::InvalidParameter(
+            "Sawin long-cycle Euler report requires degree at least five".to_owned(),
+        ));
+    }
+    if degree > limits.max_degree {
+        return Err(HayesError::ResourceLimit {
+            resource: "sawin_long_cycle_fixed_locus_degree",
+            requested: degree,
+            limit: limits.max_degree,
+        });
+    }
+
+    let ell = degree.div_ceil(2).checked_sub(1).ok_or_else(|| {
+        HayesError::InvalidParameter("Sawin long-cycle endpoint level underflow".to_owned())
+    })?;
+    let interval_dimension = degree.checked_sub(ell).ok_or_else(|| {
+        HayesError::InvalidParameter("Sawin long-cycle interval underflow".to_owned())
+    })?;
+    let first_odd_binomial_index =
+        1_usize
+            .checked_shl(degree.trailing_zeros())
+            .ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "Sawin long-cycle lowest-set-bit computation overflow".to_owned(),
+                )
+            })?;
+    let has_active_odd_binomial_constraint = first_odd_binomial_index <= ell;
+    let full_cycle_fixed_locus_dimension = usize::from(!has_active_odd_binomial_constraint);
+    let expected_affine_line = degree.is_power_of_two();
+    if (full_cycle_fixed_locus_dimension == 1) != expected_affine_line {
+        return Err(HayesError::Invariant(
+            "Sawin long-cycle fixed-locus classification failed".to_owned(),
+        ));
+    }
+
+    let wild_cycle_order = first_odd_binomial_index;
+    let tame_cycle_order = degree / wild_cycle_order;
+    let cycle_trace_reduced_to_point = tame_cycle_order > 1;
+    let tame_fixed_locus_dimension = if cycle_trace_reduced_to_point {
+        0
+    } else {
+        interval_dimension
+    };
+    if cycle_trace_reduced_to_point && ell < wild_cycle_order {
+        return Err(HayesError::Invariant(
+            "Sawin tame fixed locus lacks enough triangular constraints".to_owned(),
+        ));
+    }
+
+    let top_compact_cohomology_degree = interval_dimension.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("Sawin top cohomology degree overflow".to_owned())
+    })?;
+    let sawin_singular_offset = degree / 2 - ell / 2 + 1;
+    if sawin_singular_offset >= interval_dimension {
+        return Err(HayesError::Invariant(
+            "Sawin strict top-cohomology hypothesis failed".to_owned(),
+        ));
+    }
+    let fixed_locus_compact_euler_characteristic = 1_i8;
+    let top_cycle_trace = 1_i8;
+    let total_alternating_cycle_trace =
+        cycle_trace_reduced_to_point.then_some(fixed_locus_compact_euler_characteristic);
+    let non_top_alternating_cycle_trace =
+        total_alternating_cycle_trace.map(|trace| trace - top_cycle_trace);
+
+    Ok(SawinLongCycleEulerReport {
+        degree,
+        ell,
+        interval_dimension,
+        first_odd_binomial_index,
+        has_active_odd_binomial_constraint,
+        full_cycle_fixed_locus_dimension,
+        fixed_locus_compact_euler_characteristic,
+        wild_cycle_order,
+        tame_cycle_order,
+        tame_fixed_locus_dimension,
+        cycle_trace_reduced_to_point,
+        power_sum_value_on_long_cycle: degree,
+        long_cycle_centralizer_order: degree,
+        power_sum_projection_scalar: 1,
+        top_compact_cohomology_degree,
+        top_cycle_trace,
+        total_alternating_cycle_trace,
+        non_top_alternating_cycle_trace,
+        frobenius_weighted_cancellation_certified: false,
+    })
 }
 
 /// Certify the cyclic/Foulkes long-cycle identity and evaluate its exact
@@ -17723,6 +17915,105 @@ mod tests {
         assert_eq!(report.squared_irreducible_margin, BigUint::from(0_u8));
         assert!(!report.conditional_endpoint_closure);
         assert!(!report.published_generic_endpoint_closure);
+    }
+
+    #[test]
+    fn long_cycle_fixed_locus_separates_tame_trace_from_wild_geometry() {
+        for (degree, first_odd, full_fixed_dimension, trace) in [
+            (401_usize, 1_usize, 0_usize, Some(1_i8)),
+            (402, 2, 0, Some(1)),
+            (12, 4, 0, Some(1)),
+            (512, 512, 1, None),
+        ] {
+            let report =
+                sawin_long_cycle_euler_report(degree, SawinFoulkesLimits::default()).unwrap();
+            assert_eq!(report.ell, degree.div_ceil(2) - 1);
+            assert_eq!(report.interval_dimension, degree - report.ell);
+            assert_eq!(report.first_odd_binomial_index, first_odd);
+            assert_eq!(
+                report.full_cycle_fixed_locus_dimension,
+                full_fixed_dimension
+            );
+            assert_eq!(
+                report.has_active_odd_binomial_constraint,
+                full_fixed_dimension == 0
+            );
+            assert_eq!(report.fixed_locus_compact_euler_characteristic, 1);
+            assert_eq!(report.wild_cycle_order, first_odd);
+            assert_eq!(report.tame_cycle_order, degree / first_odd);
+            assert_eq!(report.cycle_trace_reduced_to_point, trace.is_some());
+            assert_eq!(
+                report.tame_fixed_locus_dimension,
+                if trace.is_some() {
+                    0
+                } else {
+                    report.interval_dimension
+                }
+            );
+            assert_eq!(report.power_sum_value_on_long_cycle, degree);
+            assert_eq!(report.long_cycle_centralizer_order, degree);
+            assert_eq!(report.power_sum_projection_scalar, 1);
+            assert_eq!(
+                report.top_compact_cohomology_degree,
+                2 * report.interval_dimension
+            );
+            assert_eq!(report.top_cycle_trace, 1);
+            assert_eq!(report.total_alternating_cycle_trace, trace);
+            assert_eq!(
+                report.non_top_alternating_cycle_trace,
+                trace.map(|value| value - 1)
+            );
+            assert!(!report.frobenius_weighted_cancellation_certified);
+        }
+    }
+
+    #[test]
+    fn long_cycle_lowest_odd_binomial_index_matches_pascal_recurrence() {
+        let mut pascal_row = vec![true];
+        for degree in 1_usize..=128 {
+            let mut next = vec![false; degree + 1];
+            for (index, &odd) in pascal_row.iter().enumerate() {
+                next[index] ^= odd;
+                next[index + 1] ^= odd;
+            }
+            pascal_row = next;
+            if degree < 5 {
+                continue;
+            }
+            let independently_enumerated_first = pascal_row
+                .iter()
+                .enumerate()
+                .skip(1)
+                .find_map(|(index, &odd)| odd.then_some(index))
+                .unwrap();
+            let report =
+                sawin_long_cycle_euler_report(degree, SawinFoulkesLimits::default()).unwrap();
+            assert_eq!(
+                report.first_odd_binomial_index,
+                independently_enumerated_first
+            );
+        }
+    }
+
+    #[test]
+    fn long_cycle_euler_report_declines_invalid_or_excessive_degree() {
+        for degree in 0..=4 {
+            assert!(sawin_long_cycle_euler_report(degree, SawinFoulkesLimits::default()).is_err());
+        }
+        assert_eq!(
+            sawin_long_cycle_euler_report(
+                13,
+                SawinFoulkesLimits {
+                    max_degree: 12,
+                    max_orthogonality_cells: 1,
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "sawin_long_cycle_fixed_locus_degree",
+                requested: 13,
+                limit: 12,
+            })
+        );
     }
 
     #[test]
