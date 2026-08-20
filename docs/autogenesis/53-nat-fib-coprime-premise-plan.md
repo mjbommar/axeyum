@@ -88,7 +88,9 @@ by [atomic singleton-inductive composition](60-atomic-singleton-inductive-compos
 [official Bool order](62-official-bool-order.md), followed by
 [general Nat.mod_lt compatibility](63-general-nat-mod-lt-compatibility.md),
 [canonical Acc composition](64-canonical-acc-composition.md), and the
-[Nat division composition mismatch](65-nat-division-composition-mismatch.md).
+[Nat division composition mismatch](65-nat-division-composition-mismatch.md),
+followed by the
+[axiom-free Nat.mod equation pack](66-axiom-free-nat-mod-equation-pack.md).
 Verify the tracked plan and its authority boundary with:
 
 ```sh

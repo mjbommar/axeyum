@@ -116,15 +116,24 @@ python3 -m unittest \
   scripts.tests.test_check_autogenesis_nat_fib_coprime_premise_plan
 ```
 
+## Subsequent foundation
+
+The next bottom-up increment found that Lean's two generated computation
+equations `Nat.mod.eq_2` and `Nat.modCore.go.eq_1` have empty footprints and
+compose exactly into r082 with a replayed receipt. See the
+[axiom-free Nat.mod equation pack](66-axiom-free-nat-mod-equation-pack.md).
+This replaces the vague instruction to reason directly over the official
+implementation with two exact, independently checked induction primitives.
+
 ## Next bounded increment
 
-1. State `Nat.dvd_mod_iff` against the imported target declarations, especially
-   official `Nat.mod` and exact `Nat.dvd`.
-2. Prefer a direct constructive proof using the target's already checked
-   arithmetic lemmas; treat official proof dependencies as hints, not imports.
-3. Submit the candidate to a fresh target kernel and require an empty axiom
+1. Prove the divisibility invariant for `Nat.modCore.go` by fuel induction using
+   the composed step equation.
+2. Lift it through official `Nat.modCore` and `Nat.mod`, using the target's
+   checked divisibility and subtraction lemmas.
+3. Generalize the native `Nat.dvd_mod_iff` signature to official Lean's
+   all-divisor statement.
+4. Submit the candidate to a fresh target kernel and require an empty axiom
    footprint.
-4. Confirm the bridge actually removes the `Nat.div_mod_exec` dependency from
-   the `Nat.dvd_gcd` composition path.
-5. Replay `Nat.dvd_gcd` unchanged and let its next independent rejection choose
-   the following bottom-up increment.
+5. Confirm the bridge removes `Nat.div_mod_exec` from this path, then replay
+   `Nat.dvd_gcd` unchanged.

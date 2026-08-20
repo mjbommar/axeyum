@@ -170,6 +170,25 @@
       }
     }
   },
+  "official_equation_pack": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/dd79317c5-lean430-nat-mod-equations-v1/manifest.json",
+    "manifest_sha256": "a41348a8fed7ebf1a877e5a48d86287c25a3216291da6c586909884f5f28c658",
+    "implementation_commit": "dd79317c5495ba42bac14d855923b1f1cb40aad5",
+    "source_stream_sha256": "bbb1136fef6c4dacd737ace4d797e3512dd85f290506f6d635cc069ec36035fb",
+    "composition_receipt_sha256": "804aabcf8a72f9ae5f4df04c7868d02b691472481917d5ff856bc02b987d1108",
+    "source_closure_count": 183,
+    "reused_declarations": 181,
+    "added_theorems": {
+      "Nat.mod.eq_2": {
+        "declaration_sha256": "47a0f25d2575086bb8d8ad687beca4e69ef71644bb6057f55ec052d5c2084610",
+        "axiom_footprint": []
+      },
+      "Nat.modCore.go.eq_1": {
+        "declaration_sha256": "aaf85a61edef7f6416bfccd8d817ca53c88cf7fe3d5b34bfbf166287e485448d",
+        "axiom_footprint": []
+      }
+    }
+  },
   "nat_mod_lt_compatibility_result": {
     "name": "Nat.mod_lt",
     "compatibility": "translated-definitional-equality",
@@ -353,7 +372,8 @@
     "compare overlapping declaration identities and fail closed on semantic mismatch",
     "reconstruct missing definitions and singleton inductives only through ordinary target kernel gates",
     "reconstruct the exact canonical native Acc package only through an atomic target-kernel inductive gate",
-    "reconstruct an axiom-free target-side Nat.dvd_mod_iff bridge over the imported Nat.mod representation",
+    "use the composed axiom-free Nat.mod.eq_2 and Nat.modCore.go.eq_1 equations to prove the target-side remainder divisibility invariant",
+    "generalize Nat.dvd_mod_iff to the official all-divisor signature and reconstruct it axiom-free over imported Nat.mod",
     "retry the unchanged Nat.div_mod_exec-dependent Nat.dvd_gcd closure without importing propext",
     "replay the seven-lemma surface before any coprimality target submission"
   ],

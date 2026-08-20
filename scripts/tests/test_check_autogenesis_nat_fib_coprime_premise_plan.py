@@ -149,6 +149,24 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
             MODULE.validate(changed)
 
+    def test_official_equation_pack_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["official_equation_pack"]["added_theorems"]["Nat.mod.eq_2"][
+            "axiom_footprint"
+        ] = ["propext"]
+        with self.assertRaisesRegex(MODULE.PlanError, "equation theorem"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["official_equation_pack"]["source_closure_count"] = 182
+        with self.assertRaisesRegex(MODULE.PlanError, "identity or authority"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["official_equation_pack"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
     def test_nat_mod_lt_compatibility_mutations_are_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)
         changed["nat_mod_lt_compatibility_result"]["source_declaration_sha256"] = (

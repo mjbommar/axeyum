@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Semantic admission diagnostics now render the expected, inferred, weak-head-normal-form, and first-mismatch expressions before a rejected private target clone is discarded. The unchanged Mathlib 4.30.0 r082 `Nat.dvd_gcd` control isolates official `Nat.mod` versus the native Bool-rollover remainder inside `Nat.div_mod_exec`; its full source closure has 92 declarations. `Nat.mod_lt` already reuses the target theorem, while the independently missing direct consumer is `Nat.dvd_mod_iff`. Fresh official Lean 4.30.0 exports show that both `Nat.dvd_mod_iff` and `Nat.mod_add_div` carry `propext`, so neither proof is admissible support for the axiom-free flywheel.
+**Status:** Semantic admission diagnostics isolate official `Nat.mod` versus the native Bool-rollover remainder inside `Nat.div_mod_exec`; the 92-declaration `Nat.dvd_gcd` closure shows `Nat.mod_lt` already reusable and `Nat.dvd_mod_iff` independently missing. Official high-level support (`Nat.dvd_mod_iff`, `Nat.mod_add_div`, and `Nat.div_add_mod`) carries `propext` and remains reference-only. A minimal Lean 4.30.0 pack of generated `Nat.mod.eq_2` and `Nat.modCore.go.eq_1` equations instead imports with zero axioms and composes into r082 exactly: 183 selected declarations, 181 reused, two added theorem identities equal, both footprints empty, and the V5 receipt replays.
 
-**Next:** construct an axiom-free target-side `Nat.dvd_mod_iff` proof or bridge over the imported official `Nat.mod` representation; require a fresh-kernel empty footprint; prove that it removes the `Nat.div_mod_exec` dependency from this path; then retry `Nat.dvd_gcd` unchanged. Do not import the assumption-bearing official proofs or weaken definitional equality.
+**Next:** prove `k ∣ Nat.modCore.go y hy fuel x hfuel ↔ k ∣ x` under `k ∣ y` by fuel induction using the composed step equation and checked subtraction/divisibility lemmas; lift it through official `Nat.modCore` and `Nat.mod`; generalize native `Nat.dvd_mod_iff` to official Lean's all-divisor signature; require a fresh-kernel empty footprint; then retry `Nat.dvd_gcd` unchanged.
 
 <!-- plan-section: landed-changes -->
 
@@ -29,3 +29,4 @@
 | 2026-08-20 | `3d466b45c` | Receipt V5 reconstructs only canonical native `Acc` exactly and exposes `Nat.div_mod_exec` target type mismatch |
 | 2026-08-20 | `f099a4a37` | Semantic admission diagnostics isolate the 92-declaration division mismatch and the missing `Nat.dvd_mod_iff` consumer |
 | 2026-08-20 | `a12d44858` | Lean export audit reports canonical theorem identities, direct dependencies, and kernel-derived axiom footprints |
+| 2026-08-20 | `dd79317c5` | Proof-isolated theorem-pack composition replays two axiom-free official `Nat.mod` computation equations into r082 |

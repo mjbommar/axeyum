@@ -92,6 +92,92 @@ def validate_official_support_audit(manifest: dict[str, Any]) -> None:
             raise PlanError(f"official support audit report changed for {root}")
 
 
+def validate_official_equation_pack(manifest: dict[str, Any]) -> None:
+    pack = manifest["official_equation_pack"]
+    manifest_path = pathlib.Path(pack["manifest"])
+    pack_dir = manifest_path.parent
+    if (
+        sha256(manifest_path) != pack["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or stat.S_IMODE(manifest_path.stat().st_mode) != 0o444
+    ):
+        raise PlanError("official equation pack changed or is mutable")
+    external = load(manifest_path)
+    source = external["source"]
+    audit = external["audit"]
+    composition = external["composition"]
+    source_path = pack_dir / source["path"]
+    audit_path = pack_dir / audit["path"]
+    receipt_path = pack_dir / composition["receipt"]
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind") != "axeyum-lean430-nat-mod-equation-pack"
+        or external.get("lean_version") != "4.30.0"
+        or external.get("lean_githash")
+        != "d024af099ca4bf2c86f649261ebf59565dc8c622"
+        or external.get("composition_tool_commit") != pack["implementation_commit"]
+        or external.get("composition_tool_sha256")
+        != sha256(ROOT / external["composition_tool"])
+        or external.get("generation")
+        != {
+            "module": "Init",
+            "roots": ["Nat.mod.eq_2", "Nat.modCore.go.eq_1"],
+        }
+        or source["sha256"] != pack["source_stream_sha256"]
+        or sha256(source_path) != source["sha256"]
+        or source["declarations_admitted"] != 183
+        or source["axioms"] != []
+        or sha256(audit_path) != audit["sha256"]
+        or sha256(receipt_path) != composition["receipt_file_sha256"]
+        or stat.S_IMODE(source_path.stat().st_mode) != 0o444
+        or stat.S_IMODE(audit_path.stat().st_mode) != 0o444
+        or stat.S_IMODE(receipt_path.stat().st_mode) != 0o444
+        or external["target"]["sha256"] != manifest["source"]["stream_sha256"]
+        or external["target"]["axioms"] != []
+        or composition["receipt_sha256"] != pack["composition_receipt_sha256"]
+        or composition["source_closure_count"] != pack["source_closure_count"]
+        or composition["source_closure_count"] != 183
+        or composition["reused_declarations"] != pack["reused_declarations"]
+        or composition["reused_declarations"] != 181
+        or composition["added_theorems"] != list(pack["added_theorems"])
+        or composition["added_axiom_footprints"]
+        != {name: [] for name in pack["added_theorems"]}
+        or external["authority"]
+        != {
+            "proof_bodies_displayed": False,
+            "proof_search_invocations": 0,
+            "imported_declarations_admitted": 444,
+            "composed_theorem_admissions_including_replay": 4,
+            "ledger_writes": 0,
+        }
+    ):
+        raise PlanError("official equation pack identity or authority changed")
+    receipt = load(receipt_path)
+    if (
+        receipt["schema_version"] != composition["receipt_schema"]
+        or receipt["roots"] != external["generation"]["roots"]
+        or receipt["receipt_sha256"] != composition["receipt_sha256"]
+        or len(receipt["source_closure"]) != composition["source_closure_count"]
+        or len(receipt["reused_declarations"]) != composition["reused_declarations"]
+        or [row["name"] for row in receipt["added_theorems"]]
+        != composition["added_theorems"]
+        or receipt["target_environment_sha256_before"]
+        != composition["target_environment_sha256_before"]
+        or receipt["target_environment_sha256_after"]
+        != composition["target_environment_sha256_after"]
+    ):
+        raise PlanError("official equation pack receipt changed")
+    for row in receipt["added_theorems"]:
+        expected = pack["added_theorems"][row["name"]]
+        if (
+            row["source_declaration_sha256"] != expected["declaration_sha256"]
+            or row["target_declaration_sha256"] != expected["declaration_sha256"]
+            or row["axiom_footprint"] != expected["axiom_footprint"]
+            or row["axiom_footprint"] != []
+        ):
+            raise PlanError(f"official equation theorem changed for {row['name']}")
+
+
 def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     manifest = load(MANIFEST) if manifest is None else manifest
     if (
@@ -504,6 +590,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     }:
         raise PlanError("plan authority changed")
     validate_official_support_audit(manifest)
+    validate_official_equation_pack(manifest)
     return manifest
 
 
