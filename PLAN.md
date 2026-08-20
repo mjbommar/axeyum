@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `0db0c7ffd` | Added bounded native fixed-degree traces over binary extension fields, separating genuine Frobenius-power long-cycle diagnostics from the base-field Hayes population. |
 | 2026-08-19 | `9e3cb37a4` | Audited Sawin's characteristic-two singular-support argument, rejected every elementary-abelian Fomenko small-kernel variant, and required genuinely equivariant or higher-Witt input. |
 | 2026-08-19 | `1b4f3503f` | Audited Ito--Takeuchi--Tsushima at equation level and required a checked linearized quadratic reduction or new mixed associative cocycle before importing its characteristic-two Heisenberg nondegeneracy. |
 | 2026-08-19 | `f01dfe8e0` | Extended both exact endpoint cumulant and local Witt-cylinder concentration diagnostics through `ell=23`, retaining exact ratios, fleet resource provenance, and the non-credit theorem boundary. |
@@ -707,6 +708,16 @@ long-cycle virtual character.  A Sawin route now requires an equivariant
 smoothing, a direct Frobenius--long-cycle trace theorem, or a recursive complex
 with checked stalk multiplicities; the fixed-point identity alone is the
 original Mangoldt population and is circular as an estimate.
+The distinct fixed-degree extension-field diagnostic is now native rather
+than conflated with the base-field Hayes count.  Certified binary field
+moduli, exact `GF(2^r)[T]` Rabin tests, inseparable/odd prime-power recognition,
+and pre-enumeration population limits produce exact long-cycle errors.  Small
+controls recover `A_r(5,2)=(-4)^r-(-2)^r` through `r=3` and
+`(A_1,A_2,A_3)(9,4)=(5,129,-1771)`;
+the ignored release probe independently enumerated the 33,554,432-candidate
+four-coefficient `GF(32)` row in 206.15 seconds and recovered
+`A_5(9,4)=-28675`.  This refutes the two-mode recurrence but remains finite
+diagnostic evidence, not an ordinary-gate or uniform theorem.
 The multi-minute endpoint sweep is now an explicit ignored,
 environment-selected research probe; the ordinary theorem gate keeps the
 bounded `ell<=7` controls.  Three exact-commit fleet probes extend both the
