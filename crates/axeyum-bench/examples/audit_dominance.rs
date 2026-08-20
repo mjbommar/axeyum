@@ -32,6 +32,7 @@ use axeyum_ir::{TermArena, TermId};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     Evidence, SolverConfig, produce_evidence, produce_evidence_smtlib, prove_unsat_to_lean_module,
+    scan_proof_fragment,
 };
 use serde_json::{Value as JsonValue, json};
 
@@ -80,22 +81,43 @@ struct AuditResult {
 struct AuditProgress {
     phase: &'static str,
     phase_started: Instant,
+    /// What the current phase is working ON, when the phase name alone does not
+    /// say. Today: the `ProofFragment` a lean reconstruction is attempting.
+    ///
+    /// Without it, a timeout in `lean-reconstruction` is unreadable. Measured
+    /// 2026-08-20, NINE of ten timing-out rows landed in that one phase, and
+    /// they were three unrelated failures: an exponential blowup, a CORRECT
+    /// decline arriving 35s late because `lra_ctx()` builds a CReal prelude
+    /// before the route knows it will decline, and a SUCCESS emitting a 2.4 GB
+    /// module. The fragment name separates all three at a glance and costs
+    /// microseconds -- `scan_proof_fragment` is the same classification the
+    /// reconstruction is about to do anyway.
+    detail: Option<String>,
 }
 
 fn mark_phase(progress: &Arc<Mutex<AuditProgress>>, phase: &'static str) {
     if let Ok(mut state) = progress.lock() {
         state.phase = phase;
         state.phase_started = Instant::now();
+        state.detail = None;
     }
 }
 
-fn progress_snapshot(progress: &Arc<Mutex<AuditProgress>>) -> (&'static str, f64) {
+/// Annotate the CURRENT phase without restarting its clock.
+fn mark_detail(progress: &Arc<Mutex<AuditProgress>>, detail: String) {
+    if let Ok(mut state) = progress.lock() {
+        state.detail = Some(detail);
+    }
+}
+
+fn progress_snapshot(progress: &Arc<Mutex<AuditProgress>>) -> (&'static str, f64, Option<String>) {
     match progress.lock() {
         Ok(state) => (
             state.phase,
             state.phase_started.elapsed().as_secs_f64() * 1000.0,
+            state.detail.clone(),
         ),
-        Err(_) => ("poisoned-progress", 0.0),
+        Err(_) => ("poisoned-progress", 0.0, None),
     }
 }
 
@@ -487,6 +509,15 @@ fn audit_instance(
                 parse_lean_ms = json!(ms(parse_lean_start.elapsed()));
                 let lean_assertions = lean_script.assertions.clone();
                 mark_phase(progress, "lean-reconstruction");
+                // Classify FIRST and record it, so a timeout row says which
+                // route was being attempted rather than only that one was.
+                mark_detail(
+                    progress,
+                    format!(
+                        "{:?}",
+                        scan_proof_fragment(&lean_script.arena, &lean_assertions)
+                    ),
+                );
                 let lean_start = Instant::now();
                 match prove_unsat_to_lean_module(&mut lean_script.arena, &lean_assertions) {
                     Ok((fragment, module)) => {
@@ -562,6 +593,7 @@ fn audit_instance_capped(path: PathBuf, baseline_outcome: Verdict, cap: Duration
     let wall_cap = cap.checked_add(Duration::from_secs(5)).unwrap_or(cap);
     let wall_start = Instant::now();
     let progress = Arc::new(Mutex::new(AuditProgress {
+        detail: None,
         phase: "queued",
         phase_started: Instant::now(),
     }));
@@ -578,7 +610,7 @@ fn audit_instance_capped(path: PathBuf, baseline_outcome: Verdict, cap: Duration
         })
         .expect("spawn dominance audit thread");
     rx.recv_timeout(wall_cap).unwrap_or_else(|_| {
-        let (phase, phase_elapsed_ms) = progress_snapshot(&progress);
+        let (phase, phase_elapsed_ms, phase_detail) = progress_snapshot(&progress);
         AuditResult {
             record: json!({
                 "file": display,
@@ -589,6 +621,8 @@ fn audit_instance_capped(path: PathBuf, baseline_outcome: Verdict, cap: Duration
                 "audit_phase": phase,
                 "timeout_phase": phase,
                 "timeout_phase_elapsed_ms": phase_elapsed_ms,
+                "timeout_phase_detail": phase_detail
+                    .map_or(JsonValue::Null, JsonValue::from),
                 "evidence_kind": JsonValue::Null,
                 "evidence_certified": false,
                 "evidence_checked": false,
