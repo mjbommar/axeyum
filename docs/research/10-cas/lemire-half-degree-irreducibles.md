@@ -1610,6 +1610,55 @@ both Lemire endpoints, because `k+d` is the endpoint degree and the exact
 diagonal is `(2^k-(-1)^k)/3`.  It still would not by itself control the
 complementary signed cross-order convolution block.
 
+There is now a sharper algebraic decomposition of the fibrewise `L^2` half.
+For an exact fibre `F`, put
+
+```text
+c_F=sum_(f in F) mu(f)mu(f+h).
+```
+
+The CAS retains `sum_F c_F^2`, `sum_F #F`, and their difference.  At the
+pinned `(ell,k,d)=(9,11,8)` row these are respectively `120680`, `130048`,
+and `-9368`.  The square sum splits as `62948+57732` over the
+at-most-quadratic and nonquadratic sectors, while their populations split as
+`68784+61264`; both sectors separately have negative defect.  The proposed
+inequality
+
+```text
+sum_F c_F^2 <= sum_F #F                              (E2')
+```
+
+also survives every endpoint row through `ell=7` and the maximal-interval
+fleet rows through `ell=14`, without theorem credit.
+
+Unlike the earlier spectrum patterns, `(E2')` has an exact four-point form.
+In `R=GF(2)[x]/(x^(ell+1))`, write
+
+```text
+delta_h(f)=f^(-1)+(f+h)^(-1)=h/(f(f+h)).
+```
+
+For every allowed translation `t`, clearing the four unit denominators gives
+
+```text
+delta_h(f)=delta_h(f+t)  <=>  h t(t+h)=0 in R.        (parallelogram)
+```
+
+The right side is independent of `f`.  The factor `h` is essential because
+the truncated ring has zero divisors; the native checker includes a modulo
+`x^4` witness that rejects cancelling it.  Expanding `sum_F c_F^2` therefore
+turns `(E2')` into the assertion that the restricted off-diagonal sum
+
+```text
+sum mu(f)mu(f+h)mu(f+t)mu(f+h+t),
+```
+
+over fixed high input cosets and nilpotent translations
+`h*t*(t+h)=0`, `t!=0`, is nonpositive.  This is the active local theorem
+target.  It requires a sign mechanism on nilpotent Mobius parallelograms;
+positive moments alone cannot supply that sign.  Even if proved, the separate
+cross-order convolution block would remain.
+
 All valuation layers now also live in one checked Witt system.  If a
 normalized parameter belongs to `E_(ell-v)`, then on each odd 2-typical block
 the CAS embeds its coordinate by the blockwise Verschiebung

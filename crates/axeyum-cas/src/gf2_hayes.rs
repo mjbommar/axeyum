@@ -3836,6 +3836,10 @@ pub struct BinaryDyadicAutocorrelationFibreReport {
     /// Fibres whose product-discriminant phase is at most quadratic modulo
     /// eight in the recovered affine coordinates.
     pub at_most_quadratic_fibre_count: usize,
+    /// Total points in the at-most-quadratic fibres.
+    pub at_most_quadratic_fibre_points: u128,
+    /// Sum of squared correlations on the at-most-quadratic fibres.
+    pub at_most_quadratic_correlation_square_sum: BigUint,
     /// Fibres whose primitive modulo-eight Walsh spectrum is exactly flat.
     pub generalized_bent_fibre_count: usize,
     /// Total points in the generalized-bent fibres.
@@ -3846,8 +3850,21 @@ pub struct BinaryDyadicAutocorrelationFibreReport {
     pub nonquadratic_signed_correlation: i128,
     /// Sum of absolute fibre correlations on the nonquadratic fibres.
     pub nonquadratic_absolute_correlation: u128,
+    /// Sum of squared correlations on the nonquadratic fibres.
+    pub nonquadratic_correlation_square_sum: BigUint,
     /// Sum of absolute correlations before combining any exact fibres.
     pub fibrewise_absolute_correlation: u128,
+    /// Sum of squared signed correlations before combining exact fibres.
+    ///
+    /// Subtracting `total_fibre_points` gives the exact within-fibre
+    /// off-diagonal dyadic correlation.  This is the nonnegative counting
+    /// half of the proposed connected square-root estimate; no sign or
+    /// asymptotic claim is attached to the finite value.
+    pub fibre_correlation_square_sum: BigUint,
+    /// Fibres with nonzero signed correlation.
+    pub nonzero_fibre_correlation_count: usize,
+    /// Nonzero fibres whose correlation magnitude is an exact power of two.
+    pub power_of_two_magnitude_fibre_count: usize,
     /// Number of exact `(shift,inverse difference)` parameter pairs after
     /// combining the high-coefficient input cosets.
     pub shift_inverse_pair_count: usize,
@@ -3874,6 +3891,26 @@ pub struct BinaryDyadicAutocorrelationFibreReport {
     pub worst_fibre: Option<BinaryDyadicAutocorrelationFibreWitness>,
 }
 
+impl BinaryDyadicAutocorrelationFibreReport {
+    /// Exact within-fibre off-diagonal dyadic correlation.
+    ///
+    /// If `c_F=sum_(x in F) epsilon(x)`, then this returns
+    /// `sum_F c_F^2-sum_F #F`.  A nonpositive value is precisely the proposed
+    /// counting inequality `sum_F c_F^2<=total_fibre_points`.
+    #[must_use]
+    pub fn within_fibre_off_diagonal_correlation(&self) -> BigInt {
+        BigInt::from(self.fibre_correlation_square_sum.clone())
+            - BigInt::from(self.total_fibre_points)
+    }
+
+    /// Whether this finite row satisfies the proposed nonpositive
+    /// within-fibre off-diagonal correlation inequality.
+    #[must_use]
+    pub fn satisfies_nonpositive_within_fibre_correlation(&self) -> bool {
+        self.fibre_correlation_square_sum <= BigUint::from(self.total_fibre_points)
+    }
+}
+
 /// Kernel size of one binary truncated Artin--Schreier shift map.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BinaryArtinSchreierKernelReport {
@@ -3885,6 +3922,40 @@ pub struct BinaryArtinSchreierKernelReport {
     pub kernel_dimension: usize,
     /// Exact kernel size `2^kernel_dimension`.
     pub kernel_size: u128,
+}
+
+/// Exact parallelogram identity for principal-unit inverse differences.
+///
+/// In a characteristic-two truncated polynomial ring, put
+/// `delta_h(f)=f^(-1)+(f+h)^(-1)`.  Clearing the four unit denominators gives
+///
+/// ```text
+/// delta_h(f)=delta_h(f+t)  <=>  h t(t+h)=0.
+/// ```
+///
+/// The right side is independent of `f`.  Consequently the square of every
+/// exact inverse-difference fibre sum is a restricted four-shift correlation
+/// over the parallelogram `f,f+h,f+t,f+h+t`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryInverseDifferenceParallelogramReport {
+    /// Principal-unit modulus is `x^(ell+1)`.
+    pub ell: usize,
+    /// Packed constant-one input unit `f`.
+    pub input_unit: u64,
+    /// Packed zero-constant shift `h`.
+    pub first_shift: u64,
+    /// Packed zero-constant translation `t`.
+    pub second_shift: u64,
+    /// `delta_h(f)` in the quotient ring.
+    pub inverse_difference: u64,
+    /// `delta_h(f+t)` in the quotient ring.
+    pub translated_inverse_difference: u64,
+    /// Reduced product `h t(t+h)`.
+    pub annihilator_product: u64,
+    /// Whether the two inverse differences agree.
+    pub inverse_differences_equal: bool,
+    /// Whether `h t(t+h)` vanishes in the quotient.
+    pub annihilator_product_vanishes: bool,
 }
 
 /// Exact annihilator-average of the combined Berlekamp/inverse shift energy.
@@ -11231,6 +11302,64 @@ pub fn binary_artin_schreier_kernel_report(
     })
 }
 
+/// Check the inverse-difference parallelogram identity in
+/// `GF(2)[x]/x^(ell+1)`.
+///
+/// # Errors
+///
+/// Rejects unsupported truncations, a non-unit input, shifts with nonzero
+/// constant coefficient, or packed values outside the quotient.
+pub fn binary_inverse_difference_parallelogram_report(
+    ell: usize,
+    input_unit: u64,
+    first_shift: u64,
+    second_shift: u64,
+) -> Result<BinaryInverseDifferenceParallelogramReport, HayesError> {
+    if ell == 0 || ell >= 32 {
+        return Err(HayesError::InvalidParameter(
+            "inverse-difference parallelogram requires 1<=ell<32".to_owned(),
+        ));
+    }
+    let mask = (1_u64 << (ell + 1)) - 1;
+    if input_unit & !mask != 0
+        || first_shift & !mask != 0
+        || second_shift & !mask != 0
+        || input_unit & 1 == 0
+        || first_shift & 1 != 0
+        || second_shift & 1 != 0
+    {
+        return Err(HayesError::InvalidParameter(
+            "parallelogram inputs have the wrong quotient or constant term".to_owned(),
+        ));
+    }
+    let translated = input_unit ^ second_shift;
+    let inverse_difference = principal_unit_inverse(input_unit, ell)
+        ^ principal_unit_inverse(input_unit ^ first_shift, ell);
+    let translated_inverse_difference = principal_unit_inverse(translated, ell)
+        ^ principal_unit_inverse(translated ^ first_shift, ell);
+    let first_product = polynomial_multiply_packed(first_shift, second_shift) & mask;
+    let annihilator_product =
+        polynomial_multiply_packed(first_product, first_shift ^ second_shift) & mask;
+    let inverse_differences_equal = inverse_difference == translated_inverse_difference;
+    let annihilator_product_vanishes = annihilator_product == 0;
+    if inverse_differences_equal != annihilator_product_vanishes {
+        return Err(HayesError::Invariant(
+            "inverse-difference equality misses h*t*(t+h) annihilation".to_owned(),
+        ));
+    }
+    Ok(BinaryInverseDifferenceParallelogramReport {
+        ell,
+        input_unit,
+        first_shift,
+        second_shift,
+        inverse_difference,
+        translated_inverse_difference,
+        annihilator_product,
+        inverse_differences_equal,
+        annihilator_product_vanishes,
+    })
+}
+
 fn binary_berlekamp_shift_correlations(
     mobius: &[i8],
     inverse_cosets: &[usize],
@@ -12463,6 +12592,16 @@ fn record_binary_dyadic_fibre_statistics(
         .ok_or_else(|| HayesError::InvalidParameter("dyadic fibre total overflow".to_owned()))?;
     report.max_fibre_dimension = report.max_fibre_dimension.max(phase.dimension);
     report.at_most_quadratic_fibre_count += usize::from(phase.support_degree <= 2);
+    if phase.support_degree <= 2 {
+        report.at_most_quadratic_fibre_points = report
+            .at_most_quadratic_fibre_points
+            .checked_add(population)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("quadratic fibre point overflow".to_owned())
+            })?;
+        report.at_most_quadratic_correlation_square_sum +=
+            BigUint::from(phase.signed_correlation.unsigned_abs()).pow(2);
+    }
     if phase.is_generalized_bent {
         report.generalized_bent_fibre_count += 1;
         report.generalized_bent_fibre_points = report
@@ -12491,12 +12630,20 @@ fn record_binary_dyadic_fibre_statistics(
             .ok_or_else(|| {
                 HayesError::InvalidParameter("nonquadratic absolute overflow".to_owned())
             })?;
+        report.nonquadratic_correlation_square_sum +=
+            BigUint::from(phase.signed_correlation.unsigned_abs()).pow(2);
     }
     report.full_degree_fibre_count += usize::from(phase.support_degree == phase.dimension);
     report.fibrewise_absolute_correlation = report
         .fibrewise_absolute_correlation
         .checked_add(phase.signed_correlation.unsigned_abs())
         .ok_or_else(|| HayesError::InvalidParameter("fibrewise correlation overflow".to_owned()))?;
+    let magnitude = phase.signed_correlation.unsigned_abs();
+    report.fibre_correlation_square_sum += BigUint::from(magnitude).pow(2);
+    if magnitude != 0 {
+        report.nonzero_fibre_correlation_count += 1;
+        report.power_of_two_magnitude_fibre_count += usize::from(magnitude.is_power_of_two());
+    }
     if phase.support_degree > report.max_phase_support_degree || report.worst_fibre.is_none() {
         report.max_phase_support_degree = phase.support_degree;
         report.worst_fibre = Some(BinaryDyadicAutocorrelationFibreWitness {
@@ -13199,12 +13346,18 @@ pub fn binary_dyadic_autocorrelation_fibre_report(
         total_fibre_points: 0,
         max_fibre_dimension: 0,
         at_most_quadratic_fibre_count: 0,
+        at_most_quadratic_fibre_points: 0,
+        at_most_quadratic_correlation_square_sum: BigUint::from(0_u8),
         generalized_bent_fibre_count: 0,
         generalized_bent_fibre_points: 0,
         nonquadratic_fibre_points: 0,
         nonquadratic_signed_correlation: 0,
         nonquadratic_absolute_correlation: 0,
+        nonquadratic_correlation_square_sum: BigUint::from(0_u8),
         fibrewise_absolute_correlation: 0,
+        fibre_correlation_square_sum: BigUint::from(0_u8),
+        nonzero_fibre_correlation_count: 0,
+        power_of_two_magnitude_fibre_count: 0,
         shift_inverse_pair_count: 0,
         shift_inverse_pairwise_absolute_correlation: 0,
         normalized_parameter_count: 0,
@@ -18440,12 +18593,32 @@ mod tests {
         assert_eq!(report.total_fibre_points, 130_048);
         assert_eq!(report.max_fibre_dimension, 8);
         assert_eq!(report.at_most_quadratic_fibre_count, 16_587);
+        assert_eq!(
+            report.at_most_quadratic_fibre_points + report.nonquadratic_fibre_points,
+            report.total_fibre_points
+        );
         assert_eq!(report.generalized_bent_fibre_count, 0);
         assert_eq!(report.generalized_bent_fibre_points, 0);
         assert_eq!(report.nonquadratic_fibre_points, 61_264);
         assert_eq!(report.nonquadratic_signed_correlation, -202);
         assert_eq!(report.nonquadratic_absolute_correlation, 8_622);
+        assert_eq!(
+            &report.at_most_quadratic_correlation_square_sum
+                + &report.nonquadratic_correlation_square_sum,
+            report.fibre_correlation_square_sum
+        );
         assert_eq!(report.fibrewise_absolute_correlation, 33_680);
+        assert_eq!(
+            report.fibre_correlation_square_sum,
+            BigUint::from(120_680_u32)
+        );
+        assert_eq!(report.nonzero_fibre_correlation_count, 12_915);
+        assert_eq!(report.power_of_two_magnitude_fibre_count, 12_456);
+        assert_eq!(
+            report.within_fibre_off_diagonal_correlation(),
+            BigInt::from(-9_368)
+        );
+        assert!(report.satisfies_nonpositive_within_fibre_correlation());
         assert_eq!(report.shift_inverse_pair_count, 4_721);
         assert_eq!(report.shift_inverse_pairwise_absolute_correlation, 16_972);
         assert_eq!(report.normalized_parameter_count, 214);
@@ -18509,13 +18682,37 @@ mod tests {
         let offset = parse("AXEYUM_DYADIC_PROBE_OFFSET");
         assert!(matches!(offset, 1 | 2));
         let degree = 2 * ell + offset - d;
-        let report =
-            binary_dyadic_autocorrelation_fibre_report(ell, degree, d, HayesLimits::default())
-                .unwrap();
+        let max_table_cells = std::env::var("AXEYUM_DYADIC_PROBE_MAX_CELLS")
+            .map_or(Ok(HayesLimits::default().max_table_cells), |value| {
+                value
+                    .parse::<usize>()
+                    .map_err(|_| "invalid AXEYUM_DYADIC_PROBE_MAX_CELLS")
+            })
+            .unwrap();
+        let report = binary_dyadic_autocorrelation_fibre_report(
+            ell,
+            degree,
+            d,
+            HayesLimits {
+                max_table_cells,
+                ..HayesLimits::default()
+            },
+        )
+        .unwrap();
         eprintln!(
-            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} pair_abs={} normalized_abs={} valuation_abs={} gbent_fibres={} gbent_points={} witt_support={} witt_abs={} witt_m2={} witt_fourier_m2={} witt_fourier_m4={} phase_residues={:?} phase_comp_identity={} phase_comp_max_off={} phase_comp_square_sum={} additive_phases={:?} witt_conductors={:?} layers={:?}",
+            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} fibre_l2_square={} fibre_points={} within_fibre_offdiag={} nonzero_fibres={} power_two_fibres={} counting_candidate={} quadratic_l2_square={} quadratic_points={} nonquadratic_l2_square={} nonquadratic_points={} pair_abs={} normalized_abs={} valuation_abs={} gbent_fibres={} gbent_points={} witt_support={} witt_abs={} witt_m2={} witt_fourier_m2={} witt_fourier_m4={} phase_residues={:?} phase_comp_identity={} phase_comp_max_off={} phase_comp_square_sum={} additive_phases={:?} witt_conductors={:?} layers={:?}",
             report.off_diagonal_signed_correlation,
             report.fibrewise_absolute_correlation,
+            report.fibre_correlation_square_sum,
+            report.total_fibre_points,
+            report.within_fibre_off_diagonal_correlation(),
+            report.nonzero_fibre_correlation_count,
+            report.power_of_two_magnitude_fibre_count,
+            report.satisfies_nonpositive_within_fibre_correlation(),
+            report.at_most_quadratic_correlation_square_sum,
+            report.at_most_quadratic_fibre_points,
+            report.nonquadratic_correlation_square_sum,
+            report.nonquadratic_fibre_points,
             report.shift_inverse_pairwise_absolute_correlation,
             report.normalized_parameterwise_absolute_correlation,
             report.valuationwise_absolute_correlation,
@@ -18604,6 +18801,43 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn inverse_difference_fibres_are_shift_only_parallelograms() {
+        assert!(binary_inverse_difference_parallelogram_report(0, 1, 0, 0).is_err());
+        assert!(binary_inverse_difference_parallelogram_report(3, 0, 0, 0).is_err());
+        assert!(binary_inverse_difference_parallelogram_report(3, 1, 1, 0).is_err());
+        for ell in 1_usize..=6 {
+            let group_order = 1_usize << ell;
+            for middle in 0..group_order {
+                let input = 1_u64 | ((middle as u64) << 1);
+                for first in 0..group_order {
+                    for second in 0..group_order {
+                        let report = binary_inverse_difference_parallelogram_report(
+                            ell,
+                            input,
+                            (first as u64) << 1,
+                            (second as u64) << 1,
+                        )
+                        .unwrap();
+                        assert_eq!(
+                            report.inverse_differences_equal,
+                            report.annihilator_product_vanishes
+                        );
+                    }
+                }
+            }
+        }
+
+        let ramified = binary_inverse_difference_parallelogram_report(3, 1, 0b100, 0b010).unwrap();
+        assert!(ramified.inverse_differences_equal);
+        let mask = (1_u64 << 4) - 1;
+        assert_ne!(
+            polynomial_multiply_packed(0b010, 0b010 ^ 0b100) & mask,
+            0,
+            "dropping the ramified factor h must change the criterion"
+        );
     }
 
     #[test]

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-inverse-difference-parallelogram-identity",
+  "title": "Binary truncated inverse-difference parallelogram identity",
+  "statement": "Let ell>=1 and R=GF(2)[x]/(x^(ell+1)). For a unit f and zero-constant h,t, put delta_h(f)=f^(-1)+(f+h)^(-1). Then delta_h(f)=delta_h(f+t) if and only if h t(t+h)=0 in R.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"equivalence\":\"delta_h(f)=delta_h(f+t) iff h*t*(t+h)=0\",\"field_order\":2,\"format\":\"axeyum-gf2-inverse-difference-parallelogram\",\"level_min\":1,\"modulus\":\"x^(ell+1)\",\"version\":1}",
+    "fragment": "gf2-truncated-polynomial-identity",
+    "free_symbols": ["ell", "f", "h", "t"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "gf2-polynomial-semantics-v1",
+    "truncated-polynomial-quotient-arithmetic",
+    "characteristic-two-field-arithmetic"
+  ],
+  "evidence": [
+    {
+      "id": "gf2-inverse-difference-parallelogram-native-check",
+      "kind": "exhaustive-enumeration",
+      "supports": "The denominator-clearing derivation and both sides of the quotient-ring equivalence, with the noncancellable h factor retained.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features inverse_difference_fibres_are_shift_only_parallelograms",
+      "artifact": "crates/axeyum-cas/src/gf2_hayes.rs",
+      "notes": "The test exhausts every packed f,h,t through ell=6 and includes a modulo-x^4 mutation witness that fails if h is cancelled. The universal proof is the two-line denominator-clearing identity recorded in ADR-0562; exhaustive rows are controls, not the quantifier step."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "direct algebra in the truncated characteristic-two polynomial ring"
+  },
+  "notes": "This identity classifies equality inside an inverse-difference fibre. It does not determine the sign of the resulting four-shift Mobius correlation and supplies no endpoint theorem credit by itself."
+}

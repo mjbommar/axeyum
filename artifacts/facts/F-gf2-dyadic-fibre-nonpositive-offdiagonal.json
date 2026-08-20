@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-dyadic-fibre-nonpositive-offdiagonal",
+  "title": "Nonpositive within-fibre dyadic Mobius correlation",
+  "statement": "At the two binary Lemire endpoints, for every valid interval degree d, the sum of squared signed Mobius correlations over the exact input-coset, shift, and inverse-difference fibres is at most the total population of those fibres.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"sum_F c_F^2 <= sum_F #F\",\"degrees\":[\"2*ell+1-d\",\"2*ell+2-d\"],\"field_order\":2,\"format\":\"axeyum-gf2-dyadic-fibre-nonpositive-offdiagonal\",\"interval\":\"1<=d<ell\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": ["ell", "d", "F", "c_F"]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:gf2-inverse-difference-parallelogram-identity"
+  ],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; exact dyadic fibre L2 and nilpotent parallelogram decomposition"
+  },
+  "notes": "This is the open counting half E2', not a promoted finite pattern. By the proved inverse-difference identity, subtracting the fibre populations leaves exactly the restricted four-shift sum over h*t*(t+h)=0 with t nonzero. The candidate holds in exhaustive endpoint rows through ell=7, the pinned (ell,k,d)=(9,11,8) row with defect -9368, and maximal-interval fleet rows through ell=14. These observations are controls only. Even a universal proof would validate a local inverse-energy input but would not control the complementary signed cross-order Mobius convolution or prove Lemire."
+}
