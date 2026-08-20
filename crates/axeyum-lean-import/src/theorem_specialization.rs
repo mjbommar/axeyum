@@ -13,7 +13,6 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 use crate::canonical_declaration_sha256;
-use crate::theorem_composition::environment_sha256;
 
 /// Version of the checked theorem-specialization receipt.
 pub const CHECKED_THEOREM_SPECIALIZATION_VERSION: &str = "axeyum.checked-theorem-specialization.v1";
@@ -199,8 +198,7 @@ pub fn specialize_checked_theorem(
         });
     }
 
-    let before = environment_sha256(kernel)
-        .map_err(|error| CheckedTheoremSpecializationError::Identity(error.to_string()))?;
+    let before = environment_sha256(kernel)?;
     let source_sha256 = canonical_declaration_sha256(kernel, source_theorem)
         .map_err(|error| CheckedTheoremSpecializationError::Identity(error.clone()))?;
     let mut staged = kernel.clone();
@@ -232,8 +230,7 @@ pub fn specialize_checked_theorem(
     }
     let target_sha256 = canonical_declaration_sha256(&staged, target_theorem)
         .map_err(|error| CheckedTheoremSpecializationError::Identity(error.clone()))?;
-    let after = environment_sha256(&staged)
-        .map_err(|error| CheckedTheoremSpecializationError::Identity(error.to_string()))?;
+    let after = environment_sha256(&staged)?;
     let mut receipt = CheckedTheoremSpecializationReceipt {
         schema_version: CHECKED_THEOREM_SPECIALIZATION_VERSION.to_owned(),
         source_theorem: source_name,
@@ -274,8 +271,7 @@ pub fn verify_checked_theorem_specialization(
         return Err(CheckedTheoremSpecializationError::ReceiptMismatch);
     }
     let reproduced = specialize_checked_theorem(kernel, source_theorem, arguments, target_theorem)?;
-    let completed_identity = environment_sha256(completed)
-        .map_err(|error| CheckedTheoremSpecializationError::Identity(error.to_string()))?;
+    let completed_identity = environment_sha256(completed)?;
     if reproduced.receipt != *receipt
         || completed_identity != receipt.environment_sha256_after
         || reproduced.receipt.environment_sha256_after != receipt.environment_sha256_after
@@ -295,6 +291,29 @@ fn hex_sha256(bytes: &[u8]) -> String {
     rendered
 }
 
+fn environment_sha256(kernel: &Kernel) -> Result<String, CheckedTheoremSpecializationError> {
+    let mut entries = kernel
+        .environment()
+        .iter()
+        .map(|(&name, _)| {
+            Ok((
+                kernel.display_name(name).to_string(),
+                canonical_declaration_sha256(kernel, name)
+                    .map_err(|error| CheckedTheoremSpecializationError::Identity(error.clone()))?,
+            ))
+        })
+        .collect::<Result<Vec<_>, CheckedTheoremSpecializationError>>()?;
+    entries.sort();
+    let mut hasher = Sha256::new();
+    hasher.update(b"axeyum.checked-theorem-composition.environment.v1\0");
+    for (name, digest) in entries {
+        hasher.update((name.len() as u64).to_le_bytes());
+        hasher.update(name.as_bytes());
+        hasher.update(digest.as_bytes());
+    }
+    Ok(hex_sha256(&hasher.finalize()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -306,6 +325,9 @@ mod tests {
         identity: NameId,
         wrong: NameId,
         target: NameId,
+        assumption: NameId,
+        assumption_consumer: NameId,
+        assumption_target: NameId,
     }
 
     fn fixture() -> Fixture {
@@ -354,12 +376,38 @@ mod tests {
             })
             .expect("generic theorem checks");
         let target = kernel.name_str(anon, "specializationTarget");
+        let true_ty = kernel.const_(logic.true_, vec![]);
+        let assumption = kernel.name_str(anon, "specializationAssumption");
+        kernel
+            .add_declaration(Declaration::Axiom {
+                name: assumption,
+                uparams: vec![],
+                ty: true_ty,
+            })
+            .expect("assumption control checks");
+        let assumption_consumer = kernel.name_str(anon, "specializationAssumptionConsumer");
+        let assumption_consumer_ty = kernel.pi(anon, true_ty, true_ty, BinderInfo::Default);
+        let assumption_consumer_body = kernel.bvar(0);
+        let assumption_consumer_value =
+            kernel.lam(anon, true_ty, assumption_consumer_body, BinderInfo::Default);
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name: assumption_consumer,
+                uparams: vec![],
+                ty: assumption_consumer_ty,
+                value: assumption_consumer_value,
+            })
+            .expect("assumption consumer checks without reaching the control axiom");
+        let assumption_target = kernel.name_str(anon, "specializationAssumptionTarget");
         Fixture {
             kernel,
             generic,
             identity,
             wrong,
             target,
+            assumption,
+            assumption_consumer,
+            assumption_target,
         }
     }
 
@@ -430,6 +478,32 @@ mod tests {
                 &receipt,
             ),
             Err(CheckedTheoremSpecializationError::ReceiptMismatch)
+        );
+    }
+
+    #[test]
+    fn assumption_bearing_specialization_is_rejected_without_publication() {
+        let fixture = fixture();
+        let before = fixture.kernel.environment().len();
+        let error = specialize_checked_theorem(
+            &fixture.kernel,
+            fixture.assumption_consumer,
+            &[fixture.assumption],
+            fixture.assumption_target,
+        )
+        .expect_err("an assumption-bearing application must not publish");
+        assert_eq!(
+            error,
+            CheckedTheoremSpecializationError::NonEmptyAxiomFootprint(vec![
+                "specializationAssumption".to_owned()
+            ])
+        );
+        assert_eq!(fixture.kernel.environment().len(), before);
+        assert!(
+            !fixture
+                .kernel
+                .environment()
+                .contains(fixture.assumption_target)
         );
     }
 

@@ -178,6 +178,159 @@ def validate_official_equation_pack(manifest: dict[str, Any]) -> None:
             raise PlanError(f"official equation theorem changed for {row['name']}")
 
 
+def validate_nat_mod_invariant_pack(manifest: dict[str, Any]) -> None:
+    pack = manifest["nat_mod_invariant_pack"]
+    manifest_path = pathlib.Path(pack["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "autogenesis_nat_mod_invariant.lean",
+        "manifest.json",
+        "nat-mod-invariant.ndjson",
+        "specialization.json",
+        "theorem-audit.txt",
+    }
+    if (
+        sha256(manifest_path) != pack["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(
+            stat.S_IMODE((pack_dir / name).stat().st_mode) != 0o444
+            for name in expected_files
+        )
+    ):
+        raise PlanError("Nat.mod invariant pack changed or is mutable")
+
+    external = load(manifest_path)
+    authored = external["authored_source"]
+    export = external["export"]
+    audit = external["audit"]
+    target = external["target"]
+    tool = external["specialization_tool"]
+    result = external["result"]
+    authored_path = pack_dir / authored["pack_path"]
+    export_path = pack_dir / export["path"]
+    audit_path = pack_dir / audit["path"]
+    result_path = pack_dir / result["path"]
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-lean430-nat-mod-invariant-specialization-pack"
+        or external.get("lean_version") != manifest["source"]["lean_version"]
+        or external.get("lean_githash") != manifest["source"]["lean_githash"]
+        or external.get("repository_commit")
+        != pack["implementation_commit"][:12]
+        or authored["repository_path"]
+        != "scripts/lean/autogenesis_nat_mod_invariant.lean"
+        or authored["module"] != "AutogenesisNatModInvariant"
+        or authored["root"] != "Axeyum.Autogenesis.modSucc_dvd_iff"
+        or authored["sha256"] != pack["authored_source_sha256"]
+        or sha256(authored_path) != authored["sha256"]
+        or sha256(ROOT / authored["repository_path"]) != authored["sha256"]
+        or authored["bytes"] != authored_path.stat().st_size
+        or authored["lines"] != len(authored_path.read_text().splitlines())
+        or export["sha256"] != pack["source_stream_sha256"]
+        or sha256(export_path) != export["sha256"]
+        or export["bytes"] != export_path.stat().st_size
+        or export["lines"] != len(export_path.read_bytes().splitlines())
+        or export["declarations_admitted"] != 211
+        or export["axioms"] != []
+        or audit["tool"]
+        != "crates/axeyum-lean-import/examples/lean4export_import.rs"
+        or audit["tool_sha256"] != sha256(ROOT / audit["tool"])
+        or sha256(audit_path) != audit["sha256"]
+        or target["sha256"] != manifest["source"]["stream_sha256"]
+        or sha256(pathlib.Path(target["path"])) != target["sha256"]
+        or target["declarations_admitted"] != 261
+        or target["axioms"] != []
+        or tool["path"]
+        != "crates/axeyum-lean-import/examples/nat_mod_invariant_specialization.rs"
+        or tool["sha256"] != pack["specialization_tool_sha256"]
+        or tool["library_path"]
+        != "crates/axeyum-lean-import/src/theorem_specialization.rs"
+        or tool["library_sha256"] != pack["specialization_library_sha256"]
+        or sha256(result_path) != result["sha256"]
+        or external["authority"]
+        != {
+            "proof_source_authored_by_searcher": True,
+            "proof_source_is_trusted": False,
+            "proof_terms_independently_admitted": True,
+            "specialization_independently_admitted": True,
+            "native_type_compatibility_checked": True,
+            "proof_import_declarations_admitted": 211,
+            "target_import_declarations_admitted": 261,
+            "ledger_writes": 0,
+        }
+    ):
+        raise PlanError("Nat.mod invariant pack identity or authority changed")
+
+    expected_theorems = {
+        "Axeyum.Autogenesis.modCoreGo_invariant": (
+            "d2c5b7f22ba8be2944cf3a4a864250b40410de6bda746b026023f555efa66b14"
+        ),
+        "Axeyum.Autogenesis.modSucc_invariant": (
+            "3edbf74b7eb077da928a8ca499823419449791a72e654b885e1920e15df2952e"
+        ),
+        "Axeyum.Autogenesis.modSucc_dvd_iff": (
+            "cc6cb4ce64e5c30b3f8ff36cbc5c6c14f19dae1b57c51a6df095a07e9851a43e"
+        ),
+    }
+    audit_text = audit_path.read_text()
+    if set(audit["theorems"]) != set(expected_theorems):
+        raise PlanError("Nat.mod invariant theorem set changed")
+    for theorem, identity in expected_theorems.items():
+        row = audit["theorems"][theorem]
+        if (
+            row != {"declaration_sha256": identity, "axiom_footprint": []}
+            or f"name={theorem}|identity={identity}|axiom_free=true|"
+            not in audit_text
+            or "|axiom_footprint=none|" not in audit_text
+        ):
+            raise PlanError(f"Nat.mod invariant theorem changed for {theorem}")
+    if audit_text.count("|axioms=none|") != 3 or "axiom_free=false" in audit_text:
+        raise PlanError("Nat.mod invariant audit coverage changed")
+
+    observed = load(result_path)
+    specialization = observed["specialization"]
+    tracked_target = pack["target"]
+    if (
+        observed.get("schema_version") != 1
+        or observed.get("kind") != "axeyum-nat-mod-invariant-specialization"
+        or observed.get("lean_version") != manifest["source"]["lean_version"]
+        or observed["generic_composition"]["receipt_sha256"]
+        != pack["generic_composition_receipt_sha256"]
+        or observed["generic_composition"]["source_closure"] != 211
+        or observed["generic_composition"]["added_theorems"] != 16
+        or observed["helper_composition"]["receipt_sha256"]
+        != pack["helper_composition_receipt_sha256"]
+        or observed["helper_composition"]["roots"]
+        != ["Nat.dvd_add_iff_right", "Nat.sub_add_cancel", "Nat.add_comm"]
+        or observed["helper_composition"]["source_closure"] != 49
+        or observed["helper_composition"]["added_theorems"] != 21
+        or specialization["source"]
+        != "Axeyum.Autogenesis.modSucc_dvd_iff"
+        or specialization["arguments"]
+        != [
+            "Nat.dvd",
+            "Nat.dvd_add_iff_right",
+            "Nat.sub_add_cancel",
+            "Nat.add_comm",
+        ]
+        or specialization["target"] != tracked_target["name"]
+        or specialization["target_sha256"]
+        != tracked_target["declaration_sha256"]
+        or specialization["specialized_type_shape_sha256"]
+        != tracked_target["type_shape_sha256"]
+        or specialization["native_type_shape_sha256"]
+        != tracked_target["native_type_shape_sha256"]
+        or specialization["native_type_compatibility"] != "kernel-type-shape"
+        or specialization["axiom_footprint"] != tracked_target["axiom_footprint"]
+        or specialization["axiom_footprint"] != []
+        or specialization["receipt_sha256"]
+        != pack["specialization_receipt_sha256"]
+    ):
+        raise PlanError("Nat.mod invariant specialization result changed")
+
+
 def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     manifest = load(MANIFEST) if manifest is None else manifest
     if (
@@ -185,7 +338,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "proof-plan-frozen-nat-division-representation-mismatch-isolated"
+        != "target-nat-dvd-mod-iff-specialized-axiom-free"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -591,6 +744,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         raise PlanError("plan authority changed")
     validate_official_support_audit(manifest)
     validate_official_equation_pack(manifest)
+    validate_nat_mod_invariant_pack(manifest)
     return manifest
 
 
@@ -600,7 +754,8 @@ def main() -> int:
         print(
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
-            "present=0|exact=11|compatible=Nat.mod_lt,Acc|next=Nat.dvd_mod_iff|"
+            "present=0|exact=11|compatible=Nat.mod_lt,Acc,Nat.dvd_mod_iff|"
+            "next=target-leaf-cut|"
             "submissions=24|evaluation=0|writes=0"
         )
         return 0

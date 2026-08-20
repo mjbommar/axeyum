@@ -167,6 +167,31 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
             MODULE.validate(changed)
 
+    def test_nat_mod_invariant_pack_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_mod_invariant_pack"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_mod_invariant_pack"]["target"]["axiom_footprint"] = [
+            "propext"
+        ]
+        with self.assertRaisesRegex(MODULE.PlanError, "specialization result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_mod_invariant_pack"][
+            "specialization_receipt_sha256"
+        ] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "specialization result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_mod_invariant_pack"]["authored_source_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "identity or authority"):
+            MODULE.validate(changed)
+
     def test_nat_mod_lt_compatibility_mutations_are_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)
         changed["nat_mod_lt_compatibility_result"]["source_declaration_sha256"] = (

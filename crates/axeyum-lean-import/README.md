@@ -16,6 +16,8 @@ cargo run -p axeyum-lean-import --example lean4export_import -- export.ndjson
 cargo run -p axeyum-lean-import --example lean4export_import -- export.ndjson Nat.example
 cargo run -p axeyum-lean-import --example lean4export_composition -- \
   support.ndjson target.ndjson Nat.example
+cargo run -p axeyum-lean-import --example nat_mod_invariant_specialization -- \
+  nat-mod-invariant.ndjson target.ndjson
 ```
 
 Autogenesis statement inputs use the stronger proof-isolated adapter boundary:
@@ -40,3 +42,10 @@ inventories, every selected theorem is admitted into a private clone, the
 completed receipt must replay exactly, and every added theorem must retain an
 empty kernel-derived footprint. It prints the V5 receipt and never mutates an
 input kernel or ledger.
+
+`nat_mod_invariant_specialization` exercises the receipt-backed theorem
+specialization boundary on the real remainder proof. It composes the generic
+proof and named native arithmetic helpers into a private target, applies those
+checked declarations, replays the specialization receipt, requires an empty
+footprint, and checks that the resulting `Nat.dvd_mod_iff` has the native
+theorem's kernel type shape.

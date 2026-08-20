@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "proof-plan-frozen-nat-division-representation-mismatch-isolated",
+  "state": "target-nat-dvd-mod-iff-specialized-axiom-free",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -189,6 +189,25 @@
       }
     }
   },
+  "nat_mod_invariant_pack": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/667201932-lean430-nat-mod-invariant-v1/manifest.json",
+    "manifest_sha256": "ba31490c95fbd9b08005fcc0517fe6c09645d63c216005be0a795be85a15ef0e",
+    "implementation_commit": "6672019320fc6bfe1fdf98b14852d765e6e17c33",
+    "specialization_tool_sha256": "15d83ce54377277c45ae6584eb3e179cd0da4a9490009df71ff997157bd62b5c",
+    "specialization_library_sha256": "b7143d4fb448d934124c07c3918853239d1d8dd616156d4ac1609319c2df6da7",
+    "authored_source_sha256": "6afdadc9efae226348d73e6c4024608a1566973d16d24a29ab3e8176424f07bc",
+    "source_stream_sha256": "5d945b100f3e2939d6ea3ffa67e10b4d78ff9efb7782a56f3d67468aa167ebf9",
+    "generic_composition_receipt_sha256": "95774f7e022659cb41f792e3049d533035dee561c50064bab5e33f9e2f254b3e",
+    "helper_composition_receipt_sha256": "df4704110bd0458ce772302fd3eca5a873c6704cec12de7451363e26aeae6e07",
+    "specialization_receipt_sha256": "f03cd55d79467478528e24cdc347e6f9945a3eb1c49064e075176068451e358d",
+    "target": {
+      "name": "Nat.dvd_mod_iff",
+      "declaration_sha256": "7f785ea99cdfd9ca1e5e4a7044f2c53bc3a0255fa4143532ebcb26bef4d671a8",
+      "type_shape_sha256": "82789b0e69792f3d2308a32b4c6f108fef63bbded868e066fed2422a1b49019e",
+      "native_type_shape_sha256": "82789b0e69792f3d2308a32b4c6f108fef63bbded868e066fed2422a1b49019e",
+      "axiom_footprint": []
+    }
+  },
   "nat_mod_lt_compatibility_result": {
     "name": "Nat.mod_lt",
     "compatibility": "translated-definitional-equality",
@@ -372,9 +391,10 @@
     "compare overlapping declaration identities and fail closed on semantic mismatch",
     "reconstruct missing definitions and singleton inductives only through ordinary target kernel gates",
     "reconstruct the exact canonical native Acc package only through an atomic target-kernel inductive gate",
-    "use the composed axiom-free Nat.mod.eq_2 and Nat.modCore.go.eq_1 equations to prove the target-side remainder divisibility invariant",
-    "generalize Nat.dvd_mod_iff to the official all-divisor signature and reconstruct it axiom-free over imported Nat.mod",
-    "retry the unchanged Nat.div_mod_exec-dependent Nat.dvd_gcd closure without importing propext",
+    "compose the authored fuel invariant over official Nat.mod and independently specialize its explicit arithmetic parameters",
+    "retain the resulting successor-divisor Nat.dvd_mod_iff as an axiom-free target theorem with the native type shape",
+    "make theorem-root composition stop at an explicitly compatible target theorem leaf instead of traversing the unrelated source proof behind that leaf",
+    "retry Nat.dvd_gcd with target Nat.dvd_mod_iff as the checked dependency cut and without importing propext or native Nat.div_mod_exec",
     "replay the seven-lemma surface before any coprimality target submission"
   ],
   "authority": {
@@ -387,5 +407,5 @@
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "This freezes a proof plan and independently composes exact Nat.mul and Nat.dvd definitions, the exact official-order Bool and singleton Exists packages, the declaration-exact canonical native Acc package, and axiom-free control theorems. Native Nat.mod_lt has Lean's general positive-denominator contract and its distinct wrapper-level type is target-kernel definitionally equal to the imported theorem. The rendered Nat.div_mod_exec mismatch is localized to official Nat.mod versus the native Bool-rollover remainder representation across a 92-declaration closure: Nat.mod_lt is already reusable, while Nat.dvd_mod_iff remains missing. Official Lean 4.30 Nat.dvd_mod_iff and Nat.mod_add_div both carry propext and therefore are audited references, not admissible support. This does not authorize arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, quotient packages, generic theorem transport, recursor permutation, or weakening definitional equality; compose the remaining six required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
+  "limitations": "This freezes a proof plan and independently composes exact Nat.mul and Nat.dvd definitions, the exact official-order Bool and singleton Exists packages, the declaration-exact canonical native Acc package, and axiom-free control theorems. Native Nat.mod_lt has Lean's general positive-denominator contract and its distinct wrapper-level type is target-kernel definitionally equal to the imported theorem. An authored constructive fuel induction now composes over official Nat.mod and specializes checked Nat.dvd, Nat.dvd_add_iff_right, Nat.sub_add_cancel, and Nat.add_comm into an axiom-free target Nat.dvd_mod_iff whose successor-divisor type shape exactly matches the native theorem. Official Lean 4.30 Nat.dvd_mod_iff and Nat.mod_add_div still carry propext and remain audited references, not admissible support. The current source-root closure algorithm still walks through the native proof behind an already compatible target theorem, so Nat.dvd_gcd has not yet replayed across this new leaf. This does not authorize arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, quotient packages, unchecked theorem transport, recursor permutation, or weakening definitional equality; compose the remaining required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
 }

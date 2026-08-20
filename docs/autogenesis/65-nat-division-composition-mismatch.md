@@ -125,15 +125,11 @@ compose exactly into r082 with a replayed receipt. See the
 This replaces the vague instruction to reason directly over the official
 implementation with two exact, independently checked induction primitives.
 
-## Next bounded increment
+## Subsequent foundation
 
-1. Prove the divisibility invariant for `Nat.modCore.go` by fuel induction using
-   the composed step equation.
-2. Lift it through official `Nat.modCore` and `Nat.mod`, using the target's
-   checked divisibility and subtraction lemmas.
-3. Generalize the native `Nat.dvd_mod_iff` signature to official Lean's
-   all-divisor statement.
-4. Submit the candidate to a fresh target kernel and require an empty axiom
-   footprint.
-5. Confirm the bridge removes `Nat.div_mod_exec` from this path, then replay
-   `Nat.dvd_gcd` unchanged.
+The target-side fuel invariant now composes and specializes into an axiom-free
+`Nat.dvd_mod_iff` with exactly the native successor-divisor type shape. See the
+[constructive Nat.mod invariant specialization](67-constructive-nat-mod-invariant-specialization.md).
+The remaining blocker is closure semantics: composition must treat that
+compatible target theorem as an explicit leaf instead of traversing the
+unrelated native proof behind it and rediscovering `Nat.div_mod_exec`.

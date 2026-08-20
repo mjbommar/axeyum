@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Semantic admission diagnostics isolate official `Nat.mod` versus the native Bool-rollover remainder inside `Nat.div_mod_exec`; the 92-declaration `Nat.dvd_gcd` closure shows `Nat.mod_lt` already reusable and `Nat.dvd_mod_iff` independently missing. Official high-level support (`Nat.dvd_mod_iff`, `Nat.mod_add_div`, and `Nat.div_add_mod`) carries `propext` and remains reference-only. A minimal Lean 4.30.0 pack of generated `Nat.mod.eq_2` and `Nat.modCore.go.eq_1` equations instead imports with zero axioms and composes into r082 exactly: 183 selected declarations, 181 reused, two added theorem identities equal, both footprints empty, and the V5 receipt replays.
+**Status:** The official-`Nat.mod` division seam now has an axiom-free target theorem. An authored Lean 4.30 fuel induction exports 211 declarations with no axioms; all three authored theorem footprints are empty. Its final generic theorem composes into r082, checked native `Nat.dvd`, `Nat.dvd_add_iff_right`, `Nat.sub_add_cancel`, and `Nat.add_comm` specialize through a replayable private-clone operation, and target `Nat.dvd_mod_iff` is footprint-empty with exactly the native successor-divisor type shape. Official high-level support remains reference-only because it reaches `propext`. The remaining `Nat.dvd_gcd` blocker is now closure semantics: source-root selection still traverses the native proof behind the compatible target theorem and unnecessarily reintroduces native `Nat.div_mod_exec`.
 
-**Next:** prove `k ∣ Nat.modCore.go y hy fuel x hfuel ↔ k ∣ x` under `k ∣ y` by fuel induction using the composed step equation and checked subtraction/divisibility lemmas; lift it through official `Nat.modCore` and `Nat.mod`; generalize native `Nat.dvd_mod_iff` to official Lean's all-divisor signature; require a fresh-kernel empty footprint; then retry `Nat.dvd_gcd` unchanged.
+**Next:** define an explicit target-theorem leaf contract for theorem composition: validate the same-name target theorem's type compatibility, stop the selected dependency traversal at that target-owned leaf, bind the cut in the receipt, and mutation-test wrong type, wrong leaf, missing leaf, hidden assumptions, replay drift, and unchanged caller state. Then retry unchanged `Nat.dvd_gcd` with target `Nat.dvd_mod_iff` as the leaf, without importing `propext` or native `Nat.div_mod_exec`.
 
 <!-- plan-section: landed-changes -->
 
@@ -30,3 +30,4 @@
 | 2026-08-20 | `f099a4a37` | Semantic admission diagnostics isolate the 92-declaration division mismatch and the missing `Nat.dvd_mod_iff` consumer |
 | 2026-08-20 | `a12d44858` | Lean export audit reports canonical theorem identities, direct dependencies, and kernel-derived axiom footprints |
 | 2026-08-20 | `dd79317c5` | Proof-isolated theorem-pack composition replays two axiom-free official `Nat.mod` computation equations into r082 |
+| 2026-08-20 | `667201932` | Receipt-backed checked specialization admits constructive target `Nat.dvd_mod_iff` with an empty footprint and native type shape |

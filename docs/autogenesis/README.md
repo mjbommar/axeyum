@@ -163,6 +163,7 @@ compounding, not automation theatre.
 | [Canonical Acc composition](64-canonical-acc-composition.md) | Can one demanded recursive package be regenerated exactly without authorizing a generic transport class, and what target check appears next? |
 | [Nat division composition mismatch](65-nat-division-composition-mismatch.md) | Which semantic representation mismatch blocks `Nat.div_mod_exec`, which direct consumer is the real next repair, and can official support remain axiom-free? |
 | [Axiom-free Nat.mod equation pack](66-axiom-free-nat-mod-equation-pack.md) | Which official computation equations can compose with empty footprints and support a constructive target-side remainder proof? |
+| [Constructive Nat.mod invariant specialization](67-constructive-nat-mod-invariant-specialization.md) | Can an authored fuel induction become an independently checked target `Nat.dvd_mod_iff`, and which closure boundary remains before `Nat.dvd_gcd`? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
