@@ -210,3 +210,86 @@ fn eval_mixing_rational_and_algebraic_computes() {
         other => panic!("expected RealAlgebraic, got {other:?}"),
     }
 }
+
+/// Regression: a rational operand must not defeat the combination.
+///
+/// `combine` reaches the operand intervals only by bisection, and bisecting
+/// toward a *rational* root puts the midpoint **on** it — the interval collapses
+/// to a point and no isolation test can accept it. Every rational lifted by
+/// `from_rational` hits that on its very first refinement (interval `(c−1, c+1)`,
+/// midpoint exactly `c`), so `c + α` used to decline outright whenever the initial
+/// combined interval was too wide to isolate in one shot.
+///
+/// Here `α` is `−3/4` carried as a degree-2 algebraic — the shape the NRA witness
+/// route actually produces, since `algebraic_to_value` only collapses a *degree-1*
+/// defining polynomial back to a rational. `256x² − 144` has roots `±3/4`, so the
+/// resultant for `1 + α` has roots `1 ± 3/4` and the un-refined combined interval
+/// `(−2, 0) + (0, 2) = (−2, 2)` brackets BOTH: refinement is mandatory, and it is
+/// exactly what used to fail.
+#[test]
+fn rational_plus_wide_interval_algebraic_computes() {
+    // −3/4 as the root of 256x² − 144 in (−2, 0).
+    let minus_three_quarters = RealAlgebraic::new(vec![-144, 0, 256], rat(-2), rat(0)).unwrap();
+    let one = RealAlgebraic::from_rational(rat(1)).unwrap();
+    let sum = one
+        .add(&minus_three_quarters)
+        .expect("1 + (−3/4) must compute");
+    assert_eq!(
+        sum.compare_rational(&ratf(1, 4)),
+        Some(Ordering::Equal),
+        "1 + (−3/4) = 1/4"
+    );
+    // …and the same through the ground evaluator, the soundness trust anchor.
+    let mut arena = TermArena::new();
+    let mut asg = Assignment::new();
+    let a = algebraic_symbol(&mut arena, "a", minus_three_quarters, &mut asg);
+    let one_t = arena.real_const(rat(1));
+    let t = arena.real_add(one_t, a).unwrap();
+    let quarter = arena.real_const(ratf(1, 4));
+    let eq = arena.eq(t, quarter).unwrap();
+    assert_eq!(
+        eval(&arena, eq, &asg),
+        Ok(Value::Bool(true)),
+        "1 + (−3/4) = 1/4 must replay through `eval`"
+    );
+}
+
+/// The same decline, with an **irrational** result: `β` is the root of
+/// `10x² − 20x + 9` in `(0, 1)` (≈ 0.6838), whose sibling root ≈ 1.3162 sits
+/// close enough that the inflated combined interval `(0, 3)` brackets both images
+/// `1 + β` and `1 + β′`. Refinement is again mandatory, and again the
+/// rational operand cannot survive it. `1 + β` is a root of `10x² − 40x + 39`.
+#[test]
+fn rational_plus_close_root_pair_algebraic_computes() {
+    let beta = RealAlgebraic::new(vec![9, -20, 10], rat(0), rat(1)).unwrap();
+    let one = RealAlgebraic::from_rational(rat(1)).unwrap();
+    let sum = one.add(&beta).expect("1 + β must compute");
+    assert_eq!(sum.sign_at(&[39, -40, 10]), Some(Sign::Zero));
+    // ≈ 1.68377, and NOT the sibling image ≈ 2.31623.
+    assert_eq!(
+        sum.compare_rational(&ratf(168, 100)),
+        Some(Ordering::Greater)
+    );
+    assert_eq!(sum.compare_rational(&ratf(169, 100)), Some(Ordering::Less));
+}
+
+/// `4 · (−3/4) = −3`, pinning the multiplicative side of the shortcut.
+///
+/// This one is a value pin, not a reproduction: a rational operand never defeats
+/// the PRODUCT combination, because scaling maps the operand interval onto the
+/// image exactly (root count preserved), whereas a sum inflates it by the
+/// rational's own interval width. It exists so a wrong scaling in
+/// `combine_with_rational` cannot pass unnoticed.
+#[test]
+fn rational_times_wide_interval_algebraic_computes() {
+    let minus_three_quarters = RealAlgebraic::new(vec![-144, 0, 256], rat(-2), rat(0)).unwrap();
+    let four = RealAlgebraic::from_rational(rat(4)).unwrap();
+    let product = four
+        .mul(&minus_three_quarters)
+        .expect("4 · (−3/4) must compute");
+    assert_eq!(
+        product.compare_rational(&rat(-3)),
+        Some(Ordering::Equal),
+        "4 · (−3/4) = −3"
+    );
+}

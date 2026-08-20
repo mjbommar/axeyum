@@ -1075,6 +1075,15 @@ pub enum ProofFragment {
     /// A syntactic even-power NRA refutation: a sum of even powers plus a
     /// nonnegative rational constant is asserted strictly negative.
     NraEvenPower,
+    /// A monomial-divisibility NRA refutation: one product is asserted zero,
+    /// another asserted non-zero, and the first divides the second.
+    ///
+    /// A THEORY reconstruction, not a structural attestation: the term is built
+    /// from the certificate's factors and every step is a ring law
+    /// (`congr_mul` / `mul_comm` / `mul_zero`), so Lean can reject it on the
+    /// merits. Kernel-checked over the CONSTRUCTED reals — `lra_ctx()` builds
+    /// `CReal` (trusted surface 0), not the 30-axiom `AxReal` package.
+    RealZeroProduct,
     /// A top-level universal quantifier.
     Forall,
     /// A closed universal integer equality/disequality refuted by one evaluator-
@@ -1261,7 +1270,8 @@ impl ProofFragment {
             | ProofFragment::BoundedIntBlast
             | ProofFragment::NraEvenPower => StructuralAttestation,
             // --- Theory reconstructions: the term is built from the query. ---
-            ProofFragment::IntFarkas
+            ProofFragment::RealZeroProduct
+            | ProofFragment::IntFarkas
             | ProofFragment::QfBv
             | ProofFragment::ReflexiveDisequality
             | ProofFragment::TermIdentity
@@ -1828,6 +1838,13 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         || sos_certificate_certifies(arena, assertions)
     {
         ProofFragment::Sos
+    } else if crate::nra_zero_product_cert::real_zero_product_refutation(arena, assertions)
+        .is_some_and(|c| c.zeroing_cases().len() == 1)
+    {
+        // Monomial divisibility, direct form. Ahead of `NraEvenPower` because
+        // this one is a theory reconstruction and that one is an attestation:
+        // when both could apply, the tier Lean can fail on should win.
+        ProofFragment::RealZeroProduct
     } else if crate::nra_even_power::nra_even_power_refutation(arena, assertions).is_some() {
         // Higher even-power nonnegativity (e.g. `x^4 < 0`) is outside the
         // degree-2 SOS/LDLᵀ certificate, but has its own checked structural
@@ -2619,6 +2636,9 @@ fn reconstruct_proof_fragment_to_lean_module(
         }
         ProofFragment::IntFarkas => reconstruct_int_farkas_to_lean_module(arena, assertions)?,
         ProofFragment::Sos => reconstruct_sos_to_lean_module(arena, assertions)?,
+        ProofFragment::RealZeroProduct => {
+            reconstruct_real_zero_product_to_lean_module(arena, assertions)?
+        }
         ProofFragment::Diophantine => {
             // The integer Diophantine reconstructor builds its own integer-prelude
             // kernel, gates the `False` proof, and renders the module (ADR-0042).
@@ -3002,6 +3022,30 @@ fn reconstruct_qf_abv_to_lean_source(
 ///
 /// Returns a [`ReconstructError`] when the query is not classified as the `Sos`
 /// fragment, or the SOS reconstruction does not kernel-check to `False`.
+/// Reconstruct a monomial-divisibility refutation into a Lean module.
+///
+/// # Errors
+///
+/// [`ReconstructError`] when the query is not classified as the
+/// `RealZeroProduct` fragment, or the reconstruction does not kernel-check to
+/// `False` over the constructed reals.
+pub fn reconstruct_real_zero_product_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let Some(certificate) =
+        crate::nra_zero_product_cert::real_zero_product_refutation(arena, assertions)
+    else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "reconstruct_real_zero_product".to_owned(),
+            detail: "query carries no monomial-divisibility certificate".to_owned(),
+        });
+    };
+    let mut ctx = lra_ctx()?;
+    let term = arithmetic::zero_product::reconstruct_real_zero_product(&mut ctx, &certificate)?;
+    gate_and_render_lra_module(&mut ctx, term, "RealZeroProduct")
+}
+
 pub fn reconstruct_sos_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],

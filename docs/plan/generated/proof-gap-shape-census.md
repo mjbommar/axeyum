@@ -12,19 +12,19 @@ implement a proof rule.
 
 | Population | Count |
 |---|---:|
-| Audit-row occurrences | 58 |
-| Schema-v2 occurrences with a decision backend | 58 |
+| Audit-row occurrences | 49 |
+| Schema-v2 occurrences with a decision backend | 49 |
 | Current audit `evidence_checked=true` despite no certificate | 0 |
 | Independently checked certificate occurrences | 0 |
-| Unique normalized paths | 56 |
-| Unique exact contents (SHA-256) | 51 |
-| Exact duplicate groups | 5 |
-| Unique contents with zero reachable parsed-IR terms | 3 |
-| Unique contents using bounded string/sequence lowering | 26 |
-| Unique contents using word-only fallback | 3 |
+| Unique normalized paths | 47 |
+| Unique exact contents (SHA-256) | 40 |
+| Exact duplicate groups | 7 |
+| Unique contents with zero reachable parsed-IR terms | 0 |
+| Unique contents using bounded string/sequence lowering | 19 |
+| Unique contents using word-only fallback | 0 |
 
-The raw 58 count contracts to **51 unique benchmark contents**.
-All 58 are uncertified and therefore have no independently checkable
+The raw 49 count contracts to **40 unique benchmark contents**.
+All 49 are uncertified and therefore have no independently checkable
 certificate. The affected schema-v1 rows historically contained 28
 vacuous `evidence_checked=true` values; the schema-v2 refresh records zero
 such values in the current residual population.
@@ -39,18 +39,18 @@ specific failed certificate route or reduction step.
 
 | Decision backend | Audit occurrences | Unique paths | Unique contents |
 |---|---:|---:|---:|
-| `smtlib-string-front-door` | 31 | 31 | 26 |
+| `smtlib-string-front-door` | 26 | 26 | 19 |
 | `auto-solve` | 15 | 13 | 13 |
-| `nra-linear-abstraction` | 12 | 12 | 12 |
+| `nra-linear-abstraction` | 8 | 8 | 8 |
 
 ## Declared-logic population
 
 | Declared logic | Unique contents |
 |---|---:|
-| QF_SLIA | 15 |
-| QF_NRA | 13 |
-| QF_S | 10 |
-| QF_NIA | 8 |
+| QF_SLIA | 12 |
+| QF_NIA | 9 |
+| QF_NRA | 8 |
+| QF_S | 6 |
 | QF_AUFLIA | 2 |
 | QF_UFLIA | 2 |
 | QF_SEQ | 1 |
@@ -59,22 +59,21 @@ specific failed certificate route or reduction step.
 
 | Family | Unique contents | Audit occurrences | Structural criterion |
 |---|---:|---:|---|
-| `real-nonlinear` | 12 | 12 | Parsed IR contains real multiplication. |
-| `string-concat` | 9 | 12 | Source uses string concatenation. |
-| `string-regex` | 7 | 8 | Source uses regex construction or membership. |
+| `real-nonlinear` | 7 | 7 | Parsed IR contains real multiplication. |
+| `string-concat` | 6 | 10 | Source uses string concatenation. |
+| `int-pow2` | 6 | 6 | Parsed IR contains cvc5 `int.pow2`. |
 | `int-nonlinear` | 5 | 7 | Parsed IR contains integer multiplication. |
-| `int-divmod` | 5 | 5 | Parsed IR contains integer division or modulo. |
+| `string-regex` | 5 | 7 | Source uses regex construction or membership. |
+| `string-replace` | 4 | 6 | Source uses a string replacement operator. |
 | `uf` | 4 | 6 | Parsed IR contains uninterpreted-function application. |
-| `int-pow2` | 4 | 4 | Parsed IR contains cvc5 `int.pow2`. |
-| `uncategorized` | 4 | 4 | No current high-level tag matched; inspect exact heads/ops. |
+| `int-divmod` | 4 | 4 | Parsed IR contains integer division or modulo. |
 | `string-code` | 3 | 4 | Source uses `str.to_code`. |
-| `string-replace` | 3 | 4 | Source uses a string replacement operator. |
 | `string-length` | 3 | 3 | Source uses string length. |
 | `string-lex` | 2 | 4 | Source uses lexicographic string comparison. |
 | `arrays` | 2 | 2 | Parsed IR contains array select/store. |
+| `string-contains` | 2 | 2 | Source uses string containment. |
 | `real-division` | 1 | 1 | Parsed IR contains real division. |
 | `sequence-index` | 1 | 1 | Source uses sequence indexing. |
-| `string-contains` | 1 | 1 | Source uses string containment. |
 
 ## Per-content census
 
@@ -82,59 +81,48 @@ specific failed certificate route or reduction step.
 |---|---|---:|---:|---:|---|
 | QF_AUFLIA | `corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2` | 1 | 1 | 21 | `arrays`, `uf` |
 | QF_AUFLIA | `corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2` | 1 | 1 | 90 | `arrays`, `uf` |
-| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__mod-simp.smt2` | 1 | 1 | 10 | `int-divmod`, `int-nonlinear` |
+| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-2.smt2` | 1 | 1 | 8 | `int-pow2` |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-3.smt2` | 1 | 1 | 9 | `int-pow2` |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-4.smt2` | 1 | 1 | 5 | `int-pow2` |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-5.smt2` | 1 | 1 | 7 | `int-divmod`, `int-pow2` |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-6.smt2` | 1 | 1 | 7 | `int-divmod`, `int-pow2` |
+| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-7.smt2` | 1 | 1 | 10 | `int-nonlinear`, `int-pow2` |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.03.smt2` | 1 | 1 | 8 | `int-divmod` |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__mod.02.smt2` | 1 | 1 | 6 | `int-divmod` |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__nl__rewriting-sums.smt2` | 1 | 1 | 27 | `int-nonlinear` |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.07.smt2` | 1 | 1 | 12 | `real-division` |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2` | 1 | 1 | 10 | `real-nonlinear` |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2` | 1 | 1 | 19 | `real-nonlinear` |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2` | 1 | 1 | 6 | `real-nonlinear` |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2` | 1 | 1 | 29 | `real-nonlinear` |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2` | 1 | 1 | 12 | `real-nonlinear` |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2` | 1 | 1 | 13 | `real-nonlinear` |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2` | 1 | 1 | 9 | `real-nonlinear` |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2` | 1 | 1 | 20 | `real-nonlinear` |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__red-exp.smt2` | 1 | 1 | 15 | `real-nonlinear` |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2` | 1 | 1 | 17 | `real-nonlinear` |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2` | 1 | 1 | 9 | `real-nonlinear` |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__zero-subset.smt2` | 1 | 1 | 13 | `real-nonlinear` |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug612.smt2` | 1 | 1 | 382 | `string-contains` |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_loop001.smt2` | 1 | 1 | 343 | `string-concat` |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str003.smt2` | 1 | 1 | 469 | `string-concat` |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2` | 1 | 1 | 274 | `string-length` |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2` | 1 | 1 | 398 | `string-regex` |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2` | 1 | 1 | 0 | `string-concat` |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str007.smt2` | 1 | 1 | 196 | `string-concat` |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__re_comp__a-in-comp-a.smt2` | 1 | 1 | 14425 | `string-regex` |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2` | 1 | 1 | 56 | `string-replace` |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_re_all__not-all-digits.smt2` | 1 | 1 | 3 | `string-regex`, `string-replace` |
+| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug612.smt2` | 1 | 1 | 710 | `string-contains` |
+| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2` | 1 | 1 | 398 | `string-length` |
+| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2` | 1 | 1 | 678 | `string-regex` |
+| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2` | 1 | 1 | 1544 | `string-concat` |
+| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__re_comp__a-in-comp-a.smt2` | 1 | 1 | 21633 | `string-regex` |
+| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2` | 1 | 1 | 80 | `string-replace` |
 | QF_SEQ | `corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__nth__oob-functional.smt2` | 1 | 1 | 97 | `int-nonlinear`, `sequence-index` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2` | 2 | 2 | 1058 | `string-concat`, `string-lex` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2` | 1 | 1 | 0 | `string-concat`, `string-regex` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2` | 1 | 1 | 250 | `string-regex` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2` | 2 | 2 | 0 | `string-concat`, `string-replace` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2` | 1 | 1 | 439 | `string-concat`, `string-length` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2` | 2 | 2 | 588 | `string-regex` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2` | 1 | 1 | 64 | `string-code`, `string-length` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2` | 2 | 2 | 233 | `string-code` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2` | 1 | 1 | 174 | `string-code` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2` | 2 | 2 | 624 | `string-concat`, `string-lex` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2` | 1 | 1 | 50 | `uncategorized` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__rev__not-identity.smt2` | 1 | 1 | 85 | `uncategorized` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__span-truncate.smt2` | 1 | 1 | 147 | `uncategorized` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__wrong-result.smt2` | 1 | 1 | 88 | `uncategorized` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__proofs__dsl-no-eval.smt2` | 1 | 1 | 80 | `string-regex` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_ctn-repl-to-ctn.smt2` | 1 | 1 | 10824 | `string-replace`, `string-contains` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2` | 2 | 2 | 1546 | `string-concat`, `string-lex` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2` | 2 | 2 | 8519 | `string-concat`, `string-regex` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2` | 2 | 2 | 9755 | `string-concat`, `string-replace` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2` | 1 | 1 | 639 | `string-concat`, `string-length` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2` | 2 | 2 | 916 | `string-regex` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2` | 1 | 1 | 88 | `string-code`, `string-length` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2` | 2 | 2 | 297 | `string-code` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2` | 1 | 1 | 238 | `string-code` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-pred-small-rw_392.smt2` | 2 | 2 | 12903 | `string-replace` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2` | 2 | 2 | 916 | `string-concat`, `string-lex` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__proofs__dsl-no-eval.smt2` | 1 | 1 | 116 | `string-regex` |
 | QF_UFLIA | `corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2` | 1 | 2 | 4024 | `int-nonlinear`, `uf` |
 | QF_UFLIA | `corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2` | 1 | 2 | 4024 | `int-nonlinear`, `uf` |
 
 ## Research interpretation
 
-- The population is bifurcated: **25 arithmetic** and **26 string/sequence** unique contents. A single reconstruction feature cannot close the uncertified lane.
+- The population is bifurcated: **21 arithmetic** and **19 string/sequence** unique contents. A single reconstruction feature cannot close the uncertified lane.
 - Decision-backend attribution is complete for this population, but
   `auto-solve` and `smtlib-string-front-door` each bundle several
   certificate attempts and fallbacks. Backend prevalence selects the
@@ -143,8 +131,8 @@ specific failed certificate route or reduction step.
   but operator presence does not distinguish an SOS-capable refutation from
   a different nonlinear argument. The next producer must record the actual
   refuter/reduction identity and premises.
-- **3 unique contents have zero reachable parsed-IR terms** because front-end handling discharges them before the ordinary assertion DAG. Certificate provenance must begin at that early-fold seam.
-- **26 unique contents use bounded string/sequence lowering** and **3 use the word-only fallback**. A DRAT over the flat lowered arena is therefore not, by itself, a certificate for the source-level sequence obligation.
+- **0 unique contents have zero reachable parsed-IR terms** because front-end handling discharges them before the ordinary assertion DAG. Certificate provenance must begin at that early-fold seam.
+- **19 unique contents use bounded string/sequence lowering** and **0 use the word-only fallback**. A DRAT over the flat lowered arena is therefore not, by itself, a certificate for the source-level sequence obligation.
 - String lowering frequently becomes BV structure in parsed IR. Source heads
   and lowered IR operators are therefore both retained; neither alone is an
   adequate proof taxonomy.
@@ -156,6 +144,6 @@ specific failed certificate route or reduction step.
 Before implementing a new proof mechanism, extend evidence production to
 record a stable route ID, source-to-lowered obligation map, checker identity,
 and the first uncertified reduction for every `bare-unsat`. Re-run this exact
-51-content population and select work only when one route appears across
+40-content population and select work only when one route appears across
 multiple independent source families. Syntax co-occurrence alone is not a
 causal mechanism.

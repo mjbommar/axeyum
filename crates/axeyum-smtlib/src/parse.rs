@@ -19285,10 +19285,52 @@ fn apply_op(
             // Type-check the complete application before any semantic
             // shortcut. In particular, a duplicate early argument must not
             // hide an ill-sorted later argument.
+            //
+            // BUT a packed string or sequence encodes its SMT-LIB sort as a
+            // bit-vector whose WIDTH carries the length bound, so two operands
+            // of the same SMT-LIB sort routinely have different `Sort::BitVec`
+            // widths — `(seq.unit 0)` is `BitVec(17)` while a declared
+            // `(Seq Int)` is `BitVec(115)`. Comparing `Sort` for equality here
+            // rejected those as ill-sorted before the seq/string-aware pairwise
+            // expansion below could align them.
+            //
+            // `=` has no such pre-check and has always accepted them, so this
+            // made `(distinct x y)` reject a query `(= x y)` accepts. Measured
+            // 2026-08-20: `sat__regress0__strings__issue5542-strings-seq-mix.smt2`
+            // failed to PARSE with `SortsDiffer(BitVec(100), BitVec(197))`,
+            // while the committed dominance audit still recorded it as decided
+            // `sat` with a replayed model.
+            //
+            // Genuinely ill-sorted arguments are still rejected: the exemption
+            // requires BOTH operands to be packed-seq with a registered element
+            // width, or BOTH packed-string. An `Int` against a `(Seq Int)`, or
+            // two honest `BitVec`s of different widths, still error here.
+            //
+            // That precision is DEFENCE IN DEPTH, not the only guard: the
+            // pairwise expansion below ends in `arena.eq`, which raises
+            // `SortsDiffer` for anything the aware-eq helpers decline. Widening
+            // this exemption to "any two bit-vectors" therefore kills no test —
+            // the query still fails to parse, one site later. Mutation testing
+            // reports it as unprotected and that is the correct result, not a
+            // missing test. Keeping the narrow form means the error is raised
+            // where the sorts are actually compared.
             let expected_sort = arena.sort_of(args[0]);
             for &arg in &args[1..] {
                 let actual_sort = arena.sort_of(arg);
-                if actual_sort != expected_sort {
+                if actual_sort == expected_sort {
+                    continue;
+                }
+                let both_packed_seq = matches!(
+                    (expected_sort, actual_sort),
+                    (Sort::BitVec(wa), Sort::BitVec(wb))
+                        if seq.elem_width_of(wa).is_some() && seq.elem_width_of(wb).is_some()
+                );
+                let both_packed_string = matches!(
+                    (expected_sort, actual_sort),
+                    (Sort::BitVec(wa), Sort::BitVec(wb))
+                        if string_max_len_of(wa).is_some() && string_max_len_of(wb).is_some()
+                );
+                if !both_packed_seq && !both_packed_string {
                     return Err(SmtError::Ir(IrError::SortsDiffer(
                         expected_sort,
                         actual_sort,

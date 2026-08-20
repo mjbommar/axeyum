@@ -3,12 +3,12 @@
     {
       "category": "proof-production-error",
       "description": "Evidence production did not reproduce UNSAT.",
-      "instances": 2
+      "instances": 8
     },
     {
       "category": "uncertified-and-unchecked",
       "description": "The UNSAT route is neither certified nor independently checked.",
-      "instances": 48
+      "instances": 49
     },
     {
       "category": "uncertified-but-checked",
@@ -33,65 +33,52 @@
     {
       "category": "lean-reconstruction-gap",
       "description": "Certified, checked, trust-free evidence lacks Lean reconstruction.",
-      "instances": 12
+      "instances": 6
     },
     {
       "category": "dominant",
       "description": "Certified, checked, trust-free, and Lean-reconstructed UNSAT.",
-      "instances": 261
+      "instances": 244
     }
   ],
   "evidence_kinds": [
     {
       "audit_reported_checked": 0,
-      "audit_unsat": 48,
-      "baseline_unsat": 48,
+      "audit_unsat": 49,
+      "baseline_unsat": 49,
       "dominant_unsat": 0,
       "evidence_certified": 0,
       "evidence_checked": 0,
       "evidence_kind": "bare-unsat",
       "lean_checked": 0,
       "proof_errors": 0,
-      "trust_hole_free": 48,
-      "trust_hole_instances": 0
-    },
-    {
-      "audit_reported_checked": 12,
-      "audit_unsat": 12,
-      "baseline_unsat": 12,
-      "dominant_unsat": 9,
-      "evidence_certified": 12,
-      "evidence_checked": 12,
-      "evidence_kind": "alethe-unsat",
-      "lean_checked": 9,
-      "proof_errors": 0,
-      "trust_hole_free": 12,
+      "trust_hole_free": 49,
       "trust_hole_instances": 0
     },
     {
       "audit_reported_checked": 0,
       "audit_unsat": 0,
-      "baseline_unsat": 2,
+      "baseline_unsat": 8,
       "dominant_unsat": 0,
       "evidence_certified": 0,
       "evidence_checked": 0,
       "evidence_kind": "(none)",
       "lean_checked": 0,
-      "proof_errors": 2,
+      "proof_errors": 8,
       "trust_hole_free": 0,
-      "trust_hole_instances": 0
+      "trust_hole_instances": 8
     },
     {
-      "audit_reported_checked": 2,
-      "audit_unsat": 2,
-      "baseline_unsat": 2,
-      "dominant_unsat": 0,
-      "evidence_certified": 2,
-      "evidence_checked": 2,
-      "evidence_kind": "bv-alternation-counterexample-unsat",
-      "lean_checked": 0,
+      "audit_reported_checked": 13,
+      "audit_unsat": 13,
+      "baseline_unsat": 13,
+      "dominant_unsat": 11,
+      "evidence_certified": 13,
+      "evidence_checked": 13,
+      "evidence_kind": "alethe-unsat",
+      "lean_checked": 11,
       "proof_errors": 0,
-      "trust_hole_free": 2,
+      "trust_hole_free": 13,
       "trust_hole_instances": 0
     },
     {
@@ -121,55 +108,16 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 2,
-      "audit_unsat": 2,
-      "baseline_unsat": 2,
-      "dominant_unsat": 1,
-      "evidence_certified": 2,
-      "evidence_checked": 2,
-      "evidence_kind": "closed-universal-counterexample-unsat",
-      "lean_checked": 1,
-      "proof_errors": 0,
-      "trust_hole_free": 2,
-      "trust_hole_instances": 0
-    },
-    {
-      "audit_reported_checked": 1,
-      "audit_unsat": 1,
-      "baseline_unsat": 1,
-      "dominant_unsat": 0,
-      "evidence_certified": 1,
-      "evidence_checked": 1,
-      "evidence_kind": "bv-conjunctive-universal-instance-unsat",
-      "lean_checked": 0,
-      "proof_errors": 0,
-      "trust_hole_free": 1,
-      "trust_hole_instances": 0
-    },
-    {
-      "audit_reported_checked": 1,
-      "audit_unsat": 1,
-      "baseline_unsat": 1,
-      "dominant_unsat": 0,
-      "evidence_certified": 1,
-      "evidence_checked": 1,
-      "evidence_kind": "bv-paired-existential-transfer-unsat",
-      "lean_checked": 0,
-      "proof_errors": 0,
-      "trust_hole_free": 1,
-      "trust_hole_instances": 0
-    },
-    {
-      "audit_reported_checked": 86,
-      "audit_unsat": 86,
-      "baseline_unsat": 86,
-      "dominant_unsat": 86,
-      "evidence_certified": 86,
-      "evidence_checked": 86,
+      "audit_reported_checked": 85,
+      "audit_unsat": 85,
+      "baseline_unsat": 85,
+      "dominant_unsat": 85,
+      "evidence_certified": 85,
+      "evidence_checked": 85,
       "evidence_kind": "array-axiom-unsat",
-      "lean_checked": 86,
+      "lean_checked": 85,
       "proof_errors": 0,
-      "trust_hole_free": 86,
+      "trust_hole_free": 85,
       "trust_hole_instances": 0
     },
     {
@@ -186,16 +134,16 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 14,
-      "audit_unsat": 14,
-      "baseline_unsat": 14,
-      "dominant_unsat": 14,
-      "evidence_certified": 14,
-      "evidence_checked": 14,
+      "audit_reported_checked": 16,
+      "audit_unsat": 16,
+      "baseline_unsat": 16,
+      "dominant_unsat": 16,
+      "evidence_certified": 16,
+      "evidence_checked": 16,
       "evidence_kind": "term-level-unsat",
-      "lean_checked": 14,
+      "lean_checked": 16,
       "proof_errors": 0,
-      "trust_hole_free": 14,
+      "trust_hole_free": 16,
       "trust_hole_instances": 0
     },
     {
@@ -212,52 +160,13 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 10,
-      "audit_unsat": 10,
-      "baseline_unsat": 10,
-      "dominant_unsat": 10,
-      "evidence_certified": 10,
-      "evidence_checked": 10,
-      "evidence_kind": "nra-even-power-unsat",
-      "lean_checked": 10,
-      "proof_errors": 0,
-      "trust_hole_free": 10,
-      "trust_hole_instances": 0
-    },
-    {
-      "audit_reported_checked": 8,
-      "audit_unsat": 8,
-      "baseline_unsat": 8,
-      "dominant_unsat": 8,
-      "evidence_certified": 8,
-      "evidence_checked": 8,
-      "evidence_kind": "arith-dpll-unsat",
-      "lean_checked": 8,
-      "proof_errors": 0,
-      "trust_hole_free": 8,
-      "trust_hole_instances": 0
-    },
-    {
-      "audit_reported_checked": 8,
-      "audit_unsat": 8,
-      "baseline_unsat": 8,
-      "dominant_unsat": 8,
-      "evidence_certified": 8,
-      "evidence_checked": 8,
-      "evidence_kind": "bv-defined-enum-unsat",
-      "lean_checked": 8,
-      "proof_errors": 0,
-      "trust_hole_free": 8,
-      "trust_hole_instances": 0
-    },
-    {
       "audit_reported_checked": 7,
       "audit_unsat": 7,
       "baseline_unsat": 7,
       "dominant_unsat": 7,
       "evidence_certified": 7,
       "evidence_checked": 7,
-      "evidence_kind": "bool-euf-exhaustive-unsat",
+      "evidence_kind": "arith-dpll-unsat",
       "lean_checked": 7,
       "proof_errors": 0,
       "trust_hole_free": 7,
@@ -277,29 +186,16 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 7,
-      "audit_unsat": 7,
-      "baseline_unsat": 7,
-      "dominant_unsat": 7,
-      "evidence_certified": 7,
-      "evidence_checked": 7,
-      "evidence_kind": "bv-uf-local-unsat",
-      "lean_checked": 7,
+      "audit_reported_checked": 6,
+      "audit_unsat": 6,
+      "baseline_unsat": 6,
+      "dominant_unsat": 6,
+      "evidence_certified": 6,
+      "evidence_checked": 6,
+      "evidence_kind": "bool-euf-exhaustive-unsat",
+      "lean_checked": 6,
       "proof_errors": 0,
-      "trust_hole_free": 7,
-      "trust_hole_instances": 0
-    },
-    {
-      "audit_reported_checked": 7,
-      "audit_unsat": 7,
-      "baseline_unsat": 7,
-      "dominant_unsat": 7,
-      "evidence_certified": 7,
-      "evidence_checked": 7,
-      "evidence_kind": "sos-unsat",
-      "lean_checked": 7,
-      "proof_errors": 0,
-      "trust_hole_free": 7,
+      "trust_hole_free": 6,
       "trust_hole_instances": 0
     },
     {
@@ -322,10 +218,23 @@
       "dominant_unsat": 6,
       "evidence_certified": 6,
       "evidence_checked": 6,
-      "evidence_kind": "term-identity-unsat",
+      "evidence_kind": "bv-uf-local-unsat",
       "lean_checked": 6,
       "proof_errors": 0,
       "trust_hole_free": 6,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 5,
+      "audit_unsat": 5,
+      "baseline_unsat": 5,
+      "dominant_unsat": 5,
+      "evidence_certified": 5,
+      "evidence_checked": 5,
+      "evidence_kind": "bv-defined-enum-unsat",
+      "lean_checked": 5,
+      "proof_errors": 0,
+      "trust_hole_free": 5,
       "trust_hole_instances": 0
     },
     {
@@ -339,6 +248,19 @@
       "lean_checked": 5,
       "proof_errors": 0,
       "trust_hole_free": 5,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 4,
+      "audit_unsat": 4,
+      "baseline_unsat": 4,
+      "dominant_unsat": 4,
+      "evidence_certified": 4,
+      "evidence_checked": 4,
+      "evidence_kind": "bool-simplification-unsat",
+      "lean_checked": 4,
+      "proof_errors": 0,
+      "trust_hole_free": 4,
       "trust_hole_instances": 0
     },
     {
@@ -446,13 +368,26 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 3,
+      "audit_unsat": 3,
+      "baseline_unsat": 3,
+      "dominant_unsat": 3,
+      "evidence_certified": 3,
+      "evidence_checked": 3,
+      "evidence_kind": "term-identity-unsat",
+      "lean_checked": 3,
+      "proof_errors": 0,
+      "trust_hole_free": 3,
+      "trust_hole_instances": 0
+    },
+    {
       "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "dominant_unsat": 2,
       "evidence_certified": 2,
       "evidence_checked": 2,
-      "evidence_kind": "bool-simplification-unsat",
+      "evidence_kind": "closed-universal-counterexample-unsat",
       "lean_checked": 2,
       "proof_errors": 0,
       "trust_hole_free": 2,
@@ -543,6 +478,19 @@
       "dominant_unsat": 1,
       "evidence_certified": 1,
       "evidence_checked": 1,
+      "evidence_kind": "bv-paired-existential-transfer-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
       "evidence_kind": "bv-positive-universal-instance-set-unsat",
       "lean_checked": 1,
       "proof_errors": 0,
@@ -569,7 +517,33 @@
       "dominant_unsat": 1,
       "evidence_certified": 1,
       "evidence_checked": 1,
+      "evidence_kind": "farkas-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
       "evidence_kind": "fifo-bc04-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "nra-even-power-unsat",
       "lean_checked": 1,
       "proof_errors": 0,
       "trust_hole_free": 1,
@@ -669,42 +643,6 @@
   ],
   "lean_reconstruction_gaps": [
     {
-      "evidence_kind": "bv-alternation-counterexample-unsat",
-      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2",
-      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
-      "logic": "BV"
-    },
-    {
-      "evidence_kind": "bv-alternation-counterexample-unsat",
-      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2",
-      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
-      "logic": "BV"
-    },
-    {
-      "evidence_kind": "bv-conjunctive-universal-instance-unsat",
-      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__cond-var-elim-binary.smt2",
-      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
-      "logic": "BV"
-    },
-    {
-      "evidence_kind": "bv-paired-existential-transfer-unsat",
-      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__nested9_true-unreach-call.i_575.smt2",
-      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
-      "logic": "BV"
-    },
-    {
-      "evidence_kind": "closed-universal-counterexample-unsat",
-      "file": "corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__regsmtparselet.smt2",
-      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
-      "logic": "BV"
-    },
-    {
-      "evidence_kind": "alethe-unsat",
-      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__div.01.smt2",
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "logic": "QF_NIA"
-    },
-    {
       "evidence_kind": "alethe-unsat",
       "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.08.smt2",
       "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
@@ -743,16 +681,52 @@
   ],
   "proof_errors": [
     {
-      "error": "backend failure: int-blast failed: integer bit-blast does not support operator IntPow2",
-      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-2.smt2",
-      "logic": "QF_NIA",
+      "error": "unknown",
+      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__cond-var-elim-binary.smt2",
+      "logic": "BV",
+      "phase": "lean-reconstruction"
+    },
+    {
+      "error": "unknown",
+      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2",
+      "logic": "BV",
+      "phase": "lean-reconstruction"
+    },
+    {
+      "error": "unknown",
+      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2",
+      "logic": "BV",
+      "phase": "lean-reconstruction"
+    },
+    {
+      "error": "unknown",
+      "file": "corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2",
+      "logic": "QF_BVFP",
       "phase": "produce-evidence"
     },
     {
-      "error": "backend failure: int-blast failed: integer bit-blast does not support operator IntPow2",
-      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-7.smt2",
+      "error": "unknown",
+      "file": "corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_fromsbv.smt2",
+      "logic": "QF_BVFP",
+      "phase": "lean-reconstruction"
+    },
+    {
+      "error": "unknown",
+      "file": "corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2",
+      "logic": "QF_FP",
+      "phase": "lean-reconstruction"
+    },
+    {
+      "error": "unknown",
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__div.01.smt2",
       "logic": "QF_NIA",
-      "phase": "produce-evidence"
+      "phase": "lean-reconstruction"
+    },
+    {
+      "error": "unknown",
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__mod-simp.smt2",
+      "logic": "QF_NIA",
+      "phase": "lean-reconstruction"
     }
   ],
   "rows": [
@@ -760,13 +734,11 @@
       "audit_reported_checked": 4,
       "audit_unsat": 4,
       "baseline_unsat": 4,
-      "blockers": {
-        "lean-reconstruction-gap": 1
-      },
-      "dominant_unsat": 3,
+      "blockers": {},
+      "dominant_unsat": 4,
       "evidence_certified": 4,
       "evidence_checked": 4,
-      "lean_checked": 3,
+      "lean_checked": 4,
       "logic": "BV",
       "proof_errors": 0,
       "slice": "bv-bitwuzla-regress-clean-quantified-solver-vs-z3-10s.json",
@@ -775,22 +747,22 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 18,
-      "audit_unsat": 18,
+      "audit_reported_checked": 15,
+      "audit_unsat": 15,
       "baseline_unsat": 18,
       "blockers": {
-        "lean-reconstruction-gap": 4
+        "proof-production-error": 3
       },
-      "dominant_unsat": 14,
-      "evidence_certified": 18,
-      "evidence_checked": 18,
-      "lean_checked": 14,
+      "dominant_unsat": 15,
+      "evidence_certified": 15,
+      "evidence_checked": 15,
+      "lean_checked": 15,
       "logic": "BV",
-      "proof_errors": 0,
+      "proof_errors": 3,
       "slice": "bv-cvc5-regress-clean-quantified-solver-vs-z3-10s.json",
       "source": "bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json",
-      "trust_hole_free": 18,
-      "trust_hole_instances": 0
+      "trust_hole_free": 15,
+      "trust_hole_instances": 3
     },
     {
       "audit_reported_checked": 0,
@@ -923,20 +895,22 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 3,
-      "audit_unsat": 3,
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
       "baseline_unsat": 3,
-      "blockers": {},
-      "dominant_unsat": 3,
-      "evidence_certified": 3,
-      "evidence_checked": 3,
-      "lean_checked": 3,
+      "blockers": {
+        "proof-production-error": 2
+      },
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "lean_checked": 1,
       "logic": "QF_BVFP",
-      "proof_errors": 0,
+      "proof_errors": 2,
       "slice": "qf-bvfp-bitwuzla-regress-clean-solver-vs-z3-10s.json",
       "source": "bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json",
-      "trust_hole_free": 3,
-      "trust_hole_instances": 0
+      "trust_hole_free": 1,
+      "trust_hole_instances": 2
     },
     {
       "audit_reported_checked": 3,
@@ -971,20 +945,22 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 7,
-      "audit_unsat": 7,
+      "audit_reported_checked": 6,
+      "audit_unsat": 6,
       "baseline_unsat": 7,
-      "blockers": {},
-      "dominant_unsat": 7,
-      "evidence_certified": 7,
-      "evidence_checked": 7,
-      "lean_checked": 7,
+      "blockers": {
+        "proof-production-error": 1
+      },
+      "dominant_unsat": 6,
+      "evidence_certified": 6,
+      "evidence_checked": 6,
+      "lean_checked": 6,
       "logic": "QF_FP",
-      "proof_errors": 0,
+      "proof_errors": 1,
       "slice": "qf-fp-bitwuzla-regress-clean-solver-vs-z3-10s.json",
       "source": "bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json",
-      "trust_hole_free": 7,
-      "trust_hole_instances": 0
+      "trust_hole_free": 6,
+      "trust_hole_instances": 1
     },
     {
       "audit_reported_checked": 4,
@@ -1035,24 +1011,24 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 5,
+      "audit_reported_checked": 4,
       "audit_unsat": 13,
       "baseline_unsat": 15,
       "blockers": {
-        "lean-reconstruction-gap": 3,
+        "lean-reconstruction-gap": 2,
         "proof-production-error": 2,
-        "uncertified-and-unchecked": 8
+        "uncertified-and-unchecked": 9
       },
       "dominant_unsat": 2,
-      "evidence_certified": 5,
-      "evidence_checked": 5,
+      "evidence_certified": 4,
+      "evidence_checked": 4,
       "lean_checked": 2,
       "logic": "QF_NIA",
       "proof_errors": 2,
       "slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
       "source": "bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json",
       "trust_hole_free": 13,
-      "trust_hole_instances": 0
+      "trust_hole_instances": 2
     },
     {
       "audit_reported_checked": 16,
@@ -1087,22 +1063,6 @@
       "slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
       "source": "bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json",
       "trust_hole_free": 14,
-      "trust_hole_instances": 0
-    },
-    {
-      "audit_reported_checked": 16,
-      "audit_unsat": 16,
-      "baseline_unsat": 16,
-      "blockers": {},
-      "dominant_unsat": 16,
-      "evidence_certified": 16,
-      "evidence_checked": 16,
-      "lean_checked": 16,
-      "logic": "QF_NRA",
-      "proof_errors": 0,
-      "slice": "qf-nra-synthetic-graduated-vs-z3.json",
-      "source": "bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json",
-      "trust_hole_free": 16,
       "trust_hole_instances": 0
     },
     {
@@ -1343,87 +1303,83 @@
   "sources": [
     {
       "path": "bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json",
-      "sha256": "d6757e8ca8275a575c6ea12c885d77af6948e95e709fd9e77fcb096818cb20c6"
+      "sha256": "94ae8ca0d925618e9f8daea68d13525933110356bd0ee1ef27eec61b6c58c7f2"
     },
     {
       "path": "bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json",
-      "sha256": "0ec37f4606e84618ec771778b7295fdf96a91b0d106e1cf8a2124c1b916f6482"
+      "sha256": "707cd728a1292d73af74fae0201f10459921afb4aa33a6dbd1c6804021a31899"
     },
     {
       "path": "bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json",
-      "sha256": "9533761a8f6818533df79cf53993deb8fcc73a96f67a92a1f630632b22cc18d3"
+      "sha256": "3935de6c18cd3fda6d8dc276ad1987ab0094ef01586001392fee90b86ba9ea22"
     },
     {
       "path": "bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "5c965300ec3c2dac27ffd283b9a0fa5a63d89f885fcaca8ee0c93c104142a235"
+      "sha256": "172bac2fdc53f806700a2e9a121fd05cf25aa1ca0847a3748df0b19b25db0127"
     },
     {
       "path": "bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "aa1105c80d88f98f095af897b0280ed146c68c52caa83c6c076e844ccb2c4d2d"
+      "sha256": "945c332aec7884fa05d0ef2eacf1f308477dc91cf7433aa656b57b494e66a068"
     },
     {
       "path": "bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "9f97f8e2556b9a2c9e8a2b0a8448604b0b7fd244630c0e673f6a95b7359b61ed"
+      "sha256": "ad6ef2ce7d5a2b67eb190ec8694be3e11bfafd47158692032b8972c728085ccb"
     },
     {
       "path": "bench-results/dominance/qf-aufbv-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "db5e6786c284fc173204d2bb29df28737ade93807356946e736a29c5562919a9"
+      "sha256": "86f4730b252bf41fcd7ebd4d983174f6210b7327f77c86d116cbfeec236c0f68"
     },
     {
       "path": "bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "cc4e3bc3bee95676af93bafca5863ec896ee31b377f08ab89cb1e55ea37ca529"
+      "sha256": "adc41a6020c37bddffc625652f18c74d2052fecf73501a26c2237a22c84ccc9d"
     },
     {
       "path": "bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "705bcf3bb4d9ee05ccd2b82a2e16bbfe251d02b11db9e56e919f18f2bc7c6e62"
+      "sha256": "c092bd4deb7e01f1ee17401cc6e6964c8a83460ac9e2346db4b4a5ce223aa132"
     },
     {
       "path": "bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json",
-      "sha256": "16612a6cb6f74a7ab823b9927409254248061795baeaac087e732e2176d5de2b"
+      "sha256": "d14b62b5689533302a4e3de49b9062afae0ecef1678e43fdd13c595811331063"
     },
     {
       "path": "bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "05c388aaf11cc164ae3038efa0811043d38a9482e250b79a7f7ecc47cafd6c28"
+      "sha256": "f4db59f34ff44068a3fe74fe02133088b7336cbc5cf80deb8d8ff8cb1d5e01f8"
     },
     {
       "path": "bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "57a939c9e24e3aa0825f96d10aff0638a5d14309387dd342e3066b0a703c8e5a"
+      "sha256": "d2b72dbda9af3f21ad3eda5baf0ed71d4c8715f87b8d693779beab81a8407e5e"
     },
     {
       "path": "bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "c6b87e2ce1d315a0c1233caa715b68daa02df092ec606e231f2947b462760183"
+      "sha256": "3321ff256e028b59d837642bf556b501dc893f94ca63d1c2594a719d400759e0"
     },
     {
       "path": "bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "f7236fa94ece23f32fc4559b7f6f567f339fb0a525ea85e36724586123b126e9"
+      "sha256": "a4558167cb4ba10e5cb368d450bcdc8aa5ed13577309fe3d6587f1ec239c056a"
     },
     {
       "path": "bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "d2a10ff175eab7d70037d557c2ae1a4722ef6175268ef2b7d994060c9293babe"
+      "sha256": "8b0a338dd735880178c833657b2fe8ddf2df760f38e0179653feb29503a8a337"
     },
     {
       "path": "bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "292d1bb6ee2d36bfe6bdfa7ad3f51769ed192a092c15548927e4620ac4bb1beb"
+      "sha256": "53049800fb5091637c9bc21fe5524f1c5272603e34a24e311d0f97a1a4a391ad"
     },
     {
       "path": "bench-results/dominance/qf-nia-curated-iand-dominance-audit.json",
-      "sha256": "04c59b2829d979095aee18b9427544b008a1b1d9ff5ec557352a68c1634d48c8"
+      "sha256": "31d1df3a340b521b0e5719f3a9bef5337071e21ac7d5a49f0dfc0ad9c44ab5e4"
     },
     {
       "path": "bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "49c5baa05b29ca1c0e54acfc0d59fad937c065ebd0421ed5f56c39ec2992fc29"
+      "sha256": "3002828368f83cf1c720f9d5a478970885588d2a5ccabfcbda4289b19a84acbe"
     },
     {
       "path": "bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json",
-      "sha256": "68ed92fba4a5e29d48c9a98e4913ded4cf8b5c57c410bc630ea07be1d0b71e37"
+      "sha256": "5d58f41bae656d67eb0ab6c57e656c2f56fcdbdc651d93103f2707b5c1ce30c3"
     },
     {
       "path": "bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json",
       "sha256": "e211818ee49d43e63f32151e8d18222ce0d22eb0fac38484355f15353bc38488"
-    },
-    {
-      "path": "bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json",
-      "sha256": "b4c9c0f631b2e4be954c386d3cfcbdefc109015183b5ef5320c24a5adfd621ef"
     },
     {
       "path": "bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json",
@@ -1439,62 +1395,67 @@
     },
     {
       "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json",
-      "sha256": "3297a645bde8b3e48763bcc92b067cc907ee0449adf54282f8df33ba51548fcf"
+      "sha256": "5efc087332ec63d5662af8e3a83d0d29ef3a08532f1b870c463eee4e87c0c4f8"
     },
     {
       "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json",
-      "sha256": "fd7bd53dc9bdc06cfd607e139a27d4c5d29ee61abf0672b9a3ba6df0a344bda9"
+      "sha256": "ab3b0fa37acb3bc5a38fbc926407e7ee5fe19683e964e484a5beed416a82cb56"
     },
     {
       "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json",
-      "sha256": "fbe5bcfc7c233ffce39b0fb44efe38d9214dfc33112e1e3bcf8998c3849d9398"
+      "sha256": "c7e774e4e6dda933b041c52691a2cfd1191792e80e2fa93b9243b1b16c9e85e3"
     },
     {
       "path": "bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "d45b43b63de6942f8e0d16bd3ede2c439bead021b499dd7f8dfb2d59bef55dbd"
+      "sha256": "dd58d41730ec5101a513473003284f113243485b09a92f4ade45e3ea6d1b6563"
     },
     {
       "path": "bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "115f4ec569d627bdcf9e5119d8856a678b73db8f4674cd07ccbc06036d61ae52"
+      "sha256": "c532748d2bab9a59dd9bab568bd4d41a7f996ec3bd3547c9e219f038d2501e08"
     },
     {
       "path": "bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "b8e29548374faba569edcf549b1e667cb6a04895751ddce4ff6829b0163e1a6e"
+      "sha256": "7242b632a7a1dc1fd0429a4b137a0bb30e48f86a2615e8751ac9c75f8080687e"
     },
     {
       "path": "bench-results/dominance/qf-uflia-curated-named-dominance-audit.json",
-      "sha256": "e3a0d9fbc713e1082a7fd08ba97b1290d96137f2099b80766d8e68fd0db7ba4f"
+      "sha256": "580bb2f33492527b68e8b7248625efeb88ece383b6fda8280a2c7aeaee9c93e8"
     },
     {
       "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json",
-      "sha256": "ec2c413fee1375a836f2f48d4296761371325057643d83b00cc87e035265bd09"
+      "sha256": "673cf1467a73952ff44a40bd2199433981ea60a08c88ed467cf6d8fcf7fed55b"
     },
     {
       "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "9702bc4267bece393a84a2f05ca911fb040491f790fb98e828f808beb1bc0e8d"
+      "sha256": "b54a1ef029542dfebf09104c2310adaf722923174928c8c16c724987e904a380"
     },
     {
       "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json",
-      "sha256": "16e392be05d81a74c81483684262135123a293f568e67cc91a80acdfe608204f"
+      "sha256": "964ac6d7aaf9f2a91007f40ed7b1125490e93c4cac24cca5a9808a7bf4f38f60"
     },
     {
       "path": "bench-results/dominance/uf-cvc5-regress-clean-quantified-dominance-audit.json",
-      "sha256": "8c6e03439eaf82e6447d3de6bdc74211a68e9671ac97e081a217d3549a0896c9"
+      "sha256": "47bea14253cf43dff400829d43993765383d894085437b1095f1815c833be88a"
     }
   ],
   "summary": {
-    "audit_reported_checked": 273,
-    "audit_unsat": 321,
-    "baseline_unsat": 323,
-    "complete_audits": 35,
-    "dominant_unsat": 261,
-    "evidence_certified": 273,
-    "evidence_checked": 273,
-    "lean_checked": 261,
-    "proof_errors": 2,
-    "trust_hole_free": 321,
-    "trust_hole_instances": 0
+    "audit_reported_checked": 250,
+    "audit_unsat": 299,
+    "baseline_unsat": 307,
+    "complete_audits": 34,
+    "dominant_unsat": 244,
+    "evidence_certified": 250,
+    "evidence_checked": 250,
+    "lean_checked": 244,
+    "proof_errors": 8,
+    "trust_hole_free": 299,
+    "trust_hole_instances": 8
   },
-  "trust_holes": [],
+  "trust_holes": [
+    {
+      "instances": 8,
+      "trust_hole": "timeout"
+    }
+  ],
   "version": 1
 }

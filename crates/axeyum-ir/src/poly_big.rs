@@ -698,6 +698,93 @@ fn combined_interval(a: &Operand, b: &Operand, how: Combine) -> (BigRational, Bi
     }
 }
 
+/// `p(x − c)` — the defining polynomial of `α + c` when `p` defines `α`. Exact
+/// composition by Horner over `(x − c)`.
+fn big_shift_by_rational(poly: &[BigRational], c: &BigRational) -> BigVec {
+    let x_minus_c = vec![-c.clone(), BigRational::one()];
+    let mut acc: BigVec = vec![BigRational::zero()];
+    for coeff in poly.iter().rev() {
+        acc = big_add(&big_mul(&acc, &x_minus_c), core::slice::from_ref(coeff));
+    }
+    big_trim(acc)
+}
+
+/// `p(x / c)` for `c ≠ 0` — the defining polynomial of `α · c` when `p` defines
+/// `α`. Coefficient `aᵢ` becomes `aᵢ / cⁱ`.
+fn big_scale_by_rational(poly: &[BigRational], c: &BigRational) -> BigVec {
+    let mut power = BigRational::one();
+    let mut out = Vec::with_capacity(poly.len());
+    for coeff in poly {
+        out.push(coeff / &power);
+        power = &power * c;
+    }
+    big_trim(out)
+}
+
+/// `α ∘ c` where `c` is the **exact rational value** of one operand and `other`
+/// is the remaining algebraic operand.
+///
+/// A rational operand needs no resultant at all: `α + c` is a root of `p(x − c)`
+/// and `α · c` (for `c ≠ 0`) a root of `p(x / c)`, in the correspondingly shifted
+/// / scaled interval — a bijection of `p`'s roots onto the composed poly's, so the
+/// operand's own isolation carries over instead of having to be re-established by
+/// a Sturm count inside an interval that may bracket several roots of a resultant.
+///
+/// That distinction is the whole point: the resultant route reaches the rational
+/// operand's interval only by bisection, and bisecting toward a *rational* root
+/// lands the midpoint **on** it — `refine_once` reports [`Sign::Zero`] and the
+/// interval collapses to a point, which no isolation test can ever accept. Every
+/// rational lifted by `RealAlgebraic::from_rational` hits that on its first
+/// refinement (its interval is `(c−1, c+1)`, midpoint exactly `c`), so before this
+/// path `1 + α` simply declined whenever the initial combined interval was too
+/// wide to isolate.
+///
+/// The result is still accepted only under the same criterion as [`combine`]:
+/// strictly opposite endpoint signs and an exact Sturm count of `1`.
+fn combine_with_rational(other: &Operand, c: &BigRational, how: Combine) -> Option<BigAlgebraic> {
+    if other.lo.cmp(&other.hi) != Ordering::Less {
+        return None;
+    }
+    let (composed, lo, hi) = match how {
+        Combine::Sum => (
+            big_shift_by_rational(&other.poly, c),
+            &other.lo + c,
+            &other.hi + c,
+        ),
+        Combine::Product => {
+            if c.is_zero() {
+                // `α · 0 = 0` exactly: the unique root of `x` in `(−1, 1)`.
+                return Some(BigAlgebraic {
+                    poly: vec![BigInt::zero(), BigInt::one()],
+                    lo: -BigRational::one(),
+                    hi: BigRational::one(),
+                });
+            }
+            let (x, y) = (&other.lo * c, &other.hi * c);
+            let (lo, hi) = if x < y { (x, y) } else { (y, x) };
+            (big_scale_by_rational(&other.poly, c), lo, hi)
+        }
+    };
+    let sqfree = big_squarefree_part(&composed, BIG_MAX_DEGREE_GUARD)?;
+    let poly = big_to_int_poly(&sqfree)?;
+    if poly.len() <= 1 {
+        return None;
+    }
+    let qrat = bigint_poly_to_rat(&poly);
+    let (slo, shi) = (
+        big_sign(&big_eval(&qrat, &lo)),
+        big_sign(&big_eval(&qrat, &hi)),
+    );
+    if slo == Sign::Zero || shi == Sign::Zero || slo == shi {
+        return None;
+    }
+    let chain = big_sturm_chain(&qrat, BIG_MAX_DEGREE_GUARD)?;
+    if big_count_roots_in(&chain, &lo, &hi)? != 1 {
+        return None;
+    }
+    Some(BigAlgebraic { poly, lo, hi })
+}
+
 /// Identify the unique root of squarefree `q` equal to `α ∘ β` and return it (in
 /// bignum). Mirrors `real_algebraic::combine_via_interval`.
 fn combine(a: &Operand, b: &Operand, q: &[BigInt], how: Combine) -> Option<BigAlgebraic> {
@@ -732,11 +819,15 @@ fn combine(a: &Operand, b: &Operand, q: &[BigInt], how: Combine) -> Option<BigAl
                 });
             }
         }
+        // A midpoint that evaluates to zero lies strictly inside an interval
+        // holding exactly one root, so it IS that root: the operand is exactly the
+        // rational `mid`. That is more information, not less — take the exact
+        // shift/scale route rather than declining.
         if pa.refine_once() == Sign::Zero {
-            return None;
+            return combine_with_rational(&pb, &pa.lo, how);
         }
         if pb.refine_once() == Sign::Zero {
-            return None;
+            return combine_with_rational(&pa, &pb.lo, how);
         }
     }
     None
