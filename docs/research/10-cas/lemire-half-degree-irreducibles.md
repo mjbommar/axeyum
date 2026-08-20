@@ -2853,6 +2853,19 @@ cohomology cutoff, and it does not rule out a replacement estimate scoped to
 of `ell` and be replayed through the endpoint ledger before receiving credit.
 See ADR-0540.
 
+The connected extension-field computation is now deterministically
+shardable.  Each shard retains its exact contiguous candidate range and a
+partial vector of all `q^ell` Mangoldt class populations.  The checked merge
+rejects missing, duplicate, noncontiguous, parameter-mismatched, or malformed
+vectors, adds them componentwise, and requires the global Mangoldt sum to be
+exactly `q^n` before forming either moment or the Wick subtraction.  The
+monolithic API itself now uses the same one-shard merge path, and the
+`axeyum-gf2-extension-trace` binary exposes canonical `--connected-shard` and
+`--connected-merge` workflows.  This makes larger field rows reproducible
+across the fleet, but it changes no evidence status: even a complete merged
+row is a finite stopping test, not the required growing-conductor theorem
+(ADR-0547).
+
 At level two the weight question can be decided without further enumeration.
 The first two leading coefficients are the trace and subtrace.  Theorem 2 of
 Ri--Myong--Kim--Rim's characteristic-two

@@ -99,6 +99,37 @@ pub struct BinaryExtensionConnectedAdamsTraceReport {
     pub satisfies_candidate_bound: bool,
 }
 
+/// One deterministic shard of the connected extension-field class vector.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct BinaryExtensionConnectedAdamsTraceShardReport {
+    /// Packed monic irreducible modulus defining `GF(2^r)`.
+    pub field_modulus: u64,
+    /// Extension degree `r`.
+    pub field_degree: usize,
+    /// Field order `q=2^r`.
+    pub field_order: u64,
+    /// Leading-coefficient prefix length.
+    pub ell: usize,
+    /// Degree of every monic polynomial.
+    pub polynomial_degree: usize,
+    /// Number `q^ell` of coefficient classes.
+    pub class_count: u64,
+    /// Number `q^degree` of monic polynomials before sharding.
+    pub candidate_count: u64,
+    /// Exact uniform population `q^(degree-ell)` in every class.
+    pub uniform_mean: u64,
+    /// Zero-based shard index.
+    pub shard_index: u64,
+    /// Total number of deterministic contiguous shards.
+    pub shard_count: u64,
+    /// Inclusive start in the canonical coefficient encoding.
+    pub candidate_start: u64,
+    /// Exclusive end in the canonical coefficient encoding.
+    pub candidate_end: u64,
+    /// Partial Mangoldt population in every leading-coefficient class.
+    pub class_mangoldt_populations: Vec<u128>,
+}
+
 /// Closed-form connected trace at the first nontrivial endpoint `(ell,n)=(2,5)`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BinaryExtensionEllTwoDegreeFiveClosedForm {
@@ -374,6 +405,23 @@ pub fn binary_extension_connected_adams_trace(
     polynomial_degree: usize,
     limits: BinaryExtensionTraceLimits,
 ) -> Result<BinaryExtensionConnectedAdamsTraceReport, BinaryExtensionTraceError> {
+    let shard = binary_extension_connected_adams_trace_shard(
+        field_modulus,
+        ell,
+        polynomial_degree,
+        0,
+        1,
+        limits,
+    )?;
+    combine_binary_extension_connected_adams_trace_shards(&[shard])
+}
+
+fn connected_adams_domain(
+    field_modulus: u64,
+    ell: usize,
+    polynomial_degree: usize,
+    limits: BinaryExtensionTraceLimits,
+) -> Result<(BinaryExtensionField, u64, u64, usize), BinaryExtensionTraceError> {
     let twice_ell = ell.checked_mul(2).ok_or_else(|| {
         BinaryExtensionTraceError::InvalidParameter("connected ell overflow".to_owned())
     })?;
@@ -404,14 +452,179 @@ pub fn binary_extension_connected_adams_trace(
     let uniform_mean = field.order.checked_pow(low_exponent).ok_or_else(|| {
         BinaryExtensionTraceError::ResourceLimit("uniform class mean overflow".to_owned())
     })?;
-    let populations = extension_class_mangoldt_populations(
+    Ok((field, candidate_count, uniform_mean, class_len))
+}
+
+/// Compute one deterministic contiguous shard of the connected class vector.
+///
+/// Unlike the long-cycle shard, this report retains one partial population
+/// for every leading-coefficient class.  Shards may split a class; exact
+/// componentwise addition during merge restores the full population vector.
+///
+/// # Errors
+///
+/// Rejects invalid shard coordinates, non-endpoint parameters, inadmissible
+/// fields/populations, and checked arithmetic or class-index failures.
+pub fn binary_extension_connected_adams_trace_shard(
+    field_modulus: u64,
+    ell: usize,
+    polynomial_degree: usize,
+    shard_index: u64,
+    shard_count: u64,
+    limits: BinaryExtensionTraceLimits,
+) -> Result<BinaryExtensionConnectedAdamsTraceShardReport, BinaryExtensionTraceError> {
+    if shard_count == 0 || shard_index >= shard_count {
+        return Err(BinaryExtensionTraceError::InvalidParameter(
+            "require 0 <= shard index < positive shard count".to_owned(),
+        ));
+    }
+    let (field, candidate_count, uniform_mean, class_len) =
+        connected_adams_domain(field_modulus, ell, polynomial_degree, limits)?;
+    let candidate_start = shard_endpoint(candidate_count, shard_index, shard_count)?;
+    let candidate_end = shard_endpoint(candidate_count, shard_index + 1, shard_count)?;
+    let class_mangoldt_populations = extension_class_mangoldt_population_range(
         field,
         polynomial_degree,
         class_len,
         uniform_mean,
-        candidate_count,
+        candidate_start,
+        candidate_end,
     )?;
-    let mean = u128::from(uniform_mean);
+    Ok(BinaryExtensionConnectedAdamsTraceShardReport {
+        field_modulus,
+        field_degree: field.degree,
+        field_order: field.order,
+        ell,
+        polynomial_degree,
+        class_count: u64::try_from(class_len).map_err(|_| {
+            BinaryExtensionTraceError::ResourceLimit("class count exceeds u64".to_owned())
+        })?,
+        candidate_count,
+        uniform_mean,
+        shard_index,
+        shard_count,
+        candidate_start,
+        candidate_end,
+        class_mangoldt_populations,
+    })
+}
+
+/// Merge a complete deterministic shard set and form the connected moments.
+///
+/// # Errors
+///
+/// Rejects empty, duplicated, missing, noncontiguous, differently
+/// parameterized, or malformed class vectors.  The merged vector must recover
+/// the exact global Mangoldt population before any moment is returned.
+pub fn combine_binary_extension_connected_adams_trace_shards(
+    shards: &[BinaryExtensionConnectedAdamsTraceShardReport],
+) -> Result<BinaryExtensionConnectedAdamsTraceReport, BinaryExtensionTraceError> {
+    let first = shards.first().ok_or_else(|| {
+        BinaryExtensionTraceError::InvalidParameter(
+            "cannot combine zero connected shards".to_owned(),
+        )
+    })?;
+    let expected_len = usize::try_from(first.shard_count).map_err(|_| {
+        BinaryExtensionTraceError::ResourceLimit("shard count exceeds host size".to_owned())
+    })?;
+    if shards.len() != expected_len {
+        return Err(BinaryExtensionTraceError::Invariant(format!(
+            "received {} connected shards but expected {expected_len}",
+            shards.len()
+        )));
+    }
+    let class_len = usize::try_from(first.class_count).map_err(|_| {
+        BinaryExtensionTraceError::ResourceLimit("class count exceeds host size".to_owned())
+    })?;
+    let mut populations = vec![0_u128; class_len];
+    let mut ordered = shards.iter().collect::<Vec<_>>();
+    ordered.sort_by_key(|shard| shard.shard_index);
+    let mut expected_start = 0_u64;
+    for (expected_index, shard) in ordered.into_iter().enumerate() {
+        let expected_index = u64::try_from(expected_index).map_err(|_| {
+            BinaryExtensionTraceError::ResourceLimit("shard index exceeds u64".to_owned())
+        })?;
+        if shard.field_modulus != first.field_modulus
+            || shard.field_degree != first.field_degree
+            || shard.field_order != first.field_order
+            || shard.ell != first.ell
+            || shard.polynomial_degree != first.polynomial_degree
+            || shard.class_count != first.class_count
+            || shard.candidate_count != first.candidate_count
+            || shard.uniform_mean != first.uniform_mean
+            || shard.shard_count != first.shard_count
+        {
+            return Err(BinaryExtensionTraceError::Invariant(
+                "connected shard parameters disagree".to_owned(),
+            ));
+        }
+        if shard.shard_index != expected_index || shard.candidate_start != expected_start {
+            return Err(BinaryExtensionTraceError::Invariant(
+                "connected shards are duplicated, missing, or noncontiguous".to_owned(),
+            ));
+        }
+        if shard.candidate_end < shard.candidate_start
+            || shard.class_mangoldt_populations.len() != class_len
+        {
+            return Err(BinaryExtensionTraceError::Invariant(
+                "connected shard has a reversed range or malformed class vector".to_owned(),
+            ));
+        }
+        expected_start = shard.candidate_end;
+        for (total, partial) in populations
+            .iter_mut()
+            .zip(&shard.class_mangoldt_populations)
+        {
+            *total = total.checked_add(*partial).ok_or_else(|| {
+                BinaryExtensionTraceError::ResourceLimit(
+                    "connected class population overflow".to_owned(),
+                )
+            })?;
+        }
+    }
+    if expected_start != first.candidate_count {
+        return Err(BinaryExtensionTraceError::Invariant(
+            "connected shards do not cover the full population".to_owned(),
+        ));
+    }
+    connected_adams_report_from_populations(first, &populations)
+}
+
+fn connected_adams_report_from_populations(
+    metadata: &BinaryExtensionConnectedAdamsTraceShardReport,
+    populations: &[u128],
+) -> Result<BinaryExtensionConnectedAdamsTraceReport, BinaryExtensionTraceError> {
+    let class_count = metadata
+        .field_order
+        .checked_pow(u32::try_from(metadata.ell).map_err(|_| {
+            BinaryExtensionTraceError::ResourceLimit("class exponent exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| {
+            BinaryExtensionTraceError::ResourceLimit("class count overflow".to_owned())
+        })?;
+    if populations.len()
+        != usize::try_from(class_count).map_err(|_| {
+            BinaryExtensionTraceError::ResourceLimit("class count exceeds host size".to_owned())
+        })?
+    {
+        return Err(BinaryExtensionTraceError::Invariant(
+            "connected class population vector has the wrong length".to_owned(),
+        ));
+    }
+    let recovered_total = populations.iter().try_fold(0_u128, |sum, value| {
+        sum.checked_add(*value).ok_or_else(|| {
+            BinaryExtensionTraceError::ResourceLimit(
+                "connected class population total overflow".to_owned(),
+            )
+        })
+    })?;
+    if recovered_total != u128::from(metadata.candidate_count) {
+        return Err(BinaryExtensionTraceError::Invariant(format!(
+            "Mangoldt populations sum to {recovered_total}, expected {}",
+            metadata.candidate_count
+        )));
+    }
+    let mean = u128::from(metadata.uniform_mean);
     let centered_second_moment = populations
         .iter()
         .map(|population| BigUint::from(population.abs_diff(mean)).pow(2))
@@ -424,10 +637,12 @@ pub fn binary_extension_connected_adams_trace(
     let fourth_cumulant_numerator = BigInt::from(&class_count_big * &centered_fourth_moment)
         - BigInt::from(BigUint::from(3_u8) * centered_second_moment.pow(2));
     let connected_adams_trace = BigInt::from(class_count_big.pow(2)) * &fourth_cumulant_numerator;
-    let allowance_exponent = ell
+    let allowance_exponent = metadata
+        .ell
         .checked_mul(2)
         .and_then(|value| {
-            polynomial_degree
+            metadata
+                .polynomial_degree
                 .checked_mul(2)
                 .and_then(|n| value.checked_add(n))
         })
@@ -437,21 +652,21 @@ pub fn binary_extension_connected_adams_trace(
                 "connected allowance exponent overflow".to_owned(),
             )
         })?;
-    let geometric_scale = BigUint::from(field.order).pow(allowance_exponent);
-    let candidate_absolute_bound = BigUint::from(ell).pow(4) * &geometric_scale;
+    let geometric_scale = BigUint::from(metadata.field_order).pow(allowance_exponent);
+    let candidate_absolute_bound = BigUint::from(metadata.ell).pow(4) * &geometric_scale;
     let minimum_normalized_betti_ceiling = (connected_adams_trace.magnitude() + &geometric_scale
         - BigUint::from(1_u8))
         / &geometric_scale;
     let satisfies_candidate_bound = connected_adams_trace.magnitude() <= &candidate_absolute_bound;
     Ok(BinaryExtensionConnectedAdamsTraceReport {
-        field_modulus,
-        field_degree: field.degree,
-        field_order: field.order,
-        ell,
-        polynomial_degree,
+        field_modulus: metadata.field_modulus,
+        field_degree: metadata.field_degree,
+        field_order: metadata.field_order,
+        ell: metadata.ell,
+        polynomial_degree: metadata.polynomial_degree,
         class_count,
-        candidate_count,
-        uniform_mean,
+        candidate_count: metadata.candidate_count,
+        uniform_mean: metadata.uniform_mean,
         identity_class_mangoldt_sum: populations[0],
         centered_second_moment,
         centered_fourth_moment,
@@ -987,15 +1202,16 @@ fn extension_trace_range(
     Ok(mangoldt_sum)
 }
 
-fn extension_class_mangoldt_populations(
+fn extension_class_mangoldt_population_range(
     field: BinaryExtensionField,
     polynomial_degree: usize,
     class_len: usize,
     uniform_mean: u64,
-    candidate_count: u64,
+    candidate_start: u64,
+    candidate_end: u64,
 ) -> Result<Vec<u128>, BinaryExtensionTraceError> {
     let mut populations = vec![0_u128; class_len];
-    for encoded in 0..candidate_count {
+    for encoded in candidate_start..candidate_end {
         let mut digits = encoded;
         let mut polynomial = vec![0_u64; polynomial_degree + 1];
         for coefficient in polynomial.iter_mut().take(polynomial_degree) {
@@ -1015,12 +1231,6 @@ fn extension_class_mangoldt_populations(
                         "class Mangoldt population overflow".to_owned(),
                     )
                 })?;
-    }
-    let recovered_total = populations.iter().copied().sum::<u128>();
-    if recovered_total != u128::from(candidate_count) {
-        return Err(BinaryExtensionTraceError::Invariant(format!(
-            "Mangoldt populations sum to {recovered_total}, expected {candidate_count}"
-        )));
     }
     Ok(populations)
 }
@@ -1453,6 +1663,69 @@ mod tests {
             binary_extension_connected_adams_trace(0b11, 2, 5, tight),
             Err(BinaryExtensionTraceError::ResourceLimit(_))
         ));
+    }
+
+    #[test]
+    fn connected_adams_shards_merge_exact_class_vectors() {
+        let limits = BinaryExtensionTraceLimits::default();
+        for (modulus, ell, degree) in [(0b11_u64, 2_usize, 5_usize), (0b111, 2, 5)] {
+            let direct =
+                binary_extension_connected_adams_trace(modulus, ell, degree, limits).unwrap();
+            for shard_count in [2_u64, 3, 7] {
+                let shards = (0..shard_count)
+                    .map(|shard_index| {
+                        binary_extension_connected_adams_trace_shard(
+                            modulus,
+                            ell,
+                            degree,
+                            shard_index,
+                            shard_count,
+                            limits,
+                        )
+                        .unwrap()
+                    })
+                    .collect::<Vec<_>>();
+                let merged =
+                    combine_binary_extension_connected_adams_trace_shards(&shards).unwrap();
+                assert_eq!(merged, direct);
+                assert_eq!(shards.first().unwrap().candidate_start, 0);
+                assert_eq!(shards.last().unwrap().candidate_end, direct.candidate_count);
+
+                let encoded = serde_json::to_string(&shards[0]).unwrap();
+                assert_eq!(
+                    serde_json::from_str::<BinaryExtensionConnectedAdamsTraceShardReport>(&encoded)
+                        .unwrap(),
+                    shards[0]
+                );
+            }
+        }
+
+        let shards = (0..2_u64)
+            .map(|index| {
+                binary_extension_connected_adams_trace_shard(0b11, 2, 5, index, 2, limits).unwrap()
+            })
+            .collect::<Vec<_>>();
+        assert!(combine_binary_extension_connected_adams_trace_shards(&shards[..1]).is_err());
+        assert!(
+            combine_binary_extension_connected_adams_trace_shards(&[
+                shards[0].clone(),
+                shards[0].clone(),
+            ])
+            .is_err()
+        );
+
+        let mut bad_parameter = shards.clone();
+        bad_parameter[1].ell = 3;
+        assert!(combine_binary_extension_connected_adams_trace_shards(&bad_parameter).is_err());
+        let mut bad_vector = shards.clone();
+        bad_vector[1].class_mangoldt_populations.pop();
+        assert!(combine_binary_extension_connected_adams_trace_shards(&bad_vector).is_err());
+        let mut bad_population = shards;
+        bad_population[0].class_mangoldt_populations[0] += 1;
+        assert!(combine_binary_extension_connected_adams_trace_shards(&bad_population).is_err());
+
+        assert!(binary_extension_connected_adams_trace_shard(0b11, 2, 5, 0, 0, limits).is_err());
+        assert!(binary_extension_connected_adams_trace_shard(0b11, 2, 5, 2, 2, limits).is_err());
     }
 
     #[test]
