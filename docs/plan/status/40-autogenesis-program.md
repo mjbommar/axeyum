@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Semantic admission diagnostics isolate official `Nat.mod` versus the native Bool-rollover remainder inside `Nat.div_mod_exec`; the 92-declaration `Nat.dvd_gcd` closure shows `Nat.mod_lt` already reusable and `Nat.dvd_mod_iff` independently missing. Official high-level support (`Nat.dvd_mod_iff`, `Nat.mod_add_div`, and `Nat.div_add_mod`) carries `propext` and remains reference-only. A minimal Lean 4.30.0 pack of generated `Nat.mod.eq_2` and `Nat.modCore.go.eq_1` equations instead imports with zero axioms and composes into r082 exactly: 183 selected declarations, 181 reused, two added theorem identities equal, both footprints empty, and the V5 receipt replays.
+**Status:** The exact Lean 4.30 `Nat.fib` definition and admitted `Nat.fib_add_two` theorem compose into Axeyum's native Nat kernel. The bounded Fibonacci-neighbor coprimality induction now reconstructs twice with identical goal, proof, and declaration identities; its kernel-derived footprint is empty and its direct dependencies are exactly the recurrence plus the seven planned native gcd/divisibility lemmas. The r082 target remains open: official `Nat.Coprime` closes over the official `Nat.gcd`, while the accepted theorem closes over the independently constructed native `Nat.gcd`. Same-name/type compatibility is not semantic transport authority. No receipt, evaluation, or ledger credit is due.
 
-**Next:** prove `k ∣ Nat.modCore.go y hy fuel x hfuel ↔ k ∣ x` under `k ∣ y` by fuel induction using the composed step equation and checked subtraction/divisibility lemmas; lift it through official `Nat.modCore` and `Nat.mod`; generalize native `Nat.dvd_mod_iff` to official Lean's all-divisor signature; require a fresh-kernel empty footprint; then retry `Nat.dvd_gcd` unchanged.
+**Next:** construct an explicit checked semantic bridge from the official r082 `Nat.Coprime`/`Nat.gcd` definition closure to the native gcd theorem. Prefer a pointwise equivalence or a residualized uniqueness contract independently specialized on both definitions. Do not infer equivalence from same-name declarations, import `Quot.sound`, or issue a target receipt before the ordinary kernel accepts the exact bridged statement.
 
 <!-- plan-section: landed-changes -->
 
@@ -30,3 +30,8 @@
 | 2026-08-20 | `f099a4a37` | Semantic admission diagnostics isolate the 92-declaration division mismatch and the missing `Nat.dvd_mod_iff` consumer |
 | 2026-08-20 | `a12d44858` | Lean export audit reports canonical theorem identities, direct dependencies, and kernel-derived axiom footprints |
 | 2026-08-20 | `dd79317c5` | Proof-isolated theorem-pack composition replays two axiom-free official `Nat.mod` computation equations into r082 |
+| 2026-08-20 | `667201932` | Receipt-backed checked specialization admits constructive target `Nat.dvd_mod_iff` with an empty footprint and native type shape |
+| 2026-08-20 | `7e6e28c1f` | Explicit target-owned theorem leaves cut only compatible axiom-free source proofs and replay from a distinct receipt |
+| 2026-08-20 | `5fb817301` | Real r082 leaf probe removes `Nat.div_mod_exec` with two cuts and exposes assumption-bearing `Nat.gcd_succ` next |
+| 2026-08-20 | `91d7df736` | Dependency-ordered mixed composition moves exact `Nat.fib` and the established recurrence into the axiom-free native gcd kernel |
+| 2026-08-20 | `8403e6f65` | Twice-reconstructed native Fibonacci coprimality theorem closes with the exact planned dependency set and exposes the official/native gcd semantic bridge |

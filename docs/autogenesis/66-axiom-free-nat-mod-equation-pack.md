@@ -100,12 +100,15 @@ python3 -m unittest \
   scripts.tests.test_check_autogenesis_nat_fib_coprime_premise_plan
 ```
 
-## Next bounded increment
+## Subsequent foundation
 
-Build the target-side fuel invariant
-`k ∣ Nat.modCore.go y hy fuel x hfuel ↔ k ∣ x` under `k ∣ y`, using the
-composed step equation and already checked native divisibility/subtraction
-lemmas. Lift it through `Nat.modCore` and `Nat.mod`, then generalize the native
-`Nat.dvd_mod_iff` signature to match official Lean before replaying
-`Nat.dvd_gcd`. The equation pack alone does not establish any divisibility
-theorem and receives no ledger credit.
+The constructive fuel invariant and its successor-divisor specialization are
+now independently admitted with empty footprints. See the
+[constructive Nat.mod invariant specialization](67-constructive-nat-mod-invariant-specialization.md).
+The equation pack alone still receives no ledger credit; its value is the
+checked computation boundary consumed by that proof.
+
+The specialized theorem is now consumed as an explicit target-owned leaf.
+Together with target `Nat.mod_lt`, it removes `Nat.div_mod_exec` from the
+downstream `Nat.dvd_gcd` closure and exposes the next gcd-specific foundation;
+see [target-owned theorem leaves and the Nat.gcd frontier](68-target-owned-theorem-leaves-and-nat-gcd-frontier.md).

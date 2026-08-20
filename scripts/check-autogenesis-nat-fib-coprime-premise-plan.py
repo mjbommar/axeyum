@@ -6,7 +6,9 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import re
 import stat
+import subprocess
 import sys
 from typing import Any
 
@@ -30,6 +32,29 @@ def sha256(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def git_blob_sha256(revision: str, path: str) -> str:
+    """Hash one tracked file at the evidence-producing revision.
+
+    Immutable evidence binds the tool that produced it, not every future
+    version of the same path. Reading the pinned blob keeps historical packs
+    verifiable while allowing the current implementation to evolve.
+    """
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise PlanError("historical tool revision is not a full Git object ID")
+    relative = pathlib.PurePosixPath(path)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise PlanError("historical tool path is not repository-relative")
+    completed = subprocess.run(
+        ["git", "show", f"{revision}:{relative.as_posix()}"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        raise PlanError("historical tool blob is unavailable")
+    return hashlib.sha256(completed.stdout).hexdigest()
+
+
 def validate_official_support_audit(manifest: dict[str, Any]) -> None:
     audit = manifest["official_support_audit"]
     audit_path = pathlib.Path(audit["manifest"])
@@ -49,7 +74,10 @@ def validate_official_support_audit(manifest: dict[str, Any]) -> None:
         or external.get("lean4export_commit") != audit["lean4export_commit"]
         or external.get("audit_commit") != audit["audit_commit"]
         or external.get("audit_tool_sha256")
-        != sha256(ROOT / "crates/axeyum-lean-import/examples/lean4export_import.rs")
+        != git_blob_sha256(
+            audit["audit_commit"],
+            "crates/axeyum-lean-import/examples/lean4export_import.rs",
+        )
         or external.get("authority")
         != {
             "proof_search_invocations": 0,
@@ -117,7 +145,7 @@ def validate_official_equation_pack(manifest: dict[str, Any]) -> None:
         != "d024af099ca4bf2c86f649261ebf59565dc8c622"
         or external.get("composition_tool_commit") != pack["implementation_commit"]
         or external.get("composition_tool_sha256")
-        != sha256(ROOT / external["composition_tool"])
+        != git_blob_sha256(pack["implementation_commit"], external["composition_tool"])
         or external.get("generation")
         != {
             "module": "Init",
@@ -178,6 +206,555 @@ def validate_official_equation_pack(manifest: dict[str, Any]) -> None:
             raise PlanError(f"official equation theorem changed for {row['name']}")
 
 
+def validate_nat_mod_invariant_pack(manifest: dict[str, Any]) -> None:
+    pack = manifest["nat_mod_invariant_pack"]
+    manifest_path = pathlib.Path(pack["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "autogenesis_nat_mod_invariant.lean",
+        "manifest.json",
+        "nat-mod-invariant.ndjson",
+        "specialization.json",
+        "theorem-audit.txt",
+    }
+    if (
+        sha256(manifest_path) != pack["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(
+            stat.S_IMODE((pack_dir / name).stat().st_mode) != 0o444
+            for name in expected_files
+        )
+    ):
+        raise PlanError("Nat.mod invariant pack changed or is mutable")
+
+    external = load(manifest_path)
+    authored = external["authored_source"]
+    export = external["export"]
+    audit = external["audit"]
+    target = external["target"]
+    tool = external["specialization_tool"]
+    result = external["result"]
+    authored_path = pack_dir / authored["pack_path"]
+    export_path = pack_dir / export["path"]
+    audit_path = pack_dir / audit["path"]
+    result_path = pack_dir / result["path"]
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-lean430-nat-mod-invariant-specialization-pack"
+        or external.get("lean_version") != manifest["source"]["lean_version"]
+        or external.get("lean_githash") != manifest["source"]["lean_githash"]
+        or external.get("repository_commit")
+        != pack["implementation_commit"][:12]
+        or authored["repository_path"]
+        != "scripts/lean/autogenesis_nat_mod_invariant.lean"
+        or authored["module"] != "AutogenesisNatModInvariant"
+        or authored["root"] != "Axeyum.Autogenesis.modSucc_dvd_iff"
+        or authored["sha256"] != pack["authored_source_sha256"]
+        or sha256(authored_path) != authored["sha256"]
+        or git_blob_sha256(pack["implementation_commit"], authored["repository_path"])
+        != authored["sha256"]
+        or authored["bytes"] != authored_path.stat().st_size
+        or authored["lines"] != len(authored_path.read_text().splitlines())
+        or export["sha256"] != pack["source_stream_sha256"]
+        or sha256(export_path) != export["sha256"]
+        or export["bytes"] != export_path.stat().st_size
+        or export["lines"] != len(export_path.read_bytes().splitlines())
+        or export["declarations_admitted"] != 211
+        or export["axioms"] != []
+        or audit["tool"]
+        != "crates/axeyum-lean-import/examples/lean4export_import.rs"
+        or audit["tool_sha256"]
+        != git_blob_sha256(pack["implementation_commit"], audit["tool"])
+        or sha256(audit_path) != audit["sha256"]
+        or target["sha256"] != manifest["source"]["stream_sha256"]
+        or sha256(pathlib.Path(target["path"])) != target["sha256"]
+        or target["declarations_admitted"] != 261
+        or target["axioms"] != []
+        or tool["path"]
+        != "crates/axeyum-lean-import/examples/nat_mod_invariant_specialization.rs"
+        or tool["sha256"] != pack["specialization_tool_sha256"]
+        or git_blob_sha256(pack["implementation_commit"], tool["path"])
+        != tool["sha256"]
+        or tool["library_path"]
+        != "crates/axeyum-lean-import/src/theorem_specialization.rs"
+        or tool["library_sha256"] != pack["specialization_library_sha256"]
+        or git_blob_sha256(pack["implementation_commit"], tool["library_path"])
+        != tool["library_sha256"]
+        or sha256(result_path) != result["sha256"]
+        or external["authority"]
+        != {
+            "proof_source_authored_by_searcher": True,
+            "proof_source_is_trusted": False,
+            "proof_terms_independently_admitted": True,
+            "specialization_independently_admitted": True,
+            "native_type_compatibility_checked": True,
+            "proof_import_declarations_admitted": 211,
+            "target_import_declarations_admitted": 261,
+            "ledger_writes": 0,
+        }
+    ):
+        raise PlanError("Nat.mod invariant pack identity or authority changed")
+
+    expected_theorems = {
+        "Axeyum.Autogenesis.modCoreGo_invariant": (
+            "d2c5b7f22ba8be2944cf3a4a864250b40410de6bda746b026023f555efa66b14"
+        ),
+        "Axeyum.Autogenesis.modSucc_invariant": (
+            "3edbf74b7eb077da928a8ca499823419449791a72e654b885e1920e15df2952e"
+        ),
+        "Axeyum.Autogenesis.modSucc_dvd_iff": (
+            "cc6cb4ce64e5c30b3f8ff36cbc5c6c14f19dae1b57c51a6df095a07e9851a43e"
+        ),
+    }
+    audit_text = audit_path.read_text()
+    if set(audit["theorems"]) != set(expected_theorems):
+        raise PlanError("Nat.mod invariant theorem set changed")
+    for theorem, identity in expected_theorems.items():
+        row = audit["theorems"][theorem]
+        if (
+            row != {"declaration_sha256": identity, "axiom_footprint": []}
+            or f"name={theorem}|identity={identity}|axiom_free=true|"
+            not in audit_text
+            or "|axiom_footprint=none|" not in audit_text
+        ):
+            raise PlanError(f"Nat.mod invariant theorem changed for {theorem}")
+    if audit_text.count("|axioms=none|") != 3 or "axiom_free=false" in audit_text:
+        raise PlanError("Nat.mod invariant audit coverage changed")
+
+    observed = load(result_path)
+    specialization = observed["specialization"]
+    tracked_target = pack["target"]
+    if (
+        observed.get("schema_version") != 1
+        or observed.get("kind") != "axeyum-nat-mod-invariant-specialization"
+        or observed.get("lean_version") != manifest["source"]["lean_version"]
+        or observed["generic_composition"]["receipt_sha256"]
+        != pack["generic_composition_receipt_sha256"]
+        or observed["generic_composition"]["source_closure"] != 211
+        or observed["generic_composition"]["added_theorems"] != 16
+        or observed["helper_composition"]["receipt_sha256"]
+        != pack["helper_composition_receipt_sha256"]
+        or observed["helper_composition"]["roots"]
+        != ["Nat.dvd_add_iff_right", "Nat.sub_add_cancel", "Nat.add_comm"]
+        or observed["helper_composition"]["source_closure"] != 49
+        or observed["helper_composition"]["added_theorems"] != 21
+        or specialization["source"]
+        != "Axeyum.Autogenesis.modSucc_dvd_iff"
+        or specialization["arguments"]
+        != [
+            "Nat.dvd",
+            "Nat.dvd_add_iff_right",
+            "Nat.sub_add_cancel",
+            "Nat.add_comm",
+        ]
+        or specialization["target"] != tracked_target["name"]
+        or specialization["target_sha256"]
+        != tracked_target["declaration_sha256"]
+        or specialization["specialized_type_shape_sha256"]
+        != tracked_target["type_shape_sha256"]
+        or specialization["native_type_shape_sha256"]
+        != tracked_target["native_type_shape_sha256"]
+        or specialization["native_type_compatibility"] != "kernel-type-shape"
+        or specialization["axiom_footprint"] != tracked_target["axiom_footprint"]
+        or specialization["axiom_footprint"] != []
+        or specialization["receipt_sha256"]
+        != pack["specialization_receipt_sha256"]
+    ):
+        raise PlanError("Nat.mod invariant specialization result changed")
+
+
+def validate_nat_gcd_target_leaf_frontier(manifest: dict[str, Any]) -> None:
+    tracked = manifest["nat_gcd_target_leaf_frontier"]
+    manifest_path = pathlib.Path(tracked["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "manifest.json",
+        "nat-gcd-eq1-audit.txt",
+        "nat-gcd-eq1.ndjson",
+        "nat-gcd-succ-audit.txt",
+        "nat-gcd-succ.ndjson",
+        "target-leaf-probe.json",
+    }
+    if (
+        sha256(manifest_path) != tracked["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(
+            stat.S_IMODE((pack_dir / name).stat().st_mode) != 0o444
+            for name in expected_files
+        )
+    ):
+        raise PlanError("Nat.gcd target-leaf frontier pack changed or is mutable")
+
+    external = load(manifest_path)
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-lean430-nat-gcd-target-leaf-frontier-pack"
+        or external.get("lean_version") != manifest["source"]["lean_version"]
+        or external.get("lean_githash") != manifest["source"]["lean_githash"]
+        or external.get("repository_commit") != tracked["implementation_commit"]
+        or external["inputs"]["constructive_mod_pack_manifest_sha256"]
+        != manifest["nat_mod_invariant_pack"]["manifest_sha256"]
+        or sha256(pathlib.Path(external["inputs"]["constructive_mod_pack_manifest"]))
+        != external["inputs"]["constructive_mod_pack_manifest_sha256"]
+        or external["inputs"]["target_stream_sha256"]
+        != manifest["source"]["stream_sha256"]
+        or sha256(pathlib.Path(external["inputs"]["target_stream"]))
+        != external["inputs"]["target_stream_sha256"]
+        or external["inputs"]["target_declarations_admitted"] != 261
+        or external["inputs"]["target_axioms"] != []
+        or external["authority"]
+        != {
+            "proof_search_invocations": 0,
+            "target_outcome_accesses": 0,
+            "ledger_writes": 0,
+            "private_clone_publications": 0,
+            "official_support_is_reference_only": True,
+            "official_support_is_axiom_free": False,
+        }
+    ):
+        raise PlanError("Nat.gcd target-leaf frontier identity or authority changed")
+
+    expected_tools = {
+        "target_leaf_probe": "crates/axeyum-lean-import/examples/nat_mod_invariant_specialization.rs",
+        "composition_api": "crates/axeyum-lean-import/src/theorem_composition.rs",
+        "source_closure_api": "crates/axeyum-lean-kernel/src/lean_export.rs",
+        "theorem_audit": "crates/axeyum-lean-import/examples/lean4export_import.rs",
+    }
+    if set(external["tools"]) != set(expected_tools):
+        raise PlanError("Nat.gcd target-leaf tool set changed")
+    for role, expected_path in expected_tools.items():
+        tool = external["tools"][role]
+        if (
+            tool["path"] != expected_path
+            or git_blob_sha256(tracked["implementation_commit"], tool["path"])
+            != tool["sha256"]
+        ):
+            raise PlanError(f"Nat.gcd target-leaf historical tool changed for {role}")
+
+    probe_path = pack_dir / external["target_leaf_probe"]["path"]
+    observed = load(probe_path)
+    leaf_probe = observed["target_leaf_probe"]
+    single = leaf_probe["single_leaf"]
+    double = leaf_probe["two_leaves"]
+    if (
+        sha256(probe_path) != external["target_leaf_probe"]["sha256"]
+        or external["target_leaf_probe"]["sha256"] != tracked["probe_sha256"]
+        or observed.get("kind") != "axeyum-nat-mod-invariant-specialization"
+        or observed["specialization"]["target"] != "Nat.dvd_mod_iff"
+        or observed["specialization"]["axiom_footprint"] != []
+        or leaf_probe["root"] != tracked["root"]
+        or leaf_probe["private_clone_publications"] != 0
+        or leaf_probe["proof_search_invocations"] != 0
+        or leaf_probe["ledger_writes"] != 0
+        or single["target_theorem_leaves"] != tracked["single_leaf"]["leaves"]
+        or single["source_closure"] != tracked["single_leaf"]["source_closure"]
+        or single["contains_nat_div_mod_exec"]
+        != tracked["single_leaf"]["contains_nat_div_mod_exec"]
+        or single["first_rejected"] != tracked["single_leaf"]["first_rejected"]
+        or double["target_theorem_leaves"] != tracked["two_leaves"]["leaves"]
+        or double["source_closure"] != tracked["two_leaves"]["source_closure"]
+        or double["contains_nat_div_mod_exec"]
+        != tracked["two_leaves"]["contains_nat_div_mod_exec"]
+        or double["first_rejected"] != tracked["two_leaves"]["first_rejected"]
+        or single["outcome"] != "declined"
+        or double["outcome"] != "declined"
+        or single["error_kind"] != "TypeMismatch"
+        or double["error_kind"] != "TypeMismatch"
+        or single["caller_declarations_before"] != 315
+        or single["caller_declarations_after"] != 315
+        or double["caller_declarations_before"] != 315
+        or double["caller_declarations_after"] != 315
+    ):
+        raise PlanError("Nat.gcd target-leaf probe result changed")
+    for key, observed_row in [("single_leaf", single), ("two_leaves", double)]:
+        external_row = external["target_leaf_probe"][key]
+        if (
+            external_row["leaves"] != observed_row["target_theorem_leaves"]
+            or external_row["source_closure"] != observed_row["source_closure"]
+            or external_row["contains_nat_div_mod_exec"]
+            != observed_row["contains_nat_div_mod_exec"]
+            or external_row["first_rejected"] != observed_row["first_rejected"]
+            or external_row["error_kind"] != observed_row["error_kind"]
+            or external_row["error_sha256"] != observed_row["error_sha256"]
+        ):
+            raise PlanError(f"Nat.gcd target-leaf manifest drift for {key}")
+
+    expected_support = tracked["official_support"]
+    official = external["official_gcd_support"]
+    if {row["root"] for row in official} != set(expected_support) or len(official) != 2:
+        raise PlanError("Nat.gcd official support set changed")
+    for row in official:
+        expected = expected_support[row["root"]]
+        stream_path = pack_dir / row["stream"]
+        audit_path = pack_dir / row["audit"]
+        audit_text = audit_path.read_text()
+        if (
+            sha256(stream_path) != row["stream_sha256"]
+            or stream_path.stat().st_size != row["stream_bytes"]
+            or len(stream_path.read_bytes().splitlines()) != row["stream_lines"]
+            or sha256(audit_path) != row["audit_sha256"]
+            or row["declaration_sha256"] != expected["declaration_sha256"]
+            or row["axiom_footprint"] != expected["axiom_footprint"]
+            or row["axioms"] != ["Quot.sound"]
+            or row["axiom_footprint"] != ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"]
+            or f"name={row['root']}|identity={row['declaration_sha256']}|axiom_free=false|"
+            not in audit_text
+            or "|axiom_footprint=Quot,Quot.lift,Quot.mk,Quot.sound|"
+            not in audit_text
+        ):
+            raise PlanError(f"Nat.gcd official support changed for {row['root']}")
+
+
+def validate_native_fib_composition(manifest: dict[str, Any]) -> None:
+    pack = manifest["native_fib_composition"]
+    manifest_path = pathlib.Path(pack["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "manifest.json",
+        "r080-native-recurrence.json",
+        "r082-native-definition.json",
+    }
+    if (
+        sha256(manifest_path) != pack["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(stat.S_IMODE(path.stat().st_mode) != 0o444 for path in pack_dir.iterdir())
+    ):
+        raise PlanError("native Fibonacci composition pack changed or is mutable")
+    external = load(manifest_path)
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-lean430-native-fib-composition-reference-pack"
+        or external.get("tooling_commit") != pack["implementation_commit"]
+        or external.get("lean")
+        != {
+            "version": "4.30.0",
+            "githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+        }
+    ):
+        raise PlanError("native Fibonacci composition identity changed")
+    for row in external["implementation"]:
+        if row["sha256"] != git_blob_sha256(pack["implementation_commit"], row["path"]):
+            raise PlanError("native Fibonacci composition implementation changed")
+    for row in external["sources"]:
+        if sha256(pathlib.Path(row["path"])) != row["sha256"]:
+            raise PlanError("native Fibonacci composition source changed")
+
+    observation_rows = {row["file"]: row for row in external["observations"]}
+    if set(observation_rows) != expected_files - {"manifest.json"}:
+        raise PlanError("native Fibonacci composition observation set changed")
+    r080 = load(pack_dir / "r080-native-recurrence.json")
+    r082 = load(pack_dir / "r082-native-definition.json")
+    expected_definitions = {
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "Nat.casesOn",
+        "outParam",
+        "HAdd.hAdd",
+        "Add.add",
+        "instHAdd",
+        "Nat.below",
+        "Nat.brecOn.go",
+        "Nat.brecOn",
+        "Nat.add.match_1",
+        "Nat.add._f",
+        "instAddNat",
+        "Prod.fst",
+        "Nat.iterate.match_1",
+        "Nat.iterate._f",
+        "Nat.iterate",
+        "Prod.snd",
+        "Nat.fib",
+    }
+    expected_packages = {"OfNat", "HAdd", "Add", "PUnit", "PProd", "Prod"}
+    observations = [
+        (
+            "r080-native-recurrence.json",
+            r080,
+            pack["r080"],
+            "axeyum-nat-fib-recurrence-native-composition",
+        ),
+        (
+            "r082-native-definition.json",
+            r082,
+            pack["r082"],
+            "axeyum-nat-fib-native-definition-probe",
+        ),
+    ]
+    for filename, observation, tracked, expected_kind in observations:
+        observation_path = pack_dir / filename
+        external_row = observation_rows[filename]
+        if (
+            sha256(observation_path) != external_row["sha256"]
+            or observation_path.stat().st_size != external_row["bytes"]
+            or observation.get("schema_version") != 1
+            or observation.get("kind") != expected_kind
+            or observation.get("source_stream_sha256")
+            != tracked["source_stream_sha256"]
+            or observation.get("nat_fib_declaration_sha256")
+            != pack["nat_fib_declaration_sha256"]
+            or observation.get("source_closure") != tracked["source_closure"]
+            or observation.get("reused_declarations")
+            != tracked["reused_declarations"]
+            or set(observation.get("added_definitions", [])) != expected_definitions
+            or len(observation.get("added_definitions", []))
+            != tracked["added_definitions"]
+            or set(observation.get("added_singleton_inductives", []))
+            != expected_packages
+            or len(observation.get("added_singleton_inductives", []))
+            != tracked["added_singleton_inductives"]
+            or observation.get("added_theorems") != tracked["added_theorems"]
+            or observation.get("receipt_sha256") != tracked["receipt_sha256"]
+            or observation.get("receipt_sha256") != external_row["receipt_sha256"]
+            or observation.get("caller_declarations_before") != 198
+            or observation.get("caller_declarations_after") != 198
+            or observation.get("completed_declarations") != 236
+            or observation.get("proof_search_invocations") != 0
+            or observation.get("ledger_writes") != 0
+        ):
+            raise PlanError(f"native Fibonacci composition changed for {filename}")
+    if (
+        r080["target_theorem_axiom_footprint"] != []
+        or r080["target_theorem_dependencies"] != []
+        or r082["added_axiom_footprints"]
+        != [["Axeyum.Autogenesis.fib_definition_probe", []]]
+        or external["result"]
+        != {
+            "nat_fib_declaration_sha256": pack["nat_fib_declaration_sha256"],
+            "definition_identity_equal_across_r080_r082": True,
+            "native_recurrence_axiom_footprint": [],
+            "native_recurrence_theorem_dependencies": [],
+            "caller_mutations": 0,
+            "proof_search_invocations": 0,
+            "ledger_writes": 0,
+        }
+        or pack["definition_identity_equal_across_r080_r082"] is not True
+        or pack["native_recurrence_axiom_footprint"] != []
+        or pack["native_recurrence_theorem_dependencies"] != []
+        or pack["caller_mutations"] != 0
+        or pack["proof_search_invocations"] != 0
+        or pack["ledger_writes"] != 0
+    ):
+        raise PlanError("native Fibonacci composition assurance changed")
+
+
+def validate_native_fib_coprimality(manifest: dict[str, Any]) -> None:
+    tracked = manifest["native_fib_coprimality"]
+    manifest_path = pathlib.Path(tracked["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "manifest.json",
+        "native-coprimality.json",
+        "r082-target-goal.json",
+    }
+    if (
+        sha256(manifest_path) != tracked["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(stat.S_IMODE(path.stat().st_mode) != 0o444 for path in pack_dir.iterdir())
+    ):
+        raise PlanError("native Fibonacci coprimality pack changed or is mutable")
+    external = load(manifest_path)
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-native-fibonacci-coprimality-reference-pack"
+        or external.get("tooling_commit") != tracked["implementation_commit"]
+        or external.get("lean")
+        != {
+            "version": "4.30.0",
+            "githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+        }
+    ):
+        raise PlanError("native Fibonacci coprimality identity changed")
+    for row in external["implementation"]:
+        if row["sha256"] != git_blob_sha256(tracked["implementation_commit"], row["path"]):
+            raise PlanError("native Fibonacci coprimality implementation changed")
+    for row in external["inputs"]:
+        if sha256(pathlib.Path(row["path"])) != row["sha256"]:
+            raise PlanError("native Fibonacci coprimality input changed")
+
+    observations = {row["file"]: row for row in external["observations"]}
+    if set(observations) != expected_files - {"manifest.json"}:
+        raise PlanError("native Fibonacci coprimality observation set changed")
+    native_path = pack_dir / "native-coprimality.json"
+    target_path = pack_dir / "r082-target-goal.json"
+    native = load(native_path)
+    target = load(target_path)
+    for filename, path in [
+        ("native-coprimality.json", native_path),
+        ("r082-target-goal.json", target_path),
+    ]:
+        row = observations[filename]
+        if sha256(path) != row["sha256"] or path.stat().st_size != row["bytes"]:
+            raise PlanError(f"native Fibonacci coprimality observation changed for {filename}")
+    expected_dependencies = tracked["direct_theorem_dependencies"]
+    if (
+        native.get("schema_version") != 1
+        or native.get("kind") != "axeyum-native-fibonacci-coprimality-control"
+        or native.get("source_stream_sha256")
+        != manifest["native_fib_composition"]["r080"]["source_stream_sha256"]
+        or native.get("composition_receipt_sha256")
+        != manifest["native_fib_composition"]["r080"]["receipt_sha256"]
+        or native.get("target") != tracked["name"]
+        or native.get("goal_sha256") != tracked["goal_sha256"]
+        or native.get("proof_sha256") != tracked["proof_sha256"]
+        or native.get("theorem_declaration_sha256")
+        != tracked["declaration_sha256"]
+        or native.get("axiom_footprint") != tracked["axiom_footprint"]
+        or native.get("axiom_footprint") != []
+        or native.get("direct_theorem_dependencies") != expected_dependencies
+        or native.get("fresh_reconstructions") != tracked["fresh_reconstructions"]
+        or native.get("kernel_submissions") != tracked["kernel_submissions"]
+        or native.get("proof_search_invocations") != 0
+        or native.get("ledger_writes") != 0
+    ):
+        raise PlanError("native Fibonacci coprimality theorem changed")
+    external_native = external["native_theorem"]
+    if (
+        external_native["name"] != tracked["name"]
+        or external_native["goal_sha256"] != tracked["goal_sha256"]
+        or external_native["proof_sha256"] != tracked["proof_sha256"]
+        or external_native["declaration_sha256"] != tracked["declaration_sha256"]
+        or external_native["axiom_footprint"] != tracked["axiom_footprint"]
+        or external_native["direct_theorem_dependencies"] != expected_dependencies
+        or external_native["fresh_reconstructions"] != tracked["fresh_reconstructions"]
+        or external_native["kernel_submissions"] != tracked["kernel_submissions"]
+    ):
+        raise PlanError("native Fibonacci coprimality manifest theorem changed")
+    target_statement = external["target_statement"]
+    if (
+        target.get("target_goal_sha256") != tracked["target_goal_sha256"]
+        or target.get("target_goal")
+        != "((n : AxNat) -> AxNat.Coprime (AxNat.fib n) (AxNat.fib (HAdd.hAdd.{0, 0, 0} AxNat AxNat AxNat (instHAdd.{0} AxNat instAddNat) n (OfNat.ofNat.{0} AxNat 1 (instOfNatNat 1)))))"
+        or target_statement
+        != {
+            "definition": tracked["target_definition"],
+            "goal_sha256": tracked["target_goal_sha256"],
+            "head": tracked["target_head"],
+            "native_goal_uses": "Nat.gcd",
+            "semantic_transport_authorized": False,
+        }
+        or tracked["semantic_transport_authorized"] is not False
+        or tracked["semantic_theorem_receipts_issued"] != 0
+        or tracked["evaluation_credit"] != 0
+        or tracked["ledger_writes"] != 0
+        or external["authority"]
+        != {
+            "proof_search_invocations": 0,
+            "semantic_theorem_receipts_issued": 0,
+            "evaluation_credit": 0,
+            "ledger_writes": 0,
+        }
+    ):
+        raise PlanError("native Fibonacci coprimality target boundary changed")
+
+
 def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     manifest = load(MANIFEST) if manifest is None else manifest
     if (
@@ -185,7 +762,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "proof-plan-frozen-nat-division-representation-mismatch-isolated"
+        != "native-coprimality-proved-semantic-transport-to-r082-unresolved"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -218,9 +795,10 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     ):
         raise PlanError("native alignment implementation identity changed")
     probe = manifest["composition_probe"]
-    if sha256(ROOT / probe["tool"]) != probe["tool_sha256"]:
+    evidence_commit = implementation["evidence_commit"]
+    if git_blob_sha256(evidence_commit, probe["tool"]) != probe["tool_sha256"]:
         raise PlanError("composition probe changed")
-    if sha256(ROOT / probe["api"]) != probe["api_sha256"]:
+    if git_blob_sha256(evidence_commit, probe["api"]) != probe["api_sha256"]:
         raise PlanError("composition API changed")
     observation_path = pathlib.Path(probe["observation"])
     if (
@@ -280,6 +858,8 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or not presence["Nat.rec"]
         or manifest["proof_plan"]["required_present_in_import"] != []
         or manifest["proof_plan"]["already_present_in_import"] != ["Nat.rec"]
+        or manifest["proof_plan"]["next_action"]
+        != "construct an explicit checked semantic bridge from the r082 Nat.Coprime statement over official Nat.gcd to the independently proved native-gcd theorem; same-name definitions alone are not transport authority"
         or probe["imported_division_declaration_names"] != expected_division_names
         or observation["source"]["imported_division_declaration_names"]
         != expected_division_names
@@ -591,6 +1171,10 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         raise PlanError("plan authority changed")
     validate_official_support_audit(manifest)
     validate_official_equation_pack(manifest)
+    validate_nat_mod_invariant_pack(manifest)
+    validate_nat_gcd_target_leaf_frontier(manifest)
+    validate_native_fib_composition(manifest)
+    validate_native_fib_coprimality(manifest)
     return manifest
 
 
@@ -600,8 +1184,9 @@ def main() -> int:
         print(
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
-            "present=0|exact=11|compatible=Nat.mod_lt,Acc|next=Nat.dvd_mod_iff|"
-            "submissions=24|evaluation=0|writes=0"
+            "present=0|exact=11|compatible=Nat.mod_lt,Acc,Nat.dvd_mod_iff|"
+            "next=official-native-gcd-semantic-bridge|"
+            "submissions=24|native_submissions=2|evaluation=0|writes=0"
         )
         return 0
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, PlanError) as error:

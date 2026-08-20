@@ -163,6 +163,10 @@ compounding, not automation theatre.
 | [Canonical Acc composition](64-canonical-acc-composition.md) | Can one demanded recursive package be regenerated exactly without authorizing a generic transport class, and what target check appears next? |
 | [Nat division composition mismatch](65-nat-division-composition-mismatch.md) | Which semantic representation mismatch blocks `Nat.div_mod_exec`, which direct consumer is the real next repair, and can official support remain axiom-free? |
 | [Axiom-free Nat.mod equation pack](66-axiom-free-nat-mod-equation-pack.md) | Which official computation equations can compose with empty footprints and support a constructive target-side remainder proof? |
+| [Constructive Nat.mod invariant specialization](67-constructive-nat-mod-invariant-specialization.md) | Can an authored fuel induction become an independently checked target `Nat.dvd_mod_iff`, and which closure boundary remains before `Nat.dvd_gcd`? |
+| [Target-owned theorem leaves and the Nat.gcd frontier](68-target-owned-theorem-leaves-and-nat-gcd-frontier.md) | Can a compatible axiom-free target theorem cut only its source proof, and which foundation appears after both division branches are cut? |
+| [Native Fibonacci composition](69-native-fibonacci-composition.md) | Can the exact imported Fibonacci definition and its established recurrence move into the axiom-free native gcd environment, avoiding the assumption-bearing official gcd route? |
+| [Native Fibonacci coprimality](70-native-fibonacci-coprimality.md) | Does the bounded induction close with exactly the planned axiom-free dependencies, and why does the official r082 statement still require a semantic gcd bridge? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

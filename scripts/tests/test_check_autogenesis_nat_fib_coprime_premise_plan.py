@@ -45,6 +45,18 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
     def test_exact_plan_is_accepted(self) -> None:
         MODULE.validate(self.manifest)
 
+    def test_historical_tool_identity_survives_current_api_evolution(self) -> None:
+        probe = self.manifest["composition_probe"]
+        commit = self.manifest["implementation"]["evidence_commit"]
+        self.assertEqual(
+            MODULE.git_blob_sha256(commit, probe["api"]), probe["api_sha256"]
+        )
+        self.assertNotEqual(MODULE.sha256(ROOT / probe["api"]), probe["api_sha256"])
+        with self.assertRaisesRegex(MODULE.PlanError, "full Git object ID"):
+            MODULE.git_blob_sha256(commit[:12], probe["api"])
+        with self.assertRaisesRegex(MODULE.PlanError, "repository-relative"):
+            MODULE.git_blob_sha256(commit, "../outside")
+
     def test_probe_and_authority_mutations_are_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)
         changed["composition_probe"]["first_conflict"] = "Nat"
@@ -165,6 +177,107 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         changed = copy.deepcopy(self.manifest)
         changed["official_equation_pack"]["manifest_sha256"] = "0" * 64
         with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+    def test_nat_mod_invariant_pack_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_mod_invariant_pack"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_mod_invariant_pack"]["target"]["axiom_footprint"] = [
+            "propext"
+        ]
+        with self.assertRaisesRegex(MODULE.PlanError, "specialization result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_mod_invariant_pack"][
+            "specialization_receipt_sha256"
+        ] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "specialization result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_mod_invariant_pack"]["authored_source_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "identity or authority"):
+            MODULE.validate(changed)
+
+    def test_nat_gcd_target_leaf_frontier_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_target_leaf_frontier"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_target_leaf_frontier"]["two_leaves"][
+            "source_closure"
+        ] = 58
+        with self.assertRaisesRegex(MODULE.PlanError, "probe result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_target_leaf_frontier"]["two_leaves"][
+            "contains_nat_div_mod_exec"
+        ] = True
+        with self.assertRaisesRegex(MODULE.PlanError, "probe result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_target_leaf_frontier"]["official_support"][
+            "Nat.gcd_succ"
+        ]["axiom_footprint"] = []
+        with self.assertRaisesRegex(MODULE.PlanError, "official support"):
+            MODULE.validate(changed)
+
+    def test_native_fib_composition_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_composition"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_composition"]["nat_fib_declaration_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "native Fibonacci composition"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_composition"]["r080"]["added_definitions"] = 18
+        with self.assertRaisesRegex(MODULE.PlanError, "r080-native-recurrence"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_composition"]["native_recurrence_axiom_footprint"] = [
+            "Quot.sound"
+        ]
+        with self.assertRaisesRegex(MODULE.PlanError, "assurance"):
+            MODULE.validate(changed)
+
+    def test_native_fib_coprimality_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_coprimality"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_coprimality"]["proof_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "theorem changed"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_coprimality"]["direct_theorem_dependencies"].pop()
+        with self.assertRaisesRegex(MODULE.PlanError, "theorem changed"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_coprimality"]["semantic_transport_authorized"] = True
+        with self.assertRaisesRegex(MODULE.PlanError, "target boundary"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_coprimality"]["semantic_theorem_receipts_issued"] = 1
+        with self.assertRaisesRegex(MODULE.PlanError, "target boundary"):
             MODULE.validate(changed)
 
     def test_nat_mod_lt_compatibility_mutations_are_rejected(self) -> None:

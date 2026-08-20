@@ -20,6 +20,10 @@ use crate::{canonical_declaration_sha256, canonical_kernel_type_shape_sha256};
 /// Version of the checked theorem-composition receipt and compatibility policy.
 pub const CHECKED_THEOREM_COMPOSITION_VERSION: &str = "axeyum.checked-theorem-composition.v5";
 
+/// Version of theorem composition with explicit target-owned theorem leaves.
+pub const CHECKED_TARGET_LEAF_THEOREM_COMPOSITION_VERSION: &str =
+    "axeyum.checked-theorem-composition.target-leaves.v1";
+
 /// The checked relation that authorized reuse of one target declaration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReusedTypeCompatibility {
@@ -105,6 +109,9 @@ pub struct CheckedTheoremCompositionReceipt {
     pub schema_version: String,
     /// Explicit roots requested by the caller, in caller order.
     pub roots: Vec<String>,
+    /// Explicit compatible, axiom-free target theorems whose source proofs were
+    /// not traversed. Empty for the original V5 operation.
+    pub target_theorem_leaves: Vec<String>,
     /// Root-selected source closure in dependency order.
     pub source_closure: Vec<String>,
     /// Exact target environment identity before composition.
@@ -178,6 +185,14 @@ impl CheckedTheoremCompositionReceipt {
             })).collect::<Vec<_>>(),
             "target_environment_sha256_after": self.target_environment_sha256_after,
         });
+        if !self.target_theorem_leaves.is_empty()
+            && let Some(object) = value.as_object_mut()
+        {
+            object.insert(
+                "target_theorem_leaves".to_owned(),
+                json!(self.target_theorem_leaves),
+            );
+        }
         if include_digest && let Some(object) = value.as_object_mut() {
             object.insert(
                 "receipt_sha256".to_owned(),
@@ -273,6 +288,22 @@ pub enum CheckedTheoremCompositionError {
     Identity(String),
     /// A supplied receipt or completed environment did not reproduce.
     ReceiptMismatch,
+    /// The target-leaf operation requires at least one explicit theorem leaf.
+    EmptyTargetTheoremLeaves,
+    /// One explicit target theorem leaf is invalid.
+    InvalidTargetTheoremLeaf {
+        /// Complete rendered declaration name.
+        name: String,
+        /// Stable reason for rejection.
+        reason: &'static str,
+    },
+    /// A target theorem leaf reaches one or more assumptions.
+    TargetTheoremLeafAxiomFootprint {
+        /// Complete rendered theorem name.
+        name: String,
+        /// Kernel-derived assumptions reached by the target theorem.
+        footprint: Vec<String>,
+    },
 }
 
 impl fmt::Display for CheckedTheoremCompositionError {
@@ -302,8 +333,120 @@ pub fn compose_checked_theorem_slice(
     roots: &[&str],
 ) -> Result<CompletedTheoremComposition, CheckedTheoremCompositionError> {
     let selected = select_closure(source, roots)?;
+    compose_selected_theorem_slice(
+        source,
+        target,
+        roots,
+        &[],
+        &selected,
+        CHECKED_THEOREM_COMPOSITION_VERSION,
+    )
+}
+
+/// Compose a theorem-rooted slice while treating explicit compatible,
+/// axiom-free target theorems as dependency leaves.
+///
+/// Each leaf must be a unique checked theorem in both kernels, have an empty
+/// target footprint, be reachable from the requested source roots, and pass
+/// the same target type-compatibility check as ordinary reuse. Its source type
+/// dependencies remain in the selected closure, but its unrelated source proof
+/// dependencies do not. The target is borrowed immutably and publication stays
+/// private-clone atomic.
+///
+/// # Errors
+///
+/// Returns the ordinary composition declines plus a typed leaf error for an
+/// empty, duplicate, missing, non-theorem, assumption-bearing, incompatible,
+/// or unreachable target leaf.
+pub fn compose_checked_theorem_slice_with_target_leaves(
+    source: &Kernel,
+    target: &Kernel,
+    roots: &[&str],
+    target_theorem_leaves: &[&str],
+) -> Result<CompletedTheoremComposition, CheckedTheoremCompositionError> {
+    if target_theorem_leaves.is_empty() {
+        return Err(CheckedTheoremCompositionError::EmptyTargetTheoremLeaves);
+    }
+    let source_names = declaration_names(source);
     let target_names = declaration_names(target);
-    let reused = validate_reused(source, target, &selected, &target_names)?;
+    let mut unique = BTreeSet::new();
+    let mut leaf_ids = Vec::with_capacity(target_theorem_leaves.len());
+    for &leaf in target_theorem_leaves {
+        if !unique.insert(leaf) {
+            return Err(CheckedTheoremCompositionError::InvalidTargetTheoremLeaf {
+                name: leaf.to_owned(),
+                reason: "duplicate",
+            });
+        }
+        let Some(&source_leaf) = source_names.get(leaf) else {
+            return Err(CheckedTheoremCompositionError::InvalidTargetTheoremLeaf {
+                name: leaf.to_owned(),
+                reason: "missing from source",
+            });
+        };
+        if !matches!(
+            source.environment().get(source_leaf),
+            Some(Declaration::Theorem { .. })
+        ) {
+            return Err(CheckedTheoremCompositionError::InvalidTargetTheoremLeaf {
+                name: leaf.to_owned(),
+                reason: "source declaration is not a theorem",
+            });
+        }
+        let Some(&target_leaf) = target_names.get(leaf) else {
+            return Err(CheckedTheoremCompositionError::InvalidTargetTheoremLeaf {
+                name: leaf.to_owned(),
+                reason: "missing from target",
+            });
+        };
+        if !matches!(
+            target.environment().get(target_leaf),
+            Some(Declaration::Theorem { .. })
+        ) {
+            return Err(CheckedTheoremCompositionError::InvalidTargetTheoremLeaf {
+                name: leaf.to_owned(),
+                reason: "target declaration is not a theorem",
+            });
+        }
+        let footprint = target
+            .axiom_footprint(target_leaf)
+            .iter()
+            .map(|&name| target.display_name(name).to_string())
+            .collect::<Vec<_>>();
+        if !footprint.is_empty() {
+            return Err(
+                CheckedTheoremCompositionError::TargetTheoremLeafAxiomFootprint {
+                    name: leaf.to_owned(),
+                    footprint,
+                },
+            );
+        }
+        leaf_ids.push(source_leaf);
+    }
+    let root_ids = select_root_ids(source, roots)?;
+    let selected = source
+        .root_declaration_closure_with_theorem_leaves(&root_ids, &leaf_ids)
+        .map_err(|error| CheckedTheoremCompositionError::Closure(format!("{error:?}")))?;
+    compose_selected_theorem_slice(
+        source,
+        target,
+        roots,
+        target_theorem_leaves,
+        &selected,
+        CHECKED_TARGET_LEAF_THEOREM_COMPOSITION_VERSION,
+    )
+}
+
+fn compose_selected_theorem_slice(
+    source: &Kernel,
+    target: &Kernel,
+    roots: &[&str],
+    target_theorem_leaves: &[&str],
+    selected: &[NameId],
+    schema_version: &str,
+) -> Result<CompletedTheoremComposition, CheckedTheoremCompositionError> {
+    let target_names = declaration_names(target);
+    let reused = validate_reused(source, target, selected, &target_names)?;
     let missing: Vec<NameId> = selected
         .iter()
         .copied()
@@ -316,23 +459,29 @@ pub fn compose_checked_theorem_slice(
 
     let before = environment_sha256(target)?;
     let mut staged = target.clone();
-    let added_singleton_inductives =
-        admit_missing_singleton_inductives(source, &mut staged, &singleton_packages)?;
-    let (added_definitions, added) =
-        admit_missing_definitions_and_theorems(source, &mut staged, &missing)?;
+    let admitted = admit_missing_declarations_in_dependency_order(
+        source,
+        &mut staged,
+        &missing,
+        &singleton_packages,
+    )?;
     let after = environment_sha256(&staged)?;
     let mut receipt = CheckedTheoremCompositionReceipt {
-        schema_version: CHECKED_THEOREM_COMPOSITION_VERSION.to_owned(),
+        schema_version: schema_version.to_owned(),
         roots: roots.iter().map(|root| (*root).to_owned()).collect(),
+        target_theorem_leaves: target_theorem_leaves
+            .iter()
+            .map(|leaf| (*leaf).to_owned())
+            .collect(),
         source_closure: selected
             .iter()
             .map(|name| source.display_name(*name).to_string())
             .collect(),
         target_environment_sha256_before: before,
         reused_declarations: reused,
-        added_theorems: added,
-        added_definitions,
-        added_singleton_inductives,
+        added_theorems: admitted.theorems,
+        added_definitions: admitted.definitions,
+        added_singleton_inductives: admitted.singleton_inductives,
         target_environment_sha256_after: after,
         receipt_sha256: String::new(),
     };
@@ -362,6 +511,42 @@ pub fn verify_checked_theorem_composition(
     }
     let roots: Vec<&str> = receipt.roots.iter().map(String::as_str).collect();
     let reproduced = compose_checked_theorem_slice(source, target, &roots)?;
+    if reproduced.receipt != *receipt
+        || environment_sha256(completed)? != receipt.target_environment_sha256_after
+        || environment_sha256(reproduced.kernel())? != receipt.target_environment_sha256_after
+    {
+        return Err(CheckedTheoremCompositionError::ReceiptMismatch);
+    }
+    Ok(())
+}
+
+/// Replay target-leaf theorem composition and require the receipt and completed
+/// environment identity to match exactly.
+///
+/// # Errors
+///
+/// Returns the original target-leaf composition decline or `ReceiptMismatch`
+/// when the schema, digest, receipt, or completed environment does not
+/// reproduce.
+pub fn verify_checked_theorem_composition_with_target_leaves(
+    source: &Kernel,
+    target: &Kernel,
+    completed: &Kernel,
+    receipt: &CheckedTheoremCompositionReceipt,
+) -> Result<(), CheckedTheoremCompositionError> {
+    if receipt.schema_version != CHECKED_TARGET_LEAF_THEOREM_COMPOSITION_VERSION
+        || !receipt.has_valid_digest()
+    {
+        return Err(CheckedTheoremCompositionError::ReceiptMismatch);
+    }
+    let roots = receipt.roots.iter().map(String::as_str).collect::<Vec<_>>();
+    let leaves = receipt
+        .target_theorem_leaves
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    let reproduced =
+        compose_checked_theorem_slice_with_target_leaves(source, target, &roots, &leaves)?;
     if reproduced.receipt != *receipt
         || environment_sha256(completed)? != receipt.target_environment_sha256_after
         || environment_sha256(reproduced.kernel())? != receipt.target_environment_sha256_after
@@ -412,6 +597,16 @@ fn select_closure(
     source: &Kernel,
     roots: &[&str],
 ) -> Result<Vec<NameId>, CheckedTheoremCompositionError> {
+    let root_ids = select_root_ids(source, roots)?;
+    source
+        .root_declaration_closure(&root_ids)
+        .map_err(|error| CheckedTheoremCompositionError::Closure(format!("{error:?}")))
+}
+
+fn select_root_ids(
+    source: &Kernel,
+    roots: &[&str],
+) -> Result<Vec<NameId>, CheckedTheoremCompositionError> {
     if roots.is_empty() {
         return Err(CheckedTheoremCompositionError::EmptyRoots);
     }
@@ -438,9 +633,7 @@ fn select_closure(
         }
         root_ids.push(id);
     }
-    source
-        .root_declaration_closure(&root_ids)
-        .map_err(|error| CheckedTheoremCompositionError::Closure(format!("{error:?}")))
+    Ok(root_ids)
 }
 
 fn validate_reused(
@@ -721,119 +914,144 @@ fn is_canonical_native_acc_package(
     Ok(true)
 }
 
-fn admit_missing_singleton_inductives(
+fn admit_one_singleton_inductive(
     source: &Kernel,
-    target: &mut Kernel,
-    packages: &[SingletonInductivePackage],
-) -> Result<Vec<AddedSingletonInductiveReceipt>, CheckedTheoremCompositionError> {
-    let mut translator = ExpressionTranslator::new(source, target);
-    let mut added = Vec::new();
-    for package in packages {
-        let Some(Declaration::Inductive {
-            name,
-            uparams,
-            ty,
-            num_params,
-            ..
-        }) = source.environment().get(package.family).cloned()
+    translator: &mut ExpressionTranslator<'_>,
+    package: &SingletonInductivePackage,
+) -> Result<AddedSingletonInductiveReceipt, CheckedTheoremCompositionError> {
+    let Some(Declaration::Inductive {
+        name,
+        uparams,
+        ty,
+        num_params,
+        ..
+    }) = source.environment().get(package.family).cloned()
+    else {
+        return Err(CheckedTheoremCompositionError::Identity(
+            "validated singleton family disappeared".to_owned(),
+        ));
+    };
+    let target_family = translator.name(name);
+    let target_uparams = uparams
+        .into_iter()
+        .map(|name| translator.name(name))
+        .collect::<Vec<_>>();
+    let target_type = translator.expr(ty)?;
+    let mut target_constructors = Vec::with_capacity(package.constructors.len());
+    for &constructor in &package.constructors {
+        let Some(Declaration::Constructor { name, ty, .. }) =
+            source.environment().get(constructor).cloned()
         else {
             return Err(CheckedTheoremCompositionError::Identity(
-                "validated singleton family disappeared".to_owned(),
+                "validated singleton constructor disappeared".to_owned(),
             ));
         };
-        let target_family = translator.name(name);
-        let target_uparams = uparams
-            .into_iter()
-            .map(|name| translator.name(name))
-            .collect::<Vec<_>>();
-        let target_type = translator.expr(ty)?;
-        let mut target_constructors = Vec::with_capacity(package.constructors.len());
-        for &constructor in &package.constructors {
-            let Some(Declaration::Constructor { name, ty, .. }) =
-                source.environment().get(constructor).cloned()
-            else {
-                return Err(CheckedTheoremCompositionError::Identity(
-                    "validated singleton constructor disappeared".to_owned(),
-                ));
-            };
-            let name = translator.name(name);
-            let ty = translator.expr(ty)?;
-            target_constructors.push((name, ty));
-        }
-        translator
-            .target
-            .add_inductive(
-                target_family,
-                &target_uparams,
-                usize::from(num_params),
-                target_type,
-                &target_constructors,
-            )
-            .map_err(|error| CheckedTheoremCompositionError::AdmissionRejected {
-                name: source.display_name(package.family).to_string(),
-                error: explain_admission_error(translator.target, &error),
-            })?;
-
-        let family = source.display_name(package.family).to_string();
-        let constructors = package
-            .constructors
-            .iter()
-            .map(|name| source.display_name(*name).to_string())
-            .collect::<Vec<_>>();
-        let recursor = source.display_name(package.recursor).to_string();
-        let package_declarations = std::iter::once((family.clone(), package.family))
-            .chain(
-                constructors
-                    .iter()
-                    .cloned()
-                    .zip(package.constructors.iter().copied()),
-            )
-            .chain(std::iter::once((recursor.clone(), package.recursor)))
-            .collect::<Vec<_>>();
-        let target_names = declaration_names(translator.target);
-        let mut source_digests = BTreeMap::new();
-        let mut target_digests = BTreeMap::new();
-        for (rendered, source_name) in package_declarations {
-            let target_name = target_names.get(&rendered).copied().ok_or_else(|| {
-                CheckedTheoremCompositionError::Identity(format!(
-                    "reconstructed singleton declaration is absent: {rendered}"
-                ))
-            })?;
-            let source_digest = declaration_sha256(source, source_name)?;
-            let target_digest = declaration_sha256(translator.target, target_name)?;
-            if package.require_exact_reconstruction && source_digest != target_digest {
-                return Err(
-                    CheckedTheoremCompositionError::ReconstructedInductiveMismatch {
-                        name: rendered,
-                        source_sha256: source_digest,
-                        target_sha256: target_digest,
-                    },
-                );
-            }
-            source_digests.insert(rendered.clone(), source_digest);
-            target_digests.insert(rendered, target_digest);
-        }
-        added.push(AddedSingletonInductiveReceipt {
-            family,
-            constructors,
-            recursor,
-            source_declaration_sha256: source_digests,
-            target_declaration_sha256: target_digests,
-        });
+        let name = translator.name(name);
+        let ty = translator.expr(ty)?;
+        target_constructors.push((name, ty));
     }
-    Ok(added)
+    translator
+        .target
+        .add_inductive(
+            target_family,
+            &target_uparams,
+            usize::from(num_params),
+            target_type,
+            &target_constructors,
+        )
+        .map_err(|error| CheckedTheoremCompositionError::AdmissionRejected {
+            name: source.display_name(package.family).to_string(),
+            error: explain_admission_error(translator.target, &error),
+        })?;
+
+    let family = source.display_name(package.family).to_string();
+    let constructors = package
+        .constructors
+        .iter()
+        .map(|name| source.display_name(*name).to_string())
+        .collect::<Vec<_>>();
+    let recursor = source.display_name(package.recursor).to_string();
+    let package_declarations = std::iter::once((family.clone(), package.family))
+        .chain(
+            constructors
+                .iter()
+                .cloned()
+                .zip(package.constructors.iter().copied()),
+        )
+        .chain(std::iter::once((recursor.clone(), package.recursor)))
+        .collect::<Vec<_>>();
+    let target_names = declaration_names(translator.target);
+    let mut source_digests = BTreeMap::new();
+    let mut target_digests = BTreeMap::new();
+    for (rendered, source_name) in package_declarations {
+        let target_name = target_names.get(&rendered).copied().ok_or_else(|| {
+            CheckedTheoremCompositionError::Identity(format!(
+                "reconstructed singleton declaration is absent: {rendered}"
+            ))
+        })?;
+        let source_digest = declaration_sha256(source, source_name)?;
+        let target_digest = declaration_sha256(translator.target, target_name)?;
+        if package.require_exact_reconstruction && source_digest != target_digest {
+            return Err(
+                CheckedTheoremCompositionError::ReconstructedInductiveMismatch {
+                    name: rendered,
+                    source_sha256: source_digest,
+                    target_sha256: target_digest,
+                },
+            );
+        }
+        source_digests.insert(rendered.clone(), source_digest);
+        target_digests.insert(rendered, target_digest);
+    }
+    Ok(AddedSingletonInductiveReceipt {
+        family,
+        constructors,
+        recursor,
+        source_declaration_sha256: source_digests,
+        target_declaration_sha256: target_digests,
+    })
 }
 
-fn admit_missing_definitions_and_theorems(
+struct AdmittedDeclarations {
+    definitions: Vec<AddedDefinitionReceipt>,
+    theorems: Vec<AddedTheoremReceipt>,
+    singleton_inductives: Vec<AddedSingletonInductiveReceipt>,
+}
+
+fn admit_missing_declarations_in_dependency_order(
     source: &Kernel,
     target: &mut Kernel,
     missing: &[NameId],
-) -> Result<(Vec<AddedDefinitionReceipt>, Vec<AddedTheoremReceipt>), CheckedTheoremCompositionError>
-{
+    packages: &[SingletonInductivePackage],
+) -> Result<AdmittedDeclarations, CheckedTheoremCompositionError> {
     let mut translator = ExpressionTranslator::new(source, target);
     let mut definitions = Vec::new();
     let mut theorems = Vec::new();
+    let packages_by_family = packages
+        .iter()
+        .map(|package| (package.family, package))
+        .collect::<BTreeMap<_, _>>();
+    let package_members = packages
+        .iter()
+        .flat_map(|package| {
+            std::iter::once(package.family)
+                .chain(package.constructors.iter().copied())
+                .chain(std::iter::once(package.recursor))
+        })
+        .collect::<BTreeSet<_>>();
+    let mut singleton_inductives = Vec::new();
     for &source_name in missing {
+        if let Some(package) = packages_by_family.get(&source_name) {
+            singleton_inductives.push(admit_one_singleton_inductive(
+                source,
+                &mut translator,
+                package,
+            )?);
+            continue;
+        }
+        if package_members.contains(&source_name) {
+            continue;
+        }
         let declaration = source
             .environment()
             .get(source_name)
@@ -859,7 +1077,11 @@ fn admit_missing_definitions_and_theorems(
             _ => {}
         }
     }
-    Ok((definitions, theorems))
+    Ok(AdmittedDeclarations {
+        definitions,
+        theorems,
+        singleton_inductives,
+    })
 }
 
 fn admit_one_definition(

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "proof-plan-frozen-nat-division-representation-mismatch-isolated",
+  "state": "native-coprimality-proved-semantic-transport-to-r082-unresolved",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -189,6 +189,113 @@
       }
     }
   },
+  "nat_mod_invariant_pack": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/667201932-lean430-nat-mod-invariant-v1/manifest.json",
+    "manifest_sha256": "ba31490c95fbd9b08005fcc0517fe6c09645d63c216005be0a795be85a15ef0e",
+    "implementation_commit": "6672019320fc6bfe1fdf98b14852d765e6e17c33",
+    "specialization_tool_sha256": "15d83ce54377277c45ae6584eb3e179cd0da4a9490009df71ff997157bd62b5c",
+    "specialization_library_sha256": "b7143d4fb448d934124c07c3918853239d1d8dd616156d4ac1609319c2df6da7",
+    "authored_source_sha256": "6afdadc9efae226348d73e6c4024608a1566973d16d24a29ab3e8176424f07bc",
+    "source_stream_sha256": "5d945b100f3e2939d6ea3ffa67e10b4d78ff9efb7782a56f3d67468aa167ebf9",
+    "generic_composition_receipt_sha256": "95774f7e022659cb41f792e3049d533035dee561c50064bab5e33f9e2f254b3e",
+    "helper_composition_receipt_sha256": "df4704110bd0458ce772302fd3eca5a873c6704cec12de7451363e26aeae6e07",
+    "specialization_receipt_sha256": "f03cd55d79467478528e24cdc347e6f9945a3eb1c49064e075176068451e358d",
+    "target": {
+      "name": "Nat.dvd_mod_iff",
+      "declaration_sha256": "7f785ea99cdfd9ca1e5e4a7044f2c53bc3a0255fa4143532ebcb26bef4d671a8",
+      "type_shape_sha256": "82789b0e69792f3d2308a32b4c6f108fef63bbded868e066fed2422a1b49019e",
+      "native_type_shape_sha256": "82789b0e69792f3d2308a32b4c6f108fef63bbded868e066fed2422a1b49019e",
+      "axiom_footprint": []
+    }
+  },
+  "nat_gcd_target_leaf_frontier": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/5fb817301-lean430-nat-gcd-target-leaf-frontier-v1/manifest.json",
+    "manifest_sha256": "5619dcefce4aea6be55a3f66fa8d81d2a2869a654b5e5d036db3ccb848d21154",
+    "implementation_commit": "5fb8173012d5248118f9b564c2afb89c9532b9d7",
+    "probe_sha256": "af13fbc609a2158931509ac8d25aa290d4b35fb670502e968bc3873db3fa4514",
+    "root": "Nat.dvd_gcd",
+    "single_leaf": {
+      "leaves": ["Nat.dvd_mod_iff"],
+      "source_closure": 66,
+      "contains_nat_div_mod_exec": true,
+      "first_rejected": "Nat.div_mod_exec"
+    },
+    "two_leaves": {
+      "leaves": ["Nat.dvd_mod_iff", "Nat.mod_lt"],
+      "source_closure": 57,
+      "contains_nat_div_mod_exec": false,
+      "first_rejected": "Nat.gcd_succ"
+    },
+    "official_support": {
+      "Nat.gcd_succ": {
+        "declaration_sha256": "5508f854491d6efee655061a69710e2b7250883f6a4d08afa0f1472cee94e217",
+        "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"]
+      },
+      "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_1": {
+        "declaration_sha256": "9673ec16e49e53dffb698e4a2f7a8ff7c2791c5730805485d94d1ddd254f8bee",
+        "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"]
+      }
+    }
+  },
+  "native_fib_composition": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/91d7df736-lean430-native-fib-composition-v1/manifest.json",
+    "manifest_sha256": "b797f5876ca3d033a5e58424573a774e3cad1af6dc9723059555a779d3028877",
+    "implementation_commit": "91d7df736fee9bb3becc3977ca4cb7165b06d3ee",
+    "nat_fib_declaration_sha256": "15f76f9318e04cf653cd094524473919b14a333c308cee32d6d428136bdc522c",
+    "r080": {
+      "source_stream_sha256": "00578e949d71154cf5d9e79005b2a1c8f7fe73d9885ae96b0dd5cb6744c30501",
+      "source_closure": 46,
+      "reused_declarations": 8,
+      "added_definitions": 19,
+      "added_singleton_inductives": 6,
+      "added_theorems": ["Axeyum.Autogenesis.NatFibAddTwo"],
+      "receipt_sha256": "f7244fbc69e6ceec6ed2511e46786bccd2d5a4e4485f3e6de70743104f888168"
+    },
+    "r082": {
+      "source_stream_sha256": "6afa79d79481403d3e3273ea3eea26b4d1194762f9bd623ec019f8e821323cfd",
+      "source_closure": 46,
+      "reused_declarations": 8,
+      "added_definitions": 19,
+      "added_singleton_inductives": 6,
+      "added_theorems": ["Axeyum.Autogenesis.fib_definition_probe"],
+      "receipt_sha256": "208b7e8703b3de9e89319d2ba9716a917940ccaeb3f4a7af4527d1e2d6f790ee"
+    },
+    "definition_identity_equal_across_r080_r082": true,
+    "native_recurrence_axiom_footprint": [],
+    "native_recurrence_theorem_dependencies": [],
+    "caller_mutations": 0,
+    "proof_search_invocations": 0,
+    "ledger_writes": 0
+  },
+  "native_fib_coprimality": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/8403e6f65-native-fibonacci-coprimality-v1/manifest.json",
+    "manifest_sha256": "e068326d75717014d5425ff4566e4e3d0cc355a77fbf2b898fda004f037a86e6",
+    "implementation_commit": "8403e6f658aacb332acecc3afe3dbf6cb539f684",
+    "name": "Axeyum.Autogenesis.NatFibCoprimeSucc",
+    "goal_sha256": "36a50e432178b2a22463e13ace748a078b989f6670eb97638fb7884a3df2ba86",
+    "proof_sha256": "e4af20e137001895506d5ccc11e2f4aa5186fe575c9b0ce61bd3fa51c6ca9efe",
+    "declaration_sha256": "72edaaed9362afed68cfc03ff99b619435130bb16c8229e41b1c3188091a3e6a",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.NatFibAddTwo",
+      "Nat.add_comm",
+      "Nat.dvd_add_iff_right",
+      "Nat.dvd_gcd",
+      "Nat.eq_one_of_dvd_one",
+      "Nat.gcd_dvd_left",
+      "Nat.gcd_dvd_right",
+      "Nat.gcd_zero_left"
+    ],
+    "fresh_reconstructions": 2,
+    "kernel_submissions": 2,
+    "target_definition": "Axeyum.Autogenesis.Coverage.r082",
+    "target_goal_sha256": "a053d8f483f2cc1e79c53924baf5f79e4897ce992ca77722168cee20a6f5150f",
+    "target_head": "Nat.Coprime",
+    "semantic_transport_authorized": false,
+    "semantic_theorem_receipts_issued": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
   "nat_mod_lt_compatibility_result": {
     "name": "Nat.mod_lt",
     "compatibility": "translated-definitional-equality",
@@ -365,17 +472,20 @@
       "Nat.gcd_zero_left"
     ],
     "required_present_in_import": [],
-    "already_present_in_import": ["Nat.rec"]
+    "already_present_in_import": ["Nat.rec"],
+    "next_action": "construct an explicit checked semantic bridge from the r082 Nat.Coprime statement over official Nat.gcd to the independently proved native-gcd theorem; same-name definitions alone are not transport authority"
   },
   "next_capability_sequence": [
     "bind existing imported logic and Nat declarations to reusable prelude handles",
     "compare overlapping declaration identities and fail closed on semantic mismatch",
     "reconstruct missing definitions and singleton inductives only through ordinary target kernel gates",
     "reconstruct the exact canonical native Acc package only through an atomic target-kernel inductive gate",
-    "use the composed axiom-free Nat.mod.eq_2 and Nat.modCore.go.eq_1 equations to prove the target-side remainder divisibility invariant",
-    "generalize Nat.dvd_mod_iff to the official all-divisor signature and reconstruct it axiom-free over imported Nat.mod",
-    "retry the unchanged Nat.div_mod_exec-dependent Nat.dvd_gcd closure without importing propext",
-    "replay the seven-lemma surface before any coprimality target submission"
+    "compose the authored fuel invariant over official Nat.mod and independently specialize its explicit arithmetic parameters",
+    "retain the resulting successor-divisor Nat.dvd_mod_iff as an axiom-free target theorem with the native type shape",
+    "retain explicit target-owned theorem leaves only after type compatibility, empty target footprint, exact reachability, and receipt replay",
+    "compose the exact imported Nat.fib definition and the admitted Nat.fib_add_two theorem into the axiom-free native Nat kernel in source dependency order",
+    "retain the twice-reconstructed native Fibonacci coprimality theorem with its exact eight-theorem dependency set and empty footprint",
+    "bridge the official r082 Nat.Coprime definition closure to the native gcd theorem through independently checked semantics before any receipt or ledger transition"
   ],
   "authority": {
     "partitions_inspected": ["train"],
@@ -387,5 +497,5 @@
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "This freezes a proof plan and independently composes exact Nat.mul and Nat.dvd definitions, the exact official-order Bool and singleton Exists packages, the declaration-exact canonical native Acc package, and axiom-free control theorems. Native Nat.mod_lt has Lean's general positive-denominator contract and its distinct wrapper-level type is target-kernel definitionally equal to the imported theorem. The rendered Nat.div_mod_exec mismatch is localized to official Nat.mod versus the native Bool-rollover remainder representation across a 92-declaration closure: Nat.mod_lt is already reusable, while Nat.dvd_mod_iff remains missing. Official Lean 4.30 Nat.dvd_mod_iff and Nat.mod_add_div both carry propext and therefore are audited references, not admissible support. This does not authorize arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, quotient packages, generic theorem transport, recursor permutation, or weakening definitional equality; compose the remaining six required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
+  "limitations": "The bounded native Fibonacci-coprimality induction is independently kernel-accepted twice with an empty footprint and exactly the admitted recurrence plus seven planned native theorem dependencies. The imported-to-official direction still reaches assumption-bearing Nat.gcd_succ. The r082 target statement is headed by official Nat.Coprime and therefore closes over the official Nat.gcd definition, while the accepted native theorem closes over Axeyum's independently constructed Nat.gcd. Same spelling and compatible types do not prove those definition closures semantically interchangeable. This does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, or weakening definitional equality; construct a checked official/native gcd semantic bridge; issue a theorem receipt; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
 }
