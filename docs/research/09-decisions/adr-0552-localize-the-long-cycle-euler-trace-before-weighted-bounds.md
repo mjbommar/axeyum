@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-08-20
-Index-summary: Prove exact non-top long-cycle Euler cancellation away from power-of-two degrees, while retaining the Frobenius-weighted trace as the endpoint obligation
+Index-summary: Prove exact non-top long-cycle Euler cancellation from the homogeneous cone, while retaining its projective Frobenius trace as the endpoint obligation
 
 ## Context
 
@@ -57,10 +57,11 @@ Successively, the coefficient of degree `qb-j` in `G^b` is
 b g_j + a polynomial in g_1,...,g_(j-1).
 ```
 
-Since the image of odd `b` in `GF(2)` is one, vanishing of the first `ell` coefficients forces all
-`q` coefficients of `G` to vanish.  The fixed locus of the odd-order part is
-therefore the single reduced point `G=x^q`.  The remaining `q`-power part of
-the cycle acts trivially on that point.  Deligne--Lusztig reduction gives
+Since the image of odd `b` in `GF(2)` is one, vanishing of the first `ell`
+coefficients forces all `q` coefficients of `G` to vanish.  The fixed locus of
+the odd-order part is therefore the single reduced point `G=x^q`.  The
+remaining `q`-power part of the cycle acts trivially on that point.
+Deligne--Lusztig reduction gives
 
 ```text
 Tr(c | H_c^*(X_(n,ell,0))) = 1
@@ -74,7 +75,25 @@ Tr(c | H_c,non-top^*(X_(n,ell,0))) = 0.          (E)
 ```
 
 At a power-of-two degree the odd-order part is the identity and its fixed
-locus is all of `X`; the report consequently returns no cycle-trace verdict.
+locus is all of `X`, so the finite-order reduction alone gives no verdict.
+The zero coefficient class supplies a uniform argument.  The variety
+`X=X_(n,ell,0)` is a homogeneous affine cone.  Decompose it into its vertex
+and punctured cone, and write `P(X)` for its projectivization.  The projection
+
+```text
+X - {0} -> P(X)
+```
+
+is an `S_n`-equivariant `G_m`-torsor.  The cycle acts trivially on the fibre,
+whose compactly supported Euler trace is
+
+```text
+chi_c(G_m)=-1+1=0.
+```
+
+The punctured cone therefore has zero alternating cycle trace and the vertex
+has trace one.  Thus `(E)` holds for **every** `n>=5`, including powers of two,
+without applying a tame fixed-point formula to a wild automorphism.
 
 Equation `(E)` is deliberately not promoted to the required estimate.  The
 Lemire count contains
@@ -84,7 +103,16 @@ Tr(Frob*c | H_c,non-top^*(X_(n,ell,0))),
 ```
 
 and zero alternating trace after forgetting Frobenius does not bound that
-weighted trace.  The report exposes this boundary with
+weighted trace.  Indeed, for `r`th binary Frobenius the fibre trace is
+`2^r-1`, giving the exact reduction
+
+```text
+Tr(Frob^r*c | H_c^*(X))
+  =1+(2^r-1)Tr(Frob^r*c | H_c^*(P(X))).          (P)
+```
+
+At the base field the projective factor is one, so the cone decomposition
+does not save anything.  The report exposes this boundary with
 `frobenius_weighted_cancellation_certified=false` in every row.
 
 ## Evidence
@@ -94,9 +122,13 @@ weighted trace.  The report exposes this boundary with
   Section 3, supplies the finite-order decomposition
   `Tr(su,H_c^*(X))=Tr(u,H_c^*(X^s))` with `s` prime-to-characteristic and `u`
   of characteristic-power order.
+- Sawin, [*Square-root cancellation for sums of factorization functions over
+  short intervals in function fields*](https://arxiv.org/abs/1809.05137),
+  Proposition 2.5, supplies the strict-range top cohomology calculation and
+  its trivial `S_n` action.
 - The native report checks the endpoint, Sawin's strict top-cohomology
   hypothesis, lowest-set-bit, odd/two-power cycle orders, fixed-locus
-  dimensions, top degree, and trace subtraction.  An
+  dimensions, cone/vertex traces, top degree, and trace subtraction.  An
   independent Pascal-recurrence test verifies the first odd binomial index
   through degree 128.
 - Pinned rows cover odd degree 401, even composite degrees 12 and 402, and the
@@ -108,7 +140,8 @@ weighted trace.  The report exposes this boundary with
 - **Use the full fixed locus for every degree:** rejected because an even
   cycle is wild in characteristic two.
 - **Treat zero Euler trace as zero Frobenius trace:** rejected because
-  Frobenius can have different eigenvalues on cancelling cohomological pieces.
+  Frobenius can have different eigenvalues on cancelling cohomological pieces;
+  `(P)` retains the projective trace with coefficient one over `GF(2)`.
 - **Infer a polynomial Betti bound from the zero virtual dimension:** rejected;
   virtual cancellation does not bound the dimensions of the positive and
   negative eigenspaces.
@@ -116,11 +149,12 @@ weighted trace.  The report exposes this boundary with
 ## Consequences
 
 - The unweighted long-cycle complex has exact non-top Euler cancellation at
-  every non-power-of-two degree.  This is a genuine structural theorem, not a
-  finite diagnostic.
-- Power-of-two degrees need a separate wild trace analysis even before
-  Frobenius weights are introduced.
-- For all other degrees, the remaining geometric obligation is now precisely
-  a Frobenius-weighted refinement of an already zero virtual Euler trace.
+  every degree `n>=5`.  This is a genuine structural theorem, not a finite
+  diagnostic.
+- The cone argument removes the unweighted power-of-two exception without
+  relying on wild fixed-point theory.
+- The remaining geometric obligation is precisely a bound for the projective
+  Frobenius--long-cycle trace in `(P)`, equivalently a Frobenius-weighted
+  refinement of an already zero virtual Euler trace.
 - No Lemire existence fact changes status, and no endpoint theorem credit is
   granted.

@@ -3593,28 +3593,41 @@ degree,
 Tr(c | H_c^*(X_(n,ell,0)))=1.
 ```
 
-The one-dimensional top compactly supported cohomology is trivial under
-`S_n`, also contributing one.  Thus the complete non-top long-cycle complex
-has exact alternating Euler trace zero.  The public
-`sawin_long_cycle_euler_report` certifies the lowest-set-bit classification,
-the tame/wild orders, the reduced-locus dimension, and this trace subtraction;
-an independent Pascal recurrence checks the Lucas index through degree 128.
-At power-of-two degrees it returns no trace verdict, rather than applying a
-tame formula to a wild automorphism.
+At a power of two the odd part is the identity, so this finite-order reduction
+alone says nothing.  The homogeneous cone supplies the uniform argument.
+Because every prescribed coefficient is zero, `X_(n,ell,0)` is an affine cone.
+Its punctured part is an `S_n`-equivariant `G_m`-torsor over the
+projectivization.  The cycle acts trivially on the fibre and
+`chi_c(G_m)=-1+1=0`, while the cone vertex contributes one.  Hence the total
+alternating cycle trace is one at **every** degree `n>=5`, including powers of
+two.  The one-dimensional top compactly supported cohomology is trivial under
+`S_n`, also contributing one, so the complete non-top long-cycle complex has
+exact alternating Euler trace zero.
 
-This is genuine exact cancellation on every non-power-of-two degree, but it is
-still unweighted.  The
-endpoint count requires
+The public `sawin_long_cycle_euler_report` certifies the lowest-set-bit
+classification, tame/wild orders, reduced-locus dimension, cone/vertex
+traces, Sawin's strict top-cohomology hypothesis, and the final subtraction;
+an independent Pascal recurrence checks the Lucas index through degree 128.
+It does not apply a tame fixed-point formula to a wild automorphism.
+
+This exact cancellation is still unweighted.  The endpoint count requires
 
 ```text
 Tr(Frob*c | H_c,non-top^*(X_(n,ell,0))),
 ```
 
 and zero trace after forgetting Frobenius does not control distinct Frobenius
-eigenvalues on the cancelling pieces.  The next theorem must therefore be a
-Frobenius-weighted refinement of this zero Euler sector (plus a separate
-power-of-two wild analysis), not another generic total-Betti estimate.  No
-Lemire endpoint credit is attached (ADR-0552).
+eigenvalues on the cancelling pieces.  In fact the cone decomposition gives
+
+```text
+Tr(Frob^r*c | H_c^*(X))
+ =1+(2^r-1)Tr(Frob^r*c | H_c^*(P(X))).
+```
+
+At `r=1` the projective factor is one, so this identity supplies no numerical
+saving.  The next theorem must bound that projective Frobenius--long-cycle
+trace, not merely its zero unweighted Euler specialization or a generic total
+Betti number.  No Lemire endpoint credit is attached (ADR-0552).
 
 The closest general symmetric-cohomology theorems do not fill that gap.
 Chenevert's smooth projective hypersurface calculation assumes `n!` is

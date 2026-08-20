@@ -2665,11 +2665,16 @@ pub struct SawinFoulkesEndpointLedger {
 /// order-`2^a` part acting on that locus.  When `b>1`, the first `ell`
 /// coefficients of `G(x)^b` force the degree-`2^a` block polynomial to be
 /// `G(x)=x^(2^a)`, so the reduced locus is a point.  Thus every non-power-of-two
-/// degree has total cycle Euler trace one.  The top compactly supported
-/// cohomology is the one-dimensional trivial `S_n` representation, and
-/// subtraction gives zero alternating trace on all non-top cohomology.
-/// Powers of two remain genuinely wild.  Even where the Euler cancellation is
-/// proved, it does not imply cancellation after Frobenius weights are inserted.
+/// degree also has total cycle Euler trace one by that route.
+///
+/// Uniformly, however, `X_(n,ell,0)` is a homogeneous affine cone.  Its vertex
+/// contributes one, while its punctured part is a `G_m`-torsor over the
+/// projectivization and has zero unweighted equivariant Euler trace.  This
+/// proves total cycle Euler trace one even at power-of-two degrees.  The top
+/// compactly supported cohomology is the one-dimensional trivial `S_n`
+/// representation, and subtraction gives zero alternating trace on all
+/// non-top cohomology.  With `r`th Frobenius inserted, the `G_m` factor is
+/// `2^r-1`, not zero, so the argument supplies no weighted cancellation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SawinLongCycleEulerReport {
     /// Polynomial degree `n`.
@@ -2695,6 +2700,11 @@ pub struct SawinLongCycleEulerReport {
     pub tame_fixed_locus_dimension: usize,
     /// Whether Deligne--Lusztig reduction collapses the cycle trace to a point.
     pub cycle_trace_reduced_to_point: bool,
+    /// Cycle trace of the cone vertex.
+    pub cone_vertex_cycle_trace: i8,
+    /// Alternating cycle trace of the punctured cone, using
+    /// `chi_c(G_m)=0`.
+    pub punctured_cone_alternating_cycle_trace: i8,
     /// Value `n` of the power-sum character `p_n` on an `n`-cycle.
     pub power_sum_value_on_long_cycle: usize,
     /// Centralizer order `n` of an `n`-cycle in `S_n`.
@@ -2705,12 +2715,13 @@ pub struct SawinLongCycleEulerReport {
     pub top_compact_cohomology_degree: usize,
     /// Long-cycle trace on the one-dimensional trivial top cohomology.
     pub top_cycle_trace: i8,
-    /// Alternating total long-cycle trace, unavailable only at power-of-two
-    /// degrees where the remaining cycle action is entirely wild.
-    pub total_alternating_cycle_trace: Option<i8>,
-    /// Alternating long-cycle trace on all non-top cohomology, with the same
-    /// power-of-two boundary.
-    pub non_top_alternating_cycle_trace: Option<i8>,
+    /// Alternating total long-cycle trace.
+    pub total_alternating_cycle_trace: i8,
+    /// Alternating long-cycle trace on all non-top cohomology.
+    pub non_top_alternating_cycle_trace: i8,
+    /// Multiplicative factor `2^1-1` retained by the punctured cone after one
+    /// binary Frobenius is inserted.
+    pub binary_frobenius_projective_trace_factor: usize,
     /// Explicit boundary: Euler cancellation alone certifies no
     /// Frobenius-weighted trace estimate.
     pub frobenius_weighted_cancellation_certified: bool,
@@ -7955,10 +7966,13 @@ fn endpoint_proper_prime_power_upper_bound(
 /// its odd part.  If `b>1`, a triangular leading-coefficient calculation on
 /// `G(x)^b` makes that locus a point.  Subtracting the trivial one-dimensional
 /// top cohomology then proves exact zero alternating trace on the non-top
-/// complex.  At powers of two the odd part is the identity, so no trace
-/// conclusion is claimed.  Frobenius acts nontrivially on separate weight
-/// pieces even in the proved cases, and no Frobenius-weighted cancellation is
-/// certified.
+/// complex away from powers of two.  At powers of two the odd part is the
+/// identity, so that route alone gives no trace conclusion.
+///
+/// The homogeneous-cone decomposition closes the unweighted power-of-two row:
+/// the vertex has trace one and the punctured `G_m`-torsor has alternating
+/// trace zero.  Frobenius changes the fibre trace from zero to `2^r-1`, so no
+/// Frobenius-weighted cancellation is certified.
 ///
 /// # Errors
 ///
@@ -8030,10 +8044,14 @@ pub fn sawin_long_cycle_euler_report(
     }
     let fixed_locus_compact_euler_characteristic = 1_i8;
     let top_cycle_trace = 1_i8;
-    let total_alternating_cycle_trace =
-        cycle_trace_reduced_to_point.then_some(fixed_locus_compact_euler_characteristic);
-    let non_top_alternating_cycle_trace =
-        total_alternating_cycle_trace.map(|trace| trace - top_cycle_trace);
+    let cone_vertex_cycle_trace = 1_i8;
+    let punctured_cone_alternating_cycle_trace = 0_i8;
+    let total_alternating_cycle_trace = cone_vertex_cycle_trace
+        .checked_add(punctured_cone_alternating_cycle_trace)
+        .ok_or_else(|| HayesError::Invariant("Sawin cone Euler trace overflow".to_owned()))?;
+    let non_top_alternating_cycle_trace = total_alternating_cycle_trace
+        .checked_sub(top_cycle_trace)
+        .ok_or_else(|| HayesError::Invariant("Sawin non-top trace underflow".to_owned()))?;
 
     Ok(SawinLongCycleEulerReport {
         degree,
@@ -8047,6 +8065,8 @@ pub fn sawin_long_cycle_euler_report(
         tame_cycle_order,
         tame_fixed_locus_dimension,
         cycle_trace_reduced_to_point,
+        cone_vertex_cycle_trace,
+        punctured_cone_alternating_cycle_trace,
         power_sum_value_on_long_cycle: degree,
         long_cycle_centralizer_order: degree,
         power_sum_projection_scalar: 1,
@@ -8054,6 +8074,7 @@ pub fn sawin_long_cycle_euler_report(
         top_cycle_trace,
         total_alternating_cycle_trace,
         non_top_alternating_cycle_trace,
+        binary_frobenius_projective_trace_factor: 1,
         frobenius_weighted_cancellation_certified: false,
     })
 }
@@ -17918,12 +17939,12 @@ mod tests {
     }
 
     #[test]
-    fn long_cycle_fixed_locus_separates_tame_trace_from_wild_geometry() {
-        for (degree, first_odd, full_fixed_dimension, trace) in [
-            (401_usize, 1_usize, 0_usize, Some(1_i8)),
-            (402, 2, 0, Some(1)),
-            (12, 4, 0, Some(1)),
-            (512, 512, 1, None),
+    fn long_cycle_cone_cancels_non_top_euler_trace_including_wild_row() {
+        for (degree, first_odd, full_fixed_dimension, point_reduction) in [
+            (401_usize, 1_usize, 0_usize, true),
+            (402, 2, 0, true),
+            (12, 4, 0, true),
+            (512, 512, 1, false),
         ] {
             let report =
                 sawin_long_cycle_euler_report(degree, SawinFoulkesLimits::default()).unwrap();
@@ -17941,15 +17962,17 @@ mod tests {
             assert_eq!(report.fixed_locus_compact_euler_characteristic, 1);
             assert_eq!(report.wild_cycle_order, first_odd);
             assert_eq!(report.tame_cycle_order, degree / first_odd);
-            assert_eq!(report.cycle_trace_reduced_to_point, trace.is_some());
+            assert_eq!(report.cycle_trace_reduced_to_point, point_reduction);
             assert_eq!(
                 report.tame_fixed_locus_dimension,
-                if trace.is_some() {
+                if point_reduction {
                     0
                 } else {
                     report.interval_dimension
                 }
             );
+            assert_eq!(report.cone_vertex_cycle_trace, 1);
+            assert_eq!(report.punctured_cone_alternating_cycle_trace, 0);
             assert_eq!(report.power_sum_value_on_long_cycle, degree);
             assert_eq!(report.long_cycle_centralizer_order, degree);
             assert_eq!(report.power_sum_projection_scalar, 1);
@@ -17958,11 +17981,9 @@ mod tests {
                 2 * report.interval_dimension
             );
             assert_eq!(report.top_cycle_trace, 1);
-            assert_eq!(report.total_alternating_cycle_trace, trace);
-            assert_eq!(
-                report.non_top_alternating_cycle_trace,
-                trace.map(|value| value - 1)
-            );
+            assert_eq!(report.total_alternating_cycle_trace, 1);
+            assert_eq!(report.non_top_alternating_cycle_trace, 0);
+            assert_eq!(report.binary_frobenius_projective_trace_factor, 1);
             assert!(!report.frobenius_weighted_cancellation_certified);
         }
     }
