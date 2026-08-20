@@ -1576,6 +1576,22 @@ sum back to `mu(f)`.  A saving requires a rank theorem for the **joint**
 exceptional-plus-generic decomposition; the per-polynomial Arf rank alone
 cannot be inserted into the endpoint ledger.
 
+The uncollapsed pairwise rank test now rejects the simplest such theorem.
+`binary_second_trace_bucket_difference_report` keeps the full forms
+`Q_f(y)=T_2(m_y)` on their common coefficient space and, inside every
+simultaneous coefficient/inverse bucket, classifies `Q_f+Q_g` by polar rank
+and by its restriction to the radical.  It independently verifies each exact
+binary quadratic Gauss sum.  At the pinned `(ell,k,d)=(9,11,8)` row, 683
+squarefree forms give 28,830 unordered within-bucket pairs and ten types,
+realizing every even rank from zero through ten.  Five nonzero Gauss
+correlations have rank only two and radical dimension nine; their polynomial
+differences are `x^3`, `x^3+x`, and
+`x^8+x^6+x^5+x^3+x^2`.  At degrees eight and nine, distinct pairs already
+have phase-trivial rank zero, hence maximal correlation.  Thus the raw forms
+are not a bounded-class high-rank Kerdock/Delsarte--Goethals family.  A useful
+Arf lift would still have to aggregate and cancel the growing low-rank sectors,
+which is the same connected arithmetic problem rather than a rank shortcut.
+
 The principal-unit coordinates are now explicit as well.  For every odd
 `m<=ell`, the generator `1+x^m` has order `2^L`, where `L` is the number of
 slots `m,2m,4m,...<=ell`, and

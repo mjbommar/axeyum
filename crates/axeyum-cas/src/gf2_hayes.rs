@@ -1448,6 +1448,69 @@ pub struct BinarySecondTraceArfReport {
     pub sign_phase: Option<u8>,
 }
 
+/// One exact pairwise-difference type for second-trace quadratic forms.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinarySecondTraceDifferenceType {
+    /// Rank of the polar form of `Q_f+Q_g` on the common coefficient space.
+    pub polar_rank: usize,
+    /// Dimension of its radical.
+    pub radical_dimension: usize,
+    /// Whether `Q_f+Q_g` is nonzero on the polar radical.
+    pub phase_nontrivial_on_radical: bool,
+    /// Number of unordered distinct polynomial pairs of this type.
+    pub pair_count: u128,
+    /// Input-coefficient coset of the first stable witness.
+    pub first_input_coset: usize,
+    /// Inverse-coefficient coset of the first stable witness.
+    pub first_inverse_coset: usize,
+    /// First packed polynomial in the stable witness pair.
+    pub first_left_polynomial: u64,
+    /// Second packed polynomial in the stable witness pair.
+    pub first_right_polynomial: u64,
+}
+
+/// One pair attaining the minimum polar rank among nonzero quadratic Gauss
+/// correlations in simultaneous buckets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinarySecondTraceDifferenceWitness {
+    /// Input-coefficient coset.
+    pub input_coset: usize,
+    /// Inverse-coefficient coset.
+    pub inverse_coset: usize,
+    /// First packed polynomial.
+    pub left_polynomial: u64,
+    /// Second packed polynomial.
+    pub right_polynomial: u64,
+    /// XOR of the packed polynomials.
+    pub polynomial_difference: u64,
+    /// Polar rank of the quadratic-form difference.
+    pub polar_rank: usize,
+}
+
+/// Pairwise second-trace geometry inside simultaneous coefficient/inverse
+/// buckets.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinarySecondTraceBucketDifferenceReport {
+    /// Principal-unit modulus level.
+    pub ell: usize,
+    /// Polynomial degree.
+    pub degree: usize,
+    /// Number of free low coefficient bits in each input bucket.
+    pub interval_degree: usize,
+    /// Nonempty simultaneous coefficient/inverse buckets.
+    pub occupied_bucket_count: usize,
+    /// Squarefree polynomials retained across those buckets.
+    pub squarefree_count: usize,
+    /// Unordered distinct pairs compared within buckets.
+    pub unordered_pair_count: u128,
+    /// Stable rank/radical type table.
+    pub types: Vec<BinarySecondTraceDifferenceType>,
+    /// Minimum rank among pairs whose quadratic Gauss sum is nonzero.
+    pub minimum_nonzero_gauss_rank: Option<usize>,
+    /// Every pair attaining `minimum_nonzero_gauss_rank`.
+    pub minimum_rank_witnesses: Vec<BinarySecondTraceDifferenceWitness>,
+}
+
 /// Exact four-term additive Fourier expansion of the real character modulo
 /// eight.
 ///
@@ -6239,6 +6302,41 @@ fn binary_matrix_rank(mut rows: Vec<u64>, dimension: usize) -> usize {
     rank
 }
 
+fn binary_matrix_nullspace_basis(mut rows: Vec<u64>, dimension: usize) -> Vec<u64> {
+    let mut pivot_columns = Vec::new();
+    let mut rank = 0_usize;
+    for column in 0..dimension {
+        let Some(pivot) = (rank..rows.len()).find(|&row| (rows[row] >> column) & 1 != 0) else {
+            continue;
+        };
+        rows.swap(rank, pivot);
+        for row in 0..rows.len() {
+            if row != rank && (rows[row] >> column) & 1 != 0 {
+                rows[row] ^= rows[rank];
+            }
+        }
+        pivot_columns.push(column);
+        rank += 1;
+    }
+    let pivot_mask = pivot_columns
+        .iter()
+        .fold(0_u64, |mask, &column| mask | (1_u64 << column));
+    let mut basis = Vec::with_capacity(dimension - rank);
+    for free_column in 0..dimension {
+        if pivot_mask >> free_column & 1 != 0 {
+            continue;
+        }
+        let mut vector = 1_u64 << free_column;
+        for (row, &pivot_column) in pivot_columns.iter().enumerate() {
+            if rows[row] >> free_column & 1 != 0 {
+                vector |= 1_u64 << pivot_column;
+            }
+        }
+        basis.push(vector);
+    }
+    basis
+}
+
 fn binary_second_trace_space_basis(modulus: u64, degree: usize) -> Result<Vec<u64>, HayesError> {
     if degree.is_multiple_of(2) {
         return Ok((0..degree).map(|index| 1_u64 << index).collect());
@@ -7412,6 +7510,247 @@ fn enumerate_binary_berlekamp_cosets(
         mobius_values,
         inverse_cosets,
         inverse_interval_phase_sum,
+    })
+}
+
+fn binary_second_trace_truth_tables(
+    buckets: &BTreeMap<(usize, usize), Vec<usize>>,
+    input_count: usize,
+    degree: usize,
+    vector_count: usize,
+) -> Result<Vec<Option<Vec<u8>>>, HayesError> {
+    let mut truth_tables = vec![None; input_count];
+    for members in buckets.values() {
+        for &middle in members {
+            let middle_u64 = u64::try_from(middle).map_err(|_| {
+                HayesError::InvalidParameter("second-trace index exceeds u64".to_owned())
+            })?;
+            let polynomial = (1_u64 << degree) | (middle_u64 << 1) | 1;
+            truth_tables[middle] = Some(
+                (0..vector_count)
+                    .map(|vector| binary_second_trace_value(vector as u64, polynomial, degree))
+                    .collect::<Vec<_>>(),
+            );
+        }
+    }
+    Ok(truth_tables)
+}
+
+fn binary_second_trace_difference_geometry(
+    left: &[u8],
+    right: &[u8],
+    degree: usize,
+) -> Result<(usize, usize, bool), HayesError> {
+    let value = |vector: usize| left[vector] ^ right[vector];
+    let polar_rows = (0..degree)
+        .map(|row| {
+            (0..degree).fold(0_u64, |bits, column| {
+                let polar =
+                    value(1 << row) ^ value(1 << column) ^ value((1 << row) ^ (1 << column));
+                bits | (u64::from(polar) << column)
+            })
+        })
+        .collect::<Vec<_>>();
+    let polar_rank = binary_matrix_rank(polar_rows.clone(), degree);
+    if !polar_rank.is_multiple_of(2) {
+        return Err(HayesError::Invariant(
+            "alternating second-trace difference has odd rank".to_owned(),
+        ));
+    }
+    let radical_basis = binary_matrix_nullspace_basis(polar_rows, degree);
+    let radical_dimension = radical_basis.len();
+    let phase_nontrivial_on_radical = radical_basis.iter().try_fold(false, |found, &vector| {
+        let vector = usize::try_from(vector).map_err(|_| {
+            HayesError::InvalidParameter("second-trace radical vector exceeds usize".to_owned())
+        })?;
+        Ok::<_, HayesError>(found || value(vector) != 0)
+    })?;
+    let signed_gauss_sum = (0..left.len()).fold(0_i128, |sum, vector| {
+        sum + if value(vector) == 0 { 1 } else { -1 }
+    });
+    let expected_magnitude = if phase_nontrivial_on_radical {
+        0
+    } else {
+        1_i128 << (degree - polar_rank / 2)
+    };
+    if signed_gauss_sum.abs() != expected_magnitude {
+        return Err(HayesError::Invariant(
+            "second-trace difference Gauss classification failed".to_owned(),
+        ));
+    }
+    Ok((polar_rank, radical_dimension, phase_nontrivial_on_radical))
+}
+
+type BinarySecondTraceDifferenceTypes = (
+    Vec<BinarySecondTraceDifferenceType>,
+    Option<usize>,
+    Vec<BinarySecondTraceDifferenceWitness>,
+);
+
+fn classify_binary_second_trace_bucket_pairs(
+    buckets: &BTreeMap<(usize, usize), Vec<usize>>,
+    truth_tables: &[Option<Vec<u8>>],
+    degree: usize,
+    expected_pair_count: u128,
+) -> Result<BinarySecondTraceDifferenceTypes, HayesError> {
+    let mut type_counts = BTreeMap::<(usize, usize, bool), (u128, usize, usize, u64, u64)>::new();
+    let mut minimum_rank = None;
+    let mut minimum_witnesses = Vec::new();
+    for (&(input_coset, inverse_coset), members) in buckets {
+        for left_index in 0..members.len() {
+            for right_index in left_index + 1..members.len() {
+                let left = truth_tables[members[left_index]].as_ref().ok_or_else(|| {
+                    HayesError::Invariant("missing left second-trace truth table".to_owned())
+                })?;
+                let right = truth_tables[members[right_index]].as_ref().ok_or_else(|| {
+                    HayesError::Invariant("missing right second-trace truth table".to_owned())
+                })?;
+                let (rank, radical_dimension, nontrivial) =
+                    binary_second_trace_difference_geometry(left, right, degree)?;
+                let left_polynomial = (1_u64 << degree) | ((members[left_index] as u64) << 1) | 1;
+                let right_polynomial = (1_u64 << degree) | ((members[right_index] as u64) << 1) | 1;
+                if !nontrivial && minimum_rank.is_none_or(|minimum| rank <= minimum) {
+                    if minimum_rank.is_none_or(|minimum| rank < minimum) {
+                        minimum_rank = Some(rank);
+                        minimum_witnesses.clear();
+                    }
+                    minimum_witnesses.push(BinarySecondTraceDifferenceWitness {
+                        input_coset,
+                        inverse_coset,
+                        left_polynomial,
+                        right_polynomial,
+                        polynomial_difference: left_polynomial ^ right_polynomial,
+                        polar_rank: rank,
+                    });
+                }
+                type_counts
+                    .entry((rank, radical_dimension, nontrivial))
+                    .and_modify(|entry| entry.0 += 1)
+                    .or_insert((
+                        1,
+                        input_coset,
+                        inverse_coset,
+                        left_polynomial,
+                        right_polynomial,
+                    ));
+            }
+        }
+    }
+    if type_counts.values().map(|entry| entry.0).sum::<u128>() != expected_pair_count {
+        return Err(HayesError::Invariant(
+            "second-trace difference types do not partition the pairs".to_owned(),
+        ));
+    }
+    let types = type_counts
+        .into_iter()
+        .map(
+            |((rank, radical_dimension, nontrivial), data)| BinarySecondTraceDifferenceType {
+                polar_rank: rank,
+                radical_dimension,
+                phase_nontrivial_on_radical: nontrivial,
+                pair_count: data.0,
+                first_input_coset: data.1,
+                first_inverse_coset: data.2,
+                first_left_polynomial: data.3,
+                first_right_polynomial: data.4,
+            },
+        )
+        .collect();
+    Ok((types, minimum_rank, minimum_witnesses))
+}
+
+/// Classify pairwise differences of second-trace quadratic forms inside each
+/// simultaneous coefficient/inverse bucket.
+///
+/// This retains `Q_f(y)=T_2(m_y)` on the common coefficient space.  For every
+/// unordered distinct squarefree pair it computes polar rank, tests the phase
+/// on the radical, and independently verifies the binary quadratic Gauss sum.
+/// The result is a structural diagnostic, not a cancellation theorem.
+///
+/// # Errors
+///
+/// Rejects invalid parameters, resource violations, or a failed exact Gauss
+/// classification.
+pub fn binary_second_trace_bucket_difference_report(
+    ell: usize,
+    degree: usize,
+    interval_degree: usize,
+    limits: HayesLimits,
+) -> Result<BinarySecondTraceBucketDifferenceReport, HayesError> {
+    if interval_degree == 0 || interval_degree >= ell {
+        return Err(HayesError::InvalidParameter(format!(
+            "second-trace bucket interval must satisfy 1<=d<ell, got d={interval_degree}, ell={ell}"
+        )));
+    }
+    let domain = admit_binary_berlekamp_phase_domain(ell, degree, 0, interval_degree, limits)?;
+    let enumeration = enumerate_binary_berlekamp_cosets(&domain, degree, ell, interval_degree)?;
+    let mut buckets = BTreeMap::<(usize, usize), Vec<usize>>::new();
+    for middle in 0..domain.input_count {
+        if enumeration.mobius_values[middle] != 0 {
+            buckets
+                .entry((
+                    middle / domain.coset_size,
+                    enumeration.inverse_cosets[middle],
+                ))
+                .or_default()
+                .push(middle);
+        }
+    }
+    let squarefree_count = buckets.values().map(Vec::len).sum::<usize>();
+    let unordered_pair_count = buckets.values().try_fold(0_u128, |total, members| {
+        let population = u128::try_from(members.len()).map_err(|_| {
+            HayesError::InvalidParameter("second-trace bucket population exceeds u128".to_owned())
+        })?;
+        total
+            .checked_add(population.saturating_sub(1) * population / 2)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("second-trace pair count overflow".to_owned())
+            })
+    })?;
+    let vector_count = 1_usize
+        .checked_shl(u32::try_from(degree).map_err(|_| {
+            HayesError::InvalidParameter("second-trace vector dimension exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("second-trace vector count overflow".to_owned())
+        })?;
+    let truth_cells = squarefree_count.checked_mul(vector_count).ok_or_else(|| {
+        HayesError::InvalidParameter("second-trace truth-table work overflow".to_owned())
+    })?;
+    let pair_cells = usize::try_from(unordered_pair_count)
+        .ok()
+        .and_then(|pairs| pairs.checked_mul(vector_count))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("second-trace pair work overflow".to_owned())
+        })?;
+    let work = truth_cells.checked_add(pair_cells).ok_or_else(|| {
+        HayesError::InvalidParameter("second-trace total work overflow".to_owned())
+    })?;
+    check_limit(
+        "second_trace_difference_cells",
+        work,
+        limits.max_table_cells,
+    )?;
+
+    let truth_tables =
+        binary_second_trace_truth_tables(&buckets, domain.input_count, degree, vector_count)?;
+    let (types, minimum_nonzero_gauss_rank, minimum_rank_witnesses) =
+        classify_binary_second_trace_bucket_pairs(
+            &buckets,
+            &truth_tables,
+            degree,
+            unordered_pair_count,
+        )?;
+    Ok(BinarySecondTraceBucketDifferenceReport {
+        ell,
+        degree,
+        interval_degree,
+        occupied_bucket_count: buckets.len(),
+        squarefree_count,
+        unordered_pair_count,
+        types,
+        minimum_nonzero_gauss_rank,
+        minimum_rank_witnesses,
     })
 }
 
@@ -13143,6 +13482,61 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn second_trace_difference_types_are_exact_in_pinned_buckets() {
+        for (
+            ell,
+            degree,
+            interval_degree,
+            expected_squarefree,
+            expected_pairs,
+            expected_types,
+            expected_minimum_rank,
+            expected_witnesses,
+        ) in [
+            (6, 8, 5, 85, 410, 9, 0, 1),
+            (7, 9, 6, 171, 1_856, 9, 0, 2),
+            (8, 10, 7, 341, 7_100, 10, 2, 1),
+        ] {
+            let row = binary_second_trace_bucket_difference_report(
+                ell,
+                degree,
+                interval_degree,
+                HayesLimits::default(),
+            )
+            .unwrap();
+            assert_eq!(row.occupied_bucket_count, 8);
+            assert_eq!(row.squarefree_count, expected_squarefree);
+            assert_eq!(row.unordered_pair_count, expected_pairs);
+            assert_eq!(row.types.len(), expected_types);
+            assert_eq!(row.minimum_nonzero_gauss_rank, Some(expected_minimum_rank));
+            assert_eq!(row.minimum_rank_witnesses.len(), expected_witnesses);
+        }
+        let report =
+            binary_second_trace_bucket_difference_report(9, 11, 8, HayesLimits::default()).unwrap();
+        assert_eq!(report.occupied_bucket_count, 8);
+        assert_eq!(report.squarefree_count, 683);
+        assert_eq!(report.unordered_pair_count, 28_830);
+        assert_eq!(report.types.len(), 10);
+        assert_eq!(report.minimum_nonzero_gauss_rank, Some(2));
+        assert_eq!(report.minimum_rank_witnesses.len(), 5);
+        assert_eq!(
+            report
+                .minimum_rank_witnesses
+                .iter()
+                .map(|row| row.polynomial_difference)
+                .collect::<Vec<_>>(),
+            vec![8, 8, 10, 364, 10]
+        );
+        assert_eq!(
+            report.types.iter().map(|row| row.pair_count).sum::<u128>(),
+            report.unordered_pair_count
+        );
+        assert!(
+            binary_second_trace_bucket_difference_report(9, 11, 0, HayesLimits::default()).is_err()
+        );
     }
 
     #[test]

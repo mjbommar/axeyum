@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-second-trace-pinned-minimum-rank-four",
+  "title": "Pinned simultaneous-bucket second-trace differences have minimum nonzero-Gauss rank at least four",
+  "statement": "For every distinct squarefree degree-eleven pair in one simultaneous coefficient/inverse bucket at (ell,d)=(9,8), if the Gauss sum of the second-trace difference is nonzero then its polar rank is at least four. THIS PROPOSITION IS FALSE: five pairs have phase-trivial radical and polar rank two.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"claim\":\"minimum nonzero-Gauss polar rank >= 4\",\"counterexample_count\":5,\"degree\":11,\"ell\":9,\"format\":\"axeyum-gf2-second-trace-bucket-difference\",\"interval_degree\":8,\"observed_minimum_rank\":2,\"pair_count\":28830,\"version\":1}",
+    "fragment": "none",
+    "free_symbols": ["f", "g"]
+  },
+  "epistemic_status": "refuted",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "evidence": [
+    {
+      "id": "gf2-second-trace-pinned-rank-two-witnesses",
+      "kind": "witness-replay",
+      "supports": "The exact 683-form table partitions all 28,830 unordered within-bucket pairs into ten rank/radical types and finds five nonzero quadratic Gauss sums of polar rank two.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features second_trace_difference_types_are_exact_in_pinned_buckets",
+      "artifact": "crates/axeyum-cas/src/gf2_hayes.rs",
+      "notes": "The checker computes nullspaces over GF(2) and independently sums every quadratic truth table; the five polynomial differences are pinned."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "native exact second-trace quadratic forms and binary linear algebra"
+  },
+  "notes": "This refutes a precise finite high-rank premise and stops the raw Kerdock model. It does not exclude cancellation after signed aggregation across buckets or orders and grants no endpoint credit."
+}
