@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** ADR-0523 fixes the public trust boundary for checked cross-kernel theorem-slice composition after the probe-local r082 kernel admitted the first three axiom-free native Nat theorems.
+**Status:** The ADR-0523 public theorem-only completed-clone API reproduces the first three axiom-free native Nat admissions over r082 with an exact source closure, environment transition, and canonical receipt; ten controls cover the major fail-closed boundary.
 
-**Next:** extract the probe implementation into `axeyum-lean-import` behind ADR-0523's completed-owned-environment contract, register its full in-tree negative matrix, and reproduce the three-theorem r082 result through that API before composing another lemma.
+**Next:** finish the missing constructor/recursor/quotient-kind controls, then measure and specify the smallest representation bridge for `Nat.dvd_add_iff_right` (`Nat.le_trans` / `Nat.zero_le`) before retrying that original root. Do not broaden V1 into definition or inductive transport without a demand-backed ADR.
 
 <!-- plan-section: landed-changes -->
 
@@ -15,3 +15,6 @@
 | 2026-08-20 | `8dbd18c82` | Required Nat theorem closure census isolates a structurally unblocked first replay slice |
 | 2026-08-20 | `9caac0bf5` | First probe-local checked native Nat theorem slice composes over the imported r082 kernel |
 | 2026-08-20 | `b7573a525` | ADR-0523 fixes theorem-only identity-gated completed-clone composition as the public V1 boundary |
+| 2026-08-20 | `bdc9bf1c9` | Public checked theorem-slice composition API publishes only a fully admitted owned clone and replayable receipt |
+| 2026-08-20 | `75aa21d1a` | Composition boundary controls cover unsupported kinds, type mismatch, binder metadata, free variables, partial staging, and receipt mutation |
+| 2026-08-20 | `0bcbe935d` | The r082 public-API probe exposes the exact source closure and canonical composition receipt identity |

@@ -154,6 +154,7 @@ compounding, not automation theatre.
 | [Kernel-type-shape prelude compatibility](55-kernel-type-shape-prelude-compatibility.md) | Which remaining overlaps differ only in kernel-irrelevant binder metadata, and which eight need explicit translation? |
 | [Required Nat closure census](56-required-nat-theorem-closure-census.md) | Which representation mismatches actually block the seven-lemma target surface, and what is the first safe composition slice? |
 | [First checked native-library composition](57-first-native-nat-composition.md) | Can native axiom-free proofs be transactionally admitted over compatible imported Mathlib declarations? |
+| [Public checked theorem composition](58-public-checked-theorem-composition.md) | Does the first composition survive a reviewed reusable API, exact receipt, and fail-closed control matrix? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
