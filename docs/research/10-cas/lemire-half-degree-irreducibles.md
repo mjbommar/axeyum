@@ -2917,10 +2917,50 @@ A_5(9,4)=-28,675.
 ```
 
 It completed in 206.15 seconds and independently matches the earlier scratch
-value.  Together with the lower extension traces, this rejects an order-two
-rational recurrence at the four-coefficient boundary.  It does not determine
-the reduced zeta factor or its growth with `m`, so no asymptotic theorem credit
-is attached.
+value.  A deterministic 64-shard run over `GF(64)`, with certified modulus
+`x^6+x+1`, subsequently covered all `64^5=1,073,741,824` interval polynomials
+and returned
+
+```text
+sum Lambda=1,073,464,057,
+A_6(9,4)=-277,767.
+```
+
+ADR-0529 makes that split native and fail-closed.  Each coefficientwise
+Frobenius orbit is owned by its least encoded representative, whose exact
+Mangoldt weight is multiplied by its orbit size.  The merge rejects missing,
+duplicate, noncontiguous, or differently parameterized shards.  A checked
+hierarchical collapse also permits a commensurable fine partition to rebuild
+one skewed coarse range without trusting an aggregate generated outside the
+CAS.  Over `GF(128)`, with certified modulus `x^7+x+1`, this route covered all
+`128^5=34,359,738,368` candidates and returned
+
+```text
+sum Lambda=34,357,258,693,
+A_7(9,4)=-2,479,675.
+```
+
+Exact Hankel minors from `A_1,...,A_7` are nonzero at two consecutive
+order-two offsets and at order three:
+
+```text
+det H_(1,2)=7,972,848,576,
+det H_(2,2)=569,010,016,512,
+det H_(1,3)=-6,852,895,898,075,136.
+```
+
+This rigorously rejects every constant-coefficient recurrence of order at most
+three at the four-coefficient boundary.  It does not determine the reduced
+zeta factor or its growth with `m`, so no asymptotic theorem credit is attached.
+
+The closest general symmetric-cohomology theorems do not fill that gap.
+Chenevert's smooth projective hypersurface calculation assumes `n!` is
+invertible in the ground field, excluding this characteristic-two `S_n`
+action.  Basu--Riener instead bound rational cohomology of real
+semi-algebraic sets.  Neither controls the hook-isotypic compactly-supported
+etale cohomology of this singular wild affine quotient.  A valid bridge must
+prove precisely that characteristic-two statement rather than transfer a
+characteristic-zero Euler-characteristic formula.
 
 The exact algebra is no longer trapped in that executable. ADR-0486 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
