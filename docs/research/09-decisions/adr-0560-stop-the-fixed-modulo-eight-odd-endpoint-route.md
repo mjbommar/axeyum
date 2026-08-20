@@ -48,6 +48,16 @@ Return theorem effort to a genuine aggregate trace estimate (or to an
 explicit, proved degree-dependent residue law), and require any proposed
 congruence to predict this degree-55 counterexample before further fleet work.
 
+A primary-source applicability check also narrows the proposed Newton-polygon
+literature bridge.  Kramer--Miller's *p-adic estimates of abelian Artin
+L-functions on curves* assumes `p>=3`, and Kramer--Miller--Upton's *Newton
+polygons of sums on curves I* opens with `p` odd.  Part II treats
+`Z_p`-towers.  Davis--Wan--Xiao likewise treats a `Z_p`-tower, while the
+higher-rank Ren--Wan--Xiao--Yu extension has Galois group the unramified
+coefficient ring `Z_(p^a)`, not the finite product of cyclic 2-groups in the
+binary Hayes tower.  These papers provide nearby language and possible proof
+technology, but none states the needed binary product-group theorem.
+
 ## Evidence
 
 The exact single-NTT computation ran on `s4` for 4,217.201 seconds with peak
@@ -72,3 +82,15 @@ primality or floating-point calculation.
 - Characterwise Newton slopes remain too weak; their aggregate cancellation
   is once again an estimate to prove, not a route to fixed-modulus positivity.
 - The universal Lemire theorem and the requested final paper remain open.
+
+## References
+
+- J. Kramer--Miller, [*p-adic estimates of abelian Artin L-functions on
+  curves*](https://arxiv.org/abs/2006.04936).
+- J. Kramer--Miller and J. Upton, [*Newton polygons of sums on curves I:
+  local-to-global theorems*](https://arxiv.org/abs/2110.08656) and [part
+  II](https://arxiv.org/abs/2110.08657).
+- C. Davis, D. Wan, and L. Xiao, [*Newton slopes for Artin--Schreier--Witt
+  towers*](https://arxiv.org/abs/1310.5311).
+- R. Ren, D. Wan, L. Xiao, and M. Yu, [*Slopes for higher rank
+  Artin--Schreier--Witt towers*](https://arxiv.org/abs/1605.02254).

@@ -637,6 +637,9 @@ fixed-modulo-eight nonvanishing while strongly certifying existence in that
 row.  The Newton machinery remains a diagnostic for a possible
 degree-dependent law, but theorem effort returns to a genuine aggregate trace
 estimate; no endpoint credit came from the refuted congruence.
+The nearest local-to-global Newton references do not change that verdict:
+their primary statements assume an odd prime or a `Z_p`-tower, while the
+binary Hayes group is a finite product of cyclic 2-groups.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.

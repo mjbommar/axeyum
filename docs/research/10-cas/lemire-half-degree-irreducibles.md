@@ -592,6 +592,14 @@ Galois/conductor family of low positive slopes; a characterwise Newton cutoff
 does not supply `(C8)`.  With `(C8)` refuted, these polygons remain a diagnostic
 for any future degree-dependent trace law, not an active existence bridge.
 
+The closest Newton-polygon papers do not presently restore that bridge.
+Kramer--Miller's abelian Artin estimate assumes characteristic at least three,
+and Kramer--Miller--Upton's local-to-global Part I explicitly fixes an odd
+prime; Part II is a `Z_p`-tower theorem.  Davis--Wan--Xiao is also rank one,
+and Ren--Wan--Xiao--Yu's higher-rank coefficient ring is not the binary Hayes
+product of finite cyclic 2-groups.  Their local Hodge/Newton machinery is
+adjacent technology, not a theorem that can be substituted at `q=2`.
+
 ### The exact half-level sieve hits the parity barrier
 
 There is an elementary identity which initially looks strong enough to prove
